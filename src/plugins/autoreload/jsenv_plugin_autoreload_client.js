@@ -1,10 +1,7 @@
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 
 export const jsenvPluginAutoreloadClient = () => {
-  const autoreloadClientFileUrl = new URL(
-    "./client/autoreload.js",
-    import.meta.url,
-  ).href;
+  const autoreloadClientFileUrl = import.meta.resolve("./client/autoreload.js");
 
   return {
     name: "jsenv:autoreload_client",

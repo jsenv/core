@@ -1,3 +1,3 @@
-import { answer } from "/js/vendors.js";
+import { answer } from "/vendors.js";
 
 window.resolveResultPromise(answer);

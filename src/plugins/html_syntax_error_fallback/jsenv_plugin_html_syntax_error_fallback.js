@@ -5,9 +5,8 @@ import { readFileSync } from "node:fs";
 import { jsenvCoreDirectoryUrl } from "../../jsenv_core_directory_url.js";
 
 export const jsenvPluginHtmlSyntaxErrorFallback = () => {
-  const htmlSyntaxErrorFileUrl = new URL(
+  const htmlSyntaxErrorFileUrl = import.meta.resolve(
     "./client/html_syntax_error.html",
-    import.meta.url,
   );
 
   return {
@@ -55,7 +54,9 @@ const generateHtmlForSyntaxError = (
   htmlSyntaxError,
   { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame, htmlSyntaxErrorFileUrl },
 ) => {
-  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
+  const htmlForSyntaxError = String(
+    readFileSync(new URL(htmlSyntaxErrorFileUrl)),
+  );
   const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
   const { line, column } = htmlSyntaxError;
   if (htmlUrl.startsWith(jsenvCoreDirectoryUrl.href)) {

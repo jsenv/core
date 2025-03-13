@@ -1,11 +1,11 @@
-System.register([__v__("/js/workspaces.nomodule.js")], function (_export, _context) {
+System.register([__v__("/jsenv_core_packages.js")], function (_export, _context) {
   "use strict";
 
   var _slicedToArray, _objectSpread2, getResponse, _getResponse, _getResponse2, answer, b;
   return {
-    setters: [function (_buildWorkspacesJs) {
-      _slicedToArray = _buildWorkspacesJs._slicedToArray;
-      _objectSpread2 = _buildWorkspacesJs._objectSpread2;
+    setters: [function (_buildJsenv_core_packagesJs) {
+      _slicedToArray = _buildJsenv_core_packagesJs._slicedToArray;
+      _objectSpread2 = _buildJsenv_core_packagesJs._objectSpread2;
     }],
     execute: function () {
       getResponse = () => {

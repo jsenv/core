@@ -12,9 +12,13 @@ export const assertFetchedContentCompliance = ({ urlInfo, content }) => {
   }
   const { expectedType } = urlInfo.firstReference;
   if (expectedType && urlInfo.type !== expectedType) {
-    throw new Error(
-      `type must be "${expectedType}", got "${urlInfo.type}" on ${urlInfo.url}`,
-    );
+    if (urlInfo.type === "asset" && urlInfo.context.build) {
+      // asset is a valid type during build
+    } else {
+      throw new Error(
+        `type must be "${expectedType}", got "${urlInfo.type}" on ${urlInfo.url}`,
+      );
+    }
   }
   const { integrity } = urlInfo.firstReference;
   if (integrity) {

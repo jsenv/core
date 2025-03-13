@@ -19,18 +19,18 @@ function _await(value, then, direct) {
   }
   return then ? value.then(then) : value;
 }
-System.register([__v__("/js/vendors.nomodule.js")], function (_export, _context) {
+System.register([__v__("/jsenv_plugin_preact_node_modules.js")], function (_export, _context) {
   "use strict";
 
   var compose, createStore, combineReducers, E, u, Provider_default, counterReducer, composeEnhancers, initialState, store, App, resolveRenderPromise, renderPromise, spanContentAfterIncrement, spanContentAfterDecrement;
   return {
-    setters: [function (_buildVendorsJs) {
-      compose = _buildVendorsJs.compose;
-      createStore = _buildVendorsJs.createStore;
-      combineReducers = _buildVendorsJs.combineReducers;
-      E = _buildVendorsJs.E;
-      u = _buildVendorsJs.u;
-      Provider_default = _buildVendorsJs.Provider_default;
+    setters: [function (_buildJsenv_plugin_preact_node_modulesJs) {
+      compose = _buildJsenv_plugin_preact_node_modulesJs.compose;
+      createStore = _buildJsenv_plugin_preact_node_modulesJs.createStore;
+      combineReducers = _buildJsenv_plugin_preact_node_modulesJs.combineReducers;
+      E = _buildJsenv_plugin_preact_node_modulesJs.E;
+      u = _buildJsenv_plugin_preact_node_modulesJs.u;
+      Provider_default = _buildJsenv_plugin_preact_node_modulesJs.Provider_default;
     }],
     execute: async function () {
       counterReducer = (state = {

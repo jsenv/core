@@ -1,4 +1,4 @@
-import { foo } from "./js/vendors.js";
+import { foo } from "./test_node_modules.js";
 
 const clientHtmlFileUrl = import.meta.resolve("./html/main.html");
 

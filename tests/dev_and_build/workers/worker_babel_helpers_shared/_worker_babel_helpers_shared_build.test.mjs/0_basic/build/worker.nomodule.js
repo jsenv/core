@@ -1,6 +1,6 @@
 ;(function() {
   var __versionMappings__ = {
-    "/js/workspaces.nomodule.js": "/js/workspaces.nomodule.js?v=43370847"
+    "/jsenv_core_packages.js": "/jsenv_core_packages.js?v=43370847"
   };
   self.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
@@ -416,13 +416,13 @@
   } : () => Object.create(null);
 })();
 
-System.register([__v__("/js/workspaces.nomodule.js")], function (_export, _context) {
+System.register([__v__("/jsenv_core_packages.js")], function (_export, _context) {
   "use strict";
 
   var _objectSpread2;
   return {
-    setters: [function (_buildWorkspacesJs) {
-      _objectSpread2 = _buildWorkspacesJs._objectSpread2;
+    setters: [function (_buildJsenv_core_packagesJs) {
+      _objectSpread2 = _buildJsenv_core_packagesJs._objectSpread2;
     }],
     execute: function () {
       console.log(_objectSpread2({}, {

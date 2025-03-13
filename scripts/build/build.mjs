@@ -1,13 +1,64 @@
 import { build } from "@jsenv/core/src/build/build.js";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+import { urlToBasename, urlToFilename } from "@jsenv/urls";
+
+const clientFileSubbuild = (clientFileRelativeUrl, options = {}) => {
+  const clientFileUrl = import.meta.resolve(
+    `../../src/${clientFileRelativeUrl}`,
+  );
+  const clientFilebasename = urlToBasename(clientFileUrl);
+  const clientFilename = urlToFilename(clientFileUrl);
+  return {
+    buildDirectoryUrl: import.meta.resolve(
+      `../../dist/client/${clientFilebasename}/`,
+    ),
+    entryPoints: {
+      [`./${clientFileRelativeUrl}`]: clientFilename,
+    },
+    runtimeCompat: { chrome: "89" },
+    bundling: {
+      js_module: {
+        chunks: false,
+      },
+    },
+    ...options,
+  };
+};
 
 await build({
-  sourceDirectoryUrl: new URL("../../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../../"),
+  buildDirectoryUrl: import.meta.resolve("../../dist/"),
   entryPoints: {
-    "./main.js": "jsenv_core.js",
+    "./src/main.js": "jsenv_core.js",
   },
+  subbuilds: [
+    clientFileSubbuild("src/kitchen/client/inline_content.js"),
+    clientFileSubbuild("src/plugins/autoreload/client/autoreload.js"),
+    clientFileSubbuild(
+      "src/plugins/html_syntax_error_fallback/client/html_syntax_error.html",
+    ),
+    clientFileSubbuild("src/plugins/import_meta_hot/client/import_meta_hot.js"),
+    clientFileSubbuild(
+      "src/plugins/protocol_file/client/directory_listing.html",
+      {
+        plugins: [jsenvPluginPreact({})],
+      },
+    ),
+    clientFileSubbuild("src/plugins/ribbon/client/ribbon.js"),
+    clientFileSubbuild(
+      "src/plugins/server_events/client/server_events_client.js",
+    ),
+    clientFileSubbuild(
+      "src/plugins/server_events/client/server_events_client.js",
+    ),
+    clientFileSubbuild(
+      "packages/internal/plugin-transpilation/src/babel/new_stylesheet/client/new_stylesheet.js",
+    ),
+    clientFileSubbuild(
+      "packages/internal/plugin-transpilation/src/babel/regenerator_runtime/client/regenerator_runtime.js",
+    ),
+  ],
   ignore: {
     "file://**/node_modules/": true,
     // selectively unignore some node_modules
@@ -35,7 +86,7 @@ await build({
   },
   directoryReferenceEffect: (reference) => {
     // @jsenv/core root dir
-    if (reference.url === new URL("../../", import.meta.url).href) {
+    if (reference.url === import.meta.resolve("../../")) {
       return "resolve";
     }
     if (reference.url.includes("/babel_helpers/")) {
@@ -64,13 +115,7 @@ await build({
         "file:///**/node_modules/rollup/dist/native.js": true,
       },
     }),
-    jsenvPluginPreact({}),
   ],
-  bundling: {
-    js_module: {
-      chunks: null,
-    },
-  },
   // for debug
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
 });

@@ -1,3 +1,3 @@
-import { answer } from "/js/vendors.js";
+import { answer } from "/jsenv_plugin_bundling_node_modules.js";
 
 window.resolveResultPromise(answer);

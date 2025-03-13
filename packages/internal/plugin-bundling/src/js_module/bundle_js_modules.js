@@ -1,4 +1,4 @@
-import { lookupPackageDirectory } from "@jsenv/filesystem";
+import { lookupPackageDirectory, readPackageAtOrNull } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
@@ -38,44 +38,44 @@ export const bundleJsModules = async (
 
   let manualChunks;
   if (chunks) {
-    if (chunks.vendors) {
-      chunks.vendors = {
-        "file:///**/node_modules/": true,
-        ...chunks.vendors,
-      };
-    } else {
-      chunks.vendors = {
-        "file:///**/node_modules/": true,
-      };
-    }
+    let workspaces;
+    let packageName;
     const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
     if (packageDirectoryUrl) {
-      try {
-        const packageFileContent = readFileSync(
-          new URL("package.json", packageDirectoryUrl),
-          "utf8",
-        );
-        const packageJSON = JSON.parse(packageFileContent);
-        const workspaces = packageJSON.workspaces;
-        if (workspaces) {
-          const workspacePatterns = {};
-          for (const workspace of workspaces) {
-            const workspacePattern = new URL(
-              workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
-              packageDirectoryUrl,
-            ).href;
-            workspacePatterns[workspacePattern] = true;
-          }
-          if (chunks.workspaces) {
-            chunks.workspaces = {
-              ...workspacePatterns,
-              ...chunks.workspaces,
-            };
-          } else {
-            chunks.workspaces = workspacePatterns;
-          }
-        }
-      } catch {}
+      const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
+      if (packageJSON) {
+        packageName = packageJSON.name;
+        workspaces = packageJSON.workspaces;
+      }
+    }
+    let nodeModuleChunkName = "node_modules";
+    let packagesChunkName = "packages";
+
+    if (packageName) {
+      let packageNameAsFilename = packageName
+        .replaceAll("@", "")
+        .replaceAll("-", "_")
+        .replaceAll("/", "_");
+      nodeModuleChunkName = `${packageNameAsFilename}_node_modules`;
+      packagesChunkName = `${packageNameAsFilename}_packages`;
+    }
+    chunks[nodeModuleChunkName] = {
+      "file:///**/node_modules/": true,
+      ...chunks.vendors,
+    };
+    if (workspaces) {
+      const workspacePatterns = {};
+      for (const workspace of workspaces) {
+        const workspacePattern = new URL(
+          workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
+          packageDirectoryUrl,
+        ).href;
+        workspacePatterns[workspacePattern] = true;
+      }
+      chunks[packagesChunkName] = {
+        ...workspacePatterns,
+        ...chunks.workspaces,
+      };
     }
 
     const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
@@ -149,7 +149,8 @@ export const bundleJsModules = async (
           }
           if (
             warning.code === "EMPTY_BUNDLE" &&
-            warning.names.join("") === "vendors"
+            (warning.names.join("").endsWith("node_modules") ||
+              warning.names.join("").endsWith("packages"))
           ) {
             return;
           }
@@ -226,7 +227,13 @@ const rollupPluginJsenv = ({
   }
 
   const getOriginalUrl = (rollupFileInfo) => {
-    if (rollupFileInfo.isEntry) {
+    if (
+      // - explicitely emitted by emitChunk
+      // - import.meta.resolve("")
+      rollupFileInfo.isEntry ||
+      // - new URL("", import.meta.url)
+      rollupFileInfo.isImplicitEntry
+    ) {
       const { facadeModuleId } = rollupFileInfo;
       if (facadeModuleId) {
         return fileUrlConverter.asFileUrl(facadeModuleId);

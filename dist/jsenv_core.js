@@ -1,2 +1,14 @@
-export { INJECTIONS, build, startBuildServer, startDevServer } from "./js/main.js";
+export { INJECTIONS, build, startBuildServer, startDevServer } from "./main.js";
 import "@jsenv/sourcemap";
+import "./jsenv_core_packages.js";
+import "node:path";
+import "node:fs";
+import "node:crypto";
+import "@jsenv/ast";
+import "node:url";
+import "node:module";
+import "@jsenv/js-module-fallback";
+import "node:process";
+import "node:os";
+import "node:tty";
+import "string-width";

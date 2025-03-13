@@ -19,13 +19,13 @@ function _await(value, then, direct) {
   }
   return then ? value.then(then) : value;
 }
-System.register([__v__("/js/workspaces.nomodule.js")], function (_export, _context) {
+System.register([__v__("/jsenv_core_packages.js")], function (_export, _context) {
   "use strict";
 
   var _objectSpread2, worker, workerResponse;
   return {
-    setters: [function (_buildWorkspacesJs) {
-      _objectSpread2 = _buildWorkspacesJs._objectSpread2;
+    setters: [function (_buildJsenv_core_packagesJs) {
+      _objectSpread2 = _buildJsenv_core_packagesJs._objectSpread2;
     }],
     execute: async function () {
       // this is causing an import to babel helper for object spread

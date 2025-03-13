@@ -3,9 +3,8 @@ import { build } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { copyFileSync, removeFileSync } from "@jsenv/filesystem";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 const test = async (params) => {
   const snapshotDirectoryUrl = new URL("./snapshots/", import.meta.url);

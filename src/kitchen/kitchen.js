@@ -681,6 +681,9 @@ const inferUrlInfoType = (urlInfo) => {
   const { type, typeHint } = urlInfo;
   const mediaType = CONTENT_TYPE.asMediaType(urlInfo.contentType);
   const { expectedType } = urlInfo.firstReference;
+  if (typeHint === "asset") {
+    return "asset";
+  }
   if (type === "sourcemap" || typeHint === "sourcemap") {
     return "sourcemap";
   }

@@ -1,4 +1,4 @@
-System.register([__v__("/js/vendors.nomodule.js")], function (_export, _context) {
+System.register([__v__("/vendors.js")], function (_export, _context) {
   "use strict";
 
   var answer;

@@ -20,6 +20,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import {
   assertAndNormalizeDirectoryUrl,
+  clearDirectorySync,
   ensureEmptyDirectory,
   lookupPackageDirectory,
   writeFileSync,
@@ -42,60 +43,48 @@ import {
 } from "../plugins/plugin_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
+import {
+  defaultRuntimeCompat,
+  getDefaultBase,
+  logsDefault,
+} from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
-
-// default runtimeCompat corresponds to
-// "we can keep <script type="module"> intact":
-// so script_type_module + dynamic_import + import_meta
-export const defaultRuntimeCompat = {
-  // android: "8",
-  chrome: "64",
-  edge: "79",
-  firefox: "67",
-  ios: "12",
-  opera: "51",
-  safari: "11.3",
-  samsung: "9.2",
-};
-const logsDefault = {
-  level: "info",
-  disabled: false,
-  animation: true,
-};
+import { jsenvPluginSubbuilds } from "./jsenv_plugin_subbuilds.js";
 
 /**
- * Generate an optimized version of source files into a directory
- * @param {Object} buildParameters
- * @param {string|url} buildParameters.sourceDirectoryUrl
+ * Generate an optimized version of source files into a directory.
+ *
+ * @param {Object} params
+ * @param {string|url} params.sourceDirectoryUrl
  *        Directory containing source files
- * @param {string|url} buildParameters.buildDirectoryUrl
+ * @param {string|url} params.buildDirectoryUrl
  *        Directory where optimized files will be written
- * @param {object} buildParameters.entryPoints
+ * @param {object} params.entryPoints
  *        Object where keys are paths to source files and values are their future name in the build directory.
  *        Keys are relative to sourceDirectoryUrl
- * @param {object} buildParameters.runtimeCompat
+ * @param {object} params.runtimeCompat
  *        Code generated will be compatible with these runtimes
- * @param {string} [buildParameters.assetsDirectory=""]
+ * @param {string} [params.assetsDirectory=""]
  *        Directory where asset files will be written
- * @param {string|url} [buildParameters.base=""]
+ * @param {string|url} [params.base=""]
  *        Urls in build file contents will be prefixed with this string
- * @param {boolean|object} [buildParameters.bundling=true]
+ * @param {boolean|object} [params.bundling=true]
  *        Reduce number of files written in the build directory
- *  @param {boolean|object} [buildParameters.minification=true]
+ *  @param {boolean|object} [params.minification=true]
  *        Minify the content of files written into the build directory
- * @param {boolean} [buildParameters.versioning=true]
+ * @param {boolean} [params.versioning=true]
  *        Use versioning on files written in the build directory
- * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
+ * @param {('search_param'|'filename')} [params.versioningMethod="search_param"]
  *        Controls how url are versioned in the build directory
- * @param {('none'|'inline'|'file'|'programmatic')} [buildParameters.sourcemaps="none"]
+ * @param {('none'|'inline'|'file'|'programmatic')} [params.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
- * @param {('error'|'copy'|'preserve')|function} [buildParameters.directoryReferenceEffect="error"]
+ * @param {('error'|'copy'|'preserve')|function} [params.directoryReferenceEffect="error"]
  *        What to do when a reference leads to a directory on the filesystem
- * @return {Object} buildReturnValue
- * @return {Object} buildReturnValue.buildInlineContents
+ * @return {Promise<Object>} buildReturnValue
+ * @return {Promise<Object>} buildReturnValue.buildInlineContents
  *        Contains content that is inline into build files
- * @return {Object} buildReturnValue.buildManifest
+ * @return {Promise<Object>} buildReturnValue.buildManifest
  *        Map build file paths without versioning to versioned file paths
  */
 export const build = async ({
@@ -107,9 +96,10 @@ export const build = async ({
   entryPoints = {},
   assetsDirectory = "",
   runtimeCompat = defaultRuntimeCompat,
-  base = runtimeCompat.node ? "./" : "/",
+  base = getDefaultBase(runtimeCompat),
   ignore,
 
+  subbuilds = [],
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
@@ -132,7 +122,9 @@ export const build = async ({
   watch = false,
   http = false,
 
-  directoryToClean,
+  buildDirectoryCleanPatterns = {
+    "**/*": true,
+  },
   sourcemaps = "none",
   sourcemapsSourcesContent,
   writeOnFileSystem = true,
@@ -232,13 +224,6 @@ export const build = async ({
   if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
     assetsDirectory = `${assetsDirectory}/`;
   }
-  if (directoryToClean === undefined) {
-    if (assetsDirectory === undefined) {
-      directoryToClean = buildDirectoryUrl;
-    } else {
-      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
-    }
-  }
 
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
@@ -284,7 +269,6 @@ build ${entryPointKeys.length} entry points`);
         break;
       }
     }
-    const rawRedirections = new Map();
     const entryUrls = [];
     const contextSharedDuringBuild = {
       buildStep: "craft",
@@ -310,21 +294,39 @@ build ${entryPointKeys.length} entry points`);
         ? new URL("craft/", outDirectoryUrl)
         : undefined,
     });
+
+    let subbuildResults = [];
+
     const rawPluginStore = createPluginStore([
+      ...jsenvPluginSubbuilds(subbuilds, {
+        parentBuildParams: {
+          sourceDirectoryUrl,
+          buildDirectoryUrl,
+          runtimeCompat,
+          bundling,
+          minification,
+          versioning,
+          versioningMethod,
+        },
+        onCustomBuildDirectory: (subBuildRelativeUrl) => {
+          buildDirectoryCleanPatterns = {
+            ...buildDirectoryCleanPatterns,
+            [`${subBuildRelativeUrl}**/*`]: false,
+          };
+        },
+        buildStart: async (params, index) => {
+          const result = await build({
+            ...params,
+            signal,
+            handleSIGINT: false,
+          });
+          subbuildResults[index] = result;
+          return result;
+        },
+      }),
       ...plugins,
       ...(bundling ? [jsenvPluginBundling(bundling)] : []),
       ...(minification ? [jsenvPluginMinification(minification)] : []),
-      {
-        appliesDuring: "build",
-        fetchUrlContent: (urlInfo) => {
-          if (urlInfo.firstReference.original) {
-            rawRedirections.set(
-              urlInfo.firstReference.original.url,
-              urlInfo.firstReference.url,
-            );
-          }
-        },
-      },
       ...getCorePlugins({
         rootDirectoryUrl: sourceDirectoryUrl,
         runtimeCompat,
@@ -694,9 +696,7 @@ build ${entryPointKeys.length} entry points`);
       buildSpecifierManager.getBuildInfo();
     if (writeOnFileSystem) {
       const writingFiles = createBuildTask("write files in build directory");
-      if (directoryToClean) {
-        await ensureEmptyDirectory(directoryToClean);
-      }
+      clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
       const buildRelativeUrls = Object.keys(buildFileContents);
       buildRelativeUrls.forEach((buildRelativeUrl) => {
         writeFileSync(
@@ -720,6 +720,7 @@ build ${entryPointKeys.length} entry points`);
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
       ...(returnBuildManifest ? { buildManifest } : {}),
+      ...(subbuilds.length ? { subbuilds: subbuildResults } : {}),
     };
   };
 

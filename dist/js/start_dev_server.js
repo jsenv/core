@@ -1,23 +1,23 @@
-import { assertAndNormalizeDirectoryUrl, createLogger, createTaskLog } from "./process_teardown_events.js";
+import { moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, urlToRelativeUrl, lookupPackageDirectory, createLogger, createTaskLog, URL_META, bufferToEtag } from "../jsenv_core_packages.js";
 import { ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { URL_META } from "./main.js";
 import { existsSync, readFileSync } from "node:fs";
-import { moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, urlToRelativeUrl, lookupPackageDirectory, createEventEmitter, watchSourceFiles, createPluginStore, getCorePlugins, defaultRuntimeCompat, createKitchen, bufferToEtag, createPluginController } from "./build.js";
+import { createEventEmitter, watchSourceFiles, createPluginStore, getCorePlugins, defaultRuntimeCompat, createKitchen, createPluginController } from "../plugins.js";
 import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
 import { createRequire } from "node:module";
+import "node:path";
+import "node:crypto";
+import "@jsenv/sourcemap";
+import "node:url";
+import "@jsenv/js-module-fallback";
 import "node:process";
 import "node:os";
 import "node:tty";
 import "string-width";
-import "node:url";
-import "@jsenv/sourcemap";
 import "@jsenv/runtime-compat";
-import "node:path";
-import "node:crypto";
 import "node:perf_hooks";
 import "@jsenv/plugin-supervisor";
-import "@jsenv/js-module-fallback";
+import "../main.js";
 
 const WEB_URL_CONVERTER = {
   asWebUrl: (fileUrl, webServer) => {
@@ -52,7 +52,7 @@ const WEB_URL_CONVERTER = {
 
 
 const serverEventsClientFileUrl = new URL(
-  "./server_events_client.js",
+  "../client/server_events_client/server_events_client.js",
   import.meta.url,
 ).href;
 
@@ -146,26 +146,6 @@ const jsenvPluginServerEvents = ({ clientAutoreload }) => {
   };
 };
 
-const memoizeByFirstArgument = (compute) => {
-  const urlCache = new Map();
-
-  const fnWithMemoization = (url, ...args) => {
-    const valueFromCache = urlCache.get(url);
-    if (valueFromCache) {
-      return valueFromCache;
-    }
-    const value = compute(url, ...args);
-    urlCache.set(url, value);
-    return value;
-  };
-
-  fnWithMemoization.forget = () => {
-    urlCache.clear();
-  };
-
-  return fnWithMemoization;
-};
-
 const requireFromJsenv = createRequire(import.meta.url);
 
 const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {
@@ -190,12 +170,26 @@ const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {
 const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
 
 /**
- * Start a server for source files:
- * - cook source files according to jsenv plugins
- * - inject code to autoreload the browser when a file is modified
- * @param {Object} devServerParameters
- * @param {string|url} devServerParameters.sourceDirectoryUrl Root directory of the project
- * @return {Object} A dev server object
+ * Starts the development server.
+ *
+ * @param {Object} [params={}] - Configuration params for the dev server.
+ * @param {number} [params.port=3456] - Port number the server should listen on.
+ * @param {string} [params.hostname="localhost"] - Hostname to bind the server to.
+ * @param {boolean} [params.https=false] - Whether to use HTTPS.
+ *
+ * @returns {Promise<Object>} A promise that resolves to the server instance.
+ * @throws {Error} Will throw an error if the server fails to start or is called with unexpected params.
+ *
+ * @example
+ * // Start a basic dev server
+ * const server = await startDevServer();
+ * console.log(`Server started at ${server.origin}`);
+ *
+ * @example
+ * // Start a server with custom params
+ * const server = await startDevServer({
+ *   port: 8080,
+ * });
  */
 const startDevServer = async ({
   sourceDirectoryUrl,

@@ -1,13 +1,13 @@
-System.register([__v__("/js/vendors.nomodule.js")], function (_export, _context) {
+System.register([__v__("/jsenv_plugin_preact_node_modules.js")], function (_export, _context) {
   "use strict";
 
   var useSelector, useDispatch, y, u, increment, decrement, counterValueSelector, App;
   return {
-    setters: [function (_buildVendorsJs) {
-      useSelector = _buildVendorsJs.useSelector;
-      useDispatch = _buildVendorsJs.useDispatch;
-      y = _buildVendorsJs.y;
-      u = _buildVendorsJs.u;
+    setters: [function (_buildJsenv_plugin_preact_node_modulesJs) {
+      useSelector = _buildJsenv_plugin_preact_node_modulesJs.useSelector;
+      useDispatch = _buildJsenv_plugin_preact_node_modulesJs.useDispatch;
+      y = _buildJsenv_plugin_preact_node_modulesJs.y;
+      u = _buildJsenv_plugin_preact_node_modulesJs.u;
     }],
     execute: function () {
       increment = () => {

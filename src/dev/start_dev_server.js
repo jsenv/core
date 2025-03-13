@@ -16,7 +16,7 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, readFileSync } from "node:fs";
-import { defaultRuntimeCompat } from "../build/build.js";
+import { defaultRuntimeCompat } from "../build/build_params.js";
 import { createEventEmitter } from "../helpers/event_emitter.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
@@ -33,12 +33,26 @@ import { parseUserAgentHeader } from "./user_agent.js";
 const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
 
 /**
- * Start a server for source files:
- * - cook source files according to jsenv plugins
- * - inject code to autoreload the browser when a file is modified
- * @param {Object} devServerParameters
- * @param {string|url} devServerParameters.sourceDirectoryUrl Root directory of the project
- * @return {Object} A dev server object
+ * Starts the development server.
+ *
+ * @param {Object} [params={}] - Configuration params for the dev server.
+ * @param {number} [params.port=3456] - Port number the server should listen on.
+ * @param {string} [params.hostname="localhost"] - Hostname to bind the server to.
+ * @param {boolean} [params.https=false] - Whether to use HTTPS.
+ *
+ * @returns {Promise<Object>} A promise that resolves to the server instance.
+ * @throws {Error} Will throw an error if the server fails to start or is called with unexpected params.
+ *
+ * @example
+ * // Start a basic dev server
+ * const server = await startDevServer();
+ * console.log(`Server started at ${server.origin}`);
+ *
+ * @example
+ * // Start a server with custom params
+ * const server = await startDevServer({
+ *   port: 8080,
+ * });
  */
 export const startDevServer = async ({
   sourceDirectoryUrl,

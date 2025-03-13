@@ -9,6 +9,10 @@ import {
 } from "@jsenv/js-module-fallback";
 import { injectQueryParams, urlToFilename } from "@jsenv/urls";
 
+const systemJsClientFileUrl = injectQueryParams(systemJsClientFileUrlDefault, {
+  as_js_classic: undefined,
+});
+
 export const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
   const isReferencingJsModule = (reference) => {
     if (
@@ -101,7 +105,7 @@ export const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
         outputFormat = "system";
         urlInfo.type = "js_classic";
         urlInfo.dependencies.foundSideEffectFile({
-          sideEffectFileUrl: systemJsClientFileUrlDefault,
+          sideEffectFileUrl: systemJsClientFileUrl,
           expectedType: "js_classic",
           line: 0,
           column: 0,

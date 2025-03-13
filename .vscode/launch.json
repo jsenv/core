@@ -2,7 +2,8 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "node",
+      // Run the current file with node command enabling inspector and favoring development conditions
+      "name": "node dev inspect",
       "type": "node",
       "request": "launch",
       "program": "${file}",
@@ -36,11 +37,11 @@
       ]
     },
     {
-      "name": "node watch",
+      // Run the current file with node command enabling inspector and favoring development conditions and reloading on file change
+      "name": "node dev inspect watch",
       "type": "node",
       "request": "launch",
       "program": "${file}",
-      // "runtimeVersion": "14.5.0",
       "runtimeArgs": [
         "--inspect",
         "--experimental-json-modules",
@@ -48,11 +49,38 @@
         "--trace-warnings",
         "--conditions=development",
         "--watch"
-        // "--preserve-symlinks",
-        // "--preserve-symlinks-main"
       ],
       "console": "integratedTerminal",
-      // "args": ["--coverage"],
+      "autoAttachChildProcesses": true,
+      "sourceMaps": true,
+      "smartStep": true,
+      "skipFiles": [
+        // force-array-multiline
+        // "node_modules/**",
+        "node_modules/@babel/template/**",
+        "node_modules/@jsenv/cancellation/**",
+        "node_modules/@rollup/**",
+        "node_modules/playwright/**",
+        "node_modules/playwright-chromium/**",
+        "node_modules/playwright-webkit/**",
+        "node_modules/playwright-firefox/**",
+        "node_modules/playwright-core/**",
+        "<node_internals>/**"
+      ]
+    },
+    {
+      // Run the current file with node command enabling inspector
+      "name": "node inspect",
+      "type": "node",
+      "request": "launch",
+      "program": "${file}",
+      "runtimeArgs": [
+        "--inspect",
+        "--experimental-json-modules",
+        "--experimental-import-meta-resolve",
+        "--trace-warnings"
+      ],
+      "console": "integratedTerminal",
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "smartStep": true,

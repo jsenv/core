@@ -41,9 +41,8 @@ import { getDirectoryWatchPatterns } from "../../helpers/watch_source_files.js";
 import { replacePlaceholders } from "../injections/jsenv_plugin_injections.js";
 import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";
 
-const htmlFileUrlForDirectory = new URL(
+const htmlFileUrlForDirectory = import.meta.resolve(
   "./client/directory_listing.html",
-  import.meta.url,
 );
 
 export const jsenvPluginDirectoryListing = ({

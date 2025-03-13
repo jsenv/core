@@ -3,7 +3,11 @@ import {
   systemJsClientFileUrlDefault,
 } from "@jsenv/js-module-fallback";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
-import { urlToFilename } from "@jsenv/urls";
+import { injectQueryParams, urlToFilename } from "@jsenv/urls";
+
+const systemJsClientFileUrl = injectQueryParams(systemJsClientFileUrlDefault, {
+  as_js_classic: undefined,
+});
 
 export const jsenvPluginAsJsClassic = () => {
   const markAsJsClassicProxy = (reference) => {
@@ -63,7 +67,7 @@ export const jsenvPluginAsJsClassic = () => {
         outputFormat = "system";
         urlInfo.type = "js_classic";
         urlInfo.dependencies.foundSideEffectFile({
-          sideEffectFileUrl: systemJsClientFileUrlDefault,
+          sideEffectFileUrl: systemJsClientFileUrl,
           expectedType: "js_classic",
           line: 0,
           column: 0,

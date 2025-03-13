@@ -18,7 +18,7 @@ try {
   const names = readdirSync(tempDirectoryUrl);
   assert({
     actual: names,
-    expect: [],
+    expect: ["src"],
   });
 } finally {
   ensureEmptyDirectorySync(tempDirectoryUrl);

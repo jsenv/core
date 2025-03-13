@@ -1,5 +1,5 @@
-import { nodePackageA, nodePackageB } from "./js/vendors.js";
-import { workspacePackageA, workspacePackageB } from "./js/workspaces.js";
+import { nodePackageA, nodePackageB } from "./test_node_modules.js";
+import { workspacePackageA, workspacePackageB } from "./test_packages.js";
 
 console.log(nodePackageA.toUpperCase());
 console.log(nodePackageB.toUpperCase());
