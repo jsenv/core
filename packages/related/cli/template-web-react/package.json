@@ -22,15 +22,15 @@
     "@babel/plugin-syntax-import-attributes": "7.26.0",
     "@babel/plugin-transform-react-jsx": "7.25.9",
     "@jsenv/assert": "4.4.4",
-    "@jsenv/core": "40.0.3",
-    "@jsenv/plugin-react": "1.7.2",
+    "@jsenv/core": "40.0.4",
+    "@jsenv/plugin-react": "1.7.3",
     "@jsenv/plugin-bundling": "2.8.2",
-    "@jsenv/plugin-minification": "1.6.0",
-    "@jsenv/eslint-config-relax": "1.4.2",
-    "@jsenv/test": "3.6.3",
-    "eslint": "9.18.0",
+    "@jsenv/plugin-minification": "1.6.2",
+    "@jsenv/eslint-config-relax": "1.4.4",
+    "@jsenv/test": "3.6.4",
+    "eslint": "9.22.0",
     "open": "10.1.0",
-    "@playwright/browser-chromium": "1.49.1",
-    "prettier": "3.4.2"
+    "@playwright/browser-chromium": "1.51.0",
+    "prettier": "3.5.3"
   }
 }
