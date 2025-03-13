@@ -1,9 +1,10 @@
 import { lookupPackageDirectory, readPackageAtOrNull } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
+import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
-import { fileSystemPathToUrl, isFileSystemPath } from "@jsenv/urls";
+import { isFileSystemPath } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 import { fileUrlConverter } from "../file_url_converter.js";
 
@@ -192,8 +193,9 @@ const rollupPluginJsenv = ({
   buildDirectoryUrl,
   graph,
   jsModuleUrlInfos,
-  sourcemaps,
 
+  runtimeCompat,
+  sourcemaps,
   include,
   preserveDynamicImport,
   augmentDynamicImportUrlSearchParams,
@@ -245,6 +247,94 @@ const rollupPluginJsenv = ({
       return fileUrlConverter.asFileUrl(lastModuleId);
     }
     return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
+  };
+
+  const packageSideEffectsCacheMap = new Map();
+  const readClosestPackageJsonSideEffects = (url) => {
+    const packageDirectoryUrl = lookupPackageDirectory(url);
+    if (!packageDirectoryUrl) {
+      return undefined;
+    }
+    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
+    if (fromCache) {
+      return fromCache.value;
+    }
+    try {
+      const packageFileContent = readFileSync(
+        new URL("./package.json", packageDirectoryUrl),
+        "utf8",
+      );
+      const packageJSON = JSON.parse(packageFileContent);
+      const value = packageJSON.sideEffects;
+      if (Array.isArray(value)) {
+        const sideEffectPatterns = {};
+        for (const v of value) {
+          sideEffectPatterns[v] = true;
+        }
+        const associations = URL_META.resolveAssociations(
+          { sideEffects: sideEffectPatterns },
+          packageDirectoryUrl,
+        );
+        const isMatching = (url) => {
+          const meta = URL_META.applyAssociations({ url, associations });
+          return meta.sideEffects || false;
+        };
+        packageSideEffectsCacheMap.set(packageDirectoryUrl, {
+          value: isMatching,
+        });
+      } else {
+        packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
+      }
+      return value;
+    } catch {
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
+      return undefined;
+    }
+  };
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+  const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
+  const inferSideEffectsFromResolvedUrl = (url) => {
+    if (url.startsWith("ignore:")) {
+      // console.log(`may have side effect: ${url}`);
+      // double ignore we must keep the import
+      return null;
+    }
+    if (isSpecifierForNodeBuiltin(url)) {
+      return false;
+    }
+    const closestPackageJsonSideEffects =
+      readClosestPackageJsonSideEffects(url);
+    if (closestPackageJsonSideEffects === undefined) {
+      // console.log(`may have side effect: ${url}`);
+      return null;
+    }
+    if (typeof closestPackageJsonSideEffects === "function") {
+      const haveSideEffect = closestPackageJsonSideEffects(url);
+      // if (haveSideEffect) {
+      //   console.log(`have side effect: ${url}`);
+      // }
+      return haveSideEffect;
+    }
+    return closestPackageJsonSideEffects;
+  };
+  const getModuleSideEffects = (url, importer) => {
+    if (!url.startsWith("ignore:")) {
+      return inferSideEffectsFromResolvedUrl(url);
+    }
+    url = url.slice("ignore:".length);
+    if (url.startsWith("file:")) {
+      return inferSideEffectsFromResolvedUrl(url);
+    }
+    try {
+      const result = applyNodeEsmResolution({
+        conditions: packageConditions,
+        parentUrl: importer,
+        specifier: url,
+      });
+      return inferSideEffectsFromResolvedUrl(result.url);
+    } catch {
+      return null;
+    }
   };
 
   return {
@@ -483,22 +573,43 @@ const rollupPluginJsenv = ({
       } else {
         url = new URL(specifier, importer).href;
       }
+
       if (!url.startsWith("file:")) {
-        return { id: url, external: true };
+        return {
+          id: url,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(url, importer),
+        };
       }
       if (!importCanBeBundled(url)) {
-        return { id: url, external: true };
+        return {
+          id: url,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(url, importer),
+        };
       }
       const urlInfo = graph.getUrlInfo(url);
       if (!urlInfo) {
         // happen when excluded by referenceAnalysis.include
-        return { id: url, external: true };
+        return {
+          id: url,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(url, importer),
+        };
       }
       if (url.startsWith("ignore:")) {
-        return { id: url, external: true };
+        return {
+          id: url,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(url, importer),
+        };
       }
       const filePath = fileUrlConverter.asFilePath(url);
-      return filePath;
+      return {
+        id: filePath,
+        external: false,
+        moduleSideEffects: getModuleSideEffects(url, importer),
+      };
     },
     async load(rollupId) {
       const fileUrl = fileUrlConverter.asFileUrl(rollupId);
@@ -526,81 +637,10 @@ const applyRollupPlugins = async ({
     rollup = rollupModule.rollup;
   }
 
-  const packageSideEffectsCacheMap = new Map();
-  const readClosestPackageJsonSideEffects = (url) => {
-    const packageDirectoryUrl = lookupPackageDirectory(url);
-    if (!packageDirectoryUrl) {
-      return undefined;
-    }
-    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
-    if (fromCache) {
-      return fromCache.value;
-    }
-    try {
-      const packageFileContent = readFileSync(
-        new URL("./package.json", packageDirectoryUrl),
-        "utf8",
-      );
-      const packageJSON = JSON.parse(packageFileContent);
-      const value = packageJSON.sideEffects;
-      if (Array.isArray(value)) {
-        const sideEffectPatterns = {};
-        for (const v of value) {
-          sideEffectPatterns[v] = true;
-        }
-        const associations = URL_META.resolveAssociations(
-          { sideEffects: sideEffectPatterns },
-          packageDirectoryUrl,
-        );
-        const isMatching = (url) => {
-          const meta = URL_META.applyAssociations({ url, associations });
-          return meta.sideEffects || false;
-        };
-        packageSideEffectsCacheMap.set(packageDirectoryUrl, {
-          value: isMatching,
-        });
-      } else {
-        packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
-      }
-      return value;
-    } catch {
-      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
-      return undefined;
-    }
-  };
-
   const rollupReturnValue = await rollup({
     ...rollupInput,
     treeshake: {
       ...rollupInput.treeshake,
-      moduleSideEffects: (id, external) => {
-        if (id.startsWith("ignore:node:")) {
-          return false;
-        }
-        if (isSpecifierForNodeBuiltin(id)) {
-          return false;
-        }
-        if (id.startsWith("ignore:")) {
-          return null;
-        }
-        const url = id.startsWith("file:") ? id : fileSystemPathToUrl(id);
-        const closestPackageJsonSideEffects =
-          readClosestPackageJsonSideEffects(url);
-        if (closestPackageJsonSideEffects !== undefined) {
-          if (typeof closestPackageJsonSideEffects === "function") {
-            return closestPackageJsonSideEffects(url);
-          }
-          return closestPackageJsonSideEffects;
-        }
-        const moduleSideEffects = rollupInput.treeshake?.moduleSideEffects;
-        if (moduleSideEffects) {
-          if (typeof moduleSideEffects === "function") {
-            return moduleSideEffects(id, external);
-          }
-          return moduleSideEffects;
-        }
-        return null;
-      },
     },
     plugins: rollupPlugins,
   });

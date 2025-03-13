@@ -2,7 +2,6 @@ import { applyBabelPlugins, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtm
 import process$1 from "node:process";
 import os from "node:os";
 import tty from "node:tty";
-import "string-width";
 import { createRequire } from "node:module";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
