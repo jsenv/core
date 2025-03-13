@@ -6678,7 +6678,7 @@ const getImportAttributes = (importNode) => {
 };
 
 const regeneratorRuntimeClientFileUrl = new URL(
-  "./js/regenerator_runtime.js",
+  "./client/regenerator_runtime/regenerator_runtime.js",
   import.meta.url,
 ).href;
 

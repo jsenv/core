@@ -315,7 +315,11 @@ build ${entryPointKeys.length} entry points`);
           };
         },
         buildStart: async (params, index) => {
-          const result = await build(params);
+          const result = await build({
+            ...params,
+            signal,
+            handleSIGINT: false,
+          });
           subbuildResults[index] = result;
           return result;
         },

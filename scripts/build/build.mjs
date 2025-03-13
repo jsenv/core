@@ -55,6 +55,9 @@ await build({
     clientFileSubbuild(
       "packages/internal/plugin-transpilation/src/babel/new_stylesheet/client/new_stylesheet.js",
     ),
+    clientFileSubbuild(
+      "packages/internal/plugin-transpilation/src/babel/regenerator_runtime/client/regenerator_runtime.js",
+    ),
   ],
   ignore: {
     "file://**/node_modules/": true,
