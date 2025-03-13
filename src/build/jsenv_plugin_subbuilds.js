@@ -60,11 +60,10 @@ export const jsenvPluginSubbuilds = (
       },
       fetchUrlContent: async (urlInfo) => {
         if (!entryPointBuildUrlSet.has(urlInfo.url)) {
-          return null;
+          return;
         }
         await buildPromise;
         urlInfo.typeHint = "asset"; // this ensure the rest of jsenv do not scan or modify the content of this file
-        return null;
       },
     };
   });
