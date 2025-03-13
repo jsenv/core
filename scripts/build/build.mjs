@@ -27,22 +27,33 @@ const clientFileSubbuild = (clientFileRelativeUrl, options = {}) => {
 };
 
 await build({
-  sourceDirectoryUrl: import.meta.resolve("../../src/"),
+  sourceDirectoryUrl: import.meta.resolve("../../"),
   buildDirectoryUrl: import.meta.resolve("../../dist/"),
   entryPoints: {
-    "./main.js": "jsenv_core.js",
+    "./src/main.js": "jsenv_core.js",
   },
   subbuilds: [
-    clientFileSubbuild("plugins/autoreload/client/autoreload.js"),
+    clientFileSubbuild("src/plugins/autoreload/client/autoreload.js"),
     clientFileSubbuild(
-      "plugins/html_syntax_error_fallback/client/html_syntax_error.html",
+      "src/plugins/html_syntax_error_fallback/client/html_syntax_error.html",
     ),
-    clientFileSubbuild("plugins/import_meta_hot/client/import_meta_hot.js"),
-    clientFileSubbuild("plugins/protocol_file/client/directory_listing.html", {
-      plugins: [jsenvPluginPreact({})],
-    }),
-    clientFileSubbuild("plugins/ribbon/client/ribbon.js"),
-    clientFileSubbuild("plugins/server_events/client/server_events_client.js"),
+    clientFileSubbuild("src/plugins/import_meta_hot/client/import_meta_hot.js"),
+    clientFileSubbuild(
+      "src/plugins/protocol_file/client/directory_listing.html",
+      {
+        plugins: [jsenvPluginPreact({})],
+      },
+    ),
+    clientFileSubbuild("src/plugins/ribbon/client/ribbon.js"),
+    clientFileSubbuild(
+      "src/plugins/server_events/client/server_events_client.js",
+    ),
+    clientFileSubbuild(
+      "src/plugins/server_events/client/server_events_client.js",
+    ),
+    clientFileSubbuild(
+      "packages/internal/plugin-transpilation/src/babel/new_stylesheet/client/new_stylesheet.js",
+    ),
   ],
   ignore: {
     "file://**/node_modules/": true,

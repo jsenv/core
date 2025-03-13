@@ -162,7 +162,7 @@ const watchSourceFiles = (
   return watch();
 };
 
-const jsenvCoreDirectoryUrl = new URL("../", import.meta.url);
+const jsenvCoreDirectoryUrl = new URL("./", import.meta.url);
 
 const createResolveUrlError = ({
   pluginController,
@@ -7754,7 +7754,7 @@ const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html",
 }) => {
-  const ribbonClientFileUrl = new URL("./client/ribbon/ribbon.js", import.meta.url);
+  const ribbonClientFileUrl = import.meta.resolve("./client/ribbon/ribbon.js");
   const associations = URL_META.resolveAssociations(
     {
       ribbon: {

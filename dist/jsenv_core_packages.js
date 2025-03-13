@@ -6520,7 +6520,7 @@ const injectAstAfterImport = (programPath, ast) => {
 };
 
 const newStylesheetClientFileUrl = new URL(
-  "./js/new_stylesheet.js",
+  "./client/new_stylesheet/new_stylesheet.js",
   import.meta.url,
 ).href;
 
