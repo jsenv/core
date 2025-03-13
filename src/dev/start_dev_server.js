@@ -35,13 +35,13 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
 /**
  * Starts the development server.
  *
- * @param {Object} [options={}] - Configuration options for the dev server.
- * @param {number} [options.port=3456] - Port number the server should listen on.
- * @param {string} [options.hostname="localhost"] - Hostname to bind the server to.
- * @param {boolean} [options.https=false] - Whether to use HTTPS.
+ * @param {Object} [params={}] - Configuration params for the dev server.
+ * @param {number} [params.port=3456] - Port number the server should listen on.
+ * @param {string} [params.hostname="localhost"] - Hostname to bind the server to.
+ * @param {boolean} [params.https=false] - Whether to use HTTPS.
  *
  * @returns {Promise<Object>} A promise that resolves to the server instance.
- * @throws {Error} Will throw an error if the server fails to start or is called with unexpected options.
+ * @throws {Error} Will throw an error if the server fails to start or is called with unexpected params.
  *
  * @example
  * // Start a basic dev server
@@ -49,7 +49,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * console.log(`Server started at ${server.origin}`);
  *
  * @example
- * // Start a server with custom options
+ * // Start a server with custom params
  * const server = await startDevServer({
  *   port: 8080,
  * });

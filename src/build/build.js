@@ -65,37 +65,38 @@ const logsDefault = {
 };
 
 /**
- * Generate an optimized version of source files into a directory
- * @param {Object} buildParameters
- * @param {string|url} buildParameters.sourceDirectoryUrl
+ * Generate an optimized version of source files into a directory.
+ *
+ * @param {Object} params
+ * @param {string|url} params.sourceDirectoryUrl
  *        Directory containing source files
- * @param {string|url} buildParameters.buildDirectoryUrl
+ * @param {string|url} params.buildDirectoryUrl
  *        Directory where optimized files will be written
- * @param {object} buildParameters.entryPoints
+ * @param {object} params.entryPoints
  *        Object where keys are paths to source files and values are their future name in the build directory.
  *        Keys are relative to sourceDirectoryUrl
- * @param {object} buildParameters.runtimeCompat
+ * @param {object} params.runtimeCompat
  *        Code generated will be compatible with these runtimes
- * @param {string} [buildParameters.assetsDirectory=""]
+ * @param {string} [params.assetsDirectory=""]
  *        Directory where asset files will be written
- * @param {string|url} [buildParameters.base=""]
+ * @param {string|url} [params.base=""]
  *        Urls in build file contents will be prefixed with this string
- * @param {boolean|object} [buildParameters.bundling=true]
+ * @param {boolean|object} [params.bundling=true]
  *        Reduce number of files written in the build directory
- *  @param {boolean|object} [buildParameters.minification=true]
+ *  @param {boolean|object} [params.minification=true]
  *        Minify the content of files written into the build directory
- * @param {boolean} [buildParameters.versioning=true]
+ * @param {boolean} [params.versioning=true]
  *        Use versioning on files written in the build directory
- * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
+ * @param {('search_param'|'filename')} [params.versioningMethod="search_param"]
  *        Controls how url are versioned in the build directory
- * @param {('none'|'inline'|'file'|'programmatic')} [buildParameters.sourcemaps="none"]
+ * @param {('none'|'inline'|'file'|'programmatic')} [params.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
- * @param {('error'|'copy'|'preserve')|function} [buildParameters.directoryReferenceEffect="error"]
+ * @param {('error'|'copy'|'preserve')|function} [params.directoryReferenceEffect="error"]
  *        What to do when a reference leads to a directory on the filesystem
- * @return {Object} buildReturnValue
- * @return {Object} buildReturnValue.buildInlineContents
+ * @return {Promise<Object>} buildReturnValue
+ * @return {Promise<Object>} buildReturnValue.buildInlineContents
  *        Contains content that is inline into build files
- * @return {Object} buildReturnValue.buildManifest
+ * @return {Promise<Object>} buildReturnValue.buildManifest
  *        Map build file paths without versioning to versioned file paths
  */
 export const build = async ({
