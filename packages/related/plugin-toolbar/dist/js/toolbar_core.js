@@ -1,4 +1,4 @@
-import { d, E, w } from "./jsenv_plugin_toolbar_node_modules.js";
+import { d, E, w } from "../jsenv_plugin_toolbar_node_modules.js";
 
 const paramsFromParentWindow = {};
 const searchParams = new URLSearchParams(window.location.search);

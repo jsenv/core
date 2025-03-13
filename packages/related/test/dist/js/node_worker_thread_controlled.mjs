@@ -3,7 +3,7 @@ import { memoryUsage } from "node:process";
 import { setFlagsFromString } from "node:v8";
 import { runInNewContext } from "node:vm";
 import { parentPort } from "node:worker_threads";
-import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
+import { executeUsingDynamicImport } from "../execute_using_dynamic_import.js";
 import "node:fs";
 import "node:perf_hooks";
 import "node:inspector";

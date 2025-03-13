@@ -1,4 +1,4 @@
-import { createSupportsColor, isUnicodeSupported, clearTerminal, eraseLines } from "./js/vendors.js";
+import { createSupportsColor, isUnicodeSupported, clearTerminal, eraseLines } from "./jsenv_humanize_node_modules.js";
 import stringWidth from "string-width";
 import "node:process";
 import "node:os";
