@@ -22,7 +22,7 @@ await build({
       },
       plugins: [jsenvPluginPreact({})],
       runtimeCompat: {
-        chrome: "80",
+        chrome: "89",
       },
     },
   ],
