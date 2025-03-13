@@ -2637,7 +2637,7 @@ const shouldHandleSourcemap = (urlInfo) => {
 };
 
 const inlineContentClientFileUrl = new URL(
-  "./js/inline_content.js",
+  "./client/inline_content/inline_content.js",
   import.meta.url,
 ).href;
 

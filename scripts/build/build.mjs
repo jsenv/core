@@ -33,6 +33,7 @@ await build({
     "./src/main.js": "jsenv_core.js",
   },
   subbuilds: [
+    clientFileSubbuild("src/kitchen/client/inline_content.js"),
     clientFileSubbuild("src/plugins/autoreload/client/autoreload.js"),
     clientFileSubbuild(
       "src/plugins/html_syntax_error_fallback/client/html_syntax_error.html",
