@@ -6,9 +6,9 @@ function g(n,t){for(var e in t)n[e]=t[e];return n}function E(n,t){for(var e in n
 
 var f=0;function u(e,t,n,o,i,u){t||(t={});var a,c,p=t;if("ref"in p)for(c in p={},t)"ref"==c?a=t[c]:p[c]=t[c];var l={type:e,props:p,key:n,ref:a,__k:null,__:null,__b:0,__e:null,__c:null,constructor:void 0,__v:--f,__i:-1,__u:0,__source:i,__self:u};if("function"==typeof e&&(a=e.defaultProps))for(c in a) void 0===p[c]&&(p[c]=a[c]);return l$1.vnode&&l$1.vnode(l),l}
 
-const directoryIconUrl = new URL("/directory_listing/other/dir.png", import.meta.url).href;
-const fileIconUrl = new URL("/directory_listing/other/file.png", import.meta.url).href;
-const homeIconUrl = new URL("/directory_listing/other/home.svg#root", import.meta.url).href;
+const directoryIconUrl = new URL("/client/directory_listing/other/dir.png", import.meta.url).href;
+const fileIconUrl = new URL("/client/directory_listing/other/file.png", import.meta.url).href;
+const homeIconUrl = new URL("/client/directory_listing/other/home.svg#root", import.meta.url).href;
 let {
   navItems,
   mainFilePath,

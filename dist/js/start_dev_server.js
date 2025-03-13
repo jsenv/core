@@ -52,7 +52,7 @@ const WEB_URL_CONVERTER = {
 
 
 const serverEventsClientFileUrl = new URL(
-  "./server_events_client.js",
+  "../client/server_events_client/server_events_client.js",
   import.meta.url,
 ).href;
 

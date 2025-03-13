@@ -5,9 +5,8 @@ import { readFileSync } from "node:fs";
 import { jsenvCoreDirectoryUrl } from "../../jsenv_core_directory_url.js";
 
 export const jsenvPluginHtmlSyntaxErrorFallback = () => {
-  const htmlSyntaxErrorFileUrl = new URL(
+  const htmlSyntaxErrorFileUrl = import.meta.resolve(
     "./client/html_syntax_error.html",
-    import.meta.url,
   );
 
   return {

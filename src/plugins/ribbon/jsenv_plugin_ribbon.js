@@ -6,7 +6,7 @@ export const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html",
 }) => {
-  const ribbonClientFileUrl = new URL("./client/ribbon.js", import.meta.url);
+  const ribbonClientFileUrl = import.meta.resolve("./client/ribbon.js");
   const associations = URL_META.resolveAssociations(
     {
       ribbon: {

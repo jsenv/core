@@ -1,6 +1,30 @@
 import { build } from "@jsenv/core/src/build/build.js";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+import { urlToBasename, urlToFilename } from "@jsenv/urls";
+
+const clientFileSubbuild = (clientFileRelativeUrl, options = {}) => {
+  const clientFileUrl = import.meta.resolve(
+    `../../src/${clientFileRelativeUrl}`,
+  );
+  const clientFilebasename = urlToBasename(clientFileUrl);
+  const clientFilename = urlToFilename(clientFileUrl);
+  return {
+    buildDirectoryUrl: import.meta.resolve(
+      `../../dist/client/${clientFilebasename}/`,
+    ),
+    entryPoints: {
+      [`./${clientFileRelativeUrl}`]: clientFilename,
+    },
+    runtimeCompat: { chrome: "89" },
+    bundling: {
+      js_module: {
+        chunks: false,
+      },
+    },
+    ...options,
+  };
+};
 
 await build({
   sourceDirectoryUrl: import.meta.resolve("../../src/"),
@@ -9,22 +33,16 @@ await build({
     "./main.js": "jsenv_core.js",
   },
   subbuilds: [
-    {
-      buildDirectoryUrl: import.meta.resolve("../../dist/directory_listing/"),
-      entryPoints: {
-        "./plugins/protocol_file/client/directory_listing.html":
-          "directory_listing.html",
-      },
-      bundling: {
-        js_module: {
-          chunks: false,
-        },
-      },
+    clientFileSubbuild("plugins/autoreload/client/autoreload.js"),
+    clientFileSubbuild(
+      "plugins/html_syntax_error_fallback/client/html_syntax_error.html",
+    ),
+    clientFileSubbuild("plugins/import_meta_hot/client/import_meta_hot.js"),
+    clientFileSubbuild("plugins/protocol_file/client/directory_listing.html", {
       plugins: [jsenvPluginPreact({})],
-      runtimeCompat: {
-        chrome: "89",
-      },
-    },
+    }),
+    clientFileSubbuild("plugins/ribbon/client/ribbon.js"),
+    clientFileSubbuild("plugins/server_events/client/server_events_client.js"),
   ],
   ignore: {
     "file://**/node_modules/": true,

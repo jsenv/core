@@ -1,5 +1,48 @@
-import { parseSrcSet, stringifySrcSet } from "@jsenv/ast/src/html/html_src_set.js";
-import { urlHotMetas, dispatchBeforeFullReload, dispatchBeforePartialReload, dispatchAfterPartialReload, dispatchBeforePrune } from "./import_meta_hot.js";
+const parseSrcSet = (srcset) => {
+  const srcCandidates = [];
+  srcset.split(",").forEach((set) => {
+    const [specifier, descriptor] = set.trim().split(" ");
+    srcCandidates.push({
+      specifier,
+      descriptor,
+    });
+  });
+  return srcCandidates;
+};
+
+const stringifySrcSet = (srcCandidates) => {
+  const srcset = srcCandidates
+    .map(({ specifier, descriptor }) => `${specifier} ${descriptor}`)
+    .join(", ");
+  return srcset;
+};
+
+/*
+ * https://vitejs.dev/guide/api-hmr.html#hot-accept-deps-cb
+ * https://modern-web.dev/docs/dev-server/plugins/hmr/
+ */
+
+const urlHotMetas = {};
+
+const createEvent = () => {
+  const callbackSet = new Set();
+  const addCallback = (callback) => {
+    callbackSet.add(callback);
+    return () => {
+      callbackSet.delete(callback);
+    };
+  };
+  const dispatch = () => {
+    for (const callback of callbackSet) {
+      callback();
+    }
+  };
+  return [{ addCallback }, dispatch];
+};
+const [beforePartialReload, dispatchBeforePartialReload] = createEvent();
+const [afterPartialReload, dispatchAfterPartialReload] = createEvent();
+const [beforeFullReload, dispatchBeforeFullReload] = createEvent();
+const [beforePrune, dispatchBeforePrune] = createEvent();
 
 const initAutoreload = ({ mainFilePath }) => {
   const reloader = {

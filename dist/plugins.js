@@ -514,9 +514,11 @@ const assertFetchedContentCompliance = ({ urlInfo, content }) => {
   }
   const { expectedType } = urlInfo.firstReference;
   if (expectedType && urlInfo.type !== expectedType) {
-    throw new Error(
-      `type must be "${expectedType}", got "${urlInfo.type}" on ${urlInfo.url}`,
-    );
+    if (urlInfo.type === "asset" && urlInfo.context.build) ; else {
+      throw new Error(
+        `type must be "${expectedType}", got "${urlInfo.type}" on ${urlInfo.url}`,
+      );
+    }
   }
   const { integrity } = urlInfo.firstReference;
   if (integrity) {
@@ -3333,9 +3335,8 @@ const inferUrlInfoType = (urlInfo) => {
 };
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
-  const htmlSyntaxErrorFileUrl = new URL(
-    "./html/html_syntax_error.html",
-    import.meta.url,
+  const htmlSyntaxErrorFileUrl = import.meta.resolve(
+    "./client/html_syntax_error/html_syntax_error.html",
   );
 
   return {
@@ -5445,7 +5446,7 @@ const FILE_AND_SERVER_URLS_CONVERTER = {
 
 
 const htmlFileUrlForDirectory = import.meta.resolve(
-  "./directory_listing/directory_listing.html",
+  "./client/directory_listing/directory_listing.html",
 );
 
 const jsenvPluginDirectoryListing = ({
@@ -7121,10 +7122,9 @@ const htmlNodeCanHotReload = (node) => {
 };
 
 const jsenvPluginImportMetaHot = () => {
-  const importMetaHotClientFileUrl = new URL(
-    "./js/import_meta_hot.js",
-    import.meta.url,
-  ).href;
+  const importMetaHotClientFileUrl = import.meta.resolve(
+    "./client/import_meta_hot/import_meta_hot.js",
+  );
 
   return {
     name: "jsenv:import_meta_hot",
@@ -7235,10 +7235,7 @@ import.meta.hot = createImportMetaHot(import.meta.url);
 };
 
 const jsenvPluginAutoreloadClient = () => {
-  const autoreloadClientFileUrl = new URL(
-    "./js/autoreload.js",
-    import.meta.url,
-  ).href;
+  const autoreloadClientFileUrl = import.meta.resolve("./client/autoreload/autoreload.js");
 
   return {
     name: "jsenv:autoreload_client",
@@ -7757,7 +7754,7 @@ const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html",
 }) => {
-  const ribbonClientFileUrl = new URL("./js/ribbon.js", import.meta.url);
+  const ribbonClientFileUrl = new URL("./client/ribbon/ribbon.js", import.meta.url);
   const associations = URL_META.resolveAssociations(
     {
       ribbon: {
