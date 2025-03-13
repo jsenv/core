@@ -3,9 +3,6 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = async () => {
   await build({
-    logs: {
-      disabled: true,
-    },
     sourceDirectoryUrl: import.meta.resolve("./source/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: { "./index.js": "index.js" },

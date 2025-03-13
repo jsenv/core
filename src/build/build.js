@@ -29,7 +29,7 @@ import { createLogger, createTaskLog } from "@jsenv/humanize";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import { urlIsInsideOf } from "@jsenv/urls";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
@@ -43,28 +43,14 @@ import {
 } from "../plugins/plugin_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
+import {
+  defaultRuntimeCompat,
+  getDefaultBase,
+  logsDefault,
+} from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
-
-// default runtimeCompat corresponds to
-// "we can keep <script type="module"> intact":
-// so script_type_module + dynamic_import + import_meta
-export const defaultRuntimeCompat = {
-  // android: "8",
-  chrome: "64",
-  edge: "79",
-  firefox: "67",
-  ios: "12",
-  opera: "51",
-  safari: "11.3",
-  samsung: "9.2",
-};
-const logsDefault = {
-  level: "info",
-  disabled: false,
-  animation: true,
-};
-const getDefaultBase = (runtimeCompat) => (runtimeCompat.node ? "./" : "/");
+import { jsenvPluginSubbuilds } from "./jsenv_plugin_subbuilds.js";
 
 /**
  * Generate an optimized version of source files into a directory.
@@ -310,80 +296,28 @@ build ${entryPointKeys.length} entry points`);
     });
 
     let subbuildResults = [];
-    const jsenvPluginSubbuilds = (subBuildParamsArray) => {
-      if (subBuildParamsArray.length === 0) {
-        return [];
-      }
-      return subBuildParamsArray.map((subBuildParams, index) => {
-        const defaultChildBuildParams = {
-          logs: {
-            level: "warn",
-            disabled: true,
-          },
+
+    const rawPluginStore = createPluginStore([
+      ...jsenvPluginSubbuilds(subbuilds, {
+        parentBuildParams: {
           sourceDirectoryUrl,
           buildDirectoryUrl,
-        };
-        const subBuildDirectoryUrl = subBuildParams.buildDirectoryUrl;
-        if (subBuildDirectoryUrl) {
-          const subBuildRelativeUrl = urlToRelativeUrl(
-            subBuildDirectoryUrl,
-            buildDirectoryUrl,
-          );
-          const subbuildRuntimeCompat =
-            subBuildParams.runtimeCompat ||
-            defaultChildBuildParams.runtimeCompat ||
-            defaultRuntimeCompat;
-          const subbuildBase =
-            subBuildParams.base || getDefaultBase(subbuildRuntimeCompat);
-          defaultChildBuildParams.base = `${subbuildBase}${subBuildRelativeUrl}`;
+          bundling,
+          minification,
+          runtimeCompat,
+        },
+        onCustomBuildDirectory: (subBuildRelativeUrl) => {
           buildDirectoryCleanPatterns = {
             ...buildDirectoryCleanPatterns,
             [`${subBuildRelativeUrl}**/*`]: false,
           };
-        }
-        const childBuildParams = {
-          ...defaultChildBuildParams,
-          ...subBuildParams,
-        };
-        const buildPromise = build(childBuildParams);
-        const entryPointBuildUrlMap = new Map();
-        const entryPointSourceUrlSet = new Set();
-        const entryPointBuildUrlSet = new Set();
-        for (const key of Object.keys(entryPoints)) {
-          const entryPointUrl = new URL(key, sourceDirectoryUrl).href;
-          const entryPointBuildUrl = new URL(
-            entryPoints[key],
-            buildDirectoryUrl,
-          ).href;
-          entryPointBuildUrlMap.set(entryPointUrl, entryPointBuildUrl);
-          entryPointSourceUrlSet.add(entryPointUrl);
-          entryPointBuildUrlSet.add(entryPointBuildUrl);
-        }
-
-        return {
-          name: `jsenv:subbuild_${index}`,
-          redirectReference: (reference) => {
-            const entryPointBuildUrl = entryPointBuildUrlMap.get(reference.url);
-            if (!entryPointBuildUrl) {
-              return null;
-            }
-            return entryPointBuildUrl;
-          },
-          fetchUrlContent: async (urlInfo) => {
-            if (!entryPointBuildUrlSet.has(urlInfo.url)) {
-              return null;
-            }
-            const result = await buildPromise;
-            subbuildResults[index] = result;
-            urlInfo.type = "asset";
-            return null;
-          },
-        };
-      });
-    };
-
-    const rawPluginStore = createPluginStore([
-      ...jsenvPluginSubbuilds(subbuilds),
+        },
+        buildStart: async (params, index) => {
+          const result = await build(params);
+          subbuildResults[index] = result;
+          return result;
+        },
+      }),
       ...plugins,
       ...(bundling ? [jsenvPluginBundling(bundling)] : []),
       ...(minification ? [jsenvPluginMinification(minification)] : []),
