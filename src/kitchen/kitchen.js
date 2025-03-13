@@ -352,7 +352,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       urlInfo.status = status;
       urlInfo.contentType = contentType;
       urlInfo.headers = headers;
-      urlInfo.type = urlInfo.type || type || inferUrlInfoType(urlInfo);
+      urlInfo.type = type || inferUrlInfoType(urlInfo);
       urlInfo.subtype =
         subtype ||
         urlInfo.firstReference.expectedSubtype ||
@@ -681,6 +681,9 @@ const inferUrlInfoType = (urlInfo) => {
   const { type, typeHint } = urlInfo;
   const mediaType = CONTENT_TYPE.asMediaType(urlInfo.contentType);
   const { expectedType } = urlInfo.firstReference;
+  if (typeHint === "asset") {
+    return "asset";
+  }
   if (type === "sourcemap" || typeHint === "sourcemap") {
     return "sourcemap";
   }
