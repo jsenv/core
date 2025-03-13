@@ -1,2 +1,14 @@
 export { INJECTIONS, build, startBuildServer, startDevServer } from "./js/main.js";
 import "@jsenv/sourcemap";
+import "./js/jsenv_core_packages.js";
+import "node:path";
+import "node:fs";
+import "node:crypto";
+import "node:url";
+import "node:process";
+import "node:os";
+import "node:tty";
+import "string-width";
+import "node:module";
+import "@jsenv/ast";
+import "@jsenv/js-module-fallback";

@@ -66,11 +66,6 @@ await build({
     }),
     jsenvPluginPreact({}),
   ],
-  bundling: {
-    js_module: {
-      chunks: null,
-    },
-  },
   // for debug
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
 });
