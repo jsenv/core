@@ -1,4 +1,4 @@
-import { bar } from "./vendors.js";
+import { bar } from "../test_node_modules.js";
 
 /* eslint-disable */
 // construct-style-sheets-polyfill@3.1.0

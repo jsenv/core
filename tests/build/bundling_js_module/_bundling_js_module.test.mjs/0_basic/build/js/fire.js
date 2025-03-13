@@ -1,4 +1,4 @@
-import { logElementName } from "/js/util.js?v=87f93610";
+import { logElementName } from "/util.js?v=87f93610";
 
 const name = "fire";
 

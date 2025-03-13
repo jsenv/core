@@ -1,4 +1,4 @@
-import "./jsenv_core_packages.js";
+import "../jsenv_core_packages.js";
 
 /* eslint-env browser,node */
 
