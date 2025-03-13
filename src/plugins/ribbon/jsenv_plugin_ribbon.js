@@ -45,7 +45,7 @@ export const jsenvPluginRibbon = ({
           type: "script",
           subtype: "js_module",
           expectedType: "js_module",
-          specifier: ribbonClientFileUrl.href,
+          specifier: ribbonClientFileUrl,
         });
         injectJsenvScript(htmlAst, {
           type: "module",
