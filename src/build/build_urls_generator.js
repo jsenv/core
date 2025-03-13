@@ -1,5 +1,5 @@
 import { ANSI } from "@jsenv/humanize";
-import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import { urlIsInsideOf, urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 
 export const createBuildUrlsGenerator = ({
   logger,
@@ -32,6 +32,10 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     const buildUrlFromCache = buildUrlCache.get(url);
     if (buildUrlFromCache) {
       return buildUrlFromCache;
+    }
+    if (urlIsInsideOf(url, buildDirectoryUrl)) {
+      buildUrlCache.set(url, url);
+      return url;
     }
     if (
       urlInfo.type === "directory" ||

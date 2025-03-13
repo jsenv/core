@@ -285,7 +285,6 @@ build ${entryPointKeys.length} entry points`);
         break;
       }
     }
-    const rawRedirections = new Map();
     const entryUrls = [];
     const contextSharedDuringBuild = {
       buildStep: "craft",
@@ -315,17 +314,6 @@ build ${entryPointKeys.length} entry points`);
       ...plugins,
       ...(bundling ? [jsenvPluginBundling(bundling)] : []),
       ...(minification ? [jsenvPluginMinification(minification)] : []),
-      {
-        appliesDuring: "build",
-        fetchUrlContent: (urlInfo) => {
-          if (urlInfo.firstReference.original) {
-            rawRedirections.set(
-              urlInfo.firstReference.original.url,
-              urlInfo.firstReference.url,
-            );
-          }
-        },
-      },
       ...getCorePlugins({
         rootDirectoryUrl: sourceDirectoryUrl,
         runtimeCompat,
