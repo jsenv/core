@@ -22,7 +22,10 @@ export { findAncestorDirectoryUrl } from "./path_and_url/find_ancestor_directory
 // All other exports are agnostic and focused on the filesystem only
 // "lookupPackageDirectory" is an exception because it related to node module resolution
 // but it's very useful and it's not a problem to have it here (and useful to share this logic)
-export { lookupPackageDirectory } from "./path_and_url/lookup_package_directory.js";
+export {
+  lookupPackageDirectory,
+  readPackageAtOrNull,
+} from "./path_and_url/lookup_package_directory.js";
 
 // list
 export { collectDirectoryMatchReport } from "./list/collect_directory_match_report.js";
