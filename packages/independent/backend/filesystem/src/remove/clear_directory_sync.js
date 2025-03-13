@@ -106,6 +106,7 @@ export const clearDirectorySync = (
         visitDirectory(subDirectoryUrl);
         continue;
       }
+
       const meta = URL_META.applyAssociations({
         url: entryUrl,
         associations,
