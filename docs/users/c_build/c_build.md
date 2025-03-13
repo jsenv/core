@@ -175,8 +175,8 @@ _scripts/build.mjs_:
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./index.html": "index.html",
   },
@@ -221,8 +221,8 @@ You can adjust browser support using `runtimeCompat`:
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl:new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./main.html": "index.html",
   },
@@ -292,8 +292,8 @@ These can be HTML, CSS, JS, etc. The values define the name of the output files 
 import { build } from "@jsenv/build";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./index.html": "index_after_build.html",
     "./about.html": "about_after_build.html",
@@ -320,8 +320,8 @@ You can organize assets into a dedicated directory by using `assetsDirectory`:
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./index.html": "index.html",
   },
@@ -359,8 +359,8 @@ You can configure which files to bundle:
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./index.html": "index.html",
   },
@@ -381,8 +381,8 @@ Use the `chunks` parameter to assign source files to specific build files. For i
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./index.html": "index.html",
   },
@@ -420,8 +420,8 @@ You can configure which files to minify:
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./index.html": "index.html",
   },
@@ -468,8 +468,8 @@ You can switch to filename versioning:
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./main.html": "index.html",
   },
@@ -490,8 +490,8 @@ Or disable versioning entirely:
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./main.html": "index.html",
   },
@@ -514,8 +514,8 @@ You can configure the base URL for all files in the build:
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./main.html": "index.html",
   },

@@ -135,7 +135,7 @@ _scripts/test.mjs_:
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
+  rootDirectoryUrl: import.meta.resolve("../"),
   testPlan: {
     "./src/**/*.test.mjs": {
       node: {
@@ -207,7 +207,7 @@ The following code executes test files twice:
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 const testPlanReport = await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
+  rootDirectoryUrl: import.meta.resolve("../"),
   testPlan: {
     "./src/**/*.test.mjs": {
       node_1: {
@@ -240,7 +240,7 @@ If you need to execute a test relying on `process.env` directly with the `node` 
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 const testPlanReport = await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
+  rootDirectoryUrl: import.meta.resolve("../"),
   testPlan: {
     "./src/**/*.test.mjs": {
       node: {
@@ -270,7 +270,7 @@ If you need to execute a test relying on command line options directly with the 
 import { executeTestPlan, nodeChildProcess } from "@jsenv/test";
 
 await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
+  rootDirectoryUrl: import.meta.resolve("../"),
   testPlan: {
     "./src/**/*.test.mjs": {
       node: {
@@ -310,7 +310,7 @@ import {
 } from "@jsenv/test"
 
 const testPlanReport = await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
+  rootDirectoryUrl: import.meta.resolve("../"),
   testPlan: {
     "./src/**/*.test.mjs": {
       node: {

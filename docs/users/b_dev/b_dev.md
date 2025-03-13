@@ -157,7 +157,7 @@ _scripts/dev.mjs_:
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
 });
 ```
 
@@ -291,7 +291,7 @@ The code below shows how to disable the ribbon:
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   ribbon: false, // Disables the ribbon
 });
 ```
@@ -330,7 +330,7 @@ Error overlay can be disabled as follow:
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   supervisor: {
     errorOverlay: false, // Disables the error overlay
   },
@@ -371,7 +371,7 @@ The following would change the files being watched:
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   sourceFilesConfig: {
     "./**/*.js": true,
     "./**/*.css": false,
@@ -385,7 +385,7 @@ await startDevServer({
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   clientAutoreload: false,
 });
 ```
@@ -399,7 +399,7 @@ import { startDevServer } from "@jsenv/core";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   plugins: [jsenvPluginReact()],
 });
 ```
@@ -426,7 +426,7 @@ The dev server defaults to port 3456. Change it as needed:
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   port: 8888,
 });
 ```
@@ -439,7 +439,7 @@ The dev server can use HTTPS with a certificate and private key:
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   https: {
     certificate: "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
     privateKey:
