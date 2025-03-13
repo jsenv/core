@@ -1,10 +1,10 @@
-# [0_basic](../../subbuild_import_meta_resolve.test.mjs#L30)
+# [1_with_bundling](../../subbuild_import_meta_resolve.test.mjs#L32)
 
 ```js
-run({ bundling: false })
+run({ bundling: true })
 ```
 
-# 1/2 write 5 files into "./build/"
+# 1/2 write 3 files into "./build/"
 
 see [./build/](./build/)
 

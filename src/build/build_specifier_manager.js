@@ -1022,6 +1022,12 @@ export const createBuildSpecifierManager = ({
           if (!buildUrl) {
             return;
           }
+          if (
+            urlInfo.type === "asset" &&
+            urlIsInsideOf(urlInfo.url, buildDirectoryUrl)
+          ) {
+            return;
+          }
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned = versioning
             ? buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier)

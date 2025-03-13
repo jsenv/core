@@ -65,7 +65,7 @@ export const jsenvPluginSubbuilds = (
           return null;
         }
         await buildPromise;
-        urlInfo.type = "asset";
+        urlInfo.type = "asset"; // this ensure the rest of jsenv do not scan or modify the content of this file
         return null;
       },
     };

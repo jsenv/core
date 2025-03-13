@@ -302,9 +302,11 @@ build ${entryPointKeys.length} entry points`);
         parentBuildParams: {
           sourceDirectoryUrl,
           buildDirectoryUrl,
+          runtimeCompat,
           bundling,
           minification,
-          runtimeCompat,
+          versioning,
+          versioningMethod,
         },
         onCustomBuildDirectory: (subBuildRelativeUrl) => {
           buildDirectoryCleanPatterns = {

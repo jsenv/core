@@ -1,7 +1,8 @@
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const run = async () => {
+// TODO: test with versioning and bundling
+const run = async ({ bundling }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./source/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
@@ -9,10 +10,7 @@ const run = async () => {
     runtimeCompat: {
       node: "20",
     },
-    bundling: false,
-    minification: false,
-    versioning: false,
-    // bundling: false,
+    bundling,
     subbuilds: [
       {
         sourceDirectoryUrl: import.meta.resolve("./source/"),
@@ -23,14 +21,13 @@ const run = async () => {
         runtimeCompat: {
           chrome: "89",
         },
-        bundling: false,
-        minification: false,
-        versioning: false,
       },
     ],
   });
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => run());
+  test("0_basic", () => run({ bundling: false }));
+
+  test("1_with_bundling", () => run({ bundling: true }));
 });
