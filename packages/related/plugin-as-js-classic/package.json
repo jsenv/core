@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-as-js-classic",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,6 +24,6 @@
   "dependencies": {
     "@jsenv/urls": "2.6.3",
     "@jsenv/js-module-fallback": "1.4.3",
-    "@jsenv/plugin-bundling": "2.8.2"
+    "@jsenv/plugin-bundling": "2.8.3"
   }
 }

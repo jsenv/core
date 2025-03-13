@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "40.0.4",
+  "version": "40.0.5",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -85,7 +85,7 @@
     "@jsenv/integrity": "0.0.2",
     "@jsenv/js-module-fallback": "1.4.3",
     "@jsenv/node-esm-resolution": "1.1.0",
-    "@jsenv/plugin-bundling": "2.8.2",
+    "@jsenv/plugin-bundling": "2.8.3",
     "@jsenv/plugin-minification": "1.6.2",
     "@jsenv/plugin-supervisor": "1.6.10",
     "@jsenv/plugin-transpilation": "1.5.6",
