@@ -226,7 +226,13 @@ const rollupPluginJsenv = ({
   }
 
   const getOriginalUrl = (rollupFileInfo) => {
-    if (rollupFileInfo.isEntry) {
+    if (
+      // - explicitely emitted by emitChunk
+      // - import.meta.resolve("")
+      rollupFileInfo.isEntry ||
+      // - new URL("", import.meta.url)
+      rollupFileInfo.isImplicitEntry
+    ) {
       const { facadeModuleId } = rollupFileInfo;
       if (facadeModuleId) {
         return fileUrlConverter.asFileUrl(facadeModuleId);
