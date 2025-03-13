@@ -20,6 +20,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import {
   assertAndNormalizeDirectoryUrl,
+  clearDirectorySync,
   ensureEmptyDirectory,
   lookupPackageDirectory,
   writeFileSync,
@@ -28,7 +29,7 @@ import { createLogger, createTaskLog } from "@jsenv/humanize";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
-import { urlIsInsideOf } from "@jsenv/urls";
+import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
@@ -63,6 +64,7 @@ const logsDefault = {
   disabled: false,
   animation: true,
 };
+const getDefaultBase = (runtimeCompat) => (runtimeCompat.node ? "./" : "/");
 
 /**
  * Generate an optimized version of source files into a directory.
@@ -108,9 +110,10 @@ export const build = async ({
   entryPoints = {},
   assetsDirectory = "",
   runtimeCompat = defaultRuntimeCompat,
-  base = runtimeCompat.node ? "./" : "/",
+  base = getDefaultBase(runtimeCompat),
   ignore,
 
+  subbuilds = [],
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
@@ -133,7 +136,9 @@ export const build = async ({
   watch = false,
   http = false,
 
-  directoryToClean,
+  buildDirectoryCleanPatterns = {
+    "**/*": true,
+  },
   sourcemaps = "none",
   sourcemapsSourcesContent,
   writeOnFileSystem = true,
@@ -233,13 +238,6 @@ export const build = async ({
   if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
     assetsDirectory = `${assetsDirectory}/`;
   }
-  if (directoryToClean === undefined) {
-    if (assetsDirectory === undefined) {
-      directoryToClean = buildDirectoryUrl;
-    } else {
-      directoryToClean = new URL(assetsDirectory, buildDirectoryUrl).href;
-    }
-  }
 
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
@@ -310,7 +308,82 @@ build ${entryPointKeys.length} entry points`);
         ? new URL("craft/", outDirectoryUrl)
         : undefined,
     });
+
+    let subbuildResults = [];
+    const jsenvPluginSubbuilds = (subBuildParamsArray) => {
+      if (subBuildParamsArray.length === 0) {
+        return [];
+      }
+      return subBuildParamsArray.map((subBuildParams, index) => {
+        const defaultChildBuildParams = {
+          logs: {
+            level: "warn",
+            disabled: true,
+          },
+          sourceDirectoryUrl,
+          buildDirectoryUrl,
+        };
+        const subBuildDirectoryUrl = subBuildParams.buildDirectoryUrl;
+        if (subBuildDirectoryUrl) {
+          const subBuildRelativeUrl = urlToRelativeUrl(
+            subBuildDirectoryUrl,
+            buildDirectoryUrl,
+          );
+          const subbuildRuntimeCompat =
+            subBuildParams.runtimeCompat ||
+            defaultChildBuildParams.runtimeCompat ||
+            defaultRuntimeCompat;
+          const subbuildBase =
+            subBuildParams.base || getDefaultBase(subbuildRuntimeCompat);
+          defaultChildBuildParams.base = `${subbuildBase}${subBuildRelativeUrl}`;
+          buildDirectoryCleanPatterns = {
+            ...buildDirectoryCleanPatterns,
+            [`${subBuildRelativeUrl}**/*`]: false,
+          };
+        }
+        const childBuildParams = {
+          ...defaultChildBuildParams,
+          ...subBuildParams,
+        };
+        const buildPromise = build(childBuildParams);
+        const entryPointBuildUrlMap = new Map();
+        const entryPointSourceUrlSet = new Set();
+        const entryPointBuildUrlSet = new Set();
+        for (const key of Object.keys(entryPoints)) {
+          const entryPointUrl = new URL(key, sourceDirectoryUrl).href;
+          const entryPointBuildUrl = new URL(
+            entryPoints[key],
+            buildDirectoryUrl,
+          ).href;
+          entryPointBuildUrlMap.set(entryPointUrl, entryPointBuildUrl);
+          entryPointSourceUrlSet.add(entryPointUrl);
+          entryPointBuildUrlSet.add(entryPointBuildUrl);
+        }
+
+        return {
+          name: `jsenv:subbuild_${index}`,
+          redirectReference: (reference) => {
+            const entryPointBuildUrl = entryPointBuildUrlMap.get(reference.url);
+            if (!entryPointBuildUrl) {
+              return null;
+            }
+            return entryPointBuildUrl;
+          },
+          fetchUrlContent: async (urlInfo) => {
+            if (!entryPointBuildUrlSet.has(urlInfo.url)) {
+              return null;
+            }
+            const result = await buildPromise;
+            subbuildResults[index] = result;
+            urlInfo.type = "asset";
+            return null;
+          },
+        };
+      });
+    };
+
     const rawPluginStore = createPluginStore([
+      ...jsenvPluginSubbuilds(subbuilds),
       ...plugins,
       ...(bundling ? [jsenvPluginBundling(bundling)] : []),
       ...(minification ? [jsenvPluginMinification(minification)] : []),
@@ -683,9 +756,7 @@ build ${entryPointKeys.length} entry points`);
       buildSpecifierManager.getBuildInfo();
     if (writeOnFileSystem) {
       const writingFiles = createBuildTask("write files in build directory");
-      if (directoryToClean) {
-        await ensureEmptyDirectory(directoryToClean);
-      }
+      clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
       const buildRelativeUrls = Object.keys(buildFileContents);
       buildRelativeUrls.forEach((buildRelativeUrl) => {
         writeFileSync(
@@ -709,6 +780,7 @@ build ${entryPointKeys.length} entry points`);
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
       ...(returnBuildManifest ? { buildManifest } : {}),
+      ...(subbuilds.length ? { subbuilds: subbuildResults } : {}),
     };
   };
 

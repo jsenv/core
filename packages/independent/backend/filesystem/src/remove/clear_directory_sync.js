@@ -3,26 +3,59 @@ import { readdirSync } from "node:fs";
 import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
 import { removeEntrySync } from "./remove_entry_sync.js";
 
-export const clearDirectorySync = (initialDirectoryUrl, pattern = "**/*") => {
+export const clearDirectorySync = (
+  initialDirectoryUrl,
+  secondArg,
+  thirdArg,
+) => {
+  let removePatterns = {};
+  if (secondArg && typeof secondArg === "object") {
+    removePatterns = secondArg;
+  } else {
+    removePatterns = {};
+    let clearPatterns = secondArg || "**/*";
+    let keepPatterns = thirdArg || [];
+
+    if (typeof keepPatterns === "string") {
+      keepPatterns = [keepPatterns];
+    }
+    if (Array.isArray(keepPatterns)) {
+      for (const keepPattern of keepPatterns) {
+        Object.assign(removePatterns, {
+          [keepPattern]: false,
+        });
+      }
+    }
+    if (typeof clearPatterns === "string") {
+      clearPatterns = [clearPatterns];
+    }
+    if (Array.isArray(clearPatterns)) {
+      let someClearPatternHandleNodeModules = false;
+      for (const clearPattern of clearPatterns) {
+        Object.assign(removePatterns, {
+          [clearPatterns]: true,
+        });
+        if (
+          !someClearPatternHandleNodeModules &&
+          clearPattern.includes("node_modules")
+        ) {
+          someClearPatternHandleNodeModules = true;
+        }
+      }
+      Object.assign(removePatterns, {
+        "**/.*": false,
+        "**/.*/": false,
+      });
+      if (!someClearPatternHandleNodeModules) {
+        Object.assign(removePatterns, {
+          "**/node_modules/": false,
+        });
+      }
+    }
+  }
+
   const associations = URL_META.resolveAssociations(
-    {
-      clear:
-        typeof pattern === "string"
-          ? {
-              [pattern]: true,
-              "**/.*": false,
-              "**/.*/": false,
-              ...(pattern.includes("node_modules")
-                ? {}
-                : { "**/node_modules/": false }),
-            }
-          : {
-              "**/.*": false,
-              "**/.*/": false,
-              "**/node_modules/": false,
-              ...pattern,
-            },
-    },
+    { remove: removePatterns },
     initialDirectoryUrl,
   );
   const visitDirectory = (directoryUrl) => {
@@ -54,7 +87,7 @@ export const clearDirectorySync = (initialDirectoryUrl, pattern = "**/*") => {
           url: subDirectoryUrl,
           associations,
         });
-        if (meta.clear) {
+        if (meta.remove) {
           removeEntrySync(subDirectoryUrl, {
             recursive: true,
             allowUseless: true,
@@ -65,19 +98,19 @@ export const clearDirectorySync = (initialDirectoryUrl, pattern = "**/*") => {
           !URL_META.urlChildMayMatch({
             url: subDirectoryUrl,
             associations,
-            predicate: ({ clear }) => clear,
+            predicate: ({ remove }) => remove,
           })
         ) {
           continue;
         }
         visitDirectory(subDirectoryUrl);
+        continue;
       }
-
       const meta = URL_META.applyAssociations({
         url: entryUrl,
         associations,
       });
-      if (meta.clear) {
+      if (meta.remove) {
         removeEntrySync(entryUrl, { allowUseless: true });
         continue;
       }

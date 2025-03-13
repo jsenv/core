@@ -352,7 +352,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       urlInfo.status = status;
       urlInfo.contentType = contentType;
       urlInfo.headers = headers;
-      urlInfo.type = type || inferUrlInfoType(urlInfo);
+      urlInfo.type = urlInfo.type || type || inferUrlInfoType(urlInfo);
       urlInfo.subtype =
         subtype ||
         urlInfo.firstReference.expectedSubtype ||

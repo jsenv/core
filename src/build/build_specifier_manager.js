@@ -259,6 +259,10 @@ export const createBuildSpecifierManager = ({
       return placeholder;
     },
     fetchUrlContent: async (finalUrlInfo) => {
+      // not need because it will be inherit from rawUrlInfo
+      // if (urlIsInsideOf(finalUrlInfo.url, buildDirectoryUrl)) {
+      //   finalUrlInfo.type = "asset";
+      // }
       let { firstReference } = finalUrlInfo;
       if (
         firstReference.isInline &&
