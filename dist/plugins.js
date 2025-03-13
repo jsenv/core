@@ -3387,7 +3387,9 @@ const generateHtmlForSyntaxError = (
   htmlSyntaxError,
   { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame, htmlSyntaxErrorFileUrl },
 ) => {
-  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
+  const htmlForSyntaxError = String(
+    readFileSync(new URL(htmlSyntaxErrorFileUrl)),
+  );
   const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
   const { line, column } = htmlSyntaxError;
   if (htmlUrl.startsWith(jsenvCoreDirectoryUrl.href)) {
@@ -7796,7 +7798,7 @@ const jsenvPluginRibbon = ({
           type: "script",
           subtype: "js_module",
           expectedType: "js_module",
-          specifier: ribbonClientFileUrl.href,
+          specifier: ribbonClientFileUrl,
         });
         injectJsenvScript(htmlAst, {
           type: "module",
