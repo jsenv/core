@@ -1,4 +1,4 @@
-import "/js/vendors.js";
+import "/jsenv_terminal_recorder_node_modules.js";
 
 const createLzwEncoder = ({ width, height, pixels, colorDepth }) => {
   var EOF = -1;
