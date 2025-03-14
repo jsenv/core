@@ -6,16 +6,22 @@ import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 const run = async ({ runtimeCompat }) => {
   await build({
     logs: { level: "warn" },
-    sourceDirectoryUrl: import.meta.resolve("./client/"),
+    sourceDirectoryUrl: import.meta.resolve("./source/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    plugins: [jsenvPluginAsJsClassic()],
+    entryPoints: { "./index.mjs": "index.mjs" },
+    subbuilds: [
+      {
+        buildDirectoryUrl: import.meta.resolve("./build/client/"),
+        entryPoints: { "./main.html": "main.html" },
+        plugins: [jsenvPluginAsJsClassic()],
+        minification: false,
+        runtimeCompat,
+        mappings: {
+          "./client/main.js": "./client/main.js?as_js_classic",
+        },
+      },
+    ],
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    minification: false,
-    runtimeCompat,
-    mappings: {
-      "./main.js": "./main.js?as_js_classic",
-    },
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: new URL("./build/", import.meta.url),
