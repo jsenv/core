@@ -15,7 +15,7 @@ export const bundleJsModules = async (
     include,
     chunks = {},
     strictExports = false,
-    preserveDynamicImport = false,
+    preserveDynamicImports = false,
     augmentDynamicImportUrlSearchParams = () => {},
     rollup,
     rollupInput = {},
@@ -126,7 +126,7 @@ export const bundleJsModules = async (
           runtimeCompat,
           sourcemaps,
           include,
-          preserveDynamicImport,
+          preserveDynamicImports,
           augmentDynamicImportUrlSearchParams,
           strictExports,
           resultRef,
@@ -197,7 +197,7 @@ const rollupPluginJsenv = ({
   runtimeCompat,
   sourcemaps,
   include,
-  preserveDynamicImport,
+  preserveDynamicImports,
   augmentDynamicImportUrlSearchParams,
   strictExports,
 
@@ -456,7 +456,7 @@ const rollupPluginJsenv = ({
             specifierToUrlMap.size > 0
               ? (reference) => {
                   if (
-                    preserveDynamicImport &&
+                    preserveDynamicImports &&
                     reference.subtype === "dynamic_import"
                   ) {
                     // when dynamic import are preserved, no need to remap them
@@ -538,7 +538,7 @@ const rollupPluginJsenv = ({
     },
     // https://rollupjs.org/guide/en/#resolvedynamicimport
     resolveDynamicImport: (specifier, importer) => {
-      if (!preserveDynamicImport) {
+      if (!preserveDynamicImports) {
         return null;
       }
       let urlObject;
