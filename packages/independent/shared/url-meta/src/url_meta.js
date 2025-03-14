@@ -157,34 +157,29 @@ export const urlChildMayMatch = ({ url, associations, predicate }) => {
 };
 
 export const applyAliases = ({ url, aliases }) => {
-  let aliasFullMatchResult;
-  const aliasMatchingKey = Object.keys(aliases).find((key) => {
-    const aliasMatchResult = applyPatternMatching({
+  for (const key of Object.keys(aliases)) {
+    const matchResult = applyPatternMatching({
       pattern: key,
       url,
     });
-    if (aliasMatchResult.matched) {
-      aliasFullMatchResult = aliasMatchResult;
-      return true;
+    if (!matchResult.matched) {
+      continue;
     }
-    return false;
-  });
-  if (!aliasMatchingKey) {
-    return url;
-  }
-  const { matchGroups } = aliasFullMatchResult;
-  const alias = aliases[aliasMatchingKey];
-  const parts = alias.split("*");
-  let newUrl = "";
-  let index = 0;
-  for (const part of parts) {
-    newUrl += `${part}`;
-    if (index < parts.length - 1) {
-      newUrl += matchGroups[index];
+    const { matchGroups } = matchResult;
+    const alias = aliases[key];
+    const parts = alias.split("*");
+    let newUrl = "";
+    let index = 0;
+    for (const part of parts) {
+      newUrl += `${part}`;
+      if (index < parts.length - 1) {
+        newUrl += matchGroups[index];
+      }
+      index++;
     }
-    index++;
+    return newUrl;
   }
-  return newUrl;
+  return url;
 };
 
 export const matches = (url, patterns) => {
