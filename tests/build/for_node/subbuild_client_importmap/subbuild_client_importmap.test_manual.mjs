@@ -17,6 +17,7 @@ await build({
       runtimeCompat: {
         chrome: "89",
       },
+      http: true,
     },
   ],
 });
