@@ -6,7 +6,7 @@
     <svg width="692.11" height="42.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55" fill="#DAA520">⚠</text>
-        <text x="35.2" y="24.55"> remove resource hint on "base/client/style.css" because it is not used anymore</text>
+        <text x="26.8" y="24.55"> remove resource hint on "base/client/style.css" because it is not used anymore</text>
       </g>
     </svg>
   </foreignObject>
