@@ -64,6 +64,9 @@ await build({
     clientFileSubbuild("src/services/error_handler/client/500.html"),
     clientFileSubbuild(
       "src/services/route_inspector/client/route_inspector.html",
+      {
+        http: true,
+      },
     ),
   ],
   directoryReferenceEffect: (reference) => {
