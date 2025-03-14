@@ -577,6 +577,13 @@ const rollupPluginJsenv = ({
     },
     // https://rollupjs.org/guide/en/#resolvedynamicimport
     resolveDynamicImport: (specifier, importer) => {
+      if (typeof specifier !== "string") {
+        // Receiving an ASTNode (specifier is dynamic)
+        return null;
+      }
+      if (!specifier.startsWith("file:")) {
+        return { id: specifier, external: true };
+      }
       if (preserveDynamicImports) {
         if (isFileSystemPath(importer)) {
           importer = fileUrlConverter.asFileUrl(importer);
@@ -615,19 +622,7 @@ const rollupPluginJsenv = ({
         importer = fileUrlConverter.asFileUrl(importer);
       }
       const resolvedUrlObject = resolveImport(specifier, importer);
-      if (importer.includes("dynamic_import_id")) {
-        const importerUrlObject = new URL(importer);
-        const dynamicImportId =
-          importerUrlObject.searchParams.get("dynamic_import_id");
-        if (dynamicImportId) {
-          resolvedUrlObject.searchParams.set(
-            "dynamic_import_id",
-            dynamicImportId,
-          );
-        }
-      }
-      const resolvedUrl = resolvedUrlObject.href;
-
+      let resolvedUrl = resolvedUrlObject.href;
       if (!resolvedUrl.startsWith("file:")) {
         return {
           id: resolvedUrl,
@@ -648,6 +643,18 @@ const rollupPluginJsenv = ({
           external: true,
           moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
         };
+      }
+      if (importer.includes("dynamic_import_id")) {
+        const importerUrlObject = new URL(importer);
+        const dynamicImportId =
+          importerUrlObject.searchParams.get("dynamic_import_id");
+        if (dynamicImportId) {
+          resolvedUrlObject.searchParams.set(
+            "dynamic_import_id",
+            dynamicImportId,
+          );
+          resolvedUrl = resolvedUrlObject.href;
+        }
       }
       const filePath = fileUrlConverter.asFilePath(resolvedUrl);
       return {

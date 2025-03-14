@@ -1,13 +1,13 @@
-import { assertAndNormalizeDirectoryUrl, createLogger, Abort, raceProcessTeardownEvents, createTaskLog, urlToExtension, urlToPathname } from "../jsenv_core_packages.js";
-import { startServer, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvAccessControlAllowedHeaders, createFileSystemFetch } from "@jsenv/server";
+import { assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, createLogger$2 as createLogger, Abort$1 as Abort, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, createTaskLog$2 as createTaskLog, urlToExtension$2 as urlToExtension, urlToPathname$2 as urlToPathname } from "../jsenv_core_packages.js";
 import { existsSync } from "node:fs";
+import { startServer, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvAccessControlAllowedHeaders, createFileSystemFetch } from "@jsenv/server";
 import "node:path";
 import "node:crypto";
 import "@jsenv/ast";
 import "@jsenv/sourcemap";
 import "node:url";
-import "node:module";
 import "@jsenv/js-module-fallback";
+import "node:module";
 import "node:process";
 import "node:os";
 import "node:tty";
@@ -98,8 +98,7 @@ const startBuildServer = async ({
     operation.addAbortSource((abort) => {
       return raceProcessTeardownEvents(
         {
-          SIGINT: true,
-        },
+          },
         abort,
       );
     });
