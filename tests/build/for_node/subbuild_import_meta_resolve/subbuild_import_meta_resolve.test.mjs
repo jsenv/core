@@ -1,7 +1,6 @@
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-// TODO: test with versioning and bundling
 const run = async ({ bundling }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./source/"),
