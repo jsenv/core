@@ -13,9 +13,9 @@
   },
   "devDependencies": {
     "@jsenv/assert": "4.4.4",
-    "@jsenv/core": "40.0.6",
+    "@jsenv/core": "40.0.7",
     "@jsenv/eslint-config-relax": "1.4.4",
-    "@jsenv/test": "3.6.4",
+    "@jsenv/test": "3.6.5",
     "eslint": "9.22.0",
     "prettier": "3.5.3"
   }
