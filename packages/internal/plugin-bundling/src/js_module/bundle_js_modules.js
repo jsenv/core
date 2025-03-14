@@ -4,7 +4,11 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
-import { isFileSystemPath, urlToBasename } from "@jsenv/urls";
+import {
+  injectQueryParams,
+  isFileSystemPath,
+  urlToBasename,
+} from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 import { fileUrlConverter } from "../file_url_converter.js";
 
@@ -40,6 +44,26 @@ export const bundleJsModules = async (
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   if (isolateDynamicImports === undefined && nodeRuntimeEnabled) {
     isolateDynamicImports = true;
+  }
+
+  const PATH_AND_URL_CONVERTER = {
+    asFileUrl: fileUrlConverter.asFileUrl,
+    asFilePath: fileUrlConverter.asFilePath,
+  };
+
+  if (isolateDynamicImports) {
+    PATH_AND_URL_CONVERTER.asFileUrl = (path, stripDynamicImportId) => {
+      const fileUrl = fileUrlConverter.asFileUrl(path);
+      if (!stripDynamicImportId) {
+        return fileUrl;
+      }
+      if (!fileUrl.includes("dynamic_import_id")) {
+        return fileUrl;
+      }
+      return injectQueryParams(fileUrl, {
+        dynamic_import_id: undefined,
+      });
+    };
   }
 
   const generateBundleWithRollup = async () => {
@@ -103,7 +127,7 @@ export const bundleJsModules = async (
         if (moduleInfo.isEntry || moduleInfo.dynamicImporters.length) {
           return null;
         }
-        const url = fileUrlConverter.asFileUrl(id);
+        const url = PATH_AND_URL_CONVERTER.asFileUrl(id);
         const urlObject = new URL(url);
         urlObject.search = "";
         const urlWithoutSearch = urlObject.href;
@@ -134,6 +158,7 @@ export const bundleJsModules = async (
             buildDirectoryUrl,
             graph,
             jsModuleUrlInfos,
+            PATH_AND_URL_CONVERTER,
 
             runtimeCompat,
             sourcemaps,
@@ -210,6 +235,7 @@ const rollupPluginJsenv = ({
   buildDirectoryUrl,
   graph,
   jsModuleUrlInfos,
+  PATH_AND_URL_CONVERTER,
 
   runtimeCompat,
   sourcemaps,
@@ -246,7 +272,7 @@ const rollupPluginJsenv = ({
     };
   }
 
-  const getOriginalUrl = (rollupFileInfo) => {
+  const getOriginalUrl = (rollupFileInfo, stripDynamicImportId) => {
     if (
       // - explicitely emitted by emitChunk
       // - import.meta.resolve("")
@@ -256,13 +282,19 @@ const rollupPluginJsenv = ({
     ) {
       const { facadeModuleId } = rollupFileInfo;
       if (facadeModuleId) {
-        return fileUrlConverter.asFileUrl(facadeModuleId);
+        return PATH_AND_URL_CONVERTER.asFileUrl(
+          facadeModuleId,
+          stripDynamicImportId,
+        );
       }
     }
     if (rollupFileInfo.isDynamicEntry) {
       const { moduleIds } = rollupFileInfo;
       const lastModuleId = moduleIds[moduleIds.length - 1];
-      return fileUrlConverter.asFileUrl(lastModuleId);
+      return PATH_AND_URL_CONVERTER.asFileUrl(
+        lastModuleId,
+        stripDynamicImportId,
+      );
     }
     return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
   };
@@ -430,7 +462,7 @@ const rollupPluginJsenv = ({
       const createBundledFileInfo = (rollupFileInfo) => {
         const originalUrl = getOriginalUrl(rollupFileInfo);
         const sourceUrls = Object.keys(rollupFileInfo.modules).map((id) =>
-          fileUrlConverter.asFileUrl(id),
+          PATH_AND_URL_CONVERTER.asFileUrl(id),
         );
 
         const specifierToUrlMap = new Map();
@@ -552,7 +584,7 @@ const rollupPluginJsenv = ({
       // const sourcemapFile = buildDirectoryUrl
       Object.assign(outputOptions, {
         format,
-        dir: fileUrlConverter.asFilePath(rootDirectoryUrl),
+        dir: PATH_AND_URL_CONVERTER.asFilePath(rootDirectoryUrl),
         sourcemap: sourcemaps === "file" || sourcemaps === "inline",
         // sourcemapFile,
         sourcemapPathTransform: (relativePath) => {
@@ -563,12 +595,22 @@ const rollupPluginJsenv = ({
         },
         chunkFileNames: (chunkInfo) => {
           if (chunkInfo.isEntry) {
-            const originalFileUrl = getOriginalUrl(chunkInfo);
+            const originalFileUrl = getOriginalUrl(chunkInfo, true);
             const jsModuleUrlInfo = jsModuleUrlInfos.find(
               (candidate) => candidate.url === originalFileUrl,
             );
             if (jsModuleUrlInfo && jsModuleUrlInfo.filenameHint) {
               return jsModuleUrlInfo.filenameHint;
+            }
+          }
+          if (chunkInfo.isDynamicEntry) {
+            const originalFileUrl = getOriginalUrl(chunkInfo, true);
+            const urlInfo =
+              jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
+                originalFileUrl,
+              );
+            if (urlInfo && urlInfo.filenameHint) {
+              return urlInfo.filenameHint;
             }
           }
           return `${chunkInfo.name}.js`;
@@ -586,43 +628,38 @@ const rollupPluginJsenv = ({
       }
       if (preserveDynamicImports) {
         if (isFileSystemPath(importer)) {
-          importer = fileUrlConverter.asFileUrl(importer);
+          importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
         const urlObject = resolveImport(specifier, importer);
         const searchParamsToAdd =
           augmentDynamicImportUrlSearchParams(urlObject);
         if (searchParamsToAdd) {
-          Object.keys(searchParamsToAdd).forEach((key) => {
-            const value = searchParamsToAdd[key];
-            if (value === undefined) {
-              urlObject.searchParams.delete(key);
-            } else {
-              urlObject.searchParams.set(key, value);
-            }
-          });
+          injectQueryParams(urlObject, searchParamsToAdd);
         }
         const id = urlObject.href;
         return { id, external: true };
       }
       if (isolateDynamicImports) {
         if (isFileSystemPath(importer)) {
-          importer = fileUrlConverter.asFileUrl(importer);
+          importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
         const urlObject = resolveImport(specifier, importer);
         const importId = assignImportId(urlObject.href);
-        urlObject.searchParams.set("dynamic_import_id", importId);
+        injectQueryParams(urlObject, {
+          dynamic_import_id: importId,
+        });
         const url = urlObject.href;
-        const filePath = fileUrlConverter.asFilePath(url);
+        const filePath = PATH_AND_URL_CONVERTER.asFilePath(url);
         return { id: filePath };
       }
       return null;
     },
     resolveId: (specifier, importer = rootDirectoryUrl) => {
       if (isFileSystemPath(importer)) {
-        importer = fileUrlConverter.asFileUrl(importer);
+        importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
       }
       const resolvedUrlObject = resolveImport(specifier, importer);
-      let resolvedUrl = resolvedUrlObject.href;
+      const resolvedUrl = resolvedUrlObject.href;
       if (!resolvedUrl.startsWith("file:")) {
         return {
           id: resolvedUrl,
@@ -649,27 +686,25 @@ const rollupPluginJsenv = ({
         const dynamicImportId =
           importerUrlObject.searchParams.get("dynamic_import_id");
         if (dynamicImportId) {
-          resolvedUrlObject.searchParams.set(
-            "dynamic_import_id",
-            dynamicImportId,
-          );
-          resolvedUrl = resolvedUrlObject.href;
+          injectQueryParams(resolvedUrlObject, {
+            dynamic_import_id: dynamicImportId,
+          });
+          const isolatedResolvedUrl = resolvedUrlObject.href;
+          return {
+            id: PATH_AND_URL_CONVERTER.asFilePath(isolatedResolvedUrl),
+            external: false,
+            moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          };
         }
       }
-      const filePath = fileUrlConverter.asFilePath(resolvedUrl);
       return {
-        id: filePath,
+        id: PATH_AND_URL_CONVERTER.asFilePath(resolvedUrl),
         external: false,
         moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
       };
     },
     async load(rollupId) {
-      let fileUrl = fileUrlConverter.asFileUrl(rollupId);
-      if (fileUrl.includes("dynamic_import_id")) {
-        const fileUrlObject = new URL(fileUrl);
-        fileUrlObject.searchParams.delete("dynamic_import_id");
-        fileUrl = fileUrlObject.href;
-      }
+      const fileUrl = PATH_AND_URL_CONVERTER.asFileUrl(rollupId, true);
       const urlInfo = graph.getUrlInfo(fileUrl);
       return {
         code: urlInfo.content,

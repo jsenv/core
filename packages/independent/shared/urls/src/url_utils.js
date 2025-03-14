@@ -80,7 +80,8 @@ export const injectQueryParamsIntoSpecifier = (specifier, params) => {
 };
 
 export const injectQueryParams = (url, params) => {
-  const urlObject = typeof url === "object" ? url : new URL(url);
+  const calledWithString = typeof url === "string";
+  const urlObject = calledWithString ? new URL(url) : url;
   const { searchParams } = urlObject;
   for (const key of Object.keys(params)) {
     const value = params[key];
@@ -90,7 +91,7 @@ export const injectQueryParams = (url, params) => {
       searchParams.set(key, value);
     }
   }
-  return normalizeUrl(urlObject);
+  return normalizeUrl(calledWithString ? urlObject.href : urlObject);
 };
 
 export const injectQueryParamWithoutEncoding = (url, key, value) => {
