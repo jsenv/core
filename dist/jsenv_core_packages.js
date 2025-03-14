@@ -1,15 +1,15 @@
-import { existsSync, chmodSync, statSync, lstatSync, promises, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$2, constants, watch, realpathSync, readdir, chmod, stat as stat$3, lstat, unlink, rmdir } from "node:fs";
+import process$1 from "node:process";
+import os from "node:os";
+import tty from "node:tty";
+import stringWidth from "string-width";
+import { existsSync, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$2, watch, realpathSync, readdir, chmod, stat, lstat, promises, unlink, rmdir } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import { parseJsUrls, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil } from "@jsenv/ast";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter } from "@jsenv/sourcemap";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { convertJsModuleToJsClassic, systemJsClientFileUrlDefault } from "@jsenv/js-module-fallback";
 import { createRequire } from "node:module";
-import process$1 from "node:process";
-import os from "node:os";
-import tty from "node:tty";
-import stringWidth from "string-width";
+import { convertJsModuleToJsClassic, systemJsClientFileUrlDefault } from "@jsenv/js-module-fallback";
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -1386,14 +1386,23 @@ const asSpecifierWithoutSearch$1 = (specifier) => {
 // becoming "file:///file.css?css_module="
 // we want to get rid of the "=" and consider it's the same url
 const normalizeUrl$1 = (url) => {
-  if (url.includes("?")) {
-    // disable on data urls (would mess up base64 encoding)
-    if (url.startsWith("data:")) {
-      return url;
-    }
-    return url.replace(/[=](?=&|$)/g, "");
+  const calledWithString = typeof url === "string";
+  const urlObject = calledWithString ? new URL(url) : url;
+  let urlString = urlObject.href;
+
+  if (!urlString.includes("?")) {
+    return url;
   }
-  return url;
+  // disable on data urls (would mess up base64 encoding)
+  if (urlString.startsWith("data:")) {
+    return url;
+  }
+  urlString = urlString.replace(/[=](?=&|$)/g, "");
+  if (calledWithString) {
+    return urlString;
+  }
+  urlObject.href = urlString;
+  return urlObject;
 };
 
 const injectQueryParamsIntoSpecifier$1 = (specifier, params) => {
@@ -1419,18 +1428,18 @@ const injectQueryParamsIntoSpecifier$1 = (specifier, params) => {
 };
 
 const injectQueryParams$1 = (url, params) => {
-  const urlObject = new URL(url);
+  const calledWithString = typeof url === "string";
+  const urlObject = calledWithString ? new URL(url) : url;
   const { searchParams } = urlObject;
-  Object.keys(params).forEach((key) => {
+  for (const key of Object.keys(params)) {
     const value = params[key];
     if (value === undefined) {
       searchParams.delete(key);
     } else {
       searchParams.set(key, value);
     }
-  });
-  const urlWithParams = urlObject.href;
-  return normalizeUrl$1(urlWithParams);
+  }
+  return normalizeUrl$1(calledWithString ? urlObject.href : urlObject);
 };
 
 const setUrlExtension$1 = (url, extension) => {
@@ -2598,14 +2607,6 @@ const generateWindowsEPERMErrorMessage$1 = (
   return message;
 };
 
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
-
-process.platform === "win32";
-
 const writeEntryPermissionsSync$1 = (source, permissions) => {
   const sourceUrl = assertAndNormalizeFileUrl$1(source);
 
@@ -2718,9 +2719,6 @@ const statsToType$1 = (stats) => {
   if (stats.isBlockDevice()) return "block-device";
   return undefined;
 };
-
-// https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
-const { mkdir: mkdir$2 } = promises;
 
 const mediaTypeInfos$1 = {
   "application/json": {
@@ -3254,28 +3252,6 @@ const writeFileSync$1 = (destination, content = "", { force } = {}) => {
   }
 };
 
-// https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_symlink_target_path_type
-const { symlink: symlink$2 } = promises;
-process.platform === "win32";
-
-process.platform === "win32";
-
-/*
- * - file modes documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_file_modes
- */
-
-
-const { stat: stat$2 } = promises;
-
-const { access: access$2 } = promises;
-const {
-  // F_OK,
-  R_OK: R_OK$2,
-  W_OK: W_OK$2,
-  X_OK: X_OK$2,
-} = constants;
-
 const callOnceIdlePerFile$1 = (callback, idleMs) => {
   const timeoutIdMap = new Map();
   return (fileEvent) => {
@@ -3784,10 +3760,6 @@ const fileSystemPathToDirectoryRelativeUrlAndFilename$1 = (path) => {
     filename,
   };
 };
-
-process.platform === "darwin";
-process.platform === "linux";
-process.platform === "freebsd";
 
 /*
  * - Buffer documentation on Node.js
@@ -9954,14 +9926,23 @@ const asSpecifierWithoutSearch = (specifier) => {
 // becoming "file:///file.css?css_module="
 // we want to get rid of the "=" and consider it's the same url
 const normalizeUrl = (url) => {
-  if (url.includes("?")) {
-    // disable on data urls (would mess up base64 encoding)
-    if (url.startsWith("data:")) {
-      return url;
-    }
-    return url.replace(/[=](?=&|$)/g, "");
+  const calledWithString = typeof url === "string";
+  const urlObject = calledWithString ? new URL(url) : url;
+  let urlString = urlObject.href;
+
+  if (!urlString.includes("?")) {
+    return url;
   }
-  return url;
+  // disable on data urls (would mess up base64 encoding)
+  if (urlString.startsWith("data:")) {
+    return url;
+  }
+  urlString = urlString.replace(/[=](?=&|$)/g, "");
+  if (calledWithString) {
+    return urlString;
+  }
+  urlObject.href = urlString;
+  return urlObject;
 };
 
 const injectQueryParamsIntoSpecifier = (specifier, params) => {
@@ -9987,18 +9968,18 @@ const injectQueryParamsIntoSpecifier = (specifier, params) => {
 };
 
 const injectQueryParams = (url, params) => {
-  const urlObject = new URL(url);
+  const calledWithString = typeof url === "string";
+  const urlObject = calledWithString ? new URL(url) : url;
   const { searchParams } = urlObject;
-  Object.keys(params).forEach((key) => {
+  for (const key of Object.keys(params)) {
     const value = params[key];
     if (value === undefined) {
       searchParams.delete(key);
     } else {
       searchParams.set(key, value);
     }
-  });
-  const urlWithParams = urlObject.href;
-  return normalizeUrl(urlWithParams);
+  }
+  return normalizeUrl(calledWithString ? urlObject.href : urlObject);
 };
 
 const injectQueryParamWithoutEncoding = (url, key, value) => {
@@ -11369,7 +11350,7 @@ const readStat = (
     handlePermissionDeniedError = null,
   } = {},
 ) => {
-  const nodeMethod = followLink ? stat$3 : lstat;
+  const nodeMethod = followLink ? stat : lstat;
 
   return new Promise((resolve, reject) => {
     nodeMethod(sourcePath, (error, statsObject) => {
@@ -11505,7 +11486,7 @@ const statsToType = (stats) => {
 };
 
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
-const { mkdir: mkdir$1 } = promises;
+const { mkdir } = promises;
 
 const writeDirectory = async (
   destination,
@@ -11534,7 +11515,7 @@ const writeDirectory = async (
   }
 
   try {
-    await mkdir$1(destinationPath, { recursive });
+    await mkdir(destinationPath, { recursive });
   } catch (error) {
     if (allowUseless && error.code === "EEXIST") {
       return;
@@ -12322,28 +12303,6 @@ const removeDirectoryNaive = (
   });
 };
 
-// https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_symlink_target_path_type
-const { symlink: symlink$1 } = promises;
-process.platform === "win32";
-
-process.platform === "win32";
-
-/*
- * - file modes documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_file_modes
- */
-
-
-const { stat: stat$1 } = promises;
-
-const { access: access$1 } = promises;
-const {
-  // F_OK,
-  R_OK: R_OK$1,
-  W_OK: W_OK$1,
-  X_OK: X_OK$1,
-} = constants;
-
 const ensureEmptyDirectory = async (source) => {
   const stats = await readEntryStat(source, {
     nullIfNotFound: true,
@@ -12996,10 +12955,6 @@ const fileSystemPathToDirectoryRelativeUrlAndFilename = (path) => {
     filename,
   };
 };
-
-process.platform === "darwin";
-process.platform === "linux";
-process.platform === "freebsd";
 
 /*
  * - Buffer documentation on Node.js
@@ -14193,6 +14148,26 @@ const bundleJsModules = async (
     isolateDynamicImports = true;
   }
 
+  const PATH_AND_URL_CONVERTER = {
+    asFileUrl: fileUrlConverter.asFileUrl,
+    asFilePath: fileUrlConverter.asFilePath,
+  };
+
+  if (isolateDynamicImports) {
+    PATH_AND_URL_CONVERTER.asFileUrl = (path, stripDynamicImportId) => {
+      const fileUrl = fileUrlConverter.asFileUrl(path);
+      if (!stripDynamicImportId) {
+        return fileUrl;
+      }
+      if (!fileUrl.includes("dynamic_import_id")) {
+        return fileUrl;
+      }
+      return injectQueryParams(fileUrl, {
+        dynamic_import_id: undefined,
+      });
+    };
+  }
+
   const generateBundleWithRollup = async () => {
     let manualChunks;
     if (chunks) {
@@ -14254,7 +14229,7 @@ const bundleJsModules = async (
         if (moduleInfo.isEntry || moduleInfo.dynamicImporters.length) {
           return null;
         }
-        const url = fileUrlConverter.asFileUrl(id);
+        const url = PATH_AND_URL_CONVERTER.asFileUrl(id);
         const urlObject = new URL(url);
         urlObject.search = "";
         const urlWithoutSearch = urlObject.href;
@@ -14285,6 +14260,7 @@ const bundleJsModules = async (
             buildDirectoryUrl,
             graph,
             jsModuleUrlInfos,
+            PATH_AND_URL_CONVERTER,
 
             runtimeCompat,
             sourcemaps,
@@ -14361,6 +14337,7 @@ const rollupPluginJsenv = ({
   buildDirectoryUrl,
   graph,
   jsModuleUrlInfos,
+  PATH_AND_URL_CONVERTER,
 
   runtimeCompat,
   sourcemaps,
@@ -14397,7 +14374,7 @@ const rollupPluginJsenv = ({
     };
   }
 
-  const getOriginalUrl = (rollupFileInfo) => {
+  const getOriginalUrl = (rollupFileInfo, stripDynamicImportId) => {
     if (
       // - explicitely emitted by emitChunk
       // - import.meta.resolve("")
@@ -14407,13 +14384,19 @@ const rollupPluginJsenv = ({
     ) {
       const { facadeModuleId } = rollupFileInfo;
       if (facadeModuleId) {
-        return fileUrlConverter.asFileUrl(facadeModuleId);
+        return PATH_AND_URL_CONVERTER.asFileUrl(
+          facadeModuleId,
+          stripDynamicImportId,
+        );
       }
     }
     if (rollupFileInfo.isDynamicEntry) {
       const { moduleIds } = rollupFileInfo;
       const lastModuleId = moduleIds[moduleIds.length - 1];
-      return fileUrlConverter.asFileUrl(lastModuleId);
+      return PATH_AND_URL_CONVERTER.asFileUrl(
+        lastModuleId,
+        stripDynamicImportId,
+      );
     }
     return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
   };
@@ -14513,18 +14496,24 @@ const rollupPluginJsenv = ({
     return new URL(specifier, importer);
   };
 
-  const importIdSet = new Set();
-  const assignImportId = (urlImportedDynamically) => {
-    const basename = urlToBasename(urlImportedDynamically);
-    let importIdCandidate = basename;
+  const dynamicImportIdSet = new Set();
+  const assignDynamicImportId = (urlImportedDynamically) => {
+    const urlInfo = jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
+      urlImportedDynamically,
+    );
+    let dynamicImportIdBase =
+      urlInfo && urlInfo.filenameHint
+        ? filenameWithoutExtension(urlInfo.filenameHint)
+        : urlToBasename(urlImportedDynamically);
+    let dynamicImportIdCandidate = dynamicImportIdBase;
     let positiveInteger = 1;
-    while (importIdSet.has(importIdCandidate)) {
-      importIdCandidate = `${basename}_${positiveInteger}`;
+    while (dynamicImportIdSet.has(dynamicImportIdCandidate)) {
+      dynamicImportIdCandidate = `${dynamicImportIdBase}_${positiveInteger}`;
       positiveInteger++;
     }
-    const importId = importIdCandidate;
-    importIdSet.add(importId);
-    return importId;
+    const dynamicImportId = dynamicImportIdCandidate;
+    dynamicImportIdSet.add(dynamicImportId);
+    return dynamicImportId;
   };
 
   return {
@@ -14581,7 +14570,7 @@ const rollupPluginJsenv = ({
       const createBundledFileInfo = (rollupFileInfo) => {
         const originalUrl = getOriginalUrl(rollupFileInfo);
         const sourceUrls = Object.keys(rollupFileInfo.modules).map((id) =>
-          fileUrlConverter.asFileUrl(id),
+          PATH_AND_URL_CONVERTER.asFileUrl(id),
         );
 
         const specifierToUrlMap = new Map();
@@ -14703,7 +14692,7 @@ const rollupPluginJsenv = ({
       // const sourcemapFile = buildDirectoryUrl
       Object.assign(outputOptions, {
         format,
-        dir: fileUrlConverter.asFilePath(rootDirectoryUrl),
+        dir: PATH_AND_URL_CONVERTER.asFilePath(rootDirectoryUrl),
         sourcemap: sourcemaps === "file" || sourcemaps === "inline",
         // sourcemapFile,
         sourcemapPathTransform: (relativePath) => {
@@ -14714,12 +14703,22 @@ const rollupPluginJsenv = ({
         },
         chunkFileNames: (chunkInfo) => {
           if (chunkInfo.isEntry) {
-            const originalFileUrl = getOriginalUrl(chunkInfo);
+            const originalFileUrl = getOriginalUrl(chunkInfo, true);
             const jsModuleUrlInfo = jsModuleUrlInfos.find(
               (candidate) => candidate.url === originalFileUrl,
             );
             if (jsModuleUrlInfo && jsModuleUrlInfo.filenameHint) {
               return jsModuleUrlInfo.filenameHint;
+            }
+          }
+          if (chunkInfo.isDynamicEntry) {
+            const originalFileUrl = getOriginalUrl(chunkInfo, true);
+            const urlInfo =
+              jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
+                originalFileUrl,
+              );
+            if (urlInfo && urlInfo.filenameHint) {
+              return urlInfo.filenameHint;
             }
           }
           return `${chunkInfo.name}.js`;
@@ -14737,43 +14736,38 @@ const rollupPluginJsenv = ({
       }
       if (preserveDynamicImports) {
         if (isFileSystemPath$1(importer)) {
-          importer = fileUrlConverter.asFileUrl(importer);
+          importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
         const urlObject = resolveImport(specifier, importer);
         const searchParamsToAdd =
           augmentDynamicImportUrlSearchParams(urlObject);
         if (searchParamsToAdd) {
-          Object.keys(searchParamsToAdd).forEach((key) => {
-            const value = searchParamsToAdd[key];
-            if (value === undefined) {
-              urlObject.searchParams.delete(key);
-            } else {
-              urlObject.searchParams.set(key, value);
-            }
-          });
+          injectQueryParams(urlObject, searchParamsToAdd);
         }
         const id = urlObject.href;
         return { id, external: true };
       }
       if (isolateDynamicImports) {
         if (isFileSystemPath$1(importer)) {
-          importer = fileUrlConverter.asFileUrl(importer);
+          importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
         const urlObject = resolveImport(specifier, importer);
-        const importId = assignImportId(urlObject.href);
-        urlObject.searchParams.set("dynamic_import_id", importId);
+        const importId = assignDynamicImportId(urlObject.href);
+        injectQueryParams(urlObject, {
+          dynamic_import_id: importId,
+        });
         const url = urlObject.href;
-        const filePath = fileUrlConverter.asFilePath(url);
+        const filePath = PATH_AND_URL_CONVERTER.asFilePath(url);
         return { id: filePath };
       }
       return null;
     },
     resolveId: (specifier, importer = rootDirectoryUrl) => {
       if (isFileSystemPath$1(importer)) {
-        importer = fileUrlConverter.asFileUrl(importer);
+        importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
       }
       const resolvedUrlObject = resolveImport(specifier, importer);
-      let resolvedUrl = resolvedUrlObject.href;
+      const resolvedUrl = resolvedUrlObject.href;
       if (!resolvedUrl.startsWith("file:")) {
         return {
           id: resolvedUrl,
@@ -14800,27 +14794,25 @@ const rollupPluginJsenv = ({
         const dynamicImportId =
           importerUrlObject.searchParams.get("dynamic_import_id");
         if (dynamicImportId) {
-          resolvedUrlObject.searchParams.set(
-            "dynamic_import_id",
-            dynamicImportId,
-          );
-          resolvedUrl = resolvedUrlObject.href;
+          injectQueryParams(resolvedUrlObject, {
+            dynamic_import_id: dynamicImportId,
+          });
+          const isolatedResolvedUrl = resolvedUrlObject.href;
+          return {
+            id: PATH_AND_URL_CONVERTER.asFilePath(isolatedResolvedUrl),
+            external: false,
+            moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          };
         }
       }
-      const filePath = fileUrlConverter.asFilePath(resolvedUrl);
       return {
-        id: filePath,
+        id: PATH_AND_URL_CONVERTER.asFilePath(resolvedUrl),
         external: false,
         moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
       };
     },
     async load(rollupId) {
-      let fileUrl = fileUrlConverter.asFileUrl(rollupId);
-      if (fileUrl.includes("dynamic_import_id")) {
-        const fileUrlObject = new URL(fileUrl);
-        fileUrlObject.searchParams.delete("dynamic_import_id");
-        fileUrl = fileUrlObject.href;
-      }
+      const fileUrl = PATH_AND_URL_CONVERTER.asFileUrl(rollupId, true);
       const urlInfo = graph.getUrlInfo(fileUrl);
       return {
         code: urlInfo.content,
@@ -14854,6 +14846,14 @@ const applyRollupPlugins = async ({
   });
   const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);
   return rollupOutputArray;
+};
+
+const filenameWithoutExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return filename;
+  }
+  return filename.slice(0, dotLastIndex);
 };
 
 // Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
@@ -19828,57 +19828,5 @@ const assertAndNormalizeDirectoryUrl = (
   }
   return value;
 };
-
-process.platform === "win32";
-fileSystemPathToUrl(process.cwd());
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
-
-process.platform === "win32";
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
-
-process.platform === "win32";
-
-// https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
-const { mkdir } = promises;
-
-// https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_symlink_target_path_type
-const { symlink } = promises;
-process.platform === "win32";
-
-process.platform === "win32";
-
-/*
- * - file modes documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_file_modes
- */
-
-
-const { stat } = promises;
-
-const { access } = promises;
-const {
-  // F_OK,
-  R_OK,
-  W_OK,
-  X_OK,
-} = constants;
-
-process.platform === "win32";
-
-process.platform === "linux";
-
-process.platform === "darwin";
-process.platform === "linux";
-process.platform === "freebsd";
 
 export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, comparePathnames$1 as comparePathnames, comparePathnames as comparePathnames$1, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeFileSize, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };

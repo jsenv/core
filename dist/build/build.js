@@ -1,5 +1,5 @@
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, distributePercentages, humanizeFileSize, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, applyNodeEsmResolution$1 as applyNodeEsmResolution, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, comparePathnames$1 as comparePathnames, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, clearDirectorySync, createTaskLog$1 as createTaskLog } from "../jsenv_core_packages.js";
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, distributePercentages, humanizeFileSize, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, applyNodeEsmResolution$1 as applyNodeEsmResolution, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, comparePathnames$1 as comparePathnames, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, clearDirectorySync, createTaskLog$1 as createTaskLog } from "../jsenv_core_packages.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { pathToFileURL } from "node:url";
@@ -8,13 +8,13 @@ import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { WebSocketResponse, pickContentType } from "@jsenv/server";
 import { createHash } from "node:crypto";
-import "node:path";
-import "@jsenv/js-module-fallback";
-import "node:module";
 import "node:process";
 import "node:os";
 import "node:tty";
 import "string-width";
+import "node:path";
+import "node:module";
+import "@jsenv/js-module-fallback";
 
 const getDirectoryWatchPatterns = (
   directoryUrl,
@@ -6746,6 +6746,12 @@ const jsenvPluginProtocolHttp = ({ include }) => {
     //   }
     //   return null;
     // },
+    init: (context) => {
+      const outDirectoryUrl = context.outDirectoryUrl;
+      if (!outDirectoryUrl) {
+        throw new Error(`need outDirectoryUrl to write http files`);
+      }
+    },
     redirectReference: (reference) => {
       if (!reference.url.startsWith("http")) {
         return null;
@@ -8771,6 +8777,9 @@ const createBuildSpecifierManager = ({
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
         finalUrlInfo.remapReference = bundleInfo.remapReference;
+        if (!finalUrlInfo.filenameHint && bundleInfo.data.bundleRelativeUrl) {
+          finalUrlInfo.filenameHint = bundleInfo.data.bundleRelativeUrl;
+        }
         return {
           // url: bundleInfo.url,
           originalUrl: bundleInfo.originalUrl,
@@ -9849,6 +9858,10 @@ const jsenvPluginSubbuilds = (
       },
       ...defaultChildBuildParams,
       ...subBuildParams,
+      outDirectoryUrl: new URL(
+        `./subbuild_${index}/`,
+        parentBuildParams.outDirectoryUrl,
+      ),
     };
     const subBuildDirectoryUrl = subBuildParams.buildDirectoryUrl;
     if (subBuildDirectoryUrl) {
@@ -10045,7 +10058,7 @@ const build = async ({
           outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
         }
       }
-    } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
+    } else if (outDirectoryUrl) {
       outDirectoryUrl = assertAndNormalizeDirectoryUrl(
         outDirectoryUrl,
         "outDirectoryUrl",
@@ -10172,6 +10185,7 @@ build ${entryPointKeys.length} entry points`);
           minification,
           versioning,
           versioningMethod,
+          outDirectoryUrl,
         },
         onCustomBuildDirectory: (subBuildRelativeUrl) => {
           buildDirectoryCleanPatterns = {
@@ -10393,18 +10407,10 @@ build ${entryPointKeys.length} entry points`);
               }
               const referencedUrlInfo = referenceToOther.urlInfo;
               if (referencedUrlInfo.isInline) {
-                if (referencedUrlInfo.type === "js_module") {
-                  // bundle inline script type module deps
-                  referencedUrlInfo.referenceToOthersSet.forEach(
-                    (jsModuleReferenceToOther) => {
-                      if (jsModuleReferenceToOther.type === "js_import") {
-                        const inlineUrlInfo = jsModuleReferenceToOther.urlInfo;
-                        addToBundlerIfAny(inlineUrlInfo);
-                      }
-                    },
-                  );
+                if (referencedUrlInfo.type !== "js_module") {
+                  continue;
                 }
-                // inline content cannot be bundled
+                addToBundlerIfAny(referencedUrlInfo);
                 continue;
               }
               addToBundlerIfAny(referencedUrlInfo);

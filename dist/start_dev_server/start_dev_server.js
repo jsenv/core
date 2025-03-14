@@ -1,7 +1,7 @@
 import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, normalizeUrl, ANSI, CONTENT_TYPE, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, comparePathnames, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog } from "../jsenv_core_packages.js";
-import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
+import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
@@ -9,13 +9,13 @@ import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHt
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { createRequire } from "node:module";
-import "node:path";
-import "node:crypto";
-import "@jsenv/js-module-fallback";
 import "node:process";
 import "node:os";
 import "node:tty";
 import "string-width";
+import "node:path";
+import "node:crypto";
+import "@jsenv/js-module-fallback";
 
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
@@ -6267,6 +6267,12 @@ const jsenvPluginProtocolHttp = ({ include }) => {
     //   }
     //   return null;
     // },
+    init: (context) => {
+      const outDirectoryUrl = context.outDirectoryUrl;
+      if (!outDirectoryUrl) {
+        throw new Error(`need outDirectoryUrl to write http files`);
+      }
+    },
     redirectReference: (reference) => {
       if (!reference.url.startsWith("http")) {
         return null;

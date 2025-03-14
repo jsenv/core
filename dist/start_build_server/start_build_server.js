@@ -1,17 +1,17 @@
 import { assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, createLogger$2 as createLogger, Abort$1 as Abort, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, createTaskLog$2 as createTaskLog, urlToExtension$2 as urlToExtension, urlToPathname$2 as urlToPathname } from "../jsenv_core_packages.js";
-import { existsSync } from "node:fs";
 import { startServer, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvAccessControlAllowedHeaders, createFileSystemFetch } from "@jsenv/server";
+import { existsSync } from "node:fs";
+import "node:process";
+import "node:os";
+import "node:tty";
+import "string-width";
 import "node:path";
 import "node:crypto";
 import "@jsenv/ast";
 import "@jsenv/sourcemap";
 import "node:url";
-import "@jsenv/js-module-fallback";
 import "node:module";
-import "node:process";
-import "node:os";
-import "node:tty";
-import "string-width";
+import "@jsenv/js-module-fallback";
 
 /*
  * startBuildServer is mean to interact with the build files;
