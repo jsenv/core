@@ -277,6 +277,9 @@ export const createBuildSpecifierManager = ({
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
         finalUrlInfo.remapReference = bundleInfo.remapReference;
+        if (!finalUrlInfo.filenameHint && bundleInfo.data.bundleRelativeUrl) {
+          finalUrlInfo.filenameHint = bundleInfo.data.bundleRelativeUrl;
+        }
         return {
           // url: bundleInfo.url,
           originalUrl: bundleInfo.originalUrl,

@@ -1718,7 +1718,7 @@ const fromNodeRequest = (
         `formData() called on a request with content-type: "${contentType}". multipart/form-data was expected.`,
       );
     }
-    const { formidable } = await import("./js/formidable_index.js");
+    const { formidable } = await import("./formidable_index/formidable_index.js");
     const form = formidable({});
     nodeRequest.resume(); // was paused in line #53
     const [fields, files] = await form.parse(nodeRequest);
@@ -7627,7 +7627,7 @@ const startServer = async ({
     const webSocketSet = new Set();
     let upgradeRequestToWebSocket;
     const loadUpgradeRequestToWebSocket = async () => {
-      const { WebSocketServer } = await import("./js/ws.js");
+      const { WebSocketServer } = await import("./ws/ws.js");
       let webSocketServer = new WebSocketServer({ noServer: true });
       stopCallbackSet.add(() => {
         webSocketServer.close();

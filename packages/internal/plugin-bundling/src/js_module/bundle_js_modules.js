@@ -394,18 +394,24 @@ const rollupPluginJsenv = ({
     return new URL(specifier, importer);
   };
 
-  const importIdSet = new Set();
-  const assignImportId = (urlImportedDynamically) => {
-    const basename = urlToBasename(urlImportedDynamically);
-    let importIdCandidate = basename;
+  const dynamicImportIdSet = new Set();
+  const assignDynamicImportId = (urlImportedDynamically) => {
+    const urlInfo = jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
+      urlImportedDynamically,
+    );
+    let dynamicImportIdBase =
+      urlInfo && urlInfo.filenameHint
+        ? filenameWithoutExtension(urlInfo.filenameHint)
+        : urlToBasename(urlImportedDynamically);
+    let dynamicImportIdCandidate = dynamicImportIdBase;
     let positiveInteger = 1;
-    while (importIdSet.has(importIdCandidate)) {
-      importIdCandidate = `${basename}_${positiveInteger}`;
+    while (dynamicImportIdSet.has(dynamicImportIdCandidate)) {
+      dynamicImportIdCandidate = `${dynamicImportIdBase}_${positiveInteger}`;
       positiveInteger++;
     }
-    const importId = importIdCandidate;
-    importIdSet.add(importId);
-    return importId;
+    const dynamicImportId = dynamicImportIdCandidate;
+    dynamicImportIdSet.add(dynamicImportId);
+    return dynamicImportId;
   };
 
   return {
@@ -644,7 +650,7 @@ const rollupPluginJsenv = ({
           importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
         const urlObject = resolveImport(specifier, importer);
-        const importId = assignImportId(urlObject.href);
+        const importId = assignDynamicImportId(urlObject.href);
         injectQueryParams(urlObject, {
           dynamic_import_id: importId,
         });
@@ -738,4 +744,12 @@ const applyRollupPlugins = async ({
   });
   const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);
   return rollupOutputArray;
+};
+
+const filenameWithoutExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return filename;
+  }
+  return filename.slice(0, dotLastIndex);
 };
