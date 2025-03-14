@@ -40,7 +40,6 @@ export const bundleJsModules = async (
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   if (isolateDynamicImports === undefined && nodeRuntimeEnabled) {
     isolateDynamicImports = true;
-    // when we isolate we could bundle in parallel, well see that later
   }
 
   const generateBundleWithRollup = async () => {
@@ -365,9 +364,16 @@ const rollupPluginJsenv = ({
 
   const importIdSet = new Set();
   const assignImportId = (urlImportedDynamically) => {
-    const importIdCandidate = urlToBasename(urlImportedDynamically);
-    importIdSet.add(importIdCandidate);
-    return importIdCandidate;
+    const basename = urlToBasename(urlImportedDynamically);
+    let importIdCandidate = basename;
+    let positiveInteger = 1;
+    while (importIdSet.has(importIdCandidate)) {
+      importIdCandidate = `${basename}_${positiveInteger}`;
+      positiveInteger++;
+    }
+    const importId = importIdCandidate;
+    importIdSet.add(importId);
+    return importId;
   };
 
   return {

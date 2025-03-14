@@ -238,6 +238,7 @@ export const createBuildSpecifierManager = ({
         js_classic: undefined, // TODO: add comment to explain who is using this
         entry_point: undefined,
         dynamic_import: undefined,
+        dynamic_import_id: undefined,
       };
     },
     formatReference: (reference) => {
