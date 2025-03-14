@@ -17,18 +17,8 @@ const clientFileSubbuild = (clientFileRelativeUrl, options = {}) => {
       [`./${clientFileRelativeUrl}`]: clientFilename,
     },
     runtimeCompat: { chrome: "89" },
-    bundling: {
-      js_module: {
-        chunks: false,
-      },
-    },
+    base: "./",
     ...options,
-    // for now the subbuild content won't be written cause
-    // it can conflict when there is several build in parallel
-    // causing errors like scandir ENOENT
-    // (this is because we cleanup the outDirectory for each build)
-    // (so we night be removing dir while also trying to write them)
-    outDirectoryUrl: null,
   };
 };
 

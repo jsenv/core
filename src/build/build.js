@@ -311,6 +311,7 @@ build ${entryPointKeys.length} entry points`);
           versioning,
           versioningMethod,
           outDirectoryUrl,
+          base,
         },
         onCustomBuildDirectory: (subBuildRelativeUrl) => {
           buildDirectoryCleanPatterns = {

@@ -9954,11 +9954,13 @@ const jsenvPluginSubbuilds = (
         subBuildDirectoryUrl,
         parentBuildParams.buildDirectoryUrl,
       );
-      const subbuildRuntimeCompat =
-        childBuildParams.runtimeCompat || defaultRuntimeCompat;
-      const subbuildBase =
-        subBuildParams.base || getDefaultBase(subbuildRuntimeCompat);
-      childBuildParams.base = `${subbuildBase}${subBuildRelativeUrl}`;
+      childBuildParams.base =
+        parentBuildParams.base === "./"
+          ? `./`
+          : subBuildParams.base ||
+            getDefaultBase(
+              childBuildParams.runtimeCompat || defaultRuntimeCompat,
+            );
       onCustomBuildDirectory(subBuildRelativeUrl);
     }
     const buildPromise = buildStart(childBuildParams, index);
@@ -10273,6 +10275,7 @@ build ${entryPointKeys.length} entry points`);
           versioning,
           versioningMethod,
           outDirectoryUrl,
+          base,
         },
         onCustomBuildDirectory: (subBuildRelativeUrl) => {
           buildDirectoryCleanPatterns = {
