@@ -104,15 +104,10 @@ await build({
     node: "20.0",
   },
   scenarioPlaceholders: false,
+  mappings: {
+    "emoji-regex/index.js": "emoji-regex/index.mjs",
+  },
   plugins: [
-    {
-      redirectReference: (reference) => {
-        if (reference.url.endsWith("emoji-regex/index.js")) {
-          return reference.url.replace("index.js", "index.mjs");
-        }
-        return null;
-      },
-    },
     jsenvPluginCommonJs({
       include: {
         "file:///**/node_modules/ws/": true,
