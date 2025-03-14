@@ -1,4 +1,4 @@
-import { stripAnsi, ansiRegex, stringWidth, __jsenv_default_import__ } from "/client/jsenv_terminal_recorder_node_modules.js";
+import { stripAnsi, ansiRegex, stringWidth, __jsenv_default_import__ } from "/jsenv_terminal_recorder_node_modules.js";
 
 // inspired by https://github.com/F1LT3R/parse-ansi/blob/master/index.js
 

@@ -13,12 +13,14 @@ await build({
       buildDirectoryUrl: import.meta.resolve("../dist/client/"),
       entryPoints: { "./main_browser.js": "terminal_recorder_browser.js" },
       runtimeCompat: { chrome: "100" },
+      mappings: {
+        "emoji-regex/index.js": "emoji-regex/index.mjs",
+      },
       plugins: [
         jsenvPluginCommonJs({
           include: {
             "file:///**/node_modules/he/": true,
             "file:///**/node_modules/string-width/": true,
-            "file:///**/node_modules/emoji-regex/": true,
           },
         }),
       ],
