@@ -1,4 +1,4 @@
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, normalizeUrl, ANSI, CONTENT_TYPE, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, applyNodeEsmResolution, defaultLookupPackageScope, defaultReadPackageJson, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, comparePathnames, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, CONTENT_TYPE, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, defaultLookupPackageScope, defaultReadPackageJson, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, comparePathnames, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog } from "../jsenv_core_packages.js";
 import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
@@ -9,10 +9,10 @@ import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHt
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { createRequire } from "node:module";
+import "string-width";
 import "node:process";
 import "node:os";
 import "node:tty";
-import "string-width";
 import "node:path";
 import "node:crypto";
 import "@jsenv/js-module-fallback";
@@ -2696,6 +2696,9 @@ const createKitchen = ({
 }) => {
   const logger = createLogger({ logLevel });
 
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+  const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
+
   const kitchen = {
     context: {
       ...initialContext,
@@ -2714,6 +2717,14 @@ const createKitchen = ({
       getPluginMeta: null,
       sourcemaps,
       outDirectoryUrl,
+    },
+    resolve: (specifier, importer) => {
+      const { url, packageDirectoryUrl, packageJson } = applyNodeEsmResolution({
+        conditions: packageConditions,
+        parentUrl: importer,
+        specifier,
+      });
+      return { url, packageDirectoryUrl, packageJson };
     },
     graph: null,
     urlInfoTransformer: null,
