@@ -9,7 +9,7 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { parseJsUrls, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil } from "@jsenv/ast";
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
-import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
+import { convertJsModuleToJsClassic, systemJsClientFileUrlDefault } from "@jsenv/js-module-fallback";
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -5076,7 +5076,9 @@ const jsenvPluginImportMetaResolve$1 = ({ needJsModuleFallback }) => {
  */
 
 
-const systemJsClientFileUrl$1 = systemJsClientFileUrlDefault;
+const systemJsClientFileUrl$1 = injectQueryParams$1(systemJsClientFileUrlDefault, {
+  as_js_classic: undefined,
+});
 
 const jsenvPluginJsModuleConversion$1 = ({ remapImportSpecifier }) => {
   const isReferencingJsModule = (reference) => {
@@ -14141,7 +14143,9 @@ const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
  */
 
 
-const systemJsClientFileUrl = systemJsClientFileUrlDefault;
+const systemJsClientFileUrl = injectQueryParams(systemJsClientFileUrlDefault, {
+  as_js_classic: undefined,
+});
 
 const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
   const isReferencingJsModule = (reference) => {
