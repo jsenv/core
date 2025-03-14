@@ -1,19 +1,17 @@
-# [0_basic](../../as_js_classic_mapping_build.test.mjs#L29)
+# [0_basic](../../as_js_classic_mapping_build.test.mjs#L36)
 
 ```js
-run({
-  runtimeCompat: { chrome: "55" },
-})
+run()
 ```
 
-# 1/2 write 2 files into "./build/"
+# 1/2 write 3 files into "./build/"
 
 see [./build/](./build/)
 
 # 2/2 resolve
 
 ```js
-42
+undefined
 ```
 
 ---

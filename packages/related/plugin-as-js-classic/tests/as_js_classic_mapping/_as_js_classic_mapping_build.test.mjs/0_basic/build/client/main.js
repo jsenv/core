@@ -13,5 +13,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  window.ask = () => 42;
+  window.ask = function () {
+    return 42;
+  };
 });
+//# sourceMappingURL=main.js.map
