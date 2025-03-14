@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/exception",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Error and throw value wrapper",
   "license": "MIT",
   "author": {
@@ -31,7 +31,7 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/url-meta": "8.5.5",
+    "@jsenv/url-meta": "8.5.6",
     "errorstacks": "2.4.1"
   }
 }
