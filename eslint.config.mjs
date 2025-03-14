@@ -31,6 +31,8 @@ export default [
       "**/regenerator_runtime.js",
       "**/neuquant.js",
       "**/babel_helpers/",
+      "**/_*test.*/",
+      "**/_*test_manual.*/",
       "experiments/",
     ],
   },
