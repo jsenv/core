@@ -1,4 +1,5 @@
 import { ANSI, createDetailedMessage, createLogger } from "@jsenv/humanize";
+import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { URL_META } from "@jsenv/url-meta";
 import { normalizeUrl } from "@jsenv/urls";
@@ -51,6 +52,9 @@ export const createKitchen = ({
 }) => {
   const logger = createLogger({ logLevel });
 
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+  const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
+
   const kitchen = {
     context: {
       ...initialContext,
@@ -69,6 +73,14 @@ export const createKitchen = ({
       getPluginMeta: null,
       sourcemaps,
       outDirectoryUrl,
+    },
+    resolve: (specifier, importer) => {
+      const { url, packageDirectoryUrl, packageJson } = applyNodeEsmResolution({
+        conditions: packageConditions,
+        parentUrl: importer,
+        specifier,
+      });
+      return { url, packageDirectoryUrl, packageJson };
     },
     graph: null,
     urlInfoTransformer: null,

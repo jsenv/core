@@ -1,6 +1,5 @@
 import { lookupPackageDirectory, readPackageAtOrNull } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
-import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
@@ -36,6 +35,7 @@ export const bundleJsModules = async (
     sourcemaps,
     isSupportedOnCurrentClients,
     getPluginMeta,
+    kitchen,
   } = jsModuleUrlInfos[0].context;
   const graph = jsModuleUrlInfos[0].graph;
   if (buildDirectoryUrl === undefined) {
@@ -159,6 +159,7 @@ export const bundleJsModules = async (
             graph,
             jsModuleUrlInfos,
             PATH_AND_URL_CONVERTER,
+            kitchen,
 
             runtimeCompat,
             sourcemaps,
@@ -237,7 +238,7 @@ const rollupPluginJsenv = ({
   jsModuleUrlInfos,
   PATH_AND_URL_CONVERTER,
 
-  runtimeCompat,
+  kitchen,
   sourcemaps,
   include,
   preserveDynamicImports,
@@ -315,34 +316,39 @@ const rollupPluginJsenv = ({
         "utf8",
       );
       const packageJSON = JSON.parse(packageFileContent);
-      const value = packageJSON.sideEffects;
-      if (Array.isArray(value)) {
-        const sideEffectPatterns = {};
-        for (const v of value) {
-          sideEffectPatterns[v] = true;
-        }
-        const associations = URL_META.resolveAssociations(
-          { sideEffects: sideEffectPatterns },
-          packageDirectoryUrl,
-        );
-        const isMatching = (url) => {
-          const meta = URL_META.applyAssociations({ url, associations });
-          return meta.sideEffects || false;
-        };
-        packageSideEffectsCacheMap.set(packageDirectoryUrl, {
-          value: isMatching,
-        });
-      } else {
-        packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
-      }
-      return value;
+      return storePackageSideEffect(packageDirectoryUrl, packageJSON);
     } catch {
+      return storePackageSideEffect(packageDirectoryUrl, null);
+    }
+  };
+  const storePackageSideEffect = (packageDirectoryUrl, packageJson) => {
+    if (!packageJson) {
       packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
       return undefined;
     }
+    const value = packageJson.sideEffects;
+    if (Array.isArray(value)) {
+      const sideEffectPatterns = {};
+      for (const v of value) {
+        sideEffectPatterns[v] = true;
+      }
+      const associations = URL_META.resolveAssociations(
+        { sideEffects: sideEffectPatterns },
+        packageDirectoryUrl,
+      );
+      const isMatching = (url) => {
+        const meta = URL_META.applyAssociations({ url, associations });
+        return meta.sideEffects || false;
+      };
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, {
+        value: isMatching,
+      });
+      return isMatching;
+    }
+    packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
+    return value;
   };
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
-  const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
+
   const inferSideEffectsFromResolvedUrl = (url) => {
     if (url.startsWith("ignore:")) {
       // console.log(`may have side effect: ${url}`);
@@ -376,12 +382,11 @@ const rollupPluginJsenv = ({
       return inferSideEffectsFromResolvedUrl(url);
     }
     try {
-      const result = applyNodeEsmResolution({
-        conditions: packageConditions,
-        parentUrl: importer,
-        specifier: url,
-      });
-      return inferSideEffectsFromResolvedUrl(result.url);
+      const result = kitchen.resolve(url, importer);
+      if (result.packageDirectoryUrl) {
+        storePackageSideEffect(result.packageDirectoryUrl, result.packageJson);
+      }
+      return inferSideEffectsFromResolvedUrl(url);
     } catch {
       return null;
     }
