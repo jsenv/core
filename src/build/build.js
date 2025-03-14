@@ -546,12 +546,17 @@ build ${entryPointKeys.length} entry points`);
             }
             return;
           }
-          // File referenced with new URL('./file.js', import.meta.url)
+          // File referenced with
+          // - new URL("./file.js", import.meta.url)
+          // - import.meta.resolve("./file.js")
           // are entry points that should be bundled
           // For instance we will bundle service worker/workers detected like this
           if (rawUrlInfo.type === "js_module") {
             for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
-              if (referenceToOther.type === "js_url") {
+              if (
+                referenceToOther.type === "js_url" ||
+                referenceToOther.subtype === "import_meta_resolve"
+              ) {
                 const referencedUrlInfo = referenceToOther.urlInfo;
                 let isAlreadyBundled = false;
                 for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
