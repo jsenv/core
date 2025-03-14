@@ -1,4 +1,4 @@
-# [0_basic](../../subbuild_import_meta_resolve.test.mjs#L30)
+# [0_basic](../../subbuild_import_meta_resolve.test.mjs#L27)
 
 ```js
 run({ bundling: false })

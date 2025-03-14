@@ -4,16 +4,6 @@
     <title>Title</title>
     <meta charset="utf-8">
     <script>
-      ;(function() {
-        var __versionMappings__ = {
-          "/js/file.nomodule.js": "/js/file.nomodule.js?v=67382087"
-        };
-        window.__v__ = function (specifier) {
-          return __versionMappings__[specifier] || specifier
-        };
-      })();
-    </script>
-    <script>
       /*
        * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
        * with the following changes:
@@ -429,15 +419,14 @@
     <script>window.resultPromise = new Promise(resolve => {
   window.resolveResultPromise = resolve;
 });</script>
-    <script>System.register([__v__("/js/file.nomodule.js")], function (_export, _context) {
+    <script>System.register([], function (_export, _context) {
   "use strict";
 
   var answer;
   return {
-    setters: [function (_fileJs) {
-      answer = _fileJs.answer;
-    }],
+    setters: [],
     execute: function () {
+      answer = 42;
       setTimeout(() => {
         const url = _context.meta.url;
         window.resolveResultPromise({

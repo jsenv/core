@@ -3,13 +3,6 @@
   <head>
     <title>Title</title>
     <meta charset="utf-8">
-    <script type="importmap">
-      {
-        "imports": {
-          "/js/main.css.js?side_effect": "/js/main.css.js?side_effect=&v=b700243f"
-        }
-      }
-    </script>
   </head>
 
   <body>
@@ -18,12 +11,33 @@
         window.resolveResultPromise = resolve;
       });
     </script>
-    <script type="module">
-      import "/js/main.css.js?side_effect" ;
+    <script type="module">/* eslint-env browser,node */
 
-      window.resolveResultPromise(
+/*
+ * This file does not use export const InlineContent = function() {} on purpose:
+ * - An export would be renamed by rollup,
+ *   making it harder to statically detect new InlineContent() calls
+ * - An export would be renamed by terser
+ *   here again it becomes hard to detect new InlineContent() calls
+ * Instead it sets "__InlineContent__" on the global object and terser is configured by jsenv
+ * to preserve the __InlineContent__ global variable name
+ */
+
+const globalObject = typeof self === "object" ? self : process;
+globalObject.__InlineContent__ = function (content, { type = "text/plain" }) {
+  this.text = content;
+  this.type = type;
+};
+
+const inlineContent = new __InlineContent__("body {\n  background: red;\n}\n", { type: "text/css" });
+const stylesheet = new CSSStyleSheet();
+stylesheet.replaceSync(inlineContent.text);
+
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+
+window.resolveResultPromise(
         getComputedStyle(document.body).backgroundColor,
       );
-    </script>
+</script>
   </body>
 </html>

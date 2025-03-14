@@ -4,15 +4,8 @@
     <title>Title</title>
     <meta charset="utf-8">
     <link rel="icon" href="data:,">
-    <link rel="preload" href="/js/style.css.js?v=dadfbfa6" as="script" crossorigin="">
+    
     <link rel="preload" href="/other/roboto_v27_latin_regular.woff2?v=fda7bb73" as="font" type="font/woff2" id="font_preload_link" crossorigin="">
-    <script type="importmap">
-      {
-        "imports": {
-          "/js/style.css.js": "/js/style.css.js?v=dadfbfa6"
-        }
-      }
-    </script>
     <script>
       ;(function() {
         var __versionMappings__ = {
@@ -32,10 +25,29 @@
         window.resolveResultPromise = resolve;
       });
     </script>
-    <script type="module">
-      import style from "/js/style.css.js" ;
+    <script type="module">/* eslint-env browser,node */
 
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, style];
+/*
+ * This file does not use export const InlineContent = function() {} on purpose:
+ * - An export would be renamed by rollup,
+ *   making it harder to statically detect new InlineContent() calls
+ * - An export would be renamed by terser
+ *   here again it becomes hard to detect new InlineContent() calls
+ * Instead it sets "__InlineContent__" on the global object and terser is configured by jsenv
+ * to preserve the __InlineContent__ global variable name
+ */
+
+const globalObject = typeof self === "object" ? self : process;
+globalObject.__InlineContent__ = function (content, { type = "text/plain" }) {
+  this.text = content;
+  this.type = type;
+};
+
+const inlineContent = new __InlineContent__('@font-face {\n  font-family: Roboto;\n  font-style: normal;\n  font-weight: 400;\n  src: local(Roboto), url('+__v__("/other/roboto_v27_latin_regular.woff2")+') format("woff2");\n}\n\nbody {\n  font-family: Roboto;\n}\n', { type: "text/css" });
+const stylesheet = new CSSStyleSheet();
+stylesheet.replaceSync(inlineContent.text);
+
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
 
       // Let browser time to log an eventual warning about preload link not used
       await new Promise((resolve) => {
@@ -43,6 +55,6 @@
       });
       await document.fonts.ready;
       window.resolveResultPromise(getComputedStyle(document.body).fontFamily);
-    </script>
+</script>
   </body>
 </html>
