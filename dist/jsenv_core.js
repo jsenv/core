@@ -1,3 +1,5 @@
+import "@jsenv/sourcemap";
+
 const injectionSymbol = Symbol.for("jsenv_injection");
 const INJECTIONS = {
   optional: (value) => {

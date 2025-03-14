@@ -71,11 +71,13 @@ await build({
     return "error";
   },
   scenarioPlaceholders: false,
+  mappings: {
+    "emoji-regex/index.js": "emoji-regex/index.mjs",
+  },
   plugins: [
     jsenvPluginCommonJs({
       include: {
         "file:///**/node_modules/ws/": true,
-        "file:///**/node_modules/emoji-regex/": true,
         "file:///**/node_modules/once/": true,
         "file:///**/node_modules/dezalgo/": true,
       },

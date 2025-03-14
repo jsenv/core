@@ -50,6 +50,7 @@ import {
 } from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
+import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
 import { jsenvPluginSubbuilds } from "./jsenv_plugin_subbuilds.js";
 
 /**
@@ -99,6 +100,7 @@ export const build = async ({
   base = getDefaultBase(runtimeCompat),
   ignore,
 
+  mappings,
   subbuilds = [],
   plugins = [],
   referenceAnalysis = {},
@@ -298,6 +300,7 @@ build ${entryPointKeys.length} entry points`);
     let subbuildResults = [];
 
     const rawPluginStore = createPluginStore([
+      ...(mappings ? [jsenvPluginMappings(mappings)] : []),
       ...jsenvPluginSubbuilds(subbuilds, {
         parentBuildParams: {
           sourceDirectoryUrl,

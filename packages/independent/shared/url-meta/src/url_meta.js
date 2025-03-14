@@ -7,9 +7,19 @@ export const applyPatternMatching = ({ url, pattern }) => {
   return applyPattern({ url, pattern });
 };
 
-export const resolveAssociations = (associations, baseUrl) => {
-  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
-  assertUrlLike(baseUrl, "baseUrl");
+export const resolveAssociations = (associations, resolver) => {
+  let resolve = () => {};
+  if (typeof resolver === "function") {
+    resolve = resolver;
+  } else if (typeof resolver === "string") {
+    const baseUrl = resolver;
+    assertUrlLike(baseUrl, "baseUrl");
+    resolve = (pattern) => new URL(pattern, baseUrl).href;
+  } else if (resolver && typeof resolver.href === "string") {
+    const baseUrl = resolver.href;
+    assertUrlLike(baseUrl, "baseUrl");
+    resolve = (pattern) => new URL(pattern, baseUrl).href;
+  }
 
   const associationsResolved = {};
   for (const key of Object.keys(associations)) {
@@ -20,12 +30,11 @@ export const resolveAssociations = (associations, baseUrl) => {
         const valueAssociated = value[pattern];
         let patternResolved;
         try {
-          patternResolved = String(new URL(pattern, baseUrl));
+          patternResolved = resolve(pattern);
         } catch {
           // it's not really an url, no need to perform url resolution nor encoding
           patternResolved = pattern;
         }
-
         valueMapResolved[patternResolved] = valueAssociated;
       }
       associationsResolved[key] = valueMapResolved;
@@ -148,34 +157,29 @@ export const urlChildMayMatch = ({ url, associations, predicate }) => {
 };
 
 export const applyAliases = ({ url, aliases }) => {
-  let aliasFullMatchResult;
-  const aliasMatchingKey = Object.keys(aliases).find((key) => {
-    const aliasMatchResult = applyPatternMatching({
+  for (const key of Object.keys(aliases)) {
+    const matchResult = applyPatternMatching({
       pattern: key,
       url,
     });
-    if (aliasMatchResult.matched) {
-      aliasFullMatchResult = aliasMatchResult;
-      return true;
+    if (!matchResult.matched) {
+      continue;
     }
-    return false;
-  });
-  if (!aliasMatchingKey) {
-    return url;
-  }
-  const { matchGroups } = aliasFullMatchResult;
-  const alias = aliases[aliasMatchingKey];
-  const parts = alias.split("*");
-  let newUrl = "";
-  let index = 0;
-  for (const part of parts) {
-    newUrl += `${part}`;
-    if (index < parts.length - 1) {
-      newUrl += matchGroups[index];
+    const { matchGroups } = matchResult;
+    const alias = aliases[key];
+    const parts = alias.split("*");
+    let newUrl = "";
+    let index = 0;
+    for (const part of parts) {
+      newUrl += `${part}`;
+      if (index < parts.length - 1) {
+        newUrl += matchGroups[index];
+      }
+      index++;
     }
-    index++;
+    return newUrl;
   }
-  return newUrl;
+  return url;
 };
 
 export const matches = (url, patterns) => {
