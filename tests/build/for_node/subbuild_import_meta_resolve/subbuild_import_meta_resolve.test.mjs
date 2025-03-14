@@ -19,10 +19,8 @@ const run = async ({ bundling }) => {
           "./client/main.html": "main.html",
         },
         runtimeCompat: { chrome: "89" },
-        outDirectoryUrl: false,
       },
     ],
-    outDirectoryUrl: false,
   });
 };
 

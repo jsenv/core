@@ -5,9 +5,7 @@ await build({
   buildDirectoryUrl: import.meta.resolve("./build/"),
   entryPoints: { "./main.js": "main.js" },
   minification: false,
-  runtimeCompat: {
-    node: "20",
-  },
+  runtimeCompat: { node: "20" },
   subbuilds: [
     {
       buildDirectoryUrl: import.meta.resolve("./build/client/"),
@@ -18,6 +16,11 @@ await build({
         chrome: "89",
       },
       http: true,
+      bundling: {
+        js_module: {
+          chunks: false,
+        },
+      },
     },
   ],
 });

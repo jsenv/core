@@ -179,7 +179,7 @@ export const build = async ({
           outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
         }
       }
-    } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
+    } else if (outDirectoryUrl) {
       outDirectoryUrl = assertAndNormalizeDirectoryUrl(
         outDirectoryUrl,
         "outDirectoryUrl",
@@ -307,6 +307,7 @@ build ${entryPointKeys.length} entry points`);
           minification,
           versioning,
           versioningMethod,
+          outDirectoryUrl,
         },
         onCustomBuildDirectory: (subBuildRelativeUrl) => {
           buildDirectoryCleanPatterns = {
