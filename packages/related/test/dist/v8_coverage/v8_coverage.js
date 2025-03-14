@@ -622,9 +622,4 @@ const filterV8Coverage = async (
   return v8CoverageFiltered;
 };
 
-const v8_coverage = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
-  __proto__: null,
-  filterV8Coverage
-}, Symbol.toStringTag, { value: 'Module' }));
-
-export { URL_META, filterV8Coverage, v8_coverage };
+export { filterV8Coverage };

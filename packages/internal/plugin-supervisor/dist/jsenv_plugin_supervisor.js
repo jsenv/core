@@ -468,30 +468,38 @@ const fillLeft = (value, biggestValue, char = " ") => {
 // becoming "file:///file.css?css_module="
 // we want to get rid of the "=" and consider it's the same url
 const normalizeUrl = url => {
-  if (url.includes("?")) {
-    // disable on data urls (would mess up base64 encoding)
-    if (url.startsWith("data:")) {
-      return url;
-    }
-    return url.replace(/[=](?=&|$)/g, "");
+  const calledWithString = typeof url === "string";
+  const urlObject = calledWithString ? new URL(url) : url;
+  let urlString = urlObject.href;
+  if (!urlString.includes("?")) {
+    return url;
   }
-  return url;
+  // disable on data urls (would mess up base64 encoding)
+  if (urlString.startsWith("data:")) {
+    return url;
+  }
+  urlString = urlString.replace(/[=](?=&|$)/g, "");
+  if (calledWithString) {
+    return urlString;
+  }
+  urlObject.href = urlString;
+  return urlObject;
 };
 const injectQueryParams = (url, params) => {
-  const urlObject = new URL(url);
+  const calledWithString = typeof url === "string";
+  const urlObject = calledWithString ? new URL(url) : url;
   const {
     searchParams
   } = urlObject;
-  Object.keys(params).forEach(key => {
+  for (const key of Object.keys(params)) {
     const value = params[key];
     if (value === undefined) {
       searchParams.delete(key);
     } else {
       searchParams.set(key, value);
     }
-  });
-  const urlWithParams = urlObject.href;
-  return normalizeUrl(urlWithParams);
+  }
+  return normalizeUrl(calledWithString ? urlObject.href : urlObject);
 };
 
 const getCommonPathname = (pathname, otherPathname) => {
