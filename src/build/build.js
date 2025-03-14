@@ -179,7 +179,7 @@ export const build = async ({
           outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
         }
       }
-    } else if (outDirectoryUrl !== null && outDirectoryUrl !== false) {
+    } else if (outDirectoryUrl) {
       outDirectoryUrl = assertAndNormalizeDirectoryUrl(
         outDirectoryUrl,
         "outDirectoryUrl",
@@ -307,6 +307,7 @@ build ${entryPointKeys.length} entry points`);
           minification,
           versioning,
           versioningMethod,
+          outDirectoryUrl,
         },
         onCustomBuildDirectory: (subBuildRelativeUrl) => {
           buildDirectoryCleanPatterns = {
@@ -528,30 +529,27 @@ build ${entryPointKeys.length} entry points`);
               }
               const referencedUrlInfo = referenceToOther.urlInfo;
               if (referencedUrlInfo.isInline) {
-                if (referencedUrlInfo.type === "js_module") {
-                  // bundle inline script type module deps
-                  referencedUrlInfo.referenceToOthersSet.forEach(
-                    (jsModuleReferenceToOther) => {
-                      if (jsModuleReferenceToOther.type === "js_import") {
-                        const inlineUrlInfo = jsModuleReferenceToOther.urlInfo;
-                        addToBundlerIfAny(inlineUrlInfo);
-                      }
-                    },
-                  );
+                if (referencedUrlInfo.type !== "js_module") {
+                  continue;
                 }
-                // inline content cannot be bundled
+                addToBundlerIfAny(referencedUrlInfo);
                 continue;
               }
               addToBundlerIfAny(referencedUrlInfo);
             }
             return;
           }
-          // File referenced with new URL('./file.js', import.meta.url)
+          // File referenced with
+          // - new URL("./file.js", import.meta.url)
+          // - import.meta.resolve("./file.js")
           // are entry points that should be bundled
           // For instance we will bundle service worker/workers detected like this
           if (rawUrlInfo.type === "js_module") {
             for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
-              if (referenceToOther.type === "js_url") {
+              if (
+                referenceToOther.type === "js_url" ||
+                referenceToOther.subtype === "import_meta_resolve"
+              ) {
                 const referencedUrlInfo = referenceToOther.urlInfo;
                 let isAlreadyBundled = false;
                 for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {

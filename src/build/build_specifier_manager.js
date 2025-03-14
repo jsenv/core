@@ -238,6 +238,7 @@ export const createBuildSpecifierManager = ({
         js_classic: undefined, // TODO: add comment to explain who is using this
         entry_point: undefined,
         dynamic_import: undefined,
+        dynamic_import_id: undefined,
       };
     },
     formatReference: (reference) => {
@@ -276,6 +277,9 @@ export const createBuildSpecifierManager = ({
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
         finalUrlInfo.remapReference = bundleInfo.remapReference;
+        if (!finalUrlInfo.filenameHint && bundleInfo.data.bundleRelativeUrl) {
+          finalUrlInfo.filenameHint = bundleInfo.data.bundleRelativeUrl;
+        }
         return {
           // url: bundleInfo.url,
           originalUrl: bundleInfo.originalUrl,

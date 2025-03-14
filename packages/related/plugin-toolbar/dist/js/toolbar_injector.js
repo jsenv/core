@@ -1,5 +1,5 @@
 const jsenvLogoSvgUrl = new URL("../other/jsenv_logo.svg", import.meta.url);
-export const injectToolbar = async ({
+const injectToolbar = async ({
   toolbarUrl,
   logLevel,
   theme,
@@ -263,3 +263,5 @@ const iframeToLoadedPromise = iframe => {
     iframe.addEventListener("load", onload, true);
   });
 };
+
+export { injectToolbar };

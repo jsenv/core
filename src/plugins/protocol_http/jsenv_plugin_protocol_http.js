@@ -36,6 +36,12 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
     //   }
     //   return null;
     // },
+    init: (context) => {
+      const outDirectoryUrl = context.outDirectoryUrl;
+      if (!outDirectoryUrl) {
+        throw new Error(`need outDirectoryUrl to write http files`);
+      }
+    },
     redirectReference: (reference) => {
       if (!reference.url.startsWith("http")) {
         return null;

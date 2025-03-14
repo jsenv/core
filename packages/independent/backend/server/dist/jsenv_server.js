@@ -1718,7 +1718,7 @@ const fromNodeRequest = (
         `formData() called on a request with content-type: "${contentType}". multipart/form-data was expected.`,
       );
     }
-    const { formidable } = await import("./js/formidable_index.js");
+    const { formidable } = await import("./formidable_index/formidable_index.js");
     const form = formidable({});
     nodeRequest.resume(); // was paused in line #53
     const [fields, files] = await form.parse(nodeRequest);
@@ -6489,7 +6489,7 @@ const replacePlaceholdersInHtml = (html, replacers) => {
   });
 };
 
-const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./html/4xx.html");
+const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/4xx/4xx.html");
 
 const jsenvServiceDefaultBody4xx5xx = () => {
   return {
@@ -6568,7 +6568,7 @@ const generateBadStatusResponse = (
   );
 };
 
-const jsenvServerRootDirectoryUrl = import.meta.resolve("../");
+const jsenvServerRootDirectoryUrl = import.meta.resolve("./");
 
 const jsenvServiceInternalClientFiles = () => {
   return {
@@ -6636,7 +6636,7 @@ const jsenvServiceOpenFile = () => {
 };
 
 const routeInspectorHtmlFileUrl = import.meta.resolve(
-  "./html/route_inspector.html",
+  "./client/route_inspector/route_inspector.html",
 );
 
 const jsenvServiceRouteInspector = () => {
@@ -7627,7 +7627,7 @@ const startServer = async ({
     const webSocketSet = new Set();
     let upgradeRequestToWebSocket;
     const loadUpgradeRequestToWebSocket = async () => {
-      const { WebSocketServer } = await import("./js/ws.js");
+      const { WebSocketServer } = await import("./ws/ws.js");
       let webSocketServer = new WebSocketServer({ noServer: true });
       stopCallbackSet.add(() => {
         webSocketServer.close();
@@ -7812,7 +7812,7 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   exit: STOP_REASON_PROCESS_EXIT,
 };
 
-const internalErrorHtmlFileUrl = import.meta.resolve("./html/500.html");
+const internalErrorHtmlFileUrl = import.meta.resolve("./client/500/500.html");
 
 const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {

@@ -1,9 +1,8 @@
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
-import { chromium } from "playwright";
-
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+import { chromium } from "playwright";
 
 const debug = false; // true to have browser UI + keep it open after test
 const devServer = await startDevServer({

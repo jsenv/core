@@ -315,7 +315,12 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
                   });
                 } else {
                   setHtmlNodeText(node, inlineUrlInfo.content, {
-                    indentation: false, // indentation would decrease stack trace precision
+                    indentation:
+                      inlineUrlInfo.type === "js_classic" ||
+                      inlineUrlInfo.type === "js_module"
+                        ? // indentation would mess with stack trace and sourcemap
+                          false
+                        : "auto",
                   });
                   setHtmlNodeAttributes(node, {
                     "jsenv-cooked-by": "jsenv:html_inline_content_analysis",

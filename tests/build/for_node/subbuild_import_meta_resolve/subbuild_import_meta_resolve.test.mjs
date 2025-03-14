@@ -1,7 +1,6 @@
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-// TODO: test with versioning and bundling
 const run = async ({ bundling }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./source/"),
@@ -19,10 +18,8 @@ const run = async ({ bundling }) => {
           "./client/main.html": "main.html",
         },
         runtimeCompat: { chrome: "89" },
-        outDirectoryUrl: false,
       },
     ],
-    outDirectoryUrl: false,
   });
 };
 

@@ -18,6 +18,10 @@ export const jsenvPluginSubbuilds = (
       },
       ...defaultChildBuildParams,
       ...subBuildParams,
+      outDirectoryUrl: new URL(
+        `./subbuild_${index}/`,
+        parentBuildParams.outDirectoryUrl,
+      ),
     };
     const subBuildDirectoryUrl = subBuildParams.buildDirectoryUrl;
     if (subBuildDirectoryUrl) {

@@ -163,7 +163,7 @@ const executeUsingDynamicImport = async ({
     finalizeCoverage = async () => {
       const [coverage, { filterV8Coverage }] = await Promise.all([
         stopJsCoverage(),
-        import("./js/v8_coverage.js").then(n => n.v8_coverage),
+        import("./v8_coverage/v8_coverage.js"),
       ]);
       const coverageLight = await filterV8Coverage(coverage, {
         rootDirectoryUrl,

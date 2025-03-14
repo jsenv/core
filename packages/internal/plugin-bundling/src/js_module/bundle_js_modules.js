@@ -4,7 +4,11 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
-import { isFileSystemPath } from "@jsenv/urls";
+import {
+  injectQueryParams,
+  isFileSystemPath,
+  urlToBasename,
+} from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 import { fileUrlConverter } from "../file_url_converter.js";
 
@@ -15,7 +19,8 @@ export const bundleJsModules = async (
     include,
     chunks = {},
     strictExports = false,
-    preserveDynamicImport = false,
+    isolateDynamicImports = undefined,
+    preserveDynamicImports = false,
     augmentDynamicImportUrlSearchParams = () => {},
     rollup,
     rollupInput = {},
@@ -36,155 +41,192 @@ export const bundleJsModules = async (
   if (buildDirectoryUrl === undefined) {
     buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
   }
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+  if (isolateDynamicImports === undefined && nodeRuntimeEnabled) {
+    isolateDynamicImports = true;
+  }
 
-  let manualChunks;
-  if (chunks) {
-    let workspaces;
-    let packageName;
-    const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
-    if (packageDirectoryUrl) {
-      const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
-      if (packageJSON) {
-        packageName = packageJSON.name;
-        workspaces = packageJSON.workspaces;
+  const PATH_AND_URL_CONVERTER = {
+    asFileUrl: fileUrlConverter.asFileUrl,
+    asFilePath: fileUrlConverter.asFilePath,
+  };
+
+  if (isolateDynamicImports) {
+    PATH_AND_URL_CONVERTER.asFileUrl = (path, stripDynamicImportId) => {
+      const fileUrl = fileUrlConverter.asFileUrl(path);
+      if (!stripDynamicImportId) {
+        return fileUrl;
       }
-    }
-    let nodeModuleChunkName = "node_modules";
-    let packagesChunkName = "packages";
-
-    if (packageName) {
-      let packageNameAsFilename = packageName
-        .replaceAll("@", "")
-        .replaceAll("-", "_")
-        .replaceAll("/", "_");
-      nodeModuleChunkName = `${packageNameAsFilename}_node_modules`;
-      packagesChunkName = `${packageNameAsFilename}_packages`;
-    }
-    chunks[nodeModuleChunkName] = {
-      "file:///**/node_modules/": true,
-      ...chunks.vendors,
+      if (!fileUrl.includes("dynamic_import_id")) {
+        return fileUrl;
+      }
+      return injectQueryParams(fileUrl, {
+        dynamic_import_id: undefined,
+      });
     };
-    if (workspaces) {
-      const workspacePatterns = {};
-      for (const workspace of workspaces) {
-        const workspacePattern = new URL(
-          workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
-          packageDirectoryUrl,
-        ).href;
-        workspacePatterns[workspacePattern] = true;
+  }
+
+  const generateBundleWithRollup = async () => {
+    let manualChunks;
+    if (chunks) {
+      let workspaces;
+      let packageName;
+      const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
+      if (packageDirectoryUrl) {
+        const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
+        if (packageJSON) {
+          packageName = packageJSON.name;
+          workspaces = packageJSON.workspaces;
+        }
       }
-      chunks[packagesChunkName] = {
-        ...workspacePatterns,
-        ...chunks.workspaces,
+      let nodeModuleChunkName = "node_modules";
+      let packagesChunkName = "packages";
+
+      if (packageName) {
+        let packageNameAsFilename = packageName
+          .replaceAll("@", "")
+          .replaceAll("-", "_")
+          .replaceAll("/", "_");
+        nodeModuleChunkName = `${packageNameAsFilename}_node_modules`;
+        packagesChunkName = `${packageNameAsFilename}_packages`;
+      }
+      chunks[nodeModuleChunkName] = {
+        "file:///**/node_modules/": true,
+        ...chunks.vendors,
+      };
+      if (workspaces) {
+        const workspacePatterns = {};
+        for (const workspace of workspaces) {
+          const workspacePattern = new URL(
+            workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
+            packageDirectoryUrl,
+          ).href;
+          workspacePatterns[workspacePattern] = true;
+        }
+        chunks[packagesChunkName] = {
+          ...workspacePatterns,
+          ...chunks.workspaces,
+        };
+      }
+
+      const associations = URL_META.resolveAssociations(
+        chunks,
+        rootDirectoryUrl,
+      );
+      manualChunks = (id, manualChunksApi) => {
+        if (rollupOutput.manualChunks) {
+          const manualChunkName = rollupOutput.manualChunks(
+            id,
+            manualChunksApi,
+          );
+          if (manualChunkName) {
+            return manualChunkName;
+          }
+        }
+        const moduleInfo = manualChunksApi.getModuleInfo(id);
+        if (moduleInfo.isEntry || moduleInfo.dynamicImporters.length) {
+          return null;
+        }
+        const url = PATH_AND_URL_CONVERTER.asFileUrl(id);
+        const urlObject = new URL(url);
+        urlObject.search = "";
+        const urlWithoutSearch = urlObject.href;
+        const meta = URL_META.applyAssociations({
+          url: urlWithoutSearch,
+          associations,
+        });
+        for (const chunkNameCandidate of Object.keys(meta)) {
+          if (meta[chunkNameCandidate]) {
+            return chunkNameCandidate;
+          }
+        }
+        return undefined;
       };
     }
 
-    const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
-    manualChunks = (id, manualChunksApi) => {
-      if (rollupOutput.manualChunks) {
-        const manualChunkName = rollupOutput.manualChunks(id, manualChunksApi);
-        if (manualChunkName) {
-          return manualChunkName;
-        }
-      }
-      const moduleInfo = manualChunksApi.getModuleInfo(id);
-      if (moduleInfo.isEntry || moduleInfo.dynamicImporters.length) {
-        return null;
-      }
-      const url = fileUrlConverter.asFileUrl(id);
-      const urlObject = new URL(url);
-      urlObject.search = "";
-      const urlWithoutSearch = urlObject.href;
-      const meta = URL_META.applyAssociations({
-        url: urlWithoutSearch,
-        associations,
-      });
-      for (const chunkNameCandidate of Object.keys(meta)) {
-        if (meta[chunkNameCandidate]) {
-          return chunkNameCandidate;
-        }
-      }
-      return undefined;
-    };
-  }
+    const resultRef = { current: null };
+    const willMinifyJsModule = Boolean(getPluginMeta("willMinifyJsModule"));
+    try {
+      await applyRollupPlugins({
+        rollup,
+        rollupPlugins: [
+          ...rollupPlugins,
+          rollupPluginJsenv({
+            signal,
+            logger,
+            rootDirectoryUrl,
+            buildDirectoryUrl,
+            graph,
+            jsModuleUrlInfos,
+            PATH_AND_URL_CONVERTER,
 
-  const resultRef = { current: null };
-  const willMinifyJsModule = Boolean(getPluginMeta("willMinifyJsModule"));
-  try {
-    await applyRollupPlugins({
-      rollup,
-      rollupPlugins: [
-        ...rollupPlugins,
-        rollupPluginJsenv({
-          signal,
-          logger,
-          rootDirectoryUrl,
-          buildDirectoryUrl,
-          graph,
-          jsModuleUrlInfos,
-
-          runtimeCompat,
-          sourcemaps,
-          include,
-          preserveDynamicImport,
-          augmentDynamicImportUrlSearchParams,
-          strictExports,
-          resultRef,
-        }),
-      ],
-      rollupInput: {
-        input: [],
-        onwarn: (warning) => {
-          if (warning.code === "CIRCULAR_DEPENDENCY") {
-            return;
-          }
-          if (warning.code === "EVAL") {
-            // ideally we should disable only for jsenv files
-            return;
-          }
-          if (
-            warning.code === "INVALID_ANNOTATION" &&
-            warning.loc.file.includes("/node_modules/")
-          ) {
-            return;
-          }
-          if (
-            warning.code === "EMPTY_BUNDLE" &&
-            (warning.names.join("").endsWith("node_modules") ||
-              warning.names.join("").endsWith("packages"))
-          ) {
-            return;
-          }
-          logger.warn(String(warning));
+            runtimeCompat,
+            sourcemaps,
+            include,
+            preserveDynamicImports,
+            augmentDynamicImportUrlSearchParams,
+            isolateDynamicImports,
+            strictExports,
+            resultRef,
+          }),
+        ],
+        rollupInput: {
+          input: [],
+          onwarn: (warning) => {
+            if (warning.code === "CIRCULAR_DEPENDENCY") {
+              return;
+            }
+            if (warning.code === "EVAL") {
+              // ideally we should disable only for jsenv files
+              return;
+            }
+            if (
+              warning.code === "INVALID_ANNOTATION" &&
+              warning.loc.file.includes("/node_modules/")
+            ) {
+              return;
+            }
+            if (
+              warning.code === "EMPTY_BUNDLE" &&
+              (warning.names.join("").endsWith("node_modules") ||
+                warning.names.join("").endsWith("packages"))
+            ) {
+              return;
+            }
+            logger.warn(String(warning));
+          },
+          ...rollupInput,
         },
-        ...rollupInput,
-      },
-      rollupOutput: {
-        compact: willMinifyJsModule,
-        minifyInternalExports: willMinifyJsModule,
-        generatedCode: {
-          arrowFunctions: isSupportedOnCurrentClients("arrow_function"),
-          constBindings: isSupportedOnCurrentClients("const_bindings"),
-          objectShorthand: isSupportedOnCurrentClients(
-            "object_properties_shorthand",
-          ),
-          reservedNamesAsProps: isSupportedOnCurrentClients("reserved_words"),
-          symbols: isSupportedOnCurrentClients("symbols"),
+        rollupOutput: {
+          compact: willMinifyJsModule,
+          minifyInternalExports: willMinifyJsModule,
+          generatedCode: {
+            arrowFunctions: isSupportedOnCurrentClients("arrow_function"),
+            constBindings: isSupportedOnCurrentClients("const_bindings"),
+            objectShorthand: isSupportedOnCurrentClients(
+              "object_properties_shorthand",
+            ),
+            reservedNamesAsProps: isSupportedOnCurrentClients("reserved_words"),
+            symbols: isSupportedOnCurrentClients("symbols"),
+          },
+          ...rollupOutput,
+          manualChunks,
         },
-        ...rollupOutput,
-        manualChunks,
-      },
-    });
-    return resultRef.current.jsModuleBundleUrlInfos;
-  } catch (e) {
-    if (e.code === "MISSING_EXPORT") {
-      const detailedMessage = createDetailedMessage(e.message, {
-        frame: e.frame,
       });
-      throw new Error(detailedMessage, { cause: e });
+      return resultRef.current.jsModuleBundleUrlInfos;
+    } catch (e) {
+      if (e.code === "MISSING_EXPORT") {
+        const detailedMessage = createDetailedMessage(e.message, {
+          frame: e.frame,
+        });
+        throw new Error(detailedMessage, { cause: e });
+      }
+      throw e;
     }
-    throw e;
-  }
+  };
+
+  const jsModuleBundleUrlInfos = await generateBundleWithRollup();
+  return jsModuleBundleUrlInfos;
 };
 
 const rollupPluginJsenv = ({
@@ -193,11 +235,13 @@ const rollupPluginJsenv = ({
   buildDirectoryUrl,
   graph,
   jsModuleUrlInfos,
+  PATH_AND_URL_CONVERTER,
 
   runtimeCompat,
   sourcemaps,
   include,
-  preserveDynamicImport,
+  preserveDynamicImports,
+  isolateDynamicImports,
   augmentDynamicImportUrlSearchParams,
   strictExports,
 
@@ -228,7 +272,7 @@ const rollupPluginJsenv = ({
     };
   }
 
-  const getOriginalUrl = (rollupFileInfo) => {
+  const getOriginalUrl = (rollupFileInfo, stripDynamicImportId) => {
     if (
       // - explicitely emitted by emitChunk
       // - import.meta.resolve("")
@@ -238,13 +282,19 @@ const rollupPluginJsenv = ({
     ) {
       const { facadeModuleId } = rollupFileInfo;
       if (facadeModuleId) {
-        return fileUrlConverter.asFileUrl(facadeModuleId);
+        return PATH_AND_URL_CONVERTER.asFileUrl(
+          facadeModuleId,
+          stripDynamicImportId,
+        );
       }
     }
     if (rollupFileInfo.isDynamicEntry) {
       const { moduleIds } = rollupFileInfo;
       const lastModuleId = moduleIds[moduleIds.length - 1];
-      return fileUrlConverter.asFileUrl(lastModuleId);
+      return PATH_AND_URL_CONVERTER.asFileUrl(
+        lastModuleId,
+        stripDynamicImportId,
+      );
     }
     return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
   };
@@ -337,6 +387,33 @@ const rollupPluginJsenv = ({
     }
   };
 
+  const resolveImport = (specifier, importer) => {
+    if (specifier[0] === "/") {
+      return new URL(specifier.slice(1), rootDirectoryUrl);
+    }
+    return new URL(specifier, importer);
+  };
+
+  const dynamicImportIdSet = new Set();
+  const assignDynamicImportId = (urlImportedDynamically) => {
+    const urlInfo = jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
+      urlImportedDynamically,
+    );
+    let dynamicImportIdBase =
+      urlInfo && urlInfo.filenameHint
+        ? filenameWithoutExtension(urlInfo.filenameHint)
+        : urlToBasename(urlImportedDynamically);
+    let dynamicImportIdCandidate = dynamicImportIdBase;
+    let positiveInteger = 1;
+    while (dynamicImportIdSet.has(dynamicImportIdCandidate)) {
+      dynamicImportIdCandidate = `${dynamicImportIdBase}_${positiveInteger}`;
+      positiveInteger++;
+    }
+    const dynamicImportId = dynamicImportIdCandidate;
+    dynamicImportIdSet.add(dynamicImportId);
+    return dynamicImportId;
+  };
+
   return {
     name: "jsenv",
     async buildStart() {
@@ -391,7 +468,7 @@ const rollupPluginJsenv = ({
       const createBundledFileInfo = (rollupFileInfo) => {
         const originalUrl = getOriginalUrl(rollupFileInfo);
         const sourceUrls = Object.keys(rollupFileInfo.modules).map((id) =>
-          fileUrlConverter.asFileUrl(id),
+          PATH_AND_URL_CONVERTER.asFileUrl(id),
         );
 
         const specifierToUrlMap = new Map();
@@ -456,7 +533,7 @@ const rollupPluginJsenv = ({
             specifierToUrlMap.size > 0
               ? (reference) => {
                   if (
-                    preserveDynamicImport &&
+                    preserveDynamicImports &&
                     reference.subtype === "dynamic_import"
                   ) {
                     // when dynamic import are preserved, no need to remap them
@@ -513,7 +590,7 @@ const rollupPluginJsenv = ({
       // const sourcemapFile = buildDirectoryUrl
       Object.assign(outputOptions, {
         format,
-        dir: fileUrlConverter.asFilePath(rootDirectoryUrl),
+        dir: PATH_AND_URL_CONVERTER.asFilePath(rootDirectoryUrl),
         sourcemap: sourcemaps === "file" || sourcemaps === "inline",
         // sourcemapFile,
         sourcemapPathTransform: (relativePath) => {
@@ -524,12 +601,22 @@ const rollupPluginJsenv = ({
         },
         chunkFileNames: (chunkInfo) => {
           if (chunkInfo.isEntry) {
-            const originalFileUrl = getOriginalUrl(chunkInfo);
+            const originalFileUrl = getOriginalUrl(chunkInfo, true);
             const jsModuleUrlInfo = jsModuleUrlInfos.find(
               (candidate) => candidate.url === originalFileUrl,
             );
             if (jsModuleUrlInfo && jsModuleUrlInfo.filenameHint) {
               return jsModuleUrlInfo.filenameHint;
+            }
+          }
+          if (chunkInfo.isDynamicEntry) {
+            const originalFileUrl = getOriginalUrl(chunkInfo, true);
+            const urlInfo =
+              jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
+                originalFileUrl,
+              );
+            if (urlInfo && urlInfo.filenameHint) {
+              return urlInfo.filenameHint;
             }
           }
           return `${chunkInfo.name}.js`;
@@ -538,81 +625,95 @@ const rollupPluginJsenv = ({
     },
     // https://rollupjs.org/guide/en/#resolvedynamicimport
     resolveDynamicImport: (specifier, importer) => {
-      if (!preserveDynamicImport) {
+      if (typeof specifier !== "string") {
+        // Receiving an ASTNode (specifier is dynamic)
         return null;
       }
-      let urlObject;
-      if (specifier[0] === "/") {
-        urlObject = new URL(specifier.slice(1), rootDirectoryUrl);
-      } else {
+      if (preserveDynamicImports) {
         if (isFileSystemPath(importer)) {
-          importer = fileUrlConverter.asFileUrl(importer);
+          importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
-        urlObject = new URL(specifier, importer);
+        const urlObject = resolveImport(specifier, importer);
+        if (!urlObject.href.startsWith("file:")) {
+          return { id: specifier, external: true };
+        }
+        const searchParamsToAdd =
+          augmentDynamicImportUrlSearchParams(urlObject);
+        if (searchParamsToAdd) {
+          injectQueryParams(urlObject, searchParamsToAdd);
+        }
+        const id = urlObject.href;
+        return { id, external: true };
       }
-      const searchParamsToAdd = augmentDynamicImportUrlSearchParams(urlObject);
-      if (searchParamsToAdd) {
-        Object.keys(searchParamsToAdd).forEach((key) => {
-          const value = searchParamsToAdd[key];
-          if (value === undefined) {
-            urlObject.searchParams.delete(key);
-          } else {
-            urlObject.searchParams.set(key, value);
-          }
+      if (isolateDynamicImports) {
+        if (isFileSystemPath(importer)) {
+          importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
+        }
+        const urlObject = resolveImport(specifier, importer);
+        if (!urlObject.href.startsWith("file:")) {
+          return { id: specifier, external: true };
+        }
+        const importId = assignDynamicImportId(urlObject.href);
+        injectQueryParams(urlObject, {
+          dynamic_import_id: importId,
         });
+        const url = urlObject.href;
+        const filePath = PATH_AND_URL_CONVERTER.asFilePath(url);
+        return { id: filePath };
       }
-      return { external: true, id: urlObject.href };
+      return null;
     },
     resolveId: (specifier, importer = rootDirectoryUrl) => {
       if (isFileSystemPath(importer)) {
-        importer = fileUrlConverter.asFileUrl(importer);
+        importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
       }
-      let url;
-      if (specifier[0] === "/") {
-        url = new URL(specifier.slice(1), rootDirectoryUrl).href;
-      } else {
-        url = new URL(specifier, importer).href;
-      }
-
-      if (!url.startsWith("file:")) {
+      const resolvedUrlObject = resolveImport(specifier, importer);
+      const resolvedUrl = resolvedUrlObject.href;
+      if (!resolvedUrl.startsWith("file:")) {
         return {
-          id: url,
+          id: resolvedUrl,
           external: true,
-          moduleSideEffects: getModuleSideEffects(url, importer),
+          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
         };
       }
-      if (!importCanBeBundled(url)) {
+      if (!importCanBeBundled(resolvedUrl)) {
         return {
-          id: url,
+          id: resolvedUrl,
           external: true,
-          moduleSideEffects: getModuleSideEffects(url, importer),
+          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
         };
       }
-      const urlInfo = graph.getUrlInfo(url);
-      if (!urlInfo) {
-        // happen when excluded by referenceAnalysis.include
+      if (resolvedUrl.startsWith("ignore:")) {
         return {
-          id: url,
+          id: resolvedUrl,
           external: true,
-          moduleSideEffects: getModuleSideEffects(url, importer),
+          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
         };
       }
-      if (url.startsWith("ignore:")) {
-        return {
-          id: url,
-          external: true,
-          moduleSideEffects: getModuleSideEffects(url, importer),
-        };
+      if (importer.includes("dynamic_import_id")) {
+        const importerUrlObject = new URL(importer);
+        const dynamicImportId =
+          importerUrlObject.searchParams.get("dynamic_import_id");
+        if (dynamicImportId) {
+          injectQueryParams(resolvedUrlObject, {
+            dynamic_import_id: dynamicImportId,
+          });
+          const isolatedResolvedUrl = resolvedUrlObject.href;
+          return {
+            id: PATH_AND_URL_CONVERTER.asFilePath(isolatedResolvedUrl),
+            external: false,
+            moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          };
+        }
       }
-      const filePath = fileUrlConverter.asFilePath(url);
       return {
-        id: filePath,
+        id: PATH_AND_URL_CONVERTER.asFilePath(resolvedUrl),
         external: false,
-        moduleSideEffects: getModuleSideEffects(url, importer),
+        moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
       };
     },
     async load(rollupId) {
-      const fileUrl = fileUrlConverter.asFileUrl(rollupId);
+      const fileUrl = PATH_AND_URL_CONVERTER.asFileUrl(rollupId, true);
       const urlInfo = graph.getUrlInfo(fileUrl);
       return {
         code: urlInfo.content,
@@ -646,4 +747,12 @@ const applyRollupPlugins = async ({
   });
   const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);
   return rollupOutputArray;
+};
+
+const filenameWithoutExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return filename;
+  }
+  return filename.slice(0, dotLastIndex);
 };

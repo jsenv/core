@@ -1,15 +1,68 @@
 import { build } from "@jsenv/core";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+import { urlToBasename, urlToFilename } from "@jsenv/urls";
+
+const jsenvPluginServerInternalClientFilesResolver = () => {
+  return {
+    name: "jsenv_server_internal_client_files_resolver",
+    appliesDuring: "*",
+    resolveReference: (reference) => {
+      if (reference.specifier.startsWith("/@jsenv/server/")) {
+        const urlRelativeToJsenvServer = reference.specifier.slice(
+          "/@jsenv/server/".length,
+        );
+        const url = new URL(
+          urlRelativeToJsenvServer,
+          new URL("../", import.meta.url),
+        );
+        return url;
+      }
+      return null;
+    },
+  };
+};
+
+const clientFileSubbuild = (clientFileRelativeUrl, options = {}) => {
+  const clientFileUrl = import.meta.resolve(`../src/${clientFileRelativeUrl}`);
+  const clientFilebasename = urlToBasename(clientFileUrl);
+  const clientFilename = urlToFilename(clientFileUrl);
+  return {
+    buildDirectoryUrl: import.meta.resolve(
+      `../dist/client/${clientFilebasename}/`,
+    ),
+    entryPoints: {
+      [`./${clientFileRelativeUrl}`]: clientFilename,
+    },
+    runtimeCompat: { chrome: "89" },
+    bundling: {
+      js_module: {
+        chunks: false,
+      },
+    },
+    plugins: [jsenvPluginServerInternalClientFilesResolver()],
+    ...options,
+  };
+};
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: new URL("../", import.meta.url),
   buildDirectoryUrl: new URL("../dist/", import.meta.url),
   entryPoints: {
-    "./main.js": "jsenv_server.js",
+    "./src/main.js": "jsenv_server.js",
   },
   runtimeCompat: {
     node: "22.13.1",
   },
+  subbuilds: [
+    clientFileSubbuild("src/services/default_body_4xx_5xx/client/4xx.html"),
+    clientFileSubbuild("src/services/error_handler/client/500.html"),
+    clientFileSubbuild(
+      "src/services/route_inspector/client/route_inspector.html",
+      {
+        http: true,
+      },
+    ),
+  ],
   directoryReferenceEffect: (reference) => {
     // jsenv server directory url
     if (reference.url === new URL("../", import.meta.url).href) {
@@ -27,23 +80,6 @@ await build({
         "file:///**/node_modules/dezalgo/": true,
       },
     }),
-    {
-      name: "jsenv_server_internal_client_files_resolver",
-      appliesDuring: "*",
-      resolveReference: (reference) => {
-        if (reference.specifier.startsWith("/@jsenv/server/")) {
-          const urlRelativeToJsenvServer = reference.specifier.slice(
-            "/@jsenv/server/".length,
-          );
-          const url = new URL(
-            urlRelativeToJsenvServer,
-            new URL("../", import.meta.url),
-          );
-          return url;
-        }
-        return null;
-      },
-    },
   ],
   // for debug
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
