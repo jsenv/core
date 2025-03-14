@@ -13,6 +13,9 @@
 })(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
+  var _console;
+  var values = [0, 1];
+  (_console = console).log.apply(_console, values);
   window.ask = function () {
     return 42;
   };

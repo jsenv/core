@@ -3932,7 +3932,9 @@ function default_1({ types, traverse, transformFromAst, version, }) {
     };
 }
 
-const systemJsClientFileUrlDefault = new URL("./client/s.js", import.meta.url).href;
+const systemJsClientFileUrlDefault = import.meta.resolve(
+  "./client/s.js",
+);
 
 const require = createRequire(import.meta.url);
 

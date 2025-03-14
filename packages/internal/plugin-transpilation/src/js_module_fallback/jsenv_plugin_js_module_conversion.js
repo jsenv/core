@@ -9,9 +9,7 @@ import {
 } from "@jsenv/js-module-fallback";
 import { injectQueryParams, urlToFilename } from "@jsenv/urls";
 
-const systemJsClientFileUrl = injectQueryParams(systemJsClientFileUrlDefault, {
-  as_js_classic: undefined,
-});
+const systemJsClientFileUrl = systemJsClientFileUrlDefault;
 
 export const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
   const isReferencingJsModule = (reference) => {

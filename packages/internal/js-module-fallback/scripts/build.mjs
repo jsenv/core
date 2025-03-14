@@ -11,7 +11,7 @@ await build({
     "file://**/node_modules/": true,
   },
   runtimeCompat: {
-    node: "16.14",
+    node: "22.1",
   },
   scenarioPlaceholders: false,
   subbuilds: [

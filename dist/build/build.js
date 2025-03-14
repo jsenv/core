@@ -9886,21 +9886,21 @@ const jsenvPluginMappings = (mappings) => {
         if (!matchResult.matched) {
           continue;
         }
-        if (value.includes("*")) {
-          const { matchGroups } = matchResult;
-          const parts = value.split("*");
-          let newUrl = "";
-          let index = 0;
-          for (const part of parts) {
-            newUrl += `${part}`;
-            if (index < parts.length - 1) {
-              newUrl += matchGroups[index];
-            }
-            index++;
-          }
-          return newUrl;
+        if (!value.includes("*")) {
+          return value;
         }
-        return value;
+        const { matchGroups } = matchResult;
+        const parts = value.split("*");
+        let newUrl = "";
+        let index = 0;
+        for (const part of parts) {
+          newUrl += `${part}`;
+          if (index < parts.length - 1) {
+            newUrl += matchGroups[index];
+          }
+          index++;
+        }
+        return newUrl;
       }
       return null;
     },

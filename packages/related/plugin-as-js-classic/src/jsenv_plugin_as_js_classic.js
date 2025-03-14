@@ -3,11 +3,9 @@ import {
   systemJsClientFileUrlDefault,
 } from "@jsenv/js-module-fallback";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
-import { injectQueryParams, urlToFilename } from "@jsenv/urls";
+import { urlToFilename } from "@jsenv/urls";
 
-const systemJsClientFileUrl = injectQueryParams(systemJsClientFileUrlDefault, {
-  as_js_classic: undefined,
-});
+const systemJsClientFileUrl = systemJsClientFileUrlDefault;
 
 export const jsenvPluginAsJsClassic = () => {
   const markAsJsClassicProxy = (reference) => {
