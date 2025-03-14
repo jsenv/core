@@ -629,14 +629,14 @@ const rollupPluginJsenv = ({
         // Receiving an ASTNode (specifier is dynamic)
         return null;
       }
-      if (!specifier.startsWith("file:")) {
-        return { id: specifier, external: true };
-      }
       if (preserveDynamicImports) {
         if (isFileSystemPath(importer)) {
           importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
         const urlObject = resolveImport(specifier, importer);
+        if (!urlObject.href.startsWith("file:")) {
+          return { id: specifier, external: true };
+        }
         const searchParamsToAdd =
           augmentDynamicImportUrlSearchParams(urlObject);
         if (searchParamsToAdd) {
@@ -650,6 +650,9 @@ const rollupPluginJsenv = ({
           importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
         const urlObject = resolveImport(specifier, importer);
+        if (!urlObject.href.startsWith("file:")) {
+          return { id: specifier, external: true };
+        }
         const importId = assignDynamicImportId(urlObject.href);
         injectQueryParams(urlObject, {
           dynamic_import_id: importId,
