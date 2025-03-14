@@ -6,30 +6,14 @@ run({
 })
 ```
 
-# 1/3 write 2 files into "./dist/"
+# 1/2 write 2 files into "./build/"
 
-see [./dist/](./dist/)
+see [./build/](./build/)
 
-# 2/3 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-GET http://127.0.0.1/main.html
-  404 ENOENT: File not found at base/build/main.html
-chromium console.error > Failed to load resource: the server responded with a status of 404 (ENOENT: File not found at base/build/main.html)
-```
-
-</details>
-
-
-# 3/3 resolve
+# 2/2 resolve
 
 ```js
-undefined
+42
 ```
 
 ---

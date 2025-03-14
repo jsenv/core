@@ -7,7 +7,7 @@ const run = async ({ runtimeCompat }) => {
   await build({
     logs: { level: "warn" },
     sourceDirectoryUrl: import.meta.resolve("./client/"),
-    buildDirectoryUrl: import.meta.resolve("./dist/"),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: { "./main.html": "main.html" },
     plugins: [jsenvPluginAsJsClassic()],
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
