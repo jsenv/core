@@ -529,18 +529,10 @@ build ${entryPointKeys.length} entry points`);
               }
               const referencedUrlInfo = referenceToOther.urlInfo;
               if (referencedUrlInfo.isInline) {
-                if (referencedUrlInfo.type === "js_module") {
-                  // bundle inline script type module deps
-                  referencedUrlInfo.referenceToOthersSet.forEach(
-                    (jsModuleReferenceToOther) => {
-                      if (jsModuleReferenceToOther.type === "js_import") {
-                        const inlineUrlInfo = jsModuleReferenceToOther.urlInfo;
-                        addToBundlerIfAny(inlineUrlInfo);
-                      }
-                    },
-                  );
+                if (referencedUrlInfo.type !== "js_module") {
+                  continue;
                 }
-                // inline content cannot be bundled
+                addToBundlerIfAny(referencedUrlInfo);
                 continue;
               }
               addToBundlerIfAny(referencedUrlInfo);
