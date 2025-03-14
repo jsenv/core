@@ -41,6 +41,13 @@ export const applyPattern = ({ url, pattern }) => {
   };
 };
 
+/**
+ * Core pattern matching function that processes patterns against strings
+ * @param {string} pattern - The pattern with special syntax (*,**,/) to match against
+ * @param {string} string - The string to test against the pattern
+ * @returns {Object} Result containing match status and capture groups
+ * @private
+ */
 const applyMatching = (pattern, string) => {
   const groups = [];
   let patternIndex = 0;
@@ -65,22 +72,6 @@ const applyMatching = (pattern, string) => {
     return consumeString(remainingString.length);
   };
 
-  let matched;
-  const iterate = () => {
-    const patternIndexBefore = patternIndex;
-    const indexBefore = index;
-    matched = matchOne();
-    if (matched === undefined) {
-      consumePattern(1);
-      consumeString(1);
-      iterate();
-      return;
-    }
-    if (matched === false && restoreIndexes) {
-      patternIndex = patternIndexBefore;
-      index = indexBefore;
-    }
-  };
   const matchOne = () => {
     // pattern consumed
     if (remainingPattern === "") {
@@ -90,12 +81,11 @@ const applyMatching = (pattern, string) => {
       if (remainingString[0] === "?") {
         // match search params
         consumeRemainingString();
-
         return true;
       }
-      // if remainingString
       return false; // fails because string longer than expect
     }
+
     // -- from this point pattern is not consumed --
     // string consumed, pattern not consumed
     if (remainingString === "") {
@@ -109,6 +99,7 @@ const applyMatching = (pattern, string) => {
       }
       return false; // fail because string shorter than expect
     }
+
     // -- from this point pattern and string are not consumed --
     // fast path trailing slash
     if (remainingPattern === "/") {
@@ -120,25 +111,30 @@ const applyMatching = (pattern, string) => {
       }
       return false;
     }
+
     // fast path trailing '**'
     if (remainingPattern === "**") {
       consumePattern(2);
       consumeRemainingString();
       return true;
     }
+
     if (remainingPattern.slice(0, 4) === "/**/") {
       consumePattern(3); // consumes "/**/"
-      const skipResult = skipUntilMatch({
+      const skipResult = skipUntilMatchIterative({
         pattern: remainingPattern,
         string: remainingString,
         canSkipSlash: true,
       });
-      groups.push(...skipResult.groups);
+      for (let i = 0; i < skipResult.groups.length; i++) {
+        groups.push(skipResult.groups[i]);
+      }
       consumePattern(skipResult.patternIndex);
       consumeRemainingString();
       restoreIndexes = false;
       return skipResult.matched;
     }
+
     // pattern leading **
     if (remainingPattern.slice(0, 2) === "**") {
       consumePattern(2); // consumes "**"
@@ -148,7 +144,7 @@ const applyMatching = (pattern, string) => {
         // when remainingPattern was preceeded by "**/"
         // and remainingString have no "/"
         // then skip is not allowed, a regular match will be performed
-        if (!remainingString.includes("/")) {
+        if (remainingString.includes("/")) {
           skipAllowed = false;
         }
       }
@@ -158,18 +154,21 @@ const applyMatching = (pattern, string) => {
         return true;
       }
       if (skipAllowed) {
-        const skipResult = skipUntilMatch({
+        const skipResult = skipUntilMatchIterative({
           pattern: remainingPattern,
           string: remainingString,
           canSkipSlash: true,
         });
-        groups.push(...skipResult.groups);
+        for (let i = 0; i < skipResult.groups.length; i++) {
+          groups.push(skipResult.groups[i]);
+        }
         consumePattern(skipResult.patternIndex);
         consumeRemainingString();
         restoreIndexes = false;
         return skipResult.matched;
       }
     }
+
     if (remainingPattern[0] === "*") {
       consumePattern(1); // consumes "*"
       if (remainingPattern === "") {
@@ -189,23 +188,53 @@ const applyMatching = (pattern, string) => {
         patternIndex = patternIndex - 1;
         return false;
       }
-      const skipResult = skipUntilMatch({
+      const skipResult = skipUntilMatchIterative({
         pattern: remainingPattern,
         string: remainingString,
         canSkipSlash: false,
       });
-      groups.push(skipResult.group, ...skipResult.groups);
+      groups.push(skipResult.group);
+      for (let i = 0; i < skipResult.groups.length; i++) {
+        groups.push(skipResult.groups[i]);
+      }
       consumePattern(skipResult.patternIndex);
       consumeString(skipResult.index);
       restoreIndexes = false;
       return skipResult.matched;
     }
+
     if (remainingPattern[0] !== remainingString[0]) {
       return false;
     }
+
     return undefined;
   };
-  iterate();
+
+  // Replace recursive iterate() with iterative approach
+  let matched;
+  let continueIteration = true;
+
+  while (continueIteration) {
+    const patternIndexBefore = patternIndex;
+    const indexBefore = index;
+
+    matched = matchOne();
+
+    if (matched === undefined) {
+      consumePattern(1);
+      consumeString(1);
+      // Continue the loop instead of recursion
+      continue;
+    }
+
+    if (matched === false && restoreIndexes) {
+      patternIndex = patternIndexBefore;
+      index = indexBefore;
+    }
+
+    // End the loop
+    continueIteration = false;
+  }
 
   return {
     matched,
@@ -215,7 +244,15 @@ const applyMatching = (pattern, string) => {
   };
 };
 
-const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
+/**
+ * Iterative version of skipUntilMatch that avoids recursion
+ * @param {Object} params
+ * @param {string} params.pattern - The pattern to match
+ * @param {string} params.string - The string to test against
+ * @param {boolean} params.canSkipSlash - Whether slash characters can be skipped
+ * @returns {Object} Result of the matching attempt
+ */
+const skipUntilMatchIterative = ({ pattern, string, canSkipSlash }) => {
   let index = 0;
   let remainingString = string;
   let longestAttemptRange = null;
@@ -233,8 +270,10 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
     };
   };
 
-  const tryToMatch = () => {
+  // Loop until a match is found or all attempts fail
+  while (true) {
     const matchAttempt = applyMatching(pattern, remainingString);
+
     if (matchAttempt.matched) {
       return {
         matched: true,
@@ -249,6 +288,7 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
         },
       };
     }
+
     const attemptIndex = matchAttempt.index;
     const attemptRange = {
       patternIndex: matchAttempt.patternIndex,
@@ -256,19 +296,23 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
       length: attemptIndex,
       groups: matchAttempt.groups,
     };
+
     if (
       !longestAttemptRange ||
       longestAttemptRange.length < attemptRange.length
     ) {
       longestAttemptRange = attemptRange;
     }
+
     if (isLastAttempt) {
       return failure();
     }
+
     const nextIndex = attemptIndex + 1;
     if (nextIndex >= remainingString.length) {
       return failure();
     }
+
     if (remainingString[0] === "/") {
       if (!canSkipSlash) {
         return failure();
@@ -278,10 +322,9 @@ const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
         isLastAttempt = true;
       }
     }
+
     // search against the next unattempted string
     index += nextIndex;
     remainingString = remainingString.slice(nextIndex);
-    return tryToMatch();
-  };
-  return tryToMatch();
+  }
 };
