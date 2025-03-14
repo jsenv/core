@@ -8374,6 +8374,10 @@ const determineDirectoryPath = ({
     });
     return parentDirectoryPath;
   }
+  const dynamicImportId = urlInfo.searchParams.get("dynamic_import_id");
+  if (dynamicImportId) {
+    return `${assetsDirectory}${dynamicImportId}/`;
+  }
   if (urlInfo.isEntryPoint && !urlInfo.isDynamicEntryPoint) {
     return "";
   }

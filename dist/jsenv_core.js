@@ -7,17 +7,17 @@ const INJECTIONS = {
 
 // dev
 const startDevServer = async (...args) => {
-  const namespace = await import("./js/start_dev_server.js");
+  const namespace = await import("./start_dev_server/start_dev_server.js");
   return namespace.startDevServer(...args);
 };
 
 // build
 const build = async (...args) => {
-  const namespace = await import("./js/build.js");
+  const namespace = await import("./build/build.js");
   return namespace.build(...args);
 };
 const startBuildServer = async (...args) => {
-  const namespace = await import("./js/start_build_server.js");
+  const namespace = await import("./start_build_server/start_build_server.js");
   return namespace.startBuildServer(...args);
 };
 
