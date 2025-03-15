@@ -187,53 +187,51 @@ export const build = async ({
   }
 
   const runBuild = async ({ signal }) => {
-    // redirectReference: (reference) => {
-    //   const entryPointBuildUrl = entryPointBuildUrlMap.get(reference.url);
-    //   if (!entryPointBuildUrl) {
-    //     return null;
-    //   }
-    //   return entryPointBuildUrl;
-    // },
-    // fetchUrlContent: async (urlInfo) => {
-    //   if (!entryPointBuildUrlSet.has(urlInfo.url)) {
-    //     return;
-    //   }
-    //   await buildPromise;
-    //   urlInfo.typeHint = "asset"; // this ensure the rest of jsenv do not scan or modify the content of this file
-    // },
-
     const entryBuildInfoMap = new Map();
-
     const entryBuildPromises = [];
-    const entryUrlSet = new Set();
     let entryPointIndex = 0;
     for (const key of Object.keys(entryPoints)) {
       const entryBuildInfo = {
+        index: entryPointIndex,
         promise: null,
-        url: null,
+        entryReference: null,
+        entryUrlInfo: null,
+        buildFileContents: {},
+        buildInlineContents: {},
+        buildManifest: {},
       };
-      const entryBuildPromise = buildEntryPoint(
-        {
-          signal,
-          sourceDirectoryUrl,
-          buildDirectoryUrl,
-          outDirectoryUrl: new URL(
-            `./entry_${entryPointIndex}/`,
-            outDirectoryUrl,
-          ),
-          sourceRelativeUrl: key,
-        },
-        entryPoints[key],
-        {
-          onEntryUrl: (entryUrl) => {
-            entryUrlSet.add(entryUrl);
-            entryBuildInfo.url = entryUrl;
-            entryBuildInfoMap.set(entryUrl, entryBuildInfo);
-          },
-        },
+      const entryOutDirectoryUrl = new URL(
+        `./entry_${entryPointIndex}/`,
+        outDirectoryUrl,
       );
+      const entryBuildPromise = (async () => {
+        const result = await buildEntryPoint(
+          {
+            signal,
+            sourceDirectoryUrl,
+            buildDirectoryUrl,
+            outDirectoryUrl: entryOutDirectoryUrl,
+            sourceRelativeUrl: key,
+          },
+          entryPoints[key],
+          {
+            onEntryReference: (entryReference) => {
+              entryBuildInfo.entryReference = entryReference;
+              entryBuildInfo.entryUrlInfo = entryReference.urlInfo;
+              entryBuildInfoMap.set(entryReference.url, entryBuildInfo);
+            },
+            getOtherEntryBuildInfo: (url) => {
+              return entryBuildInfoMap.get(url);
+            },
+          },
+        );
+        entryBuildInfo.buildFileContents = result.buildFileContents;
+        entryBuildInfo.buildInlineContents = result.buildInlineContents;
+        entryBuildInfo.buildManifest = result.buildManifest;
+      })();
       entryBuildInfo.promise = entryBuildPromise;
       entryBuildPromises.push(entryBuildPromise);
+      entryPointIndex++;
     }
     await Promise.all(entryBuildPromises);
 
@@ -383,7 +381,7 @@ const buildEntryPoint = async (
     assetManifestFileRelativeUrl = "asset-manifest.json",
     ...rest
   },
-  { onEntryUrl },
+  { onEntryReference, getOtherEntryBuildInfo },
 ) => {
   // param validation
   {
@@ -473,6 +471,19 @@ const buildEntryPoint = async (
 
   const rawPluginStore = createPluginStore([
     ...(mappings ? [jsenvPluginMappings(mappings)] : []),
+    {
+      name: "jsenv:other_entry_point_build_during_craft",
+      fetchUrlContent: async (urlInfo) => {
+        const otherEntryBuildInfo = getOtherEntryBuildInfo(urlInfo.url);
+        if (!otherEntryBuildInfo) {
+          return null;
+        }
+        return {
+          type: "asset", // this ensure the rest of jsenv do not try to scan or modify the content
+          content: "", // we don't know yet the content it will be known later
+        };
+      },
+    },
     ...plugins,
     ...(bundling ? [jsenvPluginBundling(bundling)] : []),
     ...(minification ? [jsenvPluginMinification(minification)] : []),
@@ -517,7 +528,7 @@ const buildEntryPoint = async (
           specifier: sourceRelativeUrl,
           filenameHint: buildRelativeUrl,
         });
-        onEntryUrl(entryReference.url);
+        onEntryReference(entryReference);
       });
       await rawRootUrlInfo.cookDependencies({
         operation: buildOperation,
@@ -567,6 +578,7 @@ const buildEntryPoint = async (
       versioningViaImportmap &&
       rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
       rawKitchen.context.isSupportedOnCurrentClients("importmap"),
+    getOtherEntryBuildInfo,
   });
   const finalPluginStore = createPluginStore([
     jsenvPluginReferenceAnalysis({

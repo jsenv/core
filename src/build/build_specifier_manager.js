@@ -46,6 +46,7 @@ export const createBuildSpecifierManager = ({
   versioningMethod,
   versionLength,
   canUseImportmap,
+  getOtherEntryBuildInfo,
 }) => {
   const buildUrlsGenerator = createBuildUrlsGenerator({
     logger,
@@ -188,6 +189,14 @@ export const createBuildSpecifierManager = ({
       return url;
     },
     redirectReference: (reference) => {
+      // don't think this is needed because we'll find the rawUrlInfo
+      // which contains the filenameHint
+      // const otherEntryBuildInfo = getOtherEntryBuildInfo(reference.url);
+      // if (otherEntryBuildInfo) {
+      //   reference.filenameHint = otherEntryBuildInfo.entryUrlInfo.filenameHint;
+      //   return null;
+      // }
+
       let referenceBeforeInlining = reference;
       if (
         referenceBeforeInlining.isInline &&
@@ -273,6 +282,16 @@ export const createBuildSpecifierManager = ({
         firstReference = firstReference.prev;
       }
       const rawUrl = firstReference.rawUrl || firstReference.url;
+
+      const otherEntryBuildInfo = getOtherEntryBuildInfo(rawUrl);
+      if (otherEntryBuildInfo) {
+        await otherEntryBuildInfo.promise;
+        return {
+          type: "asset", // this ensure the rest of jsenv do not try to scan or modify the content
+          content: "", // still not needed
+        };
+      }
+
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
@@ -521,6 +540,14 @@ export const createBuildSpecifierManager = ({
           if (urlInfo.url.startsWith("ignore:")) {
             return;
           }
+          if (urlInfo.type === "asset") {
+            const otherEntryBuildInfo = getOtherEntryBuildInfo(urlInfo.url);
+            // TODO: check if we properly detect the other entry point
+            debugger;
+            if (otherEntryBuildInfo) {
+              return;
+            }
+          }
           let content = urlInfo.content;
           if (urlInfo.type === "html") {
             content = stringifyHtmlAst(
@@ -609,6 +636,22 @@ export const createBuildSpecifierManager = ({
         const versionPartSet = new Set();
         versionPartSet.add(contentOnlyVersion);
         for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
+          const otherEntryBuildInfo = getOtherEntryBuildInfo(
+            urlInfoInfluencingVersion.url,
+          );
+          // TODO: do we properly detect the ref to an other entry point here?
+          debugger;
+          if (otherEntryBuildInfo) {
+            // TODO: how do we get the version of the other entry point build content?
+            // likely somewhere in
+            // otherEntryBuildInfo.buildManifest
+            versionPartSet.add(
+              otherEntryBuildInfo.buildManifest[
+                otherEntryBuildInfo.entryUrlInfo.buildRelativeUrl
+              ],
+            );
+            continue;
+          }
           const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
             urlInfoInfluencingVersion,
           );
