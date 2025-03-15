@@ -51,7 +51,6 @@ import {
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
 import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
-import { jsenvPluginSubbuilds } from "./jsenv_plugin_subbuilds.js";
 
 /**
  * Generate an optimized version of source files into a directory.
@@ -116,50 +115,60 @@ export const build = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       );
     }
-
-    sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      sourceDirectoryUrl,
-      "sourceDirectoryUrl",
-    );
-    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      buildDirectoryUrl,
-      "buildDirectoryUrl",
-    );
-    if (outDirectoryUrl === undefined) {
-      if (
-        process.env.CAPTURING_SIDE_EFFECTS ||
-        (!import.meta.build &&
-          urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
-      ) {
-        outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl);
-      } else {
-        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
-        if (packageDirectoryUrl) {
-          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
-        }
-      }
-    } else if (outDirectoryUrl) {
-      outDirectoryUrl = assertAndNormalizeDirectoryUrl(
-        outDirectoryUrl,
-        "outDirectoryUrl",
+    // source and build directory
+    {
+      sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        sourceDirectoryUrl,
+        "sourceDirectoryUrl",
+      );
+      buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        buildDirectoryUrl,
+        "buildDirectoryUrl",
       );
     }
-
-    if (typeof entryPoints !== "object" || entryPoints === null) {
-      throw new TypeError(`entryPoints must be an object, got ${entryPoints}`);
-    }
-    const keys = Object.keys(entryPoints);
-    for (const key of keys) {
-      if (!key.startsWith("./")) {
-        throw new TypeError(
-          `entryPoints keys must start with "./", found ${key}`,
+    // out directory url
+    {
+      if (outDirectoryUrl === undefined) {
+        if (
+          process.env.CAPTURING_SIDE_EFFECTS ||
+          (!import.meta.build &&
+            urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
+        ) {
+          outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl);
+        } else {
+          const packageDirectoryUrl =
+            lookupPackageDirectory(sourceDirectoryUrl);
+          if (packageDirectoryUrl) {
+            outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+          }
+        }
+      } else if (outDirectoryUrl) {
+        outDirectoryUrl = assertAndNormalizeDirectoryUrl(
+          outDirectoryUrl,
+          "outDirectoryUrl",
         );
       }
-      const value = entryPoints[key];
-      if (value === null || typeof value !== "object") {
+    }
+    // entry points
+    {
+      if (typeof entryPoints !== "object" || entryPoints === null) {
         throw new TypeError(
-          `entryPoints values must be objects, found "${value}" on key "${key}"`,
+          `entryPoints must be an object, got ${entryPoints}`,
         );
+      }
+      const keys = Object.keys(entryPoints);
+      for (const key of keys) {
+        if (!key.startsWith("./")) {
+          throw new TypeError(
+            `entryPoints keys must start with "./", found ${key}`,
+          );
+        }
+        const value = entryPoints[key];
+        if (value === null || typeof value !== "object") {
+          throw new TypeError(
+            `entryPoints values must be objects, found "${value}" on key "${key}"`,
+          );
+        }
       }
     }
   }
@@ -178,30 +187,66 @@ export const build = async ({
   }
 
   const runBuild = async ({ signal }) => {
-    const buildFileContents = {};
+    // redirectReference: (reference) => {
+    //   const entryPointBuildUrl = entryPointBuildUrlMap.get(reference.url);
+    //   if (!entryPointBuildUrl) {
+    //     return null;
+    //   }
+    //   return entryPointBuildUrl;
+    // },
+    // fetchUrlContent: async (urlInfo) => {
+    //   if (!entryPointBuildUrlSet.has(urlInfo.url)) {
+    //     return;
+    //   }
+    //   await buildPromise;
+    //   urlInfo.typeHint = "asset"; // this ensure the rest of jsenv do not scan or modify the content of this file
+    // },
+
+    const entryBuildInfoMap = new Map();
 
     const entryBuildPromises = [];
+    const entryUrlSet = new Set();
     let entryPointIndex = 0;
     for (const key of Object.keys(entryPoints)) {
+      const entryBuildInfo = {
+        promise: null,
+        url: null,
+      };
       const entryBuildPromise = buildEntryPoint(
         {
           signal,
           sourceDirectoryUrl,
           buildDirectoryUrl,
-          sourceRelativeUrl: key,
           outDirectoryUrl: new URL(
             `./entry_${entryPointIndex}/`,
             outDirectoryUrl,
           ),
+          sourceRelativeUrl: key,
         },
         entryPoints[key],
+        {
+          onEntryUrl: (entryUrl) => {
+            entryUrlSet.add(entryUrl);
+            entryBuildInfo.url = entryUrl;
+            entryBuildInfoMap.set(entryUrl, entryBuildInfo);
+          },
+        },
       );
+      entryBuildInfo.promise = entryBuildPromise;
       entryBuildPromises.push(entryBuildPromise);
     }
     await Promise.all(entryBuildPromises);
 
+    const buildFileContents = {};
+    const buildInlineContents = {};
+    const buildManifest = {};
+    for (const [, entryBuildInfo] of entryBuildInfoMap) {
+      Object.assign(buildFileContents, entryBuildInfo.buildFileContents);
+      Object.assign(buildInlineContents, entryBuildInfo.buildInlineContents);
+      Object.assign(buildManifest, entryBuildInfo.buildManifest);
+    }
     if (writeOnFileSystem) {
-      const writingFiles = createBuildTask("write files in build directory");
+      // const writingFiles = createBuildTask("write files in build directory");
       clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
       const buildRelativeUrls = Object.keys(buildFileContents);
       buildRelativeUrls.forEach((buildRelativeUrl) => {
@@ -210,14 +255,12 @@ export const build = async ({
           buildFileContents[buildRelativeUrl],
         );
       });
-      // if (versioning && assetManifest && Object.keys(buildManifest).length) {
-      //   writeFileSync(
-      //     new URL(assetManifestFileRelativeUrl, buildDirectoryUrl),
-      //     JSON.stringify(buildManifest, null, "  "),
-      //   );
-      // }
-      writingFiles.done();
+      // writingFiles.done();
     }
+    return {
+      ...(returnBuildInlineContents ? { buildInlineContents } : {}),
+      ...(returnBuildManifest ? { buildManifest } : {}),
+    };
   };
 
   if (!watch) {
@@ -340,9 +383,16 @@ const buildEntryPoint = async (
     assetManifestFileRelativeUrl = "asset-manifest.json",
     ...rest
   },
+  { onEntryUrl },
 ) => {
   // param validation
   {
+    const unexpectedParamNames = Object.keys(rest);
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(
+        `${unexpectedParamNames.join(",")}: there is no such param`,
+      );
+    }
     // logs
     {
       if (typeof logs !== "object") {
@@ -356,15 +406,20 @@ const buildEntryPoint = async (
           `${unexpectedLogsKeys.join(",")}: no such key on logs`,
         );
       }
-      logs = { ...logsDefault, ...logs };
     }
-
-    if (!["filename", "search_param"].includes(versioningMethod)) {
-      throw new TypeError(
-        `versioningMethod must be "filename" or "search_param", got ${versioning}`,
-      );
+    // versioning
+    {
+      if (!["filename", "search_param"].includes(versioningMethod)) {
+        throw new TypeError(
+          `versioningMethod must be "filename" or "search_param", got ${versioning}`,
+        );
+      }
     }
   }
+  logs = {
+    ...logsDefault,
+    ...logs,
+  };
   if (bundling === true) {
     bundling = {};
   }
@@ -374,8 +429,6 @@ const buildEntryPoint = async (
   if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
     assetsDirectory = `${assetsDirectory}/`;
   }
-  // do it
-
   const buildOperation = Abort.startOperation();
   buildOperation.addAbortSignal(signal);
 
@@ -393,7 +446,6 @@ const buildEntryPoint = async (
   const explicitJsModuleConversion =
     sourceRelativeUrl.includes("?js_module_fallback") ||
     sourceRelativeUrl.includes("?as_js_classic");
-  const entryUrls = [];
   const contextSharedDuringBuild = {
     buildStep: "craft",
     buildDirectoryUrl,
@@ -419,38 +471,8 @@ const buildEntryPoint = async (
       : undefined,
   });
 
-  let subbuildResults = [];
-
   const rawPluginStore = createPluginStore([
     ...(mappings ? [jsenvPluginMappings(mappings)] : []),
-    ...jsenvPluginSubbuilds(subbuilds, {
-      parentBuildParams: {
-        sourceDirectoryUrl,
-        buildDirectoryUrl,
-        runtimeCompat,
-        bundling,
-        minification,
-        versioning,
-        versioningMethod,
-        outDirectoryUrl,
-        base,
-      },
-      onCustomBuildDirectory: (subBuildRelativeUrl) => {
-        buildDirectoryCleanPatterns = {
-          ...buildDirectoryCleanPatterns,
-          [`${subBuildRelativeUrl}**/*`]: false,
-        };
-      },
-      buildStart: async (params, index) => {
-        const result = await build({
-          ...params,
-          signal,
-          handleSIGINT: false,
-        });
-        subbuildResults[index] = result;
-        return result;
-      },
-    }),
     ...plugins,
     ...(bundling ? [jsenvPluginBundling(bundling)] : []),
     ...(minification ? [jsenvPluginMinification(minification)] : []),
@@ -479,6 +501,7 @@ const buildEntryPoint = async (
   );
   rawKitchen.setPluginController(rawPluginController);
 
+  let entryReference;
   craft: {
     const generateSourceGraph = createBuildTask("generate source graph");
     try {
@@ -487,14 +510,14 @@ const buildEntryPoint = async (
       }
       const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
       await rawRootUrlInfo.dependencies.startCollecting(() => {
-        const entryReference = rawRootUrlInfo.dependencies.found({
+        entryReference = rawRootUrlInfo.dependencies.found({
           trace: { message: `"${sourceRelativeUrl}" from "entryPoints"` },
           isEntryPoint: true,
           type: "entry_point",
           specifier: sourceRelativeUrl,
           filenameHint: buildRelativeUrl,
         });
-        entryUrls.push(entryReference.url);
+        onEntryUrl(entryReference.url);
       });
       await rawRootUrlInfo.cookDependencies({
         operation: buildOperation,
@@ -542,10 +565,7 @@ const buildEntryPoint = async (
     versionLength,
     canUseImportmap:
       versioningViaImportmap &&
-      entryUrls.every((finalEntryUrl) => {
-        const entryUrlInfo = rawKitchen.graph.getUrlInfo(finalEntryUrl);
-        return entryUrlInfo.type === "html";
-      }) &&
+      rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
       rawKitchen.context.isSupportedOnCurrentClients("importmap"),
   });
   const finalPluginStore = createPluginStore([
@@ -728,18 +748,14 @@ const buildEntryPoint = async (
       }
       const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
       await finalRootUrlInfo.dependencies.startCollecting(() => {
-        entryUrls.forEach((entryUrl) => {
-          finalRootUrlInfo.dependencies.found({
-            trace: { message: `entryPoint` },
-            isEntryPoint: true,
-            type: "entry_point",
-            specifier: entryUrl,
-          });
+        finalRootUrlInfo.dependencies.found({
+          trace: { message: `entryPoint` },
+          isEntryPoint: true,
+          type: "entry_point",
+          specifier: entryReference.url,
         });
       });
-      await finalRootUrlInfo.cookDependencies({
-        operation: buildOperation,
-      });
+      await finalRootUrlInfo.cookDependencies({ operation: buildOperation });
     } catch (e) {
       generateBuildGraph.fail();
       throw e;
@@ -821,6 +837,13 @@ const buildEntryPoint = async (
       title: "build files",
     }),
   );
+  if (versioning && assetManifest && Object.keys(buildManifest).length) {
+    buildFileContents[assetManifestFileRelativeUrl] = JSON.stringify(
+      buildManifest,
+      null,
+      "  ",
+    );
+  }
   return {
     buildFileContents,
     buildInlineContents,
