@@ -1,3 +1,11 @@
+/**
+ * TODO: quand un fichier appartient a un autre build, le build url generator
+ * ne s'en rend pas vraiment compte et vu au'il voit un asset
+ * il le met dans other/client/main.html
+ * au lieu de client/main.html
+ *
+ */
+
 import { build } from "@jsenv/core";
 // import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 

@@ -37,6 +37,11 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       associateBuildUrl(url, url);
       return url;
     }
+    if (urlInfo.type === "entry_build") {
+      const buildUrl = new URL(urlInfo.filenameHint, buildDirectoryUrl).href;
+      associateBuildUrl(url, buildUrl);
+      return buildUrl;
+    }
     if (
       urlInfo.type === "directory" ||
       (urlInfo.type === undefined && urlInfo.typeHint === "directory")
@@ -117,9 +122,6 @@ const determineDirectoryPath = ({
   urlInfo,
   ownerUrlInfo,
 }) => {
-  if (urlInfo.type === "entry_build") {
-    debugger;
-  }
   if (urlInfo.dirnameHint) {
     return urlInfo.dirnameHint;
   }
