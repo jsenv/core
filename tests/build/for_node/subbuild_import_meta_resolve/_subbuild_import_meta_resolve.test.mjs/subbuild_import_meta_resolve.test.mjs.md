@@ -1,8 +1,9 @@
 # [subbuild_import_meta_resolve.test.mjs](../subbuild_import_meta_resolve.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
-- [1_with_bundling](1_with_bundling/1_with_bundling.md)
+- [0_no_bundling](0_no_bundling/0_no_bundling.md)
+- [1_no_bundling_relative_base](1_no_bundling_relative_base/1_no_bundling_relative_base.md)
+- [2_with_bundling](2_with_bundling/2_with_bundling.md)
 
 ---
 
