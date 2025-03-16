@@ -160,13 +160,13 @@ export const build = async ({
       for (const key of keys) {
         if (!key.startsWith("./")) {
           throw new TypeError(
-            `entryPoints keys must start with "./", found ${key}`,
+            `The key "${key}" in "entryPoints" is invalid: all keys must start with "./".`,
           );
         }
         const value = entryPoints[key];
         if (value === null || typeof value !== "object") {
           throw new TypeError(
-            `entryPoints values must be objects, found "${value}" on key "${key}"`,
+            `The value "${value}" in "entryPoints" is invalid: all values must be objects.`,
           );
         }
       }
@@ -430,6 +430,9 @@ const buildEntryPoint = async (
   }
   if (minification === true) {
     minification = {};
+  }
+  if (buildRelativeUrl === undefined) {
+    buildRelativeUrl = sourceRelativeUrl;
   }
   if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
     assetsDirectory = `${assetsDirectory}/`;
