@@ -221,7 +221,14 @@ export const build = async ({
               entryBuildInfoMap.set(entryReference.url, entryBuildInfo);
             },
             getOtherEntryBuildInfo: (url) => {
-              return entryBuildInfoMap.get(url);
+              if (url === entryBuildInfo.entryReference.url) {
+                return null;
+              }
+              const otherEntryBuildInfo = entryBuildInfoMap.get(url);
+              if (!otherEntryBuildInfo) {
+                return null;
+              }
+              return otherEntryBuildInfo;
             },
           },
         );
