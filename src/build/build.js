@@ -264,9 +264,9 @@ export const build = async ({
     for (const key of Object.keys(entryPoints)) {
       let _resolve;
       let _reject;
-      const promise = new Promise((r) => {
-        _resolve = r;
-        _reject = r;
+      const promise = new Promise((res, rej) => {
+        _resolve = res;
+        _reject = rej;
       });
       const entryOutDirectoryUrl = new URL(
         `./entry_${entryPointIndex}/`,
@@ -551,16 +551,16 @@ const prepareEntryPointBuild = async (
     ) {
       assetsDirectory = `${assetsDirectory}/`;
     }
-    if (base === undefined) {
+    if (entryPointParams.base === undefined) {
       base = getDefaultBase(runtimeCompat);
     }
-    if (minification === undefined) {
+    if (entryPointParams.minification === undefined) {
       minification = !runtimeCompat.node;
     }
-    if (versioning === undefined) {
+    if (entryPointParams.versioning === undefined) {
       versioning = !runtimeCompat.node;
     }
-    if (assetManifest === undefined) {
+    if (entryPointParams.assetManifest === undefined) {
       assetManifest = versioningMethod === "filename";
     }
   }

@@ -281,18 +281,6 @@ export const createBuildSpecifierManager = ({
         firstReference = firstReference.prev;
       }
       const rawUrl = firstReference.rawUrl || firstReference.url;
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
-      if (rawUrlInfo.type === "entry_build") {
-        const otherEntryBuildInfo = rawUrlInfo.otherEntryBuildInfo;
-        await otherEntryBuildInfo.promise;
-        finalUrlInfo.otherEntryBuildInfo = otherEntryBuildInfo;
-        return {
-          type: "entry_build", // this ensure the rest of jsenv do not try to scan or modify the content
-          content: "", // still not needed
-          filenameHint: otherEntryBuildInfo.entryUrlInfo.filenameHint,
-        };
-      }
-
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
         finalUrlInfo.remapReference = bundleInfo.remapReference;
@@ -309,7 +297,13 @@ export const createBuildSpecifierManager = ({
           data: bundleInfo.data,
         };
       }
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       if (rawUrlInfo) {
+        if (rawUrlInfo.type === "entry_build") {
+          const otherEntryBuildInfo = rawUrlInfo.otherEntryBuildInfo;
+          await otherEntryBuildInfo.promise;
+          finalUrlInfo.otherEntryBuildInfo = otherEntryBuildInfo;
+        }
         return rawUrlInfo;
       }
       // reference injected during "shape":

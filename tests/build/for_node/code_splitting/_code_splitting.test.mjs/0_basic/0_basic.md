@@ -1,4 +1,4 @@
-# [0_basic](../../code_splitting.test.mjs#L36)
+# [0_basic](../../code_splitting.test.mjs#L18)
 
 ```js
 run()
