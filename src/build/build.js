@@ -29,7 +29,7 @@ import { createLogger, createTaskLog } from "@jsenv/humanize";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
-import { urlIsInsideOf } from "@jsenv/urls";
+import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
@@ -65,8 +65,8 @@ import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
  *        Keys are relative to sourceDirectoryUrl
  * @param {object} params.runtimeCompat
  *        Code generated will be compatible with these runtimes
- * @param {string} [params.assetsDirectory=""]
- *        Directory where asset files will be written
+ * @param {string} [params.assetsDirectory]
+ *        Directory where asset files will be written. By default sibling to the entry build file.
  * @param {string|url} [params.base=""]
  *        Urls in build file contents will be prefixed with this string
  * @param {boolean|object} [params.bundling=true]
@@ -357,7 +357,7 @@ const buildEntryPoint = async (
     runtimeCompat = defaultRuntimeCompat,
     plugins = [],
     mappings,
-    assetsDirectory = "",
+    assetsDirectory,
     base = getDefaultBase(runtimeCompat),
     ignore,
 
@@ -434,7 +434,20 @@ const buildEntryPoint = async (
   if (buildRelativeUrl === undefined) {
     buildRelativeUrl = sourceRelativeUrl;
   }
-  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
+  if (assetsDirectory === undefined) {
+    const entryBuildUrl = new URL(buildRelativeUrl, buildDirectoryUrl).href;
+    const entryBuildRelativeUrl = urlToRelativeUrl(
+      entryBuildUrl,
+      buildDirectoryUrl,
+    );
+    if (entryBuildRelativeUrl.includes("/")) {
+      const assetDirectoryUrl = new URL("./", entryBuildUrl);
+      assetsDirectory = urlToRelativeUrl(assetDirectoryUrl, buildDirectoryUrl);
+    } else {
+      assetsDirectory = "./";
+    }
+  }
+  if (assetsDirectory[assetsDirectory.length - 1] !== "/") {
     assetsDirectory = `${assetsDirectory}/`;
   }
   const buildOperation = Abort.startOperation();

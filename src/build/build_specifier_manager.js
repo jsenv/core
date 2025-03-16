@@ -289,6 +289,7 @@ export const createBuildSpecifierManager = ({
         return {
           type: "asset", // this ensure the rest of jsenv do not try to scan or modify the content
           content: "", // still not needed
+          filenameHint: otherEntryBuildInfo.entryUrlInfo.filenameHint,
         };
       }
 
