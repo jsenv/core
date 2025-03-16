@@ -5,7 +5,7 @@
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const run = async ({ bundling }) => {
+const run = async ({ bundling, clientBase }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./source/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
@@ -25,6 +25,7 @@ const run = async ({ bundling }) => {
         bundling,
         versioning: false,
         minification: false,
+        base: clientBase,
         logs: {
           level: "warn",
           disabled: true,
@@ -35,10 +36,19 @@ const run = async ({ bundling }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test.ONLY("0_no_bundling", () => run({ bundling: false }));
+  test("0_no_bundling", () =>
+    run({
+      bundling: false,
+    }));
 
   test("1_no_bundling_relative_base", () =>
-    run({ bundling: false, clientBase: "./" }));
+    run({
+      bundling: false,
+      clientBase: "./",
+    }));
 
-  test("2_with_bundling", () => run({ bundling: true }));
+  test("2_with_bundling", () =>
+    run({
+      bundling: true,
+    }));
 });

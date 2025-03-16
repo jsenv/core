@@ -1,8 +1,9 @@
-# [0_no_bundling](../../subbuild_import_meta_resolve.test.mjs#L39)
+# [1_no_bundling_relative_base](../../subbuild_import_meta_resolve.test.mjs#L44)
 
 ```js
 run({
   bundling: false,
+  clientBase: "./",
 })
 ```
 

@@ -1,12 +1,12 @@
-# [0_no_bundling](../../subbuild_import_meta_resolve.test.mjs#L39)
+# [2_with_bundling](../../subbuild_import_meta_resolve.test.mjs#L50)
 
 ```js
 run({
-  bundling: false,
+  bundling: true,
 })
 ```
 
-# 1/2 write 5 files into "./build/"
+# 1/2 write 3 files into "./build/"
 
 see [./build/](./build/)
 
