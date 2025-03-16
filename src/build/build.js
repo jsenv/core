@@ -153,21 +153,93 @@ export const build = async ({
     {
       if (typeof entryPoints !== "object" || entryPoints === null) {
         throw new TypeError(
-          `entryPoints must be an object, got ${entryPoints}`,
+          `The value "${entryPoints}" for "entryPoints" is invalid: it must be an object`,
         );
       }
       const keys = Object.keys(entryPoints);
+      const isSingleEntryPoint = keys.length === 1;
       for (const key of keys) {
         if (!key.startsWith("./")) {
           throw new TypeError(
-            `The key "${key}" in "entryPoints" is invalid: all keys must start with "./".`,
+            `The key "${key}" in "entryPoints" is invalid: it must start with "./".`,
           );
         }
+        let sourceUrl;
+        try {
+          sourceUrl = new URL(key, sourceDirectoryUrl);
+        } catch {
+          throw new TypeError(
+            `The key "${key}" in "entryPoints" is invalid: it must be a relative url.`,
+          );
+        }
+        if (!urlIsInsideOf(sourceUrl, sourceDirectoryUrl)) {
+          throw new Error(
+            `The key "${key}" in "entryPoints" is invalid: it must be inside the source directory at ${sourceDirectoryUrl}.`,
+          );
+        }
+
         const value = entryPoints[key];
         if (value === null || typeof value !== "object") {
           throw new TypeError(
-            `The value "${value}" in "entryPoints" is invalid: all values must be objects.`,
+            `The value "${value}" in "entryPoints" is invalid: it must be an object.`,
           );
+        }
+
+        const forEntryPointOrEmpty = isSingleEntryPoint
+          ? ""
+          : ` for entry point "${key}"`;
+
+        const unexpectedEntryPointParmNames = Object.keys(value).filter(
+          (key) => !Object.hasOwn(entryPoinDefaultParams, key),
+        );
+        if (unexpectedEntryPointParmNames.length) {
+          throw new TypeError(
+            `${unexpectedEntryPointParmNames.join(",")}: there is no such param`,
+          );
+        }
+
+        // logs
+        {
+          const { logs } = value;
+          if (typeof logs !== "object") {
+            throw new TypeError(`logs must be an object, got ${logs}`);
+          }
+          const unexpectedLogsKeys = Object.keys(logs).filter(
+            (key) => !Object.hasOwn(logsDefault, key),
+          );
+          if (unexpectedLogsKeys.length > 0) {
+            throw new TypeError(
+              `${unexpectedLogsKeys.join(",")}: no such key on logs${forEntryPointOrEmpty}.`,
+            );
+          }
+        }
+        // versioning
+        {
+          const { versioningMethod } = value;
+          if (!["filename", "search_param"].includes(versioningMethod)) {
+            throw new TypeError(
+              `The versioningMethod "${versioningMethod}"${forEntryPointOrEmpty} is invalid: it must be "filename" or "search_param".`,
+            );
+          }
+        }
+        // build relativeUrl
+        {
+          const { buildRelativeUrl } = value;
+          if (buildRelativeUrl) {
+            let buildUrl;
+            try {
+              buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
+            } catch {
+              throw new TypeError(
+                `The buildRelativeUrl "${buildRelativeUrl}"${forEntryPointOrEmpty} is invalid: it must be a relative url.`,
+              );
+            }
+            if (!urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
+              throw new Error(
+                `The buildRelativeUrl "${buildRelativeUrl}"${forEntryPointOrEmpty} is invalid: it must be inside the build directory at ${buildDirectoryUrl}.`,
+              );
+            }
+          }
         }
       }
     }
@@ -344,6 +416,42 @@ export const build = async ({
   return stopWatchingSourceFiles;
 };
 
+const entryPoinDefaultParams = {
+  buildRelativeUrl: undefined,
+  runtimeCompat: defaultRuntimeCompat,
+  plugins: [],
+  mappings: undefined,
+  assetsDirectory: undefined,
+  base: undefined,
+  ignore: undefined,
+
+  bundling: true,
+  minification: true,
+  versioning: true,
+
+  logs: logsDefault,
+  referenceAnalysis: {},
+  nodeEsmResolution: undefined,
+  magicExtensions: undefined,
+  magicDirectoryIndex: undefined,
+  directoryReferenceEffect: undefined,
+  scenarioPlaceholders: undefined,
+  injections: undefined,
+  transpilation: {},
+
+  versioningMethod: "search_param", // "filename", "search_param"
+  versioningViaImportmap: true,
+  versionLength: 8,
+  lineBreakNormalization: process.platform === "win32",
+
+  http: false,
+
+  sourcemaps: "none",
+  sourcemapsSourcesContent: undefined,
+  assetManifest: false,
+  assetManifestFileRelativeUrl: "asset-manifest.json",
+};
+
 const buildEntryPoint = async (
   {
     signal,
@@ -352,104 +460,101 @@ const buildEntryPoint = async (
     sourceRelativeUrl,
     outDirectoryUrl,
   },
-  {
+  entryPointParams,
+  { onEntryReference, getOtherEntryBuildInfo },
+) => {
+  let {
     buildRelativeUrl,
-    runtimeCompat = defaultRuntimeCompat,
-    plugins = [],
+    runtimeCompat,
+    plugins,
     mappings,
     assetsDirectory,
-    base = getDefaultBase(runtimeCompat),
+    base,
     ignore,
 
-    bundling = true,
-    minification = !runtimeCompat.node,
-    versioning = !runtimeCompat.node,
+    bundling,
+    minification,
+    versioning,
 
-    logs = logsDefault,
-    referenceAnalysis = {},
+    logs,
+    referenceAnalysis,
     nodeEsmResolution,
     magicExtensions,
     magicDirectoryIndex,
     directoryReferenceEffect,
     scenarioPlaceholders,
     injections,
-    transpilation = {},
+    transpilation,
 
-    versioningMethod = "search_param", // "filename", "search_param"
-    versioningViaImportmap = true,
-    versionLength = 8,
-    lineBreakNormalization = process.platform === "win32",
+    versioningMethod,
+    versioningViaImportmap,
+    versionLength,
+    lineBreakNormalization,
 
-    http = false,
+    http,
 
-    sourcemaps = "none",
+    sourcemaps,
     sourcemapsSourcesContent,
-    assetManifest = versioningMethod === "filename",
-    assetManifestFileRelativeUrl = "asset-manifest.json",
-    ...rest
-  },
-  { onEntryReference, getOtherEntryBuildInfo },
-) => {
-  // param validation
-  {
-    const unexpectedParamNames = Object.keys(rest);
-    if (unexpectedParamNames.length > 0) {
-      throw new TypeError(
-        `${unexpectedParamNames.join(",")}: there is no such param`,
-      );
-    }
-    // logs
-    {
-      if (typeof logs !== "object") {
-        throw new TypeError(`logs must be an object, got ${logs}`);
-      }
-      const unexpectedLogsKeys = Object.keys(logs).filter(
-        (key) => !Object.hasOwn(logsDefault, key),
-      );
-      if (unexpectedLogsKeys.length > 0) {
-        throw new TypeError(
-          `${unexpectedLogsKeys.join(",")}: no such key on logs`,
-        );
-      }
-    }
-    // versioning
-    {
-      if (!["filename", "search_param"].includes(versioningMethod)) {
-        throw new TypeError(
-          `versioningMethod must be "filename" or "search_param", got ${versioning}`,
-        );
-      }
-    }
-  }
-  logs = {
-    ...logsDefault,
-    ...logs,
+    assetManifest,
+    assetManifestFileRelativeUrl,
+  } = {
+    ...entryPoinDefaultParams,
+    ...entryPointParams,
   };
-  if (bundling === true) {
-    bundling = {};
-  }
-  if (minification === true) {
-    minification = {};
-  }
-  if (buildRelativeUrl === undefined) {
-    buildRelativeUrl = sourceRelativeUrl;
-  }
-  if (assetsDirectory === undefined) {
-    const entryBuildUrl = new URL(buildRelativeUrl, buildDirectoryUrl).href;
-    const entryBuildRelativeUrl = urlToRelativeUrl(
-      entryBuildUrl,
-      buildDirectoryUrl,
-    );
-    if (entryBuildRelativeUrl.includes("/")) {
-      const assetDirectoryUrl = new URL("./", entryBuildUrl);
-      assetsDirectory = urlToRelativeUrl(assetDirectoryUrl, buildDirectoryUrl);
-    } else {
-      assetsDirectory = "./";
+
+  // param defaults and normalization
+  {
+    logs = {
+      ...logsDefault,
+      ...logs,
+    };
+    if (bundling === true) {
+      bundling = {};
+    }
+    if (minification === true) {
+      minification = {};
+    }
+    if (buildRelativeUrl === undefined) {
+      buildRelativeUrl = sourceRelativeUrl;
+    }
+    const buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
+    buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl);
+    if (assetsDirectory === undefined) {
+      const entryBuildUrl = new URL(buildRelativeUrl, buildDirectoryUrl).href;
+      const entryBuildRelativeUrl = urlToRelativeUrl(
+        entryBuildUrl,
+        buildDirectoryUrl,
+      );
+      if (entryBuildRelativeUrl.includes("/")) {
+        const assetDirectoryUrl = new URL("./", entryBuildUrl);
+        assetsDirectory = urlToRelativeUrl(
+          assetDirectoryUrl,
+          buildDirectoryUrl,
+        );
+      } else {
+        assetsDirectory = "";
+      }
+    }
+    if (
+      assetsDirectory &&
+      assetsDirectory[assetsDirectory.length - 1] !== "/"
+    ) {
+      assetsDirectory = `${assetsDirectory}/`;
+    }
+    if (base === undefined) {
+      base = getDefaultBase(runtimeCompat);
+    }
+    if (minification === undefined) {
+      minification = !runtimeCompat.node;
+    }
+    if (versioning === undefined) {
+      versioning = !runtimeCompat.node;
+    }
+    if (assetManifest === undefined) {
+      assetManifest = versioningMethod === "filename";
     }
   }
-  if (assetsDirectory[assetsDirectory.length - 1] !== "/") {
-    assetsDirectory = `${assetsDirectory}/`;
-  }
+
   const buildOperation = Abort.startOperation();
   buildOperation.addAbortSignal(signal);
 

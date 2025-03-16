@@ -34,7 +34,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       return buildUrlFromCache;
     }
     if (urlIsInsideOf(url, buildDirectoryUrl)) {
-      buildUrlCache.set(url, url);
+      associateBuildUrl(url, url);
       return url;
     }
     if (
