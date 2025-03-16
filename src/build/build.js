@@ -153,79 +153,79 @@ export const build = async ({
     {
       if (typeof entryPoints !== "object" || entryPoints === null) {
         throw new TypeError(
-          `The value "${entryPoints}" for "entryPoints" is invalid: it must be an object`,
+          `The value "${entryPoints}" for "entryPoints" is invalid: it must be an object.`,
         );
       }
       const keys = Object.keys(entryPoints);
       const isSingleEntryPoint = keys.length === 1;
       for (const key of keys) {
-        if (!key.startsWith("./")) {
-          throw new TypeError(
-            `The key "${key}" in "entryPoints" is invalid: it must start with "./".`,
-          );
-        }
-        let sourceUrl;
-        try {
-          sourceUrl = new URL(key, sourceDirectoryUrl);
-        } catch {
-          throw new TypeError(
-            `The key "${key}" in "entryPoints" is invalid: it must be a relative url.`,
-          );
-        }
-        if (!urlIsInsideOf(sourceUrl, sourceDirectoryUrl)) {
-          throw new Error(
-            `The key "${key}" in "entryPoints" is invalid: it must be inside the source directory at ${sourceDirectoryUrl}.`,
-          );
-        }
-
-        const value = entryPoints[key];
-        if (value === null || typeof value !== "object") {
-          throw new TypeError(
-            `The value "${value}" in "entryPoints" is invalid: it must be an object.`,
-          );
-        }
-
-        const forEntryPointOrEmpty = isSingleEntryPoint
-          ? ""
-          : ` for entry point "${key}"`;
-
-        const unexpectedEntryPointParmNames = Object.keys(value).filter(
-          (key) => !Object.hasOwn(entryPoinDefaultParams, key),
-        );
-        if (unexpectedEntryPointParmNames.length) {
-          throw new TypeError(
-            `${unexpectedEntryPointParmNames.join(",")}: there is no such param`,
-          );
-        }
-
-        // logs
+        // key (sourceRelativeUrl)
         {
+          if (!key.startsWith("./")) {
+            throw new TypeError(
+              `The key "${key}" in "entryPoints" is invalid: it must start with "./".`,
+            );
+          }
+          let sourceUrl;
+          try {
+            sourceUrl = new URL(key, sourceDirectoryUrl);
+          } catch {
+            throw new TypeError(
+              `The key "${key}" in "entryPoints" is invalid: it must be a relative url.`,
+            );
+          }
+          if (!urlIsInsideOf(sourceUrl, sourceDirectoryUrl)) {
+            throw new Error(
+              `The key "${key}" in "entryPoints" is invalid: it must be inside the source directory at ${sourceDirectoryUrl}.`,
+            );
+          }
+        }
+        // value (entryPointParams)
+        {
+          const value = entryPoints[key];
+          if (value === null || typeof value !== "object") {
+            throw new TypeError(
+              `The value "${value}" in "entryPoints" is invalid: it must be an object.`,
+            );
+          }
+
+          const forEntryPointOrEmpty = isSingleEntryPoint
+            ? ""
+            : ` for entry point "${key}"`;
+          const unexpectedEntryPointParamNames = Object.keys(value).filter(
+            (key) => !Object.hasOwn(entryPoinDefaultParams, key),
+          );
+          if (unexpectedEntryPointParamNames.length) {
+            throw new TypeError(
+              `The entry point value${forEntryPointOrEmpty} have unknown params: ${unexpectedEntryPointParamNames.join(",")}.`,
+            );
+          }
           const { logs } = value;
-          if (typeof logs !== "object") {
-            throw new TypeError(`logs must be an object, got ${logs}`);
-          }
-          const unexpectedLogsKeys = Object.keys(logs).filter(
-            (key) => !Object.hasOwn(logsDefault, key),
-          );
-          if (unexpectedLogsKeys.length > 0) {
-            throw new TypeError(
-              `${unexpectedLogsKeys.join(",")}: no such key on logs${forEntryPointOrEmpty}.`,
+          if (logs !== undefined) {
+            if (typeof logs !== "object") {
+              throw new TypeError(
+                `The logs "${logs}"${forEntryPointOrEmpty} is invalid: it must be an object.`,
+              );
+            }
+            const unexpectedLogsKeys = Object.keys(logs).filter(
+              (key) => !Object.hasOwn(logsDefault, key),
             );
+            if (unexpectedLogsKeys.length > 0) {
+              throw new TypeError(
+                `The logs ${forEntryPointOrEmpty} have unknown params: ${unexpectedLogsKeys.join(",")}.`,
+              );
+            }
           }
-        }
-        // versioning
-        {
           const { versioningMethod } = value;
-          if (!["filename", "search_param"].includes(versioningMethod)) {
-            throw new TypeError(
-              `The versioningMethod "${versioningMethod}"${forEntryPointOrEmpty} is invalid: it must be "filename" or "search_param".`,
-            );
+          if (versioningMethod !== undefined) {
+            if (!["filename", "search_param"].includes(versioningMethod)) {
+              throw new TypeError(
+                `The versioningMethod "${versioningMethod}"${forEntryPointOrEmpty} is invalid: it must be "filename" or "search_param".`,
+              );
+            }
           }
-        }
-        // build relativeUrl
-        {
           const { buildRelativeUrl } = value;
-          if (buildRelativeUrl) {
+          if (buildRelativeUrl !== undefined) {
             let buildUrl;
             try {
               buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
