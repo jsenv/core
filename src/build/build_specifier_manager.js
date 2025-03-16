@@ -46,7 +46,6 @@ export const createBuildSpecifierManager = ({
   versioningMethod,
   versionLength,
   canUseImportmap,
-  getOtherEntryBuildInfo,
 }) => {
   const buildUrlsGenerator = createBuildUrlsGenerator({
     logger,
@@ -282,18 +281,18 @@ export const createBuildSpecifierManager = ({
         firstReference = firstReference.prev;
       }
       const rawUrl = firstReference.rawUrl || firstReference.url;
-
-      const otherEntryBuildInfo = getOtherEntryBuildInfo(rawUrl);
-      if (otherEntryBuildInfo) {
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
+      if (rawUrlInfo.type === "entry_build") {
+        const otherEntryBuildInfo = rawUrlInfo.otherEntryBuildInfo;
         await otherEntryBuildInfo.promise;
+        finalUrlInfo.otherEntryBuildInfo = otherEntryBuildInfo;
         return {
-          type: "asset", // this ensure the rest of jsenv do not try to scan or modify the content
+          type: "entry_build", // this ensure the rest of jsenv do not try to scan or modify the content
           content: "", // still not needed
           filenameHint: otherEntryBuildInfo.entryUrlInfo.filenameHint,
         };
       }
 
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
         finalUrlInfo.remapReference = bundleInfo.remapReference;
@@ -541,13 +540,14 @@ export const createBuildSpecifierManager = ({
           if (urlInfo.url.startsWith("ignore:")) {
             return;
           }
-          if (urlInfo.type === "asset") {
-            const otherEntryBuildInfo = getOtherEntryBuildInfo(urlInfo.url);
-            // TODO: check if we properly detect the other entry point
-            debugger;
-            if (otherEntryBuildInfo) {
-              return;
-            }
+          if (urlInfo.type === "entry_build") {
+            const otherEntryBuildInfo = urlInfo.otherEntryBuildInfo;
+            const entryUrlInfoVersion =
+              otherEntryBuildInfo.buildManifest[
+                otherEntryBuildInfo.entryUrlInfo.buildRelativeUrl
+              ];
+            contentOnlyVersionMap.set(urlInfo, entryUrlInfoVersion);
+            return;
           }
           let content = urlInfo.content;
           if (urlInfo.type === "html") {
@@ -632,36 +632,24 @@ export const createBuildSpecifierManager = ({
         contentOnlyUrlInfo,
         contentOnlyVersion,
       ] of contentOnlyVersionMap) {
-        const setOfUrlInfoInfluencingVersion =
-          getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
         const versionPartSet = new Set();
-        versionPartSet.add(contentOnlyVersion);
-        for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
-          const otherEntryBuildInfo = getOtherEntryBuildInfo(
-            urlInfoInfluencingVersion.url,
-          );
-          // TODO: do we properly detect the ref to an other entry point here?
-          debugger;
-          if (otherEntryBuildInfo) {
-            // TODO: how do we get the version of the other entry point build content?
-            // likely somewhere in
-            // otherEntryBuildInfo.buildManifest
-            versionPartSet.add(
-              otherEntryBuildInfo.buildManifest[
-                otherEntryBuildInfo.entryUrlInfo.buildRelativeUrl
-              ],
+        if (contentOnlyUrlInfo.type === "entry_build") {
+          versionPartSet.add(contentOnlyVersion);
+        } else {
+          const setOfUrlInfoInfluencingVersion =
+            getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
+          versionPartSet.add(contentOnlyVersion);
+          for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
+            const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
+              urlInfoInfluencingVersion,
             );
-            continue;
+            if (!otherUrlInfoContentVersion) {
+              throw new Error(
+                `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
+              );
+            }
+            versionPartSet.add(otherUrlInfoContentVersion);
           }
-          const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
-            urlInfoInfluencingVersion,
-          );
-          if (!otherUrlInfoContentVersion) {
-            throw new Error(
-              `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
-            );
-          }
-          versionPartSet.add(otherUrlInfoContentVersion);
         }
         const version = generateVersion(versionPartSet, versionLength);
         versionMap.set(contentOnlyUrlInfo, version);

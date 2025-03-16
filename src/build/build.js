@@ -620,8 +620,9 @@ const prepareEntryPointBuild = async (
         if (!otherEntryBuildInfo) {
           return null;
         }
+        urlInfo.otherEntryBuildInfo = otherEntryBuildInfo;
         return {
-          type: "asset", // this ensure the rest of jsenv do not try to scan or modify the content
+          type: "entry_build", // this ensure the rest of jsenv do not try to scan or modify the content
           content: "", // we don't know yet the content it will be known later
           filenameHint: otherEntryBuildInfo.entryUrlInfo.filenameHint,
         };
@@ -723,7 +724,6 @@ const prepareEntryPointBuild = async (
           versioningViaImportmap &&
           rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
           rawKitchen.context.isSupportedOnCurrentClients("importmap"),
-        getOtherEntryBuildInfo,
       });
       const finalPluginStore = createPluginStore([
         jsenvPluginReferenceAnalysis({

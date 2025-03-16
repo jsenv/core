@@ -117,6 +117,9 @@ const determineDirectoryPath = ({
   urlInfo,
   ownerUrlInfo,
 }) => {
+  if (urlInfo.type === "entry_build") {
+    debugger;
+  }
   if (urlInfo.dirnameHint) {
     return urlInfo.dirnameHint;
   }
