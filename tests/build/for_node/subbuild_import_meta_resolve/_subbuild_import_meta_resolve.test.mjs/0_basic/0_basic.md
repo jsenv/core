@@ -4,7 +4,7 @@
 run({ bundling: false })
 ```
 
-# 1/2 write 2 files into "./build/"
+# 1/2 write 5 files into "./build/"
 
 see [./build/](./build/)
 
