@@ -49,6 +49,7 @@ import {
   logsDefault,
 } from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
+import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
 import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
 
@@ -259,6 +260,11 @@ export const build = async ({
   }
 
   const runBuild = async ({ signal }) => {
+    const buildUrlsGenerator = createBuildUrlsGenerator({
+      sourceDirectoryUrl,
+      buildDirectoryUrl,
+    });
+
     const entryBuildInfoMap = new Map();
     let entryPointIndex = 0;
     for (const key of Object.keys(entryPoints)) {
@@ -279,6 +285,7 @@ export const build = async ({
           buildDirectoryUrl,
           outDirectoryUrl: entryOutDirectoryUrl,
           sourceRelativeUrl: key,
+          buildUrlsGenerator,
         },
         entryPoints[key],
       );
@@ -470,6 +477,7 @@ const prepareEntryPointBuild = async (
     buildDirectoryUrl,
     sourceRelativeUrl,
     outDirectoryUrl,
+    buildUrlsGenerator,
   },
   entryPointParams,
 ) => {
@@ -716,6 +724,7 @@ const prepareEntryPointBuild = async (
         buildDirectoryUrl,
         base,
         assetsDirectory,
+        buildUrlsGenerator,
 
         versioning,
         versioningMethod,

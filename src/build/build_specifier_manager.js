@@ -26,7 +26,6 @@ import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_
 import { prependContent } from "../kitchen/prepend_content.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { isWebWorkerUrlInfo } from "../kitchen/web_workers.js";
-import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import {
   injectGlobalMappings,
   injectImportmapMappings,
@@ -38,8 +37,9 @@ export const createBuildSpecifierManager = ({
   logger,
   sourceDirectoryUrl,
   buildDirectoryUrl,
-  base,
   assetsDirectory,
+  buildUrlsGenerator,
+  base,
   length = 8,
 
   versioning,
@@ -47,12 +47,6 @@ export const createBuildSpecifierManager = ({
   versionLength,
   canUseImportmap,
 }) => {
-  const buildUrlsGenerator = createBuildUrlsGenerator({
-    logger,
-    sourceDirectoryUrl,
-    buildDirectoryUrl,
-    assetsDirectory,
-  });
   const placeholderAPI = createPlaceholderAPI({
     length,
   });
@@ -82,6 +76,7 @@ export const createBuildSpecifierManager = ({
       buildUrl = buildUrlsGenerator.generate(url, {
         urlInfo,
         ownerUrlInfo: reference.ownerUrlInfo,
+        assetsDirectory,
       });
     }
 

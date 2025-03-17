@@ -1,8 +1,8 @@
-import { ANSI } from "@jsenv/humanize";
+// import { ANSI } from "@jsenv/humanize";
 import { urlIsInsideOf, urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 
 export const createBuildUrlsGenerator = ({
-  logger,
+  // logger,
   sourceDirectoryUrl,
   buildDirectoryUrl,
 }) => {
@@ -19,10 +19,10 @@ export const createBuildUrlsGenerator = ({
   const buildUrlMap = new Map();
   const associateBuildUrl = (url, buildUrl) => {
     buildUrlMap.set(url, buildUrl);
-    logger.debug(`associate a build url
-${ANSI.color(url, ANSI.GREY)} ->
-${ANSI.color(buildUrl, ANSI.MAGENTA)}
-      `);
+    //     logger.debug(`associate a build url
+    // ${ANSI.color(url, ANSI.GREY)} ->
+    // ${ANSI.color(buildUrl, ANSI.MAGENTA)}
+    // `);
   };
 
   const nameSetPerDirectoryMap = new Map();

@@ -19,7 +19,13 @@ const run = async ({ http }) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_without_http", () => run({ http: false }));
+  test("0_without_http", () =>
+    run({
+      http: false,
+    }));
 
-  test("1_with_http", () => run({ http: true }));
+  test("1_with_http", () =>
+    run({
+      http: true,
+    }));
 });
