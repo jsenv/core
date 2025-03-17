@@ -43,11 +43,7 @@ import {
 } from "../plugins/plugin_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
-import {
-  defaultRuntimeCompat,
-  getDefaultBase,
-  logsDefault,
-} from "./build_params.js";
+import { defaultRuntimeCompat, logsDefault } from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
@@ -108,6 +104,8 @@ export const build = async ({
 
   ...rest
 }) => {
+  let someEntryPointUseNode = false;
+
   // param validation
   {
     const unexpectedParamNames = Object.keys(rest);
@@ -129,21 +127,7 @@ export const build = async ({
     }
     // out directory url
     {
-      if (outDirectoryUrl === undefined) {
-        if (
-          process.env.CAPTURING_SIDE_EFFECTS ||
-          (!import.meta.build &&
-            urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
-        ) {
-          outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl);
-        } else {
-          const packageDirectoryUrl =
-            lookupPackageDirectory(sourceDirectoryUrl);
-          if (packageDirectoryUrl) {
-            outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
-          }
-        }
-      } else if (outDirectoryUrl) {
+      if (outDirectoryUrl) {
         outDirectoryUrl = assertAndNormalizeDirectoryUrl(
           outDirectoryUrl,
           "outDirectoryUrl",
@@ -241,6 +225,15 @@ export const build = async ({
               );
             }
           }
+          const { runtimeCompat } = value;
+          if (!runtimeCompat) {
+            throw new Error(
+              `RuntimeCompat is required${forEntryPointOrEmpty}.`,
+            );
+          }
+          if (!someEntryPointUseNode && "node" in runtimeCompat) {
+            someEntryPointUseNode = true;
+          }
         }
       }
     }
@@ -257,6 +250,21 @@ export const build = async ({
         abort,
       );
     });
+  }
+
+  if (outDirectoryUrl === undefined) {
+    if (
+      process.env.CAPTURING_SIDE_EFFECTS ||
+      (!import.meta.build &&
+        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
+    ) {
+      outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl).href;
+    } else {
+      const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
+      if (packageDirectoryUrl) {
+        outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+      }
+    }
   }
 
   const runBuild = async ({ signal }) => {
@@ -278,6 +286,7 @@ export const build = async ({
         `./entry_${entryPointIndex}/`,
         outDirectoryUrl,
       );
+      const entryPointParams = entryPoints[key];
       const { entryReference, buildEntryPoint } = await prepareEntryPointBuild(
         {
           signal,
@@ -286,8 +295,9 @@ export const build = async ({
           outDirectoryUrl: entryOutDirectoryUrl,
           sourceRelativeUrl: key,
           buildUrlsGenerator,
+          someEntryPointUseNode,
         },
-        entryPoints[key],
+        entryPointParams,
       );
       const entryBuildInfo = {
         index: entryPointIndex,
@@ -478,6 +488,7 @@ const prepareEntryPointBuild = async (
     sourceRelativeUrl,
     outDirectoryUrl,
     buildUrlsGenerator,
+    someEntryPointUseNode,
   },
   entryPointParams,
 ) => {
@@ -526,18 +537,12 @@ const prepareEntryPointBuild = async (
       ...logsDefault,
       ...logs,
     };
-    if (bundling === true) {
-      bundling = {};
-    }
-    if (minification === true) {
-      minification = {};
-    }
-    if (buildRelativeUrl === undefined) {
+    if (entryPointParams.buildRelativeUrl === undefined) {
       buildRelativeUrl = sourceRelativeUrl;
     }
     const buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
     buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl);
-    if (assetsDirectory === undefined) {
+    if (entryPointParams.assetsDirectory === undefined) {
       const entryBuildUrl = new URL(buildRelativeUrl, buildDirectoryUrl).href;
       const entryBuildRelativeUrl = urlToRelativeUrl(
         entryBuildUrl,
@@ -560,10 +565,13 @@ const prepareEntryPointBuild = async (
       assetsDirectory = `${assetsDirectory}/`;
     }
     if (entryPointParams.base === undefined) {
-      base = getDefaultBase(runtimeCompat);
+      base = someEntryPointUseNode ? "./" : "/";
     }
     if (entryPointParams.minification === undefined) {
       minification = !runtimeCompat.node;
+    }
+    if (minification === true) {
+      minification = {};
     }
     if (entryPointParams.versioning === undefined) {
       versioning = !runtimeCompat.node;

@@ -13,6 +13,7 @@ const run = async ({ http }) => {
         runtimeCompat: { chrome: "89" },
         http,
         bundling: { js_module: { chunks: false } },
+        minification: false,
       },
     },
   });

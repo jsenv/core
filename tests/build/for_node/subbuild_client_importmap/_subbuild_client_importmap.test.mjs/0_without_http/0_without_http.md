@@ -1,7 +1,9 @@
-# [0_without_http](../../subbuild_client_importmap.test.mjs#L24)
+# [0_without_http](../../subbuild_client_importmap.test.mjs#L23)
 
 ```js
-run({ http: false })
+run({
+  http: false,
+})
 ```
 
 # 1/2 write 2 files into "./build/"
