@@ -15,6 +15,9 @@ const run = async () => {
       "./index.js": {
         runtimeCompat: { node: "20" },
       },
+      "./client/main.html": {
+        runtimeCompat: { chrome: "89" },
+      },
     },
   });
 };
