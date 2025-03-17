@@ -12,7 +12,7 @@ const testPlanResult = await executeTestPlan({
   },
   webServer: {
     origin: "http://localhost:3456",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("./client/"),
     moduleUrl: new URL("./dev.mjs", import.meta.url),
   },
   coverage: true,

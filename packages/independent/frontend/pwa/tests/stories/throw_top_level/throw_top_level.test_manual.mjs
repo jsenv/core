@@ -3,7 +3,7 @@ import { startTestServer } from "@jsenv/pwa/tests/start_test_server.mjs";
 
 await startTestServer({
   logLevel: "info",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   supervisor: false,
   clientAutoreload: true,
   plugins: [

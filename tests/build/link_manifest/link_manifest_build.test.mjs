@@ -4,8 +4,8 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_basic", () =>
     build({
-      sourceDirectoryUrl: new URL("./client/", import.meta.url),
-      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      sourceDirectoryUrl: import.meta.resolve("./client/"),
+      buildDirectoryUrl: import.meta.resolve("./build/"),
       entryPoints: { "./src/main.html": "main.html" },
       bundling: false,
       minification: false,

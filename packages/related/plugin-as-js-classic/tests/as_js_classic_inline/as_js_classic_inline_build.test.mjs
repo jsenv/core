@@ -7,7 +7,7 @@ const test = async (params) => {
   const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logs: { level: "warn" },
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: snapshotDirectoryUrl,
     entryPoints: {
       "./main.html": "main.html",

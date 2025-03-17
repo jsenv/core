@@ -5,8 +5,8 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = async ({ bundling }) => {
   await build({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: { "./main.js": "main.js" },
     minification: false,
     versioning: false,

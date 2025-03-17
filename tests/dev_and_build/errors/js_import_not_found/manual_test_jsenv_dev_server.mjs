@@ -2,7 +2,7 @@ import { startDevServer } from "@jsenv/core";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   clientAutoreload: {
     clientServerEventsConfig: {
       logs: false,

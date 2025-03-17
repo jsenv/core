@@ -7,8 +7,8 @@ import { readFileSync } from "@jsenv/filesystem";
 const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_js_module", () =>
     build({
-      sourceDirectoryUrl: new URL("./client/", import.meta.url),
-      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      sourceDirectoryUrl: import.meta.resolve("./client/"),
+      buildDirectoryUrl: import.meta.resolve("./build/"),
       entryPoints: { "./main.html": "main.html" },
       bundling: false,
       minification: false,

@@ -10,7 +10,7 @@ import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 const debug = false; // true to have browser UI + keep it open after test
 const devServer = await startDevServer({
   logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   keepProcessAlive: false,
   clientAutoreload: false,
   supervisor: false,

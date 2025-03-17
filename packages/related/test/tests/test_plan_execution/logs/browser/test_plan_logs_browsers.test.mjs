@@ -30,7 +30,7 @@ ANSI.supported = true;
 
 const devServer = await startDevServer({
   logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   keepProcessAlive: false,
   port: 0,
 });
@@ -95,7 +95,7 @@ const run = async ({ filename }) => {
           ]
         : []),
     ],
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("./client/"),
     testPlan: {
       [filename]: {
         chromium: {

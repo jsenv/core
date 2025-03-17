@@ -5,8 +5,8 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_basic", () => {
     const jsenvSrcDirectoryUrl = new URL("../../../src/", import.meta.url);
     return build({
-      sourceDirectoryUrl: new URL("./client/", import.meta.url),
-      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      sourceDirectoryUrl: import.meta.resolve("./client/"),
+      buildDirectoryUrl: import.meta.resolve("./build/"),
       entryPoints: { "./main.html": "main.html" },
       runtimeCompat: {
         chrome: "64",

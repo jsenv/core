@@ -11,7 +11,7 @@ import { startDevServer } from "@jsenv/core";
 const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   keepProcessAlive: false,
   plugins: [
     {

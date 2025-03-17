@@ -10,7 +10,7 @@ if (process.env.CI) {
 
 const run = async () => {
   const devServer = await startDevServer({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
     clientAutoreload: false,
     ribbon: false,
     supervisor: false,

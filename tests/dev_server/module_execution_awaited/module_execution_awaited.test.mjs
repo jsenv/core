@@ -5,7 +5,7 @@ import { chromium, firefox, webkit } from "playwright";
 
 const devServer = await startDevServer({
   logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   keepProcessAlive: false,
   port: 0,
 });

@@ -3,7 +3,7 @@ import { startDevServer } from "@jsenv/core";
 await startDevServer({
   logLevel: "info",
   serverLogLevel: "info",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   sourceMainFilePath: "main.html",
   keepProcessAlive: true,
   port: 5678,

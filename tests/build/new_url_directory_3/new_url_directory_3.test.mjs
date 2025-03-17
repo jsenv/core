@@ -8,7 +8,7 @@ const run = ({
 }) => {
   return build({
     sourceDirectoryUrl,
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: { "./main.js": "main.js" },
     bundling: false,
     minification: false,

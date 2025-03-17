@@ -3,7 +3,7 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = async () => {
   await build({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
   });

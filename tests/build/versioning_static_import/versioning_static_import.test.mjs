@@ -31,7 +31,7 @@ const test = async ({ name, ...rest }) => {
     const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
     await build({
       logs: { level: "warn" },
-      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      sourceDirectoryUrl: import.meta.resolve("./client/"),
       buildDirectoryUrl: new URL("./dist/", import.meta.url),
       entryPoints: { "./main.html": "main.html" },
       versioningMethod: "filename",

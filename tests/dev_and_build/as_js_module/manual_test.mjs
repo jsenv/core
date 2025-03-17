@@ -1,6 +1,6 @@
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   port: 5678,
 });

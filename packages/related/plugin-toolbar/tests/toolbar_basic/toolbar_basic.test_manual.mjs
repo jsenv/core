@@ -2,7 +2,7 @@ import { startDevServer } from "@jsenv/core";
 import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 
 startDevServer({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   plugins: [
     jsenvPluginToolbar({
       logLevel: "debug",

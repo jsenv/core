@@ -4,7 +4,7 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 const run = async () => {
   await build({
     sourceDirectoryUrl: new URL("./source/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: { "./main.js": "main_build.js" },
     runtimeCompat: {
       node: "20",

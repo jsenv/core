@@ -26,7 +26,7 @@ const run = async () => {
     sourcemaps: "none",
     logLevel: "warn",
     serverLogLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     keepProcessAlive: true,
     port: 8888,

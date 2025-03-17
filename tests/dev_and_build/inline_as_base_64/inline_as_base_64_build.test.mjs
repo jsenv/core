@@ -6,8 +6,8 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_inline_base64", () =>
     build({
-      sourceDirectoryUrl: new URL("./client/", import.meta.url),
-      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      sourceDirectoryUrl: import.meta.resolve("./client/"),
+      buildDirectoryUrl: import.meta.resolve("./build/"),
       entryPoints: { "./main.html": "main.html" },
       runtimeCompat: { chrome: "89" },
       bundling: false,

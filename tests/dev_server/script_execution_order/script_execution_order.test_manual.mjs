@@ -2,7 +2,7 @@
 // import { startFileServer } from "@jsenv/core/tests/start_file_server.js"
 
 // await startFileServer({
-//   rootDirectoryUrl: new URL("./client/", import.meta.url),
+//   rootDirectoryUrl: import.meta.resolve("./client/"),
 //   debug: true,
 // })
 
@@ -10,7 +10,7 @@ import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
   logLevel: "info",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   sourceMainFilePath: "main.html",
   keepProcessAlive: true,
 });

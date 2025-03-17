@@ -4,7 +4,7 @@ import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 await startDevServer({
   logLevel: "info",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   clientAutoreload: false,
   supervisor: false,
   plugins: [jsenvPluginAsJsClassic(), jsenvPluginPreact()],

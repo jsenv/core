@@ -19,7 +19,7 @@ const htmlFileContent = {
 const devServer = await startDevServer({
   logLevel: "warn",
   serverLogLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
