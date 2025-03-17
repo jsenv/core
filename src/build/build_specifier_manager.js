@@ -296,7 +296,15 @@ export const createBuildSpecifierManager = ({
       if (rawUrlInfo) {
         if (rawUrlInfo.type === "entry_build") {
           const otherEntryBuildInfo = rawUrlInfo.otherEntryBuildInfo;
-          await otherEntryBuildInfo.promise;
+          if (
+            // we need to wait ONLY if we are versioning
+            // and only IF the reference can't be remapped globally or by importmap
+            // otherwise we can reference the file right away
+            versioning &&
+            getReferenceVersioningInfo(firstReference).type === "inline"
+          ) {
+            await otherEntryBuildInfo.promise;
+          }
           finalUrlInfo.otherEntryBuildInfo = otherEntryBuildInfo;
         }
         return rawUrlInfo;
