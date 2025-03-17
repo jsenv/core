@@ -5,10 +5,14 @@ const run = () => {
   return build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    bundling: {
-      css: true,
-      js_module: false,
+    entryPoints: {
+      "./main.html": {
+        runtimeCompat: { chrome: "89" },
+        bundling: {
+          css: true,
+          js_module: false,
+        },
+      },
     },
   });
 };
