@@ -568,13 +568,13 @@ const prepareEntryPointBuild = async (
       base = someEntryPointUseNode ? "./" : "/";
     }
     if (entryPointParams.minification === undefined) {
-      minification = !runtimeCompat.node;
+      minification = !someEntryPointUseNode;
     }
     if (minification === true) {
       minification = {};
     }
     if (entryPointParams.versioning === undefined) {
-      versioning = !runtimeCompat.node;
+      versioning = !someEntryPointUseNode;
     }
     if (entryPointParams.assetManifest === undefined) {
       assetManifest = versioningMethod === "filename";
