@@ -1,0 +1,13 @@
+{
+  "name": "bar",
+  "private": true,
+  "exports": {
+    ".": {
+      "import": {
+        "development": "./bar.js",
+        "default": "./build/bar_build.js"
+      }
+    },
+    "./*": "./*"
+  }
+}

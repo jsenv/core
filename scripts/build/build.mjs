@@ -31,7 +31,7 @@ await build({
       nodeEsmResolution: {
         "*": {
           packageConditions: {
-            "@jsenv/humanize/": ["development", "inherit"],
+            "@jsenv/server/": ["node", "import"],
           },
         },
       },

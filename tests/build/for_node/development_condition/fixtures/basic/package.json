@@ -1,5 +1,8 @@
 {
   "private": true,
   "name": "test",
-  "type": "module"
+  "type": "module",
+  "workspaces": [
+    "./packages/*"
+  ]
 }

@@ -24,8 +24,9 @@ export const createNodeEsmResolver = ({
 }) => {
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+  const processArgConditions = readCustomConditionsFromProcessArgs();
   const defaultPackageConditions = [
-    ...(build ? [] : readCustomConditionsFromProcessArgs()),
+    ...(build ? [] : processArgConditions),
     nodeRuntimeEnabled ? "node" : "browser",
     "import",
   ];
