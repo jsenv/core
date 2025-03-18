@@ -342,12 +342,6 @@ export const build = async ({
     const entryBuildInfoMap = new Map();
     let entryPointIndex = 0;
     for (const entryPoint of entryPointSet) {
-      let _resolve;
-      let _reject;
-      const promise = new Promise((res, rej) => {
-        _resolve = res;
-        _reject = rej;
-      });
       const entryOutDirectoryUrl = new URL(
         `./entry_${entryPointIndex}/`,
         outDirectoryUrl,

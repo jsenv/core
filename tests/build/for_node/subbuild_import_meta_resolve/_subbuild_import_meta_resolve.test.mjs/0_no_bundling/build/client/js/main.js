@@ -1,1 +1,1 @@
-import "/client/js/main.css.js?side_effect" ;
+import "./main.css.js?side_effect" ;
