@@ -12,7 +12,12 @@ import {
   readGitHubWorkflowEnv,
   startGithubCheckRun,
 } from "@jsenv/github-check-run";
-import { createDetailedMessage, createLogger, UNICODE } from "@jsenv/humanize";
+import {
+  createCallOrderer,
+  createDetailedMessage,
+  createLogger,
+  UNICODE,
+} from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsInsideOf } from "@jsenv/urls";
@@ -28,7 +33,6 @@ import { memoryUsage } from "node:process";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { generateCoverage } from "../coverage/generate_coverage.js";
-import { createCallOrderer } from "../helpers/call_orderer.js";
 import { startMeasuringTotalCpuUsage } from "../helpers/cpu_usage.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { createIsInsideFragment } from "./is_inside_fragment.js";

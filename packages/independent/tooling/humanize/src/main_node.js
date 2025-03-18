@@ -8,6 +8,7 @@ export { humanizeDuration, humanizeEllapsedTime } from "./time/time.js";
 export { humanizeFileSize, humanizeMemory } from "./byte/byte.js";
 export { distributePercentages } from "./percentage/distribute_percentages.js";
 export { generateContentFrame } from "./content_frame/content_frame.js";
+export { createCallOrderer } from "./log/call_orderer.js";
 
 // node only
 export { createLogger } from "./log/logger.js";

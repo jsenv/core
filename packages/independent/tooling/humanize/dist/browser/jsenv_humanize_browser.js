@@ -1272,4 +1272,43 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
-export { ANSI, UNICODE, createDetailedMessage, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol };
+const createCallOrderer = () => {
+  const queue = [];
+  const callWhenPreviousExecutionAreDone = (executionIndex, callback) => {
+    if (queue[executionIndex]) {
+      throw new Error("".concat(executionIndex, " already used"));
+    }
+    let allBeforeAreDone = true;
+    if (executionIndex > 0) {
+      let beforeIndex = executionIndex - 1;
+      do {
+        const value = queue[beforeIndex];
+        if (!value) {
+          allBeforeAreDone = false;
+          break;
+        }
+      } while (beforeIndex--);
+    }
+    if (!allBeforeAreDone) {
+      queue[executionIndex] = callback;
+      return;
+    }
+    queue[executionIndex] = true;
+    callback();
+    let afterIndex = executionIndex + 1;
+    while (afterIndex < queue.length) {
+      const value = queue[afterIndex];
+      if (value === undefined) {
+        break;
+      }
+      if (typeof value === "function") {
+        queue[afterIndex] = true;
+        value();
+      }
+      afterIndex++;
+    }
+  };
+  return callWhenPreviousExecutionAreDone;
+};
+
+export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol };
