@@ -13,6 +13,10 @@ writeSymbolicLinkSync({
   from: import.meta.resolve("./git_ignored/node_modules/internal/"),
   to: import.meta.resolve("./git_ignored/packages/internal/"),
 });
+writeSymbolicLinkSync({
+  from: import.meta.resolve("./git_ignored/node_modules/z-internal/"),
+  to: import.meta.resolve("./git_ignored/packages/z-internal/"),
+});
 
 const run = async ({ packageConditions }) => {
   await build({
