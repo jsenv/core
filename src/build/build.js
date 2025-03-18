@@ -110,7 +110,6 @@ export const build = async ({
 
   ...rest
 }) => {
-  let someEntryPointUseNode = false;
   const entryPointSet = new Set();
 
   // param validation
@@ -203,15 +202,13 @@ export const build = async ({
         }
 
         // value (entryPointParams)
-        let params;
+        const value = entryPoints[key];
         {
-          const value = entryPoints[key];
           if (value === null || typeof value !== "object") {
             throw new TypeError(
               `The value "${value}" in "entryPoints" is invalid: it must be an object.`,
             );
           }
-          params = { ...value };
           const forEntryPointOrEmpty = isSingleEntryPoint
             ? ""
             : ` for entry point "${key}"`;
@@ -264,40 +261,20 @@ export const build = async ({
             }
           }
           const { runtimeCompat } = value;
-          if (runtimeCompat === undefined) {
-            const runtimeCompatFromPackage =
-              inferRuntimeCompatFromClosestPackage(sourceUrl, {
-                runtimeType,
-              });
-            if (runtimeCompatFromPackage) {
-              params.runtimeCompat = runtimeCompatFromPackage;
-            } else {
-              params.runtimeCompat =
-                runtimeType === "browser"
-                  ? browserDefaultRuntimeCompat
-                  : nodeDefaultRuntimeCompat;
-              // if (!runtimeCompatFromPackage) {
-              //   throw new TypeError(
-              //     `The runtimeCompat is missing${forEntryPointOrEmpty} and could not be inferred from the closest package.json.`,
-              //   );
-              // }
+          if (runtimeCompat !== undefined) {
+            if (runtimeCompat === null || typeof runtimeCompat !== "object") {
+              throw new TypeError(
+                `The runtimeCompat "${runtimeCompat}"${forEntryPointOrEmpty} is invalid: it must be an object.`,
+              );
             }
-          } else if (
-            runtimeCompat === null ||
-            typeof runtimeCompat !== "object"
-          ) {
-            throw new TypeError(
-              `The runtimeCompat "${runtimeCompat}"${forEntryPointOrEmpty} is invalid: it must be an object.`,
-            );
-          } else if (!someEntryPointUseNode && "node" in runtimeCompat) {
-            someEntryPointUseNode = true;
           }
         }
 
         entryPointSet.add({
           sourceUrl,
           sourceRelativeUrl: `./${urlToRelativeUrl(sourceUrl, sourceDirectoryUrl)}`,
-          params,
+          params: { ...value },
+          runtimeType,
         });
       }
     }
@@ -336,6 +313,31 @@ export const build = async ({
       sourceDirectoryUrl,
       buildDirectoryUrl,
     });
+
+    let someEntryPointUseNode = false;
+    for (const entryPoint of entryPointSet) {
+      let { runtimeCompat } = entryPoint.params;
+      if (runtimeCompat === undefined) {
+        const runtimeCompatFromPackage = inferRuntimeCompatFromClosestPackage(
+          entryPoint.sourceUrl,
+          {
+            runtimeType: entryPoint.runtimeType,
+          },
+        );
+        if (runtimeCompatFromPackage) {
+          entryPoint.params.runtimeCompat = runtimeCompat =
+            runtimeCompatFromPackage;
+        } else {
+          entryPoint.params.runtimeCompat = runtimeCompat =
+            entryPoint.runtimeType === "browser"
+              ? browserDefaultRuntimeCompat
+              : nodeDefaultRuntimeCompat;
+        }
+      }
+      if (!someEntryPointUseNode && "node" in runtimeCompat) {
+        someEntryPointUseNode = true;
+      }
+    }
 
     const entryBuildInfoMap = new Map();
     let entryPointIndex = 0;
