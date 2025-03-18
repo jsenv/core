@@ -8061,14 +8061,13 @@ const getCorePlugins = ({
   ];
 };
 
-const createBuildContentSummary = (
+const createBuildContentOneLineSummary = (
   buildFileContents,
-  { title = "build content summary" } = {},
+  { indent },
 ) => {
   const buildContentReport = createBuildContentReport(buildFileContents);
-  return `--- ${title} ---  
-${createRepartitionMessage(buildContentReport)}
---------------------`;
+  const shortSummary = createBuildShortSummary(buildContentReport);
+  return `${indent}${shortSummary}`;
 };
 
 const createBuildContentReport = (buildFileContents) => {
@@ -8200,41 +8199,55 @@ const determineCategory = (buildRelativeUrl) => {
   return "other";
 };
 
-const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
-  const addPart = (name, { count, size, percentage }) => {
-    parts.push(
-      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${humanizeFileSize(
-        size,
-      )} / ${percentage} %)`,
-    );
-  };
+const createBuildShortSummary = ({ html, css, js, json, other, total }) => {
+  let shortSummary = "";
 
-  const parts = [];
-  // if (sourcemaps.count) {
-  //   parts.push(
-  //     `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
-  //       sourcemaps.count
-  //     } (${humanizeFileSize(sourcemaps.size)})`,
-  //   )
-  // }
+  const tag =
+    html.count === total.count
+      ? "html"
+      : css.count === total.count
+        ? "css"
+        : js.count === total.count
+          ? "js"
+          : json.count === total.count
+            ? "json"
+            : "";
+
+  if (total.count === 1) {
+    if (tag) {
+      shortSummary += `1 ${tag} file`;
+    } else {
+      shortSummary += "1 file";
+    }
+  } else if (tag) {
+    shortSummary += `${total.count} ${tag} files`;
+  } else {
+    shortSummary += `${total.count} files`;
+  }
+
+  shortSummary += " (";
+  shortSummary += humanizeFileSize(total.size);
+  const repart = [];
   if (html.count) {
-    addPart("html ", html);
+    repart.push(`html: ${html.percentage}%`);
   }
   if (css.count) {
-    addPart("css  ", css);
+    repart.push(`css: ${css.percentage}%`);
   }
   if (js.count) {
-    addPart("js   ", js);
+    repart.push(`js: ${js.percentage}%`);
   }
   if (json.count) {
-    addPart("json ", json);
+    repart.push(`json: ${js.percentage}%`);
   }
   if (other.count) {
-    addPart("other", other);
+    repart.push(`other: ${js.percentage}%`);
   }
-  addPart("total", total);
-  return `- ${parts.join(`
-- `)}`;
+  if (repart.length > 1) {
+    shortSummary += ` / ${repart.join(" ")}`;
+  }
+  shortSummary += ")";
+  return shortSummary;
 };
 
 // default runtimeCompat corresponds to
@@ -8503,6 +8516,12 @@ const createBuildSpecifierManager = ({
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
       if (ownerUrlInfo.remapReference && !reference.isInline) {
+        if (reference.specifier.startsWith("file:")) {
+          const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.specifier);
+          if (rawUrlInfo && rawUrlInfo.type === "entry_build") {
+            return reference.specifier; // we want to ignore it
+          }
+        }
         const newSpecifier = ownerUrlInfo.remapReference(reference);
         reference.specifier = newSpecifier;
       }
@@ -10332,6 +10351,11 @@ const build = async ({
               logger.info(
                 `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `,
               );
+              logger.info(
+                createBuildContentOneLineSummary(result.buildFileContents, {
+                  indent: "  ",
+                }),
+              );
             });
           })();
           entryBuildInfo.promise = promise;
@@ -10342,7 +10366,12 @@ const build = async ({
       entryPointIndex++;
     }
 
-    logger.info(`building ${entryBuildInfoMap.size} entry points`);
+    if (entryPointSet.size === 1) {
+      const [singleEntryPoint] = entryPointSet.values();
+      logger.info(`building ${singleEntryPoint.key}`);
+    } else {
+      logger.info(`building ${entryBuildInfoMap.size} entry points`);
+    }
     logger.info("");
     const promises = [];
     for (const [, entryBuildInfo] of entryBuildInfoMap) {
@@ -10372,11 +10401,6 @@ const build = async ({
       });
       writingFiles.done();
     }
-    logger.info(
-      createBuildContentSummary(buildFileContents, {
-        title: "build files",
-      }),
-    );
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
       ...(returnBuildManifest ? { buildManifest } : {}),

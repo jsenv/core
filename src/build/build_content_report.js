@@ -2,12 +2,21 @@ import { ANSI, distributePercentages, humanizeFileSize } from "@jsenv/humanize";
 
 export const createBuildContentSummary = (
   buildFileContents,
-  { title = "build content summary" } = {},
+  { indent, title } = {},
 ) => {
   const buildContentReport = createBuildContentReport(buildFileContents);
   return `--- ${title} ---  
-${createRepartitionMessage(buildContentReport)}
+${createRepartitionMessage(buildContentReport, { indent })}
 --------------------`;
+};
+
+export const createBuildContentOneLineSummary = (
+  buildFileContents,
+  { indent },
+) => {
+  const buildContentReport = createBuildContentReport(buildFileContents);
+  const shortSummary = createBuildShortSummary(buildContentReport);
+  return `${indent}${shortSummary}`;
 };
 
 const createBuildContentReport = (buildFileContents) => {
@@ -139,13 +148,72 @@ const determineCategory = (buildRelativeUrl) => {
   return "other";
 };
 
-const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
+const createBuildShortSummary = ({ html, css, js, json, other, total }) => {
+  let shortSummary = "";
+
+  const tag =
+    html.count === total.count
+      ? "html"
+      : css.count === total.count
+        ? "css"
+        : js.count === total.count
+          ? "js"
+          : json.count === total.count
+            ? "json"
+            : "";
+
+  if (total.count === 1) {
+    if (tag) {
+      shortSummary += `1 ${tag} file`;
+    } else {
+      shortSummary += "1 file";
+    }
+  } else if (tag) {
+    shortSummary += `${total.count} ${tag} files`;
+  } else {
+    shortSummary += `${total.count} files`;
+  }
+
+  shortSummary += " (";
+  shortSummary += humanizeFileSize(total.size);
+  const repart = [];
+  if (html.count) {
+    repart.push(`html: ${html.percentage}%`);
+  }
+  if (css.count) {
+    repart.push(`css: ${css.percentage}%`);
+  }
+  if (js.count) {
+    repart.push(`js: ${js.percentage}%`);
+  }
+  if (json.count) {
+    repart.push(`json: ${js.percentage}%`);
+  }
+  if (other.count) {
+    repart.push(`other: ${js.percentage}%`);
+  }
+  if (repart.length > 1) {
+    shortSummary += ` / ${repart.join(" ")}`;
+  }
+  shortSummary += ")";
+  return shortSummary;
+};
+
+const createRepartitionMessage = (
+  { html, css, js, json, other, total },
+  { indent },
+) => {
   const addPart = (name, { count, size, percentage }) => {
-    parts.push(
-      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${humanizeFileSize(
-        size,
-      )} / ${percentage} %)`,
+    let part = "";
+    part += ANSI.color(`${name}:`, ANSI.GREY);
+    part += " ";
+    part += count;
+    part += " ";
+    part += ANSI.color(
+      `(${humanizeFileSize(size)} / ${percentage} %)`,
+      ANSI.GREY,
     );
+    parts.push(part);
   };
 
   const parts = [];
@@ -172,6 +240,6 @@ const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
     addPart("other", other);
   }
   addPart("total", total);
-  return `- ${parts.join(`
-- `)}`;
+  return `${indent}${ANSI.color("-", ANSI.GREY)} ${parts.join(`
+${indent}${ANSI.color("-", ANSI.GREY)} `)}`;
 };

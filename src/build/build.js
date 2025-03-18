@@ -59,7 +59,7 @@ import {
 } from "../plugins/plugin_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
-import { createBuildContentSummary } from "./build_content_report.js";
+import { createBuildContentOneLineSummary } from "./build_content_report.js";
 import { defaultRuntimeCompat, logsDefault } from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
@@ -430,6 +430,11 @@ export const build = async ({
               logger.info(
                 `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `,
               );
+              logger.info(
+                createBuildContentOneLineSummary(result.buildFileContents, {
+                  indent: "  ",
+                }),
+              );
             });
           })();
           entryBuildInfo.promise = promise;
@@ -475,11 +480,6 @@ export const build = async ({
       });
       writingFiles.done();
     }
-    logger.info(
-      createBuildContentSummary(buildFileContents, {
-        title: "build files",
-      }),
-    );
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
       ...(returnBuildManifest ? { buildManifest } : {}),
