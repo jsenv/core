@@ -1,4 +1,4 @@
-# [0_js_module](../../hash_local_reference_build.test.mjs#L24)
+# [0_js_module](../../hash_local_reference_build.test.mjs#L27)
 
 ```js
 run()

@@ -1,4 +1,4 @@
-# [0_import_meta_resolve](../../import_meta_resolve_build.test.mjs#L24)
+# [0_import_meta_resolve](../../import_meta_resolve_build.test.mjs#L27)
 
 ```js
 run({

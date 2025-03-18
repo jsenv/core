@@ -13,8 +13,16 @@ base/client/style.css:2:25
 no entry on filesystem
 --- plugin name ---
 "jsenv:file_url_fetching"
-  at async run (base/css_background_url_not_found_build.test.mjs:6:3)
-  at async base/css_background_url_not_found_build.test.mjs:19:1
+  at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:72:24)
+  at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:114:14)
+  at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:419:13)
+  at async @jsenv/core/src/kitchen/kitchen.js:488:11
+  at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)
+  at async @jsenv/core/src/kitchen/kitchen.js:486:9
+  at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:670:5)
+  at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:577:7)
+  at async Promise.all (index 0)
+  at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:611:7)
 ```
 
 ---
