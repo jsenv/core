@@ -5,9 +5,12 @@ const run = async () => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.js": "main.js" },
-    runtimeCompat: { node: "19" },
-    directoryReferenceEffect: "copy",
+    entryPoints: {
+      "./main.js": {
+        runtimeCompat: { node: "19" },
+        directoryReferenceEffect: "copy",
+      },
+    },
   });
   const { directoryUrl } = await import(
     new URL("./build/main.js", import.meta.url)

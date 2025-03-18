@@ -6,12 +6,15 @@ const run = async ({ directoryReferenceEffect }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    bundling: false,
-    minification: false,
-    runtimeCompat: { chrome: "98" },
-    assetManifest: true,
-    directoryReferenceEffect,
+    entryPoints: {
+      "./main.html": {
+        bundling: false,
+        minification: false,
+        runtimeCompat: { chrome: "98" },
+        assetManifest: true,
+        directoryReferenceEffect,
+      },
+    },
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: import.meta.resolve("./build/"),

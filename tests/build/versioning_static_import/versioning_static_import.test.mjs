@@ -22,7 +22,7 @@ import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 
-const test = async ({ name, ...rest }) => {
+const test = async ({ name, runtimeCompat }) => {
   const generateDist = async (step) => {
     const snapshotDirectoryUrl = new URL(
       `./snapshots/${name}/${step}/`,
@@ -32,25 +32,29 @@ const test = async ({ name, ...rest }) => {
     await build({
       logs: { level: "warn" },
       sourceDirectoryUrl: import.meta.resolve("./client/"),
-      buildDirectoryUrl: new URL("./dist/", import.meta.url),
-      entryPoints: { "./main.html": "main.html" },
-      versioningMethod: "filename",
-      // we could just disable bundling to achieve the same result
-      // but this allows to test versioning with bundling and include param
-      bundling: {
-        js_module: {
-          include: {
-            "**/*": true,
-            "./file.js": false,
+      buildDirectoryUrl: import.meta.resolve("./dist/"),
+      outDirectoryUrl: import.meta.resolve("./.jsenv/"),
+      entryPoints: {
+        "./main.html": {
+          versioningMethod: "filename",
+          // we could just disable bundling to achieve the same result
+          // but this allows to test versioning with bundling and include param
+          bundling: {
+            js_module: {
+              include: {
+                "**/*": true,
+                "./file.js": false,
+              },
+            },
           },
+          minification: false,
+
+          runtimeCompat,
         },
       },
-      minification: false,
-      outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-      ...rest,
     });
     copyDirectorySync({
-      from: new URL("./dist/", import.meta.url),
+      from: import.meta.resolve("./dist/"),
       to: snapshotDirectoryUrl,
       overwrite: true,
     });
@@ -63,7 +67,7 @@ const test = async ({ name, ...rest }) => {
   // 2. Ensure file executes properly
   const serverRequests = [];
   const server = await startFileServer({
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("./dist/"),
     canUseLongTermCache: (request) => !request.url.endsWith(".html"),
     services: [
       {
@@ -91,7 +95,7 @@ const test = async ({ name, ...rest }) => {
   // Now update source file then rebuild testing that:
   // - snapshots are correct
   // - browser do not request the file
-  const jsFileUrl = new URL("./client/file.js", import.meta.url);
+  const jsFileUrl = import.meta.resolve("./client/file.js");
   const jsFileContent = {
     beforeTest: readFileSync(jsFileUrl),
     update: (content) => writeFileSync(jsFileUrl, content),

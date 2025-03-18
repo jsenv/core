@@ -11,11 +11,14 @@ const run = async ({ runtimeCompat, sourcemaps }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    minification: false,
-    bundling: false,
-    runtimeCompat,
-    sourcemaps,
+    entryPoints: {
+      "./main.html": {
+        minification: false,
+        bundling: false,
+        runtimeCompat,
+        sourcemaps,
+      },
+    },
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: import.meta.resolve("./build/"),

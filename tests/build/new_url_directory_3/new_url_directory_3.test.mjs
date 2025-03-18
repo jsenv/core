@@ -9,12 +9,15 @@ const run = ({
   return build({
     sourceDirectoryUrl,
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.js": "main.js" },
-    bundling: false,
-    minification: false,
-    assetManifest: true,
-    directoryReferenceEffect,
-    runtimeCompat,
+    entryPoints: {
+      "./main.js": {
+        bundling: false,
+        minification: false,
+        assetManifest: true,
+        directoryReferenceEffect,
+        runtimeCompat,
+      },
+    },
   });
 };
 
