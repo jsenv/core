@@ -7,11 +7,15 @@ const run = async ({ bundling }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.js": "main.js" },
-    minification: false,
-    versioning: false,
-    base: "./",
-    bundling,
+    entryPoints: {
+      "./main.js": {
+        minification: false,
+        versioning: false,
+        base: "./",
+        bundling,
+        runtimeCompat: { node: "0" },
+      },
+    },
   });
   return import(new URL("./build/main.js", import.meta.url));
 };
