@@ -1,6 +1,5 @@
-import { bar } from "./test_packages.js";
-import { foo } from "./test_node_modules.js";
-
 // eslint-disable-next-line import-x/no-unresolved
+import { bar } from "./js/bar.js";
+import { foo } from "./js/foo.js";
 
 console.log(foo, bar);

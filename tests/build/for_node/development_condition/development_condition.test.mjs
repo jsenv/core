@@ -23,6 +23,7 @@ const run = async ({ packageConditions }) => {
         buildRelativeUrl: "./main_build.js",
         runtimeCompat: { node: "20" },
         packageConditions,
+        bundling: false,
       },
     },
   });
