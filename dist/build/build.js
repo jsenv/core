@@ -1,5 +1,6 @@
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, comparePathnames$1 as comparePathnames, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, distributePercentages, humanizeFileSize, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createCallOrderer } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, distributePercentages, humanizeFileSize, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog, humanizeDuration, humanizeMemory } from "../jsenv_core_packages.js";
+import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
@@ -8,7 +9,6 @@ import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { WebSocketResponse, pickContentType } from "@jsenv/server";
 import { createHash } from "node:crypto";
 import "string-width";
-import "node:process";
 import "node:os";
 import "node:tty";
 import "node:path";
@@ -6239,9 +6239,8 @@ const getDirectoryContentItems = ({
       fileUrls.push(fileUrlObject);
     }
   }
-  fileUrls.sort((a, b) => {
-    return comparePathnames(a.pathname, b.pathname);
-  });
+  fileUrls.sort(compareFileUrls);
+
   const items = [];
   for (const fileUrl of fileUrls) {
     const urlRelativeToCurrentDirectory = urlToRelativeUrl(
@@ -8265,8 +8264,7 @@ const defaultRuntimeCompat = {
 };
 const logsDefault = {
   level: "info",
-  disabled: false,
-  animation: true,
+  animated: true,
 };
 
 // https://bundlers.tooling.report/hashing/avoid-cascade/
@@ -10045,7 +10043,7 @@ const build = async ({
 
   ...rest
 }) => {
-  const entryPointSet = new Set();
+  const entryPointArray = [];
 
   // param validation
   {
@@ -10065,15 +10063,6 @@ const build = async ({
         buildDirectoryUrl,
         "buildDirectoryUrl",
       );
-    }
-    // out directory url
-    {
-      if (outDirectoryUrl) {
-        outDirectoryUrl = assertAndNormalizeDirectoryUrl(
-          outDirectoryUrl,
-          "outDirectoryUrl",
-        );
-      }
     }
     // entry points
     {
@@ -10189,7 +10178,7 @@ const build = async ({
           }
         }
 
-        entryPointSet.add({
+        entryPointArray.push({
           key,
           sourceUrl,
           sourceRelativeUrl: `./${urlToRelativeUrl(sourceUrl, sourceDirectoryUrl)}`,
@@ -10216,16 +10205,163 @@ const build = async ({
         );
       }
     }
+    if (outDirectoryUrl !== undefined) {
+      outDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        outDirectoryUrl,
+        "outDirectoryUrl",
+      );
+    }
   }
 
   const logLevel = logs.level;
   const logger = createLogger({ logLevel });
+  const animatedLogEnabled =
+    logs.animated &&
+    // canEraseProcessStdout
+    process.stdout.isTTY &&
+    // if there is an error during execution npm will mess up the output
+    // (happens when npm runs several command in a workspace)
+    // so we enable hot replace only when !process.exitCode (no error so far)
+    process.exitCode !== 1;
   const createBuildTask = (label) => {
     return createTaskLog(label, {
-      disabled: logs.disabled || (!logger.levels.debug && !logger.levels.info),
-      animated: logs.animation && !logger.levels.debug,
+      disabled: !animatedLogEnabled,
+      animated: animatedLogEnabled,
     });
   };
+  let startBuildLogs = () => {};
+
+  const renderEntyPointBuildDoneLog = (
+    entryBuildInfo,
+    { sourceUrlToLog, buildUrlToLog },
+  ) => {
+    let content = "";
+    content += "\n";
+    content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `;
+    content += "\n";
+    content += createBuildContentOneLineSummary(
+      entryBuildInfo.buildFileContents,
+      {
+        indent: "  ",
+      },
+    );
+    return content;
+  };
+
+  if (animatedLogEnabled) {
+    startBuildLogs = () => {
+      const startMs = Date.now();
+      let dynamicLog = createDynamicLog();
+      const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+      let frameIndex = 0;
+      let oneWrite = false;
+      const memoryHeapUsedAtStart = memoryUsage().heapUsed;
+      const renderDynamicLog = () => {
+        frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+        let dynamicLogContent = "";
+        dynamicLogContent += `${frames[frameIndex]} `;
+        dynamicLogContent += `building ${entryPointArray.length} entry points`;
+
+        const msEllapsed = Date.now() - startMs;
+        const infos = [];
+        const duration = humanizeDuration(msEllapsed, {
+          short: true,
+          decimals: 0,
+          rounded: false,
+        });
+        infos.push(ANSI.color(duration, ANSI.GREY));
+        let memoryUsageColor = ANSI.GREY;
+        const memoryHeapUsed = memoryUsage().heapUsed;
+        if (memoryHeapUsed > 2.5 * memoryHeapUsedAtStart) {
+          memoryUsageColor = ANSI.YELLOW;
+        } else if (memoryHeapUsed > 1.5 * memoryHeapUsedAtStart) {
+          memoryUsageColor = null;
+        }
+        const memoryHeapUsedFormatted = humanizeMemory(memoryHeapUsed, {
+          short: true,
+          decimals: 0,
+        });
+        infos.push(ANSI.color(memoryHeapUsedFormatted, memoryUsageColor));
+
+        const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
+        dynamicLogContent += ` ${ANSI.color(
+          "[",
+          ANSI.GREY,
+        )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
+
+        if (oneWrite) {
+          dynamicLogContent = `\n${dynamicLogContent}`;
+        }
+        dynamicLogContent = `${dynamicLogContent}\n`;
+        return dynamicLogContent;
+      };
+      dynamicLog.update(renderDynamicLog());
+      const interval = setInterval(() => {
+        dynamicLog.update(renderDynamicLog());
+      }, 150).unref();
+      signal.addEventListener("abort", () => {
+        clearInterval(interval);
+      });
+      return {
+        onEntryPointBuildStart: (
+          entryBuildInfo,
+          { sourceUrlToLog, buildUrlToLog },
+        ) => {
+          return () => {
+            oneWrite = true;
+            dynamicLog.clearDuringFunctionCall((write) => {
+              const log = renderEntyPointBuildDoneLog(entryBuildInfo, {
+                sourceUrlToLog,
+                buildUrlToLog,
+              });
+              write(log);
+            }, renderDynamicLog());
+          };
+        },
+        onBuildEnd: () => {
+          clearInterval(interval);
+          dynamicLog.update("");
+          dynamicLog.destroy();
+          dynamicLog = null;
+        },
+      };
+    };
+  } else {
+    startBuildLogs = () => {
+      if (entryPointArray.length === 1) {
+        const [singleEntryPoint] = entryPointArray;
+        logger.info(`building ${singleEntryPoint.key}`);
+      } else {
+        logger.info(`building ${entryPointArray.length} entry points`);
+      }
+      logger.info("");
+      return {
+        onEntryPointBuildStart: (
+          entryBuildInfo,
+          { sourceUrlToLog, buildUrlToLog },
+        ) => {
+          return () => {
+            logger.info(
+              renderEntyPointBuildDoneLog(entryBuildInfo, {
+                sourceUrlToLog,
+                buildUrlToLog,
+              }),
+            );
+          };
+        },
+        onBuildEnd: () => {
+          logger.info("");
+        },
+      };
+    };
+  }
+
+  // we want to start building the entry point that are deeper
+  // - they are more likely to be small
+  // - they are more likely to be referenced by highter files that will depend on them
+  entryPointArray.sort((a, b) => {
+    return compareFileUrls(a.sourceUrl, b.sourceUrl);
+  });
 
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
@@ -10252,15 +10388,15 @@ const build = async ({
   }
 
   const runBuild = async ({ signal }) => {
+    const { onBuildEnd, onEntryPointBuildStart } = startBuildLogs();
+
     const buildUrlsGenerator = createBuildUrlsGenerator({
       sourceDirectoryUrl,
       buildDirectoryUrl,
     });
 
-    const callWhenPreviousBuildAreDone = createCallOrderer();
-
     let someEntryPointUseNode = false;
-    for (const entryPoint of entryPointSet) {
+    for (const entryPoint of entryPointArray) {
       let { runtimeCompat } = entryPoint.params;
       if (runtimeCompat === undefined) {
         const runtimeCompatFromPackage = inferRuntimeCompatFromClosestPackage(
@@ -10287,7 +10423,7 @@ const build = async ({
     const entryBuildInfoMap = new Map();
     let entryPointIndex = 0;
     const entryOutDirSet = new Set();
-    for (const entryPoint of entryPointSet) {
+    for (const entryPoint of entryPointArray) {
       let entryOutDirCandidate = `entry_${urlToBasename(entryPoint.sourceRelativeUrl)}/`;
       let entryInteger = 1;
       while (entryOutDirSet.has(entryOutDirCandidate)) {
@@ -10317,6 +10453,25 @@ const build = async ({
         buildInlineContents: undefined,
         buildManifest: undefined,
         buildEntryPoint: () => {
+          const sourceUrl = new URL(
+            entryPoint.sourceRelativeUrl,
+            sourceDirectoryUrl,
+          );
+          const buildUrl = new URL(
+            entryPoint.params.buildRelativeUrl,
+            buildDirectoryUrl,
+          );
+          const sourceUrlToLog = packageDirectoryUrl
+            ? urlToRelativeUrl(sourceUrl, packageDirectoryUrl)
+            : entryPoint.key;
+          const buildUrlToLog = packageDirectoryUrl
+            ? urlToRelativeUrl(buildUrl, packageDirectoryUrl)
+            : entryPoint.params.buildRelativeUrl;
+
+          const onEntryPointBuildEnd = onEntryPointBuildStart(entryBuildInfo, {
+            sourceUrlToLog,
+            buildUrlToLog,
+          });
           const promise = (async () => {
             const result = await buildEntryPoint({
               getOtherEntryBuildInfo: (url) => {
@@ -10333,30 +10488,7 @@ const build = async ({
             entryBuildInfo.buildFileContents = result.buildFileContents;
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
-            callWhenPreviousBuildAreDone(entryBuildInfo.index, () => {
-              const sourceUrl = new URL(
-                entryPoint.sourceRelativeUrl,
-                sourceDirectoryUrl,
-              );
-              const buildUrl = new URL(
-                entryPoint.params.buildRelativeUrl,
-                buildDirectoryUrl,
-              );
-              const sourceUrlToLog = packageDirectoryUrl
-                ? urlToRelativeUrl(sourceUrl, packageDirectoryUrl)
-                : entryPoint.key;
-              const buildUrlToLog = packageDirectoryUrl
-                ? urlToRelativeUrl(buildUrl, packageDirectoryUrl)
-                : entryPoint.params.buildRelativeUrl;
-              logger.info(
-                `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `,
-              );
-              logger.info(
-                createBuildContentOneLineSummary(result.buildFileContents, {
-                  indent: "  ",
-                }),
-              );
-            });
+            onEntryPointBuildEnd();
           })();
           entryBuildInfo.promise = promise;
           return promise;
@@ -10366,20 +10498,12 @@ const build = async ({
       entryPointIndex++;
     }
 
-    if (entryPointSet.size === 1) {
-      const [singleEntryPoint] = entryPointSet.values();
-      logger.info(`building ${singleEntryPoint.key}`);
-    } else {
-      logger.info(`building ${entryBuildInfoMap.size} entry points`);
-    }
-    logger.info("");
     const promises = [];
     for (const [, entryBuildInfo] of entryBuildInfoMap) {
       const promise = entryBuildInfo.buildEntryPoint();
       promises.push(promise);
     }
     await Promise.all(promises);
-    logger.info("");
 
     const buildFileContents = {};
     const buildInlineContents = {};
@@ -10401,6 +10525,11 @@ const build = async ({
       });
       writingFiles.done();
     }
+    onBuildEnd({
+      buildFileContents,
+      buildInlineContents,
+      buildManifest,
+    });
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
       ...(returnBuildManifest ? { buildManifest } : {}),

@@ -21,15 +21,18 @@ import { parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import {
   assertAndNormalizeDirectoryUrl,
   clearDirectorySync,
+  compareFileUrls,
   ensureEmptyDirectory,
   lookupPackageDirectory,
   writeFileSync,
 } from "@jsenv/filesystem";
 import {
   ANSI,
-  createCallOrderer,
+  createDynamicLog,
   createLogger,
   createTaskLog,
+  humanizeDuration,
+  humanizeMemory,
   UNICODE,
 } from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
@@ -47,6 +50,7 @@ import {
   urlToExtension,
   urlToRelativeUrl,
 } from "@jsenv/urls";
+import { memoryUsage as processMemoryUsage } from "node:process";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
@@ -122,7 +126,7 @@ export const build = async ({
 
   ...rest
 }) => {
-  const entryPointSet = new Set();
+  const entryPointArray = [];
 
   // param validation
   {
@@ -142,15 +146,6 @@ export const build = async ({
         buildDirectoryUrl,
         "buildDirectoryUrl",
       );
-    }
-    // out directory url
-    {
-      if (outDirectoryUrl) {
-        outDirectoryUrl = assertAndNormalizeDirectoryUrl(
-          outDirectoryUrl,
-          "outDirectoryUrl",
-        );
-      }
     }
     // entry points
     {
@@ -266,7 +261,7 @@ export const build = async ({
           }
         }
 
-        entryPointSet.add({
+        entryPointArray.push({
           key,
           sourceUrl,
           sourceRelativeUrl: `./${urlToRelativeUrl(sourceUrl, sourceDirectoryUrl)}`,
@@ -293,16 +288,163 @@ export const build = async ({
         );
       }
     }
+    if (outDirectoryUrl !== undefined) {
+      outDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        outDirectoryUrl,
+        "outDirectoryUrl",
+      );
+    }
   }
 
   const logLevel = logs.level;
   const logger = createLogger({ logLevel });
+  const animatedLogEnabled =
+    logs.animated &&
+    // canEraseProcessStdout
+    process.stdout.isTTY &&
+    // if there is an error during execution npm will mess up the output
+    // (happens when npm runs several command in a workspace)
+    // so we enable hot replace only when !process.exitCode (no error so far)
+    process.exitCode !== 1;
   const createBuildTask = (label) => {
     return createTaskLog(label, {
-      disabled: logs.disabled || (!logger.levels.debug && !logger.levels.info),
-      animated: logs.animation && !logger.levels.debug,
+      disabled: !animatedLogEnabled,
+      animated: animatedLogEnabled,
     });
   };
+  let startBuildLogs = () => {};
+
+  const renderEntyPointBuildDoneLog = (
+    entryBuildInfo,
+    { sourceUrlToLog, buildUrlToLog },
+  ) => {
+    let content = "";
+    content += "\n";
+    content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `;
+    content += "\n";
+    content += createBuildContentOneLineSummary(
+      entryBuildInfo.buildFileContents,
+      {
+        indent: "  ",
+      },
+    );
+    return content;
+  };
+
+  if (animatedLogEnabled) {
+    startBuildLogs = () => {
+      const startMs = Date.now();
+      let dynamicLog = createDynamicLog();
+      const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+      let frameIndex = 0;
+      let oneWrite = false;
+      const memoryHeapUsedAtStart = processMemoryUsage().heapUsed;
+      const renderDynamicLog = () => {
+        frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+        let dynamicLogContent = "";
+        dynamicLogContent += `${frames[frameIndex]} `;
+        dynamicLogContent += `building ${entryPointArray.length} entry points`;
+
+        const msEllapsed = Date.now() - startMs;
+        const infos = [];
+        const duration = humanizeDuration(msEllapsed, {
+          short: true,
+          decimals: 0,
+          rounded: false,
+        });
+        infos.push(ANSI.color(duration, ANSI.GREY));
+        let memoryUsageColor = ANSI.GREY;
+        const memoryHeapUsed = processMemoryUsage().heapUsed;
+        if (memoryHeapUsed > 2.5 * memoryHeapUsedAtStart) {
+          memoryUsageColor = ANSI.YELLOW;
+        } else if (memoryHeapUsed > 1.5 * memoryHeapUsedAtStart) {
+          memoryUsageColor = null;
+        }
+        const memoryHeapUsedFormatted = humanizeMemory(memoryHeapUsed, {
+          short: true,
+          decimals: 0,
+        });
+        infos.push(ANSI.color(memoryHeapUsedFormatted, memoryUsageColor));
+
+        const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
+        dynamicLogContent += ` ${ANSI.color(
+          "[",
+          ANSI.GREY,
+        )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
+
+        if (oneWrite) {
+          dynamicLogContent = `\n${dynamicLogContent}`;
+        }
+        dynamicLogContent = `${dynamicLogContent}\n`;
+        return dynamicLogContent;
+      };
+      dynamicLog.update(renderDynamicLog());
+      const interval = setInterval(() => {
+        dynamicLog.update(renderDynamicLog());
+      }, 150).unref();
+      signal.addEventListener("abort", () => {
+        clearInterval(interval);
+      });
+      return {
+        onEntryPointBuildStart: (
+          entryBuildInfo,
+          { sourceUrlToLog, buildUrlToLog },
+        ) => {
+          return () => {
+            oneWrite = true;
+            dynamicLog.clearDuringFunctionCall((write) => {
+              const log = renderEntyPointBuildDoneLog(entryBuildInfo, {
+                sourceUrlToLog,
+                buildUrlToLog,
+              });
+              write(log);
+            }, renderDynamicLog());
+          };
+        },
+        onBuildEnd: () => {
+          clearInterval(interval);
+          dynamicLog.update("");
+          dynamicLog.destroy();
+          dynamicLog = null;
+        },
+      };
+    };
+  } else {
+    startBuildLogs = () => {
+      if (entryPointArray.length === 1) {
+        const [singleEntryPoint] = entryPointArray;
+        logger.info(`building ${singleEntryPoint.key}`);
+      } else {
+        logger.info(`building ${entryPointArray.length} entry points`);
+      }
+      logger.info("");
+      return {
+        onEntryPointBuildStart: (
+          entryBuildInfo,
+          { sourceUrlToLog, buildUrlToLog },
+        ) => {
+          return () => {
+            logger.info(
+              renderEntyPointBuildDoneLog(entryBuildInfo, {
+                sourceUrlToLog,
+                buildUrlToLog,
+              }),
+            );
+          };
+        },
+        onBuildEnd: () => {
+          logger.info("");
+        },
+      };
+    };
+  }
+
+  // we want to start building the entry point that are deeper
+  // - they are more likely to be small
+  // - they are more likely to be referenced by highter files that will depend on them
+  entryPointArray.sort((a, b) => {
+    return compareFileUrls(a.sourceUrl, b.sourceUrl);
+  });
 
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
@@ -331,15 +473,15 @@ export const build = async ({
   }
 
   const runBuild = async ({ signal }) => {
+    const { onBuildEnd, onEntryPointBuildStart } = startBuildLogs();
+
     const buildUrlsGenerator = createBuildUrlsGenerator({
       sourceDirectoryUrl,
       buildDirectoryUrl,
     });
 
-    const callWhenPreviousBuildAreDone = createCallOrderer();
-
     let someEntryPointUseNode = false;
-    for (const entryPoint of entryPointSet) {
+    for (const entryPoint of entryPointArray) {
       let { runtimeCompat } = entryPoint.params;
       if (runtimeCompat === undefined) {
         const runtimeCompatFromPackage = inferRuntimeCompatFromClosestPackage(
@@ -366,7 +508,7 @@ export const build = async ({
     const entryBuildInfoMap = new Map();
     let entryPointIndex = 0;
     const entryOutDirSet = new Set();
-    for (const entryPoint of entryPointSet) {
+    for (const entryPoint of entryPointArray) {
       let entryOutDirCandidate = `entry_${urlToBasename(entryPoint.sourceRelativeUrl)}/`;
       let entryInteger = 1;
       while (entryOutDirSet.has(entryOutDirCandidate)) {
@@ -396,6 +538,25 @@ export const build = async ({
         buildInlineContents: undefined,
         buildManifest: undefined,
         buildEntryPoint: () => {
+          const sourceUrl = new URL(
+            entryPoint.sourceRelativeUrl,
+            sourceDirectoryUrl,
+          );
+          const buildUrl = new URL(
+            entryPoint.params.buildRelativeUrl,
+            buildDirectoryUrl,
+          );
+          const sourceUrlToLog = packageDirectoryUrl
+            ? urlToRelativeUrl(sourceUrl, packageDirectoryUrl)
+            : entryPoint.key;
+          const buildUrlToLog = packageDirectoryUrl
+            ? urlToRelativeUrl(buildUrl, packageDirectoryUrl)
+            : entryPoint.params.buildRelativeUrl;
+
+          const onEntryPointBuildEnd = onEntryPointBuildStart(entryBuildInfo, {
+            sourceUrlToLog,
+            buildUrlToLog,
+          });
           const promise = (async () => {
             const result = await buildEntryPoint({
               getOtherEntryBuildInfo: (url) => {
@@ -412,30 +573,7 @@ export const build = async ({
             entryBuildInfo.buildFileContents = result.buildFileContents;
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
-            callWhenPreviousBuildAreDone(entryBuildInfo.index, () => {
-              const sourceUrl = new URL(
-                entryPoint.sourceRelativeUrl,
-                sourceDirectoryUrl,
-              );
-              const buildUrl = new URL(
-                entryPoint.params.buildRelativeUrl,
-                buildDirectoryUrl,
-              );
-              const sourceUrlToLog = packageDirectoryUrl
-                ? urlToRelativeUrl(sourceUrl, packageDirectoryUrl)
-                : entryPoint.key;
-              const buildUrlToLog = packageDirectoryUrl
-                ? urlToRelativeUrl(buildUrl, packageDirectoryUrl)
-                : entryPoint.params.buildRelativeUrl;
-              logger.info(
-                `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `,
-              );
-              logger.info(
-                createBuildContentOneLineSummary(result.buildFileContents, {
-                  indent: "  ",
-                }),
-              );
-            });
+            onEntryPointBuildEnd();
           })();
           entryBuildInfo.promise = promise;
           return promise;
@@ -445,20 +583,12 @@ export const build = async ({
       entryPointIndex++;
     }
 
-    if (entryPointSet.size === 1) {
-      const [singleEntryPoint] = entryPointSet.values();
-      logger.info(`building ${singleEntryPoint.key}`);
-    } else {
-      logger.info(`building ${entryBuildInfoMap.size} entry points`);
-    }
-    logger.info("");
     const promises = [];
     for (const [, entryBuildInfo] of entryBuildInfoMap) {
       const promise = entryBuildInfo.buildEntryPoint();
       promises.push(promise);
     }
     await Promise.all(promises);
-    logger.info("");
 
     const buildFileContents = {};
     const buildInlineContents = {};
@@ -480,6 +610,11 @@ export const build = async ({
       });
       writingFiles.done();
     }
+    onBuildEnd({
+      buildFileContents,
+      buildInlineContents,
+      buildManifest,
+    });
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
       ...(returnBuildManifest ? { buildManifest } : {}),

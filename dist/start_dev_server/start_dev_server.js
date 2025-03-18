@@ -1,4 +1,4 @@
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, defaultLookupPackageScope, defaultReadPackageJson, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, comparePathnames, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, defaultLookupPackageScope, defaultReadPackageJson, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog } from "../jsenv_core_packages.js";
 import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
@@ -5945,9 +5945,8 @@ const getDirectoryContentItems = ({
       fileUrls.push(fileUrlObject);
     }
   }
-  fileUrls.sort((a, b) => {
-    return comparePathnames(a.pathname, b.pathname);
-  });
+  fileUrls.sort(compareFileUrls);
+
   const items = [];
   for (const fileUrl of fileUrls) {
     const urlRelativeToCurrentDirectory = urlToRelativeUrl(

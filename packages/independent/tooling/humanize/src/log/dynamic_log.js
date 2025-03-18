@@ -100,7 +100,8 @@ export const createDynamicLog = ({
     update("");
 
     writing = true;
-    callback();
+    callback(update);
+    lastOutput = "";
     writing = false;
 
     update(ouputAfterCallback);
