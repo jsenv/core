@@ -1,4 +1,4 @@
-# [4_js_module_fallback](../../new_worker_type_module_build.test.mjs#L43)
+# [4_js_module_fallback](../../new_worker_type_module_build.test.mjs#L46)
 
 ```js
 run({
