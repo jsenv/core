@@ -368,12 +368,11 @@ export const build = async ({
         index: entryPointIndex,
         entryReference,
         entryUrlInfo: entryReference.urlInfo,
-        promise,
         buildFileContents: undefined,
         buildInlineContents: undefined,
         buildManifest: undefined,
-        buildEntryPoint: async () => {
-          try {
+        buildEntryPoint: () => {
+          const promise = (async () => {
             const result = await buildEntryPoint({
               getOtherEntryBuildInfo: (url) => {
                 if (url === entryReference.url) {
@@ -389,10 +388,8 @@ export const build = async ({
             entryBuildInfo.buildFileContents = result.buildFileContents;
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
-            _resolve();
-          } catch (e) {
-            _reject(e);
-          }
+          })();
+          entryBuildInfo.promise = promise;
           return promise;
         },
       };
@@ -402,8 +399,8 @@ export const build = async ({
 
     const promises = [];
     for (const [, entryBuildInfo] of entryBuildInfoMap) {
-      entryBuildInfo.buildEntryPoint();
-      promises.push(entryBuildInfo.promise);
+      const promise = entryBuildInfo.buildEntryPoint();
+      promises.push(promise);
     }
     await Promise.all(promises);
 

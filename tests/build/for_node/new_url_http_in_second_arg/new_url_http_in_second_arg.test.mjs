@@ -11,9 +11,10 @@ const run = async () => {
   await build({
     sourceDirectoryUrl: new URL("./source/", import.meta.url),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./index.js": "index.js" },
-    runtimeCompat: {
-      node: "20",
+    entryPoints: {
+      "./index.js": {
+        runtimeCompat: { node: "20" },
+      },
     },
   });
 };
