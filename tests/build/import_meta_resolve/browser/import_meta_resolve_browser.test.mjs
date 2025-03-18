@@ -5,9 +5,12 @@ const run = async ({ runtimeCompat }) => {
   return build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./index.js": "index.js" },
-    minification: false,
-    runtimeCompat,
+    entryPoints: {
+      "./index.js": {
+        minification: false,
+        runtimeCompat,
+      },
+    },
   });
 };
 

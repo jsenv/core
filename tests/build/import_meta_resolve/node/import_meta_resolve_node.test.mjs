@@ -5,11 +5,14 @@ const run = ({ runtimeCompat }) => {
   return build({
     sourceDirectoryUrl: new URL("./node_client/", import.meta.url),
     buildDirectoryUrl: new URL("./node_build/", import.meta.url),
-    entryPoints: { "./index.js": "index.js" },
-    ignore: {
-      "./node_modules/bar/": true,
+    entryPoints: {
+      "./index.js": {
+        ignore: {
+          "./node_modules/bar/": true,
+        },
+        runtimeCompat,
+      },
     },
-    runtimeCompat,
   });
 };
 
