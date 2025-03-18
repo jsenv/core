@@ -1061,6 +1061,9 @@ export const createBuildSpecifierManager = ({
           ) {
             return;
           }
+          if (urlInfo.type === "entry_build") {
+            return;
+          }
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned = versioning
             ? buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier)

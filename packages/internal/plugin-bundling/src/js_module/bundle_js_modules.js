@@ -711,6 +711,14 @@ const rollupPluginJsenv = ({
           };
         }
       }
+      const urlInfo = graph.getUrlInfo(resolvedUrl);
+      if (urlInfo.type === "entry_build") {
+        return {
+          id: resolvedUrl,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+        };
+      }
       return {
         id: PATH_AND_URL_CONVERTER.asFilePath(resolvedUrl),
         external: false,
