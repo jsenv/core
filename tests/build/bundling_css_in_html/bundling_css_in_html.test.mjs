@@ -5,8 +5,12 @@ const run = () => {
   return build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.js": "main.js" },
-    minification: false,
+    entryPoints: {
+      "./main.js": {
+        runtimeCompat: { chrome: "90" },
+        minification: false,
+      },
+    },
   });
 };
 

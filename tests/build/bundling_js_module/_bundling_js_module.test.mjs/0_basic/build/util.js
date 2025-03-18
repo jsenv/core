@@ -1,4 +1,4 @@
-const logElementName = name => {
+const logElementName = (name) => {
   console.log(name);
 };
 
