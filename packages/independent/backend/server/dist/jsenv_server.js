@@ -6493,7 +6493,7 @@ const replacePlaceholdersInHtml = (html, replacers) => {
   });
 };
 
-const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/4xx/4xx.html");
+const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/default_body_4xx_5xx/4xx.html");
 
 const jsenvServiceDefaultBody4xx5xx = () => {
   return {
@@ -7816,7 +7816,7 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   exit: STOP_REASON_PROCESS_EXIT,
 };
 
-const internalErrorHtmlFileUrl = import.meta.resolve("./client/500/500.html");
+const internalErrorHtmlFileUrl = import.meta.resolve("./client/error_handler/500.html");
 
 const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {
