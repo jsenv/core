@@ -26,9 +26,11 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
+import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
+import { inferRuntimeCompatFromClosestPackage } from "@jsenv/runtime-compat";
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
@@ -105,6 +107,7 @@ export const build = async ({
   ...rest
 }) => {
   let someEntryPointUseNode = false;
+  const entryPointSet = new Set();
 
   // param validation
   {
@@ -145,19 +148,41 @@ export const build = async ({
       const isSingleEntryPoint = keys.length === 1;
       for (const key of keys) {
         // key (sourceRelativeUrl)
+        let sourceUrl;
+        let runtimeType;
         {
-          if (!key.startsWith("./")) {
-            throw new TypeError(
-              `The key "${key}" in "entryPoints" is invalid: it must start with "./".`,
-            );
-          }
-          let sourceUrl;
-          try {
-            sourceUrl = new URL(key, sourceDirectoryUrl);
-          } catch {
-            throw new TypeError(
-              `The key "${key}" in "entryPoints" is invalid: it must be a relative url.`,
-            );
+          if (isBareSpecifier(key)) {
+            const packageConditions = ["development", "node", "import"];
+            try {
+              const { url, type } = applyNodeEsmResolution({
+                conditions: packageConditions,
+                parentUrl: sourceDirectoryUrl,
+                specifier: key,
+              });
+              if (type === "field:browser") {
+                runtimeType = "browser";
+              }
+              sourceUrl = url;
+            } catch (e) {
+              throw new Error(
+                `The key "${key}" in "entryPoints" is invalid: it cannot be resolved.`,
+                { cause: e },
+              );
+            }
+          } else {
+            if (!key.startsWith("./")) {
+              throw new TypeError(
+                `The key "${key}" in "entryPoints" is invalid: it must start with "./".`,
+              );
+            }
+
+            try {
+              sourceUrl = new URL(key, sourceDirectoryUrl);
+            } catch {
+              throw new TypeError(
+                `The key "${key}" in "entryPoints" is invalid: it must be a relative url.`,
+              );
+            }
           }
           if (!urlIsInsideOf(sourceUrl, sourceDirectoryUrl)) {
             throw new Error(
@@ -165,7 +190,9 @@ export const build = async ({
             );
           }
         }
+
         // value (entryPointParams)
+        let params;
         {
           const value = entryPoints[key];
           if (value === null || typeof value !== "object") {
@@ -173,7 +200,7 @@ export const build = async ({
               `The value "${value}" in "entryPoints" is invalid: it must be an object.`,
             );
           }
-
+          params = { ...value };
           const forEntryPointOrEmpty = isSingleEntryPoint
             ? ""
             : ` for entry point "${key}"`;
@@ -226,15 +253,31 @@ export const build = async ({
             }
           }
           const { runtimeCompat } = value;
-          if (!runtimeCompat) {
-            throw new Error(
-              `RuntimeCompat is required${forEntryPointOrEmpty}.`,
+          if (runtimeCompat === undefined) {
+            const runtimeCompatFromPackage =
+              inferRuntimeCompatFromClosestPackage(sourceUrl, { runtimeType });
+            if (!runtimeCompatFromPackage) {
+              throw new TypeError(
+                `The runtimeCompat is missing${forEntryPointOrEmpty} and could not be inferred from the closest package.json.`,
+              );
+            }
+          } else if (
+            runtimeCompat === null ||
+            typeof runtimeCompat !== "object"
+          ) {
+            throw new TypeError(
+              `The runtimeCompat "${runtimeCompat}"${forEntryPointOrEmpty} is invalid: it must be an object.`,
             );
-          }
-          if (!someEntryPointUseNode && "node" in runtimeCompat) {
+          } else if (!someEntryPointUseNode && "node" in runtimeCompat) {
             someEntryPointUseNode = true;
           }
         }
+
+        entryPointSet.add({
+          sourceUrl,
+          sourceRelativeUrl: urlToRelativeUrl(sourceUrl, sourceDirectoryUrl),
+          params,
+        });
       }
     }
   }
@@ -275,7 +318,7 @@ export const build = async ({
 
     const entryBuildInfoMap = new Map();
     let entryPointIndex = 0;
-    for (const key of Object.keys(entryPoints)) {
+    for (const entryPoint of entryPointSet) {
       let _resolve;
       let _reject;
       const promise = new Promise((res, rej) => {
@@ -286,18 +329,17 @@ export const build = async ({
         `./entry_${entryPointIndex}/`,
         outDirectoryUrl,
       );
-      const entryPointParams = entryPoints[key];
       const { entryReference, buildEntryPoint } = await prepareEntryPointBuild(
         {
           signal,
           sourceDirectoryUrl,
           buildDirectoryUrl,
           outDirectoryUrl: entryOutDirectoryUrl,
-          sourceRelativeUrl: key,
+          sourceRelativeUrl: entryPoint.sourceRelativeUrl,
           buildUrlsGenerator,
           someEntryPointUseNode,
         },
-        entryPointParams,
+        entryPoint.params,
       );
       const entryBuildInfo = {
         index: entryPointIndex,
@@ -1030,4 +1072,21 @@ const prepareEntryPointBuild = async (
       };
     },
   };
+};
+
+const isBareSpecifier = (specifier) => {
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    return false;
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(specifier);
+    return false;
+  } catch {
+    return true;
+  }
 };

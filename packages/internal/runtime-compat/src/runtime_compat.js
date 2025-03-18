@@ -1,5 +1,4 @@
 import { findHighestVersion } from "@jsenv/utils/src/semantic_versioning/highest_version.js";
-
 import { featuresCompatMap } from "./features_compatibility.js";
 
 export const RUNTIME_COMPAT = {

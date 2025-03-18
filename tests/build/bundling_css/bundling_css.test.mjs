@@ -5,8 +5,11 @@ const run = () => {
   return build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./elements.css": "elements.css" },
-    minification: false,
+    entryPoints: {
+      "./elements.css": {
+        minification: false,
+      },
+    },
   });
 };
 
