@@ -1,10 +1,10 @@
-# [0_basic](../../development_condition.test.mjs#L26)
+# [0_basic](../../development_condition.test.mjs#L35)
 
 ```js
-run()
+run({})
 ```
 
-# 1/2 write 2 files into "./build/"
+# 1/2 write 3 files into "./build/"
 
 see [./build/](./build/)
 

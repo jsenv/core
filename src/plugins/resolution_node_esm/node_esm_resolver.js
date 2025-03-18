@@ -13,50 +13,19 @@ import {
   defaultReadPackageJson,
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
+import { URL_META } from "@jsenv/url-meta";
 import { urlToBasename, urlToExtension } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 
 export const createNodeEsmResolver = ({
-  build,
   runtimeCompat,
-  packageConditions,
+  packageConditions = {},
   preservesSymlink,
 }) => {
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
-  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-  const processArgConditions = readCustomConditionsFromProcessArgs();
-  const defaultPackageConditions = [
-    ...(build ? [] : processArgConditions),
-    nodeRuntimeEnabled ? "node" : "browser",
-    "import",
-  ];
-
-  const resolveConditions = (conditionArray) => {
-    const conditionsResolved = [];
-    for (const condition of conditionArray) {
-      if (condition === "inherit") {
-        conditionsResolved.push(...defaultPackageConditions);
-      } else {
-        conditionsResolved.push(condition);
-      }
-    }
-    return conditionsResolved;
-  };
-  let getPackageConditions;
-  if (packageConditions === undefined) {
-    getPackageConditions = () => defaultPackageConditions;
-  } else if (Array.isArray(packageConditions)) {
-    const resolvedConditions = resolveConditions(packageConditions);
-    getPackageConditions = () => resolvedConditions;
-  } else if (typeof packageConditions === "function") {
-    getPackageConditions = (specifier, importer) => {
-      const result = packageConditions(specifier, importer);
-      if (Array.isArray(result)) {
-        return resolveConditions(result);
-      }
-      return defaultPackageConditions;
-    };
-  }
+  const buildPackageConditions = createBuildPackageConditions({
+    packageConditions,
+    runtimeCompat,
+  });
 
   return (reference) => {
     if (reference.type === "package_json") {
@@ -77,7 +46,7 @@ export const createNodeEsmResolver = ({
     if (!parentUrl.startsWith("file:")) {
       return null; // let it to jsenv_web_resolution
     }
-    const conditions = getPackageConditions(reference.specifier, parentUrl);
+    const conditions = buildPackageConditions(reference.specifier, parentUrl);
     const { url, type, isMain, packageDirectoryUrl } = applyNodeEsmResolution({
       conditions,
       parentUrl,
@@ -145,6 +114,80 @@ export const createNodeEsmResolver = ({
   };
 };
 
+const createBuildPackageConditions = ({ packageConditions, runtimeCompat }) => {
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+  const processArgConditions = readCustomConditionsFromProcessArgs();
+  const packageConditionsDefaultResolvers = {};
+  for (const processArgCondition of processArgConditions) {
+    packageConditionsDefaultResolvers[processArgCondition] = true;
+  }
+  const packageConditionResolvers = {
+    ...packageConditionsDefaultResolvers,
+    development: (specifier, importer) => {
+      if (isBareSpecifier(specifier)) {
+        const { url } = applyNodeEsmResolution({
+          specifier,
+          parentUrl: importer,
+        });
+        return !url.includes("/node_modules/");
+      }
+      return !importer.includes("/node_modules/");
+    },
+    node: nodeRuntimeEnabled,
+    browser: nodeRuntimeEnabled,
+    import: true,
+  };
+  for (const condition of Object.keys(packageConditions)) {
+    const value = packageConditions[condition];
+    let customResolver;
+    if (typeof value === "object") {
+      const associations = URL_META.resolveAssociations(
+        { applies: value },
+        () => {},
+      );
+      customResolver = (specifier, importer) => {
+        if (isBareSpecifier(specifier)) {
+          const { url } = applyNodeEsmResolution({
+            specifier,
+            parentUrl: importer,
+          });
+          return URL_META.applyAssociations({ url, associations }).applies;
+        }
+        return URL_META.applyAssociations({ url: importer, associations })
+          .applies;
+      };
+    } else if (typeof value === "function") {
+      customResolver = value;
+    } else {
+      customResolver = () => value;
+    }
+    const existing = packageConditionResolvers[condition];
+    if (existing) {
+      packageConditionResolvers[condition] = (...args) =>
+        customResolver(...args) || existing(...args);
+    } else {
+      packageConditionResolvers[condition] = customResolver;
+    }
+  }
+
+  return (specifier, importer) => {
+    const conditions = [];
+    for (const conditionCandidate of Object.keys(packageConditionResolvers)) {
+      const packageConditionResolver =
+        packageConditionResolvers[conditionCandidate];
+      if (typeof packageConditionResolver === "function") {
+        if (packageConditionResolver(specifier, importer)) {
+          conditions.push(conditionCandidate);
+        }
+      } else if (packageConditionResolver) {
+        conditions.push(conditionCandidate);
+      }
+    }
+    return conditions;
+  };
+};
+
 const addRelationshipWithPackageJson = ({
   reference,
   packageJsonUrl,
@@ -176,5 +219,22 @@ const addRelationshipWithPackageJson = ({
       packageJsonReference.urlInfo,
       String(packageJsonContentAsBuffer),
     );
+  }
+};
+
+const isBareSpecifier = (specifier) => {
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    return false;
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(specifier);
+    return false;
+  } catch {
+    return true;
   }
 };

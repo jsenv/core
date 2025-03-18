@@ -1,13 +1,15 @@
-import { URL_META } from "@jsenv/url-meta";
 import { createNodeEsmResolver } from "./node_esm_resolver.js";
 
-export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
+export const jsenvPluginNodeEsmResolution = (
+  resolutionConfig = {},
+  packageConditions,
+) => {
   let nodeEsmResolverDefault;
   const resolverMap = new Map();
   let anyTypeResolver;
 
   const resolverFromObject = (
-    { packageConditions, preservesSymlink, ...rest },
+    { preservesSymlink, ...rest },
     { kitchenContext, urlType },
   ) => {
     const unexpectedKeys = Object.keys(rest);
@@ -17,31 +19,6 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
           ",",
         )}: there is no such configuration on "${urlType}"`,
       );
-    }
-    if (
-      packageConditions &&
-      !Array.isArray(packageConditions) &&
-      typeof packageConditions === "object"
-    ) {
-      const associations = URL_META.resolveAssociations(
-        { conditions: packageConditions },
-        (key) => {
-          try {
-            const { url } = kitchenContext.kitchen.resolve(key);
-            return url;
-          } catch {
-            return new URL(key, kitchenContext.rootDirectoryUrl);
-          }
-        },
-      );
-      packageConditions = (specifier, importer) => {
-        if (isBareSpecifier(specifier)) {
-          const { url } = kitchenContext.resolve(specifier, importer);
-          return URL_META.applyAssociations({ url, associations }).conditions;
-        }
-        return URL_META.applyAssociations({ url: importer, associations })
-          .conditions;
-      };
     }
     return createNodeEsmResolver({
       build: kitchenContext.build,
@@ -59,6 +36,7 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
         build: kitchenContext.build,
         runtimeCompat: kitchenContext.runtimeCompat,
         preservesSymlink: true,
+        packageConditions,
       });
       for (const urlType of Object.keys(resolutionConfig)) {
         let resolver;
@@ -138,21 +116,4 @@ const urlTypeFromReference = (reference) => {
     return reference.expectedType;
   }
   return reference.ownerUrlInfo.type;
-};
-
-const isBareSpecifier = (specifier) => {
-  if (
-    specifier[0] === "/" ||
-    specifier.startsWith("./") ||
-    specifier.startsWith("../")
-  ) {
-    return false;
-  }
-  try {
-    // eslint-disable-next-line no-new
-    new URL(specifier);
-    return false;
-  } catch {
-    return true;
-  }
 };

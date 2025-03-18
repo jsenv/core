@@ -14,7 +14,7 @@ writeSymbolicLinkSync({
   to: import.meta.resolve("./git_ignored/packages/bar/"),
 });
 
-const run = async ({ nodeEsmResolution }) => {
+const run = async ({ packageConditions }) => {
   await build({
     sourceDirectoryUrl: new URL("./git_ignored/", import.meta.url),
     buildDirectoryUrl: import.meta.resolve("./build/"),
@@ -22,7 +22,7 @@ const run = async ({ nodeEsmResolution }) => {
       "./main.js": {
         buildRelativeUrl: "./main_build.js",
         runtimeCompat: { node: "20" },
-        nodeEsmResolution,
+        packageConditions,
       },
     },
   });
@@ -32,23 +32,24 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
   // by default
   // - node modules "default" is favored
   // - workspace modules "development" is favored
-  test("0_basic", () =>
-    run({
-      nodeEsmResolution: undefined,
-    }));
+  test.ONLY("0_basic", () => run({}));
 
   // we can pick "default" for a given workspace
   test("1_default_on_workspace_module", () =>
     run({
-      nodeEsmResolution: {
-        "*": {},
+      packageConditions: {
+        development: {
+          "bar/": false,
+        },
       },
     }));
 
   test("1_dev_on_node_module", () =>
     run({
-      nodeEsmResolution: {
-        "*": {},
+      packageConditions: {
+        development: {
+          "foo/": true,
+        },
       },
     }));
 });

@@ -32,6 +32,7 @@ export const getCorePlugins = ({
 
   referenceAnalysis = {},
   nodeEsmResolution = {},
+  packageConditions,
   magicExtensions,
   magicDirectoryIndex,
   directoryListing = true,
@@ -102,7 +103,7 @@ export const getCorePlugins = ({
       },
     },
     ...(nodeEsmResolution
-      ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
+      ? [jsenvPluginNodeEsmResolution(nodeEsmResolution, packageConditions)]
       : []),
     jsenvPluginWebResolution(),
     jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect, {

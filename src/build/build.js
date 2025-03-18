@@ -713,6 +713,7 @@ const entryPointDefaultParams = {
 
   referenceAnalysis: {},
   nodeEsmResolution: undefined,
+  packageConditions: undefined,
   magicExtensions: undefined,
   magicDirectoryIndex: undefined,
   directoryReferenceEffect: undefined,
@@ -760,6 +761,7 @@ const prepareEntryPointBuild = async (
 
     referenceAnalysis,
     nodeEsmResolution,
+    packageConditions,
     magicExtensions,
     magicDirectoryIndex,
     directoryReferenceEffect,
@@ -901,6 +903,7 @@ const prepareEntryPointBuild = async (
       runtimeCompat,
       referenceAnalysis,
       nodeEsmResolution,
+      packageConditions,
       magicExtensions,
       magicDirectoryIndex,
       directoryReferenceEffect,
