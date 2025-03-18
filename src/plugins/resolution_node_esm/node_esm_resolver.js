@@ -19,13 +19,17 @@ import { readFileSync } from "node:fs";
 
 export const createNodeEsmResolver = ({
   runtimeCompat,
+  rootDirectoryUrl,
   packageConditions = {},
   preservesSymlink,
 }) => {
-  const buildPackageConditions = createBuildPackageConditions({
+  const buildPackageConditions = createBuildPackageConditions(
     packageConditions,
-    runtimeCompat,
-  });
+    {
+      rootDirectoryUrl,
+      runtimeCompat,
+    },
+  );
 
   return (reference) => {
     if (reference.type === "package_json") {
@@ -114,7 +118,10 @@ export const createNodeEsmResolver = ({
   };
 };
 
-const createBuildPackageConditions = ({ packageConditions, runtimeCompat }) => {
+const createBuildPackageConditions = (
+  packageConditions,
+  { rootDirectoryUrl, runtimeCompat },
+) => {
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   const processArgConditions = readCustomConditionsFromProcessArgs();
@@ -144,7 +151,28 @@ const createBuildPackageConditions = ({ packageConditions, runtimeCompat }) => {
     if (typeof value === "object") {
       const associations = URL_META.resolveAssociations(
         { applies: value },
-        () => {},
+        (pattern) => {
+          if (isBareSpecifier(pattern)) {
+            try {
+              if (pattern.endsWith("/")) {
+                // avoid package path not exported
+                const { packageDirectoryUrl } = applyNodeEsmResolution({
+                  specifier: pattern.slice(0, -1),
+                  parentUrl: rootDirectoryUrl,
+                });
+                return packageDirectoryUrl;
+              }
+              const { url } = applyNodeEsmResolution({
+                specifier: pattern,
+                parentUrl: rootDirectoryUrl,
+              });
+              return url;
+            } catch {
+              return new URL(pattern, rootDirectoryUrl);
+            }
+          }
+          return new URL(pattern, rootDirectoryUrl);
+        },
       );
       customResolver = (specifier, importer) => {
         if (isBareSpecifier(specifier)) {

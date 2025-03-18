@@ -198,7 +198,7 @@ const applyPackageImportsResolution = (
 };
 
 const applyPackageResolve = (packageSpecifier, resolutionContext) => {
-  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
+  const { parentUrl, conditions, readPackageJson, preservesSymlink, isImport } =
     resolutionContext;
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier");
@@ -224,7 +224,7 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       resolutionContext,
     );
   }
-  if (packageSubpath.endsWith("/")) {
+  if (isImport && packageSubpath.endsWith("/")) {
     throw new Error("invalid module specifier");
   }
   const questionCharIndex = packageName.indexOf("?");
@@ -568,6 +568,12 @@ const parsePackageSpecifier = (packageSpecifier) => {
   }
   const packageName = packageSpecifier.slice(0, firstSlashIndex);
   const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  if (afterFirstSlash === "") {
+    return {
+      packageName,
+      packageSubpath: "/",
+    };
+  }
   const packageSubpath = `./${afterFirstSlash}`;
   return {
     packageName,

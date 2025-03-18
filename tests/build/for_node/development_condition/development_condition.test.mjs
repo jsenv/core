@@ -32,7 +32,7 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
   // by default
   // - node modules "default" is favored
   // - workspace modules "development" is favored
-  test.ONLY("0_basic", () => run({}));
+  test("0_basic", () => run({}));
 
   // we can pick "default" for a given workspace
   test("1_default_on_workspace_module", () =>
