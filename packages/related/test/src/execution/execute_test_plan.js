@@ -19,21 +19,19 @@ import {
   UNICODE,
 } from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
+import {
+  countAvailableCpus,
+  startMeasuringTotalCpuUsage,
+  startMonitoringMetric,
+} from "@jsenv/os-metrics";
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsInsideOf } from "@jsenv/urls";
 import { existsSync } from "node:fs";
-import {
-  availableParallelism,
-  cpus,
-  freemem,
-  release,
-  totalmem,
-} from "node:os";
+import { freemem, release, totalmem } from "node:os";
 import { memoryUsage } from "node:process";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { generateCoverage } from "../coverage/generate_coverage.js";
-import { startMeasuringTotalCpuUsage } from "../helpers/cpu_usage.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { createIsInsideFragment } from "./is_inside_fragment.js";
 import { renderOutroContent, reporterList } from "./reporters/reporter_list.js";
@@ -1162,59 +1160,6 @@ To fix this warning:
   }
 
   return testPlanResult;
-};
-
-const startMonitoringMetric = (measure) => {
-  const metrics = [];
-  const takeMeasure = () => {
-    const value = measure();
-    metrics.push(value);
-    return value;
-  };
-
-  const info = {
-    start: takeMeasure(),
-    min: null,
-    max: null,
-    median: null,
-    end: null,
-  };
-  return {
-    info,
-    measure: takeMeasure,
-    end: () => {
-      info.end = takeMeasure();
-      metrics.sort((a, b) => a - b);
-      info.min = metrics[0];
-      info.max = metrics[metrics.length - 1];
-      info.median = medianFromSortedArray(metrics);
-      metrics.length = 0;
-    },
-  };
-};
-
-const medianFromSortedArray = (array) => {
-  const length = array.length;
-  const isOdd = length % 2 === 1;
-  if (isOdd) {
-    const medianNumberIndex = (length - 1) / 2;
-    const medianNumber = array[medianNumberIndex];
-    return medianNumber;
-  }
-  const rightMiddleNumberIndex = length / 2;
-  const leftMiddleNumberIndex = rightMiddleNumberIndex - 1;
-  const leftMiddleNumber = array[leftMiddleNumberIndex];
-  const rightMiddleNumber = array[rightMiddleNumberIndex];
-  const medianNumber = (leftMiddleNumber + rightMiddleNumber) / 2;
-  return medianNumber;
-};
-
-const countAvailableCpus = () => {
-  if (typeof availableParallelism === "function") {
-    return availableParallelism();
-  }
-  const cpuArray = cpus();
-  return cpuArray.length || 1;
 };
 
 const mutateCountersBeforeExecutionStarts = (counters) => {

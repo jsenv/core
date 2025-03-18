@@ -114,6 +114,7 @@
     "@jsenv/router": "workspace:*",
     "@jsenv/snapshot": "workspace:*",
     "@jsenv/test": "workspace:*",
+    "@jsenv/os-metrics": "workspace:*",
     "@playwright/browser-chromium": "1.51.0",
     "@playwright/browser-firefox": "1.51.0",
     "@playwright/browser-webkit": "1.51.0",
