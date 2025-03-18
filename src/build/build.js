@@ -181,7 +181,7 @@ export const build = async ({
             }
 
             try {
-              sourceUrl = new URL(key, sourceDirectoryUrl);
+              sourceUrl = new URL(key, sourceDirectoryUrl).href;
             } catch {
               throw new TypeError(
                 `The key "${key}" in "entryPoints" is invalid: it must be a relative url.`,
@@ -296,7 +296,7 @@ export const build = async ({
 
         entryPointSet.add({
           sourceUrl,
-          sourceRelativeUrl: urlToRelativeUrl(sourceUrl, sourceDirectoryUrl),
+          sourceRelativeUrl: `./${urlToRelativeUrl(sourceUrl, sourceDirectoryUrl)}`,
           params,
         });
       }

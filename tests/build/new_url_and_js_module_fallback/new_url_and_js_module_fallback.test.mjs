@@ -7,10 +7,13 @@ const run = () => {
   return build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    bundling: false,
-    minification: false,
-    runtimeCompat: { chrome: "60" },
+    entryPoints: {
+      "./main.html": {
+        bundling: false,
+        minification: false,
+        runtimeCompat: { chrome: "60" },
+      },
+    },
   });
 };
 
