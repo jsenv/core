@@ -1,4 +1,4 @@
-# [0_basic](../../new_worker_type_classic_build.test.mjs#L25)
+# [0_basic](../../new_worker_type_classic_build.test.mjs#L28)
 
 ```js
 run({
