@@ -13,12 +13,15 @@ const run = async () => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    transpilation: {
-      // topLevelAwait: "ignore",
+    entryPoints: {
+      "./main.html": {
+        transpilation: {
+          // topLevelAwait: "ignore",
+        },
+        minification: false,
+        runtimeCompat: { edge: "17" },
+      },
     },
-    minification: false,
-    runtimeCompat: { edge: "17" },
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: import.meta.resolve("./build/"),

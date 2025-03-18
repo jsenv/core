@@ -6,9 +6,12 @@ const run = async ({ runtimeCompat, minification }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    runtimeCompat,
-    minification,
+    entryPoints: {
+      "./main.html": {
+        runtimeCompat,
+        minification,
+      },
+    },
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: import.meta.resolve("./build/"),

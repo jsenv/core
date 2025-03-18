@@ -8,11 +8,14 @@ const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
     build({
       sourceDirectoryUrl: import.meta.resolve("./client/"),
       buildDirectoryUrl: import.meta.resolve("./build/"),
-      entryPoints: { "./main.html": "main.html" },
-      runtimeCompat: { chrome: "89" },
-      bundling: false,
-      minification: false,
-      versioning: false,
+      entryPoints: {
+        "./main.html": {
+          runtimeCompat: { chrome: "89" },
+          bundling: false,
+          minification: false,
+          versioning: false,
+        },
+      },
     }));
 });
 

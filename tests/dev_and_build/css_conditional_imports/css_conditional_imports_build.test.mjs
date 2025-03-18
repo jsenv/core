@@ -6,9 +6,12 @@ const run = async () => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.css": "main.css" },
-    bundling: false,
-    minification: false,
+    entryPoints: {
+      "./main.css": {
+        bundling: false,
+        minification: false,
+      },
+    },
   });
 };
 

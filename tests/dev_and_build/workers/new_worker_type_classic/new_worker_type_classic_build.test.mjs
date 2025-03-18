@@ -6,12 +6,15 @@ const run = async ({ bundling }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    minification: false,
-    transpilation: {
-      // topLevelAwait: "ignore",
+    entryPoints: {
+      "./main.html": {
+        minification: false,
+        transpilation: {
+          // topLevelAwait: "ignore",
+        },
+        bundling,
+      },
     },
-    bundling,
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: import.meta.resolve("./build/"),

@@ -6,15 +6,18 @@ const run = async () => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    bundling: false,
-    minification: false,
-    versioning: true,
-    runtimeCompat: {
-      chrome: "55",
-      edge: "14",
-      firefox: "52",
-      safari: "11",
+    entryPoints: {
+      "./main.html": {
+        bundling: false,
+        minification: false,
+        versioning: true,
+        runtimeCompat: {
+          chrome: "55",
+          edge: "14",
+          firefox: "52",
+          safari: "11",
+        },
+      },
     },
   });
   const buildServer = await startBuildServer({

@@ -6,14 +6,17 @@ const run = async () => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    bundling: false,
-    minification: false,
-    injections: {
-      "./main.js": (urlInfo) => {
-        return {
-          __DEMO__: urlInfo.context.dev ? "dev" : "build",
-        };
+    entryPoints: {
+      "./main.html": {
+        bundling: false,
+        minification: false,
+        injections: {
+          "./main.js": (urlInfo) => {
+            return {
+              __DEMO__: urlInfo.context.dev ? "dev" : "build",
+            };
+          },
+        },
       },
     },
   });

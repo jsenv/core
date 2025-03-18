@@ -7,11 +7,14 @@ const run = async ({ http, bundling = false }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    minification: false,
-    runtimeCompat: { chrome: "89" },
-    bundling,
-    http,
+    entryPoints: {
+      "./main.html": {
+        minification: false,
+        runtimeCompat: { chrome: "89" },
+        bundling,
+        http,
+      },
+    },
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: import.meta.resolve("./build/"),

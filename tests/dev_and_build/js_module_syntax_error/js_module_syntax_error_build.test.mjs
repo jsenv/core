@@ -5,7 +5,7 @@ const run = async () => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    entryPoints: { "./main.html": "main.html" },
+    entryPoints: { "./main.html": {} },
   });
 };
 
