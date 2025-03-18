@@ -624,7 +624,7 @@ const prepareEntryPointBuild = async (
       base = someEntryPointUseNode ? "./" : "/";
     }
     if (entryPointParams.bundling === undefined) {
-      bundling = !someEntryPointUseNode;
+      bundling = true;
     }
     if (bundling === true) {
       bundling = {};
