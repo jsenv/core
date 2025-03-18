@@ -10,13 +10,13 @@ replaceFileStructureSync({
   to: import.meta.resolve("./git_ignored/"),
 });
 writeSymbolicLinkSync({
-  from: import.meta.resolve("./git_ignored/node_modules/bar/"),
-  to: import.meta.resolve("./git_ignored/packages/bar/"),
+  from: import.meta.resolve("./git_ignored/node_modules/internal/"),
+  to: import.meta.resolve("./git_ignored/packages/internal/"),
 });
 
 const run = async ({ packageConditions }) => {
   await build({
-    sourceDirectoryUrl: new URL("./git_ignored/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./git_ignored/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
       "./main.js": {
@@ -31,25 +31,37 @@ const run = async ({ packageConditions }) => {
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   // by default
-  // - node modules "default" is favored
-  // - workspace modules "development" is favored
-  test("0_basic", () => run({}));
+  // - node modules "default" is favored (build)
+  // - workspace modules "development" is favored (dev)
+  test("0_default", () =>
+    run({
+      packageConditions: {},
+    }));
 
-  // we can pick "default" for a given workspace
-  test("1_default_on_workspace_module", () =>
+  test("1_internal_build", () =>
     run({
       packageConditions: {
         development: {
-          "bar/": false,
+          "internal/": false,
         },
       },
     }));
 
-  test("1_dev_on_node_module", () =>
+  test("2_external_dev", () =>
     run({
       packageConditions: {
         development: {
-          "foo/": true,
+          "external/": true,
+        },
+      },
+    }));
+
+  test("3_external_dev_internal_build", () =>
+    run({
+      packageConditions: {
+        development: {
+          "external/": true,
+          "internal/": false,
         },
       },
     }));

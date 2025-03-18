@@ -1,5 +1,5 @@
+import { external } from "external";
 // eslint-disable-next-line import-x/no-unresolved
-import { bar } from "bar";
-import { foo } from "foo";
+import { internal } from "internal";
 
-console.log(foo, bar);
+console.log(internal, external);

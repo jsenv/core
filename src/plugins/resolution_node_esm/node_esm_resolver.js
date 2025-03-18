@@ -180,7 +180,8 @@ const createBuildPackageConditions = (
             specifier,
             parentUrl: importer,
           });
-          return URL_META.applyAssociations({ url, associations }).applies;
+          const { applies } = URL_META.applyAssociations({ url, associations });
+          return applies;
         }
         return URL_META.applyAssociations({ url: importer, associations })
           .applies;
@@ -192,8 +193,10 @@ const createBuildPackageConditions = (
     }
     const existing = packageConditionResolvers[condition];
     if (existing) {
-      packageConditionResolvers[condition] = (...args) =>
-        customResolver(...args) || existing(...args);
+      packageConditionResolvers[condition] = (...args) => {
+        const customResult = customResolver(...args);
+        return customResult === undefined ? existing(...args) : customResult;
+      };
     } else {
       packageConditionResolvers[condition] = customResolver;
     }
