@@ -213,7 +213,7 @@ export const build = async ({
             ? ""
             : ` for entry point "${key}"`;
           const unexpectedEntryPointParamNames = Object.keys(value).filter(
-            (key) => !Object.hasOwn(entryPoinDefaultParams, key),
+            (key) => !Object.hasOwn(entryPointDefaultParams, key),
           );
           if (unexpectedEntryPointParamNames.length) {
             throw new TypeError(
@@ -500,7 +500,7 @@ export const build = async ({
   return stopWatchingSourceFiles;
 };
 
-const entryPoinDefaultParams = {
+const entryPointDefaultParams = {
   buildRelativeUrl: undefined,
   runtimeCompat: defaultRuntimeCompat,
   plugins: [],
@@ -583,7 +583,7 @@ const prepareEntryPointBuild = async (
     assetManifest,
     assetManifestFileRelativeUrl,
   } = {
-    ...entryPoinDefaultParams,
+    ...entryPointDefaultParams,
     ...entryPointParams,
   };
 
@@ -637,6 +637,9 @@ const prepareEntryPointBuild = async (
     }
     if (entryPointParams.versioning === undefined) {
       versioning = !someEntryPointUseNode;
+    }
+    if (entryPointParams.versioningMethod === undefined) {
+      versioningMethod = entryPointDefaultParams.versioningMethod;
     }
     if (entryPointParams.assetManifest === undefined) {
       assetManifest = versioningMethod === "filename";
