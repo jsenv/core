@@ -63,42 +63,42 @@ await build({
       },
     },
     "./src/kitchen/client/inline_content.js": {
-      buildRelativeUrl: "client/inline_content/inline_content.js",
+      buildRelativeUrl: "./client/inline_content/inline_content.js",
       runtimeCompat: clientRuntimeCompat,
     },
     "./src/plugins/autoreload/client/autoreload.js": {
-      buildRelativeUrl: "client/autoreload/autoreload.js",
+      buildRelativeUrl: "./client/autoreload/autoreload.js",
       runtimeCompat: clientRuntimeCompat,
     },
     "./src/plugins/html_syntax_error_fallback/client/html_syntax_error.html": {
-      buildRelativeUrl: "client/html_syntax_error/html_syntax_error.html",
+      buildRelativeUrl: "./client/html_syntax_error/html_syntax_error.html",
       runtimeCompat: clientRuntimeCompat,
     },
     "./src/plugins/import_meta_hot/client/import_meta_hot.js": {
-      buildRelativeUrl: "client/import_meta_hot/import_meta_hot.js",
+      buildRelativeUrl: "./client/import_meta_hot/import_meta_hot.js",
       runtimeCompat: clientRuntimeCompat,
     },
     "./src/plugins/protocol_file/client/directory_listing.html": {
-      buildRelativeUrl: "client/directory_listing/directory_listing.html",
+      buildRelativeUrl: "./client/directory_listing/directory_listing.html",
       runtimeCompat: clientRuntimeCompat,
       plugins: [jsenvPluginPreact({})],
     },
     "./src/plugins/ribbon/client/ribbon.js": {
-      buildRelativeUrl: "client/ribbon/ribbon.js",
+      buildRelativeUrl: "./client/ribbon/ribbon.js",
       runtimeCompat: clientRuntimeCompat,
     },
     "./src/plugins/server_events/client/server_events_client.js": {
-      buildRelativeUrl: "client/server_events/server_events_client.js",
+      buildRelativeUrl: "./client/server_events/server_events_client.js",
       runtimeCompat: clientRuntimeCompat,
     },
     "./packages/internal/plugin-transpilation/src/babel/new_stylesheet/client/new_stylesheet.js":
       {
-        buildRelativeUrl: "client/new_stylesheet/new_stylesheet.js",
+        buildRelativeUrl: "./client/new_stylesheet/new_stylesheet.js",
         runtimeCompat: clientRuntimeCompat,
       },
     "./packages/internal/plugin-transpilation/src/babel/regenerator_runtime/client/regenerator_runtime.js":
       {
-        buildRelativeUrl: "client/regenerator_runtime/regenerator_runtime.js",
+        buildRelativeUrl: "./client/regenerator_runtime/regenerator_runtime.js",
         runtimeCompat: clientRuntimeCompat,
       },
   },

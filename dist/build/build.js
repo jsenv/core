@@ -10171,6 +10171,7 @@ const build = async ({
         }
 
         entryPointSet.add({
+          key,
           sourceUrl,
           sourceRelativeUrl: `./${urlToRelativeUrl(sourceUrl, sourceDirectoryUrl)}`,
           params: { ...value },
@@ -10219,17 +10220,15 @@ const build = async ({
     });
   }
 
+  const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
   if (outDirectoryUrl === undefined) {
     if (
       process.env.CAPTURING_SIDE_EFFECTS ||
       (false)
     ) {
       outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl).href;
-    } else {
-      const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
-      if (packageDirectoryUrl) {
-        outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
-      }
+    } else if (packageDirectoryUrl) {
+      outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
     }
   }
 
@@ -10316,7 +10315,23 @@ const build = async ({
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
             callWhenPreviousBuildAreDone(entryBuildInfo.index, () => {
-              logger.info(`${UNICODE.OK} "${entryPoint.key}" build is done`);
+              const sourceUrl = new URL(
+                entryPoint.sourceRelativeUrl,
+                sourceDirectoryUrl,
+              );
+              const buildUrl = new URL(
+                entryPoint.params.buildRelativeUrl,
+                buildDirectoryUrl,
+              );
+              const sourceUrlToLog = packageDirectoryUrl
+                ? urlToRelativeUrl(sourceUrl, packageDirectoryUrl)
+                : entryPoint.key;
+              const buildUrlToLog = packageDirectoryUrl
+                ? urlToRelativeUrl(buildUrl, packageDirectoryUrl)
+                : entryPoint.params.buildRelativeUrl;
+              logger.info(
+                `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `,
+              );
             });
           })();
           entryBuildInfo.promise = promise;
@@ -10328,12 +10343,14 @@ const build = async ({
     }
 
     logger.info(`building ${entryBuildInfoMap.size} entry points`);
+    logger.info("");
     const promises = [];
     for (const [, entryBuildInfo] of entryBuildInfoMap) {
       const promise = entryBuildInfo.buildEntryPoint();
       promises.push(promise);
     }
     await Promise.all(promises);
+    logger.info("");
 
     const buildFileContents = {};
     const buildInlineContents = {};
@@ -10530,10 +10547,13 @@ const prepareEntryPointBuild = async (
   // param defaults and normalization
   {
     if (entryPointParams.buildRelativeUrl === undefined) {
-      buildRelativeUrl = sourceRelativeUrl;
+      buildRelativeUrl = entryPointParams.buildRelativeUrl = sourceRelativeUrl;
     }
     const buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
-    buildRelativeUrl = urlToRelativeUrl(buildUrl, buildDirectoryUrl);
+    entryPointParams.buildRelativeUrl = buildRelativeUrl = urlToRelativeUrl(
+      buildUrl,
+      buildDirectoryUrl,
+    );
     if (entryPointParams.assetsDirectory === undefined) {
       const entryBuildUrl = new URL(buildRelativeUrl, buildDirectoryUrl).href;
       const entryBuildRelativeUrl = urlToRelativeUrl(
