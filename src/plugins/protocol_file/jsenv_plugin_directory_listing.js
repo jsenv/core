@@ -23,7 +23,7 @@
  */
 
 import {
-  comparePathnames,
+  compareFileUrls,
   lookupPackageDirectory,
   readEntryStatSync,
   registerDirectoryLifecycle,
@@ -399,9 +399,8 @@ const getDirectoryContentItems = ({
       fileUrls.push(fileUrlObject);
     }
   }
-  fileUrls.sort((a, b) => {
-    return comparePathnames(a.pathname, b.pathname);
-  });
+  fileUrls.sort(compareFileUrls);
+
   const items = [];
   for (const fileUrl of fileUrls) {
     const urlRelativeToCurrentDirectory = urlToRelativeUrl(
