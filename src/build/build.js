@@ -35,7 +35,12 @@ import {
   inferRuntimeCompatFromClosestPackage,
   nodeDefaultRuntimeCompat,
 } from "@jsenv/runtime-compat";
-import { urlIsInsideOf, urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  urlIsInsideOf,
+  urlToBasename,
+  urlToExtension,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
@@ -341,11 +346,17 @@ export const build = async ({
 
     const entryBuildInfoMap = new Map();
     let entryPointIndex = 0;
+    const entryOutDirSet = new Set();
     for (const entryPoint of entryPointSet) {
-      const entryOutDirectoryUrl = new URL(
-        `./entry_${entryPointIndex}/`,
-        outDirectoryUrl,
-      );
+      let entryOutDirCandidate = `entry_${urlToBasename(entryPoint.sourceRelativeUrl)}/`;
+      let entryInteger = 1;
+      while (entryOutDirSet.has(entryOutDirCandidate)) {
+        entryInteger++;
+        entryOutDirCandidate = `entry_${urlToBasename(entryPoint.sourceRelativeUrl)}_${entryInteger}/`;
+      }
+      const entryOutDirname = entryOutDirCandidate;
+      entryOutDirSet.add(entryOutDirname);
+      const entryOutDirectoryUrl = new URL(entryOutDirname, outDirectoryUrl);
       const { entryReference, buildEntryPoint } = await prepareEntryPointBuild(
         {
           signal,
