@@ -11,6 +11,7 @@ export { generateContentFrame } from "./content_frame/content_frame.js";
 export { createCallOrderer } from "./log/call_orderer.js";
 
 // node only
+export { renderSection, renderBigSection } from "./log/section.js";
 export { createLogger } from "./log/logger.js";
 export { createDynamicLog } from "./log/dynamic_log.js";
 export { startSpinner } from "./log/spinner.js";

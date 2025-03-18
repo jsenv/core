@@ -10223,12 +10223,6 @@ const build = async ({
     // (happens when npm runs several command in a workspace)
     // so we enable hot replace only when !process.exitCode (no error so far)
     process.exitCode !== 1;
-  const createBuildTask = (label) => {
-    return createTaskLog(label, {
-      disabled: !animatedLogEnabled,
-      animated: animatedLogEnabled,
-    });
-  };
   let startBuildLogs = () => {};
 
   const renderEntyPointBuildDoneLog = (
@@ -10236,7 +10230,6 @@ const build = async ({
     { sourceUrlToLog, buildUrlToLog },
   ) => {
     let content = "";
-    content += "\n";
     content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `;
     content += "\n";
     content += createBuildContentOneLineSummary(
@@ -10245,6 +10238,7 @@ const build = async ({
         indent: "  ",
       },
     );
+    content += "\n";
     return content;
   };
 
@@ -10323,6 +10317,7 @@ const build = async ({
           dynamicLog.update("");
           dynamicLog.destroy();
           dynamicLog = null;
+          logger.info("");
         },
       };
     };
@@ -10514,7 +10509,6 @@ const build = async ({
       Object.assign(buildManifest, entryBuildInfo.buildManifest);
     }
     if (writeOnFileSystem) {
-      const writingFiles = createBuildTask("write files in build directory");
       clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
       const buildRelativeUrls = Object.keys(buildFileContents);
       buildRelativeUrls.forEach((buildRelativeUrl) => {
@@ -10523,7 +10517,6 @@ const build = async ({
           buildFileContents[buildRelativeUrl],
         );
       });
-      writingFiles.done();
     }
     onBuildEnd({
       buildFileContents,

@@ -9,3 +9,4 @@ export { humanizeFileSize, humanizeMemory } from "./byte/byte.js";
 export { distributePercentages } from "./percentage/distribute_percentages.js";
 export { generateContentFrame } from "./content_frame/content_frame.js";
 export { createCallOrderer } from "./log/call_orderer.js";
+export { renderSection, renderBigSection } from "./log/section.js";

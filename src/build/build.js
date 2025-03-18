@@ -33,6 +33,7 @@ import {
   createTaskLog,
   humanizeDuration,
   humanizeMemory,
+  renderBigSection,
   UNICODE,
 } from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
@@ -63,7 +64,6 @@ import {
 } from "../plugins/plugin_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
-import { createBuildContentOneLineSummary } from "./build_content_report.js";
 import { defaultRuntimeCompat, logsDefault } from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
@@ -306,12 +306,6 @@ export const build = async ({
     // (happens when npm runs several command in a workspace)
     // so we enable hot replace only when !process.exitCode (no error so far)
     process.exitCode !== 1;
-  const createBuildTask = (label) => {
-    return createTaskLog(label, {
-      disabled: !animatedLogEnabled,
-      animated: animatedLogEnabled,
-    });
-  };
   let startBuildLogs = () => {};
 
   const renderEntyPointBuildDoneLog = (
@@ -319,16 +313,22 @@ export const build = async ({
     { sourceUrlToLog, buildUrlToLog },
   ) => {
     let content = "";
-    content += "\n";
     content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `;
     content += "\n";
-    content += createBuildContentOneLineSummary(
-      entryBuildInfo.buildFileContents,
-      {
-        indent: "  ",
-      },
-    );
     return content;
+  };
+  const renderBuildEndLog = () => {
+    // tell how many files are generated in build directory
+    // tell the repartition?
+    // this is not really useful for single build right?
+
+    return `${renderBigSection({
+      title:
+        entryPointArray.length === 1
+          ? "build done"
+          : `${entryPointArray.length} builds done`,
+      content: "",
+    })}\n`;
   };
 
   if (animatedLogEnabled) {
@@ -406,6 +406,8 @@ export const build = async ({
           dynamicLog.update("");
           dynamicLog.destroy();
           dynamicLog = null;
+          logger.info("");
+          logger.info(renderBuildEndLog());
         },
       };
     };
@@ -434,6 +436,7 @@ export const build = async ({
         },
         onBuildEnd: () => {
           logger.info("");
+          logger.info(renderBuildEndLog());
         },
       };
     };
@@ -599,7 +602,6 @@ export const build = async ({
       Object.assign(buildManifest, entryBuildInfo.buildManifest);
     }
     if (writeOnFileSystem) {
-      const writingFiles = createBuildTask("write files in build directory");
       clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
       const buildRelativeUrls = Object.keys(buildFileContents);
       buildRelativeUrls.forEach((buildRelativeUrl) => {
@@ -608,7 +610,6 @@ export const build = async ({
           buildFileContents[buildRelativeUrl],
         );
       });
-      writingFiles.done();
     }
     onBuildEnd({
       buildFileContents,
