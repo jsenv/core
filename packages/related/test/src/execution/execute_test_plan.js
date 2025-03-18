@@ -21,14 +21,14 @@ import {
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import {
   countAvailableCpus,
-  startMeasuringTotalCpuUsage,
-  startMonitoringMetric,
+  getAvailableMemory,
+  getOsVersion,
+  startMonitoringCpuUsage,
+  startMonitoringMemoryUsage,
 } from "@jsenv/os-metrics";
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsInsideOf } from "@jsenv/urls";
 import { existsSync } from "node:fs";
-import { freemem, release, totalmem } from "node:os";
-import { memoryUsage } from "node:process";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { generateCoverage } from "../coverage/generate_coverage.js";
@@ -161,22 +161,12 @@ export const executeTestPlan = async ({
     });
   }
 
-  const cpuUsage = startMeasuringTotalCpuUsage();
-  operation.addEndCallback(cpuUsage.stop);
-  const processCpuUsageMonitoring = startMonitoringMetric(() => {
-    return cpuUsage.thisProcess.active;
-  });
-  const osCpuUsageMonitoring = startMonitoringMetric(() => {
-    return cpuUsage.overall.active;
-  });
-  const processMemoryUsageMonitoring = startMonitoringMetric(() => {
-    return memoryUsage().rss;
-  });
-  const osMemoryUsageMonitoring = startMonitoringMetric(() => {
-    const total = totalmem();
-    const free = freemem();
-    return total - free;
-  });
+  const cpuMonitoring = startMonitoringCpuUsage();
+  operation.addEndCallback(cpuMonitoring.stop);
+  const [processCpuUsageMonitoring, osCpuUsageMonitoring] = cpuMonitoring;
+  const memoryMonitoring = startMonitoringMemoryUsage();
+  const [processMemoryUsageMonitoring, osMemoryUsageMonitoring] =
+    memoryMonitoring;
 
   const timingsOrigin = Date.now();
   const takeTiming = () => {
@@ -192,9 +182,9 @@ export const executeTestPlan = async ({
             : process.platform === "linux"
               ? "linux"
               : "other",
-      version: release(),
+      version: getOsVersion(),
       availableCpu: countAvailableCpus(),
-      availableMemory: totalmem(),
+      availableMemory: getAvailableMemory(),
     },
     runtime: {
       name: "node",

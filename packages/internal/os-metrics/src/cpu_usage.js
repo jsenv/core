@@ -1,5 +1,3 @@
-// https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
-
 import { cpus } from "node:os";
 import { cpuUsage } from "node:process";
 
@@ -171,23 +169,6 @@ export const startMeasuringTotalCpuUsage = () => {
   };
 };
 
-export const formatUsage = (usageInfo) => {
-  const { active, inactive, system, user } = usageInfo;
-
-  return `${ratioAsPercentage(active)} (system: ${ratioAsPercentage(
-    system,
-  )}, user: ${ratioAsPercentage(user)}), inactive: ${ratioAsPercentage(
-    inactive,
-  )}`;
-};
-
-export const ratioAsPercentage = (ratio) => {
-  const percentageAsNumber = ratio * 100;
-  const percentageAsNumberRounded = Math.round(percentageAsNumber);
-  const percentage = `${percentageAsNumberRounded}%`;
-  return percentage;
-};
-
 export const startMeasuringCpuUsage = () => {
   let previousHrtime = process.hrtime();
   let previousCpuUsage = process.cpuUsage();
@@ -218,4 +199,21 @@ export const startMeasuringCpuUsage = () => {
       clearInterval(interval);
     },
   };
+};
+
+export const formatUsage = (usageInfo) => {
+  const { active, inactive, system, user } = usageInfo;
+
+  return `${ratioAsPercentage(active)} (system: ${ratioAsPercentage(
+    system,
+  )}, user: ${ratioAsPercentage(user)}), inactive: ${ratioAsPercentage(
+    inactive,
+  )}`;
+};
+
+export const ratioAsPercentage = (ratio) => {
+  const percentageAsNumber = ratio * 100;
+  const percentageAsNumberRounded = Math.round(percentageAsNumber);
+  const percentage = `${percentageAsNumberRounded}%`;
+  return percentage;
 };
