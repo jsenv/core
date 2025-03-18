@@ -6,8 +6,12 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
     build({
       sourceDirectoryUrl: import.meta.resolve("./client/"),
       buildDirectoryUrl: import.meta.resolve("./build/"),
-      entryPoints: { "./src/main.html": "main.html" },
-      bundling: false,
-      minification: false,
+      entryPoints: {
+        "./src/main.html": {
+          buildRelativeUrl: "./main.html",
+          bundling: false,
+          minification: false,
+        },
+      },
     }));
 });
