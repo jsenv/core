@@ -29,12 +29,9 @@ await build({
     "./src/main.js": {
       buildRelativeUrl: "./jsenv_server.js",
       runtimeCompat: { node: "22.13.1" },
-      directoryReferenceEffect: (reference) => {
-        // jsenv server directory url
-        if (reference.url === import.meta.resolve("../")) {
-          return "resolve";
-        }
-        return "error";
+      directoryReferenceEffect: {
+        [import.meta.resolve("../")]: "resolve",
+        "**/*": "error",
       },
       scenarioPlaceholders: false,
       mappings: {

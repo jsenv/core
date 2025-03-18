@@ -105,7 +105,9 @@ export const getCorePlugins = ({
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),
     jsenvPluginWebResolution(),
-    jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
+    jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect, {
+      rootDirectoryUrl,
+    }),
     jsenvPluginVersionSearchParam(),
 
     // "jsenvPluginSupervisor" MUST be after "jsenvPluginInlining" as it needs inline script to be cooked

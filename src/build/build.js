@@ -813,7 +813,9 @@ const prepareEntryPointBuild = async (
           fetchInlineUrls: false,
           // inlineContent: false,
         }),
-        jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
+        jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect, {
+          rootDirectoryUrl: sourceDirectoryUrl,
+        }),
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
           : []),

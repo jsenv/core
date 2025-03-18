@@ -1,9 +1,28 @@
+import { URL_META } from "@jsenv/url-meta";
 import { urlToFilename } from "@jsenv/urls";
 import { defineNonEnumerableProperties } from "../../kitchen/errors.js";
 
 export const jsenvPluginDirectoryReferenceEffect = (
   directoryReferenceEffect = "error",
+  { rootDirectoryUrl },
 ) => {
+  let getDirectoryReferenceEffect;
+  if (typeof directoryReferenceEffect === "string") {
+    getDirectoryReferenceEffect = () => directoryReferenceEffect;
+  } else if (typeof directoryReferenceEffect === "function") {
+    getDirectoryReferenceEffect = directoryReferenceEffect;
+  } else if (typeof directoryReferenceEffect === "object") {
+    const associations = URL_META.resolveAssociations(
+      { effect: directoryReferenceEffect },
+      rootDirectoryUrl,
+    );
+    getDirectoryReferenceEffect = (reference) => {
+      const { url } = reference;
+      const meta = URL_META.applyAssociations({ url, associations });
+      return meta.effect || "error";
+    };
+  }
+
   return {
     name: "jsenv:directory_reference_effect",
     appliesDuring: "*",
@@ -41,12 +60,8 @@ export const jsenvPluginDirectoryReferenceEffect = (
         actionForDirectory = "copy";
       } else if (reference.type === "http_request") {
         actionForDirectory = "preserve";
-      } else if (typeof directoryReferenceEffect === "string") {
-        actionForDirectory = directoryReferenceEffect;
-      } else if (typeof directoryReferenceEffect === "function") {
-        actionForDirectory = directoryReferenceEffect(reference);
       } else {
-        actionForDirectory = "error";
+        actionForDirectory = getDirectoryReferenceEffect(reference);
       }
       reference.actionForDirectory = actionForDirectory;
       if (actionForDirectory !== "copy") {

@@ -55,15 +55,11 @@ await build({
         "file://**/node_modules/environment/": false,
         "file://**/node_modules/preact/": false,
       },
-      directoryReferenceEffect: (reference) => {
+      directoryReferenceEffect: {
         // @jsenv/core root dir
-        if (reference.url === import.meta.resolve("../../")) {
-          return "resolve";
-        }
-        if (reference.url.includes("/babel_helpers/")) {
-          return "copy";
-        }
-        return "error";
+        [import.meta.resolve("../../")]: "resolve",
+        "file://**/babel_helpers/": "copy",
+        "**/*": "error",
       },
     },
     "./src/kitchen/client/inline_content.js": {
