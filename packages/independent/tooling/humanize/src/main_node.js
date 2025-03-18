@@ -11,6 +11,7 @@ export { generateContentFrame } from "./content_frame/content_frame.js";
 export { createCallOrderer } from "./log/call_orderer.js";
 
 // node only
+export { renderTable } from "./log/table.js";
 export { renderSection, renderBigSection } from "./log/section.js";
 export { renderDetails } from "./log/details.js";
 export { createLogger } from "./log/logger.js";

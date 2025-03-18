@@ -69,6 +69,7 @@ import {
 } from "../plugins/plugin_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
+import { createBuildContentLog } from "./build_content_report.js";
 import { defaultRuntimeCompat, logsDefault } from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
@@ -345,17 +346,17 @@ export const build = async ({
   ) => {
     let content = "";
     content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")}`;
-    content += " ";
-    content += ANSI.color("(", ANSI.GREY);
-    content += ANSI.color(
-      humanizeDuration(entryBuildInfo.duration, { short: true }),
-      ANSI.GREY,
-    );
-    content += ANSI.color(")", ANSI.GREY);
+    // content += " ";
+    // content += ANSI.color("(", ANSI.GREY);
+    // content += ANSI.color(
+    //   humanizeDuration(entryBuildInfo.duration, { short: true }),
+    //   ANSI.GREY,
+    // );
+    // content += ANSI.color(")", ANSI.GREY);
     content += "\n";
     return content;
   };
-  const renderBuildEndLog = ({ duration }) => {
+  const renderBuildEndLog = ({ duration, buildFileContents }) => {
     // tell how many files are generated in build directory
     // tell the repartition?
     // this is not really useful for single build right?
@@ -405,6 +406,8 @@ export const build = async ({
     lines.push(memoryUsageLine);
 
     content = lines.join("\n");
+    content += "\n";
+    content += createBuildContentLog(buildFileContents);
 
     return `${renderBigSection({
       title:
@@ -412,7 +415,7 @@ export const build = async ({
           ? "build done"
           : `${entryPointArray.length} builds done`,
       content,
-    })}\n`;
+    })}`;
   };
 
   if (animatedLogEnabled) {
@@ -485,13 +488,13 @@ export const build = async ({
             }, renderDynamicLog());
           };
         },
-        onBuildEnd: ({ duration }) => {
+        onBuildEnd: ({ buildFileContents, duration }) => {
           clearInterval(interval);
           dynamicLog.update("");
           dynamicLog.destroy();
           dynamicLog = null;
           logger.info("");
-          logger.info(renderBuildEndLog({ duration }));
+          logger.info(renderBuildEndLog({ duration, buildFileContents }));
         },
       };
     };
@@ -518,9 +521,9 @@ export const build = async ({
             );
           };
         },
-        onBuildEnd: ({ duration }) => {
+        onBuildEnd: ({ buildFileContents, duration }) => {
           logger.info("");
-          logger.info(renderBuildEndLog({ duration }));
+          logger.info(renderBuildEndLog({ duration, buildFileContents }));
         },
       };
     };

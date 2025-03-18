@@ -1,5 +1,5 @@
-import stripAnsi from "strip-ansi";
 import stringWidth from "string-width";
+import stripAnsi from "strip-ansi";
 import { createSupportsColor, isUnicodeSupported, clearTerminal, eraseLines, createSupportsColor$1, isUnicodeSupported$1, clearTerminal$1, eraseLines$1, createSupportsColor$2, isUnicodeSupported$2, clearTerminal$2, eraseLines$2 } from "./jsenv_core_node_modules.js";
 import { existsSync, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$2, watch, realpathSync, readdir, chmod, stat, lstat, promises, unlink, rmdir } from "node:fs";
 import { extname } from "node:path";
@@ -8750,6 +8750,12 @@ const UNICODE$1 = createUnicode$1({
   ANSI: ANSI$1,
 });
 
+const getPrecision = (number) => {
+  if (Math.floor(number) === number) return 0;
+  const [, decimals] = number.toString().split(".");
+  return decimals.length || 0;
+};
+
 const setRoundedPrecision$1 = (
   number,
   { decimals = 1, decimalsWhenSmall = decimals } = {},
@@ -8939,6 +8945,10 @@ const parseMs$1 = (ms) => {
   };
 };
 
+const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
+  return inspectBytes(numberOfBytes, { decimals, short });
+};
+
 const humanizeMemory = (metricValue, { decimals, short } = {}) => {
   return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
@@ -8977,6 +8987,58 @@ const inspectBytes = (
 };
 
 const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+const distributePercentages = (
+  namedNumbers,
+  { maxPrecisionHint = 2 } = {},
+) => {
+  const numberNames = Object.keys(namedNumbers);
+  if (numberNames.length === 0) {
+    return {};
+  }
+  if (numberNames.length === 1) {
+    const firstNumberName = numberNames[0];
+    return { [firstNumberName]: "100 %" };
+  }
+  const numbers = numberNames.map((name) => namedNumbers[name]);
+  const total = numbers.reduce((sum, value) => sum + value, 0);
+  const ratios = numbers.map((number) => number / total);
+  const percentages = {};
+  ratios.pop();
+  ratios.forEach((ratio, index) => {
+    const percentage = ratio * 100;
+    percentages[numberNames[index]] = percentage;
+  });
+  const lowestPercentage = (1 / Math.pow(10, maxPrecisionHint)) * 100;
+  let precision = 0;
+  Object.keys(percentages).forEach((name) => {
+    const percentage = percentages[name];
+    if (percentage < lowestPercentage) {
+      // check the amout of meaningful decimals
+      // and that what we will use
+      const percentageRounded = setRoundedPrecision$1(percentage);
+      const percentagePrecision = getPrecision(percentageRounded);
+      if (percentagePrecision > precision) {
+        precision = percentagePrecision;
+      }
+    }
+  });
+  let remainingPercentage = 100;
+
+  Object.keys(percentages).forEach((name) => {
+    const percentage = percentages[name];
+    const percentageAllocated = setRoundedPrecision$1(percentage, {
+      decimals: precision,
+    });
+    remainingPercentage -= percentageAllocated;
+    percentages[name] = percentageAllocated;
+  });
+  const lastName = numberNames[numberNames.length - 1];
+  percentages[lastName] = setRoundedPrecision$1(remainingPercentage, {
+    decimals: precision,
+  });
+  return percentages;
+};
 
 const formatDefault = (v) => v;
 
@@ -9135,6 +9197,260 @@ const fillLeft = (value, biggestValue, char = " ") => {
   padded += value;
   return padded;
 };
+
+const renderTable = ({ head, body, foot }) => {
+  const columnBiggestWidthArray = [];
+  const createCell = (cellProps, { isHead, isFoot, x, y }) => {
+    let {
+      value,
+      bold,
+      format,
+      unit = format === "percentage" ? "%" : undefined,
+      unitColor,
+      quoteAroundStrings = !format && !isHead && !isFoot,
+      color,
+    } = cellProps;
+
+    let valueFormatted;
+    if (typeof value === "string") {
+      if (quoteAroundStrings) {
+        valueFormatted = `"${value}"`;
+        if (color === undefined) {
+          color = ANSI$1.GREEN;
+        }
+      } else {
+        valueFormatted = value;
+      }
+    } else if (typeof value === "number") {
+      if (format === "size") {
+        valueFormatted = humanizeFileSize(value);
+      } else {
+        valueFormatted = String(value);
+        if (color === undefined) {
+          color = ANSI$1.YELLOW;
+        }
+      }
+    } else {
+      valueFormatted = value;
+    }
+
+    if (bold) {
+      valueFormatted = ANSI$1.color(valueFormatted, ANSI$1.BOLD);
+    }
+    if (color) {
+      valueFormatted = ANSI$1.color(valueFormatted, color);
+    }
+
+    let width = stringWidth(valueFormatted);
+    if (unit) {
+      width += ` ${unit}`.length;
+      if (unitColor) {
+        unit = ANSI$1.color(unit, unitColor);
+      }
+      valueFormatted += ` ${unit}`;
+    }
+
+    const biggestWidth = columnBiggestWidthArray[x] || 0;
+    if (width > biggestWidth) {
+      columnBiggestWidthArray[x] = width;
+    }
+
+    return {
+      valueRaw: value,
+      x,
+      y,
+      value: valueFormatted,
+      width,
+      isHead,
+      isFoot,
+    };
+  };
+
+  const rows = [];
+  if (head) {
+    const headRow = {
+      cells: [],
+      borderTop: true,
+      borderBottom: true,
+    };
+    {
+      let x = 0;
+      for (const cellProps of head) {
+        const headerCell = createCell(cellProps, {
+          isHead: true,
+          x,
+          y: 0,
+        });
+        headRow.cells.push(headerCell);
+        x++;
+      }
+    }
+    rows.push(headRow);
+  }
+  {
+    const bodyRows = [];
+    let y = rows.length;
+    for (const object of body) {
+      const bodyRow = { cells: [] };
+      let x = 0;
+      for (const headCellProps of head) {
+        const propName = headCellProps.value;
+        const bodyCellProps = object[propName] || { value: undefined };
+        const bodyCell = createCell(bodyCellProps, {
+          x,
+          y,
+        });
+        bodyRow.cells.push(bodyCell);
+        x++;
+      }
+      y++;
+      bodyRows.push(bodyRow);
+    }
+    rows.push(...bodyRows);
+    rows[rows.length - 1].borderBottom = true;
+  }
+  if (foot) {
+    const footRow = {
+      cells: [],
+      borderBottom: true,
+    };
+    let y = rows.length;
+    let x = 0;
+    for (const fooCellProps of foot) {
+      const footCell = createCell(fooCellProps, {
+        isFoot: true,
+        x,
+        y,
+      });
+      footRow.cells.push(footCell);
+      x++;
+    }
+    rows.push(footRow);
+  }
+
+  const leftSpacing = 1;
+  const rightSpacing = 1;
+
+  let log = "";
+  let y = 0;
+  while (y < rows.length) {
+    const row = rows[y];
+    if (row.borderTop) {
+      let topBorder = "";
+      topBorder += "┌";
+      let x = 0;
+      while (x < columnBiggestWidthArray.length) {
+        const columnWidth = columnBiggestWidthArray[x];
+        topBorder += `${"─".repeat(columnWidth + leftSpacing + rightSpacing)}`;
+        if (x < columnBiggestWidthArray.length - 1) {
+          topBorder += "┬";
+        }
+        x++;
+      }
+      topBorder += "┐";
+      log += topBorder;
+      log += "\n";
+    }
+    const cells = row.cells;
+    let line = "";
+    let x = 0;
+    while (x < cells.length) {
+      const cell = cells[x];
+      const biggestWidth = columnBiggestWidthArray[x];
+      line += " ";
+      line += cell.value; // if number use yellow, if string use green
+      line += " ";
+      line += " ".repeat(biggestWidth - cell.width);
+      if (x === cells.length - 1) {
+        break;
+      }
+      line += "│";
+      x++;
+    }
+    log += "│";
+    log += line;
+    log += "│";
+    log += "\n";
+
+    if (row.borderBottom) {
+      if (y === rows.length - 1) {
+        // last line
+        let bottomBorder = "";
+        let x = 0;
+        while (x < columnBiggestWidthArray.length) {
+          const columnWidth = columnBiggestWidthArray[x];
+          bottomBorder += `${"─".repeat(columnWidth + leftSpacing + rightSpacing)}`;
+          if (x < columnBiggestWidthArray.length - 1) {
+            bottomBorder += "┴";
+          }
+          x++;
+        }
+        log += "└";
+        log += bottomBorder;
+        log += "┘";
+        log += "\n";
+      } else {
+        let middleBorder = "";
+        {
+          let x = 0;
+          while (x < columnBiggestWidthArray.length) {
+            const columnWidth = columnBiggestWidthArray[x];
+            middleBorder += `${"─".repeat(columnWidth + leftSpacing + rightSpacing)}`;
+            if (x < columnBiggestWidthArray.length - 1) {
+              middleBorder += "┼";
+            }
+            x++;
+          }
+        }
+        log += "├";
+        log += middleBorder;
+        log += "┤";
+        log += "\n";
+      }
+    }
+    y++;
+  }
+
+  return log;
+};
+
+// console.log(
+//   renderTable({
+//     head: ["name", "long_name", "percentage"],
+//     body: [
+//       { name: "dam", long_name: 120, percentage: "56.0" },
+//       { name: "seb", long_name: 10, percentage: "56.0" },
+//     ],
+//     // foot: [],
+//   }),
+// );
+
+// console.log(
+//   renderTable({
+//     head: [
+//       { value: "name", bold: true },
+//       { value: "long_name", bold: true },
+//       { value: "percentage", bold: true },
+//     ],
+//     body: [
+//       {
+//         name: { value: "dam" },
+//         long_name: { value: 120 },
+//         percentage: { value: "56.0" },
+//       },
+//       {
+//         name: { value: "seb" },
+//         long_name: { value: 10 },
+//         percentage: { value: "56.0", format: "percentage" },
+//       },
+//     ],
+//     foot: [
+//       { value: "hey", bold: true },
+//       { value: "hey", bold: true },
+//       { value: "hey", bold: true },
+//     ],
+//   }),
+// );
 
 const renderBigSection = (params) => {
   return renderSection({
@@ -19886,4 +20202,4 @@ const assertAndNormalizeDirectoryUrl = (
   return value;
 };
 
-export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };
+export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };

@@ -1,4 +1,9 @@
-import { ANSI, distributePercentages, humanizeFileSize } from "@jsenv/humanize";
+import {
+  ANSI,
+  distributePercentages,
+  humanizeFileSize,
+  renderTable,
+} from "@jsenv/humanize";
 
 export const createBuildContentSummary = (
   buildFileContents,
@@ -8,6 +13,57 @@ export const createBuildContentSummary = (
   return `--- ${title} ---  
 ${createRepartitionMessage(buildContentReport, { indent })}
 --------------------`;
+};
+
+export const createBuildContentLog = (buildFileContents) => {
+  const buildContentReport = createBuildContentReport(buildFileContents);
+  const items = [];
+  for (const key of Object.keys(buildContentReport)) {
+    if (key === "sourcemaps") {
+      continue;
+    }
+    if (key === "total") {
+      continue;
+    }
+    const { count, size, percentage } = buildContentReport[key];
+    if (count === 0) {
+      continue;
+    }
+    items.push({
+      "File type": {
+        value: key,
+        quoteAroundStrings: false,
+      },
+      "File count": {
+        value: count,
+        color: null,
+      },
+      "File size": {
+        value: size,
+        format: "size",
+      },
+      "Percentage": {
+        value: percentage,
+        format: "percentage",
+        color: null,
+      },
+    });
+  }
+  return renderTable({
+    head: [
+      { value: "File type" },
+      { value: "File count" },
+      { value: "File size" },
+      { value: "Percentage" },
+    ],
+    body: items,
+    foot: [
+      { value: "Total" },
+      { value: buildContentReport.total.count, color: null },
+      { value: buildContentReport.total.size, format: "size" },
+      { value: 100, format: "percentage", color: null },
+    ],
+  });
 };
 
 export const createBuildContentOneLineSummary = (

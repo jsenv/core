@@ -2,15 +2,15 @@ import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHt
 import { startMonitoringCpuUsage, startMonitoringMemoryUsage } from "@jsenv/os-metrics";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog, humanizeDuration, humanizeMemory, renderDetails, renderBigSection } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, renderTable, distributePercentages, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog, humanizeDuration, humanizeMemory, renderDetails, renderBigSection } from "../jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { WebSocketResponse, pickContentType } from "@jsenv/server";
 import { createHash } from "node:crypto";
-import "strip-ansi";
 import "string-width";
+import "strip-ansi";
 import "../jsenv_core_node_modules.js";
 import "node:os";
 import "node:tty";
@@ -8206,6 +8206,186 @@ const getCorePlugins = ({
   ];
 };
 
+const createBuildContentLog = (buildFileContents) => {
+  const buildContentReport = createBuildContentReport(buildFileContents);
+  const items = [];
+  for (const key of Object.keys(buildContentReport)) {
+    if (key === "sourcemaps") {
+      continue;
+    }
+    if (key === "total") {
+      continue;
+    }
+    const { count, size, percentage } = buildContentReport[key];
+    if (count === 0) {
+      continue;
+    }
+    items.push({
+      "File type": {
+        value: key,
+        quoteAroundStrings: false,
+      },
+      "File count": {
+        value: count,
+        color: null,
+      },
+      "File size": {
+        value: size,
+        format: "size",
+      },
+      "Percentage": {
+        value: percentage,
+        format: "percentage",
+        color: null,
+      },
+    });
+  }
+  return renderTable({
+    head: [
+      { value: "File type" },
+      { value: "File count" },
+      { value: "File size" },
+      { value: "Percentage" },
+    ],
+    body: items,
+    foot: [
+      { value: "Total" },
+      { value: buildContentReport.total.count, color: null },
+      { value: buildContentReport.total.size, format: "size" },
+      { value: 100, format: "percentage", color: null },
+    ],
+  });
+};
+
+const createBuildContentReport = (buildFileContents) => {
+  const countGroups = {
+    sourcemaps: 0,
+    html: 0,
+    css: 0,
+    js: 0,
+    json: 0,
+    other: 0,
+    total: 0,
+  };
+  const sizeGroups = {
+    sourcemaps: 0,
+    html: 0,
+    css: 0,
+    js: 0,
+    json: 0,
+    other: 0,
+    total: 0,
+  };
+
+  for (const buildRelativeUrl of Object.keys(buildFileContents)) {
+    const content = buildFileContents[buildRelativeUrl];
+    const contentSize = Buffer.byteLength(content);
+    const category = determineCategory(buildRelativeUrl);
+    if (category === "sourcemap") {
+      countGroups.sourcemaps++;
+      sizeGroups.sourcemaps += contentSize;
+      continue;
+    }
+    countGroups.total++;
+    sizeGroups.total += contentSize;
+    if (category === "html") {
+      countGroups.html++;
+      sizeGroups.html += contentSize;
+      continue;
+    }
+    if (category === "css") {
+      countGroups.css++;
+      sizeGroups.css += contentSize;
+      continue;
+    }
+    if (category === "js") {
+      countGroups.js++;
+      sizeGroups.js += contentSize;
+      continue;
+    }
+    if (category === "json") {
+      countGroups.json++;
+      sizeGroups.json += contentSize;
+      continue;
+    }
+    countGroups.other++;
+    sizeGroups.other += contentSize;
+    continue;
+  }
+
+  const sizesToDistribute = {};
+  for (const groupName of Object.keys(sizeGroups)) {
+    if (groupName !== "sourcemaps" && groupName !== "total") {
+      sizesToDistribute[groupName] = sizeGroups[groupName];
+    }
+  }
+  const percentageGroups = distributePercentages(sizesToDistribute);
+
+  return {
+    // sourcemaps are special, there size are ignored
+    // so there is no "percentage" associated
+    sourcemaps: {
+      count: countGroups.sourcemaps,
+      size: sizeGroups.sourcemaps,
+      percentage: undefined,
+    },
+
+    html: {
+      count: countGroups.html,
+      size: sizeGroups.html,
+      percentage: percentageGroups.html,
+    },
+    css: {
+      count: countGroups.css,
+      size: sizeGroups.css,
+      percentage: percentageGroups.css,
+    },
+    js: {
+      count: countGroups.js,
+      size: sizeGroups.js,
+      percentage: percentageGroups.js,
+    },
+    json: {
+      count: countGroups.json,
+      size: sizeGroups.json,
+      percentage: percentageGroups.json,
+    },
+    other: {
+      count: countGroups.other,
+      size: sizeGroups.other,
+      percentage: percentageGroups.other,
+    },
+    total: {
+      count: countGroups.total,
+      size: sizeGroups.total,
+      percentage: 100,
+    },
+  };
+};
+
+const determineCategory = (buildRelativeUrl) => {
+  if (buildRelativeUrl.endsWith(".map")) {
+    return "sourcemap";
+  }
+  if (buildRelativeUrl.endsWith(".html")) {
+    return "html";
+  }
+  if (buildRelativeUrl.endsWith(".css")) {
+    return "css";
+  }
+  if (
+    buildRelativeUrl.endsWith(".js") ||
+    buildRelativeUrl.endsWith(".mjs") ||
+    buildRelativeUrl.endsWith(".cjs")
+  ) {
+    return "js";
+  }
+  if (buildRelativeUrl.endsWith(".json")) {
+    return "json";
+  }
+  return "other";
+};
+
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
 // so script_type_module + dynamic_import + import_meta
@@ -10213,17 +10393,17 @@ const build = async ({
   ) => {
     let content = "";
     content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")}`;
-    content += " ";
-    content += ANSI.color("(", ANSI.GREY);
-    content += ANSI.color(
-      humanizeDuration(entryBuildInfo.duration, { short: true }),
-      ANSI.GREY,
-    );
-    content += ANSI.color(")", ANSI.GREY);
+    // content += " ";
+    // content += ANSI.color("(", ANSI.GREY);
+    // content += ANSI.color(
+    //   humanizeDuration(entryBuildInfo.duration, { short: true }),
+    //   ANSI.GREY,
+    // );
+    // content += ANSI.color(")", ANSI.GREY);
     content += "\n";
     return content;
   };
-  const renderBuildEndLog = ({ duration }) => {
+  const renderBuildEndLog = ({ duration, buildFileContents }) => {
     // tell how many files are generated in build directory
     // tell the repartition?
     // this is not really useful for single build right?
@@ -10273,6 +10453,8 @@ const build = async ({
     lines.push(memoryUsageLine);
 
     content = lines.join("\n");
+    content += "\n";
+    content += createBuildContentLog(buildFileContents);
 
     return `${renderBigSection({
       title:
@@ -10280,7 +10462,7 @@ const build = async ({
           ? "build done"
           : `${entryPointArray.length} builds done`,
       content,
-    })}\n`;
+    })}`;
   };
 
   if (animatedLogEnabled) {
@@ -10353,13 +10535,13 @@ const build = async ({
             }, renderDynamicLog());
           };
         },
-        onBuildEnd: ({ duration }) => {
+        onBuildEnd: ({ buildFileContents, duration }) => {
           clearInterval(interval);
           dynamicLog.update("");
           dynamicLog.destroy();
           dynamicLog = null;
           logger.info("");
-          logger.info(renderBuildEndLog({ duration }));
+          logger.info(renderBuildEndLog({ duration, buildFileContents }));
         },
       };
     };
@@ -10386,9 +10568,9 @@ const build = async ({
             );
           };
         },
-        onBuildEnd: ({ duration }) => {
+        onBuildEnd: ({ buildFileContents, duration }) => {
           logger.info("");
-          logger.info(renderBuildEndLog({ duration }));
+          logger.info(renderBuildEndLog({ duration, buildFileContents }));
         },
       };
     };
