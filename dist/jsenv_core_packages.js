@@ -1,7 +1,6 @@
+import stripAnsi from "strip-ansi";
 import stringWidth from "string-width";
-import process$1 from "node:process";
-import os from "node:os";
-import tty from "node:tty";
+import { createSupportsColor, isUnicodeSupported, clearTerminal, eraseLines, createSupportsColor$1, isUnicodeSupported$1, clearTerminal$1, eraseLines$1, createSupportsColor$2, isUnicodeSupported$2, clearTerminal$2, eraseLines$2 } from "./jsenv_core_node_modules.js";
 import { existsSync, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$2, watch, realpathSync, readdir, chmod, stat, lstat, promises, unlink, rmdir } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
@@ -61,296 +60,6 @@ const DATA_URL$1 = {
     return `data:${contentType},${data}`;
   },
 };
-
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag$2(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-
-const {env: env$2} = process$1;
-
-let flagForceColor$2;
-if (
-	hasFlag$2('no-color')
-	|| hasFlag$2('no-colors')
-	|| hasFlag$2('color=false')
-	|| hasFlag$2('color=never')
-) {
-	flagForceColor$2 = 0;
-} else if (
-	hasFlag$2('color')
-	|| hasFlag$2('colors')
-	|| hasFlag$2('color=true')
-	|| hasFlag$2('color=always')
-) {
-	flagForceColor$2 = 1;
-}
-
-function envForceColor$2() {
-	if (!('FORCE_COLOR' in env$2)) {
-		return;
-	}
-
-	if (env$2.FORCE_COLOR === 'true') {
-		return 1;
-	}
-
-	if (env$2.FORCE_COLOR === 'false') {
-		return 0;
-	}
-
-	if (env$2.FORCE_COLOR.length === 0) {
-		return 1;
-	}
-
-	const level = Math.min(Number.parseInt(env$2.FORCE_COLOR, 10), 3);
-
-	if (![0, 1, 2, 3].includes(level)) {
-		return;
-	}
-
-	return level;
-}
-
-function translateLevel$2(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3,
-	};
-}
-
-function _supportsColor$2(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor$2();
-	if (noFlagForceColor !== undefined) {
-		flagForceColor$2 = noFlagForceColor;
-	}
-
-	const forceColor = sniffFlags ? flagForceColor$2 : noFlagForceColor;
-
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (sniffFlags) {
-		if (hasFlag$2('color=16m')
-			|| hasFlag$2('color=full')
-			|| hasFlag$2('color=truecolor')) {
-			return 3;
-		}
-
-		if (hasFlag$2('color=256')) {
-			return 2;
-		}
-	}
-
-	// Check for Azure DevOps pipelines.
-	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env$2 && 'AGENT_NAME' in env$2) {
-		return 1;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env$2.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process$1.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10
-			&& Number(osRelease[2]) >= 10_586
-		) {
-			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env$2) {
-		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env$2)) {
-			return 3;
-		}
-
-		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env$2) || env$2.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env$2) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env$2.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env$2.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if (env$2.TERM === 'xterm-kitty') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env$2) {
-		const version = Number.parseInt((env$2.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env$2.TERM_PROGRAM) {
-			case 'iTerm.app': {
-				return version >= 3 ? 3 : 2;
-			}
-
-			case 'Apple_Terminal': {
-				return 2;
-			}
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env$2.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env$2.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env$2) {
-		return 1;
-	}
-
-	return min;
-}
-
-function createSupportsColor$2(stream, options = {}) {
-	const level = _supportsColor$2(stream, {
-		streamIsTTY: stream && stream.isTTY,
-		...options,
-	});
-
-	return translateLevel$2(level);
-}
-
-({
-	stdout: createSupportsColor$2({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor$2({isTTY: tty.isatty(2)}),
-});
-
-function isUnicodeSupported$2() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser$2 = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform$2 = globalThis.navigator?.userAgentData?.platform;
-
-platform$2 === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform$2 === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform$2 === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform$2 === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-const ESC$2 = '\u001B[';
-
-!isBrowser$2 && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows$9 = !isBrowser$2 && process$1.platform === 'win32';
-
-isBrowser$2 ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
-const cursorUp$2 = (count = 1) => ESC$2 + count + 'A';
-
-const cursorLeft$2 = ESC$2 + 'G';
-
-const eraseLines$2 = count => {
-	let clear = '';
-
-	for (let i = 0; i < count; i++) {
-		clear += eraseLine$2 + (i < count - 1 ? cursorUp$2() : '');
-	}
-
-	if (count) {
-		clear += cursorLeft$2;
-	}
-
-	return clear;
-};
-const eraseLine$2 = ESC$2 + '2K';
-const eraseScreen$2 = ESC$2 + '2J';
-
-const clearTerminal$2 = isWindows$9
-	? `${eraseScreen$2}${ESC$2}0f`
-	// 1. Erases the screen (Only done in case `2` is not supported)
-	// 2. Erases the whole screen including scrollback buffer
-	// 3. Moves cursor to the top-left position
-	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	:	`${eraseScreen$2}${ESC$2}3J${ESC$2}H`;
 
 const createDetailedMessage$3 = (message, details = {}) => {
   let string = `${message}`;
@@ -420,7 +129,7 @@ const createAnsi$2 = ({ supported }) => {
   return ANSI;
 };
 
-const processSupportsBasicColor$2 = createSupportsColor$2(process.stdout).hasBasic;
+const processSupportsBasicColor$2 = createSupportsColor(process.stdout).hasBasic;
 
 const ANSI$2 = createAnsi$2({
   supported:
@@ -489,7 +198,7 @@ const createUnicode$2 = ({ supported, ANSI }) => {
 };
 
 const UNICODE$2 = createUnicode$2({
-  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported$2(),
+  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
   ANSI: ANSI$2,
 });
 
@@ -544,6 +253,23 @@ const setDecimalsPrecision$2 = (
   const asFloat = asInteger / coef;
   return number < 0 ? -asFloat : asFloat;
 };
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
 const unitShort$2 = {
   year: "y",
   month: "m",
@@ -957,7 +683,7 @@ const createDynamicLog$2 = ({
     if (visualLineCount > rows) {
       if (clearTerminalAllowed) {
         clearAttemptResult = true;
-        return clearTerminal$2;
+        return clearTerminal;
       }
       // the whole log cannot be cleared because it's vertically to long
       // (longer than terminal height)
@@ -970,7 +696,7 @@ const createDynamicLog$2 = ({
     }
 
     clearAttemptResult = true;
-    return eraseLines$2(visualLineCount);
+    return eraseLines(visualLineCount);
   };
 
   const update = (string) => {
@@ -1011,7 +737,8 @@ const createDynamicLog$2 = ({
     update("");
 
     writing = true;
-    callback();
+    callback(update);
+    lastOutput = "";
     writing = false;
 
     update(ouputAfterCallback);
@@ -1881,7 +1608,7 @@ const compareFileUrls$1 = (a, b) => {
   return comparePathnames$1(new URL(a).pathname, new URL(b).pathname);
 };
 
-const isWindows$8 = process.platform === "win32";
+const isWindows$6 = process.platform === "win32";
 const baseUrlFallback$1 = fileSystemPathToUrl$2(process.cwd());
 
 /**
@@ -1904,7 +1631,7 @@ const ensureWindowsDriveLetter$1 = (url, baseUrl) => {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
-  if (!isWindows$8) {
+  if (!isWindows$6) {
     return url;
   }
 
@@ -2632,7 +2359,7 @@ const writeEntryPermissionsSync$1 = (source, permissions) => {
  */
 
 
-const isWindows$7 = process.platform === "win32";
+const isWindows$5 = process.platform === "win32";
 
 const readEntryStatSync$1 = (
   source,
@@ -2652,7 +2379,7 @@ const readEntryStatSync$1 = (
   return statSyncNaive$1(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$7
+    ...(isWindows$5
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: (error) => {
@@ -3278,12 +3005,12 @@ const callOnceIdlePerFile$1 = (callback, idleMs) => {
   };
 };
 
-const isWindows$6 = process.platform === "win32";
+const isWindows$4 = process.platform === "win32";
 
 const createWatcher$1 = (sourcePath, options) => {
   const watcher = watch(sourcePath, options);
 
-  if (isWindows$6) {
+  if (isWindows$4) {
     watcher.on("error", async (error) => {
       // https://github.com/joyent/node/issues/4337
       if (error.code === "EPERM") {
@@ -4256,7 +3983,7 @@ const applyPackageImportsResolution$1 = (
 };
 
 const applyPackageResolve$1 = (packageSpecifier, resolutionContext) => {
-  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
+  const { parentUrl, conditions, readPackageJson, preservesSymlink, isImport } =
     resolutionContext;
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier");
@@ -4282,7 +4009,7 @@ const applyPackageResolve$1 = (packageSpecifier, resolutionContext) => {
       resolutionContext,
     );
   }
-  if (packageSubpath.endsWith("/")) {
+  if (isImport && packageSubpath.endsWith("/")) {
     throw new Error("invalid module specifier");
   }
   const questionCharIndex = packageName.indexOf("?");
@@ -4626,6 +4353,12 @@ const parsePackageSpecifier$1 = (packageSpecifier) => {
   }
   const packageName = packageSpecifier.slice(0, firstSlashIndex);
   const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  if (afterFirstSlash === "") {
+    return {
+      packageName,
+      packageSubpath: "/",
+    };
+  }
   const packageSubpath = `./${afterFirstSlash}`;
   return {
     packageName,
@@ -8876,296 +8609,6 @@ const DATA_URL = {
   },
 };
 
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag$1(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-
-const {env: env$1} = process$1;
-
-let flagForceColor$1;
-if (
-	hasFlag$1('no-color')
-	|| hasFlag$1('no-colors')
-	|| hasFlag$1('color=false')
-	|| hasFlag$1('color=never')
-) {
-	flagForceColor$1 = 0;
-} else if (
-	hasFlag$1('color')
-	|| hasFlag$1('colors')
-	|| hasFlag$1('color=true')
-	|| hasFlag$1('color=always')
-) {
-	flagForceColor$1 = 1;
-}
-
-function envForceColor$1() {
-	if (!('FORCE_COLOR' in env$1)) {
-		return;
-	}
-
-	if (env$1.FORCE_COLOR === 'true') {
-		return 1;
-	}
-
-	if (env$1.FORCE_COLOR === 'false') {
-		return 0;
-	}
-
-	if (env$1.FORCE_COLOR.length === 0) {
-		return 1;
-	}
-
-	const level = Math.min(Number.parseInt(env$1.FORCE_COLOR, 10), 3);
-
-	if (![0, 1, 2, 3].includes(level)) {
-		return;
-	}
-
-	return level;
-}
-
-function translateLevel$1(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3,
-	};
-}
-
-function _supportsColor$1(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor$1();
-	if (noFlagForceColor !== undefined) {
-		flagForceColor$1 = noFlagForceColor;
-	}
-
-	const forceColor = sniffFlags ? flagForceColor$1 : noFlagForceColor;
-
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (sniffFlags) {
-		if (hasFlag$1('color=16m')
-			|| hasFlag$1('color=full')
-			|| hasFlag$1('color=truecolor')) {
-			return 3;
-		}
-
-		if (hasFlag$1('color=256')) {
-			return 2;
-		}
-	}
-
-	// Check for Azure DevOps pipelines.
-	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env$1 && 'AGENT_NAME' in env$1) {
-		return 1;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env$1.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process$1.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10
-			&& Number(osRelease[2]) >= 10_586
-		) {
-			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env$1) {
-		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env$1)) {
-			return 3;
-		}
-
-		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env$1) || env$1.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env$1) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env$1.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env$1.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if (env$1.TERM === 'xterm-kitty') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env$1) {
-		const version = Number.parseInt((env$1.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env$1.TERM_PROGRAM) {
-			case 'iTerm.app': {
-				return version >= 3 ? 3 : 2;
-			}
-
-			case 'Apple_Terminal': {
-				return 2;
-			}
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env$1.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env$1.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env$1) {
-		return 1;
-	}
-
-	return min;
-}
-
-function createSupportsColor$1(stream, options = {}) {
-	const level = _supportsColor$1(stream, {
-		streamIsTTY: stream && stream.isTTY,
-		...options,
-	});
-
-	return translateLevel$1(level);
-}
-
-({
-	stdout: createSupportsColor$1({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor$1({isTTY: tty.isatty(2)}),
-});
-
-function isUnicodeSupported$1() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser$1 = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform$1 = globalThis.navigator?.userAgentData?.platform;
-
-platform$1 === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform$1 === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform$1 === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform$1 === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-const ESC$1 = '\u001B[';
-
-!isBrowser$1 && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows$5 = !isBrowser$1 && process$1.platform === 'win32';
-
-isBrowser$1 ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
-const cursorUp$1 = (count = 1) => ESC$1 + count + 'A';
-
-const cursorLeft$1 = ESC$1 + 'G';
-
-const eraseLines$1 = count => {
-	let clear = '';
-
-	for (let i = 0; i < count; i++) {
-		clear += eraseLine$1 + (i < count - 1 ? cursorUp$1() : '');
-	}
-
-	if (count) {
-		clear += cursorLeft$1;
-	}
-
-	return clear;
-};
-const eraseLine$1 = ESC$1 + '2K';
-const eraseScreen$1 = ESC$1 + '2J';
-
-const clearTerminal$1 = isWindows$5
-	? `${eraseScreen$1}${ESC$1}0f`
-	// 1. Erases the screen (Only done in case `2` is not supported)
-	// 2. Erases the whole screen including scrollback buffer
-	// 3. Moves cursor to the top-left position
-	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	:	`${eraseScreen$1}${ESC$1}3J${ESC$1}H`;
-
 const createDetailedMessage$1 = (message, details = {}) => {
   let string = `${message}`;
 
@@ -9307,12 +8750,6 @@ const UNICODE$1 = createUnicode$1({
   ANSI: ANSI$1,
 });
 
-const getPrecision = (number) => {
-  if (Math.floor(number) === number) return 0;
-  const [, decimals] = number.toString().split(".");
-  return decimals.length || 0;
-};
-
 const setRoundedPrecision$1 = (
   number,
   { decimals = 1, decimalsWhenSmall = decimals } = {},
@@ -9364,6 +8801,23 @@ const setDecimalsPrecision$1 = (
   const asFloat = asInteger / coef;
   return number < 0 ? -asFloat : asFloat;
 };
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
 const unitShort$1 = {
   year: "y",
   month: "m",
@@ -9485,10 +8939,6 @@ const parseMs$1 = (ms) => {
   };
 };
 
-const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
-  return inspectBytes(numberOfBytes, { decimals, short });
-};
-
 const humanizeMemory = (metricValue, { decimals, short } = {}) => {
   return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
@@ -9527,58 +8977,6 @@ const inspectBytes = (
 };
 
 const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-
-const distributePercentages = (
-  namedNumbers,
-  { maxPrecisionHint = 2 } = {},
-) => {
-  const numberNames = Object.keys(namedNumbers);
-  if (numberNames.length === 0) {
-    return {};
-  }
-  if (numberNames.length === 1) {
-    const firstNumberName = numberNames[0];
-    return { [firstNumberName]: "100 %" };
-  }
-  const numbers = numberNames.map((name) => namedNumbers[name]);
-  const total = numbers.reduce((sum, value) => sum + value, 0);
-  const ratios = numbers.map((number) => number / total);
-  const percentages = {};
-  ratios.pop();
-  ratios.forEach((ratio, index) => {
-    const percentage = ratio * 100;
-    percentages[numberNames[index]] = percentage;
-  });
-  const lowestPercentage = (1 / Math.pow(10, maxPrecisionHint)) * 100;
-  let precision = 0;
-  Object.keys(percentages).forEach((name) => {
-    const percentage = percentages[name];
-    if (percentage < lowestPercentage) {
-      // check the amout of meaningful decimals
-      // and that what we will use
-      const percentageRounded = setRoundedPrecision$1(percentage);
-      const percentagePrecision = getPrecision(percentageRounded);
-      if (percentagePrecision > precision) {
-        precision = percentagePrecision;
-      }
-    }
-  });
-  let remainingPercentage = 100;
-
-  Object.keys(percentages).forEach((name) => {
-    const percentage = percentages[name];
-    const percentageAllocated = setRoundedPrecision$1(percentage, {
-      decimals: precision,
-    });
-    remainingPercentage -= percentageAllocated;
-    percentages[name] = percentageAllocated;
-  });
-  const lastName = numberNames[numberNames.length - 1];
-  percentages[lastName] = setRoundedPrecision$1(remainingPercentage, {
-    decimals: precision,
-  });
-  return percentages;
-};
 
 const formatDefault = (v) => v;
 
@@ -9736,6 +9134,54 @@ const fillLeft = (value, biggestValue, char = " ") => {
   }
   padded += value;
   return padded;
+};
+
+const renderBigSection = (params) => {
+  return renderSection({
+    width: 45,
+    ...params,
+  });
+};
+
+const renderSection = ({
+  title,
+  content,
+  dashColor = ANSI$1.GREY,
+  width = 38,
+  bottomSeparator = true,
+}) => {
+  let section = "";
+
+  if (title) {
+    const titleWidth = stripAnsi(title).length;
+    const minWidthRequired = `--- … ---`.length;
+    const needsTruncate = titleWidth + minWidthRequired >= width;
+    if (needsTruncate) {
+      const titleTruncated = title.slice(0, width - minWidthRequired);
+      const leftDashes = ANSI$1.color("---", dashColor);
+      const rightDashes = ANSI$1.color("---", dashColor);
+      section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
+    } else {
+      const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
+      const dashLeftCount = Math.floor(remainingWidth / 2);
+      const dashRightCount = remainingWidth - dashLeftCount;
+      const leftDashes = ANSI$1.color("-".repeat(dashLeftCount), dashColor);
+      const rightDashes = ANSI$1.color("-".repeat(dashRightCount), dashColor);
+      section += `${leftDashes} ${title} ${rightDashes}`;
+    }
+    section += "\n";
+  } else {
+    const topDashes = ANSI$1.color(`-`.repeat(width), dashColor);
+    section += topDashes;
+    section += "\n";
+  }
+  section += `${content}`;
+  if (bottomSeparator) {
+    section += "\n";
+    const bottomDashes = ANSI$1.color(`-`.repeat(width), dashColor);
+    section += bottomDashes;
+  }
+  return section;
 };
 
 const LOG_LEVEL_OFF$1 = "off";
@@ -9926,7 +9372,8 @@ const createDynamicLog$1 = ({
     update("");
 
     writing = true;
-    callback();
+    callback(update);
+    lastOutput = "";
     writing = false;
 
     update(ouputAfterCallback);
@@ -10858,7 +10305,7 @@ const compareFileUrls = (a, b) => {
   return comparePathnames(new URL(a).pathname, new URL(b).pathname);
 };
 
-const isWindows$4 = process.platform === "win32";
+const isWindows$3 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
 
 /**
@@ -10881,7 +10328,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
-  if (!isWindows$4) {
+  if (!isWindows$3) {
     return url;
   }
 
@@ -11667,7 +11114,7 @@ const writeEntryPermissions = async (source, permissions) => {
  */
 
 
-const isWindows$3 = process.platform === "win32";
+const isWindows$2 = process.platform === "win32";
 
 const readEntryStat = async (
   source,
@@ -11687,7 +11134,7 @@ const readEntryStat = async (
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$3
+    ...(isWindows$2
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: async (error) => {
@@ -11772,7 +11219,7 @@ const writeEntryPermissionsSync = (source, permissions) => {
  */
 
 
-const isWindows$2 = process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
 
 const readEntryStatSync = (
   source,
@@ -11792,7 +11239,7 @@ const readEntryStatSync = (
   return statSyncNaive(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$2
+    ...(isWindows$1
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: (error) => {
@@ -12848,12 +12295,12 @@ const callOnceIdlePerFile = (callback, idleMs) => {
   };
 };
 
-const isWindows$1 = process.platform === "win32";
+const isWindows = process.platform === "win32";
 
 const createWatcher = (sourcePath, options) => {
   const watcher = watch(sourcePath, options);
 
-  if (isWindows$1) {
+  if (isWindows) {
     watcher.on("error", async (error) => {
       // https://github.com/joyent/node/issues/4337
       if (error.code === "EPERM") {
@@ -13826,7 +13273,7 @@ const applyPackageImportsResolution = (
 };
 
 const applyPackageResolve = (packageSpecifier, resolutionContext) => {
-  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
+  const { parentUrl, conditions, readPackageJson, preservesSymlink, isImport } =
     resolutionContext;
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier");
@@ -13852,7 +13299,7 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       resolutionContext,
     );
   }
-  if (packageSubpath.endsWith("/")) {
+  if (isImport && packageSubpath.endsWith("/")) {
     throw new Error("invalid module specifier");
   }
   const questionCharIndex = packageName.indexOf("?");
@@ -14196,6 +13643,12 @@ const parsePackageSpecifier = (packageSpecifier) => {
   }
   const packageName = packageSpecifier.slice(0, firstSlashIndex);
   const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  if (afterFirstSlash === "") {
+    return {
+      packageName,
+      packageSubpath: "/",
+    };
+  }
   const packageSubpath = `./${afterFirstSlash}`;
   return {
     packageName,
@@ -19525,296 +18978,6 @@ const SIGINT_CALLBACK = {
   },
 };
 
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-
-const {env} = process$1;
-
-let flagForceColor;
-if (
-	hasFlag('no-color')
-	|| hasFlag('no-colors')
-	|| hasFlag('color=false')
-	|| hasFlag('color=never')
-) {
-	flagForceColor = 0;
-} else if (
-	hasFlag('color')
-	|| hasFlag('colors')
-	|| hasFlag('color=true')
-	|| hasFlag('color=always')
-) {
-	flagForceColor = 1;
-}
-
-function envForceColor() {
-	if (!('FORCE_COLOR' in env)) {
-		return;
-	}
-
-	if (env.FORCE_COLOR === 'true') {
-		return 1;
-	}
-
-	if (env.FORCE_COLOR === 'false') {
-		return 0;
-	}
-
-	if (env.FORCE_COLOR.length === 0) {
-		return 1;
-	}
-
-	const level = Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
-
-	if (![0, 1, 2, 3].includes(level)) {
-		return;
-	}
-
-	return level;
-}
-
-function translateLevel(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3,
-	};
-}
-
-function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor();
-	if (noFlagForceColor !== undefined) {
-		flagForceColor = noFlagForceColor;
-	}
-
-	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
-
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (sniffFlags) {
-		if (hasFlag('color=16m')
-			|| hasFlag('color=full')
-			|| hasFlag('color=truecolor')) {
-			return 3;
-		}
-
-		if (hasFlag('color=256')) {
-			return 2;
-		}
-	}
-
-	// Check for Azure DevOps pipelines.
-	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
-		return 1;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process$1.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10
-			&& Number(osRelease[2]) >= 10_586
-		) {
-			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env) {
-		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env)) {
-			return 3;
-		}
-
-		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if (env.TERM === 'xterm-kitty') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env) {
-		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env.TERM_PROGRAM) {
-			case 'iTerm.app': {
-				return version >= 3 ? 3 : 2;
-			}
-
-			case 'Apple_Terminal': {
-				return 2;
-			}
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env) {
-		return 1;
-	}
-
-	return min;
-}
-
-function createSupportsColor(stream, options = {}) {
-	const level = _supportsColor(stream, {
-		streamIsTTY: stream && stream.isTTY,
-		...options,
-	});
-
-	return translateLevel(level);
-}
-
-({
-	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
-});
-
-function isUnicodeSupported() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
-
-platform === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-const ESC = '\u001B[';
-
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows = !isBrowser && process$1.platform === 'win32';
-
-isBrowser ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
-const cursorUp = (count = 1) => ESC + count + 'A';
-
-const cursorLeft = ESC + 'G';
-
-const eraseLines = count => {
-	let clear = '';
-
-	for (let i = 0; i < count; i++) {
-		clear += eraseLine + (i < count - 1 ? cursorUp() : '');
-	}
-
-	if (count) {
-		clear += cursorLeft;
-	}
-
-	return clear;
-};
-const eraseLine = ESC + '2K';
-const eraseScreen = ESC + '2J';
-
-const clearTerminal = isWindows
-	? `${eraseScreen}${ESC}0f`
-	// 1. Erases the screen (Only done in case `2` is not supported)
-	// 2. Erases the whole screen including scrollback buffer
-	// 3. Moves cursor to the top-left position
-	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	:	`${eraseScreen}${ESC}3J${ESC}H`;
-
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
@@ -19865,7 +19028,7 @@ const createAnsi = ({ supported }) => {
   return ANSI;
 };
 
-const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+const processSupportsBasicColor = createSupportsColor$2(process.stdout).hasBasic;
 
 const ANSI = createAnsi({
   supported:
@@ -19934,7 +19097,7 @@ const createUnicode = ({ supported, ANSI }) => {
 };
 
 const UNICODE = createUnicode({
-  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
+  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported$2(),
   ANSI,
 });
 
@@ -19989,6 +19152,23 @@ const setDecimalsPrecision = (
   const asFloat = asInteger / coef;
   return number < 0 ? -asFloat : asFloat;
 };
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
 const unitShort = {
   year: "y",
   month: "m",
@@ -20244,7 +19424,7 @@ const createDynamicLog = ({
     if (visualLineCount > rows) {
       if (clearTerminalAllowed) {
         clearAttemptResult = true;
-        return clearTerminal;
+        return clearTerminal$2;
       }
       // the whole log cannot be cleared because it's vertically to long
       // (longer than terminal height)
@@ -20257,7 +19437,7 @@ const createDynamicLog = ({
     }
 
     clearAttemptResult = true;
-    return eraseLines(visualLineCount);
+    return eraseLines$2(visualLineCount);
   };
 
   const update = (string) => {
@@ -20298,7 +19478,8 @@ const createDynamicLog = ({
     update("");
 
     writing = true;
-    callback();
+    callback(update);
+    lastOutput = "";
     writing = false;
 
     update(ouputAfterCallback);
@@ -20680,4 +19861,4 @@ const assertAndNormalizeDirectoryUrl = (
   return value;
 };
 
-export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };
+export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };

@@ -50,11 +50,12 @@ export const createNodeEsmResolver = ({
     if (!parentUrl.startsWith("file:")) {
       return null; // let it to jsenv_web_resolution
     }
-    const conditions = buildPackageConditions(reference.specifier, parentUrl);
+    const { specifier } = reference;
+    const conditions = buildPackageConditions(specifier, parentUrl);
     const { url, type, isMain, packageDirectoryUrl } = applyNodeEsmResolution({
       conditions,
       parentUrl,
-      specifier: reference.specifier,
+      specifier,
       preservesSymlink,
     });
     // try to give a more meaningful filename after build
@@ -142,7 +143,7 @@ const createBuildPackageConditions = (
       return !importer.includes("/node_modules/");
     },
     node: nodeRuntimeEnabled,
-    browser: nodeRuntimeEnabled,
+    browser: !nodeRuntimeEnabled,
     import: true,
   };
   for (const condition of Object.keys(packageConditions)) {

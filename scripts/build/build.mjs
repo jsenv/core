@@ -28,11 +28,9 @@ await build({
           },
         }),
       ],
-      nodeEsmResolution: {
-        "*": {
-          packageConditions: {
-            "@jsenv/server/": ["node", "import"],
-          },
+      packageConditions: {
+        development: {
+          "@jsenv/server/": false,
         },
       },
       ignore: {
