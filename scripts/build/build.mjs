@@ -9,8 +9,7 @@ const clientRuntimeCompat = {
 await build({
   sourceDirectoryUrl: import.meta.resolve("../../"),
   buildDirectoryUrl: import.meta.resolve("../../dist/"),
-  // for debug
-  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"), // for debug
   entryPoints: {
     "./src/main.js": {
       buildRelativeUrl: "./jsenv_core.js",
@@ -87,8 +86,8 @@ await build({
       buildRelativeUrl: "client/ribbon/ribbon.js",
       runtimeCompat: clientRuntimeCompat,
     },
-    "./src/plugins/server_events/client/server_events.js": {
-      buildRelativeUrl: "client/server_events/server_events.js",
+    "./src/plugins/server_events/client/server_events_client.js": {
+      buildRelativeUrl: "client/server_events/server_events_client.js",
       runtimeCompat: clientRuntimeCompat,
     },
     "./packages/internal/plugin-transpilation/src/babel/new_stylesheet/client/new_stylesheet.js":
