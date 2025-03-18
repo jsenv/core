@@ -30,8 +30,12 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
-import { inferRuntimeCompatFromClosestPackage } from "@jsenv/runtime-compat";
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  browserDefaultRuntimeCompat,
+  inferRuntimeCompatFromClosestPackage,
+  nodeDefaultRuntimeCompat,
+} from "@jsenv/runtime-compat";
+import { urlIsInsideOf, urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
@@ -189,6 +193,13 @@ export const build = async ({
               `The key "${key}" in "entryPoints" is invalid: it must be inside the source directory at ${sourceDirectoryUrl}.`,
             );
           }
+
+          if (!runtimeType) {
+            const ext = urlToExtension(sourceUrl);
+            if (ext === ".html" || ext === ".css") {
+              runtimeType = "browser";
+            }
+          }
         }
 
         // value (entryPointParams)
@@ -255,11 +266,21 @@ export const build = async ({
           const { runtimeCompat } = value;
           if (runtimeCompat === undefined) {
             const runtimeCompatFromPackage =
-              inferRuntimeCompatFromClosestPackage(sourceUrl, { runtimeType });
-            if (!runtimeCompatFromPackage) {
-              throw new TypeError(
-                `The runtimeCompat is missing${forEntryPointOrEmpty} and could not be inferred from the closest package.json.`,
-              );
+              inferRuntimeCompatFromClosestPackage(sourceUrl, {
+                runtimeType,
+              });
+            if (runtimeCompatFromPackage) {
+              params.runtimeCompat = runtimeCompatFromPackage;
+            } else {
+              params.runtimeCompat =
+                runtimeType === "browser"
+                  ? browserDefaultRuntimeCompat
+                  : nodeDefaultRuntimeCompat;
+              // if (!runtimeCompatFromPackage) {
+              //   throw new TypeError(
+              //     `The runtimeCompat is missing${forEntryPointOrEmpty} and could not be inferred from the closest package.json.`,
+              //   );
+              // }
             }
           } else if (
             runtimeCompat === null ||

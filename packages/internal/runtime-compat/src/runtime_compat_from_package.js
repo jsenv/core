@@ -1,5 +1,5 @@
 import { lookupPackageDirectory, readPackageAtOrNull } from "@jsenv/filesystem";
-import { urlToExtension } from "@jsenv/urls";
+import { browserDefaultRuntimeCompat } from "./browser_default_runtime_compat.js";
 
 export const inferRuntimeCompatFromClosestPackage = async (
   sourceUrl,
@@ -14,12 +14,7 @@ export const inferRuntimeCompatFromClosestPackage = async (
     return null;
   }
 
-  const extension = urlToExtension(sourceUrl);
-  if (
-    runtimeType === "browser" ||
-    extension === ".html" ||
-    extension === ".css"
-  ) {
+  if (runtimeType === "browser") {
     const browserlist = packageJSON.browserlist;
     if (!browserlist) {
       return null;
@@ -33,7 +28,9 @@ export const inferRuntimeCompatFromClosestPackage = async (
       if (name === "ios_saf") {
         name = "ios";
       }
-      runtimeCompat[name] = version;
+      if (Object.keys(browserDefaultRuntimeCompat).includes(name)) {
+        runtimeCompat[name] = version;
+      }
     }
     return runtimeCompat;
   }
@@ -42,7 +39,6 @@ export const inferRuntimeCompatFromClosestPackage = async (
   if (!engines) {
     return null;
   }
-
   const node = engines.node;
   const versionMatch = node.match(/[0-9*.]+/);
   if (!versionMatch) {
