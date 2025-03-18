@@ -1,4 +1,4 @@
-# [0_basic](../../js_entry_many.test.mjs#L36)
+# [0_basic](../../js_entry_many.test.mjs#L42)
 
 ```js
 run()

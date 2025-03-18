@@ -46,6 +46,7 @@ await build({
         "file://**/node_modules/@jsenv/sourcemap/": true, // cannot inline "source-map"
         "file://**/node_modules/@jsenv/url-meta/": false,
         "file://**/node_modules/@jsenv/urls/": false,
+        "file://**/node_modules/@jsenv/runtime-compat/": false,
         "file://**/node_modules/@jsenv/utils/": false,
         "file://**/node_modules/ws/": false,
         "file://**/node_modules/ansi-escapes/": false,

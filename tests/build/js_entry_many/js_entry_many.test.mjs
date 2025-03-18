@@ -8,11 +8,17 @@ const run = async () => {
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
-      "./a.js": "a.js",
-      "./b.js": "b.js",
+      "./a.js": {
+        bundling: false,
+        minification: false,
+        runtimeCompat: { chrome: "90" },
+      },
+      "./b.js": {
+        bundling: false,
+        minification: false,
+        runtimeCompat: { chrome: "90" },
+      },
     },
-    bundling: false,
-    minification: false,
   });
   copyFileSync({
     from: new URL("./client/a.html", import.meta.url),
