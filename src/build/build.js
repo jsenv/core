@@ -623,6 +623,12 @@ const prepareEntryPointBuild = async (
     if (entryPointParams.base === undefined) {
       base = someEntryPointUseNode ? "./" : "/";
     }
+    if (entryPointParams.bundling === undefined) {
+      bundling = !someEntryPointUseNode;
+    }
+    if (bundling === true) {
+      bundling = {};
+    }
     if (entryPointParams.minification === undefined) {
       minification = !someEntryPointUseNode;
     }
@@ -838,8 +844,8 @@ const prepareEntryPointBuild = async (
       );
       finalKitchen.setPluginController(finalPluginController);
 
-      const bundlers = {};
       bundle: {
+        const bundlerMap = new Map();
         for (const plugin of rawKitchen.pluginController.activePlugins) {
           const bundle = plugin.bundle;
           if (!bundle) {
@@ -855,20 +861,22 @@ const prepareEntryPointBuild = async (
             if (!bundleFunction) {
               continue;
             }
-            const bundlerForThatType = bundlers[type];
-            if (bundlerForThatType) {
+            if (bundlerMap.has(type)) {
               // first plugin to define a bundle hook wins
               continue;
             }
-            bundlers[type] = {
+            bundlerMap.set(type, {
               plugin,
               bundleFunction: bundle[type],
               urlInfoMap: new Map(),
-            };
+            });
           }
         }
+        if (bundlerMap.size === 0) {
+          break bundle;
+        }
         const addToBundlerIfAny = (rawUrlInfo) => {
-          const bundler = bundlers[rawUrlInfo.type];
+          const bundler = bundlerMap.get(rawUrlInfo.type);
           if (bundler) {
             bundler.urlInfoMap.set(rawUrlInfo.url, rawUrlInfo);
           }
@@ -951,8 +959,7 @@ const prepareEntryPointBuild = async (
             }
           },
         );
-        for (const type of Object.keys(bundlers)) {
-          const bundler = bundlers[type];
+        for (const [type, bundler] of bundlerMap) {
           const urlInfosToBundle = Array.from(bundler.urlInfoMap.values());
           if (urlInfosToBundle.length === 0) {
             continue;
