@@ -4903,6 +4903,369 @@ const getExtensionsToTry$1 = (magicExtensions, importer) => {
   return Array.from(extensionsSet.values());
 };
 
+const versionFromValue$1 = (value) => {
+  if (typeof value === "number") {
+    return numberToVersion$1(value);
+  }
+  if (typeof value === "string") {
+    return stringToVersion$1(value);
+  }
+  throw new TypeError(`version must be a number or a string, got ${value}`);
+};
+
+const numberToVersion$1 = (number) => {
+  return {
+    major: number,
+    minor: 0,
+    patch: 0,
+  };
+};
+
+const stringToVersion$1 = (string) => {
+  if (string.indexOf(".") > -1) {
+    const parts = string.split(".");
+    return {
+      major: Number(parts[0]),
+      minor: parts[1] ? Number(parts[1]) : 0,
+      patch: parts[2] ? Number(parts[2]) : 0,
+    };
+  }
+
+  if (isNaN(string)) {
+    return {
+      major: 0,
+      minor: 0,
+      patch: 0,
+    };
+  }
+
+  return {
+    major: Number(string),
+    minor: 0,
+    patch: 0,
+  };
+};
+
+const compareTwoVersions$1 = (versionA, versionB) => {
+  const semanticVersionA = versionFromValue$1(versionA);
+  const semanticVersionB = versionFromValue$1(versionB);
+  const majorDiff = semanticVersionA.major - semanticVersionB.major;
+  if (majorDiff > 0) {
+    return majorDiff;
+  }
+  if (majorDiff < 0) {
+    return majorDiff;
+  }
+  const minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+  if (minorDiff > 0) {
+    return minorDiff;
+  }
+  if (minorDiff < 0) {
+    return minorDiff;
+  }
+  const patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+  if (patchDiff > 0) {
+    return patchDiff;
+  }
+  if (patchDiff < 0) {
+    return patchDiff;
+  }
+  return 0;
+};
+
+const versionIsBelow$1 = (versionSupposedBelow, versionSupposedAbove) => {
+  return compareTwoVersions$1(versionSupposedBelow, versionSupposedAbove) < 0;
+};
+
+const findHighestVersion$1 = (...values) => {
+  if (values.length === 0) throw new Error(`missing argument`);
+  return values.reduce((highestVersion, value) => {
+    if (versionIsBelow$1(highestVersion, value)) {
+      return value;
+    }
+    return highestVersion;
+  });
+};
+
+const featuresCompatMap$1 = {
+  script_type_module: {
+    edge: "16",
+    firefox: "60",
+    chrome: "61",
+    safari: "10.1",
+    opera: "48",
+    ios: "10.3",
+    android: "61",
+    samsung: "8.2",
+  },
+  document_current_script: {
+    edge: "12",
+    firefox: "4",
+    chrome: "29",
+    safari: "8",
+    opera: "16",
+    android: "4.4",
+    samsung: "4",
+  },
+  // https://caniuse.com/?search=import.meta
+  import_meta: {
+    android: "9",
+    chrome: "64",
+    edge: "79",
+    firefox: "62",
+    ios: "12",
+    opera: "51",
+    safari: "11.1",
+    samsung: "9.2",
+  },
+  import_meta_resolve: {
+    chrome: "107",
+    edge: "105",
+    firefox: "106",
+    node: "20.0.0",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
+  import_dynamic: {
+    android: "8",
+    chrome: "63",
+    edge: "79",
+    firefox: "67",
+    ios: "11.3",
+    opera: "50",
+    safari: "11.3",
+    samsung: "8.0",
+    node: "13.2",
+  },
+  top_level_await: {
+    edge: "89",
+    chrome: "89",
+    firefox: "89",
+    opera: "75",
+    safari: "15",
+    samsung: "15",
+    ios: "15",
+    node: "14.8",
+  },
+  // https://caniuse.com/import-maps
+  importmap: {
+    edge: "89",
+    chrome: "89",
+    opera: "76",
+    samsung: "15",
+    firefox: "108",
+    safari: "16.4",
+  },
+  import_type_json: {
+    chrome: "123",
+    safari: "17.2",
+  },
+  import_type_css: {
+    chrome: "123",
+  },
+  import_type_text: {},
+  // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility
+  new_stylesheet: {
+    chrome: "73",
+    edge: "79",
+    opera: "53",
+    android: "73",
+  },
+  // https://caniuse.com/?search=worker
+  worker: {
+    ie: "10",
+    edge: "12",
+    firefox: "3.5",
+    chrome: "4",
+    opera: "11.5",
+    safari: "4",
+    ios: "5",
+    android: "4.4",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
+  worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  worker_importmap: {},
+  service_worker: {
+    edge: "17",
+    firefox: "44",
+    chrome: "40",
+    safari: "11.1",
+    opera: "27",
+    ios: "11.3",
+    android: "12.12",
+  },
+  service_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  service_worker_importmap: {},
+  shared_worker: {
+    chrome: "4",
+    edge: "79",
+    firefox: "29",
+    opera: "10.6",
+  },
+  shared_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+  },
+  shared_worker_importmap: {},
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
+  global_this: {
+    edge: "79",
+    firefox: "65",
+    chrome: "71",
+    safari: "12.1",
+    opera: "58",
+    ios: "12.2",
+    android: "94",
+    node: "12",
+  },
+  async_generator_function: {
+    chrome: "63",
+    opera: "50",
+    edge: "79",
+    firefox: "57",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "8",
+    electron: "3",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#browser_compatibility
+  template_literals: {
+    chrome: "41",
+    edge: "12",
+    firefox: "34",
+    opera: "28",
+    safari: "9",
+    ios: "9",
+    android: "4",
+    node: "4",
+  },
+  arrow_function: {
+    chrome: "47",
+    opera: "34",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36",
+  },
+  const_bindings: {
+    chrome: "41",
+    opera: "28",
+    edge: "12",
+    firefox: "46",
+    safari: "10",
+    node: "4",
+    ie: "11",
+    ios: "10",
+    samsung: "3.4",
+    electron: "0.22",
+  },
+  object_properties_shorthand: {
+    chrome: "43",
+    opera: "30",
+    edge: "12",
+    firefox: "33",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.28",
+  },
+  reserved_words: {
+    chrome: "13",
+    opera: "10.50",
+    edge: "12",
+    firefox: "2",
+    safari: "3.1",
+    node: "0.10",
+    ie: "9",
+    android: "4.4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20",
+  },
+  symbols: {
+    chrome: "38",
+    opera: "25",
+    edge: "12",
+    firefox: "36",
+    safari: "9",
+    ios: "9",
+    samsung: "4",
+    node: "0.12",
+  },
+};
+
+const RUNTIME_COMPAT$1 = {
+  featuresCompatMap: featuresCompatMap$1,
+
+  add: (originalRuntimeCompat, feature) => {
+    const featureCompat = getFeatureCompat$1(feature);
+    const runtimeCompat = {
+      ...originalRuntimeCompat,
+    };
+    Object.keys(originalRuntimeCompat).forEach((runtimeName) => {
+      const secondVersion = featureCompat[runtimeName]; // the version supported by the feature
+      if (secondVersion) {
+        const firstVersion = originalRuntimeCompat[runtimeName];
+        runtimeCompat[runtimeName] = findHighestVersion$1(
+          firstVersion,
+          secondVersion,
+        );
+      }
+    });
+    return runtimeCompat;
+  },
+
+  isSupported: (
+    runtimeCompat,
+    feature,
+    featureCompat = getFeatureCompat$1(feature),
+  ) => {
+    const runtimeNames = Object.keys(runtimeCompat);
+    const runtimeWithoutCompat = runtimeNames.find((runtimeName) => {
+      const runtimeVersion = runtimeCompat[runtimeName];
+      const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity";
+      const highestVersion = findHighestVersion$1(
+        runtimeVersion,
+        runtimeVersionCompatible,
+      );
+      return highestVersion !== runtimeVersion;
+    });
+    return !runtimeWithoutCompat;
+  },
+};
+
+const getFeatureCompat$1 = (feature) => {
+  if (typeof feature === "string") {
+    const compat = featuresCompatMap$1[feature];
+    if (!compat) {
+      throw new Error(`"${feature}" feature is unknown`);
+    }
+    return compat;
+  }
+  if (typeof feature !== "object") {
+    throw new TypeError(
+      `feature must be a string or an object, got ${feature}`,
+    );
+  }
+  return feature;
+};
+
 const isSupportedAlgorithm$1 = (algo) => {
   return SUPPORTED_ALGORITHMS$1.includes(algo);
 };
@@ -6429,7 +6792,7 @@ const injectAstAfterImport$1 = (programPath, ast) => {
 };
 
 const newStylesheetClientFileUrl$1 = new URL(
-  "./client/new_stylesheet/new_stylesheet.js",
+  "./client/new_stylesheet.js",
   import.meta.url,
 ).href;
 
@@ -6587,7 +6950,7 @@ const getImportAttributes$1 = (importNode) => {
 };
 
 const regeneratorRuntimeClientFileUrl$1 = new URL(
-  "./client/regenerator_runtime/regenerator_runtime.js",
+  "./client/regenerator_runtime.js",
   import.meta.url,
 ).href;
 
@@ -12993,6 +13356,192 @@ const bufferToEtag = (buffer) => {
   return `"${length.toString(16)}-${hashBase64StringSubset}"`;
 };
 
+// https://nodejs.org/api/packages.html#resolving-user-conditions
+const readCustomConditionsFromProcessArgs = () => {
+  const packageConditions = [];
+  for (const arg of process.execArgv) {
+    if (arg.includes("-C=")) {
+      const packageCondition = arg.slice(0, "-C=".length);
+      packageConditions.push(packageCondition);
+    }
+    if (arg.includes("--conditions=")) {
+      const packageCondition = arg.slice("--conditions=".length);
+      packageConditions.push(packageCondition);
+    }
+  }
+  return packageConditions;
+};
+
+const asDirectoryUrl = (url) => {
+  const { pathname } = new URL(url);
+  if (pathname.endsWith("/")) {
+    return url;
+  }
+  return new URL("./", url).href;
+};
+
+const getParentUrl = (url) => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
+    }
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf(
+        "/",
+        slashLastIndex - 1,
+      );
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+
+const isValidUrl = (url) => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const urlToFilename = (url) => {
+  const { pathname } = new URL(url);
+  const pathnameBeforeLastSlash = pathname.endsWith("/")
+    ? pathname.slice(0, -1)
+    : pathname;
+  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1
+      ? pathnameBeforeLastSlash
+      : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
+  return filename;
+};
+
+const urlToExtension$1 = (url) => {
+  const filename = urlToFilename(url);
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) return "";
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex);
+  return extension;
+};
+
+const defaultLookupPackageScope = (url) => {
+  let scopeUrl = asDirectoryUrl(url);
+  while (scopeUrl !== "file:///") {
+    if (scopeUrl.endsWith("node_modules/")) {
+      return null;
+    }
+    const packageJsonUrlObject = new URL("package.json", scopeUrl);
+    if (existsSync(packageJsonUrlObject)) {
+      return scopeUrl;
+    }
+    scopeUrl = getParentUrl(scopeUrl);
+  }
+  return null;
+};
+
+const defaultReadPackageJson = (packageUrl) => {
+  const packageJsonUrl = new URL("package.json", packageUrl);
+  const buffer = readFileSync(packageJsonUrl);
+  const string = String(buffer);
+  try {
+    return JSON.parse(string);
+  } catch {
+    throw new Error(`Invalid package configuration`);
+  }
+};
+
+// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
+
+const createInvalidModuleSpecifierError = (
+  reason,
+  specifier,
+  { parentUrl },
+) => {
+  const error = new Error(
+    `Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(
+      parentUrl,
+    )}`,
+  );
+  error.code = "INVALID_MODULE_SPECIFIER";
+  return error;
+};
+
+const createInvalidPackageTargetError = (
+  reason,
+  target,
+  { parentUrl, packageDirectoryUrl, key, isImport },
+) => {
+  let message;
+  if (key === ".") {
+    message = `Invalid "exports" main target defined in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+  } else {
+    message = `Invalid "${
+      isImport ? "imports" : "exports"
+    }" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+  }
+  const error = new Error(message);
+  error.code = "INVALID_PACKAGE_TARGET";
+  return error;
+};
+
+const createPackagePathNotExportedError = (
+  subpath,
+  { parentUrl, packageDirectoryUrl },
+) => {
+  let message;
+  if (subpath === ".") {
+    message = `No "exports" main defined in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}`;
+  } else {
+    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}`;
+  }
+  const error = new Error(message);
+  error.code = "PACKAGE_PATH_NOT_EXPORTED";
+  return error;
+};
+
+const createModuleNotFoundError = (specifier, { parentUrl }) => {
+  const error = new Error(
+    `Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`,
+  );
+  error.code = "MODULE_NOT_FOUND";
+  return error;
+};
+
+const createPackageImportNotDefinedError = (
+  specifier,
+  { parentUrl, packageDirectoryUrl },
+) => {
+  const error = new Error(
+    `Package import specifier "${specifier}" is not defined in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}`,
+  );
+  error.code = "PACKAGE_IMPORT_NOT_DEFINED";
+  return error;
+};
+
 const isSpecifierForNodeBuiltin = (specifier) => {
   return (
     specifier.startsWith("node:") ||
@@ -13079,6 +13628,843 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "global",
 ];
 
+/*
+ * https://nodejs.org/api/esm.html#resolver-algorithm-specification
+ * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
+ * deviations from the spec:
+ * - take into account "browser", "module" and "jsnext"
+ * - the check for isDirectory -> throw is delayed is descoped to the caller
+ * - the call to real path ->
+ *   delayed to the caller so that we can decide to
+ *   maintain symlink as facade url when it's outside project directory
+ *   or use the real path when inside
+ */
+
+const applyNodeEsmResolution = ({
+  specifier,
+  parentUrl,
+  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
+  lookupPackageScope = defaultLookupPackageScope,
+  readPackageJson = defaultReadPackageJson,
+  preservesSymlink = false,
+}) => {
+  const resolution = applyPackageSpecifierResolution(specifier, {
+    parentUrl: String(parentUrl),
+    conditions,
+    lookupPackageScope,
+    readPackageJson,
+    preservesSymlink,
+  });
+  const { url } = resolution;
+  if (url.startsWith("file:")) {
+    if (url.includes("%2F") || url.includes("%5C")) {
+      throw createInvalidModuleSpecifierError(
+        `must not include encoded "/" or "\\" characters`,
+        specifier,
+        {
+          parentUrl,
+        },
+      );
+    }
+    return resolution;
+  }
+  return resolution;
+};
+
+const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
+  const { parentUrl } = resolutionContext;
+  // relative specifier
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    if (specifier[0] !== "/") {
+      const browserFieldResolution = applyBrowserFieldResolution(
+        specifier,
+        resolutionContext,
+      );
+      if (browserFieldResolution) {
+        return browserFieldResolution;
+      }
+    }
+    return {
+      type: "relative_specifier",
+      url: new URL(specifier, parentUrl).href,
+    };
+  }
+  if (specifier[0] === "#") {
+    return applyPackageImportsResolution(specifier, resolutionContext);
+  }
+  try {
+    const urlObject = new URL(specifier);
+    if (specifier.startsWith("node:")) {
+      return {
+        type: "node_builtin_specifier",
+        url: specifier,
+      };
+    }
+    return {
+      type: "absolute_specifier",
+      url: urlObject.href,
+    };
+  } catch {
+    // bare specifier
+    const browserFieldResolution = applyBrowserFieldResolution(
+      specifier,
+      resolutionContext,
+    );
+    if (browserFieldResolution) {
+      return browserFieldResolution;
+    }
+    const packageResolution = applyPackageResolve(specifier, resolutionContext);
+    const search = new URL(specifier, "file:///").search;
+    if (search && !new URL(packageResolution.url).search) {
+      packageResolution.url = `${packageResolution.url}${search}`;
+    }
+    return packageResolution;
+  }
+};
+
+const applyBrowserFieldResolution = (specifier, resolutionContext) => {
+  const { parentUrl, conditions, lookupPackageScope, readPackageJson } =
+    resolutionContext;
+  const browserCondition = conditions.includes("browser");
+  if (!browserCondition) {
+    return null;
+  }
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (!packageDirectoryUrl) {
+    return null;
+  }
+  const packageJson = readPackageJson(packageDirectoryUrl);
+  if (!packageJson) {
+    return null;
+  }
+  const { browser } = packageJson;
+  if (!browser) {
+    return null;
+  }
+  if (typeof browser !== "object") {
+    return null;
+  }
+  let url;
+  if (specifier.startsWith(".")) {
+    const specifierUrl = new URL(specifier, parentUrl).href;
+    const specifierRelativeUrl = specifierUrl.slice(packageDirectoryUrl.length);
+    const secifierRelativeNotation = `./${specifierRelativeUrl}`;
+    const browserMapping = browser[secifierRelativeNotation];
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageDirectoryUrl).href;
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${specifierUrl.slice("file:///")}`;
+    }
+  } else {
+    const browserMapping = browser[specifier];
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageDirectoryUrl).href;
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${specifier}`;
+    }
+  }
+  if (url) {
+    return {
+      type: "field:browser",
+      isMain: true,
+      packageDirectoryUrl,
+      packageJson,
+      url,
+    };
+  }
+  return null;
+};
+
+const applyPackageImportsResolution = (
+  internalSpecifier,
+  resolutionContext,
+) => {
+  const { parentUrl, lookupPackageScope, readPackageJson } = resolutionContext;
+  if (internalSpecifier === "#" || internalSpecifier.startsWith("#/")) {
+    throw createInvalidModuleSpecifierError(
+      "not a valid internal imports specifier name",
+      internalSpecifier,
+      resolutionContext,
+    );
+  }
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (packageDirectoryUrl !== null) {
+    const packageJson = readPackageJson(packageDirectoryUrl);
+    const { imports } = packageJson;
+    if (imports !== null && typeof imports === "object") {
+      const resolved = applyPackageImportsExportsResolution(internalSpecifier, {
+        ...resolutionContext,
+        packageDirectoryUrl,
+        packageJson,
+        isImport: true,
+      });
+      if (resolved) {
+        return resolved;
+      }
+    }
+  }
+  throw createPackageImportNotDefinedError(internalSpecifier, {
+    ...resolutionContext,
+    packageDirectoryUrl,
+  });
+};
+
+const applyPackageResolve = (packageSpecifier, resolutionContext) => {
+  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
+    resolutionContext;
+  if (packageSpecifier === "") {
+    throw new Error("invalid module specifier");
+  }
+  if (
+    conditions.includes("node") &&
+    isSpecifierForNodeBuiltin(packageSpecifier)
+  ) {
+    return {
+      type: "node_builtin_specifier",
+      url: `node:${packageSpecifier}`,
+    };
+  }
+  let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
+  if (
+    packageName[0] === "." ||
+    packageName.includes("\\") ||
+    packageName.includes("%")
+  ) {
+    throw createInvalidModuleSpecifierError(
+      `is not a valid package name`,
+      packageName,
+      resolutionContext,
+    );
+  }
+  if (packageSubpath.endsWith("/")) {
+    throw new Error("invalid module specifier");
+  }
+  const questionCharIndex = packageName.indexOf("?");
+  if (questionCharIndex > -1) {
+    packageName = packageName.slice(0, questionCharIndex);
+  }
+  const selfResolution = applyPackageSelfResolution(packageSubpath, {
+    ...resolutionContext,
+    packageName,
+  });
+  if (selfResolution) {
+    return selfResolution;
+  }
+  let currentUrl = parentUrl;
+  while (currentUrl !== "file:///") {
+    const packageDirectoryFacadeUrl = new URL(
+      `node_modules/${packageName}/`,
+      currentUrl,
+    ).href;
+    if (!existsSync(new URL(packageDirectoryFacadeUrl))) {
+      currentUrl = getParentUrl(currentUrl);
+      continue;
+    }
+    const packageDirectoryUrl = preservesSymlink
+      ? packageDirectoryFacadeUrl
+      : resolvePackageSymlink(packageDirectoryFacadeUrl);
+    const packageJson = readPackageJson(packageDirectoryUrl);
+    if (packageJson !== null) {
+      const { exports } = packageJson;
+      if (exports !== null && exports !== undefined) {
+        return applyPackageExportsResolution(packageSubpath, {
+          ...resolutionContext,
+          packageDirectoryUrl,
+          packageJson,
+          exports,
+        });
+      }
+    }
+    return applyLegacySubpathResolution(packageSubpath, {
+      ...resolutionContext,
+      packageDirectoryUrl,
+      packageJson,
+    });
+  }
+  throw createModuleNotFoundError(packageName, resolutionContext);
+};
+
+const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
+  const { parentUrl, packageName, lookupPackageScope, readPackageJson } =
+    resolutionContext;
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (!packageDirectoryUrl) {
+    return undefined;
+  }
+  const packageJson = readPackageJson(packageDirectoryUrl);
+  if (!packageJson) {
+    return undefined;
+  }
+  if (packageJson.name !== packageName) {
+    return undefined;
+  }
+  const { exports } = packageJson;
+  if (!exports) {
+    const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
+      ...resolutionContext,
+      packageDirectoryUrl,
+      packageJson,
+    });
+    if (subpathResolution && subpathResolution.type !== "subpath") {
+      return subpathResolution;
+    }
+    return undefined;
+  }
+  return applyPackageExportsResolution(packageSubpath, {
+    ...resolutionContext,
+    packageDirectoryUrl,
+    packageJson,
+  });
+};
+
+// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
+const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
+  if (packageSubpath === ".") {
+    const mainExport = applyMainExportResolution(resolutionContext);
+    if (!mainExport) {
+      throw createPackagePathNotExportedError(
+        packageSubpath,
+        resolutionContext,
+      );
+    }
+    const resolved = applyPackageTargetResolution(mainExport, {
+      ...resolutionContext,
+      key: ".",
+    });
+    if (resolved) {
+      return resolved;
+    }
+    throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
+  }
+  const packageExportsInfo = readExports(resolutionContext);
+  if (
+    packageExportsInfo.type === "object" &&
+    packageExportsInfo.allKeysAreRelative
+  ) {
+    const resolved = applyPackageImportsExportsResolution(packageSubpath, {
+      ...resolutionContext,
+      isImport: false,
+    });
+    if (resolved) {
+      return resolved;
+    }
+  }
+  throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
+};
+
+const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
+  const { packageJson, isImport } = resolutionContext;
+  const matchObject = isImport ? packageJson.imports : packageJson.exports;
+
+  if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
+    const target = matchObject[matchKey];
+    return applyPackageTargetResolution(target, {
+      ...resolutionContext,
+      key: matchKey,
+      isImport,
+    });
+  }
+  const expansionKeys = Object.keys(matchObject)
+    .filter((key) => key.split("*").length === 2)
+    .sort(comparePatternKeys);
+  for (const expansionKey of expansionKeys) {
+    const [patternBase, patternTrailer] = expansionKey.split("*");
+    if (matchKey === patternBase) continue;
+    if (!matchKey.startsWith(patternBase)) continue;
+    if (patternTrailer.length > 0) {
+      if (!matchKey.endsWith(patternTrailer)) continue;
+      if (matchKey.length < expansionKey.length) continue;
+    }
+    const target = matchObject[expansionKey];
+    const subpath = matchKey.slice(
+      patternBase.length,
+      matchKey.length - patternTrailer.length,
+    );
+    return applyPackageTargetResolution(target, {
+      ...resolutionContext,
+      key: matchKey,
+      subpath,
+      pattern: true,
+      isImport,
+    });
+  }
+  return null;
+};
+
+const applyPackageTargetResolution = (target, resolutionContext) => {
+  const {
+    conditions,
+    packageDirectoryUrl,
+    packageJson,
+    key,
+    subpath = "",
+    pattern = false,
+    isImport = false,
+  } = resolutionContext;
+
+  if (typeof target === "string") {
+    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
+      throw new Error("invalid module specifier");
+    }
+    if (target.startsWith("./")) {
+      const targetUrl = new URL(target, packageDirectoryUrl).href;
+      if (!targetUrl.startsWith(packageDirectoryUrl)) {
+        throw createInvalidPackageTargetError(
+          `target must be inside package`,
+          target,
+          resolutionContext,
+        );
+      }
+      return {
+        type: isImport ? "field:imports" : "field:exports",
+        isMain: subpath === "" || subpath === ".",
+        packageDirectoryUrl,
+        packageJson,
+        url: pattern
+          ? targetUrl.replaceAll("*", subpath)
+          : new URL(subpath, targetUrl).href,
+      };
+    }
+    if (!isImport || target.startsWith("../") || isValidUrl(target)) {
+      throw createInvalidPackageTargetError(
+        `target must starst with "./"`,
+        target,
+        resolutionContext,
+      );
+    }
+    return applyPackageResolve(
+      pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
+      {
+        ...resolutionContext,
+        parentUrl: packageDirectoryUrl,
+      },
+    );
+  }
+  if (Array.isArray(target)) {
+    if (target.length === 0) {
+      return null;
+    }
+    let lastResult;
+    let i = 0;
+    while (i < target.length) {
+      const targetValue = target[i];
+      i++;
+      try {
+        const resolved = applyPackageTargetResolution(targetValue, {
+          ...resolutionContext,
+          key: `${key}[${i}]`,
+          subpath,
+          pattern,
+          isImport,
+        });
+        if (resolved) {
+          return resolved;
+        }
+        lastResult = resolved;
+      } catch (e) {
+        if (e.code === "INVALID_PACKAGE_TARGET") {
+          continue;
+        }
+        lastResult = e;
+      }
+    }
+    if (lastResult) {
+      throw lastResult;
+    }
+    return null;
+  }
+  if (target === null) {
+    return null;
+  }
+  if (typeof target === "object") {
+    const keys = Object.keys(target);
+    for (const key of keys) {
+      if (Number.isInteger(key)) {
+        throw new Error("Invalid package configuration");
+      }
+      if (key === "default" || conditions.includes(key)) {
+        const targetValue = target[key];
+        const resolved = applyPackageTargetResolution(targetValue, {
+          ...resolutionContext,
+          key,
+          subpath,
+          pattern,
+          isImport,
+        });
+        if (resolved) {
+          return resolved;
+        }
+      }
+    }
+    return null;
+  }
+  throw createInvalidPackageTargetError(
+    `target must be a string, array, object or null`,
+    target,
+    resolutionContext,
+  );
+};
+
+const readExports = ({ packageDirectoryUrl, packageJson }) => {
+  const packageExports = packageJson.exports;
+  if (Array.isArray(packageExports)) {
+    return {
+      type: "array",
+    };
+  }
+  if (packageExports === null) {
+    return {};
+  }
+  if (typeof packageExports === "object") {
+    const keys = Object.keys(packageExports);
+    const relativeKeys = [];
+    const conditionalKeys = [];
+    keys.forEach((availableKey) => {
+      if (availableKey.startsWith(".")) {
+        relativeKeys.push(availableKey);
+      } else {
+        conditionalKeys.push(availableKey);
+      }
+    });
+    const hasRelativeKey = relativeKeys.length > 0;
+    if (hasRelativeKey && conditionalKeys.length > 0) {
+      throw new Error(
+        `Invalid package configuration: cannot mix relative and conditional keys in package.exports
+--- unexpected keys ---
+${conditionalKeys.map((key) => `"${key}"`).join("\n")}
+--- package directory url ---
+${packageDirectoryUrl}`,
+      );
+    }
+    return {
+      type: "object",
+      hasRelativeKey,
+      allKeysAreRelative: relativeKeys.length === keys.length,
+    };
+  }
+  if (typeof packageExports === "string") {
+    return { type: "string" };
+  }
+  return {};
+};
+
+const parsePackageSpecifier = (packageSpecifier) => {
+  if (packageSpecifier[0] === "@") {
+    const firstSlashIndex = packageSpecifier.indexOf("/");
+    if (firstSlashIndex === -1) {
+      throw new Error("invalid module specifier");
+    }
+    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
+    if (secondSlashIndex === -1) {
+      return {
+        packageName: packageSpecifier,
+        packageSubpath: ".",
+        isScoped: true,
+      };
+    }
+    const packageName = packageSpecifier.slice(0, secondSlashIndex);
+    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
+    const packageSubpath = `./${afterSecondSlash}`;
+    return {
+      packageName,
+      packageSubpath,
+      isScoped: true,
+    };
+  }
+  const firstSlashIndex = packageSpecifier.indexOf("/");
+  if (firstSlashIndex === -1) {
+    return {
+      packageName: packageSpecifier,
+      packageSubpath: ".",
+    };
+  }
+  const packageName = packageSpecifier.slice(0, firstSlashIndex);
+  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  const packageSubpath = `./${afterFirstSlash}`;
+  return {
+    packageName,
+    packageSubpath,
+  };
+};
+
+const applyMainExportResolution = (resolutionContext) => {
+  const { packageJson } = resolutionContext;
+  const packageExportsInfo = readExports(resolutionContext);
+  if (
+    packageExportsInfo.type === "array" ||
+    packageExportsInfo.type === "string"
+  ) {
+    return packageJson.exports;
+  }
+  if (packageExportsInfo.type === "object") {
+    if (packageExportsInfo.hasRelativeKey) {
+      return packageJson.exports["."];
+    }
+    return packageJson.exports;
+  }
+  return undefined;
+};
+
+const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
+  const { packageDirectoryUrl, packageJson } = resolutionContext;
+
+  if (packageSubpath === ".") {
+    return applyLegacyMainResolution(packageSubpath, resolutionContext);
+  }
+  const browserFieldResolution = applyBrowserFieldResolution(
+    packageSubpath,
+    resolutionContext,
+  );
+  if (browserFieldResolution) {
+    return browserFieldResolution;
+  }
+  return {
+    type: "subpath",
+    isMain: packageSubpath === ".",
+    packageDirectoryUrl,
+    packageJson,
+    url: new URL(packageSubpath, packageDirectoryUrl).href,
+  };
+};
+
+const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
+  const { conditions, packageDirectoryUrl, packageJson } = resolutionContext;
+  for (const condition of conditions) {
+    const conditionResolver = mainLegacyResolvers[condition];
+    if (!conditionResolver) {
+      continue;
+    }
+    const resolved = conditionResolver(resolutionContext);
+    if (resolved) {
+      return {
+        type: resolved.type,
+        isMain: resolved.isMain,
+        packageDirectoryUrl,
+        packageJson,
+        url: new URL(resolved.path, packageDirectoryUrl).href,
+      };
+    }
+  }
+  return {
+    type: "field:main", // the absence of "main" field
+    isMain: true,
+    packageDirectoryUrl,
+    packageJson,
+    url: new URL("index.js", packageDirectoryUrl).href,
+  };
+};
+const mainLegacyResolvers = {
+  import: ({ packageJson }) => {
+    if (typeof packageJson.module === "string") {
+      return { type: "field:module", isMain: true, path: packageJson.module };
+    }
+    if (typeof packageJson.jsnext === "string") {
+      return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
+    }
+    if (typeof packageJson.main === "string") {
+      return { type: "field:main", isMain: true, path: packageJson.main };
+    }
+    return null;
+  },
+  browser: ({ packageDirectoryUrl, packageJson }) => {
+    const browserMain = (() => {
+      if (typeof packageJson.browser === "string") {
+        return packageJson.browser;
+      }
+      if (
+        typeof packageJson.browser === "object" &&
+        packageJson.browser !== null
+      ) {
+        return packageJson.browser["."];
+      }
+      return "";
+    })();
+
+    if (!browserMain) {
+      if (typeof packageJson.module === "string") {
+        return {
+          type: "field:module",
+          isMain: true,
+          path: packageJson.module,
+        };
+      }
+      return null;
+    }
+    if (
+      typeof packageJson.module !== "string" ||
+      packageJson.module === browserMain
+    ) {
+      return {
+        type: "field:browser",
+        isMain: true,
+        path: browserMain,
+      };
+    }
+    const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
+    const content = readFileSync(browserMainUrlObject, "utf-8");
+    if (
+      (/typeof exports\s*==/.test(content) &&
+        /typeof module\s*==/.test(content)) ||
+      /module\.exports\s*=/.test(content)
+    ) {
+      return {
+        type: "field:module",
+        isMain: true,
+        path: packageJson.module,
+      };
+    }
+    return {
+      type: "field:browser",
+      isMain: true,
+      path: browserMain,
+    };
+  },
+  node: ({ packageJson }) => {
+    if (typeof packageJson.main === "string") {
+      return {
+        type: "field:main",
+        isMain: true,
+        path: packageJson.main,
+      };
+    }
+    return null;
+  },
+};
+
+const comparePatternKeys = (keyA, keyB) => {
+  if (!keyA.endsWith("/") && !keyA.includes("*")) {
+    throw new Error("Invalid package configuration");
+  }
+  if (!keyB.endsWith("/") && !keyB.includes("*")) {
+    throw new Error("Invalid package configuration");
+  }
+  const aStarIndex = keyA.indexOf("*");
+  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
+  const bStarIndex = keyB.indexOf("*");
+  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
+  if (baseLengthA > baseLengthB) {
+    return -1;
+  }
+  if (baseLengthB > baseLengthA) {
+    return 1;
+  }
+  if (aStarIndex === -1) {
+    return 1;
+  }
+  if (bStarIndex === -1) {
+    return -1;
+  }
+  if (keyA.length > keyB.length) {
+    return -1;
+  }
+  if (keyB.length > keyA.length) {
+    return 1;
+  }
+  return 0;
+};
+
+const resolvePackageSymlink = (packageDirectoryUrl) => {
+  const packageDirectoryPath = realpathSync(new URL(packageDirectoryUrl));
+  const packageDirectoryResolvedUrl = pathToFileURL(packageDirectoryPath).href;
+  return `${packageDirectoryResolvedUrl}/`;
+};
+
+const applyFileSystemMagicResolution = (
+  fileUrl,
+  { fileStat, magicDirectoryIndex, magicExtensions },
+) => {
+  const result = {
+    stat: null,
+    url: fileUrl,
+    magicExtension: "",
+    magicDirectoryIndex: false,
+    lastENOENTError: null,
+  };
+
+  if (fileStat === undefined) {
+    try {
+      fileStat = readEntryStatSync(new URL(fileUrl));
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        result.lastENOENTError = e;
+        fileStat = null;
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  if (fileStat && fileStat.isFile()) {
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result;
+  }
+  if (fileStat && fileStat.isDirectory()) {
+    if (magicDirectoryIndex) {
+      const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
+      const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
+      const subResult = applyFileSystemMagicResolution(indexFileUrl, {
+        magicDirectoryIndex: false,
+        magicExtensions,
+      });
+      return {
+        ...result,
+        ...subResult,
+        magicDirectoryIndex: true,
+      };
+    }
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result;
+  }
+
+  if (magicExtensions && magicExtensions.length) {
+    const parentUrl = new URL("./", fileUrl).href;
+    const urlFilename = urlToFilename(fileUrl);
+    for (const extensionToTry of magicExtensions) {
+      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
+      let stat;
+      try {
+        stat = readEntryStatSync(new URL(urlCandidate));
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          stat = null;
+        } else {
+          throw e;
+        }
+      }
+      if (stat) {
+        result.stat = stat;
+        result.url = `${fileUrl}${extensionToTry}`;
+        result.magicExtension = extensionToTry;
+        return result;
+      }
+    }
+  }
+  // magic extension not found
+  return result;
+};
+
+const getExtensionsToTry = (magicExtensions, importer) => {
+  if (!magicExtensions) {
+    return [];
+  }
+  const extensionsSet = new Set();
+  magicExtensions.forEach((magicExtension) => {
+    if (magicExtension === "inherit") {
+      const importerExtension = urlToExtension$1(importer);
+      extensionsSet.add(importerExtension);
+    } else {
+      extensionsSet.add(magicExtension);
+    }
+  });
+  return Array.from(extensionsSet.values());
+};
+
 const fileUrlConverter = {
   asFilePath: (fileUrl) => {
     const filePath = urlToFileSystemPath(fileUrl);
@@ -13124,6 +14510,7 @@ const bundleJsModules = async (
     isSupportedOnCurrentClients,
     getPluginMeta,
     kitchen,
+    assetsDirectory,
   } = jsModuleUrlInfos[0].context;
   const graph = jsModuleUrlInfos[0].graph;
   if (buildDirectoryUrl === undefined) {
@@ -13167,8 +14554,8 @@ const bundleJsModules = async (
           workspaces = packageJSON.workspaces;
         }
       }
-      let nodeModuleChunkName = "node_modules";
-      let packagesChunkName = "packages";
+      let nodeModuleChunkName = `node_modules`;
+      let packagesChunkName = `packages`;
 
       if (packageName) {
         let packageNameAsFilename = packageName
@@ -13178,6 +14565,11 @@ const bundleJsModules = async (
         nodeModuleChunkName = `${packageNameAsFilename}_node_modules`;
         packagesChunkName = `${packageNameAsFilename}_packages`;
       }
+      if (assetsDirectory) {
+        nodeModuleChunkName = `${assetsDirectory}${nodeModuleChunkName}`;
+        packagesChunkName = `${assetsDirectory}${packagesChunkName}`;
+      }
+
       chunks[nodeModuleChunkName] = {
         "file:///**/node_modules/": true,
         ...chunks.vendors,
@@ -13575,7 +14967,22 @@ const rollupPluginJsenv = ({
               continue;
             }
             const importUrl = getOriginalUrl(importRollupFileInfo);
-            const rollupSpecifier = `./${importRollupFileInfo.fileName}`;
+            const importerBuildUrl = new URL(
+              rollupFileInfo.fileName,
+              buildDirectoryUrl,
+            ).href;
+            const urlToImport = new URL(
+              importRollupFileInfo.fileName,
+              buildDirectoryUrl,
+            ).href;
+            const specifierRelative = urlToRelativeUrl(
+              urlToImport,
+              importerBuildUrl,
+            );
+            const rollupSpecifier =
+              specifierRelative[0] === "."
+                ? specifierRelative
+                : `./${specifierRelative}`;
             specifierToUrlMap.set(rollupSpecifier, importUrl);
           }
         }
@@ -13798,6 +15205,14 @@ const rollupPluginJsenv = ({
             moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
           };
         }
+      }
+      const urlInfo = graph.getUrlInfo(resolvedUrl);
+      if (urlInfo.type === "entry_build") {
+        return {
+          id: resolvedUrl,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+        };
       }
       return {
         id: PATH_AND_URL_CONVERTER.asFilePath(resolvedUrl),
@@ -15496,7 +16911,7 @@ const injectAstAfterImport = (programPath, ast) => {
 };
 
 const newStylesheetClientFileUrl = new URL(
-  "./client/new_stylesheet/new_stylesheet.js",
+  "./client/new_stylesheet.js",
   import.meta.url,
 ).href;
 
@@ -15654,7 +17069,7 @@ const getImportAttributes = (importNode) => {
 };
 
 const regeneratorRuntimeClientFileUrl = new URL(
-  "./client/regenerator_runtime/regenerator_runtime.js",
+  "./client/regenerator_runtime.js",
   import.meta.url,
 ).href;
 
@@ -16284,1027 +17699,433 @@ const jsenvPluginTranspilation = ({
   ];
 };
 
-// https://nodejs.org/api/packages.html#resolving-user-conditions
-const readCustomConditionsFromProcessArgs = () => {
-  const packageConditions = [];
-  for (const arg of process.execArgv) {
-    if (arg.includes("-C=")) {
-      const packageCondition = arg.slice(0, "-C=".length);
-      packageConditions.push(packageCondition);
-    }
-    if (arg.includes("--conditions=")) {
-      const packageCondition = arg.slice("--conditions=".length);
-      packageConditions.push(packageCondition);
-    }
-  }
-  return packageConditions;
+// default runtimeCompat corresponds to
+// "we can keep <script type="module"> intact":
+// so script_type_module + dynamic_import + import_meta
+const browserDefaultRuntimeCompat = {
+  // android: "8",
+  chrome: "64",
+  edge: "79",
+  firefox: "67",
+  ios: "12",
+  opera: "51",
+  safari: "11.3",
+  samsung: "9.2",
 };
 
-const asDirectoryUrl = (url) => {
-  const { pathname } = new URL(url);
-  if (pathname.endsWith("/")) {
-    return url;
-  }
-  return new URL("./", url).href;
+const nodeDefaultRuntimeCompat = {
+  node: process.version.slice(1),
 };
 
-const getParentUrl = (url) => {
-  if (url.startsWith("file://")) {
-    // With node.js new URL('../', 'file:///C:/').href
-    // returns "file:///C:/" instead of "file:///"
-    const resource = url.slice("file://".length);
-    const slashLastIndex = resource.lastIndexOf("/");
-    if (slashLastIndex === -1) {
-      return url;
-    }
-    const lastCharIndex = resource.length - 1;
-    if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = resource.lastIndexOf(
-        "/",
-        slashLastIndex - 1,
-      );
-      if (slashBeforeLastIndex === -1) {
-        return url;
-      }
-      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
-    }
-
-    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+const versionFromValue = (value) => {
+  if (typeof value === "number") {
+    return numberToVersion(value);
   }
-  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+  if (typeof value === "string") {
+    return stringToVersion(value);
+  }
+  throw new TypeError(`version must be a number or a string, got ${value}`);
 };
 
-const isValidUrl = (url) => {
-  try {
-    // eslint-disable-next-line no-new
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const urlToFilename = (url) => {
-  const { pathname } = new URL(url);
-  const pathnameBeforeLastSlash = pathname.endsWith("/")
-    ? pathname.slice(0, -1)
-    : pathname;
-  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
-  const filename =
-    slashLastIndex === -1
-      ? pathnameBeforeLastSlash
-      : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
-  return filename;
-};
-
-const urlToExtension$1 = (url) => {
-  const filename = urlToFilename(url);
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) return "";
-  // if (dotLastIndex === pathname.length - 1) return ""
-  const extension = filename.slice(dotLastIndex);
-  return extension;
-};
-
-const defaultLookupPackageScope = (url) => {
-  let scopeUrl = asDirectoryUrl(url);
-  while (scopeUrl !== "file:///") {
-    if (scopeUrl.endsWith("node_modules/")) {
-      return null;
-    }
-    const packageJsonUrlObject = new URL("package.json", scopeUrl);
-    if (existsSync(packageJsonUrlObject)) {
-      return scopeUrl;
-    }
-    scopeUrl = getParentUrl(scopeUrl);
-  }
-  return null;
-};
-
-const defaultReadPackageJson = (packageUrl) => {
-  const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync(packageJsonUrl);
-  const string = String(buffer);
-  try {
-    return JSON.parse(string);
-  } catch {
-    throw new Error(`Invalid package configuration`);
-  }
-};
-
-// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
-
-const createInvalidModuleSpecifierError = (
-  reason,
-  specifier,
-  { parentUrl },
-) => {
-  const error = new Error(
-    `Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(
-      parentUrl,
-    )}`,
-  );
-  error.code = "INVALID_MODULE_SPECIFIER";
-  return error;
-};
-
-const createInvalidPackageTargetError = (
-  reason,
-  target,
-  { parentUrl, packageDirectoryUrl, key, isImport },
-) => {
-  let message;
-  if (key === ".") {
-    message = `Invalid "exports" main target defined in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
-  } else {
-    message = `Invalid "${
-      isImport ? "imports" : "exports"
-    }" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
-  }
-  const error = new Error(message);
-  error.code = "INVALID_PACKAGE_TARGET";
-  return error;
-};
-
-const createPackagePathNotExportedError = (
-  subpath,
-  { parentUrl, packageDirectoryUrl },
-) => {
-  let message;
-  if (subpath === ".") {
-    message = `No "exports" main defined in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`;
-  } else {
-    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`;
-  }
-  const error = new Error(message);
-  error.code = "PACKAGE_PATH_NOT_EXPORTED";
-  return error;
-};
-
-const createModuleNotFoundError = (specifier, { parentUrl }) => {
-  const error = new Error(
-    `Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`,
-  );
-  error.code = "MODULE_NOT_FOUND";
-  return error;
-};
-
-const createPackageImportNotDefinedError = (
-  specifier,
-  { parentUrl, packageDirectoryUrl },
-) => {
-  const error = new Error(
-    `Package import specifier "${specifier}" is not defined in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`,
-  );
-  error.code = "PACKAGE_IMPORT_NOT_DEFINED";
-  return error;
-};
-
-/*
- * https://nodejs.org/api/esm.html#resolver-algorithm-specification
- * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
- * deviations from the spec:
- * - take into account "browser", "module" and "jsnext"
- * - the check for isDirectory -> throw is delayed is descoped to the caller
- * - the call to real path ->
- *   delayed to the caller so that we can decide to
- *   maintain symlink as facade url when it's outside project directory
- *   or use the real path when inside
- */
-
-const applyNodeEsmResolution = ({
-  specifier,
-  parentUrl,
-  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
-  lookupPackageScope = defaultLookupPackageScope,
-  readPackageJson = defaultReadPackageJson,
-  preservesSymlink = false,
-}) => {
-  const resolution = applyPackageSpecifierResolution(specifier, {
-    parentUrl: String(parentUrl),
-    conditions,
-    lookupPackageScope,
-    readPackageJson,
-    preservesSymlink,
-  });
-  const { url } = resolution;
-  if (url.startsWith("file:")) {
-    if (url.includes("%2F") || url.includes("%5C")) {
-      throw createInvalidModuleSpecifierError(
-        `must not include encoded "/" or "\\" characters`,
-        specifier,
-        {
-          parentUrl,
-        },
-      );
-    }
-    return resolution;
-  }
-  return resolution;
-};
-
-const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
-  const { parentUrl } = resolutionContext;
-  // relative specifier
-  if (
-    specifier[0] === "/" ||
-    specifier.startsWith("./") ||
-    specifier.startsWith("../")
-  ) {
-    if (specifier[0] !== "/") {
-      const browserFieldResolution = applyBrowserFieldResolution(
-        specifier,
-        resolutionContext,
-      );
-      if (browserFieldResolution) {
-        return browserFieldResolution;
-      }
-    }
-    return {
-      type: "relative_specifier",
-      url: new URL(specifier, parentUrl).href,
-    };
-  }
-  if (specifier[0] === "#") {
-    return applyPackageImportsResolution(specifier, resolutionContext);
-  }
-  try {
-    const urlObject = new URL(specifier);
-    if (specifier.startsWith("node:")) {
-      return {
-        type: "node_builtin_specifier",
-        url: specifier,
-      };
-    }
-    return {
-      type: "absolute_specifier",
-      url: urlObject.href,
-    };
-  } catch {
-    // bare specifier
-    const browserFieldResolution = applyBrowserFieldResolution(
-      specifier,
-      resolutionContext,
-    );
-    if (browserFieldResolution) {
-      return browserFieldResolution;
-    }
-    const packageResolution = applyPackageResolve(specifier, resolutionContext);
-    const search = new URL(specifier, "file:///").search;
-    if (search && !new URL(packageResolution.url).search) {
-      packageResolution.url = `${packageResolution.url}${search}`;
-    }
-    return packageResolution;
-  }
-};
-
-const applyBrowserFieldResolution = (specifier, resolutionContext) => {
-  const { parentUrl, conditions, lookupPackageScope, readPackageJson } =
-    resolutionContext;
-  const browserCondition = conditions.includes("browser");
-  if (!browserCondition) {
-    return null;
-  }
-  const packageDirectoryUrl = lookupPackageScope(parentUrl);
-  if (!packageDirectoryUrl) {
-    return null;
-  }
-  const packageJson = readPackageJson(packageDirectoryUrl);
-  if (!packageJson) {
-    return null;
-  }
-  const { browser } = packageJson;
-  if (!browser) {
-    return null;
-  }
-  if (typeof browser !== "object") {
-    return null;
-  }
-  let url;
-  if (specifier.startsWith(".")) {
-    const specifierUrl = new URL(specifier, parentUrl).href;
-    const specifierRelativeUrl = specifierUrl.slice(packageDirectoryUrl.length);
-    const secifierRelativeNotation = `./${specifierRelativeUrl}`;
-    const browserMapping = browser[secifierRelativeNotation];
-    if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageDirectoryUrl).href;
-    } else if (browserMapping === false) {
-      url = `file:///@ignore/${specifierUrl.slice("file:///")}`;
-    }
-  } else {
-    const browserMapping = browser[specifier];
-    if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageDirectoryUrl).href;
-    } else if (browserMapping === false) {
-      url = `file:///@ignore/${specifier}`;
-    }
-  }
-  if (url) {
-    return {
-      type: "field:browser",
-      isMain: true,
-      packageDirectoryUrl,
-      packageJson,
-      url,
-    };
-  }
-  return null;
-};
-
-const applyPackageImportsResolution = (
-  internalSpecifier,
-  resolutionContext,
-) => {
-  const { parentUrl, lookupPackageScope, readPackageJson } = resolutionContext;
-  if (internalSpecifier === "#" || internalSpecifier.startsWith("#/")) {
-    throw createInvalidModuleSpecifierError(
-      "not a valid internal imports specifier name",
-      internalSpecifier,
-      resolutionContext,
-    );
-  }
-  const packageDirectoryUrl = lookupPackageScope(parentUrl);
-  if (packageDirectoryUrl !== null) {
-    const packageJson = readPackageJson(packageDirectoryUrl);
-    const { imports } = packageJson;
-    if (imports !== null && typeof imports === "object") {
-      const resolved = applyPackageImportsExportsResolution(internalSpecifier, {
-        ...resolutionContext,
-        packageDirectoryUrl,
-        packageJson,
-        isImport: true,
-      });
-      if (resolved) {
-        return resolved;
-      }
-    }
-  }
-  throw createPackageImportNotDefinedError(internalSpecifier, {
-    ...resolutionContext,
-    packageDirectoryUrl,
-  });
-};
-
-const applyPackageResolve = (packageSpecifier, resolutionContext) => {
-  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
-    resolutionContext;
-  if (packageSpecifier === "") {
-    throw new Error("invalid module specifier");
-  }
-  if (
-    conditions.includes("node") &&
-    isSpecifierForNodeBuiltin(packageSpecifier)
-  ) {
-    return {
-      type: "node_builtin_specifier",
-      url: `node:${packageSpecifier}`,
-    };
-  }
-  let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
-  if (
-    packageName[0] === "." ||
-    packageName.includes("\\") ||
-    packageName.includes("%")
-  ) {
-    throw createInvalidModuleSpecifierError(
-      `is not a valid package name`,
-      packageName,
-      resolutionContext,
-    );
-  }
-  if (packageSubpath.endsWith("/")) {
-    throw new Error("invalid module specifier");
-  }
-  const questionCharIndex = packageName.indexOf("?");
-  if (questionCharIndex > -1) {
-    packageName = packageName.slice(0, questionCharIndex);
-  }
-  const selfResolution = applyPackageSelfResolution(packageSubpath, {
-    ...resolutionContext,
-    packageName,
-  });
-  if (selfResolution) {
-    return selfResolution;
-  }
-  let currentUrl = parentUrl;
-  while (currentUrl !== "file:///") {
-    const packageDirectoryFacadeUrl = new URL(
-      `node_modules/${packageName}/`,
-      currentUrl,
-    ).href;
-    if (!existsSync(new URL(packageDirectoryFacadeUrl))) {
-      currentUrl = getParentUrl(currentUrl);
-      continue;
-    }
-    const packageDirectoryUrl = preservesSymlink
-      ? packageDirectoryFacadeUrl
-      : resolvePackageSymlink(packageDirectoryFacadeUrl);
-    const packageJson = readPackageJson(packageDirectoryUrl);
-    if (packageJson !== null) {
-      const { exports } = packageJson;
-      if (exports !== null && exports !== undefined) {
-        return applyPackageExportsResolution(packageSubpath, {
-          ...resolutionContext,
-          packageDirectoryUrl,
-          packageJson,
-          exports,
-        });
-      }
-    }
-    return applyLegacySubpathResolution(packageSubpath, {
-      ...resolutionContext,
-      packageDirectoryUrl,
-      packageJson,
-    });
-  }
-  throw createModuleNotFoundError(packageName, resolutionContext);
-};
-
-const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
-  const { parentUrl, packageName, lookupPackageScope, readPackageJson } =
-    resolutionContext;
-  const packageDirectoryUrl = lookupPackageScope(parentUrl);
-  if (!packageDirectoryUrl) {
-    return undefined;
-  }
-  const packageJson = readPackageJson(packageDirectoryUrl);
-  if (!packageJson) {
-    return undefined;
-  }
-  if (packageJson.name !== packageName) {
-    return undefined;
-  }
-  const { exports } = packageJson;
-  if (!exports) {
-    const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
-      ...resolutionContext,
-      packageDirectoryUrl,
-      packageJson,
-    });
-    if (subpathResolution && subpathResolution.type !== "subpath") {
-      return subpathResolution;
-    }
-    return undefined;
-  }
-  return applyPackageExportsResolution(packageSubpath, {
-    ...resolutionContext,
-    packageDirectoryUrl,
-    packageJson,
-  });
-};
-
-// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
-const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
-  if (packageSubpath === ".") {
-    const mainExport = applyMainExportResolution(resolutionContext);
-    if (!mainExport) {
-      throw createPackagePathNotExportedError(
-        packageSubpath,
-        resolutionContext,
-      );
-    }
-    const resolved = applyPackageTargetResolution(mainExport, {
-      ...resolutionContext,
-      key: ".",
-    });
-    if (resolved) {
-      return resolved;
-    }
-    throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
-  }
-  const packageExportsInfo = readExports(resolutionContext);
-  if (
-    packageExportsInfo.type === "object" &&
-    packageExportsInfo.allKeysAreRelative
-  ) {
-    const resolved = applyPackageImportsExportsResolution(packageSubpath, {
-      ...resolutionContext,
-      isImport: false,
-    });
-    if (resolved) {
-      return resolved;
-    }
-  }
-  throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
-};
-
-const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
-  const { packageJson, isImport } = resolutionContext;
-  const matchObject = isImport ? packageJson.imports : packageJson.exports;
-
-  if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
-    const target = matchObject[matchKey];
-    return applyPackageTargetResolution(target, {
-      ...resolutionContext,
-      key: matchKey,
-      isImport,
-    });
-  }
-  const expansionKeys = Object.keys(matchObject)
-    .filter((key) => key.split("*").length === 2)
-    .sort(comparePatternKeys);
-  for (const expansionKey of expansionKeys) {
-    const [patternBase, patternTrailer] = expansionKey.split("*");
-    if (matchKey === patternBase) continue;
-    if (!matchKey.startsWith(patternBase)) continue;
-    if (patternTrailer.length > 0) {
-      if (!matchKey.endsWith(patternTrailer)) continue;
-      if (matchKey.length < expansionKey.length) continue;
-    }
-    const target = matchObject[expansionKey];
-    const subpath = matchKey.slice(
-      patternBase.length,
-      matchKey.length - patternTrailer.length,
-    );
-    return applyPackageTargetResolution(target, {
-      ...resolutionContext,
-      key: matchKey,
-      subpath,
-      pattern: true,
-      isImport,
-    });
-  }
-  return null;
-};
-
-const applyPackageTargetResolution = (target, resolutionContext) => {
-  const {
-    conditions,
-    packageDirectoryUrl,
-    packageJson,
-    key,
-    subpath = "",
-    pattern = false,
-    isImport = false,
-  } = resolutionContext;
-
-  if (typeof target === "string") {
-    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
-      throw new Error("invalid module specifier");
-    }
-    if (target.startsWith("./")) {
-      const targetUrl = new URL(target, packageDirectoryUrl).href;
-      if (!targetUrl.startsWith(packageDirectoryUrl)) {
-        throw createInvalidPackageTargetError(
-          `target must be inside package`,
-          target,
-          resolutionContext,
-        );
-      }
-      return {
-        type: isImport ? "field:imports" : "field:exports",
-        isMain: subpath === "" || subpath === ".",
-        packageDirectoryUrl,
-        packageJson,
-        url: pattern
-          ? targetUrl.replaceAll("*", subpath)
-          : new URL(subpath, targetUrl).href,
-      };
-    }
-    if (!isImport || target.startsWith("../") || isValidUrl(target)) {
-      throw createInvalidPackageTargetError(
-        `target must starst with "./"`,
-        target,
-        resolutionContext,
-      );
-    }
-    return applyPackageResolve(
-      pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
-      {
-        ...resolutionContext,
-        parentUrl: packageDirectoryUrl,
-      },
-    );
-  }
-  if (Array.isArray(target)) {
-    if (target.length === 0) {
-      return null;
-    }
-    let lastResult;
-    let i = 0;
-    while (i < target.length) {
-      const targetValue = target[i];
-      i++;
-      try {
-        const resolved = applyPackageTargetResolution(targetValue, {
-          ...resolutionContext,
-          key: `${key}[${i}]`,
-          subpath,
-          pattern,
-          isImport,
-        });
-        if (resolved) {
-          return resolved;
-        }
-        lastResult = resolved;
-      } catch (e) {
-        if (e.code === "INVALID_PACKAGE_TARGET") {
-          continue;
-        }
-        lastResult = e;
-      }
-    }
-    if (lastResult) {
-      throw lastResult;
-    }
-    return null;
-  }
-  if (target === null) {
-    return null;
-  }
-  if (typeof target === "object") {
-    const keys = Object.keys(target);
-    for (const key of keys) {
-      if (Number.isInteger(key)) {
-        throw new Error("Invalid package configuration");
-      }
-      if (key === "default" || conditions.includes(key)) {
-        const targetValue = target[key];
-        const resolved = applyPackageTargetResolution(targetValue, {
-          ...resolutionContext,
-          key,
-          subpath,
-          pattern,
-          isImport,
-        });
-        if (resolved) {
-          return resolved;
-        }
-      }
-    }
-    return null;
-  }
-  throw createInvalidPackageTargetError(
-    `target must be a string, array, object or null`,
-    target,
-    resolutionContext,
-  );
-};
-
-const readExports = ({ packageDirectoryUrl, packageJson }) => {
-  const packageExports = packageJson.exports;
-  if (Array.isArray(packageExports)) {
-    return {
-      type: "array",
-    };
-  }
-  if (packageExports === null) {
-    return {};
-  }
-  if (typeof packageExports === "object") {
-    const keys = Object.keys(packageExports);
-    const relativeKeys = [];
-    const conditionalKeys = [];
-    keys.forEach((availableKey) => {
-      if (availableKey.startsWith(".")) {
-        relativeKeys.push(availableKey);
-      } else {
-        conditionalKeys.push(availableKey);
-      }
-    });
-    const hasRelativeKey = relativeKeys.length > 0;
-    if (hasRelativeKey && conditionalKeys.length > 0) {
-      throw new Error(
-        `Invalid package configuration: cannot mix relative and conditional keys in package.exports
---- unexpected keys ---
-${conditionalKeys.map((key) => `"${key}"`).join("\n")}
---- package directory url ---
-${packageDirectoryUrl}`,
-      );
-    }
-    return {
-      type: "object",
-      hasRelativeKey,
-      allKeysAreRelative: relativeKeys.length === keys.length,
-    };
-  }
-  if (typeof packageExports === "string") {
-    return { type: "string" };
-  }
-  return {};
-};
-
-const parsePackageSpecifier = (packageSpecifier) => {
-  if (packageSpecifier[0] === "@") {
-    const firstSlashIndex = packageSpecifier.indexOf("/");
-    if (firstSlashIndex === -1) {
-      throw new Error("invalid module specifier");
-    }
-    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
-    if (secondSlashIndex === -1) {
-      return {
-        packageName: packageSpecifier,
-        packageSubpath: ".",
-        isScoped: true,
-      };
-    }
-    const packageName = packageSpecifier.slice(0, secondSlashIndex);
-    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
-    const packageSubpath = `./${afterSecondSlash}`;
-    return {
-      packageName,
-      packageSubpath,
-      isScoped: true,
-    };
-  }
-  const firstSlashIndex = packageSpecifier.indexOf("/");
-  if (firstSlashIndex === -1) {
-    return {
-      packageName: packageSpecifier,
-      packageSubpath: ".",
-    };
-  }
-  const packageName = packageSpecifier.slice(0, firstSlashIndex);
-  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
-  const packageSubpath = `./${afterFirstSlash}`;
+const numberToVersion = (number) => {
   return {
-    packageName,
-    packageSubpath,
+    major: number,
+    minor: 0,
+    patch: 0,
   };
 };
 
-const applyMainExportResolution = (resolutionContext) => {
-  const { packageJson } = resolutionContext;
-  const packageExportsInfo = readExports(resolutionContext);
-  if (
-    packageExportsInfo.type === "array" ||
-    packageExportsInfo.type === "string"
-  ) {
-    return packageJson.exports;
-  }
-  if (packageExportsInfo.type === "object") {
-    if (packageExportsInfo.hasRelativeKey) {
-      return packageJson.exports["."];
-    }
-    return packageJson.exports;
-  }
-  return undefined;
-};
-
-const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
-  const { packageDirectoryUrl, packageJson } = resolutionContext;
-
-  if (packageSubpath === ".") {
-    return applyLegacyMainResolution(packageSubpath, resolutionContext);
-  }
-  const browserFieldResolution = applyBrowserFieldResolution(
-    packageSubpath,
-    resolutionContext,
-  );
-  if (browserFieldResolution) {
-    return browserFieldResolution;
-  }
-  return {
-    type: "subpath",
-    isMain: packageSubpath === ".",
-    packageDirectoryUrl,
-    packageJson,
-    url: new URL(packageSubpath, packageDirectoryUrl).href,
-  };
-};
-
-const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
-  const { conditions, packageDirectoryUrl, packageJson } = resolutionContext;
-  for (const condition of conditions) {
-    const conditionResolver = mainLegacyResolvers[condition];
-    if (!conditionResolver) {
-      continue;
-    }
-    const resolved = conditionResolver(resolutionContext);
-    if (resolved) {
-      return {
-        type: resolved.type,
-        isMain: resolved.isMain,
-        packageDirectoryUrl,
-        packageJson,
-        url: new URL(resolved.path, packageDirectoryUrl).href,
-      };
-    }
-  }
-  return {
-    type: "field:main", // the absence of "main" field
-    isMain: true,
-    packageDirectoryUrl,
-    packageJson,
-    url: new URL("index.js", packageDirectoryUrl).href,
-  };
-};
-const mainLegacyResolvers = {
-  import: ({ packageJson }) => {
-    if (typeof packageJson.module === "string") {
-      return { type: "field:module", isMain: true, path: packageJson.module };
-    }
-    if (typeof packageJson.jsnext === "string") {
-      return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
-    }
-    if (typeof packageJson.main === "string") {
-      return { type: "field:main", isMain: true, path: packageJson.main };
-    }
-    return null;
-  },
-  browser: ({ packageDirectoryUrl, packageJson }) => {
-    const browserMain = (() => {
-      if (typeof packageJson.browser === "string") {
-        return packageJson.browser;
-      }
-      if (
-        typeof packageJson.browser === "object" &&
-        packageJson.browser !== null
-      ) {
-        return packageJson.browser["."];
-      }
-      return "";
-    })();
-
-    if (!browserMain) {
-      if (typeof packageJson.module === "string") {
-        return {
-          type: "field:module",
-          isMain: true,
-          path: packageJson.module,
-        };
-      }
-      return null;
-    }
-    if (
-      typeof packageJson.module !== "string" ||
-      packageJson.module === browserMain
-    ) {
-      return {
-        type: "field:browser",
-        isMain: true,
-        path: browserMain,
-      };
-    }
-    const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
-    const content = readFileSync(browserMainUrlObject, "utf-8");
-    if (
-      (/typeof exports\s*==/.test(content) &&
-        /typeof module\s*==/.test(content)) ||
-      /module\.exports\s*=/.test(content)
-    ) {
-      return {
-        type: "field:module",
-        isMain: true,
-        path: packageJson.module,
-      };
-    }
+const stringToVersion = (string) => {
+  if (string.indexOf(".") > -1) {
+    const parts = string.split(".");
     return {
-      type: "field:browser",
-      isMain: true,
-      path: browserMain,
+      major: Number(parts[0]),
+      minor: parts[1] ? Number(parts[1]) : 0,
+      patch: parts[2] ? Number(parts[2]) : 0,
     };
-  },
-  node: ({ packageJson }) => {
-    if (typeof packageJson.main === "string") {
-      return {
-        type: "field:main",
-        isMain: true,
-        path: packageJson.main,
-      };
-    }
-    return null;
-  },
+  }
+
+  if (isNaN(string)) {
+    return {
+      major: 0,
+      minor: 0,
+      patch: 0,
+    };
+  }
+
+  return {
+    major: Number(string),
+    minor: 0,
+    patch: 0,
+  };
 };
 
-const comparePatternKeys = (keyA, keyB) => {
-  if (!keyA.endsWith("/") && !keyA.includes("*")) {
-    throw new Error("Invalid package configuration");
+const compareTwoVersions = (versionA, versionB) => {
+  const semanticVersionA = versionFromValue(versionA);
+  const semanticVersionB = versionFromValue(versionB);
+  const majorDiff = semanticVersionA.major - semanticVersionB.major;
+  if (majorDiff > 0) {
+    return majorDiff;
   }
-  if (!keyB.endsWith("/") && !keyB.includes("*")) {
-    throw new Error("Invalid package configuration");
+  if (majorDiff < 0) {
+    return majorDiff;
   }
-  const aStarIndex = keyA.indexOf("*");
-  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
-  const bStarIndex = keyB.indexOf("*");
-  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
-  if (baseLengthA > baseLengthB) {
-    return -1;
+  const minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+  if (minorDiff > 0) {
+    return minorDiff;
   }
-  if (baseLengthB > baseLengthA) {
-    return 1;
+  if (minorDiff < 0) {
+    return minorDiff;
   }
-  if (aStarIndex === -1) {
-    return 1;
+  const patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+  if (patchDiff > 0) {
+    return patchDiff;
   }
-  if (bStarIndex === -1) {
-    return -1;
-  }
-  if (keyA.length > keyB.length) {
-    return -1;
-  }
-  if (keyB.length > keyA.length) {
-    return 1;
+  if (patchDiff < 0) {
+    return patchDiff;
   }
   return 0;
 };
 
-const resolvePackageSymlink = (packageDirectoryUrl) => {
-  const packageDirectoryPath = realpathSync(new URL(packageDirectoryUrl));
-  const packageDirectoryResolvedUrl = pathToFileURL(packageDirectoryPath).href;
-  return `${packageDirectoryResolvedUrl}/`;
+const versionIsBelow = (versionSupposedBelow, versionSupposedAbove) => {
+  return compareTwoVersions(versionSupposedBelow, versionSupposedAbove) < 0;
 };
 
-const applyFileSystemMagicResolution = (
-  fileUrl,
-  { fileStat, magicDirectoryIndex, magicExtensions },
-) => {
-  const result = {
-    stat: null,
-    url: fileUrl,
-    magicExtension: "",
-    magicDirectoryIndex: false,
-    lastENOENTError: null,
-  };
-
-  if (fileStat === undefined) {
-    try {
-      fileStat = readEntryStatSync(new URL(fileUrl));
-    } catch (e) {
-      if (e.code === "ENOENT") {
-        result.lastENOENTError = e;
-        fileStat = null;
-      } else {
-        throw e;
-      }
+const findHighestVersion = (...values) => {
+  if (values.length === 0) throw new Error(`missing argument`);
+  return values.reduce((highestVersion, value) => {
+    if (versionIsBelow(highestVersion, value)) {
+      return value;
     }
-  }
-
-  if (fileStat && fileStat.isFile()) {
-    result.stat = fileStat;
-    result.url = fileUrl;
-    return result;
-  }
-  if (fileStat && fileStat.isDirectory()) {
-    if (magicDirectoryIndex) {
-      const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
-      const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
-      const subResult = applyFileSystemMagicResolution(indexFileUrl, {
-        magicDirectoryIndex: false,
-        magicExtensions,
-      });
-      return {
-        ...result,
-        ...subResult,
-        magicDirectoryIndex: true,
-      };
-    }
-    result.stat = fileStat;
-    result.url = fileUrl;
-    return result;
-  }
-
-  if (magicExtensions && magicExtensions.length) {
-    const parentUrl = new URL("./", fileUrl).href;
-    const urlFilename = urlToFilename(fileUrl);
-    for (const extensionToTry of magicExtensions) {
-      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
-      let stat;
-      try {
-        stat = readEntryStatSync(new URL(urlCandidate));
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          stat = null;
-        } else {
-          throw e;
-        }
-      }
-      if (stat) {
-        result.stat = stat;
-        result.url = `${fileUrl}${extensionToTry}`;
-        result.magicExtension = extensionToTry;
-        return result;
-      }
-    }
-  }
-  // magic extension not found
-  return result;
-};
-
-const getExtensionsToTry = (magicExtensions, importer) => {
-  if (!magicExtensions) {
-    return [];
-  }
-  const extensionsSet = new Set();
-  magicExtensions.forEach((magicExtension) => {
-    if (magicExtension === "inherit") {
-      const importerExtension = urlToExtension$1(importer);
-      extensionsSet.add(importerExtension);
-    } else {
-      extensionsSet.add(magicExtension);
-    }
+    return highestVersion;
   });
-  return Array.from(extensionsSet.values());
+};
+
+const featuresCompatMap = {
+  script_type_module: {
+    edge: "16",
+    firefox: "60",
+    chrome: "61",
+    safari: "10.1",
+    opera: "48",
+    ios: "10.3",
+    android: "61",
+    samsung: "8.2",
+  },
+  document_current_script: {
+    edge: "12",
+    firefox: "4",
+    chrome: "29",
+    safari: "8",
+    opera: "16",
+    android: "4.4",
+    samsung: "4",
+  },
+  // https://caniuse.com/?search=import.meta
+  import_meta: {
+    android: "9",
+    chrome: "64",
+    edge: "79",
+    firefox: "62",
+    ios: "12",
+    opera: "51",
+    safari: "11.1",
+    samsung: "9.2",
+  },
+  import_meta_resolve: {
+    chrome: "107",
+    edge: "105",
+    firefox: "106",
+    node: "20.0.0",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
+  import_dynamic: {
+    android: "8",
+    chrome: "63",
+    edge: "79",
+    firefox: "67",
+    ios: "11.3",
+    opera: "50",
+    safari: "11.3",
+    samsung: "8.0",
+    node: "13.2",
+  },
+  top_level_await: {
+    edge: "89",
+    chrome: "89",
+    firefox: "89",
+    opera: "75",
+    safari: "15",
+    samsung: "15",
+    ios: "15",
+    node: "14.8",
+  },
+  // https://caniuse.com/import-maps
+  importmap: {
+    edge: "89",
+    chrome: "89",
+    opera: "76",
+    samsung: "15",
+    firefox: "108",
+    safari: "16.4",
+  },
+  import_type_json: {
+    chrome: "123",
+    safari: "17.2",
+  },
+  import_type_css: {
+    chrome: "123",
+  },
+  import_type_text: {},
+  // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility
+  new_stylesheet: {
+    chrome: "73",
+    edge: "79",
+    opera: "53",
+    android: "73",
+  },
+  // https://caniuse.com/?search=worker
+  worker: {
+    ie: "10",
+    edge: "12",
+    firefox: "3.5",
+    chrome: "4",
+    opera: "11.5",
+    safari: "4",
+    ios: "5",
+    android: "4.4",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
+  worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  worker_importmap: {},
+  service_worker: {
+    edge: "17",
+    firefox: "44",
+    chrome: "40",
+    safari: "11.1",
+    opera: "27",
+    ios: "11.3",
+    android: "12.12",
+  },
+  service_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  service_worker_importmap: {},
+  shared_worker: {
+    chrome: "4",
+    edge: "79",
+    firefox: "29",
+    opera: "10.6",
+  },
+  shared_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+  },
+  shared_worker_importmap: {},
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
+  global_this: {
+    edge: "79",
+    firefox: "65",
+    chrome: "71",
+    safari: "12.1",
+    opera: "58",
+    ios: "12.2",
+    android: "94",
+    node: "12",
+  },
+  async_generator_function: {
+    chrome: "63",
+    opera: "50",
+    edge: "79",
+    firefox: "57",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "8",
+    electron: "3",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#browser_compatibility
+  template_literals: {
+    chrome: "41",
+    edge: "12",
+    firefox: "34",
+    opera: "28",
+    safari: "9",
+    ios: "9",
+    android: "4",
+    node: "4",
+  },
+  arrow_function: {
+    chrome: "47",
+    opera: "34",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36",
+  },
+  const_bindings: {
+    chrome: "41",
+    opera: "28",
+    edge: "12",
+    firefox: "46",
+    safari: "10",
+    node: "4",
+    ie: "11",
+    ios: "10",
+    samsung: "3.4",
+    electron: "0.22",
+  },
+  object_properties_shorthand: {
+    chrome: "43",
+    opera: "30",
+    edge: "12",
+    firefox: "33",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.28",
+  },
+  reserved_words: {
+    chrome: "13",
+    opera: "10.50",
+    edge: "12",
+    firefox: "2",
+    safari: "3.1",
+    node: "0.10",
+    ie: "9",
+    android: "4.4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20",
+  },
+  symbols: {
+    chrome: "38",
+    opera: "25",
+    edge: "12",
+    firefox: "36",
+    safari: "9",
+    ios: "9",
+    samsung: "4",
+    node: "0.12",
+  },
+};
+
+const RUNTIME_COMPAT = {
+  featuresCompatMap,
+
+  add: (originalRuntimeCompat, feature) => {
+    const featureCompat = getFeatureCompat(feature);
+    const runtimeCompat = {
+      ...originalRuntimeCompat,
+    };
+    Object.keys(originalRuntimeCompat).forEach((runtimeName) => {
+      const secondVersion = featureCompat[runtimeName]; // the version supported by the feature
+      if (secondVersion) {
+        const firstVersion = originalRuntimeCompat[runtimeName];
+        runtimeCompat[runtimeName] = findHighestVersion(
+          firstVersion,
+          secondVersion,
+        );
+      }
+    });
+    return runtimeCompat;
+  },
+
+  isSupported: (
+    runtimeCompat,
+    feature,
+    featureCompat = getFeatureCompat(feature),
+  ) => {
+    const runtimeNames = Object.keys(runtimeCompat);
+    const runtimeWithoutCompat = runtimeNames.find((runtimeName) => {
+      const runtimeVersion = runtimeCompat[runtimeName];
+      const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity";
+      const highestVersion = findHighestVersion(
+        runtimeVersion,
+        runtimeVersionCompatible,
+      );
+      return highestVersion !== runtimeVersion;
+    });
+    return !runtimeWithoutCompat;
+  },
+};
+
+const getFeatureCompat = (feature) => {
+  if (typeof feature === "string") {
+    const compat = featuresCompatMap[feature];
+    if (!compat) {
+      throw new Error(`"${feature}" feature is unknown`);
+    }
+    return compat;
+  }
+  if (typeof feature !== "object") {
+    throw new TypeError(
+      `feature must be a string or an object, got ${feature}`,
+    );
+  }
+  return feature;
+};
+
+const inferRuntimeCompatFromClosestPackage = async (
+  sourceUrl,
+  { runtimeType },
+) => {
+  const packageDirectoryUrl = lookupPackageDirectory(sourceUrl);
+  if (!packageDirectoryUrl) {
+    return null;
+  }
+  const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
+  if (!packageJSON) {
+    return null;
+  }
+
+  if (runtimeType === "browser") {
+    const browserlist = packageJSON.browserlist;
+    if (!browserlist) {
+      return null;
+    }
+    const namespace = await import("browserslist");
+    const browserslist = namespace.default;
+    const browserslistConfig = browserslist(browserlist);
+    const runtimeCompat = {};
+    for (const browserNameAndVersion of browserslistConfig) {
+      let [name, version] = browserNameAndVersion.split(" ");
+      if (name === "ios_saf") {
+        name = "ios";
+      }
+      if (Object.keys(browserDefaultRuntimeCompat).includes(name)) {
+        runtimeCompat[name] = version;
+      }
+    }
+    return runtimeCompat;
+  }
+
+  const engines = packageJSON.engines;
+  if (!engines) {
+    return null;
+  }
+  const node = engines.node;
+  const versionMatch = node.match(/[0-9*.]+/);
+  if (!versionMatch) {
+    return null;
+  }
+  return {
+    node: versionMatch[0],
+  };
 };
 
 const isSupportedAlgorithm = (algo) => {
@@ -19846,4 +20667,4 @@ const assertAndNormalizeDirectoryUrl = (
   return value;
 };
 
-export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, comparePathnames$1 as comparePathnames, comparePathnames as comparePathnames$1, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeFileSize, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };
+export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, comparePathnames$1 as comparePathnames, comparePathnames as comparePathnames$1, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeFileSize, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };

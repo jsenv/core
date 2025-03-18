@@ -1,8 +1,7 @@
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, normalizeUrl, ANSI, CONTENT_TYPE, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, defaultLookupPackageScope, defaultReadPackageJson, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, comparePathnames, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, readCustomConditionsFromProcessArgs, defaultLookupPackageScope, defaultReadPackageJson, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, comparePathnames, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog } from "../jsenv_core_packages.js";
 import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript } from "@jsenv/ast";
@@ -541,7 +540,7 @@ const assertFetchedContentCompliance = ({ urlInfo, content }) => {
   }
   const { expectedType } = urlInfo.firstReference;
   if (expectedType && urlInfo.type !== expectedType) {
-    if (urlInfo.type === "asset" && urlInfo.context.build) ; else {
+    if (urlInfo.type === "entry_build" && urlInfo.context.build) ; else {
       throw new Error(
         `type must be "${expectedType}", got "${urlInfo.type}" on ${urlInfo.url}`,
       );
@@ -2665,7 +2664,7 @@ const shouldHandleSourcemap = (urlInfo) => {
 };
 
 const inlineContentClientFileUrl = new URL(
-  "../client/inline_content/inline_content.js",
+  "./client/inline_content.js",
   import.meta.url,
 ).href;
 
@@ -3378,7 +3377,7 @@ const inferUrlInfoType = (urlInfo) => {
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = import.meta.resolve(
-    "../client/html_syntax_error/html_syntax_error.html",
+    "./client/html_syntax_error.html",
   );
 
   return {
@@ -5045,7 +5044,6 @@ const jsenvPluginReferenceAnalysis = ({
   inlineContent = true,
   inlineConvertedScript = false,
   fetchInlineUrls = true,
-  directoryReferenceEffect,
 }) => {
   return [
     jsenvPluginDirectoryReferenceAnalysis(),
@@ -5592,7 +5590,7 @@ return {
 
 
 const htmlFileUrlForDirectory = import.meta.resolve(
-  "../client/directory_listing/directory_listing.html",
+  "./client/directory_listing.html",
 );
 
 const jsenvPluginDirectoryListing = ({
@@ -6378,7 +6376,25 @@ const asValidFilename = (string) => {
 
 const jsenvPluginDirectoryReferenceEffect = (
   directoryReferenceEffect = "error",
+  { rootDirectoryUrl },
 ) => {
+  let getDirectoryReferenceEffect;
+  if (typeof directoryReferenceEffect === "string") {
+    getDirectoryReferenceEffect = () => directoryReferenceEffect;
+  } else if (typeof directoryReferenceEffect === "function") {
+    getDirectoryReferenceEffect = directoryReferenceEffect;
+  } else if (typeof directoryReferenceEffect === "object") {
+    const associations = URL_META.resolveAssociations(
+      { effect: directoryReferenceEffect },
+      rootDirectoryUrl,
+    );
+    getDirectoryReferenceEffect = (reference) => {
+      const { url } = reference;
+      const meta = URL_META.applyAssociations({ url, associations });
+      return meta.effect || "error";
+    };
+  }
+
   return {
     name: "jsenv:directory_reference_effect",
     appliesDuring: "*",
@@ -6415,12 +6431,8 @@ const jsenvPluginDirectoryReferenceEffect = (
         actionForDirectory = "copy";
       } else if (reference.type === "http_request") {
         actionForDirectory = "preserve";
-      } else if (typeof directoryReferenceEffect === "string") {
-        actionForDirectory = directoryReferenceEffect;
-      } else if (typeof directoryReferenceEffect === "function") {
-        actionForDirectory = directoryReferenceEffect(reference);
       } else {
-        actionForDirectory = "error";
+        actionForDirectory = getDirectoryReferenceEffect(reference);
       }
       reference.actionForDirectory = actionForDirectory;
       if (actionForDirectory !== "copy") {
@@ -7275,7 +7287,7 @@ const htmlNodeCanHotReload = (node) => {
 
 const jsenvPluginImportMetaHot = () => {
   const importMetaHotClientFileUrl = import.meta.resolve(
-    "../client/import_meta_hot/import_meta_hot.js",
+    "./client/import_meta_hot.js",
   );
 
   return {
@@ -7387,7 +7399,7 @@ import.meta.hot = createImportMetaHot(import.meta.url);
 };
 
 const jsenvPluginAutoreloadClient = () => {
-  const autoreloadClientFileUrl = import.meta.resolve("../client/autoreload/autoreload.js");
+  const autoreloadClientFileUrl = import.meta.resolve("./client/autoreload.js");
 
   return {
     name: "jsenv:autoreload_client",
@@ -7906,7 +7918,7 @@ const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html",
 }) => {
-  const ribbonClientFileUrl = import.meta.resolve("../client/ribbon/ribbon.js");
+  const ribbonClientFileUrl = import.meta.resolve("./client/ribbon.js");
   const associations = URL_META.resolveAssociations(
     {
       ribbon: {
@@ -8067,7 +8079,9 @@ const getCorePlugins = ({
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),
     jsenvPluginWebResolution(),
-    jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
+    jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect, {
+      rootDirectoryUrl,
+    }),
     jsenvPluginVersionSearchParam(),
 
     // "jsenvPluginSupervisor" MUST be after "jsenvPluginInlining" as it needs inline script to be cooked
@@ -8095,7 +8109,7 @@ const getCorePlugins = ({
 
 
 const serverEventsClientFileUrl = new URL(
-  "../client/server_events_client/server_events_client.js",
+  "./client/server_events_client.js",
   import.meta.url,
 ).href;
 

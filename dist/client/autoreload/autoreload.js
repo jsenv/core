@@ -1,31 +1,5 @@
 import { parseSrcSet, stringifySrcSet } from "./jsenv_core_packages.js";
-
-/*
- * https://vitejs.dev/guide/api-hmr.html#hot-accept-deps-cb
- * https://modern-web.dev/docs/dev-server/plugins/hmr/
- */
-
-const urlHotMetas = {};
-
-const createEvent = () => {
-  const callbackSet = new Set();
-  const addCallback = (callback) => {
-    callbackSet.add(callback);
-    return () => {
-      callbackSet.delete(callback);
-    };
-  };
-  const dispatch = () => {
-    for (const callback of callbackSet) {
-      callback();
-    }
-  };
-  return [{ addCallback }, dispatch];
-};
-const [beforePartialReload, dispatchBeforePartialReload] = createEvent();
-const [afterPartialReload, dispatchAfterPartialReload] = createEvent();
-const [beforeFullReload, dispatchBeforeFullReload] = createEvent();
-const [beforePrune, dispatchBeforePrune] = createEvent();
+import { urlHotMetas, dispatchBeforeFullReload, dispatchBeforePartialReload, dispatchAfterPartialReload, dispatchBeforePrune } from "../import_meta_hot/import_meta_hot.js";
 
 const initAutoreload = ({ mainFilePath }) => {
   const reloader = {
