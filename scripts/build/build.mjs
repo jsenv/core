@@ -28,6 +28,13 @@ await build({
           },
         }),
       ],
+      nodeEsmResolution: {
+        "*": {
+          packageConditions: {
+            "@jsenv/humanize/": ["development", "inherit"],
+          },
+        },
+      },
       ignore: {
         "file://**/node_modules/": true,
         // selectively unignore some node_modules

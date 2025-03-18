@@ -24,11 +24,38 @@ export const createNodeEsmResolver = ({
 }) => {
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-  packageConditions = packageConditions || [
+  const defaultPackageConditions = [
     ...(build ? [] : readCustomConditionsFromProcessArgs()),
     nodeRuntimeEnabled ? "node" : "browser",
     "import",
   ];
+
+  const resolveConditions = (conditionArray) => {
+    const conditionsResolved = [];
+    for (const condition of conditionArray) {
+      if (condition === "inherit") {
+        conditionsResolved.push(...defaultPackageConditions);
+      } else {
+        conditionsResolved.push(condition);
+      }
+    }
+    return conditionsResolved;
+  };
+  let getPackageConditions;
+  if (packageConditions === undefined) {
+    getPackageConditions = () => defaultPackageConditions;
+  } else if (Array.isArray(packageConditions)) {
+    const resolvedConditions = resolveConditions(packageConditions);
+    getPackageConditions = () => resolvedConditions;
+  } else if (typeof packageConditions === "function") {
+    getPackageConditions = (specifier, importer) => {
+      const result = packageConditions(specifier, importer);
+      if (Array.isArray(result)) {
+        return resolveConditions(result);
+      }
+      return defaultPackageConditions;
+    };
+  }
 
   return (reference) => {
     if (reference.type === "package_json") {
@@ -49,8 +76,9 @@ export const createNodeEsmResolver = ({
     if (!parentUrl.startsWith("file:")) {
       return null; // let it to jsenv_web_resolution
     }
+    const conditions = getPackageConditions(reference.specifier, parentUrl);
     const { url, type, isMain, packageDirectoryUrl } = applyNodeEsmResolution({
-      conditions: packageConditions,
+      conditions,
       parentUrl,
       specifier: reference.specifier,
       preservesSymlink,
