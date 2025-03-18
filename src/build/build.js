@@ -344,7 +344,14 @@ export const build = async ({
     { sourceUrlToLog, buildUrlToLog },
   ) => {
     let content = "";
-    content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `;
+    content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")}`;
+    content += " ";
+    content += ANSI.color("(", ANSI.GREY);
+    content += ANSI.color(
+      humanizeDuration(entryBuildInfo.duration, { short: true }),
+      ANSI.GREY,
+    );
+    content += ANSI.color(")", ANSI.GREY);
     content += "\n";
     return content;
   };
@@ -371,6 +378,9 @@ export const build = async ({
     const humanizeProcessMemoryUsage = (value) => {
       return humanizeMemory(value, { short: true, decimals: 0 });
     };
+
+    processCpuUsageMonitoring.end();
+    processMemoryUsageMonitoring.end();
 
     // cpu usage
     const processCpuUsage = processCpuUsageMonitoring.info;
@@ -602,6 +612,7 @@ export const build = async ({
         buildFileContents: undefined,
         buildInlineContents: undefined,
         buildManifest: undefined,
+        duration: null,
         buildEntryPoint: () => {
           const sourceUrl = new URL(
             entryPoint.sourceRelativeUrl,
@@ -618,6 +629,7 @@ export const build = async ({
             ? urlToRelativeUrl(buildUrl, packageDirectoryUrl)
             : entryPoint.params.buildRelativeUrl;
 
+          const entryPointBuildStartMs = Date.now();
           const onEntryPointBuildEnd = onEntryPointBuildStart(entryBuildInfo, {
             sourceUrlToLog,
             buildUrlToLog,
@@ -638,6 +650,7 @@ export const build = async ({
             entryBuildInfo.buildFileContents = result.buildFileContents;
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
+            entryBuildInfo.duration = Date.now() - entryPointBuildStartMs;
             onEntryPointBuildEnd();
           })();
           entryBuildInfo.promise = promise;

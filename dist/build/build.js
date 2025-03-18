@@ -1,7 +1,8 @@
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { startMonitoringCpuUsage, startMonitoringMemoryUsage } from "@jsenv/os-metrics";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog, humanizeDuration, humanizeMemory, renderBigSection } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog, humanizeDuration, humanizeMemory, renderDetails, renderBigSection } from "../jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
@@ -10169,6 +10170,31 @@ const build = async ({
     }
   }
 
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+  if (handleSIGINT) {
+    operation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
+        {
+          },
+        abort,
+      );
+    });
+  }
+
+  const cpuMonitoring = startMonitoringCpuUsage();
+  operation.addEndCallback(cpuMonitoring.stop);
+  const [processCpuUsageMonitoring] = cpuMonitoring;
+  const memoryMonitoring = startMonitoringMemoryUsage();
+  const [processMemoryUsageMonitoring] = memoryMonitoring;
+  const interval = setInterval(() => {
+    processCpuUsageMonitoring.measure();
+    processMemoryUsageMonitoring.measure();
+  }, 500).unref();
+  operation.addEndCallback(() => {
+    clearInterval(interval);
+  });
+
   const logLevel = logs.level;
   const logger = createLogger({ logLevel });
   const animatedLogEnabled =
@@ -10186,21 +10212,74 @@ const build = async ({
     { sourceUrlToLog, buildUrlToLog },
   ) => {
     let content = "";
-    content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")} `;
+    content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")}`;
+    content += " ";
+    content += ANSI.color("(", ANSI.GREY);
+    content += ANSI.color(
+      humanizeDuration(entryBuildInfo.duration, { short: true }),
+      ANSI.GREY,
+    );
+    content += ANSI.color(")", ANSI.GREY);
     content += "\n";
     return content;
   };
-  const renderBuildEndLog = () => {
+  const renderBuildEndLog = ({ duration }) => {
     // tell how many files are generated in build directory
     // tell the repartition?
     // this is not really useful for single build right?
+
+    let content = "";
+
+    const lines = [];
+
+    let durationLine = `duration: `;
+    durationLine += humanizeDuration(duration, { short: true });
+    lines.push(durationLine);
+
+    const humanizeProcessCpuUsage = (ratio) => {
+      const percentageAsNumber = ratio * 100;
+      const percentageAsNumberRounded = Math.round(percentageAsNumber);
+      const percentage = `${percentageAsNumberRounded}%`;
+      return percentage;
+    };
+
+    const humanizeProcessMemoryUsage = (value) => {
+      return humanizeMemory(value, { short: true, decimals: 0 });
+    };
+
+    processCpuUsageMonitoring.end();
+    processMemoryUsageMonitoring.end();
+
+    // cpu usage
+    const processCpuUsage = processCpuUsageMonitoring.info;
+    let cpuUsageLine = "cpu: ";
+    cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
+    cpuUsageLine += renderDetails({
+      med: humanizeProcessCpuUsage(processCpuUsage.median),
+      min: humanizeProcessCpuUsage(processCpuUsage.min),
+      max: humanizeProcessCpuUsage(processCpuUsage.max),
+    });
+    lines.push(cpuUsageLine);
+
+    // memory usage
+    const processMemoryUsage = processMemoryUsageMonitoring.info;
+    let memoryUsageLine = "memory: ";
+    memoryUsageLine += `${humanizeProcessMemoryUsage(processMemoryUsage.end)}`;
+    memoryUsageLine += renderDetails({
+      med: humanizeProcessMemoryUsage(processMemoryUsage.median),
+      min: humanizeProcessMemoryUsage(processMemoryUsage.min),
+      max: humanizeProcessMemoryUsage(processMemoryUsage.max),
+    });
+    lines.push(memoryUsageLine);
+
+    content = lines.join("\n");
 
     return `${renderBigSection({
       title:
         entryPointArray.length === 1
           ? "build done"
           : `${entryPointArray.length} builds done`,
-      content: "",
+      content,
     })}\n`;
   };
 
@@ -10274,13 +10353,13 @@ const build = async ({
             }, renderDynamicLog());
           };
         },
-        onBuildEnd: () => {
+        onBuildEnd: ({ duration }) => {
           clearInterval(interval);
           dynamicLog.update("");
           dynamicLog.destroy();
           dynamicLog = null;
           logger.info("");
-          logger.info(renderBuildEndLog());
+          logger.info(renderBuildEndLog({ duration }));
         },
       };
     };
@@ -10307,9 +10386,9 @@ const build = async ({
             );
           };
         },
-        onBuildEnd: () => {
+        onBuildEnd: ({ duration }) => {
           logger.info("");
-          logger.info(renderBuildEndLog());
+          logger.info(renderBuildEndLog({ duration }));
         },
       };
     };
@@ -10321,18 +10400,6 @@ const build = async ({
   entryPointArray.sort((a, b) => {
     return compareFileUrls(a.sourceUrl, b.sourceUrl);
   });
-
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-  if (handleSIGINT) {
-    operation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
-        {
-          },
-        abort,
-      );
-    });
-  }
 
   const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
   if (outDirectoryUrl === undefined) {
@@ -10347,6 +10414,7 @@ const build = async ({
   }
 
   const runBuild = async ({ signal }) => {
+    const startDate = Date.now();
     const { onBuildEnd, onEntryPointBuildStart } = startBuildLogs();
 
     const buildUrlsGenerator = createBuildUrlsGenerator({
@@ -10411,6 +10479,7 @@ const build = async ({
         buildFileContents: undefined,
         buildInlineContents: undefined,
         buildManifest: undefined,
+        duration: null,
         buildEntryPoint: () => {
           const sourceUrl = new URL(
             entryPoint.sourceRelativeUrl,
@@ -10427,6 +10496,7 @@ const build = async ({
             ? urlToRelativeUrl(buildUrl, packageDirectoryUrl)
             : entryPoint.params.buildRelativeUrl;
 
+          const entryPointBuildStartMs = Date.now();
           const onEntryPointBuildEnd = onEntryPointBuildStart(entryBuildInfo, {
             sourceUrlToLog,
             buildUrlToLog,
@@ -10447,6 +10517,7 @@ const build = async ({
             entryBuildInfo.buildFileContents = result.buildFileContents;
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
+            entryBuildInfo.duration = Date.now() - entryPointBuildStartMs;
             onEntryPointBuildEnd();
           })();
           entryBuildInfo.promise = promise;
@@ -10486,6 +10557,7 @@ const build = async ({
       buildFileContents,
       buildInlineContents,
       buildManifest,
+      duration: Date.now() - startDate,
     });
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),

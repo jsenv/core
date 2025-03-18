@@ -13,5 +13,5 @@ export const startMonitoringCpuUsage = () => {
   });
   const result = [processCpuUsageMonitoring, osCpuUsageMonitoring];
   result.stop = cpuUsage.stop;
-  return cpuUsage;
+  return result;
 };

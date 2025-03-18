@@ -98,6 +98,14 @@ export const commonJsToJsModuleRaw = async ({
     input: sourceFilePath,
     external,
     plugins: [
+      {
+        resolveId: (specifier) => {
+          if (specifier.startsWith("node:")) {
+            return { id: specifier, external: true };
+          }
+          return null;
+        },
+      },
       nodeResolveRollupPlugin,
       jsonRollupPlugin,
       replaceRollupPlugin,

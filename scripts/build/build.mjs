@@ -25,7 +25,6 @@ await build({
             "file:///**/node_modules/@babel/parser/": true,
             "file:///**/node_modules/postcss/": true,
             "file:///**/node_modules/rollup/dist/native.js": true,
-            "file:///**/node_modules/supports-color/": true,
           },
         }),
       ],
