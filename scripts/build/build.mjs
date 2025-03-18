@@ -13,7 +13,7 @@ await build({
   outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   entryPoints: {
     "./src/main.js": {
-      buildRelativeUrl: "jsenv_core.js",
+      buildRelativeUrl: "./jsenv_core.js",
       runtimeCompat: { node: "20.0" },
       scenarioPlaceholders: false,
       mappings: {
