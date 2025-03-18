@@ -25,7 +25,12 @@ import {
   lookupPackageDirectory,
   writeFileSync,
 } from "@jsenv/filesystem";
-import { createLogger, createTaskLog } from "@jsenv/humanize";
+import {
+  createCallOrderer,
+  createLogger,
+  createTaskLog,
+  UNICODE,
+} from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
@@ -44,7 +49,6 @@ import {
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
-import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { jsenvPluginDirectoryReferenceEffect } from "../plugins/directory_reference_effect/jsenv_plugin_directory_reference_effect.js";
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
@@ -54,6 +58,7 @@ import {
 } from "../plugins/plugin_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
+import { createBuildContentSummary } from "./build_content_report.js";
 import { defaultRuntimeCompat, logsDefault } from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
@@ -99,6 +104,7 @@ export const build = async ({
   sourceDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
+  logs,
 
   outDirectoryUrl,
   buildDirectoryCleanPatterns = { "**/*": true },
@@ -225,22 +231,6 @@ export const build = async ({
               `The entry point value${forEntryPointOrEmpty} have unknown params: ${unexpectedEntryPointParamNames.join(",")}.`,
             );
           }
-          const { logs } = value;
-          if (logs !== undefined) {
-            if (typeof logs !== "object") {
-              throw new TypeError(
-                `The logs "${logs}"${forEntryPointOrEmpty} is invalid: it must be an object.`,
-              );
-            }
-            const unexpectedLogsKeys = Object.keys(logs).filter(
-              (key) => !Object.hasOwn(logsDefault, key),
-            );
-            if (unexpectedLogsKeys.length > 0) {
-              throw new TypeError(
-                `The logs ${forEntryPointOrEmpty} have unknown params: ${unexpectedLogsKeys.join(",")}.`,
-              );
-            }
-          }
           const { versioningMethod } = value;
           if (versioningMethod !== undefined) {
             if (!["filename", "search_param"].includes(versioningMethod)) {
@@ -283,7 +273,34 @@ export const build = async ({
         });
       }
     }
+    // logs
+    if (logs === undefined) {
+      logs = logsDefault;
+    } else {
+      if (typeof logs !== "object") {
+        throw new TypeError(
+          `The value "${logs}" is invalid for param logs: it must be an object.`,
+        );
+      }
+      const unexpectedLogsKeys = Object.keys(logs).filter(
+        (key) => !Object.hasOwn(logsDefault, key),
+      );
+      if (unexpectedLogsKeys.length > 0) {
+        throw new TypeError(
+          `The param logs have unknown params: ${unexpectedLogsKeys.join(",")}.`,
+        );
+      }
+    }
   }
+
+  const logLevel = logs.level;
+  const logger = createLogger({ logLevel });
+  const createBuildTask = (label) => {
+    return createTaskLog(label, {
+      disabled: logs.disabled || (!logger.levels.debug && !logger.levels.info),
+      animated: logs.animation && !logger.levels.debug,
+    });
+  };
 
   const operation = Abort.startOperation();
   operation.addAbortSignal(signal);
@@ -318,6 +335,8 @@ export const build = async ({
       sourceDirectoryUrl,
       buildDirectoryUrl,
     });
+
+    const callWhenPreviousBuildAreDone = createCallOrderer();
 
     let someEntryPointUseNode = false;
     for (const entryPoint of entryPointSet) {
@@ -393,6 +412,9 @@ export const build = async ({
             entryBuildInfo.buildFileContents = result.buildFileContents;
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
+            callWhenPreviousBuildAreDone(entryBuildInfo.index, () => {
+              logger.info(`${UNICODE.OK} "${entryPoint.key}" build is done`);
+            });
           })();
           entryBuildInfo.promise = promise;
           return promise;
@@ -402,6 +424,7 @@ export const build = async ({
       entryPointIndex++;
     }
 
+    logger.info(`building ${entryBuildInfoMap.size} entry points`);
     const promises = [];
     for (const [, entryBuildInfo] of entryBuildInfoMap) {
       const promise = entryBuildInfo.buildEntryPoint();
@@ -418,7 +441,7 @@ export const build = async ({
       Object.assign(buildManifest, entryBuildInfo.buildManifest);
     }
     if (writeOnFileSystem) {
-      // const writingFiles = createBuildTask("write files in build directory");
+      const writingFiles = createBuildTask("write files in build directory");
       clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
       const buildRelativeUrls = Object.keys(buildFileContents);
       buildRelativeUrls.forEach((buildRelativeUrl) => {
@@ -427,8 +450,13 @@ export const build = async ({
           buildFileContents[buildRelativeUrl],
         );
       });
-      // writingFiles.done();
+      writingFiles.done();
     }
+    logger.info(
+      createBuildContentSummary(buildFileContents, {
+        title: "build files",
+      }),
+    );
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
       ...(returnBuildManifest ? { buildManifest } : {}),
@@ -524,7 +552,6 @@ const entryPointDefaultParams = {
   minification: true,
   versioning: true,
 
-  logs: logsDefault,
   referenceAnalysis: {},
   nodeEsmResolution: undefined,
   magicExtensions: undefined,
@@ -572,7 +599,6 @@ const prepareEntryPointBuild = async (
     minification,
     versioning,
 
-    logs,
     referenceAnalysis,
     nodeEsmResolution,
     magicExtensions,
@@ -600,10 +626,6 @@ const prepareEntryPointBuild = async (
 
   // param defaults and normalization
   {
-    logs = {
-      ...logsDefault,
-      ...logs,
-    };
     if (entryPointParams.buildRelativeUrl === undefined) {
       buildRelativeUrl = sourceRelativeUrl;
     }
@@ -660,17 +682,6 @@ const prepareEntryPointBuild = async (
   const buildOperation = Abort.startOperation();
   buildOperation.addAbortSignal(signal);
 
-  const logLevel = logs.level;
-  const logger = createLogger({ logLevel });
-  const createBuildTask = (label) => {
-    return createTaskLog(label, {
-      disabled: logs.disabled || (!logger.levels.debug && !logger.levels.info),
-      animated: logs.animation && !logger.levels.debug,
-    });
-  };
-  logger.info(``);
-  logger.info(`build "${sourceRelativeUrl}"`);
-
   const explicitJsModuleConversion =
     sourceRelativeUrl.includes("?js_module_fallback") ||
     sourceRelativeUrl.includes("?as_js_classic");
@@ -683,7 +694,7 @@ const prepareEntryPointBuild = async (
   };
   const rawKitchen = createKitchen({
     signal,
-    logLevel: logs.level,
+    logLevel: "warn",
     rootDirectoryUrl: sourceDirectoryUrl,
     ignore,
     // during first pass (craft) we keep "ignore:" when a reference is ignored
@@ -765,22 +776,15 @@ const prepareEntryPointBuild = async (
     buildEntryPoint: async ({ getOtherEntryBuildInfo }) => {
       craft: {
         _getOtherEntryBuildInfo = getOtherEntryBuildInfo;
-        const generateSourceGraph = createBuildTask("generate source graph");
-        try {
-          if (outDirectoryUrl) {
-            await ensureEmptyDirectory(new URL(`craft/`, outDirectoryUrl));
-          }
-          await rawRootUrlInfo.cookDependencies({ operation: buildOperation });
-        } catch (e) {
-          generateSourceGraph.fail();
-          throw e;
+        if (outDirectoryUrl) {
+          await ensureEmptyDirectory(new URL(`craft/`, outDirectoryUrl));
         }
-        generateSourceGraph.done();
+        await rawRootUrlInfo.cookDependencies({ operation: buildOperation });
       }
 
       const finalKitchen = createKitchen({
         name: "shape",
-        logLevel: logs.level,
+        logLevel: "warn",
         rootDirectoryUrl: sourceDirectoryUrl,
         // here most plugins are not there
         // - no external plugin
@@ -803,7 +807,7 @@ const prepareEntryPointBuild = async (
       const buildSpecifierManager = createBuildSpecifierManager({
         rawKitchen,
         finalKitchen,
-        logger,
+        logger: createLogger({ logLevel: "warn" }),
         sourceDirectoryUrl,
         buildDirectoryUrl,
         base,
@@ -975,49 +979,35 @@ const prepareEntryPointBuild = async (
             }
           },
         );
-        for (const [type, bundler] of bundlerMap) {
+        for (const [, bundler] of bundlerMap) {
           const urlInfosToBundle = Array.from(bundler.urlInfoMap.values());
           if (urlInfosToBundle.length === 0) {
             continue;
           }
-          const bundleTask = createBuildTask(`bundle "${type}"`);
-          try {
-            await buildSpecifierManager.applyBundling({
-              bundler,
-              urlInfosToBundle,
-            });
-          } catch (e) {
-            bundleTask.fail();
-            throw e;
-          }
-          bundleTask.done();
+          await buildSpecifierManager.applyBundling({
+            bundler,
+            urlInfosToBundle,
+          });
         }
       }
 
       shape: {
         finalKitchen.context.buildStep = "shape";
-        const generateBuildGraph = createBuildTask("generate build graph");
-        try {
-          if (outDirectoryUrl) {
-            await ensureEmptyDirectory(new URL(`shape/`, outDirectoryUrl));
-          }
-          const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
-          await finalRootUrlInfo.dependencies.startCollecting(() => {
-            finalRootUrlInfo.dependencies.found({
-              trace: { message: `entryPoint` },
-              isEntryPoint: true,
-              type: "entry_point",
-              specifier: entryReference.url,
-            });
-          });
-          await finalRootUrlInfo.cookDependencies({
-            operation: buildOperation,
-          });
-        } catch (e) {
-          generateBuildGraph.fail();
-          throw e;
+        if (outDirectoryUrl) {
+          await ensureEmptyDirectory(new URL(`shape/`, outDirectoryUrl));
         }
-        generateBuildGraph.done();
+        const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
+        await finalRootUrlInfo.dependencies.startCollecting(() => {
+          finalRootUrlInfo.dependencies.found({
+            trace: { message: `entryPoint` },
+            isEntryPoint: true,
+            type: "entry_point",
+            specifier: entryReference.url,
+          });
+        });
+        await finalRootUrlInfo.cookDependencies({
+          operation: buildOperation,
+        });
       }
 
       refine: {
@@ -1079,22 +1069,13 @@ const prepareEntryPointBuild = async (
           const inject =
             buildSpecifierManager.prepareServiceWorkerUrlInjection();
           if (inject) {
-            const urlsInjectionInSw = createBuildTask(
-              "inject urls in service worker",
-            );
             await inject();
-            urlsInjectionInSw.done();
             buildOperation.throwIfAborted();
           }
         }
       }
       const { buildFileContents, buildInlineContents, buildManifest } =
         buildSpecifierManager.getBuildInfo();
-      logger.info(
-        createUrlGraphSummary(finalKitchen.graph, {
-          title: "build files",
-        }),
-      );
       if (versioning && assetManifest && Object.keys(buildManifest).length) {
         buildFileContents[assetManifestFileRelativeUrl] = JSON.stringify(
           buildManifest,
