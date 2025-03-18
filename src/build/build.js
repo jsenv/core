@@ -440,9 +440,9 @@ export const build = async ({
       entryPointIndex++;
     }
 
-    if (entryBuildInfoMap.size === 1) {
-      const [entryBuildInfo] = entryBuildInfoMap.values();
-      logger.info(`building ${entryBuildInfo.key}`);
+    if (entryPointSet.size === 1) {
+      const [singleEntryPoint] = entryPointSet.values();
+      logger.info(`building ${singleEntryPoint.key}`);
     } else {
       logger.info(`building ${entryBuildInfoMap.size} entry points`);
     }

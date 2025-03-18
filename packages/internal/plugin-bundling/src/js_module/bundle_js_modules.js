@@ -579,6 +579,7 @@ const rollupPluginJsenv = ({
                     reference.specifier,
                   );
                   if (!specifierBeforeRollup) {
+                    // process.emitWarning?
                     console.warn(
                       `cannot remap "${reference.specifier}" back to specifier before rollup, this is unexpected.`,
                     );

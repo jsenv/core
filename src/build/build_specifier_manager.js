@@ -151,6 +151,12 @@ export const createBuildSpecifierManager = ({
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
       if (ownerUrlInfo.remapReference && !reference.isInline) {
+        if (reference.specifier.startsWith("file:")) {
+          const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.specifier);
+          if (rawUrlInfo && rawUrlInfo.type === "entry_build") {
+            return reference.specifier; // we want to ignore it
+          }
+        }
         const newSpecifier = ownerUrlInfo.remapReference(reference);
         reference.specifier = newSpecifier;
       }
