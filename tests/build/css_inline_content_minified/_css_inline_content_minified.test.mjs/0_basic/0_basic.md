@@ -1,28 +1,7 @@
-# [0_basic](../../css_inline_content_minified.test.mjs#L5)
+# [0_basic](../../css_inline_content_minified.test.mjs#L34)
 
 ```js
-const jsenvSrcDirectoryUrl = new URL("../../../src/", import.meta.url);
-return build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-  runtimeCompat: {
-    chrome: "64",
-    edge: "79",
-    firefox: "67",
-    safari: "11.3",
-  },
-  bundling: {
-    js_module: {
-      chunks: {
-        vendors: {
-          "**/node_modules/": true,
-          [jsenvSrcDirectoryUrl]: true,
-        },
-      },
-    },
-  },
-});
+run()
 ```
 
 # 1/2 write 4 files into "./build/"
