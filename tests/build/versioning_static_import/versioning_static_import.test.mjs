@@ -30,7 +30,7 @@ const test = async ({ name, runtimeCompat }) => {
     );
     const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
     await build({
-      logs: { level: "warn" },
+      // logs: { level: "warn" },
       sourceDirectoryUrl: import.meta.resolve("./client/"),
       buildDirectoryUrl: import.meta.resolve("./dist/"),
       outDirectoryUrl: import.meta.resolve("./.jsenv/"),
@@ -48,7 +48,6 @@ const test = async ({ name, runtimeCompat }) => {
             },
           },
           minification: false,
-
           runtimeCompat,
         },
       },
@@ -97,9 +96,9 @@ const test = async ({ name, runtimeCompat }) => {
   // - browser do not request the file
   const jsFileUrl = import.meta.resolve("./client/file.js");
   const jsFileContent = {
-    beforeTest: readFileSync(jsFileUrl),
-    update: (content) => writeFileSync(jsFileUrl, content),
-    restore: () => writeFileSync(jsFileUrl, jsFileContent.beforeTest),
+    beforeTest: readFileSync(new URL(jsFileUrl)),
+    update: (content) => writeFileSync(new URL(jsFileUrl), content),
+    restore: () => writeFileSync(new URL(jsFileUrl), jsFileContent.beforeTest),
   };
 
   // rebuild
