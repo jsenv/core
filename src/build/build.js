@@ -34,9 +34,14 @@ import {
   humanizeDuration,
   humanizeMemory,
   renderBigSection,
+  renderDetails,
   UNICODE,
 } from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
+import {
+  startMonitoringCpuUsage,
+  startMonitoringMemoryUsage,
+} from "@jsenv/os-metrics";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
@@ -296,6 +301,32 @@ export const build = async ({
     }
   }
 
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+  if (handleSIGINT) {
+    operation.addAbortSource((abort) => {
+      return raceProcessTeardownEvents(
+        {
+          SIGINT: true,
+        },
+        abort,
+      );
+    });
+  }
+
+  const cpuMonitoring = startMonitoringCpuUsage();
+  operation.addEndCallback(cpuMonitoring.stop);
+  const [processCpuUsageMonitoring] = cpuMonitoring;
+  const memoryMonitoring = startMonitoringMemoryUsage();
+  const [processMemoryUsageMonitoring] = memoryMonitoring;
+  const interval = setInterval(() => {
+    processCpuUsageMonitoring.measure();
+    processMemoryUsageMonitoring.measure();
+  }, 500).unref();
+  operation.addEndCallback(() => {
+    clearInterval(interval);
+  });
+
   const logLevel = logs.level;
   const logger = createLogger({ logLevel });
   const animatedLogEnabled =
@@ -317,17 +348,60 @@ export const build = async ({
     content += "\n";
     return content;
   };
-  const renderBuildEndLog = () => {
+  const renderBuildEndLog = ({ duration }) => {
     // tell how many files are generated in build directory
     // tell the repartition?
     // this is not really useful for single build right?
+
+    let content = "";
+
+    const lines = [];
+
+    let durationLine = `duration: `;
+    durationLine += humanizeDuration(duration, { short: true });
+    lines.push(durationLine);
+
+    const humanizeProcessCpuUsage = (ratio) => {
+      const percentageAsNumber = ratio * 100;
+      const percentageAsNumberRounded = Math.round(percentageAsNumber);
+      const percentage = `${percentageAsNumberRounded}%`;
+      return percentage;
+    };
+
+    const humanizeProcessMemoryUsage = (value) => {
+      return humanizeMemory(value, { short: true, decimals: 0 });
+    };
+
+    // cpu usage
+    const processCpuUsage = processCpuUsageMonitoring.info;
+    let cpuUsageLine = "cpu: ";
+    cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
+    cpuUsageLine += renderDetails({
+      med: humanizeProcessCpuUsage(processCpuUsage.median),
+      min: humanizeProcessCpuUsage(processCpuUsage.min),
+      max: humanizeProcessCpuUsage(processCpuUsage.max),
+    });
+    lines.push(cpuUsageLine);
+
+    // memory usage
+    const processMemoryUsage = processMemoryUsageMonitoring.info;
+    let memoryUsageLine = "memory: ";
+    memoryUsageLine += `${humanizeProcessMemoryUsage(processMemoryUsage.end)}`;
+    memoryUsageLine += renderDetails({
+      med: humanizeProcessMemoryUsage(processMemoryUsage.median),
+      min: humanizeProcessMemoryUsage(processMemoryUsage.min),
+      max: humanizeProcessMemoryUsage(processMemoryUsage.max),
+    });
+    lines.push(memoryUsageLine);
+
+    content = lines.join("\n");
 
     return `${renderBigSection({
       title:
         entryPointArray.length === 1
           ? "build done"
           : `${entryPointArray.length} builds done`,
-      content: "",
+      content,
     })}\n`;
   };
 
@@ -401,13 +475,13 @@ export const build = async ({
             }, renderDynamicLog());
           };
         },
-        onBuildEnd: () => {
+        onBuildEnd: ({ duration }) => {
           clearInterval(interval);
           dynamicLog.update("");
           dynamicLog.destroy();
           dynamicLog = null;
           logger.info("");
-          logger.info(renderBuildEndLog());
+          logger.info(renderBuildEndLog({ duration }));
         },
       };
     };
@@ -434,9 +508,9 @@ export const build = async ({
             );
           };
         },
-        onBuildEnd: () => {
+        onBuildEnd: ({ duration }) => {
           logger.info("");
-          logger.info(renderBuildEndLog());
+          logger.info(renderBuildEndLog({ duration }));
         },
       };
     };
@@ -448,19 +522,6 @@ export const build = async ({
   entryPointArray.sort((a, b) => {
     return compareFileUrls(a.sourceUrl, b.sourceUrl);
   });
-
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-  if (handleSIGINT) {
-    operation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
-        {
-          SIGINT: true,
-        },
-        abort,
-      );
-    });
-  }
 
   const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
   if (outDirectoryUrl === undefined) {
@@ -476,6 +537,7 @@ export const build = async ({
   }
 
   const runBuild = async ({ signal }) => {
+    const startDate = Date.now();
     const { onBuildEnd, onEntryPointBuildStart } = startBuildLogs();
 
     const buildUrlsGenerator = createBuildUrlsGenerator({
@@ -615,6 +677,7 @@ export const build = async ({
       buildFileContents,
       buildInlineContents,
       buildManifest,
+      duration: Date.now() - startDate,
     });
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),

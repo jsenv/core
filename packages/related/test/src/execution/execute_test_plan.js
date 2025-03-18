@@ -16,6 +16,7 @@ import {
   createCallOrderer,
   createDetailedMessage,
   createLogger,
+  renderDetails,
   UNICODE,
 } from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
