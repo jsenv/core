@@ -16,6 +16,7 @@ const run = async () => {
         runtimeCompat: { node: "20" },
       },
       "./client/main.html": {
+        buildRelativeUrl: "./client/toto/main.html",
         runtimeCompat: { chrome: "89" },
       },
     },

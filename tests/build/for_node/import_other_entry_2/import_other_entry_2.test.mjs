@@ -10,9 +10,11 @@ const run = async () => {
         runtimeCompat: { node: "20" },
       },
       "./client/a.js": {
+        buildRelativeUrl: "./client/a/a.js",
         runtimeCompat: { chrome: "89" },
       },
       "./client/b.js": {
+        buildRelativeUrl: "./client/b/b.js",
         runtimeCompat: { chrome: "89" },
       },
     },

@@ -1,4 +1,4 @@
-import { bar } from "../../test_node_modules.js";
+import { bar } from "../../../test_node_modules.js";
 
 /* eslint-env browser,node */
 
