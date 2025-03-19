@@ -212,7 +212,11 @@ export const renderTable = (
       if (cellBelow && cellBelow.borderRight) {
         text += borderRight ? "┼" : "";
       } else if (borderRight && borderBottom) {
-        text += "┴";
+        if (cellRight.borderBottom && cellRight.borderLeft) {
+          text += "┴";
+        } else {
+          text += "┘";
+        }
       } else if (borderBottom) {
         text += "─";
       } else if (borderRight) {
