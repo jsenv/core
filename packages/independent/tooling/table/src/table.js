@@ -209,7 +209,14 @@ export const renderTable = (
                 ? "│"
                 : " ";
       }
-    } else if (hasBorderBelow) {
+    } else if (cellBelow) {
+      if (cellBelow.borderRight && cellBelow.borderTop) {
+        text += borderRight ? "┤" : "┐";
+      } else if (cellBelow.borderTop) {
+        text += borderRight ? "│" : "";
+      } else {
+        text += borderRight ? "┤" : "";
+      }
     } else {
       text += borderRight ? "┘" : "─";
     }
