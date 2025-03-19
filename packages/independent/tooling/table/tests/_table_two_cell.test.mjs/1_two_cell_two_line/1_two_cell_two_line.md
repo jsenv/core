@@ -1,4 +1,4 @@
-# [1_two_cell_two_line](../../table_two_cell.test.mjs#L48)
+# [1_two_cell_two_line](../../table_two_cell.test.mjs#L50)
 
 ```js
 const keys = Object.keys(twoLineScenarios);
@@ -25,7 +25,7 @@ ${text}`);
 --- bottom_and_top ---
 
  "1" 
-├─────
+─────
  "2" 
 ```
 

@@ -180,8 +180,6 @@ export const renderTable = (
     let text = "";
     if (hasBorderOnTheLeft) {
     } else if (hasBorderBelow) {
-      text += borderBottom ? "├" : "─";
-    } else if (cellBelow) {
       if (cellBelow.borderLeft && cellBelow.borderTop) {
         text += borderLeft ? "├" : "┌";
       } else if (cellBelow.borderTop) {

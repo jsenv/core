@@ -42,7 +42,9 @@ ${text}`);
       {
         borderBottom: {},
       },
-      { borderTop: {} },
+      {
+        borderTop: {},
+      },
     ],
   };
   test("1_two_cell_two_line", () => {
