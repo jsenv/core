@@ -174,11 +174,11 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           injectCell(borderRightCell, cell, "right");
         }
         if (borderTop) {
-          const borderTopCell = { value: "border top" };
+          const borderTopCell = { type: "border_top", value: "-" };
           injectCell(borderTopCell, cell, "top");
         }
         if (borderBottom) {
-          const borderBottomCell = { value: "border bottom" };
+          const borderBottomCell = { type: "border_bottom", value: "-" };
           injectCell(borderBottomCell, cell, "bottom");
         }
         line[x] = cell;
@@ -188,7 +188,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       y++;
     }
 
-    // Line injections (for completeness, though not modified in this example)
+    // Line injections
     const lineInjectionMap = new Map();
 
     // Organize column injections by line and then by column position
@@ -199,7 +199,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
 
       if (where === "top" || where === "bottom") {
         const line = cell.y;
-        const injectedLineIndex = where === "top" ? line - 1 : line + 1;
+        const injectedLineIndex = where === "top" ? line : line + 1;
         let lineInjection = lineInjectionMap.get(injectedLineIndex);
         if (!lineInjection) {
           lineInjection = [];
@@ -230,7 +230,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       const line = grid[lineIndex];
 
       // Sort injections by column index for this specific line
-      injections.sort((a, b) => a.columnIndex - b.columnIndex);
+      // injections.sort((a, b) => a.columnIndex - b.columnIndex);
 
       // Apply injections with cumulative offset
       let offset = 0;
@@ -239,6 +239,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         if (
           cellToInject.type === "border_left" &&
           x > 0 &&
+          line[x - 1] &&
           line[x - 1].type === "border_right"
         ) {
           // collapse borders
@@ -252,15 +253,16 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     let injectedLineCount = 0;
     for (const [indexToInjectLine, cells] of lineInjectionMap) {
       const [firstCell] = cells;
+      const actualIndex = indexToInjectLine + injectedLineCount;
       if (
         firstCell.type === "border_top" &&
         y > 0 &&
         grid[y - 1][0].type === "border_bottom"
       ) {
         // collapse borders
-        // continue;
+        continue;
       }
-      grid.splice(indexToInjectLine + injectedLineCount, 0, cells);
+      grid.splice(actualIndex, 0, cells);
       injectedLineCount++;
     }
   }
