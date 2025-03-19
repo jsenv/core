@@ -66,7 +66,7 @@ ${text}`);
 --- bottom_right_and_top_left ---
 
   "1" │
-┌─────│
+┌─────┘
 │ "2"  
 ```
 

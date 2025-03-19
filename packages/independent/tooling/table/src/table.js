@@ -254,16 +254,12 @@ export const renderTable = (
           text += " ";
         }
       }
-    } else if (cellBelow) {
-      if (cellBelow.borderRight && cellBelow.borderTop) {
-        text += borderRight ? "┤" : "┐";
-      } else if (cellBelow.borderTop) {
-        text += borderRight ? "│" : "";
-      } else {
-        text += borderRight ? "┤" : "";
-      }
     } else if (borderBottom && borderRight) {
-      text += "┘";
+      if (cellBelow && cellBelow.borderRight) {
+        text += "┤";
+      } else {
+        text += "┘";
+      }
     } else if (borderRight) {
       text += " ";
     }
