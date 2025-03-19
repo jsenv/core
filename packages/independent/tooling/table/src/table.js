@@ -152,14 +152,13 @@ export const renderTable = (
       text += " ".repeat(columnWidth);
     }
     if (hasBorderOnTheRight) {
-      text +=
-        borderRight && borderTop
-          ? "┬"
-          : borderTop
-            ? "─"
-            : borderRight
-              ? "│"
-              : " ";
+      if (borderRight && borderTop) {
+        text += "┬";
+      } else if (borderRight) {
+        text += " ";
+      } else {
+        text += " ";
+      }
     } else if (borderRight && borderTop) {
       text += "┐";
     } else if (borderRight) {
@@ -204,15 +203,12 @@ export const renderTable = (
     if (hasBorderOnTheRight) {
       if (cellBelow && cellBelow.borderRight) {
         text += borderRight ? "┼" : "";
-      } else {
-        text +=
-          borderRight && borderBottom
-            ? "┴"
-            : borderBottom
-              ? "─"
-              : borderRight
-                ? "│"
-                : " ";
+      } else if (borderRight && borderBottom) {
+        text += "┴";
+      } else if (borderBottom) {
+        text += "─";
+      } else if (borderRight) {
+        text += " ";
       }
     } else if (cellBelow) {
       if (cellBelow.borderRight && cellBelow.borderTop) {
