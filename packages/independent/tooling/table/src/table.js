@@ -125,25 +125,29 @@ export const renderTable = (
     return columnBiggestWidthArray[cell.x];
   };
 
-  const anyCellAboveHasLeftBorder = (cell) => {
+  const someCellAboveOrBelow = (cell, predicate) => {
     let cellAbove = getCellAbove(cell);
     while (cellAbove) {
-      if (cellAbove.borderLeft) {
+      if (predicate(cellAbove)) {
         return true;
       }
       cellAbove = getCellAbove(cellAbove);
+    }
+    let cellBelow = getCellBelow(cell);
+    while (cellBelow) {
+      if (predicate(cellBelow)) {
+        return true;
+      }
+      cellBelow = getCellAbove(cellBelow);
     }
     return false;
   };
-  const anyCellAboveHasRightBorder = (cell) => {
-    let cellAbove = getCellAbove(cell);
-    while (cellAbove) {
-      if (cellAbove.borderRight) {
-        return true;
-      }
-      cellAbove = getCellAbove(cellAbove);
-    }
-    return false;
+
+  const someCellAboveOrBelowHasLeftBorder = (cell) => {
+    return someCellAboveOrBelow(cell, (cell) => cell.borderLeft);
+  };
+  const someCellAboveOrBelowHasRightBorder = (cell) => {
+    return someCellAboveOrBelow(cell, (cell) => cell.borderRight);
   };
 
   const renderCellTopBorder = (cell) => {
@@ -223,7 +227,7 @@ export const renderTable = (
       text += "└";
     } else if (borderLeft) {
       text += " ";
-    } else if (anyCellAboveHasLeftBorder(cell)) {
+    } else if (someCellAboveOrBelowHasLeftBorder(cell)) {
       text += " ";
     }
     const columnWidth = getCellWidth(cell) + leftSpacing + rightSpacing;
@@ -279,7 +283,7 @@ export const renderTable = (
       const hasBorderOnTheLeft = leftCell && leftCell.borderRight;
       if (cell.borderLeft && !hasBorderOnTheLeft) {
         line += "│";
-      } else if (anyCellAboveHasLeftBorder(cell)) {
+      } else if (someCellAboveOrBelowHasLeftBorder(cell)) {
         line += " ";
       }
       lineAbove += renderCellTopBorder(cell);
@@ -292,7 +296,7 @@ export const renderTable = (
       // const hasBorderOnTheRight = rightCell && rightCell.borderLeft;
       if (cell.borderRight) {
         line += "│";
-      } else if (anyCellAboveHasRightBorder(cell)) {
+      } else if (someCellAboveOrBelowHasRightBorder(cell)) {
         line += " ";
       }
     }

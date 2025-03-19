@@ -55,7 +55,7 @@ ${text}`);
 --- top_left_and_bottom_right ---
 
 ┌─────
-│ "1" 
+│ "1"  
   "2" │
  ─────┘
 ```
@@ -65,7 +65,7 @@ ${text}`);
 ```console
 --- bottom_right_and_top_left ---
 
- "1" │
+  "1" │
 ┌─────│
 │ "2"  
 ```
