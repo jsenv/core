@@ -6,7 +6,7 @@ const run = (lines, options) => {
 };
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
-  const scenarios = {
+  const sameLineScenarios = {
     right_and_left: [
       {
         borderRight: {},
@@ -16,17 +16,43 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       },
     ],
   };
-
-  test(`0_two_cell_borders`, () => {
-    const keys = Object.keys(scenarios);
+  test(`0_two_cell_same_line`, () => {
+    const keys = Object.keys(sameLineScenarios);
     for (const scenario of keys) {
-      const [firstCellProps, secondCellProps] = scenarios[scenario];
+      const [firstCellProps, secondCellProps] = sameLineScenarios[scenario];
       const text = run(
         [
           [
             { value: "1", ...firstCellProps },
             { value: "2", ...secondCellProps },
           ],
+        ],
+        {
+          ansi: false,
+        },
+      );
+      console.log(`--- ${scenario} ---
+
+${text}`);
+    }
+  });
+
+  const twoLineScenarios = {
+    bottom_and_top: [
+      {
+        borderBottom: {},
+      },
+      { borderTop: {} },
+    ],
+  };
+  test("1_two_cell_two_line", () => {
+    const keys = Object.keys(twoLineScenarios);
+    for (const scenario of keys) {
+      const [firstCellProps, secondCellProps] = twoLineScenarios[scenario];
+      const text = run(
+        [
+          [{ value: "1", ...firstCellProps }],
+          [{ value: "2", ...secondCellProps }],
         ],
         {
           ansi: false,

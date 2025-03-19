@@ -1,9 +1,9 @@
-# [0_two_cell_borders](../../table_two_cell.test.mjs#L20)
+# [0_two_cell_same_line](../../table_two_cell.test.mjs#L19)
 
 ```js
-const keys = Object.keys(scenarios);
+const keys = Object.keys(sameLineScenarios);
 for (const scenario of keys) {
-  const [firstCellProps, secondCellProps] = scenarios[scenario];
+  const [firstCellProps, secondCellProps] = sameLineScenarios[scenario];
   const text = run(
     [
       [
