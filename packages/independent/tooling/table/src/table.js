@@ -211,7 +211,11 @@ export const renderTable = (
       } else if (borderBottom) {
         text += "─";
       } else if (borderRight) {
-        text += " ";
+        if (cellRight.borderBottom && cellRight.borderLeft) {
+          text += "└";
+        } else {
+          text += " ";
+        }
       }
     } else if (cellBelow) {
       if (cellBelow.borderRight && cellBelow.borderTop) {
