@@ -153,8 +153,13 @@ export const renderTable = (
     }
     if (hasBorderOnTheRight) {
       if (borderRight && borderTop) {
-        text += "┬";
-      } else if (borderRight) {
+        if (cellRight.borderTop) {
+          text += "┬";
+        } else {
+          text += "┐";
+        }
+      }
+      if (borderRight) {
         text += " ";
       } else {
         text += " ";

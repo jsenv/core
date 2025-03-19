@@ -34,7 +34,7 @@ ${text}`);
 ```console
 --- top_right_and_bottom_left ---
 
-─────┬     
+─────┐      
  "1" │ "2" 
       ─────
 ```
