@@ -1,4 +1,4 @@
-# [0_two_cell_same_line](../../table_two_cell.test.mjs#L63)
+# [0_two_cell_same_line](../../table_two_cells.test.mjs#L63)
 
 ```js
 const keys = Object.keys(sameLineScenarios);

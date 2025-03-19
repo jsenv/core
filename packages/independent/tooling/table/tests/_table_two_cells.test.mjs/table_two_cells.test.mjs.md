@@ -1,4 +1,4 @@
-# [table_two_cell.test.mjs](../table_two_cell.test.mjs)
+# [table_two_cells.test.mjs](../table_two_cells.test.mjs)
 
 
 - [0_two_cell_same_line](0_two_cell_same_line/0_two_cell_same_line.md)
