@@ -3,7 +3,7 @@ import stringWidth from "string-width";
 
 export const renderTable = (
   lines,
-  { leftSpacing = 1, rightSpacing = 1 } = {},
+  { ansi = true, leftSpacing = 1, rightSpacing = 1 } = {},
 ) => {
   const columnBiggestWidthArray = [];
   const createCell = (
@@ -45,17 +45,17 @@ export const renderTable = (
       text = value;
     }
 
-    if (bold) {
+    if (ansi && bold) {
       text = ANSI.color(text, ANSI.BOLD);
     }
-    if (color) {
+    if (ansi && color) {
       text = ANSI.color(text, color);
     }
 
     let width = stringWidth(text);
     if (unit) {
       width += ` ${unit}`.length;
-      if (unitColor) {
+      if (ansi && unitColor) {
         unit = ANSI.color(unit, unitColor);
       }
       text += ` ${unit}`;

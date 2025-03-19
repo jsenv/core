@@ -1,9 +1,7 @@
 # [table.test.mjs](../table.test.mjs)
 
 
-- [0_one_cell_all_border](0_one_cell_all_border/0_one_cell_all_border.md)
-- [1_one_cell_border_top](1_one_cell_border_top/1_one_cell_border_top.md)
-- [1_one_cell_border_top_and_left](1_one_cell_border_top_and_left/1_one_cell_border_top_and_left.md)
+- [0_single_cell_borders](0_single_cell_borders/0_single_cell_borders.md)
 
 ---
 
