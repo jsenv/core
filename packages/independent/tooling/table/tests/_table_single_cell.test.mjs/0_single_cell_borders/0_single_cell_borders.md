@@ -1,4 +1,4 @@
-# [0_single_cell_borders](../../table.test.mjs#L110)
+# [0_single_cell_borders](../../table_single_cell.test.mjs#L110)
 
 ```js
 const keys = Object.keys(scenarios);

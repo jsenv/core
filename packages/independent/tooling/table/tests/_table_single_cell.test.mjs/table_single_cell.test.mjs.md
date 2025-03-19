@@ -1,4 +1,4 @@
-# [table.test.mjs](../table.test.mjs)
+# [table_single_cell.test.mjs](../table_single_cell.test.mjs)
 
 
 - [0_single_cell_borders](0_single_cell_borders/0_single_cell_borders.md)

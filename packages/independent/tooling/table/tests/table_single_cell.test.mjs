@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { renderTable } from "./table.js";
+import { renderTable } from "@jsenv/table";
 
 const run = (lines, options) => {
   return renderTable(lines, options);
@@ -118,13 +118,6 @@ await snapshotTests(
 ${text}`);
       }
     });
-
-    // test.ONLY("2_two_lines", () => {
-    //   return run([
-    //     [{ value: "1", ...borderAllAround }],
-    //     [{ value: "2", ...borderAllAround }],
-    //   ]);
-    // });
   },
   {
     logEffects: {
@@ -132,11 +125,3 @@ ${text}`);
     },
   },
 );
-
-// test(`
-//     ┌─────────┐
-//     │ (index) │
-//     ├─────────┤
-//     │ 0       │
-//     │ 1       │
-//     └─────────┘`);
