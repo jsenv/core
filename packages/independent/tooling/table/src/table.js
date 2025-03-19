@@ -251,10 +251,13 @@ export const renderTable = (
     let line = "";
     for (const cell of row) {
       const biggestWidth = columnBiggestWidthArray[cell.x];
+      const cellAbove = getCellAbove(cell);
       const leftCell = getLeftCell(cell);
       const hasBorderOnTheLeft = leftCell && leftCell.borderRight;
       if (cell.borderLeft && !hasBorderOnTheLeft) {
         line += "│";
+      } else if (cellAbove && cellAbove.borderLeft) {
+        line += " ";
       }
       lineAbove += renderCellTopBorder(cell);
       lineBelow += renderCellBottomBorder(cell);

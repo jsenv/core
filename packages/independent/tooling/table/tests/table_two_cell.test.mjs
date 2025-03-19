@@ -110,6 +110,16 @@ ${text}`);
         borderRight: {},
       },
     ],
+    top_left_and_bottom_right: [
+      {
+        borderTop: {},
+        borderLeft: {},
+      },
+      {
+        borderBottom: {},
+        borderRight: {},
+      },
+    ],
     all_around: [
       {
         borderTop: {},
