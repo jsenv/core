@@ -158,13 +158,14 @@ export const renderTable = (
         } else {
           text += "┐";
         }
-      }
-      if (borderRight) {
-        text += " ";
-      } else if (cellRight.borderLeft && cellRight.borderTop) {
-        text += "┌";
-      } else if (cellRight.borderLeft) {
-        text += "│";
+      } else if (borderRight) {
+        if (cellRight.borderLeft && cellRight.borderTop) {
+          text += "┌";
+        } else if (cellRight.borderLeft) {
+          text += "│";
+        } else {
+          text += " ";
+        }
       } else {
         text += " ";
       }

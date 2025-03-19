@@ -26,6 +26,7 @@ ${text}`);
 ```console
 --- right_and_left ---
 
+     │     
  "1" │ "2" 
 ```
 
@@ -34,7 +35,7 @@ ${text}`);
 ```console
 --- top_right_and_bottom_left ---
 
-─────┐      
+─────┐     
  "1" │ "2" 
      └─────
 ```
@@ -44,7 +45,7 @@ ${text}`);
 ```console
 --- bottom_right_and_top_left ---
 
-      ─────
+     ┌─────
  "1" │ "2" 
 ─────┴     
 ```
