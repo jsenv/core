@@ -1,9 +1,5 @@
-import {
-  ANSI,
-  distributePercentages,
-  humanizeFileSize,
-  renderTable,
-} from "@jsenv/humanize";
+import { ANSI, distributePercentages, humanizeFileSize } from "@jsenv/humanize";
+import { renderTable } from "@jsenv/table";
 
 export const createBuildContentSummary = (
   buildFileContents,

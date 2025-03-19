@@ -1,11 +1,8 @@
 import { snapshotTests } from "@jsenv/snapshot";
 import { renderTable } from "./table.js";
 
-const run = (table) => {
-  return renderTable({
-    head: table[0],
-    body: table.slice(1),
-  });
+const run = (lines) => {
+  return renderTable(lines);
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {

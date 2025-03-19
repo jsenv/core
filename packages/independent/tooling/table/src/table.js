@@ -1,160 +1,104 @@
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
 import stringWidth from "string-width";
 
-export const renderTable = ({ head, body, foot }) => {
+export const renderTable = (
+  lines,
+  { leftSpacing = 1, rightSpacing = 1 } = {},
+) => {
   const columnBiggestWidthArray = [];
-  const rows = [];
-  const appendRow = (rowProps) => {
-    const cells = [];
-    const y = rows.length;
-    const appendCell = (cellProps) => {
-      const props = {
-        ...rowProps,
-        ...cellProps,
-      };
-      let {
-        value,
-        bold,
-        format,
-        unit = format === "percentage" ? "%" : undefined,
-        unitColor,
-        quoteAroundStrings = !format,
-        color,
-        borderLeft,
-        borderTop,
-        borderRight,
-        borderBottom,
-      } = props;
-
-      let text;
-      if (typeof value === "string") {
-        if (quoteAroundStrings) {
-          text = `"${value}"`;
-          if (color === undefined) {
-            color = ANSI.GREEN;
-          }
-        } else {
-          text = value;
-        }
-      } else if (typeof value === "number") {
-        if (format === "size") {
-          text = humanizeFileSize(value);
-        } else {
-          text = String(value);
-          if (color === undefined) {
-            color = ANSI.YELLOW;
-          }
+  const createCell = (
+    {
+      value,
+      bold,
+      format,
+      unit = format === "percentage" ? "%" : undefined,
+      unitColor,
+      quoteAroundStrings = !format,
+      color,
+      borderLeft,
+      borderTop,
+      borderRight,
+      borderBottom,
+    },
+    { x, y },
+  ) => {
+    let text;
+    if (typeof value === "string") {
+      if (quoteAroundStrings) {
+        text = `"${value}"`;
+        if (color === undefined) {
+          color = ANSI.GREEN;
         }
       } else {
         text = value;
       }
-
-      if (bold) {
-        text = ANSI.color(text, ANSI.BOLD);
-      }
-      if (color) {
-        text = ANSI.color(text, color);
-      }
-
-      let width = stringWidth(text);
-      if (unit) {
-        width += ` ${unit}`.length;
-        if (unitColor) {
-          unit = ANSI.color(unit, unitColor);
+    } else if (typeof value === "number") {
+      if (format === "size") {
+        text = humanizeFileSize(value);
+      } else {
+        text = String(value);
+        if (color === undefined) {
+          color = ANSI.YELLOW;
         }
-        text += ` ${unit}`;
       }
+    } else {
+      text = value;
+    }
 
-      const x = cells.length;
-      const biggestWidth = columnBiggestWidthArray[x] || 0;
-      if (width > biggestWidth) {
-        columnBiggestWidthArray[x] = width;
+    if (bold) {
+      text = ANSI.color(text, ANSI.BOLD);
+    }
+    if (color) {
+      text = ANSI.color(text, color);
+    }
+
+    let width = stringWidth(text);
+    if (unit) {
+      width += ` ${unit}`.length;
+      if (unitColor) {
+        unit = ANSI.color(unit, unitColor);
       }
+      text += ` ${unit}`;
+    }
 
-      const cell = {
-        isFirst: x === 0,
-        isLast: false,
-        x,
-        y,
-        value,
-        text,
-        width,
-        borderLeft,
-        borderTop,
-        borderRight,
-        borderBottom,
-      };
-      cells.push(cell);
-      return cell;
-    };
+    const biggestWidth = columnBiggestWidthArray[x] || 0;
+    if (width > biggestWidth) {
+      columnBiggestWidthArray[x] = width;
+    }
 
-    const close = () => {
-      cells[cells.length - 1].isLast = true;
-    };
-
-    const row = {
+    const cell = {
+      isFirst: x === 0,
+      isLast: false,
+      x,
       y,
-      cells,
-      appendCell,
-      close,
+      value,
+      text,
+      width,
+      borderLeft,
+      borderTop,
+      borderRight,
+      borderBottom,
     };
-    rows.push(row);
-    return row;
+    return cell;
   };
 
-  if (head) {
-    const headRow = appendRow({
-      quoteAroundStrings: false,
-      borderTop: { color: null },
-      borderBottom: { color: null },
-      borderLeft: { color: null },
-      borderRight: { color: null },
-    });
-    thead: {
-      for (const cellProps of head) {
-        headRow.appendCell(cellProps);
-      }
-      headRow.close();
+  const rows = [];
+  let y = 0;
+  for (const line of lines) {
+    const row = [];
+    let lastCell;
+    let x = 0;
+    for (const cellProps of line) {
+      const cell = createCell(cellProps, { x, y });
+      lastCell = cell;
+      row.push(cell);
+      x++;
     }
+    if (lastCell) {
+      lastCell.isLast = true;
+    }
+    y++;
   }
-  tbody: {
-    let bodyLastRow;
-    for (const object of body) {
-      const bodyRow = appendRow({
-        borderLeft: { color: null },
-        borderRight: { color: null },
-      });
-      bodyLastRow = bodyRow;
-      for (const headCellProps of head) {
-        const propName = headCellProps.value;
-        const bodyCellProps = object[propName] || { value: undefined };
-        bodyRow.appendCell(bodyCellProps);
-      }
-      bodyRow.close();
-    }
-    if (bodyLastRow) {
-      for (const bodyLastRowCell of bodyLastRow.cells) {
-        if (bodyLastRowCell.borderBottom === undefined) {
-          bodyLastRowCell.borderBottom = { color: null };
-        }
-      }
-    }
-  }
-  if (foot) {
-    const footRow = appendRow({
-      quoteAroundStrings: false,
-      borderBottom: { color: null },
-      borderLeft: { color: null },
-      borderRight: { color: null },
-    });
-    for (const fooCellProps of foot) {
-      footRow.appendCell(fooCellProps);
-    }
-    footRow.close();
-  }
-
-  const leftSpacing = 1;
-  const rightSpacing = 1;
 
   const getLeftCell = (cell) => {
     const { x, y } = cell;
