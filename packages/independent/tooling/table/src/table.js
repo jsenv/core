@@ -140,7 +140,7 @@ export const renderTable = (
 
     let text = "";
     if (hasBorderOnTheLeft) {
-    } else if (borderLeft && borderTop) {
+    } else if (borderTop && borderLeft) {
       text += "┌";
     } else if (borderLeft) {
       text += " ";
@@ -192,9 +192,7 @@ export const renderTable = (
       }
     } else if (borderBottom && borderLeft) {
       text += "└";
-    } else if (borderBottom) {
-      text += "─";
-    } else {
+    } else if (borderLeft) {
       text += " ";
     }
     const columnWidth = getCellWidth(cell) + leftSpacing + rightSpacing;
@@ -226,9 +224,7 @@ export const renderTable = (
       }
     } else if (borderBottom && borderRight) {
       text += "┘";
-    } else if (borderBottom) {
-      text += "─";
-    } else {
+    } else if (borderRight) {
       text += " ";
     }
 
