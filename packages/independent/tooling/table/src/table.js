@@ -186,8 +186,6 @@ export const renderTable = (
       } else if (borderRight) {
         if (cellRight.borderLeft && cellRight.borderTop) {
           text += "┌";
-        } else if (cellRight.borderLeft) {
-          text += "│";
         } else {
           text += " ";
         }

@@ -26,7 +26,6 @@ ${text}`);
 ```console
 --- right_and_left ---
 
-     │     
  "1" │ "2" 
 ```
 
