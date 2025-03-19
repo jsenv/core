@@ -166,11 +166,11 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           inputCell;
         const cell = { x, y, props };
         if (borderLeft) {
-          const borderLeftCell = { value: "border left" };
+          const borderLeftCell = { type: "border_left", value: "|" };
           injectCell(borderLeftCell, cell, "left");
         }
         if (borderRight) {
-          const borderRightCell = { value: "border right" };
+          const borderRightCell = { type: "border_right", value: "|" };
           injectCell(borderRightCell, cell, "right");
         }
         if (borderTop) {
@@ -188,10 +188,15 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       y++;
     }
 
+    // Line injections (for completeness, though not modified in this example)
     const lineInjectionMap = new Map();
-    const columnInjectionMap = new Map();
+
+    // Organize column injections by line and then by column position
+    const columnInjectionsByLine = new Map();
+
     for (const injection of injectionSet) {
       const { cellToInject, cell, where } = injection;
+
       if (where === "top" || where === "bottom") {
         const line = cell.y;
         const injectedLineIndex = where === "top" ? line - 1 : line + 1;
@@ -202,37 +207,66 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         }
         lineInjection[cell.x] = cellToInject;
       } else {
+        // Handle column injections
+        const lineIndex = cell.y;
         const column = cell.x;
         const injectedColumnIndex = where === "left" ? column : column + 1;
-        let columnInjection = columnInjectionMap.get(injectedColumnIndex);
-        if (!columnInjection) {
-          columnInjection = new Set();
-          columnInjectionMap.set(injectedColumnIndex, columnInjection);
+
+        // Get or create line map
+        if (!columnInjectionsByLine.has(lineIndex)) {
+          columnInjectionsByLine.set(lineIndex, []);
         }
-        columnInjection.add({ y: cell.y, cellToInject });
+
+        // Add injection to the appropriate line with its column position
+        columnInjectionsByLine.get(lineIndex).push({
+          columnIndex: injectedColumnIndex,
+          cellToInject,
+        });
       }
     }
 
-    let injectedColumnPerLine = new Map();
-    for (let [indexToInjectColumn, injectionSet] of columnInjectionMap) {
-      for (const { y, cellToInject } of injectionSet) {
-        const line = grid[y];
-        let injectedColumnCount = injectedColumnPerLine.get(y) || 0;
-        line.splice(indexToInjectColumn + injectedColumnCount, 0, cellToInject);
-        injectedColumnPerLine.set(y, injectedColumnCount + 1);
+    // Process column injections line by line
+    for (const [lineIndex, injections] of columnInjectionsByLine.entries()) {
+      const line = grid[lineIndex];
+
+      // Sort injections by column index for this specific line
+      injections.sort((a, b) => a.columnIndex - b.columnIndex);
+
+      // Apply injections with cumulative offset
+      let offset = 0;
+      for (const { columnIndex, cellToInject } of injections) {
+        const x = columnIndex + offset;
+        if (
+          cellToInject.type === "border_left" &&
+          x > 0 &&
+          line[x - 1].type === "border_right"
+        ) {
+          // collapse borders
+          continue;
+        }
+        line.splice(columnIndex + offset, 0, cellToInject);
+        offset++;
       }
     }
 
     let injectedLineCount = 0;
     for (const [indexToInjectLine, cells] of lineInjectionMap) {
+      const [firstCell] = cells;
+      if (
+        firstCell.type === "border_top" &&
+        y > 0 &&
+        grid[y - 1][0].type === "border_bottom"
+      ) {
+        // collapse borders
+        // continue;
+      }
       grid.splice(indexToInjectLine + injectedLineCount, 0, cells);
       injectedLineCount++;
     }
-
-    grid;
-    debugger;
   }
 
+  grid;
+  debugger;
   const getCellWidth = (cell) => {
     return columnBiggestWidthArray[cell.x];
   };
@@ -420,37 +454,37 @@ renderTable([
       borderRight: {},
       borderBottom: {},
     },
-    // {
-    //   value: "1:3",
-    //   borderTop: {},
-    //   borderLeft: {},
-    //   borderRight: {},
-    //   borderBottom: {},
-    // },
+    {
+      value: "1:3",
+      borderTop: {},
+      borderLeft: {},
+      borderRight: {},
+      borderBottom: {},
+    },
   ],
-  // [
-  //   {
-  //     value: "2:1",
-  //     borderTop: {},
-  //     borderLeft: {},
-  //     borderRight: {},
-  //     borderBottom: {},
-  //   },
-  //   {
-  //     value: "2:2",
-  //     borderTop: {},
-  //     borderLeft: {},
-  //     borderRight: {},
-  //     borderBottom: {},
-  //   },
-  //   {
-  //     value: "2:3",
-  //     borderTop: {},
-  //     borderLeft: {},
-  //     borderRight: {},
-  //     borderBottom: {},
-  //   },
-  // ],
+  [
+    {
+      value: "2:1",
+      borderTop: {},
+      borderLeft: {},
+      borderRight: {},
+      borderBottom: {},
+    },
+    {
+      value: "2:2",
+      borderTop: {},
+      borderLeft: {},
+      borderRight: {},
+      borderBottom: {},
+    },
+    {
+      value: "2:3",
+      borderTop: {},
+      borderLeft: {},
+      borderRight: {},
+      borderBottom: {},
+    },
+  ],
 ]);
 
 // console.log(
