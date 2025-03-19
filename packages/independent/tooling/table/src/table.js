@@ -157,7 +157,6 @@ export const renderTable = (
             : borderRight
               ? "│"
               : " ";
-    } else if (hasBorderBelow) {
     } else {
       text += borderRight ? "┐" : "─";
     }

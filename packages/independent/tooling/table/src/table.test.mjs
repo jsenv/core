@@ -13,7 +13,7 @@ const borderAllAround = {
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test.ONLY("0_one_line", () => {
+  test("0_one_line", () => {
     return run([
       [
         {
@@ -24,7 +24,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     ]);
   });
 
-  test("1_two_lines", () => {
+  test.ONLY("1_two_lines", () => {
     return run([
       [{ value: "1", ...borderAllAround }],
       [{ value: "2", ...borderAllAround }],
