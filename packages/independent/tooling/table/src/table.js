@@ -127,11 +127,7 @@ export const renderTable = (
 
   const renderCellTopBorder = (cell) => {
     const { borderTop, borderLeft, borderRight } = cell;
-    if (!borderTop) {
-      return " ".repeat(getCellWidth(cell) + leftSpacing + rightSpacing + 2);
-    }
     let text = "";
-
     const cellLeft = getLeftCell(cell);
     const cellAbove = getCellAbove(cell);
     const cellBelow = getCellBelow(cell);
@@ -141,9 +137,12 @@ export const renderTable = (
     const hasBorderOnTheRight = cellRight && cellRight.borderLeft;
     const hasBorderAbove = cellAbove && cellAbove.borderBottom;
     const hasBorderBelow = cellBelow && cellBelow.borderTop;
+    if (hasBorderAbove) {
+      // already handled by the border above
+      return "";
+    }
 
     if (hasBorderOnTheLeft) {
-    } else if (hasBorderAbove) {
     } else {
       text += borderLeft ? "┌" : "─";
     }
