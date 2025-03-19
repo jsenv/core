@@ -1,0 +1,9 @@
+{
+  "name": "@jsenv/table",
+  "private": true,
+  "type": "module",
+  "main": "./src/table.js",
+  "dependencies": {
+    "@jsenv/humanize": "1.3.1"
+  }
+}
