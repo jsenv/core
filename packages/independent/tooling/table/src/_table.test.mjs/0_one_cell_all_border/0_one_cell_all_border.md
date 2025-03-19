@@ -1,17 +1,19 @@
-# [1_two_lines](../../table.test.mjs#L27)
+# [0_one_cell_all_border](../../table.test.mjs#L16)
 
 ```js
 return run([
-  [{ value: "1", ...borderAllAround }],
-  [{ value: "2", ...borderAllAround }],
+  [
+    {
+      value: "1",
+      ...borderAllAround,
+    },
+  ],
 ]);
 ```
 
 ```js
 ┌─────┐
 │ "1" │
-├─────┤
-│ "2" │
 └─────┘
 ```
 

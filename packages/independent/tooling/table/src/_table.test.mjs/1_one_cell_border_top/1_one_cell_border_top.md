@@ -1,20 +1,19 @@
-# [0_one_line](../../table.test.mjs#L16)
+# [1_one_cell_border_top](../../table.test.mjs#L27)
 
 ```js
 return run([
   [
     {
       value: "1",
-      ...borderAllAround,
+      borderTop: {},
     },
   ],
 ]);
 ```
 
 ```js
-┌─────┐
-│ "1" │
-└─────┘
+───────
+ "1" 
 ```
 
 ---

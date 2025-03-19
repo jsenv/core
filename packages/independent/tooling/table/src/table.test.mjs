@@ -13,7 +13,7 @@ const borderAllAround = {
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_one_line", () => {
+  test.ONLY("0_one_cell_all_border", () => {
     return run([
       [
         {
@@ -24,12 +24,35 @@ await snapshotTests(import.meta.url, ({ test }) => {
     ]);
   });
 
-  test.ONLY("1_two_lines", () => {
+  test.ONLY("1_one_cell_border_top", () => {
     return run([
-      [{ value: "1", ...borderAllAround }],
-      [{ value: "2", ...borderAllAround }],
+      [
+        {
+          value: "1",
+          borderTop: {},
+        },
+      ],
     ]);
   });
+
+  test.ONLY("1_one_cell_border_top_and_left", () => {
+    return run([
+      [
+        {
+          value: "1",
+          borderTop: {},
+          borderLeft: {},
+        },
+      ],
+    ]);
+  });
+
+  // test.ONLY("2_two_lines", () => {
+  //   return run([
+  //     [{ value: "1", ...borderAllAround }],
+  //     [{ value: "2", ...borderAllAround }],
+  //   ]);
+  // });
 });
 
 // test(`
