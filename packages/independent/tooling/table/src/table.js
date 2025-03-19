@@ -181,6 +181,7 @@ export const renderTable = (
   const renderCellBottomBorder = (cell) => {
     const { borderBottom, borderLeft, borderRight } = cell;
     const cellLeft = getLeftCell(cell);
+
     const cellBelow = getCellBelow(cell);
     const cellRight = getRightCell(cell);
     const hasBorderOnTheLeft = cellLeft && cellLeft.borderRight;
@@ -201,6 +202,16 @@ export const renderTable = (
       text += "└";
     } else if (borderLeft) {
       text += " ";
+    } else {
+      // any cell above having a border can force this cell to have a space
+      let cellAbove = getCellAbove(cell);
+      while (cellAbove) {
+        if (cellAbove.borderLeft) {
+          text += " ";
+          break;
+        }
+        cellAbove = getCellAbove(cellAbove);
+      }
     }
     const columnWidth = getCellWidth(cell) + leftSpacing + rightSpacing;
     if (borderBottom) {
