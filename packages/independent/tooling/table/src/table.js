@@ -125,6 +125,27 @@ export const renderTable = (
     return columnBiggestWidthArray[cell.x];
   };
 
+  const anyCellAboveHasLeftBorder = (cell) => {
+    let cellAbove = getCellAbove(cell);
+    while (cellAbove) {
+      if (cellAbove.borderLeft) {
+        return true;
+      }
+      cellAbove = getCellAbove(cellAbove);
+    }
+    return false;
+  };
+  const anyCellAboveHasRightBorder = (cell) => {
+    let cellAbove = getCellAbove(cell);
+    while (cellAbove) {
+      if (cellAbove.borderRight) {
+        return true;
+      }
+      cellAbove = getCellAbove(cellAbove);
+    }
+    return false;
+  };
+
   const renderCellTopBorder = (cell) => {
     const { borderTop, borderLeft, borderRight } = cell;
     const cellLeft = getLeftCell(cell);
@@ -202,16 +223,8 @@ export const renderTable = (
       text += "└";
     } else if (borderLeft) {
       text += " ";
-    } else {
-      // any cell above having a border can force this cell to have a space
-      let cellAbove = getCellAbove(cell);
-      while (cellAbove) {
-        if (cellAbove.borderLeft) {
-          text += " ";
-          break;
-        }
-        cellAbove = getCellAbove(cellAbove);
-      }
+    } else if (anyCellAboveHasLeftBorder(cell)) {
+      text += " ";
     }
     const columnWidth = getCellWidth(cell) + leftSpacing + rightSpacing;
     if (borderBottom) {
@@ -262,12 +275,11 @@ export const renderTable = (
     let line = "";
     for (const cell of row) {
       const biggestWidth = columnBiggestWidthArray[cell.x];
-      const cellAbove = getCellAbove(cell);
       const leftCell = getLeftCell(cell);
       const hasBorderOnTheLeft = leftCell && leftCell.borderRight;
       if (cell.borderLeft && !hasBorderOnTheLeft) {
         line += "│";
-      } else if (cellAbove && cellAbove.borderLeft) {
+      } else if (anyCellAboveHasLeftBorder(cell)) {
         line += " ";
       }
       lineAbove += renderCellTopBorder(cell);
@@ -280,6 +292,8 @@ export const renderTable = (
       // const hasBorderOnTheRight = rightCell && rightCell.borderLeft;
       if (cell.borderRight) {
         line += "│";
+      } else if (anyCellAboveHasRightBorder(cell)) {
+        line += " ";
       }
     }
     if (lineAbove.trim()) {

@@ -120,6 +120,16 @@ ${text}`);
         borderRight: {},
       },
     ],
+    bottom_right_and_top_left: [
+      {
+        borderBottom: {},
+        borderRight: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+      },
+    ],
     all_around: [
       {
         borderTop: {},

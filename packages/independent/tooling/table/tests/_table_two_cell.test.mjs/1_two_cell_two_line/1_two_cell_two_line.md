@@ -1,4 +1,4 @@
-# [1_two_cell_two_line](../../table_two_cell.test.mjs#L138)
+# [1_two_cell_two_line](../../table_two_cell.test.mjs#L148)
 
 ```js
 const keys = Object.keys(twoLineScenarios);
@@ -19,7 +19,7 @@ ${text}`);
 }
 ```
 
-# 1/6 console.log
+# 1/7 console.log
 
 ```console
 --- bottom_and_top ---
@@ -29,7 +29,7 @@ ${text}`);
  "2" 
 ```
 
-# 2/6 console.log
+# 2/7 console.log
 
 ```console
 --- bottom_left_and_top_left ---
@@ -39,7 +39,7 @@ ${text}`);
 │ "2" 
 ```
 
-# 3/6 console.log
+# 3/7 console.log
 
 ```console
 --- bottom_right_and_top_right ---
@@ -49,7 +49,7 @@ ${text}`);
  "2" │
 ```
 
-# 4/6 console.log
+# 4/7 console.log
 
 ```console
 --- top_left_and_bottom_right ---
@@ -60,7 +60,17 @@ ${text}`);
  ─────┘
 ```
 
-# 5/6 console.log
+# 5/7 console.log
+
+```console
+--- bottom_right_and_top_left ---
+
+ "1" │
+┌─────│
+│ "2"  
+```
+
+# 6/7 console.log
 
 ```console
 --- all_around ---
@@ -72,7 +82,7 @@ ${text}`);
 └─────┘
 ```
 
-# 6/6 return
+# 7/7 return
 
 ```js
 undefined
