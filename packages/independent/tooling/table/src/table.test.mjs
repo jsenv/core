@@ -5,17 +5,29 @@ const run = (lines) => {
   return renderTable(lines);
 };
 
+const borderAllAround = {
+  borderLeft: {},
+  borderTop: {},
+  borderRight: {},
+  borderBottom: {},
+};
+
 await snapshotTests(import.meta.url, ({ test }) => {
   test.ONLY("0_one_line", () => {
     return run([
-      [{ value: "1", borderLeft: {}, borderTop: {}, borderRight: {} }],
+      [
+        {
+          value: "1",
+          ...borderAllAround,
+        },
+      ],
     ]);
   });
 
   test("1_two_lines", () => {
     return run([
-      [{ value: "1", borderLeft: {}, borderTop: {}, borderRight: {} }],
-      [{ value: "2", borderLeft: {}, borderTop: {}, borderRight: {} }],
+      [{ value: "1", ...borderAllAround }],
+      [{ value: "2", ...borderAllAround }],
     ]);
   });
 });

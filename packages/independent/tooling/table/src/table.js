@@ -83,22 +83,24 @@ export const renderTable = (
   };
 
   const rows = [];
-  let y = 0;
-  for (const line of lines) {
-    const row = [];
-    let lastCell;
-    let x = 0;
-    for (const cellProps of line) {
-      const cell = createCell(cellProps, { x, y });
-      lastCell = cell;
-      row.push(cell);
-      x++;
+  {
+    let y = 0;
+    for (const line of lines) {
+      const row = [];
+      let lastCell;
+      let x = 0;
+      for (const cellProps of line) {
+        const cell = createCell(cellProps, { x, y });
+        lastCell = cell;
+        row.push(cell);
+        x++;
+      }
+      if (lastCell) {
+        lastCell.isLast = true;
+      }
+      rows.push(row);
+      y++;
     }
-    if (lastCell) {
-      lastCell.isLast = true;
-    }
-    rows.push(row);
-    y++;
   }
 
   const getLeftCell = (cell) => {
@@ -191,6 +193,8 @@ export const renderTable = (
       } else {
         text += borderLeft ? "├" : "";
       }
+    } else {
+      text += borderLeft ? "└" : "─";
     }
     text += "─".repeat(getCellWidth(cell) + leftSpacing + rightSpacing);
     if (hasBorderOnTheRight) {
@@ -215,6 +219,7 @@ export const renderTable = (
   };
 
   let log = "";
+  let y = 0;
   for (const row of rows) {
     let lineAbove = "";
     let lineBelow = "";
@@ -243,11 +248,15 @@ export const renderTable = (
       log += "\n";
     }
     log += line;
-    log += "\n";
     if (lineBelow.trim()) {
-      log += lineBelow;
       log += "\n";
+      log += lineBelow;
     }
+    if (y === rows.length - 1) {
+      break;
+    }
+    log += "\n";
+    y++;
   }
 
   return log;

@@ -1,15 +1,20 @@
-# [0_one_line](../../table.test.mjs#L9)
+# [0_one_line](../../table.test.mjs#L16)
 
 ```js
 return run([
-  [{ value: "1", borderLeft: {}, borderTop: {}, borderRight: {} }],
+  [
+    {
+      value: "1",
+      ...borderAllAround,
+    },
+  ],
 ]);
 ```
 
 ```js
 ┌─────┐
 │ "1" │
-
+└─────┘
 ```
 
 ---
