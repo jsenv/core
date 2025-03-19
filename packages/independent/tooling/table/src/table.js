@@ -127,26 +127,30 @@ export const renderTable = (
 
   const renderCellTopBorder = (cell) => {
     const { borderTop, borderLeft, borderRight } = cell;
-    let text = "";
     const cellLeft = getLeftCell(cell);
     const cellAbove = getCellAbove(cell);
-    const cellBelow = getCellBelow(cell);
     const cellRight = getRightCell(cell);
-
     const hasBorderOnTheLeft = cellLeft && cellLeft.borderRight;
     const hasBorderOnTheRight = cellRight && cellRight.borderLeft;
     const hasBorderAbove = cellAbove && cellAbove.borderBottom;
-    const hasBorderBelow = cellBelow && cellBelow.borderTop;
     if (hasBorderAbove) {
       // already handled by the border above
       return "";
     }
 
+    let text = "";
     if (hasBorderOnTheLeft) {
-    } else if (borderLeft) {
+    } else if (borderLeft && borderTop) {
       text += "┌";
+    } else if (borderLeft) {
+      text += " ";
     }
-    text += "─".repeat(getCellWidth(cell) + leftSpacing + rightSpacing);
+    const columnWidth = getCellWidth(cell) + leftSpacing + rightSpacing;
+    if (borderTop) {
+      text += "─".repeat(columnWidth);
+    } else {
+      text += " ".repeat(columnWidth);
+    }
     if (hasBorderOnTheRight) {
       text +=
         borderRight && borderTop
@@ -156,8 +160,10 @@ export const renderTable = (
             : borderRight
               ? "│"
               : " ";
-    } else if (borderRight) {
+    } else if (borderRight && borderTop) {
       text += "┐";
+    } else if (borderRight) {
+      text += " ";
     }
 
     return text;
@@ -165,21 +171,14 @@ export const renderTable = (
 
   const renderCellBottomBorder = (cell) => {
     const { borderBottom, borderLeft, borderRight } = cell;
-    if (!borderBottom) {
-      return " ".repeat(getCellWidth(cell) + leftSpacing + rightSpacing + 2);
-    }
-    let text = "";
-
     const cellLeft = getLeftCell(cell);
-    const cellAbove = getCellAbove(cell);
     const cellBelow = getCellBelow(cell);
     const cellRight = getRightCell(cell);
-
     const hasBorderOnTheLeft = cellLeft && cellLeft.borderRight;
     const hasBorderOnTheRight = cellRight && cellRight.borderLeft;
-    const hasBorderAbove = cellAbove && cellAbove.borderBottom;
     const hasBorderBelow = cellBelow && cellBelow.borderTop;
 
+    let text = "";
     if (hasBorderOnTheLeft) {
     } else if (hasBorderBelow) {
       text += borderBottom ? "├" : "─";
@@ -191,10 +190,19 @@ export const renderTable = (
       } else {
         text += borderLeft ? "├" : "";
       }
+    } else if (borderBottom && borderLeft) {
+      text += "└";
+    } else if (borderBottom) {
+      text += "─";
     } else {
-      text += borderLeft ? "└" : "─";
+      text += " ";
     }
-    text += "─".repeat(getCellWidth(cell) + leftSpacing + rightSpacing);
+    const columnWidth = getCellWidth(cell) + leftSpacing + rightSpacing;
+    if (borderBottom) {
+      text += "─".repeat(columnWidth);
+    } else {
+      text += " ".repeat(columnWidth);
+    }
     if (hasBorderOnTheRight) {
       if (cellBelow && cellBelow.borderRight) {
         text += borderRight ? "┼" : "";
@@ -216,8 +224,12 @@ export const renderTable = (
       } else {
         text += borderRight ? "┤" : "";
       }
+    } else if (borderBottom && borderRight) {
+      text += "┘";
+    } else if (borderBottom) {
+      text += "─";
     } else {
-      text += borderRight ? "┘" : "─";
+      text += " ";
     }
 
     return text;
