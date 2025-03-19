@@ -97,26 +97,27 @@ export const renderTable = (
     if (lastCell) {
       lastCell.isLast = true;
     }
+    rows.push(row);
     y++;
   }
 
   const getLeftCell = (cell) => {
     const { x, y } = cell;
-    return x === 0 ? null : rows[y].cells[x - 1];
+    return x === 0 ? null : rows[y][x - 1];
   };
   const getRightCell = (cell) => {
     const { x, y } = cell;
-    const cells = rows[y].cells;
+    const cells = rows[y];
     return cells[x + 1];
   };
   const getCellAbove = (cell) => {
     const { x, y } = cell;
-    return y === 0 ? null : rows[y - 1].cells[x];
+    return y === 0 ? null : rows[y - 1][x];
   };
   const getCellBelow = (cell) => {
     const { x, y } = cell;
     const rowBelow = rows[y + 1];
-    return rowBelow ? rowBelow.cells[x] : null;
+    return rowBelow ? rowBelow[x] : null;
   };
   const getCellWidth = (cell) => {
     return columnBiggestWidthArray[cell.x];
@@ -215,11 +216,10 @@ export const renderTable = (
 
   let log = "";
   for (const row of rows) {
-    const { cells } = row;
     let lineAbove = "";
     let lineBelow = "";
     let line = "";
-    for (const cell of cells) {
+    for (const cell of row) {
       const biggestWidth = columnBiggestWidthArray[cell.x];
       const leftCell = getLeftCell(cell);
       const hasBorderOnTheLeft = leftCell && leftCell.borderRight;

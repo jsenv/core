@@ -1,7 +1,8 @@
 # [table.test.mjs](../table.test.mjs)
 
 
-- [0_basic](0_basic/0_basic.md)
+- [0_one_line](0_one_line/0_one_line.md)
+- [1_two_lines](1_two_lines/1_two_lines.md)
 
 ---
 
