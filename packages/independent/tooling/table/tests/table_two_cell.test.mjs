@@ -25,6 +25,16 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         borderLeft: {},
       },
     ],
+    bottom_right_and_top_left: [
+      {
+        borderBottom: {},
+        borderRight: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+      },
+    ],
   };
   test(`0_two_cell_same_line`, () => {
     const keys = Object.keys(sameLineScenarios);

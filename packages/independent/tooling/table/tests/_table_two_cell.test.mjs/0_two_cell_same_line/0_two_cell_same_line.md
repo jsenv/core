@@ -1,4 +1,4 @@
-# [0_two_cell_same_line](../../table_two_cell.test.mjs#L29)
+# [0_two_cell_same_line](../../table_two_cell.test.mjs#L39)
 
 ```js
 const keys = Object.keys(sameLineScenarios);
@@ -21,7 +21,7 @@ ${text}`);
 }
 ```
 
-# 1/3 console.log
+# 1/4 console.log
 
 ```console
 --- right_and_left ---
@@ -29,7 +29,7 @@ ${text}`);
  "1" │ "2" 
 ```
 
-# 2/3 console.log
+# 2/4 console.log
 
 ```console
 --- top_right_and_bottom_left ---
@@ -39,7 +39,17 @@ ${text}`);
      └─────
 ```
 
-# 3/3 return
+# 3/4 console.log
+
+```console
+--- bottom_right_and_top_left ---
+
+      ─────
+ "1" │ "2" 
+─────┴     
+```
+
+# 4/4 return
 
 ```js
 undefined

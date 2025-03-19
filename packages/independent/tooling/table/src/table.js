@@ -161,6 +161,10 @@ export const renderTable = (
       }
       if (borderRight) {
         text += " ";
+      } else if (cellRight.borderLeft && cellRight.borderTop) {
+        text += "┌";
+      } else if (cellRight.borderLeft) {
+        text += "│";
       } else {
         text += " ";
       }
