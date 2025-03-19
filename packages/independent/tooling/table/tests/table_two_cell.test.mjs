@@ -46,6 +46,40 @@ ${text}`);
         borderTop: {},
       },
     ],
+    bottom_left_and_top_left: [
+      {
+        borderBottom: {},
+        borderLeft: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+      },
+    ],
+    bottom_right_and_top_right: [
+      {
+        borderBottom: {},
+        borderRight: {},
+      },
+      {
+        borderTop: {},
+        borderRight: {},
+      },
+    ],
+    all_around: [
+      {
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+    ],
   };
   test("1_two_cell_two_line", () => {
     const keys = Object.keys(twoLineScenarios);
