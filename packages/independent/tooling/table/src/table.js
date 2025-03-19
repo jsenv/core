@@ -143,8 +143,8 @@ export const renderTable = (
     }
 
     if (hasBorderOnTheLeft) {
-    } else {
-      text += borderLeft ? "┌" : "─";
+    } else if (borderLeft) {
+      text += "┌";
     }
     text += "─".repeat(getCellWidth(cell) + leftSpacing + rightSpacing);
     if (hasBorderOnTheRight) {
@@ -156,8 +156,8 @@ export const renderTable = (
             : borderRight
               ? "│"
               : " ";
-    } else {
-      text += borderRight ? "┐" : "─";
+    } else if (borderRight) {
+      text += "┐";
     }
 
     return text;
