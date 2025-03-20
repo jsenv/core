@@ -109,8 +109,54 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
 
+  // collapse horizontal borders
+  {
+    // if every right border can collapse with the left border next to it
+    // then we collapse all right borders of the column
+    const canCollapseTwoCells = (left, right) => {
+      if (left.type === "blank" && right.type === "blank") {
+        return true;
+      }
+      if (left.type === "blank" && right.type === "border") {
+        return true;
+      }
+      if (left.type === "border" && right.type === "blank") {
+        return true;
+      }
+      if (left.type === "border" && right.type === "border") {
+        // (later we'll check that border share size, color and styles)
+        return true;
+      }
+      return false;
+    };
+
+    let x = 2;
+    const columnCount = grid[0].length;
+    while (x < columnCount - 1) {
+      let canCollapseColumn = false;
+      let y = 0;
+      while (y < grid.length) {
+        const columnCell = grid[y][x];
+        const eastColumnCell = grid[y][x + 1];
+        if (canCollapseTwoCells(columnCell, eastColumnCell)) {
+          canCollapseColumn = true;
+        } else {
+          break;
+        }
+        y++;
+      }
+      if (canCollapseColumn) {
+        let y = 0;
+        while (y < grid.length) {
+          grid[y][x + 1] = blankCell;
+          y++;
+        }
+      }
+      x += 3;
+    }
+  }
+
   // transform connecting borders into blank cells when they are not needed
-  // (this is also where we going to do border collapsing)
   {
     const columnContainingLeftBorderSet = new Set();
     const columnContainingRightBorderSet = new Set();
@@ -118,6 +164,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       columnContainingLeftBorderSet.has(x);
     const columnContainsRightBorder = (x) =>
       columnContainingRightBorderSet.has(x);
+
     {
       let y = 0;
       while (y < grid.length) {
@@ -203,8 +250,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   // remove columns that are only blank cells (no visible borders)
   {
     let x = 0;
-    const firstLine = grid[0];
-    while (x < firstLine.length) {
+    let columnCount = grid[0].length;
+    while (x < columnCount) {
       let columnContainsNonBlankCell = false;
       let y = 0;
       while (y < grid.length) {
@@ -225,6 +272,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       while (y < grid.length) {
         const line = grid[y];
         line.splice(x, 1);
+        columnCount--;
         y++;
       }
     }
@@ -375,6 +423,7 @@ const createContentCell = (
 
   return {
     type: "content",
+    value,
     xAlign,
     yAlign,
     getSize: () => {

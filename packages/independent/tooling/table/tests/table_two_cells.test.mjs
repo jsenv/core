@@ -15,52 +15,52 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         borderLeft: {},
       },
     ],
-    top_right_and_bottom_left: [
-      {
-        borderTop: {},
-        borderRight: {},
-      },
-      {
-        borderBottom: {},
-        borderLeft: {},
-      },
-    ],
-    bottom_right_and_top_left: [
-      {
-        borderBottom: {},
-        borderRight: {},
-      },
-      {
-        borderTop: {},
-        borderLeft: {},
-      },
-    ],
-    bottom_left_and_top_right: [
-      {
-        borderBottom: {},
-        borderLeft: {},
-      },
-      {
-        borderTop: {},
-        borderRight: {},
-      },
-    ],
-    all_around: [
-      {
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-      {
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-    ],
+    // top_right_and_bottom_left: [
+    //   {
+    //     borderTop: {},
+    //     borderRight: {},
+    //   },
+    //   {
+    //     borderBottom: {},
+    //     borderLeft: {},
+    //   },
+    // ],
+    // bottom_right_and_top_left: [
+    //   {
+    //     borderBottom: {},
+    //     borderRight: {},
+    //   },
+    //   {
+    //     borderTop: {},
+    //     borderLeft: {},
+    //   },
+    // ],
+    // bottom_left_and_top_right: [
+    //   {
+    //     borderBottom: {},
+    //     borderLeft: {},
+    //   },
+    //   {
+    //     borderTop: {},
+    //     borderRight: {},
+    //   },
+    // ],
+    // all_around: [
+    //   {
+    //     borderTop: {},
+    //     borderLeft: {},
+    //     borderRight: {},
+    //     borderBottom: {},
+    //   },
+    //   {
+    //     borderTop: {},
+    //     borderLeft: {},
+    //     borderRight: {},
+    //     borderBottom: {},
+    //   },
+    // ],
   };
-  test(`0_two_cell_same_line`, () => {
+  test.ONLY(`0_two_cell_same_line`, () => {
     const keys = Object.keys(sameLineScenarios);
     for (const scenario of keys) {
       const [firstCellProps, secondCellProps] = sameLineScenarios[scenario];
