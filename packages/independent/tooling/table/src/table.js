@@ -481,37 +481,37 @@ console.log(
         borderRight: {},
         borderBottom: {},
       },
-      // {
-      //   value: "1:3",
-      //   borderTop: {},
-      //   borderLeft: {},
-      //   borderRight: {},
-      //   borderBottom: {},
-      // },
+      {
+        value: "1:3",
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
     ],
-    // [
-    //   {
-    //     value: "2:1",
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    //   {
-    //     value: "2:2",
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    //   {
-    //     value: "2:3",
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    // ],
+    [
+      {
+        value: "2:1",
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+      {
+        value: "2:2",
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+      {
+        value: "2:3",
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+    ],
   ]),
 );
 
