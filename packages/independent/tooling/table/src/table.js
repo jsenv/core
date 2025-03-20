@@ -57,8 +57,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (topCell) {
             aboveCell = topCell;
           } else {
-            const nextCell = topCells[x + 1];
-            if (nextCell && nextCell.type === "border") {
+            const rightTopCell = topCells[x + 1];
+            if (rightTopCell && rightTopCell.type === "border") {
               aboveCell = createTopLeftBorderCell();
             } else {
               const previousCell = topCells[x - 1];
@@ -107,6 +107,77 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         y++;
       }
     }
+  }
+
+  // transform connecting borders into blank cells when they are not needed
+  // (this is also where we going to do border collapsing)
+  {
+    const columnContainingLeftBorderSet = new Set();
+    const columnContainingRightBorderSet = new Set();
+    const columnsContainsLeftBorder = (x) =>
+      columnContainingLeftBorderSet.has(x);
+    const columnContainsRightBorder = (x) =>
+      columnContainingRightBorderSet.has(x);
+    {
+      let y = 0;
+      while (y < grid.length) {
+        const line = grid[y];
+        let x = 0;
+        for (const cell of line) {
+          if (isBorderLeft(cell)) {
+            columnContainingLeftBorderSet.add(x);
+          } else if (isBorderRight(cell)) {
+            columnContainingRightBorderSet.add(x);
+          }
+          x++;
+        }
+        y++;
+      }
+    }
+
+    mutateGrid(grid, (cell, { x, y }) => {
+      if (isBorderTopLeft(cell)) {
+        if (columnsContainsLeftBorder(x)) {
+          const southCell = grid[y + 1][x];
+          if (isBorderLeft(southCell)) {
+            return cell;
+          }
+          return createBorderTopCell();
+        }
+        return blankCell;
+      }
+      if (isBorderTopRight(cell)) {
+        if (columnContainsRightBorder(x)) {
+          const southCell = grid[y + 1][x];
+          if (isBorderRight(southCell)) {
+            return cell;
+          }
+          return createBorderTopCell();
+        }
+        return blankCell;
+      }
+      if (isBorderBottomRight(cell)) {
+        if (columnContainsRightBorder(x)) {
+          const northCell = grid[y - 1][x];
+          if (isBorderRight(northCell)) {
+            return cell;
+          }
+          return createBorderBottomCell();
+        }
+        return blankCell;
+      }
+      if (isBorderBottomLeft(cell)) {
+        if (columnsContainsLeftBorder(x)) {
+          const northCell = grid[y - 1][x];
+          if (isBorderLeft(northCell)) {
+            return cell;
+          }
+          return createBorderBottomCell();
+        }
+        return blankCell;
+      }
+      return cell;
+    });
   }
 
   // remove lines that are only blank cells (no visible borders)
@@ -434,6 +505,14 @@ const createBottomLeftBorderCell = () => {
     char: BORDER_CHARS.bottom_left,
   });
 };
+const isBorderTopLeft = (cell) => cell.position === "top_left";
+const isBorderTopRight = (cell) => cell.position === "top_right";
+const isBorderLeft = (cell) => cell.position === "left";
+const isBorderRight = (cell) => cell.position === "right";
+// const isBorderTop = (cell) => cell.position === "top";
+// const isBorderBottom = (cell) => cell.position === "bottom";
+const isBorderBottomRight = (cell) => cell.position === "bottom_right";
+const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
 
 // blank cells are fluid cells that will take whatever size they are requested to take
 // they can seen as placeholders that are removed when a line or column is composed only by blank cells
@@ -457,6 +536,18 @@ const blankCell = {
     }
     return text;
   },
+};
+
+const mutateGrid = (grid, callback) => {
+  let y = 0;
+  for (const line of grid) {
+    let x = 0;
+    for (const cell of line) {
+      line[x] = callback(cell, { x, y });
+      x++;
+    }
+    y++;
+  }
 };
 
 // console.log(

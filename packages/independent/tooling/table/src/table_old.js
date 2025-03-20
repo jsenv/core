@@ -1,3 +1,24 @@
+// const someCellInColumn = (x, y, predicate) => {
+//   let yNorth = y - 1;
+//   while (yNorth >= 0) {
+//     const cellAtNorth = grid[yNorth][x];
+//     if (predicate(cellAtNorth)) {
+//       return true;
+//     }
+//     yNorth--;
+//   }
+//   let ySouth = y + 1;
+//   while (ySouth < grid.length) {
+//     const cellAtSouth = grid[ySouth][x];
+//     if (predicate(cellAtSouth)) {
+//       return true;
+//     }
+//     ySouth++;
+//   }
+
+//   return false;
+// };
+
 // const getLeftCell = (cell) => {
 //   const { x, y } = cell;
 //   return x === 0 ? null : grid[y][x - 1];
