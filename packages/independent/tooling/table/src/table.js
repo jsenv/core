@@ -100,7 +100,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
 
     // Process column injections line by line
-    for (const [lineIndex, injections] of columnInjectionsByLine.entries()) {
+    for (const [lineIndex, injections] of columnInjectionsByLine) {
       const line = grid[lineIndex];
 
       // Sort injections by column index for this specific line
@@ -125,18 +125,33 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
 
     let injectedLineCount = 0;
-    for (const [indexToInjectLine, cells] of lineInjectionMap) {
-      const [firstCell] = cells;
+    for (const [indexToInjectLine, borderCells] of lineInjectionMap) {
+      const [firstBorderCell] = borderCells;
       const actualIndex = indexToInjectLine + injectedLineCount;
+      const columnInjectionForThisLine =
+        columnInjectionsByLine.get(actualIndex);
+      if (columnInjectionForThisLine) {
+        let offset = 0;
+        for (const { columnIndex, borderCell } of columnInjectionForThisLine) {
+          const cornerBorderCell = {
+            type: "border",
+            position: `${firstBorderCell.position}_${borderCell.position}`,
+            value: "+",
+          };
+          borderCells.splice(columnIndex + offset, 0, cornerBorderCell);
+          offset++;
+        }
+      }
+
       if (
-        firstCell.position === "top" &&
+        firstBorderCell.position === "top" &&
         y > 0 &&
         grid[y - 1][0].position === "bottom"
       ) {
         // collapse borders
         continue;
       }
-      grid.splice(actualIndex, 0, cells);
+      grid.splice(actualIndex, 0, borderCells);
       injectedLineCount++;
     }
   }
@@ -442,44 +457,44 @@ console.log(
         borderRight: {},
         borderBottom: {},
       },
-      {
-        value: "1:2",
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-      {
-        value: "1:3",
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
+      // {
+      //   value: "1:2",
+      //   borderTop: {},
+      //   borderLeft: {},
+      //   borderRight: {},
+      //   borderBottom: {},
+      // },
+      // {
+      //   value: "1:3",
+      //   borderTop: {},
+      //   borderLeft: {},
+      //   borderRight: {},
+      //   borderBottom: {},
+      // },
     ],
-    [
-      {
-        value: "2:1",
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-      {
-        value: "2:2",
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-      {
-        value: "2:3",
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-    ],
+    // [
+    //   {
+    //     value: "2:1",
+    //     borderTop: {},
+    //     borderLeft: {},
+    //     borderRight: {},
+    //     borderBottom: {},
+    //   },
+    //   {
+    //     value: "2:2",
+    //     borderTop: {},
+    //     borderLeft: {},
+    //     borderRight: {},
+    //     borderBottom: {},
+    //   },
+    //   {
+    //     value: "2:3",
+    //     borderTop: {},
+    //     borderLeft: {},
+    //     borderRight: {},
+    //     borderBottom: {},
+    //   },
+    // ],
   ]),
 );
 
