@@ -11,181 +11,6 @@ import stringWidth from "string-width";
 export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const grid = [];
 
-  // blank cells are fluid cells that will take whatever size they are requested to take
-  // they can seen as placeholders that are removed when a line or column is composed only by blank cells
-  // this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
-  // (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
-  // where the border is)
-  const blankCell = {
-    type: "blank",
-    value: "",
-    getSize: () => [0, 0],
-    render: ({ availableWidth, availableHeight }) => {
-      let text = "";
-      let y = 0;
-      while (true) {
-        text += " ".repeat(availableWidth);
-        if (y === availableHeight - 1) {
-          break;
-        }
-        text += "\n";
-        y++;
-      }
-      return text;
-    },
-  };
-  const createBorderCell = ({ position, char }) => {
-    const size = [stringWidth(char), char.split("\n").length];
-
-    return {
-      type: "border",
-      position,
-      xAlign:
-        position === "top_left" || position === "bottom_left"
-          ? "start"
-          : position === "top_right" || position === "bottom_right"
-            ? "end"
-            : undefined,
-      yAlign:
-        position === "top_left" || position === "top_right"
-          ? "start"
-          : position === "bottom_left" || position === "bottom_right"
-            ? "end"
-            : undefined,
-      getSize: () => size,
-      render: ({ availableWidth, availableHeight }) => {
-        if (position === "left") {
-          return char.repeat(availableWidth);
-        }
-        if (position === "right") {
-          return char.repeat(availableWidth);
-        }
-        if (position === "top" || position === "bottom") {
-          let text = "";
-          let y = 0;
-          while (true) {
-            text += char.repeat(availableWidth);
-            if (y === availableHeight - 1) {
-              break;
-            }
-            text += "\n";
-            y++;
-          }
-          return text;
-        }
-        return char;
-      },
-    };
-  };
-  const createBorderLeftCell = () => {
-    return createBorderCell({ position: "left", char: "│" });
-  };
-  const createBorderTopCell = () => {
-    return createBorderCell({ position: "top", char: "─" });
-  };
-  const createBorderBottomCell = () => {
-    return createBorderCell({ position: "bottom", char: "─" });
-  };
-  const createBorderRightCell = () => {
-    return createBorderCell({ position: "right", char: "│" });
-  };
-  const createTopLeftBorderCell = () => {
-    return createBorderCell({ position: "top_left", char: "┌" });
-  };
-  const createTopRightBorderCell = () => {
-    return createBorderCell({ position: "top_right", char: "┐" });
-  };
-  const createBottomRightBorderCell = () => {
-    return createBorderCell({ position: "bottom_right", char: "┘" });
-  };
-  const createBottomLeftBorderCell = () => {
-    return createBorderCell({ position: "bottom_left", char: "└" });
-  };
-
-  const createContentCell = ({
-    value,
-    quoteAroundStrings = true,
-    color,
-    format,
-    bold,
-    unit,
-    unitColor,
-    leftSpacing = 1,
-    rightSpacing = 1,
-    topSpacing = 0,
-    bottomSpacing = 0,
-    xAlign = "start", // "start", "center", "end"
-    yAlign = "start", // "start", "center", "end"
-  }) => {
-    let text;
-    if (typeof value === "string") {
-      if (quoteAroundStrings) {
-        text = `"${value}"`;
-        if (color === undefined) {
-          color = ANSI.GREEN;
-        }
-      } else {
-        text = value;
-      }
-    } else if (typeof value === "number") {
-      if (format === "size") {
-        text = humanizeFileSize(value);
-      } else {
-        text = String(value);
-        if (color === undefined) {
-          color = ANSI.YELLOW;
-        }
-      }
-    } else {
-      text = value;
-    }
-
-    if (ansi && bold) {
-      text = ANSI.color(text, ANSI.BOLD);
-    }
-    if (ansi && color) {
-      text = ANSI.color(text, color);
-    }
-
-    let width = stringWidth(text);
-    if (leftSpacing) {
-      width += leftSpacing;
-      text = ` `.repeat(leftSpacing) + text;
-    }
-    if (unit) {
-      width += ` ${unit}`.length;
-      if (ansi && unitColor) {
-        unit = ANSI.color(unit, unitColor);
-      }
-      text += ` ${unit}`;
-    }
-    if (rightSpacing) {
-      width += rightSpacing;
-      text += ` `.repeat(rightSpacing);
-    }
-    let height = text.split("\n").length;
-    if (topSpacing) {
-      height += topSpacing;
-      text = `\n`.repeat(topSpacing) + text;
-    }
-    if (bottomSpacing) {
-      height += bottomSpacing;
-      text += `\n`.repeat(bottomSpacing);
-    }
-
-    return {
-      type: "content",
-      xAlign,
-      yAlign,
-      getSize: () => {
-        return [width, height];
-      },
-      render: () => {
-        return text;
-      },
-    };
-  };
-
   // inject borders
   {
     let y = 0;
@@ -210,7 +35,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           ? createBorderBottomCell(borderBottom)
           : blankCell;
         bottomCells[x] = bottomCell;
-        const contentCell = createContentCell(props);
+        const contentCell = createContentCell(props, { ansi });
         line[x] = contentCell;
         x++;
 
@@ -282,53 +107,43 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
 
-  // remove lines that have no visible borders
+  // remove lines that are only blank cells (no visible borders)
   {
     let y = 0;
     while (y < grid.length) {
       const line = grid[y];
-      const [firstCell] = line;
-      if (firstCell.type === "content") {
-        y++;
-        continue;
-      }
-      let hasVisibleBorder = false;
+      let hasNonBlankCell = false;
       for (const cell of line) {
-        if (cell.color === ANSI.RED) {
+        if (cell.type === "blank") {
           continue;
         }
-        hasVisibleBorder = true;
+        hasNonBlankCell = true;
         break;
       }
-      if (hasVisibleBorder) {
+      if (hasNonBlankCell) {
         y++;
         continue;
       }
       grid.splice(y, 1);
     }
   }
-  // remove columns that have no visible borders
+  // remove columns that are only blank cells (no visible borders)
   {
     let x = 0;
     const firstLine = grid[0];
     while (x < firstLine.length) {
-      const cell = firstLine[0];
-      if (cell.type === "content") {
-        x++;
-        continue;
-      }
-      let hasVisibleBorder = false;
+      let hasNonBlankCell = false;
       let y = 0;
       while (y < grid.length) {
         const cellBelow = grid[y][x];
-        if (cellBelow.color === ANSI.RED) {
+        if (cellBelow.type === "blank") {
           y++;
           continue;
         }
-        hasVisibleBorder = true;
+        hasNonBlankCell = true;
         break;
       }
-      if (hasVisibleBorder) {
+      if (hasNonBlankCell) {
         x++;
         continue;
       }
@@ -412,6 +227,183 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   return log;
 };
 
+// blank cells are fluid cells that will take whatever size they are requested to take
+// they can seen as placeholders that are removed when a line or column is composed only by blank cells
+// this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
+// (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
+// where the border is)
+const blankCell = {
+  type: "blank",
+  value: "",
+  getSize: () => [0, 0],
+  render: ({ availableWidth, availableHeight }) => {
+    let text = "";
+    let y = 0;
+    while (true) {
+      text += " ".repeat(availableWidth);
+      if (y === availableHeight - 1) {
+        break;
+      }
+      text += "\n";
+      y++;
+    }
+    return text;
+  },
+};
+const createBorderCell = ({ position, char }) => {
+  const size = [stringWidth(char), char.split("\n").length];
+
+  return {
+    type: "border",
+    position,
+    xAlign:
+      position === "top_left" || position === "bottom_left"
+        ? "start"
+        : position === "top_right" || position === "bottom_right"
+          ? "end"
+          : undefined,
+    yAlign:
+      position === "top_left" || position === "top_right"
+        ? "start"
+        : position === "bottom_left" || position === "bottom_right"
+          ? "end"
+          : undefined,
+    getSize: () => size,
+    render: ({ availableWidth, availableHeight }) => {
+      if (position === "left") {
+        return char.repeat(availableWidth);
+      }
+      if (position === "right") {
+        return char.repeat(availableWidth);
+      }
+      if (position === "top" || position === "bottom") {
+        let text = "";
+        let y = 0;
+        while (true) {
+          text += char.repeat(availableWidth);
+          if (y === availableHeight - 1) {
+            break;
+          }
+          text += "\n";
+          y++;
+        }
+        return text;
+      }
+      return char;
+    },
+  };
+};
+const createBorderLeftCell = () => {
+  return createBorderCell({ position: "left", char: "│" });
+};
+const createBorderTopCell = () => {
+  return createBorderCell({ position: "top", char: "─" });
+};
+const createBorderBottomCell = () => {
+  return createBorderCell({ position: "bottom", char: "─" });
+};
+const createBorderRightCell = () => {
+  return createBorderCell({ position: "right", char: "│" });
+};
+const createTopLeftBorderCell = () => {
+  return createBorderCell({ position: "top_left", char: "┌" });
+};
+const createTopRightBorderCell = () => {
+  return createBorderCell({ position: "top_right", char: "┐" });
+};
+const createBottomRightBorderCell = () => {
+  return createBorderCell({ position: "bottom_right", char: "┘" });
+};
+const createBottomLeftBorderCell = () => {
+  return createBorderCell({ position: "bottom_left", char: "└" });
+};
+const createContentCell = (
+  {
+    value,
+    quoteAroundStrings = true,
+    color,
+    format,
+    bold,
+    unit,
+    unitColor,
+    leftSpacing = 1,
+    rightSpacing = 1,
+    topSpacing = 0,
+    bottomSpacing = 0,
+    xAlign = "start", // "start", "center", "end"
+    yAlign = "start", // "start", "center", "end"
+  },
+  { ansi },
+) => {
+  let text;
+  if (typeof value === "string") {
+    if (quoteAroundStrings) {
+      text = `"${value}"`;
+      if (color === undefined) {
+        color = ANSI.GREEN;
+      }
+    } else {
+      text = value;
+    }
+  } else if (typeof value === "number") {
+    if (format === "size") {
+      text = humanizeFileSize(value);
+    } else {
+      text = String(value);
+      if (color === undefined) {
+        color = ANSI.YELLOW;
+      }
+    }
+  } else {
+    text = value;
+  }
+
+  if (ansi && bold) {
+    text = ANSI.color(text, ANSI.BOLD);
+  }
+  if (ansi && color) {
+    text = ANSI.color(text, color);
+  }
+
+  let width = stringWidth(text);
+  if (leftSpacing) {
+    width += leftSpacing;
+    text = ` `.repeat(leftSpacing) + text;
+  }
+  if (unit) {
+    width += ` ${unit}`.length;
+    if (ansi && unitColor) {
+      unit = ANSI.color(unit, unitColor);
+    }
+    text += ` ${unit}`;
+  }
+  if (rightSpacing) {
+    width += rightSpacing;
+    text += ` `.repeat(rightSpacing);
+  }
+  let height = text.split("\n").length;
+  if (topSpacing) {
+    height += topSpacing;
+    text = `\n`.repeat(topSpacing) + text;
+  }
+  if (bottomSpacing) {
+    height += bottomSpacing;
+    text += `\n`.repeat(bottomSpacing);
+  }
+
+  return {
+    type: "content",
+    xAlign,
+    yAlign,
+    getSize: () => {
+      return [width, height];
+    },
+    render: () => {
+      return text;
+    },
+  };
+};
+
 const applyXAlign = (text, xAlign, availableWidth, width) => {
   if (xAlign === "start") {
     return text + " ".repeat(availableWidth - width);
@@ -432,91 +424,53 @@ const applyYAlign = (text, yAlign, availableHeight, height) => {
   return text;
 };
 
-console.log(
-  renderTable([
-    [
-      {
-        value: "1:1",
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-      // {
-      //   value: "1:2",
-      //   borderTop: {},
-      //   borderLeft: {},
-      //   // borderRight: {},
-      //   borderBottom: {},
-      // },
-      // {
-      //   value: "1:3",
-      //   borderTop: {},
-      //   // borderLeft: {},
-      //   borderRight: {},
-      //   borderBottom: {},
-      // },
-    ],
-    // [
-    //   {
-    //     value: "2:1",
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    //   {
-    //     value: "2:2",
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    //   {
-    //     value: "2:3",
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    // ],
-  ]),
-);
-
 // console.log(
-//   renderTable({
-//     head: ["name", "long_name", "percentage"],
-//     body: [
-//       { name: "dam", long_name: 120, percentage: "56.0" },
-//       { name: "seb", long_name: 10, percentage: "56.0" },
-//     ],
-//     // foot: [],
-//   }),
-// );
-
-// console.log(
-//   renderTable({
-//     head: [
-//       { value: "name", bold: true },
-//       { value: "long_name", bold: true },
-//       //  { value: "percentage", bold: true },
-//     ],
-//     body: [
+//   renderTable([
+//     [
 //       {
-//         name: { value: "dam" },
-//         long_name: { value: 120 },
-//         percentage: { value: "56.0" },
+//         value: "1:1",
+//         borderTop: {},
+//         borderLeft: {},
+//         borderRight: {},
+//         borderBottom: {},
 //       },
-//       // {
-//       //   name: { value: "seb" },
-//       //   long_name: { value: 10 },
-//       //   percentage: { value: "56.0", format: "percentage" },
-//       // },
+//       {
+//         value: "1:2",
+//         borderTop: {},
+//         borderLeft: {},
+//         // borderRight: {},
+//         borderBottom: {},
+//       },
+//       {
+//         value: "1:3",
+//         borderTop: {},
+//         // borderLeft: {},
+//         borderRight: {},
+//         borderBottom: {},
+//       },
 //     ],
-//     // foot: [
-//     //   { value: "hey", bold: true },
-//     //   { value: "hey", bold: true },
-//     //   // { value: "hey", bold: true },
-//     // ],
-//   }),
+//     [
+//       {
+//         value: "2:1",
+//         borderTop: {},
+//         borderLeft: {},
+//         borderRight: {},
+//         borderBottom: {},
+//       },
+//       {
+//         value: "2:2",
+//         borderTop: {},
+//         borderLeft: {},
+//         borderRight: {},
+//         borderBottom: {},
+//       },
+//       {
+//         value: "2:3",
+//         borderTop: {},
+//         borderLeft: {},
+//         borderRight: {},
+//         borderBottom: {},
+//       },
+//     ],
+//   ]),
 // );
