@@ -12,7 +12,7 @@ ${text}`);
 }
 ```
 
-# 1/2 console.log
+# 1/17 console.log
 
 ```console
 --- none ---
@@ -20,7 +20,143 @@ ${text}`);
  "1" 
 ```
 
-# 2/2 return
+# 2/17 console.log
+
+```console
+--- top ---
+
+┌─────┐
+  "1"  
+```
+
+# 3/17 console.log
+
+```console
+--- left ---
+
+│ "1" 
+```
+
+# 4/17 console.log
+
+```console
+--- right ---
+
+ "1" │
+```
+
+# 5/17 console.log
+
+```console
+--- bottom ---
+
+  "1"  
+└─────┘
+```
+
+# 6/17 console.log
+
+```console
+--- topLeft ---
+
+┌─────┐
+│ "1"  
+```
+
+# 7/17 console.log
+
+```console
+--- topRight ---
+
+┌─────┐
+  "1" │
+```
+
+# 8/17 console.log
+
+```console
+--- bottomRight ---
+
+  "1" │
+└─────┘
+```
+
+# 9/17 console.log
+
+```console
+--- bottomLeft ---
+
+│ "1"  
+└─────┘
+```
+
+# 10/17 console.log
+
+```console
+--- leftAndRight ---
+
+│ "1" │
+```
+
+# 11/17 console.log
+
+```console
+--- topAndBottom ---
+
+┌─────┐
+  "1"  
+└─────┘
+```
+
+# 12/17 console.log
+
+```console
+--- allButTop ---
+
+│ "1" │
+└─────┘
+```
+
+# 13/17 console.log
+
+```console
+--- allButRight ---
+
+┌─────┐
+│ "1"  
+└─────┘
+```
+
+# 14/17 console.log
+
+```console
+--- allButLeft ---
+
+┌─────┐
+  "1" │
+└─────┘
+```
+
+# 15/17 console.log
+
+```console
+--- allButBottom ---
+
+┌─────┐
+│ "1" │
+```
+
+# 16/17 console.log
+
+```console
+--- all ---
+
+┌─────┐
+│ "1" │
+└─────┘
+```
+
+# 17/17 return
 
 ```js
 undefined
