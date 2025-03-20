@@ -12,7 +12,7 @@ ${text}`);
 }
 ```
 
-# 1/3 console.log
+# 1/7 console.log
 
 ```console
 --- none ---
@@ -20,7 +20,7 @@ ${text}`);
  "1" 
 ```
 
-# 2/3 console.log
+# 2/7 console.log
 
 ```console
 --- top ---
@@ -29,7 +29,41 @@ ${text}`);
  "1" 
 ```
 
-# 3/3 return
+# 3/7 console.log
+
+```console
+--- left ---
+
+│ "1" 
+```
+
+# 4/7 console.log
+
+```console
+--- right ---
+
+ "1" │
+```
+
+# 5/7 console.log
+
+```console
+--- bottom ---
+
+ "1" 
+─────
+```
+
+# 6/7 console.log
+
+```console
+--- topLeft ---
+
+┌─────
+│ "1" 
+```
+
+# 7/7 return
 
 ```js
 undefined

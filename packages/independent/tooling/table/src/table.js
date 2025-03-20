@@ -406,9 +406,9 @@ const applyYAlign = (text, yAlign, availableHeight, height) => {
 
 const BORDER_CHARS = {
   top: "─",
-  left: "|",
+  left: "│",
   bottom: "─",
-  right: "|",
+  right: "│",
   top_left: "┌",
   top_right: "┐",
   bottom_right: "┘",
