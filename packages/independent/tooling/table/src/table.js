@@ -1,7 +1,8 @@
 /**
  * TODO:
- * - Les border doivent s'étendre pour prendre la place disponible dans la cellule
- * - Les borders doivent utilisé des forme spécial a leur extrémité
+ * - Plein de cas de tests
+ * - Le border collapse
+ * - Les jointures spéciale pour les bordures qui jointent des cellules adjacentes
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
@@ -10,6 +11,11 @@ import stringWidth from "string-width";
 export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const grid = [];
 
+  // blank cells are fluid cells that will take whatever size they are requested to take
+  // they can seen as placeholders that are removed when a line or column is composed only by blank cells
+  // this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
+  // (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
+  // where the border is)
   const blankCell = {
     type: "blank",
     value: "",
@@ -277,7 +283,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   }
 
   // remove lines that have no visible borders
-  // lines mixing visible and disabled borders will be rendered and disabled border will be rendered using blank chars
   {
     let y = 0;
     while (y < grid.length) {
