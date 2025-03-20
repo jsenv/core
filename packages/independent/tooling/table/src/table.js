@@ -1,6 +1,5 @@
 /**
  * TODO:
- * - En cas de bordures vide il faut mettre des espaces
  * - Les border doivent s'étendre pour prendre la place disponible dans la cellule
  * - Les borders doivent utilisé des forme spécial a leur extrémité
  */
@@ -18,14 +17,18 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     };
 
     let y = 0;
+    let maxColumnCount = 0;
     for (const inputLine of inputGrid) {
       let x = 0;
       const line = [];
+      let columnCount = 0;
       for (const inputCell of inputLine) {
         const { borderLeft, borderTop, borderRight, borderBottom, ...props } =
           inputCell;
         const contentCell = { type: "content", x, y, props };
+        columnCount++;
         if (borderLeft) {
+          columnCount++;
           const borderLeftCell = {
             type: "border",
             position: "left",
@@ -34,6 +37,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           injectBorderCell(contentCell, borderLeftCell);
         }
         if (borderRight) {
+          columnCount++;
           const borderRightCell = {
             type: "border",
             position: "right",
@@ -55,6 +59,9 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         }
         line[x] = contentCell;
         x++;
+      }
+      if (columnCount > maxColumnCount) {
+        maxColumnCount = columnCount;
       }
       grid[y] = line;
       y++;
@@ -109,16 +116,16 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       let offset = 0;
       for (const { columnIndex, borderCell } of injections) {
         const x = columnIndex + offset;
-        if (
-          borderCell.position === "left" &&
-          x > 0 &&
-          line[x - 1] &&
-          line[x - 1].position === "right"
-        ) {
-          // collapse borders
-          continue;
-        }
-        line.splice(columnIndex + offset, 0, borderCell);
+        // if (
+        //   borderCell.position === "left" &&
+        //   x > 0 &&
+        //   line[x - 1] &&
+        //   line[x - 1].position === "right"
+        // ) {
+        //   // collapse borders
+        //   continue;
+        // }
+        line.splice(x, 0, borderCell);
         offset++;
       }
     }
@@ -126,6 +133,22 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     let injectedLineCount = 0;
     for (const [indexToInjectLine, borderCells] of lineInjectionMap) {
       const [firstBorderCell] = borderCells;
+
+      let i = 0;
+      while (i < maxColumnCount) {
+        const borderCell = borderCells[i];
+        if (!borderCell) {
+          const blankCell = {
+            type: "content",
+            props: {
+              value: "",
+              quoteAroundStrings: false,
+            },
+          };
+          borderCells[i] = blankCell;
+        }
+        i++;
+      }
 
       const actualIndex = indexToInjectLine + injectedLineCount;
       const columnInjectionForThisLine =
@@ -137,37 +160,37 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         columnInjectionForThisLine || columnInjectionForLineBelow;
       if (columnInjection) {
         let offset = 0;
-        const positionToCollapse =
-          firstBorderCell.position === "top" ? "top_right" : "bottom_right";
+        // const positionToCollapse =
+        //   firstBorderCell.position === "top" ? "top_right" : "bottom_right";
         for (const { columnIndex, borderCell } of columnInjection) {
           const x = columnIndex + offset;
-          if (
-            borderCell.position === "left" &&
-            x > 0 &&
-            borderCells[x - 1].position === positionToCollapse
-          ) {
-            // collapse borders
-            continue;
-          }
+          // if (
+          //   borderCell.position === "left" &&
+          //   x > 0 &&
+          //   borderCells[x - 1].position === positionToCollapse
+          // ) {
+          //   // collapse borders
+          //   continue;
+          // }
 
           const cornerBorderCell = {
             type: "border",
             position: `${firstBorderCell.position}_${borderCell.position}`,
             value: "+",
           };
-          borderCells.splice(columnIndex + offset, 0, cornerBorderCell);
+          borderCells.splice(x, 0, cornerBorderCell);
           offset++;
         }
       }
 
-      if (
-        firstBorderCell.position === "top" &&
-        y > 0 &&
-        grid[y - 1][0].position === "bottom"
-      ) {
-        // collapse borders
-        continue;
-      }
+      // if (
+      //   firstBorderCell.position === "top" &&
+      //   y > 0 &&
+      //   grid[y - 1][0].position === "bottom"
+      // ) {
+      //   // collapse borders
+      //   continue;
+      // }
       grid.splice(actualIndex, 0, borderCells);
       injectedLineCount++;
     }
@@ -311,24 +334,24 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
 
-  const getLeftCell = (cell) => {
-    const { x, y } = cell;
-    return x === 0 ? null : grid[y][x - 1];
-  };
-  const getRightCell = (cell) => {
-    const { x, y } = cell;
-    const cells = grid[y];
-    return cells[x + 1];
-  };
-  const getCellAbove = (cell) => {
-    const { x, y } = cell;
-    return y === 0 ? null : grid[y - 1][x];
-  };
-  const getCellBelow = (cell) => {
-    const { x, y } = cell;
-    const lineBelow = grid[y + 1];
-    return lineBelow ? lineBelow[x] : null;
-  };
+  // const getLeftCell = (cell) => {
+  //   const { x, y } = cell;
+  //   return x === 0 ? null : grid[y][x - 1];
+  // };
+  // const getRightCell = (cell) => {
+  //   const { x, y } = cell;
+  //   const cells = grid[y];
+  //   return cells[x + 1];
+  // };
+  // const getCellAbove = (cell) => {
+  //   const { x, y } = cell;
+  //   return y === 0 ? null : grid[y - 1][x];
+  // };
+  // const getCellBelow = (cell) => {
+  //   const { x, y } = cell;
+  //   const lineBelow = grid[y + 1];
+  //   return lineBelow ? lineBelow[x] : null;
+  // };
 
   // const renderCellTopBorder = (cell) => {
   //   const { borderTop, borderLeft, borderRight } = cell;
@@ -478,13 +501,13 @@ console.log(
         value: "1:2",
         borderTop: {},
         borderLeft: {},
-        borderRight: {},
+        // borderRight: {},
         borderBottom: {},
       },
       {
         value: "1:3",
         borderTop: {},
-        borderLeft: {},
+        // borderLeft: {},
         borderRight: {},
         borderBottom: {},
       },
