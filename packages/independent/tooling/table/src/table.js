@@ -112,15 +112,15 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     let y = 0;
     while (y < grid.length) {
       const line = grid[y];
-      let hasNonBlankCell = false;
+      let lineContainsNonBlankCell = false;
       for (const cell of line) {
         if (cell.type === "blank") {
           continue;
         }
-        hasNonBlankCell = true;
+        lineContainsNonBlankCell = true;
         break;
       }
-      if (hasNonBlankCell) {
+      if (lineContainsNonBlankCell) {
         y++;
         continue;
       }
@@ -132,18 +132,18 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     let x = 0;
     const firstLine = grid[0];
     while (x < firstLine.length) {
-      let hasNonBlankCell = false;
+      let columnContainsNonBlankCell = false;
       let y = 0;
       while (y < grid.length) {
-        const cellBelow = grid[y][x];
-        if (cellBelow.type === "blank") {
+        const columnCell = grid[y][x];
+        if (columnCell.type === "blank") {
           y++;
           continue;
         }
-        hasNonBlankCell = true;
+        columnContainsNonBlankCell = true;
         break;
       }
-      if (hasNonBlankCell) {
+      if (columnContainsNonBlankCell) {
         x++;
         continue;
       }
@@ -151,7 +151,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       y = 0;
       while (y < grid.length) {
         const line = grid[y];
-        line.splice(x, 0);
+        line.splice(x, 1);
         y++;
       }
     }
@@ -161,7 +161,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   {
     const columnBiggestWidthArray = [];
     const lineBiggestHeightArray = [];
-
     const createCellNode = (cell, { x, y }) => {
       const biggestWidth = columnBiggestWidthArray[x] || 0;
       const biggestHeight = lineBiggestHeightArray[y] || 0;
