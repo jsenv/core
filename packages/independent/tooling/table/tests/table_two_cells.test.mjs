@@ -15,16 +15,16 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         borderLeft: {},
       },
     ],
-    // top_right_and_bottom_left: [
-    //   {
-    //     borderTop: {},
-    //     borderRight: {},
-    //   },
-    //   {
-    //     borderBottom: {},
-    //     borderLeft: {},
-    //   },
-    // ],
+    top_right_and_bottom_left: [
+      {
+        borderTop: {},
+        borderRight: {},
+      },
+      {
+        borderBottom: {},
+        borderLeft: {},
+      },
+    ],
     // bottom_right_and_top_left: [
     //   {
     //     borderBottom: {},

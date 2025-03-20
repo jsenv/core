@@ -21,7 +21,7 @@ ${text}`);
 }
 ```
 
-# 1/2 console.log
+# 1/3 console.log
 
 ```console
 --- right_and_left ---
@@ -29,7 +29,17 @@ ${text}`);
  "1" │ "2" 
 ```
 
-# 2/2 return
+# 2/3 console.log
+
+```console
+--- top_right_and_bottom_left ---
+
+─────┐     
+ "1" │ "2" 
+     └─────
+```
+
+# 3/3 return
 
 ```js
 undefined
