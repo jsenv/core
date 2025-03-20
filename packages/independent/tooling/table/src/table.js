@@ -1,3 +1,11 @@
+/**
+ * TODO:
+ * - Les border doivent s'étendre pour prendre la place disponible dans la cellule
+ * - Les borders doivent injecté des cellules pour matcher les autres borders eux meme injectés
+ * - Les borders doivent utilisé des forme spécial a leur extrémité
+ * - En cas de bordures vide il faut mettre des espaces
+ */
+
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
 import stringWidth from "string-width";
 
@@ -6,8 +14,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   // inject borders
   {
     const injectionSet = new Set();
-    const injectBorderCell = (contentCell, where, borderCell) => {
-      injectionSet.add({ contentCell, where, borderCell });
+    const injectBorderCell = (contentCell, borderCell) => {
+      injectionSet.add({ contentCell, borderCell });
     };
 
     let y = 0;
@@ -19,20 +27,32 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           inputCell;
         const contentCell = { type: "content", x, y, props };
         if (borderLeft) {
-          const borderLeftCell = { type: "border_left", value: "|" };
-          injectBorderCell(contentCell, "left", borderLeftCell);
+          const borderLeftCell = {
+            type: "border",
+            position: "left",
+            value: "|",
+          };
+          injectBorderCell(contentCell, borderLeftCell);
         }
         if (borderRight) {
-          const borderRightCell = { type: "border_right", value: "|" };
-          injectBorderCell(contentCell, "right", borderRightCell);
+          const borderRightCell = {
+            type: "border",
+            position: "right",
+            value: "|",
+          };
+          injectBorderCell(contentCell, borderRightCell);
         }
         if (borderTop) {
-          const borderTopCell = { type: "border_top", value: "-" };
-          injectBorderCell(contentCell, "top", borderTopCell);
+          const borderTopCell = { type: "border", position: "top", value: "-" };
+          injectBorderCell(contentCell, borderTopCell);
         }
         if (borderBottom) {
-          const borderBottomCell = { type: "border_bottom", value: "-" };
-          injectBorderCell(contentCell, "bottom", borderBottomCell);
+          const borderBottomCell = {
+            type: "border",
+            position: "bottom",
+            value: "-",
+          };
+          injectBorderCell(contentCell, borderBottomCell);
         }
         line[x] = contentCell;
         x++;
@@ -47,11 +67,12 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     const columnInjectionsByLine = new Map();
 
     for (const injection of injectionSet) {
-      const { borderCell, contentCell, where } = injection;
+      const { borderCell, contentCell } = injection;
 
-      if (where === "top" || where === "bottom") {
+      if (borderCell.position === "top" || borderCell.position === "bottom") {
         const line = contentCell.y;
-        const injectedLineIndex = where === "top" ? line : line + 1;
+        const injectedLineIndex =
+          borderCell.position === "top" ? line : line + 1;
         let lineInjection = lineInjectionMap.get(injectedLineIndex);
         if (!lineInjection) {
           lineInjection = [];
@@ -62,7 +83,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         // Handle column injections
         const lineIndex = contentCell.y;
         const column = contentCell.x;
-        const injectedColumnIndex = where === "left" ? column : column + 1;
+        const injectedColumnIndex =
+          borderCell.position === "left" ? column : column + 1;
 
         // Get or create line map
         if (!columnInjectionsByLine.has(lineIndex)) {
@@ -89,10 +111,10 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       for (const { columnIndex, borderCell } of injections) {
         const x = columnIndex + offset;
         if (
-          borderCell.type === "border_left" &&
+          borderCell.position === "left" &&
           x > 0 &&
           line[x - 1] &&
-          line[x - 1].type === "border_right"
+          line[x - 1].position === "right"
         ) {
           // collapse borders
           continue;
@@ -107,9 +129,9 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       const [firstCell] = cells;
       const actualIndex = indexToInjectLine + injectedLineCount;
       if (
-        firstCell.type === "border_top" &&
+        firstCell.position === "top" &&
         y > 0 &&
-        grid[y - 1][0].type === "border_bottom"
+        grid[y - 1][0].position === "bottom"
       ) {
         // collapse borders
         continue;
