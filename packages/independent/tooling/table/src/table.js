@@ -11,43 +11,47 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const grid = [];
   // inject borders
   {
-    const injectionSet = new Set();
-    const injectBorderCell = (contentCell, borderCell) => {
-      injectionSet.add({ contentCell, borderCell });
+    const blankCell = {
+      type: "content",
+      props: {
+        value: ANSI.effect(" ", ANSI.underline),
+        quoteAroundStrings: false,
+      },
     };
 
     let y = 0;
-    let maxColumnCount = 0;
+
+    // const yWithSomeBorderTopSet = new Set();
+    // const yWithSomeBottomSet = new Set();
+    const xWithSomeBorderLeftSet = new Set();
+    const xWithSomeBorderRightSet = new Set();
+
     for (const inputLine of inputGrid) {
       let x = 0;
       const line = [];
-      let columnCount = 0;
+      const borderTopCells = [];
+      const borderBottomCells = [];
       for (const inputCell of inputLine) {
         const { borderLeft, borderTop, borderRight, borderBottom, ...props } =
           inputCell;
-        const contentCell = { type: "content", x, y, props };
-        columnCount++;
+
         if (borderLeft) {
-          columnCount++;
           const borderLeftCell = {
             type: "border",
             position: "left",
             value: "|",
           };
-          injectBorderCell(contentCell, borderLeftCell);
+          line[x] = borderLeftCell;
+          xWithSomeBorderLeftSet.add(x);
+          x++;
+        } else if (xWithSomeBorderLeftSet.has(x)) {
+          line[x] = blankCell;
+          x++;
         }
-        if (borderRight) {
-          columnCount++;
-          const borderRightCell = {
-            type: "border",
-            position: "right",
-            value: "|",
-          };
-          injectBorderCell(contentCell, borderRightCell);
-        }
+
         if (borderTop) {
           const borderTopCell = { type: "border", position: "top", value: "-" };
-          injectBorderCell(contentCell, borderTopCell);
+          borderTopCells[x] = borderTopCell;
         }
         if (borderBottom) {
           const borderBottomCell = {
@@ -55,144 +59,87 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
             position: "bottom",
             value: "-",
           };
-          injectBorderCell(contentCell, borderBottomCell);
+          borderBottomCells[x] = borderBottomCell;
         }
+        const contentCell = { type: "content", x, y, props };
         line[x] = contentCell;
         x++;
+
+        if (borderRight) {
+          const borderRightCell = {
+            type: "border",
+            position: "right",
+            value: "|",
+          };
+          line[x] = borderRightCell;
+          xWithSomeBorderRightSet.add(x);
+          x++;
+        } else if (xWithSomeBorderRightSet.has(x)) {
+          line[x] = blankCell;
+          x++;
+        }
       }
-      if (columnCount > maxColumnCount) {
-        maxColumnCount = columnCount;
+
+      if (borderTopCells.length > 0) {
+        const topCells = [];
+        {
+          let x = 0;
+          while (x < line.length) {
+            const borderTopCell = borderTopCells[x];
+            let topCell;
+            if (borderTopCell) {
+              topCell = borderTopCell;
+            } else if (borderTopCells[x + 1]) {
+              topCell = {
+                type: "border",
+                position: "top_left",
+                value: "+",
+              };
+            } else {
+              topCell = {
+                type: "border",
+                position: "top_right",
+                value: "+",
+              };
+            }
+            topCells[x] = topCell;
+            x++;
+          }
+        }
+        grid[y] = topCells;
+        y++;
       }
       grid[y] = line;
       y++;
-    }
-
-    // Line injections
-    const lineInjectionMap = new Map();
-    // Organize column injections by line and then by column position
-    const columnInjectionsByLine = new Map();
-
-    for (const injection of injectionSet) {
-      const { borderCell, contentCell } = injection;
-
-      if (borderCell.position === "top" || borderCell.position === "bottom") {
-        const line = contentCell.y;
-        const injectedLineIndex =
-          borderCell.position === "top" ? line : line + 1;
-        let lineInjection = lineInjectionMap.get(injectedLineIndex);
-        if (!lineInjection) {
-          lineInjection = [];
-          lineInjectionMap.set(injectedLineIndex, lineInjection);
+      if (borderBottomCells.length > 0) {
+        const bottomCells = [];
+        {
+          let x = 0;
+          while (x < line.length) {
+            const borderBottomCell = borderBottomCells[x];
+            let bottomCell;
+            if (borderBottomCell) {
+              bottomCell = borderBottomCell;
+            } else if (borderBottomCells[x + 1]) {
+              bottomCell = {
+                type: "border",
+                position: "bottom_left",
+                value: "+",
+              };
+            } else {
+              bottomCell = {
+                type: "border",
+                position: "bottom_right",
+                value: "+",
+              };
+            }
+            bottomCells[x] = bottomCell;
+            x++;
+          }
         }
-        lineInjection[contentCell.x] = borderCell;
-      } else {
-        // Handle column injections
-        const lineIndex = contentCell.y;
-        const column = contentCell.x;
-        const injectedColumnIndex =
-          borderCell.position === "left" ? column : column + 1;
-
-        // Get or create line map
-        if (!columnInjectionsByLine.has(lineIndex)) {
-          columnInjectionsByLine.set(lineIndex, []);
-        }
-
-        // Add injection to the appropriate line with its column position
-        columnInjectionsByLine.get(lineIndex).push({
-          columnIndex: injectedColumnIndex,
-          borderCell,
-        });
+        grid[y] = bottomCells;
+        y++;
       }
-    }
-
-    // Process column injections line by line
-    for (const [lineIndex, injections] of columnInjectionsByLine) {
-      const line = grid[lineIndex];
-
-      // Sort injections by column index for this specific line
-      // injections.sort((a, b) => a.columnIndex - b.columnIndex);
-
-      // Apply injections with cumulative offset
-      let offset = 0;
-      for (const { columnIndex, borderCell } of injections) {
-        const x = columnIndex + offset;
-        // if (
-        //   borderCell.position === "left" &&
-        //   x > 0 &&
-        //   line[x - 1] &&
-        //   line[x - 1].position === "right"
-        // ) {
-        //   // collapse borders
-        //   continue;
-        // }
-        line.splice(x, 0, borderCell);
-        offset++;
-      }
-    }
-
-    let injectedLineCount = 0;
-    for (const [indexToInjectLine, borderCells] of lineInjectionMap) {
-      const [firstBorderCell] = borderCells;
-
-      let i = 0;
-      while (i < maxColumnCount) {
-        const borderCell = borderCells[i];
-        if (!borderCell) {
-          const blankCell = {
-            type: "content",
-            props: {
-              value: "",
-              quoteAroundStrings: false,
-            },
-          };
-          borderCells[i] = blankCell;
-        }
-        i++;
-      }
-
-      const actualIndex = indexToInjectLine + injectedLineCount;
-      const columnInjectionForThisLine =
-        columnInjectionsByLine.get(indexToInjectLine);
-      const columnInjectionForLineBelow = columnInjectionsByLine.get(
-        indexToInjectLine - 1,
-      );
-      const columnInjection =
-        columnInjectionForThisLine || columnInjectionForLineBelow;
-      if (columnInjection) {
-        let offset = 0;
-        // const positionToCollapse =
-        //   firstBorderCell.position === "top" ? "top_right" : "bottom_right";
-        for (const { columnIndex, borderCell } of columnInjection) {
-          const x = columnIndex + offset;
-          // if (
-          //   borderCell.position === "left" &&
-          //   x > 0 &&
-          //   borderCells[x - 1].position === positionToCollapse
-          // ) {
-          //   // collapse borders
-          //   continue;
-          // }
-
-          const cornerBorderCell = {
-            type: "border",
-            position: `${firstBorderCell.position}_${borderCell.position}`,
-            value: "+",
-          };
-          borderCells.splice(x, 0, cornerBorderCell);
-          offset++;
-        }
-      }
-
-      // if (
-      //   firstBorderCell.position === "top" &&
-      //   y > 0 &&
-      //   grid[y - 1][0].position === "bottom"
-      // ) {
-      //   // collapse borders
-      //   continue;
-      // }
-      grid.splice(actualIndex, 0, borderCells);
-      injectedLineCount++;
     }
   }
 
@@ -334,139 +281,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
 
-  // const getLeftCell = (cell) => {
-  //   const { x, y } = cell;
-  //   return x === 0 ? null : grid[y][x - 1];
-  // };
-  // const getRightCell = (cell) => {
-  //   const { x, y } = cell;
-  //   const cells = grid[y];
-  //   return cells[x + 1];
-  // };
-  // const getCellAbove = (cell) => {
-  //   const { x, y } = cell;
-  //   return y === 0 ? null : grid[y - 1][x];
-  // };
-  // const getCellBelow = (cell) => {
-  //   const { x, y } = cell;
-  //   const lineBelow = grid[y + 1];
-  //   return lineBelow ? lineBelow[x] : null;
-  // };
-
-  // const renderCellTopBorder = (cell) => {
-  //   const { borderTop, borderLeft, borderRight } = cell;
-  //   const cellLeft = getLeftCell(cell);
-  //   const cellAbove = getCellAbove(cell);
-  //   const cellRight = getRightCell(cell);
-  //   const hasBorderOnTheLeft = cellLeft && cellLeft.borderRight;
-  //   const hasBorderOnTheRight = cellRight && cellRight.borderLeft;
-  //   const hasBorderAbove = cellAbove && cellAbove.borderBottom;
-  //   if (hasBorderAbove) {
-  //     // already handled by the border above
-  //     return "";
-  //   }
-
-  //   let text = "";
-  //   if (hasBorderOnTheLeft) {
-  //   } else if (borderTop && borderLeft) {
-  //     text += "┌";
-  //   } else if (borderLeft) {
-  //     text += " ";
-  //   }
-  //   const columnWidth = getCellWidth(cell) + leftSpacing + rightSpacing;
-  //   if (borderTop) {
-  //     text += "─".repeat(columnWidth);
-  //   } else {
-  //     text += " ".repeat(columnWidth);
-  //   }
-  //   if (hasBorderOnTheRight) {
-  //     if (borderRight && borderTop) {
-  //       if (cellRight.borderTop) {
-  //         text += "┬";
-  //       } else {
-  //         text += "┐";
-  //       }
-  //     } else if (borderRight) {
-  //       if (cellRight.borderLeft && cellRight.borderTop) {
-  //         text += "┌";
-  //       } else {
-  //         text += " ";
-  //       }
-  //     } else {
-  //       text += " ";
-  //     }
-  //   } else if (borderRight && borderTop) {
-  //     text += "┐";
-  //   } else if (borderRight) {
-  //     text += " ";
-  //   }
-
-  //   return text;
-  // };
-  // const renderCellBottomBorder = (cell) => {
-  //   const { borderBottom, borderLeft, borderRight } = cell;
-  //   const cellLeft = getLeftCell(cell);
-
-  //   const cellBelow = getCellBelow(cell);
-  //   const cellRight = getRightCell(cell);
-  //   const hasBorderOnTheLeft = cellLeft && cellLeft.borderRight;
-  //   const hasBorderOnTheRight = cellRight && cellRight.borderLeft;
-  //   const hasBorderBelow = cellBelow && cellBelow.borderTop;
-
-  //   let text = "";
-  //   if (hasBorderOnTheLeft) {
-  //   } else if (hasBorderBelow) {
-  //     if (cellBelow.borderLeft && cellBelow.borderTop) {
-  //       text += borderLeft ? "├" : "┌";
-  //     } else if (cellBelow.borderTop) {
-  //       text += borderLeft ? "│" : "";
-  //     } else {
-  //       text += borderLeft ? "├" : "";
-  //     }
-  //   } else if (borderBottom && borderLeft) {
-  //     text += "└";
-  //   } else if (borderLeft) {
-  //     text += " ";
-  //   } else if (someCellAboveOrBelowHasLeftBorder(cell)) {
-  //     text += " ";
-  //   }
-  //   const columnWidth = getCellWidth(cell) + leftSpacing + rightSpacing;
-  //   if (borderBottom) {
-  //     text += "─".repeat(columnWidth);
-  //   } else {
-  //     text += " ".repeat(columnWidth);
-  //   }
-  //   if (hasBorderOnTheRight) {
-  //     if (cellBelow && cellBelow.borderRight) {
-  //       text += borderRight ? "┼" : "";
-  //     } else if (borderRight && borderBottom) {
-  //       if (cellRight.borderBottom && cellRight.borderLeft) {
-  //         text += "┴";
-  //       } else {
-  //         text += "┘";
-  //       }
-  //     } else if (borderBottom) {
-  //       text += "─";
-  //     } else if (borderRight) {
-  //       if (cellRight.borderBottom && cellRight.borderLeft) {
-  //         text += "└";
-  //       } else {
-  //         text += " ";
-  //       }
-  //     }
-  //   } else if (borderBottom && borderRight) {
-  //     if (cellBelow && cellBelow.borderRight) {
-  //       text += "┤";
-  //     } else {
-  //       text += "┘";
-  //     }
-  //   } else if (borderRight) {
-  //     text += " ";
-  //   }
-
-  //   return text;
-  // };
-
   let log = "";
   {
     let y = 0;
@@ -483,7 +297,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       y++;
     }
   }
-
   return log;
 };
 
@@ -497,44 +310,44 @@ console.log(
         borderRight: {},
         borderBottom: {},
       },
-      {
-        value: "1:2",
-        borderTop: {},
-        borderLeft: {},
-        // borderRight: {},
-        borderBottom: {},
-      },
-      {
-        value: "1:3",
-        borderTop: {},
-        // borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
+      // {
+      //   value: "1:2",
+      //   borderTop: {},
+      //   borderLeft: {},
+      //   borderRight: {},
+      //   borderBottom: {},
+      // },
+      // {
+      //   value: "1:3",
+      //   borderTop: {},
+      //   // borderLeft: {},
+      //   borderRight: {},
+      //   borderBottom: {},
+      // },
     ],
-    [
-      {
-        value: "2:1",
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-      {
-        value: "2:2",
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-      {
-        value: "2:3",
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-    ],
+    // [
+    //   {
+    //     value: "2:1",
+    //     borderTop: {},
+    //     borderLeft: {},
+    //     borderRight: {},
+    //     borderBottom: {},
+    //   },
+    //   {
+    //     value: "2:2",
+    //     borderTop: {},
+    //     borderLeft: {},
+    //     borderRight: {},
+    //     borderBottom: {},
+    //   },
+    //   {
+    //     value: "2:3",
+    //     borderTop: {},
+    //     borderLeft: {},
+    //     borderRight: {},
+    //     borderBottom: {},
+    //   },
+    // ],
   ]),
 );
 
