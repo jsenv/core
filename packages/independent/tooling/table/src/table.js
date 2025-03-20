@@ -11,21 +11,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const grid = [];
   // inject borders
   {
-    const blankCell = {
-      type: "content",
-      props: {
-        value: ANSI.effect(" ", ANSI.underline),
-        quoteAroundStrings: false,
-      },
-    };
-
     let y = 0;
-
-    // const yWithSomeBorderTopSet = new Set();
-    // const yWithSomeBottomSet = new Set();
-    const xWithSomeBorderLeftSet = new Set();
-    const xWithSomeBorderRightSet = new Set();
-
     for (const inputLine of inputGrid) {
       let x = 0;
       const line = [];
@@ -35,111 +21,101 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         const { borderLeft, borderTop, borderRight, borderBottom, ...props } =
           inputCell;
 
-        if (borderLeft) {
-          const borderLeftCell = {
-            type: "border",
-            position: "left",
-            value: "|",
-          };
-          line[x] = borderLeftCell;
-          xWithSomeBorderLeftSet.add(x);
-          x++;
-        } else if (xWithSomeBorderLeftSet.has(x)) {
-          line[x] = blankCell;
-          x++;
-        }
+        const borderLeftCell = {
+          type: "border",
+          position: "left",
+          value: "|",
+          color: borderLeft ? null : ANSI.RED,
+        };
+        line[x] = borderLeftCell;
+        x++;
 
-        if (borderTop) {
-          const borderTopCell = { type: "border", position: "top", value: "-" };
-          borderTopCells[x] = borderTopCell;
-        }
-        if (borderBottom) {
-          const borderBottomCell = {
-            type: "border",
-            position: "bottom",
-            value: "-",
-          };
-          borderBottomCells[x] = borderBottomCell;
-        }
+        const borderTopCell = {
+          type: "border",
+          position: "top",
+          value: "-",
+          color: borderTop ? null : ANSI.RED,
+        };
+        borderTopCells[x] = borderTopCell;
+        const borderBottomCell = {
+          type: "border",
+          position: "bottom",
+          value: "-",
+          color: borderBottom ? null : ANSI.RED,
+        };
+        borderBottomCells[x] = borderBottomCell;
         const contentCell = { type: "content", x, y, props };
         line[x] = contentCell;
         x++;
 
-        if (borderRight) {
-          const borderRightCell = {
-            type: "border",
-            position: "right",
-            value: "|",
-          };
-          line[x] = borderRightCell;
-          xWithSomeBorderRightSet.add(x);
-          x++;
-        } else if (xWithSomeBorderRightSet.has(x)) {
-          line[x] = blankCell;
-          x++;
-        }
+        const borderRightCell = {
+          type: "border",
+          position: "right",
+          value: "|",
+          color: borderRight ? null : ANSI.RED,
+        };
+        line[x] = borderRightCell;
+        x++;
       }
 
-      if (borderTopCells.length > 0) {
-        const topCells = [];
-        {
-          let x = 0;
-          while (x < line.length) {
-            const borderTopCell = borderTopCells[x];
-            let topCell;
-            if (borderTopCell) {
-              topCell = borderTopCell;
-            } else if (borderTopCells[x + 1]) {
-              topCell = {
-                type: "border",
-                position: "top_left",
-                value: "+",
-              };
-            } else {
-              topCell = {
-                type: "border",
-                position: "top_right",
-                value: "+",
-              };
-            }
-            topCells[x] = topCell;
-            x++;
+      const topCells = [];
+      {
+        let x = 0;
+        while (x < line.length) {
+          const borderTopCell = borderTopCells[x];
+          let topCell;
+          if (borderTopCell) {
+            topCell = borderTopCell;
+          } else if (borderTopCells[x + 1]) {
+            topCell = {
+              type: "border",
+              position: "top_left",
+              value: "+",
+            };
+          } else {
+            topCell = {
+              type: "border",
+              position: "top_right",
+              value: "+",
+            };
           }
+          topCells[x] = topCell;
+          x++;
         }
-        grid[y] = topCells;
-        y++;
       }
+      grid[y] = topCells;
+      y++;
+
       grid[y] = line;
       y++;
-      if (borderBottomCells.length > 0) {
-        const bottomCells = [];
-        {
-          let x = 0;
-          while (x < line.length) {
-            const borderBottomCell = borderBottomCells[x];
-            let bottomCell;
-            if (borderBottomCell) {
-              bottomCell = borderBottomCell;
-            } else if (borderBottomCells[x + 1]) {
-              bottomCell = {
-                type: "border",
-                position: "bottom_left",
-                value: "+",
-              };
-            } else {
-              bottomCell = {
-                type: "border",
-                position: "bottom_right",
-                value: "+",
-              };
-            }
-            bottomCells[x] = bottomCell;
-            x++;
+
+      const bottomCells = [];
+      {
+        let x = 0;
+        while (x < line.length) {
+          const borderBottomCell = borderBottomCells[x];
+          let bottomCell;
+          if (borderBottomCell) {
+            bottomCell = borderBottomCell;
+          } else if (borderBottomCells[x + 1]) {
+            bottomCell = {
+              type: "border",
+              position: "bottom_left",
+              value: "+",
+            };
+          } else {
+            bottomCell = {
+              type: "border",
+              position: "bottom_right",
+              value: "+",
+            };
           }
+          bottomCells[x] = bottomCell;
+          x++;
         }
-        grid[y] = bottomCells;
-        y++;
       }
+      grid[y] = bottomCells;
+      y++;
     }
   }
 
@@ -310,20 +286,20 @@ console.log(
         borderRight: {},
         borderBottom: {},
       },
-      // {
-      //   value: "1:2",
-      //   borderTop: {},
-      //   borderLeft: {},
-      //   borderRight: {},
-      //   borderBottom: {},
-      // },
-      // {
-      //   value: "1:3",
-      //   borderTop: {},
-      //   // borderLeft: {},
-      //   borderRight: {},
-      //   borderBottom: {},
-      // },
+      {
+        value: "1:2",
+        borderTop: {},
+        borderLeft: {},
+        // borderRight: {},
+        borderBottom: {},
+      },
+      {
+        value: "1:3",
+        borderTop: {},
+        // borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
     ],
     // [
     //   {
