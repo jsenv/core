@@ -1,9 +1,8 @@
 /**
  * TODO:
- * - Les border doivent s'étendre pour prendre la place disponible dans la cellule
- * - Les borders doivent injecté des cellules pour matcher les autres borders eux meme injectés
- * - Les borders doivent utilisé des forme spécial a leur extrémité
  * - En cas de bordures vide il faut mettre des espaces
+ * - Les border doivent s'étendre pour prendre la place disponible dans la cellule
+ * - Les borders doivent utilisé des forme spécial a leur extrémité
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
@@ -127,12 +126,30 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     let injectedLineCount = 0;
     for (const [indexToInjectLine, borderCells] of lineInjectionMap) {
       const [firstBorderCell] = borderCells;
+
       const actualIndex = indexToInjectLine + injectedLineCount;
       const columnInjectionForThisLine =
-        columnInjectionsByLine.get(actualIndex);
-      if (columnInjectionForThisLine) {
+        columnInjectionsByLine.get(indexToInjectLine);
+      const columnInjectionForLineBelow = columnInjectionsByLine.get(
+        indexToInjectLine - 1,
+      );
+      const columnInjection =
+        columnInjectionForThisLine || columnInjectionForLineBelow;
+      if (columnInjection) {
         let offset = 0;
-        for (const { columnIndex, borderCell } of columnInjectionForThisLine) {
+        const positionToCollapse =
+          firstBorderCell.position === "top" ? "top_right" : "bottom_right";
+        for (const { columnIndex, borderCell } of columnInjection) {
+          const x = columnIndex + offset;
+          if (
+            borderCell.position === "left" &&
+            x > 0 &&
+            borderCells[x - 1].position === positionToCollapse
+          ) {
+            // collapse borders
+            continue;
+          }
+
           const cornerBorderCell = {
             type: "border",
             position: `${firstBorderCell.position}_${borderCell.position}`,
@@ -457,13 +474,13 @@ console.log(
         borderRight: {},
         borderBottom: {},
       },
-      // {
-      //   value: "1:2",
-      //   borderTop: {},
-      //   borderLeft: {},
-      //   borderRight: {},
-      //   borderBottom: {},
-      // },
+      {
+        value: "1:2",
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
       // {
       //   value: "1:3",
       //   borderTop: {},
