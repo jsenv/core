@@ -58,7 +58,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           let text = "";
           let y = 0;
           while (true) {
-            text += char;
+            text += char.repeat(availableWidth);
             if (y === availableHeight - 1) {
               break;
             }
