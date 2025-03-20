@@ -42,7 +42,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       return {
         type: "border",
         position: "right",
-        value: "-",
+        value: "|",
       };
     };
 
@@ -79,8 +79,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         x++;
       }
 
-      const lineAbove = [];
       {
+        const lineAbove = [];
         let x = 0;
         while (x < line.length) {
           const topCell = topCells[x];
@@ -88,20 +88,38 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (topCell) {
             aboveCell = topCell;
           } else {
-            aboveCell = blankCell;
+            const nextCell = topCells[x + 1];
+            if (nextCell && nextCell.type === "border") {
+              aboveCell = {
+                type: "border",
+                position: "top_left",
+                value: "+",
+              };
+            } else {
+              const previousCell = topCells[x - 1];
+              if (previousCell && previousCell.type === "border") {
+                aboveCell = {
+                  type: "border",
+                  position: "top_right",
+                  value: "+",
+                };
+              } else {
+                aboveCell = blankCell;
+              }
+            }
           }
           lineAbove[x] = aboveCell;
           x++;
         }
+        grid[y] = lineAbove;
+        y++;
       }
-      grid[y] = lineAbove;
-      y++;
 
       grid[y] = line;
       y++;
 
-      const lineBelow = [];
       {
+        const lineBelow = [];
         let x = 0;
         while (x < line.length) {
           const bottomCell = bottomCells[x];
@@ -109,14 +127,32 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (bottomCell) {
             belowCell = bottomCell;
           } else {
-            belowCell = blankCell;
+            const nextCell = bottomCells[x + 1];
+            if (nextCell && nextCell.type === "border") {
+              belowCell = {
+                type: "border",
+                position: "bottom_left",
+                value: "+",
+              };
+            } else {
+              const previousCell = bottomCells[x - 1];
+              if (previousCell && previousCell.type === "border") {
+                belowCell = {
+                  type: "border",
+                  position: "bottom_right",
+                  value: "+",
+                };
+              } else {
+                belowCell = blankCell;
+              }
+            }
           }
           lineBelow[x] = belowCell;
           x++;
         }
+        grid[y] = lineBelow;
+        y++;
       }
-      grid[y] = lineBelow;
-      y++;
     }
   }
 
@@ -345,20 +381,20 @@ console.log(
         borderRight: {},
         borderBottom: {},
       },
-      {
-        value: "1:2",
-        borderTop: {},
-        borderLeft: {},
-        // borderRight: {},
-        borderBottom: {},
-      },
-      {
-        value: "1:3",
-        borderTop: {},
-        // borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
+      // {
+      //   value: "1:2",
+      //   borderTop: {},
+      //   borderLeft: {},
+      //   // borderRight: {},
+      //   borderBottom: {},
+      // },
+      // {
+      //   value: "1:3",
+      //   borderTop: {},
+      //   // borderLeft: {},
+      //   borderRight: {},
+      //   borderBottom: {},
+      // },
     ],
     // [
     //   {
