@@ -21,7 +21,7 @@ ${text}`);
 }
 ```
 
-# 1/3 console.log
+# 1/6 console.log
 
 ```console
 --- right_and_left ---
@@ -29,7 +29,7 @@ ${text}`);
  "1" │ "2" 
 ```
 
-# 2/3 console.log
+# 2/6 console.log
 
 ```console
 --- top_right_and_bottom_left ---
@@ -39,7 +39,37 @@ ${text}`);
      └─────
 ```
 
-# 3/3 return
+# 3/6 console.log
+
+```console
+--- bottom_right_and_top_left ---
+
+     ┌─────
+ "1" │ "2" 
+─────┘     
+```
+
+# 4/6 console.log
+
+```console
+--- bottom_left_and_top_right ---
+
+      ─────┐
+│ "1"  "2" │
+└─────      
+```
+
+# 5/6 console.log
+
+```console
+--- all_around ---
+
+┌─────┐─────┐
+│ "1" │ "2" │
+└─────┘─────┘
+```
+
+# 6/6 return
 
 ```js
 undefined

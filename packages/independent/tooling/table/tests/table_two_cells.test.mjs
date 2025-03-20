@@ -25,40 +25,40 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         borderLeft: {},
       },
     ],
-    // bottom_right_and_top_left: [
-    //   {
-    //     borderBottom: {},
-    //     borderRight: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //   },
-    // ],
-    // bottom_left_and_top_right: [
-    //   {
-    //     borderBottom: {},
-    //     borderLeft: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //     borderRight: {},
-    //   },
-    // ],
-    // all_around: [
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    // ],
+    bottom_right_and_top_left: [
+      {
+        borderBottom: {},
+        borderRight: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+      },
+    ],
+    bottom_left_and_top_right: [
+      {
+        borderBottom: {},
+        borderLeft: {},
+      },
+      {
+        borderTop: {},
+        borderRight: {},
+      },
+    ],
+    all_around: [
+      {
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+    ],
   };
   test.ONLY(`0_two_cell_same_line`, () => {
     const keys = Object.keys(sameLineScenarios);
