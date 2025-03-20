@@ -9,113 +9,175 @@ import stringWidth from "string-width";
 
 export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const grid = [];
+
+  const blankCell = {
+    type: "blank",
+    value: "",
+  };
+
   // inject borders
   {
+    const createBorderLeftCell = () => {
+      return {
+        type: "border",
+        position: "left",
+        value: "|",
+      };
+    };
+    const createBorderTopCell = () => {
+      return {
+        type: "border",
+        position: "top",
+        value: "-",
+      };
+    };
+    const createBorderBottomCell = () => {
+      return {
+        type: "border",
+        position: "bottom",
+        value: "-",
+      };
+    };
+    const createBorderRightCell = () => {
+      return {
+        type: "border",
+        position: "right",
+        value: "-",
+      };
+    };
+
     let y = 0;
     for (const inputLine of inputGrid) {
       let x = 0;
+      const topCells = [];
       const line = [];
-      const borderTopCells = [];
-      const borderBottomCells = [];
+      const bottomCells = [];
       for (const inputCell of inputLine) {
         const { borderLeft, borderTop, borderRight, borderBottom, ...props } =
           inputCell;
 
-        const borderLeftCell = {
-          type: "border",
-          position: "left",
-          value: "|",
-          color: borderLeft ? null : ANSI.RED,
-        };
-        line[x] = borderLeftCell;
+        const leftCell = borderLeft
+          ? createBorderLeftCell(borderLeft)
+          : blankCell;
+        line[x] = leftCell;
         x++;
 
-        const borderTopCell = {
-          type: "border",
-          position: "top",
-          value: "-",
-          color: borderTop ? null : ANSI.RED,
-        };
-        borderTopCells[x] = borderTopCell;
-        const borderBottomCell = {
-          type: "border",
-          position: "bottom",
-          value: "-",
-          color: borderBottom ? null : ANSI.RED,
-        };
-        borderBottomCells[x] = borderBottomCell;
-        const contentCell = { type: "content", x, y, props };
+        const topCell = borderTop ? createBorderTopCell(borderTop) : blankCell;
+        topCells[x] = topCell;
+        const bottomCell = borderBottom
+          ? createBorderBottomCell(borderBottom)
+          : blankCell;
+        bottomCells[x] = bottomCell;
+        const contentCell = { type: "content", ...props };
         line[x] = contentCell;
         x++;
 
-        const borderRightCell = {
-          type: "border",
-          position: "right",
-          value: "|",
-          color: borderRight ? null : ANSI.RED,
-        };
-        line[x] = borderRightCell;
+        const rightCell = borderRight
+          ? createBorderRightCell(borderRight)
+          : blankCell;
+        line[x] = rightCell;
         x++;
       }
 
-      const topCells = [];
+      const lineAbove = [];
       {
         let x = 0;
         while (x < line.length) {
-          const borderTopCell = borderTopCells[x];
-          let topCell;
-          if (borderTopCell) {
-            topCell = borderTopCell;
-          } else if (borderTopCells[x + 1]) {
-            topCell = {
-              type: "border",
-              position: "top_left",
-              value: "+",
-            };
+          const topCell = topCells[x];
+          let aboveCell;
+          if (topCell) {
+            aboveCell = topCell;
           } else {
-            topCell = {
-              type: "border",
-              position: "top_right",
-              value: "+",
-            };
+            aboveCell = blankCell;
           }
-          topCells[x] = topCell;
+          lineAbove[x] = aboveCell;
           x++;
         }
       }
-      grid[y] = topCells;
+      grid[y] = lineAbove;
       y++;
 
       grid[y] = line;
       y++;
 
-      const bottomCells = [];
+      const lineBelow = [];
       {
         let x = 0;
         while (x < line.length) {
-          const borderBottomCell = borderBottomCells[x];
-          let bottomCell;
-          if (borderBottomCell) {
-            bottomCell = borderBottomCell;
-          } else if (borderBottomCells[x + 1]) {
-            bottomCell = {
-              type: "border",
-              position: "bottom_left",
-              value: "+",
-            };
+          const bottomCell = bottomCells[x];
+          let belowCell;
+          if (bottomCell) {
+            belowCell = bottomCell;
           } else {
-            bottomCell = {
-              type: "border",
-              position: "bottom_right",
-              value: "+",
-            };
+            belowCell = blankCell;
           }
-          bottomCells[x] = bottomCell;
+          lineBelow[x] = belowCell;
           x++;
         }
       }
-      grid[y] = bottomCells;
+      grid[y] = lineBelow;
       y++;
+    }
+  }
+
+  // remove lines that have no visible borders
+  // lines mixing visible and disabled borders will be rendered and disabled border will be rendered using blank chars
+  {
+    let y = 0;
+    while (y < grid.length) {
+      const line = grid[y];
+      const [firstCell] = line;
+      if (firstCell.type === "content") {
+        y++;
+        continue;
+      }
+      let hasVisibleBorder = false;
+      for (const cell of line) {
+        if (cell.color === ANSI.RED) {
+          continue;
+        }
+        hasVisibleBorder = true;
+        break;
+      }
+      if (hasVisibleBorder) {
+        y++;
+        continue;
+      }
+      grid.splice(y, 1);
+    }
+  }
+  // remove columns that have no visible borders
+  {
+    let x = 0;
+    const firstLine = grid[0];
+    while (x < firstLine.length) {
+      const cell = firstLine[0];
+      if (cell.type === "content") {
+        x++;
+        continue;
+      }
+      let hasVisibleBorder = false;
+      let y = 0;
+      while (y < grid.length) {
+        const cellBelow = grid[y][x];
+        if (cellBelow.color === ANSI.RED) {
+          y++;
+          continue;
+        }
+        hasVisibleBorder = true;
+        break;
+      }
+      if (hasVisibleBorder) {
+        x++;
+        continue;
+      }
+      // get rid of this cell on every line (remove the full column)
+      y = 0;
+      while (y < grid.length) {
+        const line = grid[y];
+        line.splice(x, 0);
+        y++;
+      }
     }
   }
 
@@ -246,10 +308,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     for (const line of grid) {
       let x = 0;
       for (const data of line) {
-        const cell = createCell(data.type === "content" ? data.props : data, {
-          x,
-          y,
-        });
+        const cell = createCell(data, { x, y });
         line[x] = cell;
         x++;
       }
