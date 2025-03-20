@@ -83,6 +83,19 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const createBorderRightCell = () => {
     return createBorderCell({ position: "right", char: "│" });
   };
+  const createTopLeftBorderCell = () => {
+    return createBorderCell({ position: "top_left", char: "┌" });
+  };
+  const createTopRightBorderCell = () => {
+    return createBorderCell({ position: "top_right", char: "┐" });
+  };
+  const createBottomRightBorderCell = () => {
+    return createBorderCell({ position: "bottom_right", char: "┘" });
+  };
+  const createBottomLeftBorderCell = () => {
+    return createBorderCell({ position: "bottom_left", char: "└" });
+  };
+
   const createContentCell = ({
     value,
     quoteAroundStrings = true,
@@ -213,19 +226,11 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           } else {
             const nextCell = topCells[x + 1];
             if (nextCell && nextCell.type === "border") {
-              aboveCell = {
-                type: "border",
-                position: "top_left",
-                value: "+",
-              };
+              aboveCell = createTopLeftBorderCell();
             } else {
               const previousCell = topCells[x - 1];
               if (previousCell && previousCell.type === "border") {
-                aboveCell = {
-                  type: "border",
-                  position: "top_right",
-                  value: "+",
-                };
+                aboveCell = createTopRightBorderCell();
               } else {
                 aboveCell = blankCell;
               }
@@ -252,19 +257,11 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           } else {
             const nextCell = bottomCells[x + 1];
             if (nextCell && nextCell.type === "border") {
-              belowCell = {
-                type: "border",
-                position: "bottom_left",
-                value: "+",
-              };
+              belowCell = createBottomLeftBorderCell();
             } else {
               const previousCell = bottomCells[x - 1];
               if (previousCell && previousCell.type === "border") {
-                belowCell = {
-                  type: "border",
-                  position: "bottom_right",
-                  value: "+",
-                };
+                belowCell = createBottomRightBorderCell();
               } else {
                 belowCell = blankCell;
               }
