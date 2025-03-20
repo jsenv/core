@@ -13,39 +13,162 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const blankCell = {
     type: "blank",
     value: "",
+    getSize: () => [0, 0],
+    render: ({ availableWidth, availableHeight }) => {
+      let text = "";
+      let y = 0;
+      while (true) {
+        text += " ".repeat(availableWidth);
+        if (y === availableHeight - 1) {
+          break;
+        }
+        text += "\n";
+        y++;
+      }
+      return text;
+    },
+  };
+  const createBorderCell = ({ position, char }) => {
+    const size = [stringWidth(char), char.split("\n").length];
+
+    return {
+      type: "border",
+      position,
+      xAlign:
+        position === "top_left" || position === "bottom_left"
+          ? "start"
+          : position === "top_right" || position === "bottom_right"
+            ? "end"
+            : undefined,
+      yAlign:
+        position === "top_left" || position === "top_right"
+          ? "start"
+          : position === "bottom_left" || position === "bottom_right"
+            ? "end"
+            : undefined,
+      getSize: () => size,
+      render: ({ availableWidth, availableHeight }) => {
+        if (position === "left") {
+          return char.repeat(availableWidth);
+        }
+        if (position === "right") {
+          return char.repeat(availableWidth);
+        }
+        if (position === "top" || position === "bottom") {
+          let text = "";
+          let y = 0;
+          while (true) {
+            text += char;
+            if (y === availableHeight - 1) {
+              break;
+            }
+            text += "\n";
+            y++;
+          }
+          return text;
+        }
+        return char;
+      },
+    };
+  };
+  const createBorderLeftCell = () => {
+    return createBorderCell({ position: "left", char: "│" });
+  };
+  const createBorderTopCell = () => {
+    return createBorderCell({ position: "top", char: "─" });
+  };
+  const createBorderBottomCell = () => {
+    return createBorderCell({ position: "bottom", char: "─" });
+  };
+  const createBorderRightCell = () => {
+    return createBorderCell({ position: "right", char: "│" });
+  };
+  const createContentCell = ({
+    value,
+    quoteAroundStrings = true,
+    color,
+    format,
+    bold,
+    unit,
+    unitColor,
+    leftSpacing = 1,
+    rightSpacing = 1,
+    topSpacing = 0,
+    bottomSpacing = 0,
+    xAlign = "start", // "start", "center", "end"
+    yAlign = "start", // "start", "center", "end"
+  }) => {
+    let text;
+    if (typeof value === "string") {
+      if (quoteAroundStrings) {
+        text = `"${value}"`;
+        if (color === undefined) {
+          color = ANSI.GREEN;
+        }
+      } else {
+        text = value;
+      }
+    } else if (typeof value === "number") {
+      if (format === "size") {
+        text = humanizeFileSize(value);
+      } else {
+        text = String(value);
+        if (color === undefined) {
+          color = ANSI.YELLOW;
+        }
+      }
+    } else {
+      text = value;
+    }
+
+    if (ansi && bold) {
+      text = ANSI.color(text, ANSI.BOLD);
+    }
+    if (ansi && color) {
+      text = ANSI.color(text, color);
+    }
+
+    let width = stringWidth(text);
+    if (leftSpacing) {
+      width += leftSpacing;
+      text = ` `.repeat(leftSpacing) + text;
+    }
+    if (unit) {
+      width += ` ${unit}`.length;
+      if (ansi && unitColor) {
+        unit = ANSI.color(unit, unitColor);
+      }
+      text += ` ${unit}`;
+    }
+    if (rightSpacing) {
+      width += rightSpacing;
+      text += ` `.repeat(rightSpacing);
+    }
+    let height = text.split("\n").length;
+    if (topSpacing) {
+      height += topSpacing;
+      text = `\n`.repeat(topSpacing) + text;
+    }
+    if (bottomSpacing) {
+      height += bottomSpacing;
+      text += `\n`.repeat(bottomSpacing);
+    }
+
+    return {
+      type: "content",
+      xAlign,
+      yAlign,
+      getSize: () => {
+        return [width, height];
+      },
+      render: () => {
+        return text;
+      },
+    };
   };
 
   // inject borders
   {
-    const createBorderLeftCell = () => {
-      return {
-        type: "border",
-        position: "left",
-        value: "|",
-      };
-    };
-    const createBorderTopCell = () => {
-      return {
-        type: "border",
-        position: "top",
-        value: "-",
-      };
-    };
-    const createBorderBottomCell = () => {
-      return {
-        type: "border",
-        position: "bottom",
-        value: "-",
-      };
-    };
-    const createBorderRightCell = () => {
-      return {
-        type: "border",
-        position: "right",
-        value: "|",
-      };
-    };
-
     let y = 0;
     for (const inputLine of inputGrid) {
       let x = 0;
@@ -68,7 +191,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           ? createBorderBottomCell(borderBottom)
           : blankCell;
         bottomCells[x] = bottomCell;
-        const contentCell = { type: "content", ...props };
+        const contentCell = createContentCell(props);
         line[x] = contentCell;
         x++;
 
@@ -221,131 +344,47 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   {
     const columnBiggestWidthArray = [];
     const lineBiggestHeightArray = [];
-    const getColumnWidth = (cell) => {
-      return columnBiggestWidthArray[cell.x];
-    };
-    const getLineHeight = (cell) => {
-      return lineBiggestHeightArray[cell.y];
-    };
 
-    const createCell = (
-      {
-        type = "content",
-        value,
-        bold,
-        format,
-        unit = format === "percentage" ? "%" : undefined,
-        unitColor,
-        quoteAroundStrings = type === "content" ? !format : false,
-        color = type === "content" ? undefined : null,
-        leftSpacing = type === "content" ? 1 : 0,
-        rightSpacing = type === "content" ? 1 : 0,
-        topSpacing = 0,
-        bottomSpacing = 0,
-        xAlign = "start", // "start", "center", "end"
-        yAlign = "start", // "start", "center", "end"
-      },
-      { x, y },
-    ) => {
-      let text;
-      if (typeof value === "string") {
-        if (quoteAroundStrings) {
-          text = `"${value}"`;
-          if (color === undefined) {
-            color = ANSI.GREEN;
-          }
-        } else {
-          text = value;
-        }
-      } else if (typeof value === "number") {
-        if (format === "size") {
-          text = humanizeFileSize(value);
-        } else {
-          text = String(value);
-          if (color === undefined) {
-            color = ANSI.YELLOW;
-          }
-        }
-      } else {
-        text = value;
-      }
-
-      if (ansi && bold) {
-        text = ANSI.color(text, ANSI.BOLD);
-      }
-      if (ansi && color) {
-        text = ANSI.color(text, color);
-      }
-
-      let width = stringWidth(text);
-      if (leftSpacing) {
-        width += leftSpacing;
-        text = ` `.repeat(leftSpacing) + text;
-      }
-      if (unit) {
-        width += ` ${unit}`.length;
-        if (ansi && unitColor) {
-          unit = ANSI.color(unit, unitColor);
-        }
-        text += ` ${unit}`;
-      }
-      if (rightSpacing) {
-        width += rightSpacing;
-        text += ` `.repeat(rightSpacing);
-      }
-      let height = text.split("\n").length;
-      if (topSpacing) {
-        height += topSpacing;
-        text = `\n`.repeat(topSpacing) + text;
-      }
-      if (bottomSpacing) {
-        height += bottomSpacing;
-        text += `\n`.repeat(bottomSpacing);
-      }
-
+    const createCellNode = (cell, { x, y }) => {
       const biggestWidth = columnBiggestWidthArray[x] || 0;
+      const biggestHeight = lineBiggestHeightArray[y] || 0;
+
+      const [width, height] = cell.getSize();
       if (width > biggestWidth) {
         columnBiggestWidthArray[x] = width;
       }
-      const biggestHeight = lineBiggestHeightArray[y] || 0;
       if (height > biggestHeight) {
         lineBiggestHeightArray[y] = height;
       }
-
-      const cell = {
-        type,
-        x,
-        y,
-        value,
-        text,
-        xAlign,
-        yAlign,
-        width,
-        height,
+      const cellNode = {
         render: () => {
-          let output = "";
-          output += text;
-          const columnWidth = getColumnWidth(cell);
-          const lineHeight = getLineHeight(cell);
-          if (xAlign === "start") {
-            output += " ".repeat(columnWidth - cell.width);
+          const availableWidth = columnBiggestWidthArray[x];
+          const availableHeight = lineBiggestHeightArray[y];
+          const renderResult = cell.render({
+            availableWidth,
+            availableHeight,
+          });
+          let text = renderResult;
+          const { xAlign } = cell;
+          if (xAlign) {
+            text = applyXAlign(text, xAlign, availableWidth, width);
           }
-          if (yAlign === "start") {
-            output += "\n".repeat(lineHeight - cell.height);
+          const { yAlign } = text;
+          if (yAlign) {
+            text = applyYAlign(text, yAlign, availableHeight, height);
           }
-          return output;
+          return text;
         },
       };
-
-      return cell;
+      return cellNode;
     };
 
     let y = 0;
     for (const line of grid) {
       let x = 0;
-      for (const data of line) {
-        const cell = createCell(data, { x, y });
-        line[x] = cell;
+      for (const cell of line) {
+        const cellNode = createCellNode(cell, { x, y });
+        line[x] = cellNode;
         x++;
       }
       y++;
@@ -357,8 +396,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     let y = 0;
     for (const line of grid) {
       let lineText = "";
-      for (const cell of line) {
-        lineText += cell.render();
+      for (const cellNode of line) {
+        lineText += cellNode.render();
       }
       log += lineText;
       if (y === grid.length - 1) {
@@ -369,6 +408,26 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
   return log;
+};
+
+const applyXAlign = (text, xAlign, availableWidth, width) => {
+  if (xAlign === "start") {
+    return text + " ".repeat(availableWidth - width);
+  }
+  if (xAlign === "end") {
+    return " ".repeat(availableWidth - width) + text;
+  }
+  return text;
+};
+
+const applyYAlign = (text, yAlign, availableHeight, height) => {
+  if (yAlign === "start") {
+    return text + "\n".repeat(availableHeight - height);
+  }
+  if (yAlign === "end") {
+    return "\n".repeat(availableHeight - height) + text;
+  }
+  return text;
 };
 
 console.log(
