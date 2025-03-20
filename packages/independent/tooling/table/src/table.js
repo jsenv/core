@@ -3,6 +3,8 @@
  * - Plein de cas de tests
  * - Le border collapse
  * - Les jointures spéciale pour les bordures qui jointent des cellules adjacentes
+ *
+ * https://github.com/Automattic/cli-table
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
@@ -226,96 +228,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   return log;
 };
 
-// blank cells are fluid cells that will take whatever size they are requested to take
-// they can seen as placeholders that are removed when a line or column is composed only by blank cells
-// this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
-// (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
-// where the border is)
-const blankCell = {
-  type: "blank",
-  value: "",
-  getSize: () => [0, 0],
-  render: ({ availableWidth, availableHeight }) => {
-    let text = "";
-    let y = 0;
-    while (true) {
-      text += " ".repeat(availableWidth);
-      if (y === availableHeight - 1) {
-        break;
-      }
-      text += "\n";
-      y++;
-    }
-    return text;
-  },
-};
-const createBorderCell = ({ position, char }) => {
-  const size = [stringWidth(char), char.split("\n").length];
-
-  return {
-    type: "border",
-    position,
-    xAlign:
-      position === "top_left" || position === "bottom_left"
-        ? "start"
-        : position === "top_right" || position === "bottom_right"
-          ? "end"
-          : undefined,
-    yAlign:
-      position === "top_left" || position === "top_right"
-        ? "start"
-        : position === "bottom_left" || position === "bottom_right"
-          ? "end"
-          : undefined,
-    getSize: () => size,
-    render: ({ availableWidth, availableHeight }) => {
-      if (position === "left") {
-        return char.repeat(availableWidth);
-      }
-      if (position === "right") {
-        return char.repeat(availableWidth);
-      }
-      if (position === "top" || position === "bottom") {
-        let text = "";
-        let y = 0;
-        while (true) {
-          text += char.repeat(availableWidth);
-          if (y === availableHeight - 1) {
-            break;
-          }
-          text += "\n";
-          y++;
-        }
-        return text;
-      }
-      return char;
-    },
-  };
-};
-const createBorderLeftCell = () => {
-  return createBorderCell({ position: "left", char: "│" });
-};
-const createBorderTopCell = () => {
-  return createBorderCell({ position: "top", char: "─" });
-};
-const createBorderBottomCell = () => {
-  return createBorderCell({ position: "bottom", char: "─" });
-};
-const createBorderRightCell = () => {
-  return createBorderCell({ position: "right", char: "│" });
-};
-const createTopLeftBorderCell = () => {
-  return createBorderCell({ position: "top_left", char: "┌" });
-};
-const createTopRightBorderCell = () => {
-  return createBorderCell({ position: "top_right", char: "┐" });
-};
-const createBottomRightBorderCell = () => {
-  return createBorderCell({ position: "bottom_right", char: "┘" });
-};
-const createBottomLeftBorderCell = () => {
-  return createBorderCell({ position: "bottom_left", char: "└" });
-};
 const createContentCell = (
   {
     value,
@@ -402,7 +314,6 @@ const createContentCell = (
     },
   };
 };
-
 const applyXAlign = (text, xAlign, availableWidth, width) => {
   if (xAlign === "start") {
     return text + " ".repeat(availableWidth - width);
@@ -412,7 +323,6 @@ const applyXAlign = (text, xAlign, availableWidth, width) => {
   }
   return text;
 };
-
 const applyYAlign = (text, yAlign, availableHeight, height) => {
   if (yAlign === "start") {
     return text + "\n".repeat(availableHeight - height);
@@ -421,6 +331,132 @@ const applyYAlign = (text, yAlign, availableHeight, height) => {
     return "\n".repeat(availableHeight - height) + text;
   }
   return text;
+};
+
+const BORDER_CHARS = {
+  top: "─",
+  left: "|",
+  bottom: "─",
+  right: "|",
+  top_left: "┌",
+  top_right: "┐",
+  bottom_right: "┘",
+  bottom_left: "└",
+};
+const createBorderCell = ({ position, char }) => {
+  const size = [stringWidth(char), char.split("\n").length];
+
+  return {
+    type: "border",
+    position,
+    xAlign:
+      position === "top_left" || position === "bottom_left"
+        ? "start"
+        : position === "top_right" || position === "bottom_right"
+          ? "end"
+          : undefined,
+    yAlign:
+      position === "top_left" || position === "top_right"
+        ? "start"
+        : position === "bottom_left" || position === "bottom_right"
+          ? "end"
+          : undefined,
+    getSize: () => size,
+    render: ({ availableWidth, availableHeight }) => {
+      if (position === "left") {
+        return char.repeat(availableWidth);
+      }
+      if (position === "right") {
+        return char.repeat(availableWidth);
+      }
+      if (position === "top" || position === "bottom") {
+        let text = "";
+        let y = 0;
+        while (true) {
+          text += char.repeat(availableWidth);
+          if (y === availableHeight - 1) {
+            break;
+          }
+          text += "\n";
+          y++;
+        }
+        return text;
+      }
+      return char;
+    },
+  };
+};
+const createBorderLeftCell = () => {
+  return createBorderCell({
+    position: "left",
+    char: BORDER_CHARS.left,
+  });
+};
+const createBorderTopCell = () => {
+  return createBorderCell({
+    position: "top",
+    char: BORDER_CHARS.top,
+  });
+};
+const createBorderBottomCell = () => {
+  return createBorderCell({
+    position: "bottom",
+    char: BORDER_CHARS.bottom,
+  });
+};
+const createBorderRightCell = () => {
+  return createBorderCell({
+    position: "right",
+    char: BORDER_CHARS.right,
+  });
+};
+const createTopLeftBorderCell = () => {
+  return createBorderCell({
+    position: "top_left",
+    char: BORDER_CHARS.top_left,
+  });
+};
+const createTopRightBorderCell = () => {
+  return createBorderCell({
+    position: "top_right",
+    char: BORDER_CHARS.top_right,
+  });
+};
+const createBottomRightBorderCell = () => {
+  return createBorderCell({
+    position: "bottom_right",
+    char: BORDER_CHARS.bottom_right,
+  });
+};
+const createBottomLeftBorderCell = () => {
+  return createBorderCell({
+    position: "bottom_left",
+    char: BORDER_CHARS.bottom_left,
+  });
+};
+
+// blank cells are fluid cells that will take whatever size they are requested to take
+// they can seen as placeholders that are removed when a line or column is composed only by blank cells
+// this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
+// (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
+// where the border is)
+const blankCell = {
+  type: "blank",
+  value: "",
+  getSize: () => [0, 0],
+  render: ({ availableWidth, availableHeight }) => {
+    let text = "";
+    let y = 0;
+    while (true) {
+      text += " ".repeat(availableWidth);
+      if (y === availableHeight - 1) {
+        break;
+      }
+      text += "\n";
+      y++;
+    }
+    return text;
+  },
 };
 
 // console.log(
