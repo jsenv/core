@@ -151,14 +151,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (isBorderLeft(southCell)) {
             return cell;
           }
-          if (y > 2) {
-            // in theory we can do this only if the border are compatible and about to be collapsed
-            // so maybe this logic belongs to the collapse border part
-            const northNorthCell = grid[y - 2][x];
-            if (northNorthCell && isBorderLeft(northNorthCell)) {
-              return createBottomLeftBorderCell();
-            }
-          }
           return createBorderTopCell();
         }
         if (columnContainsRightBorder(x - 1)) {
@@ -194,14 +186,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           const northCell = grid[y - 1][x];
           if (isBorderLeft(northCell)) {
             return cell;
-          }
-          if (y < grid.length - 2) {
-            // in theory we can do this only if the border are compatible and about to be collapsed
-            // so maybe this logic belongs to the collapse border part
-            const southSouthCell = grid[y + 2][x];
-            if (isBorderLeft(southSouthCell)) {
-              return createTopLeftBorderCell();
-            }
           }
           return createBorderBottomCell();
         }
@@ -249,6 +233,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           blankCell, // merged into the left cell
         ];
       }
+
       return null;
     };
 
@@ -264,6 +249,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         const howToCollapseCells = getHowToCollapseAdjacentCells(
           columnCell,
           eastColumnCell,
+          x,
+          y,
         );
         if (!howToCollapseCells) {
           hasConlict = true;
@@ -289,7 +276,23 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
 
   // collapse top and bottom borders
   {
-    const getHowToCollapseAdjacentCells = (cell, cellBelow) => {
+    const getHowToCollapseAdjacentCells = (cell, cellBelow, x, y) => {
+      if (
+        isBorderBottom(cell) &&
+        x % 3 === 0 && // there is a bottom left every 3 column
+        y <= grid.length - 2 &&
+        isBorderLeft(grid[y + 2][x]) // south south cell is a border left
+      ) {
+        return [createTopLeftBorderCell(), cellBelow];
+      }
+      if (
+        isBorderTop(cellBelow) &&
+        x % 3 === 0 &&
+        y > 1 &&
+        isBorderLeft(grid[y - 1][x]) // north cell is a border left
+      ) {
+        return [createBottomLeftBorderCell(), cell];
+      }
       if (isBlankCell(cell)) {
         return [
           cellBelow, // cell becomes cell below
@@ -362,6 +365,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         const howToCollapseCells = getHowToCollapseAdjacentCells(
           cell,
           cellBelow,
+          x,
+          y,
         );
         if (!howToCollapseCells) {
           hasConflict = true;

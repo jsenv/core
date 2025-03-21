@@ -1,37 +1,37 @@
 # [1_three_cell_same_column](../../table_3_cells.test.mjs#L98)
 
 ```js
-// const none = renderTable([
-//   [{ value: "a", border: null }],
-//   [{ value: "b", border: null }],
-//   [{ value: "c", border: null }],
-// ]);
-// const left_and_right = renderTable([
-//   [{ value: "a", borderLeft: {}, borderRight: {} }],
-//   [{ value: "b", borderLeft: {}, borderRight: {} }],
-//   [{ value: "c", borderLeft: {}, borderRight: {} }],
-// ]);
-// const top_and_bottom = renderTable([
-//   [{ value: "a", borderTop: {}, borderBottom: {} }],
-//   [{ value: "b", borderTop: {}, borderBottom: {} }],
-//   [{ value: "c", borderTop: {}, borderBottom: {} }],
-// ]);
+const none = renderTable([
+  [{ value: "a", border: null }],
+  [{ value: "b", border: null }],
+  [{ value: "c", border: null }],
+]);
+const left_and_right = renderTable([
+  [{ value: "a", borderLeft: {}, borderRight: {} }],
+  [{ value: "b", borderLeft: {}, borderRight: {} }],
+  [{ value: "c", borderLeft: {}, borderRight: {} }],
+]);
+const top_and_bottom = renderTable([
+  [{ value: "a", borderTop: {}, borderBottom: {} }],
+  [{ value: "b", borderTop: {}, borderBottom: {} }],
+  [{ value: "c", borderTop: {}, borderBottom: {} }],
+]);
 const castle = renderTable([
   [{ value: "a", borderTop: {}, borderRight: {}, borderBottom: {} }],
   [{ value: "b", borderLeft: {} }],
   [{ value: "c", borderTop: {}, borderRight: {}, borderBottom: {} }],
 ]);
-// const all = renderTable([
-//   [{ value: "a", border: {} }],
-//   [{ value: "b", border: {} }],
-//   [{ value: "c", border: {} }],
-// ]);
+const all = renderTable([
+  [{ value: "a", border: {} }],
+  [{ value: "b", border: {} }],
+  [{ value: "c", border: {} }],
+]);
 const results = {
-  //   none,
-  //   left_and_right,
-  //   top_and_bottom,
+  none,
+  left_and_right,
+  top_and_bottom,
   castle,
-  // all,
+  all,
 };
 console.log(renderNamedSections(results));
 ```
@@ -44,6 +44,22 @@ console.log(renderNamedSections(results));
   <summary>see without style</summary>
 
 ```console
+--- none ---
+ "a" 
+ "b" 
+ "c" 
+--- left_and_right ---
+│ "a" │
+│ "b" │
+│ "c" │
+--- top_and_bottom ---
+─────
+ "a" 
+─────
+ "b" 
+─────
+ "c" 
+─────
 --- castle ---
 ──────┐
   "a" │
@@ -52,6 +68,14 @@ console.log(renderNamedSections(results));
 └─────┐
   "c" │
 ──────┘
+--- all ---
+┌─────┐
+│ "a" │
+│─────│
+│ "b" │
+│─────│
+│ "c" │
+└─────┘
 ```
 
 </details>
