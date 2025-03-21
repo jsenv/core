@@ -1,8 +1,5 @@
 /**
  * TODO:
- * - Plein de cas de tests
- * - Le border collapse
- * - Les jointures spéciale pour les bordures qui jointent des cellules adjacentes
  *
  * https://github.com/Automattic/cli-table
  */
@@ -255,35 +252,40 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
 
   // collapse top and bottom borders
   {
-    const getHowToCollapseAdjacentCells = (topCell, bottomCell) => {
-      if (topCell.type === "blank") {
+    const getHowToCollapseAdjacentCells = (cell, cellBelow) => {
+      if (cell.type === "blank") {
         return [
-          // top cell becomes bottom cell
-          bottomCell,
-          // bottom cell becomes blank (it's redundant)
+          // cell becomes cell below
+          cellBelow,
+          // cell below becomes blank
           blankCell,
         ];
       }
-      if (bottomCell.type === "blank") {
-        // keep as it is
-        return [topCell, bottomCell];
+      if (cellBelow.type === "blank") {
+        return [cell, cellBelow]; // keep as it is
       }
-      if (isBorderTopRight(topCell) && isBorderTopLeft(bottomCell)) {
+      if (isBorderTopRight(cell) && isBorderTopLeft(cellBelow)) {
         return [
-          createTopMidBorderCell({ color: topCell.color }),
+          createTopMidBorderCell({ color: cell.color }),
+          blankCell, // merged into the top cell
+        ];
+      }
+      if (isBorderBottomRight(cell) && isBorderBottomLeft(cellBelow)) {
+        return [
+          createBottomMidBorderCell({ color: cell.color }),
+          blankCell, // merged into the top cell
+        ];
+      }
+      if (isBorderBottomLeft(cell) && isBorderTopLeft(cellBelow)) {
+        return [
+          createLeftMidBorderCell({ color: cell.color }),
           blankCell, // merged into the left cell
         ];
       }
-      if (isBorderBottomRight(topCell) && isBorderBottomLeft(bottomCell)) {
+      if (isBorderBottom(cell) && isBorderTop(cellBelow)) {
         return [
-          createBottomMidBorderCell({ color: topCell.color }),
-          blankCell, // merged into the left cell
-        ];
-      }
-      if (isBorderBottom(topCell) && isBorderTop(bottomCell)) {
-        return [
-          topCell,
-          blankCell, // merged into the left cell
+          cell,
+          blankCell, // merged into the top cell
         ];
       }
       return null;
@@ -838,8 +840,8 @@ const createBottomMidBorderCell = (options) =>
   createBorderCell("bottom_mid", options);
 // const createRightMidBorderCell = (options) =>
 //   createBorderCell("right_mid", options);
-// const createLeftMidBorderCell = (options) =>
-//   createBorderCell("left_mid", options);
+const createLeftMidBorderCell = (options) =>
+  createBorderCell("left_mid", options);
 // const createMidBorderCell = (options) => createBorderCell("mid", options);
 
 const isBorderTopLeft = (cell) => cell.position === "top_left";

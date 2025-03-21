@@ -1,4 +1,4 @@
-# [1_two_cell_two_line](../../table_two_cells.test.mjs#L148)
+# [1_two_cell_two_line](../../table_two_cells.test.mjs#L149)
 
 ```js
 const keys = Object.keys(twoLineScenarios);
@@ -15,11 +15,12 @@ for (const scenario of keys) {
   );
   console.log(`--- ${scenario} ---
 
-${text}`);
+${text}
+`);
 }
 ```
 
-# 1/2 console.log
+# 1/2 logs
 
 ```console
 --- bottom_and_top ---
@@ -27,6 +28,13 @@ ${text}`);
  "1" 
 ─────
  "2" 
+
+--- bottom_left_and_top_left ---
+
+│ "1" 
+│─────
+│ "2" 
+
 ```
 
 # 2/2 return

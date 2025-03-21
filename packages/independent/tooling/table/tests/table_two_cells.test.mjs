@@ -60,7 +60,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       },
     ],
   };
-  test.ONLY(`0_two_cell_same_line`, () => {
+  test(`0_two_cell_same_line`, () => {
     const keys = Object.keys(sameLineScenarios);
     for (const scenario of keys) {
       const [firstCellProps, secondCellProps] = sameLineScenarios[scenario];
@@ -91,16 +91,16 @@ ${text}
         borderTop: {},
       },
     ],
-    // bottom_left_and_top_left: [
-    //   {
-    //     borderBottom: {},
-    //     borderLeft: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //   },
-    // ],
+    bottom_left_and_top_left: [
+      {
+        borderBottom: {},
+        borderLeft: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+      },
+    ],
     // bottom_right_and_top_right: [
     //   {
     //     borderBottom: {},
@@ -146,7 +146,7 @@ ${text}
     //   },
     // ],
   };
-  test("1_two_cell_two_line", () => {
+  test.ONLY("1_two_cell_two_line", () => {
     const keys = Object.keys(twoLineScenarios);
     for (const scenario of keys) {
       const [firstCellProps, secondCellProps] = twoLineScenarios[scenario];
@@ -161,7 +161,8 @@ ${text}
       );
       console.log(`--- ${scenario} ---
 
-${text}`);
+${text}
+`);
     }
   });
 });
