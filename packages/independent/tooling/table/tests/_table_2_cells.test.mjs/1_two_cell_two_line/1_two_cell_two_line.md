@@ -1,4 +1,4 @@
-# [1_two_cell_two_line](../../table_two_cells.test.mjs#L149)
+# [1_two_cell_two_line](../../table_2_cells.test.mjs#L149)
 
 ```js
 const keys = Object.keys(twoLineScenarios);
