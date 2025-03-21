@@ -416,13 +416,19 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         if (topSpacing) {
           let lineToInsertAbove = topSpacing;
           while (lineToInsertAbove--) {
-            rects.unshift({ width: 0, render: () => "" });
+            rects.unshift({
+              width: 0,
+              render: ({ columnWidth }) => " ".repeat(columnWidth),
+            });
           }
         }
         if (bottomSpacing) {
           let lineToInsertBelow = bottomSpacing;
           while (lineToInsertBelow--) {
-            rects.push({ width: 0, render: () => "" });
+            rects.push({
+              width: 0,
+              render: ({ columnWidth }) => " ".repeat(columnWidth),
+            });
           }
         }
         const cellHeight = rects.length;
