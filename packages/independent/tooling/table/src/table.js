@@ -198,15 +198,18 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         return [leftCell, rightCell];
       }
       if (isBorderTopRight(leftCell) && isBorderTopLeft(rightCell)) {
-        return () => {
-          return [
-            createTopMidBorderCell(leftCell),
-            blankCell, // merged into the left cell
-          ];
-        };
+        return [
+          createTopMidBorderCell({ color: leftCell.color }),
+          blankCell, // merged into the left cell
+        ];
       }
-
-      if (leftCell.type === "border" && rightCell.type === "border") {
+      if (isBorderBottomRight(leftCell) && isBorderBottomLeft(rightCell)) {
+        return [
+          createBottomMidBorderCell({ color: leftCell.color }),
+          blankCell, // merged into the left cell
+        ];
+      }
+      if (isBorderRight(leftCell) && isBorderLeft(rightCell)) {
         return [
           leftCell,
           blankCell, // merged into the left cell
@@ -346,7 +349,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
             } else if (xAlign === "center") {
               const leftSpacing = Math.floor((availableWidth - width) / 2);
               const rightSpacing = availableWidth - width - leftSpacing;
-              textAlignedX +=
+              textAlignedX =
                 xAlignChar.repeat(leftSpacing) +
                 rectText +
                 xAlignChar.repeat(rightSpacing);
@@ -732,8 +735,8 @@ const createBottomLeftBorderCell = (options) =>
   createBorderCell("bottom_left", options);
 const createTopMidBorderCell = (options) =>
   createBorderCell("top_mid", options);
-// const createBottomMidBorderCell = (options) =>
-//   createBorderCell("bottom_mid", options);
+const createBottomMidBorderCell = (options) =>
+  createBorderCell("bottom_mid", options);
 // const createRightMidBorderCell = (options) =>
 //   createBorderCell("right_mid", options);
 // const createLeftMidBorderCell = (options) =>
