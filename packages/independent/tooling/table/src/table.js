@@ -184,54 +184,58 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   {
     // if every right border can collapse with the left border next to it
     // then we collapse all right borders of the column
-    const canCollapseTwoCells = (left, right) => {
-      if (left.type === "blank" && right.type === "blank") {
-        return true;
+    const getHowToCollapseAdjacentCells = (leftCell, rightCell) => {
+      if (leftCell.type === "blank") {
+        return [
+          // left cell becomes right cell
+          rightCell,
+          // right cell becomes blank (it's redundant)
+          blankCell,
+        ];
       }
-      if (left.type === "blank" && right.type === "border") {
-        return true;
+      if (rightCell.type === "blank") {
+        // keep as it is
+        return [leftCell, rightCell];
       }
-      if (left.type === "border" && right.type === "blank") {
-        return true;
+      if (leftCell.type === "border" && rightCell.type === "border") {
+        return [
+          leftCell,
+          // right cell becomes blank (it's redundant)
+          blankCell,
+        ];
       }
-      if (left.type === "border" && right.type === "border") {
-        // (later we'll check that border share size, color and styles)
-        return true;
-      }
-      return false;
+      return null;
     };
 
     let x = 2;
     const columnCount = grid[0].length;
+    const collapseInfoSet = new Set();
     while (x < columnCount - 1) {
-      let canCollapseColumn = false;
+      let canCollapseColumn;
       let y = 0;
       while (y < grid.length) {
         const columnCell = grid[y][x];
         const eastColumnCell = grid[y][x + 1];
-        if (canCollapseTwoCells(columnCell, eastColumnCell)) {
-          canCollapseColumn = true;
-        } else {
+        const howToCollapseCells = getHowToCollapseAdjacentCells(
+          columnCell,
+          eastColumnCell,
+        );
+        if (!howToCollapseCells) {
+          canCollapseColumn = false;
           break;
         }
+        collapseInfoSet.add({ x, y, howToCollapseCells });
         y++;
       }
-      if (canCollapseColumn) {
-        let y = 0;
-        while (y < grid.length) {
-          const leftCell = grid[y][x];
-          const rightCell = grid[y][x + 1];
-          if (leftCell.type === "blank") {
-            // left cell becomes right cell
-            grid[y][x] = rightCell;
-            // right cell becomes blank (it's redundant)
-            grid[y][x + 1] = blankCell;
-          } else if (rightCell.type === "blank") {
-          } else {
-            // right cell becomes blank (it's redundant)
-            grid[y][x + 1] = blankCell;
-          }
-          y++;
+      if (canCollapseColumn !== false) {
+        for (const collapseInfo of collapseInfoSet) {
+          const { x, y, howToCollapseCells } = collapseInfo;
+          const collapsedCells = Array.isArray(howToCollapseCells)
+            ? howToCollapseCells
+            : howToCollapseCells();
+          const [leftCollapsed, rightCollapsed] = collapsedCells;
+          grid[y][x] = leftCollapsed;
+          grid[y][x + 1] = rightCollapsed;
         }
       }
       x += 3;

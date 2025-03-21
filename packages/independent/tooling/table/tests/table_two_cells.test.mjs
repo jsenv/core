@@ -45,6 +45,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         borderRight: {},
       },
     ],
+    // TODO: the junction between adjacent cells should use an other char
     all_around: [
       {
         borderTop: {},
