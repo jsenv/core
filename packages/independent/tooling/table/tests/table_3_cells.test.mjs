@@ -23,6 +23,41 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "c", borderLeft: {} },
       ],
     ]);
+    const left_and_right = renderTable([
+      [
+        { value: "a", borderLeft: {}, borderRight: {} },
+        { value: "b", borderLeft: {}, borderRight: {} },
+        { value: "c", borderLeft: {}, borderRight: {} },
+      ],
+    ]);
+    const top_and_bottom = renderTable([
+      [
+        { value: "a", borderTop: {}, borderBottom: {} },
+        { value: "b", borderTop: {}, borderBottom: {} },
+        { value: "c", borderTop: {}, borderBottom: {} },
+      ],
+    ]);
+    const first_only = renderTable([
+      [
+        { value: "a", border: {} },
+        { value: "b", border: null },
+        { value: "c", border: null },
+      ],
+    ]);
+    const middle_none = renderTable([
+      [
+        { value: "a", border: {} },
+        { value: "b", border: null },
+        { value: "c", border: {} },
+      ],
+    ]);
+    const last_only = renderTable([
+      [
+        { value: "a", border: null },
+        { value: "b", border: null },
+        { value: "c", border: {} },
+      ],
+    ]);
     const all = renderTable([
       [
         { value: "a", border: {} },
@@ -31,7 +66,16 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       ],
     ]);
 
-    const results = { none, left, all };
+    const results = {
+      none,
+      left,
+      left_and_right,
+      top_and_bottom,
+      first_only,
+      middle_none,
+      last_only,
+      all,
+    };
     console.log(renderNamedSections(results));
   });
 

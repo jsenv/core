@@ -15,6 +15,41 @@ const left = renderTable([
     { value: "c", borderLeft: {} },
   ],
 ]);
+const left_and_right = renderTable([
+  [
+    { value: "a", borderLeft: {}, borderRight: {} },
+    { value: "b", borderLeft: {}, borderRight: {} },
+    { value: "c", borderLeft: {}, borderRight: {} },
+  ],
+]);
+const top_and_bottom = renderTable([
+  [
+    { value: "a", borderTop: {}, borderBottom: {} },
+    { value: "b", borderTop: {}, borderBottom: {} },
+    { value: "c", borderTop: {}, borderBottom: {} },
+  ],
+]);
+const first_only = renderTable([
+  [
+    { value: "a", border: {} },
+    { value: "b", border: null },
+    { value: "c", border: null },
+  ],
+]);
+const middle_none = renderTable([
+  [
+    { value: "a", border: {} },
+    { value: "b", border: null },
+    { value: "c", border: {} },
+  ],
+]);
+const last_only = renderTable([
+  [
+    { value: "a", border: null },
+    { value: "b", border: null },
+    { value: "c", border: {} },
+  ],
+]);
 const all = renderTable([
   [
     { value: "a", border: {} },
@@ -23,7 +58,16 @@ const all = renderTable([
   ],
 ]);
 
-const results = { none, all, left };
+const results = {
+  none,
+  left,
+  left_and_right,
+  top_and_bottom,
+  first_only,
+  middle_none,
+  last_only,
+  all,
+};
 console.log(renderNamedSections(results));
 ```
 
@@ -37,12 +81,30 @@ console.log(renderNamedSections(results));
 ```console
 --- none ---
  "a"  "b"  "c" 
+--- left ---
+│ "a" │ "b" │ "c" 
+--- left_and_right ---
+│ "a" │ "b" │ "c" │
+--- top_and_bottom ---
+───────────────
+ "a"  "b"  "c" 
+───────────────
+--- first_only ---
+┌─────┐          
+│ "a" │ "b"  "c" 
+└─────┘          
+--- middle_none ---
+┌─────┐     ┌─────┐
+│ "a" │ "b" │ "c" │
+└─────┘     └─────┘
+--- last_only ---
+          ┌─────┐
+ "a"  "b" │ "c" │
+          └─────┘
 --- all ---
 ┌─────┬─────┬─────┐
 │ "a" │ "b" │ "c" │
 └─────┴─────┴─────┘
---- left ---
-│ "a" │ "b" │ "c" 
 ```
 
 </details>
