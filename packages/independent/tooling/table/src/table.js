@@ -152,6 +152,9 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           }
           return createBorderTopCell();
         }
+        if (columnContainsRightBorder(x - 1)) {
+          return cell;
+        }
         return blankCell;
       }
       if (isBorderTopRight(cell)) {
@@ -184,6 +187,9 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
             return cell;
           }
           return createBorderBottomCell();
+        }
+        if (columnContainsRightBorder(x - 1)) {
+          return cell;
         }
         return blankCell;
       }

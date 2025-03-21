@@ -58,11 +58,18 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "c", border: {} },
       ],
     ]);
-    const snake = renderTable([
+    const castle = renderTable([
       [
         { value: "a", borderTop: {}, borderRight: {} },
         { value: "b", borderLeft: {}, borderBottom: {} },
         { value: "c", borderLeft: {}, borderTop: {} },
+      ],
+    ]);
+    const castle_inverted = renderTable([
+      [
+        { value: "a", borderBottom: {}, borderRight: {} },
+        { value: "b", borderTop: {}, borderRight: {} },
+        { value: "c", borderBottom: {} },
       ],
     ]);
     const all = renderTable([
@@ -81,7 +88,8 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       first_only,
       middle_none,
       last_only,
-      snake,
+      castle,
+      castle_inverted,
       all,
     };
     console.log(renderNamedSections(results));

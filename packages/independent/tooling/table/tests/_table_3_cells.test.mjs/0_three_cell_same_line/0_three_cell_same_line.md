@@ -50,11 +50,18 @@ const last_only = renderTable([
     { value: "c", border: {} },
   ],
 ]);
-const snake = renderTable([
+const castle = renderTable([
   [
     { value: "a", borderTop: {}, borderRight: {} },
     { value: "b", borderLeft: {}, borderBottom: {} },
     { value: "c", borderLeft: {}, borderTop: {} },
+  ],
+]);
+const castle_inverted = renderTable([
+  [
+    { value: "a", borderBottom: {}, borderRight: {} },
+    { value: "b", borderTop: {}, borderRight: {} },
+    { value: "c", borderBottom: {} },
   ],
 ]);
 const all = renderTable([
@@ -73,7 +80,8 @@ const results = {
   first_only,
   middle_none,
   last_only,
-  snake,
+  castle,
+  castle_inverted,
   all,
 };
 console.log(renderNamedSections(results));
@@ -109,10 +117,14 @@ console.log(renderNamedSections(results));
           ┌─────┐
  "a"  "b" │ "c" │
           └─────┘
---- snake ---
+--- castle ---
 ─────┐     ┌─────
  "a" │ "b" │ "c" 
      └─────┘     
+--- castle_inverted ---
+     ┌─────┐     
+ "a" │ "b" │ "c" 
+─────┘     └─────
 --- all ---
 ┌─────┬─────┬─────┐
 │ "a" │ "b" │ "c" │
