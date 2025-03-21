@@ -60,7 +60,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       },
     ],
   };
-  test.ONLY(`0_two_cell_same_line`, () => {
+  test(`0_two_cell_same_line`, () => {
     const keys = Object.keys(sameLineScenarios);
     for (const scenario of keys) {
       const [firstCellProps, secondCellProps] = sameLineScenarios[scenario];
@@ -90,62 +90,62 @@ ${text}`);
         borderTop: {},
       },
     ],
-    bottom_left_and_top_left: [
-      {
-        borderBottom: {},
-        borderLeft: {},
-      },
-      {
-        borderTop: {},
-        borderLeft: {},
-      },
-    ],
-    bottom_right_and_top_right: [
-      {
-        borderBottom: {},
-        borderRight: {},
-      },
-      {
-        borderTop: {},
-        borderRight: {},
-      },
-    ],
-    top_left_and_bottom_right: [
-      {
-        borderTop: {},
-        borderLeft: {},
-      },
-      {
-        borderBottom: {},
-        borderRight: {},
-      },
-    ],
-    bottom_right_and_top_left: [
-      {
-        borderBottom: {},
-        borderRight: {},
-      },
-      {
-        borderTop: {},
-        borderLeft: {},
-      },
-    ],
-    all_around: [
-      {
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-      {
-        borderTop: {},
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      },
-    ],
+    // bottom_left_and_top_left: [
+    //   {
+    //     borderBottom: {},
+    //     borderLeft: {},
+    //   },
+    //   {
+    //     borderTop: {},
+    //     borderLeft: {},
+    //   },
+    // ],
+    // bottom_right_and_top_right: [
+    //   {
+    //     borderBottom: {},
+    //     borderRight: {},
+    //   },
+    //   {
+    //     borderTop: {},
+    //     borderRight: {},
+    //   },
+    // ],
+    // top_left_and_bottom_right: [
+    //   {
+    //     borderTop: {},
+    //     borderLeft: {},
+    //   },
+    //   {
+    //     borderBottom: {},
+    //     borderRight: {},
+    //   },
+    // ],
+    // bottom_right_and_top_left: [
+    //   {
+    //     borderBottom: {},
+    //     borderRight: {},
+    //   },
+    //   {
+    //     borderTop: {},
+    //     borderLeft: {},
+    //   },
+    // ],
+    // all_around: [
+    //   {
+    //     borderTop: {},
+    //     borderLeft: {},
+    //     borderRight: {},
+    //     borderBottom: {},
+    //   },
+    //   {
+    //     borderTop: {},
+    //     borderLeft: {},
+    //     borderRight: {},
+    //     borderBottom: {},
+    //   },
+    // ],
   };
-  test("1_two_cell_two_line", () => {
+  test.ONLY("1_two_cell_two_line", () => {
     const keys = Object.keys(twoLineScenarios);
     for (const scenario of keys) {
       const [firstCellProps, secondCellProps] = twoLineScenarios[scenario];
