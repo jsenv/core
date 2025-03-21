@@ -60,7 +60,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       },
     ],
   };
-  test(`0_two_cell_same_line`, () => {
+  test.ONLY(`0_two_cell_same_line`, () => {
     const keys = Object.keys(sameLineScenarios);
     for (const scenario of keys) {
       const [firstCellProps, secondCellProps] = sameLineScenarios[scenario];
@@ -77,7 +77,8 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       );
       console.log(`--- ${scenario} ---
 
-${text}`);
+${text}
+`);
     }
   });
 

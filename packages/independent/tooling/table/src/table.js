@@ -397,6 +397,9 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         let cellBiggestWidth = -1;
         for (const rect of rects) {
           let { width } = rect;
+          if (width === "fill") {
+            continue;
+          }
           if (leftSpacing || rightSpacing) {
             width += leftSpacing + rightSpacing;
             rect.width = width;
@@ -417,7 +420,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           let lineToInsertAbove = topSpacing;
           while (lineToInsertAbove--) {
             rects.unshift({
-              width: 0,
+              width: "fill",
               render: ({ columnWidth }) => " ".repeat(columnWidth),
             });
           }
@@ -426,7 +429,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           let lineToInsertBelow = bottomSpacing;
           while (lineToInsertBelow--) {
             rects.push({
-              width: 0,
+              width: "fill",
               render: ({ columnWidth }) => " ".repeat(columnWidth),
             });
           }
@@ -487,13 +490,17 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           let cellLineText;
           if (rect) {
             const { width, render } = rect;
-            let rectText = render({ columnWidth, rowHeight });
-            cellLineText = applyXAlign(rectText, {
-              width,
-              desiredWidth: columnWidth,
-              align: xAlign,
-              alignChar: xAlignChar,
-            });
+            let rectText = render({ columnWidth });
+            if (width === "fill") {
+              cellLineText = rectText;
+            } else {
+              cellLineText = applyXAlign(rectText, {
+                width,
+                desiredWidth: columnWidth,
+                align: xAlign,
+                alignChar: xAlignChar,
+              });
+            }
           } else {
             cellLineText = applyXAlign(yAlignChar, {
               width: 1,
@@ -529,18 +536,18 @@ const applyXAlign = (text, { width, desiredWidth, align, alignChar }) => {
   if (missingWidth === 0) {
     return text;
   }
-  if (align === "fill") {
-    let textRepeated = "";
-    let widthFilled = 0;
-    while (true) {
-      textRepeated += text;
-      widthFilled += width;
-      if (widthFilled >= desiredWidth) {
-        break;
-      }
-    }
-    return textRepeated;
-  }
+  // if (align === "fill") {
+  //   let textRepeated = "";
+  //   let widthFilled = 0;
+  //   while (true) {
+  //     textRepeated += text;
+  //     widthFilled += width;
+  //     if (widthFilled >= desiredWidth) {
+  //       break;
+  //     }
+  //   }
+  //   return textRepeated;
+  // }
   if (align === "start") {
     return text + alignChar.repeat(missingWidth);
   }
@@ -642,30 +649,28 @@ const createContentCell = (
 const BORDER_PROPS = {
   top: {
     position: "top",
-    xAlign: "fill",
     yAlign: "end",
     rects: [
       {
-        width: 1,
-        render: () => "─",
+        width: "fill",
+        render: ({ columnWidth }) => "─".repeat(columnWidth),
       },
     ],
   },
   bottom: {
     position: "bottom",
-    xAlign: "fill",
     yAlign: "start",
     rects: [
       {
-        width: 1,
-        render: () => "─",
+        width: "fill",
+        render: ({ columnWidth }) => "─".repeat(columnWidth),
       },
     ],
   },
   left: {
     position: "left",
     xAlign: "end",
-    yAlign: "fill",
+    yAlignChar: "|",
     rects: [
       {
         width: 1,
@@ -676,7 +681,7 @@ const BORDER_PROPS = {
   right: {
     position: "right",
     xAlign: "start",
-    yAlign: "fill",
+    yAlignChar: "|",
     rects: [
       {
         width: 1,
@@ -853,12 +858,10 @@ const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
 // where the border is)
 const blankCell = {
   type: "blank",
-  xAlign: "fill",
-  yAlign: "fill",
   rects: [
     {
-      width: 0,
-      render: () => "",
+      width: "fill",
+      render: ({ columnWidth }) => " ".repeat(columnWidth),
     },
   ],
 };
