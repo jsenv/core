@@ -58,11 +58,11 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
             aboveCell = topCell;
           } else {
             const rightTopCell = topCells[x + 1];
-            if (rightTopCell && rightTopCell.type === "border") {
+            if (rightTopCell && isBorderTop(rightTopCell)) {
               aboveCell = createTopLeftBorderCell();
             } else {
               const previousCell = topCells[x - 1];
-              if (previousCell && previousCell.type === "border") {
+              if (previousCell && isBorderTop(previousCell)) {
                 aboveCell = createTopRightBorderCell();
               } else {
                 aboveCell = blankCell;
@@ -89,11 +89,11 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
             belowCell = bottomCell;
           } else {
             const nextCell = bottomCells[x + 1];
-            if (nextCell && nextCell.type === "border") {
+            if (nextCell && isBorderBottom(nextCell)) {
               belowCell = createBottomLeftBorderCell();
             } else {
               const previousCell = bottomCells[x - 1];
-              if (previousCell && previousCell.type === "border") {
+              if (previousCell && isBorderBottom(previousCell)) {
                 belowCell = createBottomRightBorderCell();
               } else {
                 belowCell = blankCell;
@@ -770,8 +770,8 @@ const isBorderTopLeft = (cell) => cell.position === "top_left";
 const isBorderTopRight = (cell) => cell.position === "top_right";
 const isBorderLeft = (cell) => cell.position === "left";
 const isBorderRight = (cell) => cell.position === "right";
-// const isBorderTop = (cell) => cell.position === "top";
-// const isBorderBottom = (cell) => cell.position === "bottom";
+const isBorderTop = (cell) => cell.position === "top";
+const isBorderBottom = (cell) => cell.position === "bottom";
 const isBorderBottomRight = (cell) => cell.position === "bottom_right";
 const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
 
