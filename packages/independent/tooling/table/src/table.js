@@ -782,21 +782,25 @@ const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
 // where the border is)
 const blankCell = {
   type: "blank",
-  value: "",
-  getSize: () => [0, 0],
-  render: ({ availableWidth, availableHeight }) => {
-    let text = "";
-    let y = 0;
-    while (true) {
-      text += " ".repeat(availableWidth);
-      if (y === availableHeight - 1) {
-        break;
-      }
-      text += "\n";
-      y++;
-    }
-    return text;
-  },
+  rects: [
+    {
+      width: "100%",
+      height: "100%",
+      render: ({ availableWidth, availableHeight }) => {
+        let text = "";
+        let y = 0;
+        while (true) {
+          text += " ".repeat(availableWidth);
+          if (y === availableHeight - 1) {
+            break;
+          }
+          text += "\n";
+          y++;
+        }
+        return text;
+      },
+    },
+  ],
 };
 
 const mutateGrid = (grid, callback) => {
