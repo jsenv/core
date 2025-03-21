@@ -111,40 +111,40 @@ ${text}
         borderRight: {},
       },
     ],
-    // top_left_and_bottom_right: [
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //   },
-    //   {
-    //     borderBottom: {},
-    //     borderRight: {},
-    //   },
-    // ],
-    // bottom_right_and_top_left: [
-    //   {
-    //     borderBottom: {},
-    //     borderRight: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //   },
-    // ],
-    // all_around: [
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    // ],
+    top_left_and_bottom_right: [
+      {
+        borderTop: {},
+        borderLeft: {},
+      },
+      {
+        borderBottom: {},
+        borderRight: {},
+      },
+    ],
+    bottom_right_and_top_left: [
+      {
+        borderBottom: {},
+        borderRight: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+      },
+    ],
+    all_around: [
+      {
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+    ],
   };
   test.ONLY("1_two_cell_two_line", () => {
     const keys = Object.keys(twoLineScenarios);

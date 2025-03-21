@@ -288,6 +288,15 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           blankCell, // merged into the cell
         ];
       }
+      if (isBorderBottomRight(cell) && isBorderTop(cellBelow)) {
+        return [
+          cell,
+          blankCell, // merged into the cell
+        ];
+      }
+      if (isBorderBottom(cell) && isBorderTopLeft(cellBelow)) {
+        return [cellBelow, blankCell]; // merged into the top cell
+      }
       if (isBorderBottom(cell) && isBorderTop(cellBelow)) {
         return [
           cell,
