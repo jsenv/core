@@ -83,44 +83,44 @@ ${text}
   });
 
   const twoLineScenarios = {
-    // bottom_and_top: [
-    //   {
-    //     borderBottom: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //   },
-    // ],
-    // bottom_left_and_top_left: [
-    //   {
-    //     borderBottom: {},
-    //     borderLeft: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //   },
-    // ],
-    // bottom_right_and_top_right: [
-    //   {
-    //     borderBottom: {},
-    //     borderRight: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //     borderRight: {},
-    //   },
-    // ],
-    // top_left_and_bottom_right: [
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //   },
-    //   {
-    //     borderBottom: {},
-    //     borderRight: {},
-    //   },
-    // ],
+    bottom_and_top: [
+      {
+        borderBottom: {},
+      },
+      {
+        borderTop: {},
+      },
+    ],
+    bottom_left_and_top_left: [
+      {
+        borderBottom: {},
+        borderLeft: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+      },
+    ],
+    bottom_right_and_top_right: [
+      {
+        borderBottom: {},
+        borderRight: {},
+      },
+      {
+        borderTop: {},
+        borderRight: {},
+      },
+    ],
+    top_left_and_bottom_right: [
+      {
+        borderTop: {},
+        borderLeft: {},
+      },
+      {
+        borderBottom: {},
+        borderRight: {},
+      },
+    ],
     bottom_right_and_top_left: [
       {
         borderBottom: {},
@@ -131,20 +131,20 @@ ${text}
         borderLeft: {},
       },
     ],
-    // all_around: [
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //     borderLeft: {},
-    //     borderRight: {},
-    //     borderBottom: {},
-    //   },
-    // ],
+    all_around: [
+      {
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+      {
+        borderTop: {},
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      },
+    ],
   };
   test.ONLY("1_two_cell_two_line", () => {
     const keys = Object.keys(twoLineScenarios);

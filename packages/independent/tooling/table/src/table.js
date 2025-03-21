@@ -281,6 +281,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         isBorderBottom(cell) &&
         x % 3 === 0 && // there is a bottom left every 3 column
         y <= grid.length - 2 &&
+        isBlankCell(grid[y + 1][x]) &&
         isBorderLeft(grid[y + 2][x]) // south south cell is a border left
       ) {
         return [createTopLeftBorderCell(), cellBelow];
