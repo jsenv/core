@@ -378,15 +378,15 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   }
 
   // measure column and row dimensions (biggest of all cells in the column/row)
-  const columnWithMap = new Map();
+  const columnWidthMap = new Map();
   const rowHeightMap = new Map();
   {
     let y = 0;
     for (const line of grid) {
       let x = 0;
       for (const cell of line) {
-        const columnWidth = columnWithMap.get(x) || 0;
-        const rowHeight = rowHeightMap.get(y) || 0;
+        const columnWidth = columnWidthMap.get(x) || -1;
+        const rowHeight = rowHeightMap.get(y) || -1;
         const {
           rects,
           leftSpacing = 0,
@@ -394,7 +394,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           topSpacing = 0,
           bottomSpacing = 0,
         } = cell;
-        let cellBiggestWidth;
+        let cellBiggestWidth = -1;
         for (const rect of rects) {
           let { width } = rect;
           if (leftSpacing || rightSpacing) {
@@ -411,7 +411,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           }
         }
         if (cellBiggestWidth > columnWidth) {
-          columnWithMap.set(x, cellBiggestWidth);
+          columnWidthMap.set(x, cellBiggestWidth);
         }
         if (topSpacing) {
           let lineToInsertAbove = topSpacing;
@@ -454,7 +454,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         let x = 0;
         let lineText = "";
         for (const cell of row) {
-          const columnWidth = columnWithMap.get(x);
+          const columnWidth = columnWidthMap.get(x);
           const {
             xAlign,
             xAlignChar = " ",
@@ -465,28 +465,23 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           const cellHeight = rects.length;
 
           let rect;
-          content_or_fill: {
-            if (yAlign === "start") {
-              if (lineIndex < cellHeight) {
-                rect = rects[lineIndex];
-              }
-              break content_or_fill;
+          if (yAlign === "start") {
+            if (lineIndex < cellHeight) {
+              rect = rects[lineIndex];
             }
-            if (yAlign === "center") {
-              const topSpacing = Math.floor((rowHeight - cellHeight) / 2);
-              // const bottomSpacing = rowHeight - cellHeight - topSpacing;
-              const lineStartIndex = topSpacing;
-              const lineEndIndex = topSpacing + cellHeight;
-              if (lineIndex > lineStartIndex && lineIndex < lineEndIndex) {
-                rect = rects[lineIndex];
-              }
-              break content_or_fill;
+          } else if (yAlign === "center") {
+            const topSpacing = Math.floor((rowHeight - cellHeight) / 2);
+            // const bottomSpacing = rowHeight - cellHeight - topSpacing;
+            const lineStartIndex = topSpacing;
+            const lineEndIndex = topSpacing + cellHeight;
+            if (lineIndex > lineStartIndex && lineIndex < lineEndIndex) {
+              rect = rects[lineIndex];
             }
+          } else {
             const lineStartIndex = rowHeight - cellHeight;
             if (lineIndex >= lineStartIndex) {
               rect = rects[lineIndex];
             }
-            continue;
           }
 
           let cellLineText;
