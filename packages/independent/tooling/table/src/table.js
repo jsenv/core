@@ -202,7 +202,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     // if every right border can collapse with the left border next to it
     // then we collapse all right borders of the column
     const getHowToCollapseAdjacentCells = (leftCell, rightCell) => {
-      if (leftCell.type === "blank") {
+      if (isBlankCell(leftCell)) {
         return [
           // left cell becomes right cell
           rightCell,
@@ -210,7 +210,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           blankCell,
         ];
       }
-      if (rightCell.type === "blank") {
+      if (isBlankCell(rightCell)) {
         // keep as it is
         return [leftCell, rightCell];
       }
@@ -273,13 +273,13 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   // collapse top and bottom borders
   {
     const getHowToCollapseAdjacentCells = (cell, cellBelow) => {
-      if (cell.type === "blank") {
+      if (isBlankCell(cell)) {
         return [
           cellBelow, // cell becomes cell below
           blankCell, // cell below becomes blank
         ];
       }
-      if (cellBelow.type === "blank") {
+      if (isBlankCell(cellBelow)) {
         return [
           // keep both as is
           cell,
@@ -375,7 +375,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       const line = grid[y];
       let lineContainsNonBlankCell = false;
       for (const cell of line) {
-        if (cell.type === "blank") {
+        if (isBlankCell(cell)) {
           continue;
         }
         lineContainsNonBlankCell = true;
@@ -397,7 +397,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       let y = 0;
       while (y < grid.length) {
         const columnCell = grid[y][x];
-        if (columnCell.type === "blank") {
+        if (isBlankCell(columnCell)) {
           y++;
           continue;
         }
@@ -893,6 +893,7 @@ const isBorderBottom = (cell) => cell.position === "bottom";
 const isBorderBottomRight = (cell) => cell.position === "bottom_right";
 const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
 
+const isBlankCell = (cell) => cell.type === "blank";
 // blank cells are fluid cells that will take whatever size they are requested to take
 // they can seen as placeholders that are removed when a line or column is composed only by blank cells
 // this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
