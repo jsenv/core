@@ -101,16 +101,16 @@ ${text}
         borderLeft: {},
       },
     ],
-    // bottom_right_and_top_right: [
-    //   {
-    //     borderBottom: {},
-    //     borderRight: {},
-    //   },
-    //   {
-    //     borderTop: {},
-    //     borderRight: {},
-    //   },
-    // ],
+    bottom_right_and_top_right: [
+      {
+        borderBottom: {},
+        borderRight: {},
+      },
+      {
+        borderTop: {},
+        borderRight: {},
+      },
+    ],
     // top_left_and_bottom_right: [
     //   {
     //     borderTop: {},

@@ -273,13 +273,19 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       if (isBorderBottomRight(cell) && isBorderBottomLeft(cellBelow)) {
         return [
           createBottomMidBorderCell({ color: cell.color }),
-          blankCell, // merged into the top cell
+          blankCell, // merged into the cell
         ];
       }
       if (isBorderBottomLeft(cell) && isBorderTopLeft(cellBelow)) {
         return [
           createLeftMidBorderCell({ color: cell.color }),
-          blankCell, // merged into the left cell
+          blankCell, // merged into the cell
+        ];
+      }
+      if (isBorderBottomRight(cell) && isBorderTopRight(cellBelow)) {
+        return [
+          createRightMidBorderCell({ color: cell.color }),
+          blankCell, // merged into the cell
         ];
       }
       if (isBorderBottom(cell) && isBorderTop(cellBelow)) {
@@ -838,8 +844,8 @@ const createTopMidBorderCell = (options) =>
   createBorderCell("top_mid", options);
 const createBottomMidBorderCell = (options) =>
   createBorderCell("bottom_mid", options);
-// const createRightMidBorderCell = (options) =>
-//   createBorderCell("right_mid", options);
+const createRightMidBorderCell = (options) =>
+  createBorderCell("right_mid", options);
 const createLeftMidBorderCell = (options) =>
   createBorderCell("left_mid", options);
 // const createMidBorderCell = (options) => createBorderCell("mid", options);

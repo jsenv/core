@@ -35,6 +35,12 @@ ${text}
 │─────
 │ "2" 
 
+--- bottom_right_and_top_right ---
+
+ "1" │
+─────│
+ "2" │
+
 ```
 
 # 2/2 return
