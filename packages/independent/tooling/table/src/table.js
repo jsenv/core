@@ -57,7 +57,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       }
 
       {
-        const lineAbove = [];
+        const rowAbove = [];
         let x = 0;
         while (x < line.length) {
           const topCell = topCells[x];
@@ -65,22 +65,22 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (topCell) {
             aboveCell = topCell;
           } else {
-            const rightTopCell = topCells[x + 1];
-            if (rightTopCell && isBorderTop(rightTopCell)) {
+            const cellEast = topCells[x + 1];
+            if (cellEast && isBorderTop(cellEast)) {
               aboveCell = createTopLeftBorderCell();
             } else {
-              const previousCell = topCells[x - 1];
-              if (previousCell && isBorderTop(previousCell)) {
+              const cellWest = topCells[x - 1];
+              if (cellWest && isBorderTop(cellWest)) {
                 aboveCell = createTopRightBorderCell();
               } else {
                 aboveCell = blankCell;
               }
             }
           }
-          lineAbove[x] = aboveCell;
+          rowAbove[x] = aboveCell;
           x++;
         }
-        grid[y] = lineAbove;
+        grid[y] = rowAbove;
         y++;
       }
 
@@ -88,7 +88,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       y++;
 
       {
-        const lineBelow = [];
+        const rowBelow = [];
         let x = 0;
         while (x < line.length) {
           const bottomCell = bottomCells[x];
@@ -96,22 +96,22 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (bottomCell) {
             belowCell = bottomCell;
           } else {
-            const nextCell = bottomCells[x + 1];
-            if (nextCell && isBorderBottom(nextCell)) {
+            const cellEast = bottomCells[x + 1];
+            if (cellEast && isBorderBottom(cellEast)) {
               belowCell = createBottomLeftBorderCell();
             } else {
-              const previousCell = bottomCells[x - 1];
-              if (previousCell && isBorderBottom(previousCell)) {
+              const cellWest = bottomCells[x - 1];
+              if (cellWest && isBorderBottom(cellWest)) {
                 belowCell = createBottomRightBorderCell();
               } else {
                 belowCell = blankCell;
               }
             }
           }
-          lineBelow[x] = belowCell;
+          rowBelow[x] = belowCell;
           x++;
         }
-        grid[y] = lineBelow;
+        grid[y] = rowBelow;
         y++;
       }
     }

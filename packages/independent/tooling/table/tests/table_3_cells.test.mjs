@@ -95,5 +95,39 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
     console.log(renderNamedSections(results));
   });
 
-  test("1_three_cell_same_column", () => {});
+  test.ONLY("1_three_cell_same_column", () => {
+    // const none = renderTable([
+    //   [{ value: "a", border: null }],
+    //   [{ value: "b", border: null }],
+    //   [{ value: "c", border: null }],
+    // ]);
+    // const left_and_right = renderTable([
+    //   [{ value: "a", borderLeft: {}, borderRight: {} }],
+    //   [{ value: "b", borderLeft: {}, borderRight: {} }],
+    //   [{ value: "c", borderLeft: {}, borderRight: {} }],
+    // ]);
+    // const top_and_bottom = renderTable([
+    //   [{ value: "a", borderTop: {}, borderBottom: {} }],
+    //   [{ value: "b", borderTop: {}, borderBottom: {} }],
+    //   [{ value: "c", borderTop: {}, borderBottom: {} }],
+    // ]);
+    const castle = renderTable([
+      [{ value: "a", borderTop: {}, borderRight: {}, borderBottom: {} }],
+      [{ value: "b", borderLeft: {} }],
+      [{ value: "c", borderTop: {}, borderRight: {}, borderBottom: {} }],
+    ]);
+    // const all = renderTable([
+    //   [{ value: "a", border: {} }],
+    //   [{ value: "b", border: {} }],
+    //   [{ value: "c", border: {} }],
+    // ]);
+    const results = {
+      //   none,
+      //   left_and_right,
+      //   top_and_bottom,
+      castle,
+      // all,
+    };
+    console.log(renderNamedSections(results));
+  });
 });
