@@ -1,7 +1,12 @@
 /**
- * TODO:
  *
  * https://github.com/Automattic/cli-table
+ *
+ * remaining:
+ * border collapse on advanced scenario
+ * border color conflicts
+ * ability to control border chars
+ * multiline (for later)
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
