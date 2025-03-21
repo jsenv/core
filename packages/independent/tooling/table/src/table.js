@@ -466,34 +466,21 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (rect) {
             const { width, render } = rect;
             const rectText = render({ columnWidth, rowHeight });
-            const missingWidth = columnWidth - width;
-            if (missingWidth < 0) {
-              // never supposed to happen because the width of a column
-              // is the biggest width of all cells in this column
-              cellLineText = rectText;
-            } else if (missingWidth === 0) {
-              cellLineText = rectText;
-            } else if (xAlign === "fill") {
-              cellLineText = fillX(rectText, columnWidth, width);
-            } else if (xAlign === "start") {
-              cellLineText = rectText + xAlignChar.repeat(missingWidth);
-            } else if (xAlign === "center") {
-              const leftSpacing = Math.floor(missingWidth / 2);
-              const rightSpacing = missingWidth - leftSpacing;
-              cellLineText =
-                xAlignChar.repeat(leftSpacing) +
-                rectText +
-                xAlignChar.repeat(rightSpacing);
-            } else {
-              cellLineText = xAlignChar.repeat(missingWidth) + rectText;
-            }
+            cellLineText = applyXAlign(rectText, {
+              width,
+              desiredWidth: columnWidth,
+              align: xAlign,
+              alignChar: xAlignChar,
+            });
           } else {
-            cellLineText = fillX(
-              xAlignChar,
-              columnWidth,
-              1, // we assume xAlign char takes 1 but ideally we should measure it
-            );
+            cellLineText = applyXAlign(yAlignChar, {
+              width: 1,
+              desiredWidth: columnWidth,
+              align: xAlign,
+              alignChar: " ",
+            });
           }
+
           lineText += cellLineText;
           x++;
         }
@@ -515,32 +502,42 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   return log;
 };
 
-const fillX = (stringToRepeat, widthToFill, stringToRepeatWidth) => {
-  let text = "";
-  let widthFilled = 0;
-  while (true) {
-    text += stringToRepeat;
-    widthFilled += stringToRepeatWidth;
-    if (widthFilled >= widthToFill) {
-      break;
-    }
+const applyXAlign = (text, { width, desiredWidth, align, alignChar }) => {
+  const missingWidth = desiredWidth - width;
+  if (missingWidth < 0) {
+    // never supposed to happen because the width of a column
+    // is the biggest width of all cells in this column
+    return text;
   }
-  return text;
-};
+  if (missingWidth === 0) {
+    return text;
+  }
+  if (align === "fill") {
+    let textRepeated = "";
+    let widthFilled = 0;
+    while (true) {
+      textRepeated += text;
+      widthFilled += width;
+      if (widthFilled >= desiredWidth) {
+        break;
+      }
+    }
+    return textRepeated;
+  }
+  if (align === "start") {
+    return text + alignChar.repeat(missingWidth);
+  }
+  if (align === "center") {
+    const leftSpacing = Math.floor(missingWidth / 2);
+    const rightSpacing = missingWidth - leftSpacing;
 
-// const fillY = (stringToRepeat, heightToFill, stringToRepeatHeight) => {
-//   let text = "";
-//   let heightFilled = 0;
-//   while (true) {
-//     text += stringToRepeat;
-//     heightFilled += stringToRepeatHeight;
-//     if (heightFilled >= heightToFill) {
-//       break;
-//     }
-//     text += "\n";
-//   }
-//   return text;
-// };
+    return (
+      alignChar.repeat(leftSpacing) + text + alignChar.repeat(rightSpacing)
+    );
+  }
+  // "end"
+  return alignChar.repeat(missingWidth) + text;
+};
 
 const createContentCell = (
   {
@@ -710,8 +707,10 @@ const BORDER_PROPS = {
   // corners
   top_left: {
     position: "top_left",
-    xAlign: "end",
-    yAlign: "end",
+    xAlign: "start",
+    yAlign: "start",
+    xAlignChar: "─",
+    yAlignChar: "│",
     rects: [
       {
         width: 1,
@@ -722,8 +721,10 @@ const BORDER_PROPS = {
   },
   top_right: {
     position: "top_right",
-    xAlign: "start",
-    yAlign: "end",
+    xAlign: "end",
+    yAlign: "start",
+    xAlignChar: "─",
+    yAlignChar: "│",
     rects: [
       {
         width: 1,
@@ -734,8 +735,10 @@ const BORDER_PROPS = {
   },
   bottom_right: {
     position: "bottom_right",
-    xAlign: "start",
-    yAlign: "start",
+    xAlign: "end",
+    yAlign: "end",
+    xAlignChar: "─",
+    yAlignChar: "│",
     rects: [
       {
         width: 1,
@@ -746,8 +749,10 @@ const BORDER_PROPS = {
   },
   bottom_left: {
     position: "bottom_left",
-    xAlign: "end",
-    yAlign: "start",
+    xAlign: "start",
+    yAlign: "end",
+    xAlignChar: "─",
+    yAlignChar: "│",
     rects: [
       {
         width: 1,
@@ -760,8 +765,9 @@ const BORDER_PROPS = {
   top_mid: {
     position: "top_mid",
     xAlign: "center",
+    yAlign: "start",
     xAlignChar: "─",
-    yAlign: "end",
+    yAlignChar: "│",
     rects: [
       {
         width: 1,
@@ -773,8 +779,9 @@ const BORDER_PROPS = {
   bottom_mid: {
     position: "bottom_mid",
     xAlign: "center",
+    yAlign: "end",
     xAlignChar: "─",
-    yAlign: "start",
+    yAlignChar: "│",
     rects: [
       {
         width: 1,
@@ -785,8 +792,9 @@ const BORDER_PROPS = {
   },
   right_mid: {
     position: "right_mid",
-    xAlign: "start",
+    xAlign: "end",
     yAlign: "center",
+    xAlignChar: "─",
     yAlignChar: "│",
     rects: [
       {
@@ -798,8 +806,9 @@ const BORDER_PROPS = {
   },
   left_mid: {
     position: "left_mid",
-    xAlign: "end",
+    xAlign: "start",
     yAlign: "center",
+    xAlignChar: "─",
     yAlignChar: "│",
     rects: [
       {
@@ -812,8 +821,8 @@ const BORDER_PROPS = {
   mid: {
     position: "mid",
     xAlign: "center",
-    xAlignChar: "─",
     yAlign: "center",
+    xAlignChar: "─",
     yAlignChar: "│",
     rects: [
       {
