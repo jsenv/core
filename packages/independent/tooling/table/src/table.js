@@ -377,37 +377,26 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
 
-  // replace grid content wih cell objects
+  // measure column and row dimensions (biggest of all cells in the column/row)
   const columnWithMap = new Map();
   const rowHeightMap = new Map();
-
   {
-    const createCellNode = (cell, { x, y }) => {
-      const biggestWidth = columnWithMap.get(x) || 0;
-      const biggestHeight = rowHeightMap.get(y) || 0;
-      const { rects } = cell;
-      for (const rect of rects) {
-        const { width, height } = rect;
-        if (width > biggestWidth) {
-          columnWithMap.set(x, width);
-        }
-        if (height > biggestHeight) {
-          rowHeightMap.set(y, height);
-        }
-      }
-      const cellNode = {
-        x,
-        y,
-        cell,
-      };
-      return cellNode;
-    };
     let y = 0;
     for (const line of grid) {
       let x = 0;
       for (const cell of line) {
-        const cellNode = createCellNode(cell, { x, y });
-        line[x] = cellNode;
+        const biggestWidth = columnWithMap.get(x) || 0;
+        const biggestHeight = rowHeightMap.get(y) || 0;
+        const { rects } = cell;
+        for (const rect of rects) {
+          const { width, height } = rect;
+          if (width > biggestWidth) {
+            columnWithMap.set(x, width);
+          }
+          if (height > biggestHeight) {
+            rowHeightMap.set(y, height);
+          }
+        }
         x++;
       }
       y++;
@@ -419,15 +408,15 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     let y = 0;
     for (const row of grid) {
       let rowText = "";
+      let isLastRow = y === grid.length - 1;
       const rowHeight = rowHeightMap.get(y);
-      let lastLineIndex = rowHeight - 1;
+      let lastLineIndex = rowHeight;
       let lineIndex = 0;
       while (lineIndex !== lastLineIndex) {
         let x = 0;
         let lineText = "";
-        for (const cellNode of row) {
+        for (const cell of row) {
           const columnWidth = columnWithMap.get(x);
-          const { cell } = cellNode;
           const {
             xAlign,
             xAlignChar = " ",
@@ -480,22 +469,17 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
               alignChar: " ",
             });
           }
-
           lineText += cellLineText;
           x++;
         }
         rowText += lineText;
-        if (lineIndex === lastLineIndex) {
+        lineIndex++;
+        if (isLastRow && lineIndex === lastLineIndex) {
           break;
         }
         rowText += "\n";
-        lineIndex++;
       }
       log += rowText;
-      if (y === grid.length - 1) {
-        break;
-      }
-      log += "\n";
       y++;
     }
   }
