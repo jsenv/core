@@ -180,7 +180,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     });
   }
 
-  // collapse horizontal borders
+  // collapse left and right borders
   {
     // if every right border can collapse with the left border next to it
     // then we collapse all right borders of the column
@@ -220,10 +220,10 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
 
     let x = 2;
     const columnCount = grid[0].length;
-    const collapseInfoSet = new Set();
     while (x < columnCount - 1) {
-      let canCollapseColumn;
+      let hasConlict;
       let y = 0;
+      const collapseInfoSet = new Set();
       while (y < grid.length) {
         const columnCell = grid[y][x];
         const eastColumnCell = grid[y][x + 1];
@@ -232,13 +232,13 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           eastColumnCell,
         );
         if (!howToCollapseCells) {
-          canCollapseColumn = false;
+          hasConlict = true;
           break;
         }
         collapseInfoSet.add({ x, y, howToCollapseCells });
         y++;
       }
-      if (canCollapseColumn !== false) {
+      if (!hasConlict) {
         for (const collapseInfo of collapseInfoSet) {
           const { x, y, howToCollapseCells } = collapseInfo;
           const collapsedCells = Array.isArray(howToCollapseCells)
@@ -250,6 +250,79 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         }
       }
       x += 3;
+    }
+  }
+
+  // collapse top and bottom borders
+  {
+    const getHowToCollapseAdjacentCells = (topCell, bottomCell) => {
+      if (topCell.type === "blank") {
+        return [
+          // top cell becomes bottom cell
+          bottomCell,
+          // bottom cell becomes blank (it's redundant)
+          blankCell,
+        ];
+      }
+      if (bottomCell.type === "blank") {
+        // keep as it is
+        return [topCell, bottomCell];
+      }
+      if (isBorderTopRight(topCell) && isBorderTopLeft(bottomCell)) {
+        return [
+          createTopMidBorderCell({ color: topCell.color }),
+          blankCell, // merged into the left cell
+        ];
+      }
+      if (isBorderBottomRight(topCell) && isBorderBottomLeft(bottomCell)) {
+        return [
+          createBottomMidBorderCell({ color: topCell.color }),
+          blankCell, // merged into the left cell
+        ];
+      }
+      if (isBorderBottom(topCell) && isBorderTop(bottomCell)) {
+        return [
+          topCell,
+          blankCell, // merged into the left cell
+        ];
+      }
+      return null;
+    };
+
+    let y = 2;
+    const lineCount = grid.length;
+    while (y < lineCount - 1) {
+      let hasConflict;
+      let x = 0;
+      const line = grid[y];
+      const lineBelow = grid[y + 1];
+      const collapseInfoSet = new Set();
+      while (x < line.length) {
+        const cell = line[x];
+        const cellBelow = lineBelow[x];
+        const howToCollapseCells = getHowToCollapseAdjacentCells(
+          cell,
+          cellBelow,
+        );
+        if (!howToCollapseCells) {
+          hasConflict = true;
+          break;
+        }
+        collapseInfoSet.add({ x, y, howToCollapseCells });
+        x++;
+      }
+      if (!hasConflict) {
+        for (const collapseInfo of collapseInfoSet) {
+          const { x, y, howToCollapseCells } = collapseInfo;
+          const collapsedCells = Array.isArray(howToCollapseCells)
+            ? howToCollapseCells
+            : howToCollapseCells();
+          const [cellCollapsed, cellBelowCollapsed] = collapsedCells;
+          grid[y][x] = cellCollapsed;
+          grid[y + 1][x] = cellBelowCollapsed;
+        }
+      }
+      y += 3;
     }
   }
 

@@ -19,75 +19,17 @@ ${text}`);
 }
 ```
 
-# 1/7 console.log
+# 1/2 console.log
 
 ```console
 --- bottom_and_top ---
 
  "1" 
 ─────
-─────
  "2" 
 ```
 
-# 2/7 console.log
-
-```console
---- bottom_left_and_top_left ---
-
-│ "1" 
-└─────
-┌─────
-│ "2" 
-```
-
-# 3/7 console.log
-
-```console
---- bottom_right_and_top_right ---
-
- "1" │
-─────┘
-─────┐
- "2" │
-```
-
-# 4/7 console.log
-
-```console
---- top_left_and_bottom_right ---
-
-┌──────
-│ "1"  
-  "2" │
-──────┘
-```
-
-# 5/7 console.log
-
-```console
---- bottom_right_and_top_left ---
-
-  "1" │
-──────┘
-┌──────
-│ "2"  
-```
-
-# 6/7 console.log
-
-```console
---- all_around ---
-
-┌─────┐
-│ "1" │
-└─────┘
-┌─────┐
-│ "2" │
-└─────┘
-```
-
-# 7/7 return
+# 2/2 return
 
 ```js
 undefined
