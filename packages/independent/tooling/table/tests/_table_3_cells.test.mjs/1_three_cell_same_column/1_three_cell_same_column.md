@@ -47,9 +47,9 @@ console.log(renderNamedSections(results));
 --- castle ---
 ──────┐
   "a" │
-──────┘
+┌─────┘
 │ "b"  
-──────┐
+└─────┐
   "c" │
 ──────┘
 ```

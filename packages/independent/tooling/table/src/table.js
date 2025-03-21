@@ -118,6 +118,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   }
 
   // transform connecting borders into blank cells when they are not needed
+  // and eventually transform blank cells back into connecting borders
   {
     const columnContainingLeftBorderSet = new Set();
     const columnContainingRightBorderSet = new Set();
@@ -149,6 +150,14 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           const southCell = grid[y + 1][x];
           if (isBorderLeft(southCell)) {
             return cell;
+          }
+          if (y > 2) {
+            // in theory we can do this only if the border are compatible and about to be collapsed
+            // so maybe this logic belongs to the collapse border part
+            const northNorthCell = grid[y - 2][x];
+            if (northNorthCell && isBorderLeft(northNorthCell)) {
+              return createBottomLeftBorderCell();
+            }
           }
           return createBorderTopCell();
         }
@@ -185,6 +194,14 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           const northCell = grid[y - 1][x];
           if (isBorderLeft(northCell)) {
             return cell;
+          }
+          if (y < grid.length - 2) {
+            // in theory we can do this only if the border are compatible and about to be collapsed
+            // so maybe this logic belongs to the collapse border part
+            const southSouthCell = grid[y + 2][x];
+            if (isBorderLeft(southSouthCell)) {
+              return createTopLeftBorderCell();
+            }
           }
           return createBorderBottomCell();
         }
