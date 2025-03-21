@@ -378,98 +378,30 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   }
 
   // replace grid content wih cell objects
-  {
-    const columnBiggestWidthArray = [];
-    const lineBiggestHeightArray = [];
-    const createCellNode = (cell, { x, y }) => {
-      const biggestWidth = columnBiggestWidthArray[x] || 0;
-      const biggestHeight = lineBiggestHeightArray[y] || 0;
+  const columnWithMap = new Map();
+  const rowHeightMap = new Map();
 
+  {
+    const createCellNode = (cell, { x, y }) => {
+      const biggestWidth = columnWithMap.get(x) || 0;
+      const biggestHeight = rowHeightMap.get(y) || 0;
       const { rects } = cell;
       for (const rect of rects) {
         const { width, height } = rect;
-        if (width !== "100%" && width > biggestWidth) {
-          columnBiggestWidthArray[x] = width;
+        if (width > biggestWidth) {
+          columnWithMap.set(x, width);
         }
-        if (height !== "100%" && height > biggestHeight) {
-          lineBiggestHeightArray[y] = height;
+        if (height > biggestHeight) {
+          rowHeightMap.set(y, height);
         }
       }
       const cellNode = {
-        render: () => {
-          const availableWidth = columnBiggestWidthArray[x];
-          const availableHeight = lineBiggestHeightArray[y];
-
-          let cellText = "";
-          const { xAlign, xAlignChar = " ", yAlign, yAlignChar = "" } = cell;
-          let cellHeight = 0;
-          for (const rect of rects) {
-            const { width, height, render } = rect;
-            const rectText = render({
-              availableWidth,
-              availableHeight,
-            });
-
-            let textAlignedX;
-            if (width === "100%") {
-              textAlignedX = rectText;
-            } else if (xAlign === "start") {
-              textAlignedX =
-                rectText + xAlignChar.repeat(availableWidth - width);
-            } else if (xAlign === "end") {
-              textAlignedX =
-                xAlignChar.repeat(availableWidth - width) + rectText;
-            } else if (xAlign === "center") {
-              const leftSpacing = Math.floor((availableWidth - width) / 2);
-              const rightSpacing = availableWidth - width - leftSpacing;
-              textAlignedX =
-                xAlignChar.repeat(leftSpacing) +
-                rectText +
-                xAlignChar.repeat(rightSpacing);
-            } else {
-              textAlignedX = rectText;
-            }
-            cellText += textAlignedX;
-            if (height === "100%") {
-              cellHeight = "100%";
-            } else {
-              cellHeight += height;
-            }
-          }
-
-          // now do the y align
-          let textAlignedY;
-          {
-            const fillCharWithNewLine = `${yAlignChar}\n`;
-            if (cellHeight === "100%") {
-              textAlignedY = cellText;
-            } else if (yAlign === "start") {
-              textAlignedY =
-                cellText +
-                fillCharWithNewLine.repeat(availableHeight - cellHeight);
-            } else if (yAlign === "end") {
-              textAlignedY =
-                fillCharWithNewLine.repeat(availableHeight - cellHeight) +
-                cellText;
-            } else if (yAlign === "center") {
-              const topSpacing = Math.floor((availableHeight - cellHeight) / 2);
-              const bottomSpacing = availableHeight - cellHeight - topSpacing;
-              textAlignedY =
-                fillCharWithNewLine.repeat(topSpacing) +
-                cellText +
-                fillCharWithNewLine.repeat(bottomSpacing);
-            } else {
-              textAlignedY = cellText;
-            }
-            cellText = textAlignedY;
-          }
-
-          return cellText;
-        },
+        x,
+        y,
+        cell,
       };
       return cellNode;
     };
-
     let y = 0;
     for (const line of grid) {
       let x = 0;
@@ -485,12 +417,94 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   let log = "";
   {
     let y = 0;
-    for (const line of grid) {
-      let lineText = "";
-      for (const cellNode of line) {
-        lineText += cellNode.render();
+    for (const row of grid) {
+      let rowText = "";
+      const rowHeight = rowHeightMap.get(y);
+      let lastLineIndex = rowHeight - 1;
+      let lineIndex = 0;
+      while (lineIndex !== lastLineIndex) {
+        let x = 0;
+        let lineText = "";
+        for (const cellNode of row) {
+          const columnWidth = columnWithMap.get(x);
+          const { cell } = cellNode;
+          const {
+            xAlign,
+            xAlignChar = " ",
+            yAlign,
+            yAlignChar = " ",
+            rects,
+          } = cell;
+          const cellHeight = rects.length;
+
+          let rect;
+          content_or_fill: {
+            if (yAlign === "start") {
+              if (lineIndex < cellHeight) {
+                rect = rects[lineIndex];
+              }
+              break content_or_fill;
+            }
+            if (yAlign === "center") {
+              const topSpacing = Math.floor((rowHeight - cellHeight) / 2);
+              // const bottomSpacing = rowHeight - cellHeight - topSpacing;
+              const lineStartIndex = topSpacing;
+              const lineEndIndex = topSpacing + cellHeight;
+              if (lineIndex > lineStartIndex && lineIndex < lineEndIndex) {
+                rect = rects[lineIndex];
+              }
+              break content_or_fill;
+            }
+            const lineStartIndex = rowHeight - cellHeight;
+            if (lineIndex > lineStartIndex) {
+              rect = rects[lineIndex];
+            }
+            continue;
+          }
+
+          let cellLineText;
+          if (rect) {
+            const { width, render } = rect;
+            const rectText = render({ columnWidth, rowHeight });
+            const missingWidth = columnWidth - width;
+            if (missingWidth < 0) {
+              // never supposed to happen because the width of a column
+              // is the biggest width of all cells in this column
+              cellLineText = rectText;
+            } else if (missingWidth === 0) {
+              cellLineText = rectText;
+            } else if (xAlign === "fill") {
+              cellLineText = fillX(rectText, columnWidth, width);
+            } else if (xAlign === "start") {
+              cellLineText = rectText + xAlignChar.repeat(missingWidth);
+            } else if (xAlign === "center") {
+              const leftSpacing = Math.floor(missingWidth / 2);
+              const rightSpacing = missingWidth - leftSpacing;
+              cellLineText =
+                xAlignChar.repeat(leftSpacing) +
+                rectText +
+                xAlignChar.repeat(rightSpacing);
+            } else {
+              cellLineText = xAlignChar.repeat(missingWidth) + rectText;
+            }
+          } else {
+            cellLineText = fillX(
+              xAlignChar,
+              columnWidth,
+              1, // we assume xAlign char takes 1 but ideally we should measure it
+            );
+          }
+          lineText += cellLineText;
+          x++;
+        }
+        rowText += lineText;
+        if (lineIndex === lastLineIndex) {
+          break;
+        }
+        rowText += "\n";
+        lineIndex++;
       }
-      log += lineText;
+      log += rowText;
       if (y === grid.length - 1) {
         break;
       }
@@ -500,6 +514,33 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   }
   return log;
 };
+
+const fillX = (stringToRepeat, widthToFill, stringToRepeatWidth) => {
+  let text = "";
+  let widthFilled = 0;
+  while (true) {
+    text += stringToRepeat;
+    widthFilled += stringToRepeatWidth;
+    if (widthFilled >= widthToFill) {
+      break;
+    }
+  }
+  return text;
+};
+
+// const fillY = (stringToRepeat, heightToFill, stringToRepeatHeight) => {
+//   let text = "";
+//   let heightFilled = 0;
+//   while (true) {
+//     text += stringToRepeat;
+//     heightFilled += stringToRepeatHeight;
+//     if (heightFilled >= heightToFill) {
+//       break;
+//     }
+//     text += "\n";
+//   }
+//   return text;
+// };
 
 const createContentCell = (
   {
@@ -620,49 +661,49 @@ const createContentCell = (
 const BORDER_PROPS = {
   top: {
     position: "top",
-    xAlign: undefined, // not needed: fills the whole width
+    xAlign: "fill",
     yAlign: "end",
     rects: [
       {
-        width: "100%",
+        width: 1,
         height: 1,
-        render: ({ availableWidth }) => fillHorizontally("─", availableWidth),
+        render: () => "─",
       },
     ],
   },
   bottom: {
     position: "bottom",
-    xAlign: undefined, // not needed: fills the whole width
+    xAlign: "fill",
     yAlign: "start",
     rects: [
       {
-        width: "100%",
+        width: 1,
         height: 1,
-        render: ({ availableWidth }) => fillHorizontally("─", availableWidth),
+        render: () => "─",
       },
     ],
   },
   left: {
     position: "left",
     xAlign: "end",
-    yAlign: undefined, // not needed: fills the whole height
+    yAlign: "fill",
     rects: [
       {
         width: 1,
-        height: "100%",
-        render: ({ availableHeight }) => fillVertically("│", availableHeight),
+        height: 1,
+        render: () => "│",
       },
     ],
   },
   right: {
     position: "right",
     xAlign: "start",
-    yAlign: undefined, // not needed: fills the whole height
+    yAlign: "fill",
     rects: [
       {
         width: 1,
-        height: "100%",
-        render: ({ availableHeight }) => fillVertically("│", availableHeight),
+        height: 1,
+        render: () => "│",
       },
     ],
   },
@@ -816,32 +857,6 @@ const createBottomMidBorderCell = (options) =>
 //   createBorderCell("left_mid", options);
 // const createMidBorderCell = (options) => createBorderCell("mid", options);
 
-const fillHorizontally = (string, columnCount, stringWidth = 1) => {
-  let text = "";
-  let xFilled = 0;
-  while (true) {
-    text += string;
-    xFilled += stringWidth;
-    if (xFilled >= columnCount) {
-      break;
-    }
-  }
-  return text;
-};
-const fillVertically = (string, lineCount, stringHeight = 1) => {
-  let text = "";
-  let yFilled = 0;
-  while (true) {
-    text += string;
-    yFilled += stringHeight;
-    if (yFilled >= lineCount) {
-      break;
-    }
-    text += "\n";
-  }
-  return text;
-};
-
 const isBorderTopLeft = (cell) => cell.position === "top_left";
 const isBorderTopRight = (cell) => cell.position === "top_right";
 const isBorderLeft = (cell) => cell.position === "left";
@@ -858,23 +873,13 @@ const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
 // where the border is)
 const blankCell = {
   type: "blank",
+  xAlign: "fill",
+  yAlign: "fill",
   rects: [
     {
-      width: "100%",
-      height: "100%",
-      render: ({ availableWidth, availableHeight }) => {
-        let text = "";
-        let y = 0;
-        while (true) {
-          text += " ".repeat(availableWidth);
-          if (y === availableHeight - 1) {
-            break;
-          }
-          text += "\n";
-          y++;
-        }
-        return text;
-      },
+      width: 0,
+      height: 0,
+      render: () => "",
     },
   ],
 };
