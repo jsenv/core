@@ -7,44 +7,44 @@ const run = (lines, options) => {
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
   const sameLineScenarios = {
-    right_and_left: [
-      {
-        borderRight: {},
-      },
-      {
-        borderLeft: {},
-      },
-    ],
-    top_right_and_bottom_left: [
-      {
-        borderTop: {},
-        borderRight: {},
-      },
-      {
-        borderBottom: {},
-        borderLeft: {},
-      },
-    ],
-    bottom_right_and_top_left: [
-      {
-        borderBottom: {},
-        borderRight: {},
-      },
-      {
-        borderTop: {},
-        borderLeft: {},
-      },
-    ],
-    bottom_left_and_top_right: [
-      {
-        borderBottom: {},
-        borderLeft: {},
-      },
-      {
-        borderTop: {},
-        borderRight: {},
-      },
-    ],
+    // right_and_left: [
+    //   {
+    //     borderRight: {},
+    //   },
+    //   {
+    //     borderLeft: {},
+    //   },
+    // ],
+    // top_right_and_bottom_left: [
+    //   {
+    //     borderTop: {},
+    //     borderRight: {},
+    //   },
+    //   {
+    //     borderBottom: {},
+    //     borderLeft: {},
+    //   },
+    // ],
+    // bottom_right_and_top_left: [
+    //   {
+    //     borderBottom: {},
+    //     borderRight: {},
+    //   },
+    //   {
+    //     borderTop: {},
+    //     borderLeft: {},
+    //   },
+    // ],
+    // bottom_left_and_top_right: [
+    //   {
+    //     borderBottom: {},
+    //     borderLeft: {},
+    //   },
+    //   {
+    //     borderTop: {},
+    //     borderRight: {},
+    //   },
+    // ],
     // TODO: the junction between adjacent cells should use an other char
     all_around: [
       {

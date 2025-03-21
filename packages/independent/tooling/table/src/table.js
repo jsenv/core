@@ -197,11 +197,19 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         // keep as it is
         return [leftCell, rightCell];
       }
+      if (isBorderTopRight(leftCell) && isBorderTopLeft(rightCell)) {
+        return () => {
+          return [
+            createTopMidBorderCell(leftCell),
+            blankCell, // merged into the left cell
+          ];
+        };
+      }
+
       if (leftCell.type === "border" && rightCell.type === "border") {
         return [
           leftCell,
-          // right cell becomes blank (it's redundant)
-          blankCell,
+          blankCell, // merged into the left cell
         ];
       }
       return null;
@@ -301,31 +309,86 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       const biggestWidth = columnBiggestWidthArray[x] || 0;
       const biggestHeight = lineBiggestHeightArray[y] || 0;
 
-      const [width, height] = cell.getSize();
-      if (width > biggestWidth) {
-        columnBiggestWidthArray[x] = width;
-      }
-      if (height > biggestHeight) {
-        lineBiggestHeightArray[y] = height;
+      const { rects } = cell;
+      for (const rect of rects) {
+        const { width, height } = rect;
+        if (width !== "100%" && width > biggestWidth) {
+          columnBiggestWidthArray[x] = width;
+        }
+        if (height !== "100%" && height > biggestHeight) {
+          lineBiggestHeightArray[y] = height;
+        }
       }
       const cellNode = {
         render: () => {
           const availableWidth = columnBiggestWidthArray[x];
           const availableHeight = lineBiggestHeightArray[y];
-          const renderResult = cell.render({
-            availableWidth,
-            availableHeight,
-          });
-          let text = renderResult;
-          const { xAlign } = cell;
-          if (xAlign) {
-            text = applyXAlign(text, xAlign, availableWidth, width);
+
+          let cellText = "";
+          const { xAlign, xAlignChar = " ", yAlign, yAlignChar = "" } = cell;
+          let cellHeight = 0;
+          for (const rect of rects) {
+            const { width, height, render } = rect;
+            const rectText = render({
+              availableWidth,
+              availableHeight,
+            });
+
+            let textAlignedX;
+            if (width === "100%") {
+              textAlignedX = rectText;
+            } else if (xAlign === "start") {
+              textAlignedX =
+                rectText + xAlignChar.repeat(availableWidth - width);
+            } else if (xAlign === "end") {
+              textAlignedX =
+                xAlignChar.repeat(availableWidth - width) + rectText;
+            } else if (xAlign === "center") {
+              const leftSpacing = Math.floor((availableWidth - width) / 2);
+              const rightSpacing = availableWidth - width - leftSpacing;
+              textAlignedX +=
+                xAlignChar.repeat(leftSpacing) +
+                rectText +
+                xAlignChar.repeat(rightSpacing);
+            } else {
+              textAlignedX = rectText;
+            }
+            cellText += textAlignedX;
+            if (height === "100%") {
+              cellHeight = "100%";
+            } else {
+              cellHeight += height;
+            }
           }
-          const { yAlign } = text;
-          if (yAlign) {
-            text = applyYAlign(text, yAlign, availableHeight, height);
+
+          // now do the y align
+          let textAlignedY;
+          {
+            const fillCharWithNewLine = `${yAlignChar}\n`;
+            if (cellHeight === "100%") {
+              textAlignedY = cellText;
+            } else if (yAlign === "start") {
+              textAlignedY =
+                cellText +
+                fillCharWithNewLine.repeat(availableHeight - cellHeight);
+            } else if (yAlign === "end") {
+              textAlignedY =
+                fillCharWithNewLine.repeat(availableHeight - cellHeight) +
+                cellText;
+            } else if (yAlign === "center") {
+              const topSpacing = Math.floor((availableHeight - cellHeight) / 2);
+              const bottomSpacing = availableHeight - cellHeight - topSpacing;
+              textAlignedY =
+                fillCharWithNewLine.repeat(topSpacing) +
+                cellText +
+                fillCharWithNewLine.repeat(bottomSpacing);
+            } else {
+              textAlignedY = cellText;
+            }
+            cellText = textAlignedY;
           }
-          return text;
+
+          return cellText;
         },
       };
       return cellNode;
@@ -410,30 +473,63 @@ const createContentCell = (
     text = ANSI.color(text, color);
   }
 
-  let width = stringWidth(text);
-  if (leftSpacing) {
-    width += leftSpacing;
-    text = ` `.repeat(leftSpacing) + text;
-  }
-  if (unit) {
-    width += ` ${unit}`.length;
-    if (ansi && unitColor) {
-      unit = ANSI.color(unit, unitColor);
+  const lines = text.split("\n");
+  let largestLineWidth = 0;
+
+  let lineIndex = 0;
+  const rects = [];
+  for (const line of lines) {
+    const isLastLine = lineIndex === lines.length - 1;
+    let lineWidth = stringWidth(line);
+    let lineText = line;
+
+    if (leftSpacing) {
+      lineWidth += leftSpacing;
+      lineText = ` `.repeat(leftSpacing) + lineText;
     }
-    text += ` ${unit}`;
+    if (isLastLine && unit) {
+      lineWidth += ` ${unit}`.length;
+      if (ansi && unitColor) {
+        unit = ANSI.color(unit, unitColor);
+      }
+      lineText += ` ${unit}`;
+    }
+    if (rightSpacing) {
+      lineWidth += rightSpacing;
+      lineText += ` `.repeat(rightSpacing);
+    }
+    if (lineWidth > largestLineWidth) {
+      largestLineWidth = lineWidth;
+    }
+    if (!isLastLine) {
+      lineText += "\n";
+    }
+    rects.push({
+      width: lineWidth,
+      height: 1,
+      render: () => lineText,
+    });
+    lineIndex++;
   }
-  if (rightSpacing) {
-    width += rightSpacing;
-    text += ` `.repeat(rightSpacing);
-  }
-  let height = text.split("\n").length;
-  if (topSpacing) {
-    height += topSpacing;
-    text = `\n`.repeat(topSpacing) + text;
-  }
-  if (bottomSpacing) {
-    height += bottomSpacing;
-    text += `\n`.repeat(bottomSpacing);
+
+  {
+    let textVerticallySpaced = text;
+    if (topSpacing) {
+      let lineInsertedAbove = 0;
+      while (lineInsertedAbove < topSpacing) {
+        textVerticallySpaced = `\n${textVerticallySpaced}`;
+        lineInsertedAbove++;
+        rects.unshift({ width: 0, height: 1, text: "\n" });
+      }
+    }
+    if (bottomSpacing) {
+      let lineInsertedBelow = 0;
+      while (lineInsertedBelow < bottomSpacing) {
+        textVerticallySpaced += `\n${bottomSpacing}`;
+        lineInsertedBelow++;
+        rects.push({ width: 0, height: 1, text: "\n" });
+      }
+    }
   }
 
   return {
@@ -441,134 +537,235 @@ const createContentCell = (
     value,
     xAlign,
     yAlign,
-    getSize: () => {
-      return [width, height];
-    },
-    render: () => {
-      return text;
-    },
+    rects,
   };
 };
-const applyXAlign = (text, xAlign, availableWidth, width) => {
-  if (xAlign === "start") {
-    return text + " ".repeat(availableWidth - width);
-  }
-  if (xAlign === "end") {
-    return " ".repeat(availableWidth - width) + text;
-  }
-  return text;
-};
-const applyYAlign = (text, yAlign, availableHeight, height) => {
-  if (yAlign === "start") {
-    return text + "\n".repeat(availableHeight - height);
-  }
-  if (yAlign === "end") {
-    return "\n".repeat(availableHeight - height) + text;
-  }
-  return text;
-};
 
-const BORDER_CHARS = {
-  top: "─",
-  left: "│",
-  bottom: "─",
-  right: "│",
-  top_left: "┌",
-  top_right: "┐",
-  bottom_right: "┘",
-  bottom_left: "└",
-};
-const createBorderCell = ({ position, char }) => {
-  const size = [stringWidth(char), char.split("\n").length];
-
-  return {
-    type: "border",
-    position,
-    xAlign:
-      position === "top_left" || position === "bottom_left"
-        ? "start"
-        : position === "top_right" || position === "bottom_right"
-          ? "end"
-          : undefined,
-    yAlign:
-      position === "top_left" || position === "top_right"
-        ? "start"
-        : position === "bottom_left" || position === "bottom_right"
-          ? "end"
-          : undefined,
-    getSize: () => size,
-    render: ({ availableWidth, availableHeight }) => {
-      if (position === "left") {
-        return char.repeat(availableWidth);
-      }
-      if (position === "right") {
-        return char.repeat(availableWidth);
-      }
-      if (position === "top" || position === "bottom") {
-        let text = "";
-        let y = 0;
-        while (true) {
-          text += char.repeat(availableWidth);
-          if (y === availableHeight - 1) {
-            break;
-          }
-          text += "\n";
-          y++;
-        }
-        return text;
-      }
-      return char;
-    },
-  };
-};
-const createBorderLeftCell = () => {
-  return createBorderCell({
-    position: "left",
-    char: BORDER_CHARS.left,
-  });
-};
-const createBorderTopCell = () => {
-  return createBorderCell({
+const BORDER_PROPS = {
+  top: {
     position: "top",
-    char: BORDER_CHARS.top,
-  });
-};
-const createBorderBottomCell = () => {
-  return createBorderCell({
+    xAlign: undefined, // not needed: fills the whole width
+    yAlign: "end",
+    rects: [
+      {
+        width: "100%",
+        height: 1,
+        render: ({ availableWidth }) => fillHorizontally("─", availableWidth),
+      },
+    ],
+  },
+  bottom: {
     position: "bottom",
-    char: BORDER_CHARS.bottom,
-  });
-};
-const createBorderRightCell = () => {
-  return createBorderCell({
+    xAlign: undefined, // not needed: fills the whole width
+    yAlign: "start",
+    rects: [
+      {
+        width: "100%",
+        height: 1,
+        render: ({ availableWidth }) => fillHorizontally("─", availableWidth),
+      },
+    ],
+  },
+  left: {
+    position: "left",
+    xAlign: "end",
+    yAlign: undefined, // not needed: fills the whole height
+    rects: [
+      {
+        width: 1,
+        height: "100%",
+        render: ({ availableHeight }) => fillVertically("│", availableHeight),
+      },
+    ],
+  },
+  right: {
     position: "right",
-    char: BORDER_CHARS.right,
-  });
-};
-const createTopLeftBorderCell = () => {
-  return createBorderCell({
+    xAlign: "start",
+    yAlign: undefined, // not needed: fills the whole height
+    rects: [
+      {
+        width: 1,
+        height: "100%",
+        render: ({ availableHeight }) => fillVertically("│", availableHeight),
+      },
+    ],
+  },
+  // corners
+  top_left: {
     position: "top_left",
-    char: BORDER_CHARS.top_left,
-  });
-};
-const createTopRightBorderCell = () => {
-  return createBorderCell({
+    xAlign: "end",
+    yAlign: "end",
+    rects: [
+      {
+        width: 1,
+        height: 1,
+        render: () => "┌",
+      },
+    ],
+  },
+  top_right: {
     position: "top_right",
-    char: BORDER_CHARS.top_right,
-  });
-};
-const createBottomRightBorderCell = () => {
-  return createBorderCell({
+    xAlign: "start",
+    yAlign: "end",
+    rects: [
+      {
+        width: 1,
+        height: 1,
+        render: () => "┐",
+      },
+    ],
+  },
+  bottom_right: {
     position: "bottom_right",
-    char: BORDER_CHARS.bottom_right,
-  });
-};
-const createBottomLeftBorderCell = () => {
-  return createBorderCell({
+    xAlign: "start",
+    yAlign: "start",
+    rects: [
+      {
+        width: 1,
+        height: 1,
+        render: () => "┘",
+      },
+    ],
+  },
+  bottom_left: {
     position: "bottom_left",
-    char: BORDER_CHARS.bottom_left,
-  });
+    xAlign: "end",
+    yAlign: "start",
+    rects: [
+      {
+        width: 1,
+        height: 1,
+        render: () => "└",
+      },
+    ],
+  },
+  // junctions
+  top_mid: {
+    position: "top_mid",
+    xAlign: "center",
+    xAlignChar: "─",
+    yAlign: "end",
+    rects: [
+      {
+        width: 1,
+        height: 1,
+        render: () => "┬",
+      },
+    ],
+  },
+  bottom_mid: {
+    position: "bottom_mid",
+    xAlign: "center",
+    xAlignChar: "─",
+    yAlign: "start",
+    rects: [
+      {
+        width: 1,
+        height: 1,
+        render: () => "┴",
+      },
+    ],
+  },
+  right_mid: {
+    position: "right_mid",
+    xAlign: "start",
+    yAlign: "center",
+    yAlignChar: "│",
+    rects: [
+      {
+        width: 1,
+        height: 1,
+        render: () => "┤",
+      },
+    ],
+  },
+  left_mid: {
+    position: "left_mid",
+    xAlign: "end",
+    yAlign: "center",
+    yAlignChar: "│",
+    rects: [
+      {
+        width: 1,
+        height: 1,
+        render: () => "├",
+      },
+    ],
+  },
+  mid: {
+    position: "mid",
+    xAlign: "center",
+    xAlignChar: "─",
+    yAlign: "center",
+    yAlignChar: "│",
+    rects: [
+      {
+        width: 1,
+        height: 1,
+        render: () => "┼",
+      },
+    ],
+  },
 };
+
+const createBorderCell = (position, options) => {
+  const borderProps = BORDER_PROPS[position];
+  if (options) {
+    return {
+      ...borderProps,
+      ...options,
+    };
+  }
+  return borderProps;
+};
+const createBorderLeftCell = (options) => createBorderCell("left", options);
+const createBorderRightCell = (options) => createBorderCell("right", options);
+const createBorderTopCell = (options) => createBorderCell("top", options);
+const createBorderBottomCell = (options) => createBorderCell("bottom", options);
+const createTopLeftBorderCell = (options) =>
+  createBorderCell("top_left", options);
+const createTopRightBorderCell = (options) =>
+  createBorderCell("top_right", options);
+const createBottomRightBorderCell = (options) =>
+  createBorderCell("bottom_right", options);
+const createBottomLeftBorderCell = (options) =>
+  createBorderCell("bottom_left", options);
+const createTopMidBorderCell = (options) =>
+  createBorderCell("top_mid", options);
+// const createBottomMidBorderCell = (options) =>
+//   createBorderCell("bottom_mid", options);
+// const createRightMidBorderCell = (options) =>
+//   createBorderCell("right_mid", options);
+// const createLeftMidBorderCell = (options) =>
+//   createBorderCell("left_mid", options);
+// const createMidBorderCell = (options) => createBorderCell("mid", options);
+
+const fillHorizontally = (string, columnCount, stringWidth = 1) => {
+  let text = "";
+  let xFilled = 0;
+  while (true) {
+    text += string;
+    xFilled += stringWidth;
+    if (xFilled >= columnCount) {
+      break;
+    }
+  }
+  return text;
+};
+const fillVertically = (string, lineCount, stringHeight = 1) => {
+  let text = "";
+  let yFilled = 0;
+  while (true) {
+    text += string;
+    yFilled += stringHeight;
+    if (yFilled >= lineCount) {
+      break;
+    }
+    text += "\n";
+  }
+  return text;
+};
+
 const isBorderTopLeft = (cell) => cell.position === "top_left";
 const isBorderTopRight = (cell) => cell.position === "top_right";
 const isBorderLeft = (cell) => cell.position === "left";
