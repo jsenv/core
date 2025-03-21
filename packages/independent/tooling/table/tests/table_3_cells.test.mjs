@@ -95,7 +95,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
     console.log(renderNamedSections(results));
   });
 
-  test.ONLY("1_three_cell_same_column", () => {
+  test("1_three_cell_same_column", () => {
     const none = renderTable([
       [{ value: "a", border: null }],
       [{ value: "b", border: null }],
