@@ -385,17 +385,49 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     for (const line of grid) {
       let x = 0;
       for (const cell of line) {
-        const biggestWidth = columnWithMap.get(x) || 0;
-        const biggestHeight = rowHeightMap.get(y) || 0;
-        const { rects } = cell;
+        const columnWidth = columnWithMap.get(x) || 0;
+        const rowHeight = rowHeightMap.get(y) || 0;
+        const {
+          rects,
+          leftSpacing = 0,
+          rightSpacing = 0,
+          topSpacing = 0,
+          bottomSpacing = 0,
+        } = cell;
+        let cellBiggestWidth;
         for (const rect of rects) {
-          const { width, height } = rect;
-          if (width > biggestWidth) {
-            columnWithMap.set(x, width);
+          let { width } = rect;
+          if (leftSpacing || rightSpacing) {
+            width += leftSpacing + rightSpacing;
+            rect.width = width;
+            const { render } = rect;
+            rect.render = (...args) => {
+              const text = render(...args);
+              return " ".repeat(leftSpacing) + text + " ".repeat(rightSpacing);
+            };
           }
-          if (height > biggestHeight) {
-            rowHeightMap.set(y, height);
+          if (width > cellBiggestWidth) {
+            cellBiggestWidth = width;
           }
+        }
+        if (cellBiggestWidth > columnWidth) {
+          columnWithMap.set(x, cellBiggestWidth);
+        }
+        if (topSpacing) {
+          let lineToInsertAbove = topSpacing;
+          while (lineToInsertAbove--) {
+            rects.unshift({ width: 0, render: () => "" });
+          }
+        }
+        if (bottomSpacing) {
+          let lineToInsertBelow = bottomSpacing;
+          while (lineToInsertBelow--) {
+            rects.push({ width: 0, render: () => "" });
+          }
+        }
+        const cellHeight = rects.length;
+        if (cellHeight > rowHeight) {
+          rowHeightMap.set(y, cellHeight);
         }
         x++;
       }
@@ -445,7 +477,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
               break content_or_fill;
             }
             const lineStartIndex = rowHeight - cellHeight;
-            if (lineIndex > lineStartIndex) {
+            if (lineIndex >= lineStartIndex) {
               rect = rects[lineIndex];
             }
             continue;
@@ -454,7 +486,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           let cellLineText;
           if (rect) {
             const { width, render } = rect;
-            const rectText = render({ columnWidth, rowHeight });
+            let rectText = render({ columnWidth, rowHeight });
             cellLineText = applyXAlign(rectText, {
               width,
               desiredWidth: columnWidth,
@@ -572,7 +604,6 @@ const createContentCell = (
   }
 
   const lines = text.split("\n");
-  let largestLineWidth = 0;
 
   let lineIndex = 0;
   const rects = [];
@@ -580,11 +611,6 @@ const createContentCell = (
     const isLastLine = lineIndex === lines.length - 1;
     let lineWidth = stringWidth(line);
     let lineText = line;
-
-    if (leftSpacing) {
-      lineWidth += leftSpacing;
-      lineText = ` `.repeat(leftSpacing) + lineText;
-    }
     if (isLastLine && unit) {
       lineWidth += ` ${unit}`.length;
       if (ansi && unitColor) {
@@ -592,42 +618,11 @@ const createContentCell = (
       }
       lineText += ` ${unit}`;
     }
-    if (rightSpacing) {
-      lineWidth += rightSpacing;
-      lineText += ` `.repeat(rightSpacing);
-    }
-    if (lineWidth > largestLineWidth) {
-      largestLineWidth = lineWidth;
-    }
-    if (!isLastLine) {
-      lineText += "\n";
-    }
     rects.push({
       width: lineWidth,
-      height: 1,
       render: () => lineText,
     });
     lineIndex++;
-  }
-
-  {
-    let textVerticallySpaced = text;
-    if (topSpacing) {
-      let lineInsertedAbove = 0;
-      while (lineInsertedAbove < topSpacing) {
-        textVerticallySpaced = `\n${textVerticallySpaced}`;
-        lineInsertedAbove++;
-        rects.unshift({ width: 0, height: 1, text: "\n" });
-      }
-    }
-    if (bottomSpacing) {
-      let lineInsertedBelow = 0;
-      while (lineInsertedBelow < bottomSpacing) {
-        textVerticallySpaced += `\n${bottomSpacing}`;
-        lineInsertedBelow++;
-        rects.push({ width: 0, height: 1, text: "\n" });
-      }
-    }
   }
 
   return {
@@ -635,6 +630,10 @@ const createContentCell = (
     value,
     xAlign,
     yAlign,
+    leftSpacing,
+    rightSpacing,
+    topSpacing,
+    bottomSpacing,
     rects,
   };
 };
@@ -647,7 +646,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "─",
       },
     ],
@@ -659,7 +657,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "─",
       },
     ],
@@ -671,7 +668,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "│",
       },
     ],
@@ -683,7 +679,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "│",
       },
     ],
@@ -698,7 +693,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "┌",
       },
     ],
@@ -712,7 +706,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "┐",
       },
     ],
@@ -726,7 +719,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "┘",
       },
     ],
@@ -740,7 +732,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "└",
       },
     ],
@@ -755,7 +746,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "┬",
       },
     ],
@@ -769,7 +759,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "┴",
       },
     ],
@@ -783,7 +772,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "┤",
       },
     ],
@@ -797,7 +785,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "├",
       },
     ],
@@ -811,7 +798,6 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        height: 1,
         render: () => "┼",
       },
     ],
@@ -871,7 +857,6 @@ const blankCell = {
   rects: [
     {
       width: 0,
-      height: 0,
       render: () => "",
     },
   ],

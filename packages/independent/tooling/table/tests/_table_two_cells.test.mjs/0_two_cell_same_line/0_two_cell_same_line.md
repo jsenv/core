@@ -26,7 +26,7 @@ ${text}`);
 ```console
 --- right_and_left ---
 
- "1" │ "2" 
+ "1"  "2" 
 ```
 
 # 2/6 console.log
@@ -34,9 +34,9 @@ ${text}`);
 ```console
 --- top_right_and_bottom_left ---
 
-─────┐     
- "1" │ "2" 
-     └─────
+────┐
+ "1"  "2" 
+─────
 ```
 
 # 3/6 console.log
@@ -44,9 +44,9 @@ ${text}`);
 ```console
 --- bottom_right_and_top_left ---
 
-     ┌─────
- "1" │ "2" 
-─────┘     
+┌────
+ "1"  "2" 
+─────
 ```
 
 # 4/6 console.log
@@ -54,9 +54,9 @@ ${text}`);
 ```console
 --- bottom_left_and_top_right ---
 
-      ─────┐
-│ "1"  "2" │
-└─────      
+┐
+ "1"  "2" 
+─
 ```
 
 # 5/6 console.log
@@ -64,9 +64,9 @@ ${text}`);
 ```console
 --- all_around ---
 
-┌─────┬─────┐
-│ "1" │ "2" │
-└─────┴─────┘
+┌──┬──┐
+ "1"  "2" 
+──────
 ```
 
 # 6/6 return
