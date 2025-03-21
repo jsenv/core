@@ -1,4 +1,4 @@
-# [0_two_cell_same_line](../../table_two_cells.test.mjs#L64)
+# [0_two_cell_same_line](../../table_two_cells.test.mjs#L63)
 
 ```js
 const keys = Object.keys(sameLineScenarios);
@@ -21,7 +21,45 @@ ${text}`);
 }
 ```
 
-# 1/2 console.log
+# 1/6 console.log
+
+```console
+--- right_and_left ---
+
+ "1" │ "2" 
+```
+
+# 2/6 console.log
+
+```console
+--- top_right_and_bottom_left ---
+
+─────┐     
+ "1" │ "2" 
+     └─────
+```
+
+# 3/6 console.log
+
+```console
+--- bottom_right_and_top_left ---
+
+     ┌─────
+ "1" │ "2" 
+─────┘     
+```
+
+# 4/6 console.log
+
+```console
+--- bottom_left_and_top_right ---
+
+      ─────┐
+│ "1"  "2" │
+└─────      
+```
+
+# 5/6 console.log
 
 ```console
 --- all_around ---
@@ -31,7 +69,7 @@ ${text}`);
 └─────┴─────┘
 ```
 
-# 2/2 return
+# 6/6 return
 
 ```js
 undefined
