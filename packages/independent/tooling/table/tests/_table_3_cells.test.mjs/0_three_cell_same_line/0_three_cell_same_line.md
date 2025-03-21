@@ -50,6 +50,13 @@ const last_only = renderTable([
     { value: "c", border: {} },
   ],
 ]);
+const snake = renderTable([
+  [
+    { value: "a", borderTop: {}, borderRight: {} },
+    { value: "b", borderLeft: {}, borderBottom: {} },
+    { value: "c", borderLeft: {}, borderTop: {} },
+  ],
+]);
 const all = renderTable([
   [
     { value: "a", border: {} },
@@ -66,6 +73,7 @@ const results = {
   first_only,
   middle_none,
   last_only,
+  snake,
   all,
 };
 console.log(renderNamedSections(results));
@@ -101,6 +109,10 @@ console.log(renderNamedSections(results));
           ┌─────┐
  "a"  "b" │ "c" │
           └─────┘
+--- snake ---
+─────┐     ┌─────
+ "a" │ "b" │ "c" 
+     └─────┘     
 --- all ---
 ┌─────┬─────┬─────┐
 │ "a" │ "b" │ "c" │

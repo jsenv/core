@@ -1,4 +1,4 @@
-# [1_three_cell_same_column](../../table_3_cells.test.mjs#L82)
+# [1_three_cell_same_column](../../table_3_cells.test.mjs#L90)
 
 ```js
 

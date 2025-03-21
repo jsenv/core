@@ -121,7 +121,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   {
     const columnContainingLeftBorderSet = new Set();
     const columnContainingRightBorderSet = new Set();
-    const columnsContainsLeftBorder = (x) =>
+    const columnContainsLeftBorder = (x) =>
       columnContainingLeftBorderSet.has(x);
     const columnContainsRightBorder = (x) =>
       columnContainingRightBorderSet.has(x);
@@ -145,7 +145,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
 
     mutateGrid(grid, (cell, { x, y }) => {
       if (isBorderTopLeft(cell)) {
-        if (columnsContainsLeftBorder(x)) {
+        if (columnContainsLeftBorder(x)) {
           const southCell = grid[y + 1][x];
           if (isBorderLeft(southCell)) {
             return cell;
@@ -172,10 +172,13 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           }
           return createBorderBottomCell();
         }
+        if (columnContainsLeftBorder(x + 1)) {
+          return cell;
+        }
         return blankCell;
       }
       if (isBorderBottomLeft(cell)) {
-        if (columnsContainsLeftBorder(x)) {
+        if (columnContainsLeftBorder(x)) {
           const northCell = grid[y - 1][x];
           if (isBorderLeft(northCell)) {
             return cell;
@@ -266,14 +269,16 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     const getHowToCollapseAdjacentCells = (cell, cellBelow) => {
       if (cell.type === "blank") {
         return [
-          // cell becomes cell below
-          cellBelow,
-          // cell below becomes blank
-          blankCell,
+          cellBelow, // cell becomes cell below
+          blankCell, // cell below becomes blank
         ];
       }
       if (cellBelow.type === "blank") {
-        return [cell, cellBelow]; // keep as it is
+        return [
+          // keep both as is
+          cell,
+          cellBelow,
+        ];
       }
       if (isBorderTopRight(cell) && isBorderTopLeft(cellBelow)) {
         return [
@@ -306,7 +311,10 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         ];
       }
       if (isBorderBottom(cell) && isBorderTopLeft(cellBelow)) {
-        return [cellBelow, blankCell]; // merged into the top cell
+        return [
+          cellBelow,
+          blankCell, // merged into the top cell
+        ];
       }
       if (isBorderBottom(cell) && isBorderTop(cellBelow)) {
         return [
