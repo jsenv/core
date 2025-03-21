@@ -146,7 +146,7 @@ ${text}
       },
     ],
   };
-  test.ONLY("1_two_cell_two_line", () => {
+  test("1_two_cell_two_line", () => {
     const keys = Object.keys(twoLineScenarios);
     for (const scenario of keys) {
       const [firstCellProps, secondCellProps] = twoLineScenarios[scenario];

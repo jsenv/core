@@ -1,6 +1,9 @@
 // tslint:disable:ordered-imports
 
-export { createDetailedMessage } from "./log/detailed_message.js";
+export {
+  createDetailedMessage,
+  renderNamedSections,
+} from "./log/detailed_message.js";
 export { ANSI } from "./ansi/ansi_node.js";
 export { UNICODE } from "./unicode/unicode_node.js";
 export { humanize, humanizeMethodSymbol } from "./js_value/humanize.js";

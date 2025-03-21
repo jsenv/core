@@ -24,8 +24,14 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       const line = [];
       const bottomCells = [];
       for (const inputCell of inputLine) {
-        const { borderLeft, borderTop, borderRight, borderBottom, ...props } =
-          inputCell;
+        const {
+          border,
+          borderLeft = border,
+          borderTop = border,
+          borderRight = border,
+          borderBottom = border,
+          ...props
+        } = inputCell;
 
         const leftCell = borderLeft
           ? createBorderLeftCell(borderLeft)
