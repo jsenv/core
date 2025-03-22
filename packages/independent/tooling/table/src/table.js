@@ -556,15 +556,106 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       return [west, east, north, south];
     }
     if (isBorderLeft(cell)) {
-      // west is border right or content
-      // north is border top or bottom above or content above
+      // west is left column border right or left column content
+      const borderRightColumn = borderRightPerColumnMap.get(x - 1);
+      if (borderRightColumn) {
+        west = borderRightColumn[y] || blankCell;
+      } else {
+        west = grid[y][x - 1];
+      }
+      // east is content cell
+      east = grid[y][x];
+      // north is border top of this cell
+      const borderTopRow = borderTopPerRowMap.get(y);
+      if (borderTopRow) {
+        north = borderTopRow[x] || blankCell;
+      } else {
+        const northBorderBottomRow = borderBottomPerRowMap.get(y - 1);
+        if (northBorderBottomRow) {
+          north = northBorderBottomRow[x] || blankCell;
+        } else {
+          north = y === 0 ? null : grid[y - 1][x];
+        }
+      }
       // south is border bottom or top below or content below
+      const borderBottomRow = borderBottomPerRowMap.get(y);
+      if (borderBottomRow) {
+        south = borderBottomRow[x] || blankCell;
+      } else {
+        const southBorderTopRow = borderTopPerRowMap.get(y + 1);
+        if (southBorderTopRow) {
+          south = southBorderTopRow[x] || blankCell;
+        } else {
+          south = y === grid.length - 1 ? null : grid[y + 1][x];
+        }
+      }
     }
     if (isBorderRight(cell)) {
+      // west is content
+      west = grid[y][x];
+      // east is border left of next column or next content cell
+      const eastBorderLeftColumn = borderLeftPerColumnMap.get(x + 1);
+      if (eastBorderLeftColumn) {
+        east = eastBorderLeftColumn[y] || blankCell;
+      } else {
+        east = grid[y][x + 1];
+      }
+      // north is border top or bottom above or content above
+      const borderTopRow = borderTopPerRowMap.get(y);
+      if (borderTopRow) {
+        north = borderTopRow[x] || blankCell;
+      } else {
+        const northBorderBottomRow = borderBottomPerRowMap.get(y - 1);
+        if (northBorderBottomRow) {
+          north = northBorderBottomRow[x] || blankCell;
+        } else {
+          north = y === 0 ? null : grid[y - 1][x];
+        }
+      }
+      // south is border bottom or top below or content below
+      const borderBottomRow = borderBottomPerRowMap.get(y);
+      if (borderBottomRow) {
+        south = borderBottomRow[x] || blankCell;
+      } else {
+        const southBorderTopRow = borderTopPerRowMap.get(y + 1);
+        if (southBorderTopRow) {
+          south = southBorderTopRow[x] || blankCell;
+        } else {
+          south = y === grid.length - 1 ? null : grid[y + 1][x];
+        }
+      }
     }
     if (isBorderTop(cell)) {
+      // west is border top of left column
+      const borderTopRow = borderTopPerRowMap.get(y);
+      west = x === 0 ? null : borderTopRow[x - 1] || blankCell;
+      // east is border top of next column
+      east = x === grid[0].length - 1 ? null : borderTopRow[x + 1] || blankCell;
+      // north is border bottom or row above or content above
+      const northRowBorderBottomRow = borderBottomPerRowMap.get(y - 1);
+      if (northRowBorderBottomRow) {
+        north = northRowBorderBottomRow[x] || blankCell;
+      } else {
+        north = y === 0 ? null : grid[y - 1][x];
+      }
+      // south is content
+      south = grid[y][x];
     }
     if (isBorderBottom(cell)) {
+      // west is border bottom of left column
+      const borderBottomRow = borderBottomPerRowMap.get(y);
+      west = x === 0 ? null : borderBottomRow[x - 1] || blankCell;
+      east =
+        x === grid[0].length - 1 ? null : borderBottomRow[x + 1] || blankCell;
+      // north is content
+      north = grid[y][x];
+      // south is border top of next row or next content
+      const southRowBorderTopRow = borderTopPerRowMap.get(y + 1);
+      if (southRowBorderTopRow) {
+        south = southRowBorderTopRow[x] || blankCell;
+      } else {
+        south = y === grid.length - 1 ? null : grid[y + 1][x];
+      }
     }
     // not needed
     return [west, east, north, south];
