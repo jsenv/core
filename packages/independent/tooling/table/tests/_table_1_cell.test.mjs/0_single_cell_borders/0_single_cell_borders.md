@@ -1,4 +1,4 @@
-# [0_single_cell_borders](../../table_1_cell.test.mjs#L115)
+# [0_single_cell_borders](../../table_1_cell.test.mjs#L107)
 
 ```js
 console.log(
@@ -9,7 +9,7 @@ console.log(
     // bottom,
     // right,
     top_left,
-    // top_right,
+    top_right,
     // bottom_right,
     // bottom_left,
     // left_and_right,
@@ -29,6 +29,10 @@ console.log(
 --- top_left ---
 ┌───
 │ a 
+
+--- top_right ---
+───┐
+ a │
 
 ```
 

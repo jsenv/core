@@ -548,8 +548,12 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
     if (isBorderRight(cell)) {
       if (rowType === "border_top") {
+        const borderTopRow = borderTopPerRowMap.get(y);
+        return borderTopRow[x] || blankCell;
       }
       if (rowType === "border_bottom") {
+        const borderBottomRow = borderBottomPerRowMap.get(y);
+        return borderBottomRow[x] || blankCell;
       }
       return grid[y][x];
     }
@@ -1089,7 +1093,7 @@ const BORDER_PROPS = {
             });
             return "┌";
           }
-          if (!isBlank(eastCell)) {
+          if (isBlank(eastCell)) {
             return "╷";
           }
           return "│";
@@ -1101,7 +1105,26 @@ const BORDER_PROPS = {
     position: "right",
     xAlign: "start",
     yAlignChar: "|",
-    rects: [{ width: 1, render: () => "│" }],
+    rects: [
+      {
+        width: 1,
+        render: ({ westCell, updateOptions }) => {
+          if (westCell && isBorderTop(westCell)) {
+            updateOptions({
+              xAlign: "end",
+              yAlign: "start",
+              xAlignChar: "─",
+              yAlignChar: "│",
+            });
+            return "┐";
+          }
+          if (isBlank(westCell)) {
+            return "╷";
+          }
+          return "│";
+        },
+      },
+    ],
   },
   // 1 border junction with blank
   left_top_half: {
