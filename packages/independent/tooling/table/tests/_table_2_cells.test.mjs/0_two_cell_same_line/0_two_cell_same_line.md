@@ -57,7 +57,7 @@ console.log(
 --- top_right_and_bottom_left ---
 ───┐   
  a │ b 
-   ╷───
+   └───
 
 ```
 

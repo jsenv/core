@@ -543,6 +543,14 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       return grid[y][x];
     }
     if (isBorderRight(cell)) {
+      if (rowType === "border_top") {
+        const borderTopRow = borderTopPerRowMap.get(y);
+        return borderTopRow[x + 1];
+      }
+      if (rowType === "border_bottom") {
+        const borderBottomRow = borderBottomPerRowMap.get(y);
+        return borderBottomRow[x + 1];
+      }
       // east is border left of next column or next content cell
       const eastBorderLeftColumn = borderLeftPerColumnMap.get(x + 1);
       if (eastBorderLeftColumn) {
