@@ -1,84 +1,64 @@
 # [0_two_cell_same_line](../../table_2_cells.test.mjs#L8)
 
 ```js
-const right_and_left = renderTable([
-  [
-    { value: "a", borderRight: {} },
-    { value: "b", borderLeft: {} },
-  ],
-]);
+// const right_and_left = renderTable([
+//   [
+//     { value: "a", borderRight: {} },
+//     { value: "b", borderLeft: {} },
+//   ],
+// ]);
 const top_right_and_bottom_left = renderTable([
   [
     { value: "a", borderTop: {}, borderRight: {} },
     { value: "b", borderBottom: {}, borderLeft: {} },
   ],
 ]);
-const bottom_right_and_top_left = renderTable([
-  [
-    {
-      value: "a",
-      borderBottom: {},
-      borderRight: {},
-    },
-    {
-      value: "b",
-      borderTop: {},
-      borderLeft: {},
-    },
-  ],
-]);
-const bottom_left_and_top_right = renderTable([
-  [
-    {
-      value: "a",
-      borderBottom: {},
-      borderLeft: {},
-    },
-    {
-      value: "b",
-      borderTop: {},
-      borderRight: {},
-    },
-  ],
-]);
-const all = renderTable([
-  [
-    { value: "a", border: {} },
-    { value: "b", border: {} },
-  ],
-]);
+// const bottom_right_and_top_left = renderTable([
+//   [
+//     { value: "a", borderBottom: {}, borderRight: {} },
+//     { value: "b", borderTop: {}, borderLeft: {} },
+//   ],
+// ]);
+// const bottom_left_and_top_right = renderTable([
+//   [
+//     { value: "a", borderBottom: {}, borderLeft: {} },
+//     { value: "b", borderTop: {}, borderRight: {} },
+//   ],
+// ]);
+// // left/bottom/right + top/right
+// const left_bottom_right_and_top_right = renderTable([
+//   [
+//     { value: "a", borderLeft: {}, borderBottom: {}, borderRight: {} },
+//     { value: "b", borderTop: {}, borderRight: {} },
+//   ],
+// ]);
+// const all = renderTable([
+//   [
+//     { value: "a", border: {} },
+//     { value: "b", border: {} },
+//   ],
+// ]);
 
-const results = {
-  right_and_left,
-  top_right_and_bottom_left,
-  bottom_right_and_top_left,
-  bottom_left_and_top_right,
-  all,
-};
-console.log(renderNamedSections(results));
+console.log(
+  renderNamedSections({
+    // right_and_left,
+    top_right_and_bottom_left,
+    // bottom_right_and_top_left,
+    // bottom_left_and_top_right,
+    // left_bottom_right_and_top_right,
+    // all,
+  }),
+);
 ```
 
 # 1/2 console.log
 
 ```console
---- right_and_left ---
- a │ b 
 --- top_right_and_bottom_left ---
 ───┐   
  a │ b 
-   └───
---- bottom_right_and_top_left ---
-   ┌───
- a │ b 
-───┘   
---- bottom_left_and_top_right ---
-    ───┐
-│ a  b │
-└───    
---- all ---
-┌───┬───┐
-│ a │ b │
-└───┴───┘
+   ╷───
+
 ```
 
 # 2/2 return

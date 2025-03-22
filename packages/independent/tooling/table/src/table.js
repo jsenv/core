@@ -100,102 +100,49 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
 
-  // fill row/columns with "corners" or blank cells
-  // en gros le but ici c'est de s'assure que le border left se comporte comme un corner
-  // lorsqu'il est collé a un border top
-  // {
-  //   for (const [x, borderLeftColumn] of borderLeftPerColumnMap) {
-  //     let y = 0;
-  //     while (y < grid.length) {
-  //       const cell = borderLeftColumn[y];
-  //       if (!cell) {
-  //         const borderTopRow = borderTopPerRowMap.get(y);
-  //         if (borderTopRow) {
-  //           const borderTopCell = borderTopRow[x];
-  //           if (borderTopCell) {
-  //             borderLeftColumn[y] = createTopLeftBorderCell();
-  //           } else if (isBlank(borderTopCell)) {
-  //             borderLeftColumn[y] = createLeftTopHalfBorderCell();
-  //           }
-  //         }
-  //         const borderBottomRow = borderBottomPerRowMap.get(y);
-  //         if (borderBottomRow) {
-  //           const borderBottomCell = borderBottomRow[x];
-  //           if (borderBottomCell) {
-  //             borderLeftColumn[y] = createBottomLeftBorderCell();
-  //           } else if (isBlank(borderBottomCell)) {
-  //             borderLeftColumn[y] = createLeftBottomHalfBorderCell();
-  //           }
-  //         }
-  //       }
-  //       y++;
-  //     }
-  //   }
-  //   for (const [x, borderRightColumn] of borderRightPerColumnMap) {
-  //     let y = 0;
-  //     while (y < grid.length) {
-  //       const cell = borderRightColumn[y];
-  //       if (!cell) {
-  //         const borderTopRow = borderTopPerRowMap.get(y);
-  //         if (borderTopRow) {
-  //           const borderTopCell = borderTopRow[x];
-  //           if (borderTopCell) {
-  //             borderRightColumn[y] = createTopRightBorderCell();
-  //           } else if (isBlank(borderTopCell)) {
-  //             borderRightColumn[y] = createRightTopHalfBorderCell();
-  //           }
-  //         }
-  //         const borderBottomRow = borderBottomPerRowMap.get(y);
-  //         if (borderBottomRow) {
-  //           const borderBottomCell = borderBottomRow[x];
-  //           if (borderBottomCell) {
-  //             borderRightColumn[y] = createBottomRightBorderCell();
-  //           } else if (isBlank(borderBottomCell)) {
-  //             borderRightColumn[y] = createRightBottomHalfBorderCell();
-  //           }
-  //         }
-  //       }
-  //       y++;
-  //     }
-  //   }
-
-  //   for (const [y, borderTopRow] of borderTopPerRowMap) {
-  //     let x = 0;
-  //     while (x < grid[0].length) {
-  //       const cell = borderTopRow[x];
-  //       if (!cell) {
-  //         const borderLeftColumn = borderLeftPerColumnMap.get(x);
-  //         if (borderLeftColumn) {
-  //           const borderLeftCell = borderLeftColumn[y];
-  //           if (borderLeftCell) {
-  //             // nothing to do, the border left will handle
-  //           } else if (isBlank(borderLeftCell)) {
-  //             borderTopRow[x] = createBorderTopCell();
-  //           }
-  //         }
-  //       }
-  //       x++;
-  //     }
-  //   }
-  //   for (const [y, borderBottomRow] of borderBottomPerRowMap) {
-  //     let x = 0;
-  //     while (x < grid[0].length) {
-  //       const cell = borderBottomRow[x];
-  //       if (!cell) {
-  //         const borderRightColumn = borderRightPerColumnMap.get(x);
-  //         if (borderRightColumn) {
-  //           const borderRightCell = borderRightColumn[y];
-  //           if (borderRightCell) {
-  //             // nothing to do, the border right will handle
-  //           } else if (isBlank(borderRightCell)) {
-  //             borderBottomRow[x] = createBorderBottomCell();
-  //           }
-  //         }
-  //       }
-  //       x++;
-  //     }
-  //   }
-  // }
+  // fill border row and columns with blank cells
+  {
+    for (const [, borderLeftColumn] of borderLeftPerColumnMap) {
+      let y = 0;
+      while (y < grid.length) {
+        const borderLeft = grid[y];
+        if (!borderLeft) {
+          borderLeftColumn[y] = blankCell;
+        }
+        y++;
+      }
+    }
+    for (const [, borderRightColumn] of borderRightPerColumnMap) {
+      let y = 0;
+      while (y < grid.length) {
+        const borderRight = grid[y];
+        if (!borderRight) {
+          borderRightColumn[y] = blankCell;
+        }
+        y++;
+      }
+    }
+    for (const [, borderTopRow] of borderTopPerRowMap) {
+      let x = 0;
+      while (x < grid[0].length) {
+        const borderTop = borderTopRow[x];
+        if (!borderTop) {
+          borderTopRow[x] = blankCell;
+        }
+        x++;
+      }
+    }
+    for (const [, borderBottomRow] of borderBottomPerRowMap) {
+      let x = 0;
+      while (x < grid[0].length) {
+        const borderBottom = borderBottomRow[x];
+        if (!borderBottom) {
+          borderBottomRow[x] = blankCell;
+        }
+        x++;
+      }
+    }
+  }
 
   // // collapse left and right borders
   // {
@@ -912,7 +859,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       border_top_row: {
         const borderTopRow = borderTopPerRowMap.get(y);
         if (borderTopRow) {
-          const borderTopRowText = renderRow(borderTopPerRowMap.get(y), {
+          const borderTopRowText = renderRow(borderTopRow, {
             rowType: "border_top",
             rowHeight: 1,
           });
@@ -929,7 +876,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       border_bottom_row: {
         const borderBottomRow = borderBottomPerRowMap.get(y);
         if (borderBottomRow) {
-          const borderBottomRowText = renderRow(borderBottomPerRowMap.get(y), {
+          const borderBottomRowText = renderRow(borderBottomRow, {
             rowType: "border_bottom",
             rowHeight: 1,
           });
@@ -1087,19 +1034,11 @@ const BORDER_PROPS = {
         render: ({ eastCell, updateOptions }) => {
           if (eastCell) {
             if (isBorderTop(eastCell)) {
-              updateOptions({
-                xAlign: "start",
-                xAlignChar: "─",
-                yAlign: "end",
-              });
+              updateOptions(BORDER_JUNCTION_OPTIONS.top_left);
               return "┌";
             }
             if (isBorderBottom(eastCell)) {
-              updateOptions({
-                xAlign: "start",
-                xAlignChar: "─",
-                yAlign: "start",
-              });
+              updateOptions(BORDER_JUNCTION_OPTIONS.bottom_left);
               return "└";
             }
           }
@@ -1118,55 +1057,53 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        render: ({ westCell, updateOptions }) => {
+        render: ({ eastCell, westCell, updateOptions }) => {
           if (westCell) {
             if (isBorderTop(westCell)) {
-              updateOptions({
-                xAlign: "end",
-                yAlign: "start",
-                xAlignChar: "─",
-                yAlignChar: "│",
-              });
+              updateOptions(BORDER_JUNCTION_OPTIONS.top_right);
               return "┐";
             }
             if (isBorderBottom(westCell)) {
-              updateOptions({
-                xAlign: "end",
-                yAlign: "end",
-                xAlignChar: "─",
-                yAlignChar: "│",
-              });
+              updateOptions(BORDER_JUNCTION_OPTIONS.bottom_right);
               return "┘";
             }
-          }
-          if (isBlank(westCell)) {
-            return "╷";
+            if (isBlank(westCell)) {
+              if (eastCell && isBorderBottom(eastCell)) {
+                updateOptions(BORDER_JUNCTION_OPTIONS.bottom_left);
+                return "└";
+              }
+              updateOptions(BORDER_JUNCTION_OPTIONS.right_bottom_half);
+              return "╷";
+            }
           }
           return "│";
         },
       },
     ],
   },
+};
+
+const BORDER_JUNCTION_OPTIONS = {
   // 1 border junction with blank
   left_top_half: {
     position: "left_top_half",
     xAlign: "end",
-    rects: [{ width: 1, render: () => "╷" }],
+    char: "╷",
   },
   left_bottom_half: {
     position: "left_bottom_half",
     xAlign: "end",
-    rects: [{ width: 1, render: () => "╵" }],
+    char: "╵",
   },
   right_top_half: {
     position: "right_top_half",
     xAlign: "end",
-    rects: [{ width: 1, render: () => "╷" }],
+    char: "╷",
   },
   right_bottom_half: {
     position: "right_bottom_half",
     xAlign: "end",
-    rects: [{ width: 1, render: () => "╵" }],
+    char: "╵",
   },
   // 2 borders junctions (corners)
   top_left: {
@@ -1175,12 +1112,7 @@ const BORDER_PROPS = {
     yAlign: "start",
     xAlignChar: "─",
     yAlignChar: "│",
-    rects: [
-      {
-        width: 1,
-        render: () => "┌",
-      },
-    ],
+    char: "┌",
   },
   top_right: {
     position: "top_right",
@@ -1188,12 +1120,7 @@ const BORDER_PROPS = {
     yAlign: "start",
     xAlignChar: "─",
     yAlignChar: "│",
-    rects: [
-      {
-        width: 1,
-        render: () => "┐",
-      },
-    ],
+    char: "┐",
   },
   bottom_right: {
     position: "bottom_right",
@@ -1201,12 +1128,7 @@ const BORDER_PROPS = {
     yAlign: "end",
     xAlignChar: "─",
     yAlignChar: "│",
-    rects: [
-      {
-        width: 1,
-        render: () => "┘",
-      },
-    ],
+    char: "┘",
   },
   bottom_left: {
     position: "bottom_left",
@@ -1214,12 +1136,7 @@ const BORDER_PROPS = {
     yAlign: "end",
     xAlignChar: "─",
     yAlignChar: "│",
-    rects: [
-      {
-        width: 1,
-        render: () => "└",
-      },
-    ],
+    char: "└",
   },
   // 3 borders junctions
   top_mid: {
@@ -1228,12 +1145,7 @@ const BORDER_PROPS = {
     yAlign: "start",
     xAlignChar: "─",
     yAlignChar: "│",
-    rects: [
-      {
-        width: 1,
-        render: () => "┬",
-      },
-    ],
+    char: "┬",
   },
   bottom_mid: {
     position: "bottom_mid",
@@ -1241,12 +1153,7 @@ const BORDER_PROPS = {
     yAlign: "end",
     xAlignChar: "─",
     yAlignChar: "│",
-    rects: [
-      {
-        width: 1,
-        render: () => "┴",
-      },
-    ],
+    char: "┴",
   },
   right_mid: {
     position: "right_mid",
@@ -1254,12 +1161,7 @@ const BORDER_PROPS = {
     yAlign: "center",
     xAlignChar: "─",
     yAlignChar: "│",
-    rects: [
-      {
-        width: 1,
-        render: () => "┤",
-      },
-    ],
+    char: "┤",
   },
   left_mid: {
     position: "left_mid",
@@ -1267,12 +1169,7 @@ const BORDER_PROPS = {
     yAlign: "center",
     xAlignChar: "─",
     yAlignChar: "│",
-    rects: [
-      {
-        width: 1,
-        render: () => "├",
-      },
-    ],
+    char: "├",
   },
   // 4 border junctions
   mid: {
@@ -1281,12 +1178,7 @@ const BORDER_PROPS = {
     yAlign: "center",
     xAlignChar: "─",
     yAlignChar: "│",
-    rects: [
-      {
-        width: 1,
-        render: () => "┼",
-      },
-    ],
+    char: "┼",
   },
 };
 
