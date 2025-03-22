@@ -493,6 +493,83 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
 
+  const getCellAround = (cell, x, y) => {
+    let west;
+    let east;
+    let north;
+    let south;
+
+    if (isContent(cell)) {
+      const borderLeftColumn = borderLeftPerColumnMap.get(x);
+      const borderLeftCell = borderLeftColumn ? borderLeftColumn[y] : null;
+      const borderRightColumn = borderRightPerColumnMap.get(x);
+      const borderRightCell = borderRightColumn ? borderRightColumn[y] : null;
+      const borderTopRow = borderTopPerRowMap.get(y);
+      const borderTopCell = borderTopRow ? borderTopRow[y] : null;
+      const borderBottomRow = borderBottomPerRowMap.get(y);
+      const borderBottomCell = borderBottomRow ? borderBottomRow[y] : null;
+      const westContentCell = grid[y][x - 1];
+      const eastContentCell = grid[y][x + 1];
+      const northContentCell = y === 0 ? null : grid[y - 1][x];
+      const southContentCell = y === grid.length - 1 ? null : grid[y + 1][x];
+
+      if (borderLeftCell) {
+        west = borderLeftCell;
+      } else {
+        const westColumnBorderRightColumn = borderRightPerColumnMap.get(x - 1);
+        if (westColumnBorderRightColumn) {
+          west = westColumnBorderRightColumn[y] || blankCell;
+        } else {
+          west = westContentCell;
+        }
+      }
+      if (borderRightCell) {
+        east = borderRightCell;
+      } else {
+        const eastColumnBorderLeftColumn = borderLeftPerColumnMap.get(x + 1);
+        if (eastColumnBorderLeftColumn) {
+          east = eastColumnBorderLeftColumn[y] || blankCell;
+        } else {
+          east = eastContentCell;
+        }
+      }
+      if (borderTopCell) {
+        north = borderTopCell;
+      } else {
+        const northRowBorderBottomRow = borderBottomPerRowMap.get(y - 1);
+        if (northRowBorderBottomRow) {
+          north = northRowBorderBottomRow[x] || blankCell;
+        } else {
+          north = northContentCell;
+        }
+      }
+      if (borderBottomCell) {
+        south = borderBottomCell;
+      } else {
+        const southBorderTopRow = borderTopPerRowMap.get(y + 1);
+        if (southBorderTopRow) {
+          south = southBorderTopRow[x] || blankCell;
+        } else {
+          south = southContentCell;
+        }
+      }
+      return [west, east, north, south];
+    }
+    if (isBorderLeft(cell)) {
+      // west is border right or content
+      // north is border top or bottom above or content above
+      // south is border bottom or top below or content below
+    }
+    if (isBorderRight(cell)) {
+    }
+    if (isBorderTop(cell)) {
+    }
+    if (isBorderBottom(cell)) {
+    }
+    // not needed
+    return [west, east, north, south];
+  };
+
   // render table
   let log = "";
   {
@@ -504,10 +581,11 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         let x = 0;
         let lineText = "";
         for (const cell of cells) {
-          const westCell = cells[x - 1];
-          const eastCell = cells[x + 1];
-          const northCell = y === 0 ? null : grid[y - 1][x];
-          const southCell = y === grid.length - 1 ? null : grid[y + 1][x];
+          const [westCell, eastCell, northCell, southCell] = getCellAround(
+            cell,
+            x,
+            y,
+          );
           const cellLineText = renderCell(cell, {
             columnWidth: columnWidthMap.get(x),
             rowHeight,
@@ -523,6 +601,11 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (borderLeftColumn) {
             const borderLeftCell = borderLeftColumn[x];
             if (borderLeftCell) {
+              const [westCell, eastCell, northCell, southCell] = getCellAround(
+                borderLeftCell,
+                x,
+                y,
+              );
               borderLeftLineText = renderCell(borderLeftCell, {
                 columnWidth: 1,
                 rowHeight,
@@ -538,6 +621,11 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (borderRightColumn) {
             const borderRightCell = borderRightColumn[x];
             if (borderRightCell) {
+              const [westCell, eastCell, northCell, southCell] = getCellAround(
+                borderRightCell,
+                x,
+                y,
+              );
               borderRightLineText = renderCell(borderRightCell, {
                 columnWidth: 1,
                 rowHeight,
@@ -977,12 +1065,13 @@ const createBorderBottomCell = (options) => createBorderCell("bottom", options);
 
 // const isBorderTopLeft = (cell) => cell.position === "top_left";
 // const isBorderTopRight = (cell) => cell.position === "top_right";
-// const isBorderLeft = (cell) => cell.position === "left";
-// const isBorderRight = (cell) => cell.position === "right";
+const isBorderLeft = (cell) => cell.position === "left";
+const isBorderRight = (cell) => cell.position === "right";
 const isBorderTop = (cell) => cell.position === "top";
-// const isBorderBottom = (cell) => cell.position === "bottom";
+const isBorderBottom = (cell) => cell.position === "bottom";
 // const isBorderBottomRight = (cell) => cell.position === "bottom_right";
 // const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
+const isContent = (cell) => cell.type === "content";
 
 // const isBlankCell = (cell) => cell.type === "blank";
 // blank cells are fluid cells that will take whatever size they are requested to take
@@ -990,15 +1079,15 @@ const isBorderTop = (cell) => cell.position === "top";
 // this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
 // (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
 // where the border is)
-// const blankCell = {
-//   type: "blank",
-//   rects: [
-//     {
-//       width: "fill",
-//       render: ({ columnWidth }) => " ".repeat(columnWidth),
-//     },
-//   ],
-// };
+const blankCell = {
+  type: "blank",
+  rects: [
+    {
+      width: "fill",
+      render: ({ columnWidth }) => " ".repeat(columnWidth),
+    },
+  ],
+};
 
 // const mutateGrid = (grid, callback) => {
 //   let y = 0;
