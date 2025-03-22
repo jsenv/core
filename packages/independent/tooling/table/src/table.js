@@ -1,5 +1,6 @@
 /**
  *
+ * https://www.w3schools.com/charsets/ref_utf_box.asp
  * https://github.com/Automattic/cli-table
  *
  * remaining:
