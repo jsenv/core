@@ -27,7 +27,7 @@ console.log(
 
 ```console
 --- top_left ---
-╷───
+│───
 │ a 
 
 ```

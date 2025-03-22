@@ -67,10 +67,10 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   // detect borders
   {
     let y = 0;
-    for (const inputLine of inputGrid) {
+    for (const inputRow of inputGrid) {
       let x = 0;
       const row = [];
-      for (const inputCell of inputLine) {
+      for (const inputCell of inputRow) {
         const {
           border,
           borderLeft = border,
@@ -93,10 +93,94 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         if (borderRight) {
           onBorderRight(borderRight, x, y);
         }
+
         x++;
       }
       grid[y] = row;
       y++;
+    }
+  }
+
+  // fill row/columns with "corners" or blank cells
+  {
+    for (const [x, borderLeftColumn] of borderLeftPerColumnMap) {
+      let y = 0;
+      while (y < grid.length) {
+        const cell = borderLeftColumn[y];
+        if (!cell) {
+          const borderTopRow = borderTopPerRowMap.get(y);
+          if (borderTopRow) {
+            const borderTopCell = borderTopRow[x];
+            if (borderTopCell) {
+              // add an other left cell that will actually become a corner
+              borderLeftColumn[y] = createBorderLeftCell();
+            } else if (isBlank(borderTopCell)) {
+              // add a border left on the top row if the top row is a blank cell or there is no top cell
+              // it will be special case where only half the left border is shown right?
+              borderLeftColumn[y] = createBorderLeftCell();
+            }
+          }
+        }
+        y++;
+      }
+    }
+    for (const [x, borderRightColumn] of borderRightPerColumnMap) {
+      let y = 0;
+      while (y < grid.length) {
+        const cell = borderRightColumn[y];
+        if (!cell) {
+          const borderTopRow = borderTopPerRowMap.get(y);
+          if (borderTopRow) {
+            const borderTopCell = borderTopRow[x];
+            if (borderTopCell) {
+              // add an other left cell that will actually become a corner
+              borderRightColumn[y] = createBorderRightCell();
+            } else if (isBlank(borderTopCell)) {
+              // add a border left on the top row if the top row is a blank cell or there is no top cell
+              // it will be special case where only half the left border is shown right?
+              borderRightColumn[y] = createBorderRightCell();
+            }
+          }
+        }
+        y++;
+      }
+    }
+
+    for (const [y, borderTopRow] of borderTopPerRowMap) {
+      let x = 0;
+      while (x < grid[0].length) {
+        const cell = borderTopRow[x];
+        if (!cell) {
+          const borderLeftColumn = borderLeftPerColumnMap.get(x);
+          if (borderLeftColumn) {
+            const borderLeftCell = borderLeftColumn[y];
+            if (borderLeftCell) {
+              // nothing to do, the border left will handle
+            } else if (isBlank(borderLeftCell)) {
+              borderTopRow[x] = createBorderTopCell();
+            }
+          }
+        }
+        x++;
+      }
+    }
+    for (const [y, borderBottomRow] of borderBottomPerRowMap) {
+      let x = 0;
+      while (x < grid[0].length) {
+        const cell = borderBottomRow[x];
+        if (!cell) {
+          const borderRightColumn = borderRightPerColumnMap.get(x);
+          if (borderRightColumn) {
+            const borderRightCell = borderRightColumn[y];
+            if (borderRightCell) {
+              // nothing to do, the border right will handle
+            } else if (isBlank(borderRightCell)) {
+              borderBottomRow[x] = createBorderBottomCell();
+            }
+          }
+        }
+        x++;
+      }
     }
   }
 
@@ -745,7 +829,18 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       }
       return rowText;
     };
-    const renderCell = (cell, { columnWidth, rowHeight, lineIndex }) => {
+    const renderCell = (
+      cell,
+      {
+        columnWidth,
+        rowHeight,
+        lineIndex,
+        westCell,
+        eastCell,
+        northCell,
+        southCell,
+      },
+    ) => {
       const {
         xAlign,
         xAlignChar = " ",
@@ -777,7 +872,13 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
 
       if (rect) {
         const { width, render } = rect;
-        let rectText = render({ columnWidth });
+        let rectText = render({
+          columnWidth,
+          westCell,
+          eastCell,
+          northCell,
+          southCell,
+        });
         if (width === "fill") {
           return rectText;
         }
@@ -978,13 +1079,12 @@ const BORDER_PROPS = {
       {
         width: 1,
         render: ({ northCell, eastCell }) => {
-          if (isBorderTop(eastCell)) {
+          if (eastCell && isBorderTop(eastCell)) {
             return "┌";
           }
           if (!northCell) {
             return "╷";
           }
-
           return "│";
         },
       },
@@ -1164,7 +1264,7 @@ const isBorderBottom = (cell) => cell.position === "bottom";
 // const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
 const isContent = (cell) => cell.type === "content";
 
-// const isBlankCell = (cell) => cell.type === "blank";
+const isBlank = (cell) => cell.type === "blank";
 // blank cells are fluid cells that will take whatever size they are requested to take
 // they can seen as placeholders that are removed when a line or column is composed only by blank cells
 // this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
