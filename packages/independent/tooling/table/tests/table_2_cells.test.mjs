@@ -6,30 +6,30 @@ import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs"
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
   test.ONLY(`0_two_cell_same_line`, () => {
-    // const right_and_left = renderTable([
-    //   [
-    //     { value: "a", borderRight: {} },
-    //     { value: "b", borderLeft: {} },
-    //   ],
-    // ]);
+    const right_and_left = renderTable([
+      [
+        { value: "a", borderRight: {} },
+        { value: "b", borderLeft: {} },
+      ],
+    ]);
     const top_right_and_bottom_left = renderTable([
       [
         { value: "a", borderTop: {}, borderRight: {} },
         { value: "b", borderBottom: {}, borderLeft: {} },
       ],
     ]);
-    // const bottom_right_and_top_left = renderTable([
-    //   [
-    //     { value: "a", borderBottom: {}, borderRight: {} },
-    //     { value: "b", borderTop: {}, borderLeft: {} },
-    //   ],
-    // ]);
-    // const bottom_left_and_top_right = renderTable([
-    //   [
-    //     { value: "a", borderBottom: {}, borderLeft: {} },
-    //     { value: "b", borderTop: {}, borderRight: {} },
-    //   ],
-    // ]);
+    const bottom_right_and_top_left = renderTable([
+      [
+        { value: "a", borderBottom: {}, borderRight: {} },
+        { value: "b", borderTop: {}, borderLeft: {} },
+      ],
+    ]);
+    const bottom_left_and_top_right = renderTable([
+      [
+        { value: "a", borderBottom: {}, borderLeft: {} },
+        { value: "b", borderTop: {}, borderRight: {} },
+      ],
+    ]);
     // // left/bottom/right + top/right
     // const left_bottom_right_and_top_right = renderTable([
     //   [
@@ -46,10 +46,10 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
 
     console.log(
       renderNamedSections({
-        // right_and_left,
+        right_and_left,
         top_right_and_bottom_left,
-        // bottom_right_and_top_left,
-        // bottom_left_and_top_right,
+        bottom_right_and_top_left,
+        bottom_left_and_top_right,
         // left_bottom_right_and_top_right,
         // all,
       }),

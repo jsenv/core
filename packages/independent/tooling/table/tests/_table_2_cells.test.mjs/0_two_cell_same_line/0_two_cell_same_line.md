@@ -1,30 +1,30 @@
 # [0_two_cell_same_line](../../table_2_cells.test.mjs#L8)
 
 ```js
-// const right_and_left = renderTable([
-//   [
-//     { value: "a", borderRight: {} },
-//     { value: "b", borderLeft: {} },
-//   ],
-// ]);
+const right_and_left = renderTable([
+  [
+    { value: "a", borderRight: {} },
+    { value: "b", borderLeft: {} },
+  ],
+]);
 const top_right_and_bottom_left = renderTable([
   [
     { value: "a", borderTop: {}, borderRight: {} },
     { value: "b", borderBottom: {}, borderLeft: {} },
   ],
 ]);
-// const bottom_right_and_top_left = renderTable([
-//   [
-//     { value: "a", borderBottom: {}, borderRight: {} },
-//     { value: "b", borderTop: {}, borderLeft: {} },
-//   ],
-// ]);
-// const bottom_left_and_top_right = renderTable([
-//   [
-//     { value: "a", borderBottom: {}, borderLeft: {} },
-//     { value: "b", borderTop: {}, borderRight: {} },
-//   ],
-// ]);
+const bottom_right_and_top_left = renderTable([
+  [
+    { value: "a", borderBottom: {}, borderRight: {} },
+    { value: "b", borderTop: {}, borderLeft: {} },
+  ],
+]);
+const bottom_left_and_top_right = renderTable([
+  [
+    { value: "a", borderBottom: {}, borderLeft: {} },
+    { value: "b", borderTop: {}, borderRight: {} },
+  ],
+]);
 // // left/bottom/right + top/right
 // const left_bottom_right_and_top_right = renderTable([
 //   [
@@ -41,10 +41,10 @@ const top_right_and_bottom_left = renderTable([
 
 console.log(
   renderNamedSections({
-    // right_and_left,
+    right_and_left,
     top_right_and_bottom_left,
-    // bottom_right_and_top_left,
-    // bottom_left_and_top_right,
+    bottom_right_and_top_left,
+    bottom_left_and_top_right,
     // left_bottom_right_and_top_right,
     // all,
   }),
@@ -54,10 +54,23 @@ console.log(
 # 1/2 console.log
 
 ```console
+--- right_and_left ---
+ a ││ b 
+
 --- top_right_and_bottom_left ---
-───┐   
- a │ b 
-   └───
+───┐╵   
+ a ││ b 
+   └└───
+
+--- bottom_right_and_top_left ---
+   ╷┌───
+ a ││ b 
+───┘╵   
+
+--- bottom_left_and_top_right ---
+╵   ───┐
+│ a  b │
+└───   ╷
 
 ```
 

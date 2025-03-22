@@ -724,7 +724,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           let borderRightLineText;
           const borderLeftColumn = borderLeftPerColumnMap.get(x);
           if (borderLeftColumn) {
-            const borderLeftCell = borderLeftColumn[x];
+            const borderLeftCell = borderLeftColumn[y];
             if (borderLeftCell) {
               const westCell = getWestCell(borderLeftCell, { x, y, rowType });
               const eastCell = getEastCell(borderLeftCell, { x, y, rowType });
@@ -743,7 +743,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           }
           const borderRightColumn = borderRightPerColumnMap.get(x);
           if (borderRightColumn) {
-            const borderRightCell = borderRightColumn[x];
+            const borderRightCell = borderRightColumn[y];
             if (borderRightCell) {
               const westCell = getWestCell(borderRightCell, { x, y, rowType });
               const eastCell = getEastCell(borderRightCell, { x, y, rowType });
@@ -1039,7 +1039,7 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        render: ({ eastCell, updateOptions }) => {
+        render: ({ southCell, eastCell, updateOptions }) => {
           if (eastCell) {
             if (isBorderTop(eastCell)) {
               updateOptions(BORDER_JUNCTION_OPTIONS.top_left);
@@ -1049,9 +1049,14 @@ const BORDER_PROPS = {
               updateOptions(BORDER_JUNCTION_OPTIONS.bottom_left);
               return "└";
             }
-          }
-          if (isBlank(eastCell)) {
-            return "╷";
+            if (isBlank(eastCell)) {
+              if (southCell && isBorderLeft(southCell)) {
+                updateOptions(BORDER_JUNCTION_OPTIONS.left_top_half);
+                return "╷";
+              }
+              updateOptions(BORDER_JUNCTION_OPTIONS.left_bottom_half);
+              return "╵";
+            }
           }
           return "│";
         },
@@ -1065,7 +1070,7 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        render: ({ eastCell, westCell, updateOptions }) => {
+        render: ({ eastCell, westCell, northCell, updateOptions }) => {
           if (westCell) {
             if (isBorderTop(westCell)) {
               updateOptions(BORDER_JUNCTION_OPTIONS.top_right);
@@ -1080,7 +1085,11 @@ const BORDER_PROPS = {
                 updateOptions(BORDER_JUNCTION_OPTIONS.bottom_left);
                 return "└";
               }
-              updateOptions(BORDER_JUNCTION_OPTIONS.right_bottom_half);
+              if (northCell && isBorderRight(northCell)) {
+                updateOptions(BORDER_JUNCTION_OPTIONS.right_top_half);
+                return "╷";
+              }
+              updateOptions(BORDER_JUNCTION_OPTIONS.right_top_half);
               return "╷";
             }
           }
