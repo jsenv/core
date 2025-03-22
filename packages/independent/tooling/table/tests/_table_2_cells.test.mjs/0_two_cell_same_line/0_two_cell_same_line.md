@@ -1,58 +1,84 @@
-# [0_two_cell_same_line](../../table_2_cells.test.mjs#L63)
+# [0_two_cell_same_line](../../table_2_cells.test.mjs#L12)
 
 ```js
-const keys = Object.keys(sameLineScenarios);
-for (const scenario of keys) {
-  const [firstCellProps, secondCellProps] = sameLineScenarios[scenario];
-  const text = run(
-    [
-      [
-        { value: "1", ...firstCellProps },
-        { value: "2", ...secondCellProps },
-      ],
-    ],
+const right_and_left = renderTable([
+  [
+    { value: "a", borderRight: {} },
+    { value: "b", borderLeft: {} },
+  ],
+]);
+const top_right_and_bottom_left = renderTable([
+  [
+    { value: "a", borderTop: {}, borderRight: {} },
+    { value: "b", borderBottom: {}, borderLeft: {} },
+  ],
+]);
+const bottom_right_and_top_left = renderTable([
+  [
     {
-      ansi: false,
+      value: "a",
+      borderBottom: {},
+      borderRight: {},
     },
-  );
-  console.log(`--- ${scenario} ---
+    {
+      value: "b",
+      borderTop: {},
+      borderLeft: {},
+    },
+  ],
+]);
+const bottom_left_and_top_right = renderTable([
+  [
+    {
+      value: "a",
+      borderBottom: {},
+      borderLeft: {},
+    },
+    {
+      value: "b",
+      borderTop: {},
+      borderRight: {},
+    },
+  ],
+]);
+const all = renderTable([
+  [
+    { value: "a", border: {} },
+    { value: "b", border: {} },
+  ],
+]);
 
-${text}
-`);
-}
+const results = {
+  right_and_left,
+  top_right_and_bottom_left,
+  bottom_right_and_top_left,
+  bottom_left_and_top_right,
+  all,
+};
+console.log(renderNamedSections(results));
 ```
 
-# 1/2 logs
+# 1/2 console.log
 
 ```console
 --- right_and_left ---
-
- "1" │ "2" 
-
+ a │ b 
 --- top_right_and_bottom_left ---
-
-─────┐     
- "1" │ "2" 
-     └─────
-
+───┐   
+ a │ b 
+   └───
 --- bottom_right_and_top_left ---
-
-     ┌─────
- "1" │ "2" 
-─────┘     
-
+   ┌───
+ a │ b 
+───┘   
 --- bottom_left_and_top_right ---
-
-      ─────┐
-│ "1"  "2" │
-└─────      
-
---- all_around ---
-
-┌─────┬─────┐
-│ "1" │ "2" │
-└─────┴─────┘
-
+    ───┐
+│ a  b │
+└───    
+--- all ---
+┌───┬───┐
+│ a │ b │
+└───┴───┘
 ```
 
 # 2/2 return
