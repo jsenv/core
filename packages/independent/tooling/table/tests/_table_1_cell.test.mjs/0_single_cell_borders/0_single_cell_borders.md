@@ -3,10 +3,10 @@
 ```js
 console.log(
   renderNamedSections({
-    none,
-    // top,
+    //  none,
+    top,
     // left,
-    // bottom,
+    bottom,
     // right,
     // top_left,
     // top_right,
@@ -26,8 +26,13 @@ console.log(
 # 1/2 console.log
 
 ```console
---- none ---
+--- top ---
+───
  a 
+
+--- bottom ---
+ a 
+───
 
 ```
 

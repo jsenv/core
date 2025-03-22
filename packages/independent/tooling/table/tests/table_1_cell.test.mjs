@@ -3,11 +3,11 @@ import { renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
-  const none = renderTable([[{ value: "a", border: null }]]);
-  // const top = renderTable([[{ value: "a", borderTop: {} }]]);
-  // const left = renderTable([[{ value: "a", borderLeft: {} }]]);
+  // const none = renderTable([[{ value: "a", border: null }]]);
+  const top = renderTable([[{ value: "a", borderTop: {} }]]);
+  const left = renderTable([[{ value: "a", borderLeft: {} }]]);
   // const right = renderTable([[{ value: "a", borderRight: {} }]]);
-  // const bottom = renderTable([[{ value: "a", borderBottom: {} }]]);
+  const bottom = renderTable([[{ value: "a", borderBottom: {} }]]);
   // const top_left = renderTable([
   //   [
   //     {
@@ -123,10 +123,10 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
   test(`0_single_cell_borders`, () => {
     console.log(
       renderNamedSections({
-        none,
-        // top,
-        // left,
-        // bottom,
+        //  none,
+        top,
+        left,
+        bottom,
         // right,
         // top_left,
         // top_right,

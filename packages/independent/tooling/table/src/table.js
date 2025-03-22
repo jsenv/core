@@ -505,8 +505,44 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         let x = 0;
         let lineText = "";
         for (const cell of cells) {
-          const cellLineText = renderCell(cell, { rowHeight, x, lineIndex });
-          lineText += cellLineText;
+          const cellLineText = renderCell(cell, {
+            columnWidth: columnWidthMap.get(x),
+            rowHeight,
+            lineIndex,
+          });
+          let borderLeftLineText;
+          let borderRightLineText;
+          const borderLeftColumn = borderLeftPerColumnMap.get(x);
+          if (borderLeftColumn) {
+            const borderLeftCell = borderLeftColumn[x];
+            if (borderLeftCell) {
+              borderLeftLineText = renderCell(borderLeftCell, {
+                columnWidth: 1,
+                rowHeight,
+                lineIndex,
+              });
+            }
+          }
+          const borderRightColumn = borderRightPerColumnMap.get(x);
+          if (borderRightColumn) {
+            const borderRightCell = borderRightColumn[x];
+            if (borderRightCell) {
+              borderRightLineText = renderCell(borderRightCell, {
+                columnWidth: 1,
+                rowHeight,
+                lineIndex,
+              });
+            }
+          }
+          if (borderLeftLineText && borderRightLineText) {
+            lineText += borderLeftLineText + cellLineText + borderRightLineText;
+          } else if (borderLeftLineText) {
+            lineText += borderLeftLineText + cellLineText;
+          } else if (borderRightLineText) {
+            lineText += cellLineText + borderRightLineText;
+          } else {
+            lineText += cellLineText;
+          }
           x++;
         }
         rowText += lineText;
@@ -515,8 +551,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       }
       return rowText;
     };
-    const renderCell = (cell, { rowHeight, x, lineIndex }) => {
-      const columnWidth = columnWidthMap.get(x);
+    const renderCell = (cell, { columnWidth, rowHeight, lineIndex }) => {
       const {
         xAlign,
         xAlignChar = " ",
@@ -898,32 +933,32 @@ const createBorderLeftCell = (options) => createBorderCell("left", options);
 const createBorderRightCell = (options) => createBorderCell("right", options);
 const createBorderTopCell = (options) => createBorderCell("top", options);
 const createBorderBottomCell = (options) => createBorderCell("bottom", options);
-const createTopLeftBorderCell = (options) =>
-  createBorderCell("top_left", options);
-const createTopRightBorderCell = (options) =>
-  createBorderCell("top_right", options);
-const createBottomRightBorderCell = (options) =>
-  createBorderCell("bottom_right", options);
-const createBottomLeftBorderCell = (options) =>
-  createBorderCell("bottom_left", options);
-const createTopMidBorderCell = (options) =>
-  createBorderCell("top_mid", options);
-const createBottomMidBorderCell = (options) =>
-  createBorderCell("bottom_mid", options);
-const createRightMidBorderCell = (options) =>
-  createBorderCell("right_mid", options);
-const createLeftMidBorderCell = (options) =>
-  createBorderCell("left_mid", options);
+// const createTopLeftBorderCell = (options) =>
+//   createBorderCell("top_left", options);
+// const createTopRightBorderCell = (options) =>
+//   createBorderCell("top_right", options);
+// const createBottomRightBorderCell = (options) =>
+//   createBorderCell("bottom_right", options);
+// const createBottomLeftBorderCell = (options) =>
+//   createBorderCell("bottom_left", options);
+// const createTopMidBorderCell = (options) =>
+//   createBorderCell("top_mid", options);
+// const createBottomMidBorderCell = (options) =>
+//   createBorderCell("bottom_mid", options);
+// const createRightMidBorderCell = (options) =>
+//   createBorderCell("right_mid", options);
+// const createLeftMidBorderCell = (options) =>
+//   createBorderCell("left_mid", options);
 // const createMidBorderCell = (options) => createBorderCell("mid", options);
 
-const isBorderTopLeft = (cell) => cell.position === "top_left";
-const isBorderTopRight = (cell) => cell.position === "top_right";
-const isBorderLeft = (cell) => cell.position === "left";
-const isBorderRight = (cell) => cell.position === "right";
-const isBorderTop = (cell) => cell.position === "top";
-const isBorderBottom = (cell) => cell.position === "bottom";
-const isBorderBottomRight = (cell) => cell.position === "bottom_right";
-const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
+// const isBorderTopLeft = (cell) => cell.position === "top_left";
+// const isBorderTopRight = (cell) => cell.position === "top_right";
+// const isBorderLeft = (cell) => cell.position === "left";
+// const isBorderRight = (cell) => cell.position === "right";
+// const isBorderTop = (cell) => cell.position === "top";
+// const isBorderBottom = (cell) => cell.position === "bottom";
+// const isBorderBottomRight = (cell) => cell.position === "bottom_right";
+// const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
 
 // const isBlankCell = (cell) => cell.type === "blank";
 // blank cells are fluid cells that will take whatever size they are requested to take
