@@ -1,4 +1,4 @@
-# [0_two_cell_same_line](../../table_2_cells.test.mjs#L12)
+# [0_two_cell_same_line](../../table_2_cells.test.mjs#L8)
 
 ```js
 const right_and_left = renderTable([
