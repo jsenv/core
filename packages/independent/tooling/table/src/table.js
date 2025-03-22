@@ -631,7 +631,7 @@ const applyXAlign = (text, { width, desiredWidth, align, alignChar }) => {
 const createContentCell = (
   {
     value,
-    quoteAroundStrings = true,
+    quoteAroundStrings,
     color,
     format,
     bold,
