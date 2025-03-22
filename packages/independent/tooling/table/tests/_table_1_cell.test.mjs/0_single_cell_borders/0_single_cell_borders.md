@@ -1,84 +1,79 @@
-# [0_single_cell_borders](../../table_1_cell.test.mjs#L108)
+# [0_single_cell_borders](../../table_1_cell.test.mjs#L123)
 
 ```js
-const keys = Object.keys(scenarios);
-for (const scenario of keys) {
-  const text = run([[{ value: "1", ...scenarios[scenario] }]], {
-    ansi: false,
-  });
-  console.log(`--- ${scenario} ---
-
-${text}`);
-}
+console.log(
+  renderNamedSections({
+    none,
+    top,
+    left,
+    bottom,
+    right,
+    top_left,
+    top_right,
+    bottom_right,
+    bottom_left,
+    left_and_right,
+    top_and_bottom,
+    all_but_top,
+    all_but_right,
+    all_but_left,
+    all_but_bottom,
+    all,
+  }),
+);
 ```
 
-# 1/2 logs
+# 1/2 console.log
 
 ```console
 --- none ---
-
- "1" 
+ a 
 --- top ---
-
-─────
- "1" 
+───
+ a 
 --- left ---
-
-│ "1" 
---- right ---
-
- "1" │
+│ a 
 --- bottom ---
-
- "1" 
-─────
---- topLeft ---
-
-┌─────
-│ "1" 
---- topRight ---
-
-─────┐
- "1" │
---- bottomRight ---
-
- "1" │
-─────┘
---- bottomLeft ---
-
-│ "1" 
-└─────
---- leftAndRight ---
-
-│ "1" │
---- topAndBottom ---
-
-─────
- "1" 
-─────
---- allButTop ---
-
-│ "1" │
-└─────┘
---- allButRight ---
-
-┌─────
-│ "1" 
-└─────
---- allButLeft ---
-
-─────┐
- "1" │
-─────┘
---- allButBottom ---
-
-┌─────┐
-│ "1" │
+ a 
+───
+--- right ---
+ a │
+--- top_left ---
+┌───
+│ a 
+--- top_right ---
+───┐
+ a │
+--- bottom_right ---
+ a │
+───┘
+--- bottom_left ---
+│ a 
+└───
+--- left_and_right ---
+│ a │
+--- top_and_bottom ---
+───
+ a 
+───
+--- all_but_top ---
+│ a │
+└───┘
+--- all_but_right ---
+┌───
+│ a 
+└───
+--- all_but_left ---
+───┐
+ a │
+───┘
+--- all_but_bottom ---
+┌───┐
+│ a │
 --- all ---
-
-┌─────┐
-│ "1" │
-└─────┘
+┌───┐
+│ a │
+└───┘
 ```
 
 # 2/2 return

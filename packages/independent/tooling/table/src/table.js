@@ -666,7 +666,7 @@ const createContentCell = (
       }
     }
   } else {
-    text = value;
+    text = String(value);
   }
 
   if (ansi && bold) {
