@@ -1085,13 +1085,23 @@ const BORDER_PROPS = {
       {
         width: 1,
         render: ({ eastCell, updateOptions }) => {
-          if (eastCell && isBorderTop(eastCell)) {
-            updateOptions({
-              xAlign: "start",
-              xAlignChar: "─",
-              yAlign: "end",
-            });
-            return "┌";
+          if (eastCell) {
+            if (isBorderTop(eastCell)) {
+              updateOptions({
+                xAlign: "start",
+                xAlignChar: "─",
+                yAlign: "end",
+              });
+              return "┌";
+            }
+            if (isBorderBottom(eastCell)) {
+              updateOptions({
+                xAlign: "start",
+                xAlignChar: "─",
+                yAlign: "start",
+              });
+              return "└";
+            }
           }
           if (isBlank(eastCell)) {
             return "╷";
@@ -1109,14 +1119,25 @@ const BORDER_PROPS = {
       {
         width: 1,
         render: ({ westCell, updateOptions }) => {
-          if (westCell && isBorderTop(westCell)) {
-            updateOptions({
-              xAlign: "end",
-              yAlign: "start",
-              xAlignChar: "─",
-              yAlignChar: "│",
-            });
-            return "┐";
+          if (westCell) {
+            if (isBorderTop(westCell)) {
+              updateOptions({
+                xAlign: "end",
+                yAlign: "start",
+                xAlignChar: "─",
+                yAlignChar: "│",
+              });
+              return "┐";
+            }
+            if (isBorderBottom(westCell)) {
+              updateOptions({
+                xAlign: "end",
+                yAlign: "end",
+                xAlignChar: "─",
+                yAlignChar: "│",
+              });
+              return "┘";
+            }
           }
           if (isBlank(westCell)) {
             return "╷";
