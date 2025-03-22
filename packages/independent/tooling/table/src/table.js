@@ -58,7 +58,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     const borderRightArray = borderRightPerColumnMap.get(x);
     if (!borderRightArray) {
       const array = [];
-      borderRightPerColumnMap.set(x + 1, array);
+      borderRightPerColumnMap.set(x, array);
       array[y] = borderRightCell;
     } else {
       borderRightArray[x] = borderRightCell;

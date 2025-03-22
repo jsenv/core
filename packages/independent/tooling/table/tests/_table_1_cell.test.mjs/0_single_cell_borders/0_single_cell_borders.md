@@ -5,9 +5,9 @@ console.log(
   renderNamedSections({
     //  none,
     top,
-    // left,
+    left,
     bottom,
-    // right,
+    right,
     // top_left,
     // top_right,
     // bottom_right,
@@ -30,9 +30,15 @@ console.log(
 ───
  a 
 
+--- left ---
+│ a 
+
 --- bottom ---
  a 
 ───
+
+--- right ---
+ a │
 
 ```
 
