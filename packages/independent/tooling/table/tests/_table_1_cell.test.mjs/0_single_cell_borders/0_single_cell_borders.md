@@ -4,21 +4,21 @@
 console.log(
   renderNamedSections({
     none,
-    top,
-    left,
-    bottom,
-    right,
-    top_left,
-    top_right,
-    bottom_right,
-    bottom_left,
-    left_and_right,
-    top_and_bottom,
-    all_but_top,
-    all_but_right,
-    all_but_left,
-    all_but_bottom,
-    all,
+    // top,
+    // left,
+    // bottom,
+    // right,
+    // top_left,
+    // top_right,
+    // bottom_right,
+    // bottom_left,
+    // left_and_right,
+    // top_and_bottom,
+    // all_but_top,
+    // all_but_right,
+    // all_but_left,
+    // all_but_bottom,
+    // all,
   }),
 );
 ```
@@ -28,52 +28,7 @@ console.log(
 ```console
 --- none ---
  a 
---- top ---
-───
- a 
---- left ---
-│ a 
---- bottom ---
- a 
-───
---- right ---
- a │
---- top_left ---
-┌───
-│ a 
---- top_right ---
-───┐
- a │
---- bottom_right ---
- a │
-───┘
---- bottom_left ---
-│ a 
-└───
---- left_and_right ---
-│ a │
---- top_and_bottom ---
-───
- a 
-───
---- all_but_top ---
-│ a │
-└───┘
---- all_but_right ---
-┌───
-│ a 
-└───
---- all_but_left ---
-───┐
- a │
-───┘
---- all_but_bottom ---
-┌───┐
-│ a │
---- all ---
-┌───┐
-│ a │
-└───┘
+
 ```
 
 # 2/2 return

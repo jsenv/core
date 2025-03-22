@@ -16,14 +16,61 @@ import stringWidth from "string-width";
 export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const grid = [];
 
-  // inject borders
+  const borderTopPerRowMap = new Map();
+  const borderBottomPerRowMap = new Map();
+  const borderLeftPerColumnMap = new Map();
+  const borderRightPerColumnMap = new Map();
+  const onBorderTop = (borderTop, x, y) => {
+    const borderTopCell = createBorderTopCell(borderTop);
+    const borderTopArray = borderTopPerRowMap.get(y);
+    if (!borderTopArray) {
+      const array = [];
+      borderTopPerRowMap.set(y, array);
+      array[x] = borderTopCell;
+    } else {
+      borderTopArray[x] = borderTopCell;
+    }
+  };
+  const onBorderBottom = (borderBottom, x, y) => {
+    const borderBottomCell = createBorderBottomCell(borderBottom);
+    const borderBottomArray = borderBottomPerRowMap.get(y);
+    if (!borderBottomArray) {
+      const array = [];
+      borderBottomPerRowMap.set(y, array);
+      array[x] = borderBottomCell;
+    } else {
+      borderBottomArray[x] = borderBottomCell;
+    }
+  };
+  const onBorderLeft = (borderLeft, x, y) => {
+    const borderLeftCell = createBorderLeftCell(borderLeft);
+    const borderLeftArray = borderLeftPerColumnMap.get(x);
+    if (!borderLeftArray) {
+      const array = [];
+      borderLeftPerColumnMap.set(x, array);
+      array[y] = borderLeftCell;
+    } else {
+      borderLeftArray[x] = borderLeftCell;
+    }
+  };
+  const onBorderRight = (borderRight, x, y) => {
+    const borderRightCell = createBorderRightCell(borderRight);
+    const borderRightArray = borderRightPerColumnMap.get(x);
+    if (!borderRightArray) {
+      const array = [];
+      borderRightPerColumnMap.set(x + 1, array);
+      array[y] = borderRightCell;
+    } else {
+      borderRightArray[x] = borderRightCell;
+    }
+  };
+
+  // detect borders
   {
     let y = 0;
     for (const inputLine of inputGrid) {
       let x = 0;
-      const topCells = [];
-      const line = [];
-      const bottomCells = [];
+      const row = [];
       for (const inputCell of inputLine) {
         const {
           border,
@@ -33,474 +80,411 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           borderBottom = border,
           ...props
         } = inputCell;
-
-        const leftCell = borderLeft
-          ? createBorderLeftCell(borderLeft)
-          : blankCell;
-        line[x] = leftCell;
-        x++;
-
-        const topCell = borderTop ? createBorderTopCell(borderTop) : blankCell;
-        topCells[x] = topCell;
-        const bottomCell = borderBottom
-          ? createBorderBottomCell(borderBottom)
-          : blankCell;
-        bottomCells[x] = bottomCell;
         const contentCell = createContentCell(props, { ansi });
-        line[x] = contentCell;
-        x++;
-
-        const rightCell = borderRight
-          ? createBorderRightCell(borderRight)
-          : blankCell;
-        line[x] = rightCell;
-        x++;
-      }
-
-      {
-        const rowAbove = [];
-        let x = 0;
-        while (x < line.length) {
-          const topCell = topCells[x];
-          let aboveCell;
-          if (topCell) {
-            aboveCell = topCell;
-          } else {
-            const cellEast = topCells[x + 1];
-            if (cellEast && isBorderTop(cellEast)) {
-              aboveCell = createTopLeftBorderCell();
-            } else {
-              const cellWest = topCells[x - 1];
-              if (cellWest && isBorderTop(cellWest)) {
-                aboveCell = createTopRightBorderCell();
-              } else {
-                aboveCell = blankCell;
-              }
-            }
-          }
-          rowAbove[x] = aboveCell;
-          x++;
+        row[x] = contentCell;
+        if (borderLeft) {
+          onBorderLeft(borderLeft, x, y);
         }
-        grid[y] = rowAbove;
-        y++;
+        if (borderTop) {
+          onBorderTop(borderTop, x, y);
+        }
+        if (borderBottom) {
+          onBorderBottom(borderBottom, x, y);
+        }
+        if (borderRight) {
+          onBorderRight(borderRight, x, y);
+        }
+        x++;
       }
-
-      grid[y] = line;
+      grid[y] = row;
       y++;
-
-      {
-        const rowBelow = [];
-        let x = 0;
-        while (x < line.length) {
-          const bottomCell = bottomCells[x];
-          let belowCell;
-          if (bottomCell) {
-            belowCell = bottomCell;
-          } else {
-            const cellEast = bottomCells[x + 1];
-            if (cellEast && isBorderBottom(cellEast)) {
-              belowCell = createBottomLeftBorderCell();
-            } else {
-              const cellWest = bottomCells[x - 1];
-              if (cellWest && isBorderBottom(cellWest)) {
-                belowCell = createBottomRightBorderCell();
-              } else {
-                belowCell = blankCell;
-              }
-            }
-          }
-          rowBelow[x] = belowCell;
-          x++;
-        }
-        grid[y] = rowBelow;
-        y++;
-      }
     }
   }
 
-  // transform connecting borders into blank cells when they are not needed
-  // and eventually transform blank cells back into connecting borders
-  {
-    const columnContainingLeftBorderSet = new Set();
-    const columnContainingRightBorderSet = new Set();
-    const columnContainsLeftBorder = (x) =>
-      columnContainingLeftBorderSet.has(x);
-    const columnContainsRightBorder = (x) =>
-      columnContainingRightBorderSet.has(x);
+  // const columnHasLeftBorder = (x) => borderLeftPerColumnMap.has(x);
+  // const columnHasRightBorder = (x) => borderRightPerColumnMap.has(x);
+  // // transform connecting borders into blank cells when they are not needed
+  // // and eventually transform blank cells back into connecting borders
+  // {
+  //   {
+  //     let y = 0;
+  //     while (y < grid.length) {
+  //       const line = grid[y];
+  //       let x = 0;
+  //       for (const cell of line) {
+  //         if (isBorderLeft(cell)) {
+  //           columnContainingLeftBorderSet.add(x);
+  //         } else if (isBorderRight(cell)) {
+  //           columnContainingRightBorderSet.add(x);
+  //         }
+  //         x++;
+  //       }
+  //       y++;
+  //     }
+  //   }
 
-    {
-      let y = 0;
-      while (y < grid.length) {
-        const line = grid[y];
-        let x = 0;
-        for (const cell of line) {
-          if (isBorderLeft(cell)) {
-            columnContainingLeftBorderSet.add(x);
-          } else if (isBorderRight(cell)) {
-            columnContainingRightBorderSet.add(x);
-          }
-          x++;
-        }
-        y++;
-      }
-    }
+  //   mutateGrid(grid, (cell, { x, y }) => {
+  //     if (isBorderTopLeft(cell)) {
+  //       if (columnContainsLeftBorder(x)) {
+  //         const southCell = grid[y + 1][x];
+  //         if (isBorderLeft(southCell)) {
+  //           return cell;
+  //         }
+  //         return createBorderTopCell();
+  //       }
+  //       if (columnContainsRightBorder(x - 1)) {
+  //         return cell;
+  //       }
+  //       return blankCell;
+  //     }
+  //     if (isBorderTopRight(cell)) {
+  //       if (columnContainsRightBorder(x)) {
+  //         const southCell = grid[y + 1][x];
+  //         if (isBorderRight(southCell)) {
+  //           return cell;
+  //         }
+  //         return createBorderTopCell();
+  //       }
+  //       return blankCell;
+  //     }
+  //     if (isBorderBottomRight(cell)) {
+  //       if (columnContainsRightBorder(x)) {
+  //         const northCell = grid[y - 1][x];
+  //         if (isBorderRight(northCell)) {
+  //           return cell;
+  //         }
+  //         return createBorderBottomCell();
+  //       }
+  //       if (columnContainsLeftBorder(x + 1)) {
+  //         return cell;
+  //       }
+  //       return blankCell;
+  //     }
+  //     if (isBorderBottomLeft(cell)) {
+  //       if (columnContainsLeftBorder(x)) {
+  //         const northCell = grid[y - 1][x];
+  //         if (isBorderLeft(northCell)) {
+  //           return cell;
+  //         }
+  //         return createBorderBottomCell();
+  //       }
+  //       if (columnContainsRightBorder(x - 1)) {
+  //         return cell;
+  //       }
+  //       return blankCell;
+  //     }
+  //     return cell;
+  //   });
+  // }
 
-    mutateGrid(grid, (cell, { x, y }) => {
-      if (isBorderTopLeft(cell)) {
-        if (columnContainsLeftBorder(x)) {
-          const southCell = grid[y + 1][x];
-          if (isBorderLeft(southCell)) {
-            return cell;
-          }
-          return createBorderTopCell();
-        }
-        if (columnContainsRightBorder(x - 1)) {
-          return cell;
-        }
-        return blankCell;
-      }
-      if (isBorderTopRight(cell)) {
-        if (columnContainsRightBorder(x)) {
-          const southCell = grid[y + 1][x];
-          if (isBorderRight(southCell)) {
-            return cell;
-          }
-          return createBorderTopCell();
-        }
-        return blankCell;
-      }
-      if (isBorderBottomRight(cell)) {
-        if (columnContainsRightBorder(x)) {
-          const northCell = grid[y - 1][x];
-          if (isBorderRight(northCell)) {
-            return cell;
-          }
-          return createBorderBottomCell();
-        }
-        if (columnContainsLeftBorder(x + 1)) {
-          return cell;
-        }
-        return blankCell;
-      }
-      if (isBorderBottomLeft(cell)) {
-        if (columnContainsLeftBorder(x)) {
-          const northCell = grid[y - 1][x];
-          if (isBorderLeft(northCell)) {
-            return cell;
-          }
-          return createBorderBottomCell();
-        }
-        if (columnContainsRightBorder(x - 1)) {
-          return cell;
-        }
-        return blankCell;
-      }
-      return cell;
-    });
-  }
+  // // collapse left and right borders
+  // {
+  //   // if every right border can collapse with the left border next to it
+  //   // then we collapse all right borders of the column
+  //   const getHowToCollapseAdjacentCells = (leftCell, rightCell) => {
+  //     if (isBlankCell(leftCell)) {
+  //       return [
+  //         // left cell becomes right cell
+  //         rightCell,
+  //         // right cell becomes blank (it's redundant)
+  //         blankCell,
+  //       ];
+  //     }
+  //     if (isBlankCell(rightCell)) {
+  //       // keep as it is
+  //       return [leftCell, rightCell];
+  //     }
+  //     if (isBorderTopRight(leftCell) && isBorderTopLeft(rightCell)) {
+  //       return [
+  //         createTopMidBorderCell({ color: leftCell.color }),
+  //         blankCell, // merged into the left cell
+  //       ];
+  //     }
+  //     if (isBorderBottomRight(leftCell) && isBorderBottomLeft(rightCell)) {
+  //       return [
+  //         createBottomMidBorderCell({ color: leftCell.color }),
+  //         blankCell, // merged into the left cell
+  //       ];
+  //     }
+  //     if (isBorderRight(leftCell) && isBorderLeft(rightCell)) {
+  //       return [
+  //         leftCell,
+  //         blankCell, // merged into the left cell
+  //       ];
+  //     }
 
-  // collapse left and right borders
-  {
-    // if every right border can collapse with the left border next to it
-    // then we collapse all right borders of the column
-    const getHowToCollapseAdjacentCells = (leftCell, rightCell) => {
-      if (isBlankCell(leftCell)) {
-        return [
-          // left cell becomes right cell
-          rightCell,
-          // right cell becomes blank (it's redundant)
-          blankCell,
-        ];
-      }
-      if (isBlankCell(rightCell)) {
-        // keep as it is
-        return [leftCell, rightCell];
-      }
-      if (isBorderTopRight(leftCell) && isBorderTopLeft(rightCell)) {
-        return [
-          createTopMidBorderCell({ color: leftCell.color }),
-          blankCell, // merged into the left cell
-        ];
-      }
-      if (isBorderBottomRight(leftCell) && isBorderBottomLeft(rightCell)) {
-        return [
-          createBottomMidBorderCell({ color: leftCell.color }),
-          blankCell, // merged into the left cell
-        ];
-      }
-      if (isBorderRight(leftCell) && isBorderLeft(rightCell)) {
-        return [
-          leftCell,
-          blankCell, // merged into the left cell
-        ];
-      }
+  //     return null;
+  //   };
 
-      return null;
-    };
+  //   let x = 2;
+  //   const columnCount = grid[0].length;
+  //   while (x < columnCount - 1) {
+  //     let hasConlict;
+  //     let y = 0;
+  //     const collapseInfoSet = new Set();
+  //     while (y < grid.length) {
+  //       const columnCell = grid[y][x];
+  //       const eastColumnCell = grid[y][x + 1];
+  //       const howToCollapseCells = getHowToCollapseAdjacentCells(
+  //         columnCell,
+  //         eastColumnCell,
+  //         x,
+  //         y,
+  //       );
+  //       if (!howToCollapseCells) {
+  //         hasConlict = true;
+  //         break;
+  //       }
+  //       collapseInfoSet.add({ x, y, howToCollapseCells });
+  //       y++;
+  //     }
+  //     if (!hasConlict) {
+  //       for (const collapseInfo of collapseInfoSet) {
+  //         const { x, y, howToCollapseCells } = collapseInfo;
+  //         const collapsedCells = Array.isArray(howToCollapseCells)
+  //           ? howToCollapseCells
+  //           : howToCollapseCells();
+  //         const [leftCollapsed, rightCollapsed] = collapsedCells;
+  //         grid[y][x] = leftCollapsed;
+  //         grid[y][x + 1] = rightCollapsed;
+  //       }
+  //     }
+  //     x += 3;
+  //   }
+  // }
 
-    let x = 2;
-    const columnCount = grid[0].length;
-    while (x < columnCount - 1) {
-      let hasConlict;
-      let y = 0;
-      const collapseInfoSet = new Set();
-      while (y < grid.length) {
-        const columnCell = grid[y][x];
-        const eastColumnCell = grid[y][x + 1];
-        const howToCollapseCells = getHowToCollapseAdjacentCells(
-          columnCell,
-          eastColumnCell,
-          x,
-          y,
-        );
-        if (!howToCollapseCells) {
-          hasConlict = true;
-          break;
-        }
-        collapseInfoSet.add({ x, y, howToCollapseCells });
-        y++;
-      }
-      if (!hasConlict) {
-        for (const collapseInfo of collapseInfoSet) {
-          const { x, y, howToCollapseCells } = collapseInfo;
-          const collapsedCells = Array.isArray(howToCollapseCells)
-            ? howToCollapseCells
-            : howToCollapseCells();
-          const [leftCollapsed, rightCollapsed] = collapsedCells;
-          grid[y][x] = leftCollapsed;
-          grid[y][x + 1] = rightCollapsed;
-        }
-      }
-      x += 3;
-    }
-  }
+  // // collapse top and bottom borders
+  // {
+  //   const getHowToCollapseAdjacentCells = (cell, cellBelow, x, y) => {
+  //     if (
+  //       isBorderBottom(cell) &&
+  //       x % 3 === 0 && // there is a bottom left every 3 column
+  //       y <= grid.length - 2 &&
+  //       isBlankCell(grid[y + 1][x]) &&
+  //       isBorderLeft(grid[y + 2][x]) // south south cell is a border left
+  //     ) {
+  //       return [createTopLeftBorderCell(), cellBelow];
+  //     }
+  //     if (
+  //       isBorderTop(cellBelow) &&
+  //       x % 3 === 0 &&
+  //       y > 1 &&
+  //       isBorderLeft(grid[y - 1][x]) // north cell is a border left
+  //     ) {
+  //       return [createBottomLeftBorderCell(), cell];
+  //     }
+  //     if (isBlankCell(cell)) {
+  //       return [
+  //         cellBelow, // cell becomes cell below
+  //         blankCell, // cell below becomes blank
+  //       ];
+  //     }
+  //     if (isBlankCell(cellBelow)) {
+  //       return [
+  //         // keep both as is
+  //         cell,
+  //         cellBelow,
+  //       ];
+  //     }
+  //     if (isBorderTopRight(cell) && isBorderTopLeft(cellBelow)) {
+  //       return [
+  //         createTopMidBorderCell({ color: cell.color }),
+  //         blankCell, // merged into the top cell
+  //       ];
+  //     }
+  //     if (isBorderBottomRight(cell) && isBorderBottomLeft(cellBelow)) {
+  //       return [
+  //         createBottomMidBorderCell({ color: cell.color }),
+  //         blankCell, // merged into the cell
+  //       ];
+  //     }
+  //     if (isBorderBottomLeft(cell) && isBorderTopLeft(cellBelow)) {
+  //       return [
+  //         createLeftMidBorderCell({ color: cell.color }),
+  //         blankCell, // merged into the cell
+  //       ];
+  //     }
+  //     if (isBorderBottomRight(cell) && isBorderTopRight(cellBelow)) {
+  //       return [
+  //         createRightMidBorderCell({ color: cell.color }),
+  //         blankCell, // merged into the cell
+  //       ];
+  //     }
+  //     if (isBorderBottomRight(cell) && isBorderTop(cellBelow)) {
+  //       return [
+  //         cell,
+  //         blankCell, // merged into the cell
+  //       ];
+  //     }
+  //     if (isBorderBottom(cell) && isBorderTopLeft(cellBelow)) {
+  //       return [
+  //         cellBelow,
+  //         blankCell, // merged into the top cell
+  //       ];
+  //     }
+  //     if (isBorderBottom(cell) && isBorderTop(cellBelow)) {
+  //       return [
+  //         cell,
+  //         blankCell, // merged into the top cell
+  //       ];
+  //     }
+  //     return null;
+  //   };
 
-  // collapse top and bottom borders
-  {
-    const getHowToCollapseAdjacentCells = (cell, cellBelow, x, y) => {
-      if (
-        isBorderBottom(cell) &&
-        x % 3 === 0 && // there is a bottom left every 3 column
-        y <= grid.length - 2 &&
-        isBlankCell(grid[y + 1][x]) &&
-        isBorderLeft(grid[y + 2][x]) // south south cell is a border left
-      ) {
-        return [createTopLeftBorderCell(), cellBelow];
-      }
-      if (
-        isBorderTop(cellBelow) &&
-        x % 3 === 0 &&
-        y > 1 &&
-        isBorderLeft(grid[y - 1][x]) // north cell is a border left
-      ) {
-        return [createBottomLeftBorderCell(), cell];
-      }
-      if (isBlankCell(cell)) {
-        return [
-          cellBelow, // cell becomes cell below
-          blankCell, // cell below becomes blank
-        ];
-      }
-      if (isBlankCell(cellBelow)) {
-        return [
-          // keep both as is
-          cell,
-          cellBelow,
-        ];
-      }
-      if (isBorderTopRight(cell) && isBorderTopLeft(cellBelow)) {
-        return [
-          createTopMidBorderCell({ color: cell.color }),
-          blankCell, // merged into the top cell
-        ];
-      }
-      if (isBorderBottomRight(cell) && isBorderBottomLeft(cellBelow)) {
-        return [
-          createBottomMidBorderCell({ color: cell.color }),
-          blankCell, // merged into the cell
-        ];
-      }
-      if (isBorderBottomLeft(cell) && isBorderTopLeft(cellBelow)) {
-        return [
-          createLeftMidBorderCell({ color: cell.color }),
-          blankCell, // merged into the cell
-        ];
-      }
-      if (isBorderBottomRight(cell) && isBorderTopRight(cellBelow)) {
-        return [
-          createRightMidBorderCell({ color: cell.color }),
-          blankCell, // merged into the cell
-        ];
-      }
-      if (isBorderBottomRight(cell) && isBorderTop(cellBelow)) {
-        return [
-          cell,
-          blankCell, // merged into the cell
-        ];
-      }
-      if (isBorderBottom(cell) && isBorderTopLeft(cellBelow)) {
-        return [
-          cellBelow,
-          blankCell, // merged into the top cell
-        ];
-      }
-      if (isBorderBottom(cell) && isBorderTop(cellBelow)) {
-        return [
-          cell,
-          blankCell, // merged into the top cell
-        ];
-      }
-      return null;
-    };
+  //   let y = 2;
+  //   const lineCount = grid.length;
+  //   while (y < lineCount - 1) {
+  //     let hasConflict;
+  //     let x = 0;
+  //     const line = grid[y];
+  //     const lineBelow = grid[y + 1];
+  //     const collapseInfoSet = new Set();
+  //     while (x < line.length) {
+  //       const cell = line[x];
+  //       const cellBelow = lineBelow[x];
+  //       const howToCollapseCells = getHowToCollapseAdjacentCells(
+  //         cell,
+  //         cellBelow,
+  //         x,
+  //         y,
+  //       );
+  //       if (!howToCollapseCells) {
+  //         hasConflict = true;
+  //         break;
+  //       }
+  //       collapseInfoSet.add({ x, y, howToCollapseCells });
+  //       x++;
+  //     }
+  //     if (!hasConflict) {
+  //       for (const collapseInfo of collapseInfoSet) {
+  //         const { x, y, howToCollapseCells } = collapseInfo;
+  //         const collapsedCells = Array.isArray(howToCollapseCells)
+  //           ? howToCollapseCells
+  //           : howToCollapseCells();
+  //         const [cellCollapsed, cellBelowCollapsed] = collapsedCells;
+  //         grid[y][x] = cellCollapsed;
+  //         grid[y + 1][x] = cellBelowCollapsed;
+  //       }
+  //     }
+  //     y += 3;
+  //   }
+  // }
 
-    let y = 2;
-    const lineCount = grid.length;
-    while (y < lineCount - 1) {
-      let hasConflict;
-      let x = 0;
-      const line = grid[y];
-      const lineBelow = grid[y + 1];
-      const collapseInfoSet = new Set();
-      while (x < line.length) {
-        const cell = line[x];
-        const cellBelow = lineBelow[x];
-        const howToCollapseCells = getHowToCollapseAdjacentCells(
-          cell,
-          cellBelow,
-          x,
-          y,
-        );
-        if (!howToCollapseCells) {
-          hasConflict = true;
-          break;
-        }
-        collapseInfoSet.add({ x, y, howToCollapseCells });
-        x++;
-      }
-      if (!hasConflict) {
-        for (const collapseInfo of collapseInfoSet) {
-          const { x, y, howToCollapseCells } = collapseInfo;
-          const collapsedCells = Array.isArray(howToCollapseCells)
-            ? howToCollapseCells
-            : howToCollapseCells();
-          const [cellCollapsed, cellBelowCollapsed] = collapsedCells;
-          grid[y][x] = cellCollapsed;
-          grid[y + 1][x] = cellBelowCollapsed;
-        }
-      }
-      y += 3;
-    }
-  }
-
-  // remove lines that are only blank cells (no visible borders)
-  {
-    let y = 0;
-    while (y < grid.length) {
-      const line = grid[y];
-      let lineContainsNonBlankCell = false;
-      for (const cell of line) {
-        if (isBlankCell(cell)) {
-          continue;
-        }
-        lineContainsNonBlankCell = true;
-        break;
-      }
-      if (lineContainsNonBlankCell) {
-        y++;
-        continue;
-      }
-      grid.splice(y, 1);
-    }
-  }
-  // remove columns that are only blank cells (no visible borders)
-  {
-    let x = 0;
-    let columnCount = grid[0].length;
-    while (x < columnCount) {
-      let columnContainsNonBlankCell = false;
-      let y = 0;
-      while (y < grid.length) {
-        const columnCell = grid[y][x];
-        if (isBlankCell(columnCell)) {
-          y++;
-          continue;
-        }
-        columnContainsNonBlankCell = true;
-        break;
-      }
-      if (columnContainsNonBlankCell) {
-        x++;
-        continue;
-      }
-      // get rid of this cell on every line (remove the full column)
-      y = 0;
-      while (y < grid.length) {
-        const line = grid[y];
-        line.splice(x, 1);
-        columnCount--;
-        y++;
-      }
-    }
-  }
+  // // remove lines that are only blank cells (no visible borders)
+  // {
+  //   let y = 0;
+  //   while (y < grid.length) {
+  //     const line = grid[y];
+  //     let lineContainsNonBlankCell = false;
+  //     for (const cell of line) {
+  //       if (isBlankCell(cell)) {
+  //         continue;
+  //       }
+  //       lineContainsNonBlankCell = true;
+  //       break;
+  //     }
+  //     if (lineContainsNonBlankCell) {
+  //       y++;
+  //       continue;
+  //     }
+  //     grid.splice(y, 1);
+  //   }
+  // }
+  // // remove columns that are only blank cells (no visible borders)
+  // {
+  //   let x = 0;
+  //   let columnCount = grid[0].length;
+  //   while (x < columnCount) {
+  //     let columnContainsNonBlankCell = false;
+  //     let y = 0;
+  //     while (y < grid.length) {
+  //       const columnCell = grid[y][x];
+  //       if (isBlankCell(columnCell)) {
+  //         y++;
+  //         continue;
+  //       }
+  //       columnContainsNonBlankCell = true;
+  //       break;
+  //     }
+  //     if (columnContainsNonBlankCell) {
+  //       x++;
+  //       continue;
+  //     }
+  //     // get rid of this cell on every line (remove the full column)
+  //     y = 0;
+  //     while (y < grid.length) {
+  //       const line = grid[y];
+  //       line.splice(x, 1);
+  //       columnCount--;
+  //       y++;
+  //     }
+  //   }
+  // }
 
   // measure column and row dimensions (biggest of all cells in the column/row)
   const columnWidthMap = new Map();
   const rowHeightMap = new Map();
   {
+    const measureCell = (cell) => {
+      const {
+        rects,
+        leftSpacing = 0,
+        rightSpacing = 0,
+        topSpacing = 0,
+        bottomSpacing = 0,
+      } = cell;
+      let cellWidth = -1;
+      for (const rect of rects) {
+        let { width } = rect;
+        if (width === "fill") {
+          continue;
+        }
+        if (leftSpacing || rightSpacing) {
+          width += leftSpacing + rightSpacing;
+          rect.width = width;
+          const { render } = rect;
+          rect.render = (...args) => {
+            const text = render(...args);
+            return " ".repeat(leftSpacing) + text + " ".repeat(rightSpacing);
+          };
+        }
+        if (width > cellWidth) {
+          cellWidth = width;
+        }
+      }
+      if (topSpacing) {
+        let lineToInsertAbove = topSpacing;
+        while (lineToInsertAbove--) {
+          rects.unshift({
+            width: "fill",
+            render: ({ columnWidth }) => " ".repeat(columnWidth),
+          });
+        }
+      }
+      if (bottomSpacing) {
+        let lineToInsertBelow = bottomSpacing;
+        while (lineToInsertBelow--) {
+          rects.push({
+            width: "fill",
+            render: ({ columnWidth }) => " ".repeat(columnWidth),
+          });
+        }
+      }
+      const cellHeight = rects.length;
+
+      return [cellWidth, cellHeight];
+    };
+
     let y = 0;
     for (const line of grid) {
       let x = 0;
       for (const cell of line) {
         const columnWidth = columnWidthMap.get(x) || -1;
         const rowHeight = rowHeightMap.get(y) || -1;
-        const {
-          rects,
-          leftSpacing = 0,
-          rightSpacing = 0,
-          topSpacing = 0,
-          bottomSpacing = 0,
-        } = cell;
-        let cellBiggestWidth = -1;
-        for (const rect of rects) {
-          let { width } = rect;
-          if (width === "fill") {
-            continue;
-          }
-          if (leftSpacing || rightSpacing) {
-            width += leftSpacing + rightSpacing;
-            rect.width = width;
-            const { render } = rect;
-            rect.render = (...args) => {
-              const text = render(...args);
-              return " ".repeat(leftSpacing) + text + " ".repeat(rightSpacing);
-            };
-          }
-          if (width > cellBiggestWidth) {
-            cellBiggestWidth = width;
-          }
+        const [cellWidth, cellHeight] = measureCell(cell);
+        if (cellWidth > columnWidth) {
+          columnWidthMap.set(x, cellWidth);
         }
-        if (cellBiggestWidth > columnWidth) {
-          columnWidthMap.set(x, cellBiggestWidth);
-        }
-        if (topSpacing) {
-          let lineToInsertAbove = topSpacing;
-          while (lineToInsertAbove--) {
-            rects.unshift({
-              width: "fill",
-              render: ({ columnWidth }) => " ".repeat(columnWidth),
-            });
-          }
-        }
-        if (bottomSpacing) {
-          let lineToInsertBelow = bottomSpacing;
-          while (lineToInsertBelow--) {
-            rects.push({
-              width: "fill",
-              render: ({ columnWidth }) => " ".repeat(columnWidth),
-            });
-          }
-        }
-        const cellHeight = rects.length;
         if (cellHeight > rowHeight) {
           rowHeightMap.set(y, cellHeight);
         }
@@ -510,82 +494,106 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
 
+  // render table
   let log = "";
   {
-    let y = 0;
-    for (const row of grid) {
+    const renderRow = (cells, { rowHeight }) => {
       let rowText = "";
-      let isLastRow = y === grid.length - 1;
-      const rowHeight = rowHeightMap.get(y);
       let lastLineIndex = rowHeight;
       let lineIndex = 0;
       while (lineIndex !== lastLineIndex) {
         let x = 0;
         let lineText = "";
-        for (const cell of row) {
-          const columnWidth = columnWidthMap.get(x);
-          const {
-            xAlign,
-            xAlignChar = " ",
-            yAlign,
-            yAlignChar = " ",
-            rects,
-          } = cell;
-          const cellHeight = rects.length;
-
-          let rect;
-          if (yAlign === "start") {
-            if (lineIndex < cellHeight) {
-              rect = rects[lineIndex];
-            }
-          } else if (yAlign === "center") {
-            const topSpacing = Math.floor((rowHeight - cellHeight) / 2);
-            // const bottomSpacing = rowHeight - cellHeight - topSpacing;
-            const lineStartIndex = topSpacing;
-            const lineEndIndex = topSpacing + cellHeight;
-            if (lineIndex > lineStartIndex && lineIndex < lineEndIndex) {
-              rect = rects[lineIndex];
-            }
-          } else {
-            const lineStartIndex = rowHeight - cellHeight;
-            if (lineIndex >= lineStartIndex) {
-              rect = rects[lineIndex];
-            }
-          }
-
-          let cellLineText;
-          if (rect) {
-            const { width, render } = rect;
-            let rectText = render({ columnWidth });
-            if (width === "fill") {
-              cellLineText = rectText;
-            } else {
-              cellLineText = applyXAlign(rectText, {
-                width,
-                desiredWidth: columnWidth,
-                align: xAlign,
-                alignChar: xAlignChar,
-              });
-            }
-          } else {
-            cellLineText = applyXAlign(yAlignChar, {
-              width: 1,
-              desiredWidth: columnWidth,
-              align: xAlign,
-              alignChar: " ",
-            });
-          }
+        for (const cell of cells) {
+          const cellLineText = renderCell(cell, { rowHeight, x, lineIndex });
           lineText += cellLineText;
           x++;
         }
         rowText += lineText;
         lineIndex++;
-        if (isLastRow && lineIndex === lastLineIndex) {
-          break;
-        }
         rowText += "\n";
       }
-      log += rowText;
+      return rowText;
+    };
+    const renderCell = (cell, { rowHeight, x, lineIndex }) => {
+      const columnWidth = columnWidthMap.get(x);
+      const {
+        xAlign,
+        xAlignChar = " ",
+        yAlign,
+        yAlignChar = " ",
+        rects,
+      } = cell;
+      const cellHeight = rects.length;
+
+      let rect;
+      if (yAlign === "start") {
+        if (lineIndex < cellHeight) {
+          rect = rects[lineIndex];
+        }
+      } else if (yAlign === "center") {
+        const topSpacing = Math.floor((rowHeight - cellHeight) / 2);
+        // const bottomSpacing = rowHeight - cellHeight - topSpacing;
+        const lineStartIndex = topSpacing;
+        const lineEndIndex = topSpacing + cellHeight;
+        if (lineIndex > lineStartIndex && lineIndex < lineEndIndex) {
+          rect = rects[lineIndex];
+        }
+      } else {
+        const lineStartIndex = rowHeight - cellHeight;
+        if (lineIndex >= lineStartIndex) {
+          rect = rects[lineIndex];
+        }
+      }
+
+      if (rect) {
+        const { width, render } = rect;
+        let rectText = render({ columnWidth });
+        if (width === "fill") {
+          return rectText;
+        }
+        return applyXAlign(rectText, {
+          width,
+          desiredWidth: columnWidth,
+          align: xAlign,
+          alignChar: xAlignChar,
+        });
+      }
+      return applyXAlign(yAlignChar, {
+        width: 1,
+        desiredWidth: columnWidth,
+        align: xAlign,
+        alignChar: " ",
+      });
+    };
+
+    let y = 0;
+    for (const row of grid) {
+      // let isLastRow = y === grid.length - 1;
+      border_top_row: {
+        const borderTopRow = borderTopPerRowMap.get(y);
+        if (borderTopRow) {
+          const borderTopRowText = renderRow(borderTopPerRowMap.get(y), {
+            rowHeight: 1,
+          });
+          log += borderTopRowText;
+        }
+      }
+      content_row: {
+        const contentRowText = renderRow(row, {
+          rowHeight: rowHeightMap.get(y),
+        });
+        log += contentRowText;
+      }
+      border_bottom_row: {
+        const borderBottomRow = borderBottomPerRowMap.get(y);
+        if (borderBottomRow) {
+          const borderBottomRowText = renderRow(borderBottomPerRowMap.get(y), {
+            rowHeight: 1,
+          });
+          log += borderBottomRowText;
+        }
+      }
       y++;
     }
   }
@@ -917,33 +925,33 @@ const isBorderBottom = (cell) => cell.position === "bottom";
 const isBorderBottomRight = (cell) => cell.position === "bottom_right";
 const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
 
-const isBlankCell = (cell) => cell.type === "blank";
+// const isBlankCell = (cell) => cell.type === "blank";
 // blank cells are fluid cells that will take whatever size they are requested to take
 // they can seen as placeholders that are removed when a line or column is composed only by blank cells
 // this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
 // (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
 // where the border is)
-const blankCell = {
-  type: "blank",
-  rects: [
-    {
-      width: "fill",
-      render: ({ columnWidth }) => " ".repeat(columnWidth),
-    },
-  ],
-};
+// const blankCell = {
+//   type: "blank",
+//   rects: [
+//     {
+//       width: "fill",
+//       render: ({ columnWidth }) => " ".repeat(columnWidth),
+//     },
+//   ],
+// };
 
-const mutateGrid = (grid, callback) => {
-  let y = 0;
-  for (const line of grid) {
-    let x = 0;
-    for (const cell of line) {
-      line[x] = callback(cell, { x, y });
-      x++;
-    }
-    y++;
-  }
-};
+// const mutateGrid = (grid, callback) => {
+//   let y = 0;
+//   for (const line of grid) {
+//     let x = 0;
+//     for (const cell of line) {
+//       line[x] = callback(cell, { x, y });
+//       x++;
+//     }
+//     y++;
+//   }
+// };
 
 // console.log(
 //   renderTable([
