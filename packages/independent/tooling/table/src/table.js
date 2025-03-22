@@ -93,7 +93,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         if (borderRight) {
           onBorderRight(borderRight, x, y);
         }
-
         x++;
       }
       grid[y] = row;
@@ -112,12 +111,18 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (borderTopRow) {
             const borderTopCell = borderTopRow[x];
             if (borderTopCell) {
-              // add an other left cell that will actually become a corner
-              borderLeftColumn[y] = createBorderLeftCell();
+              borderLeftColumn[y] = createTopLeftBorderCell();
             } else if (isBlank(borderTopCell)) {
-              // add a border left on the top row if the top row is a blank cell or there is no top cell
-              // it will be special case where only half the left border is shown right?
-              borderLeftColumn[y] = createBorderLeftCell();
+              borderLeftColumn[y] = createLeftTopHalfBorderCell();
+            }
+          }
+          const borderBottomRow = borderBottomPerRowMap.get(y);
+          if (borderBottomRow) {
+            const borderBottomCell = borderBottomRow[x];
+            if (borderBottomCell) {
+              borderLeftColumn[y] = createBottomLeftBorderCell();
+            } else if (isBlank(borderBottomCell)) {
+              borderLeftColumn[y] = createLeftBottomHalfBorderCell();
             }
           }
         }
@@ -133,12 +138,18 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           if (borderTopRow) {
             const borderTopCell = borderTopRow[x];
             if (borderTopCell) {
-              // add an other left cell that will actually become a corner
-              borderRightColumn[y] = createBorderRightCell();
+              borderRightColumn[y] = createTopRightBorderCell();
             } else if (isBlank(borderTopCell)) {
-              // add a border left on the top row if the top row is a blank cell or there is no top cell
-              // it will be special case where only half the left border is shown right?
-              borderRightColumn[y] = createBorderRightCell();
+              borderRightColumn[y] = createRightTopHalfBorderCell();
+            }
+          }
+          const borderBottomRow = borderBottomPerRowMap.get(y);
+          if (borderBottomRow) {
+            const borderBottomCell = borderBottomRow[x];
+            if (borderBottomCell) {
+              borderRightColumn[y] = createBottomRightBorderCell();
+            } else if (isBlank(borderBottomCell)) {
+              borderRightColumn[y] = createRightBottomHalfBorderCell();
             }
           }
         }
@@ -1055,53 +1066,50 @@ const BORDER_PROPS = {
     position: "top",
     yAlign: "end",
     rects: [
-      {
-        width: "fill",
-        render: ({ columnWidth }) => "─".repeat(columnWidth),
-      },
+      { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
     ],
   },
   bottom: {
     position: "bottom",
     yAlign: "start",
     rects: [
-      {
-        width: "fill",
-        render: ({ columnWidth }) => "─".repeat(columnWidth),
-      },
+      { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
     ],
   },
   left: {
     position: "left",
     xAlign: "end",
     yAlignChar: "|",
-    rects: [
-      {
-        width: 1,
-        render: ({ northCell, eastCell }) => {
-          if (eastCell && isBorderTop(eastCell)) {
-            return "┌";
-          }
-          if (!northCell) {
-            return "╷";
-          }
-          return "│";
-        },
-      },
-    ],
+    rects: [{ width: 1, render: () => "│" }],
   },
   right: {
     position: "right",
     xAlign: "start",
     yAlignChar: "|",
-    rects: [
-      {
-        width: 1,
-        render: () => "│",
-      },
-    ],
+    rects: [{ width: 1, render: () => "│" }],
   },
-  // corners
+  // 1 border junction with blank
+  left_top_half: {
+    position: "left_top_half",
+    xAlign: "end",
+    rects: [{ width: 1, render: () => "╷" }],
+  },
+  left_bottom_half: {
+    position: "left_bottom_half",
+    xAlign: "end",
+    rects: [{ width: 1, render: () => "╵" }],
+  },
+  right_top_half: {
+    position: "right_top_half",
+    xAlign: "end",
+    rects: [{ width: 1, render: () => "╷" }],
+  },
+  right_bottom_half: {
+    position: "right_bottom_half",
+    xAlign: "end",
+    rects: [{ width: 1, render: () => "╵" }],
+  },
+  // 2 borders junctions (corners)
   top_left: {
     position: "top_left",
     xAlign: "start",
@@ -1154,7 +1162,7 @@ const BORDER_PROPS = {
       },
     ],
   },
-  // junctions
+  // 3 borders junctions
   top_mid: {
     position: "top_mid",
     xAlign: "center",
@@ -1207,6 +1215,7 @@ const BORDER_PROPS = {
       },
     ],
   },
+  // 4 border junctions
   mid: {
     position: "mid",
     xAlign: "center",
@@ -1236,14 +1245,22 @@ const createBorderLeftCell = (options) => createBorderCell("left", options);
 const createBorderRightCell = (options) => createBorderCell("right", options);
 const createBorderTopCell = (options) => createBorderCell("top", options);
 const createBorderBottomCell = (options) => createBorderCell("bottom", options);
-// const createTopLeftBorderCell = (options) =>
-//   createBorderCell("top_left", options);
-// const createTopRightBorderCell = (options) =>
-//   createBorderCell("top_right", options);
-// const createBottomRightBorderCell = (options) =>
-//   createBorderCell("bottom_right", options);
-// const createBottomLeftBorderCell = (options) =>
-//   createBorderCell("bottom_left", options);
+const createLeftTopHalfBorderCell = (options) =>
+  createBorderCell("left_top_half", options);
+const createLeftBottomHalfBorderCell = (options) =>
+  createBorderCell("left_bottom_half", options);
+const createRightTopHalfBorderCell = (options) =>
+  createBorderCell("right_top_half", options);
+const createRightBottomHalfBorderCell = (options) =>
+  createBorderCell("right_bottom_half", options);
+const createTopLeftBorderCell = (options) =>
+  createBorderCell("top_left", options);
+const createTopRightBorderCell = (options) =>
+  createBorderCell("top_right", options);
+const createBottomRightBorderCell = (options) =>
+  createBorderCell("bottom_right", options);
+const createBottomLeftBorderCell = (options) =>
+  createBorderCell("bottom_left", options);
 // const createTopMidBorderCell = (options) =>
 //   createBorderCell("top_mid", options);
 // const createBottomMidBorderCell = (options) =>
