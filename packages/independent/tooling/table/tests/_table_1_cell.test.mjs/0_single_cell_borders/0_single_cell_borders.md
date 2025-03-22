@@ -1,14 +1,14 @@
-# [0_single_cell_borders](../../table_1_cell.test.mjs#L123)
+# [0_single_cell_borders](../../table_1_cell.test.mjs#L115)
 
 ```js
 console.log(
   renderNamedSections({
     //  none,
-    top,
-    left,
-    bottom,
-    right,
-    // top_left,
+    // top,
+    // left,
+    // bottom,
+    // right,
+    top_left,
     // top_right,
     // bottom_right,
     // bottom_left,
@@ -26,19 +26,9 @@ console.log(
 # 1/2 console.log
 
 ```console
---- top ---
-───
- a 
-
---- left ---
+--- top_left ---
+╷───
 │ a 
-
---- bottom ---
- a 
-───
-
---- right ---
- a │
 
 ```
 

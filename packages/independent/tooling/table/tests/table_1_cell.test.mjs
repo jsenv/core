@@ -4,21 +4,13 @@ import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs"
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
   // const none = renderTable([[{ value: "a", border: null }]]);
-  const top = renderTable([[{ value: "a", borderTop: {} }]]);
-  const left = renderTable([[{ value: "a", borderLeft: {} }]]);
-  const right = renderTable([[{ value: "a", borderRight: {} }]]);
-  const bottom = renderTable([[{ value: "a", borderBottom: {} }]]);
-  // const top_left = renderTable([
-  //   [
-  //     {
-  //       value: "a",
-  //       borderTop: {},
-  //       borderLeft: {},
-  //       borderRight: null,
-  //       borderBottom: null,
-  //     },
-  //   ],
-  // ]);
+  // const top = renderTable([[{ value: "a", borderTop: {} }]]);
+  // const left = renderTable([[{ value: "a", borderLeft: {} }]]);
+  // const right = renderTable([[{ value: "a", borderRight: {} }]]);
+  // const bottom = renderTable([[{ value: "a", borderBottom: {} }]]);
+  const top_left = renderTable([
+    [{ value: "a", borderTop: {}, borderLeft: {} }],
+  ]);
   // const top_right = renderTable([
   //   [
   //     {
@@ -124,11 +116,11 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
     console.log(
       renderNamedSections({
         //  none,
-        top,
-        left,
-        bottom,
-        right,
-        // top_left,
+        // top,
+        // left,
+        // bottom,
+        // right,
+        top_left,
         // top_right,
         // bottom_right,
         // bottom_left,

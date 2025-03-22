@@ -64,7 +64,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       borderRightArray[x] = borderRightCell;
     }
   };
-
   // detect borders
   {
     let y = 0;
@@ -505,10 +504,18 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         let x = 0;
         let lineText = "";
         for (const cell of cells) {
+          const westCell = cells[x - 1];
+          const eastCell = cells[x + 1];
+          const northCell = y === 0 ? null : grid[y - 1][x];
+          const southCell = y === grid.length - 1 ? null : grid[y + 1][x];
           const cellLineText = renderCell(cell, {
             columnWidth: columnWidthMap.get(x),
             rowHeight,
             lineIndex,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
           });
           let borderLeftLineText;
           let borderRightLineText;
@@ -520,6 +527,10 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
                 columnWidth: 1,
                 rowHeight,
                 lineIndex,
+                westCell,
+                eastCell,
+                northCell,
+                southCell,
               });
             }
           }
@@ -531,6 +542,10 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
                 columnWidth: 1,
                 rowHeight,
                 lineIndex,
+                westCell,
+                eastCell,
+                northCell,
+                southCell,
               });
             }
           }
@@ -783,7 +798,16 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        render: () => "│",
+        render: ({ northCell, eastCell }) => {
+          if (isBorderTop(eastCell)) {
+            return "┌";
+          }
+          if (!northCell) {
+            return "╷";
+          }
+
+          return "│";
+        },
       },
     ],
   },
@@ -955,7 +979,7 @@ const createBorderBottomCell = (options) => createBorderCell("bottom", options);
 // const isBorderTopRight = (cell) => cell.position === "top_right";
 // const isBorderLeft = (cell) => cell.position === "left";
 // const isBorderRight = (cell) => cell.position === "right";
-// const isBorderTop = (cell) => cell.position === "top";
+const isBorderTop = (cell) => cell.position === "top";
 // const isBorderBottom = (cell) => cell.position === "bottom";
 // const isBorderBottomRight = (cell) => cell.position === "bottom_right";
 // const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
