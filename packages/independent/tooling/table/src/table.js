@@ -103,99 +103,99 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   // fill row/columns with "corners" or blank cells
   // en gros le but ici c'est de s'assure que le border left se comporte comme un corner
   // lorsqu'il est collé a un border top
-  {
-    for (const [x, borderLeftColumn] of borderLeftPerColumnMap) {
-      let y = 0;
-      while (y < grid.length) {
-        const cell = borderLeftColumn[y];
-        if (!cell) {
-          const borderTopRow = borderTopPerRowMap.get(y);
-          if (borderTopRow) {
-            const borderTopCell = borderTopRow[x];
-            if (borderTopCell) {
-              borderLeftColumn[y] = createTopLeftBorderCell();
-            } else if (isBlank(borderTopCell)) {
-              borderLeftColumn[y] = createLeftTopHalfBorderCell();
-            }
-          }
-          const borderBottomRow = borderBottomPerRowMap.get(y);
-          if (borderBottomRow) {
-            const borderBottomCell = borderBottomRow[x];
-            if (borderBottomCell) {
-              borderLeftColumn[y] = createBottomLeftBorderCell();
-            } else if (isBlank(borderBottomCell)) {
-              borderLeftColumn[y] = createLeftBottomHalfBorderCell();
-            }
-          }
-        }
-        y++;
-      }
-    }
-    for (const [x, borderRightColumn] of borderRightPerColumnMap) {
-      let y = 0;
-      while (y < grid.length) {
-        const cell = borderRightColumn[y];
-        if (!cell) {
-          const borderTopRow = borderTopPerRowMap.get(y);
-          if (borderTopRow) {
-            const borderTopCell = borderTopRow[x];
-            if (borderTopCell) {
-              borderRightColumn[y] = createTopRightBorderCell();
-            } else if (isBlank(borderTopCell)) {
-              borderRightColumn[y] = createRightTopHalfBorderCell();
-            }
-          }
-          const borderBottomRow = borderBottomPerRowMap.get(y);
-          if (borderBottomRow) {
-            const borderBottomCell = borderBottomRow[x];
-            if (borderBottomCell) {
-              borderRightColumn[y] = createBottomRightBorderCell();
-            } else if (isBlank(borderBottomCell)) {
-              borderRightColumn[y] = createRightBottomHalfBorderCell();
-            }
-          }
-        }
-        y++;
-      }
-    }
+  // {
+  //   for (const [x, borderLeftColumn] of borderLeftPerColumnMap) {
+  //     let y = 0;
+  //     while (y < grid.length) {
+  //       const cell = borderLeftColumn[y];
+  //       if (!cell) {
+  //         const borderTopRow = borderTopPerRowMap.get(y);
+  //         if (borderTopRow) {
+  //           const borderTopCell = borderTopRow[x];
+  //           if (borderTopCell) {
+  //             borderLeftColumn[y] = createTopLeftBorderCell();
+  //           } else if (isBlank(borderTopCell)) {
+  //             borderLeftColumn[y] = createLeftTopHalfBorderCell();
+  //           }
+  //         }
+  //         const borderBottomRow = borderBottomPerRowMap.get(y);
+  //         if (borderBottomRow) {
+  //           const borderBottomCell = borderBottomRow[x];
+  //           if (borderBottomCell) {
+  //             borderLeftColumn[y] = createBottomLeftBorderCell();
+  //           } else if (isBlank(borderBottomCell)) {
+  //             borderLeftColumn[y] = createLeftBottomHalfBorderCell();
+  //           }
+  //         }
+  //       }
+  //       y++;
+  //     }
+  //   }
+  //   for (const [x, borderRightColumn] of borderRightPerColumnMap) {
+  //     let y = 0;
+  //     while (y < grid.length) {
+  //       const cell = borderRightColumn[y];
+  //       if (!cell) {
+  //         const borderTopRow = borderTopPerRowMap.get(y);
+  //         if (borderTopRow) {
+  //           const borderTopCell = borderTopRow[x];
+  //           if (borderTopCell) {
+  //             borderRightColumn[y] = createTopRightBorderCell();
+  //           } else if (isBlank(borderTopCell)) {
+  //             borderRightColumn[y] = createRightTopHalfBorderCell();
+  //           }
+  //         }
+  //         const borderBottomRow = borderBottomPerRowMap.get(y);
+  //         if (borderBottomRow) {
+  //           const borderBottomCell = borderBottomRow[x];
+  //           if (borderBottomCell) {
+  //             borderRightColumn[y] = createBottomRightBorderCell();
+  //           } else if (isBlank(borderBottomCell)) {
+  //             borderRightColumn[y] = createRightBottomHalfBorderCell();
+  //           }
+  //         }
+  //       }
+  //       y++;
+  //     }
+  //   }
 
-    for (const [y, borderTopRow] of borderTopPerRowMap) {
-      let x = 0;
-      while (x < grid[0].length) {
-        const cell = borderTopRow[x];
-        if (!cell) {
-          const borderLeftColumn = borderLeftPerColumnMap.get(x);
-          if (borderLeftColumn) {
-            const borderLeftCell = borderLeftColumn[y];
-            if (borderLeftCell) {
-              // nothing to do, the border left will handle
-            } else if (isBlank(borderLeftCell)) {
-              borderTopRow[x] = createBorderTopCell();
-            }
-          }
-        }
-        x++;
-      }
-    }
-    for (const [y, borderBottomRow] of borderBottomPerRowMap) {
-      let x = 0;
-      while (x < grid[0].length) {
-        const cell = borderBottomRow[x];
-        if (!cell) {
-          const borderRightColumn = borderRightPerColumnMap.get(x);
-          if (borderRightColumn) {
-            const borderRightCell = borderRightColumn[y];
-            if (borderRightCell) {
-              // nothing to do, the border right will handle
-            } else if (isBlank(borderRightCell)) {
-              borderBottomRow[x] = createBorderBottomCell();
-            }
-          }
-        }
-        x++;
-      }
-    }
-  }
+  //   for (const [y, borderTopRow] of borderTopPerRowMap) {
+  //     let x = 0;
+  //     while (x < grid[0].length) {
+  //       const cell = borderTopRow[x];
+  //       if (!cell) {
+  //         const borderLeftColumn = borderLeftPerColumnMap.get(x);
+  //         if (borderLeftColumn) {
+  //           const borderLeftCell = borderLeftColumn[y];
+  //           if (borderLeftCell) {
+  //             // nothing to do, the border left will handle
+  //           } else if (isBlank(borderLeftCell)) {
+  //             borderTopRow[x] = createBorderTopCell();
+  //           }
+  //         }
+  //       }
+  //       x++;
+  //     }
+  //   }
+  //   for (const [y, borderBottomRow] of borderBottomPerRowMap) {
+  //     let x = 0;
+  //     while (x < grid[0].length) {
+  //       const cell = borderBottomRow[x];
+  //       if (!cell) {
+  //         const borderRightColumn = borderRightPerColumnMap.get(x);
+  //         if (borderRightColumn) {
+  //           const borderRightCell = borderRightColumn[y];
+  //           if (borderRightCell) {
+  //             // nothing to do, the border right will handle
+  //           } else if (isBlank(borderRightCell)) {
+  //             borderBottomRow[x] = createBorderBottomCell();
+  //           }
+  //         }
+  //       }
+  //       x++;
+  //     }
+  //   }
+  // }
 
   // // collapse left and right borders
   // {
@@ -581,12 +581,12 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
     if (isBorderLeft(cell)) {
       if (rowType === "border_top") {
-        const borderBottomRow = borderBottomPerRowMap.get(y);
-        return borderBottomRow[x + 1];
+        const borderTopRow = borderTopPerRowMap.get(y);
+        return borderTopRow[x];
       }
       if (rowType === "border_bottom") {
         const borderBottomRow = borderBottomPerRowMap.get(y);
-        return borderBottomRow[x + 1];
+        return borderBottomRow[x];
       }
       // east is content cell
       return grid[y][x];
@@ -838,13 +838,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         southCell,
       },
     ) => {
-      const {
-        xAlign,
-        xAlignChar = " ",
-        yAlign,
-        yAlignChar = " ",
-        rects,
-      } = cell;
+      let { xAlign, xAlignChar = " ", yAlign, yAlignChar = " ", rects } = cell;
       const cellHeight = rects.length;
 
       let rect;
@@ -875,6 +869,20 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           eastCell,
           northCell,
           southCell,
+          updateOptions: (options) => {
+            if (options.xAlign) {
+              xAlign = options.xAlign;
+            }
+            if (options.xAlignChar) {
+              xAlignChar = options.xAlignChar;
+            }
+            if (options.yAlign) {
+              yAlign = options.yAlign;
+            }
+            if (options.yAlignChar) {
+              yAlignChar = options.yAlignChar;
+            }
+          },
         });
         if (width === "fill") {
           return rectText;
@@ -1072,8 +1080,18 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        render: ({ eastCell }) => {
-          debugger;
+        render: ({ eastCell, updateOptions }) => {
+          if (eastCell && isBorderTop(eastCell)) {
+            updateOptions({
+              xAlign: "start",
+              xAlignChar: "─",
+              yAlign: "end",
+            });
+            return "┌";
+          }
+          if (!isBlank(eastCell)) {
+            return "╷";
+          }
           return "│";
         },
       },
@@ -1242,22 +1260,6 @@ const createBorderLeftCell = (options) => createBorderCell("left", options);
 const createBorderRightCell = (options) => createBorderCell("right", options);
 const createBorderTopCell = (options) => createBorderCell("top", options);
 const createBorderBottomCell = (options) => createBorderCell("bottom", options);
-const createLeftTopHalfBorderCell = (options) =>
-  createBorderCell("left_top_half", options);
-const createLeftBottomHalfBorderCell = (options) =>
-  createBorderCell("left_bottom_half", options);
-const createRightTopHalfBorderCell = (options) =>
-  createBorderCell("right_top_half", options);
-const createRightBottomHalfBorderCell = (options) =>
-  createBorderCell("right_bottom_half", options);
-const createTopLeftBorderCell = (options) =>
-  createBorderCell("top_left", options);
-const createTopRightBorderCell = (options) =>
-  createBorderCell("top_right", options);
-const createBottomRightBorderCell = (options) =>
-  createBorderCell("bottom_right", options);
-const createBottomLeftBorderCell = (options) =>
-  createBorderCell("bottom_left", options);
 // const createTopMidBorderCell = (options) =>
 //   createBorderCell("top_mid", options);
 // const createBottomMidBorderCell = (options) =>
