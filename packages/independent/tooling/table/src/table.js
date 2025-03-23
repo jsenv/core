@@ -715,6 +715,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
             columnWidth: columnWidthMap.get(x),
             rowHeight,
             lineIndex,
+            cell: grid[y][x],
             westCell,
             eastCell,
             northCell,
@@ -731,9 +732,12 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
               const northCell = getNorthCell(borderLeftCell, { x, y, rowType });
               const southCell = getSouthCell(borderLeftCell, { x, y, rowType });
               borderLeftLineText = renderCell(borderLeftCell, {
+                isTopLeftCorner: rowType === "border_top",
+                isBottomLeftCorner: rowType === "border_bottom",
                 columnWidth: 1,
                 rowHeight,
                 lineIndex,
+                cell: grid[y][x],
                 westCell,
                 eastCell,
                 northCell,
@@ -758,9 +762,12 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
                 rowType,
               });
               borderRightLineText = renderCell(borderRightCell, {
+                isTopRightCorner: rowType === "border_top",
+                isBottomRightCorner: rowType === "border_bottom",
                 columnWidth: 1,
                 rowHeight,
                 lineIndex,
+                cell: grid[y][x],
                 westCell,
                 eastCell,
                 northCell,
@@ -787,15 +794,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     };
     const renderCell = (
       cell,
-      {
-        columnWidth,
-        rowHeight,
-        lineIndex,
-        westCell,
-        eastCell,
-        northCell,
-        southCell,
-      },
+      { columnWidth, rowHeight, lineIndex, ...rest },
     ) => {
       let { xAlign, xAlignChar = " ", yAlign, yAlignChar = " ", rects } = cell;
       const cellHeight = rects.length;
@@ -824,10 +823,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         const { width, render } = rect;
         let rectText = render({
           columnWidth,
-          westCell,
-          eastCell,
-          northCell,
-          southCell,
+          ...rest,
           updateOptions: (options) => {
             if (options.xAlign) {
               xAlign = options.xAlign;
@@ -1039,24 +1035,27 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        render: ({ southCell, eastCell, updateOptions }) => {
-          if (eastCell) {
-            if (isBorderTop(eastCell)) {
+        render: ({
+          isTopLeftCorner,
+          isBottomLeftCorner,
+          cell,
+          updateOptions,
+        }) => {
+          if (isTopLeftCorner) {
+            if (cell.borderTop) {
               updateOptions(BORDER_JUNCTION_OPTIONS.top_left);
               return "┌";
             }
-            if (isBorderBottom(eastCell)) {
+            updateOptions(BORDER_JUNCTION_OPTIONS.left_top_half);
+            return "╷";
+          }
+          if (isBottomLeftCorner) {
+            if (cell.borderBottom) {
               updateOptions(BORDER_JUNCTION_OPTIONS.bottom_left);
               return "└";
             }
-            if (isBlank(eastCell)) {
-              if (southCell && isBorderLeft(southCell)) {
-                updateOptions(BORDER_JUNCTION_OPTIONS.left_top_half);
-                return "╷";
-              }
-              updateOptions(BORDER_JUNCTION_OPTIONS.left_bottom_half);
-              return "╵";
-            }
+            updateOptions(BORDER_JUNCTION_OPTIONS.left_bottom_half);
+            return "╵";
           }
           return "│";
         },
@@ -1070,28 +1069,27 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        render: ({ eastCell, westCell, northCell, updateOptions }) => {
-          if (westCell) {
-            if (isBorderTop(westCell)) {
+        render: ({
+          isTopRightCorner,
+          isBottomRightCorner,
+          cell,
+          updateOptions,
+        }) => {
+          if (isTopRightCorner) {
+            if (cell.borderTop) {
               updateOptions(BORDER_JUNCTION_OPTIONS.top_right);
               return "┐";
             }
-            if (isBorderBottom(westCell)) {
+            updateOptions(BORDER_JUNCTION_OPTIONS.right_top_half);
+            return "╷";
+          }
+          if (isBottomRightCorner) {
+            if (cell.borderBottom) {
               updateOptions(BORDER_JUNCTION_OPTIONS.bottom_right);
               return "┘";
             }
-            if (isBlank(westCell)) {
-              if (eastCell && isBorderBottom(eastCell)) {
-                updateOptions(BORDER_JUNCTION_OPTIONS.bottom_left);
-                return "└";
-              }
-              if (northCell && isBorderRight(northCell)) {
-                updateOptions(BORDER_JUNCTION_OPTIONS.right_top_half);
-                return "╷";
-              }
-              updateOptions(BORDER_JUNCTION_OPTIONS.right_top_half);
-              return "╷";
-            }
+            updateOptions(BORDER_JUNCTION_OPTIONS.right_bottom_half);
+            return "╵";
           }
           return "│";
         },
@@ -1233,7 +1231,7 @@ const isBorderBottom = (cell) => cell.position === "bottom";
 // const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
 const isContent = (cell) => cell.type === "content";
 
-const isBlank = (cell) => cell.type === "blank";
+// const isBlank = (cell) => cell.type === "blank";
 // blank cells are fluid cells that will take whatever size they are requested to take
 // they can seen as placeholders that are removed when a line or column is composed only by blank cells
 // this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
