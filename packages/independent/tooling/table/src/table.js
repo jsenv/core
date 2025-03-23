@@ -208,10 +208,10 @@ const topLeftSlot = {
       return SLOT_CONTENT_TYPES.border_top_right;
     }
     if (cell.borderLeft) {
-      return SLOT_CONTENT_TYPES.border_half_right;
+      return SLOT_CONTENT_TYPES.border_half_down;
     }
     if (cell.borderTop) {
-      return SLOT_CONTENT_TYPES.border_half_down;
+      return SLOT_CONTENT_TYPES.border_half_right;
     }
     return SLOT_CONTENT_TYPES.blank;
   },
@@ -226,10 +226,10 @@ const topRightSlot = {
       return SLOT_CONTENT_TYPES.border_top_left;
     }
     if (cell.borderRight) {
-      return SLOT_CONTENT_TYPES.border_half_left;
+      return SLOT_CONTENT_TYPES.border_half_down;
     }
     if (cell.borderTop) {
-      return SLOT_CONTENT_TYPES.border_half_down;
+      return SLOT_CONTENT_TYPES.border_half_left;
     }
     return SLOT_CONTENT_TYPES.blank;
   },
@@ -244,10 +244,10 @@ const bottomRightSlot = {
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }
     if (cell.borderRight) {
-      return SLOT_CONTENT_TYPES.border_half_left;
+      return SLOT_CONTENT_TYPES.border_half_up;
     }
     if (cell.borderBottom) {
-      return SLOT_CONTENT_TYPES.border_half_up;
+      return SLOT_CONTENT_TYPES.border_half_left;
     }
     return SLOT_CONTENT_TYPES.blank;
   },
