@@ -60,25 +60,25 @@ const SLOT_CONTENT_TYPES = {};
     type: "border_top_left_half",
     xAlign: "end",
     yAlign: "end",
-    rects: [{ width: 1, render: () => "╷" }],
+    rects: [{ width: 1, render: () => "╶" }],
   };
   const borderTopRightHalfCell = {
     type: "border_top_right_half",
     xAlign: "start",
     yAlign: "end",
-    rects: [{ width: 1, render: () => "╷" }],
+    rects: [{ width: 1, render: () => "╴" }],
   };
   const borderBottomRightHalfCell = {
     type: "border_bottom_right_half",
     xAlign: "start",
     yAlign: "start",
-    rects: [{ width: 1, render: () => "╵" }],
+    rects: [{ width: 1, render: () => "╴" }],
   };
   const borderBottomLeftHalfCell = {
     type: "border_bottom_left_half",
     xAlign: "end",
     yAlign: "start",
-    rects: [{ width: 1, render: () => "╵" }],
+    rects: [{ width: 1, render: () => "╶" }],
   };
   const borderTopLeftCell = {
     xAlign: "start",
@@ -216,7 +216,7 @@ const topLeftSlot = {
 const topRightSlot = {
   type: "top_right",
   adapt: ({ cell, eastCell }) => {
-    if (cell.borderTop) {
+    if (cell.borderTop && cell.borderRight) {
       return SLOT_CONTENT_TYPES.border_top_right;
     }
     if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
@@ -224,6 +224,9 @@ const topRightSlot = {
     }
     if (cell.borderRight) {
       return SLOT_CONTENT_TYPES.border_right_half;
+    }
+    if (cell.borderTop) {
+      return SLOT_CONTENT_TYPES.border_top_right_half;
     }
     return SLOT_CONTENT_TYPES.blank;
   },
@@ -246,7 +249,7 @@ const bottomRightSlot = {
 const bottomLeftSlot = {
   type: "bottom_left",
   adapt: ({ cell, westCell }) => {
-    if (cell.borderBottom) {
+    if (cell.borderBottom && cell.borderLeft) {
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }
     if (westCell && westCell.borderBottom && !westCell.borderRight) {
@@ -254,6 +257,9 @@ const bottomLeftSlot = {
     }
     if (cell.borderLeft) {
       return SLOT_CONTENT_TYPES.border_left_half;
+    }
+    if (cell.borderBottom) {
+      return SLOT_CONTENT_TYPES.border_bottom_left_half;
     }
     return SLOT_CONTENT_TYPES.blank;
   },
@@ -353,6 +359,47 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       y++;
     }
   }
+  // fill holes in slot rows
+  {
+    let y = 0;
+    while (y < grid.length) {
+      let leftSlotRow = leftSlotRowMap.get(y);
+      let rightSlotRow = rightSlotRowMap.get(y);
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      let x = 0;
+      while (x < grid[y].length) {
+        if (leftSlotRow) {
+          if (!leftSlotRow[x]) {
+            leftSlotRow[x] = leftSlot;
+          }
+        } else if (columnHasLeftSlot(x)) {
+          leftSlotRow = [];
+          leftSlotRowMap.set(y, leftSlotRow);
+          leftSlotRow[x] = leftSlot;
+        }
+
+        if (rightSlotRow) {
+          if (!rightSlotRow[x]) {
+            rightSlotRow[x] = rightSlot;
+          }
+        } else if (columnHasRightSlot(x)) {
+          rightSlotRow = [];
+          rightSlotRowMap.set(y, rightSlotRow);
+          rightSlotRow[x] = rightSlot;
+        }
+
+        if (topSlotRow && !topSlotRow[x]) {
+          topSlotRow[x] = topSlot;
+        }
+        if (bottomSlotRow && !bottomSlotRow[x]) {
+          bottomSlotRow[x] = bottomSlot;
+        }
+        x++;
+      }
+      y++;
+    }
+  }
   // create corners
   const topLeftSlotRowMap = new Map();
   const topRightSlotRowMap = new Map();
@@ -404,47 +451,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       }
       if (bottomRightSlotRow.length) {
         bottomRightSlotRowMap.set(y, bottomRightSlotRow);
-      }
-      y++;
-    }
-  }
-  // fill holes in slot rows
-  {
-    let y = 0;
-    while (y < grid.length) {
-      let leftSlotRow = leftSlotRowMap.get(y);
-      let rightSlotRow = rightSlotRowMap.get(y);
-      const topSlotRow = topSlotRowMap.get(y);
-      const bottomSlotRow = bottomSlotRowMap.get(y);
-      let x = 0;
-      while (x < grid[y].length) {
-        if (leftSlotRow) {
-          if (!leftSlotRow[x]) {
-            leftSlotRow[x] = leftSlot;
-          }
-        } else if (columnHasLeftSlot(x)) {
-          leftSlotRow = [];
-          leftSlotRowMap.set(y, leftSlotRow);
-          leftSlotRow[x] = leftSlot;
-        }
-
-        if (rightSlotRow) {
-          if (!rightSlotRow[x]) {
-            rightSlotRow[x] = rightSlot;
-          }
-        } else if (columnHasRightSlot(x)) {
-          rightSlotRow = [];
-          rightSlotRowMap.set(y, rightSlotRow);
-          rightSlotRow[x] = rightSlot;
-        }
-
-        if (topSlotRow && !topSlotRow[x]) {
-          topSlotRow[x] = topSlot;
-        }
-        if (bottomSlotRow && !bottomSlotRow[x]) {
-          bottomSlotRow[x] = bottomSlot;
-        }
-        x++;
       }
       y++;
     }

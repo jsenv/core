@@ -41,10 +41,10 @@ console.log(
 
 ```console
 --- top_left_and_bottom_right ---
-┌───
+┌───╴
 | a  
   b │
-───┘
+╶───┘
 
 ```
 
