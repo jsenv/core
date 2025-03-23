@@ -262,26 +262,26 @@ const bottomLeftSlot = {
 export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const grid = [];
 
-  const leftSlotColumnMap = new Map();
-  const rightSlotColumnMap = new Map();
+  const leftSlotRowMap = new Map();
+  const rightSlotRowMap = new Map();
   const topSlotRowMap = new Map();
   const bottomSlotRowMap = new Map();
   const onBorderLeft = (x, y) => {
-    const leftSlotArray = leftSlotColumnMap.get(x);
+    const leftSlotArray = leftSlotRowMap.get(y);
     if (!leftSlotArray) {
       const array = [];
-      leftSlotColumnMap.set(x, array);
-      array[y] = leftSlot;
+      leftSlotRowMap.set(y, array);
+      array[x] = leftSlot;
     } else {
       leftSlotArray[x] = leftSlot;
     }
   };
   const onBorderRight = (x, y) => {
-    const rightSlotArray = rightSlotColumnMap.get(x);
+    const rightSlotArray = rightSlotRowMap.get(x);
     if (!rightSlotArray) {
       const array = [];
-      rightSlotColumnMap.set(x, array);
-      array[y] = rightSlot;
+      rightSlotRowMap.set(y, array);
+      array[x] = rightSlot;
     } else {
       rightSlotArray[x] = rightSlot;
     }
@@ -347,64 +347,94 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
   // create corners
-  const topCornerSlotRowMap = new Map();
-  const bottomCornerSlotRowMap = new Map();
+  const topLeftSlotRowMap = new Map();
+  const topRightSlotRowMap = new Map();
+  const bottomLeftSlotRowMap = new Map();
+  const bottomRightSlotRowMap = new Map();
   {
-    for (const [x] of leftSlotColumnMap) {
+    let y = 0;
+    while (y < grid.length) {
       const topLeftSlotArray = [];
-      const bottomLeftSlotArray = [];
-      let y = 0;
-      while (y < grid.length) {
-        topLeftSlotArray[y] = topLeftSlot;
-        bottomLeftSlotArray[y] = bottomLeftSlot;
-      }
-      topCornerSlotRowMap.set(x, topLeftSlotArray);
-      bottomCornerSlotRowMap.set(x, bottomLeftSlotArray);
-    }
-    for (const [x] of rightSlotColumnMap) {
       const topRightSlotArray = [];
+      const bottomLeftSlotArray = [];
       const bottomRightSlotArray = [];
-      let y = 0;
-      while (y < grid.length) {
-        topRightSlotArray[y] = topRightSlot;
-        bottomRightSlotArray[y] = bottomRightSlot;
+      const leftSlowRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+
+      if (bottomSlotRow || topSlotRow) {
+        let x = 0;
+        while (x < grid[y].length) {
+          const leftSlotColumn = leftSlowRow[x];
+          if (leftSlotColumn) {
+            if (topSlotRow) {
+              topLeftSlotArray[x] = topLeftSlot;
+            }
+            if (bottomSlotRow) {
+              bottomLeftSlotArray[x] = bottomLeftSlot;
+            }
+          }
+          const rightSlotColumn = rightSlotRow[x];
+          if (rightSlotColumn) {
+            if (topSlotRow) {
+              topRightSlotArray[x] = topRightSlot;
+            }
+            if (bottomSlotRow) {
+              bottomRightSlotArray[x] = bottomRightSlot;
+            }
+          }
+
+          x++;
+        }
       }
-      topCornerSlotRowMap.set(x, topRightSlotArray);
-      bottomCornerSlotRowMap.set(x, bottomRightSlotArray);
+      if (topLeftSlotArray.length) {
+        topLeftSlotRowMap.set(y, topLeftSlotArray);
+      }
+      if (topRightSlotArray.length) {
+        topRightSlotRowMap.set(y, topRightSlotArray);
+      }
+      if (bottomLeftSlotArray.length) {
+        bottomLeftSlotRowMap.set(y, bottomLeftSlotArray);
+      }
+      if (bottomRightSlotArray.length) {
+        bottomRightSlotRowMap.set(y, bottomRightSlotArray);
+      }
+      y++;
     }
   }
   // fill slot row and columns
   {
-    for (const [, leftSlotColumn] of leftSlotColumnMap) {
-      let y = 0;
-      while (y < grid.length) {
-        if (!leftSlotColumn[y]) {
-          leftSlotColumn[y] = leftSlot;
-        }
-        y++;
-      }
-    }
-    for (const [, rightSlotColumn] of rightSlotColumnMap) {
-      let y = 0;
-      while (y < grid.length) {
-        if (!rightSlotColumn[y]) {
-          rightSlotColumn[y] = rightSlot;
-        }
-        y++;
-      }
-    }
-    for (const [, topSlotRow] of topSlotRowMap) {
+    for (const [y, leftSlotRow] of leftSlotRowMap) {
       let x = 0;
-      while (x < grid[0].length) {
+      while (x < grid[y].length) {
+        if (!leftSlotRow[x]) {
+          leftSlotRow[x] = topSlot;
+        }
+        x++;
+      }
+    }
+    for (const [y, rightSlotRow] of rightSlotRowMap) {
+      let x = 0;
+      while (x < grid[y].length) {
+        if (!rightSlotRow[x]) {
+          rightSlotRow[x] = topSlot;
+        }
+        x++;
+      }
+    }
+    for (const [y, topSlotRow] of topSlotRowMap) {
+      let x = 0;
+      while (x < grid[y].length) {
         if (!topSlotRow[x]) {
           topSlotRow[x] = topSlot;
         }
         x++;
       }
     }
-    for (const [, bottomSlotRow] of bottomSlotRowMap) {
+    for (const [y, bottomSlotRow] of bottomSlotRowMap) {
       let x = 0;
-      while (x < grid[0].length) {
+      while (x < grid[y].length) {
         if (!bottomSlotRow[x]) {
           bottomSlotRow[x] = bottomSlot;
         }
@@ -412,16 +442,20 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       }
     }
   }
-  // transform border slots into what they should be (is it required at this stage I don't know)
-  // (pour le moment on va ignorer les coins)
+  // transform border slots into what they should be
   {
     let y = 0;
     while (y < grid.length) {
       let x = 0;
       const row = grid[y];
+      const leftSlotRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
       const topSlotRow = topSlotRowMap.get(y);
       const bottomSlotRow = bottomSlotRowMap.get(y);
-      // TOOD: the corners
+      const topLeftSlotRow = topLeftSlotRowMap.get(y);
+      const topRightSlotRow = topRightSlotRowMap.get(y);
+      const bottomLeftSlotRow = bottomLeftSlotRowMap.get(y);
+      const bottomRightSlotRow = bottomRightSlotRowMap.get(y);
       while (x < row.length) {
         const cell = row[x];
         const westCell = x === 0 ? null : row[x - 1];
@@ -429,33 +463,27 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         const northCell = y === 0 ? null : grid[y - 1][x];
         const southCell = y === grid.length - 1 ? null : grid[y + 1][x];
 
-        const leftSlotColumn = leftSlotColumnMap.get(x);
-        const rightSlotColumn = rightSlotColumnMap.get(x);
-        if (leftSlotColumn) {
-          const leftSlot = leftSlotColumn[y];
-          if (leftSlot) {
-            const leftSlotContent = leftSlot.adapt({
-              cell,
-              westCell,
-              eastCell,
-              northCell,
-              southCell,
-            });
-            leftSlot.content = leftSlotContent;
-          }
+        if (leftSlotRow) {
+          const leftSlot = leftSlotRow[x];
+          const leftSlotContent = leftSlot.adapt({
+            cell,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
+          });
+          leftSlot.content = leftSlotContent;
         }
-        if (rightSlotColumn) {
-          const rightSlot = rightSlotColumn[y];
-          if (rightSlot) {
-            const rightSlotContent = rightSlot.adapt({
-              cell,
-              westCell,
-              eastCell,
-              northCell,
-              southCell,
-            });
-            rightSlot.content = rightSlotContent;
-          }
+        if (rightSlotRow) {
+          const rightSlot = rightSlotRow[y];
+          const rightSlotContent = rightSlot.adapt({
+            cell,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
+          });
+          rightSlot.content = rightSlotContent;
         }
         if (topSlotRow) {
           const topSlot = topSlotRow[x];
@@ -479,12 +507,56 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           });
           bottomSlot.content = bottomSlotContent;
         }
+        // corners
+        if (topLeftSlotRow) {
+          const topLeftSlot = topLeftSlotRow[x];
+          const topLeftSlotContent = topLeftSlot.adapt({
+            cell,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
+          });
+          topLeftSlot.content = topLeftSlotContent;
+        }
+        if (topRightSlotRow) {
+          const topRightSlot = topRightSlotRow[x];
+          const topRightSlotContent = topRightSlot.adapt({
+            cell,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
+          });
+          topRightSlot.content = topRightSlotContent;
+        }
+        if (bottomRightSlotRow) {
+          const bottomRightSlot = bottomRightSlotRow[x];
+          const bottomRightSlotContent = bottomRightSlot.adapt({
+            cell,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
+          });
+          bottomRightSlot.content = bottomRightSlotContent;
+        }
+        if (bottomLeftSlotRow) {
+          const bottomLeftSlot = bottomLeftSlotRow[x];
+          const bottomLeftSlotContent = bottomLeftSlot.adapt({
+            cell,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
+          });
+          bottomLeftSlot.content = bottomLeftSlotContent;
+        }
         x++;
       }
       y++;
     }
   }
-
   // // collapse left and right borders
   // {
   //   // if every right border can collapse with the left border next to it
@@ -676,7 +748,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   //     y += 3;
   //   }
   // }
-
   // measure column and row dimensions (biggest of all cells in the column/row)
   const columnWidthMap = new Map();
   const rowHeightMap = new Map();
@@ -753,7 +824,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   // render table
   let log = "";
   {
-    const renderRow = (cells, { rowHeight }) => {
+    const renderRow = (cells, { rowHeight, leftSlowRow, rightSlotRow }) => {
       let rowText = "";
       let lastLineIndex = rowHeight;
       let lineIndex = 0;
@@ -768,17 +839,15 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           });
           let leftSlotLineText;
           let rightSlotLineText;
-          const leftSlotColumn = leftSlotColumnMap.get(x);
-          if (leftSlotColumn) {
-            leftSlotLineText = renderCell(leftSlotColumn[y], {
+          if (leftSlowRow) {
+            leftSlotLineText = renderCell(leftSlowRow[x], {
               columnWidth: 1,
               rowHeight,
               lineIndex,
             });
           }
-          const rightSlotColumn = rightSlotColumnMap.get(x);
-          if (rightSlotColumn) {
-            rightSlotLineText = renderCell(rightSlotColumn[y], {
+          if (rightSlotRow) {
+            rightSlotLineText = renderCell(rightSlotRow[y], {
               columnWidth: 1,
               rowHeight,
               lineIndex,
@@ -877,14 +946,17 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         if (topSlotRow) {
           const topSlotRowText = renderRow(topSlotRow, {
             rowHeight: 1,
+            leftSlotRow: topLeftSlotRowMap.get(y),
+            rightSlotRow: topRightSlotRowMap.get(y),
           });
           log += topSlotRowText;
         }
       }
       content_row: {
         const contentRowText = renderRow(row, {
-          rowType: "content",
           rowHeight: rowHeightMap.get(y),
+          leftSlowRow: leftSlotRowMap.get(y),
+          rightSlowRow: rightSlotRowMap.get(y),
         });
         log += contentRowText;
       }
@@ -893,6 +965,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         if (bottomSlotRow) {
           const bottomSlotRowText = renderRow(bottomSlotRow, {
             rowHeight: 1,
+            leftSlotRow: bottomLeftSlotRowMap.get(y),
+            rightSlotRow: bottomRightSlotRowMap.get(y),
           });
           log += bottomSlotRowText;
         }
