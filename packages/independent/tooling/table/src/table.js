@@ -267,43 +267,43 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const topSlotRowMap = new Map();
   const bottomSlotRowMap = new Map();
   const onBorderLeft = (x, y) => {
-    const leftSlotArray = leftSlotRowMap.get(y);
-    if (!leftSlotArray) {
-      const array = [];
-      leftSlotRowMap.set(y, array);
-      array[x] = leftSlot;
+    const leftSlotRow = leftSlotRowMap.get(y);
+    if (!leftSlotRow) {
+      const leftSlotRow = [];
+      leftSlotRowMap.set(y, leftSlotRow);
+      leftSlotRow[x] = leftSlot;
     } else {
-      leftSlotArray[x] = leftSlot;
+      leftSlotRow[x] = leftSlot;
     }
   };
   const onBorderRight = (x, y) => {
-    const rightSlotArray = rightSlotRowMap.get(x);
-    if (!rightSlotArray) {
-      const array = [];
-      rightSlotRowMap.set(y, array);
-      array[x] = rightSlot;
+    const rightSlotRow = rightSlotRowMap.get(y);
+    if (!rightSlotRow) {
+      const rightSlotRow = [];
+      rightSlotRowMap.set(y, rightSlotRow);
+      rightSlotRow[x] = rightSlot;
     } else {
-      rightSlotArray[x] = rightSlot;
+      rightSlotRow[x] = rightSlot;
     }
   };
   const onBorderTop = (x, y) => {
-    const topSlotArray = topSlotRowMap.get(y);
-    if (!topSlotArray) {
-      const array = [];
-      topSlotRowMap.set(y, array);
-      array[x] = topSlot;
+    const topSlotRow = topSlotRowMap.get(y);
+    if (!topSlotRow) {
+      const topSlotRow = [];
+      topSlotRowMap.set(y, topSlotRow);
+      topSlotRow[x] = topSlot;
     } else {
-      topSlotArray[x] = topSlot;
+      topSlotRow[x] = topSlot;
     }
   };
   const onBorderBottom = (x, y) => {
-    const bottomSlotArray = bottomSlotRowMap.get(y);
-    if (!bottomSlotArray) {
-      const array = [];
-      bottomSlotRowMap.set(y, array);
-      array[x] = bottomSlot;
+    const bottomSlotRow = bottomSlotRowMap.get(y);
+    if (!bottomSlotRow) {
+      const bottomSlotRow = [];
+      bottomSlotRowMap.set(y, bottomSlotRow);
+      bottomSlotRow[x] = bottomSlot;
     } else {
-      bottomSlotArray[x] = bottomSlot;
+      bottomSlotRow[x] = bottomSlot;
     }
   };
   // detect borders
@@ -354,58 +354,54 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   {
     let y = 0;
     while (y < grid.length) {
-      const topSlotRow = topSlotRowMap.get(y);
-      const bottomSlotRow = bottomSlotRowMap.get(y);
-      if (!topSlotRow && !bottomSlotRow) {
-        y++;
-        continue;
-      }
       const leftSlotRow = leftSlotRowMap.get(y);
       const rightSlotRow = rightSlotRowMap.get(y);
       if (!leftSlotRow && !rightSlotRow) {
         y++;
         continue;
       }
-      const topLeftSlotArray = [];
-      const topRightSlotArray = [];
-      const bottomLeftSlotArray = [];
-      const bottomRightSlotArray = [];
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      if (!topSlotRow && !bottomSlotRow) {
+        y++;
+        continue;
+      }
+      const topLeftSlotRow = [];
+      const topRightSlotRow = [];
+      const bottomLeftSlotRow = [];
+      const bottomRightSlotRow = [];
       let x = 0;
       while (x < grid[y].length) {
-        if (leftSlotRow) {
-          if (topSlotRow) {
-            topLeftSlotArray[x] = topLeftSlot;
-          }
-          if (bottomSlotRow) {
-            bottomLeftSlotArray[x] = bottomLeftSlot;
-          }
+        if (topSlotRow && leftSlotRow) {
+          topLeftSlotRow[x] = topLeftSlot;
         }
-        if (rightSlotRow) {
-          if (topSlotRow) {
-            topRightSlotArray[x] = topRightSlot;
-          }
-          if (bottomSlotRow) {
-            bottomRightSlotArray[x] = bottomRightSlot;
-          }
+        if (topSlotRow && rightSlotRow) {
+          topRightSlotRow[x] = topRightSlot;
+        }
+        if (bottomSlotRow && leftSlotRow) {
+          bottomLeftSlotRow[x] = bottomLeftSlot;
+        }
+        if (bottomSlotRow && rightSlotRow) {
+          bottomRightSlotRow[x] = bottomRightSlot;
         }
         x++;
       }
-      if (topLeftSlotArray.length) {
-        topLeftSlotRowMap.set(y, topLeftSlotArray);
+      if (topLeftSlotRow.length) {
+        topLeftSlotRowMap.set(y, topLeftSlotRow);
       }
-      if (topRightSlotArray.length) {
-        topRightSlotRowMap.set(y, topRightSlotArray);
+      if (topRightSlotRow.length) {
+        topRightSlotRowMap.set(y, topRightSlotRow);
       }
-      if (bottomLeftSlotArray.length) {
-        bottomLeftSlotRowMap.set(y, bottomLeftSlotArray);
+      if (bottomLeftSlotRow.length) {
+        bottomLeftSlotRowMap.set(y, bottomLeftSlotRow);
       }
-      if (bottomRightSlotArray.length) {
-        bottomRightSlotRowMap.set(y, bottomRightSlotArray);
+      if (bottomRightSlotRow.length) {
+        bottomRightSlotRowMap.set(y, bottomRightSlotRow);
       }
       y++;
     }
   }
-  // fill slot row and columns
+  // fill holes in slot rows
   {
     let y = 0;
     while (y < grid.length) {
