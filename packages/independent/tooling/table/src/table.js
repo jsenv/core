@@ -354,39 +354,41 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   {
     let y = 0;
     while (y < grid.length) {
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      if (!topSlotRow && !bottomSlotRow) {
+        y++;
+        continue;
+      }
+      const leftSlotRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      if (!leftSlotRow && !rightSlotRow) {
+        y++;
+        continue;
+      }
       const topLeftSlotArray = [];
       const topRightSlotArray = [];
       const bottomLeftSlotArray = [];
       const bottomRightSlotArray = [];
-      const leftSlowRow = leftSlotRowMap.get(y);
-      const rightSlotRow = rightSlotRowMap.get(y);
-      const topSlotRow = topSlotRowMap.get(y);
-      const bottomSlotRow = bottomSlotRowMap.get(y);
-
-      if (bottomSlotRow || topSlotRow) {
-        let x = 0;
-        while (x < grid[y].length) {
-          const leftSlotColumn = leftSlowRow[x];
-          if (leftSlotColumn) {
-            if (topSlotRow) {
-              topLeftSlotArray[x] = topLeftSlot;
-            }
-            if (bottomSlotRow) {
-              bottomLeftSlotArray[x] = bottomLeftSlot;
-            }
+      let x = 0;
+      while (x < grid[y].length) {
+        if (leftSlotRow) {
+          if (topSlotRow) {
+            topLeftSlotArray[x] = topLeftSlot;
           }
-          const rightSlotColumn = rightSlotRow[x];
-          if (rightSlotColumn) {
-            if (topSlotRow) {
-              topRightSlotArray[x] = topRightSlot;
-            }
-            if (bottomSlotRow) {
-              bottomRightSlotArray[x] = bottomRightSlot;
-            }
+          if (bottomSlotRow) {
+            bottomLeftSlotArray[x] = bottomLeftSlot;
           }
-
-          x++;
         }
+        if (rightSlotRow) {
+          if (topSlotRow) {
+            topRightSlotArray[x] = topRightSlot;
+          }
+          if (bottomSlotRow) {
+            bottomRightSlotArray[x] = bottomRightSlot;
+          }
+        }
+        x++;
       }
       if (topLeftSlotArray.length) {
         topLeftSlotRowMap.set(y, topLeftSlotArray);
@@ -405,48 +407,35 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   }
   // fill slot row and columns
   {
-    for (const [y, leftSlotRow] of leftSlotRowMap) {
+    let y = 0;
+    while (y < grid.length) {
+      const letSlotRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
       let x = 0;
       while (x < grid[y].length) {
-        if (!leftSlotRow[x]) {
-          leftSlotRow[x] = topSlot;
+        if (letSlotRow && !letSlotRow[x]) {
+          letSlotRow[x] = leftSlot;
         }
-        x++;
-      }
-    }
-    for (const [y, rightSlotRow] of rightSlotRowMap) {
-      let x = 0;
-      while (x < grid[y].length) {
-        if (!rightSlotRow[x]) {
-          rightSlotRow[x] = topSlot;
+        if (rightSlotRow && !rightSlotRow[x]) {
+          rightSlotRow[x] = rightSlot;
         }
-        x++;
-      }
-    }
-    for (const [y, topSlotRow] of topSlotRowMap) {
-      let x = 0;
-      while (x < grid[y].length) {
-        if (!topSlotRow[x]) {
+        if (topSlotRow && !topSlotRow[x]) {
           topSlotRow[x] = topSlot;
         }
-        x++;
-      }
-    }
-    for (const [y, bottomSlotRow] of bottomSlotRowMap) {
-      let x = 0;
-      while (x < grid[y].length) {
-        if (!bottomSlotRow[x]) {
+        if (bottomSlotRow && !bottomSlotRow[x]) {
           bottomSlotRow[x] = bottomSlot;
         }
         x++;
       }
+      y++;
     }
   }
-  // transform border slots into what they should be
+  // transform slots into what they should be (border or blank)
   {
     let y = 0;
     while (y < grid.length) {
-      let x = 0;
       const row = grid[y];
       const leftSlotRow = leftSlotRowMap.get(y);
       const rightSlotRow = rightSlotRowMap.get(y);
@@ -456,6 +445,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       const topRightSlotRow = topRightSlotRowMap.get(y);
       const bottomLeftSlotRow = bottomLeftSlotRowMap.get(y);
       const bottomRightSlotRow = bottomRightSlotRowMap.get(y);
+      let x = 0;
       while (x < row.length) {
         const cell = row[x];
         const westCell = x === 0 ? null : row[x - 1];

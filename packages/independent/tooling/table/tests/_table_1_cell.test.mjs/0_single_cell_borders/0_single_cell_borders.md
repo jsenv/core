@@ -41,26 +41,26 @@ console.log(
 ───
 
 --- right ---
- a │
+ a 
 
 --- top_left ---
-|───
+───
 | a 
 
 --- top_right ---
-───│
- a │
+───┐
+ a 
 
 --- bottom_right ---
- a │
-───│
+ a 
+───┘
 
 --- bottom_left ---
 | a 
-|───
+───
 
 --- left_and_right ---
-| a │
+| a 
 
 --- top_and_bottom ---
 ───
@@ -68,27 +68,27 @@ console.log(
 ───
 
 --- all_but_top ---
-| a │
-|───│
+| a 
+───┘
 
 --- all_but_right ---
-|───
+───
 | a 
-|───
+───
 
 --- all_but_left ---
-───│
- a │
-───│
+───┐
+ a 
+───┘
 
 --- all_but_bottom ---
-|───│
-| a │
+───┐
+| a 
 
 --- all ---
-|───│
-| a │
-|───│
+───┐
+| a 
+───┘
 
 ```
 
