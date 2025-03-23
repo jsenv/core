@@ -40,43 +40,11 @@ console.log(
 # 1/2 console.log
 
 ```console
---- bottom_and_top ---
- a 
-───
-───
- b 
-
---- bottom_left_and_top_left ---
-| a 
-└───
-┌───
-| b 
-
---- bottom_right_and_top_right ---
- a │
-───┘
-───┐
- b │
-
 --- top_left_and_bottom_right ---
 ┌───
-| a 
- b │
+| a  
+  b │
 ───┘
-
---- bottom_right_and_top_left ---
- a │
-───┘
-┌───
-| b 
-
---- all ---
-┌───┐
-| a │
-└───┘
-┌───┐
-| b │
-└───┘
 
 ```
 
