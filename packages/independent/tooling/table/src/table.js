@@ -13,55 +13,95 @@
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
 import stringWidth from "string-width";
 
+const SLOT_CONTENT_TYPES = {
+  blank: "blank",
+  border_left: "border_left",
+  border_top_right: "border_top_right",
+  border_top_left: "border_top_left",
+  border_left_half: "border_left_half",
+  border_right_half: "border_right_half",
+};
+
+const leftSlot = {
+  type: "left",
+  adapt: () => {
+    return SLOT_CONTENT_TYPES.left;
+  },
+};
+const rightSlot = {};
+const topSlot = {};
+const bottomSlot = {};
+const topLeftSlot = {
+  type: "top_left",
+  adapt: ({ cell, westCell }) => {
+    if (cell.borderTop) {
+      return SLOT_CONTENT_TYPES.top_left;
+    }
+    if (westCell && westCell.borderTop && !westCell.borderRight) {
+      return SLOT_CONTENT_TYPES.top_right;
+    }
+    return SLOT_CONTENT_TYPES.left_half;
+  },
+};
+const topRightSlot = {};
+const bottomRightSlot = {};
+const bottomLeftSlot = {
+  adapt: ({ cell, westCell }) => {
+    if (cell.borderBottom) {
+      return SLOT_CONTENT_TYPES.bottom_right;
+    }
+    if (westCell && westCell.borderBottom && !westCell.borderRight) {
+      return SLOT_CONTENT_TYPES.bottom_left;
+    }
+    return SLOT_CONTENT_TYPES.right_half;
+  },
+};
+
 export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const grid = [];
 
-  const borderTopRowMap = new Map();
-  const borderBottomRowMap = new Map();
-  const borderLeftColumnMap = new Map();
-  const borderRightColumnMap = new Map();
-  const onBorderTop = (borderTop, x, y) => {
-    const borderTopCell = createBorderTop(borderTop);
-    const borderTopArray = borderTopRowMap.get(y);
-    if (!borderTopArray) {
+  const leftSlotColumnMap = new Map();
+  const rightSlotColumnMap = new Map();
+  const topSlotRowMap = new Map();
+  const bottomSlotRowMap = new Map();
+  const onBorderLeft = (x, y) => {
+    const leftSlotArray = leftSlotColumnMap.get(x);
+    if (!leftSlotArray) {
       const array = [];
-      borderTopRowMap.set(y, array);
-      array[x] = borderTopCell;
+      leftSlotColumnMap.set(x, array);
+      array[y] = leftSlot;
     } else {
-      borderTopArray[x] = borderTopCell;
+      leftSlotArray[x] = leftSlot;
     }
   };
-  const onBorderBottom = (borderBottom, x, y) => {
-    const borderBottomCell = createBorderBottom(borderBottom);
-    const borderBottomArray = borderBottomRowMap.get(y);
-    if (!borderBottomArray) {
+  const onBorderRight = (x, y) => {
+    const rightSlotArray = rightSlotColumnMap.get(x);
+    if (!rightSlotArray) {
       const array = [];
-      borderBottomRowMap.set(y, array);
-      array[x] = borderBottomCell;
+      rightSlotColumnMap.set(x, array);
+      array[y] = rightSlot;
     } else {
-      borderBottomArray[x] = borderBottomCell;
+      rightSlotArray[x] = rightSlot;
     }
   };
-  const onBorderLeft = (borderLeft, x, y) => {
-    const borderLeftCell = createBorderLeft(borderLeft);
-    const borderLeftArray = borderLeftColumnMap.get(x);
-    if (!borderLeftArray) {
+  const onBorderTop = (x, y) => {
+    const topSlotArray = topSlotRowMap.get(y);
+    if (!topSlotArray) {
       const array = [];
-      borderLeftColumnMap.set(x, array);
-      array[y] = borderLeftCell;
+      topSlotRowMap.set(y, array);
+      array[x] = topSlot;
     } else {
-      borderLeftArray[x] = borderLeftCell;
+      topSlotArray[x] = topSlot;
     }
   };
-  const onBorderRight = (borderRight, x, y) => {
-    const borderRightCell = createBorderRight(borderRight);
-    const borderRightArray = borderRightColumnMap.get(x);
-    if (!borderRightArray) {
+  const onBorderBottom = (x, y) => {
+    const bottomSlotArray = bottomSlotRowMap.get(y);
+    if (!bottomSlotArray) {
       const array = [];
-      borderRightColumnMap.set(x, array);
-      array[y] = borderRightCell;
+      bottomSlotRowMap.set(y, array);
+      array[x] = bottomSlot;
     } else {
-      borderRightArray[x] = borderRightCell;
+      bottomSlotArray[x] = bottomSlot;
     }
   };
   // detect borders
@@ -74,8 +114,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         const {
           border,
           borderLeft = border,
-          borderTop = border,
           borderRight = border,
+          borderTop = border,
           borderBottom = border,
           ...props
         } = inputCell;
@@ -85,6 +125,10 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           contentCell.borderLeft = borderLeft;
           onBorderLeft(borderLeft, x, y);
         }
+        if (borderRight) {
+          contentCell.borderRight = borderRight;
+          onBorderRight(borderRight, x, y);
+        }
         if (borderTop) {
           contentCell.borderTop = borderTop;
           onBorderTop(borderTop, x, y);
@@ -93,55 +137,47 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           contentCell.borderBottom = borderBottom;
           onBorderBottom(borderBottom, x, y);
         }
-        if (borderRight) {
-          contentCell.borderRight = borderRight;
-          onBorderRight(borderRight, x, y);
-        }
+
         x++;
       }
       grid[y] = row;
       y++;
     }
   }
-
-  // fill border row and columns with blank cells
+  // fill slot row and columns
   {
-    for (const [, borderLeftColumn] of borderLeftColumnMap) {
+    for (const [, leftSlotColumn] of leftSlotColumnMap) {
       let y = 0;
       while (y < grid.length) {
-        const borderLeft = borderLeftColumn[y];
-        if (!borderLeft) {
-          borderLeftColumn[y] = blankCell;
+        if (!leftSlotColumn[y]) {
+          leftSlotColumn[y] = leftSlot;
         }
         y++;
       }
     }
-    for (const [, borderRightColumn] of borderRightColumnMap) {
+    for (const [, rightSlotColumn] of rightSlotColumnMap) {
       let y = 0;
       while (y < grid.length) {
-        const borderRight = borderRightColumn[y];
-        if (!borderRight) {
-          borderRightColumn[y] = blankCell;
+        if (!rightSlotColumn[y]) {
+          rightSlotColumn[y] = rightSlot;
         }
         y++;
       }
     }
-    for (const [, borderTopRow] of borderTopRowMap) {
+    for (const [, topSlotRow] of topSlotRowMap) {
       let x = 0;
       while (x < grid[0].length) {
-        const borderTop = borderTopRow[x];
-        if (!borderTop) {
-          borderTopRow[x] = blankCell;
+        if (!topSlotRow[x]) {
+          topSlotRow[x] = topSlot;
         }
         x++;
       }
     }
-    for (const [, borderBottomRow] of borderBottomRowMap) {
+    for (const [, bottomSlotRow] of bottomSlotRowMap) {
       let x = 0;
       while (x < grid[0].length) {
-        const borderBottom = borderBottomRow[x];
-        if (!borderBottom) {
-          borderBottomRow[x] = blankCell;
+        if (!bottomSlotRow[x]) {
+          bottomSlotRow[x] = bottomSlot;
         }
         x++;
       }
@@ -223,7 +259,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   //     x += 3;
   //   }
   // }
-
   // // collapse top and bottom borders
   // {
   //   const getHowToCollapseAdjacentCells = (cell, cellBelow, x, y) => {
@@ -341,57 +376,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   //   }
   // }
 
-  // // remove lines that are only blank cells (no visible borders)
-  // {
-  //   let y = 0;
-  //   while (y < grid.length) {
-  //     const line = grid[y];
-  //     let lineContainsNonBlankCell = false;
-  //     for (const cell of line) {
-  //       if (isBlankCell(cell)) {
-  //         continue;
-  //       }
-  //       lineContainsNonBlankCell = true;
-  //       break;
-  //     }
-  //     if (lineContainsNonBlankCell) {
-  //       y++;
-  //       continue;
-  //     }
-  //     grid.splice(y, 1);
-  //   }
-  // }
-  // // remove columns that are only blank cells (no visible borders)
-  // {
-  //   let x = 0;
-  //   let columnCount = grid[0].length;
-  //   while (x < columnCount) {
-  //     let columnContainsNonBlankCell = false;
-  //     let y = 0;
-  //     while (y < grid.length) {
-  //       const columnCell = grid[y][x];
-  //       if (isBlankCell(columnCell)) {
-  //         y++;
-  //         continue;
-  //       }
-  //       columnContainsNonBlankCell = true;
-  //       break;
-  //     }
-  //     if (columnContainsNonBlankCell) {
-  //       x++;
-  //       continue;
-  //     }
-  //     // get rid of this cell on every line (remove the full column)
-  //     y = 0;
-  //     while (y < grid.length) {
-  //       const line = grid[y];
-  //       line.splice(x, 1);
-  //       columnCount--;
-  //       y++;
-  //     }
-  //   }
-  // }
-
   // measure column and row dimensions (biggest of all cells in the column/row)
   const columnWidthMap = new Map();
   const rowHeightMap = new Map();
@@ -465,254 +449,89 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
 
-  const getWestCell = (cell, { x, y, rowType }) => {
-    if (isContent(cell)) {
-      const borderLeftColumn = borderLeftColumnMap.get(x);
-      const borderLeftCell = borderLeftColumn ? borderLeftColumn[y] : null;
-      if (borderLeftCell) {
-        return borderLeftCell;
+  // transform border slots into what they should be (is it required at this stage I don't know)
+  {
+    const getSlotContent = (slotContent) => {
+      if (slotContent === SLOT_CONTENT_TYPES.blank) {
+        return blankCell;
       }
-      const westColumnBorderRightColumn = borderRightColumnMap.get(x - 1);
-      if (westColumnBorderRightColumn) {
-        return westColumnBorderRightColumn[y] || blankCell;
-      }
-      const westContentCell = x === 0 ? null : grid[y][x - 1];
-      return westContentCell;
-    }
-    if (isBorderLeft(cell)) {
-      if (rowType === "border_top") {
-        const borderTopRow = borderTopRowMap.get(y);
-        return borderTopRow[x - 1];
-      }
-      if (rowType === "border_bottom") {
-        const borderBottomRow = borderBottomRowMap.get(y);
-        const westBorderBottomCell = borderBottomRow[x - 1];
-        return westBorderBottomCell || blankCell;
-      }
+      return null;
+    };
 
-      // west is left column border right or left column content
-      const borderRightColumn = borderRightColumnMap.get(x - 1);
-      if (borderRightColumn) {
-        return borderRightColumn[y] || blankCell;
-      }
-      return grid[y][x - 1];
-    }
-    if (isBorderRight(cell)) {
-      if (rowType === "border_top") {
-        const borderTopRow = borderTopRowMap.get(y);
-        return borderTopRow[x] || blankCell;
-      }
-      if (rowType === "border_bottom") {
-        const borderBottomRow = borderBottomRowMap.get(y);
-        return borderBottomRow[x] || blankCell;
-      }
-      return grid[y][x];
-    }
-    if (isBorderTop(cell)) {
-      // west is border top of left column
-      const borderTopRow = borderTopRowMap.get(y);
-      return x === 0 ? null : borderTopRow[x - 1] || blankCell;
-    }
-    if (isBorderBottom(cell)) {
-      // west is border bottom of left column
-      const borderBottomRow = borderBottomRowMap.get(y);
-      return x === 0 ? null : borderBottomRow[x - 1] || blankCell;
-    }
-    return null;
-  };
-  const getEastCell = (cell, { x, y, rowType }) => {
-    if (isContent(cell)) {
-      const borderRightColumn = borderRightColumnMap.get(x);
-      const borderRightCell = borderRightColumn ? borderRightColumn[y] : null;
-      if (borderRightCell) {
-        return borderRightCell;
-      }
-      const eastColumnBorderLeftColumn = borderLeftColumnMap.get(x + 1);
-      if (eastColumnBorderLeftColumn) {
-        return eastColumnBorderLeftColumn[y] || blankCell;
-      }
-      const eastContentCell = grid[y][x + 1];
-      return eastContentCell;
-    }
-    if (isBorderLeft(cell)) {
-      if (rowType === "border_top") {
-        const borderTopRow = borderTopRowMap.get(y);
-        return borderTopRow[x];
-      }
-      if (rowType === "border_bottom") {
-        const borderBottomRow = borderBottomRowMap.get(y);
-        return borderBottomRow[x];
-      }
-      // east is content cell
-      return grid[y][x];
-    }
-    if (isBorderRight(cell)) {
-      if (rowType === "border_top") {
-        const borderTopRow = borderTopRowMap.get(y);
-        return borderTopRow[x + 1];
-      }
-      if (rowType === "border_bottom") {
-        const borderBottomRow = borderBottomRowMap.get(y);
-        return borderBottomRow[x + 1];
-      }
-      // east is border left of next column or next content cell
-      const eastBorderLeftColumn = borderLeftColumnMap.get(x + 1);
-      if (eastBorderLeftColumn) {
-        return eastBorderLeftColumn[y] || blankCell;
-      }
-      return grid[y][x + 1];
-    }
-    if (isBorderTop(cell)) {
-      // east is border top of next column
-      const borderTopRow = borderTopRowMap.get(y);
-      return x === grid[0].length - 1 ? null : borderTopRow[x + 1] || blankCell;
-    }
-    if (isBorderBottom(cell)) {
-      const borderBottomRow = borderBottomRowMap.get(y);
-      return x === grid[0].length - 1
-        ? null
-        : borderBottomRow[x + 1] || blankCell;
-    }
-    return null;
-  };
-  const getNorthCell = (cell, { x, y, rowType }) => {
-    if (isContent(cell)) {
-      const borderTopRow = borderTopRowMap.get(y);
-      const borderTopCell = borderTopRow ? borderTopRow[y] : null;
-      if (borderTopCell) {
-        return borderTopCell;
-      }
-      const northRowBorderBottomRow = borderBottomRowMap.get(y - 1);
-      if (northRowBorderBottomRow) {
-        return northRowBorderBottomRow[x] || blankCell;
-      }
-      const northContentCell = y === 0 ? null : grid[y - 1][x];
-      return northContentCell;
-    }
-    if (isBorderLeft(cell)) {
-      if (rowType === "border_top") {
-        const borderLeftColumn = borderLeftColumnMap.get(x);
-        return y === 0 ? null : borderLeftColumn[y - 1];
-      }
-      if (rowType === "border_bottom") {
-        const borderLeftColumn = borderLeftColumnMap.get(x);
-        return borderLeftColumn[y - 1];
-      }
-      // north is border top of this cell
-      const borderTopRow = borderTopRowMap.get(y);
-      if (borderTopRow) {
-        return borderTopRow[x] || blankCell;
-      }
-      const northBorderBottomRow = borderBottomRowMap.get(y - 1);
-      if (northBorderBottomRow) {
-        return northBorderBottomRow[x] || blankCell;
-      }
-      return y === 0 ? null : grid[y - 1][x];
-    }
-    if (isBorderRight(cell)) {
-      // north is border top or bottom above or content above
-      const borderTopRow = borderTopRowMap.get(y);
-      if (borderTopRow) {
-        return borderTopRow[x] || blankCell;
-      }
-      const northBorderBottomRow = borderBottomRowMap.get(y - 1);
-      if (northBorderBottomRow) {
-        return northBorderBottomRow[x] || blankCell;
-      }
-      return y === 0 ? null : grid[y - 1][x];
-    }
-    if (isBorderTop(cell)) {
-      // north is border bottom or row above or content above
-      const northRowBorderBottomRow = borderBottomRowMap.get(y - 1);
-      if (northRowBorderBottomRow) {
-        return northRowBorderBottomRow[x] || blankCell;
-      }
-      return y === 0 ? null : grid[y - 1][x];
-    }
-    if (isBorderBottom(cell)) {
-      // north is content
-      return grid[y][x];
-    }
-    return null;
-  };
-  const getSouthCell = (cell, { x, y, rowType }) => {
-    if (isContent(cell)) {
-      const borderBottomRow = borderBottomRowMap.get(y);
-      const borderBottomCell = borderBottomRow ? borderBottomRow[y] : null;
-      if (borderBottomCell) {
-        return borderBottomCell;
-      }
-      const southBorderTopRow = borderTopRowMap.get(y + 1);
-      if (southBorderTopRow) {
-        return southBorderTopRow[x] || blankCell;
-      }
-      const southContentCell = y === grid.length - 1 ? null : grid[y + 1][x];
-      return southContentCell;
-    }
-    if (isBorderLeft(cell)) {
-      if (rowType === "border_top") {
-        const borderLeftColumn = borderLeftColumnMap.get(x);
-        return borderLeftColumn[y + 1];
-      }
-      if (rowType === "border_bottom") {
-        const nextRowBorderTopRow = borderTopRowMap.get(y + 1);
-        if (nextRowBorderTopRow) {
-          return nextRowBorderTopRow[x] || blankCell;
+    let y = 0;
+    while (y < grid.length) {
+      let x = 0;
+      const row = grid[y];
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+
+      while (x < row.length) {
+        const cell = row[x];
+        const westCell = x === 0 ? null : row[x - 1];
+        const eastCell = x === row.length - 1 ? null : row[x + 1];
+        const northCell = y === 0 ? null : grid[y - 1][x];
+        const southCell = y === grid.length - 1 ? null : grid[y + 1][x];
+
+        const leftSlotColumn = leftSlotColumnMap.get(x);
+        const rightSlotColumn = rightSlotColumnMap.get(x);
+        if (leftSlotColumn) {
+          const leftSlot = leftSlotColumn[y];
+          if (leftSlot) {
+            const leftSlotContentType = leftSlot.adapt({
+              cell,
+              westCell,
+              eastCell,
+              northCell,
+              southCell,
+            });
+            leftSlot.content = getSlotContent(leftSlotContentType);
+          }
         }
-        const borderLeftColumn = borderLeftColumnMap.get(x);
-        return borderLeftColumn[y + 1];
-      }
-      // south is border bottom or top below or content below
-      const borderBottomRow = borderBottomRowMap.get(y);
-      if (borderBottomRow) {
-        return borderBottomRow[x] || blankCell;
-      }
-      const southBorderTopRow = borderTopRowMap.get(y + 1);
-      if (southBorderTopRow) {
-        return southBorderTopRow[x] || blankCell;
-      }
-      return y === grid.length - 1 ? null : grid[y + 1][x];
-    }
-    if (isBorderRight(cell)) {
-      // south is border bottom or top below or content below
-      const borderBottomRow = borderBottomRowMap.get(y);
-      if (borderBottomRow) {
-        return borderBottomRow[x] || blankCell;
-      }
-      const southBorderTopRow = borderTopRowMap.get(y + 1);
-      if (southBorderTopRow) {
-        return southBorderTopRow[x] || blankCell;
-      }
-      return y === grid.length - 1 ? null : grid[y + 1][x];
-    }
-    if (isBorderTop(cell)) {
-      // south is content
-      return grid[y][x];
-    }
-    if (isBorderBottom(cell)) {
-      // south is border top of next row or next content
-      const southRowBorderTopRow = borderTopRowMap.get(y + 1);
-      if (southRowBorderTopRow) {
-        return southRowBorderTopRow[x] || blankCell;
-      }
-      return y === grid.length - 1 ? null : grid[y + 1][x];
-    }
-    return null;
-  };
+        if (rightSlotColumn) {
+          const rightSlot = rightSlotColumn[y];
+          if (rightSlot) {
+            const rightSlotContentType = rightSlot.adapt({
+              cell,
+              westCell,
+              eastCell,
+              northCell,
+              southCell,
+            });
+            rightSlot.content = getSlotContent(rightSlotContentType);
+          }
+        }
 
-  const getContentCells = ({ x, y }) => {
-    const cell = grid[y][x];
-    const west = x === 0 ? null : grid[y][x - 1];
-    const east = x === grid[0].length - 1 ? null : grid[y][x + 1];
-    const north = y === 0 ? null : grid[y - 1][x];
-    const south = y === grid.length - 1 ? null : grid[y + 1][x];
-    return { cell, west, east, north, south };
-  };
+        if (topSlotRow) {
+          const topSlot = topSlotRow[x];
+          const topSlotContentType = topSlot.adapt({
+            cell,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
+          });
+          topSlot.content = getSlotContent(topSlotContentType);
+        }
+        if (bottomSlotRow) {
+          const bottomSlot = bottomSlotRow[x];
+          const bottomSlotContentType = bottomSlot.adapt({
+            cell,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
+          });
+          bottomSlot.content = getSlotContent(bottomSlotContentType);
+        }
+      }
+      y++;
+    }
+  }
 
   // render table
   let log = "";
   {
-    const renderRow = (cells, { rowType, rowHeight }) => {
+    const renderRow = (cells, { rowHeight }) => {
       let rowText = "";
       let lastLineIndex = rowHeight;
       let lineIndex = 0;
@@ -720,80 +539,35 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         let x = 0;
         let lineText = "";
         for (const cell of cells) {
-          const westCell = getWestCell(cell, { x, y, rowType });
-          const eastCell = getEastCell(cell, { x, y, rowType });
-          const northCell = getNorthCell(cell, { x, y, rowType });
-          const southCell = getSouthCell(cell, { x, y, rowType });
           const cellLineText = renderCell(cell, {
             columnWidth: columnWidthMap.get(x),
             rowHeight,
             lineIndex,
-            contentCells: getContentCells({ x, y }),
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
           });
-          let borderLeftLineText;
-          let borderRightLineText;
-          const borderLeftColumn = borderLeftColumnMap.get(x);
-          if (borderLeftColumn) {
-            const borderLeftCell = borderLeftColumn[y];
-            if (borderLeftCell) {
-              const westCell = getWestCell(borderLeftCell, { x, y, rowType });
-              const eastCell = getEastCell(borderLeftCell, { x, y, rowType });
-              const northCell = getNorthCell(borderLeftCell, { x, y, rowType });
-              const southCell = getSouthCell(borderLeftCell, { x, y, rowType });
-              borderLeftLineText = renderCell(borderLeftCell, {
-                isTopLeftCorner: rowType === "border_top",
-                isBottomLeftCorner: rowType === "border_bottom",
-                columnWidth: 1,
-                rowHeight,
-                lineIndex,
-                contentCells: getContentCells({ x, y }),
-                westCell,
-                eastCell,
-                northCell,
-                southCell,
-              });
-            }
+          let leftSlotLineText;
+          let rightSlotLineText;
+          const leftSlotColumn = leftSlotColumnMap.get(x);
+          if (leftSlotColumn) {
+            leftSlotLineText = renderCell(leftSlotColumn[y], {
+              columnWidth: 1,
+              rowHeight,
+              lineIndex,
+            });
           }
-          const borderRightColumn = borderRightColumnMap.get(x);
-          if (borderRightColumn) {
-            const borderRightCell = borderRightColumn[y];
-            if (borderRightCell) {
-              const westCell = getWestCell(borderRightCell, { x, y, rowType });
-              const eastCell = getEastCell(borderRightCell, { x, y, rowType });
-              const northCell = getNorthCell(borderRightCell, {
-                x,
-                y,
-                rowType,
-              });
-              const southCell = getSouthCell(borderRightCell, {
-                x,
-                y,
-                rowType,
-              });
-              borderRightLineText = renderCell(borderRightCell, {
-                isTopRightCorner: rowType === "border_top",
-                isBottomRightCorner: rowType === "border_bottom",
-                columnWidth: 1,
-                rowHeight,
-                lineIndex,
-                contentCells: getContentCells({ x, y }),
-                westCell,
-                eastCell,
-                northCell,
-                southCell,
-              });
-            }
+          const rightSlotColumn = rightSlotColumnMap.get(x);
+          if (rightSlotColumn) {
+            rightSlotLineText = renderCell(rightSlotColumn[y], {
+              columnWidth: 1,
+              rowHeight,
+              lineIndex,
+            });
           }
-          if (borderLeftLineText && borderRightLineText) {
-            lineText += borderLeftLineText + cellLineText + borderRightLineText;
-          } else if (borderLeftLineText) {
-            lineText += borderLeftLineText + cellLineText;
-          } else if (borderRightLineText) {
-            lineText += cellLineText + borderRightLineText;
+          if (leftSlotLineText && rightSlotLineText) {
+            lineText += leftSlotLineText + cellLineText + rightSlotLineText;
+          } else if (leftSlotLineText) {
+            lineText += leftSlotLineText + cellLineText;
+          } else if (rightSlotLineText) {
+            lineText += cellLineText + rightSlotLineText;
           } else {
             lineText += cellLineText;
           }
@@ -872,15 +646,13 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
 
     let y = 0;
     for (const row of grid) {
-      // let isLastRow = y === grid.length - 1;
-      border_top_row: {
-        const borderTopRow = borderTopRowMap.get(y);
-        if (borderTopRow) {
-          const borderTopRowText = renderRow(borderTopRow, {
-            rowType: "border_top",
+      top_slow_row: {
+        const topSlotRow = topSlotRowMap.get(y);
+        if (topSlotRow) {
+          const topSlotRowText = renderRow(topSlotRow, {
             rowHeight: 1,
           });
-          log += borderTopRowText;
+          log += topSlotRowText;
         }
       }
       content_row: {
@@ -890,14 +662,13 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         });
         log += contentRowText;
       }
-      border_bottom_row: {
-        const borderBottomRow = borderBottomRowMap.get(y);
-        if (borderBottomRow) {
-          const borderBottomRowText = renderRow(borderBottomRow, {
-            rowType: "border_bottom",
+      bottom_slot_row: {
+        const bottomSlotRow = bottomSlotRowMap.get(y);
+        if (bottomSlotRow) {
+          const bottomSlotRowText = renderRow(bottomSlotRow, {
             rowHeight: 1,
           });
-          log += borderBottomRowText;
+          log += bottomSlotRowText;
         }
       }
       y++;
@@ -1048,39 +819,7 @@ const BORDER_PROPS = {
     rects: [
       {
         width: 1,
-        render: ({
-          isTopLeftCorner,
-          isBottomLeftCorner,
-          contentCells,
-          updateOptions,
-        }) => {
-          const { cell, west } = contentCells;
-          if (isTopLeftCorner) {
-            if (cell.borderTop) {
-              updateOptions(BORDER_JUNCTION_OPTIONS.top_left);
-              return "┌";
-            }
-            if (west && west.borderTop && !west.borderRight) {
-              updateOptions(BORDER_JUNCTION_OPTIONS.top_right);
-              return "┐";
-            }
-            updateOptions(BORDER_JUNCTION_OPTIONS.left_top_half);
-            return "╷";
-          }
-          if (isBottomLeftCorner) {
-            if (cell.borderBottom) {
-              updateOptions(BORDER_JUNCTION_OPTIONS.bottom_left);
-              return "└";
-            }
-            if (west && west.borderBottom && !west.borderRight) {
-              updateOptions(BORDER_JUNCTION_OPTIONS.bottom_right);
-              return "┘";
-            }
-            updateOptions(BORDER_JUNCTION_OPTIONS.left_bottom_half);
-            return "╵";
-          }
-          return "│";
-        },
+        render: () => {},
       },
     ],
   },
@@ -1228,20 +967,34 @@ const BORDER_JUNCTION_OPTIONS = {
   },
 };
 
-const createBorder = (position, options) => {
-  const borderProps = BORDER_PROPS[position];
-  if (options) {
-    return {
-      ...borderProps,
-      ...options,
-    };
+const getBorderJunction = (border, { cell, west }) => {
+  if (border.type === "top_left") {
+    if (cell.borderTop) {
+      return "top_left";
+    }
+    if (west && west.borderTop && !west.borderRight) {
+      return "top_right";
+    }
+    return "top_left_half";
   }
-  return borderProps;
 };
-const createBorderLeft = (options) => createBorder("left", options);
-const createBorderRight = (options) => createBorder("right", options);
-const createBorderTop = (options) => createBorder("top", options);
-const createBorderBottom = (options) => createBorder("bottom", options);
+
+const createBorder = (position) => {
+  const borderProps = BORDER_PROPS[position];
+
+  const rectsCopy = borderProps.rects.map((rect) => ({ ...rect }));
+  rectsCopy.render = () => {
+    borderProps.rects[0].render();
+  };
+
+  return {
+    ...borderProps,
+  };
+};
+// const createBorderLeft = () => createBorder("left");
+// const createBorderRight = () => createBorder("right");
+// const createBorderTop = () => createBorder("top");
+// const createBorderBottom = () => createBorder("bottom");
 // const createTopMidBorderCell = (options) =>
 //   createBorderCell("top_mid", options);
 // const createBottomMidBorderCell = (options) =>
@@ -1254,13 +1007,13 @@ const createBorderBottom = (options) => createBorder("bottom", options);
 
 // const isBorderTopLeft = (cell) => cell.position === "top_left";
 // const isBorderTopRight = (cell) => cell.position === "top_right";
-const isBorderLeft = (cell) => cell.position === "left";
-const isBorderRight = (cell) => cell.position === "right";
-const isBorderTop = (cell) => cell.position === "top";
-const isBorderBottom = (cell) => cell.position === "bottom";
-// const isBorderBottomRight = (cell) => cell.position === "bottom_right";
-// const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
-const isContent = (cell) => cell.type === "content";
+// const isBorderLeft = (cell) => cell.position === "left";
+// const isBorderRight = (cell) => cell.position === "right";
+// const isBorderTop = (cell) => cell.position === "top";
+// const isBorderBottom = (cell) => cell.position === "bottom";
+// // const isBorderBottomRight = (cell) => cell.position === "bottom_right";
+// // const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
+// const isContent = (cell) => cell.type === "content";
 
 // const isBlank = (cell) => cell.type === "blank";
 // blank cells are fluid cells that will take whatever size they are requested to take
