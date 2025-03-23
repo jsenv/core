@@ -68,26 +68,26 @@ console.log(
 
 ```console
 --- right_and_left ---
-  a │| b  
+  a ││ b  
 
 --- top_right_and_bottom_left ---
 ╶───┐╷    
-  a │| b  
+  a ││ b  
     ╵└───╴
 
 --- bottom_right_and_top_left ---
     ╷┌───╴
-  a │| b  
+  a ││ b  
 ╶───┘╵    
 
 --- bottom_left_and_top_right ---
 ╷    ╶───┐
-| a    b │
+│ a    b │
 └───╴    ╵
 
 --- left_bottom_right_and_top_right ---
 ╷   ┌╶───┐
-| a │  b │
+│ a │  b │
 └───┘    ╵
 
 --- top_right_bottom_right ---
@@ -97,12 +97,12 @@ console.log(
 
 --- top_left_bottom_right ---
 ╶───╴┐   ╷
-  a  | b │
+  a  │ b │
      └───┘
 
 --- all ---
 ┌───┐┌───┐
-| a │| b │
+│ a ││ b │
 └───┘└───┘
 
 ```

@@ -33,13 +33,13 @@ const SLOT_CONTENT_TYPES = {};
   const borderLeftCell = {
     type: "border_left",
     xAlign: "end",
-    yAlignChar: "|",
-    rects: [{ width: 1, render: () => "|" }],
+    yAlignChar: "│",
+    rects: [{ width: 1, render: () => "│" }],
   };
   const borderRightCell = {
     type: "border_right",
     xAlign: "start",
-    yAlignChar: "|",
+    yAlignChar: "│",
     rects: [{ width: 1, render: () => "│" }],
   };
   const borderTopCell = {

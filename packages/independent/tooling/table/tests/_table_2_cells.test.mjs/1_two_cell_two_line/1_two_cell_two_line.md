@@ -1,4 +1,4 @@
-# [1_two_cell_two_line](../../table_2_cells.test.mjs#L75)
+# [1_two_cell_two_line](../../table_2_cells.test.mjs#L70)
 
 ```js
 const bottom_and_top = renderTable([
@@ -47,10 +47,10 @@ console.log(
  b 
 
 --- bottom_left_and_top_left ---
-| a 
+│ a 
 └───
 ┌───
-| b 
+│ b 
 
 --- bottom_right_and_top_right ---
  a │
@@ -60,7 +60,7 @@ console.log(
 
 --- top_left_and_bottom_right ---
 ┌───╴
-| a  
+│ a  
   b │
 ╶───┘
 
@@ -68,14 +68,14 @@ console.log(
   a │
 ╶───┘
 ┌───╴
-| b  
+│ b  
 
 --- all ---
 ┌───┐
-| a │
+│ a │
 └───┘
 ┌───┐
-| b │
+│ b │
 └───┘
 
 ```
