@@ -700,6 +700,15 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     return null;
   };
 
+  const getContentCells = ({ x, y }) => {
+    const cell = grid[y][x];
+    const west = x === 0 ? null : grid[y][x - 1];
+    const east = x === grid[0].length - 1 ? null : grid[y][x + 1];
+    const north = y === 0 ? null : grid[y - 1][x];
+    const south = y === grid.length - 1 ? null : grid[y + 1][x];
+    return { cell, west, east, north, south };
+  };
+
   // render table
   let log = "";
   {
@@ -719,7 +728,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
             columnWidth: columnWidthMap.get(x),
             rowHeight,
             lineIndex,
-            cell: grid[y][x],
+            contentCells: getContentCells({ x, y }),
             westCell,
             eastCell,
             northCell,
@@ -741,7 +750,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
                 columnWidth: 1,
                 rowHeight,
                 lineIndex,
-                cell: grid[y][x],
+                contentCells: getContentCells({ x, y }),
                 westCell,
                 eastCell,
                 northCell,
@@ -771,7 +780,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
                 columnWidth: 1,
                 rowHeight,
                 lineIndex,
-                cell: grid[y][x],
+                contentCells: getContentCells({ x, y }),
                 westCell,
                 eastCell,
                 northCell,
@@ -1042,9 +1051,11 @@ const BORDER_PROPS = {
         render: ({
           isTopLeftCorner,
           isBottomLeftCorner,
-          cell,
+          contentCells,
           updateOptions,
         }) => {
+          const { cell } = contentCells;
+
           if (isTopLeftCorner) {
             if (cell.borderTop) {
               updateOptions(BORDER_JUNCTION_OPTIONS.top_left);
@@ -1076,13 +1087,18 @@ const BORDER_PROPS = {
         render: ({
           isTopRightCorner,
           isBottomRightCorner,
-          cell,
+          contentCells,
           updateOptions,
         }) => {
+          const { cell, east } = contentCells;
           if (isTopRightCorner) {
             if (cell.borderTop) {
               updateOptions(BORDER_JUNCTION_OPTIONS.top_right);
               return "┐";
+            }
+            if (east && east.borderTop && !east.borderLeft) {
+              updateOptions(BORDER_JUNCTION_OPTIONS.top_left);
+              return "┌";
             }
             updateOptions(BORDER_JUNCTION_OPTIONS.right_top_half);
             return "╷";

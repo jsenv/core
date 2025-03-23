@@ -25,19 +25,19 @@ const bottom_left_and_top_right = renderTable([
     { value: "b", borderTop: {}, borderRight: {} },
   ],
 ]);
-// // left/bottom/right + top/right
-// const left_bottom_right_and_top_right = renderTable([
-//   [
-//     { value: "a", borderLeft: {}, borderBottom: {}, borderRight: {} },
-//     { value: "b", borderTop: {}, borderRight: {} },
-//   ],
-// ]);
-// const all = renderTable([
-//   [
-//     { value: "a", border: {} },
-//     { value: "b", border: {} },
-//   ],
-// ]);
+// left/bottom/right + top/right
+const left_bottom_right_and_top_right = renderTable([
+  [
+    { value: "a", borderLeft: {}, borderBottom: {}, borderRight: {} },
+    { value: "b", borderTop: {}, borderRight: {} },
+  ],
+]);
+const all = renderTable([
+  [
+    { value: "a", border: {} },
+    { value: "b", border: {} },
+  ],
+]);
 
 console.log(
   renderNamedSections({
@@ -45,8 +45,8 @@ console.log(
     top_right_and_bottom_left,
     bottom_right_and_top_left,
     bottom_left_and_top_right,
-    // left_bottom_right_and_top_right,
-    // all,
+    left_bottom_right_and_top_right,
+    all,
   }),
 );
 ```
@@ -71,6 +71,16 @@ console.log(
 ╷   ───┐
 │ a  b │
 └───   ╵
+
+--- left_bottom_right_and_top_right ---
+╷   ┌───┐
+│ a │ b │
+└───┘   ╵
+
+--- all ---
+┌───┐┌───┐
+│ a ││ b │
+└───┘└───┘
 
 ```
 
