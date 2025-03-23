@@ -1,38 +1,38 @@
 # [1_two_cell_two_line](../../table_2_cells.test.mjs#L75)
 
 ```js
-// const bottom_and_top = renderTable([
-//   [{ value: "a", borderBottom: {} }],
-//   [{ value: "b", borderTop: {} }],
-// ]);
-// const bottom_left_and_top_left = renderTable([
-//   [{ value: "a", borderBottom: {}, borderLeft: {} }],
-//   [{ value: "b", borderTop: {}, borderLeft: {} }],
-// ]);
-// const bottom_right_and_top_right = renderTable([
-//   [{ value: "a", borderBottom: {}, borderRight: {} }],
-//   [{ value: "b", borderTop: {}, borderRight: {} }],
-// ]);
+const bottom_and_top = renderTable([
+  [{ value: "a", borderBottom: {} }],
+  [{ value: "b", borderTop: {} }],
+]);
+const bottom_left_and_top_left = renderTable([
+  [{ value: "a", borderBottom: {}, borderLeft: {} }],
+  [{ value: "b", borderTop: {}, borderLeft: {} }],
+]);
+const bottom_right_and_top_right = renderTable([
+  [{ value: "a", borderBottom: {}, borderRight: {} }],
+  [{ value: "b", borderTop: {}, borderRight: {} }],
+]);
 const top_left_and_bottom_right = renderTable([
   [{ value: "a", borderTop: {}, borderLeft: {} }],
   [{ value: "b", borderBottom: {}, borderRight: {} }],
 ]);
-// const bottom_right_and_top_left = renderTable([
-//   [{ value: "a", borderBottom: {}, borderRight: {} }],
-//   [{ value: "b", borderTop: {}, borderLeft: {} }],
-// ]);
-// const all = renderTable([
-//   [{ value: "a", border: {} }],
-//   [{ value: "b", border: {} }],
-// ]);
+const bottom_right_and_top_left = renderTable([
+  [{ value: "a", borderBottom: {}, borderRight: {} }],
+  [{ value: "b", borderTop: {}, borderLeft: {} }],
+]);
+const all = renderTable([
+  [{ value: "a", border: {} }],
+  [{ value: "b", border: {} }],
+]);
 console.log(
   renderNamedSections({
-    // bottom_and_top,
-    // bottom_left_and_top_left,
-    // bottom_right_and_top_right,
+    bottom_and_top,
+    bottom_left_and_top_left,
+    bottom_right_and_top_right,
     top_left_and_bottom_right,
-    // bottom_right_and_top_left,
-    // all,
+    bottom_right_and_top_left,
+    all,
   }),
 );
 ```
@@ -40,11 +40,43 @@ console.log(
 # 1/2 console.log
 
 ```console
+--- bottom_and_top ---
+ a 
+───
+───
+ b 
+
+--- bottom_left_and_top_left ---
+| a 
+└───
+┌───
+| b 
+
+--- bottom_right_and_top_right ---
+ a │
+───┘
+───┐
+ b │
+
 --- top_left_and_bottom_right ---
 ┌───╴
 | a  
   b │
 ╶───┘
+
+--- bottom_right_and_top_left ---
+  a │
+╶───┘
+┌───╴
+| b  
+
+--- all ---
+┌───┐
+| a │
+└───┘
+┌───┐
+| b │
+└───┘
 
 ```
 
