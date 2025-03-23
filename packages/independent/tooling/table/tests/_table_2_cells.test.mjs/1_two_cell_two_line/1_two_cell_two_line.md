@@ -25,6 +25,10 @@ const left_bottom_right = renderTable([
   [{ value: "a", borderLeft: {}, borderBottom: {} }],
   [{ value: "b", borderRight: {} }],
 ]);
+const left_top_right = renderTable([
+  [{ value: "a", borderLeft: {} }],
+  [{ value: "b", borderTop: {}, borderRight: {} }],
+]);
 const all = renderTable([
   [{ value: "a", border: {} }],
   [{ value: "b", border: {} }],
@@ -37,6 +41,7 @@ console.log(
     top_left_and_bottom_right,
     bottom_right_and_top_left,
     left_bottom_right,
+    left_top_right,
     all,
   }),
 );
@@ -76,6 +81,11 @@ console.log(
 │ b  
 
 --- left_bottom_right ---
+│ a  
+└───┐
+  b │
+
+--- left_top_right ---
 │ a  
 └───┐
   b │

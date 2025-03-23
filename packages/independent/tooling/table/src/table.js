@@ -197,7 +197,7 @@ const bottomSlot = {
 };
 const topLeftSlot = {
   type: "top_left",
-  adapt: ({ cell, westCell }) => {
+  adapt: ({ cell, westCell, northCell }) => {
     if (cell.borderTop && cell.borderLeft) {
       return SLOT_CONTENT_TYPES.border_top_left;
     }
@@ -208,6 +208,9 @@ const topLeftSlot = {
       return SLOT_CONTENT_TYPES.border_half_down;
     }
     if (cell.borderTop) {
+      if (northCell && northCell.borderLeft && !northCell.borderBottom) {
+        return SLOT_CONTENT_TYPES.border_bottom_left;
+      }
       return SLOT_CONTENT_TYPES.border_half_right;
     }
     return SLOT_CONTENT_TYPES.blank;
