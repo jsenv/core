@@ -77,14 +77,14 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
     //   [{ value: "a", borderBottom: {} }],
     //   [{ value: "b", borderTop: {} }],
     // ]);
-    const bottom_left_and_top_left = renderTable([
-      [{ value: "a", borderBottom: {}, borderLeft: {} }],
-      [{ value: "b", borderTop: {}, borderLeft: {} }],
-    ]);
-    // const bottom_right_and_top_right = renderTable([
-    //   [{ value: "a", borderBottom: {}, borderRight: {} }],
-    //   [{ value: "b", borderTop: {}, borderRight: {} }],
+    // const bottom_left_and_top_left = renderTable([
+    //   [{ value: "a", borderBottom: {}, borderLeft: {} }],
+    //   [{ value: "b", borderTop: {}, borderLeft: {} }],
     // ]);
+    const bottom_right_and_top_right = renderTable([
+      [{ value: "a", borderBottom: {}, borderRight: {} }],
+      [{ value: "b", borderTop: {}, borderRight: {} }],
+    ]);
     // const top_left_and_bottom_right = renderTable([
     //   [{ value: "a", borderTop: {}, borderLeft: {} }],
     //   [{ value: "b", borderBottom: {}, borderRight: {} }],
@@ -100,8 +100,8 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
     console.log(
       renderNamedSections({
         // bottom_and_top,
-        bottom_left_and_top_left,
-        // bottom_right_and_top_right,
+        // bottom_left_and_top_left,
+        bottom_right_and_top_right,
         // top_left_and_bottom_right,
         // bottom_right_and_top_left,
         // all,

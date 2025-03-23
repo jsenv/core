@@ -461,7 +461,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           leftSlot.content = leftSlotContent;
         }
         if (rightSlotRow) {
-          const rightSlot = rightSlotRow[y];
+          const rightSlot = rightSlotRow[x];
           const rightSlotContent = rightSlot.adapt({
             cell,
             westCell,
@@ -833,7 +833,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
             });
           }
           if (rightSlotRow) {
-            rightSlotLineText = renderCell(rightSlotRow[y], {
+            rightSlotLineText = renderCell(rightSlotRow[x], {
               columnWidth: 1,
               rowHeight,
               lineIndex,
