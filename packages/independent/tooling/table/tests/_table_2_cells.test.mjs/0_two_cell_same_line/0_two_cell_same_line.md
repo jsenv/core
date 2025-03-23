@@ -78,7 +78,7 @@ console.log(
 --- bottom_right_and_top_left ---
     ╷┌───╴
   a │| b  
-╶───╵╵    
+╶───┘╵    
 
 --- bottom_left_and_top_right ---
 ╷    ╶───┐
@@ -88,22 +88,22 @@ console.log(
 --- left_bottom_right_and_top_right ---
 ╷   ┌╶───┐
 | a │  b │
-└───╵    ╵
+└───┘    ╵
 
 --- top_right_bottom_right ---
 ───┐   ╷
  a │ b │
-   └───╵
+   └───┘
 
 --- top_left_bottom_right ---
 ╶───╴┐   ╷
   a  | b │
-     └───╵
+     └───┘
 
 --- all ---
 ┌───┐┌───┐
 | a │| b │
-└───╵└───╵
+└───┘└───┘
 
 ```
 

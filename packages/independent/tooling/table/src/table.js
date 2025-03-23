@@ -237,7 +237,7 @@ const topRightSlot = {
 const bottomRightSlot = {
   type: "bottom_right",
   adapt: ({ cell, eastCell }) => {
-    if (cell.borderBottom && cell.borderBottomRight) {
+    if (cell.borderBottom && cell.borderRight) {
       return SLOT_CONTENT_TYPES.border_bottom_right;
     }
     if (cell.borderRight) {
@@ -366,7 +366,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
   // fill holes in slot rows
-  // TODO: row has top slot and row has bottom slot like for columns
   {
     let y = 0;
     while (y < grid.length) {
