@@ -56,29 +56,29 @@ const SLOT_CONTENT_TYPES = {};
       { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
     ],
   };
-  const borderTopLeftHalfCell = {
-    type: "border_top_left_half",
+  const borderHalfRightCell = {
+    type: "border_half_right",
     xAlign: "end",
     yAlign: "end",
     rects: [{ width: 1, render: () => "╶" }],
   };
-  const borderTopRightHalfCell = {
-    type: "border_top_right_half",
+  const borderHalfLeftCell = {
+    type: "border_half_left",
     xAlign: "start",
     yAlign: "end",
     rects: [{ width: 1, render: () => "╴" }],
   };
-  const borderBottomRightHalfCell = {
-    type: "border_bottom_right_half",
+  const borderHalfUpCell = {
+    type: "border_half_up",
     xAlign: "start",
     yAlign: "start",
-    rects: [{ width: 1, render: () => "╴" }],
+    rects: [{ width: 1, render: () => "╵" }],
   };
-  const borderBottomLeftHalfCell = {
-    type: "border_bottom_left_half",
+  const borderHalfDownCell = {
+    type: "border_half_right",
     xAlign: "end",
     yAlign: "start",
-    rects: [{ width: 1, render: () => "╶" }],
+    rects: [{ width: 1, render: () => "╷" }],
   };
   const borderTopLeftCell = {
     xAlign: "start",
@@ -154,10 +154,10 @@ const SLOT_CONTENT_TYPES = {};
     border_top_right: borderTopRightCell,
     border_bottom_left: borderBottomLeftCell,
     border_bottom_right: borderBottomRightCell,
-    border_top_left_half: borderTopLeftHalfCell,
-    border_top_right_half: borderTopRightHalfCell,
-    border_bottom_left_half: borderBottomLeftHalfCell,
-    border_bottom_right_half: borderBottomRightHalfCell,
+    border_half_left: borderHalfLeftCell,
+    border_half_right: borderHalfRightCell,
+    border_half_up: borderHalfUpCell,
+    border_half_down: borderHalfDownCell,
     border_left_mid: borderLeftMidCell,
     border_right_mid: borderRightMidCell,
     border_top_mid: borderTopMidCell,
@@ -208,10 +208,10 @@ const topLeftSlot = {
       return SLOT_CONTENT_TYPES.border_top_right;
     }
     if (cell.borderLeft) {
-      return SLOT_CONTENT_TYPES.border_top_left_half;
+      return SLOT_CONTENT_TYPES.border_half_right;
     }
     if (cell.borderTop) {
-      return SLOT_CONTENT_TYPES.border_top_left_half;
+      return SLOT_CONTENT_TYPES.border_half_down;
     }
     return SLOT_CONTENT_TYPES.blank;
   },
@@ -226,10 +226,10 @@ const topRightSlot = {
       return SLOT_CONTENT_TYPES.border_top_left;
     }
     if (cell.borderRight) {
-      return SLOT_CONTENT_TYPES.border_top_right_half;
+      return SLOT_CONTENT_TYPES.border_half_left;
     }
     if (cell.borderTop) {
-      return SLOT_CONTENT_TYPES.border_top_right_half;
+      return SLOT_CONTENT_TYPES.border_half_down;
     }
     return SLOT_CONTENT_TYPES.blank;
   },
@@ -244,10 +244,10 @@ const bottomRightSlot = {
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }
     if (cell.borderRight) {
-      return SLOT_CONTENT_TYPES.border_bottom_right_half;
+      return SLOT_CONTENT_TYPES.border_half_left;
     }
     if (cell.borderBottom) {
-      return SLOT_CONTENT_TYPES.border_bottom_right_half;
+      return SLOT_CONTENT_TYPES.border_half_up;
     }
     return SLOT_CONTENT_TYPES.blank;
   },
@@ -262,10 +262,10 @@ const bottomLeftSlot = {
       return SLOT_CONTENT_TYPES.border_bottom_right;
     }
     if (cell.borderLeft) {
-      return SLOT_CONTENT_TYPES.border_bottom_left_half;
+      return SLOT_CONTENT_TYPES.border_half_left;
     }
     if (cell.borderBottom) {
-      return SLOT_CONTENT_TYPES.border_bottom_left_half;
+      return SLOT_CONTENT_TYPES.border_half_up;
     }
     return SLOT_CONTENT_TYPES.blank;
   },
