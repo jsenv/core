@@ -21,7 +21,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const borderLeftColumnMap = new Map();
   const borderRightColumnMap = new Map();
   const onBorderTop = (borderTop, x, y) => {
-    const borderTopCell = createBorderTopCell(borderTop);
+    const borderTopCell = createBorderTop(borderTop);
     const borderTopArray = borderTopRowMap.get(y);
     if (!borderTopArray) {
       const array = [];
@@ -32,7 +32,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   };
   const onBorderBottom = (borderBottom, x, y) => {
-    const borderBottomCell = createBorderBottomCell(borderBottom);
+    const borderBottomCell = createBorderBottom(borderBottom);
     const borderBottomArray = borderBottomRowMap.get(y);
     if (!borderBottomArray) {
       const array = [];
@@ -43,7 +43,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   };
   const onBorderLeft = (borderLeft, x, y) => {
-    const borderLeftCell = createBorderLeftCell(borderLeft);
+    const borderLeftCell = createBorderLeft(borderLeft);
     const borderLeftArray = borderLeftColumnMap.get(x);
     if (!borderLeftArray) {
       const array = [];
@@ -54,7 +54,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   };
   const onBorderRight = (borderRight, x, y) => {
-    const borderRightCell = createBorderRightCell(borderRight);
+    const borderRightCell = createBorderRight(borderRight);
     const borderRightArray = borderRightColumnMap.get(x);
     if (!borderRightArray) {
       const array = [];
@@ -1199,7 +1199,7 @@ const BORDER_JUNCTION_OPTIONS = {
   },
 };
 
-const createBorderCell = (position, options) => {
+const createBorder = (position, options) => {
   const borderProps = BORDER_PROPS[position];
   if (options) {
     return {
@@ -1209,10 +1209,10 @@ const createBorderCell = (position, options) => {
   }
   return borderProps;
 };
-const createBorderLeftCell = (options) => createBorderCell("left", options);
-const createBorderRightCell = (options) => createBorderCell("right", options);
-const createBorderTopCell = (options) => createBorderCell("top", options);
-const createBorderBottomCell = (options) => createBorderCell("bottom", options);
+const createBorderLeft = (options) => createBorder("left", options);
+const createBorderRight = (options) => createBorder("right", options);
+const createBorderTop = (options) => createBorder("top", options);
+const createBorderBottom = (options) => createBorder("bottom", options);
 // const createTopMidBorderCell = (options) =>
 //   createBorderCell("top_mid", options);
 // const createBottomMidBorderCell = (options) =>
