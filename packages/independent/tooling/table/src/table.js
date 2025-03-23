@@ -3,6 +3,10 @@
  * https://www.w3schools.com/charsets/ref_utf_box.asp
  * https://github.com/Automattic/cli-table
  *
+ * OK UN TRUC: les corners sont pas adapté ou plutot on réutilise
+ * les left/right au lieu d'avoir des slots dédiés
+ * il faut en gros stocker les corners dans un truc a part et les render a part
+ *
  * remaining:
  * border collapse on advanced scenario
  * border color conflicts
@@ -194,66 +198,66 @@ const bottomSlot = {
       : SLOT_CONTENT_TYPES.blank;
   },
 };
-// const topLeftSlot = {
-//   type: "top_left",
-//   adapt: ({ cell, westCell }) => {
-//     if (cell.borderTop) {
-//       return SLOT_CONTENT_TYPES.border_top_left;
-//     }
-//     if (westCell && westCell.borderTop && !westCell.borderRight) {
-//       return SLOT_CONTENT_TYPES.border_top_right;
-//     }
-//     if (cell.borderLeft) {
-//       return SLOT_CONTENT_TYPES.border_left_half;
-//     }
-//     return SLOT_CONTENT_TYPES.blank;
-//   },
-// };
-// const topRightSlot = {
-//   type: "top_right",
-//   adapt: ({ cell, eastCell }) => {
-//     if (cell.borderTop) {
-//       return SLOT_CONTENT_TYPES.border_top_right;
-//     }
-//     if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
-//       return SLOT_CONTENT_TYPES.border_top_left;
-//     }
-//     if (cell.borderRight) {
-//       return SLOT_CONTENT_TYPES.border_right_half;
-//     }
-//     return SLOT_CONTENT_TYPES.blank;
-//   },
-// };
-// const bottomRightSlot = {
-//   type: "bottom_right",
-//   adapt: ({ cell, eastCell }) => {
-//     if (cell.borderBottom) {
-//       return SLOT_CONTENT_TYPES.border_bottom_right;
-//     }
-//     if (eastCell && eastCell.borderBottom && !eastCell.borderLeft) {
-//       return SLOT_CONTENT_TYPES.border_bottom_left;
-//     }
-//     if (cell.borderRight) {
-//       return SLOT_CONTENT_TYPES.border_right_half;
-//     }
-//     return SLOT_CONTENT_TYPES.blank;
-//   },
-// };
-// const bottomLeftSlot = {
-//   type: "bottom_left",
-//   adapt: ({ cell, westCell }) => {
-//     if (cell.borderBottom) {
-//       return SLOT_CONTENT_TYPES.border_bottom_right;
-//     }
-//     if (westCell && westCell.borderBottom && !westCell.borderRight) {
-//       return SLOT_CONTENT_TYPES.border_bottom_left;
-//     }
-//     if (cell.borderLeft) {
-//       return SLOT_CONTENT_TYPES.border_left_half;
-//     }
-//     return SLOT_CONTENT_TYPES.blank;
-//   },
-// };
+const topLeftSlot = {
+  type: "top_left",
+  adapt: ({ cell, westCell }) => {
+    if (cell.borderTop) {
+      return SLOT_CONTENT_TYPES.border_top_left;
+    }
+    if (westCell && westCell.borderTop && !westCell.borderRight) {
+      return SLOT_CONTENT_TYPES.border_top_right;
+    }
+    if (cell.borderLeft) {
+      return SLOT_CONTENT_TYPES.border_left_half;
+    }
+    return SLOT_CONTENT_TYPES.blank;
+  },
+};
+const topRightSlot = {
+  type: "top_right",
+  adapt: ({ cell, eastCell }) => {
+    if (cell.borderTop) {
+      return SLOT_CONTENT_TYPES.border_top_right;
+    }
+    if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
+      return SLOT_CONTENT_TYPES.border_top_left;
+    }
+    if (cell.borderRight) {
+      return SLOT_CONTENT_TYPES.border_right_half;
+    }
+    return SLOT_CONTENT_TYPES.blank;
+  },
+};
+const bottomRightSlot = {
+  type: "bottom_right",
+  adapt: ({ cell, eastCell }) => {
+    if (cell.borderBottom) {
+      return SLOT_CONTENT_TYPES.border_bottom_right;
+    }
+    if (eastCell && eastCell.borderBottom && !eastCell.borderLeft) {
+      return SLOT_CONTENT_TYPES.border_bottom_left;
+    }
+    if (cell.borderRight) {
+      return SLOT_CONTENT_TYPES.border_right_half;
+    }
+    return SLOT_CONTENT_TYPES.blank;
+  },
+};
+const bottomLeftSlot = {
+  type: "bottom_left",
+  adapt: ({ cell, westCell }) => {
+    if (cell.borderBottom) {
+      return SLOT_CONTENT_TYPES.border_bottom_right;
+    }
+    if (westCell && westCell.borderBottom && !westCell.borderRight) {
+      return SLOT_CONTENT_TYPES.border_bottom_left;
+    }
+    if (cell.borderLeft) {
+      return SLOT_CONTENT_TYPES.border_left_half;
+    }
+    return SLOT_CONTENT_TYPES.blank;
+  },
+};
 
 export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const grid = [];
@@ -342,6 +346,33 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       y++;
     }
   }
+  // create corners
+  const topCornerSlotRowMap = new Map();
+  const bottomCornerSlotRowMap = new Map();
+  {
+    for (const [x] of leftSlotColumnMap) {
+      const topLeftSlotArray = [];
+      const bottomLeftSlotArray = [];
+      let y = 0;
+      while (y < grid.length) {
+        topLeftSlotArray[y] = topLeftSlot;
+        bottomLeftSlotArray[y] = bottomLeftSlot;
+      }
+      topCornerSlotRowMap.set(x, topLeftSlotArray);
+      bottomCornerSlotRowMap.set(x, bottomLeftSlotArray);
+    }
+    for (const [x] of rightSlotColumnMap) {
+      const topRightSlotArray = [];
+      const bottomRightSlotArray = [];
+      let y = 0;
+      while (y < grid.length) {
+        topRightSlotArray[y] = topRightSlot;
+        bottomRightSlotArray[y] = bottomRightSlot;
+      }
+      topCornerSlotRowMap.set(x, topRightSlotArray);
+      bottomCornerSlotRowMap.set(x, bottomRightSlotArray);
+    }
+  }
   // fill slot row and columns
   {
     for (const [, leftSlotColumn] of leftSlotColumnMap) {
@@ -379,6 +410,78 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         }
         x++;
       }
+    }
+  }
+  // transform border slots into what they should be (is it required at this stage I don't know)
+  // (pour le moment on va ignorer les coins)
+  {
+    let y = 0;
+    while (y < grid.length) {
+      let x = 0;
+      const row = grid[y];
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      // TOOD: the corners
+      while (x < row.length) {
+        const cell = row[x];
+        const westCell = x === 0 ? null : row[x - 1];
+        const eastCell = x === row.length - 1 ? null : row[x + 1];
+        const northCell = y === 0 ? null : grid[y - 1][x];
+        const southCell = y === grid.length - 1 ? null : grid[y + 1][x];
+
+        const leftSlotColumn = leftSlotColumnMap.get(x);
+        const rightSlotColumn = rightSlotColumnMap.get(x);
+        if (leftSlotColumn) {
+          const leftSlot = leftSlotColumn[y];
+          if (leftSlot) {
+            const leftSlotContent = leftSlot.adapt({
+              cell,
+              westCell,
+              eastCell,
+              northCell,
+              southCell,
+            });
+            leftSlot.content = leftSlotContent;
+          }
+        }
+        if (rightSlotColumn) {
+          const rightSlot = rightSlotColumn[y];
+          if (rightSlot) {
+            const rightSlotContent = rightSlot.adapt({
+              cell,
+              westCell,
+              eastCell,
+              northCell,
+              southCell,
+            });
+            rightSlot.content = rightSlotContent;
+          }
+        }
+        if (topSlotRow) {
+          const topSlot = topSlotRow[x];
+          const topSlotContent = topSlot.adapt({
+            cell,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
+          });
+          topSlot.content = topSlotContent;
+        }
+        if (bottomSlotRow) {
+          const bottomSlot = bottomSlotRow[x];
+          const bottomSlotContent = bottomSlot.adapt({
+            cell,
+            westCell,
+            eastCell,
+            northCell,
+            southCell,
+          });
+          bottomSlot.content = bottomSlotContent;
+        }
+        x++;
+      }
+      y++;
     }
   }
 
@@ -640,78 +743,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         }
         if (cellHeight > rowHeight) {
           rowHeightMap.set(y, cellHeight);
-        }
-        x++;
-      }
-      y++;
-    }
-  }
-
-  // transform border slots into what they should be (is it required at this stage I don't know)
-  // (pour le moment on va ignorer les coins)
-  {
-    let y = 0;
-    while (y < grid.length) {
-      let x = 0;
-      const row = grid[y];
-      const topSlotRow = topSlotRowMap.get(y);
-      const bottomSlotRow = bottomSlotRowMap.get(y);
-      while (x < row.length) {
-        const cell = row[x];
-        const westCell = x === 0 ? null : row[x - 1];
-        const eastCell = x === row.length - 1 ? null : row[x + 1];
-        const northCell = y === 0 ? null : grid[y - 1][x];
-        const southCell = y === grid.length - 1 ? null : grid[y + 1][x];
-
-        const leftSlotColumn = leftSlotColumnMap.get(x);
-        const rightSlotColumn = rightSlotColumnMap.get(x);
-        if (leftSlotColumn) {
-          const leftSlot = leftSlotColumn[y];
-          if (leftSlot) {
-            const leftSlotContent = leftSlot.adapt({
-              cell,
-              westCell,
-              eastCell,
-              northCell,
-              southCell,
-            });
-            leftSlot.content = leftSlotContent;
-          }
-        }
-        if (rightSlotColumn) {
-          const rightSlot = rightSlotColumn[y];
-          if (rightSlot) {
-            const rightSlotContent = rightSlot.adapt({
-              cell,
-              westCell,
-              eastCell,
-              northCell,
-              southCell,
-            });
-            rightSlot.content = rightSlotContent;
-          }
-        }
-        if (topSlotRow) {
-          const topSlot = topSlotRow[x];
-          const topSlotContent = topSlot.adapt({
-            cell,
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
-          });
-          topSlot.content = topSlotContent;
-        }
-        if (bottomSlotRow) {
-          const bottomSlot = bottomSlotRow[x];
-          const bottomSlotContent = bottomSlot.adapt({
-            cell,
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
-          });
-          bottomSlot.content = bottomSlotContent;
         }
         x++;
       }
