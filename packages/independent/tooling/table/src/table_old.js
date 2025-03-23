@@ -437,3 +437,15 @@
 //     }
 //     return null;
 //   };
+
+// const mutateGrid = (grid, callback) => {
+//   let y = 0;
+//   for (const line of grid) {
+//     let x = 0;
+//     for (const cell of line) {
+//       line[x] = callback(cell, { x, y });
+//       x++;
+//     }
+//     y++;
+//   }
+// };

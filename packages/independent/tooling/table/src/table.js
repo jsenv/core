@@ -13,49 +13,247 @@
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
 import stringWidth from "string-width";
 
-const SLOT_CONTENT_TYPES = {
-  blank: "blank",
-  border_left: "border_left",
-  border_top_right: "border_top_right",
-  border_top_left: "border_top_left",
-  border_left_half: "border_left_half",
-  border_right_half: "border_right_half",
-};
+let SLOT_CONTENT_TYPES;
+{
+  // blank content is a fluid content that will take whatever size they are requested to take
+  // they can seen as placeholders that are removed when a line or column is composed only by blank cells
+  // this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
+  // (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
+  // where the border is)
+  const blankCell = {
+    type: "blank",
+    rects: [
+      { width: "fill", render: ({ columnWidth }) => " ".repeat(columnWidth) },
+    ],
+  };
+  const borderLeftCell = {
+    type: "border_left",
+    xAlign: "end",
+    yAlignChar: "|",
+    rects: [{ width: 1, render: () => "|" }],
+  };
+  const borderRightCell = {
+    type: "border_right",
+    xAlign: "start",
+    yAlignChar: "|",
+    rects: [{ width: 1, render: () => "│" }],
+  };
+  const borderTopCell = {
+    type: "border_top",
+    yAlign: "end",
+    rects: [
+      { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
+    ],
+  };
+  const borderBottomCell = {
+    type: "border_bottom",
+    yAlign: "start",
+    rects: [
+      { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
+    ],
+  };
+  const borderTopLeftHalfCell = {
+    type: "border_top_left_half",
+    xAlign: "end",
+    yAlign: "end",
+    rects: [{ width: 1, render: () => "╷" }],
+  };
+  const borderTopRightHalfCell = {
+    type: "border_top_right_half",
+    xAlign: "start",
+    yAlign: "end",
+    rects: [{ width: 1, render: () => "╷" }],
+  };
+  const borderBottomRightHalfCell = {
+    type: "border_bottom_right_half",
+    xAlign: "start",
+    yAlign: "start",
+    rects: [{ width: 1, render: () => "╵" }],
+  };
+  const borderBottomLeftHalfCell = {
+    type: "border_bottom_left_half",
+    xAlign: "end",
+    yAlign: "start",
+    rects: [{ width: 1, render: () => "╵" }],
+  };
+  const borderTopLeftCell = {
+    xAlign: "start",
+    yAlign: "start",
+    xAlignChar: "─",
+    yAlignChar: "│",
+    rects: [{ width: 1, render: () => "┌" }],
+  };
+  const borderTopRightCell = {
+    xAlign: "end",
+    yAlign: "start",
+    xAlignChar: "─",
+    yAlignChar: "│",
+    rects: [{ width: 1, render: () => "┐" }],
+  };
+  const borderBottomRightCell = {
+    xAlign: "end",
+    yAlign: "end",
+    xAlignChar: "─",
+    yAlignChar: "│",
+    rects: [{ width: 1, render: () => "┘" }],
+  };
+  const borderBottomLeftCell = {
+    xAlign: "start",
+    yAlign: "end",
+    xAlignChar: "─",
+    yAlignChar: "│",
+    rects: [{ width: 1, render: () => "└" }],
+  };
+  const borderTopMidCell = {
+    xAlign: "center",
+    yAlign: "start",
+    xAlignChar: "─",
+    yAlignChar: "│",
+    rects: [{ width: 1, render: () => "┬" }],
+  };
+  const borderBottomMidCell = {
+    xAlign: "center",
+    yAlign: "end",
+    xAlignChar: "─",
+    yAlignChar: "│",
+    rects: [{ width: 1, render: () => "┴" }],
+  };
+  const borderLeftMidCell = {
+    xAlign: "start",
+    yAlign: "center",
+    xAlignChar: "─",
+    yAlignChar: "│",
+    rects: [{ width: 1, render: () => "├" }],
+  };
+  const borderRightMidCell = {
+    xAlign: "end",
+    yAlign: "center",
+    xAlignChar: "─",
+    yAlignChar: "│",
+    rects: [{ width: 1, render: () => "┤" }],
+  };
+  const borderMidCell = {
+    xAlign: "center",
+    yAlign: "center",
+    xAlignChar: "─",
+    yAlignChar: "│",
+    rects: [{ width: 1, render: () => "┼" }],
+  };
+
+  Object.assign(SLOT_CONTENT_TYPES, {
+    blank: blankCell,
+    border_left: borderLeftCell,
+    border_right: borderRightCell,
+    border_top: borderTopCell,
+    border_bottom: borderBottomCell,
+    border_top_left: borderTopLeftCell,
+    border_top_right: borderTopRightCell,
+    border_bottom_left: borderBottomLeftCell,
+    border_bottom_right: borderBottomRightCell,
+    border_top_left_half: borderTopLeftHalfCell,
+    border_top_right_half: borderTopRightHalfCell,
+    border_bottom_left_half: borderBottomLeftHalfCell,
+    border_bottom_right_half: borderBottomRightHalfCell,
+    border_left_mid: borderLeftMidCell,
+    border_right_mid: borderRightMidCell,
+    border_top_mid: borderTopMidCell,
+    border_bottom_mid: borderBottomMidCell,
+    border_mid: borderMidCell,
+  });
+}
 
 const leftSlot = {
   type: "left",
-  adapt: () => {
-    return SLOT_CONTENT_TYPES.left;
+  adapt: ({ cell }) => {
+    return cell.borderLeft
+      ? SLOT_CONTENT_TYPES.border_left
+      : SLOT_CONTENT_TYPES.blank;
   },
 };
-const rightSlot = {};
-const topSlot = {};
-const bottomSlot = {};
-const topLeftSlot = {
-  type: "top_left",
-  adapt: ({ cell, westCell }) => {
-    if (cell.borderTop) {
-      return SLOT_CONTENT_TYPES.top_left;
-    }
-    if (westCell && westCell.borderTop && !westCell.borderRight) {
-      return SLOT_CONTENT_TYPES.top_right;
-    }
-    return SLOT_CONTENT_TYPES.left_half;
+const rightSlot = {
+  type: "right",
+  adapt: ({ cell }) => {
+    return cell.borderRight
+      ? SLOT_CONTENT_TYPES.border_right
+      : SLOT_CONTENT_TYPES.blank;
   },
 };
-const topRightSlot = {};
-const bottomRightSlot = {};
-const bottomLeftSlot = {
-  adapt: ({ cell, westCell }) => {
-    if (cell.borderBottom) {
-      return SLOT_CONTENT_TYPES.bottom_right;
-    }
-    if (westCell && westCell.borderBottom && !westCell.borderRight) {
-      return SLOT_CONTENT_TYPES.bottom_left;
-    }
-    return SLOT_CONTENT_TYPES.right_half;
+const topSlot = {
+  type: "top",
+  adapt: ({ cell }) => {
+    return cell.borderTop
+      ? SLOT_CONTENT_TYPES.border_top
+      : SLOT_CONTENT_TYPES.blank;
   },
 };
+const bottomSlot = {
+  type: "top",
+  adapt: ({ cell }) => {
+    return cell.borderBottom
+      ? SLOT_CONTENT_TYPES.border_bottom
+      : SLOT_CONTENT_TYPES.blank;
+  },
+};
+// const topLeftSlot = {
+//   type: "top_left",
+//   adapt: ({ cell, westCell }) => {
+//     if (cell.borderTop) {
+//       return SLOT_CONTENT_TYPES.border_top_left;
+//     }
+//     if (westCell && westCell.borderTop && !westCell.borderRight) {
+//       return SLOT_CONTENT_TYPES.border_top_right;
+//     }
+//     if (cell.borderLeft) {
+//       return SLOT_CONTENT_TYPES.border_left_half;
+//     }
+//     return SLOT_CONTENT_TYPES.blank;
+//   },
+// };
+// const topRightSlot = {
+//   type: "top_right",
+//   adapt: ({ cell, eastCell }) => {
+//     if (cell.borderTop) {
+//       return SLOT_CONTENT_TYPES.border_top_right;
+//     }
+//     if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
+//       return SLOT_CONTENT_TYPES.border_top_left;
+//     }
+//     if (cell.borderRight) {
+//       return SLOT_CONTENT_TYPES.border_right_half;
+//     }
+//     return SLOT_CONTENT_TYPES.blank;
+//   },
+// };
+// const bottomRightSlot = {
+//   type: "bottom_right",
+//   adapt: ({ cell, eastCell }) => {
+//     if (cell.borderBottom) {
+//       return SLOT_CONTENT_TYPES.border_bottom_right;
+//     }
+//     if (eastCell && eastCell.borderBottom && !eastCell.borderLeft) {
+//       return SLOT_CONTENT_TYPES.border_bottom_left;
+//     }
+//     if (cell.borderRight) {
+//       return SLOT_CONTENT_TYPES.border_right_half;
+//     }
+//     return SLOT_CONTENT_TYPES.blank;
+//   },
+// };
+// const bottomLeftSlot = {
+//   type: "bottom_left",
+//   adapt: ({ cell, westCell }) => {
+//     if (cell.borderBottom) {
+//       return SLOT_CONTENT_TYPES.border_bottom_right;
+//     }
+//     if (westCell && westCell.borderBottom && !westCell.borderRight) {
+//       return SLOT_CONTENT_TYPES.border_bottom_left;
+//     }
+//     if (cell.borderLeft) {
+//       return SLOT_CONTENT_TYPES.border_left_half;
+//     }
+//     return SLOT_CONTENT_TYPES.blank;
+//   },
+// };
 
 export const renderTable = (inputGrid, { ansi = true } = {}) => {
   const grid = [];
@@ -450,14 +648,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   }
 
   // transform border slots into what they should be (is it required at this stage I don't know)
+  // (pour le moment on va ignorer les coins)
   {
-    const getSlotContent = (slotContent) => {
-      if (slotContent === SLOT_CONTENT_TYPES.blank) {
-        return blankCell;
-      }
-      return null;
-    };
-
     let y = 0;
     while (y < grid.length) {
       let x = 0;
@@ -477,51 +669,51 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         if (leftSlotColumn) {
           const leftSlot = leftSlotColumn[y];
           if (leftSlot) {
-            const leftSlotContentType = leftSlot.adapt({
+            const leftSlotContent = leftSlot.adapt({
               cell,
               westCell,
               eastCell,
               northCell,
               southCell,
             });
-            leftSlot.content = getSlotContent(leftSlotContentType);
+            leftSlot.content = leftSlotContent;
           }
         }
         if (rightSlotColumn) {
           const rightSlot = rightSlotColumn[y];
           if (rightSlot) {
-            const rightSlotContentType = rightSlot.adapt({
+            const rightSlotContent = rightSlot.adapt({
               cell,
               westCell,
               eastCell,
               northCell,
               southCell,
             });
-            rightSlot.content = getSlotContent(rightSlotContentType);
+            rightSlot.content = rightSlotContent;
           }
         }
 
         if (topSlotRow) {
           const topSlot = topSlotRow[x];
-          const topSlotContentType = topSlot.adapt({
+          const topSlotContent = topSlot.adapt({
             cell,
             westCell,
             eastCell,
             northCell,
             southCell,
           });
-          topSlot.content = getSlotContent(topSlotContentType);
+          topSlot.content = topSlotContent;
         }
         if (bottomSlotRow) {
           const bottomSlot = bottomSlotRow[x];
-          const bottomSlotContentType = bottomSlot.adapt({
+          const bottomSlotContent = bottomSlot.adapt({
             cell,
             westCell,
             eastCell,
             northCell,
             southCell,
           });
-          bottomSlot.content = getSlotContent(bottomSlotContentType);
+          bottomSlot.content = bottomSlotContent;
         }
       }
       y++;
@@ -796,300 +988,3 @@ const createContentCell = (
     rects,
   };
 };
-
-const BORDER_PROPS = {
-  top: {
-    position: "top",
-    yAlign: "end",
-    rects: [
-      { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
-    ],
-  },
-  bottom: {
-    position: "bottom",
-    yAlign: "start",
-    rects: [
-      { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
-    ],
-  },
-  left: {
-    position: "left",
-    xAlign: "end",
-    yAlignChar: "|",
-    rects: [
-      {
-        width: 1,
-        render: () => {},
-      },
-    ],
-  },
-  right: {
-    position: "right",
-    xAlign: "start",
-    yAlignChar: "|",
-    rects: [
-      {
-        width: 1,
-        render: ({
-          isTopRightCorner,
-          isBottomRightCorner,
-          contentCells,
-          updateOptions,
-        }) => {
-          const { cell, east } = contentCells;
-          if (isTopRightCorner) {
-            if (cell.borderTop) {
-              updateOptions(BORDER_JUNCTION_OPTIONS.top_right);
-              return "┐";
-            }
-            if (east && east.borderTop && !east.borderLeft) {
-              updateOptions(BORDER_JUNCTION_OPTIONS.top_left);
-              return "┌";
-            }
-            updateOptions(BORDER_JUNCTION_OPTIONS.right_top_half);
-            return "╷";
-          }
-          if (isBottomRightCorner) {
-            if (cell.borderBottom) {
-              updateOptions(BORDER_JUNCTION_OPTIONS.bottom_right);
-              return "┘";
-            }
-            if (east && east.borderBottom && !east.borderLeft) {
-              updateOptions(BORDER_JUNCTION_OPTIONS.bottom_left);
-              return "└";
-            }
-            updateOptions(BORDER_JUNCTION_OPTIONS.right_bottom_half);
-            return "╵";
-          }
-          return "│";
-        },
-      },
-    ],
-  },
-};
-
-const BORDER_JUNCTION_OPTIONS = {
-  // 1 border junction with blank
-  left_top_half: {
-    position: "left_top_half",
-    xAlign: "end",
-    char: "╷",
-  },
-  left_bottom_half: {
-    position: "left_bottom_half",
-    xAlign: "end",
-    char: "╵",
-  },
-  right_top_half: {
-    position: "right_top_half",
-    xAlign: "end",
-    char: "╷",
-  },
-  right_bottom_half: {
-    position: "right_bottom_half",
-    xAlign: "end",
-    char: "╵",
-  },
-  // 2 borders junctions (corners)
-  top_left: {
-    position: "top_left",
-    xAlign: "start",
-    yAlign: "start",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    char: "┌",
-  },
-  top_right: {
-    position: "top_right",
-    xAlign: "end",
-    yAlign: "start",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    char: "┐",
-  },
-  bottom_right: {
-    position: "bottom_right",
-    xAlign: "end",
-    yAlign: "end",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    char: "┘",
-  },
-  bottom_left: {
-    position: "bottom_left",
-    xAlign: "start",
-    yAlign: "end",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    char: "└",
-  },
-  // 3 borders junctions
-  top_mid: {
-    position: "top_mid",
-    xAlign: "center",
-    yAlign: "start",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    char: "┬",
-  },
-  bottom_mid: {
-    position: "bottom_mid",
-    xAlign: "center",
-    yAlign: "end",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    char: "┴",
-  },
-  right_mid: {
-    position: "right_mid",
-    xAlign: "end",
-    yAlign: "center",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    char: "┤",
-  },
-  left_mid: {
-    position: "left_mid",
-    xAlign: "start",
-    yAlign: "center",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    char: "├",
-  },
-  // 4 border junctions
-  mid: {
-    position: "mid",
-    xAlign: "center",
-    yAlign: "center",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    char: "┼",
-  },
-};
-
-const getBorderJunction = (border, { cell, west }) => {
-  if (border.type === "top_left") {
-    if (cell.borderTop) {
-      return "top_left";
-    }
-    if (west && west.borderTop && !west.borderRight) {
-      return "top_right";
-    }
-    return "top_left_half";
-  }
-};
-
-const createBorder = (position) => {
-  const borderProps = BORDER_PROPS[position];
-
-  const rectsCopy = borderProps.rects.map((rect) => ({ ...rect }));
-  rectsCopy.render = () => {
-    borderProps.rects[0].render();
-  };
-
-  return {
-    ...borderProps,
-  };
-};
-// const createBorderLeft = () => createBorder("left");
-// const createBorderRight = () => createBorder("right");
-// const createBorderTop = () => createBorder("top");
-// const createBorderBottom = () => createBorder("bottom");
-// const createTopMidBorderCell = (options) =>
-//   createBorderCell("top_mid", options);
-// const createBottomMidBorderCell = (options) =>
-//   createBorderCell("bottom_mid", options);
-// const createRightMidBorderCell = (options) =>
-//   createBorderCell("right_mid", options);
-// const createLeftMidBorderCell = (options) =>
-//   createBorderCell("left_mid", options);
-// const createMidBorderCell = (options) => createBorderCell("mid", options);
-
-// const isBorderTopLeft = (cell) => cell.position === "top_left";
-// const isBorderTopRight = (cell) => cell.position === "top_right";
-// const isBorderLeft = (cell) => cell.position === "left";
-// const isBorderRight = (cell) => cell.position === "right";
-// const isBorderTop = (cell) => cell.position === "top";
-// const isBorderBottom = (cell) => cell.position === "bottom";
-// // const isBorderBottomRight = (cell) => cell.position === "bottom_right";
-// // const isBorderBottomLeft = (cell) => cell.position === "bottom_left";
-// const isContent = (cell) => cell.type === "content";
-
-// const isBlank = (cell) => cell.type === "blank";
-// blank cells are fluid cells that will take whatever size they are requested to take
-// they can seen as placeholders that are removed when a line or column is composed only by blank cells
-// this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
-// (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
-// where the border is)
-const blankCell = {
-  type: "blank",
-  rects: [
-    {
-      width: "fill",
-      render: ({ columnWidth }) => " ".repeat(columnWidth),
-    },
-  ],
-};
-
-// const mutateGrid = (grid, callback) => {
-//   let y = 0;
-//   for (const line of grid) {
-//     let x = 0;
-//     for (const cell of line) {
-//       line[x] = callback(cell, { x, y });
-//       x++;
-//     }
-//     y++;
-//   }
-// };
-
-// console.log(
-//   renderTable([
-//     [
-//       {
-//         value: "1:1",
-//         borderTop: {},
-//         borderLeft: {},
-//         borderRight: {},
-//         borderBottom: {},
-//       },
-//       {
-//         value: "1:2",
-//         borderTop: {},
-//         borderLeft: {},
-//         // borderRight: {},
-//         borderBottom: {},
-//       },
-//       {
-//         value: "1:3",
-//         borderTop: {},
-//         // borderLeft: {},
-//         borderRight: {},
-//         borderBottom: {},
-//       },
-//     ],
-//     [
-//       {
-//         value: "2:1",
-//         borderTop: {},
-//         borderLeft: {},
-//         borderRight: {},
-//         borderBottom: {},
-//       },
-//       {
-//         value: "2:2",
-//         borderTop: {},
-//         borderLeft: {},
-//         borderRight: {},
-//         borderBottom: {},
-//       },
-//       {
-//         value: "2:3",
-//         borderTop: {},
-//         borderLeft: {},
-//         borderRight: {},
-//         borderBottom: {},
-//       },
-//     ],
-//   ]),
-// );
