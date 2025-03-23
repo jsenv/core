@@ -257,8 +257,11 @@ const bottomRightSlot = {
 };
 const bottomLeftSlot = {
   type: "bottom_left",
-  adapt: ({ cell, westCell }) => {
+  adapt: ({ cell, westCell, southCell }) => {
     if (cell.borderBottom && cell.borderLeft) {
+      if (southCell && southCell.borderLeft && !southCell.borderTop) {
+        return SLOT_CONTENT_TYPES.border_left_mid;
+      }
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }
     if (cell.borderLeft) {
