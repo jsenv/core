@@ -1054,11 +1054,15 @@ const BORDER_PROPS = {
           contentCells,
           updateOptions,
         }) => {
-          const { cell } = contentCells;
+          const { cell, west } = contentCells;
           if (isTopLeftCorner) {
             if (cell.borderTop) {
               updateOptions(BORDER_JUNCTION_OPTIONS.top_left);
               return "┌";
+            }
+            if (west && west.borderTop && !west.borderRight) {
+              updateOptions(BORDER_JUNCTION_OPTIONS.top_right);
+              return "┐";
             }
             updateOptions(BORDER_JUNCTION_OPTIONS.left_top_half);
             return "╷";
