@@ -109,7 +109,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     for (const [, borderLeftColumn] of borderLeftColumnMap) {
       let y = 0;
       while (y < grid.length) {
-        const borderLeft = grid[y];
+        const borderLeft = borderLeftColumn[y];
         if (!borderLeft) {
           borderLeftColumn[y] = blankCell;
         }
@@ -119,7 +119,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     for (const [, borderRightColumn] of borderRightColumnMap) {
       let y = 0;
       while (y < grid.length) {
-        const borderRight = grid[y];
+        const borderRight = borderRightColumn[y];
         if (!borderRight) {
           borderRightColumn[y] = blankCell;
         }
@@ -1071,6 +1071,10 @@ const BORDER_PROPS = {
             if (cell.borderBottom) {
               updateOptions(BORDER_JUNCTION_OPTIONS.bottom_left);
               return "└";
+            }
+            if (west && west.borderBottom && !west.borderRight) {
+              updateOptions(BORDER_JUNCTION_OPTIONS.bottom_right);
+              return "┘";
             }
             updateOptions(BORDER_JUNCTION_OPTIONS.left_bottom_half);
             return "╵";
