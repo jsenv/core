@@ -8,7 +8,7 @@
  * il faut en gros stocker les corners dans un truc a part et les render a part
  *
  * remaining:
- * border collapse on advanced scenario
+ * border collapse
  * border color conflicts
  * ability to control border chars
  * multiline (for later)
@@ -376,7 +376,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       let x = 0;
       while (x < grid[y].length) {
         if (leftSlotRow) {
-          if (!leftSlotRow[x]) {
+          if (!leftSlotRow[x] && columnHasLeftSlot(x)) {
             leftSlotRow[x] = leftSlot;
           }
         } else if (columnHasLeftSlot(x)) {
@@ -386,7 +386,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         }
 
         if (rightSlotRow) {
-          if (!rightSlotRow[x]) {
+          if (!rightSlotRow[x] && columnHasRightSlot(x)) {
             rightSlotRow[x] = rightSlot;
           }
         } else if (columnHasRightSlot(x)) {
@@ -484,25 +484,29 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
 
         if (leftSlotRow) {
           const leftSlot = leftSlotRow[x];
-          const leftSlotContent = leftSlot.adapt({
-            cell,
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
-          });
-          leftSlotRow[x] = leftSlotContent;
+          if (leftSlot) {
+            const leftSlotContent = leftSlot.adapt({
+              cell,
+              westCell,
+              eastCell,
+              northCell,
+              southCell,
+            });
+            leftSlotRow[x] = leftSlotContent;
+          }
         }
         if (rightSlotRow) {
           const rightSlot = rightSlotRow[x];
-          const rightSlotContent = rightSlot.adapt({
-            cell,
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
-          });
-          rightSlotRow[x] = rightSlotContent;
+          if (rightSlot) {
+            const rightSlotContent = rightSlot.adapt({
+              cell,
+              westCell,
+              eastCell,
+              northCell,
+              southCell,
+            });
+            rightSlotRow[x] = rightSlotContent;
+          }
         }
         if (topSlotRow) {
           const topSlot = topSlotRow[x];
@@ -668,18 +672,24 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           let leftSlotLineText;
           let rightSlotLineText;
           if (leftSlotRow) {
-            leftSlotLineText = renderCell(leftSlotRow[x], {
-              columnWidth: 1,
-              rowHeight,
-              lineIndex,
-            });
+            const leftSlotCell = leftSlotRow[x];
+            if (leftSlotCell) {
+              leftSlotLineText = renderCell(leftSlotCell, {
+                columnWidth: 1,
+                rowHeight,
+                lineIndex,
+              });
+            }
           }
           if (rightSlotRow) {
-            rightSlotLineText = renderCell(rightSlotRow[x], {
-              columnWidth: 1,
-              rowHeight,
-              lineIndex,
-            });
+            const rightSlotCell = rightSlotRow[x];
+            if (rightSlotCell) {
+              rightSlotLineText = renderCell(rightSlotCell, {
+                columnWidth: 1,
+                rowHeight,
+                lineIndex,
+              });
+            }
           }
           if (leftSlotLineText && rightSlotLineText) {
             lineText += leftSlotLineText + cellLineText + rightSlotLineText;
