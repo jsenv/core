@@ -97,7 +97,7 @@ console.log(
 
 --- left_bottom_left ---
 │ a 
-│───
+├───
 │ b 
 
 --- all ---
