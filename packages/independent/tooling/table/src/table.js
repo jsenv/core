@@ -82,15 +82,19 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         const contentCell = createContentCell(props, { ansi });
         row[x] = contentCell;
         if (borderLeft) {
+          contentCell.borderLeft = borderLeft;
           onBorderLeft(borderLeft, x, y);
         }
         if (borderTop) {
+          contentCell.borderTop = borderTop;
           onBorderTop(borderTop, x, y);
         }
         if (borderBottom) {
+          contentCell.borderBottom = borderBottom;
           onBorderBottom(borderBottom, x, y);
         }
         if (borderRight) {
+          contentCell.borderRight = borderRight;
           onBorderRight(borderRight, x, y);
         }
         x++;

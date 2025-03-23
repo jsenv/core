@@ -58,19 +58,19 @@ console.log(
  a ││ b 
 
 --- top_right_and_bottom_left ---
-───╷╷   
+───┐╷   
  a ││ b 
-   ╵╵───
+   ╵└───
 
 --- bottom_right_and_top_left ---
-   ╷╷───
+   ╷┌───
  a ││ b 
-───╵╵   
+───┘╵   
 
 --- bottom_left_and_top_right ---
-╷   ───╷
+╷   ───┐
 │ a  b │
-╵───   ╵
+└───   ╵
 
 ```
 
