@@ -247,10 +247,10 @@ const bottomLeftSlot = {
   type: "bottom_left",
   adapt: ({ cell, westCell }) => {
     if (cell.borderBottom) {
-      return SLOT_CONTENT_TYPES.border_bottom_right;
+      return SLOT_CONTENT_TYPES.border_bottom_left;
     }
     if (westCell && westCell.borderBottom && !westCell.borderRight) {
-      return SLOT_CONTENT_TYPES.border_bottom_left;
+      return SLOT_CONTENT_TYPES.border_bottom_right;
     }
     if (cell.borderLeft) {
       return SLOT_CONTENT_TYPES.border_left_half;
@@ -810,7 +810,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
   // render table
   let log = "";
   {
-    const renderRow = (cells, { rowHeight, leftSlowRow, rightSlotRow }) => {
+    const renderRow = (cells, { rowHeight, leftSlotRow, rightSlotRow }) => {
       let rowText = "";
       let lastLineIndex = rowHeight;
       let lineIndex = 0;
@@ -825,8 +825,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           });
           let leftSlotLineText;
           let rightSlotLineText;
-          if (leftSlowRow) {
-            leftSlotLineText = renderCell(leftSlowRow[x], {
+          if (leftSlotRow) {
+            leftSlotLineText = renderCell(leftSlotRow[x], {
               columnWidth: 1,
               rowHeight,
               lineIndex,
