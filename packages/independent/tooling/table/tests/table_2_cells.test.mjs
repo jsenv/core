@@ -33,11 +33,16 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "b", borderTop: {}, borderRight: {} },
       ],
     ]);
-    // left/bottom/right + top/right
     const left_bottom_right_and_top_right = renderTable([
       [
         { value: "a", borderLeft: {}, borderBottom: {}, borderRight: {} },
         { value: "b", borderTop: {}, borderRight: {} },
+      ],
+    ]);
+    const top_right_bottom_right = renderTable([
+      [
+        { value: "a", borderTop: {}, borderRight: {} },
+        { value: "b", borderBottom: {}, borderRight: {} },
       ],
     ]);
     const all = renderTable([
@@ -54,6 +59,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         bottom_right_and_top_left,
         bottom_left_and_top_right,
         left_bottom_right_and_top_right,
+        top_right_bottom_right,
         all,
       }),
     );

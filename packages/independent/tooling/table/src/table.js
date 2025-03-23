@@ -1055,7 +1055,6 @@ const BORDER_PROPS = {
           updateOptions,
         }) => {
           const { cell } = contentCells;
-
           if (isTopLeftCorner) {
             if (cell.borderTop) {
               updateOptions(BORDER_JUNCTION_OPTIONS.top_left);
@@ -1107,6 +1106,10 @@ const BORDER_PROPS = {
             if (cell.borderBottom) {
               updateOptions(BORDER_JUNCTION_OPTIONS.bottom_right);
               return "┘";
+            }
+            if (east && east.borderBottom && !east.borderLeft) {
+              updateOptions(BORDER_JUNCTION_OPTIONS.bottom_left);
+              return "└";
             }
             updateOptions(BORDER_JUNCTION_OPTIONS.right_bottom_half);
             return "╵";
