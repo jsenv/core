@@ -204,10 +204,10 @@ const topLeftSlot = {
     if (cell.borderTop && cell.borderLeft) {
       return SLOT_CONTENT_TYPES.border_top_left;
     }
-    if (westCell && westCell.borderTop && !westCell.borderRight) {
-      return SLOT_CONTENT_TYPES.border_top_right;
-    }
     if (cell.borderLeft) {
+      if (westCell && westCell.borderTop && !westCell.borderRight) {
+        return SLOT_CONTENT_TYPES.border_top_right;
+      }
       return SLOT_CONTENT_TYPES.border_half_down;
     }
     if (cell.borderTop) {
@@ -222,10 +222,10 @@ const topRightSlot = {
     if (cell.borderTop && cell.borderRight) {
       return SLOT_CONTENT_TYPES.border_top_right;
     }
-    if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
-      return SLOT_CONTENT_TYPES.border_top_left;
-    }
     if (cell.borderRight) {
+      if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
+        return SLOT_CONTENT_TYPES.border_top_left;
+      }
       return SLOT_CONTENT_TYPES.border_half_down;
     }
     if (cell.borderTop) {
@@ -240,10 +240,10 @@ const bottomRightSlot = {
     if (cell.borderBottom && cell.borderBottomRight) {
       return SLOT_CONTENT_TYPES.border_bottom_right;
     }
-    if (eastCell && eastCell.borderBottom && !eastCell.borderLeft) {
-      return SLOT_CONTENT_TYPES.border_bottom_left;
-    }
     if (cell.borderRight) {
+      if (eastCell && eastCell.borderBottom && !eastCell.borderLeft) {
+        return SLOT_CONTENT_TYPES.border_bottom_left;
+      }
       return SLOT_CONTENT_TYPES.border_half_up;
     }
     if (cell.borderBottom) {
@@ -258,14 +258,14 @@ const bottomLeftSlot = {
     if (cell.borderBottom && cell.borderLeft) {
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }
-    if (westCell && westCell.borderBottom && !westCell.borderRight) {
-      return SLOT_CONTENT_TYPES.border_bottom_right;
-    }
     if (cell.borderLeft) {
-      return SLOT_CONTENT_TYPES.border_half_left;
+      if (westCell && westCell.borderBottom && !westCell.borderRight) {
+        return SLOT_CONTENT_TYPES.border_bottom_right;
+      }
+      return SLOT_CONTENT_TYPES.border_half_up;
     }
     if (cell.borderBottom) {
-      return SLOT_CONTENT_TYPES.border_half_up;
+      return SLOT_CONTENT_TYPES.border_half_right;
     }
     return SLOT_CONTENT_TYPES.blank;
   },
@@ -366,6 +366,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     }
   }
   // fill holes in slot rows
+  // TODO: row has top slot and row has bottom slot like for columns
   {
     let y = 0;
     while (y < grid.length) {
