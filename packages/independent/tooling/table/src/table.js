@@ -432,16 +432,19 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       const bottomRightSlotRow = [];
       let x = 0;
       while (x < grid[y].length) {
-        if (topSlotRow && leftSlotRow) {
+        const leftSlot = leftSlotRow && leftSlotRow[x];
+        const rightSlot = rightSlotRow && rightSlotRow[x];
+
+        if (topSlotRow && leftSlot) {
           topLeftSlotRow[x] = topLeftSlot;
         }
-        if (topSlotRow && rightSlotRow) {
+        if (topSlotRow && rightSlot) {
           topRightSlotRow[x] = topRightSlot;
         }
-        if (bottomSlotRow && leftSlotRow) {
+        if (bottomSlotRow && leftSlot) {
           bottomLeftSlotRow[x] = bottomLeftSlot;
         }
-        if (bottomSlotRow && rightSlotRow) {
+        if (bottomSlotRow && rightSlot) {
           bottomRightSlotRow[x] = bottomRightSlot;
         }
         x++;
@@ -533,47 +536,55 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         // corners
         if (topLeftSlotRow) {
           const topLeftSlot = topLeftSlotRow[x];
-          const topLeftSlotContent = topLeftSlot.adapt({
-            cell,
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
-          });
-          topLeftSlotRow[x] = topLeftSlotContent;
+          if (topLeftSlot) {
+            const topLeftSlotCell = topLeftSlot.adapt({
+              cell,
+              westCell,
+              eastCell,
+              northCell,
+              southCell,
+            });
+            topLeftSlotRow[x] = topLeftSlotCell;
+          }
         }
         if (topRightSlotRow) {
           const topRightSlot = topRightSlotRow[x];
-          const topRightSlotContent = topRightSlot.adapt({
-            cell,
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
-          });
-          topRightSlotRow[x] = topRightSlotContent;
+          if (topRightSlot) {
+            const topRightSlotCell = topRightSlot.adapt({
+              cell,
+              westCell,
+              eastCell,
+              northCell,
+              southCell,
+            });
+            topRightSlotRow[x] = topRightSlotCell;
+          }
         }
         if (bottomRightSlotRow) {
           const bottomRightSlot = bottomRightSlotRow[x];
-          const bottomRightSlotContent = bottomRightSlot.adapt({
-            cell,
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
-          });
-          bottomRightSlotRow[x] = bottomRightSlotContent;
+          if (bottomRightSlot) {
+            const bottomRightSlotCell = bottomRightSlot.adapt({
+              cell,
+              westCell,
+              eastCell,
+              northCell,
+              southCell,
+            });
+            bottomRightSlotRow[x] = bottomRightSlotCell;
+          }
         }
         if (bottomLeftSlotRow) {
           const bottomLeftSlot = bottomLeftSlotRow[x];
-          const bottomLeftSlotContent = bottomLeftSlot.adapt({
-            cell,
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
-          });
-          bottomLeftSlotRow[x] = bottomLeftSlotContent;
+          if (bottomLeftSlot) {
+            const bottomLeftSlotCell = bottomLeftSlot.adapt({
+              cell,
+              westCell,
+              eastCell,
+              northCell,
+              southCell,
+            });
+            bottomLeftSlotRow[x] = bottomLeftSlotCell;
+          }
         }
         x++;
       }

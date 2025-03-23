@@ -68,9 +68,9 @@ console.log(
 
 ```console
 --- top_left_bottom_right ---
-╶───╴┐   ╷
+───┐   ╷
  a │ b │
-     └───┘
+   └───┘
 
 ```
 
