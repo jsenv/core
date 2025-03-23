@@ -88,6 +88,9 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       [{ value: "a", borderBottom: {}, borderRight: {} }],
       [{ value: "b", borderTop: {}, borderLeft: {} }],
     ]);
+    // TODO: 2 tests comme pour le same line
+    // - 1 avec des border caslte qui se chevauchent
+    // - 1 avec des borders castle qui ne se chevauchent pas
     const all = renderTable([
       [{ value: "a", border: {} }],
       [{ value: "b", border: {} }],

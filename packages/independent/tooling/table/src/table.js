@@ -3,9 +3,6 @@
  * https://www.w3schools.com/charsets/ref_utf_box.asp
  * https://github.com/Automattic/cli-table
  *
- * OK UN TRUC: les corners sont pas adapté ou plutot on réutilise
- * les left/right au lieu d'avoir des slots dédiés
- * il faut en gros stocker les corners dans un truc a part et les render a part
  *
  * remaining:
  * border collapse
