@@ -1,5 +1,8 @@
 // way more "castle" tests where the border are not collapsed from the same cell
 
+// to fix current rendering a cell must be able to know if it belongs to
+// the content row or the border top/bottom row
+
 import { renderNamedSections } from "@jsenv/humanize";
 import { renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
