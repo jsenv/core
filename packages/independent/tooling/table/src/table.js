@@ -13,7 +13,7 @@
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
 import stringWidth from "string-width";
 
-let SLOT_CONTENT_TYPES;
+const SLOT_CONTENT_TYPES = {};
 {
   // blank content is a fluid content that will take whatever size they are requested to take
   // they can seen as placeholders that are removed when a line or column is composed only by blank cells
@@ -656,7 +656,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       const row = grid[y];
       const topSlotRow = topSlotRowMap.get(y);
       const bottomSlotRow = bottomSlotRowMap.get(y);
-
       while (x < row.length) {
         const cell = row[x];
         const westCell = x === 0 ? null : row[x - 1];
@@ -692,7 +691,6 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
             rightSlot.content = rightSlotContent;
           }
         }
-
         if (topSlotRow) {
           const topSlot = topSlotRow[x];
           const topSlotContent = topSlot.adapt({
@@ -715,6 +713,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
           });
           bottomSlot.content = bottomSlotContent;
         }
+        x++;
       }
       y++;
     }
@@ -775,6 +774,10 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       cell,
       { columnWidth, rowHeight, lineIndex, ...rest },
     ) => {
+      if (cell.type !== "content") {
+        cell = cell.content; // for now this is how we interact with slots
+      }
+
       let { xAlign, xAlignChar = " ", yAlign, yAlignChar = " ", rects } = cell;
       const cellHeight = rects.length;
 
