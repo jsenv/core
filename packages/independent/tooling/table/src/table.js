@@ -927,7 +927,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
 
     let y = 0;
     for (const row of grid) {
-      top_slow_row: {
+      top_slot_row: {
         const topSlotRow = topSlotRowMap.get(y);
         if (topSlotRow) {
           const topSlotRowText = renderRow(topSlotRow, {
@@ -941,8 +941,8 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
       content_row: {
         const contentRowText = renderRow(row, {
           rowHeight: rowHeightMap.get(y),
-          leftSlowRow: leftSlotRowMap.get(y),
-          rightSlowRow: rightSlotRowMap.get(y),
+          leftSlotRow: leftSlotRowMap.get(y),
+          rightSlotRow: rightSlotRowMap.get(y),
         });
         log += contentRowText;
       }
