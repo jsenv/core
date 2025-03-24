@@ -74,6 +74,16 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "d", border: {}, borderTop: null },
       ],
     ]);
+    const four_way_junction_top_left = renderTable([
+      [
+        { value: "a", border: {}, borderBottom: null, borderRight: null },
+        { value: "b", border: {}, borderBottom: null },
+      ],
+      [
+        { value: "c", border: {}, borderRight: null },
+        { value: "d", border: {} },
+      ],
+    ]);
     const all = renderTable([
       [
         { value: "a", border: {} },
@@ -94,7 +104,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         first_column_top_second_column_bottom,
         four_way_junction_bottom_right,
         four_way_junction_bottom_left,
-        // four_way_junction_top_left,
+        four_way_junction_top_left,
         all,
       }),
     );

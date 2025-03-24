@@ -203,12 +203,23 @@ const bottomSlot = {
 };
 const topLeftSlot = {
   type: "top_left",
-  adapt: ({ cell, westCell, northCell }) => {
+  adapt: ({ cell, westCell, northCell, northWestCell }) => {
     if (cell.borderTop && cell.borderLeft) {
-      if (westCell && westCell.borderTop && !westCell.borderRight) {
+      const westConnected =
+        westCell && westCell.borderTop && !westCell.borderRight;
+      const northConnected =
+        northCell && northCell.borderLeft && !northCell.borderBottom;
+      if (westConnected && northConnected) {
+        const northWestConnected =
+          !northWestCell.borderBottom && !northWestCell.borderRight;
+        if (northWestConnected) {
+          return SLOT_CONTENT_TYPES.border_mid;
+        }
+      }
+      if (westConnected) {
         return SLOT_CONTENT_TYPES.border_top_mid;
       }
-      if (northCell && northCell.borderLeft && !northCell.borderBottom) {
+      if (northConnected) {
         return SLOT_CONTENT_TYPES.border_left_mid;
       }
       return SLOT_CONTENT_TYPES.border_top_left;
