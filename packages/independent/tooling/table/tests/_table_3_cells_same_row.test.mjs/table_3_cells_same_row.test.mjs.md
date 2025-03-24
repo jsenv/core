@@ -2,6 +2,7 @@
 
 
 - [0_basic](0_basic/0_basic.md)
+- [1_border_collapse](1_border_collapse/1_border_collapse.md)
 
 ---
 
