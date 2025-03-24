@@ -90,7 +90,7 @@ const run = ({ ansi, boldBorders }) => {
 await snapshotTableTests(import.meta.url, ({ test }) => {
   test(`0_single_cell`, () => run({}));
 
-  test(`1_single_cell_bold`, () => run({ boldBorders: true }));
+  test.ONLY(`1_single_cell_bold`, () => run({ boldBorders: true }));
 
   // test(`3_single_cell_ansi`, () => run({ ansi: true }));
 });

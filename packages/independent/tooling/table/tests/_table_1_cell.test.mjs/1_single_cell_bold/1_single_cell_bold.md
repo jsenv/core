@@ -1,4 +1,4 @@
-# [2_single_cell_bold](../../table_1_cell.test.mjs#L93)
+# [1_single_cell_bold](../../table_1_cell.test.mjs#L93)
 
 ```js
 run({ boldBorders: true })
@@ -15,7 +15,7 @@ run({ boldBorders: true })
  a 
 
 --- left ---
-│ a 
+┃ a 
 
 --- bottom ---
  a 
@@ -26,7 +26,7 @@ run({ boldBorders: true })
 
 --- top_left ---
 ┌───
-│ a 
+┃ a 
 
 --- top_right ---
 ───┐
@@ -37,11 +37,11 @@ run({ boldBorders: true })
 ───┘
 
 --- bottom_left ---
-│ a 
+┃ a 
 └───
 
 --- left_and_right ---
-│ a │
+┃ a │
 
 --- top_and_bottom ---
 ───
@@ -49,12 +49,12 @@ run({ boldBorders: true })
 ───
 
 --- all_but_top ---
-│ a │
+┃ a │
 └───┘
 
 --- all_but_right ---
 ┌───
-│ a 
+┃ a 
 └───
 
 --- all_but_left ---
@@ -64,11 +64,11 @@ run({ boldBorders: true })
 
 --- all_but_bottom ---
 ┌───┐
-│ a │
+┃ a │
 
 --- all ---
 ┌───┐
-│ a │
+┃ a │
 └───┘
 
 ```

@@ -31,7 +31,14 @@ const SLOT_CONTENT_TYPES = {};
     type: "border_left",
     xAlign: "end",
     yAlignChar: "│",
-    rects: [{ width: 1, render: ({ bold }) => (bold ? "┃" : "│") }],
+    rects: [
+      {
+        width: 1,
+        render: ({ bold }) => {
+          return bold ? "┃" : "│";
+        },
+      },
+    ],
   };
   const borderRightNode = {
     type: "border_right",
@@ -166,43 +173,56 @@ const SLOT_CONTENT_TYPES = {};
 
 const leftSlot = {
   type: "left",
-  adapt: ({ cell }) => {
-    return cell.borderLeft
-      ? SLOT_CONTENT_TYPES.border_left
-      : SLOT_CONTENT_TYPES.blank;
+  adapt: ({ cell, renderOptionsRef }) => {
+    const { borderLeft } = cell;
+    if (borderLeft) {
+      renderOptionsRef.current = borderLeft;
+      return SLOT_CONTENT_TYPES.border_left;
+    }
+    return SLOT_CONTENT_TYPES.blank;
   },
 };
 const rightSlot = {
   type: "right",
-  adapt: ({ cell }) => {
-    return cell.borderRight
-      ? SLOT_CONTENT_TYPES.border_right
-      : SLOT_CONTENT_TYPES.blank;
+  adapt: ({ cell, renderOptionsRef }) => {
+    const { borderRight } = cell;
+    if (borderRight) {
+      renderOptionsRef.current = borderRight;
+      return SLOT_CONTENT_TYPES.border_right;
+    }
+    return SLOT_CONTENT_TYPES.blank;
   },
 };
 const topSlot = {
   type: "top",
-  adapt: ({ cell }) => {
-    return cell.borderTop
-      ? SLOT_CONTENT_TYPES.border_top
-      : SLOT_CONTENT_TYPES.blank;
+  adapt: ({ cell, renderOptionsRef }) => {
+    const { borderTop } = cell;
+    if (borderTop) {
+      renderOptionsRef.current = borderTop;
+      return SLOT_CONTENT_TYPES.border_top;
+    }
+    return SLOT_CONTENT_TYPES.blank;
   },
 };
 const bottomSlot = {
   type: "top",
-  adapt: ({ cell }) => {
-    return cell.borderBottom
-      ? SLOT_CONTENT_TYPES.border_bottom
-      : SLOT_CONTENT_TYPES.blank;
+  adapt: ({ cell, renderOptionsRef }) => {
+    const { borderBottom } = cell;
+    if (borderBottom) {
+      renderOptionsRef.current = borderBottom;
+      return SLOT_CONTENT_TYPES.border_bottom;
+    }
+    return SLOT_CONTENT_TYPES.blank;
   },
 };
 const topLeftSlot = {
   type: "top_left",
-  adapt: ({ cell, westCell, northCell }) => {
+  adapt: ({ cell, westCell, northCell, renderOptionsRef }) => {
     const { borderTop, borderLeft } = cell;
     if (!borderTop && !borderLeft) {
       return SLOT_CONTENT_TYPES.blank;
     }
+    renderOptionsRef.current = borderTop;
 
     let northConnected =
       northCell && northCell.borderLeft && !northCell.borderBottom;
@@ -252,12 +272,12 @@ const topLeftSlot = {
 };
 const topRightSlot = {
   type: "top_right",
-  adapt: ({ cell, eastCell, northCell }) => {
+  adapt: ({ cell, eastCell, northCell, renderOptionsRef }) => {
     const { borderTop, borderRight } = cell;
     if (!borderTop && !borderRight) {
       return SLOT_CONTENT_TYPES.blank;
     }
-
+    renderOptionsRef.current = borderTop;
     let northConnected =
       northCell && northCell.borderRight && !northCell.borderBottom;
     let eastConnected = eastCell && eastCell.borderTop && !eastCell.borderLeft;
@@ -306,11 +326,12 @@ const topRightSlot = {
 };
 const bottomRightSlot = {
   type: "bottom_right",
-  adapt: ({ cell, eastCell, southCell }) => {
+  adapt: ({ cell, eastCell, southCell, renderOptionsRef }) => {
     const { borderBottom, borderRight } = cell;
     if (!borderBottom && !borderRight) {
       return SLOT_CONTENT_TYPES.blank;
     }
+    renderOptionsRef.current = borderBottom;
 
     let southConnected =
       southCell && southCell.borderRight && !southCell.borderTop;
@@ -361,11 +382,12 @@ const bottomRightSlot = {
 };
 const bottomLeftSlot = {
   type: "bottom_left",
-  adapt: ({ cell, westCell, southCell }) => {
+  adapt: ({ cell, westCell, southCell, renderOptionsRef }) => {
     const { borderBottom, borderLeft } = cell;
     if (!borderBottom && !borderLeft) {
       return SLOT_CONTENT_TYPES.blank;
     }
+    renderOptionsRef.current = borderBottom;
 
     let southConnected =
       southCell && southCell.borderLeft && !southCell.borderTop;
@@ -650,7 +672,9 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
         const southWestCell =
           y === grid.length - 1 || x === 0 ? null : grid[y + 1][x - 1];
         const northWestCell = y === 0 || x === 0 ? null : grid[y - 1][x - 1];
+        const renderOptionsRef = { current: null };
         const adaptParams = {
+          renderOptionsRef,
           cell,
           westCell,
           eastCell,
@@ -661,57 +685,69 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
           southWestCell,
           northWestCell,
         };
+        const adapt = (slot) => {
+          renderOptionsRef.current = null;
+          const node = slot.adapt(adaptParams);
+          const renderOptions = renderOptionsRef.current;
+          if (renderOptions && Object.keys(renderOptions).length) {
+            return {
+              ...node,
+              renderOptions,
+            };
+          }
+          return node;
+        };
 
         if (leftSlotRow) {
           const leftSlot = leftSlotRow[x];
           if (leftSlot) {
-            const leftSlotContent = leftSlot.adapt(adaptParams);
-            leftSlotRow[x] = leftSlotContent;
+            const leftSlotNode = adapt(leftSlot);
+            leftSlotRow[x] = leftSlotNode;
           }
         }
         if (rightSlotRow) {
           const rightSlot = rightSlotRow[x];
           if (rightSlot) {
-            const rightSlotContent = rightSlot.adapt(adaptParams);
-            rightSlotRow[x] = rightSlotContent;
+            const rightSlotNode = adapt(rightSlot);
+            rightSlotRow[x] = rightSlotNode;
           }
         }
         if (topSlotRow) {
           const topSlot = topSlotRow[x];
-          const topSlotContent = topSlot.adapt(adaptParams);
-          topSlotRow[x] = topSlotContent;
+          const topSlotNode = adapt(topSlot);
+          topSlotRow[x] = topSlotNode;
         }
         if (bottomSlotRow) {
           const bottomSlot = bottomSlotRow[x];
-          const bottomSlotContent = bottomSlot.adapt(adaptParams);
-          bottomSlotRow[x] = bottomSlotContent;
+          const bottomSlotNode = adapt(bottomSlot);
+          bottomSlotRow[x] = bottomSlotNode;
         }
         // corners
         if (topLeftSlotRow) {
           const topLeftSlot = topLeftSlotRow[x];
           if (topLeftSlot) {
-            const topLeftSlotNode = topLeftSlot.adapt(adaptParams);
+            const topLeftSlotNode = adapt(topLeftSlot);
             topLeftSlotRow[x] = topLeftSlotNode;
           }
         }
         if (topRightSlotRow) {
           const topRightSlot = topRightSlotRow[x];
           if (topRightSlot) {
-            const topRightSlotNode = topRightSlot.adapt(adaptParams);
+            const topRightSlotNode = adapt(topRightSlot);
             topRightSlotRow[x] = topRightSlotNode;
           }
         }
         if (bottomRightSlotRow) {
           const bottomRightSlot = bottomRightSlotRow[x];
           if (bottomRightSlot) {
-            const bottomRightSlotNode = bottomRightSlot.adapt(adaptParams);
+            const bottomRightSlotNode = adapt(bottomRightSlot);
             bottomRightSlotRow[x] = bottomRightSlotNode;
           }
         }
         if (bottomLeftSlotRow) {
           const bottomLeftSlot = bottomLeftSlotRow[x];
           if (bottomLeftSlot) {
-            const bottomLeftSlotNode = bottomLeftSlot.adapt(adaptParams);
+            const bottomLeftSlotNode = adapt(bottomLeftSlot);
             bottomLeftSlotRow[x] = bottomLeftSlotNode;
           }
         }
@@ -873,7 +909,7 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
 
       if (rect) {
         const { width, render } = rect;
-        let rectText = render({ columnWidth });
+        let rectText = render({ columnWidth, ...node.renderOptions });
         if (width === "fill") {
           return rectText;
         }
