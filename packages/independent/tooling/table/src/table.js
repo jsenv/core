@@ -693,29 +693,29 @@ export const renderTable = (
         if (topLeftSlotRow) {
           const topLeftSlot = topLeftSlotRow[x];
           if (topLeftSlot) {
-            const topLeftSlotCell = topLeftSlot.adapt(adaptParams);
-            topLeftSlotRow[x] = topLeftSlotCell;
+            const topLeftSlotNode = topLeftSlot.adapt(adaptParams);
+            topLeftSlotRow[x] = topLeftSlotNode;
           }
         }
         if (topRightSlotRow) {
           const topRightSlot = topRightSlotRow[x];
           if (topRightSlot) {
-            const topRightSlotCell = topRightSlot.adapt(adaptParams);
-            topRightSlotRow[x] = topRightSlotCell;
+            const topRightSlotNode = topRightSlot.adapt(adaptParams);
+            topRightSlotRow[x] = topRightSlotNode;
           }
         }
         if (bottomRightSlotRow) {
           const bottomRightSlot = bottomRightSlotRow[x];
           if (bottomRightSlot) {
-            const bottomRightSlotCell = bottomRightSlot.adapt(adaptParams);
-            bottomRightSlotRow[x] = bottomRightSlotCell;
+            const bottomRightSlotNode = bottomRightSlot.adapt(adaptParams);
+            bottomRightSlotRow[x] = bottomRightSlotNode;
           }
         }
         if (bottomLeftSlotRow) {
           const bottomLeftSlot = bottomLeftSlotRow[x];
           if (bottomLeftSlot) {
-            const bottomLeftSlotCell = bottomLeftSlot.adapt(adaptParams);
-            bottomLeftSlotRow[x] = bottomLeftSlotCell;
+            const bottomLeftSlotNode = bottomLeftSlot.adapt(adaptParams);
+            bottomLeftSlotRow[x] = bottomLeftSlotNode;
           }
         }
         x++;
@@ -727,15 +727,15 @@ export const renderTable = (
   const columnWidthMap = new Map();
   const rowHeightMap = new Map();
   {
-    const measureCell = (cell) => {
+    const measureNode = (node) => {
       const {
         rects,
         leftSpacing = 0,
         rightSpacing = 0,
         topSpacing = 0,
         bottomSpacing = 0,
-      } = cell;
-      let cellWidth = -1;
+      } = node;
+      let nodeWidth = -1;
       for (const rect of rects) {
         let { width } = rect;
         if (width === "fill") {
@@ -750,8 +750,8 @@ export const renderTable = (
             return " ".repeat(leftSpacing) + text + " ".repeat(rightSpacing);
           };
         }
-        if (width > cellWidth) {
-          cellWidth = width;
+        if (width > nodeWidth) {
+          nodeWidth = width;
         }
       }
       if (topSpacing) {
@@ -772,9 +772,8 @@ export const renderTable = (
           });
         }
       }
-      const cellHeight = rects.length;
-
-      return [cellWidth, cellHeight];
+      const nodeHeight = rects.length;
+      return [nodeWidth, nodeHeight];
     };
 
     let y = 0;
@@ -783,7 +782,7 @@ export const renderTable = (
       for (const cell of line) {
         const columnWidth = columnWidthMap.get(x) || -1;
         const rowHeight = rowHeightMap.get(y) || -1;
-        const [cellWidth, cellHeight] = measureCell(cell);
+        const [cellWidth, cellHeight] = measureNode(cell);
         if (cellWidth > columnWidth) {
           columnWidthMap.set(x, cellWidth);
         }
@@ -799,15 +798,15 @@ export const renderTable = (
   // render table
   let log = "";
   {
-    const renderRow = (cells, { rowHeight, leftSlotRow, rightSlotRow }) => {
+    const renderRow = (nodeArray, { rowHeight, leftSlotRow, rightSlotRow }) => {
       let rowText = "";
       let lastLineIndex = rowHeight;
       let lineIndex = 0;
       while (lineIndex !== lastLineIndex) {
         let x = 0;
         let lineText = "";
-        for (const cell of cells) {
-          const cellLineText = renderCell(cell, {
+        for (const node of nodeArray) {
+          const nodeLineText = renderNode(node, {
             columnWidth: columnWidthMap.get(x),
             rowHeight,
             lineIndex,
@@ -815,9 +814,9 @@ export const renderTable = (
           let leftSlotLineText;
           let rightSlotLineText;
           if (leftSlotRow) {
-            const leftSlotCell = leftSlotRow[x];
-            if (leftSlotCell) {
-              leftSlotLineText = renderCell(leftSlotCell, {
+            const leftSlotNode = leftSlotRow[x];
+            if (leftSlotNode) {
+              leftSlotLineText = renderNode(leftSlotNode, {
                 columnWidth: 1,
                 rowHeight,
                 lineIndex,
@@ -825,9 +824,9 @@ export const renderTable = (
             }
           }
           if (rightSlotRow) {
-            const rightSlotCell = rightSlotRow[x];
-            if (rightSlotCell) {
-              rightSlotLineText = renderCell(rightSlotCell, {
+            const rightSlotNode = rightSlotRow[x];
+            if (rightSlotNode) {
+              rightSlotLineText = renderNode(rightSlotNode, {
                 columnWidth: 1,
                 rowHeight,
                 lineIndex,
@@ -835,13 +834,13 @@ export const renderTable = (
             }
           }
           if (leftSlotLineText && rightSlotLineText) {
-            lineText += leftSlotLineText + cellLineText + rightSlotLineText;
+            lineText += leftSlotLineText + nodeLineText + rightSlotLineText;
           } else if (leftSlotLineText) {
-            lineText += leftSlotLineText + cellLineText;
+            lineText += leftSlotLineText + nodeLineText;
           } else if (rightSlotLineText) {
-            lineText += cellLineText + rightSlotLineText;
+            lineText += nodeLineText + rightSlotLineText;
           } else {
-            lineText += cellLineText;
+            lineText += nodeLineText;
           }
           x++;
         }
@@ -851,28 +850,25 @@ export const renderTable = (
       }
       return rowText;
     };
-    const renderCell = (
-      cell,
-      { columnWidth, rowHeight, lineIndex, ...rest },
-    ) => {
-      let { xAlign, xAlignChar = " ", yAlign, yAlignChar = " ", rects } = cell;
-      const cellHeight = rects.length;
+    const renderNode = (node, { columnWidth, rowHeight, lineIndex }) => {
+      let { xAlign, xAlignChar = " ", yAlign, yAlignChar = " ", rects } = node;
+      const nodeHeight = rects.length;
 
       let rect;
       if (yAlign === "start") {
-        if (lineIndex < cellHeight) {
+        if (lineIndex < nodeHeight) {
           rect = rects[lineIndex];
         }
       } else if (yAlign === "center") {
-        const topSpacing = Math.floor((rowHeight - cellHeight) / 2);
+        const topSpacing = Math.floor((rowHeight - nodeHeight) / 2);
         // const bottomSpacing = rowHeight - cellHeight - topSpacing;
         const lineStartIndex = topSpacing;
-        const lineEndIndex = topSpacing + cellHeight;
+        const lineEndIndex = topSpacing + nodeHeight;
         if (lineIndex >= lineStartIndex && lineIndex < lineEndIndex) {
           rect = rects[lineIndex];
         }
       } else {
-        const lineStartIndex = rowHeight - cellHeight;
+        const lineStartIndex = rowHeight - nodeHeight;
         if (lineIndex >= lineStartIndex) {
           rect = rects[lineIndex];
         }
@@ -880,24 +876,7 @@ export const renderTable = (
 
       if (rect) {
         const { width, render } = rect;
-        let rectText = render({
-          columnWidth,
-          ...rest,
-          updateOptions: (options) => {
-            if (options.xAlign) {
-              xAlign = options.xAlign;
-            }
-            if (options.xAlignChar) {
-              xAlignChar = options.xAlignChar;
-            }
-            if (options.yAlign) {
-              yAlign = options.yAlign;
-            }
-            if (options.yAlignChar) {
-              yAlignChar = options.yAlignChar;
-            }
-          },
-        });
+        let rectText = render({ columnWidth });
         if (width === "fill") {
           return rectText;
         }
