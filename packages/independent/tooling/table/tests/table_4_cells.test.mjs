@@ -24,7 +24,6 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "d", border: {}, borderLeft: null },
       ],
     ]);
-
     const around_strange_2 = renderTable([
       [
         { value: "a", border: {} },
@@ -33,6 +32,16 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       [
         { value: "c", border: {}, borderRight: null },
         { value: "d", border: {}, borderTop: null },
+      ],
+    ]);
+    const around_strange_3 = renderTable([
+      [
+        { value: "a", border: {} },
+        { value: "b", border: {}, borderBottom: null, borderLeft: null },
+      ],
+      [
+        { value: "c", border: {}, borderTop: null },
+        { value: "d", border: {}, borderLeft: null },
       ],
     ]);
     const strange_2 = renderTable([
@@ -161,6 +170,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         none,
         around_strange,
         around_strange_2,
+        around_strange_3,
         strange_2,
         left_column_full_right_column_split,
         left_column_split_right_column_full,

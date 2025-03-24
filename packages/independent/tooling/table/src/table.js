@@ -335,7 +335,8 @@ const bottomRightSlot = {
       return SLOT_CONTENT_TYPES.border_bottom_right;
     }
     if (borderRight) {
-      eastConnected = eastCell && eastCell.borderBottom && !eastCell.borderLeft;
+      southConnected =
+        southCell && (southCell.borderRight || southCell.borderTop);
       southEastConnected = southConnected && eastConnected;
       if (southEastConnected) {
         return SLOT_CONTENT_TYPES.border_top_mid;
@@ -389,8 +390,8 @@ const bottomLeftSlot = {
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }
     if (borderLeft) {
-      westConnected =
-        westCell && westCell.borderBottom && !westCell.borderRight;
+      southConnected =
+        southCell && (southCell.borderLeft || southCell.borderTop);
       southWestConnected = southConnected && westConnected;
       if (southWestConnected) {
         return SLOT_CONTENT_TYPES.border_right_mid;
