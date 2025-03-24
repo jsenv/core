@@ -8,7 +8,7 @@ import { renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
-  test(`0_three_cell_same_line`, () => {
+  test.ONLY(`0_three_cell_same_line`, () => {
     const none = renderTable([
       [
         { value: "a", border: null },
@@ -61,7 +61,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
     const castle = renderTable([
       [
         { value: "a", borderTop: {}, borderRight: {} },
-        { value: "b", borderLeft: {}, borderBottom: {} },
+        { value: "b", borderBottom: {} },
         { value: "c", borderLeft: {}, borderTop: {} },
       ],
     ]);
@@ -70,6 +70,13 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "a", borderBottom: {}, borderRight: {} },
         { value: "b", borderTop: {}, borderRight: {} },
         { value: "c", borderBottom: {} },
+      ],
+    ]);
+    const around = renderTable([
+      [
+        { value: "a", borderTop: {}, borderBottom: {}, borderLeft: {} },
+        { value: "b", border: {} },
+        { value: "c", borderTop: {}, borderBottom: {}, borderRight: {} },
       ],
     ]);
     const all = renderTable([
@@ -90,6 +97,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       last_only,
       castle,
       castle_inverted,
+      around,
       all,
     };
     console.log(renderNamedSections(results));

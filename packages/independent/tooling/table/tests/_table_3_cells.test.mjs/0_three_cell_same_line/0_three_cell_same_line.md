@@ -53,7 +53,7 @@ const last_only = renderTable([
 const castle = renderTable([
   [
     { value: "a", borderTop: {}, borderRight: {} },
-    { value: "b", borderLeft: {}, borderBottom: {} },
+    { value: "b", borderBottom: {} },
     { value: "c", borderLeft: {}, borderTop: {} },
   ],
 ]);
@@ -62,6 +62,13 @@ const castle_inverted = renderTable([
     { value: "a", borderBottom: {}, borderRight: {} },
     { value: "b", borderTop: {}, borderRight: {} },
     { value: "c", borderBottom: {} },
+  ],
+]);
+const around = renderTable([
+  [
+    { value: "a", borderTop: {}, borderBottom: {}, borderLeft: {} },
+    { value: "b", border: {} },
+    { value: "c", borderTop: {}, borderBottom: {}, borderRight: {} },
   ],
 ]);
 const all = renderTable([
@@ -82,6 +89,7 @@ const results = {
   last_only,
   castle,
   castle_inverted,
+  around,
   all,
 };
 console.log(renderNamedSections(results));
@@ -89,50 +97,57 @@ console.log(renderNamedSections(results));
 
 # 1/2 console.log
 
-![img](console.log.svg)
-
-<details>
-  <summary>see without style</summary>
-
 ```console
 --- none ---
- "a"  "b"  "c" 
+ a  b  c 
+
 --- left ---
-│ "a" │ "b" │ "c" 
+│ a │ b │ c 
+
 --- left_and_right ---
-│ "a" │ "b" │ "c" │
+│ a ││ b ││ c │
+
 --- top_and_bottom ---
-───────────────
- "a"  "b"  "c" 
-───────────────
+─────────
+ a  b  c 
+─────────
+
 --- first_only ---
-┌─────┐          
-│ "a" │ "b"  "c" 
-└─────┘          
+┌───┐      
+│ a │ b  c 
+└───┘      
+
 --- middle_none ---
-┌─────┐     ┌─────┐
-│ "a" │ "b" │ "c" │
-└─────┘     └─────┘
+┌───┐   ┌───┐
+│ a │ b │ c │
+└───┘   └───┘
+
 --- last_only ---
-          ┌─────┐
- "a"  "b" │ "c" │
-          └─────┘
+      ┌───┐
+ a  b │ c │
+      └───┘
+
 --- castle ---
-─────┐     ┌─────
- "a" │ "b" │ "c" 
-     └─────┘     
+───┐   ┌───
+ a │ b │ c 
+   └───┘   
+
 --- castle_inverted ---
-     ┌─────┐     
- "a" │ "b" │ "c" 
-─────┘     └─────
+   ┌───┐   
+ a │ b │ c 
+───┘   └───
+
+--- around ---
+┌───┬───┬───┐
+│ a │ b │ c │
+└───┴───┴───┘
+
 --- all ---
-┌─────┬─────┬─────┐
-│ "a" │ "b" │ "c" │
-└─────┴─────┴─────┘
+┌───┐┌───┐┌───┐
+│ a ││ b ││ c │
+└───┘└───┘└───┘
+
 ```
-
-</details>
-
 
 # 2/2 return
 
