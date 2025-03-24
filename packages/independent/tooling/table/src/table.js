@@ -239,6 +239,9 @@ const topLeftSlot = {
       return SLOT_CONTENT_TYPES.border_half_down;
     }
     // borderTop
+    if (northWestConnected) {
+      return SLOT_CONTENT_TYPES.border_bottom_mid;
+    }
     if (northConnected) {
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }
@@ -283,6 +286,9 @@ const topRightSlot = {
       return SLOT_CONTENT_TYPES.border_half_down;
     }
     // borderTop
+    if (northEastConnected) {
+      return SLOT_CONTENT_TYPES.border_bottom_mid;
+    }
     if (northConnected) {
       return SLOT_CONTENT_TYPES.border_bottom_right;
     }
@@ -327,6 +333,9 @@ const bottomRightSlot = {
       return SLOT_CONTENT_TYPES.border_half_up;
     }
     // border bottom
+    if (southEastConnected) {
+      return SLOT_CONTENT_TYPES.border_top_mid;
+    }
     if (southConnected) {
       return SLOT_CONTENT_TYPES.border_top_right;
     }
@@ -374,6 +383,9 @@ const bottomLeftSlot = {
       return SLOT_CONTENT_TYPES.border_half_up;
     }
     // borderBottom
+    if (southWestConnected) {
+      return SLOT_CONTENT_TYPES.border_top_mid;
+    }
     if (southConnected) {
       return SLOT_CONTENT_TYPES.border_top_left;
     }
