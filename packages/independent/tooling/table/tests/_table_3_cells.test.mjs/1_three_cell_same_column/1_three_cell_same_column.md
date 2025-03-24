@@ -1,4 +1,4 @@
-# [1_three_cell_same_column](../../table_3_cells.test.mjs#L98)
+# [1_three_cell_same_column](../../table_3_cells.test.mjs#L106)
 
 ```js
 const none = renderTable([
@@ -17,9 +17,9 @@ const top_and_bottom = renderTable([
   [{ value: "c", borderTop: {}, borderBottom: {} }],
 ]);
 const castle = renderTable([
-  [{ value: "a", borderTop: {}, borderRight: {}, borderBottom: {} }],
+  [{ value: "a", border: {}, borderLeft: null }],
   [{ value: "b", borderLeft: {} }],
-  [{ value: "c", borderTop: {}, borderRight: {}, borderBottom: {} }],
+  [{ value: "c", border: {}, borderLeft: null }],
 ]);
 const all = renderTable([
   [{ value: "a", border: {} }],
@@ -38,48 +38,49 @@ console.log(renderNamedSections(results));
 
 # 1/2 console.log
 
-![img](console.log.svg)
-
-<details>
-  <summary>see without style</summary>
-
 ```console
 --- none ---
- "a" 
- "b" 
- "c" 
+ a 
+ b 
+ c 
+
 --- left_and_right ---
-│ "a" │
-│ "b" │
-│ "c" │
+│ a │
+│ b │
+│ c │
+
 --- top_and_bottom ---
-─────
- "a" 
-─────
- "b" 
-─────
- "c" 
-─────
+───
+ a 
+───
+───
+ b 
+───
+───
+ c 
+───
+
 --- castle ---
-──────┐
-  "a" │
-┌─────┘
-│ "b"  
-└─────┐
-  "c" │
-──────┘
+╶───┐
+  a │
+┌───┘
+│ b  
+└───┐
+  c │
+╶───┘
+
 --- all ---
-┌─────┐
-│ "a" │
-│─────│
-│ "b" │
-│─────│
-│ "c" │
-└─────┘
+┌───┐
+│ a │
+└───┘
+┌───┐
+│ b │
+└───┘
+┌───┐
+│ c │
+└───┘
+
 ```
-
-</details>
-
 
 # 2/2 return
 

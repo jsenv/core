@@ -8,7 +8,7 @@ import { renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
-  test.ONLY(`0_three_cell_same_line`, () => {
+  test(`0_three_cell_same_line`, () => {
     const none = renderTable([
       [
         { value: "a", border: null },
@@ -120,9 +120,9 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       [{ value: "c", borderTop: {}, borderBottom: {} }],
     ]);
     const castle = renderTable([
-      [{ value: "a", borderTop: {}, borderRight: {}, borderBottom: {} }],
+      [{ value: "a", border: {}, borderLeft: null }],
       [{ value: "b", borderLeft: {} }],
-      [{ value: "c", borderTop: {}, borderRight: {}, borderBottom: {} }],
+      [{ value: "c", border: {}, borderLeft: null }],
     ]);
     const all = renderTable([
       [{ value: "a", border: {} }],

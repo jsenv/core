@@ -292,6 +292,9 @@ const bottomLeftSlot = {
       return SLOT_CONTENT_TYPES.border_half_up;
     }
     if (cell.borderBottom) {
+      if (southCell && southCell.borderLeft && !southCell.borderTop) {
+        return SLOT_CONTENT_TYPES.border_top_left;
+      }
       return SLOT_CONTENT_TYPES.border_half_right;
     }
     return SLOT_CONTENT_TYPES.blank;
