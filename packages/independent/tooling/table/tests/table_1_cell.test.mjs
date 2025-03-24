@@ -2,7 +2,7 @@ import { renderNamedSections } from "@jsenv/humanize";
 import { renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
-await snapshotTableTests(import.meta.url, ({ test }) => {
+const run = () => {
   const none = renderTable([[{ value: "a", border: null }]]);
   const top = renderTable([[{ value: "a", borderTop: {} }]]);
   const left = renderTable([[{ value: "a", borderLeft: {} }]]);
@@ -40,26 +40,28 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
   ]);
   const all = renderTable([[{ value: "a", border: {} }]]);
 
-  test(`0_single_cell_borders`, () => {
-    console.log(
-      renderNamedSections({
-        none,
-        top,
-        left,
-        bottom,
-        right,
-        top_left,
-        top_right,
-        bottom_right,
-        bottom_left,
-        left_and_right,
-        top_and_bottom,
-        all_but_top,
-        all_but_right,
-        all_but_left,
-        all_but_bottom,
-        all,
-      }),
-    );
-  });
+  console.log(
+    renderNamedSections({
+      none,
+      top,
+      left,
+      bottom,
+      right,
+      top_left,
+      top_right,
+      bottom_right,
+      bottom_left,
+      left_and_right,
+      top_and_bottom,
+      all_but_top,
+      all_but_right,
+      all_but_left,
+      all_but_bottom,
+      all,
+    }),
+  );
+};
+
+await snapshotTableTests(import.meta.url, ({ test }) => {
+  test(`0_single_cell`, () => run());
 });

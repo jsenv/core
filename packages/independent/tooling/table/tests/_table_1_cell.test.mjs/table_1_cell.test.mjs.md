@@ -1,7 +1,7 @@
 # [table_1_cell.test.mjs](../table_1_cell.test.mjs)
 
 
-- [0_single_cell_borders](0_single_cell_borders/0_single_cell_borders.md)
+- [0_single_cell](0_single_cell/0_single_cell.md)
 
 ---
 
