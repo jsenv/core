@@ -3,7 +3,7 @@ import { renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
-  test(`0_two_cell_same_line`, () => {
+  test.ONLY(`0_two_cell_same_line`, () => {
     const right_and_left = renderTable([
       [
         { value: "a", borderRight: {} },

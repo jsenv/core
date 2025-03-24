@@ -277,7 +277,6 @@ const topRightSlot = {
         northConnected && eastConnected
           ? !northEastCell.borderBottom && !northEastCell.borderLeft
           : false;
-
       if (northEastConnected) {
         return SLOT_CONTENT_TYPES.border_mid;
       }
@@ -293,7 +292,7 @@ const topRightSlot = {
       const northConnected =
         northCell && northCell.borderRight && !northCell.borderBottom;
       const eastConnected =
-        eastCell && (eastCell.borderTop || eastCell.borderLeft);
+        eastCell && eastCell.borderTop && !eastCell.borderLeft;
       if (northConnected) {
         return SLOT_CONTENT_TYPES.border_right;
       }
@@ -414,7 +413,7 @@ const bottomLeftSlot = {
       const southConnected =
         southCell && southCell.borderLeft && !southCell.borderTop;
       const westConnected =
-        westCell && (westCell.borderBottom || westCell.borderRight);
+        westCell && westCell.borderBottom && !westCell.borderRight;
       const southWestConnected = southConnected && westConnected;
       if (southWestConnected) {
         return SLOT_CONTENT_TYPES.border_right_mid;
