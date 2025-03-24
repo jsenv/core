@@ -421,8 +421,14 @@ const bottomLeftSlot = {
 };
 
 export const renderTable = (inputGrid, { ansi = true } = {}) => {
-  const grid = [];
+  if (!Array.isArray(inputGrid)) {
+    throw new TypeError(`The first arg must be an array, got ${inputGrid}`);
+  }
+  if (inputGrid.length === 0) {
+    return "";
+  }
 
+  const grid = [];
   const columnWithLeftSlotSet = new Set();
   const columnWithRightSlotSet = new Set();
   const columnHasLeftSlot = (x) => columnWithLeftSlotSet.has(x);
