@@ -346,7 +346,7 @@ const bottomRightSlot = {
       return SLOT_CONTENT_TYPES.border_top_right;
     }
     if (eastConnected) {
-      return SLOT_CONTENT_TYPES.border_right;
+      return SLOT_CONTENT_TYPES.border_bottom;
     }
     return SLOT_CONTENT_TYPES.border_half_left;
   },
@@ -399,7 +399,7 @@ const bottomLeftSlot = {
       return SLOT_CONTENT_TYPES.border_top_left;
     }
     if (westConnected) {
-      return SLOT_CONTENT_TYPES.border_left;
+      return SLOT_CONTENT_TYPES.border_bottom;
     }
     return SLOT_CONTENT_TYPES.border_half_right;
   },

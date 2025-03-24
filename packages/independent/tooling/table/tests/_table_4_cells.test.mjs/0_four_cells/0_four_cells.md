@@ -21,6 +21,7 @@ const around_strange = renderTable([
     { value: "d", border: {}, borderLeft: null },
   ],
 ]);
+// TOOD: fix this (half used when it should not)
 const strange_2 = renderTable([
   [
     { value: "a", border: {}, borderRight: {} },
@@ -210,7 +211,7 @@ console.log(
 │ a │ b │
 ├───┴───┤
 │ c   d │
-└───│───┘
+└───────┘
 
 --- first_row_right_second_row_left ---
   a │  b │

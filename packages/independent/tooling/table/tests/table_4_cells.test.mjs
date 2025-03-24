@@ -65,7 +65,6 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "d", border: {}, borderLeft: {}, borderTop: null },
       ],
     ]);
-    // TODO: fix this
     const first_row_split_second_row_full = renderTable([
       [
         { value: "a", border: {}, borderRight: {} },
