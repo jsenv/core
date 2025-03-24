@@ -81,6 +81,16 @@ const four_way_junction_top_left = renderTable([
     { value: "d", border: {} },
   ],
 ]);
+const four_way_junction_top_right = renderTable([
+  [
+    { value: "a", border: {}, borderBottom: null },
+    { value: "b", border: {}, borderBottom: null, borderLeft: null },
+  ],
+  [
+    { value: "c", border: {} },
+    { value: "d", border: {}, borderLeft: null },
+  ],
+]);
 const all = renderTable([
   [
     { value: "a", border: {} },
@@ -102,6 +112,7 @@ console.log(
     four_way_junction_bottom_right,
     four_way_junction_bottom_left,
     four_way_junction_top_left,
+    four_way_junction_top_right,
     all,
   }),
 );
@@ -156,6 +167,13 @@ console.log(
 └───┴───┘
 
 --- four_way_junction_top_left ---
+┌───┬───┐
+│ a │ b │
+├───┼───┤
+│ c │ d │
+└───┴───┘
+
+--- four_way_junction_top_right ---
 ┌───┬───┐
 │ a │ b │
 ├───┼───┤

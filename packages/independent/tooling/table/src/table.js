@@ -244,13 +244,24 @@ const topLeftSlot = {
 };
 const topRightSlot = {
   type: "top_right",
-  adapt: ({ cell, eastCell, northCell }) => {
+  adapt: ({ cell, eastCell, northCell, northEastCell }) => {
     if (cell.borderTop && cell.borderRight) {
-      if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
-        return SLOT_CONTENT_TYPES.border_top_mid;
+      const eastConnected =
+        eastCell && eastCell.borderTop && !eastCell.borderLeft;
+      const northConnected =
+        northCell && northCell.borderRight && !northCell.borderBottom;
+      if (northConnected && eastConnected) {
+        const northEastConnected =
+          !northEastCell.borderBottom && !northEastCell.borderLeft;
+        if (northEastConnected) {
+          return SLOT_CONTENT_TYPES.border_mid;
+        }
       }
-      if (northCell && northCell.borderRight && !northCell.borderBottom) {
+      if (northConnected) {
         return SLOT_CONTENT_TYPES.border_right_mid;
+      }
+      if (eastConnected) {
+        return SLOT_CONTENT_TYPES.border_top_mid;
       }
       return SLOT_CONTENT_TYPES.border_top_right;
     }
