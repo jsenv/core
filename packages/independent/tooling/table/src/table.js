@@ -31,19 +31,23 @@ const SLOT_CONTENT_TYPES = {};
   const borderLeftNode = {
     type: "border_left",
     xAlign: "end",
-    yAlignChar: borderCharsetLight.left,
-    color: (cell) => {
-      const { borderLeft, borderTop } = cell;
-      return (borderLeft || borderTop).color;
+    yAlignChar: {
+      light: borderCharsetLight.left,
+      bold: borderCharsetLight.left,
     },
     rects: [
       {
         width: 1,
-        render: ({ bold }) => {
-          return bold ? borderCharsetHeavy.left : borderCharsetLight.left;
+        render: {
+          light: borderCharsetLight.left,
+          bold: borderCharsetHeavy.left,
         },
       },
     ],
+    color: (cell) => {
+      const { borderLeft, borderTop } = cell;
+      return (borderLeft || borderTop).color;
+    },
   };
   const borderRightNode = {
     type: "border_right",
@@ -52,8 +56,9 @@ const SLOT_CONTENT_TYPES = {};
     rects: [
       {
         width: 1,
-        render: ({ bold }) => {
-          return bold ? borderCharsetHeavy.right : borderCharsetLight.right;
+        render: {
+          light: borderCharsetLight.right,
+          bold: borderCharsetHeavy.right,
         },
       },
     ],
@@ -64,10 +69,10 @@ const SLOT_CONTENT_TYPES = {};
     rects: [
       {
         width: "fill",
-        render: ({ bold, columnWidth }) => {
-          return (
-            bold ? borderCharsetHeavy.top : borderCharsetLight.top
-          ).repeat(columnWidth);
+        render: {
+          light: ({ columnWidth }) =>
+            borderCharsetLight.top.repeat(columnWidth),
+          bold: ({ columnWidth }) => borderCharsetHeavy.top.repeat(columnWidth),
         },
       },
     ],
@@ -78,10 +83,11 @@ const SLOT_CONTENT_TYPES = {};
     rects: [
       {
         width: "fill",
-        render: ({ bold, columnWidth }) => {
-          return (
-            bold ? borderCharsetHeavy.bottom : borderCharsetLight.bottom
-          ).repeat(columnWidth);
+        render: {
+          light: ({ columnWidth }) =>
+            borderCharsetLight.bottom.repeat(columnWidth),
+          bold: ({ columnWidth }) =>
+            borderCharsetHeavy.bottom.repeat(columnWidth),
         },
       },
     ],
@@ -702,25 +708,7 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
             return node;
           }
           const { bold, color } = renderOptions;
-          const nodeWithOptions = { ...node };
-          nodeWithOptions.color = color;
-          if (bold) {
-            // pas sur qu'on fasse comme ça, ptet qu'on voudra plutot avoir un borderLeftNode
-            // en mode gras et un en mode light
-            // je sais pas encore
-            // (on veut pouvoir set le xAlignChar et yAlignChar aussi)
-            nodeWithOptions.rects = [
-              ...node.rects.map((rect) => {
-                const render = rect.render;
-                return {
-                  ...rect,
-                  render: (options) => {
-                    return render({ ...options, bold });
-                  },
-                };
-              }),
-            ];
-          }
+          const nodeWithOptions = { ...node, color, bold };
           return nodeWithOptions;
         };
 
@@ -918,16 +906,22 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
     };
     const renderNode = (node, { cell, columnWidth, rowHeight, lineIndex }) => {
       let {
+        bold,
         xAlign,
         xAlignChar = " ",
         yAlign,
         yAlignChar = " ",
         rects,
         color,
-        bold,
       } = node;
-      const nodeHeight = rects.length;
+      if (typeof xAlignChar === "object") {
+        xAlignChar = bold ? xAlignChar.bold : xAlignChar.light;
+      }
+      if (typeof yAlignChar === "object") {
+        yAlignChar = bold ? yAlignChar.bold : yAlignChar.light;
+      }
 
+      const nodeHeight = rects.length;
       let rect;
       if (yAlign === "start") {
         if (lineIndex < nodeHeight) {
@@ -949,8 +943,20 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
       }
 
       if (rect) {
-        const { width, render } = rect;
-        let rectText = render({ cell, columnWidth, bold });
+        let { width, render } = rect;
+        if (typeof render === "object") {
+          render = bold ? render.bold : render.light;
+        }
+        let rectText;
+        if (typeof render === "function") {
+          rectText = render({
+            cell,
+            columnWidth,
+            bold,
+          });
+        } else {
+          rectText = render;
+        }
         if (width === "fill") {
           return rectText;
         }
