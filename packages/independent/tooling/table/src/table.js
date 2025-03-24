@@ -32,6 +32,10 @@ const SLOT_CONTENT_TYPES = {};
     type: "border_left",
     xAlign: "end",
     yAlignChar: borderCharsetLight.left,
+    color: (cell) => {
+      const { borderLeft, borderTop } = cell;
+      return (borderLeft || borderTop).color;
+    },
     rects: [
       {
         width: 1,
@@ -853,7 +857,10 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
   // render table
   let log = "";
   {
-    const renderRow = (nodeArray, { rowHeight, leftSlotRow, rightSlotRow }) => {
+    const renderRow = (
+      nodeArray,
+      { cells, rowHeight, leftSlotRow, rightSlotRow },
+    ) => {
       let rowText = "";
       let lastLineIndex = rowHeight;
       let lineIndex = 0;
@@ -861,7 +868,9 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
         let x = 0;
         let lineText = "";
         for (const node of nodeArray) {
+          const cell = cells[x];
           const nodeLineText = renderNode(node, {
+            cell,
             columnWidth: columnWidthMap.get(x),
             rowHeight,
             lineIndex,
@@ -869,9 +878,10 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
           let leftSlotLineText;
           let rightSlotLineText;
           if (leftSlotRow) {
-            const leftSlotNode = leftSlotRow[x];
-            if (leftSlotNode) {
-              leftSlotLineText = renderNode(leftSlotNode, {
+            const leftSlot = leftSlotRow[x];
+            if (leftSlot) {
+              leftSlotLineText = renderNode(leftSlot, {
+                cell,
                 columnWidth: 1,
                 rowHeight,
                 lineIndex,
@@ -879,9 +889,10 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
             }
           }
           if (rightSlotRow) {
-            const rightSlotNode = rightSlotRow[x];
-            if (rightSlotNode) {
-              rightSlotLineText = renderNode(rightSlotNode, {
+            const rightSlot = rightSlotRow[x];
+            if (rightSlot) {
+              rightSlotLineText = renderNode(rightSlot, {
+                cell,
                 columnWidth: 1,
                 rowHeight,
                 lineIndex,
@@ -905,7 +916,7 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
       }
       return rowText;
     };
-    const renderNode = (node, { columnWidth, rowHeight, lineIndex }) => {
+    const renderNode = (node, { cell, columnWidth, rowHeight, lineIndex }) => {
       let {
         xAlign,
         xAlignChar = " ",
@@ -939,11 +950,14 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
 
       if (rect) {
         const { width, render } = rect;
-        let rectText = render({ columnWidth, bold });
+        let rectText = render({ cell, columnWidth, bold });
         if (width === "fill") {
           return rectText;
         }
         if (ansi && color) {
+          if (typeof color === "function") {
+            color = color(cell, { columnWidth, bold });
+          }
           rectText = ANSI.color(rectText, color);
         }
         return applyXAlign(rectText, {
@@ -967,6 +981,7 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
         const topSlotRow = topSlotRowMap.get(y);
         if (topSlotRow) {
           const topSlotRowText = renderRow(topSlotRow, {
+            cells: row,
             rowHeight: 1,
             leftSlotRow: topLeftSlotRowMap.get(y),
             rightSlotRow: topRightSlotRowMap.get(y),
@@ -976,6 +991,7 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
       }
       content_row: {
         const contentRowText = renderRow(row, {
+          cells: row,
           rowHeight: rowHeightMap.get(y),
           leftSlotRow: leftSlotRowMap.get(y),
           rightSlotRow: rightSlotRowMap.get(y),
@@ -986,6 +1002,7 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
         const bottomSlotRow = bottomSlotRowMap.get(y);
         if (bottomSlotRow) {
           const bottomSlotRowText = renderRow(bottomSlotRow, {
+            cells: row,
             rowHeight: 1,
             leftSlotRow: bottomLeftSlotRowMap.get(y),
             rightSlotRow: bottomRightSlotRowMap.get(y),
