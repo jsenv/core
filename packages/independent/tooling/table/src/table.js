@@ -217,7 +217,7 @@ const topLeftSlot = {
       if (westCell && westCell.borderTop && !westCell.borderRight) {
         return SLOT_CONTENT_TYPES.border_top_right;
       }
-      if (northCell && northCell.borderBottom) {
+      if (northCell && (northCell.borderBottom || northCell.borderLeft)) {
         return SLOT_CONTENT_TYPES.border_left;
       }
       return SLOT_CONTENT_TYPES.border_half_down;
@@ -247,7 +247,7 @@ const topRightSlot = {
       if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
         return SLOT_CONTENT_TYPES.border_top_left;
       }
-      if (northCell && northCell.borderBottom) {
+      if (northCell && (northCell.borderBottom || northCell.borderRight)) {
         return SLOT_CONTENT_TYPES.border_right;
       }
       return SLOT_CONTENT_TYPES.border_half_down;
