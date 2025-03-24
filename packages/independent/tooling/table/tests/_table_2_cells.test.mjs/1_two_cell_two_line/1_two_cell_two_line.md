@@ -41,6 +41,10 @@ const all_but_bottom_all = renderTable([
   [{ value: "a", border: {}, borderBottom: null }],
   [{ value: "b", border: {} }],
 ]);
+const all_all_but_top = renderTable([
+  [{ value: "a", border: {} }],
+  [{ value: "b", border: {}, borderTop: null }],
+]);
 const all = renderTable([
   [{ value: "a", border: {} }],
   [{ value: "b", border: {} }],
@@ -57,6 +61,7 @@ console.log(
     left_bottom_left,
     all_but_bottom_all_but_top,
     all_but_bottom_all,
+    all_all_but_top,
     all,
   }),
 );
@@ -117,6 +122,13 @@ console.log(
 └───┘
 
 --- all_but_bottom_all ---
+┌───┐
+│ a │
+├───┤
+│ b │
+└───┘
+
+--- all_all_but_top ---
 ┌───┐
 │ a │
 ├───┤

@@ -140,6 +140,10 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       [{ value: "a", border: {}, borderBottom: null }],
       [{ value: "b", border: {} }],
     ]);
+    const all_all_but_top = renderTable([
+      [{ value: "a", border: {} }],
+      [{ value: "b", border: {}, borderTop: null }],
+    ]);
     const all = renderTable([
       [{ value: "a", border: {} }],
       [{ value: "b", border: {} }],
@@ -156,6 +160,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         left_bottom_left,
         all_but_bottom_all_but_top,
         all_but_bottom_all,
+        all_all_but_top,
         all,
       }),
     );
