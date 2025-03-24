@@ -144,7 +144,7 @@ console.log(
 
 ```console
 --- first_row_full_second_row_split ---
-┌───╶───┐
+┌───────┐
 │ a   b │
 ├───┬───┤
 │ c │ d │
