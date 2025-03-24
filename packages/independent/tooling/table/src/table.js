@@ -9,11 +9,6 @@
  * border color conflicts
  * ability to control border chars
  * multiline (for later)
- *
- * ideally keep the word cell for content and
- * all the rest should be named "node" or something
- * and when we render we render border nodes, cell nodes and blank nodes
- * not cells, because cells are displaying content
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
@@ -26,119 +21,119 @@ const SLOT_CONTENT_TYPES = {};
   // this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
   // (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
   // where the border is)
-  const blankCell = {
+  const blankNode = {
     type: "blank",
     rects: [
       { width: "fill", render: ({ columnWidth }) => " ".repeat(columnWidth) },
     ],
   };
-  const borderLeftCell = {
+  const borderLeftNode = {
     type: "border_left",
     xAlign: "end",
     yAlignChar: "│",
     rects: [{ width: 1, render: () => "│" }],
   };
-  const borderRightCell = {
+  const borderRightNode = {
     type: "border_right",
     xAlign: "start",
     yAlignChar: "│",
     rects: [{ width: 1, render: () => "│" }],
   };
-  const borderTopCell = {
+  const borderTopNode = {
     type: "border_top",
     yAlign: "end",
     rects: [
       { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
     ],
   };
-  const borderBottomCell = {
+  const borderBottomNode = {
     type: "border_bottom",
     yAlign: "start",
     rects: [
       { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
     ],
   };
-  const borderHalfRightCell = {
+  const borderHalfRightNode = {
     type: "border_half_right",
     xAlign: "end",
     yAlign: "end",
     rects: [{ width: 1, render: () => "╶" }],
   };
-  const borderHalfLeftCell = {
+  const borderHalfLeftNode = {
     type: "border_half_left",
     xAlign: "start",
     yAlign: "end",
     rects: [{ width: 1, render: () => "╴" }],
   };
-  const borderHalfUpCell = {
+  const borderHalfUpNode = {
     type: "border_half_up",
     xAlign: "start",
     yAlign: "start",
     rects: [{ width: 1, render: () => "╵" }],
   };
-  const borderHalfDownCell = {
+  const borderHalfDownNode = {
     type: "border_half_right",
     xAlign: "end",
     yAlign: "start",
     rects: [{ width: 1, render: () => "╷" }],
   };
-  const borderTopLeftCell = {
+  const borderTopLeftNode = {
     xAlign: "start",
     yAlign: "start",
     xAlignChar: "─",
     yAlignChar: "│",
     rects: [{ width: 1, render: () => "┌" }],
   };
-  const borderTopRightCell = {
+  const borderTopRightNode = {
     xAlign: "end",
     yAlign: "start",
     xAlignChar: "─",
     yAlignChar: "│",
     rects: [{ width: 1, render: () => "┐" }],
   };
-  const borderBottomRightCell = {
+  const borderBottomRightNode = {
     xAlign: "end",
     yAlign: "end",
     xAlignChar: "─",
     yAlignChar: "│",
     rects: [{ width: 1, render: () => "┘" }],
   };
-  const borderBottomLeftCell = {
+  const borderBottomLeftNode = {
     xAlign: "start",
     yAlign: "end",
     xAlignChar: "─",
     yAlignChar: "│",
     rects: [{ width: 1, render: () => "└" }],
   };
-  const borderTopMidCell = {
+  const borderTopMidNode = {
     xAlign: "center",
     yAlign: "start",
     xAlignChar: "─",
     yAlignChar: "│",
     rects: [{ width: 1, render: () => "┬" }],
   };
-  const borderBottomMidCell = {
+  const borderBottomMidNode = {
     xAlign: "center",
     yAlign: "end",
     xAlignChar: "─",
     yAlignChar: "│",
     rects: [{ width: 1, render: () => "┴" }],
   };
-  const borderLeftMidCell = {
+  const borderLeftMidNode = {
     xAlign: "start",
     yAlign: "center",
     xAlignChar: "─",
     yAlignChar: "│",
     rects: [{ width: 1, render: () => "├" }],
   };
-  const borderRightMidCell = {
+  const borderRightMidNode = {
     xAlign: "end",
     yAlign: "center",
     xAlignChar: "─",
     yAlignChar: "│",
     rects: [{ width: 1, render: () => "┤" }],
   };
-  const borderMidCell = {
+  const borderMidNode = {
     type: "border_mid",
     xAlign: "center",
     yAlign: "center",
@@ -148,24 +143,24 @@ const SLOT_CONTENT_TYPES = {};
   };
 
   Object.assign(SLOT_CONTENT_TYPES, {
-    blank: blankCell,
-    border_left: borderLeftCell,
-    border_right: borderRightCell,
-    border_top: borderTopCell,
-    border_bottom: borderBottomCell,
-    border_top_left: borderTopLeftCell,
-    border_top_right: borderTopRightCell,
-    border_bottom_left: borderBottomLeftCell,
-    border_bottom_right: borderBottomRightCell,
-    border_half_left: borderHalfLeftCell,
-    border_half_right: borderHalfRightCell,
-    border_half_up: borderHalfUpCell,
-    border_half_down: borderHalfDownCell,
-    border_left_mid: borderLeftMidCell,
-    border_right_mid: borderRightMidCell,
-    border_top_mid: borderTopMidCell,
-    border_bottom_mid: borderBottomMidCell,
-    border_mid: borderMidCell,
+    blank: blankNode,
+    border_left: borderLeftNode,
+    border_right: borderRightNode,
+    border_top: borderTopNode,
+    border_bottom: borderBottomNode,
+    border_top_left: borderTopLeftNode,
+    border_top_right: borderTopRightNode,
+    border_bottom_left: borderBottomLeftNode,
+    border_bottom_right: borderBottomRightNode,
+    border_half_left: borderHalfLeftNode,
+    border_half_right: borderHalfRightNode,
+    border_half_up: borderHalfUpNode,
+    border_half_down: borderHalfDownNode,
+    border_left_mid: borderLeftMidNode,
+    border_right_mid: borderRightMidNode,
+    border_top_mid: borderTopMidNode,
+    border_bottom_mid: borderBottomMidNode,
+    border_mid: borderMidNode,
   });
 }
 
