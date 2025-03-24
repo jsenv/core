@@ -241,6 +241,9 @@ const topRightSlot = {
       return SLOT_CONTENT_TYPES.border_half_down;
     }
     if (cell.borderTop) {
+      if (northCell && northCell.borderRight && !northCell.borderBottom) {
+        return SLOT_CONTENT_TYPES.border_bottom_right;
+      }
       return SLOT_CONTENT_TYPES.border_half_left;
     }
     return SLOT_CONTENT_TYPES.blank;

@@ -21,6 +21,16 @@ const castle = renderTable([
   [{ value: "b", borderLeft: {} }],
   [{ value: "c", border: {}, borderLeft: null }],
 ]);
+const castle_inverted = renderTable([
+  [{ value: "a", border: {}, borderRight: null }],
+  [{ value: "b", borderRight: {} }],
+  [{ value: "c", border: {}, borderRight: null }],
+]);
+const around = renderTable([
+  [{ value: "a", border: {}, borderBottom: null }],
+  [{ value: "b", border: {} }],
+  [{ value: "c", border: {}, borderTop: null }],
+]);
 const all = renderTable([
   [{ value: "a", border: {} }],
   [{ value: "b", border: {} }],
@@ -31,6 +41,8 @@ const results = {
   left_and_right,
   top_and_bottom,
   castle,
+  castle_inverted,
+  around,
   all,
 };
 console.log(renderNamedSections(results));
@@ -68,6 +80,24 @@ console.log(renderNamedSections(results));
 └───┐
   c │
 ╶───┘
+
+--- castle_inverted ---
+┌───╴
+│ a  
+└───┐
+  b │
+┌───┘
+│ c  
+└───╴
+
+--- around ---
+┌───┐
+│ a │
+├───┤
+│ b │
+├───┤
+│ c │
+└───┘
 
 --- all ---
 ┌───┐
