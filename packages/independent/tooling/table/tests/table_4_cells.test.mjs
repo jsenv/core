@@ -190,4 +190,6 @@ const run = ({ borderCollapse }) => {
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
   test(`0_basic`, () => run({}));
+
+  test(`1_border_collapse`, () => run({ borderCollapse: true }));
 });
