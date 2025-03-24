@@ -6,9 +6,9 @@
  *
  * remaining:
  * border collapse (par defaut ce sera false et on refera tout les tests en mode collapse)
- * border color conflicts
- * ability to control border chars
- * multiline (for later)
+ * border color and color conflicts
+ * border bold/light (+ connection between bold and light)
+ * multiline
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";

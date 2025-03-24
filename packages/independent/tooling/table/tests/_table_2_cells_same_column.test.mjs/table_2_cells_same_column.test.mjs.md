@@ -1,8 +1,7 @@
-# [table_1_cell.test.mjs](../table_1_cell.test.mjs)
+# [table_2_cells_same_column.test.mjs](../table_2_cells_same_column.test.mjs)
 
 
 - [0_basic](0_basic/0_basic.md)
-- [1_bold](1_bold/1_bold.md)
 
 ---
 

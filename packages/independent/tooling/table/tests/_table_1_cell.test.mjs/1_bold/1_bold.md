@@ -1,7 +1,7 @@
-# [1_single_cell_bold](../../table_1_cell.test.mjs#L93)
+# [1_bold](../../table_1_cell.test.mjs#L93)
 
 ```js
-run({ boldBorders: true })
+run({ bordersBold: true })
 ```
 
 # 1/2 console.log

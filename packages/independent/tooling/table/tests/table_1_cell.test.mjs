@@ -2,8 +2,8 @@ import { renderNamedSections } from "@jsenv/humanize";
 import { renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
-const run = ({ ansi, boldBorders }) => {
-  const border = { bold: boldBorders };
+const run = ({ ansi, bordersBold }) => {
+  const border = { bold: bordersBold };
   const render = (grid) => renderTable(grid, { ansi });
 
   const none = render([
@@ -88,9 +88,9 @@ const run = ({ ansi, boldBorders }) => {
 };
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
-  test(`0_single_cell`, () => run({}));
+  test(`0_basic`, () => run({}));
 
-  test.ONLY(`1_single_cell_bold`, () => run({ boldBorders: true }));
+  test(`1_bold`, () => run({ bordersBold: true }));
 
-  // test(`3_single_cell_ansi`, () => run({ ansi: true }));
+  // test(`2_ansi`, () => run({ ansi: true }));
 });
