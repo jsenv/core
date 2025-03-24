@@ -5,7 +5,7 @@
  *
  *
  * remaining:
- * border collapse
+ * border collapse (par defaut ce sera false et on refera tout les tests en mode collapse)
  * border color conflicts
  * ability to control border chars
  * multiline (for later)
@@ -199,6 +199,9 @@ const topLeftSlot = {
   type: "top_left",
   adapt: ({ cell, westCell, northCell }) => {
     if (cell.borderTop && cell.borderLeft) {
+      if (westCell && westCell.borderTop && !westCell.borderRight) {
+        return SLOT_CONTENT_TYPES.border_top_mid;
+      }
       return SLOT_CONTENT_TYPES.border_top_left;
     }
     if (cell.borderLeft) {
@@ -261,6 +264,9 @@ const bottomLeftSlot = {
     if (cell.borderBottom && cell.borderLeft) {
       if (southCell && southCell.borderLeft && !southCell.borderTop) {
         return SLOT_CONTENT_TYPES.border_left_mid;
+      }
+      if (westCell && westCell.borderBottom && !westCell.borderRight) {
+        return SLOT_CONTENT_TYPES.border_bottom_mid;
       }
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }

@@ -1,4 +1,4 @@
-# [1_two_cell_two_line](../../table_2_cells.test.mjs#L70)
+# [1_two_cell_two_line](../../table_2_cells.test.mjs#L95)
 
 ```js
 const bottom_and_top = renderTable([

@@ -1,4 +1,4 @@
-# [0_two_cell_same_line](../../table_2_cells.test.mjs#L6)
+# [0_two_cell_same_line](../../table_2_cells.test.mjs#L10)
 
 ```js
 const right_and_left = renderTable([
@@ -43,6 +43,24 @@ const top_left_bottom_right = renderTable([
     { value: "b", borderLeft: {}, borderBottom: {}, borderRight: {} },
   ],
 ]);
+const all_but_bottom_all_but_top = renderTable([
+  [
+    { value: "a", border: {}, borderBottom: null },
+    { value: "b", border: {}, borderTop: null },
+  ],
+]);
+const all_but_right_all_but_left = renderTable([
+  [
+    { value: "a", border: {}, borderRight: null },
+    { value: "b", border: {}, borderLeft: null },
+  ],
+]);
+const all_but_right_all = renderTable([
+  [
+    { value: "a", border: {}, borderRight: null },
+    { value: "b", border: {} },
+  ],
+]);
 const all = renderTable([
   [
     { value: "a", border: {} },
@@ -59,6 +77,9 @@ console.log(
     left_bottom_right_and_top_right,
     top_right_bottom_right,
     top_left_bottom_right,
+    all_but_bottom_all_but_top,
+    all_but_right_all_but_left,
+    all_but_right_all,
     all,
   }),
 );
@@ -99,6 +120,21 @@ console.log(
 ───┐   ╷
  a │ b │
    └───┘
+
+--- all_but_bottom_all_but_top ---
+┌───┐╷   ╷
+│ a ││ b │
+╵   ╵└───┘
+
+--- all_but_right_all_but_left ---
+┌──────┐
+│ a  b │
+└──────┘
+
+--- all_but_right_all ---
+┌───┬───┐
+│ a │ b │
+└───┴───┘
 
 --- all ---
 ┌───┐┌───┐

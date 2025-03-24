@@ -1,3 +1,7 @@
+// TODO: all test where there is a mid connection
+// also a test like all but bottom + all but top to see the result
+// en gros pleeein de test
+
 import { renderNamedSections } from "@jsenv/humanize";
 import { renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
@@ -46,6 +50,24 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "b", borderLeft: {}, borderBottom: {}, borderRight: {} },
       ],
     ]);
+    const all_but_bottom_all_but_top = renderTable([
+      [
+        { value: "a", border: {}, borderBottom: null },
+        { value: "b", border: {}, borderTop: null },
+      ],
+    ]);
+    const all_but_right_all_but_left = renderTable([
+      [
+        { value: "a", border: {}, borderRight: null },
+        { value: "b", border: {}, borderLeft: null },
+      ],
+    ]);
+    const all_but_right_all = renderTable([
+      [
+        { value: "a", border: {}, borderRight: null },
+        { value: "b", border: {} },
+      ],
+    ]);
     const all = renderTable([
       [
         { value: "a", border: {} },
@@ -62,6 +84,9 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         left_bottom_right_and_top_right,
         top_right_bottom_right,
         top_left_bottom_right,
+        all_but_bottom_all_but_top,
+        all_but_right_all_but_left,
+        all_but_right_all,
         all,
       }),
     );
