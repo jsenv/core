@@ -204,17 +204,22 @@ const bottomSlot = {
 const topLeftSlot = {
   type: "top_left",
   adapt: ({ cell, westCell, northCell, northWestCell }) => {
-    if (cell.borderTop && cell.borderLeft) {
-      const westConnected =
-        westCell && westCell.borderTop && !westCell.borderRight;
-      const northConnected =
-        northCell && northCell.borderLeft && !northCell.borderBottom;
-      if (westConnected && northConnected) {
-        const northWestConnected =
-          !northWestCell.borderBottom && !northWestCell.borderRight;
-        if (northWestConnected) {
-          return SLOT_CONTENT_TYPES.border_mid;
-        }
+    const { borderTop, borderLeft } = cell;
+    if (!borderTop && !borderLeft) {
+      return SLOT_CONTENT_TYPES.blank;
+    }
+
+    const westConnected =
+      westCell && westCell.borderTop && !westCell.borderRight;
+    const northConnected =
+      northCell && northCell.borderLeft && !northCell.borderBottom;
+    const northWestConnected =
+      northConnected && westConnected
+        ? !northWestCell.borderBottom && !northWestCell.borderRight
+        : false;
+    if (borderTop && borderLeft) {
+      if (northWestConnected) {
+        return SLOT_CONTENT_TYPES.border_mid;
       }
       if (westConnected) {
         return SLOT_CONTENT_TYPES.border_top_mid;
@@ -224,8 +229,8 @@ const topLeftSlot = {
       }
       return SLOT_CONTENT_TYPES.border_top_left;
     }
-    if (cell.borderLeft) {
-      if (westCell && westCell.borderTop && !westCell.borderRight) {
+    if (borderLeft) {
+      if (westConnected) {
         return SLOT_CONTENT_TYPES.border_top_right;
       }
       if (northCell && (northCell.borderBottom || northCell.borderLeft)) {
@@ -233,29 +238,32 @@ const topLeftSlot = {
       }
       return SLOT_CONTENT_TYPES.border_half_down;
     }
-    if (cell.borderTop) {
-      if (northCell && northCell.borderLeft && !northCell.borderBottom) {
-        return SLOT_CONTENT_TYPES.border_bottom_left;
-      }
-      return SLOT_CONTENT_TYPES.border_half_right;
+    // borderTop
+    if (northConnected) {
+      return SLOT_CONTENT_TYPES.border_bottom_left;
     }
-    return SLOT_CONTENT_TYPES.blank;
+    return SLOT_CONTENT_TYPES.border_half_right;
   },
 };
 const topRightSlot = {
   type: "top_right",
   adapt: ({ cell, eastCell, northCell, northEastCell }) => {
-    if (cell.borderTop && cell.borderRight) {
-      const eastConnected =
-        eastCell && eastCell.borderTop && !eastCell.borderLeft;
-      const northConnected =
-        northCell && northCell.borderRight && !northCell.borderBottom;
-      if (northConnected && eastConnected) {
-        const northEastConnected =
-          !northEastCell.borderBottom && !northEastCell.borderLeft;
-        if (northEastConnected) {
-          return SLOT_CONTENT_TYPES.border_mid;
-        }
+    const { borderTop, borderRight } = cell;
+    if (!borderTop && !borderRight) {
+      return SLOT_CONTENT_TYPES.blank;
+    }
+
+    const eastConnected =
+      eastCell && eastCell.borderTop && !eastCell.borderLeft;
+    const northConnected =
+      northCell && northCell.borderRight && !northCell.borderBottom;
+    const northEastConnected =
+      northConnected && eastConnected
+        ? !northEastCell.borderBottom && !northEastCell.borderLeft
+        : false;
+    if (borderTop && borderRight) {
+      if (northEastConnected) {
+        return SLOT_CONTENT_TYPES.border_mid;
       }
       if (northConnected) {
         return SLOT_CONTENT_TYPES.border_right_mid;
@@ -265,38 +273,41 @@ const topRightSlot = {
       }
       return SLOT_CONTENT_TYPES.border_top_right;
     }
-    if (cell.borderRight) {
-      if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
+    if (borderRight) {
+      if (eastConnected) {
         return SLOT_CONTENT_TYPES.border_top_left;
       }
-      if (northCell && (northCell.borderBottom || northCell.borderRight)) {
+      if (northConnected) {
         return SLOT_CONTENT_TYPES.border_right;
       }
       return SLOT_CONTENT_TYPES.border_half_down;
     }
-    if (cell.borderTop) {
-      if (northCell && northCell.borderRight && !northCell.borderBottom) {
-        return SLOT_CONTENT_TYPES.border_bottom_right;
-      }
-      return SLOT_CONTENT_TYPES.border_half_left;
+    // borderTop
+    if (northConnected) {
+      return SLOT_CONTENT_TYPES.border_bottom_right;
     }
-    return SLOT_CONTENT_TYPES.blank;
+    return SLOT_CONTENT_TYPES.border_half_left;
   },
 };
 const bottomRightSlot = {
   type: "bottom_right",
   adapt: ({ cell, eastCell, southCell, southEastCell }) => {
-    if (cell.borderBottom && cell.borderRight) {
-      const eastConnected =
-        eastCell && eastCell.borderBottom && !eastCell.borderLeft;
-      const southConnected =
-        southCell && southCell.borderRight && !southCell.borderTop;
-      if (eastConnected && southConnected) {
-        const southEastConnected =
-          !southEastCell.borderTop && !southEastCell.borderLeft;
-        if (southEastConnected) {
-          return SLOT_CONTENT_TYPES.border_mid;
-        }
+    const { borderBottom, borderRight } = cell;
+    if (!borderBottom && !borderRight) {
+      return SLOT_CONTENT_TYPES.blank;
+    }
+
+    const eastConnected =
+      eastCell && eastCell.borderBottom && !eastCell.borderLeft;
+    const southConnected =
+      southCell && southCell.borderRight && !southCell.borderTop;
+    const southEastConnected =
+      southConnected && eastConnected
+        ? !southEastCell.borderTop && !southEastCell.borderLeft
+        : false;
+    if (borderBottom && borderRight) {
+      if (southEastConnected) {
+        return SLOT_CONTENT_TYPES.border_mid;
       }
       if (eastConnected) {
         return SLOT_CONTENT_TYPES.border_bottom_mid;
@@ -306,27 +317,30 @@ const bottomRightSlot = {
       }
       return SLOT_CONTENT_TYPES.border_bottom_right;
     }
-    if (cell.borderRight) {
-      if (eastCell && eastCell.borderBottom && !eastCell.borderLeft) {
+    if (borderRight) {
+      if (eastConnected) {
         return SLOT_CONTENT_TYPES.border_bottom_left;
       }
-      if (southCell && southCell.borderRight && !southCell.borderTop) {
+      if (southConnected) {
         return SLOT_CONTENT_TYPES.border_right;
       }
       return SLOT_CONTENT_TYPES.border_half_up;
     }
-    if (cell.borderBottom) {
-      if (southCell && southCell.borderRight && !southCell.borderTop) {
-        return SLOT_CONTENT_TYPES.border_top_right;
-      }
-      return SLOT_CONTENT_TYPES.border_half_left;
+    // border bottom
+    if (southConnected) {
+      return SLOT_CONTENT_TYPES.border_top_right;
     }
-    return SLOT_CONTENT_TYPES.blank;
+    return SLOT_CONTENT_TYPES.border_half_left;
   },
 };
 const bottomLeftSlot = {
   type: "bottom_left",
   adapt: ({ cell, westCell, southCell, southWestCell }) => {
+    const { borderBottom, borderLeft } = cell;
+    if (!borderBottom && !borderLeft) {
+      return SLOT_CONTENT_TYPES.blank;
+    }
+
     const southConnected =
       southCell && southCell.borderLeft && !southCell.borderTop;
     const westConnected =
@@ -335,8 +349,7 @@ const bottomLeftSlot = {
       southConnected && westConnected
         ? !southWestCell.borderTop && !southWestCell.borderRight
         : false;
-
-    if (cell.borderBottom && cell.borderLeft) {
+    if (borderBottom && borderLeft) {
       if (southWestConnected) {
         return SLOT_CONTENT_TYPES.border_mid;
       }
@@ -348,7 +361,7 @@ const bottomLeftSlot = {
       }
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }
-    if (cell.borderLeft) {
+    if (borderLeft) {
       if (southWestConnected) {
         return SLOT_CONTENT_TYPES.border_right_mid;
       }
@@ -360,13 +373,11 @@ const bottomLeftSlot = {
       }
       return SLOT_CONTENT_TYPES.border_half_up;
     }
-    if (cell.borderBottom) {
-      if (southConnected) {
-        return SLOT_CONTENT_TYPES.border_top_left;
-      }
-      return SLOT_CONTENT_TYPES.border_half_right;
+    // borderBottom
+    if (southConnected) {
+      return SLOT_CONTENT_TYPES.border_top_left;
     }
-    return SLOT_CONTENT_TYPES.blank;
+    return SLOT_CONTENT_TYPES.border_half_right;
   },
 };
 
