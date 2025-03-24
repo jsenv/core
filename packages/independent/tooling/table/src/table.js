@@ -5,7 +5,6 @@
  *
  *
  * remaining:
- * border collapse (par defaut ce sera false et on refera tout les tests en mode collapse)
  * border color and color conflicts
  * border bold/light (+ connection between bold and light)
  * multiline
@@ -17,11 +16,10 @@ import { borderCharsetHeavy, borderCharsetLight } from "./border_charsets.js";
 
 const SLOT_CONTENT_TYPES = {};
 {
-  // blank content is a fluid content that will take whatever size they are requested to take
-  // they can seen as placeholders that are removed when a line or column is composed only by blank cells
-  // this is useful to enforce a given amount of line / columns that can be adjusted later if nothing use the reserved line/column
-  // (used to implement borders because any cell can suddenly enable a border meaning all previous cells must now have blank spaces
-  // where the border is)
+  // blank node is a fluid node that will take whatever size it will be requested to take
+  // this is useful to enforce a given amount of space is taken in x/y
+  // It is used to implement borders because any cell can suddenly
+  // enable a border on X/Y meaning all previous cells must now have blank spaces where the border is
   const blankNode = {
     type: "blank",
     rects: [
@@ -711,13 +709,30 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
           renderOptionsRef.current = null;
           const node = slot.adapt(adaptParams);
           const renderOptions = renderOptionsRef.current;
-          if (renderOptions && Object.keys(renderOptions).length) {
-            return {
-              ...node,
-              renderOptions,
-            };
+          if (!renderOptions) {
+            return node;
           }
-          return node;
+          const { bold, color } = renderOptions;
+          const nodeWithOptions = { ...node };
+          nodeWithOptions.color = color;
+          if (bold) {
+            // pas sur qu'on fasse comme ça, ptet qu'on voudra plutot avoir un borderLeftNode
+            // en mode gras et un en mode light
+            // je sais pas encore
+            // (on veut pouvoir set le xAlignChar et yAlignChar aussi)
+            nodeWithOptions.rects = [
+              ...node.rects.map((rect) => {
+                const render = rect.render;
+                return {
+                  ...rect,
+                  render: (options) => {
+                    return render({ ...options, bold });
+                  },
+                };
+              }),
+            ];
+          }
+          return nodeWithOptions;
         };
 
         if (leftSlotRow) {
@@ -906,7 +921,15 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
       return rowText;
     };
     const renderNode = (node, { columnWidth, rowHeight, lineIndex }) => {
-      let { xAlign, xAlignChar = " ", yAlign, yAlignChar = " ", rects } = node;
+      let {
+        xAlign,
+        xAlignChar = " ",
+        yAlign,
+        yAlignChar = " ",
+        rects,
+        color,
+        bold,
+      } = node;
       const nodeHeight = rects.length;
 
       let rect;
@@ -931,9 +954,12 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
 
       if (rect) {
         const { width, render } = rect;
-        let rectText = render({ columnWidth, ...node.renderOptions });
+        let rectText = render({ columnWidth, bold });
         if (width === "fill") {
           return rectText;
+        }
+        if (ansi && color) {
+          rectText = ANSI.color(rectText, color);
         }
         return applyXAlign(rectText, {
           width,
