@@ -31,7 +31,7 @@ const SLOT_CONTENT_TYPES = {};
     type: "border_left",
     xAlign: "end",
     yAlignChar: "│",
-    rects: [{ width: 1, render: () => "│" }],
+    rects: [{ width: 1, render: ({ bold }) => (bold ? "┃" : "│") }],
   };
   const borderRightNode = {
     type: "border_right",
@@ -415,10 +415,7 @@ const bottomLeftSlot = {
   },
 };
 
-export const renderTable = (
-  inputGrid,
-  { ansi = true, borderCollapse } = {},
-) => {
+export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
   if (!Array.isArray(inputGrid)) {
     throw new TypeError(`The first arg must be an array, got ${inputGrid}`);
   }
