@@ -131,6 +131,10 @@ const SLOT_CONTENT_TYPES = {};
     xAlignChar: borderCharsetLight.top,
     yAlignChar: borderCharsetLight.left,
     rects: [{ width: 1, render: () => borderCharsetLight.top_left }],
+    color: (cell) => {
+      const { borderTop } = cell;
+      return borderTop ? borderTop.color : null;
+    },
   };
   const borderTopRightNode = {
     xAlign: "end",
