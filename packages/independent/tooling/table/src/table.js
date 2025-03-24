@@ -223,6 +223,9 @@ const topRightSlot = {
   type: "top_right",
   adapt: ({ cell, eastCell }) => {
     if (cell.borderTop && cell.borderRight) {
+      if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
+        return SLOT_CONTENT_TYPES.border_top_mid;
+      }
       return SLOT_CONTENT_TYPES.border_top_right;
     }
     if (cell.borderRight) {
@@ -241,6 +244,9 @@ const bottomRightSlot = {
   type: "bottom_right",
   adapt: ({ cell, eastCell, southCell }) => {
     if (cell.borderBottom && cell.borderRight) {
+      if (eastCell && eastCell.borderBottom && !eastCell.borderLeft) {
+        return SLOT_CONTENT_TYPES.border_bottom_mid;
+      }
       return SLOT_CONTENT_TYPES.border_bottom_right;
     }
     if (cell.borderRight) {
