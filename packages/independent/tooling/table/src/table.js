@@ -9,6 +9,11 @@
  * border color conflicts
  * ability to control border chars
  * multiline (for later)
+ *
+ * ideally keep the word cell for content and
+ * all the rest should be named "node" or something
+ * and when we render we render border nodes, cell nodes and blank nodes
+ * not cells, because cells are displaying content
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
@@ -268,7 +273,7 @@ const bottomRightSlot = {
         const southEastConnected =
           !southEastCell.borderTop && !southEastCell.borderLeft;
         if (southEastConnected) {
-          return SLOT_CONTENT_TYPES.mid;
+          return SLOT_CONTENT_TYPES.border_mid;
         }
       }
       if (eastConnected) {

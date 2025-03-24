@@ -1,26 +1,26 @@
 # [0_four_cells](../../table_4_cells.test.mjs#L6)
 
 ```js
-// const none = renderTable([
-//   [
-//     { value: "a", border: null },
-//     { value: "b", border: null },
-//   ],
-//   [
-//     { value: "c", border: null },
-//     { value: "d", border: null },
-//   ],
-// ]);
-// const around_strange = renderTable([
-//   [
-//     { value: "a", border: {} },
-//     { value: "b", border: {}, borderLeft: null },
-//   ],
-//   [
-//     { value: "c", border: {}, borderTop: null },
-//     { value: "d", border: {}, borderLeft: null },
-//   ],
-// ]);
+const none = renderTable([
+  [
+    { value: "a", border: null },
+    { value: "b", border: null },
+  ],
+  [
+    { value: "c", border: null },
+    { value: "d", border: null },
+  ],
+]);
+const around_strange = renderTable([
+  [
+    { value: "a", border: {} },
+    { value: "b", border: {}, borderLeft: null },
+  ],
+  [
+    { value: "c", border: {}, borderTop: null },
+    { value: "d", border: {}, borderLeft: null },
+  ],
+]);
 const around = renderTable([
   [
     { value: "a", border: {} },
@@ -31,23 +31,23 @@ const around = renderTable([
     { value: "d", border: {}, borderTop: null, borderLeft: null },
   ],
 ]);
-// const all = renderTable([
-//   [
-//     { value: "a", border: {} },
-//     { value: "b", border: {} },
-//   ],
-//   [
-//     { value: "c", border: {} },
-//     { value: "d", border: {} },
-//   ],
-// ]);
+const all = renderTable([
+  [
+    { value: "a", border: {} },
+    { value: "b", border: {} },
+  ],
+  [
+    { value: "c", border: {} },
+    { value: "d", border: {} },
+  ],
+]);
 
 console.log(
   renderNamedSections({
-    //  none,
-    // around_strange,
+    none,
+    around_strange,
     around,
-    // all,
+    all,
   }),
 );
 ```
@@ -55,12 +55,32 @@ console.log(
 # 1/2 console.log
 
 ```console
+--- none ---
+ a  b 
+ c  d 
+
+--- around_strange ---
+┌───┬───┐
+│ a │ b │
+├───┴───┘
+│   ┌───┐
+│ c │ d │
+└───┴───┘
+
 --- around ---
 ┌───┬───┐
 │ a │ b │
-├──────┤
+├───┼───┤
 │ c │ d │
 └───┴───┘
+
+--- all ---
+┌───┐┌───┐
+│ a ││ b │
+└───┘└───┘
+┌───┐┌───┐
+│ c ││ d │
+└───┘└───┘
 
 ```
 
