@@ -329,7 +329,7 @@ const topRightSlot = {
 };
 const bottomRightSlot = {
   type: "bottom_right",
-  adapt: ({ cell, eastCell, southCell, southEastCell }) => {
+  adapt: ({ cell, eastCell, southCell }) => {
     const { borderBottom, borderRight } = cell;
     if (!borderBottom && !borderRight) {
       return SLOT_CONTENT_TYPES.blank;
@@ -340,10 +340,7 @@ const bottomRightSlot = {
     if (borderBottom && borderRight) {
       const eastConnected =
         eastCell && eastCell.borderBottom && !eastCell.borderLeft;
-      const southEastConnected =
-        southConnected && eastConnected
-          ? !southEastCell.borderTop && !southEastCell.borderLeft
-          : false;
+      const southEastConnected = southConnected && eastConnected;
       if (southEastConnected) {
         return SLOT_CONTENT_TYPES.border_mid;
       }
