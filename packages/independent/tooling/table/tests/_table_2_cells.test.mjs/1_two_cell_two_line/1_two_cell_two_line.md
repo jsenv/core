@@ -1,4 +1,4 @@
-# [1_two_cell_two_line](../../table_2_cells.test.mjs#L102)
+# [1_two_cell_two_line](../../table_2_cells.test.mjs#L98)
 
 ```js
 const bottom_and_top = renderTable([
@@ -8,6 +8,14 @@ const bottom_and_top = renderTable([
 const bottom_left_and_top_left = renderTable([
   [{ value: "a", borderBottom: {}, borderLeft: {} }],
   [{ value: "b", borderTop: {}, borderLeft: {} }],
+]);
+const left_bottom_and_left = renderTable([
+  [{ value: "a", borderLeft: {}, borderBottom: {} }],
+  [{ value: "b", borderLeft: {} }],
+]);
+const left_and_top_left = renderTable([
+  [{ value: "a", borderLeft: {} }],
+  [{ value: "b", borderLeft: {}, borderTop: {} }],
 ]);
 const bottom_right_and_top_right = renderTable([
   [{ value: "a", borderBottom: {}, borderRight: {} }],
@@ -25,23 +33,19 @@ const left_bottom_right = renderTable([
   [{ value: "a", borderLeft: {}, borderBottom: {} }],
   [{ value: "b", borderRight: {} }],
 ]);
-const left_top_right = renderTable([
+const left_and_top_right = renderTable([
   [{ value: "a", borderLeft: {} }],
   [{ value: "b", borderTop: {}, borderRight: {} }],
 ]);
-const left_bottom_left = renderTable([
-  [{ value: "a", borderLeft: {}, borderBottom: {} }],
-  [{ value: "b", borderLeft: {} }],
-]);
-const all_but_bottom_all_but_top = renderTable([
+const all_but_bottom_and_all_but_top = renderTable([
   [{ value: "a", border: {}, borderBottom: null }],
   [{ value: "b", border: {}, borderTop: null }],
 ]);
-const all_but_bottom_all = renderTable([
+const all_but_bottom_and_all = renderTable([
   [{ value: "a", border: {}, borderBottom: null }],
   [{ value: "b", border: {} }],
 ]);
-const all_all_but_top = renderTable([
+const all_and_all_but_top = renderTable([
   [{ value: "a", border: {} }],
   [{ value: "b", border: {}, borderTop: null }],
 ]);
@@ -53,15 +57,16 @@ console.log(
   renderNamedSections({
     bottom_and_top,
     bottom_left_and_top_left,
+    left_bottom_and_left,
+    left_and_top_left,
     bottom_right_and_top_right,
     top_left_and_bottom_right,
     bottom_right_and_top_left,
     left_bottom_right,
-    left_top_right,
-    left_bottom_left,
-    all_but_bottom_all_but_top,
-    all_but_bottom_all,
-    all_all_but_top,
+    left_and_top_right,
+    all_but_bottom_and_all_but_top,
+    all_but_bottom_and_all,
+    all_and_all_but_top,
     all,
   }),
 );
@@ -80,6 +85,16 @@ console.log(
 │ a 
 └───
 ┌───
+│ b 
+
+--- left_bottom_and_left ---
+│ a 
+├───
+│ b 
+
+--- left_and_top_left ---
+│ a 
+├───
 │ b 
 
 --- bottom_right_and_top_right ---
@@ -105,30 +120,25 @@ console.log(
 └───┐
   b │
 
---- left_top_right ---
+--- left_and_top_right ---
 │ a  
 └───┐
   b │
 
---- left_bottom_left ---
-│ a 
-├───
-│ b 
-
---- all_but_bottom_all_but_top ---
+--- all_but_bottom_and_all_but_top ---
 ┌───┐
 │ a │
 │ b │
 └───┘
 
---- all_but_bottom_all ---
+--- all_but_bottom_and_all ---
 ┌───┐
 │ a │
 ├───┤
 │ b │
 └───┘
 
---- all_all_but_top ---
+--- all_and_all_but_top ---
 ┌───┐
 │ a │
 ├───┤

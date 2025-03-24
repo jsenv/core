@@ -1,7 +1,3 @@
-// TODO: all test where there is a mid connection
-// also a test like all but bottom + all but top to see the result
-// en gros pleeein de test
-
 import { renderNamedSections } from "@jsenv/humanize";
 import { renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
@@ -108,6 +104,14 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       [{ value: "a", borderBottom: {}, borderLeft: {} }],
       [{ value: "b", borderTop: {}, borderLeft: {} }],
     ]);
+    const left_bottom_and_left = renderTable([
+      [{ value: "a", borderLeft: {}, borderBottom: {} }],
+      [{ value: "b", borderLeft: {} }],
+    ]);
+    const left_and_top_left = renderTable([
+      [{ value: "a", borderLeft: {} }],
+      [{ value: "b", borderLeft: {}, borderTop: {} }],
+    ]);
     const bottom_right_and_top_right = renderTable([
       [{ value: "a", borderBottom: {}, borderRight: {} }],
       [{ value: "b", borderTop: {}, borderRight: {} }],
@@ -124,23 +128,19 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       [{ value: "a", borderLeft: {}, borderBottom: {} }],
       [{ value: "b", borderRight: {} }],
     ]);
-    const left_top_right = renderTable([
+    const left_and_top_right = renderTable([
       [{ value: "a", borderLeft: {} }],
       [{ value: "b", borderTop: {}, borderRight: {} }],
     ]);
-    const left_bottom_left = renderTable([
-      [{ value: "a", borderLeft: {}, borderBottom: {} }],
-      [{ value: "b", borderLeft: {} }],
-    ]);
-    const all_but_bottom_all_but_top = renderTable([
+    const all_but_bottom_and_all_but_top = renderTable([
       [{ value: "a", border: {}, borderBottom: null }],
       [{ value: "b", border: {}, borderTop: null }],
     ]);
-    const all_but_bottom_all = renderTable([
+    const all_but_bottom_and_all = renderTable([
       [{ value: "a", border: {}, borderBottom: null }],
       [{ value: "b", border: {} }],
     ]);
-    const all_all_but_top = renderTable([
+    const all_and_all_but_top = renderTable([
       [{ value: "a", border: {} }],
       [{ value: "b", border: {}, borderTop: null }],
     ]);
@@ -152,15 +152,16 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       renderNamedSections({
         bottom_and_top,
         bottom_left_and_top_left,
+        left_bottom_and_left,
+        left_and_top_left,
         bottom_right_and_top_right,
         top_left_and_bottom_right,
         bottom_right_and_top_left,
         left_bottom_right,
-        left_top_right,
-        left_bottom_left,
-        all_but_bottom_all_but_top,
-        all_but_bottom_all,
-        all_all_but_top,
+        left_and_top_right,
+        all_but_bottom_and_all_but_top,
+        all_but_bottom_and_all,
+        all_and_all_but_top,
         all,
       }),
     );
