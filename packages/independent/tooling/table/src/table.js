@@ -134,6 +134,7 @@ const SLOT_CONTENT_TYPES = {};
     rects: [{ width: 1, render: () => "┤" }],
   };
   const borderMidCell = {
+    type: "border_mid",
     xAlign: "center",
     yAlign: "center",
     xAlignChar: "─",
@@ -257,12 +258,23 @@ const topRightSlot = {
 };
 const bottomRightSlot = {
   type: "bottom_right",
-  adapt: ({ cell, eastCell, southCell }) => {
+  adapt: ({ cell, eastCell, southCell, southEastCell }) => {
     if (cell.borderBottom && cell.borderRight) {
-      if (eastCell && eastCell.borderBottom && !eastCell.borderLeft) {
+      const eastConnected =
+        eastCell && eastCell.borderBottom && !eastCell.borderLeft;
+      const southConnected =
+        southCell && southCell.borderRight && !southCell.borderTop;
+      if (eastConnected && southConnected) {
+        const southEastConnected =
+          !southEastCell.borderTop && !southEastCell.borderLeft;
+        if (southEastConnected) {
+          return SLOT_CONTENT_TYPES.mid;
+        }
+      }
+      if (eastConnected) {
         return SLOT_CONTENT_TYPES.border_bottom_mid;
       }
-      if (southCell && southCell.borderRight && !southCell.borderTop) {
+      if (southConnected) {
         return SLOT_CONTENT_TYPES.border_right_mid;
       }
       return SLOT_CONTENT_TYPES.border_bottom_right;
@@ -528,105 +540,77 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         const eastCell = x === row.length - 1 ? null : row[x + 1];
         const northCell = y === 0 ? null : grid[y - 1][x];
         const southCell = y === grid.length - 1 ? null : grid[y + 1][x];
+        const northEastCell =
+          y === 0 || x === row.length - 1 ? null : grid[y - 1][x + 1];
+        const southEastCell =
+          y === grid.length - 1 || x === row.length - 1
+            ? null
+            : grid[y + 1][x + 1];
+        const southWestCell =
+          y === grid.length - 1 || x === 0 ? null : grid[y + 1][x - 1];
+        const northWestCell = y === 0 || x === 0 ? null : grid[y - 1][x - 1];
+        const adaptParams = {
+          cell,
+          westCell,
+          eastCell,
+          northCell,
+          southCell,
+          northEastCell,
+          southEastCell,
+          southWestCell,
+          northWestCell,
+        };
 
         if (leftSlotRow) {
           const leftSlot = leftSlotRow[x];
           if (leftSlot) {
-            const leftSlotContent = leftSlot.adapt({
-              cell,
-              westCell,
-              eastCell,
-              northCell,
-              southCell,
-            });
+            const leftSlotContent = leftSlot.adapt(adaptParams);
             leftSlotRow[x] = leftSlotContent;
           }
         }
         if (rightSlotRow) {
           const rightSlot = rightSlotRow[x];
           if (rightSlot) {
-            const rightSlotContent = rightSlot.adapt({
-              cell,
-              westCell,
-              eastCell,
-              northCell,
-              southCell,
-            });
+            const rightSlotContent = rightSlot.adapt(adaptParams);
             rightSlotRow[x] = rightSlotContent;
           }
         }
         if (topSlotRow) {
           const topSlot = topSlotRow[x];
-          const topSlotContent = topSlot.adapt({
-            cell,
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
-          });
+          const topSlotContent = topSlot.adapt(adaptParams);
           topSlotRow[x] = topSlotContent;
         }
         if (bottomSlotRow) {
           const bottomSlot = bottomSlotRow[x];
-          const bottomSlotContent = bottomSlot.adapt({
-            cell,
-            westCell,
-            eastCell,
-            northCell,
-            southCell,
-          });
+          const bottomSlotContent = bottomSlot.adapt(adaptParams);
           bottomSlotRow[x] = bottomSlotContent;
         }
         // corners
         if (topLeftSlotRow) {
           const topLeftSlot = topLeftSlotRow[x];
           if (topLeftSlot) {
-            const topLeftSlotCell = topLeftSlot.adapt({
-              cell,
-              westCell,
-              eastCell,
-              northCell,
-              southCell,
-            });
+            const topLeftSlotCell = topLeftSlot.adapt(adaptParams);
             topLeftSlotRow[x] = topLeftSlotCell;
           }
         }
         if (topRightSlotRow) {
           const topRightSlot = topRightSlotRow[x];
           if (topRightSlot) {
-            const topRightSlotCell = topRightSlot.adapt({
-              cell,
-              westCell,
-              eastCell,
-              northCell,
-              southCell,
-            });
+            const topRightSlotCell = topRightSlot.adapt(adaptParams);
             topRightSlotRow[x] = topRightSlotCell;
           }
         }
         if (bottomRightSlotRow) {
           const bottomRightSlot = bottomRightSlotRow[x];
           if (bottomRightSlot) {
-            const bottomRightSlotCell = bottomRightSlot.adapt({
-              cell,
-              westCell,
-              eastCell,
-              northCell,
-              southCell,
-            });
+            const bottomRightSlotCell = bottomRightSlot.adapt(adaptParams);
             bottomRightSlotRow[x] = bottomRightSlotCell;
           }
         }
         if (bottomLeftSlotRow) {
           const bottomLeftSlot = bottomLeftSlotRow[x];
           if (bottomLeftSlot) {
-            const bottomLeftSlotCell = bottomLeftSlot.adapt({
-              cell,
-              westCell,
-              eastCell,
-              northCell,
-              southCell,
-            });
+            const bottomLeftSlotCell = bottomLeftSlot.adapt(adaptParams);
             bottomLeftSlotRow[x] = bottomLeftSlotCell;
           }
         }
