@@ -203,21 +203,17 @@ const bottomSlot = {
 };
 const topLeftSlot = {
   type: "top_left",
-  adapt: ({ cell, westCell, northCell, northWestCell }) => {
+  adapt: ({ cell, westCell, northCell }) => {
     const { borderTop, borderLeft } = cell;
     if (!borderTop && !borderLeft) {
       return SLOT_CONTENT_TYPES.blank;
     }
 
+    let northConnected =
+      northCell && northCell.borderLeft && !northCell.borderBottom;
+    let westConnected = westCell && westCell.borderTop && !westCell.borderRight;
+    let northWestConnected = northConnected && westConnected;
     if (borderTop && borderLeft) {
-      const northConnected =
-        northCell && northCell.borderLeft && !northCell.borderBottom;
-      const westConnected =
-        westCell && westCell.borderTop && !westCell.borderRight;
-      const northWestConnected =
-        northConnected && westConnected
-          ? !northWestCell.borderBottom && !northWestCell.borderRight
-          : false;
       if (northWestConnected) {
         return SLOT_CONTENT_TYPES.border_mid;
       }
@@ -230,11 +226,9 @@ const topLeftSlot = {
       return SLOT_CONTENT_TYPES.border_top_left;
     }
     if (borderLeft) {
-      const northConnected =
+      northConnected =
         northCell && (northCell.borderLeft || northCell.borderBottom);
-      const westConnected =
-        westCell && westCell.borderTop && !westCell.borderRight;
-      const northWestConnected = northConnected && westConnected;
+      northWestConnected = northConnected && westConnected;
       if (northWestConnected) {
         return SLOT_CONTENT_TYPES.border_right_mid;
       }
@@ -247,11 +241,8 @@ const topLeftSlot = {
       return SLOT_CONTENT_TYPES.border_half_down;
     }
     // borderTop
-    const northConnected =
-      northCell && northCell.borderLeft && !northCell.borderBottom;
-    const westConnected =
-      westCell && (westCell.borderTop || westCell.borderRight);
-    const northWestConnected = northConnected && westConnected;
+    westConnected = westCell && (westCell.borderTop || westCell.borderRight);
+    northWestConnected = northConnected && westConnected;
     if (northWestConnected) {
       return SLOT_CONTENT_TYPES.border_bottom_mid;
     }
@@ -266,7 +257,7 @@ const topLeftSlot = {
 };
 const topRightSlot = {
   type: "top_right",
-  adapt: ({ cell, eastCell, northCell, northEastCell }) => {
+  adapt: ({ cell, eastCell, northCell }) => {
     const { borderTop, borderRight } = cell;
     if (!borderTop && !borderRight) {
       return SLOT_CONTENT_TYPES.blank;
@@ -277,10 +268,7 @@ const topRightSlot = {
         northCell && northCell.borderRight && !northCell.borderBottom;
       const eastConnected =
         eastCell && eastCell.borderTop && !eastCell.borderLeft;
-      const northEastConnected =
-        northConnected && eastConnected
-          ? !northEastCell.borderBottom && !northEastCell.borderLeft
-          : false;
+      const northEastConnected = northConnected && eastConnected;
       if (northEastConnected) {
         return SLOT_CONTENT_TYPES.border_mid;
       }
@@ -385,7 +373,7 @@ const bottomRightSlot = {
 };
 const bottomLeftSlot = {
   type: "bottom_left",
-  adapt: ({ cell, westCell, southCell, southWestCell }) => {
+  adapt: ({ cell, westCell, southCell }) => {
     const { borderBottom, borderLeft } = cell;
     if (!borderBottom && !borderLeft) {
       return SLOT_CONTENT_TYPES.blank;
@@ -396,10 +384,7 @@ const bottomLeftSlot = {
     if (borderBottom && borderLeft) {
       const westConnected =
         westCell && westCell.borderBottom && !westCell.borderRight;
-      const southWestConnected =
-        southConnected && westConnected
-          ? !southWestCell.borderTop && !southWestCell.borderRight
-          : false;
+      const southWestConnected = southConnected && westConnected;
       if (southWestConnected) {
         return SLOT_CONTENT_TYPES.border_mid;
       }
