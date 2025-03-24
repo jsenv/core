@@ -304,12 +304,23 @@ const bottomRightSlot = {
 };
 const bottomLeftSlot = {
   type: "bottom_left",
-  adapt: ({ cell, westCell, southCell }) => {
+  adapt: ({ cell, westCell, southCell, southWestCell }) => {
     if (cell.borderBottom && cell.borderLeft) {
-      if (southCell && southCell.borderLeft && !southCell.borderTop) {
+      const southConnected =
+        southCell && southCell.borderLeft && !southCell.borderTop;
+      const westConnected =
+        westCell && westCell.borderBottom && !westCell.borderRight;
+      if (southConnected && westConnected) {
+        const southWestConnected =
+          !southWestCell.borderTop && !southWestCell.borderRight;
+        if (southWestConnected) {
+          return SLOT_CONTENT_TYPES.border_mid;
+        }
+      }
+      if (southConnected) {
         return SLOT_CONTENT_TYPES.border_left_mid;
       }
-      if (westCell && westCell.borderBottom && !westCell.borderRight) {
+      if (westConnected) {
         return SLOT_CONTENT_TYPES.border_bottom_mid;
       }
       return SLOT_CONTENT_TYPES.border_bottom_left;

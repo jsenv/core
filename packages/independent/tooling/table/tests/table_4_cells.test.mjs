@@ -24,7 +24,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "d", border: {}, borderLeft: null },
       ],
     ]);
-    const around = renderTable([
+    const four_way_junction_bottom_right = renderTable([
       [
         { value: "a", border: {} },
         { value: "b", border: {}, borderLeft: null },
@@ -32,6 +32,16 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       [
         { value: "c", border: {}, borderTop: null },
         { value: "d", border: {}, borderTop: null, borderLeft: null },
+      ],
+    ]);
+    const four_way_junction_bottom_left = renderTable([
+      [
+        { value: "a", border: {}, borderRight: null },
+        { value: "b", border: {} },
+      ],
+      [
+        { value: "c", border: {}, borderTop: null, borderRight: null },
+        { value: "d", border: {}, borderTop: null },
       ],
     ]);
     const all = renderTable([
@@ -49,7 +59,8 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       renderNamedSections({
         none,
         around_strange,
-        around,
+        four_way_junction_bottom_right,
+        four_way_junction_bottom_left,
         all,
       }),
     );
