@@ -234,6 +234,10 @@ const topLeftSlot = {
         northCell && (northCell.borderLeft || northCell.borderBottom);
       const westConnected =
         westCell && westCell.borderTop && !westCell.borderRight;
+      const northWestConnected = northConnected && westConnected;
+      if (northWestConnected) {
+        return SLOT_CONTENT_TYPES.border_right_mid;
+      }
       if (westConnected) {
         return SLOT_CONTENT_TYPES.border_top_right;
       }
@@ -290,9 +294,13 @@ const topRightSlot = {
     }
     if (borderRight) {
       const northConnected =
-        northCell && northCell.borderRight && !northCell.borderBottom;
+        northCell && (northCell.borderRight || northCell.borderBottom);
       const eastConnected =
         eastCell && eastCell.borderTop && !eastCell.borderLeft;
+      const northEastConnected = northConnected && eastConnected;
+      if (northEastConnected) {
+        return SLOT_CONTENT_TYPES.border_left_mid;
+      }
       if (northConnected) {
         return SLOT_CONTENT_TYPES.border_right;
       }
@@ -350,6 +358,10 @@ const bottomRightSlot = {
     if (borderRight) {
       const eastConnected =
         eastCell && eastCell.borderBottom && !eastCell.borderLeft;
+      const southEastConnected = southConnected && eastConnected;
+      if (southEastConnected) {
+        return SLOT_CONTENT_TYPES.border_top_mid;
+      }
       if (eastConnected) {
         return SLOT_CONTENT_TYPES.border_bottom_left;
       }

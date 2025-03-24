@@ -21,6 +21,17 @@ const around_strange = renderTable([
     { value: "d", border: {}, borderLeft: null },
   ],
 ]);
+
+const around_strange_2 = renderTable([
+  [
+    { value: "a", border: {} },
+    { value: "b", border: {}, borderLeft: null },
+  ],
+  [
+    { value: "c", border: {}, borderRight: null },
+    { value: "d", border: {}, borderTop: null },
+  ],
+]);
 const strange_2 = renderTable([
   [
     { value: "a", border: {}, borderRight: {} },
@@ -146,6 +157,7 @@ console.log(
   renderNamedSections({
     none,
     around_strange,
+    around_strange_2,
     strange_2,
     left_column_full_right_column_split,
     left_column_split_right_column_full,
@@ -173,9 +185,17 @@ console.log(
 ┌───┬───┐
 │ a │ b │
 ├───┴───┘
-│   ┌───┐
+│   ├───┐
 │ c │ d │
 └───┴───┘
+
+--- around_strange_2 ---
+┌───┬────┐
+│ a │  b │
+└───┴┬───┤
+┌────┤   │
+│ c  │ d │
+└────┴───┘
 
 --- strange_2 ---
 ┌───┬────┐
