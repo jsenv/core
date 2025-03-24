@@ -1,7 +1,7 @@
 # [table_4_cells.test.mjs](../table_4_cells.test.mjs)
 
 
-- [0_four_cells](0_four_cells/0_four_cells.md)
+- [0_basic](0_basic/0_basic.md)
 
 ---
 
