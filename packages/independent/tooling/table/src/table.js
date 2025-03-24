@@ -160,7 +160,7 @@ const SLOT_CONTENT_TYPES = {};
     yAlign: "center",
     xAlignChar: borderCharsetLight.top,
     yAlignChar: borderCharsetLight.right,
-    rects: [{ width: 1, render: () => borderCharsetLight.midRight }],
+    rects: [{ width: 1, render: () => borderCharsetLight.mid_right }],
   };
   const borderMidNode = {
     type: "border_mid",
