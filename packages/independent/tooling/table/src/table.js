@@ -209,15 +209,15 @@ const topLeftSlot = {
       return SLOT_CONTENT_TYPES.blank;
     }
 
-    const westConnected =
-      westCell && westCell.borderTop && !westCell.borderRight;
-    const northConnected =
-      northCell && northCell.borderLeft && !northCell.borderBottom;
-    const northWestConnected =
-      northConnected && westConnected
-        ? !northWestCell.borderBottom && !northWestCell.borderRight
-        : false;
     if (borderTop && borderLeft) {
+      const westConnected =
+        westCell && westCell.borderTop && !westCell.borderRight;
+      const northConnected =
+        northCell && northCell.borderLeft && !northCell.borderBottom;
+      const northWestConnected =
+        northConnected && westConnected
+          ? !northWestCell.borderBottom && !northWestCell.borderRight
+          : false;
       if (northWestConnected) {
         return SLOT_CONTENT_TYPES.border_mid;
       }
@@ -230,15 +230,24 @@ const topLeftSlot = {
       return SLOT_CONTENT_TYPES.border_top_left;
     }
     if (borderLeft) {
+      const westConnected =
+        westCell && westCell.borderTop && !westCell.borderRight;
+      const northConnected =
+        northCell && (northCell.borderBottom || northCell.borderLeft);
       if (westConnected) {
         return SLOT_CONTENT_TYPES.border_top_right;
       }
-      if (northCell && (northCell.borderBottom || northCell.borderLeft)) {
+      if (northConnected) {
         return SLOT_CONTENT_TYPES.border_left;
       }
       return SLOT_CONTENT_TYPES.border_half_down;
     }
     // borderTop
+    const northConnected =
+      northCell && northCell.borderLeft && !northCell.borderBottom;
+    const westConnected =
+      westCell && (westCell.borderTop || westCell.borderRight);
+    const northWestConnected = northConnected && westConnected;
     if (northWestConnected) {
       return SLOT_CONTENT_TYPES.border_bottom_mid;
     }
@@ -345,7 +354,7 @@ const bottomRightSlot = {
     if (southConnected) {
       return SLOT_CONTENT_TYPES.border_top_right;
     }
-    if (eastConnected) {
+    if (eastCell && (eastCell.borderBottom || eastCell.borderLeft)) {
       return SLOT_CONTENT_TYPES.border_bottom;
     }
     return SLOT_CONTENT_TYPES.border_half_left;
