@@ -24,6 +24,17 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "d", border: {}, borderLeft: null },
       ],
     ]);
+    // TOOD: fix this (half used when it should not)
+    const strange_2 = renderTable([
+      [
+        { value: "a", border: {}, borderRight: {} },
+        { value: "b", border: {}, borderLeft: null },
+      ],
+      [
+        { value: "c", border: {}, borderRight: null, borderTop: null },
+        { value: "d", border: {}, borderLeft: {}, borderTop: null },
+      ],
+    ]);
     const left_column_full_right_column_split = renderTable([
       [
         { value: "a", border: {}, borderBottom: null, borderRight: null },
@@ -52,6 +63,17 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       [
         { value: "c", border: {}, borderRight: null, borderTop: null },
         { value: "d", border: {}, borderLeft: {}, borderTop: null },
+      ],
+    ]);
+    // TODO: fix this
+    const first_row_split_second_row_full = renderTable([
+      [
+        { value: "a", border: {}, borderRight: {} },
+        { value: "b", border: {}, borderLeft: null },
+      ],
+      [
+        { value: "c", border: {}, borderRight: null, borderTop: null },
+        { value: "d", border: {}, borderLeft: null, borderTop: null },
       ],
     ]);
     const first_row_right_second_row_left = renderTable([
@@ -129,9 +151,11 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       renderNamedSections({
         none,
         around_strange,
+        strange_2,
         left_column_full_right_column_split,
         left_column_split_right_column_full,
         first_row_full_second_row_split,
+        first_row_split_second_row_full,
         first_row_right_second_row_left,
         first_column_top_second_column_bottom,
         four_way_junction_bottom_right,
