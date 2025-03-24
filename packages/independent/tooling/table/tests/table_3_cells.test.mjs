@@ -1,8 +1,3 @@
-// 3 cells on same line
-// 3 cells on same column
-// then we'll be ready to move to 4 cells (split in 2 lines/2columns)
-// and finish with 9 cells (split in 3 lines/3columns)
-
 import { renderNamedSections } from "@jsenv/humanize";
 import { renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
