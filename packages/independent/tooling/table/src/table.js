@@ -420,7 +420,10 @@ const bottomLeftSlot = {
   },
 };
 
-export const renderTable = (inputGrid, { ansi = true } = {}) => {
+export const renderTable = (
+  inputGrid,
+  { ansi = true, borderCollapse } = {},
+) => {
   if (!Array.isArray(inputGrid)) {
     throw new TypeError(`The first arg must be an array, got ${inputGrid}`);
   }
@@ -486,6 +489,7 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
     for (const inputRow of inputGrid) {
       let x = 0;
       const row = [];
+      let westCell = null;
       for (const inputCell of inputRow) {
         const {
           border,
@@ -498,21 +502,28 @@ export const renderTable = (inputGrid, { ansi = true } = {}) => {
         const contentCell = createContentCell(props, { ansi });
         row[x] = contentCell;
         if (borderLeft) {
-          contentCell.borderLeft = borderLeft;
-          onBorderLeft(x, y);
+          if (borderCollapse && westCell && westCell.borderRight) {
+          } else {
+            contentCell.borderLeft = borderLeft;
+            onBorderLeft(x, y);
+          }
         }
         if (borderRight) {
           contentCell.borderRight = borderRight;
           onBorderRight(x, y);
         }
         if (borderTop) {
-          contentCell.borderTop = borderTop;
-          onBorderTop(x, y);
+          if (borderCollapse && y > 0 && grid[y - 1][x].borderBottom) {
+          } else {
+            contentCell.borderTop = borderTop;
+            onBorderTop(x, y);
+          }
         }
         if (borderBottom) {
           contentCell.borderBottom = borderBottom;
           onBorderBottom(x, y);
         }
+        westCell = contentCell;
         x++;
       }
       grid[y] = row;
