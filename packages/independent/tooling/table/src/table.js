@@ -6,6 +6,8 @@
  *
  * remaining:
  * border color and color conflicts
+ *
+ *  (plus tard il pourra aussi y avoir un conflit entre double et bold parce qu'il n'y a pas de double bold)
  * border bold/light (+ connection between bold and light)
  * multiline
  */
@@ -193,7 +195,7 @@ const SLOT_CONTENT_TYPES = {};
 
 const leftSlot = {
   type: "left",
-  adapt: ({ cell, renderOptionsRef }) => {
+  adapt: (cell, { renderOptionsRef }) => {
     const { borderLeft } = cell;
     if (borderLeft) {
       renderOptionsRef.current = borderLeft;
@@ -204,7 +206,7 @@ const leftSlot = {
 };
 const rightSlot = {
   type: "right",
-  adapt: ({ cell, renderOptionsRef }) => {
+  adapt: (cell, { renderOptionsRef }) => {
     const { borderRight } = cell;
     if (borderRight) {
       renderOptionsRef.current = borderRight;
@@ -215,7 +217,7 @@ const rightSlot = {
 };
 const topSlot = {
   type: "top",
-  adapt: ({ cell, renderOptionsRef }) => {
+  adapt: (cell, { renderOptionsRef }) => {
     const { borderTop } = cell;
     if (borderTop) {
       renderOptionsRef.current = borderTop;
@@ -226,7 +228,7 @@ const topSlot = {
 };
 const bottomSlot = {
   type: "top",
-  adapt: ({ cell, renderOptionsRef }) => {
+  adapt: (cell, { renderOptionsRef }) => {
     const { borderBottom } = cell;
     if (borderBottom) {
       renderOptionsRef.current = borderBottom;
@@ -237,8 +239,8 @@ const bottomSlot = {
 };
 const topLeftSlot = {
   type: "top_left",
-  adapt: ({ cell, westCell, northCell, renderOptionsRef }) => {
-    const { borderTop, borderLeft } = cell;
+  adapt: (cell, { renderOptionsRef }) => {
+    const { borderTop, borderLeft, westCell, northCell } = cell;
     if (!borderTop && !borderLeft) {
       return SLOT_CONTENT_TYPES.blank;
     }
@@ -292,8 +294,8 @@ const topLeftSlot = {
 };
 const topRightSlot = {
   type: "top_right",
-  adapt: ({ cell, eastCell, northCell, renderOptionsRef }) => {
-    const { borderTop, borderRight } = cell;
+  adapt: (cell, { renderOptionsRef }) => {
+    const { borderTop, borderRight, eastCell, northCell } = cell;
     if (!borderTop && !borderRight) {
       return SLOT_CONTENT_TYPES.blank;
     }
@@ -346,8 +348,8 @@ const topRightSlot = {
 };
 const bottomRightSlot = {
   type: "bottom_right",
-  adapt: ({ cell, eastCell, southCell, renderOptionsRef }) => {
-    const { borderBottom, borderRight } = cell;
+  adapt: (cell, { renderOptionsRef }) => {
+    const { borderBottom, borderRight, eastCell, southCell } = cell;
     if (!borderBottom && !borderRight) {
       return SLOT_CONTENT_TYPES.blank;
     }
@@ -402,8 +404,8 @@ const bottomRightSlot = {
 };
 const bottomLeftSlot = {
   type: "bottom_left",
-  adapt: ({ cell, westCell, southCell, renderOptionsRef }) => {
-    const { borderBottom, borderLeft } = cell;
+  adapt: (cell, { renderOptionsRef }) => {
+    const { borderBottom, borderLeft, westCell, southCell } = cell;
     if (!borderBottom && !borderLeft) {
       return SLOT_CONTENT_TYPES.blank;
     }
@@ -523,7 +525,6 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
     for (const inputRow of inputGrid) {
       let x = 0;
       const row = [];
-      let westCell = null;
       for (const inputCell of inputRow) {
         const {
           border,
@@ -533,31 +534,40 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
           borderBottom = border,
           ...props
         } = inputCell;
-        const contentCell = createContentCell(props, { ansi });
-        row[x] = contentCell;
+        const cell = createCell(props, { ansi });
+        const westCell = x === 0 ? null : row[x - 1];
+        const northCell = y === 0 ? null : grid[y - 1][x];
+        cell.westCell = westCell;
+        cell.northCell = northCell;
+        if (westCell) {
+          westCell.eastCell = cell;
+        }
+        if (northCell) {
+          northCell.southCell = cell;
+        }
         if (borderLeft) {
           if (borderCollapse && westCell && westCell.borderRight) {
           } else {
-            contentCell.borderLeft = borderLeft;
+            cell.borderLeft = borderLeft;
             onBorderLeft(x, y);
           }
         }
         if (borderRight) {
-          contentCell.borderRight = borderRight;
+          cell.borderRight = borderRight;
           onBorderRight(x, y);
         }
         if (borderTop) {
-          if (borderCollapse && y > 0 && grid[y - 1][x].borderBottom) {
+          if (borderCollapse && northCell && northCell.borderBottom) {
           } else {
-            contentCell.borderTop = borderTop;
+            cell.borderTop = borderTop;
             onBorderTop(x, y);
           }
         }
         if (borderBottom) {
-          contentCell.borderBottom = borderBottom;
+          cell.borderBottom = borderBottom;
           onBorderBottom(x, y);
         }
-        westCell = contentCell;
+        row[x] = cell;
         x++;
       }
       grid[y] = row;
@@ -679,35 +689,10 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
       let x = 0;
       while (x < row.length) {
         const cell = row[x];
-        const westCell = x === 0 ? null : row[x - 1];
-        const eastCell = x === row.length - 1 ? null : row[x + 1];
-        const northCell = y === 0 ? null : grid[y - 1][x];
-        const southCell = y === grid.length - 1 ? null : grid[y + 1][x];
-        const northEastCell =
-          y === 0 || x === row.length - 1 ? null : grid[y - 1][x + 1];
-        const southEastCell =
-          y === grid.length - 1 || x === row.length - 1
-            ? null
-            : grid[y + 1][x + 1];
-        const southWestCell =
-          y === grid.length - 1 || x === 0 ? null : grid[y + 1][x - 1];
-        const northWestCell = y === 0 || x === 0 ? null : grid[y - 1][x - 1];
-        const renderOptionsRef = { current: null };
-        const adaptParams = {
-          renderOptionsRef,
-          cell,
-          westCell,
-          eastCell,
-          northCell,
-          southCell,
-          northEastCell,
-          southEastCell,
-          southWestCell,
-          northWestCell,
-        };
         const adapt = (slot) => {
+          const renderOptionsRef = { current: null };
           renderOptionsRef.current = null;
-          const node = slot.adapt(adaptParams);
+          const node = slot.adapt(cell, { renderOptionsRef });
           const renderOptions = renderOptionsRef.current;
           if (!renderOptions) {
             return node;
@@ -1051,7 +1036,7 @@ const applyXAlign = (text, { width, desiredWidth, align, alignChar }) => {
   return alignChar.repeat(missingWidth) + text;
 };
 
-const createContentCell = (
+const createCell = (
   {
     value,
     quoteAroundStrings,
