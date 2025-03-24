@@ -16,6 +16,11 @@ import { ANSI, humanizeFileSize } from "@jsenv/humanize";
 import stringWidth from "string-width";
 import { borderCharsetHeavy, borderCharsetLight } from "./border_charsets.js";
 
+export const BORDER_COLORS = {
+  RED: ANSI.RED,
+  BLUE: ANSI.BLUE,
+};
+
 const SLOT_CONTENT_TYPES = {};
 {
   // blank node is a fluid node that will take whatever size it will be requested to take
@@ -45,8 +50,8 @@ const SLOT_CONTENT_TYPES = {};
       },
     ],
     color: (cell) => {
-      const { borderLeft, borderTop } = cell;
-      return (borderLeft || borderTop).color;
+      const { borderLeft } = cell;
+      return borderLeft ? borderLeft.color : null;
     },
   };
   const borderRightNode = {
@@ -76,6 +81,10 @@ const SLOT_CONTENT_TYPES = {};
         },
       },
     ],
+    color: (cell) => {
+      const { borderTop } = cell;
+      return borderTop ? borderTop.color : null;
+    },
   };
   const borderBottomNode = {
     type: "border_bottom",
@@ -703,12 +712,9 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
           const renderOptionsRef = { current: null };
           renderOptionsRef.current = null;
           const node = slot.adapt(cell, { renderOptionsRef });
-          const renderOptions = renderOptionsRef.current;
-          if (!renderOptions) {
-            return node;
-          }
-          const { bold, color } = renderOptions;
-          const nodeWithOptions = { ...node, color, bold };
+          const renderOptions = renderOptionsRef.current || {};
+          const { bold } = renderOptions;
+          const nodeWithOptions = { ...node, bold, color: node.color };
           return nodeWithOptions;
         };
 
@@ -942,6 +948,22 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
         }
       }
 
+      const applyColor = (text) => {
+        if (!ansi) {
+          return text;
+        }
+        if (!color) {
+          return text;
+        }
+        if (typeof color === "function") {
+          color = color(cell, { columnWidth, bold });
+          if (!color) {
+            return text;
+          }
+        }
+        return ANSI.color(text, color);
+      };
+
       if (rect) {
         let { width, render } = rect;
         if (typeof render === "object") {
@@ -958,27 +980,25 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
           rectText = render;
         }
         if (width === "fill") {
-          return rectText;
+          return applyColor(rectText);
         }
-        if (ansi && color) {
-          if (typeof color === "function") {
-            color = color(cell, { columnWidth, bold });
-          }
-          rectText = ANSI.color(rectText, color);
-        }
-        return applyXAlign(rectText, {
-          width,
+        return applyColor(
+          applyXAlign(rectText, {
+            width,
+            desiredWidth: columnWidth,
+            align: xAlign,
+            alignChar: xAlignChar,
+          }),
+        );
+      }
+      return applyColor(
+        applyXAlign(yAlignChar, {
+          width: 1,
           desiredWidth: columnWidth,
           align: xAlign,
-          alignChar: xAlignChar,
-        });
-      }
-      return applyXAlign(yAlignChar, {
-        width: 1,
-        desiredWidth: columnWidth,
-        align: xAlign,
-        alignChar: " ",
-      });
+          alignChar: " ",
+        }),
+      );
     };
 
     let y = 0;
