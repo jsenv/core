@@ -13,6 +13,7 @@
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
 import stringWidth from "string-width";
+import { borderCharsetHeavy, borderCharsetLight } from "./border_charsets.js";
 
 const SLOT_CONTENT_TYPES = {};
 {
@@ -30,12 +31,12 @@ const SLOT_CONTENT_TYPES = {};
   const borderLeftNode = {
     type: "border_left",
     xAlign: "end",
-    yAlignChar: "│",
+    yAlignChar: borderCharsetLight.left,
     rects: [
       {
         width: 1,
         render: ({ bold }) => {
-          return bold ? "┃" : "│";
+          return bold ? borderCharsetHeavy.left : borderCharsetLight.left;
         },
       },
     ],
@@ -43,110 +44,131 @@ const SLOT_CONTENT_TYPES = {};
   const borderRightNode = {
     type: "border_right",
     xAlign: "start",
-    yAlignChar: "│",
-    rects: [{ width: 1, render: () => "│" }],
+    yAlignChar: borderCharsetLight.right,
+    rects: [
+      {
+        width: 1,
+        render: ({ bold }) => {
+          return bold ? borderCharsetHeavy.right : borderCharsetLight.right;
+        },
+      },
+    ],
   };
   const borderTopNode = {
     type: "border_top",
     yAlign: "end",
     rects: [
-      { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
+      {
+        width: "fill",
+        render: ({ bold, columnWidth }) => {
+          return (
+            bold ? borderCharsetHeavy.top : borderCharsetLight.top
+          ).repeat(columnWidth);
+        },
+      },
     ],
   };
   const borderBottomNode = {
     type: "border_bottom",
     yAlign: "start",
     rects: [
-      { width: "fill", render: ({ columnWidth }) => "─".repeat(columnWidth) },
+      {
+        width: "fill",
+        render: ({ bold, columnWidth }) => {
+          return (
+            bold ? borderCharsetHeavy.bottom : borderCharsetLight.bottom
+          ).repeat(columnWidth);
+        },
+      },
     ],
   };
   const borderHalfRightNode = {
     type: "border_half_right",
     xAlign: "end",
     yAlign: "end",
-    rects: [{ width: 1, render: () => "╶" }],
+    rects: [{ width: 1, render: () => borderCharsetLight.half_right }],
   };
   const borderHalfLeftNode = {
     type: "border_half_left",
     xAlign: "start",
     yAlign: "end",
-    rects: [{ width: 1, render: () => "╴" }],
+    rects: [{ width: 1, render: () => borderCharsetLight.half_left }],
   };
   const borderHalfUpNode = {
     type: "border_half_up",
     xAlign: "start",
     yAlign: "start",
-    rects: [{ width: 1, render: () => "╵" }],
+    rects: [{ width: 1, render: () => borderCharsetLight.half_up }],
   };
   const borderHalfDownNode = {
     type: "border_half_right",
     xAlign: "end",
     yAlign: "start",
-    rects: [{ width: 1, render: () => "╷" }],
+    rects: [{ width: 1, render: () => borderCharsetLight.half_down }],
   };
   const borderTopLeftNode = {
     xAlign: "start",
     yAlign: "start",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    rects: [{ width: 1, render: () => "┌" }],
+    xAlignChar: borderCharsetLight.top,
+    yAlignChar: borderCharsetLight.left,
+    rects: [{ width: 1, render: () => borderCharsetLight.top_left }],
   };
   const borderTopRightNode = {
     xAlign: "end",
     yAlign: "start",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    rects: [{ width: 1, render: () => "┐" }],
+    xAlignChar: borderCharsetLight.top,
+    yAlignChar: borderCharsetLight.right,
+    rects: [{ width: 1, render: () => borderCharsetLight.top_right }],
   };
   const borderBottomRightNode = {
     xAlign: "end",
     yAlign: "end",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    rects: [{ width: 1, render: () => "┘" }],
+    xAlignChar: borderCharsetLight.bottom,
+    yAlignChar: borderCharsetLight.right,
+    rects: [{ width: 1, render: () => borderCharsetLight.bottom_right }],
   };
   const borderBottomLeftNode = {
     xAlign: "start",
     yAlign: "end",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    rects: [{ width: 1, render: () => "└" }],
+    xAlignChar: borderCharsetLight.bottom,
+    yAlignChar: borderCharsetLight.left,
+    rects: [{ width: 1, render: () => borderCharsetLight.bottom_left }],
   };
-  const borderTopMidNode = {
+  const borderMidTopNode = {
     xAlign: "center",
     yAlign: "start",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    rects: [{ width: 1, render: () => "┬" }],
+    xAlignChar: borderCharsetLight.top,
+    yAlignChar: borderCharsetLight.left,
+    rects: [{ width: 1, render: () => borderCharsetLight.mid_top }],
   };
-  const borderBottomMidNode = {
+  const borderMidBottomNode = {
     xAlign: "center",
     yAlign: "end",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    rects: [{ width: 1, render: () => "┴" }],
+    xAlignChar: borderCharsetLight.top,
+    yAlignChar: borderCharsetLight.right,
+    rects: [{ width: 1, render: () => borderCharsetLight.mid_bottom }],
   };
-  const borderLeftMidNode = {
+  const borderMidLeftNode = {
     xAlign: "start",
     yAlign: "center",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    rects: [{ width: 1, render: () => "├" }],
+    xAlignChar: borderCharsetLight.top,
+    yAlignChar: borderCharsetLight.right,
+    rects: [{ width: 1, render: () => borderCharsetLight.mid_left }],
   };
-  const borderRightMidNode = {
+  const borderMidRightNode = {
     xAlign: "end",
     yAlign: "center",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    rects: [{ width: 1, render: () => "┤" }],
+    xAlignChar: borderCharsetLight.top,
+    yAlignChar: borderCharsetLight.right,
+    rects: [{ width: 1, render: () => borderCharsetLight.midRight }],
   };
   const borderMidNode = {
     type: "border_mid",
     xAlign: "center",
     yAlign: "center",
-    xAlignChar: "─",
-    yAlignChar: "│",
-    rects: [{ width: 1, render: () => "┼" }],
+    xAlignChar: borderCharsetLight.top,
+    yAlignChar: borderCharsetLight.right,
+    rects: [{ width: 1, render: () => borderCharsetLight.mid }],
   };
 
   Object.assign(SLOT_CONTENT_TYPES, {
@@ -163,10 +185,10 @@ const SLOT_CONTENT_TYPES = {};
     border_half_right: borderHalfRightNode,
     border_half_up: borderHalfUpNode,
     border_half_down: borderHalfDownNode,
-    border_left_mid: borderLeftMidNode,
-    border_right_mid: borderRightMidNode,
-    border_top_mid: borderTopMidNode,
-    border_bottom_mid: borderBottomMidNode,
+    border_mid_left: borderMidLeftNode,
+    border_mid_right: borderMidRightNode,
+    border_mid_top: borderMidTopNode,
+    border_mid_bottom: borderMidBottomNode,
     border_mid: borderMidNode,
   });
 }
@@ -233,10 +255,10 @@ const topLeftSlot = {
         return SLOT_CONTENT_TYPES.border_mid;
       }
       if (westConnected) {
-        return SLOT_CONTENT_TYPES.border_top_mid;
+        return SLOT_CONTENT_TYPES.border_mid_top;
       }
       if (northConnected) {
-        return SLOT_CONTENT_TYPES.border_left_mid;
+        return SLOT_CONTENT_TYPES.border_mid_left;
       }
       return SLOT_CONTENT_TYPES.border_top_left;
     }
@@ -245,7 +267,7 @@ const topLeftSlot = {
         northCell && (northCell.borderLeft || northCell.borderBottom);
       northWestConnected = northConnected && westConnected;
       if (northWestConnected) {
-        return SLOT_CONTENT_TYPES.border_right_mid;
+        return SLOT_CONTENT_TYPES.border_mid_right;
       }
       if (westConnected) {
         return SLOT_CONTENT_TYPES.border_top_right;
@@ -259,7 +281,7 @@ const topLeftSlot = {
     westConnected = westCell && (westCell.borderTop || westCell.borderRight);
     northWestConnected = northConnected && westConnected;
     if (northWestConnected) {
-      return SLOT_CONTENT_TYPES.border_bottom_mid;
+      return SLOT_CONTENT_TYPES.border_mid_bottom;
     }
     if (northConnected) {
       return SLOT_CONTENT_TYPES.border_bottom_left;
@@ -287,10 +309,10 @@ const topRightSlot = {
         return SLOT_CONTENT_TYPES.border_mid;
       }
       if (northConnected) {
-        return SLOT_CONTENT_TYPES.border_right_mid;
+        return SLOT_CONTENT_TYPES.border_mid_right;
       }
       if (eastConnected) {
-        return SLOT_CONTENT_TYPES.border_top_mid;
+        return SLOT_CONTENT_TYPES.border_mid_top;
       }
       return SLOT_CONTENT_TYPES.border_top_right;
     }
@@ -299,7 +321,7 @@ const topRightSlot = {
         northCell && (northCell.borderRight || northCell.borderBottom);
       northEastConnected = northConnected && eastConnected;
       if (northEastConnected) {
-        return SLOT_CONTENT_TYPES.border_left_mid;
+        return SLOT_CONTENT_TYPES.border_mid_left;
       }
       if (northConnected) {
         return SLOT_CONTENT_TYPES.border_right;
@@ -313,7 +335,7 @@ const topRightSlot = {
     eastConnected = eastCell && (eastCell.borderTop || eastCell.borderLeft);
     northEastConnected = northConnected && eastConnected;
     if (northEastConnected) {
-      return SLOT_CONTENT_TYPES.border_bottom_mid;
+      return SLOT_CONTENT_TYPES.border_mid_bottom;
     }
     if (northConnected) {
       return SLOT_CONTENT_TYPES.border_bottom_right;
@@ -343,10 +365,10 @@ const bottomRightSlot = {
         return SLOT_CONTENT_TYPES.border_mid;
       }
       if (eastConnected) {
-        return SLOT_CONTENT_TYPES.border_bottom_mid;
+        return SLOT_CONTENT_TYPES.border_mid_bottom;
       }
       if (southConnected) {
-        return SLOT_CONTENT_TYPES.border_right_mid;
+        return SLOT_CONTENT_TYPES.border_mid_right;
       }
       return SLOT_CONTENT_TYPES.border_bottom_right;
     }
@@ -355,7 +377,7 @@ const bottomRightSlot = {
         southCell && (southCell.borderRight || southCell.borderTop);
       southEastConnected = southConnected && eastConnected;
       if (southEastConnected) {
-        return SLOT_CONTENT_TYPES.border_top_mid;
+        return SLOT_CONTENT_TYPES.border_mid_top;
       }
       if (eastConnected) {
         return SLOT_CONTENT_TYPES.border_bottom_left;
@@ -369,7 +391,7 @@ const bottomRightSlot = {
     eastConnected = eastCell && (eastCell.borderBottom || eastCell.borderLeft);
     southEastConnected = southConnected && eastConnected;
     if (southEastConnected) {
-      return SLOT_CONTENT_TYPES.border_top_mid;
+      return SLOT_CONTENT_TYPES.border_mid_top;
     }
     if (southConnected) {
       return SLOT_CONTENT_TYPES.border_top_right;
@@ -399,10 +421,10 @@ const bottomLeftSlot = {
         return SLOT_CONTENT_TYPES.border_mid;
       }
       if (southConnected) {
-        return SLOT_CONTENT_TYPES.border_left_mid;
+        return SLOT_CONTENT_TYPES.border_mid_left;
       }
       if (westConnected) {
-        return SLOT_CONTENT_TYPES.border_bottom_mid;
+        return SLOT_CONTENT_TYPES.border_mid_bottom;
       }
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }
@@ -411,7 +433,7 @@ const bottomLeftSlot = {
         southCell && (southCell.borderLeft || southCell.borderTop);
       southWestConnected = southConnected && westConnected;
       if (southWestConnected) {
-        return SLOT_CONTENT_TYPES.border_right_mid;
+        return SLOT_CONTENT_TYPES.border_mid_right;
       }
       if (westConnected) {
         return SLOT_CONTENT_TYPES.border_bottom_right;
@@ -425,7 +447,7 @@ const bottomLeftSlot = {
     westConnected = westCell && (westCell.borderBottom || westCell.borderRight);
     southWestConnected = southConnected && westConnected;
     if (southWestConnected) {
-      return SLOT_CONTENT_TYPES.border_top_mid;
+      return SLOT_CONTENT_TYPES.border_mid_top;
     }
     if (southConnected) {
       return SLOT_CONTENT_TYPES.border_top_left;
