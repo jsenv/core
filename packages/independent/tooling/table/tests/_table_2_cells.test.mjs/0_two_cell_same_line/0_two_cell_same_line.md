@@ -104,9 +104,9 @@ console.log(
    ╵└───
 
 --- bottom_right_and_top_left ---
-   ╷┌───
+   ┌┌───
  a ││ b 
-───┘╵   
+───┘┘   
 
 --- bottom_left_and_top_right ---
 ╷   ───┐

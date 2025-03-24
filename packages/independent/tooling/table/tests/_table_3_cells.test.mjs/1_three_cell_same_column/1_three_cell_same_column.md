@@ -1,4 +1,4 @@
-# [1_three_cell_same_column](../../table_3_cells.test.mjs#L106)
+# [1_three_cell_same_column](../../table_3_cells.test.mjs#L101)
 
 ```js
 const none = renderTable([
