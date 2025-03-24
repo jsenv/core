@@ -263,12 +263,11 @@ const topRightSlot = {
       return SLOT_CONTENT_TYPES.blank;
     }
 
+    let northConnected =
+      northCell && northCell.borderRight && !northCell.borderBottom;
+    let eastConnected = eastCell && eastCell.borderTop && !eastCell.borderLeft;
+    let northEastConnected = northConnected && eastConnected;
     if (borderTop && borderRight) {
-      const northConnected =
-        northCell && northCell.borderRight && !northCell.borderBottom;
-      const eastConnected =
-        eastCell && eastCell.borderTop && !eastCell.borderLeft;
-      const northEastConnected = northConnected && eastConnected;
       if (northEastConnected) {
         return SLOT_CONTENT_TYPES.border_mid;
       }
@@ -281,11 +280,9 @@ const topRightSlot = {
       return SLOT_CONTENT_TYPES.border_top_right;
     }
     if (borderRight) {
-      const northConnected =
+      northConnected =
         northCell && (northCell.borderRight || northCell.borderBottom);
-      const eastConnected =
-        eastCell && eastCell.borderTop && !eastCell.borderLeft;
-      const northEastConnected = northConnected && eastConnected;
+      northEastConnected = northConnected && eastConnected;
       if (northEastConnected) {
         return SLOT_CONTENT_TYPES.border_left_mid;
       }
@@ -298,11 +295,8 @@ const topRightSlot = {
       return SLOT_CONTENT_TYPES.border_half_down;
     }
     // borderTop
-    const northConnected =
-      northCell && northCell.borderRight && !northCell.borderBottom;
-    const eastConnected =
-      eastCell && (eastCell.borderTop || eastCell.borderLeft);
-    const northEastConnected = northConnected && eastConnected;
+    eastConnected = eastCell && (eastCell.borderTop || eastCell.borderLeft);
+    northEastConnected = northConnected && eastConnected;
     if (northEastConnected) {
       return SLOT_CONTENT_TYPES.border_bottom_mid;
     }
