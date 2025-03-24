@@ -11,6 +11,16 @@ const none = renderTable([
     { value: "d", border: null },
   ],
 ]);
+const around = renderTable([
+  [
+    { value: "a", border: {} },
+    { value: "b", border: {}, borderLeft: null },
+  ],
+  [
+    { value: "c", border: {}, borderTop: null },
+    { value: "d", border: {}, borderLeft: null },
+  ],
+]);
 const all = renderTable([
   [
     { value: "a", border: {} },
@@ -24,6 +34,7 @@ const all = renderTable([
 
 const results = {
   none,
+  around,
   all,
 };
 console.log(renderNamedSections(results));
@@ -35,6 +46,14 @@ console.log(renderNamedSections(results));
 --- none ---
  a  b 
  c  d 
+
+--- around ---
+┌───┬───┐
+│ a │ b │
+├───┴───┘
+│   ┌───┐
+│ c │ d │
+└───┴───┘
 
 --- all ---
 ┌───┐┌───┐

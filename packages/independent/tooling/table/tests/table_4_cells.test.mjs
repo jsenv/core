@@ -14,6 +14,16 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "d", border: null },
       ],
     ]);
+    const around_strange = renderTable([
+      [
+        { value: "a", border: {} },
+        { value: "b", border: {}, borderLeft: null },
+      ],
+      [
+        { value: "c", border: {}, borderTop: null },
+        { value: "d", border: {}, borderLeft: null },
+      ],
+    ]);
     const all = renderTable([
       [
         { value: "a", border: {} },
@@ -27,6 +37,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
 
     const results = {
       none,
+      around_strange,
       all,
     };
     console.log(renderNamedSections(results));

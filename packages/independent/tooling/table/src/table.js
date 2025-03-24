@@ -211,6 +211,9 @@ const topLeftSlot = {
       if (westCell && westCell.borderTop && !westCell.borderRight) {
         return SLOT_CONTENT_TYPES.border_top_right;
       }
+      if (northCell && northCell.borderBottom) {
+        return SLOT_CONTENT_TYPES.border_left;
+      }
       return SLOT_CONTENT_TYPES.border_half_down;
     }
     if (cell.borderTop) {
@@ -237,6 +240,9 @@ const topRightSlot = {
     if (cell.borderRight) {
       if (eastCell && eastCell.borderTop && !eastCell.borderLeft) {
         return SLOT_CONTENT_TYPES.border_top_left;
+      }
+      if (northCell && northCell.borderBottom) {
+        return SLOT_CONTENT_TYPES.border_right;
       }
       return SLOT_CONTENT_TYPES.border_half_down;
     }
@@ -265,6 +271,9 @@ const bottomRightSlot = {
       if (eastCell && eastCell.borderBottom && !eastCell.borderLeft) {
         return SLOT_CONTENT_TYPES.border_bottom_left;
       }
+      if (southCell && southCell.borderRight && !southCell.borderTop) {
+        return SLOT_CONTENT_TYPES.border_right;
+      }
       return SLOT_CONTENT_TYPES.border_half_up;
     }
     if (cell.borderBottom) {
@@ -291,6 +300,9 @@ const bottomLeftSlot = {
     if (cell.borderLeft) {
       if (westCell && westCell.borderBottom && !westCell.borderRight) {
         return SLOT_CONTENT_TYPES.border_bottom_right;
+      }
+      if (southCell && southCell.borderLeft && !southCell.borderTop) {
+        return SLOT_CONTENT_TYPES.border_left;
       }
       return SLOT_CONTENT_TYPES.border_half_up;
     }
