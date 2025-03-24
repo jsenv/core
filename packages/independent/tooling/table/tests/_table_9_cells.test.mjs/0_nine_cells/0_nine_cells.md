@@ -52,6 +52,57 @@ const bottom_right_only = renderTable([
     { value: "i", border: {} },
   ],
 ]);
+const inner_only = renderTable([
+  [
+    { value: "a", border: {}, borderLeft: null, borderTop: null },
+    { value: "b", borderBottom: {} },
+    { value: "c", border: {}, borderRight: null, borderTop: null },
+  ],
+  [
+    { value: "d", borderRight: {}, borderBottom: {} },
+    { value: "e", borderBottom: {} },
+    { value: "f", borderLeft: {}, borderBottom: {} },
+  ],
+  [
+    { value: "g", borderRight: {} },
+    { value: "h", border: null },
+    { value: "i", borderLeft: {} },
+  ],
+]);
+const head = renderTable([
+  [
+    { value: "a", border: {} },
+    { value: "b", borderTop: {}, borderBottom: {} },
+    { value: "c", border: {} },
+  ],
+  [
+    { value: "d", borderLeft: {}, borderRight: {} },
+    { value: "e", border: null },
+    { value: "f", borderLeft: {}, borderRight: {} },
+  ],
+  [
+    { value: "g", borderLeft: {}, borderBottom: {}, borderRight: {} },
+    { value: "h", border: null, borderBottom: {} },
+    { value: "i", borderLeft: {}, borderRight: {}, borderBottom: {} },
+  ],
+]);
+const foot = renderTable([
+  [
+    { value: "a", borderLeft: {}, borderTop: {}, borderRight: {} },
+    { value: "b", border: null, borderTop: {} },
+    { value: "c", borderLeft: {}, borderRight: {}, borderTop: {} },
+  ],
+  [
+    { value: "d", borderLeft: {}, borderRight: {} },
+    { value: "e", border: null },
+    { value: "f", borderLeft: {}, borderRight: {} },
+  ],
+  [
+    { value: "g", border: {} },
+    { value: "h", borderTop: {}, borderBottom: {} },
+    { value: "i", border: {} },
+  ],
+]);
 const all = renderTable([
   [
     { value: "a", border: {} },
@@ -75,6 +126,9 @@ console.log(
     none,
     center_only,
     bottom_right_only,
+    inner_only,
+    head,
+    foot,
     all,
   }),
 );
@@ -101,6 +155,29 @@ console.log(
       ┌───┐
  g  h │ i │
       └───┘
+
+--- inner_only ---
+ a │ b │ c 
+───┼───┼───
+ d │ e │ f 
+───┼───┼───
+ g │ h │ i 
+
+--- head ---
+┌───┬───┬───┐
+│ a │ b │ c │
+├───┼───┼───┤
+│ d │ e │ f │
+│ g │ h │ i │
+└───┴───┴───┘
+
+--- foot ---
+┌───┬───┬───┐
+│ a │ b │ c │
+│ d │ e │ f │
+├───┼───┼───┤
+│ g │ h │ i │
+└───┴───┴───┘
 
 --- all ---
 ┌───┐┌───┐┌───┐
