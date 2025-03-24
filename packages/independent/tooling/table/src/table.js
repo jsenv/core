@@ -327,17 +327,18 @@ const bottomRightSlot = {
 const bottomLeftSlot = {
   type: "bottom_left",
   adapt: ({ cell, westCell, southCell, southWestCell }) => {
+    const southConnected =
+      southCell && southCell.borderLeft && !southCell.borderTop;
+    const westConnected =
+      westCell && westCell.borderBottom && !westCell.borderRight;
+    const southWestConnected =
+      southConnected && westConnected
+        ? !southWestCell.borderTop && !southWestCell.borderRight
+        : false;
+
     if (cell.borderBottom && cell.borderLeft) {
-      const southConnected =
-        southCell && southCell.borderLeft && !southCell.borderTop;
-      const westConnected =
-        westCell && westCell.borderBottom && !westCell.borderRight;
-      if (southConnected && westConnected) {
-        const southWestConnected =
-          !southWestCell.borderTop && !southWestCell.borderRight;
-        if (southWestConnected) {
-          return SLOT_CONTENT_TYPES.border_mid;
-        }
+      if (southWestConnected) {
+        return SLOT_CONTENT_TYPES.border_mid;
       }
       if (southConnected) {
         return SLOT_CONTENT_TYPES.border_left_mid;
@@ -348,16 +349,19 @@ const bottomLeftSlot = {
       return SLOT_CONTENT_TYPES.border_bottom_left;
     }
     if (cell.borderLeft) {
-      if (westCell && westCell.borderBottom && !westCell.borderRight) {
+      if (southWestConnected) {
+        return SLOT_CONTENT_TYPES.border_right_mid;
+      }
+      if (westConnected) {
         return SLOT_CONTENT_TYPES.border_bottom_right;
       }
-      if (southCell && southCell.borderLeft && !southCell.borderTop) {
+      if (southConnected) {
         return SLOT_CONTENT_TYPES.border_left;
       }
       return SLOT_CONTENT_TYPES.border_half_up;
     }
     if (cell.borderBottom) {
-      if (southCell && southCell.borderLeft && !southCell.borderTop) {
+      if (southConnected) {
         return SLOT_CONTENT_TYPES.border_top_left;
       }
       return SLOT_CONTENT_TYPES.border_half_right;

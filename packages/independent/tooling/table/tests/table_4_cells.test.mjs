@@ -24,7 +24,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
         { value: "d", border: {}, borderLeft: null },
       ],
     ]);
-    const around_stange_2 = renderTable([
+    const left_column_full_right_column_split = renderTable([
       [
         { value: "a", border: {}, borderBottom: null, borderRight: null },
         { value: "b", border: {}, borderBottom: null },
@@ -32,6 +32,16 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       [
         { value: "c", border: {}, borderTop: null, borderRight: null },
         { value: "d", border: {} },
+      ],
+    ]);
+    const left_column_split_right_column_full = renderTable([
+      [
+        { value: "a", border: {}, borderRight: null },
+        { value: "b", border: {}, borderBottom: null },
+      ],
+      [
+        { value: "c", border: {}, borderRight: null, borderTop: null },
+        { value: "d", border: {}, borderTop: null },
       ],
     ]);
     const first_row_right_second_row_left = renderTable([
@@ -109,7 +119,8 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       renderNamedSections({
         none,
         around_strange,
-        around_stange_2,
+        left_column_full_right_column_split,
+        left_column_split_right_column_full,
         first_row_right_second_row_left,
         first_column_top_second_column_bottom,
         four_way_junction_bottom_right,
