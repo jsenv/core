@@ -15,11 +15,14 @@
         <text x="43.61" y="119.55" fill="#4169E1">───</text>
         <text x="68.81" y="119.55" fill="#4169E1">┐</text>
         <text x="10" y="138.55" style="white-space:pre"> a </text>
-        <text x="35.2" y="138.55" fill="#4169E1">│</text>
-        <text x="43.61" y="138.55" style="white-space:pre"> b │ c </text>
+        <text x="35.2" y="138.55" fill="#DAA520">│</text>
+        <text x="43.61" y="138.55" style="white-space:pre"> b </text>
+        <text x="68.81" y="138.55" fill="#DAA520">│</text>
+        <text x="77.21" y="138.55" style="white-space:pre"> c </text>
         <text x="10" y="157.55" fill="#11bc79">───</text>
         <text x="35.2" y="157.55" fill="#11bc79">┘</text>
-        <text x="43.61" y="157.55" style="white-space:pre">   └───</text>
+        <text x="68.81" y="157.55" fill="#11bc79">└</text>
+        <text x="77.21" y="157.55" fill="#11bc79">───</text>
       </g>
     </svg>
   </foreignObject>

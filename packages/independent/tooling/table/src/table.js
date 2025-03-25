@@ -212,7 +212,7 @@ const topRightSlot = {
         );
       }
       if (eastConnected) {
-        return createBorderTopLeftNode(borderRight, eastCell.borderTop);
+        return createBorderTopLeftNode(eastCell.borderTop, borderRight);
       }
       return createBorderHalfDownNode(borderRight);
     }
@@ -288,7 +288,7 @@ const bottomRightSlot = {
         );
       }
       if (eastConnected) {
-        return createBorderBottomLeftNode(borderRight, eastCell.borderBottom);
+        return createBorderBottomLeftNode(eastCell.borderBottom, borderRight);
       }
       if (southConnected) {
         return createBorderRightNode(

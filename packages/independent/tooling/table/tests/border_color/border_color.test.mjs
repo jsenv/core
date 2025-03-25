@@ -11,7 +11,7 @@ const run = () => {
   const borderLeft = { color: BORDER_COLORS.RED };
   const borderTop = { color: BORDER_COLORS.BLUE };
   const borderBottom = { color: BORDER_COLORS.GREEN };
-  const borderRight = { color: null };
+  const borderRight = { color: BORDER_COLORS.YELLOW };
 
   const border_top_left = render([
     // prettier-force-multiline
@@ -20,9 +20,9 @@ const run = () => {
 
   const castle_inverted = render([
     [
-      { value: "a", borderBottom, borderRight: { color: BORDER_COLORS.BLUE } },
+      { value: "a", borderBottom, borderRight },
       { value: "b", borderTop, borderRight },
-      { value: "c", borderBottom: {} },
+      { value: "c", borderBottom },
     ],
   ]);
 
