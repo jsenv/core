@@ -1,9 +1,5 @@
 /**
- * TODO:
- * - the svg generator seems to fail on the castle, the spacing is incorrect
- *   it happens for the last row so we can just take that line, feed it to the svg generator
- *   and see how it's parsed and rendered to fix
- * - for castle inverted the top left of "b" must be yellow
+ *
  */
 
 import { renderNamedSections } from "@jsenv/humanize";
@@ -17,30 +13,22 @@ const run = () => {
   const borderBottom = { color: BORDER_COLORS.GREEN };
   const borderRight = { color: null };
 
-  //   const border_top_left = render([
-  //     // prettier-force-multiline
-  //     [{ value: "a", borderLeft, borderTop }],
-  //   ]);
+  const border_top_left = render([
+    // prettier-force-multiline
+    [{ value: "a", borderLeft, borderTop }],
+  ]);
 
   const castle_inverted = render([
     [
-      {
-        value: "a",
-        borderBottom: { color: BORDER_COLORS.GREEN },
-        borderRight: { color: BORDER_COLORS.BLUE },
-      },
-      {
-        value: "b",
-        borderTop: { color: null },
-        borderRight: { color: BORDER_COLORS.BLUE },
-      },
-      { value: "c", borderBottom: { color: BORDER_COLORS.GREEN } },
+      { value: "a", borderBottom, borderRight: { color: BORDER_COLORS.BLUE } },
+      { value: "b", borderTop, borderRight },
+      { value: "c", borderBottom: {} },
     ],
   ]);
 
   console.log(
     renderNamedSections({
-      // border_top_left,
+      border_top_left,
       castle_inverted,
     }),
   );

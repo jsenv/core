@@ -109,10 +109,11 @@ export const createBorderTopLeftNode = (
   topBorder,
   // leftBorder
 ) => {
-  // const { color } = topBorder;
+  const { color } = topBorder;
+
   return {
     type: "border_top_left",
-    // color,
+    color,
     xAlign: "start",
     yAlign: "start",
     xPadChar: "│",
@@ -139,11 +140,11 @@ export const createBorderBottomRightNode = (
   bottomBorder,
   // rightBorder
 ) => {
-  // const { color } = bottomBorder;
+  const { color } = bottomBorder;
 
   return {
     type: "border_bottom_right",
-    // color,
+    color,
     xAlign: "end",
     yAlign: "end",
     xPadChar: "│",
@@ -155,11 +156,11 @@ export const createBorderBottomLeftNode = (
   bottomBorder,
   // leftBorder
 ) => {
-  // const { color } = bottomBorder;
+  const { color } = bottomBorder;
 
   return {
     type: "border_bottom_left",
-    // color,
+    color,
     xAlign: "start",
     yAlign: "end",
     xPadChar: "│",
