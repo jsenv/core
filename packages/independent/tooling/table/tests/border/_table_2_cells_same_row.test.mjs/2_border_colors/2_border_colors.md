@@ -1,7 +1,9 @@
-# [2_border_colors](../../table_2_cells_same_row.test.mjs#L124)
+# [2_border_colors](../../table_2_cells_same_row.test.mjs#L127)
 
 ```js
-run({ borderColors: true })
+run({
+  borderColors: true,
+})
 ```
 
 # 1/2 console.log
