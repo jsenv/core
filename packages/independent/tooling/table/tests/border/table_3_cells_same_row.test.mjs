@@ -1,9 +1,30 @@
 import { renderNamedSections } from "@jsenv/humanize";
-import { renderTable } from "@jsenv/table";
+import { BORDER_COLORS, renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
-const run = ({ borderCollapse }) => {
-  const render = (grid) => renderTable(grid, { borderCollapse });
+const run = ({
+  borderBold,
+  borderCollapse,
+  borderColors,
+  ansi = borderColors,
+}) => {
+  const borderLeft = {
+    color: borderColors ? BORDER_COLORS.RED : null,
+    bold: borderBold,
+  };
+  const borderTop = {
+    color: borderColors ? BORDER_COLORS.BLUE : null,
+    bold: borderBold,
+  };
+  const borderBottom = {
+    color: borderColors ? BORDER_COLORS.GREEN : null,
+    bold: borderBold,
+  };
+  const borderRight = {
+    color: borderColors ? BORDER_COLORS.YELLOW : null,
+    bold: borderBold,
+  };
+  const render = (grid) => renderTable(grid, { borderCollapse, ansi });
 
   const none = render([
     [
@@ -14,72 +35,72 @@ const run = ({ borderCollapse }) => {
   ]);
   const left = render([
     [
-      { value: "a", borderLeft: {} },
-      { value: "b", borderLeft: {} },
-      { value: "c", borderLeft: {} },
+      { value: "a", borderLeft },
+      { value: "b", borderLeft },
+      { value: "c", borderLeft },
     ],
   ]);
   const left_and_right = render([
     [
-      { value: "a", borderLeft: {}, borderRight: {} },
-      { value: "b", borderLeft: {}, borderRight: {} },
-      { value: "c", borderLeft: {}, borderRight: {} },
+      { value: "a", borderLeft, borderRight },
+      { value: "b", borderLeft, borderRight },
+      { value: "c", borderLeft, borderRight },
     ],
   ]);
   const top_and_bottom = render([
     [
-      { value: "a", borderTop: {}, borderBottom: {} },
-      { value: "b", borderTop: {}, borderBottom: {} },
-      { value: "c", borderTop: {}, borderBottom: {} },
+      { value: "a", borderTop, borderBottom },
+      { value: "b", borderTop, borderBottom },
+      { value: "c", borderTop, borderBottom },
     ],
   ]);
   const first_only = render([
     [
-      { value: "a", border: {} },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
       { value: "b", border: null },
       { value: "c", border: null },
     ],
   ]);
   const middle_none = render([
     [
-      { value: "a", border: {} },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
       { value: "b", border: null },
-      { value: "c", border: {} },
+      { value: "c", borderLeft, borderRight, borderBottom, borderTop },
     ],
   ]);
   const last_only = render([
     [
       { value: "a", border: null },
       { value: "b", border: null },
-      { value: "c", border: {} },
+      { value: "c", borderLeft, borderRight, borderBottom, borderTop },
     ],
   ]);
   const castle = render([
     [
-      { value: "a", borderTop: {}, borderRight: {} },
-      { value: "b", borderBottom: {} },
-      { value: "c", borderLeft: {}, borderTop: {} },
+      { value: "a", borderTop, borderRight },
+      { value: "b", borderBottom },
+      { value: "c", borderLeft, borderTop },
     ],
   ]);
   const castle_inverted = render([
     [
-      { value: "a", borderBottom: {}, borderRight: {} },
-      { value: "b", borderTop: {}, borderRight: {} },
-      { value: "c", borderBottom: {} },
+      { value: "a", borderBottom, borderRight },
+      { value: "b", borderTop, borderRight },
+      { value: "c", borderBottom },
     ],
   ]);
   const around = render([
     [
-      { value: "a", borderTop: {}, borderBottom: {}, borderLeft: {} },
-      { value: "b", border: {} },
-      { value: "c", borderTop: {}, borderBottom: {}, borderRight: {} },
+      { value: "a", borderTop, borderBottom, borderLeft },
+      { value: "b", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "c", borderTop, borderBottom, borderRight },
     ],
   ]);
   const all = render([
     [
-      { value: "a", border: {} },
-      { value: "b", border: {} },
-      { value: "c", border: {} },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "b", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "c", borderLeft, borderRight, borderBottom, borderTop },
     ],
   ]);
   console.log(
@@ -102,5 +123,13 @@ const run = ({ borderCollapse }) => {
 await snapshotTableTests(import.meta.url, ({ test }) => {
   test(`0_basic`, () => run({}));
 
-  test(`1_border_collapse`, () => run({ borderCollapse: true }));
+  test(`1_border_collapse`, () =>
+    run({
+      borderCollapse: true,
+    }));
+
+  test("2_border_colors", () =>
+    run({
+      borderColors: true,
+    }));
 });

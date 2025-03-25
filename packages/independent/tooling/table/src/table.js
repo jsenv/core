@@ -5,10 +5,17 @@
  *
  *
  * remaining:
- * border color and color conflicts
+ * border color
  *
- *  (plus tard il pourra aussi y avoir un conflit entre double et bold parce qu'il n'y a pas de double bold)
  * border bold/light (+ connection between bold and light)
+ *
+ * double border + connection between double and single
+ *
+ * color and style conflicts for collapse (and connected by the way)
+ *
+ * rounded corners
+ *  (plus tard il pourra aussi y avoir un conflit entre double et bold parce qu'il n'y a pas de double bold)
+ *
  * multiline
  */
 
