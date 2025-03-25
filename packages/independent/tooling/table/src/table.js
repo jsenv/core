@@ -14,260 +14,81 @@
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
 import stringWidth from "string-width";
-import { borderCharsetHeavy, borderCharsetLight } from "./border_charsets.js";
+import {
+  createBlankNode,
+  createBorderBottomLeftNode,
+  createBorderBottomNode,
+  createBorderBottomRightNode,
+  createBorderHalfDownNode,
+  createBorderHalfLeftNode,
+  createBorderHalfRightNode,
+  createBorderHalfUpNode,
+  createBorderLeftNode,
+  createBorderMidBottomNode,
+  createBorderMidLeftNode,
+  createBorderMidNode,
+  createBorderMidRightNode,
+  createBorderMidTopNode,
+  createBorderRightNode,
+  createBorderTopLeftNode,
+  createBorderTopNode,
+  createBorderTopRightNode,
+} from "./border_nodes.js";
 
 export const BORDER_COLORS = {
   RED: ANSI.RED,
   BLUE: ANSI.BLUE,
+  YELLOW: ANSI.YELLOW,
+  GREEN: ANSI.GREEN,
 };
-
-const SLOT_CONTENT_TYPES = {};
-{
-  // blank node is a fluid node that will take whatever size it will be requested to take
-  // this is useful to enforce a given amount of space is taken in x/y
-  // It is used to implement borders because any cell can suddenly
-  // enable a border on X/Y meaning all previous cells must now have blank spaces where the border is
-  const blankNode = {
-    type: "blank",
-    rects: [
-      { width: "fill", render: ({ columnWidth }) => " ".repeat(columnWidth) },
-    ],
-  };
-  const borderLeftNode = {
-    type: "border_left",
-    xAlign: "end",
-    yAlignChar: {
-      light: borderCharsetLight.left,
-      bold: borderCharsetLight.left,
-    },
-    rects: [
-      {
-        width: 1,
-        render: {
-          light: borderCharsetLight.left,
-          bold: borderCharsetHeavy.left,
-        },
-      },
-    ],
-    color: (cell) => {
-      const { borderLeft } = cell;
-      return borderLeft ? borderLeft.color : null;
-    },
-  };
-  const borderRightNode = {
-    type: "border_right",
-    xAlign: "start",
-    yAlignChar: borderCharsetLight.right,
-    rects: [
-      {
-        width: 1,
-        render: {
-          light: borderCharsetLight.right,
-          bold: borderCharsetHeavy.right,
-        },
-      },
-    ],
-  };
-  const borderTopNode = {
-    type: "border_top",
-    yAlign: "end",
-    rects: [
-      {
-        width: "fill",
-        render: {
-          light: ({ columnWidth }) =>
-            borderCharsetLight.top.repeat(columnWidth),
-          bold: ({ columnWidth }) => borderCharsetHeavy.top.repeat(columnWidth),
-        },
-      },
-    ],
-    color: (cell) => {
-      const { borderTop } = cell;
-      return borderTop ? borderTop.color : null;
-    },
-  };
-  const borderBottomNode = {
-    type: "border_bottom",
-    yAlign: "start",
-    rects: [
-      {
-        width: "fill",
-        render: {
-          light: ({ columnWidth }) =>
-            borderCharsetLight.bottom.repeat(columnWidth),
-          bold: ({ columnWidth }) =>
-            borderCharsetHeavy.bottom.repeat(columnWidth),
-        },
-      },
-    ],
-  };
-  const borderHalfRightNode = {
-    type: "border_half_right",
-    xAlign: "end",
-    yAlign: "end",
-    rects: [{ width: 1, render: () => borderCharsetLight.half_right }],
-  };
-  const borderHalfLeftNode = {
-    type: "border_half_left",
-    xAlign: "start",
-    yAlign: "end",
-    rects: [{ width: 1, render: () => borderCharsetLight.half_left }],
-  };
-  const borderHalfUpNode = {
-    type: "border_half_up",
-    xAlign: "start",
-    yAlign: "start",
-    rects: [{ width: 1, render: () => borderCharsetLight.half_up }],
-  };
-  const borderHalfDownNode = {
-    type: "border_half_right",
-    xAlign: "end",
-    yAlign: "start",
-    rects: [{ width: 1, render: () => borderCharsetLight.half_down }],
-  };
-  const borderTopLeftNode = {
-    xAlign: "start",
-    yAlign: "start",
-    xAlignChar: borderCharsetLight.top,
-    yAlignChar: borderCharsetLight.left,
-    rects: [{ width: 1, render: () => borderCharsetLight.top_left }],
-    color: (cell) => {
-      const { borderTop } = cell;
-      return borderTop ? borderTop.color : null;
-    },
-  };
-  const borderTopRightNode = {
-    xAlign: "end",
-    yAlign: "start",
-    xAlignChar: borderCharsetLight.top,
-    yAlignChar: borderCharsetLight.right,
-    rects: [{ width: 1, render: () => borderCharsetLight.top_right }],
-  };
-  const borderBottomRightNode = {
-    xAlign: "end",
-    yAlign: "end",
-    xAlignChar: borderCharsetLight.bottom,
-    yAlignChar: borderCharsetLight.right,
-    rects: [{ width: 1, render: () => borderCharsetLight.bottom_right }],
-  };
-  const borderBottomLeftNode = {
-    xAlign: "start",
-    yAlign: "end",
-    xAlignChar: borderCharsetLight.bottom,
-    yAlignChar: borderCharsetLight.left,
-    rects: [{ width: 1, render: () => borderCharsetLight.bottom_left }],
-  };
-  const borderMidTopNode = {
-    xAlign: "center",
-    yAlign: "start",
-    xAlignChar: borderCharsetLight.top,
-    yAlignChar: borderCharsetLight.left,
-    rects: [{ width: 1, render: () => borderCharsetLight.mid_top }],
-  };
-  const borderMidBottomNode = {
-    xAlign: "center",
-    yAlign: "end",
-    xAlignChar: borderCharsetLight.top,
-    yAlignChar: borderCharsetLight.right,
-    rects: [{ width: 1, render: () => borderCharsetLight.mid_bottom }],
-  };
-  const borderMidLeftNode = {
-    xAlign: "start",
-    yAlign: "center",
-    xAlignChar: borderCharsetLight.top,
-    yAlignChar: borderCharsetLight.right,
-    rects: [{ width: 1, render: () => borderCharsetLight.mid_left }],
-  };
-  const borderMidRightNode = {
-    xAlign: "end",
-    yAlign: "center",
-    xAlignChar: borderCharsetLight.top,
-    yAlignChar: borderCharsetLight.right,
-    rects: [{ width: 1, render: () => borderCharsetLight.mid_right }],
-  };
-  const borderMidNode = {
-    type: "border_mid",
-    xAlign: "center",
-    yAlign: "center",
-    xAlignChar: borderCharsetLight.top,
-    yAlignChar: borderCharsetLight.right,
-    rects: [{ width: 1, render: () => borderCharsetLight.mid }],
-  };
-
-  Object.assign(SLOT_CONTENT_TYPES, {
-    blank: blankNode,
-    border_left: borderLeftNode,
-    border_right: borderRightNode,
-    border_top: borderTopNode,
-    border_bottom: borderBottomNode,
-    border_top_left: borderTopLeftNode,
-    border_top_right: borderTopRightNode,
-    border_bottom_left: borderBottomLeftNode,
-    border_bottom_right: borderBottomRightNode,
-    border_half_left: borderHalfLeftNode,
-    border_half_right: borderHalfRightNode,
-    border_half_up: borderHalfUpNode,
-    border_half_down: borderHalfDownNode,
-    border_mid_left: borderMidLeftNode,
-    border_mid_right: borderMidRightNode,
-    border_mid_top: borderMidTopNode,
-    border_mid_bottom: borderMidBottomNode,
-    border_mid: borderMidNode,
-  });
-}
 
 const leftSlot = {
   type: "left",
-  adapt: (cell, { renderOptionsRef }) => {
+  adapt: (cell) => {
     const { borderLeft } = cell;
     if (borderLeft) {
-      renderOptionsRef.current = borderLeft;
-      return SLOT_CONTENT_TYPES.border_left;
+      return createBorderLeftNode(borderLeft);
     }
-    return SLOT_CONTENT_TYPES.blank;
+    return createBlankNode();
   },
 };
 const rightSlot = {
   type: "right",
-  adapt: (cell, { renderOptionsRef }) => {
+  adapt: (cell) => {
     const { borderRight } = cell;
     if (borderRight) {
-      renderOptionsRef.current = borderRight;
-      return SLOT_CONTENT_TYPES.border_right;
+      return createBorderRightNode(borderRight);
     }
-    return SLOT_CONTENT_TYPES.blank;
+    return createBlankNode();
   },
 };
 const topSlot = {
   type: "top",
-  adapt: (cell, { renderOptionsRef }) => {
+  adapt: (cell) => {
     const { borderTop } = cell;
     if (borderTop) {
-      renderOptionsRef.current = borderTop;
-      return SLOT_CONTENT_TYPES.border_top;
+      return createBorderTopNode(borderTop);
     }
-    return SLOT_CONTENT_TYPES.blank;
+    return createBlankNode();
   },
 };
 const bottomSlot = {
-  type: "top",
-  adapt: (cell, { renderOptionsRef }) => {
+  type: "bottom",
+  adapt: (cell) => {
     const { borderBottom } = cell;
     if (borderBottom) {
-      renderOptionsRef.current = borderBottom;
-      return SLOT_CONTENT_TYPES.border_bottom;
+      return createBorderBottomNode(borderBottom);
     }
-    return SLOT_CONTENT_TYPES.blank;
+    return createBlankNode();
   },
 };
 const topLeftSlot = {
   type: "top_left",
-  adapt: (cell, { renderOptionsRef }) => {
+  adapt: (cell) => {
     const { borderTop, borderLeft, westCell, northCell } = cell;
     if (!borderTop && !borderLeft) {
-      return SLOT_CONTENT_TYPES.blank;
+      return createBlankNode();
     }
-    renderOptionsRef.current = borderTop;
 
     let northConnected =
       northCell && northCell.borderLeft && !northCell.borderBottom;
@@ -275,108 +96,155 @@ const topLeftSlot = {
     let northWestConnected = northConnected && westConnected;
     if (borderTop && borderLeft) {
       if (northWestConnected) {
-        return SLOT_CONTENT_TYPES.border_mid;
+        return createBorderMidNode(
+          borderLeft,
+          northCell.borderLeft,
+          borderTop,
+          westCell.borderTop,
+        );
       }
       if (westConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_top;
+        return createBorderMidTopNode(
+          borderLeft,
+          borderTop,
+          westCell.borderTop,
+        );
       }
       if (northConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_left;
+        return createBorderMidLeftNode(
+          borderLeft,
+          borderTop,
+          northCell.borderLeft,
+        );
       }
-      return SLOT_CONTENT_TYPES.border_top_left;
+      return createBorderTopLeftNode(borderTop, borderLeft);
     }
     if (borderLeft) {
       northConnected =
         northCell && (northCell.borderLeft || northCell.borderBottom);
       northWestConnected = northConnected && westConnected;
       if (northWestConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_right;
+        return createBorderMidRightNode(
+          borderLeft,
+          northCell.borderLeft,
+          westCell.borderTop,
+        );
       }
       if (westConnected) {
-        return SLOT_CONTENT_TYPES.border_top_right;
+        return createBorderTopRightNode(westCell.borderTop, borderLeft);
       }
       if (northConnected) {
-        return SLOT_CONTENT_TYPES.border_left;
+        return createBorderLeftNode(northCell.borderLeft);
       }
-      return SLOT_CONTENT_TYPES.border_half_down;
+      return createBorderHalfDownNode(borderLeft);
     }
     // borderTop
     westConnected = westCell && (westCell.borderTop || westCell.borderRight);
     northWestConnected = northConnected && westConnected;
     if (northWestConnected) {
-      return SLOT_CONTENT_TYPES.border_mid_bottom;
+      return createBorderMidBottomNode(
+        borderTop,
+        northCell.borderLeft,
+        westCell.borderTop || westCell.borderRight,
+      );
     }
     if (northConnected) {
-      return SLOT_CONTENT_TYPES.border_bottom_left;
+      return createBorderBottomLeftNode(borderTop, northCell.borderLeft);
     }
     if (westConnected) {
-      return SLOT_CONTENT_TYPES.border_top;
+      return createBorderTopNode(westCell.borderTop || westCell.borderRight);
     }
-    return SLOT_CONTENT_TYPES.border_half_right;
+    return createBorderHalfRightNode(borderTop);
   },
 };
 const topRightSlot = {
   type: "top_right",
-  adapt: (cell, { renderOptionsRef }) => {
+  adapt: (cell) => {
     const { borderTop, borderRight, eastCell, northCell } = cell;
     if (!borderTop && !borderRight) {
-      return SLOT_CONTENT_TYPES.blank;
+      return createBlankNode();
     }
-    renderOptionsRef.current = borderTop;
+
     let northConnected =
       northCell && northCell.borderRight && !northCell.borderBottom;
     let eastConnected = eastCell && eastCell.borderTop && !eastCell.borderLeft;
     let northEastConnected = northConnected && eastConnected;
     if (borderTop && borderRight) {
       if (northEastConnected) {
-        return SLOT_CONTENT_TYPES.border_mid;
+        return createBorderMidNode(
+          borderTop,
+          borderRight,
+          northCell.borderRight,
+          eastCell.borderTop,
+        );
       }
       if (northConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_right;
+        return createBorderMidRightNode(
+          borderTop,
+          borderRight,
+          northCell.borderRight,
+        );
       }
       if (eastConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_top;
+        return createBorderMidTopNode(
+          borderTop,
+          borderRight,
+          eastCell.borderTop,
+        );
       }
-      return SLOT_CONTENT_TYPES.border_top_right;
+      return createBorderTopRightNode(borderTop, borderRight);
     }
     if (borderRight) {
       northConnected =
         northCell && (northCell.borderRight || northCell.borderBottom);
       northEastConnected = northConnected && eastConnected;
       if (northEastConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_left;
+        return createBorderMidLeftNode(
+          borderRight,
+          northCell.borderRight || northCell.borderBottom,
+          eastCell.borderTop,
+        );
       }
       if (northConnected) {
-        return SLOT_CONTENT_TYPES.border_right;
+        return createBorderRightNode(
+          borderRight,
+          northCell.borderRight || northCell.borderBottom,
+        );
       }
       if (eastConnected) {
-        return SLOT_CONTENT_TYPES.border_top_left;
+        return createBorderTopLeftNode(borderRight, eastCell.borderTop);
       }
-      return SLOT_CONTENT_TYPES.border_half_down;
+      return createBorderHalfDownNode(borderRight);
     }
     // borderTop
     eastConnected = eastCell && (eastCell.borderTop || eastCell.borderLeft);
     northEastConnected = northConnected && eastConnected;
     if (northEastConnected) {
-      return SLOT_CONTENT_TYPES.border_mid_bottom;
+      return createBorderMidBottomNode(
+        borderTop,
+        northCell.borderRight,
+        eastCell.borderTop || eastCell.borderLeft,
+      );
     }
     if (northConnected) {
-      return SLOT_CONTENT_TYPES.border_bottom_right;
+      return createBorderBottomRightNode(borderTop, northCell.borderRight);
     }
     if (eastConnected) {
-      return SLOT_CONTENT_TYPES.border_top;
+      return createBorderTopNode(
+        borderTop,
+        eastCell.borderTop || eastCell.borderLeft,
+      );
     }
-    return SLOT_CONTENT_TYPES.border_half_left;
+    return createBorderHalfLeftNode(borderTop);
   },
 };
 const bottomRightSlot = {
   type: "bottom_right",
-  adapt: (cell, { renderOptionsRef }) => {
+  adapt: (cell) => {
     const { borderBottom, borderRight, eastCell, southCell } = cell;
     if (!borderBottom && !borderRight) {
-      return SLOT_CONTENT_TYPES.blank;
+      return createBlankNode();
     }
-    renderOptionsRef.current = borderBottom;
 
     let southConnected =
       southCell && southCell.borderRight && !southCell.borderTop;
@@ -385,54 +253,80 @@ const bottomRightSlot = {
     let southEastConnected = southConnected && eastConnected;
     if (borderBottom && borderRight) {
       if (southEastConnected) {
-        return SLOT_CONTENT_TYPES.border_mid;
+        return createBorderMidNode(
+          borderBottom,
+          borderRight,
+          southCell.borderRight,
+          eastCell.borderBottom,
+        );
       }
       if (eastConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_bottom;
+        return createBorderMidBottomNode(
+          borderBottom,
+          borderRight,
+          eastCell.borderBottom,
+        );
       }
       if (southConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_right;
+        return createBorderMidRightNode(
+          borderBottom,
+          borderRight,
+          southCell.borderRight,
+        );
       }
-      return SLOT_CONTENT_TYPES.border_bottom_right;
+      return createBorderBottomRightNode(borderBottom, borderRight);
     }
     if (borderRight) {
       southConnected =
         southCell && (southCell.borderRight || southCell.borderTop);
       southEastConnected = southConnected && eastConnected;
       if (southEastConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_top;
+        return createBorderMidTopNode(
+          borderRight,
+          southCell.borderRight || southCell.borderTop,
+          eastCell.borderBottom,
+        );
       }
       if (eastConnected) {
-        return SLOT_CONTENT_TYPES.border_bottom_left;
+        return createBorderBottomLeftNode(borderRight, eastCell.borderBottom);
       }
       if (southConnected) {
-        return SLOT_CONTENT_TYPES.border_right;
+        return createBorderRightNode(
+          borderRight,
+          southCell.borderRight || southCell.borderTop,
+        );
       }
-      return SLOT_CONTENT_TYPES.border_half_up;
+      return createBorderHalfUpNode(borderRight);
     }
     // border bottom
     eastConnected = eastCell && (eastCell.borderBottom || eastCell.borderLeft);
     southEastConnected = southConnected && eastConnected;
     if (southEastConnected) {
-      return SLOT_CONTENT_TYPES.border_mid_top;
+      return createBorderMidTopNode(
+        borderBottom,
+        southCell.borderRight,
+        eastCell.borderBottom || eastCell.borderLeft,
+      );
     }
     if (southConnected) {
-      return SLOT_CONTENT_TYPES.border_top_right;
+      return createBorderTopRightNode(borderBottom, southCell.borderRight);
     }
     if (eastConnected) {
-      return SLOT_CONTENT_TYPES.border_bottom;
+      return createBorderBottomNode(
+        borderBottom,
+        eastCell.borderBottom || eastCell.borderLeft,
+      );
     }
-    return SLOT_CONTENT_TYPES.border_half_left;
+    return createBorderHalfLeftNode(borderBottom);
   },
 };
 const bottomLeftSlot = {
   type: "bottom_left",
-  adapt: (cell, { renderOptionsRef }) => {
+  adapt: (cell) => {
     const { borderBottom, borderLeft, westCell, southCell } = cell;
     if (!borderBottom && !borderLeft) {
-      return SLOT_CONTENT_TYPES.blank;
+      return createBlankNode();
     }
-    renderOptionsRef.current = borderBottom;
 
     let southConnected =
       southCell && southCell.borderLeft && !southCell.borderTop;
@@ -441,44 +335,58 @@ const bottomLeftSlot = {
     let southWestConnected = southConnected && westConnected;
     if (borderBottom && borderLeft) {
       if (southWestConnected) {
-        return SLOT_CONTENT_TYPES.border_mid;
+        return createBorderMidNode(borderBottom, borderLeft);
       }
       if (southConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_left;
+        return createBorderMidLeftNode(borderBottom, borderLeft);
       }
       if (westConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_bottom;
+        return createBorderMidBottomNode(borderBottom, borderLeft);
       }
-      return SLOT_CONTENT_TYPES.border_bottom_left;
+      return createBorderBottomLeftNode(borderBottom, borderLeft);
     }
     if (borderLeft) {
       southConnected =
         southCell && (southCell.borderLeft || southCell.borderTop);
       southWestConnected = southConnected && westConnected;
       if (southWestConnected) {
-        return SLOT_CONTENT_TYPES.border_mid_right;
+        return createBorderMidRightNode(
+          borderLeft,
+          southCell.borderLeft || southCell.borderTop,
+          westCell.borderBottom,
+        );
       }
       if (westConnected) {
-        return SLOT_CONTENT_TYPES.border_bottom_right;
+        return createBorderBottomRightNode(borderLeft, westCell.borderBottom);
       }
       if (southConnected) {
-        return SLOT_CONTENT_TYPES.border_left;
+        return createBorderLeftNode(
+          borderLeft,
+          southCell.borderLeft || southCell.borderTop,
+        );
       }
-      return SLOT_CONTENT_TYPES.border_half_up;
+      return createBorderHalfUpNode(borderLeft);
     }
     // borderBottom
     westConnected = westCell && (westCell.borderBottom || westCell.borderRight);
     southWestConnected = southConnected && westConnected;
     if (southWestConnected) {
-      return SLOT_CONTENT_TYPES.border_mid_top;
+      return createBorderMidTopNode(
+        borderBottom,
+        southCell.borderLeft,
+        westCell.borderBottom || westCell.borderRight,
+      );
     }
     if (southConnected) {
-      return SLOT_CONTENT_TYPES.border_top_left;
+      return createBorderTopLeftNode(borderBottom, southCell.borderLeft);
     }
     if (westConnected) {
-      return SLOT_CONTENT_TYPES.border_bottom;
+      return createBorderBottomNode(
+        borderBottom,
+        westCell.borderBottom || westCell.borderRight,
+      );
     }
-    return SLOT_CONTENT_TYPES.border_half_right;
+    return createBorderHalfRightNode(borderBottom);
   },
 };
 
@@ -713,13 +621,8 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
       while (x < row.length) {
         const cell = row[x];
         const adapt = (slot) => {
-          const renderOptionsRef = { current: null };
-          renderOptionsRef.current = null;
-          const node = slot.adapt(cell, { renderOptionsRef });
-          const renderOptions = renderOptionsRef.current || {};
-          const { bold } = renderOptions;
-          const nodeWithOptions = { ...node, bold, color: node.color };
-          return nodeWithOptions;
+          const node = slot.adapt(cell);
+          return node;
         };
 
         if (leftSlotRow) {
@@ -802,10 +705,15 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
           width += leftSpacing + rightSpacing;
           rect.width = width;
           const { render } = rect;
-          rect.render = (...args) => {
-            const text = render(...args);
-            return " ".repeat(leftSpacing) + text + " ".repeat(rightSpacing);
-          };
+          if (typeof render === "function") {
+            rect.render = (...args) => {
+              const text = render(...args);
+              return " ".repeat(leftSpacing) + text + " ".repeat(rightSpacing);
+            };
+          } else {
+            rect.render =
+              " ".repeat(leftSpacing) + render + " ".repeat(rightSpacing);
+          }
         }
         if (width > nodeWidth) {
           nodeWidth = width;
@@ -916,20 +824,13 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
     };
     const renderNode = (node, { cell, columnWidth, rowHeight, lineIndex }) => {
       let {
-        bold,
         xAlign,
-        xAlignChar = " ",
+        xPadChar = " ",
         yAlign,
-        yAlignChar = " ",
+        yPadChar = " ",
         rects,
         color,
       } = node;
-      if (typeof xAlignChar === "object") {
-        xAlignChar = bold ? xAlignChar.bold : xAlignChar.light;
-      }
-      if (typeof yAlignChar === "object") {
-        yAlignChar = bold ? yAlignChar.bold : yAlignChar.light;
-      }
 
       const nodeHeight = rects.length;
       let rect;
@@ -942,8 +843,15 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
         // const bottomSpacing = rowHeight - cellHeight - topSpacing;
         const lineStartIndex = topSpacing;
         const lineEndIndex = topSpacing + nodeHeight;
-        if (lineIndex >= lineStartIndex && lineIndex < lineEndIndex) {
+
+        if (lineIndex < lineStartIndex) {
+          if (Array.isArray(yPadChar)) {
+            yPadChar = yPadChar[0];
+          }
+        } else if (lineIndex < lineEndIndex) {
           rect = rects[lineIndex];
+        } else if (Array.isArray(yPadChar)) {
+          yPadChar = yPadChar[1];
         }
       } else {
         const lineStartIndex = rowHeight - nodeHeight;
@@ -960,7 +868,7 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
           return text;
         }
         if (typeof color === "function") {
-          color = color(cell, { columnWidth, bold });
+          color = color(cell, { columnWidth });
           if (!color) {
             return text;
           }
@@ -970,15 +878,11 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
 
       if (rect) {
         let { width, render } = rect;
-        if (typeof render === "object") {
-          render = bold ? render.bold : render.light;
-        }
         let rectText;
         if (typeof render === "function") {
           rectText = render({
             cell,
             columnWidth,
-            bold,
           });
         } else {
           rectText = render;
@@ -991,16 +895,16 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
             width,
             desiredWidth: columnWidth,
             align: xAlign,
-            alignChar: xAlignChar,
+            padChar: xPadChar,
           }),
         );
       }
       return applyColor(
-        applyXAlign(yAlignChar, {
+        applyXAlign(yPadChar, {
           width: 1,
           desiredWidth: columnWidth,
           align: xAlign,
-          alignChar: " ",
+          padChar: " ",
         }),
       );
     };
@@ -1046,7 +950,7 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
   return log;
 };
 
-const applyXAlign = (text, { width, desiredWidth, align, alignChar }) => {
+const applyXAlign = (text, { width, desiredWidth, align, padChar }) => {
   const missingWidth = desiredWidth - width;
   if (missingWidth < 0) {
     // never supposed to happen because the width of a column
@@ -1069,18 +973,23 @@ const applyXAlign = (text, { width, desiredWidth, align, alignChar }) => {
   //   return textRepeated;
   // }
   if (align === "start") {
-    return text + alignChar.repeat(missingWidth);
+    return text + padChar.repeat(missingWidth);
   }
   if (align === "center") {
     const leftSpacing = Math.floor(missingWidth / 2);
     const rightSpacing = missingWidth - leftSpacing;
-
+    let padStartChar = padChar;
+    let padEndChar = padChar;
+    if (Array.isArray(padChar)) {
+      padStartChar = padChar[0];
+      padEndChar = padChar[1];
+    }
     return (
-      alignChar.repeat(leftSpacing) + text + alignChar.repeat(rightSpacing)
+      padStartChar.repeat(leftSpacing) + text + padEndChar.repeat(rightSpacing)
     );
   }
   // "end"
-  return alignChar.repeat(missingWidth) + text;
+  return padChar.repeat(missingWidth) + text;
 };
 
 const createCell = (

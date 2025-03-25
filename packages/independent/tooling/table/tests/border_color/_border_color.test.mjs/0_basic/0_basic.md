@@ -1,4 +1,4 @@
-# [0_basic](../../border_color.test.mjs#L27)
+# [0_basic](../../border_color.test.mjs#L50)
 
 ```js
 run({})
@@ -12,9 +12,10 @@ run({})
   <summary>see without style</summary>
 
 ```console
---- border_left_red_and_top_blue ---
-┌───
-│ a 
+--- castle_inverted ---
+   ┌───┐   
+ a │ b │ c 
+───┘   └───
 
 ```
 
