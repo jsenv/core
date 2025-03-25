@@ -429,7 +429,7 @@ export const createBorderMidLeftNode = (
   middleBorder,
   southBorder,
 ) => {
-  const { color } = southBorder;
+  const { color } = middleBorder;
   const innerCreateBorder = (char, props) => {
     return {
       type: "border_mid_left",
@@ -504,7 +504,7 @@ export const createBorderMidRightNode = (
   middleBorder,
   southBorder,
 ) => {
-  const { color } = southBorder;
+  const { color } = middleBorder;
   const innerCreateBorder = (char, props) => {
     return {
       type: "border_mid_right",
