@@ -86,7 +86,7 @@
         <text x="77.21" y="613.55" style="white-space:pre"> c </text>
         <text x="35.2" y="632.55" fill="#11bc79">└</text>
         <text x="43.61" y="632.55" fill="#11bc79">───</text>
-        <text x="68.81" y="632.55" fill="#cd5555">┘</text>
+        <text x="68.81" y="632.55" fill="#11bc79">┘</text>
         <text x="10" y="670.55">--- castle_inverted ---</text>
         <text x="35.2" y="689.55" fill="#4169E1">┌</text>
         <text x="43.61" y="689.55" fill="#4169E1">───</text>

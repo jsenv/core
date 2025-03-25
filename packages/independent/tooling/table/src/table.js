@@ -377,7 +377,7 @@ const bottomLeftSlot = {
         );
       }
       if (westConnected) {
-        return createBorderBottomRightNode(borderLeft, westCell.borderBottom);
+        return createBorderBottomRightNode(westCell.borderBottom, borderLeft);
       }
       if (southConnected) {
         return createBorderLeftNode(
