@@ -18,7 +18,7 @@
   },
   {
     "type": "text",
-    "value": "───",
+    "value": "A",
     "position": {
       "x": 0,
       "y": 0,
@@ -37,21 +37,21 @@
       "decorator": "reset"
     },
     "position": {
-      "x": 3,
+      "x": 1,
       "y": 0,
-      "n": 3,
-      "raw": 8
+      "n": 1,
+      "raw": 6
     },
     "style": {}
   },
   {
     "type": "text",
-    "value": "┘   └",
+    "value": "B  B",
     "position": {
-      "x": 3,
+      "x": 1,
       "y": 0,
-      "n": 3,
-      "raw": 12
+      "n": 1,
+      "raw": 10
     },
     "style": {}
   },
@@ -63,10 +63,10 @@
       "decorator": "foregroundColorOpen"
     },
     "position": {
-      "x": 8,
+      "x": 5,
       "y": 0,
-      "n": 8,
-      "raw": 17
+      "n": 5,
+      "raw": 14
     },
     "style": {
       "foregroundColor": "green"
@@ -74,12 +74,12 @@
   },
   {
     "type": "text",
-    "value": "───",
+    "value": "A",
     "position": {
-      "x": 8,
+      "x": 5,
       "y": 0,
-      "n": 8,
-      "raw": 22
+      "n": 5,
+      "raw": 19
     },
     "style": {
       "foregroundColor": "green"
@@ -93,21 +93,11 @@
       "decorator": "reset"
     },
     "position": {
-      "x": 11,
+      "x": 6,
       "y": 0,
-      "n": 11,
-      "raw": 25
+      "n": 6,
+      "raw": 20
     },
     "style": {}
-  },
-  {
-    "type": "newline",
-    "value": "\n",
-    "position": {
-      "x": 11,
-      "y": 0,
-      "n": 11,
-      "raw": 29
-    }
   }
 ]

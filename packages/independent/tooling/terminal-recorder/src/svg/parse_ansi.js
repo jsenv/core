@@ -11,12 +11,12 @@ export const parseAnsi = (ansi) => {
   const lines = plainText.split("\n");
   const rows = lines.length;
   let columns = 0;
-  lines.forEach((line) => {
+  for (const line of lines) {
     const len = line.length;
     if (len > columns) {
       columns = len;
     }
-  });
+  }
 
   const result = {
     raw: ansi,
