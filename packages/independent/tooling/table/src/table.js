@@ -335,13 +335,26 @@ const bottomLeftSlot = {
     let southWestConnected = southConnected && westConnected;
     if (borderBottom && borderLeft) {
       if (southWestConnected) {
-        return createBorderMidNode(borderBottom, borderLeft);
+        return createBorderMidNode(
+          borderBottom,
+          borderLeft,
+          southCell.borderLeft,
+          westCell.borderBottom,
+        );
       }
       if (southConnected) {
-        return createBorderMidLeftNode(borderBottom, borderLeft);
+        return createBorderMidLeftNode(
+          borderBottom,
+          borderLeft,
+          southCell.borderLeft,
+        );
       }
       if (westConnected) {
-        return createBorderMidBottomNode(borderBottom, borderLeft);
+        return createBorderMidBottomNode(
+          borderBottom,
+          borderLeft,
+          westCell.borderBottom,
+        );
       }
       return createBorderBottomLeftNode(borderBottom, borderLeft);
     }
