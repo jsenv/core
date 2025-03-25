@@ -1,5 +1,5 @@
 /**
- *
+ * des test de couleurs avec les 3 way, 4 ways
  */
 
 import { renderNamedSections } from "@jsenv/humanize";
@@ -17,7 +17,13 @@ const run = () => {
     // prettier-force-multiline
     [{ value: "a", borderLeft, borderTop }],
   ]);
-
+  const castle = render([
+    [
+      { value: "a", borderTop, borderRight },
+      { value: "b", borderBottom },
+      { value: "c", borderLeft, borderTop },
+    ],
+  ]);
   const castle_inverted = render([
     [
       { value: "a", borderBottom, borderRight },
@@ -29,6 +35,7 @@ const run = () => {
   console.log(
     renderNamedSections({
       border_top_left,
+      castle,
       castle_inverted,
     }),
   );

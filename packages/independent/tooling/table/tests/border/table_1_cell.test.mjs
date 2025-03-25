@@ -1,9 +1,24 @@
 import { renderNamedSections } from "@jsenv/humanize";
-import { renderTable } from "@jsenv/table";
+import { BORDER_COLORS, renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
-const run = ({ ansi, bordersBold }) => {
-  const border = { bold: bordersBold };
+const run = ({ borderBold, borderColors, ansi = borderColors }) => {
+  const borderLeft = {
+    color: borderColors ? BORDER_COLORS.RED : null,
+    bold: borderBold,
+  };
+  const borderTop = {
+    color: borderColors ? BORDER_COLORS.BLUE : null,
+    bold: borderBold,
+  };
+  const borderBottom = {
+    color: borderColors ? BORDER_COLORS.GREEN : null,
+    bold: borderBold,
+  };
+  const borderRight = {
+    color: borderColors ? BORDER_COLORS.YELLOW : null,
+    bold: borderBold,
+  };
   const render = (grid) => renderTable(grid, { ansi });
 
   const none = render([
@@ -12,57 +27,45 @@ const run = ({ ansi, bordersBold }) => {
   ]);
   const top = render([
     // prettier-force-multiline
-    [{ value: "a", borderTop: border }],
+    [{ value: "a", borderTop }],
   ]);
   const left = render([
     // prettier-force-multiline
-    [{ value: "a", borderLeft: border }],
+    [{ value: "a", borderLeft }],
   ]);
   const right = render([
     // prettier-force-multiline
-    [{ value: "a", borderRight: border }],
+    [{ value: "a", borderRight }],
   ]);
   const bottom = render([
     // prettier-force-multiline
-    [{ value: "a", borderBottom: border }],
+    [{ value: "a", borderBottom }],
   ]);
-  const top_left = render([
-    [{ value: "a", borderTop: border, borderLeft: border }],
-  ]);
-  const top_right = render([
-    [{ value: "a", borderTop: border, borderRight: border }],
-  ]);
-  const bottom_right = render([
-    [{ value: "a", borderRight: border, borderBottom: border }],
-  ]);
-  const bottom_left = render([
-    [{ value: "a", borderLeft: border, borderBottom: border }],
-  ]);
-  const left_and_right = render([
-    [{ value: "a", borderLeft: border, borderRight: border }],
-  ]);
-  const top_and_bottom = render([
-    [{ value: "a", borderTop: border, borderBottom: border }],
-  ]);
+  const top_left = render([[{ value: "a", borderTop, borderLeft }]]);
+  const top_right = render([[{ value: "a", borderTop, borderRight }]]);
+  const bottom_right = render([[{ value: "a", borderRight, borderBottom }]]);
+  const bottom_left = render([[{ value: "a", borderLeft, borderBottom }]]);
+  const left_and_right = render([[{ value: "a", borderLeft, borderRight }]]);
+  const top_and_bottom = render([[{ value: "a", borderTop, borderBottom }]]);
   const all_but_top = render([
     // prettier-force-multiline
-    [{ value: "a", border, borderTop: null }],
+    [{ value: "a", borderLeft, borderRight, borderBottom }],
   ]);
   const all_but_right = render([
     // prettier-force-multiline
-    [{ value: "a", border, borderRight: null }],
+    [{ value: "a", borderLeft, borderTop, borderBottom }],
   ]);
   const all_but_left = render([
     // prettier-force-multiline
-    [{ value: "a", border, borderLeft: null }],
+    [{ value: "a", borderRight, borderTop, borderBottom }],
   ]);
   const all_but_bottom = render([
     // prettier-force-multiline
-    [{ value: "a", border, borderBottom: null }],
+    [{ value: "a", borderRight, borderTop, borderLeft }],
   ]);
   const all = render([
     // prettier-force-multiline
-    [{ value: "a", border }],
+    [{ value: "a", borderLeft, borderRight, borderBottom, borderTop }],
   ]);
 
   console.log(
@@ -90,7 +93,7 @@ const run = ({ ansi, bordersBold }) => {
 await snapshotTableTests(import.meta.url, ({ test }) => {
   test(`0_basic`, () => run({}));
 
-  test(`1_bold`, () => run({ bordersBold: true }));
+  test(`1_border_bold`, () => run({ borderBold: true }));
 
-  // test(`2_ansi`, () => run({ ansi: true }));
+  test(`2_border_colors`, () => run({ borderColors: true }));
 });
