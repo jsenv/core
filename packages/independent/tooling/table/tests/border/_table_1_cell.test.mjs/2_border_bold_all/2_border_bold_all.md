@@ -1,7 +1,12 @@
-# [1_border_bold](../../table_1_cell.test.mjs#L96)
+# [2_border_bold_all](../../table_1_cell.test.mjs#L105)
 
 ```js
-run({ borderBold: true })
+run({
+  borderLeftBold: true,
+  borderRightBold: true,
+  borderTopBold: true,
+  borderBottomBold: true,
+})
 ```
 
 # 1/2 console.log

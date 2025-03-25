@@ -2,8 +2,10 @@
 
 
 - [0_basic](0_basic/0_basic.md)
-- [1_border_bold](1_border_bold/1_border_bold.md)
-- [2_border_colors](2_border_colors/2_border_colors.md)
+- [1_border_colors](1_border_colors/1_border_colors.md)
+- [2_border_bold_all](2_border_bold_all/2_border_bold_all.md)
+- [3_border_bold_x](3_border_bold_x/3_border_bold_x.md)
+- [4_border_bold_y](4_border_bold_y/4_border_bold_y.md)
 
 ---
 
