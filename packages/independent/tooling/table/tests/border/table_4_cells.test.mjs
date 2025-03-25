@@ -1,9 +1,30 @@
 import { renderNamedSections } from "@jsenv/humanize";
-import { renderTable } from "@jsenv/table";
+import { BORDER_COLORS, renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
-const run = ({ borderCollapse }) => {
-  const render = (grid) => renderTable(grid, { borderCollapse });
+const run = ({
+  borderBold,
+  borderCollapse,
+  borderColors,
+  ansi = borderColors,
+}) => {
+  const borderLeft = {
+    color: borderColors ? BORDER_COLORS.RED : null,
+    bold: borderBold,
+  };
+  const borderTop = {
+    color: borderColors ? BORDER_COLORS.BLUE : null,
+    bold: borderBold,
+  };
+  const borderBottom = {
+    color: borderColors ? BORDER_COLORS.GREEN : null,
+    bold: borderBold,
+  };
+  const borderRight = {
+    color: borderColors ? BORDER_COLORS.YELLOW : null,
+    bold: borderBold,
+  };
+  const render = (grid) => renderTable(grid, { borderCollapse, ansi });
 
   const none = render([
     [
@@ -17,152 +38,152 @@ const run = ({ borderCollapse }) => {
   ]);
   const around_strange = render([
     [
-      { value: "a", border: {} },
-      { value: "b", border: {}, borderLeft: null },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "b", borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "c", border: {}, borderTop: null },
-      { value: "d", border: {}, borderLeft: null },
+      { value: "c", borderLeft, borderRight, borderBottom },
+      { value: "d", borderRight, borderBottom, borderTop },
     ],
   ]);
   const around_strange_2 = render([
     [
-      { value: "a", border: {} },
-      { value: "b", border: {}, borderLeft: null },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "b", borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "c", border: {}, borderRight: null },
-      { value: "d", border: {}, borderTop: null },
+      { value: "c", borderLeft, borderBottom, borderTop },
+      { value: "d", borderLeft, borderRight, borderBottom },
     ],
   ]);
   const around_strange_3 = render([
     [
-      { value: "a", border: {} },
-      { value: "b", border: {}, borderBottom: null, borderLeft: null },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "b", borderRight, borderTop },
     ],
     [
-      { value: "c", border: {}, borderTop: null },
-      { value: "d", border: {}, borderLeft: null },
+      { value: "c", borderLeft, borderRight, borderBottom },
+      { value: "d", borderRight, borderBottom, borderTop },
     ],
   ]);
   const strange_2 = render([
     [
-      { value: "a", border: {}, borderRight: {} },
-      { value: "b", border: {}, borderLeft: null },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "b", borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "c", border: {}, borderRight: null, borderTop: null },
-      { value: "d", border: {}, borderLeft: {}, borderTop: null },
+      { value: "c", borderLeft, borderBottom },
+      { value: "d", borderLeft, borderRight, borderBottom },
     ],
   ]);
   const left_column_full_right_column_split = render([
     [
-      { value: "a", border: {}, borderBottom: null, borderRight: null },
-      { value: "b", border: {}, borderBottom: null },
+      { value: "a", borderLeft, borderTop },
+      { value: "b", borderLeft, borderRight, borderTop },
     ],
     [
-      { value: "c", border: {}, borderTop: null, borderRight: null },
-      { value: "d", border: {} },
+      { value: "c", borderLeft, borderBottom },
+      { value: "d", borderLeft, borderRight, borderBottom, borderTop },
     ],
   ]);
   const left_column_split_right_column_full = render([
     [
-      { value: "a", border: {}, borderRight: null },
-      { value: "b", border: {}, borderBottom: null },
+      { value: "a", borderLeft, borderBottom, borderTop },
+      { value: "b", borderLeft, borderRight, borderTop },
     ],
     [
-      { value: "c", border: {}, borderRight: null, borderTop: null },
-      { value: "d", border: {}, borderTop: null },
+      { value: "c", borderLeft, borderBottom },
+      { value: "d", borderLeft, borderRight, borderBottom },
     ],
   ]);
   const first_row_full_second_row_split = render([
     [
-      { value: "a", border: {}, borderRight: null },
-      { value: "b", border: {}, borderLeft: null },
+      { value: "a", borderLeft, borderBottom, borderTop },
+      { value: "b", borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "c", border: {}, borderRight: null, borderTop: null },
-      { value: "d", border: {}, borderLeft: {}, borderTop: null },
+      { value: "c", borderLeft, borderBottom },
+      { value: "d", borderLeft, borderRight, borderBottom },
     ],
   ]);
   const first_row_split_second_row_full = render([
     [
-      { value: "a", border: {}, borderRight: {} },
-      { value: "b", border: {}, borderLeft: null },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "b", borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "c", border: {}, borderRight: null, borderTop: null },
-      { value: "d", border: {}, borderLeft: null, borderTop: null },
+      { value: "c", borderLeft, borderBottom },
+      { value: "d", borderRight, borderBottom },
     ],
   ]);
   const first_row_right_second_row_left = render([
     [
-      { value: "a", borderRight: {} },
-      { value: "b", borderRight: {} },
+      { value: "a", borderRight },
+      { value: "b", borderRight },
     ],
     [
-      { value: "c", borderLeft: {} },
-      { value: "d", borderLeft: {} },
+      { value: "c", borderLeft },
+      { value: "d", borderLeft },
     ],
   ]);
   const first_column_top_second_column_bottom = render([
     [
-      { value: "a", borderTop: {} },
-      { value: "b", borderBottom: {} },
+      { value: "a", borderTop },
+      { value: "b", borderBottom },
     ],
     [
-      { value: "c", borderTop: {} },
-      { value: "d", borderBottom: {} },
+      { value: "c", borderTop },
+      { value: "d", borderBottom },
     ],
   ]);
   const four_way_junction_bottom_right = render([
     [
-      { value: "a", border: {} },
-      { value: "b", border: {}, borderLeft: null },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "b", borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "c", border: {}, borderTop: null },
-      { value: "d", border: {}, borderTop: null, borderLeft: null },
+      { value: "c", borderLeft, borderRight, borderBottom },
+      { value: "d", borderRight, borderBottom },
     ],
   ]);
   const four_way_junction_bottom_left = render([
     [
-      { value: "a", border: {}, borderRight: null },
-      { value: "b", border: {} },
+      { value: "a", borderLeft, borderBottom, borderTop },
+      { value: "b", borderLeft, borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "c", border: {}, borderTop: null, borderRight: null },
-      { value: "d", border: {}, borderTop: null },
+      { value: "c", borderLeft, borderBottom },
+      { value: "d", borderLeft, borderRight, borderBottom },
     ],
   ]);
   const four_way_junction_top_left = render([
     [
-      { value: "a", border: {}, borderBottom: null, borderRight: null },
-      { value: "b", border: {}, borderBottom: null },
+      { value: "a", borderLeft, borderTop },
+      { value: "b", borderLeft, borderRight, borderTop },
     ],
     [
-      { value: "c", border: {}, borderRight: null },
-      { value: "d", border: {} },
+      { value: "c", borderLeft, borderBottom, borderTop },
+      { value: "d", borderLeft, borderRight, borderBottom, borderTop },
     ],
   ]);
   const four_way_junction_top_right = render([
     [
-      { value: "a", border: {}, borderBottom: null },
-      { value: "b", border: {}, borderBottom: null, borderLeft: null },
+      { value: "a", borderLeft, borderRight, borderTop },
+      { value: "b", borderRight, borderTop },
     ],
     [
-      { value: "c", border: {} },
-      { value: "d", border: {}, borderLeft: null },
+      { value: "c", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "d", borderRight, borderBottom, borderTop },
     ],
   ]);
   const all = render([
     [
-      { value: "a", border: {} },
-      { value: "b", border: {} },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "b", borderLeft, borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "c", border: {} },
-      { value: "d", border: {} },
+      { value: "c", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "d", borderLeft, borderRight, borderBottom, borderTop },
     ],
   ]);
 
@@ -191,5 +212,13 @@ const run = ({ borderCollapse }) => {
 await snapshotTableTests(import.meta.url, ({ test }) => {
   test(`0_basic`, () => run({}));
 
-  test(`1_border_collapse`, () => run({ borderCollapse: true }));
+  test(`1_border_collapse`, () =>
+    run({
+      borderCollapse: true,
+    }));
+
+  test(`2_border_colors`, () =>
+    run({
+      borderColors: true,
+    }));
 });

@@ -1,10 +1,17 @@
-# [0_basic](../../table_4_cells.test.mjs#L213)
+# [2_border_colors](../../table_4_cells.test.mjs#L220)
 
 ```js
-run({})
+run({
+  borderColors: true,
+})
 ```
 
 # 1/2 console.log
+
+![img](console.log.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
 --- none ---
@@ -119,6 +126,9 @@ run({})
 └───┘└───┘
 
 ```
+
+</details>
+
 
 # 2/2 return
 

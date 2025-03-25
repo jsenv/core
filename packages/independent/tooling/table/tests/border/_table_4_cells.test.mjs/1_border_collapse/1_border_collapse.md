@@ -1,7 +1,9 @@
-# [1_border_collapse](../../table_4_cells.test.mjs#L194)
+# [1_border_collapse](../../table_4_cells.test.mjs#L215)
 
 ```js
-run({ borderCollapse: true })
+run({
+  borderCollapse: true,
+})
 ```
 
 # 1/2 console.log

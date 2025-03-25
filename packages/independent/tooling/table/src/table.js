@@ -133,7 +133,7 @@ const topLeftSlot = {
       if (northWestConnected) {
         return createBorderMidRightNode(
           borderLeft,
-          northCell.borderLeft,
+          northCell.borderLeft || northCell.borderBottom,
           westCell.borderTop,
         );
       }
@@ -141,7 +141,9 @@ const topLeftSlot = {
         return createBorderTopRightNode(westCell.borderTop, borderLeft);
       }
       if (northConnected) {
-        return createBorderLeftNode(northCell.borderLeft);
+        return createBorderLeftNode(
+          northCell.borderLeft || northCell.borderBottom,
+        );
       }
       return createBorderHalfDownNode(borderLeft);
     }
