@@ -279,7 +279,7 @@ export const createBorderMidTopNode = (
   downBorder,
   eastBorderTop,
 ) => {
-  const { color } = downBorder;
+  const { color } = westBorderTop;
   const innerCreateBorder = (char, props) => {
     return {
       type: "border_mid_top",
@@ -350,11 +350,11 @@ export const createBorderMidTopNode = (
   });
 };
 export const createBorderMidBottomNode = (
-  leftBorder,
+  westBorderBottom,
   upBorder,
-  rightBorder,
+  eastBorderBottom,
 ) => {
-  const { color } = upBorder;
+  const { color } = westBorderBottom;
   const innerCreateBorder = (char, props) => {
     return {
       type: "border_mid_bottom",
@@ -366,9 +366,9 @@ export const createBorderMidBottomNode = (
     };
   };
 
-  const leftIsBold = leftBorder.bold;
+  const leftIsBold = westBorderBottom.bold;
   const upIsBold = upBorder.bold;
-  const rightIsBold = rightBorder.bold;
+  const rightIsBold = eastBorderBottom.bold;
   const noneAreBold = !leftIsBold && !upIsBold && !rightIsBold;
   if (noneAreBold) {
     return innerCreateBorder("┴", {
@@ -424,8 +424,12 @@ export const createBorderMidBottomNode = (
     yPadChar: "┃",
   });
 };
-export const createBorderMidLeftNode = (upBorder, middleBorder, downBorder) => {
-  const { color } = upBorder;
+export const createBorderMidLeftNode = (
+  northBorder,
+  middleBorder,
+  southBorder,
+) => {
+  const { color } = southBorder;
   const innerCreateBorder = (char, props) => {
     return {
       type: "border_mid_left",
@@ -437,9 +441,9 @@ export const createBorderMidLeftNode = (upBorder, middleBorder, downBorder) => {
     };
   };
 
-  const upIsBold = upBorder.bold;
+  const upIsBold = northBorder.bold;
   const middleIsBold = middleBorder.bold;
-  const downIsBold = downBorder.bold;
+  const downIsBold = southBorder.bold;
   const nothingIsBold = !upIsBold && !middleIsBold && !downIsBold;
   if (nothingIsBold) {
     return innerCreateBorder("├", {
@@ -496,11 +500,11 @@ export const createBorderMidLeftNode = (upBorder, middleBorder, downBorder) => {
   });
 };
 export const createBorderMidRightNode = (
-  upBorder,
+  northBorder,
   middleBorder,
-  downBorder,
+  southBorder,
 ) => {
-  const { color } = upBorder;
+  const { color } = southBorder;
   const innerCreateBorder = (char, props) => {
     return {
       type: "border_mid_right",
@@ -512,9 +516,9 @@ export const createBorderMidRightNode = (
     };
   };
 
-  const upIsBold = upBorder.bold;
+  const upIsBold = northBorder.bold;
   const middleIsBold = middleBorder.bold;
-  const downIsBold = downBorder.bold;
+  const downIsBold = southBorder.bold;
   const noneAreBold = !upIsBold && !middleIsBold && !downIsBold;
   if (noneAreBold) {
     return innerCreateBorder("┤", {

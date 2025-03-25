@@ -11,7 +11,7 @@
         <text x="10" y="100.55">--- around_strange ---</text>
         <text x="10" y="119.55" fill="#4169E1">┌</text>
         <text x="18.4" y="119.55" fill="#4169E1">───</text>
-        <text x="43.61" y="119.55" fill="#DAA520">┬</text>
+        <text x="43.61" y="119.55" fill="#4169E1">┬</text>
         <text x="52.01" y="119.55" fill="#4169E1">───</text>
         <text x="77.21" y="119.55" fill="#4169E1">┐</text>
         <text x="10" y="138.55" fill="#cd5555">│</text>
@@ -19,13 +19,13 @@
         <text x="43.61" y="138.55" fill="#DAA520">│</text>
         <text x="52.01" y="138.55" style="white-space:pre"> b </text>
         <text x="77.21" y="138.55" fill="#DAA520">│</text>
-        <text x="10" y="157.55" fill="#11bc79">├</text>
+        <text x="10" y="157.55" fill="#cd5555">├</text>
         <text x="18.4" y="157.55" fill="#11bc79">───</text>
         <text x="43.61" y="157.55" fill="#11bc79">┼</text>
         <text x="52.01" y="157.55" fill="#11bc79">───</text>
         <text x="77.21" y="157.55" fill="#11bc79">┘</text>
         <text x="10" y="176.55" fill="#cd5555">│</text>
-        <text x="43.61" y="176.55" fill="#DAA520">├</text>
+        <text x="43.61" y="176.55" fill="#4169E1">├</text>
         <text x="52.01" y="176.55" fill="#4169E1">───</text>
         <text x="77.21" y="176.55" fill="#4169E1">┐</text>
         <text x="10" y="195.55" fill="#cd5555">│</text>
@@ -35,13 +35,13 @@
         <text x="77.21" y="195.55" fill="#DAA520">│</text>
         <text x="10" y="214.55" fill="#11bc79">└</text>
         <text x="18.4" y="214.55" fill="#11bc79">───</text>
-        <text x="43.61" y="214.55" fill="#DAA520">┴</text>
+        <text x="43.61" y="214.55" fill="#11bc79">┴</text>
         <text x="52.01" y="214.55" fill="#11bc79">───</text>
         <text x="77.21" y="214.55" fill="#11bc79">┘</text>
         <text x="10" y="252.55">--- around_strange_2 ---</text>
         <text x="10" y="271.55" fill="#4169E1">┌</text>
         <text x="18.4" y="271.55" fill="#4169E1">───</text>
-        <text x="43.61" y="271.55" fill="#DAA520">┬</text>
+        <text x="43.61" y="271.55" fill="#4169E1">┬</text>
         <text x="52.01" y="271.55" fill="#4169E1">─</text>
         <text x="60.41" y="271.55" fill="#4169E1">───</text>
         <text x="85.61" y="271.55" fill="#4169E1">┐</text>
@@ -52,14 +52,14 @@
         <text x="85.61" y="290.55" fill="#DAA520">│</text>
         <text x="10" y="309.55" fill="#11bc79">└</text>
         <text x="18.4" y="309.55" fill="#11bc79">───</text>
-        <text x="43.61" y="309.55" fill="#DAA520">┴</text>
-        <text x="52.01" y="309.55" fill="#cd5555">┬</text>
+        <text x="43.61" y="309.55" fill="#11bc79">┴</text>
+        <text x="52.01" y="309.55" fill="#11bc79">┬</text>
         <text x="60.41" y="309.55" fill="#11bc79">───</text>
-        <text x="85.61" y="309.55" fill="#11bc79">┤</text>
+        <text x="85.61" y="309.55" fill="#DAA520">┤</text>
         <text x="10" y="328.55" fill="#4169E1">┌</text>
         <text x="18.4" y="328.55" fill="#4169E1">───</text>
         <text x="43.61" y="328.55" fill="#4169E1">─</text>
-        <text x="52.01" y="328.55" fill="#cd5555">┤</text>
+        <text x="52.01" y="328.55" fill="#4169E1">┤</text>
         <text x="85.61" y="328.55" fill="#DAA520">│</text>
         <text x="10" y="347.55" fill="#cd5555">│</text>
         <text x="18.4" y="347.55" style="white-space:pre"> c  </text>
@@ -69,13 +69,13 @@
         <text x="10" y="366.55" fill="#11bc79">└</text>
         <text x="18.4" y="366.55" fill="#11bc79">───</text>
         <text x="43.61" y="366.55" fill="#11bc79">─</text>
-        <text x="52.01" y="366.55" fill="#cd5555">┴</text>
+        <text x="52.01" y="366.55" fill="#11bc79">┴</text>
         <text x="60.41" y="366.55" fill="#11bc79">───</text>
         <text x="85.61" y="366.55" fill="#11bc79">┘</text>
         <text x="10" y="404.55">--- around_strange_3 ---</text>
         <text x="10" y="423.55" fill="#4169E1">┌</text>
         <text x="18.4" y="423.55" fill="#4169E1">───</text>
-        <text x="43.61" y="423.55" fill="#DAA520">┬</text>
+        <text x="43.61" y="423.55" fill="#4169E1">┬</text>
         <text x="52.01" y="423.55" fill="#4169E1">───</text>
         <text x="77.21" y="423.55" fill="#4169E1">┐</text>
         <text x="10" y="442.55" fill="#cd5555">│</text>
@@ -83,14 +83,14 @@
         <text x="43.61" y="442.55" fill="#DAA520">│</text>
         <text x="52.01" y="442.55" style="white-space:pre"> b </text>
         <text x="77.21" y="442.55" fill="#DAA520">│</text>
-        <text x="10" y="461.55" fill="#11bc79">├</text>
+        <text x="10" y="461.55" fill="#cd5555">├</text>
         <text x="18.4" y="461.55" fill="#11bc79">───</text>
-        <text x="43.61" y="461.55" fill="#11bc79">┤</text>
+        <text x="43.61" y="461.55" fill="#DAA520">┤</text>
         <text x="77.21" y="461.55" fill="#DAA520">│</text>
         <text x="10" y="480.55" fill="#cd5555">│</text>
-        <text x="43.61" y="480.55" fill="#DAA520">├</text>
+        <text x="43.61" y="480.55" fill="#4169E1">├</text>
         <text x="52.01" y="480.55" fill="#4169E1">───</text>
-        <text x="77.21" y="480.55" fill="#4169E1">┤</text>
+        <text x="77.21" y="480.55" fill="#DAA520">┤</text>
         <text x="10" y="499.55" fill="#cd5555">│</text>
         <text x="18.4" y="499.55" style="white-space:pre"> c </text>
         <text x="43.61" y="499.55" fill="#DAA520">│</text>
@@ -98,13 +98,13 @@
         <text x="77.21" y="499.55" fill="#DAA520">│</text>
         <text x="10" y="518.55" fill="#11bc79">└</text>
         <text x="18.4" y="518.55" fill="#11bc79">───</text>
-        <text x="43.61" y="518.55" fill="#DAA520">┴</text>
+        <text x="43.61" y="518.55" fill="#11bc79">┴</text>
         <text x="52.01" y="518.55" fill="#11bc79">───</text>
         <text x="77.21" y="518.55" fill="#11bc79">┘</text>
         <text x="10" y="556.55">--- strange_2 ---</text>
         <text x="10" y="575.55" fill="#4169E1">┌</text>
         <text x="18.4" y="575.55" fill="#4169E1">───</text>
-        <text x="43.61" y="575.55" fill="#DAA520">┬</text>
+        <text x="43.61" y="575.55" fill="#4169E1">┬</text>
         <text x="52.01" y="575.55" fill="#4169E1">─</text>
         <text x="60.41" y="575.55" fill="#4169E1">───</text>
         <text x="85.61" y="575.55" fill="#4169E1">┐</text>
@@ -113,12 +113,12 @@
         <text x="43.61" y="594.55" fill="#DAA520">│</text>
         <text x="52.01" y="594.55" style="white-space:pre">  b </text>
         <text x="85.61" y="594.55" fill="#DAA520">│</text>
-        <text x="10" y="613.55" fill="#11bc79">├</text>
+        <text x="10" y="613.55" fill="#cd5555">├</text>
         <text x="18.4" y="613.55" fill="#11bc79">───</text>
-        <text x="43.61" y="613.55" fill="#DAA520">┴</text>
-        <text x="52.01" y="613.55" fill="#cd5555">┬</text>
+        <text x="43.61" y="613.55" fill="#11bc79">┴</text>
+        <text x="52.01" y="613.55" fill="#11bc79">┬</text>
         <text x="60.41" y="613.55" fill="#11bc79">───</text>
-        <text x="85.61" y="613.55" fill="#11bc79">┤</text>
+        <text x="85.61" y="613.55" fill="#DAA520">┤</text>
         <text x="10" y="632.55" fill="#cd5555">│</text>
         <text x="18.4" y="632.55" style="white-space:pre"> c  </text>
         <text x="52.01" y="632.55" fill="#cd5555">│</text>
@@ -127,13 +127,13 @@
         <text x="10" y="651.55" fill="#11bc79">└</text>
         <text x="18.4" y="651.55" fill="#11bc79">───</text>
         <text x="43.61" y="651.55" fill="#11bc79">─</text>
-        <text x="52.01" y="651.55" fill="#cd5555">┴</text>
+        <text x="52.01" y="651.55" fill="#11bc79">┴</text>
         <text x="60.41" y="651.55" fill="#11bc79">───</text>
         <text x="85.61" y="651.55" fill="#11bc79">┘</text>
         <text x="10" y="689.55">--- left_column_full_right_column_split ---</text>
         <text x="10" y="708.55" fill="#4169E1">┌</text>
         <text x="18.4" y="708.55" fill="#4169E1">───</text>
-        <text x="43.61" y="708.55" fill="#cd5555">┬</text>
+        <text x="43.61" y="708.55" fill="#4169E1">┬</text>
         <text x="52.01" y="708.55" fill="#4169E1">───</text>
         <text x="77.21" y="708.55" fill="#4169E1">┐</text>
         <text x="10" y="727.55" fill="#cd5555">│</text>
@@ -144,7 +144,7 @@
         <text x="10" y="746.55" fill="#cd5555">│</text>
         <text x="43.61" y="746.55" fill="#cd5555">├</text>
         <text x="52.01" y="746.55" fill="#4169E1">───</text>
-        <text x="77.21" y="746.55" fill="#4169E1">┤</text>
+        <text x="77.21" y="746.55" fill="#DAA520">┤</text>
         <text x="10" y="765.55" fill="#cd5555">│</text>
         <text x="18.4" y="765.55" style="white-space:pre"> c </text>
         <text x="43.61" y="765.55" fill="#cd5555">│</text>
@@ -152,13 +152,13 @@
         <text x="77.21" y="765.55" fill="#DAA520">│</text>
         <text x="10" y="784.55" fill="#11bc79">└</text>
         <text x="18.4" y="784.55" fill="#11bc79">───</text>
-        <text x="43.61" y="784.55" fill="#cd5555">┴</text>
+        <text x="43.61" y="784.55" fill="#11bc79">┴</text>
         <text x="52.01" y="784.55" fill="#11bc79">───</text>
         <text x="77.21" y="784.55" fill="#11bc79">┘</text>
         <text x="10" y="822.55">--- left_column_split_right_column_full ---</text>
         <text x="10" y="841.55" fill="#4169E1">┌</text>
         <text x="18.4" y="841.55" fill="#4169E1">───</text>
-        <text x="43.61" y="841.55" fill="#cd5555">┬</text>
+        <text x="43.61" y="841.55" fill="#4169E1">┬</text>
         <text x="52.01" y="841.55" fill="#4169E1">───</text>
         <text x="77.21" y="841.55" fill="#4169E1">┐</text>
         <text x="10" y="860.55" fill="#cd5555">│</text>
@@ -166,9 +166,9 @@
         <text x="43.61" y="860.55" fill="#cd5555">│</text>
         <text x="52.01" y="860.55" style="white-space:pre"> b </text>
         <text x="77.21" y="860.55" fill="#DAA520">│</text>
-        <text x="10" y="879.55" fill="#11bc79">├</text>
+        <text x="10" y="879.55" fill="#cd5555">├</text>
         <text x="18.4" y="879.55" fill="#11bc79">───</text>
-        <text x="43.61" y="879.55" fill="#cd5555">┤</text>
+        <text x="43.61" y="879.55" fill="#11bc79">┤</text>
         <text x="77.21" y="879.55" fill="#DAA520">│</text>
         <text x="10" y="898.55" fill="#cd5555">│</text>
         <text x="18.4" y="898.55" style="white-space:pre"> c </text>
@@ -177,7 +177,7 @@
         <text x="77.21" y="898.55" fill="#DAA520">│</text>
         <text x="10" y="917.55" fill="#11bc79">└</text>
         <text x="18.4" y="917.55" fill="#11bc79">───</text>
-        <text x="43.61" y="917.55" fill="#cd5555">┴</text>
+        <text x="43.61" y="917.55" fill="#11bc79">┴</text>
         <text x="52.01" y="917.55" fill="#11bc79">───</text>
         <text x="77.21" y="917.55" fill="#11bc79">┘</text>
         <text x="10" y="955.55">--- first_row_full_second_row_split ---</text>
@@ -189,11 +189,11 @@
         <text x="10" y="993.55" fill="#cd5555">│</text>
         <text x="18.4" y="993.55" style="white-space:pre"> a   b </text>
         <text x="77.21" y="993.55" fill="#DAA520">│</text>
-        <text x="10" y="1012.55" fill="#11bc79">├</text>
+        <text x="10" y="1012.55" fill="#cd5555">├</text>
         <text x="18.4" y="1012.55" fill="#11bc79">───</text>
-        <text x="43.61" y="1012.55" fill="#cd5555">┬</text>
+        <text x="43.61" y="1012.55" fill="#11bc79">┬</text>
         <text x="52.01" y="1012.55" fill="#11bc79">───</text>
-        <text x="77.21" y="1012.55" fill="#11bc79">┤</text>
+        <text x="77.21" y="1012.55" fill="#DAA520">┤</text>
         <text x="10" y="1031.55" fill="#cd5555">│</text>
         <text x="18.4" y="1031.55" style="white-space:pre"> c </text>
         <text x="43.61" y="1031.55" fill="#cd5555">│</text>
@@ -201,13 +201,13 @@
         <text x="77.21" y="1031.55" fill="#DAA520">│</text>
         <text x="10" y="1050.55" fill="#11bc79">└</text>
         <text x="18.4" y="1050.55" fill="#11bc79">───</text>
-        <text x="43.61" y="1050.55" fill="#cd5555">┴</text>
+        <text x="43.61" y="1050.55" fill="#11bc79">┴</text>
         <text x="52.01" y="1050.55" fill="#11bc79">───</text>
         <text x="77.21" y="1050.55" fill="#11bc79">┘</text>
         <text x="10" y="1088.55">--- first_row_split_second_row_full ---</text>
         <text x="10" y="1107.55" fill="#4169E1">┌</text>
         <text x="18.4" y="1107.55" fill="#4169E1">───</text>
-        <text x="43.61" y="1107.55" fill="#DAA520">┬</text>
+        <text x="43.61" y="1107.55" fill="#4169E1">┬</text>
         <text x="52.01" y="1107.55" fill="#4169E1">───</text>
         <text x="77.21" y="1107.55" fill="#4169E1">┐</text>
         <text x="10" y="1126.55" fill="#cd5555">│</text>
@@ -215,11 +215,11 @@
         <text x="43.61" y="1126.55" fill="#DAA520">│</text>
         <text x="52.01" y="1126.55" style="white-space:pre"> b </text>
         <text x="77.21" y="1126.55" fill="#DAA520">│</text>
-        <text x="10" y="1145.55" fill="#11bc79">├</text>
+        <text x="10" y="1145.55" fill="#cd5555">├</text>
         <text x="18.4" y="1145.55" fill="#11bc79">───</text>
-        <text x="43.61" y="1145.55" fill="#DAA520">┴</text>
+        <text x="43.61" y="1145.55" fill="#11bc79">┴</text>
         <text x="52.01" y="1145.55" fill="#11bc79">───</text>
-        <text x="77.21" y="1145.55" fill="#11bc79">┤</text>
+        <text x="77.21" y="1145.55" fill="#DAA520">┤</text>
         <text x="10" y="1164.55" fill="#cd5555">│</text>
         <text x="18.4" y="1164.55" style="white-space:pre"> c   d </text>
         <text x="77.21" y="1164.55" fill="#DAA520">│</text>
@@ -247,7 +247,7 @@
         <text x="10" y="1449.55">--- four_way_junction_bottom_right ---</text>
         <text x="10" y="1468.55" fill="#4169E1">┌</text>
         <text x="18.4" y="1468.55" fill="#4169E1">───</text>
-        <text x="43.61" y="1468.55" fill="#DAA520">┬</text>
+        <text x="43.61" y="1468.55" fill="#4169E1">┬</text>
         <text x="52.01" y="1468.55" fill="#4169E1">───</text>
         <text x="77.21" y="1468.55" fill="#4169E1">┐</text>
         <text x="10" y="1487.55" fill="#cd5555">│</text>
@@ -255,11 +255,11 @@
         <text x="43.61" y="1487.55" fill="#DAA520">│</text>
         <text x="52.01" y="1487.55" style="white-space:pre"> b </text>
         <text x="77.21" y="1487.55" fill="#DAA520">│</text>
-        <text x="10" y="1506.55" fill="#11bc79">├</text>
+        <text x="10" y="1506.55" fill="#cd5555">├</text>
         <text x="18.4" y="1506.55" fill="#11bc79">───</text>
         <text x="43.61" y="1506.55" fill="#11bc79">┼</text>
         <text x="52.01" y="1506.55" fill="#11bc79">───</text>
-        <text x="77.21" y="1506.55" fill="#11bc79">┤</text>
+        <text x="77.21" y="1506.55" fill="#DAA520">┤</text>
         <text x="10" y="1525.55" fill="#cd5555">│</text>
         <text x="18.4" y="1525.55" style="white-space:pre"> c </text>
         <text x="43.61" y="1525.55" fill="#DAA520">│</text>
@@ -267,13 +267,13 @@
         <text x="77.21" y="1525.55" fill="#DAA520">│</text>
         <text x="10" y="1544.55" fill="#11bc79">└</text>
         <text x="18.4" y="1544.55" fill="#11bc79">───</text>
-        <text x="43.61" y="1544.55" fill="#DAA520">┴</text>
+        <text x="43.61" y="1544.55" fill="#11bc79">┴</text>
         <text x="52.01" y="1544.55" fill="#11bc79">───</text>
         <text x="77.21" y="1544.55" fill="#11bc79">┘</text>
         <text x="10" y="1582.55">--- four_way_junction_bottom_left ---</text>
         <text x="10" y="1601.55" fill="#4169E1">┌</text>
         <text x="18.4" y="1601.55" fill="#4169E1">───</text>
-        <text x="43.61" y="1601.55" fill="#cd5555">┬</text>
+        <text x="43.61" y="1601.55" fill="#4169E1">┬</text>
         <text x="52.01" y="1601.55" fill="#4169E1">───</text>
         <text x="77.21" y="1601.55" fill="#4169E1">┐</text>
         <text x="10" y="1620.55" fill="#cd5555">│</text>
@@ -281,11 +281,11 @@
         <text x="43.61" y="1620.55" fill="#cd5555">│</text>
         <text x="52.01" y="1620.55" style="white-space:pre"> b </text>
         <text x="77.21" y="1620.55" fill="#DAA520">│</text>
-        <text x="10" y="1639.55" fill="#11bc79">├</text>
+        <text x="10" y="1639.55" fill="#cd5555">├</text>
         <text x="18.4" y="1639.55" fill="#11bc79">───</text>
         <text x="43.61" y="1639.55" fill="#11bc79">┼</text>
         <text x="52.01" y="1639.55" fill="#11bc79">───</text>
-        <text x="77.21" y="1639.55" fill="#11bc79">┤</text>
+        <text x="77.21" y="1639.55" fill="#DAA520">┤</text>
         <text x="10" y="1658.55" fill="#cd5555">│</text>
         <text x="18.4" y="1658.55" style="white-space:pre"> c </text>
         <text x="43.61" y="1658.55" fill="#cd5555">│</text>
@@ -293,13 +293,13 @@
         <text x="77.21" y="1658.55" fill="#DAA520">│</text>
         <text x="10" y="1677.55" fill="#11bc79">└</text>
         <text x="18.4" y="1677.55" fill="#11bc79">───</text>
-        <text x="43.61" y="1677.55" fill="#cd5555">┴</text>
+        <text x="43.61" y="1677.55" fill="#11bc79">┴</text>
         <text x="52.01" y="1677.55" fill="#11bc79">───</text>
         <text x="77.21" y="1677.55" fill="#11bc79">┘</text>
         <text x="10" y="1715.55">--- four_way_junction_top_left ---</text>
         <text x="10" y="1734.55" fill="#4169E1">┌</text>
         <text x="18.4" y="1734.55" fill="#4169E1">───</text>
-        <text x="43.61" y="1734.55" fill="#cd5555">┬</text>
+        <text x="43.61" y="1734.55" fill="#4169E1">┬</text>
         <text x="52.01" y="1734.55" fill="#4169E1">───</text>
         <text x="77.21" y="1734.55" fill="#4169E1">┐</text>
         <text x="10" y="1753.55" fill="#cd5555">│</text>
@@ -311,7 +311,7 @@
         <text x="18.4" y="1772.55" fill="#4169E1">───</text>
         <text x="43.61" y="1772.55" fill="#4169E1">┼</text>
         <text x="52.01" y="1772.55" fill="#4169E1">───</text>
-        <text x="77.21" y="1772.55" fill="#4169E1">┤</text>
+        <text x="77.21" y="1772.55" fill="#DAA520">┤</text>
         <text x="10" y="1791.55" fill="#cd5555">│</text>
         <text x="18.4" y="1791.55" style="white-space:pre"> c </text>
         <text x="43.61" y="1791.55" fill="#cd5555">│</text>
@@ -319,13 +319,13 @@
         <text x="77.21" y="1791.55" fill="#DAA520">│</text>
         <text x="10" y="1810.55" fill="#11bc79">└</text>
         <text x="18.4" y="1810.55" fill="#11bc79">───</text>
-        <text x="43.61" y="1810.55" fill="#cd5555">┴</text>
+        <text x="43.61" y="1810.55" fill="#11bc79">┴</text>
         <text x="52.01" y="1810.55" fill="#11bc79">───</text>
         <text x="77.21" y="1810.55" fill="#11bc79">┘</text>
         <text x="10" y="1848.55">--- four_way_junction_top_right ---</text>
         <text x="10" y="1867.55" fill="#4169E1">┌</text>
         <text x="18.4" y="1867.55" fill="#4169E1">───</text>
-        <text x="43.61" y="1867.55" fill="#DAA520">┬</text>
+        <text x="43.61" y="1867.55" fill="#4169E1">┬</text>
         <text x="52.01" y="1867.55" fill="#4169E1">───</text>
         <text x="77.21" y="1867.55" fill="#4169E1">┐</text>
         <text x="10" y="1886.55" fill="#cd5555">│</text>
@@ -337,7 +337,7 @@
         <text x="18.4" y="1905.55" fill="#4169E1">───</text>
         <text x="43.61" y="1905.55" fill="#4169E1">┼</text>
         <text x="52.01" y="1905.55" fill="#4169E1">───</text>
-        <text x="77.21" y="1905.55" fill="#4169E1">┤</text>
+        <text x="77.21" y="1905.55" fill="#DAA520">┤</text>
         <text x="10" y="1924.55" fill="#cd5555">│</text>
         <text x="18.4" y="1924.55" style="white-space:pre"> c </text>
         <text x="43.61" y="1924.55" fill="#DAA520">│</text>
@@ -345,7 +345,7 @@
         <text x="77.21" y="1924.55" fill="#DAA520">│</text>
         <text x="10" y="1943.55" fill="#11bc79">└</text>
         <text x="18.4" y="1943.55" fill="#11bc79">───</text>
-        <text x="43.61" y="1943.55" fill="#DAA520">┴</text>
+        <text x="43.61" y="1943.55" fill="#11bc79">┴</text>
         <text x="52.01" y="1943.55" fill="#11bc79">───</text>
         <text x="77.21" y="1943.55" fill="#11bc79">┘</text>
         <text x="10" y="1981.55">--- all ---</text>
