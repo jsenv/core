@@ -61,7 +61,6 @@ export const createBorderBottomNode = ({ bold, color }) => {
     yAlign: "start",
   };
 };
-
 // half sides
 export const createBorderHalfLeftNode = ({ bold, color }) => {
   return {
@@ -104,7 +103,7 @@ export const createBorderHalfDownNode = ({ bold, color }) => {
   };
 };
 
-// 2 way intersections
+// intersections between 2 borders
 export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   const { color } = topBorder;
   const innerCreateBorder = (char, props) => {
@@ -274,15 +273,13 @@ export const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
   });
 };
 
+// intersections between 3 borders
 export const createBorderMidTopNode = (
   westBorderTop,
   downBorder,
   eastBorderTop,
 ) => {
   const { color } = downBorder;
-  const westIsBold = westBorderTop.bold;
-  const downIsBold = downBorder.bold;
-  const rightIsBold = eastBorderTop.bold;
   const innerCreateBorder = (char, props) => {
     return {
       type: "border_mid_top",
@@ -293,8 +290,12 @@ export const createBorderMidTopNode = (
       ...props,
     };
   };
-  const nothingIsBold = !westIsBold && !downIsBold && !rightIsBold;
-  if (nothingIsBold) {
+
+  const westIsBold = westBorderTop.bold;
+  const downIsBold = downBorder.bold;
+  const rightIsBold = eastBorderTop.bold;
+  const noneAreBold = !westIsBold && !downIsBold && !rightIsBold;
+  if (noneAreBold) {
     return innerCreateBorder("┬", {
       xPadChar: "─",
       yPadChar: "│",
@@ -312,6 +313,20 @@ export const createBorderMidTopNode = (
     return innerCreateBorder("┯", {
       xPadChar: "━",
       yPadChar: "│",
+    });
+  }
+  const westAndDownAreBold = westIsBold && downIsBold && !rightIsBold;
+  if (westAndDownAreBold) {
+    return innerCreateBorder("┱", {
+      xPadChar: ["━", "─"],
+      yPadChar: "┃",
+    });
+  }
+  const eastAndDownAreBold = !westIsBold && downIsBold && rightIsBold;
+  if (eastAndDownAreBold) {
+    return innerCreateBorder("┲", {
+      xPadChar: ["─", "━"],
+      yPadChar: "┃",
     });
   }
   const onlyWestIsBold = westIsBold && !downIsBold && !rightIsBold;
@@ -337,56 +352,226 @@ export const createBorderMidTopNode = (
 export const createBorderMidBottomNode = (
   leftBorder,
   upBorder,
-  // rightBorder,
+  rightBorder,
 ) => {
   const { color } = upBorder;
-
-  return {
-    type: "border_mid_bottom",
-    color,
-    xAlign: "center",
-    yAlign: "end",
-    xPadChar: "─",
-    yPadChar: "│",
-    rects: [{ width: 1, render: "┴" }],
+  const innerCreateBorder = (char, props) => {
+    return {
+      type: "border_mid_bottom",
+      color,
+      xAlign: "center",
+      yAlign: "end",
+      rects: [{ width: 1, render: char }],
+      ...props,
+    };
   };
+
+  const leftIsBold = leftBorder.bold;
+  const upIsBold = upBorder.bold;
+  const rightIsBold = rightBorder.bold;
+  const noneAreBold = !leftIsBold && !upIsBold && !rightIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┴", {
+      xPadChar: "─",
+      yPadChar: "│",
+    });
+  }
+  const allAreBold = leftIsBold && upIsBold && rightIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┻", {
+      xPadChar: "━",
+      yPadChar: "┃",
+    });
+  }
+  const leftAndRightAreBold = leftIsBold && !upIsBold && rightIsBold;
+  if (leftAndRightAreBold) {
+    return innerCreateBorder("┷", {
+      xPadChar: "━",
+      yPadChar: "│",
+    });
+  }
+  const leftAndUpAreBold = leftIsBold && upIsBold && !rightIsBold;
+  if (leftAndUpAreBold) {
+    return innerCreateBorder("┹", {
+      xPadChar: ["━", "─"],
+      yPadChar: "┃",
+    });
+  }
+  const rightAndUpAreBold = !leftIsBold && upIsBold && rightIsBold;
+  if (rightAndUpAreBold) {
+    return innerCreateBorder("┺", {
+      xPadChar: ["─", "━"],
+      yPadChar: "┃",
+    });
+  }
+  const onlyLeftIsBold = leftIsBold && !upIsBold && !rightIsBold;
+  if (onlyLeftIsBold) {
+    return innerCreateBorder("┵", {
+      xPadChar: ["━", "─"],
+      yPadChar: "│",
+    });
+  }
+  const onlyRightIsBold = !leftIsBold && !upIsBold && rightIsBold;
+  if (onlyRightIsBold) {
+    return innerCreateBorder("┶", {
+      xPadChar: ["─", "━"],
+      yPadChar: "┃",
+    });
+  }
+  // only up is bold
+  return innerCreateBorder("┸", {
+    xPadChar: "─",
+    yPadChar: "┃",
+  });
 };
-export const createBorderMidLeftNode = (
-  upBorder,
-  // middleBorder,
-  // downBorder,
-) => {
+export const createBorderMidLeftNode = (upBorder, middleBorder, downBorder) => {
   const { color } = upBorder;
-
-  return {
-    type: "border_mid_left",
-    color,
-    xAlign: "start",
-    yAlign: "center",
-    xPadChar: "─",
-    yPadChar: "│",
-    rects: [{ width: 1, render: "├" }],
+  const innerCreateBorder = (char, props) => {
+    return {
+      type: "border_mid_left",
+      color,
+      xAlign: "start",
+      yAlign: "center",
+      rects: [{ width: 1, render: char }],
+      ...props,
+    };
   };
+
+  const upIsBold = upBorder.bold;
+  const middleIsBold = middleBorder.bold;
+  const downIsBold = downBorder.bold;
+  const nothingIsBold = !upIsBold && !middleIsBold && !downIsBold;
+  if (nothingIsBold) {
+    return innerCreateBorder("├", {
+      xPadChar: "─",
+      yPadChar: "│",
+    });
+  }
+  const allAreBold = upIsBold && middleIsBold && downIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┣", {
+      xPadChar: "━",
+      yPadChar: "┃",
+    });
+  }
+  const upAndDownAreBold = upIsBold && !middleIsBold && downIsBold;
+  if (upAndDownAreBold) {
+    return innerCreateBorder("┠", {
+      xPadChar: "─",
+      yPadChar: "┃",
+    });
+  }
+  const middleAndDownAreBold = !upIsBold && middleIsBold && downIsBold;
+  if (middleAndDownAreBold) {
+    return innerCreateBorder("┢", {
+      xPadChar: "━",
+      yPadChar: ["│", "┃"],
+    });
+  }
+  const middleAndUpAreBold = upIsBold && middleIsBold && !downIsBold;
+  if (middleAndUpAreBold) {
+    return innerCreateBorder("┡", {
+      xPadChar: "━",
+      yPadChar: ["┃", "│"],
+    });
+  }
+  const onlyUpIsBold = upIsBold && !middleIsBold && !downIsBold;
+  if (onlyUpIsBold) {
+    return innerCreateBorder("┞", {
+      xPadChar: "─",
+      yPadChar: ["┃", "│"],
+    });
+  }
+  const onlyMiddleIsBold = !upIsBold && middleIsBold && !downIsBold;
+  if (onlyMiddleIsBold) {
+    return innerCreateBorder("┝", {
+      xPadChar: "━",
+      yPadChar: "│",
+    });
+  }
+  // only down is bold
+  return innerCreateBorder("┟", {
+    xPadChar: "─",
+    yPadChar: ["│", "┃"],
+  });
 };
 export const createBorderMidRightNode = (
   upBorder,
-  // middleBorder,
-  // downBorder,
+  middleBorder,
+  downBorder,
 ) => {
   const { color } = upBorder;
-
-  return {
-    type: "border_mid_right",
-    color,
-    xAlign: "end",
-    yAlign: "center",
-    xPadChar: "─",
-    yPadChar: "│",
-    rects: [{ width: 1, render: "┤" }],
+  const innerCreateBorder = (char, props) => {
+    return {
+      type: "border_mid_right",
+      color,
+      xAlign: "end",
+      yAlign: "center",
+      rects: [{ width: 1, render: char }],
+      ...props,
+    };
   };
+
+  const upIsBold = upBorder.bold;
+  const middleIsBold = middleBorder.bold;
+  const downIsBold = downBorder.bold;
+  const noneAreBold = !upIsBold && !middleIsBold && !downIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┤", {
+      xPadChar: "─",
+      yPadChar: "│",
+    });
+  }
+  const allAreBold = upIsBold && middleIsBold && downIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┫", {
+      xPadChar: "━",
+      yPadChar: "┃",
+    });
+  }
+  const upAndDownAreBold = upIsBold && !middleIsBold && downIsBold;
+  if (upAndDownAreBold) {
+    return innerCreateBorder("┨", {
+      xPadChar: "─",
+      yPadChar: "┃",
+    });
+  }
+  const middleAndDownAreBold = !upIsBold && middleIsBold && downIsBold;
+  if (middleAndDownAreBold) {
+    return innerCreateBorder("┪", {
+      xPadChar: "━",
+      yPadChar: ["│", "┃"],
+    });
+  }
+  const middleAndUpAreBold = upIsBold && middleIsBold && !downIsBold;
+  if (middleAndUpAreBold) {
+    return innerCreateBorder("┩", {
+      xPadChar: "━",
+      yPadChar: ["│", "┃"],
+    });
+  }
+  const onlyUpIsBold = upIsBold && !middleIsBold && !downIsBold;
+  if (onlyUpIsBold) {
+    return innerCreateBorder("┦", {
+      xPadChar: "─",
+      yPadChar: ["┃", "│"],
+    });
+  }
+  const onlyMiddleIsBold = !upIsBold && middleIsBold && !downIsBold;
+  if (onlyMiddleIsBold) {
+    return innerCreateBorder("┥", {
+      xPadChar: "━",
+      yPadChar: "│",
+    });
+  }
+  // only down is bold
+  return innerCreateBorder("┧", {
+    xPadChar: "─",
+    yPadChar: ["│", "┃"],
+  });
 };
 
-// 4 way intersection
+// intersection between 4 borders
 export const createBorderMidNode = (
   leftBorder,
   // rightBorder,
