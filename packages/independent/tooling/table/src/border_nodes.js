@@ -574,19 +574,115 @@ export const createBorderMidRightNode = (
 // intersection between 4 borders
 export const createBorderMidNode = (
   leftBorder,
-  // rightBorder,
-  // downBorder,
+  rightBorder,
+  downBorder,
   upBorder,
 ) => {
   const { color } = upBorder;
-
-  return {
-    type: "border_mid",
-    color,
-    xAlign: "center",
-    yAlign: "center",
-    xPadChar: "─",
-    yPadChar: "│",
-    rects: [{ width: 1, render: "┼" }],
+  const innerCreateBorder = (char, props) => {
+    return {
+      type: "border_mid",
+      color,
+      xAlign: "center",
+      yAlign: "center",
+      rects: [{ width: 1, render: char }],
+      ...props,
+    };
   };
+
+  const leftIsBold = leftBorder.bold;
+  const rightIsBold = rightBorder.bold;
+  const downIsBold = downBorder.bold;
+  const upIsBold = upBorder.bold;
+  const noneAreBold = !leftIsBold && !rightIsBold && !downIsBold && !upIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┼", {
+      xPadChar: "─",
+      yPadChar: "│",
+    });
+  }
+  const allAreBold = leftIsBold && rightIsBold && downIsBold && upIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("╋", {
+      xPadChar: "━",
+      yPadChar: "┃",
+    });
+  }
+  const leftAndRightAreBold =
+    leftIsBold && rightIsBold && !downIsBold && !upIsBold;
+  if (leftAndRightAreBold) {
+    return innerCreateBorder("┿", {
+      xPadChar: "━",
+      yPadChar: "│",
+    });
+  }
+  const upAndDownAreBold =
+    !leftIsBold && !rightIsBold && downIsBold && upIsBold;
+  if (upAndDownAreBold) {
+    return innerCreateBorder("╂", {
+      xPadChar: "─",
+      yPadChar: "┃",
+    });
+  }
+  const leftAndDownAreBold =
+    leftIsBold && !rightIsBold && downIsBold && !upIsBold;
+  if (leftAndDownAreBold) {
+    return innerCreateBorder("╅", {
+      xPadChar: ["━", "─"],
+      yPadChar: ["│", "┃"],
+    });
+  }
+  const leftAndUpAreBold =
+    leftIsBold && !rightIsBold && !downIsBold && upIsBold;
+  if (leftAndUpAreBold) {
+    return innerCreateBorder("╃", {
+      xPadChar: ["━", "─"],
+      yPadChar: ["┃", "│"],
+    });
+  }
+  const rightAndUpAreBold =
+    !leftIsBold && rightIsBold && !downIsBold && upIsBold;
+  if (rightAndUpAreBold) {
+    return innerCreateBorder("╄", {
+      xPadChar: ["─", "━"],
+      yPadChar: ["┃", "│"],
+    });
+  }
+  const rightAndDownAreBold =
+    !leftIsBold && rightIsBold && downIsBold && !upIsBold;
+  if (rightAndDownAreBold) {
+    return innerCreateBorder("╆", {
+      xPadChar: ["─", "━"],
+      yPadChar: ["│", "┃"],
+    });
+  }
+  const leftAndRightAndDownAreBold =
+    leftIsBold && rightIsBold && downIsBold && !upIsBold;
+  if (leftAndRightAndDownAreBold) {
+    return innerCreateBorder("╉", {
+      xPadChar: ["━", "─"],
+      yPadChar: "┃",
+    });
+  }
+  const leftAndRightAndUpAreBold =
+    leftIsBold && rightIsBold && !downIsBold && upIsBold;
+  if (leftAndRightAndUpAreBold) {
+    return innerCreateBorder("╇", {
+      xPadChar: "━",
+      yPadChar: ["┃", "│"],
+    });
+  }
+  const upAndRightAndDownAreBold =
+    !leftIsBold && rightIsBold && downIsBold && upIsBold;
+  if (upAndRightAndDownAreBold) {
+    return innerCreateBorder("╊", {
+      xPadChar: ["─", "━"],
+      yPadChar: "┃",
+    });
+  }
+  // rigthAndDownAndLeftAreBold
+  return innerCreateBorder("╈", {
+    xPadChar: "━",
+    yPadChar: ["│", "┃"],
+  });
 };
