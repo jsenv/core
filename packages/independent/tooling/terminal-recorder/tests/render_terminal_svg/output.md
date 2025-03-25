@@ -13,3 +13,7 @@
 # rainbow_no_head
 
 ![img](./output/rainbow_no_head.svg)
+
+# array_bottom_border_row
+
+![img](./output/array_bottom_border_row.svg)

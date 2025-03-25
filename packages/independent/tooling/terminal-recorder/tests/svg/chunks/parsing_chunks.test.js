@@ -27,3 +27,4 @@ test("special.txt");
 test("unicode.txt");
 test("underline.txt");
 test("underline_2.txt");
+test("array_bottom_row.txt");

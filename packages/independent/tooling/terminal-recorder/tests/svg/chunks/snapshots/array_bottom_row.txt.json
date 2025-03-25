@@ -1,0 +1,113 @@
+[
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "green",
+      "ansi": "\u001b[32m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 0
+    },
+    "style": {
+      "foregroundColor": "green"
+    }
+  },
+  {
+    "type": "text",
+    "value": "───",
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 5
+    },
+    "style": {
+      "foregroundColor": "green"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "reset",
+      "ansi": "\u001b[0m",
+      "decorator": "reset"
+    },
+    "position": {
+      "x": 3,
+      "y": 0,
+      "n": 3,
+      "raw": 8
+    },
+    "style": {}
+  },
+  {
+    "type": "text",
+    "value": "┘   └",
+    "position": {
+      "x": 3,
+      "y": 0,
+      "n": 3,
+      "raw": 12
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "green",
+      "ansi": "\u001b[32m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 8,
+      "y": 0,
+      "n": 8,
+      "raw": 17
+    },
+    "style": {
+      "foregroundColor": "green"
+    }
+  },
+  {
+    "type": "text",
+    "value": "───",
+    "position": {
+      "x": 8,
+      "y": 0,
+      "n": 8,
+      "raw": 22
+    },
+    "style": {
+      "foregroundColor": "green"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "reset",
+      "ansi": "\u001b[0m",
+      "decorator": "reset"
+    },
+    "position": {
+      "x": 11,
+      "y": 0,
+      "n": 11,
+      "raw": 25
+    },
+    "style": {}
+  },
+  {
+    "type": "newline",
+    "value": "\n",
+    "position": {
+      "x": 11,
+      "y": 0,
+      "n": 11,
+      "raw": 29
+    }
+  }
+]

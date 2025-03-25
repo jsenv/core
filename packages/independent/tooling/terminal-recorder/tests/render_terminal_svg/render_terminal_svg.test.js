@@ -37,4 +37,6 @@ startTesting((test) => {
     "[31mred [39m[33myellow [39m[32mgreen [39m[36mcyan [39m[34mblue [39m[35mmagenta[39m",
     { head: false },
   );
+
+  test("array_bottom_border_row", "[32m───[0m┘   └[32m───[0m");
 });
