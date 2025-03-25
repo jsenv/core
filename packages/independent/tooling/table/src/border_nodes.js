@@ -105,21 +105,46 @@ export const createBorderHalfDownNode = ({ bold, color }) => {
 };
 
 // 2 way intersections
-export const createBorderTopLeftNode = (
-  topBorder,
-  // leftBorder
-) => {
+export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   const { color } = topBorder;
-
-  return {
-    type: "border_top_left",
-    color,
-    xAlign: "start",
-    yAlign: "start",
-    xPadChar: "│",
-    yPadChar: "─",
-    rects: [{ width: 1, render: "┌" }],
+  const topIsBold = topBorder.bold;
+  const leftIsBold = leftBorder.bold;
+  const noneAreBold = !topIsBold && !leftIsBold;
+  const innerCreateBorder = (char, props) => {
+    return {
+      type: "border_top_left",
+      color,
+      xAlign: "start",
+      yAlign: "start",
+      rects: [{ width: 1, render: char }],
+      ...props,
+    };
   };
+  if (noneAreBold) {
+    return innerCreateBorder("┌", {
+      xPadChar: "│",
+      yPadChar: "─",
+    });
+  }
+  const bothAreBold = topIsBold && leftIsBold;
+  if (bothAreBold) {
+    return innerCreateBorder("┏", {
+      xPadChar: "┃",
+      yPadChar: "━",
+    });
+  }
+  const onlyTopIsBold = topIsBold && !leftIsBold;
+  if (onlyTopIsBold) {
+    return innerCreateBorder("┍", {
+      xPadChar: "━",
+      yPadChar: "│",
+    });
+  }
+  // only left is bold
+  return innerCreateBorder("┎", {
+    xPadChar: "┃",
+    yPadChar: "─",
+  });
 };
 export const createBorderTopRightNode = (
   topBorder,
