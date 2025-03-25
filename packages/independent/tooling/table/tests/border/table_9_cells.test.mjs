@@ -1,9 +1,30 @@
 import { renderNamedSections } from "@jsenv/humanize";
-import { renderTable } from "@jsenv/table";
+import { BORDER_COLORS, renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
-const run = ({ borderCollapse }) => {
-  const render = (grid) => renderTable(grid, { borderCollapse });
+const run = ({
+  borderBold,
+  borderCollapse,
+  borderColors,
+  ansi = borderColors,
+}) => {
+  const borderLeft = {
+    color: borderColors ? BORDER_COLORS.RED : null,
+    bold: borderBold,
+  };
+  const borderTop = {
+    color: borderColors ? BORDER_COLORS.BLUE : null,
+    bold: borderBold,
+  };
+  const borderBottom = {
+    color: borderColors ? BORDER_COLORS.GREEN : null,
+    bold: borderBold,
+  };
+  const borderRight = {
+    color: borderColors ? BORDER_COLORS.YELLOW : null,
+    bold: borderBold,
+  };
+  const render = (grid) => renderTable(grid, { borderCollapse, ansi });
 
   const none = render([
     [
@@ -30,7 +51,7 @@ const run = ({ borderCollapse }) => {
     ],
     [
       { value: "d", border: null },
-      { value: "e", border: {} },
+      { value: "e", borderLeft, borderRight, borderBottom, borderTop },
       { value: "f", border: null },
     ],
     [
@@ -53,75 +74,75 @@ const run = ({ borderCollapse }) => {
     [
       { value: "g", border: null },
       { value: "h", border: null },
-      { value: "i", border: {} },
+      { value: "i", borderLeft, borderRight, borderBottom, borderTop },
     ],
   ]);
   const inner_only = render([
     [
-      { value: "a", border: {}, borderLeft: null, borderTop: null },
-      { value: "b", borderBottom: {} },
-      { value: "c", border: {}, borderRight: null, borderTop: null },
+      { value: "a", borderRight, borderBottom },
+      { value: "b", borderBottom },
+      { value: "c", borderLeft, borderBottom },
     ],
     [
-      { value: "d", borderRight: {}, borderBottom: {} },
+      { value: "d", borderRight, borderBottom: {} },
       { value: "e", borderBottom: {} },
-      { value: "f", borderLeft: {}, borderBottom: {} },
+      { value: "f", borderLeft, borderBottom: {} },
     ],
     [
-      { value: "g", borderRight: {} },
+      { value: "g", borderRight },
       { value: "h", border: null },
-      { value: "i", borderLeft: {} },
+      { value: "i", borderLeft },
     ],
   ]);
   const head = render([
     [
-      { value: "a", border: {} },
-      { value: "b", borderTop: {}, borderBottom: {} },
-      { value: "c", border: {} },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "b", borderTop, borderBottom: {} },
+      { value: "c", borderLeft, borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "d", borderLeft: {}, borderRight: {} },
+      { value: "d", borderLeft, borderRight },
       { value: "e", border: null },
-      { value: "f", borderLeft: {}, borderRight: {} },
+      { value: "f", borderLeft, borderRight },
     ],
     [
-      { value: "g", borderLeft: {}, borderBottom: {}, borderRight: {} },
+      { value: "g", borderLeft, borderBottom: {}, borderRight },
       { value: "h", border: null, borderBottom: {} },
-      { value: "i", borderLeft: {}, borderRight: {}, borderBottom: {} },
+      { value: "i", borderLeft, borderRight, borderBottom: {} },
     ],
   ]);
   const foot = render([
     [
-      { value: "a", borderLeft: {}, borderTop: {}, borderRight: {} },
-      { value: "b", border: null, borderTop: {} },
-      { value: "c", borderLeft: {}, borderRight: {}, borderTop: {} },
+      { value: "a", borderLeft, borderTop, borderRight },
+      { value: "b", border: null, borderTop },
+      { value: "c", borderLeft, borderRight, borderTop },
     ],
     [
-      { value: "d", borderLeft: {}, borderRight: {} },
+      { value: "d", borderLeft, borderRight },
       { value: "e", border: null },
-      { value: "f", borderLeft: {}, borderRight: {} },
+      { value: "f", borderLeft, borderRight },
     ],
     [
-      { value: "g", border: {} },
-      { value: "h", borderTop: {}, borderBottom: {} },
-      { value: "i", border: {} },
+      { value: "g", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "h", borderTop, borderBottom: {} },
+      { value: "i", borderLeft, borderRight, borderBottom, borderTop },
     ],
   ]);
   const all = render([
     [
-      { value: "a", border: {} },
-      { value: "b", border: {} },
-      { value: "c", border: {} },
+      { value: "a", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "b", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "c", borderLeft, borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "d", border: {} },
-      { value: "e", border: {} },
-      { value: "f", border: {} },
+      { value: "d", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "e", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "f", borderLeft, borderRight, borderBottom, borderTop },
     ],
     [
-      { value: "g", border: {} },
-      { value: "h", border: {} },
-      { value: "i", border: {} },
+      { value: "g", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "h", borderLeft, borderRight, borderBottom, borderTop },
+      { value: "i", borderLeft, borderRight, borderBottom, borderTop },
     ],
   ]);
 
@@ -141,5 +162,13 @@ const run = ({ borderCollapse }) => {
 await snapshotTableTests(import.meta.url, ({ test }) => {
   test(`0_basic`, () => run({}));
 
-  test(`1_border_collapse`, () => run({ borderCollapse: true }));
+  test(`1_border_collapse`, () =>
+    run({
+      borderCollapse: true,
+    }));
+
+  test(`2_border_colors`, () =>
+    run({
+      borderColors: true,
+    }));
 });

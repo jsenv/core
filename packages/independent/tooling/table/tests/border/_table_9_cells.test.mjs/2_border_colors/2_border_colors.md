@@ -1,12 +1,17 @@
-# [1_border_collapse](../../table_9_cells.test.mjs#L165)
+# [2_border_colors](../../table_9_cells.test.mjs#L170)
 
 ```js
 run({
-  borderCollapse: true,
+  borderColors: true,
 })
 ```
 
 # 1/2 console.log
+
+![img](console.log.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
 --- none ---
@@ -52,15 +57,20 @@ run({
 └───┴───┴───┘
 
 --- all ---
-┌───┬───┬───┐
-│ a │ b │ c │
-├───┼───┼───┤
-│ d │ e │ f │
-├───┼───┼───┤
-│ g │ h │ i │
-└───┴───┴───┘
+┌───┐┌───┐┌───┐
+│ a ││ b ││ c │
+└───┘└───┘└───┘
+┌───┐┌───┐┌───┐
+│ d ││ e ││ f │
+└───┘└───┘└───┘
+┌───┐┌───┐┌───┐
+│ g ││ h ││ i │
+└───┘└───┘└───┘
 
 ```
+
+</details>
+
 
 # 2/2 return
 
