@@ -24,7 +24,6 @@ const run = ({
     color: borderColors ? BORDER_COLORS.YELLOW : null,
     bold: borderBold,
   };
-
   const render = (grid) => renderTable(grid, { borderCollapse, ansi });
 
   const bottom_and_top = render([
@@ -113,5 +112,5 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
 
   test(`1_border_collapse`, () => run({ borderCollapse: true }));
 
-  test.ONLY("2_border_colors", () => run({ borderColors: true }));
+  test("2_border_colors", () => run({ borderColors: true }));
 });

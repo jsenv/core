@@ -1,24 +1,29 @@
-# [1_border_collapse](../../table_2_cells_same_row.test.mjs#L122)
+# [2_border_colors](../../table_2_cells_same_row.test.mjs#L124)
 
 ```js
-run({ borderCollapse: true })
+run({ borderColors: true })
 ```
 
 # 1/2 console.log
 
+![img](console.log.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 --- right_and_left ---
- a │ b 
+ a ││ b 
 
 --- top_right_and_bottom_left ---
-───┐   
- a │ b 
-   └───
+───┐╷   
+ a ││ b 
+   ╵└───
 
 --- bottom_right_and_top_left ---
-   ┌───
- a │ b 
-───┘   
+   ╷┌───
+ a ││ b 
+───┘╵   
 
 --- bottom_left_and_top_right ---
 ╷   ───┐
@@ -41,9 +46,9 @@ run({ borderCollapse: true })
    └───┘
 
 --- all_but_bottom_all_but_top ---
-┌───┐   ╷
-│ a │ b │
-╵   └───┘
+┌───┐╷   ╷
+│ a ││ b │
+╵   ╵└───┘
 
 --- all_but_right_all_but_left ---
 ┌──────┐
@@ -61,11 +66,14 @@ run({ borderCollapse: true })
 └───┴───┘
 
 --- all ---
-┌───┬───┐
-│ a │ b │
-└───┴───┘
+┌───┐┌───┐
+│ a ││ b │
+└───┘└───┘
 
 ```
+
+</details>
+
 
 # 2/2 return
 
