@@ -232,6 +232,9 @@ export const renderTerminalSvg = (
       if (style.italic) {
         attrs["font-style"] = "italic";
       }
+      if (value.includes("  ")) {
+        attrs.style = "white-space:pre";
+      }
 
       let opacity = 1;
       if (style.dim) {

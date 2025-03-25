@@ -25,17 +25,17 @@ const startTesting = (callback) => {
 };
 
 startTesting((test) => {
-  // test("hello_world", "hello world");
+  test("hello_world", "hello world");
 
-  // test("hello_world_custom_title", "hello world", { title: "Terminal" });
+  test("hello_world_custom_title", "hello world", { title: "Terminal" });
 
-  // test("hello_world_no_head", "hello world", { head: false });
+  test("hello_world_no_head", "hello world", { head: false });
 
-  // test(
-  //   "rainbow_no_head",
-  //   "[31mred [39m[33myellow [39m[32mgreen [39m[36mcyan [39m[34mblue [39m[35mmagenta[39m",
-  //   { head: false },
-  // );
+  test(
+    "rainbow_no_head",
+    "[31mred [39m[33myellow [39m[32mgreen [39m[36mcyan [39m[34mblue [39m[35mmagenta[39m",
+    { head: false },
+  );
 
   test("color_outside_double_spaced", "[32mA[0mB  B[32mA[0m");
 });
