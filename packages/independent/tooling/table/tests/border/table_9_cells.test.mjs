@@ -84,9 +84,9 @@ const run = ({
       { value: "c", borderLeft, borderBottom },
     ],
     [
-      { value: "d", borderRight, borderBottom: {} },
-      { value: "e", borderBottom: {} },
-      { value: "f", borderLeft, borderBottom: {} },
+      { value: "d", borderRight, borderBottom },
+      { value: "e", borderBottom },
+      { value: "f", borderLeft, borderBottom },
     ],
     [
       { value: "g", borderRight },
@@ -97,7 +97,7 @@ const run = ({
   const head = render([
     [
       { value: "a", borderLeft, borderRight, borderBottom, borderTop },
-      { value: "b", borderTop, borderBottom: {} },
+      { value: "b", borderTop, borderBottom },
       { value: "c", borderLeft, borderRight, borderBottom, borderTop },
     ],
     [
@@ -106,9 +106,9 @@ const run = ({
       { value: "f", borderLeft, borderRight },
     ],
     [
-      { value: "g", borderLeft, borderBottom: {}, borderRight },
-      { value: "h", border: null, borderBottom: {} },
-      { value: "i", borderLeft, borderRight, borderBottom: {} },
+      { value: "g", borderLeft, borderBottom, borderRight },
+      { value: "h", border: null, borderBottom },
+      { value: "i", borderLeft, borderRight, borderBottom },
     ],
   ]);
   const foot = render([
@@ -124,7 +124,7 @@ const run = ({
     ],
     [
       { value: "g", borderLeft, borderRight, borderBottom, borderTop },
-      { value: "h", borderTop, borderBottom: {} },
+      { value: "h", borderTop, borderBottom },
       { value: "i", borderLeft, borderRight, borderBottom, borderTop },
     ],
   ]);
