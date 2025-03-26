@@ -362,9 +362,9 @@ const bottomLeftSlot = {
       southWestConnected = southConnected && westConnected;
       if (southWestConnected) {
         return createBorderMidRightNode(
-          southCell.borderTop || southCell.westCell.borderBottom,
           borderLeft,
-          westCell.borderBottom,
+          southCell.borderTop || southCell.westCell.borderBottom,
+          southCell.borderLeft || southCell.westCell.borderRight,
         );
       }
       if (westConnected) {

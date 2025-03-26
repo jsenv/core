@@ -55,7 +55,7 @@ run({
 --- left_column_split_right_column_full ---
 ┎───┰───┒
 ┃ a ┃ b ┃
-┠───┥   ┃
+┠───┨   ┃
 ┃ c ┃ d ┃
 ┖───┸───┚
 
