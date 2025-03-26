@@ -120,8 +120,8 @@ const topLeftSlot = {
       }
       if (northConnected) {
         return createBorderMidLeftNode(
-          borderTop,
           northCell.borderLeft,
+          borderTop,
           borderLeft,
         );
       }

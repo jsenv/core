@@ -29,7 +29,7 @@
         <text x="10" y="347.55">--- left_and_top_left ---</text>
         <text x="10" y="366.55" fill="#cd5555">│</text>
         <text x="18.4" y="366.55" style="white-space:pre"> a </text>
-        <text x="10" y="385.55" fill="#cd5555">├</text>
+        <text x="10" y="385.55" fill="#4169E1">├</text>
         <text x="18.4" y="385.55" fill="#4169E1">───</text>
         <text x="10" y="404.55" fill="#cd5555">│</text>
         <text x="18.4" y="404.55" style="white-space:pre"> b </text>
@@ -114,7 +114,7 @@
         <text x="10" y="1316.55" fill="#cd5555">│</text>
         <text x="18.4" y="1316.55" style="white-space:pre"> a </text>
         <text x="43.61" y="1316.55" fill="#DAA520">│</text>
-        <text x="10" y="1335.55" fill="#cd5555">├</text>
+        <text x="10" y="1335.55" fill="#4169E1">├</text>
         <text x="18.4" y="1335.55" fill="#4169E1">───</text>
         <text x="43.61" y="1335.55" fill="#4169E1">┤</text>
         <text x="10" y="1354.55" fill="#cd5555">│</text>

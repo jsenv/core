@@ -29,7 +29,7 @@ run({
 
 --- left_and_top_left ---
 │ a 
-┞━━━
+┝━━━
 │ b 
 
 --- bottom_right_and_top_right ---
@@ -79,7 +79,7 @@ run({
 --- all_but_bottom_and_all ---
 ┍━━━┑
 │ a │
-┞━━━┥
+┝━━━┥
 │ b │
 ┕━━━┙
 
