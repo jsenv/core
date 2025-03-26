@@ -133,18 +133,16 @@ const topLeftSlot = {
       northWestConnected = northConnected && westConnected;
       if (northWestConnected) {
         return createBorderMidRightNode(
-          borderLeft,
-          northCell.borderBottom || northCell.borderLeft,
+          northCell.borderLeft || northCell.westCell.borderRight,
           westCell.borderTop,
+          borderLeft,
         );
       }
       if (westConnected) {
         return createBorderTopRightNode(westCell.borderTop, borderLeft);
       }
       if (northConnected) {
-        return createBorderLeftNode(
-          northCell.borderLeft || northCell.borderBottom,
-        );
+        return createBorderLeftNode(borderLeft);
       }
       return createBorderHalfDownNode(borderLeft);
     }
@@ -155,14 +153,14 @@ const topLeftSlot = {
       return createBorderMidBottomNode(
         borderTop,
         northCell.borderLeft,
-        westCell.borderTop || westCell.borderRight,
+        westCell.borderTop || northCell.westCell.borderBottom,
       );
     }
     if (northConnected) {
       return createBorderBottomLeftNode(borderTop, northCell.borderLeft);
     }
     if (westConnected) {
-      return createBorderTopNode(westCell.borderTop || westCell.borderRight);
+      return createBorderTopNode(borderTop);
     }
     return createBorderHalfRightNode(borderTop);
   },
@@ -210,9 +208,9 @@ const topRightSlot = {
       northEastConnected = northConnected && eastConnected;
       if (northEastConnected) {
         return createBorderMidLeftNode(
-          northCell.borderBottom || northCell.borderRight,
-          borderRight,
+          northCell.borderRight || northCell.eastCell.borderLeft,
           eastCell.borderTop,
+          borderRight,
         );
       }
       if (northConnected) {
@@ -239,7 +237,7 @@ const topRightSlot = {
       return createBorderBottomRightNode(borderTop, northCell.borderRight);
     }
     if (eastConnected) {
-      return createBorderTopNode(eastCell.borderTop || eastCell.borderLeft);
+      return createBorderTopNode(borderTop);
     }
     return createBorderHalfLeftNode(borderTop);
   },
@@ -289,7 +287,7 @@ const bottomRightSlot = {
       if (southEastConnected) {
         return createBorderMidTopNode(
           borderRight,
-          southCell.borderTop || southCell.borderRight,
+          southCell.borderTop || southCell.eastCell.borderBottom,
           eastCell.borderBottom,
         );
       }
@@ -297,9 +295,7 @@ const bottomRightSlot = {
         return createBorderBottomLeftNode(eastCell.borderBottom, borderRight);
       }
       if (southConnected) {
-        return createBorderRightNode(
-          southCell.borderRight || southCell.borderTop,
-        );
+        return createBorderRightNode(borderRight);
       }
       return createBorderHalfUpNode(borderRight);
     }
@@ -317,9 +313,7 @@ const bottomRightSlot = {
       return createBorderTopRightNode(borderBottom, southCell.borderRight);
     }
     if (eastConnected) {
-      return createBorderBottomNode(
-        eastCell.borderBottom || eastCell.borderLeft,
-      );
+      return createBorderBottomNode(borderBottom);
     }
     return createBorderHalfLeftNode(borderBottom);
   },
@@ -368,7 +362,7 @@ const bottomLeftSlot = {
       southWestConnected = southConnected && westConnected;
       if (southWestConnected) {
         return createBorderMidRightNode(
-          southCell.borderTop || southCell.borderLeft,
+          southCell.borderTop || southCell.westCell.borderBottom,
           borderLeft,
           westCell.borderBottom,
         );
@@ -377,10 +371,7 @@ const bottomLeftSlot = {
         return createBorderBottomRightNode(westCell.borderBottom, borderLeft);
       }
       if (southConnected) {
-        return createBorderLeftNode(
-          borderLeft,
-          southCell.borderTop || southCell.borderLeft,
-        );
+        return createBorderLeftNode(borderLeft);
       }
       return createBorderHalfUpNode(borderLeft);
     }
@@ -398,9 +389,7 @@ const bottomLeftSlot = {
       return createBorderTopLeftNode(borderBottom, southCell.borderLeft);
     }
     if (westConnected) {
-      return createBorderBottomNode(
-        westCell.borderBottom || westCell.borderRight,
-      );
+      return createBorderBottomNode(borderBottom);
     }
     return createBorderHalfRightNode(borderBottom);
   },
