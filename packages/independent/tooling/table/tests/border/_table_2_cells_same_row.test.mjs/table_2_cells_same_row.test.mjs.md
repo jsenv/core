@@ -4,6 +4,8 @@
 - [0_basic](0_basic/0_basic.md)
 - [1_border_collapse](1_border_collapse/1_border_collapse.md)
 - [2_border_colors](2_border_colors/2_border_colors.md)
+- [3_border_bold_x](3_border_bold_x/3_border_bold_x.md)
+- [4_border_bold_y](4_border_bold_y/4_border_bold_y.md)
 
 ---
 
