@@ -1,4 +1,4 @@
-# [0_basic](../../border_color.test.mjs#L45)
+# [0_basic](../../border_color.test.mjs#L63)
 
 ```js
 run({})
@@ -12,19 +12,22 @@ run({})
   <summary>see without style</summary>
 
 ```console
---- border_top_left ---
-┌───
-│ a 
+--- color_conflict ---
+ a 
+───
+───
+ b 
 
---- castle ---
-───┐   ┌───
- a │ b │ c 
-   └───┘   
+--- color_conflict_collapse ---
+ a 
+───
+ b 
 
---- castle_inverted ---
-   ┌───┐   
- a │ b │ c 
-───┘   └───
+--- color_conflict_collapse_ignore_mistmatch ---
+ a 
+───
+───
+ b 
 
 ```
 

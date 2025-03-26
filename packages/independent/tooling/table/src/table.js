@@ -6,7 +6,6 @@
  *
  * remaining:
  *
- * - border bold/light (+ connection between bold and light)
  *
  * - double border + connection between double and single
  *
@@ -395,7 +394,10 @@ const bottomLeftSlot = {
   },
 };
 
-export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
+export const renderTable = (
+  inputGrid,
+  { ansi, borderCollapse, preventBorderJunctionsWhenColorMismatch } = {},
+) => {
   if (!Array.isArray(inputGrid)) {
     throw new TypeError(`The first arg must be an array, got ${inputGrid}`);
   }
@@ -457,6 +459,16 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
       }
     };
 
+    const canCollapse = (border, otherBorder) => {
+      if (!preventBorderJunctionsWhenColorMismatch) {
+        return true;
+      }
+      if (border.color !== otherBorder.color) {
+        return false;
+      }
+      return true;
+    };
+
     let y = 0;
     for (const inputRow of inputGrid) {
       let x = 0;
@@ -482,7 +494,11 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
           northCell.southCell = cell;
         }
         if (borderLeft) {
-          if (borderCollapse && westCell && westCell.borderRight) {
+          if (
+            borderCollapse &&
+            westCell &&
+            canCollapse(borderLeft, westCell.borderRight)
+          ) {
           } else {
             cell.borderLeft = borderLeft;
             onBorderLeft(x, y);
@@ -493,7 +509,11 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
           onBorderRight(x, y);
         }
         if (borderTop) {
-          if (borderCollapse && northCell && northCell.borderBottom) {
+          if (
+            borderCollapse &&
+            northCell &&
+            canCollapse(borderTop, northCell.borderBottom)
+          ) {
           } else {
             cell.borderTop = borderTop;
             onBorderTop(x, y);
@@ -626,7 +646,9 @@ export const renderTable = (inputGrid, { ansi, borderCollapse } = {}) => {
       while (x < row.length) {
         const cell = row[x];
         const adapt = (slot) => {
-          const node = slot.adapt(cell);
+          const node = slot.adapt(cell, {
+            preventBorderJunctionsWhenColorMismatch,
+          });
           return node;
         };
 
