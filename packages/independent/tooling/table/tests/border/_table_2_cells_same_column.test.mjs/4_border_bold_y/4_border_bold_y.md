@@ -1,111 +1,104 @@
-# [2_border_colors](../../table_2_cells_same_column.test.mjs#L121)
+# [4_border_bold_y](../../table_2_cells_same_column.test.mjs#L132)
 
 ```js
 run({
-  borderColors: true,
+  borderTopBold: true,
+  borderBottomBold: true,
 })
 ```
 
 # 1/2 console.log
 
-![img](console.log.svg)
-
-<details>
-  <summary>see without style</summary>
-
 ```console
 --- bottom_and_top ---
  a 
-───
-───
+━━━
+━━━
  b 
 
 --- bottom_left_and_top_left ---
 │ a 
-└───
-┌───
+┕━━━
+┍━━━
 │ b 
 
 --- left_bottom_and_left ---
 │ a 
-├───
+┞━━━
 │ b 
 
 --- left_and_top_left ---
 │ a 
-├───
+┞━━━
 │ b 
 
 --- bottom_right_and_top_right ---
  a │
-───┘
-───┐
+━━━┙
+━━━┑
  b │
 
 --- right_bottom_and_right ---
  a │
-───┤
+━━━┦
  b │
 
 --- right_and_top_right ---
  a │
-───┤
+━━━┦
  b │
 
 --- top_left_and_bottom_right ---
-┌───╴
+┍━━━╸
 │ a  
   b │
-╶───┘
+╺━━━┙
 
 --- bottom_right_and_top_left ---
   a │
-╶───┘
-┌───╴
+╺━━━┙
+┍━━━╸
 │ b  
 
 --- left_bottom_right ---
 │ a  
-└───┐
+┕━━━┑
   b │
 
 --- left_and_top_right ---
 │ a  
-└───┐
+┕━━━┑
   b │
 
 --- all_but_bottom_and_all_but_top ---
-┌───┐
+┍━━━┑
 │ a │
 │ b │
-└───┘
+┕━━━┙
 
 --- all_but_bottom_and_all ---
-┌───┐
+┍━━━┑
 │ a │
-├───┤
+┞━━━┦
 │ b │
-└───┘
+┕━━━┙
 
 --- all_and_all_but_top ---
-┌───┐
+┍━━━┑
 │ a │
-├───┤
+┞━━━┦
 │ b │
-└───┘
+┕━━━┙
 
 --- all ---
-┌───┐
+┍━━━┑
 │ a │
-└───┘
-┌───┐
+┕━━━┙
+┍━━━┑
 │ b │
-└───┘
+┕━━━┙
 
 ```
-
-</details>
-
 
 # 2/2 return
 
