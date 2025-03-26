@@ -396,7 +396,12 @@ const bottomLeftSlot = {
 
 export const renderTable = (
   inputGrid,
-  { ansi, borderCollapse, preventBorderJunctionsWhenColorMismatch } = {},
+  {
+    ansi,
+    borderCollapse,
+    borderSeparatedOnColorConflict,
+    borderConnectionDisabledOnColorConflict,
+  } = {},
 ) => {
   if (!Array.isArray(inputGrid)) {
     throw new TypeError(`The first arg must be an array, got ${inputGrid}`);
@@ -460,7 +465,7 @@ export const renderTable = (
     };
 
     const canCollapse = (border, otherBorder) => {
-      if (!preventBorderJunctionsWhenColorMismatch) {
+      if (!borderSeparatedOnColorConflict) {
         return true;
       }
       if (border.color !== otherBorder.color) {
@@ -647,7 +652,7 @@ export const renderTable = (
         const cell = row[x];
         const adapt = (slot) => {
           const node = slot.adapt(cell, {
-            preventBorderJunctionsWhenColorMismatch,
+            borderConnectionDisabledOnColorConflict,
           });
           return node;
         };

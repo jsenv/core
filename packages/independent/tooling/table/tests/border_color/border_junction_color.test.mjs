@@ -23,28 +23,13 @@ const run = () => {
       },
     ],
   ];
-
   const main = renderTable(gridWhereBottomAndTopColorAreDifferent, {
     ansi: true,
   });
-  const border_collapse = renderTable(gridWhereBottomAndTopColorAreDifferent, {
-    ansi: true,
-    borderCollapse: true,
-  });
-  const border_collapse_but_separated_if_conflict = renderTable(
-    gridWhereBottomAndTopColorAreDifferent,
-    {
-      ansi: true,
-      borderCollapse: true,
-      borderSeparatedOnColorConflict: true,
-    },
-  );
 
   console.log(
     renderNamedSections({
       main,
-      border_collapse,
-      border_collapse_but_separated_if_conflict,
     }),
   );
 };
