@@ -24,7 +24,7 @@ run({
 
 --- left_bottom_and_left ---
 ┃ a 
-┢───
+┠───
 ┃ b 
 
 --- left_and_top_left ---
@@ -40,12 +40,12 @@ run({
 
 --- right_bottom_and_right ---
  a ┃
-───┪
+───┨
  b ┃
 
 --- right_and_top_right ---
  a ┃
-───┪
+───┨
  b ┃
 
 --- top_left_and_bottom_right ---
@@ -79,14 +79,14 @@ run({
 --- all_but_bottom_and_all ---
 ┎───┒
 ┃ a ┃
-┢───┪
+┢───┨
 ┃ b ┃
 ┖───┚
 
 --- all_and_all_but_top ---
 ┎───┒
 ┃ a ┃
-┢───┪
+┠───┨
 ┃ b ┃
 ┖───┚
 

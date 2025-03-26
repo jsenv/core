@@ -121,8 +121,8 @@ const topLeftSlot = {
       if (northConnected) {
         return createBorderMidLeftNode(
           borderTop,
-          borderLeft,
           northCell.borderLeft,
+          borderLeft,
         );
       }
       return createBorderTopLeftNode(borderTop, borderLeft);
@@ -190,9 +190,9 @@ const topRightSlot = {
       }
       if (northConnected) {
         return createBorderMidRightNode(
+          northCell.borderRight,
           borderTop,
           borderRight,
-          northCell.borderRight,
         );
       }
       if (eastConnected) {
@@ -279,8 +279,8 @@ const bottomRightSlot = {
       }
       if (southConnected) {
         return createBorderMidRightNode(
-          borderBottom,
           borderRight,
+          borderBottom,
           southCell.borderRight,
         );
       }
@@ -354,8 +354,8 @@ const bottomLeftSlot = {
       }
       if (southConnected) {
         return createBorderMidLeftNode(
-          borderBottom,
           borderLeft,
+          borderBottom,
           southCell.borderLeft,
         );
       }
