@@ -17,7 +17,7 @@ run({
 --- around_strange ---
 ┍━━━┯━━━┑
 │ a │ b │
-┝━━━╃━━━┙
+┝━━━┿━━━┙
 │   ┠━━━┑
 │ c │ d │
 ┕━━━┷━━━┙
@@ -88,28 +88,28 @@ run({
 --- four_way_junction_bottom_right ---
 ┍━━━┯━━━┑
 │ a │ b │
-┝━━━╃━━━┥
+┝━━━┿━━━┥
 │ c │ d │
 ┕━━━┷━━━┙
 
 --- four_way_junction_bottom_left ---
 ┍━━━┯━━━┑
 │ a │ b │
-┝━━━╃━━━┥
+┝━━━╅━━━┥
 │ c │ d │
 ┕━━━┷━━━┙
 
 --- four_way_junction_top_left ---
 ┍━━━┯━━━┑
 │ a │ b │
-┝━━━╂━━━┥
+┝━━━╆━━━┥
 │ c │ d │
 ┕━━━┷━━━┙
 
 --- four_way_junction_top_right ---
 ┍━━━┯━━━┑
 │ a │ b │
-┝━━━╃━━━┥
+┝━━━╅━━━┥
 │ c │ d │
 ┕━━━┷━━━┙
 

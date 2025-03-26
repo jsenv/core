@@ -262,8 +262,8 @@ const bottomRightSlot = {
         return createBorderMidNode(
           borderBottom,
           borderRight,
-          southCell.borderRight,
           eastCell.borderBottom,
+          southCell.borderRight,
         );
       }
       if (eastConnected) {

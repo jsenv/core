@@ -578,9 +578,9 @@ export const createBorderMidRightNode = (
 // intersection between 4 borders
 export const createBorderMidNode = (
   leftBorder,
+  upBorder,
   rightBorder,
   downBorder,
-  upBorder,
 ) => {
   const { color } = upBorder;
   const innerCreateBorder = (char, props) => {
