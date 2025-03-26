@@ -1,3 +1,7 @@
+/**
+ * https://www.w3schools.com/charsets/ref_utf_box.asp
+ */
+
 // blank node is a fluid node that will take whatever size it will be requested to take
 // this is useful to enforce a given amount of space is taken in x/y
 // It is used to implement borders because any cell can suddenly
@@ -13,8 +17,14 @@ export const createBlankNode = () => {
 };
 
 // sides
-export const createBorderLeftNode = ({ bold, color }) => {
-  const char = bold ? "┃" : "│";
+export const createBorderLeftNode = ({ style = "solid", bold, color }) => {
+  const char = {
+    solid: ["│", "┃"],
+    dash: ["╎", "╏"],
+    dash_3: ["┆", "┇"],
+    dash_4: ["┊", "┋"],
+    double: ["║", "║"],
+  }[style][bold ? 1 : 0];
 
   return {
     type: "border_left",
@@ -25,8 +35,14 @@ export const createBorderLeftNode = ({ bold, color }) => {
     yPadChar: char,
   };
 };
-export const createBorderRightNode = ({ bold, color }) => {
-  const char = bold ? "┃" : "│";
+export const createBorderRightNode = ({ style = "solid", bold, color }) => {
+  const char = {
+    solid: ["│", "┃"],
+    dash: ["╎", "╏"],
+    dash_3: ["┆", "┇"],
+    dash_4: ["┊", "┋"],
+    double: ["║", "║"],
+  }[style][bold ? 1 : 0];
 
   return {
     type: "border_right",
@@ -37,8 +53,14 @@ export const createBorderRightNode = ({ bold, color }) => {
     yPadChar: char,
   };
 };
-export const createBorderTopNode = ({ bold, color }) => {
-  const char = bold ? "━" : "─";
+export const createBorderTopNode = ({ style = "solid", bold, color }) => {
+  const char = {
+    solid: ["─", "━"],
+    dash: ["╌", "╍"],
+    dash_3: ["┄", "┅"],
+    dash_4: ["┈", "┉"],
+    double: ["═", "═"],
+  }[style][bold ? 1 : 0];
 
   return {
     type: "border_top",
@@ -49,8 +71,14 @@ export const createBorderTopNode = ({ bold, color }) => {
     yAlign: "end",
   };
 };
-export const createBorderBottomNode = ({ bold, color }) => {
-  const char = bold ? "━" : "─";
+export const createBorderBottomNode = ({ style = "solid", bold, color }) => {
+  const char = {
+    solid: ["─", "━"],
+    dash: ["╌", "╍"],
+    dash_3: ["┄", "┅"],
+    dash_4: ["┈", "┉"],
+    double: ["═", "═"],
+  }[style][bold ? 1 : 0];
 
   return {
     type: "border_bottom",

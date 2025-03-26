@@ -1,15 +1,13 @@
 /**
  *
- * https://www.w3schools.com/charsets/ref_utf_box.asp
  * https://github.com/Automattic/cli-table
  *
  *
  * remaining:
  *
- *
  * - double border + connection between double and single
  *
- * - color and style conflicts for collapse (and connected by the way)
+ * - test border style conflict (double -> single heavy)
  *
  * - rounded corners
  *  (plus tard il pourra aussi y avoir un conflit entre double et bold parce qu'il n'y a pas de double bold)
