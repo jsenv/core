@@ -7,28 +7,21 @@ import { BORDER_COLORS, renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
 const run = () => {
-  // const border_top_left = render([
-  //   // prettier-force-multiline
-  //   [{ value: "a", borderLeft, borderTop }],
-  // ]);
-  // const castle = render([
-  //   [
-  //     { value: "a", borderTop, borderRight },
-  //     { value: "b", borderBottom },
-  //     { value: "c", borderLeft, borderTop },
-  //   ],
-  // ]);
-  // const castle_inverted = render([
-  //   [
-  //     { value: "a", borderBottom, borderRight },
-  //     { value: "b", borderTop, borderRight },
-  //     { value: "c", borderBottom },
-  //   ],
-  // ]);
-
   const gridWhereBottomAndTopColorAreDifferent = [
-    [{ value: "a", borderBottom: { color: BORDER_COLORS.RED } }],
-    [{ value: "b", borderTop: { color: BORDER_COLORS.GREEN } }],
+    [
+      {
+        value: "a",
+        borderBottom: { color: BORDER_COLORS.RED },
+        borderLeft: { color: BORDER_COLORS.YELLOW },
+      },
+    ],
+    [
+      {
+        value: "b",
+        borderTop: { color: BORDER_COLORS.GREEN },
+        borderLeft: { color: BORDER_COLORS.BLUE },
+      },
+    ],
   ];
 
   const color_conflict = renderTable(gridWhereBottomAndTopColorAreDifferent, {

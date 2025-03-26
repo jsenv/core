@@ -1,4 +1,4 @@
-# [0_basic](../../border_color.test.mjs#L63)
+# [0_basic](../../border_color.test.mjs#L75)
 
 ```js
 run({})
@@ -13,21 +13,21 @@ run({})
 
 ```console
 --- color_conflict ---
- a 
-───
-───
- b 
+│ a 
+└───
+┌───
+│ b 
 
 --- color_conflict_collapse ---
- a 
-───
- b 
+│ a 
+├───
+│ b 
 
 --- color_conflict_collapse_ignore_mistmatch ---
- a 
-───
-───
- b 
+│ a 
+└───
+┌───
+│ b 
 
 ```
 
