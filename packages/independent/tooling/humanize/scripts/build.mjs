@@ -7,9 +7,6 @@ await build({
     "./main_node.js": {
       buildRelativeUrl: "./node/jsenv_humanize_node.js",
       runtimeCompat: { node: "20" },
-      ignore: {
-        "/**/node_modules/string-width/": true,
-      },
     },
     "./main_browser.js": {
       buildRelativeUrl: "./browser/jsenv_humanize_browser.js",

@@ -43,8 +43,7 @@
   },
   "dependencies": {
     "@jsenv/humanize": "1.3.1",
-    "graphemer": "1.4.0",
-    "string-width": "7.2.0"
+    "graphemer": "1.4.0"
   },
   "devDependencies": {
     "strip-ansi": "7.1.0"

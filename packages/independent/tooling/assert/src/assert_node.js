@@ -1,10 +1,10 @@
+import { measureTextWidth } from "@jsenv/terminal-text-size";
 import Graphemer from "graphemer";
-import stringWidth from "string-width";
 import { createAssert } from "./assert_scratch.js";
 import { createGetWellKnownValuePath } from "./utils/well_known_value.js";
 
 export const assert = createAssert({
-  measureStringWidth: stringWidth,
+  measureStringWidth: measureTextWidth,
   tokenizeString: (string) => {
     // eslint-disable-next-line new-cap
     const splitter = new Graphemer.default();

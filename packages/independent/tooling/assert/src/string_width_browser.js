@@ -1,7 +1,7 @@
 // tslint:disable:ordered-imports (keep segmenter first)
 import { cleanup } from "./segmenter_firefox.js";
-import stringWidth from "string-width";
+import { measureTextWidth } from "@jsenv/terminal-text-size";
 
 cleanup();
 
-export const measureStringWidth = stringWidth;
+export const measureStringWidth = measureTextWidth;

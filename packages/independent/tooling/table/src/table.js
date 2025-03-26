@@ -19,7 +19,7 @@
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
-import stringWidth from "string-width";
+import { measureTextWidth } from "@jsenv/terminal-text-size";
 import {
   createBlankNode,
   createBorderBottomLeftNode,
@@ -1067,7 +1067,7 @@ const createCell = (
   const rects = [];
   for (const line of lines) {
     const isLastLine = lineIndex === lines.length - 1;
-    let lineWidth = stringWidth(line);
+    let lineWidth = measureTextWidth(line);
     let lineText = line;
     if (isLastLine && unit) {
       lineWidth += ` ${unit}`.length;

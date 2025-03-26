@@ -20,7 +20,6 @@ await build({
         jsenvPluginCommonJs({
           include: {
             "file:///**/node_modules/he/": true,
-            "file:///**/node_modules/string-width/": true,
           },
         }),
       ],

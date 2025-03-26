@@ -1,7 +1,7 @@
 // inspired by https://github.com/F1LT3R/parse-ansi/blob/master/index.js
 
+import { measureTextWidth } from "@jsenv/terminal-text-size";
 import ansiRegex from "ansi-regex";
-import stringWidth from "string-width";
 import stripAnsi from "strip-ansi";
 
 export const parseAnsi = (ansi) => {
@@ -231,7 +231,7 @@ export const parseAnsi = (ansi) => {
     if (delimiters.includes(word) === false) {
       const chunk = bundle("text", word);
       result.chunks.push(chunk);
-      const width = stringWidth(word);
+      const width = measureTextWidth(word);
       x += width;
       nAnsi += width;
       nPlain += width;

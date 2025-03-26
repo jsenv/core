@@ -2,8 +2,8 @@
  * see also https://github.com/vadimdemedes/ink
  */
 
+import { measureTextWidth } from "@jsenv/terminal-text-size";
 import ansiEscapes from "ansi-escapes";
-import stringWidth from "string-width";
 
 export const createDynamicLog = ({
   stream = process.stdout,
@@ -35,7 +35,7 @@ export const createDynamicLog = ({
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
     for (const logLine of logLines) {
-      const width = stringWidth(logLine);
+      const width = measureTextWidth(logLine);
       if (width === 0) {
         visualLineCount++;
       } else {
