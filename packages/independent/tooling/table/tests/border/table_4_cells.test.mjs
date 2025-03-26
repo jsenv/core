@@ -225,12 +225,11 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderColors: true,
     }));
 
-  test.ONLY(`3_border_bold_x`, () =>
+  test(`3_border_bold_x`, () =>
     run({
       borderLeftBold: true,
       borderRightBold: true,
-    }),
-  );
+    }));
 
   test(`4_border_bold_y`, () =>
     run({
