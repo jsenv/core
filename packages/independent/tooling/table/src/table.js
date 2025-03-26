@@ -143,7 +143,7 @@ const topLeftSlot = {
       }
       if (northConnected) {
         return createBorderLeftNode(
-          northCell.borderBottom || northCell.borderLeft,
+          northCell.borderLeft || northCell.borderBottom,
         );
       }
       return createBorderHalfDownNode(borderLeft);
@@ -217,8 +217,7 @@ const topRightSlot = {
       }
       if (northConnected) {
         return createBorderRightNode(
-          borderRight,
-          northCell.borderBottom || northCell.borderRight,
+          northCell.borderRight || northCell.borderBottom,
         );
       }
       if (eastConnected) {
@@ -240,10 +239,7 @@ const topRightSlot = {
       return createBorderBottomRightNode(borderTop, northCell.borderRight);
     }
     if (eastConnected) {
-      return createBorderTopNode(
-        borderTop,
-        eastCell.borderTop || eastCell.borderLeft,
-      );
+      return createBorderTopNode(eastCell.borderTop || eastCell.borderLeft);
     }
     return createBorderHalfLeftNode(borderTop);
   },
@@ -302,8 +298,7 @@ const bottomRightSlot = {
       }
       if (southConnected) {
         return createBorderRightNode(
-          borderRight,
-          southCell.borderTop || southCell.borderRight,
+          southCell.borderRight || southCell.borderTop,
         );
       }
       return createBorderHalfUpNode(borderRight);
@@ -323,7 +318,6 @@ const bottomRightSlot = {
     }
     if (eastConnected) {
       return createBorderBottomNode(
-        borderBottom,
         eastCell.borderBottom || eastCell.borderLeft,
       );
     }
@@ -405,7 +399,6 @@ const bottomLeftSlot = {
     }
     if (westConnected) {
       return createBorderBottomNode(
-        borderBottom,
         westCell.borderBottom || westCell.borderRight,
       );
     }
