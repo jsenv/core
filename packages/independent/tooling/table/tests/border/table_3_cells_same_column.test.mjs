@@ -3,26 +3,29 @@ import { BORDER_COLORS, renderTable } from "@jsenv/table";
 import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
 
 const run = ({
-  borderBold,
+  borderLeftBold,
+  borderRightBold,
+  borderTopBold,
+  borderBottomBold,
   borderCollapse,
   borderColors,
   ansi = borderColors,
 }) => {
   const borderLeft = {
     color: borderColors ? BORDER_COLORS.RED : null,
-    bold: borderBold,
+    bold: borderLeftBold,
   };
   const borderTop = {
     color: borderColors ? BORDER_COLORS.BLUE : null,
-    bold: borderBold,
+    bold: borderTopBold,
   };
   const borderBottom = {
     color: borderColors ? BORDER_COLORS.GREEN : null,
-    bold: borderBold,
+    bold: borderBottomBold,
   };
   const borderRight = {
     color: borderColors ? BORDER_COLORS.YELLOW : null,
-    bold: borderBold,
+    bold: borderRightBold,
   };
   const render = (grid) => renderTable(grid, { borderCollapse, ansi });
 
@@ -85,5 +88,17 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
   test("2_border_colors", () =>
     run({
       borderColors: true,
+    }));
+
+  test(`3_border_bold_x`, () =>
+    run({
+      borderLeftBold: true,
+      borderRightBold: true,
+    }));
+
+  test(`4_border_bold_y`, () =>
+    run({
+      borderTopBold: true,
+      borderBottomBold: true,
     }));
 });

@@ -1,7 +1,10 @@
-# [0_basic](../../table_3_cells_same_column.test.mjs#L81)
+# [4_border_bold_y](../../table_3_cells_same_column.test.mjs#L99)
 
 ```js
-run({})
+run({
+  borderTopBold: true,
+  borderBottomBold: true,
+})
 ```
 
 # 1/2 console.log
@@ -18,53 +21,53 @@ run({})
 │ c │
 
 --- top_and_bottom ---
-───
+━━━
  a 
-───
-───
+━━━
+━━━
  b 
-───
-───
+━━━
+━━━
  c 
-───
+━━━
 
 --- castle ---
-╶───┐
+╺━━━┑
   a │
-┌───┘
+┍━━━┙
 │ b  
-└───┐
+┕━━━┑
   c │
-╶───┘
+╺━━━┙
 
 --- castle_inverted ---
-┌───╴
+┍━━━╸
 │ a  
-└───┐
+┕━━━┑
   b │
-┌───┘
+┍━━━┙
 │ c  
-└───╴
+┕━━━╸
 
 --- around ---
-┌───┐
+┍━━━┑
 │ a │
-├───┤
+┝━━━┥
 │ b │
-├───┤
+┝━━━┥
 │ c │
-└───┘
+┕━━━┙
 
 --- all ---
-┌───┐
+┍━━━┑
 │ a │
-└───┘
-┌───┐
+┕━━━┙
+┍━━━┑
 │ b │
-└───┘
-┌───┐
+┕━━━┙
+┍━━━┑
 │ c │
-└───┘
+┕━━━┙
 
 ```
 
