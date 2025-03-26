@@ -1,6 +1,6 @@
 import { snapshotTests } from "@jsenv/snapshot";
+import { measureTextWidth } from "@jsenv/terminal-text-size";
 import stringWidth from "string-width";
-import { measureSizeInTerminal } from "./text_terminal_size.js";
 
 const run = (measure) => {
   const main = [
@@ -113,5 +113,5 @@ const run = (measure) => {
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_string_width", () => run(stringWidth));
 
-  test("1_terminal_size", () => run(measureSizeInTerminal));
+  test("1_terminal_size", () => run(measureTextWidth));
 });

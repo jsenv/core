@@ -1,7 +1,7 @@
-# [1_terminal_size](../../width.test.mjs#L115)
+# [0_string_width](../../width.test.mjs#L114)
 
 ```js
-run(measureSizeInTerminal)
+run(stringWidth)
 ```
 
 ```js
@@ -20,14 +20,14 @@ run(measureSizeInTerminal)
     "\u001b[31m\u001b[39m": 0,
     "\u001b]8;;https://github.com\u0007Click\u001b]8;;\u0007": 5,
     "⌚": 2,
-    "↔️": 1,
+    "↔️": 2,
     "👩": 2,
     "👩🏿": 2,
     "葛󠄀": 2,
     "ปฏัก": 3,
     "_ิ": 1,
     "“": 1,
-    "✔": 
+    "✔": 2
   },
   "controlChars": {
     "\u0000": 0,

@@ -1,13 +1,12 @@
 import emojiRegex from "emoji-regex-xs";
 import { eastAsianWidth } from "get-east-asian-width";
-
 import { stripVTControlCharacters } from "node:util";
 
 const segmenter = new Intl.Segmenter();
 
 const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
 
-export const measureSizeInTerminal = (
+export const measureTextWidth = (
   string,
   {
     ambiguousIsNarrow = true,
@@ -73,7 +72,7 @@ export const measureSizeInTerminal = (
     }
 
     if (!skipEmojis && emojiRegex().test(character)) {
-      width += measureSizeInTerminal(character, {
+      width += measureTextWidth(character, {
         skipEmojis: true,
         countAnsiEscapeCodes: true, // to skip call to stripVTControlCharacters
       });
