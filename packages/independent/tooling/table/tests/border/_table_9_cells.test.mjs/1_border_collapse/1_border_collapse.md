@@ -1,4 +1,4 @@
-# [1_border_collapse](../../table_9_cells.test.mjs#L165)
+# [1_border_collapse](../../table_9_cells.test.mjs#L168)
 
 ```js
 run({
