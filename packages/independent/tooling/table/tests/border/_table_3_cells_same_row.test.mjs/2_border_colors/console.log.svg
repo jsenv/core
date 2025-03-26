@@ -103,9 +103,9 @@
         <text x="10" y="765.55">--- around ---</text>
         <text x="10" y="784.55" fill="#4169E1">┌</text>
         <text x="18.4" y="784.55" fill="#4169E1">───</text>
-        <text x="43.61" y="784.55" fill="#cd5555">┬</text>
+        <text x="43.61" y="784.55" fill="#4169E1">┬</text>
         <text x="52.01" y="784.55" fill="#4169E1">───</text>
-        <text x="77.21" y="784.55" fill="#DAA520">┬</text>
+        <text x="77.21" y="784.55" fill="#4169E1">┬</text>
         <text x="85.61" y="784.55" fill="#4169E1">───</text>
         <text x="110.82" y="784.55" fill="#4169E1">┐</text>
         <text x="10" y="803.55" fill="#cd5555">│</text>
@@ -117,9 +117,9 @@
         <text x="110.82" y="803.55" fill="#DAA520">│</text>
         <text x="10" y="822.55" fill="#11bc79">└</text>
         <text x="18.4" y="822.55" fill="#11bc79">───</text>
-        <text x="43.61" y="822.55" fill="#cd5555">┴</text>
+        <text x="43.61" y="822.55" fill="#11bc79">┴</text>
         <text x="52.01" y="822.55" fill="#11bc79">───</text>
-        <text x="77.21" y="822.55" fill="#DAA520">┴</text>
+        <text x="77.21" y="822.55" fill="#11bc79">┴</text>
         <text x="85.61" y="822.55" fill="#11bc79">───</text>
         <text x="110.82" y="822.55" fill="#11bc79">┘</text>
         <text x="10" y="860.55">--- all ---</text>
