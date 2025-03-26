@@ -5,18 +5,17 @@
  *
  *
  * remaining:
- * border color
  *
- * border bold/light (+ connection between bold and light)
+ * - border bold/light (+ connection between bold and light)
  *
- * double border + connection between double and single
+ * - double border + connection between double and single
  *
- * color and style conflicts for collapse (and connected by the way)
+ * - color and style conflicts for collapse (and connected by the way)
  *
- * rounded corners
+ * - rounded corners
  *  (plus tard il pourra aussi y avoir un conflit entre double et bold parce qu'il n'y a pas de double bold)
  *
- * multiline
+ * - multiline
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
