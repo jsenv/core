@@ -396,12 +396,7 @@ const bottomLeftSlot = {
 
 export const renderTable = (
   inputGrid,
-  {
-    ansi,
-    borderCollapse,
-    borderSeparatedOnColorConflict,
-    borderConnectionDisabledOnColorConflict,
-  } = {},
+  { ansi, borderCollapse, borderSeparatedOnColorConflict } = {},
 ) => {
   if (!Array.isArray(inputGrid)) {
     throw new TypeError(`The first arg must be an array, got ${inputGrid}`);
@@ -651,9 +646,7 @@ export const renderTable = (
       while (x < row.length) {
         const cell = row[x];
         const adapt = (slot) => {
-          const node = slot.adapt(cell, {
-            borderConnectionDisabledOnColorConflict,
-          });
+          const node = slot.adapt(cell);
           return node;
         };
 
