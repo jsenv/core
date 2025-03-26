@@ -16,8 +16,17 @@ export const createBlankNode = () => {
   return blankNode;
 };
 
-// sides
-export const createBorderLeftNode = ({ style = "solid", bold, color }) => {
+const getHorizontalLineChar = (style, bold) => {
+  const char = {
+    solid: ["─", "━"],
+    dash: ["╌", "╍"],
+    dash_3: ["┄", "┅"],
+    dash_4: ["┈", "┉"],
+    double: ["═", "═"],
+  }[style][bold ? 1 : 0];
+  return char;
+};
+const getVerticalLineChar = (style, bold) => {
   const char = {
     solid: ["│", "┃"],
     dash: ["╎", "╏"],
@@ -25,7 +34,12 @@ export const createBorderLeftNode = ({ style = "solid", bold, color }) => {
     dash_4: ["┊", "┋"],
     double: ["║", "║"],
   }[style][bold ? 1 : 0];
+  return char;
+};
 
+// sides
+export const createBorderLeftNode = ({ style = "solid", bold, color }) => {
+  const char = getVerticalLineChar(style, bold);
   return {
     type: "border_left",
     color,
@@ -36,14 +50,7 @@ export const createBorderLeftNode = ({ style = "solid", bold, color }) => {
   };
 };
 export const createBorderRightNode = ({ style = "solid", bold, color }) => {
-  const char = {
-    solid: ["│", "┃"],
-    dash: ["╎", "╏"],
-    dash_3: ["┆", "┇"],
-    dash_4: ["┊", "┋"],
-    double: ["║", "║"],
-  }[style][bold ? 1 : 0];
-
+  const char = getVerticalLineChar(style, bold);
   return {
     type: "border_right",
     color,
@@ -54,14 +61,7 @@ export const createBorderRightNode = ({ style = "solid", bold, color }) => {
   };
 };
 export const createBorderTopNode = ({ style = "solid", bold, color }) => {
-  const char = {
-    solid: ["─", "━"],
-    dash: ["╌", "╍"],
-    dash_3: ["┄", "┅"],
-    dash_4: ["┈", "┉"],
-    double: ["═", "═"],
-  }[style][bold ? 1 : 0];
-
+  const char = getHorizontalLineChar(style, bold);
   return {
     type: "border_top",
     color,
@@ -72,14 +72,7 @@ export const createBorderTopNode = ({ style = "solid", bold, color }) => {
   };
 };
 export const createBorderBottomNode = ({ style = "solid", bold, color }) => {
-  const char = {
-    solid: ["─", "━"],
-    dash: ["╌", "╍"],
-    dash_3: ["┄", "┅"],
-    dash_4: ["┈", "┉"],
-    double: ["═", "═"],
-  }[style][bold ? 1 : 0];
-
+  const char = getHorizontalLineChar(style, bold);
   return {
     type: "border_bottom",
     color,
@@ -90,44 +83,44 @@ export const createBorderBottomNode = ({ style = "solid", bold, color }) => {
   };
 };
 // half sides
-export const createBorderHalfLeftNode = ({ bold, color }) => {
+export const createBorderHalfLeftNode = ({ style = "solid", bold, color }) => {
   return {
     type: "border_half_left",
     color,
     rects: [{ width: 1, render: bold ? "╸" : "╴" }],
     xAlign: "end",
-    xPadChar: bold ? "━" : "─",
+    xPadChar: getHorizontalLineChar(style, bold),
     yAlign: "end",
   };
 };
-export const createBorderHalfRightNode = ({ bold, color }) => {
+export const createBorderHalfRightNode = ({ style = "solid", bold, color }) => {
   return {
     type: "border_half_right",
     color,
     rects: [{ width: 1, render: bold ? "╺" : "╶" }],
     xAlign: "end",
-    xPadChar: bold ? "━" : "─",
+    xPadChar: getHorizontalLineChar(style, bold),
     yAlign: "end",
   };
 };
-export const createBorderHalfUpNode = ({ bold, color }) => {
+export const createBorderHalfUpNode = ({ style = "solid", bold, color }) => {
   return {
     type: "border_half_up",
     color,
     rects: [{ width: 1, render: bold ? "╹" : "╵" }],
     xAlign: "start",
     yAlign: "start",
-    yPadChar: bold ? "┃" : "│",
+    yPadChar: getVerticalLineChar(style, bold),
   };
 };
-export const createBorderHalfDownNode = ({ bold, color }) => {
+export const createBorderHalfDownNode = ({ style = "solid", bold, color }) => {
   return {
     type: "border_half_down",
     color,
     rects: [{ width: 1, render: bold ? "╻" : "╷" }],
     xAlign: "end",
     yAlign: "start",
-    yPadChar: bold ? "┃" : "│",
+    yPadChar: getVerticalLineChar(style, bold),
   };
 };
 
