@@ -445,6 +445,51 @@ export const createBorderMidTopNode = (
     };
   };
 
+  // double borders
+  {
+    const westIsDouble = westBorderTop.style === "double";
+    const downIsDouble = downBorder.style === "double";
+    const eastIsDouble = eastBorderTop.style === "double";
+    const allAreDouble = westIsDouble && downIsDouble && eastIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╦", {
+        xPadChar: "║",
+        yPadChar: "═",
+      });
+    }
+    const onlyXIsDouble = westIsDouble && !downIsDouble && eastIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╤", {
+        xPadChar: "═",
+        yPadChar: "│",
+      });
+    }
+    const onlyYIsDouble = !westIsDouble && downIsDouble && !eastIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╥", {
+        xPadChar: "─",
+        yPadChar: "║",
+      });
+    }
+
+    const onlyWestAndDownAreDouble =
+      westIsDouble && downIsDouble && !eastIsDouble;
+    if (onlyWestAndDownAreDouble) {
+      return innerCreateBorder("╗", {
+        xPadChar: ["═", "─"],
+        yPadChar: "║",
+      });
+    }
+    const onlyEastAndDownAreDouble =
+      !westIsDouble && downIsDouble && eastIsDouble;
+    if (onlyEastAndDownAreDouble) {
+      return innerCreateBorder("╔", {
+        xPadChar: ["─", "═"],
+        yPadChar: "║",
+      });
+    }
+  }
+
   const westIsBold = westBorderTop.bold;
   const downIsBold = downBorder.bold;
   const rightIsBold = eastBorderTop.bold;
@@ -519,6 +564,49 @@ export const createBorderMidBottomNode = (
       ...props,
     };
   };
+
+  // double borders
+  {
+    const westIsDouble = westBorderBottom.style === "double";
+    const upIsDouble = upBorder.style === "double";
+    const eastIsDouble = eastBorderBottom.style === "double";
+    const allAreDouble = westIsDouble && upIsDouble && eastIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╩", {
+        xPadChar: "║",
+        yPadChar: "═",
+      });
+    }
+    const onlyXIsDouble = westIsDouble && !upIsDouble && eastIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╧", {
+        xPadChar: "═",
+        yPadChar: "│",
+      });
+    }
+    const onlyYIsDouble = !westIsDouble && upIsDouble && !eastIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╨", {
+        xPadChar: "─",
+        yPadChar: "║",
+      });
+    }
+
+    const onlyWestAndUpAreDouble = westIsDouble && upIsDouble && !eastIsDouble;
+    if (onlyWestAndUpAreDouble) {
+      return innerCreateBorder("╝", {
+        xPadChar: ["═", "─"],
+        yPadChar: "║",
+      });
+    }
+    const onlyEastAndUpAreDouble = !westIsDouble && upIsDouble && eastIsDouble;
+    if (onlyEastAndUpAreDouble) {
+      return innerCreateBorder("╚", {
+        xPadChar: ["─", "═"],
+        yPadChar: "║",
+      });
+    }
+  }
 
   const leftIsBold = westBorderBottom.bold;
   const upIsBold = upBorder.bold;
