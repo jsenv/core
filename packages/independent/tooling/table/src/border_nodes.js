@@ -1,5 +1,30 @@
 /**
+ * https://www.w3.org/TR/xml-entity-names/025.html?fbclid=IwZXh0bgNhZW0CMTEAAR0jL81PDwl6kfzRMUvjOSIfmuesvCdqr11lQpOS-9bpx7u1Q2LD1G7fJ1E_aem_URrWt-55lP_byLA6tjLleQ
  * https://www.w3schools.com/charsets/ref_utf_box.asp
+ *
+ * TODO: more double stuff
+ * notons aussi que pour double le cas ou 3 bord et 4 borde se connecte ne supporte pas
+ * qu'un des axes ne soit pas double (left/right style et top/bottom peutvent changer mais par exemple il
+ * n'y a pas de cher pour le cas suivant:
+ *
+ * ═ ─
+ *  ║
+ *
+ * Les seuls connecteur dispo sont:
+ *
+ * ╦, ╥ et ╤
+ *
+ * donnant ainsi
+ *
+ * ═╦─  ou   ═╥─  ou  ═╤─
+ *  ║         ║        ║
+ *
+ * ah mais on peut faire ça: (utiliser le top right corner)
+ * et ça rend pas trop mal
+ *
+ * ═╗─
+ *  ║
+ *
  */
 
 // blank node is a fluid node that will take whatever size it will be requested to take

@@ -495,6 +495,7 @@ export const renderTable = (
           if (
             borderCollapse &&
             westCell &&
+            westCell.borderRight &&
             canCollapse(borderLeft, westCell.borderRight)
           ) {
           } else {
@@ -510,6 +511,7 @@ export const renderTable = (
           if (
             borderCollapse &&
             northCell &&
+            northCell.borderBottom &&
             canCollapse(borderTop, northCell.borderBottom)
           ) {
           } else {
