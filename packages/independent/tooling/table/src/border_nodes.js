@@ -595,6 +595,50 @@ export const createBorderMidLeftNode = (
     };
   };
 
+  // double borders
+  {
+    const upIsDouble = northBorder.style === "double";
+    const middleIsDouble = middleBorder.style === "double";
+    const downIsDouble = southBorder.style === "double";
+    const allAreDouble = upIsDouble && middleIsDouble && downIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╠", {
+        xPadChar: "║",
+        yPadChar: "═",
+      });
+    }
+    const onlyYIsDouble = upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╟", {
+        xPadChar: "─",
+        yPadChar: "║",
+      });
+    }
+    const onlyXIsDouble = !upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╞", {
+        xPadChar: "═",
+        yPadChar: "│",
+      });
+    }
+    const onlyUpAndLeftAreDouble =
+      upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyUpAndLeftAreDouble) {
+      return innerCreateBorder("╚", {
+        xPadChar: "═",
+        yPadChar: ["║", "│"],
+      });
+    }
+    const onlyDownAndLeftAreDouble =
+      !upIsDouble && middleIsDouble && downIsDouble;
+    if (onlyDownAndLeftAreDouble) {
+      return innerCreateBorder("╔", {
+        xPadChar: "═",
+        yPadChar: ["│", "║"],
+      });
+    }
+  }
+
   const upIsBold = northBorder.bold;
   const middleIsBold = middleBorder.bold;
   const downIsBold = southBorder.bold;
@@ -669,6 +713,50 @@ export const createBorderMidRightNode = (
       ...props,
     };
   };
+
+  // double borders
+  {
+    const upIsDouble = northBorder.style === "double";
+    const middleIsDouble = middleBorder.style === "double";
+    const downIsDouble = southBorder.style === "double";
+    const allAreDouble = upIsDouble && middleIsDouble && downIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╣", {
+        xPadChar: "║",
+        yPadChar: "═",
+      });
+    }
+    const onlyYIsDouble = upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╢", {
+        xPadChar: "─",
+        yPadChar: "║",
+      });
+    }
+    const onlyXIsDouble = !upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╡", {
+        xPadChar: "═",
+        yPadChar: "│",
+      });
+    }
+    const onlyUpAndRightAreDouble =
+      upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyUpAndRightAreDouble) {
+      return innerCreateBorder("╝", {
+        xPadChar: "═",
+        yPadChar: ["║", "│"],
+      });
+    }
+    const onlyDownAndRightAreDouble =
+      !upIsDouble && middleIsDouble && downIsDouble;
+    if (onlyDownAndRightAreDouble) {
+      return innerCreateBorder("╗", {
+        xPadChar: "═",
+        yPadChar: ["│", "║"],
+      });
+    }
+  }
 
   const upIsBold = northBorder.bold;
   const middleIsBold = middleBorder.bold;
