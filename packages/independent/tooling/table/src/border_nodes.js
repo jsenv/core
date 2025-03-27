@@ -149,7 +149,6 @@ export const createBorderHalfDownNode = ({ style = "solid", bold, color }) => {
   };
 };
 
-// intersections between 2 borders
 export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   const { color } = topBorder;
   const innerCreateBorder = (char, props) => {
@@ -163,13 +162,42 @@ export const createBorderTopLeftNode = (topBorder, leftBorder) => {
     };
   };
 
+  // double borders
+  // there is no bold char for double borders so we'll ignore bold for double
+  {
+    const topIsDouble = topBorder.style === "double";
+    const leftIsDouble = leftBorder.style === "double";
+    const bothAreDouble = topIsDouble && leftIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╔", {
+        xPadChar: "║",
+        yPadChar: "═",
+      });
+    }
+    const onlyTopIsDouble = topIsDouble && !leftIsDouble;
+    if (onlyTopIsDouble) {
+      return innerCreateBorder("╒", {
+        xPadChar: "═",
+        yPadChar: "│",
+      });
+    }
+    const onlyLeftIsDouble = leftIsDouble && !topIsDouble;
+    if (onlyLeftIsDouble) {
+      return innerCreateBorder("╓", {
+        xPadChar: "─",
+        yPadChar: "║",
+      });
+    }
+  }
+
+  // bold
   const topIsBold = topBorder.bold;
   const leftIsBold = leftBorder.bold;
   const noneAreBold = !topIsBold && !leftIsBold;
   if (noneAreBold) {
     return innerCreateBorder("┌", {
-      xPadChar: "│",
-      yPadChar: "─",
+      xPadChar: "─",
+      yPadChar: "│",
     });
   }
   const bothAreBold = topIsBold && leftIsBold;

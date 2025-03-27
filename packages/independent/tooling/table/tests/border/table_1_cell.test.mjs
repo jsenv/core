@@ -7,25 +7,34 @@ const run = ({
   borderRightBold,
   borderTopBold,
   borderBottomBold,
+  borderLeftStyle,
+  borderRightStyle,
+  borderTopStyle,
+  borderBottomStyle,
   borderColors,
   ansi = borderColors,
 }) => {
   const borderLeft = {
     color: borderColors ? BORDER_COLORS.RED : null,
     bold: borderLeftBold,
-  };
-  const borderTop = {
-    color: borderColors ? BORDER_COLORS.BLUE : null,
-    bold: borderTopBold,
-  };
-  const borderBottom = {
-    color: borderColors ? BORDER_COLORS.GREEN : null,
-    bold: borderBottomBold,
+    style: borderLeftStyle,
   };
   const borderRight = {
     color: borderColors ? BORDER_COLORS.YELLOW : null,
     bold: borderRightBold,
+    style: borderRightStyle,
   };
+  const borderTop = {
+    color: borderColors ? BORDER_COLORS.BLUE : null,
+    bold: borderTopBold,
+    style: borderTopStyle,
+  };
+  const borderBottom = {
+    color: borderColors ? BORDER_COLORS.GREEN : null,
+    bold: borderBottomBold,
+    style: borderBottomStyle,
+  };
+
   const render = (grid) => renderTable(grid, { ansi });
 
   const none = render([
@@ -124,4 +133,13 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderTopBold: true,
       borderBottomBold: true,
     }));
+
+  test.ONLY("5_border_style_double", () =>
+    run({
+      borderLeftStyle: "double",
+      borderRightStyle: "double",
+      borderTopStyle: "double",
+      borderBottomStyle: "double",
+    }),
+  );
 });
