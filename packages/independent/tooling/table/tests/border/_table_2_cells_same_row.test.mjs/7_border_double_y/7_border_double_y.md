@@ -1,9 +1,9 @@
-# [4_border_bold_y](../../table_2_cells_same_row.test.mjs#L149)
+# [7_border_double_y](../../table_2_cells_same_row.test.mjs#L169)
 
 ```js
 run({
-  borderTopBold: true,
-  borderBottomBold: true,
+  borderTopStyle: "double",
+  borderBottomStyle: "double",
 })
 ```
 
@@ -14,59 +14,59 @@ run({
  a ││ b 
 
 --- top_right_and_bottom_left ---
-━━━┑╷   
+═══╕╷   
  a ││ b 
-   ╵┕━━━
+   ╵╘═══
 
 --- bottom_right_and_top_left ---
-   ╷┍━━━
+   ╷╒═══
  a ││ b 
-━━━┙╵   
+═══╛╵   
 
 --- bottom_left_and_top_right ---
-╷   ━━━┑
+╷   ═══╕
 │ a  b │
-┕━━━   ╵
+╘═══   ╵
 
 --- left_bottom_right_and_top_right ---
-╷   ┍━━━┑
+╷   ╒═══╕
 │ a │ b │
-┕━━━┙   ╵
+╘═══╛   ╵
 
 --- top_right_bottom_right ---
-━━━┑   ╷
+═══╕   ╷
  a │ b │
-   ┕━━━┙
+   ╘═══╛
 
 --- top_left_bottom_right ---
-━━━┑   ╷
+═══╕   ╷
  a │ b │
-   ┕━━━┙
+   ╘═══╛
 
 --- all_but_bottom_all_but_top ---
-┍━━━┑╷   ╷
+╒═══╕╷   ╷
 │ a ││ b │
-╵   ╵┕━━━┙
+╵   ╵╘═══╛
 
 --- all_but_right_all_but_left ---
-┍━━━━━━┑
+╒══════╕
 │ a  b │
-┕━━━━━━┙
+╘══════╛
 
 --- all_but_right_all ---
-┍━━━┯━━━┑
+╒═══┬═══╕
 │ a │ b │
-┕━━━┷━━━┙
+╘═══┴═══╛
 
 --- all_all_but_left ---
-┍━━━┯━━━┑
+╒═══┬═══╕
 │ a │ b │
-┕━━━┷━━━┙
+╘═══┴═══╛
 
 --- all ---
-┍━━━┑┍━━━┑
+╒═══╕╒═══╕
 │ a ││ b │
-┕━━━┙┕━━━┙
+╘═══╛╘═══╛
 
 ```
 
