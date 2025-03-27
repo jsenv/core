@@ -301,6 +301,33 @@ export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
     };
   };
 
+  // double borders
+  {
+    const bottomIsDouble = bottomBorder.style === "double";
+    const rightIsDouble = rightBorder.style === "double";
+    const bothAreDouble = bottomIsDouble && rightIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╝", {
+        xPadChar: "║",
+        yPadChar: "═",
+      });
+    }
+    const onlyBottomIsDouble = bottomIsDouble && !rightIsDouble;
+    if (onlyBottomIsDouble) {
+      return innerCreateBorder("╛", {
+        xPadChar: "═",
+        yPadChar: "│",
+      });
+    }
+    const onlyRightIsDouble = rightIsDouble && !bottomIsDouble;
+    if (onlyRightIsDouble) {
+      return innerCreateBorder("╜", {
+        xPadChar: "─",
+        yPadChar: "║",
+      });
+    }
+  }
+
   const bottomIsBold = bottomBorder.bold;
   const rightIsBold = rightBorder.bold;
   const noneAreBold = !bottomIsBold && !rightIsBold;
@@ -342,6 +369,33 @@ export const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
       ...props,
     };
   };
+
+  // double borders
+  {
+    const bottomIsDouble = bottomBorder.style === "double";
+    const leftIsDouble = leftBorder.style === "double";
+    const bothAreDouble = bottomIsDouble && leftIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╚", {
+        xPadChar: "║",
+        yPadChar: "═",
+      });
+    }
+    const onlyBottomIsDouble = bottomIsDouble && !leftIsDouble;
+    if (onlyBottomIsDouble) {
+      return innerCreateBorder("╘", {
+        xPadChar: "═",
+        yPadChar: "│",
+      });
+    }
+    const onlyLeftIsDouble = leftIsDouble && !bottomIsDouble;
+    if (onlyLeftIsDouble) {
+      return innerCreateBorder("╙", {
+        xPadChar: "─",
+        yPadChar: "║",
+      });
+    }
+  }
 
   const bottomIsBold = bottomBorder.bold;
   const leftIsBold = leftBorder.bold;
