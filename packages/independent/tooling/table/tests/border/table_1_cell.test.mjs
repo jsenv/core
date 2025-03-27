@@ -34,7 +34,6 @@ const run = ({
     bold: borderBottomBold,
     style: borderBottomStyle,
   };
-
   const render = (grid) => renderTable(grid, { ansi });
 
   const none = render([
