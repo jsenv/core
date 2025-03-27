@@ -134,12 +134,19 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderBottomBold: true,
     }));
 
-  test.ONLY("5_border_style_double", () =>
+  test.ONLY("5_border_double", () =>
     run({
       borderLeftStyle: "double",
       borderRightStyle: "double",
       borderTopStyle: "double",
       borderBottomStyle: "double",
+    }),
+  );
+
+  test.ONLY("6_border_double_x", () =>
+    run({
+      borderLeftStyle: "double",
+      borderRightStyle: "double",
     }),
   );
 });

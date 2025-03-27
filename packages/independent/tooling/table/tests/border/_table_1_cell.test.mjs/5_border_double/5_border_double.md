@@ -1,4 +1,4 @@
-# [5_border_style_double](../../table_1_cell.test.mjs#L137)
+# [5_border_double](../../table_1_cell.test.mjs#L137)
 
 ```js
 run({
@@ -30,11 +30,11 @@ run({
  a ║
 
 --- top_left ---
-┌═══
+╔═══
 ║ a 
 
 --- top_right ---
-═══┐
+═══╗
  a ║
 
 --- bottom_right ---
@@ -58,21 +58,21 @@ run({
 └═══┘
 
 --- all_but_right ---
-┌═══
+╔═══
 ║ a 
 └═══
 
 --- all_but_left ---
-═══┐
+═══╗
  a ║
 ═══┘
 
 --- all_but_bottom ---
-┌═══┐
+╔═══╗
 ║ a ║
 
 --- all ---
-┌═══┐
+╔═══╗
 ║ a ║
 └═══┘
 

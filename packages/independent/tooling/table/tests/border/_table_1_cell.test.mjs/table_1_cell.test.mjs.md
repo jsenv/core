@@ -6,7 +6,8 @@
 - [2_border_bold_all](2_border_bold_all/2_border_bold_all.md)
 - [3_border_bold_x](3_border_bold_x/3_border_bold_x.md)
 - [4_border_bold_y](4_border_bold_y/4_border_bold_y.md)
-- [5_border_style_double](5_border_style_double/5_border_style_double.md)
+- [5_border_double](5_border_double/5_border_double.md)
+- [6_border_double_x](6_border_double_x/6_border_double_x.md)
 
 ---
 

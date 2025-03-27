@@ -163,7 +163,6 @@ export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   };
 
   // double borders
-  // there is no bold char for double borders so we'll ignore bold for double
   {
     const topIsDouble = topBorder.style === "double";
     const leftIsDouble = leftBorder.style === "double";
@@ -232,6 +231,33 @@ export const createBorderTopRightNode = (topBorder, rightBorder) => {
       ...props,
     };
   };
+
+  // double borders
+  {
+    const topIsDouble = topBorder.style === "double";
+    const rightIsDouble = rightBorder.style === "double";
+    const bothAreDouble = topIsDouble && rightIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╗", {
+        xPadChar: "║",
+        yPadChar: "═",
+      });
+    }
+    const onlyTopIsDouble = topIsDouble && !rightIsDouble;
+    if (onlyTopIsDouble) {
+      return innerCreateBorder("╕", {
+        xPadChar: "═",
+        yPadChar: "│",
+      });
+    }
+    const onlyRightIsDouble = rightIsDouble && !topIsDouble;
+    if (onlyRightIsDouble) {
+      return innerCreateBorder("╖", {
+        xPadChar: "─",
+        yPadChar: "║",
+      });
+    }
+  }
 
   const topIsBold = topBorder.bold;
   const rightIsBold = rightBorder.bold;
