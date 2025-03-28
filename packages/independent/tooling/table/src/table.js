@@ -10,7 +10,6 @@
  * - test border style conflict (double -> single heavy)
  *
  * - rounded corners
- *  (plus tard il pourra aussi y avoir un conflit entre double et bold parce qu'il n'y a pas de double bold)
  *
  * - multiline
  *

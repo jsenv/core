@@ -149,16 +149,27 @@ export const createBorderHalfDownNode = ({ style = "solid", bold, color }) => {
   };
 };
 
+const topLeftCharProps = {
+  "╔": { xPadChar: "║", yPadChar: "═" },
+  "╒": { xPadChar: "═", yPadChar: "│" },
+  "╓": { xPadChar: "─", yPadChar: "║" },
+  "┌": { xPadChar: "│", yPadChar: "─" },
+  "┏": { xPadChar: "┃", yPadChar: "━" },
+  "┍": { xPadChar: "━", yPadChar: "│" },
+  "┎": { xPadChar: "┃", yPadChar: "─" },
+};
 export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   const { color } = topBorder;
-  const innerCreateBorder = (char, props) => {
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = topLeftCharProps[char];
     return {
       type: "border_top_left",
       color,
       xAlign: "start",
       yAlign: "start",
       rects: [{ width: 1, render: char }],
-      ...props,
+      xPadChar,
+      yPadChar,
     };
   };
 
@@ -168,24 +179,15 @@ export const createBorderTopLeftNode = (topBorder, leftBorder) => {
     const leftIsDouble = leftBorder.style === "double";
     const bothAreDouble = topIsDouble && leftIsDouble;
     if (bothAreDouble) {
-      return innerCreateBorder("╔", {
-        xPadChar: "║",
-        yPadChar: "═",
-      });
+      return innerCreateBorder("╔");
     }
     const onlyTopIsDouble = topIsDouble && !leftIsDouble;
     if (onlyTopIsDouble) {
-      return innerCreateBorder("╒", {
-        xPadChar: "═",
-        yPadChar: "│",
-      });
+      return innerCreateBorder("╒");
     }
     const onlyLeftIsDouble = leftIsDouble && !topIsDouble;
     if (onlyLeftIsDouble) {
-      return innerCreateBorder("╓", {
-        xPadChar: "─",
-        yPadChar: "║",
-      });
+      return innerCreateBorder("╓");
     }
   }
 
@@ -194,41 +196,40 @@ export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   const leftIsBold = leftBorder.bold;
   const noneAreBold = !topIsBold && !leftIsBold;
   if (noneAreBold) {
-    return innerCreateBorder("┌", {
-      xPadChar: "─",
-      yPadChar: "│",
-    });
+    return innerCreateBorder("┌");
   }
   const bothAreBold = topIsBold && leftIsBold;
   if (bothAreBold) {
-    return innerCreateBorder("┏", {
-      xPadChar: "┃",
-      yPadChar: "━",
-    });
+    return innerCreateBorder("┏");
   }
   const onlyTopIsBold = topIsBold && !leftIsBold;
   if (onlyTopIsBold) {
-    return innerCreateBorder("┍", {
-      xPadChar: "━",
-      yPadChar: "│",
-    });
+    return innerCreateBorder("┍");
   }
   // only left is bold
-  return innerCreateBorder("┎", {
-    xPadChar: "┃",
-    yPadChar: "─",
-  });
+  return innerCreateBorder("┎");
+};
+const topRightCharProps = {
+  "╗": { xPadChar: "║", yPadChar: "═" },
+  "╕": { xPadChar: "═", yPadChar: "│" },
+  "╖": { xPadChar: "─", yPadChar: "║" },
+  "┐": { xPadChar: "│", yPadChar: "─" },
+  "┓": { xPadChar: "┃", yPadChar: "━" },
+  "┑": { xPadChar: "━", yPadChar: "│" },
+  "┒": { xPadChar: "┃", yPadChar: "─" },
 };
 export const createBorderTopRightNode = (topBorder, rightBorder) => {
   const { color } = topBorder;
-  const innerCreateBorder = (char, props) => {
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = topRightCharProps[char];
     return {
       type: "border_top_right",
       color,
       xAlign: "end",
       yAlign: "start",
       rects: [{ width: 1, render: char }],
-      ...props,
+      xPadChar,
+      yPadChar,
     };
   };
 
@@ -238,24 +239,15 @@ export const createBorderTopRightNode = (topBorder, rightBorder) => {
     const rightIsDouble = rightBorder.style === "double";
     const bothAreDouble = topIsDouble && rightIsDouble;
     if (bothAreDouble) {
-      return innerCreateBorder("╗", {
-        xPadChar: "║",
-        yPadChar: "═",
-      });
+      return innerCreateBorder("╗");
     }
     const onlyTopIsDouble = topIsDouble && !rightIsDouble;
     if (onlyTopIsDouble) {
-      return innerCreateBorder("╕", {
-        xPadChar: "═",
-        yPadChar: "│",
-      });
+      return innerCreateBorder("╕");
     }
     const onlyRightIsDouble = rightIsDouble && !topIsDouble;
     if (onlyRightIsDouble) {
-      return innerCreateBorder("╖", {
-        xPadChar: "─",
-        yPadChar: "║",
-      });
+      return innerCreateBorder("╖");
     }
   }
 
@@ -263,41 +255,40 @@ export const createBorderTopRightNode = (topBorder, rightBorder) => {
   const rightIsBold = rightBorder.bold;
   const noneAreBold = !topIsBold && !rightIsBold;
   if (noneAreBold) {
-    return innerCreateBorder("┐", {
-      xPadChar: "│",
-      yPadChar: "─",
-    });
+    return innerCreateBorder("┐");
   }
   const bothAreBold = topIsBold && rightIsBold;
   if (bothAreBold) {
-    return innerCreateBorder("┓", {
-      xPadChar: "┃",
-      yPadChar: "━",
-    });
+    return innerCreateBorder("┓");
   }
   const onlyTopIsBold = topIsBold && !rightIsBold;
   if (onlyTopIsBold) {
-    return innerCreateBorder("┑", {
-      xPadChar: "━",
-      yPadChar: "│",
-    });
+    return innerCreateBorder("┑");
   }
   // only right is bold
-  return innerCreateBorder("┒", {
-    xPadChar: "┃",
-    yPadChar: "─",
-  });
+  return innerCreateBorder("┒");
+};
+const bottomRightCharProps = {
+  "╝": { xPadChar: "║", yPadChar: "═" },
+  "╛": { xPadChar: "═", yPadChar: "│" },
+  "╜": { xPadChar: "─", yPadChar: "║" },
+  "┘": { xPadChar: "│", yPadChar: "─" },
+  "┛": { xPadChar: "┃", yPadChar: "━" },
+  "┙": { xPadChar: "━", yPadChar: "│" },
+  "┚": { xPadChar: "┃", yPadChar: "─" },
 };
 export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
   const { color } = bottomBorder;
-  const innerCreateBorder = (char, props) => {
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = bottomRightCharProps[char];
     return {
       type: "border_bottom_right",
       color,
       xAlign: "end",
       yAlign: "end",
       rects: [{ width: 1, render: char }],
-      ...props,
+      xPadChar,
+      yPadChar,
     };
   };
 
@@ -307,24 +298,15 @@ export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
     const rightIsDouble = rightBorder.style === "double";
     const bothAreDouble = bottomIsDouble && rightIsDouble;
     if (bothAreDouble) {
-      return innerCreateBorder("╝", {
-        xPadChar: "║",
-        yPadChar: "═",
-      });
+      return innerCreateBorder("╝");
     }
     const onlyBottomIsDouble = bottomIsDouble && !rightIsDouble;
     if (onlyBottomIsDouble) {
-      return innerCreateBorder("╛", {
-        xPadChar: "═",
-        yPadChar: "│",
-      });
+      return innerCreateBorder("╛");
     }
     const onlyRightIsDouble = rightIsDouble && !bottomIsDouble;
     if (onlyRightIsDouble) {
-      return innerCreateBorder("╜", {
-        xPadChar: "─",
-        yPadChar: "║",
-      });
+      return innerCreateBorder("╜");
     }
   }
 
@@ -332,30 +314,18 @@ export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
   const rightIsBold = rightBorder.bold;
   const noneAreBold = !bottomIsBold && !rightIsBold;
   if (noneAreBold) {
-    return innerCreateBorder("┘", {
-      xPadChar: "│",
-      yPadChar: "─",
-    });
+    return innerCreateBorder("┘");
   }
   const bothAreBold = bottomIsBold && rightIsBold;
   if (bothAreBold) {
-    return innerCreateBorder("┛", {
-      xPadChar: "┃",
-      yPadChar: "━",
-    });
+    return innerCreateBorder("┛");
   }
   const onlyBottomIsBold = bottomIsBold && !rightIsBold;
   if (onlyBottomIsBold) {
-    return innerCreateBorder("┙", {
-      xPadChar: "━",
-      yPadChar: "│",
-    });
+    return innerCreateBorder("┙");
   }
   // only right is bold
-  return innerCreateBorder("┚", {
-    xPadChar: "┃",
-    yPadChar: "─",
-  });
+  return innerCreateBorder("┚");
 };
 export const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
   const { color } = bottomBorder;
