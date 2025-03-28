@@ -817,6 +817,21 @@ export const createBorderMidRightNode = (
 
 // intersection between 4 borders
 const borderMidCharProps = {
+  "╬": { xPadChar: "═", yPadChar: "║" },
+  "╫": { xPadChar: "─", yPadChar: "║" },
+  "╪": { xPadChar: "═", yPadChar: "│" },
+  "╝": { xPadChar: ["═", "─"], yPadChar: ["║", "│"] },
+  "╗": { xPadChar: ["═", "─"], yPadChar: ["│", "║"] },
+  "╔": { xPadChar: ["─", "═"], yPadChar: ["│", "║"] },
+  "╚": { xPadChar: ["─", "═"], yPadChar: ["║", "│"] },
+  "╣": { xPadChar: ["═", "─"], yPadChar: "║" },
+  "╠": { xPadChar: ["─", "═"], yPadChar: "║" },
+  "╦": { xPadChar: "═", yPadChar: ["│", "║"] },
+  "╩": { xPadChar: "═", yPadChar: ["║", "│"] },
+  "├": { xPadChar: ["═", "─"], yPadChar: "│" },
+  "┤": { xPadChar: ["─", "═"], yPadChar: "│" },
+  "┬": { xPadChar: "─", yPadChar: ["║", "│"] },
+  "┴": { xPadChar: "─", yPadChar: ["│", "║"] },
   "┼": { xPadChar: "─", yPadChar: "│" },
   "╋": { xPadChar: "━", yPadChar: "┃" },
   "┿": { xPadChar: "━", yPadChar: "│" },
@@ -849,6 +864,89 @@ export const createBorderMidNode = (
       yPadChar,
     };
   };
+
+  // double borders
+  {
+    const leftIsDouble = leftBorder.style === "double";
+    const upIsDouble = upBorder.style === "double";
+    const rightIsDouble = rightBorder.style === "double";
+    const downIsDouble = downBorder.style === "double";
+    const allAreDouble =
+      leftIsDouble && upIsDouble && rightIsDouble && downIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╬");
+    }
+    const onlyXIsDouble =
+      leftIsDouble && !upIsDouble && rightIsDouble && !downIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╪");
+    }
+    const onlyYIsDouble =
+      !leftIsDouble && upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╫");
+    }
+    const onlyLeftAndUpAndDownAreDouble =
+      leftIsDouble && upIsDouble && downIsDouble && !rightIsDouble;
+    if (onlyLeftAndUpAndDownAreDouble) {
+      return innerCreateBorder("╣");
+    }
+    const onlyLeftUpRightAreDouble =
+      leftIsDouble && upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyLeftUpRightAreDouble) {
+      return innerCreateBorder("╩");
+    }
+    const onlyUpAndRightAndDownAreDouble =
+      !leftIsDouble && upIsDouble && rightIsDouble && downIsDouble;
+    if (onlyUpAndRightAndDownAreDouble) {
+      return innerCreateBorder("╠");
+    }
+    const onlyRightDownLeftAreDouble =
+      leftIsDouble && !upIsDouble && rightIsDouble && downIsDouble;
+    if (onlyRightDownLeftAreDouble) {
+      return innerCreateBorder("╦");
+    }
+    const onlyLeftAndUpAreDouble =
+      leftIsDouble && upIsDouble && !rightIsDouble && !downIsDouble;
+    if (onlyLeftAndUpAreDouble) {
+      return innerCreateBorder("╝");
+    }
+    const onlyLeftAndDownAreDouble =
+      leftIsDouble && !upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyLeftAndDownAreDouble) {
+      return innerCreateBorder("╗");
+    }
+    const onlyRightAndDownAreDouble =
+      !leftIsDouble && upIsDouble && rightIsDouble && downIsDouble;
+    if (onlyRightAndDownAreDouble) {
+      return innerCreateBorder("╔");
+    }
+    const onlyRightAndUpAreDouble =
+      !leftIsDouble && upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyRightAndUpAreDouble) {
+      return innerCreateBorder("╚");
+    }
+    const onlyLeftIsDouble =
+      leftIsDouble && !upIsDouble && !rightIsDouble && !downIsDouble;
+    if (onlyLeftIsDouble) {
+      return innerCreateBorder("├");
+    }
+    const onlyRightIsDouble =
+      !leftIsDouble && !upIsDouble && rightIsDouble && !downIsDouble;
+    if (onlyRightIsDouble) {
+      return innerCreateBorder("┤");
+    }
+    const onlyUpIsDouble =
+      !leftIsDouble && upIsDouble && !rightIsDouble && !downIsDouble;
+    if (onlyUpIsDouble) {
+      return innerCreateBorder("┬");
+    }
+    const onlyDownIsDouble =
+      !leftIsDouble && !upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyDownIsDouble) {
+      return innerCreateBorder("┴");
+    }
+  }
 
   const leftIsBold = leftBorder.bold;
   const rightIsBold = rightBorder.bold;
