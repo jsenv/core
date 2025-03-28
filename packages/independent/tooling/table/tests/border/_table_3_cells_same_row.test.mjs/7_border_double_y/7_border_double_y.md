@@ -1,9 +1,9 @@
-# [4_border_bold_y](../../table_3_cells_same_row.test.mjs#L153)
+# [7_border_double_y](../../table_3_cells_same_row.test.mjs#L173)
 
 ```js
 run({
-  borderTopBold: true,
-  borderBottomBold: true,
+  borderTopStyle: "double",
+  borderBottomStyle: "double",
 })
 ```
 
@@ -20,44 +20,44 @@ run({
 │ a ││ b ││ c │
 
 --- top_and_bottom ---
-━━━━━━━━━
+═════════
  a  b  c 
-━━━━━━━━━
+═════════
 
 --- first_only ---
-┍━━━┑      
+╒═══╕      
 │ a │ b  c 
-┕━━━┙      
+╘═══╛      
 
 --- middle_none ---
-┍━━━┑   ┍━━━┑
+╒═══╕   ╒═══╕
 │ a │ b │ c │
-┕━━━┙   ┕━━━┙
+╘═══╛   ╘═══╛
 
 --- last_only ---
-      ┍━━━┑
+      ╒═══╕
  a  b │ c │
-      ┕━━━┙
+      ╘═══╛
 
 --- castle ---
-━━━┑   ┍━━━
+═══╕   ╒═══
  a │ b │ c 
-   ┕━━━┙   
+   ╘═══╛   
 
 --- castle_inverted ---
-   ┍━━━┑   
+   ╒═══╕   
  a │ b │ c 
-━━━┙   ┕━━━
+═══╛   ╘═══
 
 --- around ---
-┍━━━┯━━━┯━━━┑
+╒═══╤═══╤═══╕
 │ a │ b │ c │
-┕━━━┷━━━┷━━━┙
+╘═══╧═══╧═══╛
 
 --- all ---
-┍━━━┑┍━━━┑┍━━━┑
+╒═══╕╒═══╕╒═══╕
 │ a ││ b ││ c │
-┕━━━┙┕━━━┙┕━━━┙
+╘═══╛╘═══╛╘═══╛
 
 ```
 
