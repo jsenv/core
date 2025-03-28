@@ -394,6 +394,8 @@ const borderMidTopCharProps = {
   "╥": { xPadChar: "─", yPadChar: "║" },
   "╗": { xPadChar: ["═", "─"], yPadChar: "║" },
   "╔": { xPadChar: ["─", "═"], yPadChar: "║" },
+  "┌": { xPadChar: ["═", "─"], yPadChar: "│" },
+  "┐": { xPadChar: ["─", "═"], yPadChar: "│" },
   "┬": { xPadChar: "─", yPadChar: "│" },
   "┳": { xPadChar: "━", yPadChar: "┃" },
   "┯": { xPadChar: "━", yPadChar: "│" },
@@ -439,7 +441,6 @@ export const createBorderMidTopNode = (
     if (onlyYIsDouble) {
       return innerCreateBorder("╥");
     }
-
     const onlyWestAndDownAreDouble =
       westIsDouble && downIsDouble && !eastIsDouble;
     if (onlyWestAndDownAreDouble) {
@@ -449,6 +450,14 @@ export const createBorderMidTopNode = (
       !westIsDouble && downIsDouble && eastIsDouble;
     if (onlyEastAndDownAreDouble) {
       return innerCreateBorder("╔");
+    }
+    const onlyWestIsDouble = westIsDouble && !downIsDouble && !eastIsDouble;
+    if (onlyWestIsDouble) {
+      return innerCreateBorder("┌");
+    }
+    const onlyEastIsDouble = !westIsDouble && !downIsDouble && eastIsDouble;
+    if (onlyEastIsDouble) {
+      return innerCreateBorder("┐");
     }
   }
 
@@ -492,6 +501,8 @@ const borderMidBottomCharProps = {
   "╨": { xPadChar: "─", yPadChar: "║" },
   "╝": { xPadChar: ["═", "─"], yPadChar: "║" },
   "╚": { xPadChar: ["─", "═"], yPadChar: "║" },
+  "└": { xPadChar: ["═", "─"], yPadChar: "│" },
+  "┘": { xPadChar: ["─", "═"], yPadChar: "│" },
   "┴": { xPadChar: "─", yPadChar: "│" },
   "┻": { xPadChar: "━", yPadChar: "┃" },
   "┷": { xPadChar: "━", yPadChar: "│" },
@@ -537,7 +548,6 @@ export const createBorderMidBottomNode = (
     if (onlyYIsDouble) {
       return innerCreateBorder("╨");
     }
-
     const onlyWestAndUpAreDouble = westIsDouble && upIsDouble && !eastIsDouble;
     if (onlyWestAndUpAreDouble) {
       return innerCreateBorder("╝");
@@ -545,6 +555,14 @@ export const createBorderMidBottomNode = (
     const onlyEastAndUpAreDouble = !westIsDouble && upIsDouble && eastIsDouble;
     if (onlyEastAndUpAreDouble) {
       return innerCreateBorder("╚");
+    }
+    const onlyWestIsDouble = westIsDouble && !upIsDouble && !eastIsDouble;
+    if (onlyWestIsDouble) {
+      return innerCreateBorder("└");
+    }
+    const onlyEastIsDouble = !westIsDouble && !upIsDouble && eastIsDouble;
+    if (onlyEastIsDouble) {
+      return innerCreateBorder("┘");
     }
   }
 
@@ -588,6 +606,8 @@ const borderMifLeftCharProps = {
   "╞": { xPadChar: "═", yPadChar: "│" },
   "╚": { xPadChar: "═", yPadChar: ["║", "│"] },
   "╔": { xPadChar: "═", yPadChar: ["│", "║"] },
+  "┌": { xPadChar: "─", yPadChar: ["║", "│"] },
+  "└": { xPadChar: "─", yPadChar: ["│", "║"] },
   "├": { xPadChar: "─", yPadChar: "│" },
   "┣": { xPadChar: "━", yPadChar: "┃" },
   "┠": { xPadChar: "─", yPadChar: "┃" },
@@ -643,6 +663,14 @@ export const createBorderMidLeftNode = (
     if (onlyDownAndLeftAreDouble) {
       return innerCreateBorder("╔");
     }
+    const onlyUpIsDouble = upIsDouble && !middleIsDouble && !downIsDouble;
+    if (onlyUpIsDouble) {
+      return innerCreateBorder("┌");
+    }
+    const onlyDownIsDouble = !upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyDownIsDouble) {
+      return innerCreateBorder("└");
+    }
   }
 
   const upIsBold = northBorder.bold;
@@ -685,6 +713,8 @@ const borderMidRightCharProps = {
   "╡": { xPadChar: "═", yPadChar: "│" },
   "╝": { xPadChar: "═", yPadChar: ["║", "│"] },
   "╗": { xPadChar: "═", yPadChar: ["│", "║"] },
+  "┘": { xPadChar: "─", yPadChar: ["║", "│"] },
+  "└": { xPadChar: "─", yPadChar: ["│", "║"] },
   "┤": { xPadChar: "─", yPadChar: "│" },
   "┫": { xPadChar: "━", yPadChar: "┃" },
   "┨": { xPadChar: "─", yPadChar: "┃" },
@@ -739,6 +769,14 @@ export const createBorderMidRightNode = (
       !upIsDouble && middleIsDouble && downIsDouble;
     if (onlyDownAndRightAreDouble) {
       return innerCreateBorder("╗");
+    }
+    const onlyUpIsDouble = upIsDouble && !middleIsDouble && !downIsDouble;
+    if (onlyUpIsDouble) {
+      return innerCreateBorder("┘");
+    }
+    const onlyDownIsDouble = !upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyDownIsDouble) {
+      return innerCreateBorder("└");
     }
   }
 
