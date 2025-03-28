@@ -5,7 +5,6 @@
  *
  * remaining:
  *
- * - rounded corners
  *
  * - head/foot styles with a "real" example
  * test diff variations of table styles to see
