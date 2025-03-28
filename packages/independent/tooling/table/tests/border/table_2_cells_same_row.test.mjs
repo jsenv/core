@@ -171,4 +171,10 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderTopStyle: "double",
       borderBottomStyle: "double",
     }));
+
+  test("8_border_double_top_left", () =>
+    run({
+      borderTopStyle: "double",
+      borderLeftStyle: "double",
+    }));
 });
