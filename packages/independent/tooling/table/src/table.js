@@ -5,15 +5,18 @@
  *
  * remaining:
  *
- * - double border + connection between double and single
- *
- * - test border style conflict (double -> single heavy)
- *
  * - rounded corners
+ *
+ * - head/foot styles with a "real" example
+ * test diff variations of table styles to see
+ *
+ * - color inheritance and priority
  *
  * - multiline
  *
  * - colspan/rowspan
+ *
+ * - test border style conflict (double -> single heavy)
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";

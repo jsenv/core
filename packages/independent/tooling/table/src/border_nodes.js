@@ -2,30 +2,10 @@
  * https://www.w3.org/TR/xml-entity-names/025.html?fbclid=IwZXh0bgNhZW0CMTEAAR0jL81PDwl6kfzRMUvjOSIfmuesvCdqr11lQpOS-9bpx7u1Q2LD1G7fJ1E_aem_URrWt-55lP_byLA6tjLleQ
  * https://www.w3schools.com/charsets/ref_utf_box.asp
  *
- * TODO: more double stuff
- * notons aussi que pour double le cas ou 3 bord et 4 borde se connecte ne supporte pas
- * qu'un des axes ne soit pas double (left/right style et top/bottom peutvent changer mais par exemple il
- * n'y a pas de cher pour le cas suivant:
- *
- * ═ ─
- *  ║
- *
- * Les seuls connecteur dispo sont:
- *
- * ╦, ╥ et ╤
- *
- * donnant ainsi
- *
- * ═╦─  ou   ═╥─  ou  ═╤─
- *  ║         ║        ║
- *
- * ah mais on peut faire ça: (utiliser le top right corner)
- * et ça rend pas trop mal
- *
- * ═╗─
- *  ║
  *
  */
+
+import { ANSI } from "@jsenv/humanize";
 
 // blank node is a fluid node that will take whatever size it will be requested to take
 // this is useful to enforce a given amount of space is taken in x/y
@@ -149,6 +129,7 @@ export const createBorderHalfDownNode = ({ style = "solid", bold, color }) => {
   };
 };
 
+const boldTopLeftRoundedChar = ANSI.effect("╭", ANSI.BOLD);
 const topLeftCharProps = {
   "╔": { xPadChar: "║", yPadChar: "═" },
   "╒": { xPadChar: "═", yPadChar: "│" },
@@ -157,9 +138,12 @@ const topLeftCharProps = {
   "┏": { xPadChar: "┃", yPadChar: "━" },
   "┍": { xPadChar: "━", yPadChar: "│" },
   "┎": { xPadChar: "┃", yPadChar: "─" },
+  "╭": { xPadChar: "│", yPadChar: "─" },
+  [boldTopLeftRoundedChar]: { xPadChar: "┃", yPadChar: "━" },
 };
 export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   const { color } = topBorder;
+  const rounded = topBorder.rounded && leftBorder.rounded;
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = topLeftCharProps[char];
     return {
@@ -196,11 +180,11 @@ export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   const leftIsBold = leftBorder.bold;
   const noneAreBold = !topIsBold && !leftIsBold;
   if (noneAreBold) {
-    return innerCreateBorder("┌");
+    return innerCreateBorder(rounded ? "╭" : "┌");
   }
   const bothAreBold = topIsBold && leftIsBold;
   if (bothAreBold) {
-    return innerCreateBorder("┏");
+    return innerCreateBorder(rounded ? boldTopLeftRoundedChar : "┏");
   }
   const onlyTopIsBold = topIsBold && !leftIsBold;
   if (onlyTopIsBold) {
@@ -209,6 +193,7 @@ export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   // only left is bold
   return innerCreateBorder("┎");
 };
+const topRightRoundedChar = ANSI.effect("╮", ANSI.BOLD);
 const topRightCharProps = {
   "╗": { xPadChar: "║", yPadChar: "═" },
   "╕": { xPadChar: "═", yPadChar: "│" },
@@ -217,9 +202,12 @@ const topRightCharProps = {
   "┓": { xPadChar: "┃", yPadChar: "━" },
   "┑": { xPadChar: "━", yPadChar: "│" },
   "┒": { xPadChar: "┃", yPadChar: "─" },
+  "╮": { xPadChar: "│", yPadChar: "─" },
+  [topRightRoundedChar]: { xPadChar: "┃", yPadChar: "━" },
 };
 export const createBorderTopRightNode = (topBorder, rightBorder) => {
   const { color } = topBorder;
+  const rounded = topBorder.rounded && rightBorder.rounded;
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = topRightCharProps[char];
     return {
@@ -255,11 +243,11 @@ export const createBorderTopRightNode = (topBorder, rightBorder) => {
   const rightIsBold = rightBorder.bold;
   const noneAreBold = !topIsBold && !rightIsBold;
   if (noneAreBold) {
-    return innerCreateBorder("┐");
+    return innerCreateBorder(rounded ? "╮" : "┐");
   }
   const bothAreBold = topIsBold && rightIsBold;
   if (bothAreBold) {
-    return innerCreateBorder("┓");
+    return innerCreateBorder(rounded ? topRightRoundedChar : "┓");
   }
   const onlyTopIsBold = topIsBold && !rightIsBold;
   if (onlyTopIsBold) {
@@ -268,6 +256,7 @@ export const createBorderTopRightNode = (topBorder, rightBorder) => {
   // only right is bold
   return innerCreateBorder("┒");
 };
+const boldBottomRightRoundedChar = ANSI.effect("╯", ANSI.BOLD);
 const bottomRightCharProps = {
   "╝": { xPadChar: "║", yPadChar: "═" },
   "╛": { xPadChar: "═", yPadChar: "│" },
@@ -276,9 +265,12 @@ const bottomRightCharProps = {
   "┛": { xPadChar: "┃", yPadChar: "━" },
   "┙": { xPadChar: "━", yPadChar: "│" },
   "┚": { xPadChar: "┃", yPadChar: "─" },
+  "╯": { xPadChar: "│", yPadChar: "─" },
+  [boldBottomRightRoundedChar]: { xPadChar: "┃", yPadChar: "━" },
 };
 export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
   const { color } = bottomBorder;
+  const rounded = bottomBorder.rounded && rightBorder.rounded;
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = bottomRightCharProps[char];
     return {
@@ -314,11 +306,11 @@ export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
   const rightIsBold = rightBorder.bold;
   const noneAreBold = !bottomIsBold && !rightIsBold;
   if (noneAreBold) {
-    return innerCreateBorder("┘");
+    return innerCreateBorder(rounded ? "╯" : "┘");
   }
   const bothAreBold = bottomIsBold && rightIsBold;
   if (bothAreBold) {
-    return innerCreateBorder("┛");
+    return innerCreateBorder(rounded ? boldBottomRightRoundedChar : "┛");
   }
   const onlyBottomIsBold = bottomIsBold && !rightIsBold;
   if (onlyBottomIsBold) {
@@ -327,6 +319,7 @@ export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
   // only right is bold
   return innerCreateBorder("┚");
 };
+const boldBottomLeftRoundedChar = ANSI.effect("╰", ANSI.BOLD);
 const bottomLeftCharProps = {
   "╚": { xPadChar: "║", yPadChar: "═" },
   "╘": { xPadChar: "═", yPadChar: "│" },
@@ -335,9 +328,12 @@ const bottomLeftCharProps = {
   "┗": { xPadChar: "┃", yPadChar: "━" },
   "┕": { xPadChar: "━", yPadChar: "│" },
   "┖": { xPadChar: "┃", yPadChar: "─" },
+  "╰": { xPadChar: "│", yPadChar: "─" },
+  [boldBottomLeftRoundedChar]: { xPadChar: "┃", yPadChar: "━" },
 };
 export const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
   const { color } = bottomBorder;
+  const rounded = bottomBorder.rounded && leftBorder.rounded;
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = bottomLeftCharProps[char];
     return {
@@ -373,11 +369,11 @@ export const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
   const leftIsBold = leftBorder.bold;
   const noneAreBold = !bottomIsBold && !leftIsBold;
   if (noneAreBold) {
-    return innerCreateBorder("└");
+    return innerCreateBorder(rounded ? "╰" : "└");
   }
   const bothAreBold = bottomIsBold && leftIsBold;
   if (bothAreBold) {
-    return innerCreateBorder("┗");
+    return innerCreateBorder(rounded ? boldBottomLeftRoundedChar : "┗");
   }
   const onlyBottomIsBold = bottomIsBold && !leftIsBold;
   if (onlyBottomIsBold) {
@@ -388,6 +384,29 @@ export const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
 };
 
 // intersections between 3 borders
+/**
+ * notons aussi que pour double le cas ou 3 bord et 4 borde se connecte ne supporte pas
+ * qu'un des axes ne soit pas double (left/right style et top/bottom peutvent changer mais par exemple il
+ * n'y a pas de cher pour le cas suivant:
+ *
+ * ═ ─
+ *  ║
+ *
+ * Les seuls connecteur dispo sont:
+ *
+ * ╦, ╥ et ╤
+ *
+ * donnant ainsi
+ *
+ * ═╦─  ou   ═╥─  ou  ═╤─
+ *  ║         ║        ║
+ *
+ * ah mais on peut faire ça: (utiliser le top right corner)
+ * et ça rend pas trop mal
+ *
+ * ═╗─
+ *  ║
+ */
 const borderMidTopCharProps = {
   "╦": { xPadChar: "║", yPadChar: "═" },
   "╤": { xPadChar: "═", yPadChar: "│" },

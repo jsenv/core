@@ -1,9 +1,10 @@
-# [3_border_bold_x](../../table_1_cell.test.mjs#L132)
+# [9_top_corners_rounded](../../table_1_cell.test.mjs#L172)
 
 ```js
 run({
-  borderLeftBold: true,
-  borderRightBold: true,
+  borderLeftRounded: true,
+  borderRightRounded: true,
+  borderTopRounded: true,
 })
 ```
 
@@ -18,33 +19,33 @@ run({
  a 
 
 --- left ---
-┃ a 
+│ a 
 
 --- bottom ---
  a 
 ───
 
 --- right ---
- a ┃
+ a │
 
 --- top_left ---
-┎───
-┃ a 
+╭───
+│ a 
 
 --- top_right ---
-───┒
- a ┃
+───╮
+ a │
 
 --- bottom_right ---
- a ┃
-───┚
+ a │
+───┘
 
 --- bottom_left ---
-┃ a 
-┖───
+│ a 
+└───
 
 --- left_and_right ---
-┃ a ┃
+│ a │
 
 --- top_and_bottom ---
 ───
@@ -52,27 +53,27 @@ run({
 ───
 
 --- all_but_top ---
-┃ a ┃
-┖───┚
+│ a │
+└───┘
 
 --- all_but_right ---
-┎───
-┃ a 
-┖───
+╭───
+│ a 
+└───
 
 --- all_but_left ---
-───┒
- a ┃
-───┚
+───╮
+ a │
+───┘
 
 --- all_but_bottom ---
-┎───┒
-┃ a ┃
+╭───╮
+│ a │
 
 --- all ---
-┎───┒
-┃ a ┃
-┖───┚
+╭───╮
+│ a │
+└───┘
 
 ```
 
