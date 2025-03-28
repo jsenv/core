@@ -1,4 +1,4 @@
-# [0_basic](../../table_3_cells_same_column.test.mjs#L81)
+# [0_basic](../../table_3_cells_same_column.test.mjs#L89)
 
 ```js
 run({})

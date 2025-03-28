@@ -1,9 +1,9 @@
-# [4_border_bold_y](../../table_3_cells_same_column.test.mjs#L107)
+# [7_border_double_y](../../table_3_cells_same_column.test.mjs#L127)
 
 ```js
 run({
-  borderTopBold: true,
-  borderBottomBold: true,
+  borderTopStyle: "double",
+  borderBottomStyle: "double",
 })
 ```
 
@@ -21,53 +21,53 @@ run({
 │ c │
 
 --- top_and_bottom ---
-━━━
+═══
  a 
-━━━
-━━━
+═══
+═══
  b 
-━━━
-━━━
+═══
+═══
  c 
-━━━
+═══
 
 --- castle ---
-╺━━━┑
+╶═══╕
   a │
-┍━━━┙
+╒═══╛
 │ b  
-┕━━━┑
+╘═══╕
   c │
-╺━━━┙
+╶═══╛
 
 --- castle_inverted ---
-┍━━━╸
+╒═══╴
 │ a  
-┕━━━┑
+╘═══╕
   b │
-┍━━━┙
+╒═══╛
 │ c  
-┕━━━╸
+╘═══╴
 
 --- around ---
-┍━━━┑
+╒═══╕
 │ a │
-┝━━━┥
+╞═══╡
 │ b │
-┝━━━┥
+╞═══╡
 │ c │
-┕━━━┙
+╘═══╛
 
 --- all ---
-┍━━━┑
+╒═══╕
 │ a │
-┕━━━┙
-┍━━━┑
+╘═══╛
+╒═══╕
 │ b │
-┕━━━┙
-┍━━━┑
+╘═══╛
+╒═══╕
 │ c │
-┕━━━┙
+╘═══╛
 
 ```
 
