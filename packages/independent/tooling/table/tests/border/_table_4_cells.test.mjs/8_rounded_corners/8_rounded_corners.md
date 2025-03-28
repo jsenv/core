@@ -1,17 +1,15 @@
-# [2_border_colors](../../table_4_cells.test.mjs#L239)
+# [8_rounded_corners](../../table_4_cells.test.mjs#L276)
 
 ```js
 run({
-  borderColors: true,
+  borderLeftRounded: true,
+  borderRightRounded: true,
+  borderTopRounded: true,
+  borderBottomRounded: true,
 })
 ```
 
 # 1/2 console.log
-
-![img](console.log.svg)
-
-<details>
-  <summary>see without style</summary>
 
 ```console
 --- none ---
@@ -19,63 +17,63 @@ run({
  c  d 
 
 --- around_strange ---
-┌───┬───┐
+╭───┬───╮
 │ a │ b │
-├───┼───┘
-│   ├───┐
+├───┼───╯
+│   ├───╮
 │ c │ d │
-└───┴───┘
+╰───┴───╯
 
 --- around_strange_2 ---
-┌───┬────┐
+╭───┬────╮
 │ a │  b │
-└───┴┬───┤
-┌────┤   │
+╰───┴┬───┤
+╭────┤   │
 │ c  │ d │
-└────┴───┘
+╰────┴───╯
 
 --- around_strange_3 ---
-┌───┬───┐
+╭───┬───╮
 │ a │ b │
 ├───┤   │
 │   ├───┤
 │ c │ d │
-└───┴───┘
+╰───┴───╯
 
 --- strange_2 ---
-┌───┬────┐
+╭───┬────╮
 │ a │  b │
 ├───┴┬───┤
 │ c  │ d │
-└────┴───┘
+╰────┴───╯
 
 --- left_column_full_right_column_split ---
-┌───┬───┐
+╭───┬───╮
 │ a │ b │
 │   ├───┤
 │ c │ d │
-└───┴───┘
+╰───┴───╯
 
 --- left_column_split_right_column_full ---
-┌───┬───┐
+╭───┬───╮
 │ a │ b │
 ├───┤   │
 │ c │ d │
-└───┴───┘
+╰───┴───╯
 
 --- first_row_full_second_row_split ---
-┌───────┐
+╭───────╮
 │ a   b │
 ├───┬───┤
 │ c │ d │
-└───┴───┘
+╰───┴───╯
 
 --- first_row_split_second_row_full ---
-┌───┬───┐
+╭───┬───╮
 │ a │ b │
 ├───┴───┤
 │ c   d │
-└───────┘
+╰───────╯
 
 --- first_row_right_second_row_left ---
   a │  b │
@@ -90,45 +88,42 @@ run({
    ───
 
 --- four_way_junction_bottom_right ---
-┌───┬───┐
+╭───┬───╮
 │ a │ b │
 ├───┼───┤
 │ c │ d │
-└───┴───┘
+╰───┴───╯
 
 --- four_way_junction_bottom_left ---
-┌───┬───┐
+╭───┬───╮
 │ a │ b │
 ├───┼───┤
 │ c │ d │
-└───┴───┘
+╰───┴───╯
 
 --- four_way_junction_top_left ---
-┌───┬───┐
+╭───┬───╮
 │ a │ b │
 ├───┼───┤
 │ c │ d │
-└───┴───┘
+╰───┴───╯
 
 --- four_way_junction_top_right ---
-┌───┬───┐
+╭───┬───╮
 │ a │ b │
 ├───┼───┤
 │ c │ d │
-└───┴───┘
+╰───┴───╯
 
 --- all ---
-┌───┐┌───┐
+╭───╮╭───╮
 │ a ││ b │
-└───┘└───┘
-┌───┐┌───┐
+╰───╯╰───╯
+╭───╮╭───╮
 │ c ││ d │
-└───┘└───┘
+╰───╯╰───╯
 
 ```
-
-</details>
-
 
 # 2/2 return
 
