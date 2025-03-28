@@ -5,13 +5,16 @@
  *
  * remaining:
  *
- *
  * - head/foot styles with a "real" example
  * test diff variations of table styles to see
  *
  * - color inheritance and priority
  *
  * - multiline
+ *
+ * - max line, max column (la dernier ligne/colonne afficheras "and 3 more...")
+ *
+ * - maxWidth (defaults to stdout.columns, will put ... at the end of the cell when it exceeds the remaining width
  *
  * - colspan/rowspan
  *
