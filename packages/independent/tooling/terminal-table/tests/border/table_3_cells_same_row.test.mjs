@@ -1,6 +1,6 @@
 import { renderNamedSections } from "@jsenv/humanize";
-import { BORDER_COLORS, renderTable } from "@jsenv/table";
-import { snapshotTableTests } from "@jsenv/table/tests/snapshot_table_tests.mjs";
+import { BORDER_COLORS, renderTable } from "@jsenv/terminal-table";
+import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
 const run = ({
   borderLeftBold,
