@@ -1,4 +1,4 @@
-# [4_border_bold_y](../../table_2_cells_same_column.test.mjs#L140)
+# [4_border_bold_y](../../table_2_cells_same_column.test.mjs#L148)
 
 ```js
 run({

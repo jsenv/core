@@ -1,17 +1,15 @@
-# [2_border_colors](../../table_2_cells_same_column.test.mjs#L137)
+# [8_rounded_corners](../../table_2_cells_same_column.test.mjs#L174)
 
 ```js
 run({
-  borderColors: true,
+  borderLeftRounded: true,
+  borderRightRounded: true,
+  borderTopRounded: true,
+  borderBottomRounded: true,
 })
 ```
 
 # 1/2 console.log
-
-![img](console.log.svg)
-
-<details>
-  <summary>see without style</summary>
 
 ```console
 --- bottom_and_top ---
@@ -22,8 +20,8 @@ run({
 
 --- bottom_left_and_top_left ---
 │ a 
-└───
-┌───
+╰───
+╭───
 │ b 
 
 --- left_bottom_and_left ---
@@ -38,8 +36,8 @@ run({
 
 --- bottom_right_and_top_right ---
  a │
-───┘
-───┐
+───╯
+───╮
  b │
 
 --- right_bottom_and_right ---
@@ -53,59 +51,56 @@ run({
  b │
 
 --- top_left_and_bottom_right ---
-┌───╴
+╭───╴
 │ a  
   b │
-╶───┘
+╶───╯
 
 --- bottom_right_and_top_left ---
   a │
-╶───┘
-┌───╴
+╶───╯
+╭───╴
 │ b  
 
 --- left_bottom_right ---
 │ a  
-└───┐
+╰───╮
   b │
 
 --- left_and_top_right ---
 │ a  
-└───┐
+╰───╮
   b │
 
 --- all_but_bottom_and_all_but_top ---
-┌───┐
+╭───╮
 │ a │
 │ b │
-└───┘
+╰───╯
 
 --- all_but_bottom_and_all ---
-┌───┐
+╭───╮
 │ a │
 ├───┤
 │ b │
-└───┘
+╰───╯
 
 --- all_and_all_but_top ---
-┌───┐
+╭───╮
 │ a │
 ├───┤
 │ b │
-└───┘
+╰───╯
 
 --- all ---
-┌───┐
+╭───╮
 │ a │
-└───┘
-┌───┐
+╰───╯
+╭───╮
 │ b │
-└───┘
+╰───╯
 
 ```
-
-</details>
-
 
 # 2/2 return
 
