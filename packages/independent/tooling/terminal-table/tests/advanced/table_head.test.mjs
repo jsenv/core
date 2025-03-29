@@ -8,7 +8,12 @@ import { renderNamedSections } from "@jsenv/humanize";
 import { renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
-const run = ({ headCellBorderBold = false, headCellTextBold = false }) => {
+const run = ({
+  headCellBorderBold = false,
+  headCellTextBold = false,
+  cellBorderLeftStyle,
+  cellBorderRightStyle,
+}) => {
   const renderTableWithHead = (grid, { cellProps }) => {
     const gridWithProps = [];
 
@@ -45,8 +50,14 @@ const run = ({ headCellBorderBold = false, headCellTextBold = false }) => {
     cellProps: ({ y }) => {
       return {
         bold: headCellTextBold && y === 0,
-        borderLeft: { bold: headCellBorderBold && y === 0 },
-        borderRight: { bold: headCellBorderBold && y === 0 },
+        borderLeft: {
+          bold: headCellBorderBold && y === 0,
+          style: cellBorderLeftStyle,
+        },
+        borderRight: {
+          bold: headCellBorderBold && y === 0,
+          style: cellBorderRightStyle,
+        },
         borderTop: y === 0 ? { bold: headCellBorderBold && y === 0 } : null,
         borderBottom:
           y === 0 || y === grid.length - 1
@@ -59,8 +70,16 @@ const run = ({ headCellBorderBold = false, headCellTextBold = false }) => {
     cellProps: ({ y }) => {
       return {
         bold: headCellTextBold && y === 0,
-        borderLeft: { bold: headCellBorderBold && y === 0, rounded: true },
-        borderRight: { bold: headCellBorderBold && y === 0, rounded: true },
+        borderLeft: {
+          bold: headCellBorderBold && y === 0,
+          rounded: true,
+          style: cellBorderLeftStyle,
+        },
+        borderRight: {
+          bold: headCellBorderBold && y === 0,
+          rounded: true,
+          style: cellBorderRightStyle,
+        },
         borderTop:
           y === 0
             ? { bold: headCellBorderBold && y === 0, rounded: true }
@@ -76,8 +95,14 @@ const run = ({ headCellBorderBold = false, headCellTextBold = false }) => {
     cellProps: ({ y }) => {
       return {
         bold: headCellTextBold && y === 0,
-        borderLeft: { bold: headCellBorderBold && y === 0 },
-        borderRight: { bold: headCellBorderBold && y === 0 },
+        borderLeft: {
+          bold: headCellBorderBold && y === 0,
+          style: cellBorderLeftStyle,
+        },
+        borderRight: {
+          bold: headCellBorderBold && y === 0,
+          style: cellBorderRightStyle,
+        },
         borderTop: y === 0 ? { bold: headCellBorderBold && y === 0 } : null,
         borderBottom:
           y === 0 || y === grid.length - 1
@@ -93,8 +118,16 @@ const run = ({ headCellBorderBold = false, headCellTextBold = false }) => {
     cellProps: ({ y }) => {
       return {
         bold: headCellTextBold && y === 0,
-        borderLeft: { bold: headCellBorderBold && y === 0, rounded: true },
-        borderRight: { bold: headCellBorderBold && y === 0, rounded: true },
+        borderLeft: {
+          bold: headCellBorderBold && y === 0,
+          rounded: true,
+          style: cellBorderLeftStyle,
+        },
+        borderRight: {
+          bold: headCellBorderBold && y === 0,
+          rounded: true,
+          style: cellBorderRightStyle,
+        },
         borderTop:
           y === 0
             ? { bold: headCellBorderBold && y === 0, rounded: true }
@@ -115,8 +148,12 @@ const run = ({ headCellBorderBold = false, headCellTextBold = false }) => {
     cellProps: ({ westCell, eastCell, y }) => {
       return {
         bold: headCellTextBold && y === 0,
-        borderLeft: westCell ? { bold: headCellBorderBold && y === 0 } : null,
-        borderRight: eastCell ? { bold: headCellBorderBold && y === 0 } : null,
+        borderLeft: westCell
+          ? { bold: headCellBorderBold && y === 0, style: cellBorderLeftStyle }
+          : null,
+        borderRight: eastCell
+          ? { bold: headCellBorderBold && y === 0, style: cellBorderRightStyle }
+          : null,
         borderTop: y === 1 ? { bold: headCellBorderBold && y === 0 } : null,
         borderBottom: null,
       };
@@ -127,8 +164,12 @@ const run = ({ headCellBorderBold = false, headCellTextBold = false }) => {
     cellProps: ({ westCell, eastCell, y }) => {
       return {
         bold: headCellTextBold && y === 0,
-        borderLeft: westCell ? { bold: headCellBorderBold && y === 0 } : null,
-        borderRight: eastCell ? { bold: headCellBorderBold && y === 0 } : null,
+        borderLeft: westCell
+          ? { bold: headCellBorderBold && y === 0, style: cellBorderLeftStyle }
+          : null,
+        borderRight: eastCell
+          ? { bold: headCellBorderBold && y === 0, style: cellBorderRightStyle }
+          : null,
         borderTop:
           y === 1
             ? { bold: headCellBorderBold && y === 0, style: "double" }
@@ -163,5 +204,11 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
     run({
       headCellBorderBold: true,
       headCellTextBold: true,
+    }));
+
+  test(`3_border_x_dashed`, () =>
+    run({
+      cellBorderLeftStyle: "dash",
+      cellBorderRightStyle: "dash",
     }));
 });
