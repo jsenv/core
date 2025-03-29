@@ -164,11 +164,17 @@ const run = ({ headCellBorderBold = false, headCellTextBold = false }) => {
   );
 };
 
-run({});
-run({ headCellBorderBold: true });
+await snapshotTableTests(import.meta.url, ({ test }) => {
+  test(`0_basic`, () => run({}));
 
-run({ headCellBorderBold: true, headCellTextBold: true });
+  test(`1_head_border_bold`, () =>
+    run({
+      headCellBorderBold: true,
+    }));
 
-// await snapshotTableTests(import.meta.url, ({ test }) => {
-//   test(`0_basic`, () => run({}));
-// });
+  test(`2_head_border_bold_and_text_bold`, () =>
+    run({
+      headCellBorderBold: true,
+      headCellTextBold: true,
+    }));
+});

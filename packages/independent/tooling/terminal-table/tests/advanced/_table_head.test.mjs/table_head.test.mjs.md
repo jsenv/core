@@ -2,6 +2,8 @@
 
 
 - [0_basic](0_basic/0_basic.md)
+- [1_head_border_bold](1_head_border_bold/1_head_border_bold.md)
+- [2_head_border_bold_and_text_bold](2_head_border_bold_and_text_bold/2_head_border_bold_and_text_bold.md)
 
 ---
 

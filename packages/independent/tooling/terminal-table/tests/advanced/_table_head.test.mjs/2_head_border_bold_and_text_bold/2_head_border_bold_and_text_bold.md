@@ -1,7 +1,10 @@
-# [0_basic](../../table_head.test.mjs#L168)
+# [2_head_border_bold_and_text_bold](../../table_head.test.mjs#L175)
 
 ```js
-run({})
+run({
+  headCellBorderBold: true,
+  headCellTextBold: true,
+})
 ```
 
 # 1/2 console.log
@@ -13,45 +16,45 @@ run({})
 
 ```console
 --- a ---
-┌───────┬─────┐
-│ name  │ age │
-├───────┼─────┤
+┏━━━━━━━┳━━━━━┓
+┃ name  ┃ age ┃
+┡━━━━━━━╇━━━━━┩
 │ dam   │ 35  │
 │ flore │ 30  │
 └───────┴─────┘
 
 --- a_rounded ---
-╭───────┬─────╮
-│ name  │ age │
-├───────┼─────┤
+╭━━━━━━━┳━━━━━╮
+┃ name  ┃ age ┃
+┡━━━━━━━╇━━━━━┩
 │ dam   │ 35  │
 │ flore │ 30  │
 ╰───────┴─────╯
 
 --- a_double ---
-┌───────┬─────┐
-│ name  │ age │
+┏━━━━━━━┳━━━━━┓
+┃ name  ┃ age ┃
 ╞═══════╪═════╡
 │ dam   │ 35  │
 │ flore │ 30  │
 └───────┴─────┘
 
 --- a_double_rounded ---
-╭───────┬─────╮
-│ name  │ age │
+╭━━━━━━━┳━━━━━╮
+┃ name  ┃ age ┃
 ╞═══════╪═════╡
 │ dam   │ 35  │
 │ flore │ 30  │
 ╰───────┴─────╯
 
 --- b ---
- name  │ age 
-───────┼─────
+ name  ┃ age 
+───────╈─────
  dam   │ 35  
  flore │ 30  
 
 --- b_double ---
- name  │ age 
+ name  ┃ age 
 ═══════╪═════
  dam   │ 35  
  flore │ 30  
