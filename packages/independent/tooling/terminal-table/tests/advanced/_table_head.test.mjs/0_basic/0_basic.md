@@ -1,4 +1,4 @@
-# [0_basic](../../table_head.test.mjs#L99)
+# [0_basic](../../table_head.test.mjs#L103)
 
 ```js
 run({})
@@ -7,13 +7,25 @@ run({})
 # 1/2 console.log
 
 ```console
---- main ---
+--- a ---
 ┌───────┬─────┐
 │ name  │ age │
 ├───────┼─────┤
 │ dam   │ 35  │
 │ flore │ 30  │
 └───────┴─────┘
+
+--- b ---
+ name  │ age 
+───────┼─────
+ dam   │ 35  
+ flore │ 30  
+
+--- b_double ---
+ name  │ age 
+═══════╪═════
+ dam   │ 35  
+ flore │ 30  
 
 ```
 

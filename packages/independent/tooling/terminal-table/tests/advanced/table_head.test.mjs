@@ -18,83 +18,157 @@
  */
 
 import { renderNamedSections } from "@jsenv/humanize";
-import { BORDER_COLORS, renderTable } from "@jsenv/terminal-table";
+import { renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
-const run = ({
-  borderLeftBold,
-  borderRightBold,
-  borderTopBold,
-  borderBottomBold,
-  borderLeftStyle,
-  borderRightStyle,
-  borderTopStyle,
-  borderBottomStyle,
-  borderLeftRounded,
-  borderRightRounded,
-  borderTopRounded,
-  borderBottomRounded,
-  borderColors,
-  ansi = borderColors,
-}) => {
-  const borderLeft = {
-    color: borderColors ? BORDER_COLORS.RED : null,
-    bold: borderLeftBold,
-    style: borderLeftStyle,
-    rounded: borderLeftRounded,
-  };
-  const borderRight = {
-    color: borderColors ? BORDER_COLORS.YELLOW : null,
-    bold: borderRightBold,
-    style: borderRightStyle,
-    rounded: borderRightRounded,
-  };
-  const borderTop = {
-    color: borderColors ? BORDER_COLORS.BLUE : null,
-    bold: borderTopBold,
-    style: borderTopStyle,
-    rounded: borderTopRounded,
-  };
-  const borderBottom = {
-    color: borderColors ? BORDER_COLORS.GREEN : null,
-    bold: borderBottomBold,
-    style: borderBottomStyle,
-    rounded: borderBottomRounded,
-  };
-  const renderTableWithHead = ([head, ...body]) => {
-    for (const cell of head) {
-      cell.borderLeft = borderLeft;
-      cell.borderRight = borderRight;
-      cell.borderTop = borderTop;
-      cell.borderBottom = borderBottom;
-      cell.bold = true;
-    }
-    for (const bodyRow of body) {
-      for (const bodyCell of bodyRow) {
-        bodyCell.borderLeft = borderLeft;
-        bodyCell.borderRight = borderRight;
+const run = ({ headCellBorderBold = false, headCellTextBold = false }) => {
+  const renderTableWithHead = (grid, { cellProps }) => {
+    const gridWithProps = [];
+
+    let y = 0;
+    for (const row of grid) {
+      const rowWithProps = [];
+      let x = 0;
+      for (const cell of row) {
+        const cellWithProps = { ...cell };
+        const westCell = x === 0 ? null : row[x - 1];
+        const eastCell = row[x + 1];
+        const northCell = y === 0 ? null : grid[y - 1][x];
+        const southCell = y === grid.length - 1 ? null : grid[y + 1][x];
+        Object.assign(
+          cellWithProps,
+          cellProps({ northCell, southCell, westCell, eastCell, x, y }),
+        );
+        rowWithProps.push(cellWithProps);
+        x++;
       }
+      gridWithProps.push(rowWithProps);
+      y++;
     }
-    const lastBodyRow = body[body.length - 1];
-    for (const bodyCell of lastBodyRow) {
-      bodyCell.borderBottom = borderBottom;
-    }
-    return renderTable([head, ...body], { ansi, borderCollapse: true });
+    return renderTable(gridWithProps, { ansi: true, borderCollapse: true });
   };
 
-  const main = renderTableWithHead([
+  const grid = [
     [{ value: "name" }, { value: "age" }],
     [{ value: "dam" }, { value: 35 }],
     [{ value: "flore" }, { value: 30 }],
-  ]);
+  ];
+
+  const a = renderTableWithHead(grid, {
+    cellProps: ({ y }) => {
+      return {
+        bold: headCellTextBold && y === 0,
+        borderLeft: { bold: headCellBorderBold && y === 0 },
+        borderRight: { bold: headCellBorderBold && y === 0 },
+        borderTop: y === 0 ? { bold: headCellBorderBold && y === 0 } : null,
+        borderBottom:
+          y === 0 || y === grid.length - 1
+            ? { bold: headCellBorderBold && y === 0 }
+            : null,
+      };
+    },
+  });
+  const a_rounded = renderTableWithHead(grid, {
+    cellProps: ({ y }) => {
+      return {
+        bold: headCellTextBold && y === 0,
+        borderLeft: { bold: headCellBorderBold && y === 0, rounded: true },
+        borderRight: { bold: headCellBorderBold && y === 0, rounded: true },
+        borderTop:
+          y === 0
+            ? { bold: headCellBorderBold && y === 0, rounded: true }
+            : null,
+        borderBottom:
+          y === 0 || y === grid.length - 1
+            ? { bold: headCellBorderBold && y === 0, rounded: true }
+            : null,
+      };
+    },
+  });
+  const a_double = renderTableWithHead(grid, {
+    cellProps: ({ y }) => {
+      return {
+        bold: headCellTextBold && y === 0,
+        borderLeft: { bold: headCellBorderBold && y === 0 },
+        borderRight: { bold: headCellBorderBold && y === 0 },
+        borderTop: y === 0 ? { bold: headCellBorderBold && y === 0 } : null,
+        borderBottom:
+          y === 0 || y === grid.length - 1
+            ? {
+                style: y === 0 ? "double" : "solid",
+                bold: headCellBorderBold && y === 0,
+              }
+            : null,
+      };
+    },
+  });
+  const a_double_rounded = renderTableWithHead(grid, {
+    cellProps: ({ y }) => {
+      return {
+        bold: headCellTextBold && y === 0,
+        borderLeft: { bold: headCellBorderBold && y === 0, rounded: true },
+        borderRight: { bold: headCellBorderBold && y === 0, rounded: true },
+        borderTop:
+          y === 0
+            ? { bold: headCellBorderBold && y === 0, rounded: true }
+            : null,
+        borderBottom:
+          y === 0 || y === grid.length - 1
+            ? {
+                bold: headCellBorderBold && y === 0,
+                style: y === 0 ? "double" : "solid",
+                rounded: true,
+              }
+            : null,
+      };
+    },
+  });
+
+  const b = renderTableWithHead(grid, {
+    cellProps: ({ westCell, eastCell, y }) => {
+      return {
+        bold: headCellTextBold && y === 0,
+        borderLeft: westCell ? { bold: headCellBorderBold && y === 0 } : null,
+        borderRight: eastCell ? { bold: headCellBorderBold && y === 0 } : null,
+        borderTop: y === 1 ? { bold: headCellBorderBold && y === 0 } : null,
+        borderBottom: null,
+      };
+    },
+  });
+
+  const b_double = renderTableWithHead(grid, {
+    cellProps: ({ westCell, eastCell, y }) => {
+      return {
+        bold: headCellTextBold && y === 0,
+        borderLeft: westCell ? { bold: headCellBorderBold && y === 0 } : null,
+        borderRight: eastCell ? { bold: headCellBorderBold && y === 0 } : null,
+        borderTop:
+          y === 1
+            ? { bold: headCellBorderBold && y === 0, style: "double" }
+            : null,
+        borderBottom: null,
+        double: true,
+      };
+    },
+  });
 
   console.log(
     renderNamedSections({
-      main,
+      a,
+      a_rounded,
+      a_double,
+      a_double_rounded,
+      b,
+      b_double,
     }),
   );
 };
 
-await snapshotTableTests(import.meta.url, ({ test }) => {
-  test(`0_basic`, () => run({}));
-});
+run({});
+run({ headCellBorderBold: true });
+
+run({ headCellBorderBold: true, headCellTextBold: true });
+
+// await snapshotTableTests(import.meta.url, ({ test }) => {
+//   test(`0_basic`, () => run({}));
+// });
