@@ -17,9 +17,7 @@
         <text x="110.82" y="119.55" style="white-space:pre">  │</text>
         <text x="10" y="138.55">└───────┴─────┘</text>
         <text x="10" y="176.55">--- a_rounded ---</text>
-        <text x="10" y="195.55" font-weight="bold">╭</text>
-        <text x="18.4" y="195.55">━━━━━━━┳━━━━━</text>
-        <text x="127.62" y="195.55" font-weight="bold">╮</text>
+        <text x="10" y="195.55">┏━━━━━━━┳━━━━━┓</text>
         <text x="10" y="214.55" style="white-space:pre">┃ name  ┃ age ┃</text>
         <text x="10" y="233.55">┡━━━━━━━╇━━━━━┩</text>
         <text x="10" y="252.55" style="white-space:pre">│ dam   │ </text>
@@ -41,9 +39,7 @@
         <text x="110.82" y="423.55" style="white-space:pre">  │</text>
         <text x="10" y="442.55">└───────┴─────┘</text>
         <text x="10" y="480.55">--- a_double_rounded ---</text>
-        <text x="10" y="499.55" font-weight="bold">╭</text>
-        <text x="18.4" y="499.55">━━━━━━━┳━━━━━</text>
-        <text x="127.62" y="499.55" font-weight="bold">╮</text>
+        <text x="10" y="499.55">┏━━━━━━━┳━━━━━┓</text>
         <text x="10" y="518.55" style="white-space:pre">┃ name  ┃ age ┃</text>
         <text x="10" y="537.55">╞═══════╪═════╡</text>
         <text x="10" y="556.55" style="white-space:pre">│ dam   │ </text>
@@ -55,7 +51,7 @@
         <text x="10" y="594.55">╰───────┴─────╯</text>
         <text x="10" y="632.55">--- b ---</text>
         <text x="10" y="651.55" style="white-space:pre"> name  ┃ age </text>
-        <text x="10" y="670.55">───────╈─────</text>
+        <text x="10" y="670.55">───────╀─────</text>
         <text x="10" y="689.55" style="white-space:pre"> dam   │ </text>
         <text x="85.61" y="689.55" fill="#DAA520">35</text>
         <text x="10" y="708.55" style="white-space:pre"> flore │ </text>
