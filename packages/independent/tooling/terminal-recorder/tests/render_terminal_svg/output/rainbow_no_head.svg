@@ -27,11 +27,11 @@
       fill="#cccccc"
     >
       <g>
-        <text x="10" y="14.55" fill="#cd5555">red </text>
-        <text x="43.61" y="14.55" fill="#DAA520">yellow </text>
-        <text x="102.42" y="14.55" fill="#11bc79">green </text>
-        <text x="152.82" y="14.55" fill="#008B8B">cyan </text>
-        <text x="194.83" y="14.55" fill="#4169E1">blue </text>
+        <text x="10" y="14.55" style="white-space:pre" fill="#cd5555">red </text>
+        <text x="43.61" y="14.55" style="white-space:pre" fill="#DAA520">yellow </text>
+        <text x="102.42" y="14.55" style="white-space:pre" fill="#11bc79">green </text>
+        <text x="152.82" y="14.55" style="white-space:pre" fill="#008B8B">cyan </text>
+        <text x="194.83" y="14.55" style="white-space:pre" fill="#4169E1">blue </text>
         <text x="236.84" y="14.55" fill="#9932CC">magenta</text>
       </g>
     </svg>

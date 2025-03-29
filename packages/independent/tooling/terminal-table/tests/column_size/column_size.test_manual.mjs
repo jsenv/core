@@ -6,4 +6,5 @@ const grid = [
   [{ value: "✔️", border: {} }],
 ];
 
-console.log(renderTable(grid, { borderCollapse: true }));
+const output = renderTable(grid, { borderCollapse: true });
+console.log(output);

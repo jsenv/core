@@ -38,4 +38,20 @@ startTesting((test) => {
   );
 
   test("color_outside_double_spaced", "[32mA[0mB  B[32mA[0m");
+
+  test(
+    "table with emojis",
+    `┌───────┐
+│ emoji │
+├───────┤
+│ ✅    │
+├───────┤
+│ ✔️     │
+└───────┘
+`,
+    {
+      head: false,
+      title: "Terminal",
+    },
+  );
 });
