@@ -5,8 +5,6 @@
  *
  */
 
-import { ANSI } from "@jsenv/humanize";
-
 // blank node is a fluid node that will take whatever size it will be requested to take
 // this is useful to enforce a given amount of space is taken in x/y
 // It is used to implement borders because any cell can suddenly
@@ -129,7 +127,6 @@ export const createBorderHalfDownNode = ({ style = "solid", bold, color }) => {
   };
 };
 
-const boldTopLeftRoundedChar = ANSI.effect("╭", ANSI.BOLD);
 const topLeftCharProps = {
   "╔": { xPadChar: "║", yPadChar: "═" },
   "╒": { xPadChar: "═", yPadChar: "│" },
@@ -139,7 +136,6 @@ const topLeftCharProps = {
   "┍": { xPadChar: "━", yPadChar: "│" },
   "┎": { xPadChar: "┃", yPadChar: "─" },
   "╭": { xPadChar: "│", yPadChar: "─" },
-  [boldTopLeftRoundedChar]: { xPadChar: "┃", yPadChar: "━" },
 };
 export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   const { color } = topBorder;
@@ -184,7 +180,7 @@ export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   }
   const bothAreBold = topIsBold && leftIsBold;
   if (bothAreBold) {
-    return innerCreateBorder(rounded ? boldTopLeftRoundedChar : "┏");
+    return innerCreateBorder("┏");
   }
   const onlyTopIsBold = topIsBold && !leftIsBold;
   if (onlyTopIsBold) {
@@ -193,7 +189,7 @@ export const createBorderTopLeftNode = (topBorder, leftBorder) => {
   // only left is bold
   return innerCreateBorder("┎");
 };
-const topRightRoundedChar = ANSI.effect("╮", ANSI.BOLD);
+
 const topRightCharProps = {
   "╗": { xPadChar: "║", yPadChar: "═" },
   "╕": { xPadChar: "═", yPadChar: "│" },
@@ -203,7 +199,6 @@ const topRightCharProps = {
   "┑": { xPadChar: "━", yPadChar: "│" },
   "┒": { xPadChar: "┃", yPadChar: "─" },
   "╮": { xPadChar: "│", yPadChar: "─" },
-  [topRightRoundedChar]: { xPadChar: "┃", yPadChar: "━" },
 };
 export const createBorderTopRightNode = (topBorder, rightBorder) => {
   const { color } = topBorder;
@@ -247,7 +242,7 @@ export const createBorderTopRightNode = (topBorder, rightBorder) => {
   }
   const bothAreBold = topIsBold && rightIsBold;
   if (bothAreBold) {
-    return innerCreateBorder(rounded ? topRightRoundedChar : "┓");
+    return innerCreateBorder("┓");
   }
   const onlyTopIsBold = topIsBold && !rightIsBold;
   if (onlyTopIsBold) {
@@ -256,7 +251,6 @@ export const createBorderTopRightNode = (topBorder, rightBorder) => {
   // only right is bold
   return innerCreateBorder("┒");
 };
-const boldBottomRightRoundedChar = ANSI.effect("╯", ANSI.BOLD);
 const bottomRightCharProps = {
   "╝": { xPadChar: "║", yPadChar: "═" },
   "╛": { xPadChar: "═", yPadChar: "│" },
@@ -266,7 +260,6 @@ const bottomRightCharProps = {
   "┙": { xPadChar: "━", yPadChar: "│" },
   "┚": { xPadChar: "┃", yPadChar: "─" },
   "╯": { xPadChar: "│", yPadChar: "─" },
-  [boldBottomRightRoundedChar]: { xPadChar: "┃", yPadChar: "━" },
 };
 export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
   const { color } = bottomBorder;
@@ -310,7 +303,7 @@ export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
   }
   const bothAreBold = bottomIsBold && rightIsBold;
   if (bothAreBold) {
-    return innerCreateBorder(rounded ? boldBottomRightRoundedChar : "┛");
+    return innerCreateBorder("┛");
   }
   const onlyBottomIsBold = bottomIsBold && !rightIsBold;
   if (onlyBottomIsBold) {
@@ -319,7 +312,6 @@ export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
   // only right is bold
   return innerCreateBorder("┚");
 };
-const boldBottomLeftRoundedChar = ANSI.effect("╰", ANSI.BOLD);
 const bottomLeftCharProps = {
   "╚": { xPadChar: "║", yPadChar: "═" },
   "╘": { xPadChar: "═", yPadChar: "│" },
@@ -329,7 +321,6 @@ const bottomLeftCharProps = {
   "┕": { xPadChar: "━", yPadChar: "│" },
   "┖": { xPadChar: "┃", yPadChar: "─" },
   "╰": { xPadChar: "│", yPadChar: "─" },
-  [boldBottomLeftRoundedChar]: { xPadChar: "┃", yPadChar: "━" },
 };
 export const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
   const { color } = bottomBorder;
@@ -373,7 +364,7 @@ export const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
   }
   const bothAreBold = bottomIsBold && leftIsBold;
   if (bothAreBold) {
-    return innerCreateBorder(rounded ? boldBottomLeftRoundedChar : "┗");
+    return innerCreateBorder("┗");
   }
   const onlyBottomIsBold = bottomIsBold && !leftIsBold;
   if (onlyBottomIsBold) {

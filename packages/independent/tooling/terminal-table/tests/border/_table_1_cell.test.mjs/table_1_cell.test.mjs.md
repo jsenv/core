@@ -11,6 +11,7 @@
 - [7_border_double_y](7_border_double_y/7_border_double_y.md)
 - [8_rounded_corners](8_rounded_corners/8_rounded_corners.md)
 - [9_top_corners_rounded](9_top_corners_rounded/9_top_corners_rounded.md)
+- [10_corners_rounded_and_bold](10_corners_rounded_and_bold/10_corners_rounded_and_bold.md)
 
 ---
 

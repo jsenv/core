@@ -175,4 +175,18 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderRightRounded: true,
       borderTopRounded: true,
     }));
+
+  // rounded and bold are not compatible (the output will use regular bold corners)
+  test("10_corners_rounded_and_bold", () =>
+    run({
+      borderLeftRounded: true,
+      borderRightRounded: true,
+      borderTopRounded: true,
+      borderBottomRounded: true,
+      borderLeftBold: true,
+      borderRightBold: true,
+      borderTopBold: true,
+      borderBottomBold: true,
+      ansi: true,
+    }));
 });
