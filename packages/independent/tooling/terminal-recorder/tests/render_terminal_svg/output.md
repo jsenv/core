@@ -18,6 +18,6 @@
 
 ![img](./output/color_outside_double_spaced.svg)
 
-# table with emojis
+# table_with_emojis
 
-![img](./output/table with emojis.svg)
+![img](./output/table_with_emojis.svg)

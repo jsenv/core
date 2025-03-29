@@ -36,9 +36,9 @@ const run = ({ headCellBorderBold = false, headCellTextBold = false }) => {
   };
 
   const grid = [
-    [{ value: "name" }, { value: "age" }],
-    [{ value: "dam" }, { value: 35 }],
-    [{ value: "flore" }, { value: 30 }],
+    [{ value: "name" }, { value: "age" }, { value: "status" }],
+    [{ value: "dam" }, { value: 35 }, { value: "✅" }],
+    [{ value: "flore" }, { value: 30 }, { value: "🚀" }],
   ];
 
   const a = renderTableWithHead(grid, {
