@@ -98,6 +98,8 @@ const run = (measure) => {
     "x\u2064x",
   ];
 
+  const emojis = ["✔️", "✅"];
+
   return {
     main: measureAll(main),
     controlChars: measureAll(controlChars),
@@ -107,6 +109,7 @@ const run = (measure) => {
     variationSelectors: measureAll(variationSelectors),
     edgeCases: measureAll(edgeCases),
     defaultIgnorableCodePoints: measureAll(defaultIgnorableCodePoints),
+    emojis: measureAll(emojis),
   };
 };
 

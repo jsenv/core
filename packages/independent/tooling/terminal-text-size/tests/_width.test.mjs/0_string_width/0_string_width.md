@@ -1,4 +1,4 @@
-# [0_string_width](../../width.test.mjs#L114)
+# [0_string_width](../../width.test.mjs#L117)
 
 ```js
 run(stringWidth)
@@ -89,6 +89,10 @@ run(stringWidth)
     "x⁢x": 2,
     "x⁣x": 2,
     "x⁤x": 2
+  },
+  "emojis": {
+    "✔️": 2,
+    "✅": 2
   }
 }
 ```

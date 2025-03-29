@@ -1,4 +1,4 @@
-# [1_terminal_size](../../width.test.mjs#L116)
+# [1_terminal_size](../../width.test.mjs#L119)
 
 ```js
 run(measureTextWidth)
@@ -89,6 +89,10 @@ run(measureTextWidth)
     "x⁢x": 2,
     "x⁣x": 2,
     "x⁤x": 2
+  },
+  "emojis": {
+    "✔️": 1,
+    "✅": 2
   }
 }
 ```
