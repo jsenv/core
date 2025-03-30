@@ -424,7 +424,7 @@ export const renderTable = (
   const rightSlotRowMap = new Map();
   const topSlotRowMap = new Map();
   const bottomSlotRowMap = new Map();
-  // detect borders
+  // create cells and fill grid + detect borders
   {
     const onBorderLeft = (x, y) => {
       columnWithLeftSlotSet.add(x);
@@ -469,16 +469,6 @@ export const renderTable = (
       }
     };
 
-    const canCollapse = (border, otherBorder) => {
-      if (!borderSeparatedOnColorConflict) {
-        return true;
-      }
-      if (border.color !== otherBorder.color) {
-        return false;
-      }
-      return true;
-    };
-
     let y = 0;
     for (const inputRow of inputGrid) {
       let x = 0;
@@ -503,38 +493,27 @@ export const renderTable = (
         if (northCell) {
           northCell.southCell = cell;
         }
+        cell.borderLeft = borderLeft;
         if (borderLeft) {
-          if (
-            borderCollapse &&
-            westCell &&
-            westCell.borderRight &&
-            canCollapse(borderLeft, westCell.borderRight)
-          ) {
-          } else {
-            cell.borderLeft = borderLeft;
-            onBorderLeft(x, y);
-          }
+          cell.borderLeft = borderLeft;
+          onBorderLeft(x, y);
         }
         if (borderRight) {
           cell.borderRight = borderRight;
           onBorderRight(x, y);
         }
         if (borderTop) {
-          if (
-            borderCollapse &&
-            northCell &&
-            northCell.borderBottom &&
-            canCollapse(borderTop, northCell.borderBottom)
-          ) {
-          } else {
-            cell.borderTop = borderTop;
-            onBorderTop(x, y);
-          }
+          cell.borderTop = borderTop;
+          onBorderTop(x, y);
         }
         if (borderBottom) {
           cell.borderBottom = borderBottom;
           onBorderBottom(x, y);
         }
+
+        cell.borderRight = borderRight;
+        cell.borderTop = borderTop;
+        cell.borderBottom = borderBottom;
         row[x] = cell;
         x++;
       }
@@ -542,6 +521,79 @@ export const renderTable = (
       y++;
     }
   }
+
+  // border collapse
+  if (borderCollapse) {
+    const canCollapse = (border, otherBorder) => {
+      if (!borderSeparatedOnColorConflict) {
+        return true;
+      }
+      if (border.color !== otherBorder.color) {
+        return false;
+      }
+      return true;
+    };
+
+    const tryToCollapseColumnSlot = (x) => {
+      // if all borders of this row can collapsed with the right column, we collapse
+      let y = 0;
+      let allBorderCanCollapse = true;
+
+      while (y < grid.length) {
+        const cellInThatColumn = grid[y][x];
+        const border = cellInThatColumn.borderLeft;
+        if (!border) {
+          y++;
+          continue;
+        }
+        const otherBorder = cellInThatColumn.westCell.borderRight;
+        if (!otherBorder) {
+          y++;
+          continue;
+        }
+        if (!canCollapse(border, otherBorder)) {
+          allBorderCanCollapse = false;
+          break;
+        }
+        y++;
+      }
+      if (!allBorderCanCollapse) {
+        return false;
+      }
+      y = 0;
+      const slotRowMap = rightSlotRowMap;
+      while (y < grid.length) {
+        const slotRow = slotRowMap.get(y);
+        slotRow[x - 1] = undefined;
+        y++;
+      }
+      columnWithRightSlotSet.delete(x);
+      return true;
+    };
+
+    {
+      let y = 0;
+      while (y < grid.length) {
+        let x = 0;
+        const row = grid[y];
+        const firstCell = row[0];
+        if (firstCell.northCell && firstCell.southCell) {
+          // top/bottom border might be collapsible
+        }
+        while (x < row.length) {
+          if (columnHasRightSlot(x) && columnHasLeftSlot(x + 1)) {
+            if (tryToCollapseColumnSlot(x + 1, "absorbs_west_right")) {
+              x++;
+              continue;
+            }
+          }
+          x++;
+        }
+        y++;
+      }
+    }
+  }
+
   // fill holes in slot rows
   {
     let y = 0;
