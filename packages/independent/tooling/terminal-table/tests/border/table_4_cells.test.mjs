@@ -1,5 +1,5 @@
 import { renderNamedSections } from "@jsenv/humanize";
-import { BORDER_COLORS, renderTable } from "@jsenv/terminal-table";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
 const run = ({
@@ -20,25 +20,25 @@ const run = ({
   ansi = borderColors,
 }) => {
   const borderLeft = {
-    color: borderColors ? BORDER_COLORS.RED : null,
+    color: borderColors ? COLORS.RED : null,
     bold: borderLeftBold,
     style: borderLeftStyle,
     rounded: borderLeftRounded,
   };
   const borderRight = {
-    color: borderColors ? BORDER_COLORS.YELLOW : null,
+    color: borderColors ? COLORS.YELLOW : null,
     bold: borderRightBold,
     style: borderRightStyle,
     rounded: borderRightRounded,
   };
   const borderTop = {
-    color: borderColors ? BORDER_COLORS.BLUE : null,
+    color: borderColors ? COLORS.BLUE : null,
     bold: borderTopBold,
     style: borderTopStyle,
     rounded: borderTopRounded,
   };
   const borderBottom = {
-    color: borderColors ? BORDER_COLORS.GREEN : null,
+    color: borderColors ? COLORS.GREEN : null,
     bold: borderBottomBold,
     style: borderBottomStyle,
     rounded: borderBottomRounded,
@@ -236,7 +236,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderCollapse: true,
     }));
 
-  test(`2_border_colors`, () =>
+  test(`2_COLORS`, () =>
     run({
       borderColors: true,
     }));

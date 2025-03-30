@@ -47,11 +47,16 @@ import {
   createBorderTopRightNode,
 } from "./border_nodes.js";
 
-export const BORDER_COLORS = {
+export const COLORS = {
   RED: ANSI.RED,
   BLUE: ANSI.BLUE,
   YELLOW: ANSI.YELLOW,
   GREEN: ANSI.GREEN,
+  MAGENTA: ANSI.MAGENTA,
+  CYAN: ANSI.CYAN,
+  WHITE: ANSI.WHITE,
+  BLACK: ANSI.BLACK,
+  GREY: ANSI.GREY,
 };
 
 const leftSlot = {

@@ -3,7 +3,7 @@
  */
 
 import { renderNamedSections } from "@jsenv/humanize";
-import { BORDER_COLORS, renderTable } from "@jsenv/terminal-table";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
 const run = () => {
@@ -11,15 +11,15 @@ const run = () => {
     [
       {
         value: "a",
-        borderBottom: { color: BORDER_COLORS.RED },
-        borderLeft: { color: BORDER_COLORS.YELLOW },
+        borderBottom: { color: COLORS.RED },
+        borderLeft: { color: COLORS.YELLOW },
       },
     ],
     [
       {
         value: "b",
-        borderTop: { color: BORDER_COLORS.GREEN },
-        borderLeft: { color: BORDER_COLORS.BLUE },
+        borderTop: { color: COLORS.GREEN },
+        borderLeft: { color: COLORS.BLUE },
       },
     ],
   ];
