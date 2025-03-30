@@ -6,42 +6,68 @@ import { renderNamedSections } from "@jsenv/humanize";
 import { renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
-const run = () => {
-  const top_left_empty = renderTable(
+const run = ({ borderCollapse }) => {
+  const render = (grid) => renderTable(grid, { borderCollapse });
+
+  const top_left_empty = render([
     [
-      [
-        { value: "", border: null },
-        { value: "free", border: {} },
-      ],
-      [
-        { value: "feature a", border: {} },
-        { value: "✔", border: {} },
-      ],
+      { value: "top_left", border: null },
+      { value: "top_right", border: {} },
     ],
-    { borderCollapse: true },
-  );
-  const top_right_empty = renderTable(
     [
-      [
-        { value: "free", border: {} },
-        { value: "", border: null },
-      ],
-      [
-        { value: "feature a", border: {} },
-        { value: "✔", border: {} },
-      ],
+      { value: "bottom_left", border: {} },
+      { value: "bottom_right", border: {} },
     ],
-    { borderCollapse: true },
-  );
+  ]);
+  const top_right_empty = render([
+    [
+      { value: "top_left", border: {} },
+      { value: "top_right", border: null },
+    ],
+    [
+      { value: "bottom_left", border: {} },
+      { value: "bottom_right", border: {} },
+    ],
+  ]);
+  const bottom_right_empty = render([
+    [
+      { value: "top_left", border: {} },
+      { value: "top_right", border: {} },
+    ],
+    [
+      { value: "bottom_left", border: {} },
+      { value: "bottom_right", border: null },
+    ],
+  ]);
+  const bottom_left_empty = render([
+    [
+      { value: "top_left", border: {} },
+      { value: "top_right", border: {} },
+    ],
+    [
+      { value: "bottom_left", border: null },
+      { value: "bottom_right", border: {} },
+    ],
+  ]);
 
   console.log(
     renderNamedSections({
       top_left_empty,
       top_right_empty,
+      bottom_right_empty,
+      bottom_left_empty,
     }),
   );
 };
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
-  test(`0_basic`, () => run({}));
+  test(`0_without_collapse`, () =>
+    run({
+      borderCollapse: false,
+    }));
+
+  test(`1_with_collapse`, () =>
+    run({
+      borderCollapse: true,
+    }));
 });
