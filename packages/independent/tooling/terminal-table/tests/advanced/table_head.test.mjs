@@ -184,6 +184,29 @@ const run = ({
     },
   });
 
+  const product = renderTable(
+    [
+      [
+        { value: "", borderLeft: null, borderTop: null },
+        { value: "free", border: {} },
+        { value: "premium", border: {} },
+      ],
+      [
+        { value: "feature a", border: {} },
+        { value: "✔", border: {} },
+        { value: "✔", border: {} },
+      ],
+      [
+        { value: "feature b", border: {} },
+        { value: "✖", border: {} },
+        { value: "✔", border: {} },
+      ],
+    ],
+    {
+      borderCollapse: true,
+    },
+  );
+
   console.log(
     renderNamedSections({
       a,
@@ -192,6 +215,7 @@ const run = ({
       a_double_rounded,
       b,
       b_double,
+      product,
     }),
   );
 };
