@@ -1,9 +1,16 @@
-# [4_head_cell_background_cyan](../../table_head.test.mjs#L219)
+# [5_row_alternate_bg_colors](../../table_head.test.mjs#L226)
 
 ```js
 run({
+  cellColor: () => COLORS.BLACK,
   cellBackgroundColor: ({ y }) => {
-    return y === 0 ? COLORS.CYAN : null;
+    if (y === 0) {
+      return COLORS.MAGENTA;
+    }
+    if (y % 2 === 0) {
+      return COLORS.GREY;
+    }
+    return COLORS.GREEN;
   },
 })
 ```

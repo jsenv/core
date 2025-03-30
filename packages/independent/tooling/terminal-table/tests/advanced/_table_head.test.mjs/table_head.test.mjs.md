@@ -6,6 +6,7 @@
 - [2_head_border_bold_and_text_bold](2_head_border_bold_and_text_bold/2_head_border_bold_and_text_bold.md)
 - [3_border_x_dashed](3_border_x_dashed/3_border_x_dashed.md)
 - [4_head_cell_background_cyan](4_head_cell_background_cyan/4_head_cell_background_cyan.md)
+- [5_row_alternate_bg_colors](5_row_alternate_bg_colors/5_row_alternate_bg_colors.md)
 
 ---
 

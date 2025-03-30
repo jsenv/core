@@ -13,7 +13,8 @@ const run = ({
   headCellTextBold = false,
   cellBorderLeftStyle,
   cellBorderRightStyle,
-  headCellBackgroundColor,
+  cellColor,
+  cellBackgroundColor,
 }) => {
   const renderTableWithHead = (grid, { cellProps }) => {
     const gridWithProps = [];
@@ -28,13 +29,12 @@ const run = ({
         const eastCell = row[x + 1];
         const northCell = y === 0 ? null : grid[y - 1][x];
         const southCell = y === grid.length - 1 ? null : grid[y + 1][x];
+        cellWithProps.color = cellColor;
+        cellWithProps.backgroundColor = cellBackgroundColor;
         Object.assign(
           cellWithProps,
           cellProps({ northCell, southCell, westCell, eastCell, x, y }),
         );
-        if (headCellBackgroundColor && y === 0) {
-          cellWithProps.backgroundColor = headCellBackgroundColor;
-        }
         rowWithProps.push(cellWithProps);
         x++;
       }
@@ -216,9 +216,24 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       cellBorderRightStyle: "dash",
     }));
 
-  test.ONLY(`4_head_cell_background_cyan`, () =>
+  test(`4_head_cell_background_cyan`, () =>
     run({
-      headCellBackgroundColor: COLORS.CYAN,
-    }),
-  );
+      cellBackgroundColor: ({ y }) => {
+        return y === 0 ? COLORS.CYAN : null;
+      },
+    }));
+
+  test(`5_row_alternate_bg_colors`, () =>
+    run({
+      cellColor: () => COLORS.BLACK,
+      cellBackgroundColor: ({ y }) => {
+        if (y === 0) {
+          return COLORS.MAGENTA;
+        }
+        if (y % 2 === 0) {
+          return COLORS.GREY;
+        }
+        return COLORS.GREEN;
+      },
+    }));
 });
