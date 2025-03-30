@@ -2,7 +2,6 @@ export const tableFromObjects = (
   objects,
   {
     head = {
-      quoteAroundStrings: false,
       borderTop: { color: null },
       borderBottom: { color: null },
       borderLeft: { color: null },

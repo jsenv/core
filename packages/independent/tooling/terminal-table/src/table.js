@@ -1027,7 +1027,6 @@ const applyXAlign = (text, { width, desiredWidth, align, padChar }) => {
 const createCell = (
   {
     value,
-    quoteAroundStrings,
     color,
     format,
     bold,
@@ -1042,28 +1041,7 @@ const createCell = (
   },
   { ansi },
 ) => {
-  let text;
-  if (typeof value === "string") {
-    if (quoteAroundStrings) {
-      text = `"${value}"`;
-      if (color === undefined) {
-        color = ANSI.GREEN;
-      }
-    } else {
-      text = value;
-    }
-  } else if (typeof value === "number") {
-    if (format === "size") {
-      text = humanizeFileSize(value);
-    } else {
-      text = String(value);
-      if (color === undefined) {
-        color = ANSI.YELLOW;
-      }
-    }
-  } else {
-    text = String(value);
-  }
+  let text = format === "size" ? humanizeFileSize(value) : String(value);
 
   if (ansi && bold) {
     text = ANSI.color(text, ANSI.BOLD);

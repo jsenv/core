@@ -28,7 +28,6 @@ export const createBuildContentLog = (buildFileContents) => {
     items.push({
       "File type": {
         value: key,
-        quoteAroundStrings: false,
       },
       "File count": {
         value: count,
