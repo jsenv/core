@@ -187,7 +187,7 @@ const run = ({
   const product = renderTable(
     [
       [
-        { value: "", borderLeft: null, borderTop: null },
+        { value: "", border: {}, borderLeft: null, borderTop: null },
         { value: "free", border: {} },
         { value: "premium", border: {} },
       ],
