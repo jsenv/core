@@ -6,9 +6,12 @@
  * remaining:
  *
  * - head/foot styles with a "real" example
- * test diff variations of table styles to see
  *
  * - color inheritance and priority
+ *   une fonction pickColor(...borders)
+ *   en fonction de nb de borders il pick.
+ * Et on rangera les couleurs par prio, genre
+ * [BLUE, GREEN, YELLOW, RED]
  *
  * - multiline
  *
