@@ -562,8 +562,7 @@ export const renderTable = (
       bottomSlotRowMap.delete(y - 1);
       return true;
     };
-    // try to collapse left borders of this column with right borders of the previous column
-    const tryToCollapseColumnSlot = (x) => {
+    const collapsePreviousColumnRightBorders = (x) => {
       const firstCellInThatColumn = grid[0][x];
       let cellInThatColumn = firstCellInThatColumn;
       while (cellInThatColumn) {
@@ -574,8 +573,7 @@ export const renderTable = (
         }
         const otherBorder = cellInThatColumn.westCell.borderRight;
         if (!otherBorder) {
-          cellInThatColumn = cellInThatColumn.southCell;
-          continue;
+          return false;
         }
         if (!canCollapse(border, otherBorder)) {
           return false;
@@ -592,6 +590,34 @@ export const renderTable = (
       columnWithRightSlotSet.delete(x);
       return true;
     };
+    const collapseLeftBorders = (x) => {
+      const firstCellInThatColumn = grid[0][x];
+      let cellInThatColumn = firstCellInThatColumn;
+      while (cellInThatColumn) {
+        const border = cellInThatColumn.borderLeft;
+        if (!border) {
+          cellInThatColumn = cellInThatColumn.southCell;
+          continue;
+        }
+        const otherBorder = cellInThatColumn.westCell.borderRight;
+        if (!otherBorder) {
+          return false;
+        }
+        if (!canCollapse(border, otherBorder)) {
+          return false;
+        }
+        cellInThatColumn = cellInThatColumn.southCell;
+      }
+      let y = 0;
+      while (y < grid.length) {
+        const leftSlotRow = leftSlotRowMap.get(y);
+        leftSlotRow[x] = undefined;
+        grid[y][x].borderLeft = null;
+        y++;
+      }
+      columnWithLeftSlotSet.delete(x);
+      return true;
+    };
 
     {
       let y = 0;
@@ -603,7 +629,16 @@ export const renderTable = (
         const row = grid[y];
         while (x < row.length) {
           if (columnHasRightSlot(x) && columnHasLeftSlot(x + 1)) {
-            tryToCollapseColumnSlot(x + 1);
+            if (collapsePreviousColumnRightBorders(x + 1)) {
+              x++;
+              continue;
+            }
+          }
+          if (columnHasLeftSlot(x) && columnHasRightSlot(x - 1)) {
+            if (collapseLeftBorders(x)) {
+              x++;
+              continue;
+            }
           }
           x++;
         }

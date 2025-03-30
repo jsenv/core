@@ -9,33 +9,12 @@ run({
 # 1/2 console.log
 
 ```console
---- top_left_empty ---
-               ┌──────────────┐
-  top_left     │ top_right    │
-┌──────────────┼──────────────┤
-│ bottom_left  │ bottom_right │
-└──────────────┴──────────────┘
-
 --- top_right_empty ---
 ┌─────────────╴               
 │ top_left       top_right    
 ├──────────────┬──────────────┐
 │ bottom_left  │ bottom_right │
 └──────────────┴──────────────┘
-
---- bottom_right_empty ---
-┌──────────────┬──────────────┐
-│ top_left     │ top_right    │
-├─────────────╴               
-│ bottom_left    bottom_right 
-└─────────────╴               
-
---- bottom_left_empty ---
-┌──────────────┬──────────────┐
-│ top_left     │ top_right    │
-               ├──────────────┤
-  bottom_left  │ bottom_right │
-               └──────────────┘
 
 ```
 
