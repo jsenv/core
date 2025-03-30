@@ -418,6 +418,8 @@ export const renderTable = (
   const grid = [];
   const columnWithLeftSlotSet = new Set();
   const columnWithRightSlotSet = new Set();
+  const rowHasTopSlot = (y) => topSlotRowMap.has(y);
+  const rowHasBottomSlot = (y) => bottomSlotRowMap.has(y);
   const columnHasLeftSlot = (x) => columnWithLeftSlotSet.has(x);
   const columnHasRightSlot = (x) => columnWithRightSlotSet.has(x);
   const leftSlotRowMap = new Map();
@@ -534,37 +536,57 @@ export const renderTable = (
       return true;
     };
 
+    // try to collapse top borders of this row with bottom borders of the previous row
+    const tryToCollapseRowSlot = (y) => {
+      const firstCellInThatRow = grid[y][0];
+      let cellInThatRow = firstCellInThatRow;
+      while (cellInThatRow) {
+        const border = cellInThatRow.borderTop;
+        if (!border) {
+          cellInThatRow = cellInThatRow.eastCell;
+          continue;
+        }
+        const otherBorder = cellInThatRow.northCell.borderBottom;
+        if (!otherBorder) {
+          cellInThatRow = cellInThatRow.eastCell;
+          continue;
+        }
+        if (!canCollapse(border, otherBorder)) {
+          return false;
+        }
+        cellInThatRow = cellInThatRow.eastCell;
+      }
+      for (const cell of grid[y - 1]) {
+        cell.borderBottom = null;
+      }
+      bottomSlotRowMap.delete(y - 1);
+      return true;
+    };
+    // try to collapse left borders of this column with right borders of the previous column
     const tryToCollapseColumnSlot = (x) => {
-      // if all borders of this row can collapsed with the right column, we collapse
-      let y = 0;
-      let allBorderCanCollapse = true;
-
-      while (y < grid.length) {
-        const cellInThatColumn = grid[y][x];
+      const firstCellInThatColumn = grid[0][x];
+      let cellInThatColumn = firstCellInThatColumn;
+      while (cellInThatColumn) {
         const border = cellInThatColumn.borderLeft;
         if (!border) {
-          y++;
+          cellInThatColumn = cellInThatColumn.southCell;
           continue;
         }
         const otherBorder = cellInThatColumn.westCell.borderRight;
         if (!otherBorder) {
-          y++;
+          cellInThatColumn = cellInThatColumn.southCell;
           continue;
         }
         if (!canCollapse(border, otherBorder)) {
-          allBorderCanCollapse = false;
-          break;
+          return false;
         }
-        y++;
+        cellInThatColumn = cellInThatColumn.southCell;
       }
-      if (!allBorderCanCollapse) {
-        return false;
-      }
-      y = 0;
-      const slotRowMap = rightSlotRowMap;
+      let y = 0;
       while (y < grid.length) {
-        const slotRow = slotRowMap.get(y);
-        slotRow[x - 1] = undefined;
+        const rightSlotRow = rightSlotRowMap.get(y);
+        rightSlotRow[x - 1] = undefined;
+        grid[y][x - 1].borderRight = null;
         y++;
       }
       columnWithRightSlotSet.delete(x);
@@ -574,18 +596,14 @@ export const renderTable = (
     {
       let y = 0;
       while (y < grid.length) {
+        if (rowHasBottomSlot(y) && rowHasTopSlot(y + 1)) {
+          tryToCollapseRowSlot(y + 1);
+        }
         let x = 0;
         const row = grid[y];
-        const firstCell = row[0];
-        if (firstCell.northCell && firstCell.southCell) {
-          // top/bottom border might be collapsible
-        }
         while (x < row.length) {
           if (columnHasRightSlot(x) && columnHasLeftSlot(x + 1)) {
-            if (tryToCollapseColumnSlot(x + 1, "absorbs_west_right")) {
-              x++;
-              continue;
-            }
+            tryToCollapseColumnSlot(x + 1);
           }
           x++;
         }
