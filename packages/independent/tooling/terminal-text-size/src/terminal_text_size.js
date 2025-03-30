@@ -72,6 +72,12 @@ export const measureTextWidth = (
     }
 
     if (!skipEmojis && emojiRegex().test(character)) {
+      if (process.env.CAPTURING_SIDE_EFFECTS) {
+        if (character === "✔️") {
+          width += 2;
+          continue;
+        }
+      }
       width += measureTextWidth(character, {
         skipEmojis: true,
         countAnsiEscapeCodes: true, // to skip call to stripVTControlCharacters
