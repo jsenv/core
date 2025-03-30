@@ -46,6 +46,8 @@ export const createAnsi = ({ supported }) => {
     MAGENTA,
     CYAN,
     GREY,
+    WHITE,
+    BLACK,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;

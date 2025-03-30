@@ -60,4 +60,6 @@ startTesting((test) => {
     "text with background green and text black",
     "[42m[30mhello world[0m[0m",
   );
+
+  test("emoji_background_color", `\x1b[45m ✅ \x1b[0m`);
 });

@@ -1109,6 +1109,5 @@ const createCell = (
     x,
     y,
   };
-
   return cell;
 };

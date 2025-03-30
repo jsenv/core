@@ -25,3 +25,7 @@
 # text with background green and text black
 
 ![img](./output/text with background green and text black.svg)
+
+# emoji_background_color
+
+![img](./output/emoji_background_color.svg)
