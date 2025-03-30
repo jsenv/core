@@ -492,7 +492,7 @@ export const renderTable = (
           borderBottom = border,
           ...props
         } = inputCell;
-        const cell = createCell(props, { ansi });
+        const cell = createCell(props, { ansi, x, y });
         const westCell = x === 0 ? null : row[x - 1];
         const northCell = y === 0 ? null : grid[y - 1][x];
         cell.westCell = westCell;
@@ -1033,6 +1033,7 @@ const createCell = (
   {
     value,
     color,
+    backgroundColor,
     format,
     bold,
     unit,
@@ -1044,19 +1045,10 @@ const createCell = (
     xAlign = "start", // "start", "center", "end"
     yAlign = "start", // "start", "center", "end"
   },
-  { ansi },
+  { ansi, x, y },
 ) => {
   let text = format === "size" ? humanizeFileSize(value) : String(value);
-
-  if (ansi && bold) {
-    text = ANSI.color(text, ANSI.BOLD);
-  }
-  if (ansi && color) {
-    text = ANSI.color(text, color);
-  }
-
   const lines = text.split("\n");
-
   let lineIndex = 0;
   const rects = [];
   for (const line of lines) {
@@ -1072,12 +1064,40 @@ const createCell = (
     }
     rects.push({
       width: lineWidth,
-      render: () => lineText,
+      render: () => {
+        let lineTextFormatted = lineText;
+        if (ansi && bold) {
+          const lineBold = bold === "function" ? bold(cell) : bold;
+          if (lineBold) {
+            lineTextFormatted = ANSI.effect(lineTextFormatted, ANSI.BOLD);
+          }
+        }
+        if (ansi && color) {
+          const lineTextColor =
+            typeof color === "function" ? color(cell) : color;
+          if (lineTextColor) {
+            lineTextFormatted = ANSI.color(lineTextFormatted, lineTextColor);
+          }
+        }
+        if (ansi && backgroundColor) {
+          const lineBackgroundColor =
+            typeof backgroundColor === "function"
+              ? backgroundColor(cell)
+              : color;
+          if (lineBackgroundColor) {
+            lineTextFormatted = ANSI.backgroundColor(
+              lineTextFormatted,
+              lineBackgroundColor,
+            );
+          }
+        }
+        return lineTextFormatted;
+      },
     });
     lineIndex++;
   }
 
-  return {
+  const cell = {
     type: "content",
     value,
     xAlign,
@@ -1087,5 +1107,9 @@ const createCell = (
     topSpacing,
     bottomSpacing,
     rects,
+    x,
+    y,
   };
+
+  return cell;
 };

@@ -1,4 +1,4 @@
-# [1_head_border_bold](../../table_head.test.mjs#L203)
+# [1_head_border_bold](../../table_head.test.mjs#L198)
 
 ```js
 run({
@@ -7,11 +7,6 @@ run({
 ```
 
 # 1/2 console.log
-
-![img](console.log.svg)
-
-<details>
-  <summary>see without style</summary>
 
 ```console
 --- a ---
@@ -59,9 +54,6 @@ run({
  flore │ 30  │ 🚀     
 
 ```
-
-</details>
-
 
 # 2/2 return
 

@@ -1,15 +1,10 @@
-# [0_basic](../../table_head.test.mjs#L201)
+# [0_basic](../../table_head.test.mjs#L196)
 
 ```js
 run({})
 ```
 
 # 1/2 console.log
-
-![img](console.log.svg)
-
-<details>
-  <summary>see without style</summary>
 
 ```console
 --- a ---
@@ -57,9 +52,6 @@ run({})
  flore │ 30  │ 🚀     
 
 ```
-
-</details>
-
 
 # 2/2 return
 

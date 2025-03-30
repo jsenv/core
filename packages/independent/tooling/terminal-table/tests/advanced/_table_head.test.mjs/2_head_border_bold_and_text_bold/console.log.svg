@@ -15,12 +15,8 @@
         <text x="144.42" y="62.55" font-weight="bold">status</text>
         <text x="194.83" y="62.55" style="white-space:pre"> ┃</text>
         <text x="10" y="81.55">┡━━━━━━━╇━━━━━╇━━━━━━━━┩</text>
-        <text x="10" y="100.55" style="white-space:pre">│ dam   │ </text>
-        <text x="94.01" y="100.55" fill="#DAA520">35</text>
-        <text x="110.82" y="100.55" style="white-space:pre">  │ ✅     │</text>
-        <text x="10" y="119.55" style="white-space:pre">│ flore │ </text>
-        <text x="94.01" y="119.55" fill="#DAA520">30</text>
-        <text x="110.82" y="119.55" style="white-space:pre">  │ 🚀     │</text>
+        <text x="10" y="100.55" style="white-space:pre">│ dam   │ 35  │ ✅     │</text>
+        <text x="10" y="119.55" style="white-space:pre">│ flore │ 30  │ 🚀     │</text>
         <text x="10" y="138.55">└───────┴─────┴────────┘</text>
         <text x="10" y="176.55">--- a_rounded ---</text>
         <text x="10" y="195.55">┏━━━━━━━┳━━━━━┳━━━━━━━━┓</text>
@@ -32,12 +28,8 @@
         <text x="144.42" y="214.55" font-weight="bold">status</text>
         <text x="194.83" y="214.55" style="white-space:pre"> ┃</text>
         <text x="10" y="233.55">┡━━━━━━━╇━━━━━╇━━━━━━━━┩</text>
-        <text x="10" y="252.55" style="white-space:pre">│ dam   │ </text>
-        <text x="94.01" y="252.55" fill="#DAA520">35</text>
-        <text x="110.82" y="252.55" style="white-space:pre">  │ ✅     │</text>
-        <text x="10" y="271.55" style="white-space:pre">│ flore │ </text>
-        <text x="94.01" y="271.55" fill="#DAA520">30</text>
-        <text x="110.82" y="271.55" style="white-space:pre">  │ 🚀     │</text>
+        <text x="10" y="252.55" style="white-space:pre">│ dam   │ 35  │ ✅     │</text>
+        <text x="10" y="271.55" style="white-space:pre">│ flore │ 30  │ 🚀     │</text>
         <text x="10" y="290.55">╰───────┴─────┴────────╯</text>
         <text x="10" y="328.55">--- a_double ---</text>
         <text x="10" y="347.55">┏━━━━━━━┳━━━━━┳━━━━━━━━┓</text>
@@ -49,12 +41,8 @@
         <text x="144.42" y="366.55" font-weight="bold">status</text>
         <text x="194.83" y="366.55" style="white-space:pre"> ┃</text>
         <text x="10" y="385.55">╞═══════╪═════╪════════╡</text>
-        <text x="10" y="404.55" style="white-space:pre">│ dam   │ </text>
-        <text x="94.01" y="404.55" fill="#DAA520">35</text>
-        <text x="110.82" y="404.55" style="white-space:pre">  │ ✅     │</text>
-        <text x="10" y="423.55" style="white-space:pre">│ flore │ </text>
-        <text x="94.01" y="423.55" fill="#DAA520">30</text>
-        <text x="110.82" y="423.55" style="white-space:pre">  │ 🚀     │</text>
+        <text x="10" y="404.55" style="white-space:pre">│ dam   │ 35  │ ✅     │</text>
+        <text x="10" y="423.55" style="white-space:pre">│ flore │ 30  │ 🚀     │</text>
         <text x="10" y="442.55">└───────┴─────┴────────┘</text>
         <text x="10" y="480.55">--- a_double_rounded ---</text>
         <text x="10" y="499.55">┏━━━━━━━┳━━━━━┳━━━━━━━━┓</text>
@@ -66,12 +54,8 @@
         <text x="144.42" y="518.55" font-weight="bold">status</text>
         <text x="194.83" y="518.55" style="white-space:pre"> ┃</text>
         <text x="10" y="537.55">╞═══════╪═════╪════════╡</text>
-        <text x="10" y="556.55" style="white-space:pre">│ dam   │ </text>
-        <text x="94.01" y="556.55" fill="#DAA520">35</text>
-        <text x="110.82" y="556.55" style="white-space:pre">  │ ✅     │</text>
-        <text x="10" y="575.55" style="white-space:pre">│ flore │ </text>
-        <text x="94.01" y="575.55" fill="#DAA520">30</text>
-        <text x="110.82" y="575.55" style="white-space:pre">  │ 🚀     │</text>
+        <text x="10" y="556.55" style="white-space:pre">│ dam   │ 35  │ ✅     │</text>
+        <text x="10" y="575.55" style="white-space:pre">│ flore │ 30  │ 🚀     │</text>
         <text x="10" y="594.55">╰───────┴─────┴────────╯</text>
         <text x="10" y="632.55">--- b ---</text>
         <text x="18.4" y="651.55" font-weight="bold">name</text>
@@ -80,12 +64,8 @@
         <text x="110.82" y="651.55" style="white-space:pre"> ┃ </text>
         <text x="136.02" y="651.55" font-weight="bold">status</text>
         <text x="10" y="670.55">───────╀─────╀────────</text>
-        <text x="10" y="689.55" style="white-space:pre"> dam   │ </text>
-        <text x="85.61" y="689.55" fill="#DAA520">35</text>
-        <text x="102.42" y="689.55" style="white-space:pre">  │ ✅     </text>
-        <text x="10" y="708.55" style="white-space:pre"> flore │ </text>
-        <text x="85.61" y="708.55" fill="#DAA520">30</text>
-        <text x="102.42" y="708.55" style="white-space:pre">  │ 🚀     </text>
+        <text x="10" y="689.55" style="white-space:pre"> dam   │ 35  │ ✅     </text>
+        <text x="10" y="708.55" style="white-space:pre"> flore │ 30  │ 🚀     </text>
         <text x="10" y="746.55">--- b_double ---</text>
         <text x="18.4" y="765.55" font-weight="bold">name</text>
         <text x="52.01" y="765.55" style="white-space:pre">  ┃ </text>
@@ -93,12 +73,8 @@
         <text x="110.82" y="765.55" style="white-space:pre"> ┃ </text>
         <text x="136.02" y="765.55" font-weight="bold">status</text>
         <text x="10" y="784.55">═══════╪═════╪════════</text>
-        <text x="10" y="803.55" style="white-space:pre"> dam   │ </text>
-        <text x="85.61" y="803.55" fill="#DAA520">35</text>
-        <text x="102.42" y="803.55" style="white-space:pre">  │ ✅     </text>
-        <text x="10" y="822.55" style="white-space:pre"> flore │ </text>
-        <text x="85.61" y="822.55" fill="#DAA520">30</text>
-        <text x="102.42" y="822.55" style="white-space:pre">  │ 🚀     </text>
+        <text x="10" y="803.55" style="white-space:pre"> dam   │ 35  │ ✅     </text>
+        <text x="10" y="822.55" style="white-space:pre"> flore │ 30  │ 🚀     </text>
       </g>
     </svg>
   </foreignObject>
