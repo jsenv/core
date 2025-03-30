@@ -1,19 +1,7 @@
-# [0_basic](../../table_emojis.test.mjs#L7)
+# [0_basic](../../table_emojis.test.mjs#L28)
 
 ```js
-const table = renderTable(
-  [
-    [{ value: "emoji", border: {} }],
-    [{ value: "✅", border: {} }],
-    [{ value: "⚠", border: {} }],
-    [{ value: "✔", border: {} }],
-    [{ value: "✔️", border: {} }],
-  ],
-  { borderCollapse: true },
-);
-const svg = renderTerminalSvg(table);
-writeFileSync(import.meta.resolve("./table_emojis.svg"), svg);
-console.log(table);
+run();
 ```
 
 # 1/3 write file "./table_emojis.svg"
@@ -33,6 +21,14 @@ see [./table_emojis.svg](./table_emojis.svg)
 │ ✔     │
 ├───────┤
 │ ✔️    │
+├───────┤
+│ ❌    │
+├───────┤
+│ ♥     │
+├───────┤
+│ ♀     │
+├───────┤
+│ ♂     │
 └───────┘
 
 ```
