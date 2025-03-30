@@ -9,190 +9,190 @@
         <text x="10" y="43.55">┌───────┬─────┬────────┐</text>
         <text x="10" y="62.55">│</text>
         <rect x="18.4" y="48" width="58.81" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="18.4" y="62.55" style="white-space:pre"> name  </text>
+        <text x="18.4" y="62.55" style="white-space:pre" fill="#000000"> name  </text>
         <text x="77.21" y="62.55">│</text>
         <rect x="85.61" y="48" width="42.01" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="85.61" y="62.55" style="white-space:pre"> age </text>
+        <text x="85.61" y="62.55" style="white-space:pre" fill="#000000"> age </text>
         <text x="127.62" y="62.55">│</text>
         <rect x="136.02" y="48" width="67.21" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="136.02" y="62.55" style="white-space:pre"> status </text>
+        <text x="136.02" y="62.55" style="white-space:pre" fill="#000000"> status </text>
         <text x="203.23" y="62.55">│</text>
         <text x="10" y="81.55">├───────┼─────┼────────┤</text>
         <text x="10" y="100.55">│</text>
         <rect x="18.4" y="86" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="18.4" y="100.55" style="white-space:pre"> dam   </text>
+        <text x="18.4" y="100.55" style="white-space:pre" fill="#000000"> dam   </text>
         <text x="77.21" y="100.55">│</text>
         <rect x="85.61" y="86" width="42.01" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="85.61" y="100.55" style="white-space:pre"> 35  </text>
+        <text x="85.61" y="100.55" style="white-space:pre" fill="#000000"> 35  </text>
         <text x="127.62" y="100.55">│</text>
-        <rect x="136.02" y="86" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="136.02" y="100.55" style="white-space:pre"> ✅     </text>
+        <rect x="136.02" y="86" width="67.21" height="19" fill="#32CD32" opacity="1"></rect>
+        <text x="136.02" y="100.55" style="white-space:pre" fill="#000000"> ✅     </text>
         <text x="203.23" y="100.55">│</text>
         <text x="10" y="119.55">│</text>
         <rect x="18.4" y="105" width="58.81" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="18.4" y="119.55" style="white-space:pre"> flore </text>
+        <text x="18.4" y="119.55" style="white-space:pre" fill="#000000"> flore </text>
         <text x="77.21" y="119.55">│</text>
         <rect x="85.61" y="105" width="42.01" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="85.61" y="119.55" style="white-space:pre"> 30  </text>
+        <text x="85.61" y="119.55" style="white-space:pre" fill="#000000"> 30  </text>
         <text x="127.62" y="119.55">│</text>
         <rect x="136.02" y="105" width="67.21" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="136.02" y="119.55" style="white-space:pre"> 🚀     </text>
+        <text x="136.02" y="119.55" style="white-space:pre" fill="#000000"> 🚀     </text>
         <text x="203.23" y="119.55">│</text>
         <text x="10" y="138.55">└───────┴─────┴────────┘</text>
         <text x="10" y="176.55">--- a_rounded ---</text>
         <text x="10" y="195.55">╭───────┬─────┬────────╮</text>
         <text x="10" y="214.55">│</text>
         <rect x="18.4" y="200" width="58.81" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="18.4" y="214.55" style="white-space:pre"> name  </text>
+        <text x="18.4" y="214.55" style="white-space:pre" fill="#000000"> name  </text>
         <text x="77.21" y="214.55">│</text>
         <rect x="85.61" y="200" width="42.01" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="85.61" y="214.55" style="white-space:pre"> age </text>
+        <text x="85.61" y="214.55" style="white-space:pre" fill="#000000"> age </text>
         <text x="127.62" y="214.55">│</text>
         <rect x="136.02" y="200" width="67.21" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="136.02" y="214.55" style="white-space:pre"> status </text>
+        <text x="136.02" y="214.55" style="white-space:pre" fill="#000000"> status </text>
         <text x="203.23" y="214.55">│</text>
         <text x="10" y="233.55">├───────┼─────┼────────┤</text>
         <text x="10" y="252.55">│</text>
         <rect x="18.4" y="238" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="18.4" y="252.55" style="white-space:pre"> dam   </text>
+        <text x="18.4" y="252.55" style="white-space:pre" fill="#000000"> dam   </text>
         <text x="77.21" y="252.55">│</text>
         <rect x="85.61" y="238" width="42.01" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="85.61" y="252.55" style="white-space:pre"> 35  </text>
+        <text x="85.61" y="252.55" style="white-space:pre" fill="#000000"> 35  </text>
         <text x="127.62" y="252.55">│</text>
-        <rect x="136.02" y="238" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="136.02" y="252.55" style="white-space:pre"> ✅     </text>
+        <rect x="136.02" y="238" width="67.21" height="19" fill="#32CD32" opacity="1"></rect>
+        <text x="136.02" y="252.55" style="white-space:pre" fill="#000000"> ✅     </text>
         <text x="203.23" y="252.55">│</text>
         <text x="10" y="271.55">│</text>
         <rect x="18.4" y="257" width="58.81" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="18.4" y="271.55" style="white-space:pre"> flore </text>
+        <text x="18.4" y="271.55" style="white-space:pre" fill="#000000"> flore </text>
         <text x="77.21" y="271.55">│</text>
         <rect x="85.61" y="257" width="42.01" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="85.61" y="271.55" style="white-space:pre"> 30  </text>
+        <text x="85.61" y="271.55" style="white-space:pre" fill="#000000"> 30  </text>
         <text x="127.62" y="271.55">│</text>
         <rect x="136.02" y="257" width="67.21" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="136.02" y="271.55" style="white-space:pre"> 🚀     </text>
+        <text x="136.02" y="271.55" style="white-space:pre" fill="#000000"> 🚀     </text>
         <text x="203.23" y="271.55">│</text>
         <text x="10" y="290.55">╰───────┴─────┴────────╯</text>
         <text x="10" y="328.55">--- a_double ---</text>
         <text x="10" y="347.55">┌───────┬─────┬────────┐</text>
         <text x="10" y="366.55">│</text>
         <rect x="18.4" y="352" width="58.81" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="18.4" y="366.55" style="white-space:pre"> name  </text>
+        <text x="18.4" y="366.55" style="white-space:pre" fill="#000000"> name  </text>
         <text x="77.21" y="366.55">│</text>
         <rect x="85.61" y="352" width="42.01" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="85.61" y="366.55" style="white-space:pre"> age </text>
+        <text x="85.61" y="366.55" style="white-space:pre" fill="#000000"> age </text>
         <text x="127.62" y="366.55">│</text>
         <rect x="136.02" y="352" width="67.21" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="136.02" y="366.55" style="white-space:pre"> status </text>
+        <text x="136.02" y="366.55" style="white-space:pre" fill="#000000"> status </text>
         <text x="203.23" y="366.55">│</text>
         <text x="10" y="385.55">╞═══════╪═════╪════════╡</text>
         <text x="10" y="404.55">│</text>
         <rect x="18.4" y="390" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="18.4" y="404.55" style="white-space:pre"> dam   </text>
+        <text x="18.4" y="404.55" style="white-space:pre" fill="#000000"> dam   </text>
         <text x="77.21" y="404.55">│</text>
         <rect x="85.61" y="390" width="42.01" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="85.61" y="404.55" style="white-space:pre"> 35  </text>
+        <text x="85.61" y="404.55" style="white-space:pre" fill="#000000"> 35  </text>
         <text x="127.62" y="404.55">│</text>
-        <rect x="136.02" y="390" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="136.02" y="404.55" style="white-space:pre"> ✅     </text>
+        <rect x="136.02" y="390" width="67.21" height="19" fill="#32CD32" opacity="1"></rect>
+        <text x="136.02" y="404.55" style="white-space:pre" fill="#000000"> ✅     </text>
         <text x="203.23" y="404.55">│</text>
         <text x="10" y="423.55">│</text>
         <rect x="18.4" y="409" width="58.81" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="18.4" y="423.55" style="white-space:pre"> flore </text>
+        <text x="18.4" y="423.55" style="white-space:pre" fill="#000000"> flore </text>
         <text x="77.21" y="423.55">│</text>
         <rect x="85.61" y="409" width="42.01" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="85.61" y="423.55" style="white-space:pre"> 30  </text>
+        <text x="85.61" y="423.55" style="white-space:pre" fill="#000000"> 30  </text>
         <text x="127.62" y="423.55">│</text>
         <rect x="136.02" y="409" width="67.21" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="136.02" y="423.55" style="white-space:pre"> 🚀     </text>
+        <text x="136.02" y="423.55" style="white-space:pre" fill="#000000"> 🚀     </text>
         <text x="203.23" y="423.55">│</text>
         <text x="10" y="442.55">└───────┴─────┴────────┘</text>
         <text x="10" y="480.55">--- a_double_rounded ---</text>
         <text x="10" y="499.55">╭───────┬─────┬────────╮</text>
         <text x="10" y="518.55">│</text>
         <rect x="18.4" y="504" width="58.81" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="18.4" y="518.55" style="white-space:pre"> name  </text>
+        <text x="18.4" y="518.55" style="white-space:pre" fill="#000000"> name  </text>
         <text x="77.21" y="518.55">│</text>
         <rect x="85.61" y="504" width="42.01" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="85.61" y="518.55" style="white-space:pre"> age </text>
+        <text x="85.61" y="518.55" style="white-space:pre" fill="#000000"> age </text>
         <text x="127.62" y="518.55">│</text>
         <rect x="136.02" y="504" width="67.21" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="136.02" y="518.55" style="white-space:pre"> status </text>
+        <text x="136.02" y="518.55" style="white-space:pre" fill="#000000"> status </text>
         <text x="203.23" y="518.55">│</text>
         <text x="10" y="537.55">╞═══════╪═════╪════════╡</text>
         <text x="10" y="556.55">│</text>
         <rect x="18.4" y="542" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="18.4" y="556.55" style="white-space:pre"> dam   </text>
+        <text x="18.4" y="556.55" style="white-space:pre" fill="#000000"> dam   </text>
         <text x="77.21" y="556.55">│</text>
         <rect x="85.61" y="542" width="42.01" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="85.61" y="556.55" style="white-space:pre"> 35  </text>
+        <text x="85.61" y="556.55" style="white-space:pre" fill="#000000"> 35  </text>
         <text x="127.62" y="556.55">│</text>
-        <rect x="136.02" y="542" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="136.02" y="556.55" style="white-space:pre"> ✅     </text>
+        <rect x="136.02" y="542" width="67.21" height="19" fill="#32CD32" opacity="1"></rect>
+        <text x="136.02" y="556.55" style="white-space:pre" fill="#000000"> ✅     </text>
         <text x="203.23" y="556.55">│</text>
         <text x="10" y="575.55">│</text>
         <rect x="18.4" y="561" width="58.81" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="18.4" y="575.55" style="white-space:pre"> flore </text>
+        <text x="18.4" y="575.55" style="white-space:pre" fill="#000000"> flore </text>
         <text x="77.21" y="575.55">│</text>
         <rect x="85.61" y="561" width="42.01" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="85.61" y="575.55" style="white-space:pre"> 30  </text>
+        <text x="85.61" y="575.55" style="white-space:pre" fill="#000000"> 30  </text>
         <text x="127.62" y="575.55">│</text>
         <rect x="136.02" y="561" width="67.21" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="136.02" y="575.55" style="white-space:pre"> 🚀     </text>
+        <text x="136.02" y="575.55" style="white-space:pre" fill="#000000"> 🚀     </text>
         <text x="203.23" y="575.55">│</text>
         <text x="10" y="594.55">╰───────┴─────┴────────╯</text>
         <text x="10" y="632.55">--- b ---</text>
         <rect x="10" y="637" width="58.81" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="10" y="651.55" style="white-space:pre"> name  </text>
+        <text x="10" y="651.55" style="white-space:pre" fill="#000000"> name  </text>
         <text x="68.81" y="651.55">│</text>
         <rect x="77.21" y="637" width="42.01" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="77.21" y="651.55" style="white-space:pre"> age </text>
+        <text x="77.21" y="651.55" style="white-space:pre" fill="#000000"> age </text>
         <text x="119.22" y="651.55">│</text>
         <rect x="127.62" y="637" width="67.21" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="127.62" y="651.55" style="white-space:pre"> status </text>
+        <text x="127.62" y="651.55" style="white-space:pre" fill="#000000"> status </text>
         <text x="10" y="670.55">───────┼─────┼────────</text>
         <rect x="10" y="675" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="10" y="689.55" style="white-space:pre"> dam   </text>
+        <text x="10" y="689.55" style="white-space:pre" fill="#000000"> dam   </text>
         <text x="68.81" y="689.55">│</text>
         <rect x="77.21" y="675" width="42.01" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="77.21" y="689.55" style="white-space:pre"> 35  </text>
+        <text x="77.21" y="689.55" style="white-space:pre" fill="#000000"> 35  </text>
         <text x="119.22" y="689.55">│</text>
-        <rect x="127.62" y="675" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="127.62" y="689.55" style="white-space:pre"> ✅     </text>
+        <rect x="127.62" y="675" width="67.21" height="19" fill="#32CD32" opacity="1"></rect>
+        <text x="127.62" y="689.55" style="white-space:pre" fill="#000000"> ✅     </text>
         <rect x="10" y="694" width="58.81" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="10" y="708.55" style="white-space:pre"> flore </text>
+        <text x="10" y="708.55" style="white-space:pre" fill="#000000"> flore </text>
         <text x="68.81" y="708.55">│</text>
         <rect x="77.21" y="694" width="42.01" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="77.21" y="708.55" style="white-space:pre"> 30  </text>
+        <text x="77.21" y="708.55" style="white-space:pre" fill="#000000"> 30  </text>
         <text x="119.22" y="708.55">│</text>
         <rect x="127.62" y="694" width="67.21" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="127.62" y="708.55" style="white-space:pre"> 🚀     </text>
+        <text x="127.62" y="708.55" style="white-space:pre" fill="#000000"> 🚀     </text>
         <text x="10" y="746.55">--- b_double ---</text>
         <rect x="10" y="751" width="58.81" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="10" y="765.55" style="white-space:pre"> name  </text>
+        <text x="10" y="765.55" style="white-space:pre" fill="#000000"> name  </text>
         <text x="68.81" y="765.55">│</text>
         <rect x="77.21" y="751" width="42.01" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="77.21" y="765.55" style="white-space:pre"> age </text>
+        <text x="77.21" y="765.55" style="white-space:pre" fill="#000000"> age </text>
         <text x="119.22" y="765.55">│</text>
         <rect x="127.62" y="751" width="67.21" height="19" fill="#9932CC" opacity="1"></rect>
-        <text x="127.62" y="765.55" style="white-space:pre"> status </text>
+        <text x="127.62" y="765.55" style="white-space:pre" fill="#000000"> status </text>
         <text x="10" y="784.55">═══════╪═════╪════════</text>
         <rect x="10" y="789" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="10" y="803.55" style="white-space:pre"> dam   </text>
+        <text x="10" y="803.55" style="white-space:pre" fill="#000000"> dam   </text>
         <text x="68.81" y="803.55">│</text>
         <rect x="77.21" y="789" width="42.01" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="77.21" y="803.55" style="white-space:pre"> 35  </text>
+        <text x="77.21" y="803.55" style="white-space:pre" fill="#000000"> 35  </text>
         <text x="119.22" y="803.55">│</text>
-        <rect x="127.62" y="789" width="58.81" height="19" fill="#32CD32" opacity="1"></rect>
-        <text x="127.62" y="803.55" style="white-space:pre"> ✅     </text>
+        <rect x="127.62" y="789" width="67.21" height="19" fill="#32CD32" opacity="1"></rect>
+        <text x="127.62" y="803.55" style="white-space:pre" fill="#000000"> ✅     </text>
         <rect x="10" y="808" width="58.81" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="10" y="822.55" style="white-space:pre"> flore </text>
+        <text x="10" y="822.55" style="white-space:pre" fill="#000000"> flore </text>
         <text x="68.81" y="822.55">│</text>
         <rect x="77.21" y="808" width="42.01" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="77.21" y="822.55" style="white-space:pre"> 30  </text>
+        <text x="77.21" y="822.55" style="white-space:pre" fill="#000000"> 30  </text>
         <text x="119.22" y="822.55">│</text>
         <rect x="127.62" y="808" width="67.21" height="19" fill="#7f7f7f" opacity="1"></rect>
-        <text x="127.62" y="822.55" style="white-space:pre"> 🚀     </text>
+        <text x="127.62" y="822.55" style="white-space:pre" fill="#000000"> 🚀     </text>
       </g>
     </svg>
   </foreignObject>
