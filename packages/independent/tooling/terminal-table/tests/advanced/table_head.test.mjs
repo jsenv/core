@@ -5,7 +5,7 @@
  */
 
 import { renderNamedSections } from "@jsenv/humanize";
-import { renderTable } from "@jsenv/terminal-table";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
 const run = ({
@@ -13,6 +13,7 @@ const run = ({
   headCellTextBold = false,
   cellBorderLeftStyle,
   cellBorderRightStyle,
+  headCellBackgroundColor,
 }) => {
   const renderTableWithHead = (grid, { cellProps }) => {
     const gridWithProps = [];
@@ -31,6 +32,9 @@ const run = ({
           cellWithProps,
           cellProps({ northCell, southCell, westCell, eastCell, x, y }),
         );
+        if (headCellBackgroundColor && y === 0) {
+          cellWithProps.backgroundColor = headCellBackgroundColor;
+        }
         rowWithProps.push(cellWithProps);
         x++;
       }
@@ -211,4 +215,10 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       cellBorderLeftStyle: "dash",
       cellBorderRightStyle: "dash",
     }));
+
+  test.ONLY(`4_head_cell_background_cyan`, () =>
+    run({
+      headCellBackgroundColor: COLORS.CYAN,
+    }),
+  );
 });

@@ -1,4 +1,4 @@
-# [1_head_border_bold](../../table_head.test.mjs#L198)
+# [1_head_border_bold](../../table_head.test.mjs#L202)
 
 ```js
 run({

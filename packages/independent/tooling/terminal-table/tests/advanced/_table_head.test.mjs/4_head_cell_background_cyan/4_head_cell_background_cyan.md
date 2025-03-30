@@ -1,10 +1,17 @@
-# [0_basic](../../table_head.test.mjs#L200)
+# [4_head_cell_background_cyan](../../table_head.test.mjs#L219)
 
 ```js
-run({})
+run({
+  headCellBackgroundColor: COLORS.CYAN,
+})
 ```
 
 # 1/2 console.log
+
+![img](console.log.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
 --- a ---
@@ -52,6 +59,9 @@ run({})
  flore │ 30  │ 🚀     
 
 ```
+
+</details>
+
 
 # 2/2 return
 

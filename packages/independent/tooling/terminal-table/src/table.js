@@ -1083,7 +1083,7 @@ const createCell = (
           const lineBackgroundColor =
             typeof backgroundColor === "function"
               ? backgroundColor(cell)
-              : color;
+              : backgroundColor;
           if (lineBackgroundColor) {
             lineTextFormatted = ANSI.backgroundColor(
               lineTextFormatted,
