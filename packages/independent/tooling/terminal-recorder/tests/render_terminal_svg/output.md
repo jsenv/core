@@ -18,9 +18,9 @@
 
 ![img](./output/color_outside_double_spaced.svg)
 
-# table_with_emojis
+# emojis_surrounded_by_text
 
-![img](./output/table_with_emojis.svg)
+![img](./output/emojis_surrounded_by_text.svg)
 
 # text with background green and text black
 

@@ -10,7 +10,9 @@
       "x": 0,
       "y": 0,
       "n": 0,
-      "raw": 0
+      "raw": 0,
+      "width": 0,
+      "height": 0
     },
     "style": {
       "foregroundColor": "green"
@@ -23,7 +25,9 @@
       "x": 0,
       "y": 0,
       "n": 0,
-      "raw": 5
+      "raw": 5,
+      "width": 1,
+      "height": 0
     },
     "style": {
       "foregroundColor": "green"
@@ -40,7 +44,9 @@
       "x": 1,
       "y": 0,
       "n": 1,
-      "raw": 6
+      "raw": 6,
+      "width": 0,
+      "height": 0
     },
     "style": {}
   },
@@ -51,7 +57,9 @@
       "x": 1,
       "y": 0,
       "n": 1,
-      "raw": 10
+      "raw": 10,
+      "width": 4,
+      "height": 0
     },
     "style": {}
   },
@@ -66,7 +74,9 @@
       "x": 5,
       "y": 0,
       "n": 5,
-      "raw": 14
+      "raw": 14,
+      "width": 0,
+      "height": 0
     },
     "style": {
       "foregroundColor": "green"
@@ -79,7 +89,9 @@
       "x": 5,
       "y": 0,
       "n": 5,
-      "raw": 19
+      "raw": 19,
+      "width": 1,
+      "height": 0
     },
     "style": {
       "foregroundColor": "green"
@@ -96,7 +108,9 @@
       "x": 6,
       "y": 0,
       "n": 6,
-      "raw": 20
+      "raw": 20,
+      "width": 0,
+      "height": 0
     },
     "style": {}
   }

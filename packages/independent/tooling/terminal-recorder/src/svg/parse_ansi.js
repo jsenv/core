@@ -158,7 +158,7 @@ export const parseAnsi = (ansi) => {
   let nAnsi = 0;
   let nPlain = 0;
 
-  const bundle = (type, value) => {
+  const bundle = (type, value, { width = 0, height = 0 } = {}) => {
     const chunk = {
       type,
       value,
@@ -167,9 +167,10 @@ export const parseAnsi = (ansi) => {
         y,
         n: nPlain,
         raw: nAnsi,
+        width,
+        height,
       },
     };
-
     if (type === "text" || type === "ansi") {
       const style = {};
 
@@ -219,7 +220,7 @@ export const parseAnsi = (ansi) => {
   for (const word of words) {
     // Newline character
     if (word === "\n") {
-      const chunk = bundle("newline", "\n");
+      const chunk = bundle("newline", "\n", { height: 1 });
       result.chunks.push(chunk);
       x = 0;
       y += 1;
@@ -229,9 +230,9 @@ export const parseAnsi = (ansi) => {
     }
     // Text characters
     if (delimiters.includes(word) === false) {
-      const chunk = bundle("text", word);
-      result.chunks.push(chunk);
       const width = measureTextWidth(word);
+      const chunk = bundle("text", word, { width });
+      result.chunks.push(chunk);
       x += width;
       nAnsi += width;
       nPlain += width;

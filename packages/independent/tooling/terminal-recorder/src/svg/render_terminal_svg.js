@@ -237,7 +237,7 @@ export const renderTerminalSvg = (
       }
       const x = offsetLeft + position.x * font.width;
       const y = offsetTop + position.y + font.lineHeight * position.y;
-      const w = font.width * value.length;
+      const w = font.width * position.width;
 
       if (style.bold) {
         attrs["font-weight"] = "bold";

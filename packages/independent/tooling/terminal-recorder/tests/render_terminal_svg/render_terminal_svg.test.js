@@ -40,16 +40,11 @@ startTesting((test) => {
   test("color_outside_double_spaced", "[32mA[0mB  B[32mA[0m");
 
   test(
-    "table_with_emojis",
-    `┌───────┐
-│ emoji │
-├───────┤
-│ ✅    │
-├───────┤
-│ ⚠     │
-│ ✔     │
-└───────┘
-`,
+    "emojis_surrounded_by_text",
+    `
+above
+before✅after
+below`,
     {
       head: false,
       title: "Terminal",
