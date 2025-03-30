@@ -867,6 +867,8 @@ export const renderTable = (
         yPadChar = " ",
         rects,
         color,
+        bold,
+        backgroundColor,
       } = node;
 
       const nodeHeight = rects.length;
@@ -897,20 +899,40 @@ export const renderTable = (
         }
       }
 
-      const applyColor = (text) => {
+      const applyStyles = (text) => {
         if (!ansi) {
           return text;
         }
-        if (!color) {
-          return text;
-        }
-        if (typeof color === "function") {
-          color = color(cell, { columnWidth });
-          if (!color) {
-            return text;
+        let textWithStyles = text;
+
+        text_bold: {
+          if (typeof bold === "function") {
+            bold = bold(cell, { columnWidth });
+          }
+          if (bold) {
+            textWithStyles = ANSI.effect(textWithStyles, ANSI.BOLD);
           }
         }
-        return ANSI.color(text, color);
+        text_color: {
+          if (typeof color === "function") {
+            color = color(cell, { columnWidth });
+          }
+          if (color) {
+            textWithStyles = ANSI.color(textWithStyles, color);
+          }
+        }
+        background_color: {
+          if (typeof backgroundColor === "function") {
+            backgroundColor = backgroundColor(cell, { columnWidth });
+          }
+          if (backgroundColor) {
+            textWithStyles = ANSI.backgroundColor(
+              textWithStyles,
+              backgroundColor,
+            );
+          }
+        }
+        return textWithStyles;
       };
 
       if (rect) {
@@ -925,9 +947,9 @@ export const renderTable = (
           rectText = render;
         }
         if (width === "fill") {
-          return applyColor(rectText);
+          return applyStyles(rectText);
         }
-        return applyColor(
+        return applyStyles(
           applyXAlign(rectText, {
             width,
             desiredWidth: columnWidth,
@@ -936,7 +958,7 @@ export const renderTable = (
           }),
         );
       }
-      return applyColor(
+      return applyStyles(
         applyXAlign(yPadChar, {
           width: 1,
           desiredWidth: columnWidth,
@@ -1065,33 +1087,7 @@ const createCell = (
     rects.push({
       width: lineWidth,
       render: () => {
-        let lineTextFormatted = lineText;
-        if (ansi && bold) {
-          const lineBold = bold === "function" ? bold(cell) : bold;
-          if (lineBold) {
-            lineTextFormatted = ANSI.effect(lineTextFormatted, ANSI.BOLD);
-          }
-        }
-        if (ansi && color) {
-          const lineTextColor =
-            typeof color === "function" ? color(cell) : color;
-          if (lineTextColor) {
-            lineTextFormatted = ANSI.color(lineTextFormatted, lineTextColor);
-          }
-        }
-        if (ansi && backgroundColor) {
-          const lineBackgroundColor =
-            typeof backgroundColor === "function"
-              ? backgroundColor(cell)
-              : backgroundColor;
-          if (lineBackgroundColor) {
-            lineTextFormatted = ANSI.backgroundColor(
-              lineTextFormatted,
-              lineBackgroundColor,
-            );
-          }
-        }
-        return lineTextFormatted;
+        return lineText;
       },
     });
     lineIndex++;
@@ -1106,6 +1102,9 @@ const createCell = (
     rightSpacing,
     topSpacing,
     bottomSpacing,
+    color,
+    backgroundColor,
+    bold,
     rects,
     x,
     y,
