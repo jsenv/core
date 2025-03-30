@@ -21,3 +21,7 @@
 # table_with_emojis
 
 ![img](./output/table_with_emojis.svg)
+
+# text with background green and text black
+
+![img](./output/text with background green and text black.svg)

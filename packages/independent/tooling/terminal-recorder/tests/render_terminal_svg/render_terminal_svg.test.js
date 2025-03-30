@@ -55,4 +55,9 @@ startTesting((test) => {
       title: "Terminal",
     },
   );
+
+  test(
+    "text with background green and text black",
+    "[42m[30mhello world[0m[0m",
+  );
 });
