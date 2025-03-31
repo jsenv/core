@@ -1,4 +1,4 @@
-# [1_background_cyan](../../multiline_1_cell.test.mjs#L31)
+# [1_background_cyan](../../multiline_1_cell.test.mjs#L52)
 
 ```js
 run({
@@ -16,6 +16,24 @@ run({
 
 ```console
 --- a_b_c ---
+┌───┐
+│ a │
+│ b │
+│ c │
+└───┘
+
+--- a_b_c_max_height_1 ---
+┌─────────────┐
+│ ↓ 3 lines ↓ │
+└─────────────┘
+
+--- a_b_c_max_height_2 ---
+┌─────────────┐
+│ a           │
+│ ↓ 2 lines ↓ │
+└─────────────┘
+
+--- a_b_c_max_height_3 ---
 ┌───┐
 │ a │
 │ b │

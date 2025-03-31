@@ -482,7 +482,7 @@ export const renderTable = (
           borderBottom = border,
           ...props
         } = inputCell;
-        const cell = createCell(props, { ansi, x, y });
+        const cell = createCell(props, { x, y });
         const westCell = x === 0 ? null : row[x - 1];
         const northCell = y === 0 ? null : grid[y - 1][x];
         cell.westCell = westCell;
@@ -1205,16 +1205,7 @@ export const renderTable = (
       return rowText;
     };
     const renderNode = (node, { cell, columnWidth, rowHeight, lineIndex }) => {
-      let {
-        xAlign,
-        xPadChar = " ",
-        yAlign,
-        yPadChar = " ",
-        rects,
-        color,
-        bold,
-        backgroundColor,
-      } = node;
+      let { xAlign, xPadChar = " ", yAlign, yPadChar = " ", rects } = node;
 
       const nodeHeight = rects.length;
       let rect;
@@ -1245,7 +1236,7 @@ export const renderTable = (
         }
       }
 
-      const applyStyles = (text) => {
+      const applyStyles = (text, { backgroundColor, color, bold }) => {
         if (!ansi) {
           return text;
         }
@@ -1289,6 +1280,7 @@ export const renderTable = (
         let rectText;
         if (typeof render === "function") {
           rectText = render({
+            ansi,
             cell,
             columnWidth,
           });
@@ -1296,7 +1288,7 @@ export const renderTable = (
           rectText = render;
         }
         if (width === "fill") {
-          return applyStyles(rectText);
+          return applyStyles(rectText, rect);
         }
         return applyStyles(
           applyXAlign(rectText, {
@@ -1305,6 +1297,7 @@ export const renderTable = (
             align: xAlign,
             padChar: xPadChar,
           }),
+          rect,
         );
       }
       return applyStyles(
@@ -1314,6 +1307,7 @@ export const renderTable = (
           align: xAlign,
           padChar: " ",
         }),
+        node,
       );
     };
 
@@ -1418,31 +1412,56 @@ const createCell = (
     spacingBottom = spacing,
     xAlign = "start", // "start", "center", "end"
     yAlign = "start", // "start", "center", "end"
+    maxHeight = 10,
   },
-  { ansi, x, y },
+  { x, y },
 ) => {
+  if (maxHeight < 1) {
+    maxHeight = 1;
+  }
+
   let text = format === "size" ? humanizeFileSize(value) : String(value);
-  const lines = text.split("\n");
+  let lines = text.split("\n");
+  const lineCount = lines.length;
+  let skippedLineCount;
+  let lastLineIndex = lineCount - 1;
+  if (maxHeight !== Infinity) {
+    if (lineCount > maxHeight) {
+      lines = lines.slice(0, maxHeight - 1);
+      lastLineIndex = maxHeight - 1;
+      skippedLineCount = lineCount - maxHeight + 1;
+      lines.push(`↓ ${skippedLineCount} lines ↓`);
+    }
+  }
+
   let lineIndex = 0;
   const rects = [];
   for (const line of lines) {
-    const isLastLine = lineIndex === lines.length - 1;
+    const isLastLine = lineIndex === lastLineIndex;
     let lineWidth = measureTextWidth(line);
     let lineText = line;
     if (isLastLine && unit) {
       lineWidth += ` ${unit}`.length;
-      if (ansi && unitColor) {
-        unit = ANSI.color(unit, unitColor);
-      }
-      lineText += ` ${unit}`;
     }
     rects.push({
       width: lineWidth,
-      render: () => {
+      render: ({ ansi }) => {
+        if (isLastLine && unit) {
+          const unitWithStyles =
+            ansi && unitColor ? ANSI.color(unit, unitColor) : unit;
+          lineText += ` ${unitWithStyles}`;
+          return lineText;
+        }
         return lineText;
       },
+      backgroundColor,
+      color,
+      bold,
     });
     lineIndex++;
+  }
+  if (skippedLineCount) {
+    rects[rects.length - 1].color = COLORS.GREY;
   }
 
   const cell = {
@@ -1454,8 +1473,8 @@ const createCell = (
     spacingRight,
     spacingTop,
     spacingBottom,
-    color,
     backgroundColor,
+    color,
     bold,
     rects,
     x,

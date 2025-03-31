@@ -1,10 +1,15 @@
-# [0_basic](../../multiline_1_cell.test.mjs#L29)
+# [0_basic](../../multiline_1_cell.test.mjs#L50)
 
 ```js
 run({})
 ```
 
 # 1/2 console.log
+
+![img](console.log.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
 --- a_b_c ---
@@ -14,7 +19,28 @@ run({})
 │ c │
 └───┘
 
+--- a_b_c_max_height_1 ---
+┌─────────────┐
+│ ↓ 3 lines ↓ │
+└─────────────┘
+
+--- a_b_c_max_height_2 ---
+┌─────────────┐
+│ a           │
+│ ↓ 2 lines ↓ │
+└─────────────┘
+
+--- a_b_c_max_height_3 ---
+┌───┐
+│ a │
+│ b │
+│ c │
+└───┘
+
 ```
+
+</details>
+
 
 # 2/2 return
 

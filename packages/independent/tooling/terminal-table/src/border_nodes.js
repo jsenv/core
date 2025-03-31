@@ -43,101 +43,125 @@ const getVerticalLineChar = (style, bold) => {
 };
 
 // sides
-export const createBorderLeftNode = ({ style = "solid", bold, ...props }) => {
+export const createBorderLeftNode = ({ style = "solid", bold, color }) => {
   const char = getVerticalLineChar(style, bold);
   return {
     type: "border_left",
-    rects: [{ width: 1, render: char }],
+    rects: [
+      {
+        width: 1,
+        color,
+        render: char,
+      },
+    ],
     xAlign: "end",
     yAlign: "center",
     yPadChar: char,
-    ...props,
   };
 };
-export const createBorderRightNode = ({ style = "solid", bold, ...props }) => {
+export const createBorderRightNode = ({ style = "solid", bold, color }) => {
   const char = getVerticalLineChar(style, bold);
   return {
     type: "border_right",
-    rects: [{ width: 1, render: char }],
+    rects: [
+      {
+        width: 1,
+        color,
+        render: char,
+      },
+    ],
     xAlign: "start",
     yAlign: "center",
     yPadChar: char,
-    ...props,
   };
 };
-export const createBorderTopNode = ({ style = "solid", bold, ...props }) => {
+export const createBorderTopNode = ({ style = "solid", bold, color }) => {
   const char = getHorizontalLineChar(style, bold);
   return {
     type: "border_top",
     rects: [
-      { width: "fill", render: ({ columnWidth }) => char.repeat(columnWidth) },
+      {
+        width: "fill",
+        color,
+        render: ({ columnWidth }) => char.repeat(columnWidth),
+      },
     ],
     yAlign: "end",
-    ...props,
   };
 };
-export const createBorderBottomNode = ({ style = "solid", bold, ...props }) => {
+export const createBorderBottomNode = ({ style = "solid", bold, color }) => {
   const char = getHorizontalLineChar(style, bold);
   return {
     type: "border_bottom",
     rects: [
-      { width: "fill", render: ({ columnWidth }) => char.repeat(columnWidth) },
+      {
+        width: "fill",
+        color,
+        render: ({ columnWidth }) => char.repeat(columnWidth),
+      },
     ],
     yAlign: "start",
-    ...props,
   };
 };
 // half sides
-export const createBorderHalfLeftNode = ({
-  style = "solid",
-  bold,
-  ...props
-}) => {
+export const createBorderHalfLeftNode = ({ style = "solid", bold, color }) => {
   return {
     type: "border_half_left",
-    rects: [{ width: 1, render: bold ? "╸" : "╴" }],
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╸" : "╴",
+      },
+    ],
     xAlign: "end",
     xPadChar: getHorizontalLineChar(style, bold),
     yAlign: "end",
-    ...props,
   };
 };
-export const createBorderHalfRightNode = ({
-  style = "solid",
-  bold,
-  ...props
-}) => {
+export const createBorderHalfRightNode = ({ style = "solid", bold, color }) => {
   return {
     type: "border_half_right",
-    rects: [{ width: 1, render: bold ? "╺" : "╶" }],
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╺" : "╶",
+      },
+    ],
     xAlign: "end",
     xPadChar: getHorizontalLineChar(style, bold),
     yAlign: "end",
-    ...props,
   };
 };
 export const createBorderHalfUpNode = ({ style = "solid", bold, color }) => {
   return {
     type: "border_half_up",
-    color,
-    rects: [{ width: 1, render: bold ? "╹" : "╵" }],
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╹" : "╵",
+      },
+    ],
     xAlign: "start",
     yAlign: "start",
     yPadChar: getVerticalLineChar(style, bold),
   };
 };
-export const createBorderHalfDownNode = ({
-  style = "solid",
-  bold,
-  ...props
-}) => {
+export const createBorderHalfDownNode = ({ style = "solid", bold, color }) => {
   return {
     type: "border_half_down",
-    rects: [{ width: 1, render: bold ? "╻" : "╷" }],
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╻" : "╷",
+      },
+    ],
     xAlign: "end",
     yAlign: "start",
     yPadChar: getVerticalLineChar(style, bold),
-    ...props,
   };
 };
 
@@ -158,12 +182,11 @@ export const createBorderTopLeftNode = (topBorder, leftBorder) => {
     const { xPadChar, yPadChar } = topLeftCharProps[char];
     return {
       type: "border_top_left",
+      rects: [{ width: 1, color, render: char }],
       xAlign: "start",
       yAlign: "start",
-      rects: [{ width: 1, render: char }],
       xPadChar,
       yPadChar,
-      color,
     };
   };
 
@@ -221,10 +244,9 @@ export const createBorderTopRightNode = (topBorder, rightBorder) => {
     const { xPadChar, yPadChar } = topRightCharProps[char];
     return {
       type: "border_top_right",
-      color,
+      rects: [{ width: 1, color, render: char }],
       xAlign: "end",
       yAlign: "start",
-      rects: [{ width: 1, render: char }],
       xPadChar,
       yPadChar,
     };
@@ -282,10 +304,9 @@ export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
     const { xPadChar, yPadChar } = bottomRightCharProps[char];
     return {
       type: "border_bottom_right",
-      color,
+      rects: [{ width: 1, color, render: char }],
       xAlign: "end",
       yAlign: "end",
-      rects: [{ width: 1, render: char }],
       xPadChar,
       yPadChar,
     };
@@ -343,10 +364,9 @@ export const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
     const { xPadChar, yPadChar } = bottomLeftCharProps[char];
     return {
       type: "border_bottom_left",
-      color,
+      rects: [{ width: 1, color, render: char }],
       xAlign: "start",
       yAlign: "end",
-      rects: [{ width: 1, render: char }],
       xPadChar,
       yPadChar,
     };
@@ -439,10 +459,9 @@ export const createBorderMidTopNode = (
     const { xPadChar, yPadChar } = borderMidTopCharProps[char];
     return {
       type: "border_mid_top",
-      color,
+      rects: [{ width: 1, color, render: char }],
       xAlign: "center",
       yAlign: "start",
-      rects: [{ width: 1, render: char }],
       xPadChar,
       yPadChar,
     };
@@ -546,10 +565,9 @@ export const createBorderMidBottomNode = (
     const { xPadChar, yPadChar } = borderMidBottomCharProps[char];
     return {
       type: "border_mid_bottom",
-      color,
+      rects: [{ width: 1, color, render: char }],
       xAlign: "center",
       yAlign: "end",
-      rects: [{ width: 1, render: char }],
       xPadChar,
       yPadChar,
     };
@@ -651,10 +669,9 @@ export const createBorderMidLeftNode = (
     const { xPadChar, yPadChar } = borderMifLeftCharProps[char];
     return {
       type: "border_mid_left",
-      color,
+      rects: [{ width: 1, color, render: char }],
       xAlign: "start",
       yAlign: "center",
-      rects: [{ width: 1, render: char }],
       xPadChar,
       yPadChar,
     };
@@ -758,10 +775,9 @@ export const createBorderMidRightNode = (
     const { xPadChar, yPadChar } = borderMidRightCharProps[char];
     return {
       type: "border_mid_right",
-      color,
+      rects: [{ width: 1, color, render: char }],
       xAlign: "end",
       yAlign: "center",
-      rects: [{ width: 1, render: char }],
       xPadChar,
       yPadChar,
     };
@@ -884,10 +900,9 @@ export const createBorderMidNode = (
     const { xPadChar, yPadChar } = borderMidCharProps[char];
     return {
       type: "border_mid",
-      color,
+      rects: [{ width: 1, color, render: char }],
       xAlign: "center",
       yAlign: "center",
-      rects: [{ width: 1, render: char }],
       xPadChar,
       yPadChar,
     };
