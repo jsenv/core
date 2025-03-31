@@ -49,6 +49,7 @@ import {
   createBorderTopNode,
   createBorderTopRightNode,
 } from "./border_nodes.js";
+import { COLORS } from "./colors.js";
 
 const leftSlot = {
   type: "left",
@@ -1250,22 +1251,6 @@ export const renderTable = (
         }
         let textWithStyles = text;
 
-        text_bold: {
-          if (typeof bold === "function") {
-            bold = bold(cell, { columnWidth });
-          }
-          if (bold) {
-            textWithStyles = ANSI.effect(textWithStyles, ANSI.BOLD);
-          }
-        }
-        text_color: {
-          if (typeof color === "function") {
-            color = color(cell, { columnWidth });
-          }
-          if (color) {
-            textWithStyles = ANSI.color(textWithStyles, color);
-          }
-        }
         background_color: {
           if (typeof backgroundColor === "function") {
             backgroundColor = backgroundColor(cell, { columnWidth });
@@ -1275,6 +1260,25 @@ export const renderTable = (
               textWithStyles,
               backgroundColor,
             );
+          }
+        }
+        text_color: {
+          if (typeof color === "function") {
+            color = color(cell, { columnWidth });
+          }
+          if (color === undefined && backgroundColor === COLORS.WHITE) {
+            color = COLORS.BLACK;
+          }
+          if (color) {
+            textWithStyles = ANSI.color(textWithStyles, color);
+          }
+        }
+        text_bold: {
+          if (typeof bold === "function") {
+            bold = bold(cell, { columnWidth });
+          }
+          if (bold) {
+            textWithStyles = ANSI.effect(textWithStyles, ANSI.BOLD);
           }
         }
         return textWithStyles;

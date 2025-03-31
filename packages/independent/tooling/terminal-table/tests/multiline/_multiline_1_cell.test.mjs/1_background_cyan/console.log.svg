@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 156.45" background-color="#282c34">
+  <g id="background">
+    <rect x="1" y="1" width="638" height="154.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+  </g>
+  <foreignObject id="body" y="0" width="100%" height="166.45" overflow="hidden">
+    <svg width="129.22" height="156.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+      <g>
+        <text x="10" y="24.55">--- a_b_c ---</text>
+        <text x="10" y="43.55">┌───┐</text>
+        <text x="10" y="62.55">│</text>
+        <rect x="18.4" y="48" width="25.2" height="19" fill="#008B8B" opacity="1"></rect>
+        <text x="18.4" y="62.55" style="white-space:pre" fill="#000000"> a </text>
+        <text x="43.61" y="62.55">│</text>
+        <text x="10" y="81.55">│</text>
+        <rect x="18.4" y="67" width="25.2" height="19" fill="#008B8B" opacity="1"></rect>
+        <text x="18.4" y="81.55" style="white-space:pre" fill="#000000"> b </text>
+        <text x="43.61" y="81.55">│</text>
+        <text x="10" y="100.55">│</text>
+        <rect x="18.4" y="86" width="25.2" height="19" fill="#008B8B" opacity="1"></rect>
+        <text x="18.4" y="100.55" style="white-space:pre" fill="#000000"> c </text>
+        <text x="43.61" y="100.55">│</text>
+        <text x="10" y="119.55">└───┘</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>
