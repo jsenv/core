@@ -5,11 +5,6 @@
  * https://github.com/zaftzaft/terminal-table
  *
  *
- * remaining:
- *
- * - max rows, max columns (sur la table) (la dernier ligne/colonne afficheras "and 3 more...")
- * (we must presevre head and foot rows though)
- *
  * NICE TO HAVE/TO INVESTIGATE
  *
  * - colspan/rowspan
@@ -50,7 +45,7 @@ export const renderTable = (
     cornersOnly = false,
     cellMaxWidth = 50,
     cellMaxHeight = 10,
-    // maxColumns = 10
+    maxColumns = 10,
     maxRows = 20,
     fixLastRow = false,
   } = {},
@@ -61,8 +56,85 @@ export const renderTable = (
   if (inputGrid.length === 0) {
     return "";
   }
+  if (maxRows < 2) {
+    maxRows = 2;
+  }
+  if (maxColumns < 2) {
+    maxColumns = 2;
+  }
 
   let grid = [];
+  // create cells and fill grid
+  {
+    let y = 0;
+    for (const inputRow of inputGrid) {
+      let x = 0;
+      const row = [];
+      for (const inputCell of inputRow) {
+        const cell = createCell(inputCell, {
+          x,
+          y,
+          cellMaxWidth,
+          cellMaxHeight,
+        });
+        row[x] = cell;
+        x++;
+      }
+      grid[y] = row;
+      y++;
+    }
+  }
+  // max rows
+  {
+    const rowCount = grid.length;
+    if (rowCount > maxRows) {
+      const firstRow = grid[0];
+      const gridRespectingMaxRows = [];
+      let skippedRowIndexArray = [];
+      let y = 0;
+      while (y < rowCount) {
+        const row = grid[y];
+        if (y === 0) {
+          gridRespectingMaxRows.push(row);
+        } else if (gridRespectingMaxRows.length < maxRows - 1) {
+          gridRespectingMaxRows.push(row);
+        } else if (fixLastRow && rowCount > 1 && y === rowCount - 1) {
+        } else {
+          skippedRowIndexArray.push(y);
+        }
+        y++;
+      }
+      // push a row
+      const skippedRowCount = skippedRowIndexArray.length;
+      const rowShowingSkippedRows = [];
+      let x = 0;
+      while (x < firstRow.length) {
+        const cellModel = grid[skippedRowIndexArray[0]][x];
+        cellModel.updateValue(`${skippedRowCount} rows hidden...`);
+        rowShowingSkippedRows.push(cellModel);
+        x++;
+      }
+      gridRespectingMaxRows.push(rowShowingSkippedRows);
+      if (fixLastRow && rowCount > 1) {
+        gridRespectingMaxRows.push(grid[rowCount - 1]);
+      }
+      grid = gridRespectingMaxRows;
+    }
+  }
+  // max columns
+  {
+    const firstRow = grid[0];
+    const columnCount = firstRow.length;
+    if (columnCount > maxColumns) {
+      let y = 0;
+      while (y < grid.length) {
+        const row = grid[y];
+        grid[y] = row.slice(0, maxColumns - 1);
+        y++;
+      }
+    }
+  }
+
   const columnWithLeftSlotSet = new Set();
   const columnWithRightSlotSet = new Set();
   const rowHasTopSlot = (y) => topSlotRowMap.has(y);
@@ -73,7 +145,7 @@ export const renderTable = (
   const rightSlotRowMap = new Map();
   const topSlotRowMap = new Map();
   const bottomSlotRowMap = new Map();
-  // create cells and fill grid + detect borders
+  // detect borders
   {
     const onBorderLeft = (x, y) => {
       columnWithLeftSlotSet.add(x);
@@ -119,24 +191,18 @@ export const renderTable = (
     };
 
     let y = 0;
-    for (const inputRow of inputGrid) {
+    while (y < grid.length) {
       let x = 0;
-      const row = [];
-      for (const inputCell of inputRow) {
+      const row = grid[y];
+      while (x < row.length) {
+        const cell = row[x];
         const {
           border,
           borderLeft = border,
           borderRight = border,
           borderTop = border,
           borderBottom = border,
-          ...props
-        } = inputCell;
-        const cell = createCell(props, {
-          x,
-          y,
-          cellMaxWidth,
-          cellMaxHeight,
-        });
+        } = cell;
         const westCell = x === 0 ? null : row[x - 1];
         const northCell = y === 0 ? null : grid[y - 1][x];
         cell.westCell = westCell;
@@ -147,76 +213,23 @@ export const renderTable = (
         if (northCell) {
           northCell.southCell = cell;
         }
-        cell.borderLeft = borderLeft;
         if (borderLeft) {
-          cell.borderLeft = borderLeft;
           onBorderLeft(x, y);
         }
         if (borderRight) {
-          cell.borderRight = borderRight;
           onBorderRight(x, y);
         }
         if (borderTop) {
-          cell.borderTop = borderTop;
           onBorderTop(x, y);
         }
         if (borderBottom) {
-          cell.borderBottom = borderBottom;
           onBorderBottom(x, y);
         }
-
-        cell.borderRight = borderRight;
-        cell.borderTop = borderTop;
-        cell.borderBottom = borderBottom;
-        row[x] = cell;
         x++;
       }
-      grid[y] = row;
       y++;
     }
   }
-
-  // max rows
-  {
-    if (maxRows < 2) {
-      maxRows = 2;
-    }
-    const rowCount = grid.length;
-    if (rowCount > maxRows) {
-      const firstRow = grid[0];
-      const gridRespectingMaxRows = [];
-      let skippedRowIndexArray = [];
-      let y = 0;
-      while (y < rowCount) {
-        const row = grid[y];
-        if (y === 0) {
-          gridRespectingMaxRows.push(row);
-        } else if (gridRespectingMaxRows.length < maxRows - 1) {
-          gridRespectingMaxRows.push(row);
-        } else if (fixLastRow && rowCount > 1 && y === rowCount - 1) {
-        } else {
-          skippedRowIndexArray.push(y);
-        }
-        y++;
-      }
-      // push a row
-      const skippedRowCount = skippedRowIndexArray.length;
-      const rowShowingSkippedRows = [];
-      let x = 0;
-      while (x < firstRow.length) {
-        const cellModel = grid[skippedRowIndexArray[0]][x];
-        cellModel.updateValue(`${skippedRowCount} rows hidden...`);
-        rowShowingSkippedRows.push(cellModel);
-        x++;
-      }
-      gridRespectingMaxRows.push(rowShowingSkippedRows);
-      if (fixLastRow && rowCount > 1) {
-        gridRespectingMaxRows.push(grid[rowCount - 1]);
-      }
-      grid = gridRespectingMaxRows;
-    }
-  }
-
   // border collapse
   if (borderCollapse) {
     const getHowToCollapseBorders = (borderToCollapse, intoBorder) => {
@@ -424,7 +437,6 @@ export const renderTable = (
       }
     }
   }
-
   // fill holes in slot rows
   {
     let y = 0;
@@ -646,6 +658,7 @@ export const renderTable = (
       y++;
     }
   }
+
   // measure column and row dimensions (biggest of all cells in the column/row)
   const columnWidthMap = new Map();
   const rowHeightMap = new Map();
@@ -1110,6 +1123,11 @@ const createCell = (
     yAlign = "start", // "start", "center", "end"
     maxWidth,
     maxHeight,
+    border,
+    borderLeft = border,
+    borderRight = border,
+    borderTop = border,
+    borderBottom = border,
   },
   { x, y, cellMaxWidth, cellMaxHeight },
 ) => {
@@ -1176,7 +1194,6 @@ const createCell = (
       rects[rects.length - 1].color = COLORS.GREY;
     }
   };
-
   updateValue(value);
 
   const cell = {
@@ -1195,6 +1212,12 @@ const createCell = (
     x,
     y,
     updateValue,
+
+    border,
+    borderLeft,
+    borderRight,
+    borderTop,
+    borderBottom,
   };
   return cell;
 };
