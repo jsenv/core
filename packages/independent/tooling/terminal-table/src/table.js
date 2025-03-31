@@ -801,16 +801,24 @@ export const renderTable = (
           const node = slot.adapt(cell, options);
           if (borderSpacing && node.type !== "blank") {
             if (slot.type === "top_left") {
-              node.spacingTop = borderSpacing;
-              node.spacingLeft = borderSpacing;
+              if (!cell.northCell || !cell.northCell.borderBottom) {
+                node.spacingTop = borderSpacing;
+              }
+              if (!cell.westCell || !cell.westCell.borderRight) {
+                node.spacingLeft = borderSpacing;
+              }
             }
             if (slot.type === "top_right") {
-              node.spacingTop = borderSpacing;
+              if (!cell.northCell || !cell.northCell.borderBottom) {
+                node.spacingTop = borderSpacing;
+              }
               node.spacingRight = borderSpacing;
             }
             if (slot.type === "bottom_left") {
               node.spacingBottom = borderSpacing;
-              node.spacingLeft = borderSpacing;
+              if (!cell.westCell || !cell.westCell.borderRight) {
+                node.spacingLeft = borderSpacing;
+              }
             }
             if (slot.type === "bottom_right") {
               node.spacingBottom = borderSpacing;

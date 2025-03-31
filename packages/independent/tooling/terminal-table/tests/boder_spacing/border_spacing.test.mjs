@@ -3,24 +3,38 @@ import { renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
 const run = () => {
-  const table = renderTable(
+  const render = (grid) => renderTable(grid, { ansi: true, borderSpacing: 1 });
+
+  const single_cell = render([
     [
-      [
-        {
-          value: "cell",
-          border: {},
-        },
-      ],
+      // prettier-force-multiline
+      { value: "cell", border: {} },
     ],
-    {
-      ansi: true,
-      borderSpacing: 1,
-    },
-  );
+  ]);
+
+  const two_cells = render([
+    [
+      { value: "cell_a", border: {} },
+      { value: "cell_b", border: {} },
+    ],
+  ]);
+
+  const four_cells = render([
+    [
+      { value: "top_left", border: {} },
+      { value: "top_right", border: {} },
+    ],
+    [
+      { value: "bottom_right", border: {} },
+      { value: "bottom_left", border: {} },
+    ],
+  ]);
 
   console.log(
     renderNamedSections({
-      table,
+      single_cell,
+      two_cells,
+      four_cells,
     }),
   );
 };
