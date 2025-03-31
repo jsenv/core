@@ -47,13 +47,7 @@ export const createBorderLeftNode = ({ style = "solid", bold, color }) => {
   const char = getVerticalLineChar(style, bold);
   return {
     type: "border_left",
-    rects: [
-      {
-        width: 1,
-        color,
-        render: char,
-      },
-    ],
+    rects: [{ width: 1, color, render: char }],
     xAlign: "end",
     yAlign: "center",
     yPadChar: char,
@@ -63,13 +57,7 @@ export const createBorderRightNode = ({ style = "solid", bold, color }) => {
   const char = getVerticalLineChar(style, bold);
   return {
     type: "border_right",
-    rects: [
-      {
-        width: 1,
-        color,
-        render: char,
-      },
-    ],
+    rects: [{ width: 1, color, render: char }],
     xAlign: "start",
     yAlign: "center",
     yPadChar: char,

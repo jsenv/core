@@ -110,7 +110,9 @@ export const renderTable = (
       let x = 0;
       while (x < firstRow.length) {
         const cellModel = grid[skippedRowIndexArray[0]][x];
-        cellModel.updateValue(`${skippedRowCount} rows hidden...`);
+        cellModel.isSkippedRow = true;
+        cellModel.color = COLORS.GREY;
+        cellModel.updateValue(`${skippedRowCount} rows`);
         rowShowingSkippedRows.push(cellModel);
         x++;
       }
@@ -129,7 +131,16 @@ export const renderTable = (
       let y = 0;
       while (y < grid.length) {
         const row = grid[y];
-        grid[y] = row.slice(0, maxColumns - 1);
+        const cellModel = row[maxColumns - 1];
+        const skippedColumnCount = columnCount - maxColumns + 1;
+        const rowRespectingMaxColumns = row.slice(0, maxColumns - 1);
+        cellModel.isSkippedColumn = true;
+        cellModel.color = COLORS.GREY;
+        cellModel.spacingLeft = 1;
+        cellModel.spacingRight = 0;
+        cellModel.updateValue(`${skippedColumnCount} columns`);
+        rowRespectingMaxColumns.push(cellModel);
+        grid[y] = rowRespectingMaxColumns;
         y++;
       }
     }
@@ -1144,6 +1155,7 @@ const createCell = (
 
   const rects = [];
   const updateValue = (value) => {
+    cell.value = value;
     rects.length = 0;
     let text = format === "size" ? humanizeFileSize(value) : String(value);
     let lines = text.split("\n");
@@ -1184,9 +1196,9 @@ const createCell = (
           }
           return lineText;
         },
-        backgroundColor,
-        color,
-        bold,
+        backgroundColor: cell.backgroundColor,
+        color: cell.color,
+        bold: cell.bold,
       });
       lineIndex++;
     }
@@ -1194,11 +1206,9 @@ const createCell = (
       rects[rects.length - 1].color = COLORS.GREY;
     }
   };
-  updateValue(value);
 
   const cell = {
     type: "content",
-    value,
     xAlign,
     yAlign,
     spacingLeft,
@@ -1219,5 +1229,8 @@ const createCell = (
     borderTop,
     borderBottom,
   };
+
+  updateValue(value);
+
   return cell;
 };

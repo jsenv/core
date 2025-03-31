@@ -18,11 +18,24 @@ import {
   createBorderTopNode,
   createBorderTopRightNode,
 } from "./border_nodes.js";
+import {
+  createSkippedColumnBottomNode,
+  createSkippedColumnBottomRightNode,
+  createSkippedColumnTopNode,
+  createSkippedColumnTopRightNode,
+  createSkippedRowBottomLeftNode,
+  createSkippedRowBottomRightNode,
+  createSkippedRowLeftNode,
+  createSkippedRowRightNode,
+} from "./skip_nodes.js";
 
 export const leftSlot = {
   type: "left",
   adapt: (cell) => {
-    const { borderLeft } = cell;
+    const { isSkippedLine, borderLeft } = cell;
+    if (isSkippedLine) {
+      return createSkippedRowLeftNode();
+    }
     if (borderLeft) {
       return createBorderLeftNode(borderLeft);
     }
@@ -32,7 +45,13 @@ export const leftSlot = {
 export const rightSlot = {
   type: "right",
   adapt: (cell) => {
-    const { borderRight } = cell;
+    const { isSkippedColumn, isSkippedLine, borderRight } = cell;
+    if (isSkippedLine) {
+      return createSkippedRowRightNode();
+    }
+    if (isSkippedColumn) {
+      return createBlankNode();
+    }
     if (borderRight) {
       return createBorderRightNode(borderRight);
     }
@@ -42,7 +61,10 @@ export const rightSlot = {
 export const topSlot = {
   type: "top",
   adapt: (cell) => {
-    const { borderTop } = cell;
+    const { isSkippedColumn, borderTop } = cell;
+    if (isSkippedColumn) {
+      return createSkippedColumnTopNode();
+    }
     if (borderTop) {
       return createBorderTopNode(borderTop);
     }
@@ -52,7 +74,13 @@ export const topSlot = {
 export const bottomSlot = {
   type: "bottom",
   adapt: (cell) => {
-    const { borderBottom } = cell;
+    const { isSkippedLine, isSkippedColumn, borderBottom } = cell;
+    if (isSkippedColumn) {
+      return createSkippedColumnBottomNode();
+    }
+    if (isSkippedLine) {
+      return createBlankNode();
+    }
     if (borderBottom) {
       return createBorderBottomNode(borderBottom);
     }
@@ -137,7 +165,11 @@ export const topLeftSlot = {
 export const topRightSlot = {
   type: "top_right",
   adapt: (cell) => {
-    const { borderTop, borderRight, eastCell, northCell } = cell;
+    const { isSkippedColumn, borderTop, borderRight, eastCell, northCell } =
+      cell;
+    if (isSkippedColumn) {
+      return createSkippedColumnTopRightNode();
+    }
     if (!borderTop && !borderRight) {
       return createBlankNode();
     }
@@ -214,7 +246,20 @@ export const topRightSlot = {
 export const bottomRightSlot = {
   type: "bottom_right",
   adapt: (cell) => {
-    const { borderBottom, borderRight, eastCell, southCell } = cell;
+    const {
+      isSkippedLine,
+      isSkippedColumn,
+      borderBottom,
+      borderRight,
+      eastCell,
+      southCell,
+    } = cell;
+    if (isSkippedLine) {
+      return createSkippedRowBottomRightNode();
+    }
+    if (isSkippedColumn) {
+      return createSkippedColumnBottomRightNode();
+    }
     if (!borderBottom && !borderRight) {
       return createBlankNode();
     }
@@ -290,7 +335,11 @@ export const bottomRightSlot = {
 export const bottomLeftSlot = {
   type: "bottom_left",
   adapt: (cell) => {
-    const { borderBottom, borderLeft, westCell, southCell } = cell;
+    const { isSkippedLine, borderBottom, borderLeft, westCell, southCell } =
+      cell;
+    if (isSkippedLine) {
+      return createSkippedRowBottomLeftNode();
+    }
     if (!borderBottom && !borderLeft) {
       return createBlankNode();
     }

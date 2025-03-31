@@ -11,7 +11,7 @@ const run = () => {
         { value: "c", border: {} },
       ],
     ],
-    { borderCollapse: true, maxColumns: 2 },
+    { borderCollapse: true, maxColumns: 2, ansi: true },
   );
 
   console.log(
