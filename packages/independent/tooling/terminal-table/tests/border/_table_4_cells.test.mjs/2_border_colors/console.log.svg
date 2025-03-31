@@ -21,7 +21,7 @@
         <text x="77.21" y="138.55" fill="#DAA520">│</text>
         <text x="10" y="157.55" fill="#11bc79">├</text>
         <text x="18.4" y="157.55" fill="#11bc79">───</text>
-        <text x="43.61" y="157.55" fill="#DAA520">┼</text>
+        <text x="43.61" y="157.55" fill="#11bc79">┼</text>
         <text x="52.01" y="157.55" fill="#11bc79">───</text>
         <text x="77.21" y="157.55" fill="#11bc79">┘</text>
         <text x="10" y="176.55" fill="#cd5555">│</text>
@@ -257,7 +257,7 @@
         <text x="77.21" y="1487.55" fill="#DAA520">│</text>
         <text x="10" y="1506.55" fill="#11bc79">├</text>
         <text x="18.4" y="1506.55" fill="#11bc79">───</text>
-        <text x="43.61" y="1506.55" fill="#DAA520">┼</text>
+        <text x="43.61" y="1506.55" fill="#11bc79">┼</text>
         <text x="52.01" y="1506.55" fill="#11bc79">───</text>
         <text x="77.21" y="1506.55" fill="#11bc79">┤</text>
         <text x="10" y="1525.55" fill="#cd5555">│</text>
@@ -283,7 +283,7 @@
         <text x="77.21" y="1620.55" fill="#DAA520">│</text>
         <text x="10" y="1639.55" fill="#11bc79">├</text>
         <text x="18.4" y="1639.55" fill="#11bc79">───</text>
-        <text x="43.61" y="1639.55" fill="#cd5555">┼</text>
+        <text x="43.61" y="1639.55" fill="#11bc79">┼</text>
         <text x="52.01" y="1639.55" fill="#11bc79">───</text>
         <text x="77.21" y="1639.55" fill="#11bc79">┤</text>
         <text x="10" y="1658.55" fill="#cd5555">│</text>
@@ -309,7 +309,7 @@
         <text x="77.21" y="1753.55" fill="#DAA520">│</text>
         <text x="10" y="1772.55" fill="#4169E1">├</text>
         <text x="18.4" y="1772.55" fill="#4169E1">───</text>
-        <text x="43.61" y="1772.55" fill="#cd5555">┼</text>
+        <text x="43.61" y="1772.55" fill="#4169E1">┼</text>
         <text x="52.01" y="1772.55" fill="#4169E1">───</text>
         <text x="77.21" y="1772.55" fill="#4169E1">┤</text>
         <text x="10" y="1791.55" fill="#cd5555">│</text>
@@ -335,7 +335,7 @@
         <text x="77.21" y="1886.55" fill="#DAA520">│</text>
         <text x="10" y="1905.55" fill="#4169E1">├</text>
         <text x="18.4" y="1905.55" fill="#4169E1">───</text>
-        <text x="43.61" y="1905.55" fill="#DAA520">┼</text>
+        <text x="43.61" y="1905.55" fill="#4169E1">┼</text>
         <text x="52.01" y="1905.55" fill="#4169E1">───</text>
         <text x="77.21" y="1905.55" fill="#4169E1">┤</text>
         <text x="10" y="1924.55" fill="#cd5555">│</text>

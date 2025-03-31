@@ -3,7 +3,7 @@
     <rect x="1" y="1" width="638" height="1123.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
   <foreignObject id="body" y="0" width="100%" height="1135.45" overflow="hidden">
-    <svg width="406.46" height="1125.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+    <svg width="389.66" height="1125.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">--- top_left_empty ---</text>
         <text x="10" y="43.55" style="white-space:pre">              ┌──────────────┐</text>
@@ -48,25 +48,25 @@
         <text x="10" y="898.55">│ row_c │</text>
         <text x="10" y="917.55">└───────┘</text>
         <text x="10" y="955.55">--- nine_cells_middle_use_yellow_borders ---</text>
-        <text x="10" y="974.55">┌─────────────┬───────────────┬──────────────┐</text>
-        <text x="10" y="993.55" style="white-space:pre">│ top_left    │ top_middle    │ top_right    │</text>
+        <text x="10" y="974.55">┌─────────────┬────────┬──────────────┐</text>
+        <text x="10" y="993.55" style="white-space:pre">│ top_left    │ top    │ top_right    │</text>
         <text x="10" y="1012.55">├─────────────</text>
         <text x="127.62" y="1012.55" fill="#DAA520">┼</text>
-        <text x="136.02" y="1012.55" fill="#DAA520">───────────────</text>
-        <text x="262.04" y="1012.55" fill="#DAA520">┼</text>
-        <text x="270.44" y="1012.55">──────────────┤</text>
-        <text x="10" y="1031.55" style="white-space:pre">│ middle_left </text>
+        <text x="136.02" y="1012.55" fill="#DAA520">────────</text>
+        <text x="203.23" y="1012.55" fill="#DAA520">┼</text>
+        <text x="211.63" y="1012.55">──────────────┤</text>
+        <text x="10" y="1031.55" style="white-space:pre">│ left        </text>
         <text x="127.62" y="1031.55" fill="#DAA520">│</text>
-        <text x="136.02" y="1031.55" style="white-space:pre"> middle_middle </text>
-        <text x="262.04" y="1031.55" fill="#DAA520">│</text>
-        <text x="270.44" y="1031.55" style="white-space:pre"> middle_right │</text>
+        <text x="136.02" y="1031.55" style="white-space:pre"> center </text>
+        <text x="203.23" y="1031.55" fill="#DAA520">│</text>
+        <text x="211.63" y="1031.55" style="white-space:pre"> right        │</text>
         <text x="10" y="1050.55">├─────────────</text>
         <text x="127.62" y="1050.55" fill="#DAA520">┼</text>
-        <text x="136.02" y="1050.55" fill="#DAA520">───────────────</text>
-        <text x="262.04" y="1050.55" fill="#DAA520">┼</text>
-        <text x="270.44" y="1050.55">──────────────┤</text>
-        <text x="10" y="1069.55">│ bottom_left │ bottom_middle │ bottom_right │</text>
-        <text x="10" y="1088.55">└─────────────┴───────────────┴──────────────┘</text>
+        <text x="136.02" y="1050.55" fill="#DAA520">────────</text>
+        <text x="203.23" y="1050.55" fill="#DAA520">┼</text>
+        <text x="211.63" y="1050.55">──────────────┤</text>
+        <text x="10" y="1069.55">│ bottom_left │ bottom │ bottom_right │</text>
+        <text x="10" y="1088.55">└─────────────┴────────┴──────────────┘</text>
       </g>
     </svg>
   </foreignObject>

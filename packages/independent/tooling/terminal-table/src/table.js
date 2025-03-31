@@ -5,12 +5,6 @@
  *
  * remaining:
  *
- * - color inheritance and priority
- *   une fonction pickColor(...borders)
- *   en fonction de nb de borders il pick.
- * Et on rangera les couleurs par prio, genre
- * [BLUE, GREEN, YELLOW, RED]
- *
  * - multiline
  *
  * - max rows, max columns (sur la table) (la dernier ligne/colonne afficheras "and 3 more...")
@@ -51,18 +45,6 @@ import {
   createBorderTopNode,
   createBorderTopRightNode,
 } from "./border_nodes.js";
-
-export const COLORS = {
-  RED: ANSI.RED,
-  BLUE: ANSI.BLUE,
-  YELLOW: ANSI.YELLOW,
-  GREEN: ANSI.GREEN,
-  MAGENTA: ANSI.MAGENTA,
-  CYAN: ANSI.CYAN,
-  WHITE: ANSI.WHITE,
-  BLACK: ANSI.BLACK,
-  GREY: ANSI.GREY,
-};
 
 const leftSlot = {
   type: "left",

@@ -5,6 +5,8 @@
  *
  */
 
+import { pickBorderColor } from "./colors.js";
+
 // blank node is a fluid node that will take whatever size it will be requested to take
 // this is useful to enforce a given amount of space is taken in x/y
 // It is used to implement borders because any cell can suddenly
@@ -150,8 +152,7 @@ const topLeftCharProps = {
   "╭": { xPadChar: "│", yPadChar: "─" },
 };
 export const createBorderTopLeftNode = (topBorder, leftBorder) => {
-  const { color, spacingLeft, spacingRight } = topBorder;
-
+  const color = pickBorderColor(topBorder, leftBorder);
   const rounded = topBorder.rounded && leftBorder.rounded;
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = topLeftCharProps[char];
@@ -163,8 +164,6 @@ export const createBorderTopLeftNode = (topBorder, leftBorder) => {
       xPadChar,
       yPadChar,
       color,
-      spacingLeft,
-      spacingRight,
     };
   };
 
@@ -216,7 +215,7 @@ const topRightCharProps = {
   "╮": { xPadChar: "│", yPadChar: "─" },
 };
 export const createBorderTopRightNode = (topBorder, rightBorder) => {
-  const { color } = topBorder;
+  const color = pickBorderColor(topBorder, rightBorder);
   const rounded = topBorder.rounded && rightBorder.rounded;
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = topRightCharProps[char];
@@ -277,7 +276,7 @@ const bottomRightCharProps = {
   "╯": { xPadChar: "│", yPadChar: "─" },
 };
 export const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
-  const { color } = bottomBorder;
+  const color = pickBorderColor(bottomBorder, rightBorder);
   const rounded = bottomBorder.rounded && rightBorder.rounded;
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = bottomRightCharProps[char];
@@ -338,7 +337,7 @@ const bottomLeftCharProps = {
   "╰": { xPadChar: "│", yPadChar: "─" },
 };
 export const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
-  const { color } = bottomBorder;
+  const color = pickBorderColor(bottomBorder, leftBorder);
   const rounded = bottomBorder.rounded && leftBorder.rounded;
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = bottomLeftCharProps[char];
@@ -435,7 +434,7 @@ export const createBorderMidTopNode = (
   downBorder,
   eastBorderTop,
 ) => {
-  const { color } = westBorderTop;
+  const color = pickBorderColor(westBorderTop, downBorder, eastBorderTop);
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = borderMidTopCharProps[char];
     return {
@@ -542,7 +541,7 @@ export const createBorderMidBottomNode = (
   upBorder,
   eastBorderBottom,
 ) => {
-  const { color } = westBorderBottom;
+  const color = pickBorderColor(westBorderBottom, eastBorderBottom, upBorder);
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = borderMidBottomCharProps[char];
     return {
@@ -647,7 +646,7 @@ export const createBorderMidLeftNode = (
   middleBorder,
   southBorder,
 ) => {
-  const { color } = middleBorder;
+  const color = pickBorderColor(middleBorder, northBorder, southBorder);
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = borderMifLeftCharProps[char];
     return {
@@ -754,7 +753,7 @@ export const createBorderMidRightNode = (
   middleBorder,
   southBorder,
 ) => {
-  const { color } = middleBorder;
+  const color = pickBorderColor(middleBorder, northBorder, southBorder);
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = borderMidRightCharProps[char];
     return {
@@ -1054,20 +1053,4 @@ export const createBorderMidNode = (
   }
   // only down is bold
   return innerCreateBorder("╁");
-};
-
-const pickBorderColor = (...borders) => {
-  if (borders.length === 0) {
-    return borders[0].color;
-  }
-  if (borders.lenth === 2) {
-    const [first, second] = borders;
-    return first.color || second.color;
-  }
-  if (borders.length === 3) {
-    const [first, second, third] = borders;
-    return first.color || second.color || third.color;
-  }
-  const [first, second, third, fourth] = borders;
-  return first.color || second.color || third.color || fourth.color;
 };

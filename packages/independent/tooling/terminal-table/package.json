@@ -4,11 +4,11 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/table.js"
+      "import": "./src/main.js"
     },
     "./*": "./*"
   },
-  "main": "./src/table.js",
+  "main": "./src/main.js",
   "dependencies": {
     "@jsenv/humanize": "1.3.1"
   },
