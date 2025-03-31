@@ -713,13 +713,17 @@ const mainLegacyResolvers = {
       path: browserMain,
     };
   },
-  node: ({ packageJson }) => {
+  node: ({ packageJson, conditions }) => {
+    if (conditions.includes("import")) {
+      if (typeof packageJson.module === "string") {
+        return { type: "field:module", isMain: true, path: packageJson.module };
+      }
+      if (typeof packageJson.jsnext === "string") {
+        return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
+      }
+    }
     if (typeof packageJson.main === "string") {
-      return {
-        type: "field:main",
-        isMain: true,
-        path: packageJson.main,
-      };
+      return { type: "field:main", isMain: true, path: packageJson.main };
     }
     return null;
   },
