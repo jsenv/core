@@ -9,12 +9,19 @@ run({
 # 1/2 console.log
 
 ```console
---- top_right_empty ---
-┌─────────────╴               
-│ top_left       top_right    
-├──────────────┬──────────────┐
+--- top_left_empty ---
+               ┌──────────────┐
+  top_left     │ top_right    │
+┌──────────────┼──────────────┤
 │ bottom_left  │ bottom_right │
 └──────────────┴──────────────┘
+
+--- top_right_empty ---
+┌─────────────┐               
+│ top_left    │ top_right     
+├─────────────┼──────────────┐
+│ bottom_left │ bottom_right │
+└─────────────┴──────────────┘
 
 ```
 

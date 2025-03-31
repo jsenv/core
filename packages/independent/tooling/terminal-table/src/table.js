@@ -568,12 +568,12 @@ export const renderTable = (
       while (cellInThatColumn) {
         const border = cellInThatColumn.borderLeft;
         if (!border) {
-          cellInThatColumn = cellInThatColumn.southCell;
-          continue;
+          return false;
         }
         const otherBorder = cellInThatColumn.westCell.borderRight;
         if (!otherBorder) {
-          return false;
+          cellInThatColumn = cellInThatColumn.southCell;
+          continue;
         }
         if (!canCollapse(border, otherBorder)) {
           return false;

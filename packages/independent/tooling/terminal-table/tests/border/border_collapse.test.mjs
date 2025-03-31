@@ -9,16 +9,16 @@ import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_t
 const run = ({ borderCollapse }) => {
   const render = (grid) => renderTable(grid, { borderCollapse });
 
-  // const top_left_empty = render([
-  //   [
-  //     { value: "top_left", border: null },
-  //     { value: "top_right", border: {} },
-  //   ],
-  //   [
-  //     { value: "bottom_left", border: {} },
-  //     { value: "bottom_right", border: {} },
-  //   ],
-  // ]);
+  const top_left_empty = render([
+    [
+      { value: "top_left", border: null },
+      { value: "top_right", border: {} },
+    ],
+    [
+      { value: "bottom_left", border: {} },
+      { value: "bottom_right", border: {} },
+    ],
+  ]);
   const top_right_empty = render([
     [
       { value: "top_left", border: {} },
@@ -52,7 +52,7 @@ const run = ({ borderCollapse }) => {
 
   console.log(
     renderNamedSections({
-      // top_left_empty,
+      top_left_empty,
       top_right_empty,
       // bottom_right_empty,
       // bottom_left_empty,
