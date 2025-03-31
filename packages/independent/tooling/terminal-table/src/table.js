@@ -408,7 +408,12 @@ const bottomLeftSlot = {
 
 export const renderTable = (
   inputGrid,
-  { ansi, borderCollapse, borderSeparatedOnColorConflict } = {},
+  {
+    ansi,
+    borderCollapse,
+    borderSeparatedOnColorConflict,
+    borderSpacing = 0,
+  } = {},
 ) => {
   if (!Array.isArray(inputGrid)) {
     throw new TypeError(`The first arg must be an array, got ${inputGrid}`);
@@ -791,8 +796,22 @@ export const renderTable = (
       let x = 0;
       while (x < row.length) {
         const cell = row[x];
+        const options = { borderSpacing };
         const adapt = (slot) => {
-          const node = slot.adapt(cell);
+          const node = slot.adapt(cell, options);
+          if (borderSpacing && node.type !== "blank") {
+            if (
+              slot.type === "top_left" ||
+              slot.type === "top_right" ||
+              slot.type === "bottom_left" ||
+              slot.type === "bottom_right"
+            ) {
+              node.spacingTop = borderSpacing;
+              node.spacingBottom = borderSpacing;
+              node.spacingLeft = borderSpacing;
+              node.spacingRight = borderSpacing;
+            }
+          }
           return node;
         };
 
@@ -857,6 +876,10 @@ export const renderTable = (
   // measure column and row dimensions (biggest of all cells in the column/row)
   const columnWidthMap = new Map();
   const rowHeightMap = new Map();
+  const leftColumnWidthMap = new Map();
+  const rightColumnWidthMap = new Map();
+  const topRowHeightMap = new Map();
+  const bottomRowHeightMap = new Map();
   {
     const measureNode = (node) => {
       const {
@@ -928,49 +951,101 @@ export const renderTable = (
         if (topSlotRow) {
           const topSlot = topSlotRow[x];
           if (topSlot) {
-            measureNode(topSlot);
+            const [, topNodeHeight] = measureNode(topSlot);
+            const topRowHeight = topRowHeightMap.get(y) || -1;
+            if (topNodeHeight > topRowHeight) {
+              topRowHeightMap.set(y, topNodeHeight);
+            }
           }
         }
         if (bottomSlotRow) {
           const bottomSlot = bottomSlotRow[x];
           if (bottomSlot) {
-            measureNode(bottomSlot);
+            const [, bottomNodeHeight] = measureNode(bottomSlot);
+            const bottomRowHeight = bottomRowHeightMap.get(y) || -1;
+            if (bottomNodeHeight > bottomRowHeight) {
+              bottomRowHeightMap.set(y, bottomNodeHeight);
+            }
           }
         }
         if (leftSlotRow) {
           const leftSlot = leftSlotRow[x];
           if (leftSlot) {
-            measureNode(leftSlot);
+            const [leftNodeWidth] = measureNode(leftSlot);
+            const leftColumnWidth = leftColumnWidthMap.get(x) || -1;
+            if (leftNodeWidth > leftColumnWidth) {
+              leftColumnWidthMap.set(x, leftNodeWidth);
+            }
           }
         }
         if (rightSlotRow) {
           const rightSlot = rightSlotRow[x];
           if (rightSlot) {
-            measureNode(rightSlot);
+            const [rightNodeWidth] = measureNode(rightSlot);
+            const rightColumnWidth = rightColumnWidthMap.get(x) || -1;
+            if (rightNodeWidth > rightColumnWidth) {
+              rightColumnWidthMap.set(x, rightNodeWidth);
+            }
           }
         }
         if (topLeftSlotRow) {
           const topLeftSlot = topLeftSlotRow[x];
           if (topLeftSlot) {
-            measureNode(topLeftSlot);
+            const [topLeftNodeWidth, topLeftNodeHeight] =
+              measureNode(topLeftSlot);
+            const leftColumnWidth = leftColumnWidthMap.get(x) || -1;
+            if (topLeftNodeWidth > leftColumnWidth) {
+              leftColumnWidthMap.set(x, topLeftNodeWidth);
+            }
+            const topRowHeight = topRowHeightMap.get(y) || -1;
+            if (topLeftNodeHeight > topRowHeight) {
+              topRowHeightMap.set(y, topLeftNodeHeight);
+            }
           }
         }
         if (topRightSlotRow) {
           const topRightSlot = topRightSlotRow[x];
           if (topRightSlot) {
-            measureNode(topRightSlot);
+            const [topRightNodeWidth, topRightNodeHeight] =
+              measureNode(topRightSlot);
+            const rightColumnWidth = rightColumnWidthMap.get(x) || -1;
+            if (topRightNodeWidth > rightColumnWidth) {
+              rightColumnWidthMap.set(x, topRightNodeWidth);
+            }
+            const topRowHeight = topRowHeightMap.get(y) || -1;
+            if (topRightNodeHeight > topRowHeight) {
+              topRowHeightMap.set(y, topRightNodeHeight);
+            }
           }
         }
         if (bottomLeftSlotRow) {
           const bottomLeftSlot = bottomLeftSlotRow[x];
           if (bottomLeftSlot) {
-            measureNode(bottomLeftSlot);
+            const [bottomLeftNodeWidth, bottomLeftNodeHeight] =
+              measureNode(bottomLeftSlot);
+            const leftColumnWidth = leftColumnWidthMap.get(x) || -1;
+            if (bottomLeftNodeWidth > leftColumnWidth) {
+              leftColumnWidthMap.set(x, bottomLeftNodeWidth);
+            }
+            const bottomRowHeight = bottomRowHeightMap.get(y) || -1;
+            if (bottomLeftNodeHeight > bottomRowHeight) {
+              bottomRowHeightMap.set(y, bottomLeftNodeHeight);
+            }
           }
         }
         if (bottomRightSlotRow) {
           const bottomRightSlot = bottomRightSlotRow[x];
           if (bottomRightSlot) {
-            measureNode(bottomRightSlot);
+            const [bottomRightNodeWidth, bottomRightNodeHeight] =
+              measureNode(bottomRightSlot);
+            const rightColumnWidth = rightColumnWidthMap.get(x) || -1;
+            if (bottomRightNodeWidth > rightColumnWidth) {
+              rightColumnWidthMap.set(x, bottomRightNodeWidth);
+            }
+            const bottomRowHeight = bottomRowHeightMap.get(y) || -1;
+            if (bottomRightNodeHeight > bottomRowHeight) {
+              bottomRowHeightMap.set(y, bottomRightNodeHeight);
+            }
           }
         }
 
@@ -1017,7 +1092,7 @@ export const renderTable = (
             if (leftSlot) {
               leftSlotLineText = renderNode(leftSlot, {
                 cell,
-                columnWidth: 1,
+                columnWidth: leftColumnWidthMap.get(x),
                 rowHeight,
                 lineIndex,
               });
@@ -1028,7 +1103,7 @@ export const renderTable = (
             if (rightSlot) {
               rightSlotLineText = renderNode(rightSlot, {
                 cell,
-                columnWidth: 1,
+                columnWidth: rightColumnWidthMap.get(x),
                 rowHeight,
                 lineIndex,
               });
@@ -1167,7 +1242,7 @@ export const renderTable = (
         if (topSlotRow) {
           const topSlotRowText = renderRow(topSlotRow, {
             cells: row,
-            rowHeight: 1,
+            rowHeight: topRowHeightMap.get(y),
             leftSlotRow: topLeftSlotRowMap.get(y),
             rightSlotRow: topRightSlotRowMap.get(y),
           });
@@ -1188,7 +1263,7 @@ export const renderTable = (
         if (bottomSlotRow) {
           const bottomSlotRowText = renderRow(bottomSlotRow, {
             cells: row,
-            rowHeight: 1,
+            rowHeight: bottomRowHeightMap.get(y),
             leftSlotRow: bottomLeftSlotRowMap.get(y),
             rightSlotRow: bottomRightSlotRowMap.get(y),
           });
