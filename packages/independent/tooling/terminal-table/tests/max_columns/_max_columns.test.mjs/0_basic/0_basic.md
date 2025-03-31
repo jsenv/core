@@ -1,4 +1,4 @@
-# [0_basic](../../max_columns.test.mjs#L25)
+# [0_basic](../../max_columns.test.mjs#L39)
 
 ```js
 run({})
@@ -16,6 +16,11 @@ run({})
 ┌───┬┈┈┈┈┈┈┈┈┈┈→
 │ a │ 2 columns 
 └───┴┈┈┈┈┈┈┈┈┈┈→
+
+--- five_column_max_3 ---
+┌───┬───┬┈┈┈┈┈┈┈┈┈┈→
+│ a │ b │ 3 columns 
+└───┴───┴┈┈┈┈┈┈┈┈┈┈→
 
 ```
 

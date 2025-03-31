@@ -14,9 +14,23 @@ const run = () => {
     { borderCollapse: true, maxColumns: 2, ansi: true },
   );
 
+  const five_column_max_3 = renderTable(
+    [
+      [
+        { value: "a", border: {} },
+        { value: "b", border: {} },
+        { value: "c", border: {} },
+        { value: "d", border: {} },
+        { value: "e", border: {} },
+      ],
+    ],
+    { borderCollapse: true, maxColumns: 3, ansi: true },
+  );
+
   console.log(
     renderNamedSections({
       three_column_max_2,
+      five_column_max_3,
     }),
   );
 };
