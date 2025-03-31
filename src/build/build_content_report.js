@@ -1,5 +1,5 @@
 import { ANSI, distributePercentages, humanizeFileSize } from "@jsenv/humanize";
-import { renderTable } from "@jsenv/terminal-table";
+import { renderTable, tableFromObjects } from "@jsenv/terminal-table";
 
 export const createBuildContentSummary = (
   buildFileContents,
@@ -26,38 +26,37 @@ export const createBuildContentLog = (buildFileContents) => {
       continue;
     }
     items.push({
-      "File type": {
-        value: key,
-      },
-      "File count": {
-        value: count,
-        color: null,
-      },
-      "File size": {
-        value: size,
-        format: "size",
-      },
-      "Percentage": {
-        value: percentage,
-        format: "percentage",
-        color: null,
-      },
+      "File type": key,
+      "File count": count,
+      "File size": size,
+      "Percentage": percentage,
     });
   }
-  return renderTable({
+
+  const table = tableFromObjects(items, {
     head: [
-      { value: "File type" },
-      { value: "File count" },
-      { value: "File size" },
+      { value: "Files" },
+      { value: "Count" },
+      { value: "Size" },
       { value: "Percentage" },
     ],
-    body: items,
+    body: [
+      // prettier-multiline
+      {},
+      {},
+      { format: "size" },
+      { format: "percentage", unit: "%" },
+    ],
     foot: [
       { value: "Total" },
-      { value: buildContentReport.total.count, color: null },
+      { value: buildContentReport.total.count },
       { value: buildContentReport.total.size, format: "size" },
-      { value: 100, format: "percentage", color: null },
+      { value: 100, format: "percentage" },
     ],
+  });
+  return renderTable(table, {
+    borderCollapse: true,
+    ansi: true,
   });
 };
 

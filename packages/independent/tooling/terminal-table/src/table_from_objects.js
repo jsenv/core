@@ -1,18 +1,4 @@
-export const tableFromObjects = (
-  objects,
-  {
-    head = {
-      borderTop: { color: null },
-      borderBottom: { color: null },
-      borderLeft: { color: null },
-      borderRight: { color: null },
-    },
-    body = {
-      borderLeft: { color: null },
-      borderRight: { color: null },
-    },
-  } = {},
-) => {
+export const tableFromObjects = (objects, { head, body, foot } = {}) => {
   const propSet = new Set();
   for (const object of objects) {
     const names = Object.getOwnPropertyNames(object);
@@ -21,34 +7,77 @@ export const tableFromObjects = (
     }
   }
   const props = Array.from(propSet);
-  const headLine = [];
-  for (const prop of props) {
-    const headCell = {
-      value: prop,
-      ...head,
-    };
-    headLine.push(headCell);
-  }
-  const bodyLines = [];
-  let bodyLastLine;
-  for (const object of objects) {
-    const bodyLine = [];
+  let headRow = [];
+  if (head) {
+    for (const prop of head) {
+      const headCell = {
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+        ...prop,
+      };
+      headRow.push(headCell);
+    }
+  } else {
     for (const prop of props) {
+      const headCell = {
+        value: prop,
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      };
+      headRow.push(headCell);
+    }
+  }
+  headRow[0].borderLeft = null;
+  headRow[headRow.length - 1].borderRight = null;
+
+  const bodyRows = [];
+  let bodyLastRow;
+  for (const object of objects) {
+    const bodyRow = [];
+    let x = 0;
+    for (const prop of props) {
+      const cellProps = body?.[x] || {};
       const bodyCell = {
         value: object[prop],
-        ...body,
+        borderLeft: {},
+        borderRight: {},
+        ...cellProps,
       };
-      bodyLine.push(bodyCell);
+      bodyRow.push(bodyCell);
+      x++;
     }
-    bodyLines.push(bodyLine);
-    bodyLastLine = bodyLine;
+    bodyRow[0].borderLeft = null;
+    bodyRow[bodyRow.length - 1].borderRight = null;
+    bodyRows.push(bodyRow);
+    bodyLastRow = bodyRow;
   }
-  if (bodyLastLine) {
-    for (const bodyLastLineCell of bodyLastLine) {
+  if (bodyLastRow) {
+    for (const bodyLastLineCell of bodyLastRow) {
       if (bodyLastLineCell.borderBottom === undefined) {
         bodyLastLineCell.borderBottom = { color: null };
       }
     }
   }
-  return [headLine, ...bodyLines];
+
+  const rows = [headRow, ...bodyRows];
+  if (!foot) {
+    return rows;
+  }
+
+  let footRow = [];
+  for (const props of foot) {
+    const footCell = {
+      ...props,
+      borderTop: {},
+      borderLeft: {},
+      borderRight: {},
+    };
+    footRow.push(footCell);
+  }
+  footRow[0].borderLeft = null;
+  footRow[headRow.length - 1].borderRight = null;
+  rows.push(footRow);
+  return rows;
 };

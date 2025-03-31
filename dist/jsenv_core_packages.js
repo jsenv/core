@@ -18890,6 +18890,87 @@ const COLORS_PRIO = [
   COLORS.RED,
 ];
 
+const groupDigits = (digitsAsString) => {
+  const digitCount = digitsAsString.length;
+  if (digitCount < 4) {
+    return digitsAsString;
+  }
+
+  let digitsWithSeparator = digitsAsString.slice(-3);
+  let remainingDigits = digitsAsString.slice(0, -3);
+  while (remainingDigits.length) {
+    const group = remainingDigits.slice(-3);
+    remainingDigits = remainingDigits.slice(0, -3);
+    digitsWithSeparator = `${group}_${digitsWithSeparator}`;
+  }
+  return digitsWithSeparator;
+};
+
+const tokenizeInteger = (integerValue) => {
+  const integerAsString = String(integerValue);
+  const exponentIndex = integerAsString.indexOf("e");
+  if (exponentIndex === -1) {
+    return { integer: integerAsString };
+  }
+  const digitsAsString = integerAsString.slice(0, exponentIndex);
+  const digitsValue = parseFloat(digitsAsString);
+  const digitParts = tokenizeNonExponentialFloat(digitsValue);
+  const digitsInteger = digitParts.integer;
+  const digitsDecimal = digitParts.decimal;
+  const afterExponent = integerAsString.slice(exponentIndex + 2); // "e" + "+"
+  const numberOfTrailingZero = parseInt(afterExponent);
+  let integer = "";
+  integer = digitsInteger;
+  integer += digitsDecimal;
+  integer += afterExponent;
+  integer += "0".repeat(numberOfTrailingZero);
+  return { integer };
+};
+
+// see https://github.com/shrpne/from-exponential/blob/master/src/index.js
+// https://github.com/shrpne/from-exponential/blob/master/test/index.test.js
+const tokenizeFloat = (floatValue) => {
+  const floatAsString = String(floatValue);
+  const exponentIndex = floatAsString.indexOf("e");
+  if (exponentIndex === -1) {
+    return tokenizeNonExponentialFloat(floatValue);
+  }
+  let decimal = "";
+  let numberOfLeadingZero;
+  const digitsAsString = floatAsString.slice(0, exponentIndex);
+  const digitsValue = parseFloat(digitsAsString);
+  const digitParts = tokenizeNonExponentialFloat(digitsValue);
+  const digitsInteger = digitParts.integer;
+  const digitsDecimal = digitParts.decimal;
+  const decimalSeparator = digitsDecimal ? digitParts.decimalSeparator : ".";
+  const afterExponent = floatAsString.slice(exponentIndex + 2); // "e" + "-"
+  numberOfLeadingZero = parseInt(afterExponent);
+  decimal += "0".repeat(numberOfLeadingZero);
+  decimal += digitsInteger;
+  decimal += digitsDecimal;
+  return {
+    integer: "0",
+    decimalSeparator,
+    decimal,
+  };
+};
+
+const tokenizeNonExponentialFloat = (floatValue) => {
+  const floatString = String(floatValue);
+  const integer = Math.floor(floatValue);
+  const integerAsString = String(integer);
+  const decimalSeparator = floatString[integerAsString.length];
+  const decimal = floatString.slice(integerAsString.length + 1);
+  return {
+    integer: integerAsString,
+    decimalSeparator,
+    decimal,
+  };
+};
+
+// tokenizeFloat(1.2e-7);
+// tokenizeFloat(2e-7);
+
 /**
  * https://www.w3.org/TR/xml-entity-names/025.html?fbclid=IwZXh0bgNhZW0CMTEAAR0jL81PDwl6kfzRMUvjOSIfmuesvCdqr11lQpOS-9bpx7u1Q2LD1G7fJ1E_aem_URrWt-55lP_byLA6tjLleQ
  * https://www.w3schools.com/charsets/ref_utf_box.asp
@@ -21073,6 +21154,82 @@ const renderTable = (
     }
   }
 
+  // number align
+  {
+    const largestIntegerInColumnMap = new Map();
+    const largestFloatInColumnMap = new Map();
+    const formatCallbackSet = new Set();
+
+    let y = 0;
+    while (y < grid.length) {
+      const row = grid[y];
+      let x = 0;
+      while (x < row.length) {
+        const cell = row[x];
+        const { value } = cell;
+        if (isFinite(value)) {
+          if (value % 1 === 0) {
+            const { integer } = tokenizeInteger(Math.abs(value));
+            const integerFormatted = groupDigits(integer);
+            const integerWidth = measureTextWidth$1(integerFormatted);
+            const largestIntegerInColumn =
+              largestIntegerInColumnMap.get(x) || 0;
+            if (integerWidth > largestIntegerInColumn) {
+              largestIntegerInColumnMap.set(x, integerWidth);
+            }
+            formatCallbackSet.add(() => {
+              const integerColumnWidth = largestIntegerInColumnMap.get(cell.x);
+              let integerText = integerFormatted;
+              if (integerWidth < integerColumnWidth) {
+                const padding = integerColumnWidth - integerWidth;
+                integerText = " ".repeat(padding) + integerFormatted;
+              }
+              const floatWidth = largestFloatInColumnMap.get(cell.x);
+              if (floatWidth) {
+                integerText += " ".repeat(floatWidth);
+              }
+              cell.updateValue(integerText);
+            });
+          } else {
+            const { integer, decimalSeparator, decimal } = tokenizeFloat(
+              Math.abs(value),
+            );
+            const integerFormatted = groupDigits(integer);
+            const integerWidth = measureTextWidth$1(integerFormatted);
+            const floatFormatted = groupDigits(decimal);
+            const floatWidth = measureTextWidth$1(floatFormatted);
+            const largestFloatInColumn = largestFloatInColumnMap.get(x) || 0;
+            if (floatWidth > largestFloatInColumn) {
+              largestFloatInColumnMap.set(x, floatWidth);
+            }
+            formatCallbackSet.add(() => {
+              const integerColumnWidth = largestIntegerInColumnMap.get(cell.x);
+              const floatColumnWidth = largestFloatInColumnMap.get(cell.x);
+              let floatText = integerFormatted;
+              if (integerWidth < integerColumnWidth) {
+                const padding = integerColumnWidth - integerWidth;
+                floatText = " ".repeat(padding) + integerFormatted;
+              }
+              floatText += decimalSeparator;
+              floatText += decimal;
+              if (floatWidth < floatColumnWidth) {
+                const padding = floatColumnWidth - floatWidth;
+                floatText += " ".repeat(padding - 1);
+              }
+              cell.updateValue(floatText);
+            });
+          }
+        }
+        x++;
+      }
+      y++;
+    }
+
+    for (const formatCallback of formatCallbackSet) {
+      formatCallback();
+    }
+  }
+
   // measure column and row dimensions (biggest of all cells in the column/row)
   const columnWidthMap = new Map();
   const rowHeightMap = new Map();
@@ -21636,6 +21793,90 @@ const createCell = (
   updateValue(value);
 
   return cell;
+};
+
+const tableFromObjects = (objects, { head, body, foot } = {}) => {
+  const propSet = new Set();
+  for (const object of objects) {
+    const names = Object.getOwnPropertyNames(object);
+    for (const name of names) {
+      propSet.add(name);
+    }
+  }
+  const props = Array.from(propSet);
+  let headRow = [];
+  if (head) {
+    for (const prop of head) {
+      const headCell = {
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+        ...prop,
+      };
+      headRow.push(headCell);
+    }
+  } else {
+    for (const prop of props) {
+      const headCell = {
+        value: prop,
+        borderLeft: {},
+        borderRight: {},
+        borderBottom: {},
+      };
+      headRow.push(headCell);
+    }
+  }
+  headRow[0].borderLeft = null;
+  headRow[headRow.length - 1].borderRight = null;
+
+  const bodyRows = [];
+  let bodyLastRow;
+  for (const object of objects) {
+    const bodyRow = [];
+    let x = 0;
+    for (const prop of props) {
+      const cellProps = body?.[x] || {};
+      const bodyCell = {
+        value: object[prop],
+        borderLeft: {},
+        borderRight: {},
+        ...cellProps,
+      };
+      bodyRow.push(bodyCell);
+      x++;
+    }
+    bodyRow[0].borderLeft = null;
+    bodyRow[bodyRow.length - 1].borderRight = null;
+    bodyRows.push(bodyRow);
+    bodyLastRow = bodyRow;
+  }
+  if (bodyLastRow) {
+    for (const bodyLastLineCell of bodyLastRow) {
+      if (bodyLastLineCell.borderBottom === undefined) {
+        bodyLastLineCell.borderBottom = { color: null };
+      }
+    }
+  }
+
+  const rows = [headRow, ...bodyRows];
+  if (!foot) {
+    return rows;
+  }
+
+  let footRow = [];
+  for (const props of foot) {
+    const footCell = {
+      ...props,
+      borderTop: {},
+      borderLeft: {},
+      borderRight: {},
+    };
+    footRow.push(footCell);
+  }
+  footRow[0].borderLeft = null;
+  footRow[headRow.length - 1].borderRight = null;
+  rows.push(footRow);
+  return rows;
 };
 
 const escapeChars = (string, replacements) => {
@@ -23222,4 +23463,4 @@ const assertAndNormalizeDirectoryUrl = (
   return value;
 };
 
-export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };
+export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, tableFromObjects, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };

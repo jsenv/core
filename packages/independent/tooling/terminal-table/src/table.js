@@ -1235,11 +1235,18 @@ const createCell = (
     maxHeight = 1;
   }
 
+  if (format === "size") {
+    const size = humanizeFileSize(value);
+    const parts = size.split(" ");
+    value = parts[0];
+    unit = parts[1];
+  }
+
   const rects = [];
   const updateValue = (value) => {
     cell.value = value;
     rects.length = 0;
-    let text = format === "size" ? humanizeFileSize(value) : String(value);
+    let text = String(value);
     let lines = text.split("\n");
     const lineCount = lines.length;
     let skippedLineCount;
