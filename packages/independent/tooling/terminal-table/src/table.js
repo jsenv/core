@@ -800,15 +800,20 @@ export const renderTable = (
         const adapt = (slot) => {
           const node = slot.adapt(cell, options);
           if (borderSpacing && node.type !== "blank") {
-            if (
-              slot.type === "top_left" ||
-              slot.type === "top_right" ||
-              slot.type === "bottom_left" ||
-              slot.type === "bottom_right"
-            ) {
+            if (slot.type === "top_left") {
               node.spacingTop = borderSpacing;
+              node.spacingLeft = borderSpacing;
+            }
+            if (slot.type === "top_right") {
+              node.spacingTop = borderSpacing;
+              node.spacingRight = borderSpacing;
+            }
+            if (slot.type === "bottom_left") {
               node.spacingBottom = borderSpacing;
               node.spacingLeft = borderSpacing;
+            }
+            if (slot.type === "bottom_right") {
+              node.spacingBottom = borderSpacing;
               node.spacingRight = borderSpacing;
             }
           }
@@ -1162,7 +1167,8 @@ export const renderTable = (
       } else {
         const lineStartIndex = rowHeight - nodeHeight;
         if (lineIndex >= lineStartIndex) {
-          rect = rects[lineIndex];
+          const rectIndex = lineIndex - lineStartIndex;
+          rect = rects[rectIndex];
         }
       }
 
