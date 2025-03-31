@@ -8,12 +8,12 @@
         <text x="10" y="24.55">--- three_column_max_2 ---</text>
         <text x="10" y="43.55">┌───┬</text>
         <text x="52.01" y="43.55" fill="#7f7f7f">┈┈┈┈┈┈┈┈┈┈</text>
-        <text x="136.02" y="43.55" fill="#7f7f7f">⇢</text>
+        <text x="136.02" y="43.55" fill="#7f7f7f">→</text>
         <text x="10" y="62.55">│ a │</text>
         <text x="52.01" y="62.55" style="white-space:pre" fill="#7f7f7f"> 2 columns</text>
         <text x="10" y="81.55">└───┴</text>
         <text x="52.01" y="81.55" fill="#7f7f7f">┈┈┈┈┈┈┈┈┈┈</text>
-        <text x="136.02" y="81.55" fill="#7f7f7f">⇢</text>
+        <text x="136.02" y="81.55" fill="#7f7f7f">→</text>
       </g>
     </svg>
   </foreignObject>

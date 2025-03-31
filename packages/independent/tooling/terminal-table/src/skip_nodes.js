@@ -29,7 +29,7 @@ export const createSkippedColumnBottomNode = () => {
 export const createSkippedColumnTopRightNode = () => {
   return {
     type: "skipped_column_top_right",
-    rects: [{ width: 1, color: COLORS.GREY, render: "⇢" }],
+    rects: [{ width: 1, color: COLORS.GREY, render: "→" }],
     xAlign: "end",
     yAlign: "start",
     xPadChar: "┈",
@@ -38,7 +38,7 @@ export const createSkippedColumnTopRightNode = () => {
 export const createSkippedColumnBottomRightNode = () => {
   return {
     type: "skipped_column_bottom_right",
-    rects: [{ width: 1, color: COLORS.GREY, render: "⇢" }],
+    rects: [{ width: 1, color: COLORS.GREY, render: "→" }],
     xAlign: "end",
     yAlign: "end",
     xPadChar: "┈",
@@ -66,7 +66,7 @@ export const createSkippedRowRightNode = () => {
 export const createSkippedRowBottomLeftNode = () => {
   return {
     type: "skipped_row_bottom_left",
-    rects: [{ width: 1, color: COLORS.GREY, render: "⇣" }],
+    rects: [{ width: 1, color: COLORS.GREY, render: "↓" }],
     xAlign: "start",
     yAlign: "center",
     yPadChar: "┊",
@@ -75,7 +75,7 @@ export const createSkippedRowBottomLeftNode = () => {
 export const createSkippedRowBottomRightNode = () => {
   return {
     type: "skipped_row_bottom_right",
-    rects: [{ width: 1, color: COLORS.GREY, render: "⇣" }],
+    rects: [{ width: 1, color: COLORS.GREY, render: "↓" }],
     xAlign: "end",
     yAlign: "end",
     yPadChar: "┊",

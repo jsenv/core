@@ -6,13 +6,18 @@ run({})
 
 # 1/2 console.log
 
+![img](console.log.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 --- three_row_max_2 ---
 ┌────────┐
 │ a      │
 ├────────┤
-│ 2 rows │
-└────────┘
+┊ 2 rows ┊
+↓        ↓
 
 --- three_row_max_3 ---
 ┌───┐
@@ -29,12 +34,15 @@ run({})
 ├────────┤
 │ b      │
 ├────────┤
-│ 2 rows │
+┊ 2 rows ┊
 ├────────┤
 │ Total  │
 └────────┘
 
 ```
+
+</details>
+
 
 # 2/2 return
 
