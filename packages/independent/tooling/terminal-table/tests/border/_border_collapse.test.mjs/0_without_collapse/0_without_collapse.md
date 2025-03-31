@@ -1,4 +1,4 @@
-# [0_without_collapse](../../border_collapse.test.mjs#L88)
+# [0_without_collapse](../../border_collapse.test.mjs#L107)
 
 ```js
 run({
@@ -7,6 +7,11 @@ run({
 ```
 
 # 1/2 console.log
+
+![img](console.log.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
 --- top_left_empty ---
@@ -65,7 +70,21 @@ run({
 │ row_c │
 └───────┘
 
+--- nine_cells_middle_use_yellow_borders ---
+┌─────────────┐┌───────────────┐┌──────────────┐
+│ top_left    ││ top_middle    ││ top_right    │
+└─────────────┘└───────────────┘└──────────────┘
+┌─────────────┐┌───────────────┐┌──────────────┐
+│ middle_left ││ middle_middle ││ middle_right │
+└─────────────┘└───────────────┘└──────────────┘
+┌─────────────┐┌───────────────┐┌──────────────┐
+│ bottom_left ││ bottom_middle ││ bottom_right │
+└─────────────┘└───────────────┘└──────────────┘
+
 ```
+
+</details>
+
 
 # 2/2 return
 

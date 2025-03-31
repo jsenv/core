@@ -5,8 +5,6 @@
  *
  * remaining:
  *
- * - head/foot styles with a "real" example
- *
  * - color inheritance and priority
  *   une fonction pickColor(...borders)
  *   en fonction de nb de borders il pick.

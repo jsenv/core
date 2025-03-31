@@ -880,7 +880,7 @@ export const createBorderMidNode = (
   rightBorder,
   downBorder,
 ) => {
-  const { color } = upBorder;
+  const color = pickBorderColor(upBorder, leftBorder, rightBorder, downBorder);
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = borderMidCharProps[char];
     return {
@@ -1054,4 +1054,20 @@ export const createBorderMidNode = (
   }
   // only down is bold
   return innerCreateBorder("╁");
+};
+
+const pickBorderColor = (...borders) => {
+  if (borders.length === 0) {
+    return borders[0].color;
+  }
+  if (borders.lenth === 2) {
+    const [first, second] = borders;
+    return first.color || second.color;
+  }
+  if (borders.length === 3) {
+    const [first, second, third] = borders;
+    return first.color || second.color || third.color;
+  }
+  const [first, second, third, fourth] = borders;
+  return first.color || second.color || third.color || fourth.color;
 };

@@ -1,9 +1,3 @@
-/**
- *
- * then in an other file we'll try with thead + tfoot
- *
- */
-
 import { renderNamedSections } from "@jsenv/humanize";
 import { renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";

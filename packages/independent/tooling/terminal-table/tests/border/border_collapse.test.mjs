@@ -1,9 +1,9 @@
 import { renderNamedSections } from "@jsenv/humanize";
-import { renderTable } from "@jsenv/terminal-table";
+import { COLORS, renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
 const run = ({ borderCollapse }) => {
-  const render = (grid) => renderTable(grid, { borderCollapse });
+  const render = (grid) => renderTable(grid, { borderCollapse, ansi: true });
 
   const top_left_empty = render([
     [
@@ -71,6 +71,24 @@ const run = ({ borderCollapse }) => {
     [{ value: "row_c", border: {} }],
   ]);
 
+  const nine_cells_middle_use_yellow_borders = render([
+    [
+      { value: "top_left", border: {} },
+      { value: "top", border: {} },
+      { value: "top_right", border: {} },
+    ],
+    [
+      { value: "left", border: {} },
+      { value: "center", border: { color: COLORS.YELLOW } },
+      { value: "right", border: {} },
+    ],
+    [
+      { value: "bottom_left", border: {} },
+      { value: "bottom", border: {} },
+      { value: "bottom_right", border: {} },
+    ],
+  ]);
+
   console.log(
     renderNamedSections({
       top_left_empty,
@@ -80,6 +98,7 @@ const run = ({ borderCollapse }) => {
       all,
       all_3_row,
       all_3_column,
+      nine_cells_middle_use_yellow_borders,
     }),
   );
 };
