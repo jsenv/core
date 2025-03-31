@@ -9,7 +9,7 @@ const run = () => {
       [{ value: "b", border: {} }],
       [{ value: "c", border: {} }],
     ],
-    { borderCollapse: true, maxRows: 2 },
+    { borderCollapse: true, maxRows: 2, ansi: true },
   );
 
   const three_row_max_3 = renderTable(
@@ -18,7 +18,7 @@ const run = () => {
       [{ value: "b", border: {} }],
       [{ value: "c", border: {} }],
     ],
-    { borderCollapse: true, maxRows: 3 },
+    { borderCollapse: true, maxRows: 3, ansi: true },
   );
 
   const five_row_max_5_last_row_fixed = renderTable(
@@ -29,7 +29,7 @@ const run = () => {
       [{ value: "d", border: {} }],
       [{ value: "Total", border: {} }],
     ],
-    { borderCollapse: true, maxRows: 3, fixLastRow: true },
+    { borderCollapse: true, maxRows: 3, fixLastRow: true, ansi: true },
   );
 
   console.log(
