@@ -1,4 +1,4 @@
-# [1_with_collapse](../../border_collapse.test.mjs#L69)
+# [1_with_collapse](../../border_collapse.test.mjs#L97)
 
 ```js
 run({
@@ -10,11 +10,11 @@ run({
 
 ```console
 --- top_left_empty ---
-               ┌──────────────┐
-  top_left     │ top_right    │
-┌──────────────┼──────────────┤
-│ bottom_left  │ bottom_right │
-└──────────────┴──────────────┘
+              ┌──────────────┐
+  top_left    │ top_right    │
+┌─────────────┼──────────────┤
+│ bottom_left │ bottom_right │
+└─────────────┴──────────────┘
 
 --- top_right_empty ---
 ┌─────────────┐               
@@ -31,11 +31,32 @@ run({
 └─────────────┘               
 
 --- bottom_left_empty ---
-┌──────────────┬──────────────┐
-│ top_left     │ top_right    │
-└──────────────┼──────────────┤
-  bottom_left  │ bottom_right │
-               └──────────────┘
+┌─────────────┬──────────────┐
+│ top_left    │ top_right    │
+└─────────────┼──────────────┤
+  bottom_left │ bottom_right │
+              └──────────────┘
+
+--- all ---
+┌─────────────┬──────────────┐
+│ top_left    │ top_right    │
+├─────────────┼──────────────┤
+│ bottom_left │ bottom_right │
+└─────────────┴──────────────┘
+
+--- all_3_row ---
+┌──────────┬──────────┬──────────┐
+│ column_a │ column_b │ column_c │
+└──────────┴──────────┴──────────┘
+
+--- all_3_column ---
+┌───────┐
+│ row_a │
+├───────┤
+│ row_b │
+├───────┤
+│ row_c │
+└───────┘
 
 ```
 

@@ -609,7 +609,7 @@ export const renderTable = (
         grid[y][x - 1].borderRight = null;
         y++;
       }
-      columnWithRightSlotSet.delete(x);
+      columnWithRightSlotSet.delete(x - 1);
       return true;
     };
     const collapseLeftBorders = (x) => {
@@ -652,16 +652,10 @@ export const renderTable = (
             columnHasRightSlot(x) &&
             columnHasLeftSlot(x + 1)
           ) {
-            if (collapsePreviousColumnRightBorders(x + 1)) {
-              x++;
-              continue;
-            }
+            collapsePreviousColumnRightBorders(x + 1);
           }
           if (x > 0 && columnHasLeftSlot(x) && columnHasRightSlot(x - 1)) {
-            if (collapseLeftBorders(x)) {
-              x++;
-              continue;
-            }
+            collapseLeftBorders(x);
           }
           x++;
         }
@@ -670,16 +664,10 @@ export const renderTable = (
           rowHasBottomSlot(y) &&
           rowHasTopSlot(y + 1)
         ) {
-          if (collapsePreviousRowBottomBorders(y + 1)) {
-            y++;
-            continue;
-          }
+          collapsePreviousRowBottomBorders(y + 1);
         }
         if (y > 0 && rowHasTopSlot(y) && rowHasBottomSlot(y - 1)) {
-          if (collapseTopBorders(y)) {
-            y++;
-            continue;
-          }
+          collapseTopBorders(y);
         }
         y++;
       }
