@@ -22,7 +22,6 @@ const run = () => {
   writeFileSync(import.meta.resolve("./table_emojis.svg"), svg);
   console.log(table);
 };
-run();
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_basic", () => {
