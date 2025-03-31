@@ -7,20 +7,22 @@
  *
  * remaining:
  *
- * - maxWidth on the table (defaults to stdout.columns, will put ... at the end of the cell when it exceeds the remaining width
- *
  * - max rows, max columns (sur la table) (la dernier ligne/colonne afficheras "and 3 more...")
+ * (we must presevre head and foot rows though)
+ *
+ * NICE TO HAVE/TO INVESTIGATE
  *
  * - colspan/rowspan
  *
  * - test border style conflict (double -> single heavy)
  *
+ * - maxWidth on the table (defaults to stdout.columns, will put ... at the end of the cell when it exceeds the remaining width
+ *
  * - un nouveau style pour les border: "ascii"
- * 
- *  sep: "|",
-      topLeft: "+", topMid: "+", top: "-", topRight: "+",
-      midLeft: "|", midMid: "+", mid: "-", midRight: "|",
-      botLeft: "+", botMid: "+", bot: "-", botRight: "+"
+ * sep: "|",
+ * topLeft: "+", topMid: "+", top: "-", topRight: "+",
+ * midLeft: "|", midMid: "+", mid: "-", midRight: "|",
+ * botLeft: "+", botMid: "+", bot: "-", botRight: "+"
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
@@ -48,6 +50,9 @@ export const renderTable = (
     cornersOnly = false,
     cellMaxWidth = 50,
     cellMaxHeight = 10,
+    // maxColumns = 10
+    maxRows = 20,
+    fixLastRow = false,
   } = {},
 ) => {
   if (!Array.isArray(inputGrid)) {
@@ -57,7 +62,7 @@ export const renderTable = (
     return "";
   }
 
-  const grid = [];
+  let grid = [];
   const columnWithLeftSlotSet = new Set();
   const columnWithRightSlotSet = new Set();
   const rowHasTopSlot = (y) => topSlotRowMap.has(y);
@@ -168,6 +173,47 @@ export const renderTable = (
       }
       grid[y] = row;
       y++;
+    }
+  }
+
+  // max rows
+  {
+    if (maxRows < 2) {
+      maxRows = 2;
+    }
+    const rowCount = grid.length;
+    if (rowCount > maxRows) {
+      const firstRow = grid[0];
+      const gridRespectingMaxRows = [];
+      let skippedRowIndexArray = [];
+      let y = 0;
+      while (y < rowCount) {
+        const row = grid[y];
+        if (y === 0) {
+          gridRespectingMaxRows.push(row);
+        } else if (gridRespectingMaxRows.length < maxRows - 1) {
+          gridRespectingMaxRows.push(row);
+        } else if (fixLastRow && rowCount > 1 && y === rowCount - 1) {
+        } else {
+          skippedRowIndexArray.push(y);
+        }
+        y++;
+      }
+      // push a row
+      const skippedRowCount = skippedRowIndexArray.length;
+      const rowShowingSkippedRows = [];
+      let x = 0;
+      while (x < firstRow.length) {
+        const cellModel = grid[skippedRowIndexArray[0]][x];
+        cellModel.updateValue(`${skippedRowCount} rows hidden...`);
+        rowShowingSkippedRows.push(cellModel);
+        x++;
+      }
+      gridRespectingMaxRows.push(rowShowingSkippedRows);
+      if (fixLastRow && rowCount > 1) {
+        gridRespectingMaxRows.push(grid[rowCount - 1]);
+      }
+      grid = gridRespectingMaxRows;
     }
   }
 
@@ -1078,54 +1124,60 @@ const createCell = (
     maxHeight = 1;
   }
 
-  let text = format === "size" ? humanizeFileSize(value) : String(value);
-  let lines = text.split("\n");
-  const lineCount = lines.length;
-  let skippedLineCount;
-  let lastLineIndex = lineCount - 1;
-  if (lineCount > maxHeight) {
-    lines = lines.slice(0, maxHeight - 1);
-    lastLineIndex = maxHeight - 1;
-    skippedLineCount = lineCount - maxHeight + 1;
-    lines.push(`↓ ${skippedLineCount} lines ↓`);
-  }
-
-  let lineIndex = 0;
   const rects = [];
-  for (const line of lines) {
-    const isLastLine = lineIndex === lastLineIndex;
-    let lineWidth = measureTextWidth(line);
-    let lineText = line;
-    if (lineWidth > maxWidth) {
-      const skippedBoilerplate = "…";
-      // const skippedCharCount = lineWidth - maxWidth - skippedBoilerplate.length;
-      lineText = lineText.slice(0, maxWidth - skippedBoilerplate.length);
-      lineText += skippedBoilerplate;
-      lineWidth = maxWidth;
+  const updateValue = (value) => {
+    rects.length = 0;
+    let text = format === "size" ? humanizeFileSize(value) : String(value);
+    let lines = text.split("\n");
+    const lineCount = lines.length;
+    let skippedLineCount;
+    let lastLineIndex = lineCount - 1;
+    if (lineCount > maxHeight) {
+      lines = lines.slice(0, maxHeight - 1);
+      lastLineIndex = maxHeight - 1;
+      skippedLineCount = lineCount - maxHeight + 1;
+      lines.push(`↓ ${skippedLineCount} lines ↓`);
     }
-    if (isLastLine && unit) {
-      lineWidth += ` ${unit}`.length;
-    }
-    rects.push({
-      width: lineWidth,
-      render: ({ ansi }) => {
-        if (isLastLine && unit) {
-          const unitWithStyles =
-            ansi && unitColor ? ANSI.color(unit, unitColor) : unit;
-          lineText += ` ${unitWithStyles}`;
+
+    let lineIndex = 0;
+
+    for (const line of lines) {
+      const isLastLine = lineIndex === lastLineIndex;
+      let lineWidth = measureTextWidth(line);
+      let lineText = line;
+      if (lineWidth > maxWidth) {
+        const skippedBoilerplate = "…";
+        // const skippedCharCount = lineWidth - maxWidth - skippedBoilerplate.length;
+        lineText = lineText.slice(0, maxWidth - skippedBoilerplate.length);
+        lineText += skippedBoilerplate;
+        lineWidth = maxWidth;
+      }
+      if (isLastLine && unit) {
+        lineWidth += ` ${unit}`.length;
+      }
+      rects.push({
+        width: lineWidth,
+        render: ({ ansi }) => {
+          if (isLastLine && unit) {
+            const unitWithStyles =
+              ansi && unitColor ? ANSI.color(unit, unitColor) : unit;
+            lineText += ` ${unitWithStyles}`;
+            return lineText;
+          }
           return lineText;
-        }
-        return lineText;
-      },
-      backgroundColor,
-      color,
-      bold,
-    });
-    lineIndex++;
-  }
-  if (skippedLineCount) {
-    rects[rects.length - 1].color = COLORS.GREY;
-  }
+        },
+        backgroundColor,
+        color,
+        bold,
+      });
+      lineIndex++;
+    }
+    if (skippedLineCount) {
+      rects[rects.length - 1].color = COLORS.GREY;
+    }
+  };
+
+  updateValue(value);
 
   const cell = {
     type: "content",
@@ -1142,6 +1194,7 @@ const createCell = (
     rects,
     x,
     y,
+    updateValue,
   };
   return cell;
 };
