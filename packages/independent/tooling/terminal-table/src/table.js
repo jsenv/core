@@ -546,14 +546,14 @@ export const renderTable = (
         return null;
       }
       return () => {
-        //  const collapsedBorder = { ...intoBorder };
+        const collapsedBorder = { ...intoBorder };
         if (!intoBorder.style && borderToCollapse.style) {
-          intoBorder.style = borderToCollapse.style;
+          collapsedBorder.style = borderToCollapse.style;
         }
         if (!intoBorder.color && borderToCollapse.color) {
-          intoBorder.color = borderToCollapse.color;
+          collapsedBorder.color = borderToCollapse.color;
         }
-        // return collapsedBorder;
+        return collapsedBorder;
       };
     };
 
@@ -579,10 +579,9 @@ export const renderTable = (
         if (!collapseBorders) {
           return false;
         }
-        // const cell = cellInThatRow;
+        const cell = cellInThatRow;
         collapseCallbackSet.add(() => {
-          // cell.borderTop = collapsedBorder;
-          collapseBorders();
+          cell.borderTop = collapseBorders();
           northCell.borderBottom = null;
         });
         cellInThatRow = cellInThatRow.eastCell;
@@ -617,8 +616,7 @@ export const renderTable = (
         }
         const cell = cellInThatRow;
         collapseCallbackSet.add(() => {
-          collapseBorders();
-          // northCell.borderBottom = collapsedBorder;
+          northCell.borderBottom = collapseBorders();
           cell.borderTop = null;
         });
         cellInThatRow = cellInThatRow.eastCell;
@@ -651,10 +649,9 @@ export const renderTable = (
         if (!collapseBorders) {
           return false;
         }
-        // const cell = cellInThatColumn;
+        const cell = cellInThatColumn;
         collapseCallbackSet.add(() => {
-          collapseBorders();
-          // cell.borderLeft = collapsedBorder;
+          cell.borderLeft = collapseBorders();
           westCell.borderRight = null;
         });
         cellInThatColumn = cellInThatColumn.southCell;
@@ -694,8 +691,7 @@ export const renderTable = (
         }
         const cell = cellInThatColumn;
         collapseCallbackSet.add(() => {
-          collapseBorders();
-          // westCell.borderRight = collapsedBorder;
+          westCell.borderRight = collapseBorders();
           cell.borderLeft = null;
         });
         cellInThatColumn = cellInThatColumn.southCell;

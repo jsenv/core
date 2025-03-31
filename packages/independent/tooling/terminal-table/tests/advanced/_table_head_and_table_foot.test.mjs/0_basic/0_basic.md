@@ -1,4 +1,4 @@
-# [0_basic](../../table_head_and_table_foot.test.mjs#L56)
+# [0_basic](../../table_head_and_table_foot.test.mjs#L58)
 
 ```js
 run({})
@@ -6,30 +6,19 @@ run({})
 
 # 1/2 console.log
 
-![img](console.log.svg)
-
-<details>
-  <summary>see without style</summary>
-
 ```console
 --- a ---
-┌       ┐┌       ┐┌         ┐
-  Name     Price    Texture  
-└       ┘└       ┘└         ┘
-┌       ┐┌       ┐┌         ┐
-  dam      35       ✅       
-└       ┘└       ┘└         ┘
-┌       ┐┌       ┐┌         ┐
-  flore    30                
-└       ┘└       ┘└         ┘
-┌       ┐┌       ┐┌         ┐
-  Total    65                
-└       ┘└       ┘└         ┘
+┌───────┬───────┬─────────┐
+│ Name  │ Price │ Texture │
+╞═══════╪═══════╪═════════╡
+│ dam   │ 35    │ ✅      │
+├───────┼───────┼─────────┤
+│ flore │ 30    │         │
+╞═══════╪═══════╪═════════╡
+│ Total │ 65    │         │
+└───────┴───────┴─────────┘
 
 ```
-
-</details>
-
 
 # 2/2 return
 

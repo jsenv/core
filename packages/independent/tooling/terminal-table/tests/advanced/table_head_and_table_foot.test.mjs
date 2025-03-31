@@ -5,7 +5,7 @@
  */
 
 import { renderNamedSections } from "@jsenv/humanize";
-import { COLORS, renderTable } from "@jsenv/terminal-table";
+import { renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
 
 const run = () => {
@@ -19,31 +19,33 @@ const run = () => {
       }
       gridWithProps.push(rowWithProps);
     }
-    return renderTable(gridWithProps, { ansi: true });
+    return renderTable(gridWithProps, { ansi: true, borderCollapse: true });
   };
 
   const grid = [
-    [{ value: "Name" }, { value: "Price" }, { value: "Texture" }],
-    [{ value: "dam" }, { value: 35 }, { value: "✅" }],
-    [{ value: "flore" }, { value: 30 }, { value: "" }],
-    [{ value: "Total" }, { value: 65 }, { value: "" }],
+    [
+      { value: "Name", border: {}, borderBottom: { style: "double" } },
+      { value: "Price", border: {}, borderBottom: { style: "double" } },
+      { value: "Texture", border: {}, borderBottom: { style: "double" } },
+    ],
+    [
+      { value: "dam", border: {} },
+      { value: 35, border: {} },
+      { value: "✅", border: {} },
+    ],
+    [
+      { value: "flore", border: {} },
+      { value: 30, border: {} },
+      { value: "", border: {} },
+    ],
+    [
+      { value: "Total", border: {}, borderTop: { style: "double" } },
+      { value: 65, border: {}, borderTop: { style: "double" } },
+      { value: "", border: {}, borderTop: { style: "double" } },
+    ],
   ];
 
-  const a = render(grid, {
-    color: ({ y }) => {
-      if (y === 0) {
-        return COLORS.WHITE;
-      }
-      return COLORS.BLACK;
-    },
-    backgroundColor: ({ y }) => {
-      if (y === 0) {
-        return COLORS.RED;
-      }
-      return COLORS.WHITE;
-    },
-    border: { color: COLORS.GREY, spacing: 1 },
-  });
+  const a = render(grid);
 
   console.log(
     renderNamedSections({
