@@ -7,9 +7,7 @@
  *
  * remaining:
  *
- * - multiline
- *
- * - maxWidth/maxHeight sur la cell (+une option cellMaxWidth, cellMaxHeight sur la table)
+ * - maxWidth sur la cell (+une option cellMaxWidth, cellMaxHeight sur la table)
  *
  * - maxWidth on the table (defaults to stdout.columns, will put ... at the end of the cell when it exceeds the remaining width
  *
@@ -1214,17 +1212,18 @@ export const renderTable = (
           rect = rects[lineIndex];
         }
       } else if (yAlign === "center") {
-        const topSpacing = Math.floor((rowHeight - nodeHeight) / 2);
+        const lineMissingAbove = Math.floor((rowHeight - nodeHeight) / 2);
         // const bottomSpacing = rowHeight - cellHeight - topSpacing;
-        const lineStartIndex = topSpacing;
-        const lineEndIndex = topSpacing + nodeHeight;
+        const lineStartIndex = lineMissingAbove;
+        const lineEndIndex = lineMissingAbove + nodeHeight;
 
         if (lineIndex < lineStartIndex) {
           if (Array.isArray(yPadChar)) {
             yPadChar = yPadChar[0];
           }
         } else if (lineIndex < lineEndIndex) {
-          rect = rects[lineIndex];
+          const rectIndex = lineIndex - lineStartIndex;
+          rect = rects[rectIndex];
         } else if (Array.isArray(yPadChar)) {
           yPadChar = yPadChar[1];
         }
