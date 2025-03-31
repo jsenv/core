@@ -862,10 +862,10 @@ export const renderTable = (
       const {
         rects,
         spacing = 0,
-        leftSpacing = spacing,
-        rightSpacing = spacing,
-        topSpacing = spacing,
-        bottomSpacing = spacing,
+        spacingLeft = spacing,
+        spacingRight = spacing,
+        spacingTop = spacing,
+        spacingBottom = spacing,
       } = node;
       let nodeWidth = -1;
       for (const rect of rects) {
@@ -873,26 +873,26 @@ export const renderTable = (
         if (width === "fill") {
           continue;
         }
-        if (leftSpacing || rightSpacing) {
-          width += leftSpacing + rightSpacing;
+        if (spacingLeft || spacingRight) {
+          width += spacingLeft + spacingRight;
           rect.width = width;
           const { render } = rect;
           if (typeof render === "function") {
             rect.render = (...args) => {
               const text = render(...args);
-              return " ".repeat(leftSpacing) + text + " ".repeat(rightSpacing);
+              return " ".repeat(spacingLeft) + text + " ".repeat(spacingRight);
             };
           } else {
             rect.render =
-              " ".repeat(leftSpacing) + render + " ".repeat(rightSpacing);
+              " ".repeat(spacingLeft) + render + " ".repeat(spacingRight);
           }
         }
         if (width > nodeWidth) {
           nodeWidth = width;
         }
       }
-      if (topSpacing) {
-        let lineToInsertAbove = topSpacing;
+      if (spacingTop) {
+        let lineToInsertAbove = spacingTop;
         while (lineToInsertAbove--) {
           rects.unshift({
             width: "fill",
@@ -900,8 +900,8 @@ export const renderTable = (
           });
         }
       }
-      if (bottomSpacing) {
-        let lineToInsertBelow = bottomSpacing;
+      if (spacingBottom) {
+        let lineToInsertBelow = spacingBottom;
         while (lineToInsertBelow--) {
           rects.push({
             width: "fill",
@@ -919,6 +919,10 @@ export const renderTable = (
       const bottomSlotRow = bottomSlotRowMap.get(y);
       const leftSlotRow = leftSlotRowMap.get(y);
       const rightSlotRow = rightSlotRowMap.get(y);
+      const topLeftSlotRow = topLeftSlotRowMap.get(y);
+      const topRightSlotRow = topRightSlotRowMap.get(y);
+      const bottomLeftSlotRow = bottomLeftSlotRowMap.get(y);
+      const bottomRightSlotRow = bottomRightSlotRowMap.get(y);
       let x = 0;
       for (const cell of line) {
         if (topSlotRow) {
@@ -943,6 +947,30 @@ export const renderTable = (
           const rightSlot = rightSlotRow[x];
           if (rightSlot) {
             measureNode(rightSlot);
+          }
+        }
+        if (topLeftSlotRow) {
+          const topLeftSlot = topLeftSlotRow[x];
+          if (topLeftSlot) {
+            measureNode(topLeftSlot);
+          }
+        }
+        if (topRightSlotRow) {
+          const topRightSlot = topRightSlotRow[x];
+          if (topRightSlot) {
+            measureNode(topRightSlot);
+          }
+        }
+        if (bottomLeftSlotRow) {
+          const bottomLeftSlot = bottomLeftSlotRow[x];
+          if (bottomLeftSlot) {
+            measureNode(bottomLeftSlot);
+          }
+        }
+        if (bottomRightSlotRow) {
+          const bottomRightSlot = bottomRightSlotRow[x];
+          if (bottomRightSlot) {
+            measureNode(bottomRightSlot);
           }
         }
 
@@ -1199,8 +1227,8 @@ const applyXAlign = (text, { width, desiredWidth, align, padChar }) => {
     return text + padChar.repeat(missingWidth);
   }
   if (align === "center") {
-    const leftSpacing = Math.floor(missingWidth / 2);
-    const rightSpacing = missingWidth - leftSpacing;
+    const widthMissingLeft = Math.floor(missingWidth / 2);
+    const widthMissingRight = missingWidth - widthMissingLeft;
     let padStartChar = padChar;
     let padEndChar = padChar;
     if (Array.isArray(padChar)) {
@@ -1208,7 +1236,9 @@ const applyXAlign = (text, { width, desiredWidth, align, padChar }) => {
       padEndChar = padChar[1];
     }
     return (
-      padStartChar.repeat(leftSpacing) + text + padEndChar.repeat(rightSpacing)
+      padStartChar.repeat(widthMissingLeft) +
+      text +
+      padEndChar.repeat(widthMissingRight)
     );
   }
   // "end"
@@ -1224,10 +1254,11 @@ const createCell = (
     bold,
     unit,
     unitColor,
-    leftSpacing = 1,
-    rightSpacing = 1,
-    topSpacing = 0,
-    bottomSpacing = 0,
+    spacing = 0,
+    spacingLeft = spacing || 1,
+    spacingRight = spacing || 1,
+    spacingTop = spacing,
+    spacingBottom = spacing,
     xAlign = "start", // "start", "center", "end"
     yAlign = "start", // "start", "center", "end"
   },
@@ -1262,10 +1293,10 @@ const createCell = (
     value,
     xAlign,
     yAlign,
-    leftSpacing,
-    rightSpacing,
-    topSpacing,
-    bottomSpacing,
+    spacingLeft,
+    spacingRight,
+    spacingTop,
+    spacingBottom,
     color,
     backgroundColor,
     bold,

@@ -41,93 +41,77 @@ const getVerticalLineChar = (style, bold) => {
 };
 
 // sides
-export const createBorderLeftNode = ({
-  style = "solid",
-  bold,
-  color,
-  spacing,
-}) => {
+export const createBorderLeftNode = ({ style = "solid", bold, ...props }) => {
   const char = getVerticalLineChar(style, bold);
   return {
     type: "border_left",
-    color,
     rects: [{ width: 1, render: char }],
     xAlign: "end",
     yAlign: "center",
     yPadChar: char,
-    spacing,
+    ...props,
   };
 };
-export const createBorderRightNode = ({
-  style = "solid",
-  bold,
-  color,
-  spacing,
-}) => {
+export const createBorderRightNode = ({ style = "solid", bold, ...props }) => {
   const char = getVerticalLineChar(style, bold);
   return {
     type: "border_right",
-    color,
     rects: [{ width: 1, render: char }],
     xAlign: "start",
     yAlign: "center",
     yPadChar: char,
-    spacing,
+    ...props,
   };
 };
-export const createBorderTopNode = ({
-  style = "solid",
-  bold,
-  color,
-  spacing,
-}) => {
+export const createBorderTopNode = ({ style = "solid", bold, ...props }) => {
   const char = getHorizontalLineChar(style, bold);
   return {
     type: "border_top",
-    color,
     rects: [
       { width: "fill", render: ({ columnWidth }) => char.repeat(columnWidth) },
     ],
     yAlign: "end",
-    spacing,
+    ...props,
   };
 };
-export const createBorderBottomNode = ({
-  style = "solid",
-  bold,
-  color,
-  spacing,
-}) => {
+export const createBorderBottomNode = ({ style = "solid", bold, ...props }) => {
   const char = getHorizontalLineChar(style, bold);
   return {
     type: "border_bottom",
-    color,
     rects: [
       { width: "fill", render: ({ columnWidth }) => char.repeat(columnWidth) },
     ],
     yAlign: "start",
-    spacing,
+    ...props,
   };
 };
 // half sides
-export const createBorderHalfLeftNode = ({ style = "solid", bold, color }) => {
+export const createBorderHalfLeftNode = ({
+  style = "solid",
+  bold,
+  ...props
+}) => {
   return {
     type: "border_half_left",
-    color,
     rects: [{ width: 1, render: bold ? "╸" : "╴" }],
     xAlign: "end",
     xPadChar: getHorizontalLineChar(style, bold),
     yAlign: "end",
+    ...props,
   };
 };
-export const createBorderHalfRightNode = ({ style = "solid", bold, color }) => {
+export const createBorderHalfRightNode = ({
+  style = "solid",
+  bold,
+  ...props
+}) => {
   return {
     type: "border_half_right",
-    color,
     rects: [{ width: 1, render: bold ? "╺" : "╶" }],
     xAlign: "end",
     xPadChar: getHorizontalLineChar(style, bold),
     yAlign: "end",
+    ...props,
   };
 };
 export const createBorderHalfUpNode = ({ style = "solid", bold, color }) => {
@@ -140,14 +124,18 @@ export const createBorderHalfUpNode = ({ style = "solid", bold, color }) => {
     yPadChar: getVerticalLineChar(style, bold),
   };
 };
-export const createBorderHalfDownNode = ({ style = "solid", bold, color }) => {
+export const createBorderHalfDownNode = ({
+  style = "solid",
+  bold,
+  ...props
+}) => {
   return {
     type: "border_half_down",
-    color,
     rects: [{ width: 1, render: bold ? "╻" : "╷" }],
     xAlign: "end",
     yAlign: "start",
     yPadChar: getVerticalLineChar(style, bold),
+    ...props,
   };
 };
 
@@ -162,18 +150,21 @@ const topLeftCharProps = {
   "╭": { xPadChar: "│", yPadChar: "─" },
 };
 export const createBorderTopLeftNode = (topBorder, leftBorder) => {
-  const { color } = topBorder;
+  const { color, spacingLeft, spacingRight } = topBorder;
+
   const rounded = topBorder.rounded && leftBorder.rounded;
   const innerCreateBorder = (char) => {
     const { xPadChar, yPadChar } = topLeftCharProps[char];
     return {
       type: "border_top_left",
-      color,
       xAlign: "start",
       yAlign: "start",
       rects: [{ width: 1, render: char }],
       xPadChar,
       yPadChar,
+      color,
+      spacingLeft,
+      spacingRight,
     };
   };
 
