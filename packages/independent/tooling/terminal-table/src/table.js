@@ -688,8 +688,9 @@ export const renderTable = (
       let x = 0;
       while (x < row.length) {
         const cell = row[x];
-        const { value } = cell;
-        if (isFinite(value)) {
+        const { value, format } = cell;
+
+        if (format !== "size" && isFinite(value)) {
           if (value % 1 === 0) {
             const { integer } = tokenizeInteger(Math.abs(value));
             const integerFormatted = groupDigits(integer);
@@ -1150,6 +1151,9 @@ export const renderTable = (
       }
       y++;
     }
+    if (log.endsWith("\n")) {
+      log = log.slice(0, -1); // remove last "\n"
+    }
   }
   return log;
 };
@@ -1304,6 +1308,7 @@ const createCell = (
     spacingRight,
     spacingTop,
     spacingBottom,
+    format,
     backgroundColor,
     color,
     bold,

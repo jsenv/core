@@ -10452,6 +10452,7 @@ const build = async ({
 
     content = lines.join("\n");
     content += "\n";
+    content += "\n";
     content += createBuildContentLog(buildFileContents);
 
     return `${renderBigSection({
