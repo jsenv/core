@@ -536,15 +536,13 @@ export const renderTable = (
       return true;
     };
 
-    // try to collapse top borders of this row with bottom borders of the previous row
-    const tryToCollapseRowSlot = (y) => {
+    const collapsePreviousRowBottomBorders = (y) => {
       const firstCellInThatRow = grid[y][0];
       let cellInThatRow = firstCellInThatRow;
       while (cellInThatRow) {
         const border = cellInThatRow.borderTop;
         if (!border) {
-          cellInThatRow = cellInThatRow.eastCell;
-          continue;
+          return false;
         }
         const otherBorder = cellInThatRow.northCell.borderBottom;
         if (!otherBorder) {
@@ -560,6 +558,30 @@ export const renderTable = (
         cell.borderBottom = null;
       }
       bottomSlotRowMap.delete(y - 1);
+      return true;
+    };
+    const collapseTopBorders = (y) => {
+      const firstCellInThatRow = grid[y][0];
+      let cellInThatRow = firstCellInThatRow;
+      while (cellInThatRow) {
+        const border = cellInThatRow.borderTop;
+        if (!border) {
+          cellInThatRow = cellInThatRow.eastCell;
+          continue;
+        }
+        const otherBorder = cellInThatRow.northCell.borderBottom;
+        if (!otherBorder) {
+          return false;
+        }
+        if (!canCollapse(border, otherBorder)) {
+          return false;
+        }
+        cellInThatRow = cellInThatRow.eastCell;
+      }
+      for (const cell of grid[y]) {
+        cell.borderTop = null;
+      }
+      topSlotRowMap.delete(y);
       return true;
     };
     const collapsePreviousColumnRightBorders = (x) => {
@@ -622,25 +644,42 @@ export const renderTable = (
     {
       let y = 0;
       while (y < grid.length) {
-        if (rowHasBottomSlot(y) && rowHasTopSlot(y + 1)) {
-          tryToCollapseRowSlot(y + 1);
-        }
         let x = 0;
         const row = grid[y];
         while (x < row.length) {
-          if (columnHasRightSlot(x) && columnHasLeftSlot(x + 1)) {
+          if (
+            x !== row.length - 1 &&
+            columnHasRightSlot(x) &&
+            columnHasLeftSlot(x + 1)
+          ) {
             if (collapsePreviousColumnRightBorders(x + 1)) {
               x++;
               continue;
             }
           }
-          if (columnHasLeftSlot(x) && columnHasRightSlot(x - 1)) {
+          if (x > 0 && columnHasLeftSlot(x) && columnHasRightSlot(x - 1)) {
             if (collapseLeftBorders(x)) {
               x++;
               continue;
             }
           }
           x++;
+        }
+        if (
+          y !== grid.length - 1 &&
+          rowHasBottomSlot(y) &&
+          rowHasTopSlot(y + 1)
+        ) {
+          if (collapsePreviousRowBottomBorders(y + 1)) {
+            y++;
+            continue;
+          }
+        }
+        if (y > 0 && rowHasTopSlot(y) && rowHasBottomSlot(y - 1)) {
+          if (collapseTopBorders(y)) {
+            y++;
+            continue;
+          }
         }
         y++;
       }

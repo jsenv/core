@@ -23,6 +23,20 @@ run({
 │ bottom_left │ bottom_right │
 └─────────────┴──────────────┘
 
+--- bottom_right_empty ---
+┌─────────────┬──────────────┐
+│ top_left    │ top_right    │
+├─────────────┼──────────────┘
+│ bottom_left │ bottom_right  
+└─────────────┘               
+
+--- bottom_left_empty ---
+┌──────────────┬──────────────┐
+│ top_left     │ top_right    │
+└──────────────┼──────────────┤
+  bottom_left  │ bottom_right │
+               └──────────────┘
+
 ```
 
 # 2/2 return

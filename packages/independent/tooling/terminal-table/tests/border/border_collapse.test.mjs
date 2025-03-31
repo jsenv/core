@@ -29,33 +29,33 @@ const run = ({ borderCollapse }) => {
       { value: "bottom_right", border: {} },
     ],
   ]);
-  // const bottom_right_empty = render([
-  //   [
-  //     { value: "top_left", border: {} },
-  //     { value: "top_right", border: {} },
-  //   ],
-  //   [
-  //     { value: "bottom_left", border: {} },
-  //     { value: "bottom_right", border: null },
-  //   ],
-  // ]);
-  // const bottom_left_empty = render([
-  //   [
-  //     { value: "top_left", border: {} },
-  //     { value: "top_right", border: {} },
-  //   ],
-  //   [
-  //     { value: "bottom_left", border: null },
-  //     { value: "bottom_right", border: {} },
-  //   ],
-  // ]);
+  const bottom_right_empty = render([
+    [
+      { value: "top_left", border: {} },
+      { value: "top_right", border: {} },
+    ],
+    [
+      { value: "bottom_left", border: {} },
+      { value: "bottom_right", border: null },
+    ],
+  ]);
+  const bottom_left_empty = render([
+    [
+      { value: "top_left", border: {} },
+      { value: "top_right", border: {} },
+    ],
+    [
+      { value: "bottom_left", border: null },
+      { value: "bottom_right", border: {} },
+    ],
+  ]);
 
   console.log(
     renderNamedSections({
       top_left_empty,
       top_right_empty,
-      // bottom_right_empty,
-      // bottom_left_empty,
+      bottom_right_empty,
+      bottom_left_empty,
     }),
   );
 };
