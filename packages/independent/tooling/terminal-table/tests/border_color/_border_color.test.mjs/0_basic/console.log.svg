@@ -17,8 +17,8 @@
         <text x="10" y="138.55">--- border_collapse ---</text>
         <text x="10" y="157.55" fill="#DAA520">│</text>
         <text x="18.4" y="157.55" style="white-space:pre"> a </text>
-        <text x="10" y="176.55" fill="#cd5555">├</text>
-        <text x="18.4" y="176.55" fill="#cd5555">───</text>
+        <text x="10" y="176.55" fill="#11bc79">├</text>
+        <text x="18.4" y="176.55" fill="#11bc79">───</text>
         <text x="10" y="195.55" fill="#4169E1">│</text>
         <text x="18.4" y="195.55" style="white-space:pre"> b </text>
         <text x="10" y="233.55">--- border_collapse_but_separated_if_conflict ---</text>

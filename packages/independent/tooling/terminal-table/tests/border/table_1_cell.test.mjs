@@ -116,7 +116,7 @@ const run = ({
 await snapshotTableTests(import.meta.url, ({ test }) => {
   test(`0_basic`, () => run({}));
 
-  test(`1_COLORS`, () =>
+  test(`1_border_colors`, () =>
     run({
       borderColors: true,
     }));

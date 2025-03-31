@@ -135,7 +135,7 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
       borderCollapse: true,
     }));
 
-  test("2_COLORS", () =>
+  test("2_border_colors", () =>
     run({
       borderColors: true,
     }));
