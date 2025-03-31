@@ -24,6 +24,11 @@
  * - colspan/rowspan
  *
  * - test border style conflict (double -> single heavy)
+ *
+ * - une option corner borders only (c'est relativement joli genre)
+ * ┌       ┐┌       ┐┌         ┐
+ *   Name     Price    Texture
+ * └       ┘└       ┘└         ┘
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
@@ -533,36 +538,57 @@ export const renderTable = (
 
   // border collapse
   if (borderCollapse) {
-    const canCollapse = (border, otherBorder) => {
-      if (!borderSeparatedOnColorConflict) {
-        return true;
+    const getHowToCollapseBorders = (borderToCollapse, intoBorder) => {
+      if (
+        borderSeparatedOnColorConflict &&
+        borderToCollapse.color !== intoBorder.color
+      ) {
+        return null;
       }
-      if (border.color !== otherBorder.color) {
-        return false;
-      }
-      return true;
+      return () => {
+        //  const collapsedBorder = { ...intoBorder };
+        if (!intoBorder.style && borderToCollapse.style) {
+          intoBorder.style = borderToCollapse.style;
+        }
+        if (!intoBorder.color && borderToCollapse.color) {
+          intoBorder.color = borderToCollapse.color;
+        }
+        // return collapsedBorder;
+      };
     };
 
     const collapsePreviousRowBottomBorders = (y) => {
       const firstCellInThatRow = grid[y][0];
       let cellInThatRow = firstCellInThatRow;
+      const collapseCallbackSet = new Set();
       while (cellInThatRow) {
-        const border = cellInThatRow.borderTop;
-        if (!border) {
+        const borderTop = cellInThatRow.borderTop;
+        if (!borderTop) {
           return false;
         }
-        const otherBorder = cellInThatRow.northCell.borderBottom;
-        if (!otherBorder) {
+        const northCell = cellInThatRow.northCell;
+        const northCellBorderBottom = northCell.borderBottom;
+        if (!northCellBorderBottom) {
           cellInThatRow = cellInThatRow.eastCell;
           continue;
         }
-        if (!canCollapse(border, otherBorder)) {
+        const collapseBorders = getHowToCollapseBorders(
+          northCellBorderBottom,
+          borderTop,
+        );
+        if (!collapseBorders) {
           return false;
         }
+        // const cell = cellInThatRow;
+        collapseCallbackSet.add(() => {
+          // cell.borderTop = collapsedBorder;
+          collapseBorders();
+          northCell.borderBottom = null;
+        });
         cellInThatRow = cellInThatRow.eastCell;
       }
-      for (const cell of grid[y - 1]) {
-        cell.borderBottom = null;
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
       }
       bottomSlotRowMap.delete(y - 1);
       return true;
@@ -570,23 +596,35 @@ export const renderTable = (
     const collapseTopBorders = (y) => {
       const firstCellInThatRow = grid[y][0];
       let cellInThatRow = firstCellInThatRow;
+      const collapseCallbackSet = new Set();
       while (cellInThatRow) {
-        const border = cellInThatRow.borderTop;
-        if (!border) {
+        const borderTop = cellInThatRow.borderTop;
+        if (!borderTop) {
           cellInThatRow = cellInThatRow.eastCell;
           continue;
         }
-        const otherBorder = cellInThatRow.northCell.borderBottom;
-        if (!otherBorder) {
+        const northCell = cellInThatRow.northCell;
+        const northCellBorderBottom = northCell.borderBottom;
+        if (!northCellBorderBottom) {
           return false;
         }
-        if (!canCollapse(border, otherBorder)) {
+        const collapseBorders = getHowToCollapseBorders(
+          borderTop,
+          northCellBorderBottom,
+        );
+        if (!collapseBorders) {
           return false;
         }
+        const cell = cellInThatRow;
+        collapseCallbackSet.add(() => {
+          collapseBorders();
+          // northCell.borderBottom = collapsedBorder;
+          cell.borderTop = null;
+        });
         cellInThatRow = cellInThatRow.eastCell;
       }
-      for (const cell of grid[y]) {
-        cell.borderTop = null;
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
       }
       topSlotRowMap.delete(y);
       return true;
@@ -594,26 +632,42 @@ export const renderTable = (
     const collapsePreviousColumnRightBorders = (x) => {
       const firstCellInThatColumn = grid[0][x];
       let cellInThatColumn = firstCellInThatColumn;
+      const collapseCallbackSet = new Set();
       while (cellInThatColumn) {
         const border = cellInThatColumn.borderLeft;
         if (!border) {
           return false;
         }
-        const otherBorder = cellInThatColumn.westCell.borderRight;
-        if (!otherBorder) {
+        const westCell = cellInThatColumn.westCell;
+        const westCellBorderRight = westCell.borderRight;
+        if (!westCellBorderRight) {
           cellInThatColumn = cellInThatColumn.southCell;
           continue;
         }
-        if (!canCollapse(border, otherBorder)) {
+        const collapseBorders = getHowToCollapseBorders(
+          westCellBorderRight,
+          border,
+        );
+        if (!collapseBorders) {
           return false;
         }
+        // const cell = cellInThatColumn;
+        collapseCallbackSet.add(() => {
+          collapseBorders();
+          // cell.borderLeft = collapsedBorder;
+          westCell.borderRight = null;
+        });
         cellInThatColumn = cellInThatColumn.southCell;
+      }
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
       }
       let y = 0;
       while (y < grid.length) {
         const rightSlotRow = rightSlotRowMap.get(y);
-        rightSlotRow[x - 1] = undefined;
-        grid[y][x - 1].borderRight = null;
+        if (rightSlotRow) {
+          rightSlotRow[x - 1] = undefined;
+        }
         y++;
       }
       columnWithRightSlotSet.delete(x - 1);
@@ -622,26 +676,39 @@ export const renderTable = (
     const collapseLeftBorders = (x) => {
       const firstCellInThatColumn = grid[0][x];
       let cellInThatColumn = firstCellInThatColumn;
+      const collapseCallbackSet = new Set();
       while (cellInThatColumn) {
         const border = cellInThatColumn.borderLeft;
         if (!border) {
           cellInThatColumn = cellInThatColumn.southCell;
           continue;
         }
-        const otherBorder = cellInThatColumn.westCell.borderRight;
+        const westCell = cellInThatColumn.westCell;
+        const otherBorder = westCell.borderRight;
         if (!otherBorder) {
           return false;
         }
-        if (!canCollapse(border, otherBorder)) {
+        const collapseBorders = getHowToCollapseBorders(border, otherBorder);
+        if (!collapseBorders) {
           return false;
         }
+        const cell = cellInThatColumn;
+        collapseCallbackSet.add(() => {
+          collapseBorders();
+          // westCell.borderRight = collapsedBorder;
+          cell.borderLeft = null;
+        });
         cellInThatColumn = cellInThatColumn.southCell;
+      }
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
       }
       let y = 0;
       while (y < grid.length) {
         const leftSlotRow = leftSlotRowMap.get(y);
-        leftSlotRow[x] = undefined;
-        grid[y][x].borderLeft = null;
+        if (leftSlotRow) {
+          leftSlotRow[x] = undefined;
+        }
         y++;
       }
       columnWithLeftSlotSet.delete(x);
