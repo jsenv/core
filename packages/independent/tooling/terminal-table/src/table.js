@@ -1411,10 +1411,14 @@ const createCell = (
     spacingBottom = spacing,
     xAlign = "start", // "start", "center", "end"
     yAlign = "start", // "start", "center", "end"
+    maxWidth = 50,
     maxHeight = 10,
   },
   { x, y },
 ) => {
+  if (maxWidth < 1) {
+    maxWidth = 1;
+  }
   if (maxHeight < 1) {
     maxHeight = 1;
   }
@@ -1424,13 +1428,11 @@ const createCell = (
   const lineCount = lines.length;
   let skippedLineCount;
   let lastLineIndex = lineCount - 1;
-  if (maxHeight !== Infinity) {
-    if (lineCount > maxHeight) {
-      lines = lines.slice(0, maxHeight - 1);
-      lastLineIndex = maxHeight - 1;
-      skippedLineCount = lineCount - maxHeight + 1;
-      lines.push(`↓ ${skippedLineCount} lines ↓`);
-    }
+  if (lineCount > maxHeight) {
+    lines = lines.slice(0, maxHeight - 1);
+    lastLineIndex = maxHeight - 1;
+    skippedLineCount = lineCount - maxHeight + 1;
+    lines.push(`↓ ${skippedLineCount} lines ↓`);
   }
 
   let lineIndex = 0;
@@ -1439,6 +1441,13 @@ const createCell = (
     const isLastLine = lineIndex === lastLineIndex;
     let lineWidth = measureTextWidth(line);
     let lineText = line;
+    if (lineWidth > maxWidth) {
+      const skippedBoilerplate = "…";
+      // const skippedCharCount = lineWidth - maxWidth - skippedBoilerplate.length;
+      lineText = lineText.slice(0, maxWidth - skippedBoilerplate.length);
+      lineText += skippedBoilerplate;
+      lineWidth = maxWidth;
+    }
     if (isLastLine && unit) {
       lineWidth += ` ${unit}`.length;
     }
