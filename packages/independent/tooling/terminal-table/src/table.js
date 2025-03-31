@@ -1,26 +1,30 @@
 /**
  *
  * https://github.com/Automattic/cli-table
+ * https://github.com/tecfu/tty-table
+ * https://github.com/zaftzaft/terminal-table
  *
  *
  * remaining:
  *
  * - multiline
  *
- * - max rows, max columns (sur la table) (la dernier ligne/colonne afficheras "and 3 more...")
- *
  * - maxWidth/maxHeight sur la cell (+une option cellMaxWidth, cellMaxHeight sur la table)
  *
  * - maxWidth on the table (defaults to stdout.columns, will put ... at the end of the cell when it exceeds the remaining width
+ *
+ * - max rows, max columns (sur la table) (la dernier ligne/colonne afficheras "and 3 more...")
  *
  * - colspan/rowspan
  *
  * - test border style conflict (double -> single heavy)
  *
- * - une option corner borders only (c'est relativement joli genre)
- * ┌       ┐┌       ┐┌         ┐
- *   Name     Price    Texture
- * └       ┘└       ┘└         ┘
+ * - un nouveau style pour les border: "ascii"
+ * 
+ *  sep: "|",
+      topLeft: "+", topMid: "+", top: "-", topRight: "+",
+      midLeft: "|", midMid: "+", mid: "-", midRight: "|",
+      botLeft: "+", botMid: "+", bot: "-", botRight: "+"
  */
 
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
@@ -398,6 +402,7 @@ export const renderTable = (
     borderCollapse,
     borderSeparatedOnColorConflict,
     borderSpacing = 0,
+    cornersOnly = false,
   } = {},
 ) => {
   if (!Array.isArray(inputGrid)) {
@@ -839,10 +844,26 @@ export const renderTable = (
       let x = 0;
       while (x < row.length) {
         const cell = row[x];
-        const options = { borderSpacing };
         const adapt = (slot) => {
-          const node = slot.adapt(cell, options);
-          if (borderSpacing && node.type !== "blank") {
+          const node = slot.adapt(cell);
+          if (node.type === "blank") {
+            return node;
+          }
+          if (cornersOnly) {
+            if (
+              node.type === "border_left" ||
+              node.type === "border_right" ||
+              node.type === "border_top" ||
+              node.type === "border_bottom" ||
+              node.type === "border_half_left" ||
+              node.type === "border_half_right" ||
+              node.type === "border_half_up" ||
+              node.type === "border_half_down"
+            ) {
+              return createBlankNode();
+            }
+          }
+          if (borderSpacing) {
             if (slot.type === "top_left") {
               if (!cell.northCell || !cell.northCell.borderBottom) {
                 node.spacingTop = borderSpacing;

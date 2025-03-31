@@ -13,6 +13,7 @@ const run = ({
   borderBottomStyle,
   borderCollapse,
   borderColors,
+  cornersOnly,
   ansi = borderColors,
 }) => {
   const borderLeft = {
@@ -35,7 +36,8 @@ const run = ({
     bold: borderBottomBold,
     style: borderBottomStyle,
   };
-  const render = (grid) => renderTable(grid, { borderCollapse, ansi });
+  const render = (grid) =>
+    renderTable(grid, { borderCollapse, cornersOnly, ansi });
 
   const none = render([
     [
@@ -174,5 +176,10 @@ await snapshotTableTests(import.meta.url, ({ test }) => {
     run({
       borderTopStyle: "double",
       borderBottomStyle: "double",
+    }));
+
+  test("8_corners_only", () =>
+    run({
+      cornersOnly: true,
     }));
 });

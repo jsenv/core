@@ -1,8 +1,8 @@
-# [1_border_collapse](../../table_2_cells_same_column.test.mjs#L134)
+# [9_corners_only](../../table_2_cells_same_column.test.mjs#L184)
 
 ```js
 run({
-  borderCollapse: true,
+  cornersOnly: true,
 })
 ```
 
@@ -11,86 +11,91 @@ run({
 ```console
 --- bottom_and_top ---
  a 
-───
+   
+   
  b 
 
 --- bottom_left_and_top_left ---
-│ a 
-├───
-│ b 
+  a 
+└   
+┌   
+  b 
 
 --- left_bottom_and_left ---
-│ a 
-├───
-│ b 
+  a 
+├   
+  b 
 
 --- left_and_top_left ---
-│ a 
-├───
-│ b 
+  a 
+├   
+  b 
 
 --- bottom_right_and_top_right ---
- a │
-───┤
- b │
+ a  
+   ┘
+   ┐
+ b  
 
 --- right_bottom_and_right ---
- a │
-───┤
- b │
+ a  
+   ┤
+ b  
 
 --- right_and_top_right ---
- a │
-───┤
- b │
+ a  
+   ┤
+ b  
 
 --- top_left_and_bottom_right ---
-┌───╴
-│ a  
-  b │
-╶───┘
+┌    
+  a  
+  b  
+    ┘
 
 --- bottom_right_and_top_left ---
-  a │
-┌───┘
-│ b  
+  a  
+    ┘
+┌    
+  b  
 
 --- left_bottom_right ---
-│ a  
-└───┐
-  b │
+  a  
+└   ┐
+  b  
 
 --- left_and_top_right ---
-│ a  
-└───┐
-  b │
+  a  
+└   ┐
+  b  
 
 --- all_but_bottom_and_all_but_top ---
-┌───┐
-│ a │
-│ b │
-└───┘
+┌   ┐
+  a  
+  b  
+└   ┘
 
 --- all_but_bottom_and_all ---
-┌───┐
-│ a │
-├───┤
-│ b │
-└───┘
+┌   ┐
+  a  
+├   ┤
+  b  
+└   ┘
 
 --- all_and_all_but_top ---
-┌───┐
-│ a │
-├───┤
-│ b │
-└───┘
+┌   ┐
+  a  
+├   ┤
+  b  
+└   ┘
 
 --- all ---
-┌───┐
-│ a │
-├───┤
-│ b │
-└───┘
+┌   ┐
+  a  
+└   ┘
+┌   ┐
+  b  
+└   ┘
 
 ```
 
