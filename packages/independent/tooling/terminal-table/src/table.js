@@ -21,6 +21,11 @@
  * botLeft: "+", botMid: "+", bot: "-", botRight: "+"
  */
 
+import { groupDigits } from "@jsenv/assert/src/utils/group_digits.js";
+import {
+  // tokenizeFloat,
+  tokenizeInteger,
+} from "@jsenv/assert/src/utils/tokenize_number.js";
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
 import { measureTextWidth } from "@jsenv/terminal-text-size";
 import { createBlankNode } from "./border_nodes.js";
@@ -668,6 +673,53 @@ export const renderTable = (
         x++;
       }
       y++;
+    }
+  }
+
+  // number align
+  {
+    const largestIntegerInColumnMap = new Map();
+    const formatCallbackSet = new Set();
+
+    let y = 0;
+    while (y < grid.length) {
+      const row = grid[y];
+      let x = 0;
+      while (x < row.length) {
+        const cell = row[x];
+        const { value } = cell;
+        if (isFinite(value)) {
+          if (value % 1 === 0) {
+            const { integer } = tokenizeInteger(Math.abs(value));
+            cell.integer = integer;
+            const integerFormatted = groupDigits(integer);
+            const integerWidth = measureTextWidth(integerFormatted);
+            const largestIntegerInColumn =
+              largestIntegerInColumnMap.get(x) || 0;
+            if (integerWidth > largestIntegerInColumn) {
+              largestIntegerInColumnMap.set(x, integerWidth);
+            }
+            formatCallbackSet.add(() => {
+              const integerColumnWidth = largestIntegerInColumnMap.get(cell.x);
+              let integerText = integerFormatted;
+              if (integerWidth < integerColumnWidth) {
+                const padding = integerColumnWidth - integerWidth;
+                integerText = " ".repeat(padding) + integerFormatted;
+              }
+              cell.updateValue(integerText);
+            });
+          } else {
+            // TODO: handle float
+            // const { integer, decimalSeparator, decimal } = tokenizeFloat(Math.abs(value));
+          }
+        }
+        x++;
+      }
+      y++;
+    }
+
+    for (const formatCallback of formatCallbackSet) {
+      formatCallback();
     }
   }
 

@@ -28,7 +28,7 @@ const run = ({ xAlign }) => {
 };
 
 await snapshotTableTests(import.meta.url, ({ test }) => {
-  test.ONLY(`0_basic`, () => run({}));
+  test(`0_basic`, () => run({}));
 
   test(`1_x_align_right`, () =>
     run({
