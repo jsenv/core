@@ -23,7 +23,7 @@
 
 import { groupDigits } from "@jsenv/assert/src/utils/group_digits.js";
 import {
-  // tokenizeFloat,
+  tokenizeFloat,
   tokenizeInteger,
 } from "@jsenv/assert/src/utils/tokenize_number.js";
 import { ANSI, humanizeFileSize } from "@jsenv/humanize";
@@ -679,6 +679,7 @@ export const renderTable = (
   // number align
   {
     const largestIntegerInColumnMap = new Map();
+    const largestFloatInColumnMap = new Map();
     const formatCallbackSet = new Set();
 
     let y = 0;
@@ -691,7 +692,6 @@ export const renderTable = (
         if (isFinite(value)) {
           if (value % 1 === 0) {
             const { integer } = tokenizeInteger(Math.abs(value));
-            cell.integer = integer;
             const integerFormatted = groupDigits(integer);
             const integerWidth = measureTextWidth(integerFormatted);
             const largestIntegerInColumn =
@@ -706,11 +706,40 @@ export const renderTable = (
                 const padding = integerColumnWidth - integerWidth;
                 integerText = " ".repeat(padding) + integerFormatted;
               }
+              const floatWidth = largestFloatInColumnMap.get(cell.x);
+              if (floatWidth) {
+                integerText += " ".repeat(floatWidth);
+              }
               cell.updateValue(integerText);
             });
           } else {
-            // TODO: handle float
-            // const { integer, decimalSeparator, decimal } = tokenizeFloat(Math.abs(value));
+            const { integer, decimalSeparator, decimal } = tokenizeFloat(
+              Math.abs(value),
+            );
+            const integerFormatted = groupDigits(integer);
+            const integerWidth = measureTextWidth(integerFormatted);
+            const floatFormatted = groupDigits(decimal);
+            const floatWidth = measureTextWidth(floatFormatted);
+            const largestFloatInColumn = largestFloatInColumnMap.get(x) || 0;
+            if (floatWidth > largestFloatInColumn) {
+              largestFloatInColumnMap.set(x, floatWidth);
+            }
+            formatCallbackSet.add(() => {
+              const integerColumnWidth = largestIntegerInColumnMap.get(cell.x);
+              const floatColumnWidth = largestFloatInColumnMap.get(cell.x);
+              let floatText = integerFormatted;
+              if (integerWidth < integerColumnWidth) {
+                const padding = integerColumnWidth - integerWidth;
+                floatText = " ".repeat(padding) + integerFormatted;
+              }
+              floatText += decimalSeparator;
+              floatText += decimal;
+              if (floatWidth < floatColumnWidth) {
+                const padding = floatColumnWidth - floatWidth;
+                floatText += " ".repeat(padding - 1);
+              }
+              cell.updateValue(floatText);
+            });
           }
         }
         x++;

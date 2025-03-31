@@ -15,7 +15,8 @@ const run = ({ xAlign }) => {
       [{ value: 1234, border: {}, xAlign }],
       [{ value: 234, border: {}, xAlign }],
       [{ value: 12, border: {}, xAlign }],
-      // TODO: test with floats
+      [{ value: 1234.5678, border: {}, xAlign }],
+      [{ value: 1234.5, border: {}, xAlign }],
     ],
     { borderCollapse: true, ansi: true },
   );
