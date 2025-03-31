@@ -15,9 +15,6 @@ await build({
       buildRelativeUrl: "./jsenv_core.js",
       runtimeCompat: { node: "20.0" },
       scenarioPlaceholders: false,
-      mappings: {
-        "emoji-regex/index.js": "emoji-regex/index.mjs",
-      },
       plugins: [
         jsenvPluginCommonJs({
           include: {
@@ -42,6 +39,10 @@ await build({
         "file://**/node_modules/@jsenv/importmap/": false,
         "file://**/node_modules/@jsenv/integrity/": false,
         "file://**/node_modules/@jsenv/humanize/": false,
+        "file://**/node_modules/@jsenv/terminal-table/": false,
+        "file://**/node_modules/@jsenv/terminal-text-size/": false,
+        "file://**/node_modules/emoji-regex-xs/": false,
+        "file://**/node_modules/get-east-asian-width/": false,
         "file://**/node_modules/@jsenv/node-esm-resolution/": false,
         // "file://**/node_modules/@jsenv/server/": false,
         "file://**/node_modules/@jsenv/plugin-transpilation/": false,

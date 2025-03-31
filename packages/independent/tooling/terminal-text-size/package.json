@@ -10,6 +10,7 @@
     "./*": "./*"
   },
   "main": "./src/terminal_text_size.js",
+  "sideEffects": false,
   "dependencies": {
     "emoji-regex-xs": "1.0.0",
     "get-east-asian-width": "1.3.0"

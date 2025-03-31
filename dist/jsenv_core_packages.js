@@ -1,6 +1,6 @@
-import stringWidth from "string-width";
 import stripAnsi from "strip-ansi";
-import { createSupportsColor, isUnicodeSupported, clearTerminal, eraseLines, createSupportsColor$1, isUnicodeSupported$1, clearTerminal$1, eraseLines$1, createSupportsColor$2, isUnicodeSupported$2, clearTerminal$2, eraseLines$2 } from "./jsenv_core_node_modules.js";
+import { createSupportsColor, isUnicodeSupported, emojiRegex, eastAsianWidth, clearTerminal, eraseLines, createSupportsColor$1, isUnicodeSupported$1, emojiRegex$1, eastAsianWidth$1, clearTerminal$1, eraseLines$1, createSupportsColor$2, isUnicodeSupported$2, emojiRegex$2, eastAsianWidth$2, clearTerminal$2, eraseLines$2 } from "./jsenv_core_node_modules.js";
+import { stripVTControlCharacters } from "node:util";
 import { existsSync, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$2, watch, realpathSync, readdir, chmod, stat, lstat, promises, unlink, rmdir } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
@@ -62,38 +62,85 @@ const DATA_URL$1 = {
 };
 
 const createDetailedMessage$3 = (message, details = {}) => {
-  let string = `${message}`;
+  let text = `${message}`;
+  const namedSectionsText = renderNamedSections$1(details);
+  if (namedSectionsText) {
+    text += `
+${namedSectionsText}`;
+  }
+  return text;
+};
 
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
+const renderNamedSections$1 = (namedSections) => {
+  let text = "";
+  let keys = Object.keys(namedSections);
+  for (const key of keys) {
+    const isLastKey = key === keys[keys.length - 1];
+    const value = namedSections[key];
+    text += `--- ${key} ---
 ${
   Array.isArray(value)
     ? value.join(`
 `)
     : value
 }`;
-  });
-
-  return string;
+    if (!isLastKey) {
+      text += "\n";
+    }
+  }
+  return text;
 };
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET$2 = "\x1b[0m";
 
+const RED$2 = "red";
+const GREEN$2 = "green";
+const YELLOW$2 = "yellow";
+const BLUE$2 = "blue";
+const MAGENTA$2 = "magenta";
+const CYAN$2 = "cyan";
+const GREY$2 = "grey";
+const WHITE$2 = "white";
+const BLACK$2 = "black";
+
+const TEXT_COLOR_ANSI_CODES$2 = {
+  [RED$2]: "\x1b[31m",
+  [GREEN$2]: "\x1b[32m",
+  [YELLOW$2]: "\x1b[33m",
+  [BLUE$2]: "\x1b[34m",
+  [MAGENTA$2]: "\x1b[35m",
+  [CYAN$2]: "\x1b[36m",
+  [GREY$2]: "\x1b[90m",
+  [WHITE$2]: "\x1b[37m",
+  [BLACK$2]: "\x1b[30m",
+};
+const BACKGROUND_COLOR_ANSI_CODES$2 = {
+  [RED$2]: "\x1b[41m",
+  [GREEN$2]: "\x1b[42m",
+  [YELLOW$2]: "\x1b[43m",
+  [BLUE$2]: "\x1b[44m",
+  [MAGENTA$2]: "\x1b[45m",
+  [CYAN$2]: "\x1b[46m",
+  [GREY$2]: "\x1b[100m",
+  [WHITE$2]: "\x1b[47m",
+  [BLACK$2]: "\x1b[40m",
+};
+
 const createAnsi$2 = ({ supported }) => {
   const ANSI = {
     supported,
 
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED: RED$2,
+    GREEN: GREEN$2,
+    YELLOW: YELLOW$2,
+    BLUE: BLUE$2,
+    MAGENTA: MAGENTA$2,
+    CYAN: CYAN$2,
+    GREY: GREY$2,
+    WHITE: WHITE$2,
+    BLACK: BLACK$2,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -105,7 +152,29 @@ const createAnsi$2 = ({ supported }) => {
         // cannot set color of blank chars
         return text;
       }
-      return `${color}${text}${RESET$2}`;
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES$2[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForTextColor}${text}${RESET$2}`;
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor =
+        BACKGROUND_COLOR_ANSI_CODES$2[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForBackgroundColor}${text}${RESET$2}`;
     },
 
     BOLD: "\x1b[1m",
@@ -122,7 +191,8 @@ const createAnsi$2 = ({ supported }) => {
       if (text === "") {
         return text;
       }
-      return `${effect}${text}${RESET$2}`;
+      const ansiEscapeCodeForEffect = effect;
+      return `${ansiEscapeCodeForEffect}${text}${RESET$2}`;
     },
   };
 
@@ -637,6 +707,95 @@ const error$2 = (...args) => console.error(...args);
 
 const errorDisabled$2 = () => {};
 
+const segmenter$2 = new Intl.Segmenter();
+
+const defaultIgnorableCodePointRegex$2 = /^\p{Default_Ignorable_Code_Point}$/u;
+
+const measureTextWidth$2 = (
+  string,
+  {
+    ambiguousIsNarrow = true,
+    countAnsiEscapeCodes = false,
+    skipEmojis = false,
+  } = {},
+) => {
+  if (typeof string !== "string" || string.length === 0) {
+    return 0;
+  }
+
+  if (!countAnsiEscapeCodes) {
+    string = stripVTControlCharacters(string);
+  }
+
+  if (string.length === 0) {
+    return 0;
+  }
+
+  let width = 0;
+  const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
+
+  for (const { segment: character } of segmenter$2.segment(string)) {
+    const codePoint = character.codePointAt(0);
+
+    // Ignore control characters
+    if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+      continue;
+    }
+
+    // Ignore zero-width characters
+    if (
+      (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+      codePoint === 0xfe_ff // Zero-width no-break space
+    ) {
+      continue;
+    }
+
+    // Ignore combining characters
+    if (
+      (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+      (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+      (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+      (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+      (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+    ) {
+      continue;
+    }
+
+    // Ignore surrogate pairs
+    if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+      continue;
+    }
+
+    // Ignore variation selectors
+    if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+      continue;
+    }
+
+    // This covers some of the above cases, but we still keep them for performance reasons.
+    if (defaultIgnorableCodePointRegex$2.test(character)) {
+      continue;
+    }
+
+    if (!skipEmojis && emojiRegex().test(character)) {
+      if (process.env.CAPTURING_SIDE_EFFECTS) {
+        if (character === "✔️") {
+          width += 2;
+          continue;
+        }
+      }
+      width += measureTextWidth$2(character, {
+        skipEmojis: true,
+        countAnsiEscapeCodes: true, // to skip call to stripVTControlCharacters
+      });
+      continue;
+    }
+
+    width += eastAsianWidth(codePoint, eastAsianWidthOptions);
+  }
+
+  return width;
+};
+
 /*
  * see also https://github.com/vadimdemedes/ink
  */
@@ -672,7 +831,7 @@ const createDynamicLog$2 = ({
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
     for (const logLine of logLines) {
-      const width = stringWidth(logLine);
+      const width = measureTextWidth$2(logLine);
       if (width === 0) {
         visualLineCount++;
       } else {
@@ -4498,13 +4657,17 @@ const mainLegacyResolvers$1 = {
       path: browserMain,
     };
   },
-  node: ({ packageJson }) => {
+  node: ({ packageJson, conditions }) => {
+    if (conditions.includes("import")) {
+      if (typeof packageJson.module === "string") {
+        return { type: "field:module", isMain: true, path: packageJson.module };
+      }
+      if (typeof packageJson.jsnext === "string") {
+        return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
+      }
+    }
     if (typeof packageJson.main === "string") {
-      return {
-        type: "field:main",
-        isMain: true,
-        path: packageJson.main,
-      };
+      return { type: "field:main", isMain: true, path: packageJson.main };
     }
     return null;
   },
@@ -8610,38 +8773,85 @@ const DATA_URL = {
 };
 
 const createDetailedMessage$1 = (message, details = {}) => {
-  let string = `${message}`;
+  let text = `${message}`;
+  const namedSectionsText = renderNamedSections(details);
+  if (namedSectionsText) {
+    text += `
+${namedSectionsText}`;
+  }
+  return text;
+};
 
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
+const renderNamedSections = (namedSections) => {
+  let text = "";
+  let keys = Object.keys(namedSections);
+  for (const key of keys) {
+    const isLastKey = key === keys[keys.length - 1];
+    const value = namedSections[key];
+    text += `--- ${key} ---
 ${
   Array.isArray(value)
     ? value.join(`
 `)
     : value
 }`;
-  });
-
-  return string;
+    if (!isLastKey) {
+      text += "\n";
+    }
+  }
+  return text;
 };
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET$1 = "\x1b[0m";
 
+const RED$1 = "red";
+const GREEN$1 = "green";
+const YELLOW$1 = "yellow";
+const BLUE$1 = "blue";
+const MAGENTA$1 = "magenta";
+const CYAN$1 = "cyan";
+const GREY$1 = "grey";
+const WHITE$1 = "white";
+const BLACK$1 = "black";
+
+const TEXT_COLOR_ANSI_CODES$1 = {
+  [RED$1]: "\x1b[31m",
+  [GREEN$1]: "\x1b[32m",
+  [YELLOW$1]: "\x1b[33m",
+  [BLUE$1]: "\x1b[34m",
+  [MAGENTA$1]: "\x1b[35m",
+  [CYAN$1]: "\x1b[36m",
+  [GREY$1]: "\x1b[90m",
+  [WHITE$1]: "\x1b[37m",
+  [BLACK$1]: "\x1b[30m",
+};
+const BACKGROUND_COLOR_ANSI_CODES$1 = {
+  [RED$1]: "\x1b[41m",
+  [GREEN$1]: "\x1b[42m",
+  [YELLOW$1]: "\x1b[43m",
+  [BLUE$1]: "\x1b[44m",
+  [MAGENTA$1]: "\x1b[45m",
+  [CYAN$1]: "\x1b[46m",
+  [GREY$1]: "\x1b[100m",
+  [WHITE$1]: "\x1b[47m",
+  [BLACK$1]: "\x1b[40m",
+};
+
 const createAnsi$1 = ({ supported }) => {
   const ANSI = {
     supported,
 
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED: RED$1,
+    GREEN: GREEN$1,
+    YELLOW: YELLOW$1,
+    BLUE: BLUE$1,
+    MAGENTA: MAGENTA$1,
+    CYAN: CYAN$1,
+    GREY: GREY$1,
+    WHITE: WHITE$1,
+    BLACK: BLACK$1,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -8653,7 +8863,29 @@ const createAnsi$1 = ({ supported }) => {
         // cannot set color of blank chars
         return text;
       }
-      return `${color}${text}${RESET$1}`;
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES$1[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForTextColor}${text}${RESET$1}`;
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor =
+        BACKGROUND_COLOR_ANSI_CODES$1[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForBackgroundColor}${text}${RESET$1}`;
     },
 
     BOLD: "\x1b[1m",
@@ -8670,7 +8902,8 @@ const createAnsi$1 = ({ supported }) => {
       if (text === "") {
         return text;
       }
-      return `${effect}${text}${RESET$1}`;
+      const ansiEscapeCodeForEffect = effect;
+      return `${ansiEscapeCodeForEffect}${text}${RESET$1}`;
     },
   };
 
@@ -9198,260 +9431,6 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
-const renderTable = ({ head, body, foot }) => {
-  const columnBiggestWidthArray = [];
-  const createCell = (cellProps, { isHead, isFoot, x, y }) => {
-    let {
-      value,
-      bold,
-      format,
-      unit = format === "percentage" ? "%" : undefined,
-      unitColor,
-      quoteAroundStrings = !format && !isHead && !isFoot,
-      color,
-    } = cellProps;
-
-    let valueFormatted;
-    if (typeof value === "string") {
-      if (quoteAroundStrings) {
-        valueFormatted = `"${value}"`;
-        if (color === undefined) {
-          color = ANSI$1.GREEN;
-        }
-      } else {
-        valueFormatted = value;
-      }
-    } else if (typeof value === "number") {
-      if (format === "size") {
-        valueFormatted = humanizeFileSize(value);
-      } else {
-        valueFormatted = String(value);
-        if (color === undefined) {
-          color = ANSI$1.YELLOW;
-        }
-      }
-    } else {
-      valueFormatted = value;
-    }
-
-    if (bold) {
-      valueFormatted = ANSI$1.color(valueFormatted, ANSI$1.BOLD);
-    }
-    if (color) {
-      valueFormatted = ANSI$1.color(valueFormatted, color);
-    }
-
-    let width = stringWidth(valueFormatted);
-    if (unit) {
-      width += ` ${unit}`.length;
-      if (unitColor) {
-        unit = ANSI$1.color(unit, unitColor);
-      }
-      valueFormatted += ` ${unit}`;
-    }
-
-    const biggestWidth = columnBiggestWidthArray[x] || 0;
-    if (width > biggestWidth) {
-      columnBiggestWidthArray[x] = width;
-    }
-
-    return {
-      valueRaw: value,
-      x,
-      y,
-      value: valueFormatted,
-      width,
-      isHead,
-      isFoot,
-    };
-  };
-
-  const rows = [];
-  if (head) {
-    const headRow = {
-      cells: [],
-      borderTop: true,
-      borderBottom: true,
-    };
-    {
-      let x = 0;
-      for (const cellProps of head) {
-        const headerCell = createCell(cellProps, {
-          isHead: true,
-          x,
-          y: 0,
-        });
-        headRow.cells.push(headerCell);
-        x++;
-      }
-    }
-    rows.push(headRow);
-  }
-  {
-    const bodyRows = [];
-    let y = rows.length;
-    for (const object of body) {
-      const bodyRow = { cells: [] };
-      let x = 0;
-      for (const headCellProps of head) {
-        const propName = headCellProps.value;
-        const bodyCellProps = object[propName] || { value: undefined };
-        const bodyCell = createCell(bodyCellProps, {
-          x,
-          y,
-        });
-        bodyRow.cells.push(bodyCell);
-        x++;
-      }
-      y++;
-      bodyRows.push(bodyRow);
-    }
-    rows.push(...bodyRows);
-    rows[rows.length - 1].borderBottom = true;
-  }
-  if (foot) {
-    const footRow = {
-      cells: [],
-      borderBottom: true,
-    };
-    let y = rows.length;
-    let x = 0;
-    for (const fooCellProps of foot) {
-      const footCell = createCell(fooCellProps, {
-        isFoot: true,
-        x,
-        y,
-      });
-      footRow.cells.push(footCell);
-      x++;
-    }
-    rows.push(footRow);
-  }
-
-  const leftSpacing = 1;
-  const rightSpacing = 1;
-
-  let log = "";
-  let y = 0;
-  while (y < rows.length) {
-    const row = rows[y];
-    if (row.borderTop) {
-      let topBorder = "";
-      topBorder += "┌";
-      let x = 0;
-      while (x < columnBiggestWidthArray.length) {
-        const columnWidth = columnBiggestWidthArray[x];
-        topBorder += `${"─".repeat(columnWidth + leftSpacing + rightSpacing)}`;
-        if (x < columnBiggestWidthArray.length - 1) {
-          topBorder += "┬";
-        }
-        x++;
-      }
-      topBorder += "┐";
-      log += topBorder;
-      log += "\n";
-    }
-    const cells = row.cells;
-    let line = "";
-    let x = 0;
-    while (x < cells.length) {
-      const cell = cells[x];
-      const biggestWidth = columnBiggestWidthArray[x];
-      line += " ";
-      line += cell.value; // if number use yellow, if string use green
-      line += " ";
-      line += " ".repeat(biggestWidth - cell.width);
-      if (x === cells.length - 1) {
-        break;
-      }
-      line += "│";
-      x++;
-    }
-    log += "│";
-    log += line;
-    log += "│";
-    log += "\n";
-
-    if (row.borderBottom) {
-      if (y === rows.length - 1) {
-        // last line
-        let bottomBorder = "";
-        let x = 0;
-        while (x < columnBiggestWidthArray.length) {
-          const columnWidth = columnBiggestWidthArray[x];
-          bottomBorder += `${"─".repeat(columnWidth + leftSpacing + rightSpacing)}`;
-          if (x < columnBiggestWidthArray.length - 1) {
-            bottomBorder += "┴";
-          }
-          x++;
-        }
-        log += "└";
-        log += bottomBorder;
-        log += "┘";
-        log += "\n";
-      } else {
-        let middleBorder = "";
-        {
-          let x = 0;
-          while (x < columnBiggestWidthArray.length) {
-            const columnWidth = columnBiggestWidthArray[x];
-            middleBorder += `${"─".repeat(columnWidth + leftSpacing + rightSpacing)}`;
-            if (x < columnBiggestWidthArray.length - 1) {
-              middleBorder += "┼";
-            }
-            x++;
-          }
-        }
-        log += "├";
-        log += middleBorder;
-        log += "┤";
-        log += "\n";
-      }
-    }
-    y++;
-  }
-
-  return log;
-};
-
-// console.log(
-//   renderTable({
-//     head: ["name", "long_name", "percentage"],
-//     body: [
-//       { name: "dam", long_name: 120, percentage: "56.0" },
-//       { name: "seb", long_name: 10, percentage: "56.0" },
-//     ],
-//     // foot: [],
-//   }),
-// );
-
-// console.log(
-//   renderTable({
-//     head: [
-//       { value: "name", bold: true },
-//       { value: "long_name", bold: true },
-//       { value: "percentage", bold: true },
-//     ],
-//     body: [
-//       {
-//         name: { value: "dam" },
-//         long_name: { value: 120 },
-//         percentage: { value: "56.0" },
-//       },
-//       {
-//         name: { value: "seb" },
-//         long_name: { value: 10 },
-//         percentage: { value: "56.0", format: "percentage" },
-//       },
-//     ],
-//     foot: [
-//       { value: "hey", bold: true },
-//       { value: "hey", bold: true },
-//       { value: "hey", bold: true },
-//     ],
-//   }),
-// );
-
 const renderBigSection = (params) => {
   return renderSection({
     width: 45,
@@ -9613,6 +9592,95 @@ const error$1 = (...args) => console.error(...args);
 
 const errorDisabled$1 = () => {};
 
+const segmenter$1 = new Intl.Segmenter();
+
+const defaultIgnorableCodePointRegex$1 = /^\p{Default_Ignorable_Code_Point}$/u;
+
+const measureTextWidth$1 = (
+  string,
+  {
+    ambiguousIsNarrow = true,
+    countAnsiEscapeCodes = false,
+    skipEmojis = false,
+  } = {},
+) => {
+  if (typeof string !== "string" || string.length === 0) {
+    return 0;
+  }
+
+  if (!countAnsiEscapeCodes) {
+    string = stripVTControlCharacters(string);
+  }
+
+  if (string.length === 0) {
+    return 0;
+  }
+
+  let width = 0;
+  const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
+
+  for (const { segment: character } of segmenter$1.segment(string)) {
+    const codePoint = character.codePointAt(0);
+
+    // Ignore control characters
+    if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+      continue;
+    }
+
+    // Ignore zero-width characters
+    if (
+      (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+      codePoint === 0xfe_ff // Zero-width no-break space
+    ) {
+      continue;
+    }
+
+    // Ignore combining characters
+    if (
+      (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+      (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+      (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+      (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+      (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+    ) {
+      continue;
+    }
+
+    // Ignore surrogate pairs
+    if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+      continue;
+    }
+
+    // Ignore variation selectors
+    if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+      continue;
+    }
+
+    // This covers some of the above cases, but we still keep them for performance reasons.
+    if (defaultIgnorableCodePointRegex$1.test(character)) {
+      continue;
+    }
+
+    if (!skipEmojis && emojiRegex$1().test(character)) {
+      if (process.env.CAPTURING_SIDE_EFFECTS) {
+        if (character === "✔️") {
+          width += 2;
+          continue;
+        }
+      }
+      width += measureTextWidth$1(character, {
+        skipEmojis: true,
+        countAnsiEscapeCodes: true, // to skip call to stripVTControlCharacters
+      });
+      continue;
+    }
+
+    width += eastAsianWidth$1(codePoint, eastAsianWidthOptions);
+  }
+
+  return width;
+};
+
 /*
  * see also https://github.com/vadimdemedes/ink
  */
@@ -9648,7 +9716,7 @@ const createDynamicLog$1 = ({
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
     for (const logLine of logLines) {
-      const width = stringWidth(logLine);
+      const width = measureTextWidth$1(logLine);
       if (width === 0) {
         visualLineCount++;
       } else {
@@ -14129,13 +14197,17 @@ const mainLegacyResolvers = {
       path: browserMain,
     };
   },
-  node: ({ packageJson }) => {
+  node: ({ packageJson, conditions }) => {
+    if (conditions.includes("import")) {
+      if (typeof packageJson.module === "string") {
+        return { type: "field:module", isMain: true, path: packageJson.module };
+      }
+      if (typeof packageJson.jsnext === "string") {
+        return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
+      }
+    }
     if (typeof packageJson.main === "string") {
-      return {
-        type: "field:main",
-        isMain: true,
-        path: packageJson.main,
-      };
+      return { type: "field:main", isMain: true, path: packageJson.main };
     }
     return null;
   },
@@ -18765,6 +18837,2807 @@ const applyDefaultExtension = ({ url, importer, defaultExtension }) => {
   return url
 };
 
+const COLORS = {
+  RED: ANSI$1.RED,
+  BLUE: ANSI$1.BLUE,
+  YELLOW: ANSI$1.YELLOW,
+  GREEN: ANSI$1.GREEN,
+  MAGENTA: ANSI$1.MAGENTA,
+  CYAN: ANSI$1.CYAN,
+  WHITE: ANSI$1.WHITE,
+  BLACK: ANSI$1.BLACK,
+  GREY: ANSI$1.GREY,
+};
+
+const pickBorderColor = (...borders) => {
+  if (borders.length === 0) {
+    return borders[0].color;
+  }
+  if (borders.lenth === 2) {
+    const [first, second] = borders;
+    const firstColor = first.color;
+    const secondColor = second.color;
+    return compareTwoColors(firstColor, secondColor) === 1
+      ? secondColor
+      : firstColor;
+  }
+  return borders.map((border) => border.color).sort()[0];
+};
+
+const compareTwoColors = (a, b) => {
+  if (!b && !a) {
+    return 0;
+  }
+  if (!b) {
+    return 1;
+  }
+  if (!a) {
+    return 1;
+  }
+  const aPrio = COLORS_PRIO.indexOf(a);
+  const bPrio = COLORS_PRIO.indexOf(b);
+  return aPrio - bPrio;
+};
+const COLORS_PRIO = [
+  COLORS.GREY,
+  COLORS.WHITE,
+  COLORS.BLACK,
+  COLORS.BLUE,
+  COLORS.CYAN,
+  COLORS.MAGENTA,
+  COLORS.GREEN,
+  COLORS.YELLOW,
+  COLORS.RED,
+];
+
+/**
+ * https://www.w3.org/TR/xml-entity-names/025.html?fbclid=IwZXh0bgNhZW0CMTEAAR0jL81PDwl6kfzRMUvjOSIfmuesvCdqr11lQpOS-9bpx7u1Q2LD1G7fJ1E_aem_URrWt-55lP_byLA6tjLleQ
+ * https://www.w3schools.com/charsets/ref_utf_box.asp
+ *
+ *
+ */
+
+
+// blank node is a fluid node that will take whatever size it will be requested to take
+// this is useful to enforce a given amount of space is taken in x/y
+// It is used to implement borders because any cell can suddenly
+// enable a border on X/Y meaning all previous cells must now have blank spaces where the border is
+const blankNode = {
+  type: "blank",
+  rects: [
+    { width: "fill", render: ({ columnWidth }) => " ".repeat(columnWidth) },
+  ],
+};
+const createBlankNode = () => {
+  return blankNode;
+};
+
+const getHorizontalLineChar = (style, bold) => {
+  const char = {
+    solid: ["─", "━"],
+    dash: ["╌", "╍"],
+    dash_3: ["┄", "┅"],
+    dash_4: ["┈", "┉"],
+    double: ["═", "═"],
+  }[style][bold ? 1 : 0];
+  return char;
+};
+const getVerticalLineChar = (style, bold) => {
+  const char = {
+    solid: ["│", "┃"],
+    dash: ["╎", "╏"],
+    dash_3: ["┆", "┇"],
+    dash_4: ["┊", "┋"],
+    double: ["║", "║"],
+  }[style][bold ? 1 : 0];
+  return char;
+};
+
+// sides
+const createBorderLeftNode = ({ style = "solid", bold, color }) => {
+  const char = getVerticalLineChar(style, bold);
+  return {
+    type: "border_left",
+    rects: [{ width: 1, color, render: char }],
+    xAlign: "end",
+    yAlign: "center",
+    yPadChar: char,
+  };
+};
+const createBorderRightNode = ({ style = "solid", bold, color }) => {
+  const char = getVerticalLineChar(style, bold);
+  return {
+    type: "border_right",
+    rects: [{ width: 1, color, render: char }],
+    xAlign: "start",
+    yAlign: "center",
+    yPadChar: char,
+  };
+};
+const createBorderTopNode = ({ style = "solid", bold, color }) => {
+  const char = getHorizontalLineChar(style, bold);
+  return {
+    type: "border_top",
+    rects: [
+      {
+        width: "fill",
+        color,
+        render: ({ columnWidth }) => char.repeat(columnWidth),
+      },
+    ],
+    yAlign: "end",
+  };
+};
+const createBorderBottomNode = ({ style = "solid", bold, color }) => {
+  const char = getHorizontalLineChar(style, bold);
+  return {
+    type: "border_bottom",
+    rects: [
+      {
+        width: "fill",
+        color,
+        render: ({ columnWidth }) => char.repeat(columnWidth),
+      },
+    ],
+    yAlign: "start",
+  };
+};
+// half sides
+const createBorderHalfLeftNode = ({ style = "solid", bold, color }) => {
+  return {
+    type: "border_half_left",
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╸" : "╴",
+      },
+    ],
+    xAlign: "end",
+    xPadChar: getHorizontalLineChar(style, bold),
+    yAlign: "end",
+  };
+};
+const createBorderHalfRightNode = ({ style = "solid", bold, color }) => {
+  return {
+    type: "border_half_right",
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╺" : "╶",
+      },
+    ],
+    xAlign: "end",
+    xPadChar: getHorizontalLineChar(style, bold),
+    yAlign: "end",
+  };
+};
+const createBorderHalfUpNode = ({ style = "solid", bold, color }) => {
+  return {
+    type: "border_half_up",
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╹" : "╵",
+      },
+    ],
+    xAlign: "start",
+    yAlign: "start",
+    yPadChar: getVerticalLineChar(style, bold),
+  };
+};
+const createBorderHalfDownNode = ({ style = "solid", bold, color }) => {
+  return {
+    type: "border_half_down",
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╻" : "╷",
+      },
+    ],
+    xAlign: "end",
+    yAlign: "start",
+    yPadChar: getVerticalLineChar(style, bold),
+  };
+};
+
+const topLeftCharProps = {
+  "╔": { xPadChar: "║", yPadChar: "═" },
+  "╒": { xPadChar: "═", yPadChar: "│" },
+  "╓": { xPadChar: "─", yPadChar: "║" },
+  "┌": { xPadChar: "│", yPadChar: "─" },
+  "┏": { xPadChar: "┃", yPadChar: "━" },
+  "┍": { xPadChar: "━", yPadChar: "│" },
+  "┎": { xPadChar: "┃", yPadChar: "─" },
+  "╭": { xPadChar: "│", yPadChar: "─" },
+};
+const createBorderTopLeftNode = (topBorder, leftBorder) => {
+  const color = pickBorderColor(topBorder, leftBorder);
+  const rounded = topBorder.rounded && leftBorder.rounded;
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = topLeftCharProps[char];
+    return {
+      type: "border_top_left",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "start",
+      yAlign: "start",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const topIsDouble = topBorder.style === "double";
+    const leftIsDouble = leftBorder.style === "double";
+    const bothAreDouble = topIsDouble && leftIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╔");
+    }
+    const onlyTopIsDouble = topIsDouble && !leftIsDouble;
+    if (onlyTopIsDouble) {
+      return innerCreateBorder("╒");
+    }
+    const onlyLeftIsDouble = leftIsDouble && !topIsDouble;
+    if (onlyLeftIsDouble) {
+      return innerCreateBorder("╓");
+    }
+  }
+
+  // bold
+  const topIsBold = topBorder.bold;
+  const leftIsBold = leftBorder.bold;
+  const noneAreBold = !topIsBold && !leftIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder(rounded ? "╭" : "┌");
+  }
+  const bothAreBold = topIsBold && leftIsBold;
+  if (bothAreBold) {
+    return innerCreateBorder("┏");
+  }
+  const onlyTopIsBold = topIsBold && !leftIsBold;
+  if (onlyTopIsBold) {
+    return innerCreateBorder("┍");
+  }
+  // only left is bold
+  return innerCreateBorder("┎");
+};
+
+const topRightCharProps = {
+  "╗": { xPadChar: "║", yPadChar: "═" },
+  "╕": { xPadChar: "═", yPadChar: "│" },
+  "╖": { xPadChar: "─", yPadChar: "║" },
+  "┐": { xPadChar: "│", yPadChar: "─" },
+  "┓": { xPadChar: "┃", yPadChar: "━" },
+  "┑": { xPadChar: "━", yPadChar: "│" },
+  "┒": { xPadChar: "┃", yPadChar: "─" },
+  "╮": { xPadChar: "│", yPadChar: "─" },
+};
+const createBorderTopRightNode = (topBorder, rightBorder) => {
+  const color = pickBorderColor(topBorder, rightBorder);
+  const rounded = topBorder.rounded && rightBorder.rounded;
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = topRightCharProps[char];
+    return {
+      type: "border_top_right",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "end",
+      yAlign: "start",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const topIsDouble = topBorder.style === "double";
+    const rightIsDouble = rightBorder.style === "double";
+    const bothAreDouble = topIsDouble && rightIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╗");
+    }
+    const onlyTopIsDouble = topIsDouble && !rightIsDouble;
+    if (onlyTopIsDouble) {
+      return innerCreateBorder("╕");
+    }
+    const onlyRightIsDouble = rightIsDouble && !topIsDouble;
+    if (onlyRightIsDouble) {
+      return innerCreateBorder("╖");
+    }
+  }
+
+  const topIsBold = topBorder.bold;
+  const rightIsBold = rightBorder.bold;
+  const noneAreBold = !topIsBold && !rightIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder(rounded ? "╮" : "┐");
+  }
+  const bothAreBold = topIsBold && rightIsBold;
+  if (bothAreBold) {
+    return innerCreateBorder("┓");
+  }
+  const onlyTopIsBold = topIsBold && !rightIsBold;
+  if (onlyTopIsBold) {
+    return innerCreateBorder("┑");
+  }
+  // only right is bold
+  return innerCreateBorder("┒");
+};
+const bottomRightCharProps = {
+  "╝": { xPadChar: "║", yPadChar: "═" },
+  "╛": { xPadChar: "═", yPadChar: "│" },
+  "╜": { xPadChar: "─", yPadChar: "║" },
+  "┘": { xPadChar: "│", yPadChar: "─" },
+  "┛": { xPadChar: "┃", yPadChar: "━" },
+  "┙": { xPadChar: "━", yPadChar: "│" },
+  "┚": { xPadChar: "┃", yPadChar: "─" },
+  "╯": { xPadChar: "│", yPadChar: "─" },
+};
+const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
+  const color = pickBorderColor(bottomBorder, rightBorder);
+  const rounded = bottomBorder.rounded && rightBorder.rounded;
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = bottomRightCharProps[char];
+    return {
+      type: "border_bottom_right",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "end",
+      yAlign: "end",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const bottomIsDouble = bottomBorder.style === "double";
+    const rightIsDouble = rightBorder.style === "double";
+    const bothAreDouble = bottomIsDouble && rightIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╝");
+    }
+    const onlyBottomIsDouble = bottomIsDouble && !rightIsDouble;
+    if (onlyBottomIsDouble) {
+      return innerCreateBorder("╛");
+    }
+    const onlyRightIsDouble = rightIsDouble && !bottomIsDouble;
+    if (onlyRightIsDouble) {
+      return innerCreateBorder("╜");
+    }
+  }
+
+  const bottomIsBold = bottomBorder.bold;
+  const rightIsBold = rightBorder.bold;
+  const noneAreBold = !bottomIsBold && !rightIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder(rounded ? "╯" : "┘");
+  }
+  const bothAreBold = bottomIsBold && rightIsBold;
+  if (bothAreBold) {
+    return innerCreateBorder("┛");
+  }
+  const onlyBottomIsBold = bottomIsBold && !rightIsBold;
+  if (onlyBottomIsBold) {
+    return innerCreateBorder("┙");
+  }
+  // only right is bold
+  return innerCreateBorder("┚");
+};
+const bottomLeftCharProps = {
+  "╚": { xPadChar: "║", yPadChar: "═" },
+  "╘": { xPadChar: "═", yPadChar: "│" },
+  "╙": { xPadChar: "─", yPadChar: "║" },
+  "└": { xPadChar: "│", yPadChar: "─" },
+  "┗": { xPadChar: "┃", yPadChar: "━" },
+  "┕": { xPadChar: "━", yPadChar: "│" },
+  "┖": { xPadChar: "┃", yPadChar: "─" },
+  "╰": { xPadChar: "│", yPadChar: "─" },
+};
+const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
+  const color = pickBorderColor(bottomBorder, leftBorder);
+  const rounded = bottomBorder.rounded && leftBorder.rounded;
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = bottomLeftCharProps[char];
+    return {
+      type: "border_bottom_left",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "start",
+      yAlign: "end",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const bottomIsDouble = bottomBorder.style === "double";
+    const leftIsDouble = leftBorder.style === "double";
+    const bothAreDouble = bottomIsDouble && leftIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╚");
+    }
+    const onlyBottomIsDouble = bottomIsDouble && !leftIsDouble;
+    if (onlyBottomIsDouble) {
+      return innerCreateBorder("╘");
+    }
+    const onlyLeftIsDouble = leftIsDouble && !bottomIsDouble;
+    if (onlyLeftIsDouble) {
+      return innerCreateBorder("╙");
+    }
+  }
+
+  const bottomIsBold = bottomBorder.bold;
+  const leftIsBold = leftBorder.bold;
+  const noneAreBold = !bottomIsBold && !leftIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder(rounded ? "╰" : "└");
+  }
+  const bothAreBold = bottomIsBold && leftIsBold;
+  if (bothAreBold) {
+    return innerCreateBorder("┗");
+  }
+  const onlyBottomIsBold = bottomIsBold && !leftIsBold;
+  if (onlyBottomIsBold) {
+    return innerCreateBorder("┕");
+  }
+  // only left is bold
+  return innerCreateBorder("┖");
+};
+
+// intersections between 3 borders
+/**
+ * notons aussi que pour double le cas ou 3 bord et 4 borde se connecte ne supporte pas
+ * qu'un des axes ne soit pas double (left/right style et top/bottom peutvent changer mais par exemple il
+ * n'y a pas de cher pour le cas suivant:
+ *
+ * ═ ─
+ *  ║
+ *
+ * Les seuls connecteur dispo sont:
+ *
+ * ╦, ╥ et ╤
+ *
+ * donnant ainsi
+ *
+ * ═╦─  ou   ═╥─  ou  ═╤─
+ *  ║         ║        ║
+ *
+ * ah mais on peut faire ça: (utiliser le top right corner)
+ * et ça rend pas trop mal
+ *
+ * ═╗─
+ *  ║
+ */
+const borderMidTopCharProps = {
+  "╦": { xPadChar: "║", yPadChar: "═" },
+  "╤": { xPadChar: "═", yPadChar: "│" },
+  "╥": { xPadChar: "─", yPadChar: "║" },
+  "╗": { xPadChar: ["═", "─"], yPadChar: "║" },
+  "╔": { xPadChar: ["─", "═"], yPadChar: "║" },
+  "┌": { xPadChar: ["═", "─"], yPadChar: "│" },
+  "┐": { xPadChar: ["─", "═"], yPadChar: "│" },
+  "┬": { xPadChar: "─", yPadChar: "│" },
+  "┳": { xPadChar: "━", yPadChar: "┃" },
+  "┯": { xPadChar: "━", yPadChar: "│" },
+  "┱": { xPadChar: ["━", "─"], yPadChar: "┃" },
+  "┲": { xPadChar: ["─", "━"], yPadChar: "┃" },
+  "┭": { xPadChar: ["━", "─"], yPadChar: "│" },
+  "┮": { xPadChar: ["─", "━"], yPadChar: "┃" },
+  "┰": { xPadChar: "─", yPadChar: "┃" },
+};
+const createBorderMidTopNode = (
+  westBorderTop,
+  downBorder,
+  eastBorderTop,
+) => {
+  const color = pickBorderColor(westBorderTop, downBorder, eastBorderTop);
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = borderMidTopCharProps[char];
+    return {
+      type: "border_mid_top",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "center",
+      yAlign: "start",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const westIsDouble = westBorderTop.style === "double";
+    const downIsDouble = downBorder.style === "double";
+    const eastIsDouble = eastBorderTop.style === "double";
+    const allAreDouble = westIsDouble && downIsDouble && eastIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╦");
+    }
+    const onlyXIsDouble = westIsDouble && !downIsDouble && eastIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╤");
+    }
+    const onlyYIsDouble = !westIsDouble && downIsDouble && !eastIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╥");
+    }
+    const onlyWestAndDownAreDouble =
+      westIsDouble && downIsDouble && !eastIsDouble;
+    if (onlyWestAndDownAreDouble) {
+      return innerCreateBorder("╗");
+    }
+    const onlyEastAndDownAreDouble =
+      !westIsDouble && downIsDouble && eastIsDouble;
+    if (onlyEastAndDownAreDouble) {
+      return innerCreateBorder("╔");
+    }
+    const onlyWestIsDouble = westIsDouble && !downIsDouble && !eastIsDouble;
+    if (onlyWestIsDouble) {
+      return innerCreateBorder("┌");
+    }
+    const onlyEastIsDouble = !westIsDouble && !downIsDouble && eastIsDouble;
+    if (onlyEastIsDouble) {
+      return innerCreateBorder("┐");
+    }
+  }
+
+  const westIsBold = westBorderTop.bold;
+  const downIsBold = downBorder.bold;
+  const rightIsBold = eastBorderTop.bold;
+  const noneAreBold = !westIsBold && !downIsBold && !rightIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┬");
+  }
+  const allAreBold = westIsBold && downIsBold && rightIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┳");
+  }
+  const westAndEastAreBold = westIsBold && !downIsBold && rightIsBold;
+  if (westAndEastAreBold) {
+    return innerCreateBorder("┯");
+  }
+  const westAndDownAreBold = westIsBold && downIsBold && !rightIsBold;
+  if (westAndDownAreBold) {
+    return innerCreateBorder("┱");
+  }
+  const eastAndDownAreBold = !westIsBold && downIsBold && rightIsBold;
+  if (eastAndDownAreBold) {
+    return innerCreateBorder("┲");
+  }
+  const onlyWestIsBold = westIsBold && !downIsBold && !rightIsBold;
+  if (onlyWestIsBold) {
+    return innerCreateBorder("┭");
+  }
+  const onlyEastIsBold = !westIsBold && !downIsBold && rightIsBold;
+  if (onlyEastIsBold) {
+    return innerCreateBorder("┮");
+  }
+  // only down is bold
+  return innerCreateBorder("┰");
+};
+const borderMidBottomCharProps = {
+  "╩": { xPadChar: "║", yPadChar: "═" },
+  "╧": { xPadChar: "═", yPadChar: "│" },
+  "╨": { xPadChar: "─", yPadChar: "║" },
+  "╝": { xPadChar: ["═", "─"], yPadChar: "║" },
+  "╚": { xPadChar: ["─", "═"], yPadChar: "║" },
+  "└": { xPadChar: ["═", "─"], yPadChar: "│" },
+  "┘": { xPadChar: ["─", "═"], yPadChar: "│" },
+  "┴": { xPadChar: "─", yPadChar: "│" },
+  "┻": { xPadChar: "━", yPadChar: "┃" },
+  "┷": { xPadChar: "━", yPadChar: "│" },
+  "┹": { xPadChar: ["━", "─"], yPadChar: "┃" },
+  "┺": { xPadChar: ["─", "━"], yPadChar: "┃" },
+  "┵": { xPadChar: ["━", "─"], yPadChar: "│" },
+  "┶": { xPadChar: ["─", "━"], yPadChar: "┃" },
+  "┸": { xPadChar: "─", yPadChar: "┃" },
+};
+const createBorderMidBottomNode = (
+  westBorderBottom,
+  upBorder,
+  eastBorderBottom,
+) => {
+  const color = pickBorderColor(westBorderBottom, eastBorderBottom, upBorder);
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = borderMidBottomCharProps[char];
+    return {
+      type: "border_mid_bottom",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "center",
+      yAlign: "end",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const westIsDouble = westBorderBottom.style === "double";
+    const upIsDouble = upBorder.style === "double";
+    const eastIsDouble = eastBorderBottom.style === "double";
+    const allAreDouble = westIsDouble && upIsDouble && eastIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╩");
+    }
+    const onlyXIsDouble = westIsDouble && !upIsDouble && eastIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╧");
+    }
+    const onlyYIsDouble = !westIsDouble && upIsDouble && !eastIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╨");
+    }
+    const onlyWestAndUpAreDouble = westIsDouble && upIsDouble && !eastIsDouble;
+    if (onlyWestAndUpAreDouble) {
+      return innerCreateBorder("╝");
+    }
+    const onlyEastAndUpAreDouble = !westIsDouble && upIsDouble && eastIsDouble;
+    if (onlyEastAndUpAreDouble) {
+      return innerCreateBorder("╚");
+    }
+    const onlyWestIsDouble = westIsDouble && !upIsDouble && !eastIsDouble;
+    if (onlyWestIsDouble) {
+      return innerCreateBorder("└");
+    }
+    const onlyEastIsDouble = !westIsDouble && !upIsDouble && eastIsDouble;
+    if (onlyEastIsDouble) {
+      return innerCreateBorder("┘");
+    }
+  }
+
+  const leftIsBold = westBorderBottom.bold;
+  const upIsBold = upBorder.bold;
+  const rightIsBold = eastBorderBottom.bold;
+  const noneAreBold = !leftIsBold && !upIsBold && !rightIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┴");
+  }
+  const allAreBold = leftIsBold && upIsBold && rightIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┻");
+  }
+  const leftAndRightAreBold = leftIsBold && !upIsBold && rightIsBold;
+  if (leftAndRightAreBold) {
+    return innerCreateBorder("┷");
+  }
+  const leftAndUpAreBold = leftIsBold && upIsBold && !rightIsBold;
+  if (leftAndUpAreBold) {
+    return innerCreateBorder("┹");
+  }
+  const rightAndUpAreBold = !leftIsBold && upIsBold && rightIsBold;
+  if (rightAndUpAreBold) {
+    return innerCreateBorder("┺");
+  }
+  const onlyLeftIsBold = leftIsBold && !upIsBold && !rightIsBold;
+  if (onlyLeftIsBold) {
+    return innerCreateBorder("┵");
+  }
+  const onlyRightIsBold = !leftIsBold && !upIsBold && rightIsBold;
+  if (onlyRightIsBold) {
+    return innerCreateBorder("┶");
+  }
+  // only up is bold
+  return innerCreateBorder("┸");
+};
+const borderMifLeftCharProps = {
+  "╠": { xPadChar: "═", yPadChar: "║" },
+  "╟": { xPadChar: "─", yPadChar: "║" },
+  "╞": { xPadChar: "═", yPadChar: "│" },
+  "╚": { xPadChar: "═", yPadChar: ["║", "│"] },
+  "╔": { xPadChar: "═", yPadChar: ["│", "║"] },
+  "┌": { xPadChar: "─", yPadChar: ["║", "│"] },
+  "└": { xPadChar: "─", yPadChar: ["│", "║"] },
+  "├": { xPadChar: "─", yPadChar: "│" },
+  "┣": { xPadChar: "━", yPadChar: "┃" },
+  "┠": { xPadChar: "─", yPadChar: "┃" },
+  "┢": { xPadChar: "━", yPadChar: ["│", "┃"] },
+  "┡": { xPadChar: "━", yPadChar: ["┃", "│"] },
+  "┞": { xPadChar: "─", yPadChar: ["┃", "│"] },
+  "┝": { xPadChar: "━", yPadChar: "│" },
+  "┟": { xPadChar: "─", yPadChar: ["│", "┃"] },
+};
+const createBorderMidLeftNode = (
+  northBorder,
+  middleBorder,
+  southBorder,
+) => {
+  const color = pickBorderColor(middleBorder, northBorder, southBorder);
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = borderMifLeftCharProps[char];
+    return {
+      type: "border_mid_left",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "start",
+      yAlign: "center",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const upIsDouble = northBorder.style === "double";
+    const middleIsDouble = middleBorder.style === "double";
+    const downIsDouble = southBorder.style === "double";
+    const allAreDouble = upIsDouble && middleIsDouble && downIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╠");
+    }
+    const onlyYIsDouble = upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╟");
+    }
+    const onlyXIsDouble = !upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╞");
+    }
+    const onlyUpAndLeftAreDouble =
+      upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyUpAndLeftAreDouble) {
+      return innerCreateBorder("╚");
+    }
+    const onlyDownAndLeftAreDouble =
+      !upIsDouble && middleIsDouble && downIsDouble;
+    if (onlyDownAndLeftAreDouble) {
+      return innerCreateBorder("╔");
+    }
+    const onlyUpIsDouble = upIsDouble && !middleIsDouble && !downIsDouble;
+    if (onlyUpIsDouble) {
+      return innerCreateBorder("┌");
+    }
+    const onlyDownIsDouble = !upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyDownIsDouble) {
+      return innerCreateBorder("└");
+    }
+  }
+
+  const upIsBold = northBorder.bold;
+  const middleIsBold = middleBorder.bold;
+  const downIsBold = southBorder.bold;
+  const nothingIsBold = !upIsBold && !middleIsBold && !downIsBold;
+  if (nothingIsBold) {
+    return innerCreateBorder("├");
+  }
+  const allAreBold = upIsBold && middleIsBold && downIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┣");
+  }
+  const upAndDownAreBold = upIsBold && !middleIsBold && downIsBold;
+  if (upAndDownAreBold) {
+    return innerCreateBorder("┠");
+  }
+  const middleAndDownAreBold = !upIsBold && middleIsBold && downIsBold;
+  if (middleAndDownAreBold) {
+    return innerCreateBorder("┢");
+  }
+  const middleAndUpAreBold = upIsBold && middleIsBold && !downIsBold;
+  if (middleAndUpAreBold) {
+    return innerCreateBorder("┡");
+  }
+  const onlyUpIsBold = upIsBold && !middleIsBold && !downIsBold;
+  if (onlyUpIsBold) {
+    return innerCreateBorder("┞");
+  }
+  const onlyMiddleIsBold = !upIsBold && middleIsBold && !downIsBold;
+  if (onlyMiddleIsBold) {
+    return innerCreateBorder("┝");
+  }
+  // only down is bold
+  return innerCreateBorder("┟");
+};
+const borderMidRightCharProps = {
+  "╣": { xPadChar: "║", yPadChar: "═" },
+  "╢": { xPadChar: "─", yPadChar: "║" },
+  "╡": { xPadChar: "═", yPadChar: "│" },
+  "╝": { xPadChar: "═", yPadChar: ["║", "│"] },
+  "╗": { xPadChar: "═", yPadChar: ["│", "║"] },
+  "┘": { xPadChar: "─", yPadChar: ["║", "│"] },
+  "└": { xPadChar: "─", yPadChar: ["│", "║"] },
+  "┤": { xPadChar: "─", yPadChar: "│" },
+  "┫": { xPadChar: "━", yPadChar: "┃" },
+  "┨": { xPadChar: "─", yPadChar: "┃" },
+  "┪": { xPadChar: "━", yPadChar: ["│", "┃"] },
+  "┩": { xPadChar: "━", yPadChar: ["│", "┃"] },
+  "┦": { xPadChar: "─", yPadChar: ["┃", "│"] },
+  "┥": { xPadChar: "━", yPadChar: "│" },
+  "┧": { xPadChar: "─", yPadChar: ["│", "┃"] },
+};
+const createBorderMidRightNode = (
+  northBorder,
+  middleBorder,
+  southBorder,
+) => {
+  const color = pickBorderColor(middleBorder, northBorder, southBorder);
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = borderMidRightCharProps[char];
+    return {
+      type: "border_mid_right",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "end",
+      yAlign: "center",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const upIsDouble = northBorder.style === "double";
+    const middleIsDouble = middleBorder.style === "double";
+    const downIsDouble = southBorder.style === "double";
+    const allAreDouble = upIsDouble && middleIsDouble && downIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╣");
+    }
+    const onlyYIsDouble = upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╢");
+    }
+    const onlyXIsDouble = !upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╡");
+    }
+    const onlyUpAndRightAreDouble =
+      upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyUpAndRightAreDouble) {
+      return innerCreateBorder("╝");
+    }
+    const onlyDownAndRightAreDouble =
+      !upIsDouble && middleIsDouble && downIsDouble;
+    if (onlyDownAndRightAreDouble) {
+      return innerCreateBorder("╗");
+    }
+    const onlyUpIsDouble = upIsDouble && !middleIsDouble && !downIsDouble;
+    if (onlyUpIsDouble) {
+      return innerCreateBorder("┘");
+    }
+    const onlyDownIsDouble = !upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyDownIsDouble) {
+      return innerCreateBorder("└");
+    }
+  }
+
+  const upIsBold = northBorder.bold;
+  const middleIsBold = middleBorder.bold;
+  const downIsBold = southBorder.bold;
+  const noneAreBold = !upIsBold && !middleIsBold && !downIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┤");
+  }
+  const allAreBold = upIsBold && middleIsBold && downIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┫");
+  }
+  const upAndDownAreBold = upIsBold && !middleIsBold && downIsBold;
+  if (upAndDownAreBold) {
+    return innerCreateBorder("┨");
+  }
+  const middleAndDownAreBold = !upIsBold && middleIsBold && downIsBold;
+  if (middleAndDownAreBold) {
+    return innerCreateBorder("┪");
+  }
+  const middleAndUpAreBold = upIsBold && middleIsBold && !downIsBold;
+  if (middleAndUpAreBold) {
+    return innerCreateBorder("┩");
+  }
+  const onlyUpIsBold = upIsBold && !middleIsBold && !downIsBold;
+  if (onlyUpIsBold) {
+    return innerCreateBorder("┦");
+  }
+  const onlyMiddleIsBold = !upIsBold && middleIsBold && !downIsBold;
+  if (onlyMiddleIsBold) {
+    return innerCreateBorder("┥");
+  }
+  // only down is bold
+  return innerCreateBorder("┧");
+};
+
+// intersection between 4 borders
+const borderMidCharProps = {
+  "╬": { xPadChar: "═", yPadChar: "║" },
+  "╫": { xPadChar: "─", yPadChar: "║" },
+  "╪": { xPadChar: "═", yPadChar: "│" },
+  "╝": { xPadChar: ["═", "─"], yPadChar: ["║", "│"] },
+  "╗": { xPadChar: ["═", "─"], yPadChar: ["│", "║"] },
+  "╔": { xPadChar: ["─", "═"], yPadChar: ["│", "║"] },
+  "╚": { xPadChar: ["─", "═"], yPadChar: ["║", "│"] },
+  "╣": { xPadChar: ["═", "─"], yPadChar: "║" },
+  "╠": { xPadChar: ["─", "═"], yPadChar: "║" },
+  "╦": { xPadChar: "═", yPadChar: ["│", "║"] },
+  "╩": { xPadChar: "═", yPadChar: ["║", "│"] },
+  "├": { xPadChar: ["═", "─"], yPadChar: "│" },
+  "┤": { xPadChar: ["─", "═"], yPadChar: "│" },
+  "┬": { xPadChar: "─", yPadChar: ["║", "│"] },
+  "┴": { xPadChar: "─", yPadChar: ["│", "║"] },
+  "┼": { xPadChar: "─", yPadChar: "│" },
+  "╋": { xPadChar: "━", yPadChar: "┃" },
+  "┿": { xPadChar: "━", yPadChar: "│" },
+  "╂": { xPadChar: "─", yPadChar: "┃" },
+  "╅": { xPadChar: ["━", "─"], yPadChar: ["│", "┃"] },
+  "╃": { xPadChar: ["━", "─"], yPadChar: ["┃", "│"] },
+  "╄": { xPadChar: ["─", "━"], yPadChar: ["┃", "│"] },
+  "╆": { xPadChar: ["─", "━"], yPadChar: ["│", "┃"] },
+  "╉": { xPadChar: ["━", "─"], yPadChar: "┃" },
+  "╇": { xPadChar: "━", yPadChar: ["┃", "│"] },
+  "╊": { xPadChar: ["─", "━"], yPadChar: "┃" },
+  "╈": { xPadChar: "━", yPadChar: ["│", "┃"] },
+  "┽": { xPadChar: ["━", "─"], yPadChar: "│" },
+  "╀": { xPadChar: "─", yPadChar: ["┃", "│"] },
+  "┾": { xPadChar: ["─", "━"], yPadChar: "│" },
+  "╁": { xPadChar: "─", yPadChar: ["│", "┃"] },
+};
+const createBorderMidNode = (
+  leftBorder,
+  upBorder,
+  rightBorder,
+  downBorder,
+) => {
+  const color = pickBorderColor(upBorder, leftBorder, rightBorder, downBorder);
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = borderMidCharProps[char];
+    return {
+      type: "border_mid",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "center",
+      yAlign: "center",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const leftIsDouble = leftBorder.style === "double";
+    const upIsDouble = upBorder.style === "double";
+    const rightIsDouble = rightBorder.style === "double";
+    const downIsDouble = downBorder.style === "double";
+    const allAreDouble =
+      leftIsDouble && upIsDouble && rightIsDouble && downIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╬");
+    }
+    const onlyXIsDouble =
+      leftIsDouble && !upIsDouble && rightIsDouble && !downIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╪");
+    }
+    const onlyYIsDouble =
+      !leftIsDouble && upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╫");
+    }
+    const onlyLeftAndUpAndDownAreDouble =
+      leftIsDouble && upIsDouble && downIsDouble && !rightIsDouble;
+    if (onlyLeftAndUpAndDownAreDouble) {
+      return innerCreateBorder("╣");
+    }
+    const onlyLeftUpRightAreDouble =
+      leftIsDouble && upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyLeftUpRightAreDouble) {
+      return innerCreateBorder("╩");
+    }
+    const onlyUpAndRightAndDownAreDouble =
+      !leftIsDouble && upIsDouble && rightIsDouble && downIsDouble;
+    if (onlyUpAndRightAndDownAreDouble) {
+      return innerCreateBorder("╠");
+    }
+    const onlyRightDownLeftAreDouble =
+      leftIsDouble && !upIsDouble && rightIsDouble && downIsDouble;
+    if (onlyRightDownLeftAreDouble) {
+      return innerCreateBorder("╦");
+    }
+    const onlyLeftAndUpAreDouble =
+      leftIsDouble && upIsDouble && !rightIsDouble && !downIsDouble;
+    if (onlyLeftAndUpAreDouble) {
+      return innerCreateBorder("╝");
+    }
+    const onlyLeftAndDownAreDouble =
+      leftIsDouble && !upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyLeftAndDownAreDouble) {
+      return innerCreateBorder("╗");
+    }
+    const onlyRightAndDownAreDouble =
+      !leftIsDouble && upIsDouble && rightIsDouble && downIsDouble;
+    if (onlyRightAndDownAreDouble) {
+      return innerCreateBorder("╔");
+    }
+    const onlyRightAndUpAreDouble =
+      !leftIsDouble && upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyRightAndUpAreDouble) {
+      return innerCreateBorder("╚");
+    }
+    const onlyLeftIsDouble =
+      leftIsDouble && !upIsDouble && !rightIsDouble && !downIsDouble;
+    if (onlyLeftIsDouble) {
+      return innerCreateBorder("├");
+    }
+    const onlyRightIsDouble =
+      !leftIsDouble && !upIsDouble && rightIsDouble && !downIsDouble;
+    if (onlyRightIsDouble) {
+      return innerCreateBorder("┤");
+    }
+    const onlyUpIsDouble =
+      !leftIsDouble && upIsDouble && !rightIsDouble && !downIsDouble;
+    if (onlyUpIsDouble) {
+      return innerCreateBorder("┬");
+    }
+    const onlyDownIsDouble =
+      !leftIsDouble && !upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyDownIsDouble) {
+      return innerCreateBorder("┴");
+    }
+  }
+
+  const leftIsBold = leftBorder.bold;
+  const rightIsBold = rightBorder.bold;
+  const downIsBold = downBorder.bold;
+  const upIsBold = upBorder.bold;
+  const noneAreBold = !leftIsBold && !rightIsBold && !downIsBold && !upIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┼");
+  }
+  const allAreBold = leftIsBold && rightIsBold && downIsBold && upIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("╋");
+  }
+  const leftAndRightAreBold =
+    leftIsBold && rightIsBold && !downIsBold && !upIsBold;
+  if (leftAndRightAreBold) {
+    return innerCreateBorder("┿");
+  }
+  const upAndDownAreBold =
+    !leftIsBold && !rightIsBold && downIsBold && upIsBold;
+  if (upAndDownAreBold) {
+    return innerCreateBorder("╂");
+  }
+  const leftAndDownAreBold =
+    leftIsBold && !rightIsBold && downIsBold && !upIsBold;
+  if (leftAndDownAreBold) {
+    return innerCreateBorder("╅");
+  }
+  const leftAndUpAreBold =
+    leftIsBold && !rightIsBold && !downIsBold && upIsBold;
+  if (leftAndUpAreBold) {
+    return innerCreateBorder("╃");
+  }
+  const rightAndUpAreBold =
+    !leftIsBold && rightIsBold && !downIsBold && upIsBold;
+  if (rightAndUpAreBold) {
+    return innerCreateBorder("╄");
+  }
+  const rightAndDownAreBold =
+    !leftIsBold && rightIsBold && downIsBold && !upIsBold;
+  if (rightAndDownAreBold) {
+    return innerCreateBorder("╆");
+  }
+  const leftAndRightAndDownAreBold =
+    leftIsBold && rightIsBold && downIsBold && !upIsBold;
+  if (leftAndRightAndDownAreBold) {
+    return innerCreateBorder("╉");
+  }
+  const leftAndRightAndUpAreBold =
+    leftIsBold && rightIsBold && !downIsBold && upIsBold;
+  if (leftAndRightAndUpAreBold) {
+    return innerCreateBorder("╇");
+  }
+  const upAndRightAndDownAreBold =
+    !leftIsBold && rightIsBold && downIsBold && upIsBold;
+  if (upAndRightAndDownAreBold) {
+    return innerCreateBorder("╊");
+  }
+  const rightAndDownAndLeftAreBold =
+    leftIsBold && rightIsBold && !downIsBold && upIsBold;
+  if (rightAndDownAndLeftAreBold) {
+    return innerCreateBorder("╈");
+  }
+  const onlyLeftIsBold = leftIsBold && !rightIsBold && !downIsBold && !upIsBold;
+  if (onlyLeftIsBold) {
+    return innerCreateBorder("┽");
+  }
+  const onlyUpIsBold = !leftIsBold && !rightIsBold && !downIsBold && upIsBold;
+  if (onlyUpIsBold) {
+    return innerCreateBorder("╀");
+  }
+  const onlyRightIsBold =
+    !leftIsBold && rightIsBold && !downIsBold && !upIsBold;
+  if (onlyRightIsBold) {
+    return innerCreateBorder("┾");
+  }
+  // only down is bold
+  return innerCreateBorder("╁");
+};
+
+const createSkippedColumnTopNode = () => {
+  return {
+    type: "skipped_column_top",
+    rects: [
+      {
+        width: "fill",
+        color: COLORS.GREY,
+        render: ({ columnWidth }) => "┈".repeat(columnWidth),
+      },
+    ],
+    yAlign: "end",
+  };
+};
+const createSkippedColumnBottomNode = () => {
+  return {
+    type: "skipped_column_bottom",
+    rects: [
+      {
+        width: "fill",
+        color: COLORS.GREY,
+        render: ({ columnWidth }) => "┈".repeat(columnWidth),
+      },
+    ],
+    yAlign: "start",
+  };
+};
+const createSkippedColumnTopRightNode = () => {
+  return {
+    type: "skipped_column_top_right",
+    rects: [{ width: 1, color: COLORS.GREY, render: "→" }],
+    xAlign: "end",
+    yAlign: "start",
+    xPadChar: "┈",
+  };
+};
+const createSkippedColumnBottomRightNode = () => {
+  return {
+    type: "skipped_column_bottom_right",
+    rects: [{ width: 1, color: COLORS.GREY, render: "→" }],
+    xAlign: "end",
+    yAlign: "end",
+    xPadChar: "┈",
+  };
+};
+
+const createSkippedRowLeftNode = () => {
+  return {
+    type: "skipped_row_left",
+    rects: [{ width: 1, color: COLORS.GREY, render: "┊" }],
+    xAlign: "end",
+    yAlign: "center",
+    yPadChar: "┊",
+  };
+};
+const createSkippedRowRightNode = () => {
+  return {
+    type: "skipped_row_right",
+    rects: [{ width: 1, color: COLORS.GREY, render: "┊" }],
+    xAlign: "end",
+    yAlign: "center",
+    yPadChar: "┊",
+  };
+};
+const createSkippedRowBottomLeftNode = () => {
+  return {
+    type: "skipped_row_bottom_left",
+    rects: [{ width: 1, color: COLORS.GREY, render: "↓" }],
+    xAlign: "start",
+    yAlign: "center",
+    yPadChar: "┊",
+  };
+};
+const createSkippedRowBottomRightNode = () => {
+  return {
+    type: "skipped_row_bottom_right",
+    rects: [{ width: 1, color: COLORS.GREY, render: "↓" }],
+    xAlign: "end",
+    yAlign: "end",
+    yPadChar: "┊",
+  };
+};
+
+const leftSlot = {
+  type: "left",
+  adapt: (cell) => {
+    const { isSkippedRow, borderLeft } = cell;
+    if (isSkippedRow) {
+      return createSkippedRowLeftNode();
+    }
+    if (borderLeft) {
+      return createBorderLeftNode(borderLeft);
+    }
+    return createBlankNode();
+  },
+};
+const rightSlot = {
+  type: "right",
+  adapt: (cell) => {
+    const { isSkippedColumn, isSkippedRow, borderRight } = cell;
+    if (isSkippedRow) {
+      return createSkippedRowRightNode();
+    }
+    if (isSkippedColumn) {
+      return createBlankNode();
+    }
+    if (borderRight) {
+      return createBorderRightNode(borderRight);
+    }
+    return createBlankNode();
+  },
+};
+const topSlot = {
+  type: "top",
+  adapt: (cell) => {
+    const { isSkippedColumn, borderTop } = cell;
+    if (isSkippedColumn) {
+      return createSkippedColumnTopNode();
+    }
+    if (borderTop) {
+      return createBorderTopNode(borderTop);
+    }
+    return createBlankNode();
+  },
+};
+const bottomSlot = {
+  type: "bottom",
+  adapt: (cell) => {
+    const { isSkippedRow, isSkippedColumn, borderBottom } = cell;
+    if (isSkippedColumn) {
+      return createSkippedColumnBottomNode();
+    }
+    if (isSkippedRow) {
+      return createBlankNode();
+    }
+    if (borderBottom) {
+      return createBorderBottomNode(borderBottom);
+    }
+    return createBlankNode();
+  },
+};
+const topLeftSlot = {
+  type: "top_left",
+  adapt: (cell) => {
+    const { borderTop, borderLeft, westCell, northCell } = cell;
+    if (!borderTop && !borderLeft) {
+      return createBlankNode();
+    }
+
+    let northConnected =
+      northCell && !northCell.borderBottom && northCell.borderLeft;
+    let westConnected = westCell && westCell.borderTop && !westCell.borderRight;
+    let northWestConnected = northConnected && westConnected;
+    if (borderTop && borderLeft) {
+      if (northWestConnected) {
+        return createBorderMidNode(
+          westCell.borderTop,
+          northCell.borderLeft,
+          borderTop,
+          borderLeft,
+        );
+      }
+      if (westConnected) {
+        return createBorderMidTopNode(
+          borderTop,
+          borderLeft,
+          westCell.borderTop,
+        );
+      }
+      if (northConnected) {
+        return createBorderMidLeftNode(
+          northCell.borderLeft,
+          borderTop,
+          borderLeft,
+        );
+      }
+      return createBorderTopLeftNode(borderTop, borderLeft);
+    }
+    if (borderLeft) {
+      northConnected =
+        northCell && (northCell.borderBottom || northCell.borderLeft);
+      northWestConnected = northConnected && westConnected;
+      if (northWestConnected) {
+        return createBorderMidRightNode(
+          northCell.borderLeft || northCell.westCell.borderRight,
+          westCell.borderTop,
+          borderLeft,
+        );
+      }
+      if (westConnected) {
+        return createBorderTopRightNode(westCell.borderTop, borderLeft);
+      }
+      if (northConnected) {
+        return createBorderLeftNode(borderLeft);
+      }
+      return createBorderHalfDownNode(borderLeft);
+    }
+    // borderTop
+    westConnected = westCell && (westCell.borderTop || westCell.borderRight);
+    northWestConnected = northConnected && westConnected;
+    if (northWestConnected) {
+      return createBorderMidBottomNode(
+        borderTop,
+        northCell.borderLeft,
+        westCell.borderTop || northCell.westCell.borderBottom,
+      );
+    }
+    if (northConnected) {
+      return createBorderBottomLeftNode(borderTop, northCell.borderLeft);
+    }
+    if (westConnected) {
+      return createBorderTopNode(borderTop);
+    }
+    return createBorderHalfRightNode(borderTop);
+  },
+};
+const topRightSlot = {
+  type: "top_right",
+  adapt: (cell) => {
+    const { isSkippedColumn, borderTop, borderRight, eastCell, northCell } =
+      cell;
+    if (isSkippedColumn) {
+      return createSkippedColumnTopRightNode();
+    }
+    if (!borderTop && !borderRight) {
+      return createBlankNode();
+    }
+
+    let northConnected =
+      northCell && !northCell.borderBottom && northCell.borderRight;
+    let eastConnected = eastCell && eastCell.borderTop && !eastCell.borderLeft;
+    let northEastConnected = northConnected && eastConnected;
+    if (borderTop && borderRight) {
+      if (northEastConnected) {
+        return createBorderMidNode(
+          borderTop,
+          northCell.borderRight,
+          eastCell.borderTop,
+          borderRight,
+        );
+      }
+      if (northConnected) {
+        return createBorderMidRightNode(
+          northCell.borderRight,
+          borderTop,
+          borderRight,
+        );
+      }
+      if (eastConnected) {
+        return createBorderMidTopNode(
+          borderTop,
+          borderRight,
+          eastCell.borderTop,
+        );
+      }
+      return createBorderTopRightNode(borderTop, borderRight);
+    }
+    if (borderRight) {
+      northConnected =
+        northCell && (northCell.borderBottom || northCell.borderRight);
+      northEastConnected = northConnected && eastConnected;
+      if (northEastConnected) {
+        return createBorderMidLeftNode(
+          northCell.borderRight || northCell.eastCell.borderLeft,
+          eastCell.borderTop,
+          borderRight,
+        );
+      }
+      if (northConnected) {
+        return createBorderRightNode(
+          northCell.borderRight || northCell.borderBottom,
+        );
+      }
+      if (eastConnected) {
+        return createBorderTopLeftNode(eastCell.borderTop, borderRight);
+      }
+      return createBorderHalfDownNode(borderRight);
+    }
+    // borderTop
+    eastConnected = eastCell && (eastCell.borderTop || eastCell.borderLeft);
+    northEastConnected = northConnected && eastConnected;
+    if (northEastConnected) {
+      return createBorderMidBottomNode(
+        borderTop,
+        northCell.borderRight,
+        eastCell.borderTop || eastCell.northCell.borderBottom,
+      );
+    }
+    if (northConnected) {
+      return createBorderBottomRightNode(borderTop, northCell.borderRight);
+    }
+    if (eastConnected) {
+      return createBorderTopNode(borderTop);
+    }
+    return createBorderHalfLeftNode(borderTop);
+  },
+};
+const bottomRightSlot = {
+  type: "bottom_right",
+  adapt: (cell) => {
+    const {
+      isSkippedRow,
+      isSkippedColumn,
+      borderBottom,
+      borderRight,
+      eastCell,
+      southCell,
+    } = cell;
+    if (isSkippedRow) {
+      return createSkippedRowBottomRightNode();
+    }
+    if (isSkippedColumn) {
+      return createSkippedColumnBottomRightNode();
+    }
+    if (!borderBottom && !borderRight) {
+      return createBlankNode();
+    }
+
+    let southConnected =
+      southCell && !southCell.borderTop && southCell.borderRight;
+    let eastConnected =
+      eastCell && eastCell.borderBottom && !eastCell.borderLeft;
+    let southEastConnected = southConnected && eastConnected;
+    if (borderBottom && borderRight) {
+      if (southEastConnected) {
+        return createBorderMidNode(
+          borderBottom,
+          borderRight,
+          eastCell.borderBottom,
+          southCell.borderRight,
+        );
+      }
+      if (eastConnected) {
+        return createBorderMidBottomNode(
+          borderBottom,
+          borderRight,
+          eastCell.borderBottom,
+        );
+      }
+      if (southConnected) {
+        return createBorderMidRightNode(
+          borderRight,
+          borderBottom,
+          southCell.borderRight,
+        );
+      }
+      return createBorderBottomRightNode(borderBottom, borderRight);
+    }
+    if (borderRight) {
+      southConnected =
+        southCell && (southCell.borderTop || southCell.borderRight);
+      southEastConnected = southConnected && eastConnected;
+      if (southEastConnected) {
+        return createBorderMidTopNode(
+          borderRight,
+          southCell.borderTop || southCell.eastCell.borderBottom,
+          eastCell.borderBottom,
+        );
+      }
+      if (eastConnected) {
+        return createBorderBottomLeftNode(eastCell.borderBottom, borderRight);
+      }
+      if (southConnected) {
+        return createBorderRightNode(borderRight);
+      }
+      return createBorderHalfUpNode(borderRight);
+    }
+    // border bottom
+    eastConnected = eastCell && (eastCell.borderBottom || eastCell.borderLeft);
+    southEastConnected = southConnected && eastConnected;
+    if (southEastConnected) {
+      return createBorderMidTopNode(
+        borderBottom,
+        southCell.borderRight,
+        eastCell.borderBottom || eastCell.southCell.borderTop,
+      );
+    }
+    if (southConnected) {
+      return createBorderTopRightNode(borderBottom, southCell.borderRight);
+    }
+    if (eastConnected) {
+      return createBorderBottomNode(borderBottom);
+    }
+    return createBorderHalfLeftNode(borderBottom);
+  },
+};
+const bottomLeftSlot = {
+  type: "bottom_left",
+  adapt: (cell) => {
+    const { isSkippedRow, borderBottom, borderLeft, westCell, southCell } =
+      cell;
+    if (isSkippedRow) {
+      return createSkippedRowBottomLeftNode();
+    }
+    if (!borderBottom && !borderLeft) {
+      return createBlankNode();
+    }
+
+    let southConnected =
+      southCell && !southCell.borderTop && southCell.borderLeft;
+    let westConnected =
+      westCell && westCell.borderBottom && !westCell.borderRight;
+    let southWestConnected = southConnected && westConnected;
+    if (borderBottom && borderLeft) {
+      if (southWestConnected) {
+        return createBorderMidNode(
+          westCell.borderBottom,
+          borderLeft,
+          borderBottom,
+          southCell.borderLeft,
+        );
+      }
+      if (southConnected) {
+        return createBorderMidLeftNode(
+          borderLeft,
+          borderBottom,
+          southCell.borderLeft,
+        );
+      }
+      if (westConnected) {
+        return createBorderMidBottomNode(
+          borderBottom,
+          borderLeft,
+          westCell.borderBottom,
+        );
+      }
+      return createBorderBottomLeftNode(borderBottom, borderLeft);
+    }
+    if (borderLeft) {
+      southConnected =
+        southCell && (southCell.borderTop || southCell.borderLeft);
+      southWestConnected = southConnected && westConnected;
+      if (southWestConnected) {
+        return createBorderMidRightNode(
+          borderLeft,
+          southCell.borderTop || southCell.westCell.borderBottom,
+          southCell.borderLeft || southCell.westCell.borderRight,
+        );
+      }
+      if (westConnected) {
+        return createBorderBottomRightNode(westCell.borderBottom, borderLeft);
+      }
+      if (southConnected) {
+        return createBorderLeftNode(borderLeft);
+      }
+      return createBorderHalfUpNode(borderLeft);
+    }
+    // borderBottom
+    westConnected = westCell && (westCell.borderBottom || westCell.borderRight);
+    southWestConnected = southConnected && westConnected;
+    if (southWestConnected) {
+      return createBorderMidTopNode(
+        westCell.borderBottom || southCell.borderTop,
+        southCell.borderLeft,
+        borderBottom,
+      );
+    }
+    if (southConnected) {
+      return createBorderTopLeftNode(borderBottom, southCell.borderLeft);
+    }
+    if (westConnected) {
+      return createBorderBottomNode(borderBottom);
+    }
+    return createBorderHalfRightNode(borderBottom);
+  },
+};
+
+/**
+ *
+ * https://github.com/Automattic/cli-table
+ * https://github.com/tecfu/tty-table
+ * https://github.com/zaftzaft/terminal-table
+ *
+ * - number alignnment
+ *
+ * NICE TO HAVE/TO INVESTIGATE
+ *
+ * - colspan/rowspan
+ *
+ * - test border style conflict (double -> single heavy)
+ *
+ * - maxWidth on the table (defaults to stdout.columns, will put ... at the end of the cell when it exceeds the remaining width
+ *
+ * - un nouveau style pour les border: "ascii"
+ * sep: "|",
+ * topLeft: "+", topMid: "+", top: "-", topRight: "+",
+ * midLeft: "|", midMid: "+", mid: "-", midRight: "|",
+ * botLeft: "+", botMid: "+", bot: "-", botRight: "+"
+ */
+
+
+const renderTable = (
+  inputGrid,
+  {
+    ansi,
+    borderCollapse,
+    borderSeparatedOnColorConflict,
+    borderSpacing = 0,
+    cornersOnly = false,
+    cellMaxWidth = 50,
+    cellMaxHeight = 10,
+    maxColumns = 10,
+    maxRows = 20,
+    fixLastRow = false,
+  } = {},
+) => {
+  if (!Array.isArray(inputGrid)) {
+    throw new TypeError(`The first arg must be an array, got ${inputGrid}`);
+  }
+  if (inputGrid.length === 0) {
+    return "";
+  }
+  if (maxRows < 2) {
+    maxRows = 2;
+  }
+  if (maxColumns < 2) {
+    maxColumns = 2;
+  }
+
+  let grid = [];
+  // create cells and fill grid
+  {
+    let y = 0;
+    for (const inputRow of inputGrid) {
+      let x = 0;
+      const row = [];
+      for (const inputCell of inputRow) {
+        const cell = createCell(inputCell, {
+          x,
+          y,
+          cellMaxWidth,
+          cellMaxHeight,
+        });
+        row[x] = cell;
+        x++;
+      }
+      grid[y] = row;
+      y++;
+    }
+  }
+  // max rows
+  {
+    const rowCount = grid.length;
+    if (rowCount > maxRows) {
+      const firstRow = grid[0];
+      const gridRespectingMaxRows = [];
+      let skippedRowIndexArray = [];
+      let y = 0;
+      while (y < rowCount) {
+        const row = grid[y];
+        if (y === 0) {
+          gridRespectingMaxRows.push(row);
+        } else if (gridRespectingMaxRows.length < maxRows - 1) {
+          gridRespectingMaxRows.push(row);
+        } else if (fixLastRow && rowCount > 1 && y === rowCount - 1) ; else {
+          skippedRowIndexArray.push(y);
+        }
+        y++;
+      }
+      // push a row
+      const skippedRowCount = skippedRowIndexArray.length;
+      const rowShowingSkippedRows = [];
+      let x = 0;
+      while (x < firstRow.length) {
+        const cellModel = grid[skippedRowIndexArray[0]][x];
+        cellModel.isSkippedRow = true;
+        cellModel.color = COLORS.GREY;
+        cellModel.updateValue(`${skippedRowCount} rows`);
+        rowShowingSkippedRows.push(cellModel);
+        x++;
+      }
+      gridRespectingMaxRows.push(rowShowingSkippedRows);
+      if (fixLastRow && rowCount > 1) {
+        gridRespectingMaxRows.push(grid[rowCount - 1]);
+      }
+      grid = gridRespectingMaxRows;
+    }
+  }
+  // max columns
+  {
+    const firstRow = grid[0];
+    const columnCount = firstRow.length;
+    if (columnCount > maxColumns) {
+      let y = 0;
+      while (y < grid.length) {
+        const row = grid[y];
+        const cellModel = row[maxColumns - 1];
+        const skippedColumnCount = columnCount - maxColumns + 1;
+        const rowRespectingMaxColumns = row.slice(0, maxColumns - 1);
+        cellModel.isSkippedColumn = true;
+        cellModel.color = COLORS.GREY;
+        cellModel.spacingLeft = 1;
+        cellModel.spacingRight = 0;
+        cellModel.updateValue(`${skippedColumnCount} columns`);
+        rowRespectingMaxColumns.push(cellModel);
+        grid[y] = rowRespectingMaxColumns;
+        y++;
+      }
+    }
+  }
+
+  const columnWithLeftSlotSet = new Set();
+  const columnWithRightSlotSet = new Set();
+  const rowHasTopSlot = (y) => topSlotRowMap.has(y);
+  const rowHasBottomSlot = (y) => bottomSlotRowMap.has(y);
+  const columnHasLeftSlot = (x) => columnWithLeftSlotSet.has(x);
+  const columnHasRightSlot = (x) => columnWithRightSlotSet.has(x);
+  const leftSlotRowMap = new Map();
+  const rightSlotRowMap = new Map();
+  const topSlotRowMap = new Map();
+  const bottomSlotRowMap = new Map();
+  // detect borders
+  {
+    const onBorderLeft = (x, y) => {
+      columnWithLeftSlotSet.add(x);
+      const leftSlotRow = leftSlotRowMap.get(y);
+      if (!leftSlotRow) {
+        const leftSlotRow = [];
+        leftSlotRowMap.set(y, leftSlotRow);
+        leftSlotRow[x] = leftSlot;
+      } else {
+        leftSlotRow[x] = leftSlot;
+      }
+    };
+    const onBorderRight = (x, y) => {
+      columnWithRightSlotSet.add(x);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      if (!rightSlotRow) {
+        const rightSlotRow = [];
+        rightSlotRowMap.set(y, rightSlotRow);
+        rightSlotRow[x] = rightSlot;
+      } else {
+        rightSlotRow[x] = rightSlot;
+      }
+    };
+    const onBorderTop = (x, y) => {
+      const topSlotRow = topSlotRowMap.get(y);
+      if (!topSlotRow) {
+        const topSlotRow = [];
+        topSlotRowMap.set(y, topSlotRow);
+        topSlotRow[x] = topSlot;
+      } else {
+        topSlotRow[x] = topSlot;
+      }
+    };
+    const onBorderBottom = (x, y) => {
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      if (!bottomSlotRow) {
+        const bottomSlotRow = [];
+        bottomSlotRowMap.set(y, bottomSlotRow);
+        bottomSlotRow[x] = bottomSlot;
+      } else {
+        bottomSlotRow[x] = bottomSlot;
+      }
+    };
+
+    let y = 0;
+    while (y < grid.length) {
+      let x = 0;
+      const row = grid[y];
+      while (x < row.length) {
+        const cell = row[x];
+        const {
+          border,
+          borderLeft = border,
+          borderRight = border,
+          borderTop = border,
+          borderBottom = border,
+        } = cell;
+        const westCell = x === 0 ? null : row[x - 1];
+        const northCell = y === 0 ? null : grid[y - 1][x];
+        cell.westCell = westCell;
+        cell.northCell = northCell;
+        if (westCell) {
+          westCell.eastCell = cell;
+        }
+        if (northCell) {
+          northCell.southCell = cell;
+        }
+        if (borderLeft) {
+          onBorderLeft(x, y);
+        }
+        if (borderRight) {
+          onBorderRight(x, y);
+        }
+        if (borderTop) {
+          onBorderTop(x, y);
+        }
+        if (borderBottom) {
+          onBorderBottom(x, y);
+        }
+        x++;
+      }
+      y++;
+    }
+  }
+  // border collapse
+  if (borderCollapse) {
+    const getHowToCollapseBorders = (borderToCollapse, intoBorder) => {
+      if (
+        borderSeparatedOnColorConflict &&
+        borderToCollapse.color !== intoBorder.color
+      ) {
+        return null;
+      }
+      return () => {
+        const collapsedBorder = { ...intoBorder };
+        if (!intoBorder.style && borderToCollapse.style) {
+          collapsedBorder.style = borderToCollapse.style;
+        }
+        if (!intoBorder.color && borderToCollapse.color) {
+          collapsedBorder.color = borderToCollapse.color;
+        }
+        return collapsedBorder;
+      };
+    };
+
+    const collapsePreviousRowBottomBorders = (y) => {
+      const firstCellInThatRow = grid[y][0];
+      let cellInThatRow = firstCellInThatRow;
+      const collapseCallbackSet = new Set();
+      while (cellInThatRow) {
+        const borderTop = cellInThatRow.borderTop;
+        if (!borderTop) {
+          return false;
+        }
+        const northCell = cellInThatRow.northCell;
+        const northCellBorderBottom = northCell.borderBottom;
+        if (!northCellBorderBottom) {
+          cellInThatRow = cellInThatRow.eastCell;
+          continue;
+        }
+        const collapseBorders = getHowToCollapseBorders(
+          northCellBorderBottom,
+          borderTop,
+        );
+        if (!collapseBorders) {
+          return false;
+        }
+        const cell = cellInThatRow;
+        collapseCallbackSet.add(() => {
+          cell.borderTop = collapseBorders();
+          northCell.borderBottom = null;
+        });
+        cellInThatRow = cellInThatRow.eastCell;
+      }
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
+      }
+      bottomSlotRowMap.delete(y - 1);
+      return true;
+    };
+    const collapseTopBorders = (y) => {
+      const firstCellInThatRow = grid[y][0];
+      let cellInThatRow = firstCellInThatRow;
+      const collapseCallbackSet = new Set();
+      while (cellInThatRow) {
+        const borderTop = cellInThatRow.borderTop;
+        if (!borderTop) {
+          cellInThatRow = cellInThatRow.eastCell;
+          continue;
+        }
+        const northCell = cellInThatRow.northCell;
+        const northCellBorderBottom = northCell.borderBottom;
+        if (!northCellBorderBottom) {
+          return false;
+        }
+        const collapseBorders = getHowToCollapseBorders(
+          borderTop,
+          northCellBorderBottom,
+        );
+        if (!collapseBorders) {
+          return false;
+        }
+        const cell = cellInThatRow;
+        collapseCallbackSet.add(() => {
+          northCell.borderBottom = collapseBorders();
+          cell.borderTop = null;
+        });
+        cellInThatRow = cellInThatRow.eastCell;
+      }
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
+      }
+      topSlotRowMap.delete(y);
+      return true;
+    };
+    const collapsePreviousColumnRightBorders = (x) => {
+      const firstCellInThatColumn = grid[0][x];
+      let cellInThatColumn = firstCellInThatColumn;
+      const collapseCallbackSet = new Set();
+      while (cellInThatColumn) {
+        const border = cellInThatColumn.borderLeft;
+        if (!border) {
+          return false;
+        }
+        const westCell = cellInThatColumn.westCell;
+        const westCellBorderRight = westCell.borderRight;
+        if (!westCellBorderRight) {
+          cellInThatColumn = cellInThatColumn.southCell;
+          continue;
+        }
+        const collapseBorders = getHowToCollapseBorders(
+          westCellBorderRight,
+          border,
+        );
+        if (!collapseBorders) {
+          return false;
+        }
+        const cell = cellInThatColumn;
+        collapseCallbackSet.add(() => {
+          cell.borderLeft = collapseBorders();
+          westCell.borderRight = null;
+        });
+        cellInThatColumn = cellInThatColumn.southCell;
+      }
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
+      }
+      let y = 0;
+      while (y < grid.length) {
+        const rightSlotRow = rightSlotRowMap.get(y);
+        if (rightSlotRow) {
+          rightSlotRow[x - 1] = undefined;
+        }
+        y++;
+      }
+      columnWithRightSlotSet.delete(x - 1);
+      return true;
+    };
+    const collapseLeftBorders = (x) => {
+      const firstCellInThatColumn = grid[0][x];
+      let cellInThatColumn = firstCellInThatColumn;
+      const collapseCallbackSet = new Set();
+      while (cellInThatColumn) {
+        const border = cellInThatColumn.borderLeft;
+        if (!border) {
+          cellInThatColumn = cellInThatColumn.southCell;
+          continue;
+        }
+        const westCell = cellInThatColumn.westCell;
+        const otherBorder = westCell.borderRight;
+        if (!otherBorder) {
+          return false;
+        }
+        const collapseBorders = getHowToCollapseBorders(border, otherBorder);
+        if (!collapseBorders) {
+          return false;
+        }
+        const cell = cellInThatColumn;
+        collapseCallbackSet.add(() => {
+          westCell.borderRight = collapseBorders();
+          cell.borderLeft = null;
+        });
+        cellInThatColumn = cellInThatColumn.southCell;
+      }
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
+      }
+      let y = 0;
+      while (y < grid.length) {
+        const leftSlotRow = leftSlotRowMap.get(y);
+        if (leftSlotRow) {
+          leftSlotRow[x] = undefined;
+        }
+        y++;
+      }
+      columnWithLeftSlotSet.delete(x);
+      return true;
+    };
+
+    {
+      let y = 0;
+      while (y < grid.length) {
+        let x = 0;
+        const row = grid[y];
+        while (x < row.length) {
+          if (
+            x !== row.length - 1 &&
+            columnHasRightSlot(x) &&
+            columnHasLeftSlot(x + 1)
+          ) {
+            collapsePreviousColumnRightBorders(x + 1);
+          }
+          if (x > 0 && columnHasLeftSlot(x) && columnHasRightSlot(x - 1)) {
+            collapseLeftBorders(x);
+          }
+          x++;
+        }
+        if (
+          y !== grid.length - 1 &&
+          rowHasBottomSlot(y) &&
+          rowHasTopSlot(y + 1)
+        ) {
+          collapsePreviousRowBottomBorders(y + 1);
+        }
+        if (y > 0 && rowHasTopSlot(y) && rowHasBottomSlot(y - 1)) {
+          collapseTopBorders(y);
+        }
+        y++;
+      }
+    }
+  }
+  // fill holes in slot rows
+  {
+    let y = 0;
+    while (y < grid.length) {
+      let leftSlotRow = leftSlotRowMap.get(y);
+      let rightSlotRow = rightSlotRowMap.get(y);
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      let x = 0;
+      while (x < grid[y].length) {
+        if (leftSlotRow) {
+          if (!leftSlotRow[x] && columnHasLeftSlot(x)) {
+            leftSlotRow[x] = leftSlot;
+          }
+        } else if (columnHasLeftSlot(x)) {
+          leftSlotRow = [];
+          leftSlotRowMap.set(y, leftSlotRow);
+          leftSlotRow[x] = leftSlot;
+        }
+
+        if (rightSlotRow) {
+          if (!rightSlotRow[x] && columnHasRightSlot(x)) {
+            rightSlotRow[x] = rightSlot;
+          }
+        } else if (columnHasRightSlot(x)) {
+          rightSlotRow = [];
+          rightSlotRowMap.set(y, rightSlotRow);
+          rightSlotRow[x] = rightSlot;
+        }
+
+        if (topSlotRow && !topSlotRow[x]) {
+          topSlotRow[x] = topSlot;
+        }
+        if (bottomSlotRow && !bottomSlotRow[x]) {
+          bottomSlotRow[x] = bottomSlot;
+        }
+        x++;
+      }
+      y++;
+    }
+  }
+  // create corners
+  const topLeftSlotRowMap = new Map();
+  const topRightSlotRowMap = new Map();
+  const bottomLeftSlotRowMap = new Map();
+  const bottomRightSlotRowMap = new Map();
+  {
+    let y = 0;
+    while (y < grid.length) {
+      const leftSlotRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      if (!leftSlotRow && !rightSlotRow) {
+        y++;
+        continue;
+      }
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      if (!topSlotRow && !bottomSlotRow) {
+        y++;
+        continue;
+      }
+      const topLeftSlotRow = [];
+      const topRightSlotRow = [];
+      const bottomLeftSlotRow = [];
+      const bottomRightSlotRow = [];
+      let x = 0;
+      while (x < grid[y].length) {
+        const leftSlot = leftSlotRow && leftSlotRow[x];
+        const rightSlot = rightSlotRow && rightSlotRow[x];
+
+        if (topSlotRow && leftSlot) {
+          topLeftSlotRow[x] = topLeftSlot;
+        }
+        if (topSlotRow && rightSlot) {
+          topRightSlotRow[x] = topRightSlot;
+        }
+        if (bottomSlotRow && leftSlot) {
+          bottomLeftSlotRow[x] = bottomLeftSlot;
+        }
+        if (bottomSlotRow && rightSlot) {
+          bottomRightSlotRow[x] = bottomRightSlot;
+        }
+        x++;
+      }
+      if (topLeftSlotRow.length) {
+        topLeftSlotRowMap.set(y, topLeftSlotRow);
+      }
+      if (topRightSlotRow.length) {
+        topRightSlotRowMap.set(y, topRightSlotRow);
+      }
+      if (bottomLeftSlotRow.length) {
+        bottomLeftSlotRowMap.set(y, bottomLeftSlotRow);
+      }
+      if (bottomRightSlotRow.length) {
+        bottomRightSlotRowMap.set(y, bottomRightSlotRow);
+      }
+      y++;
+    }
+  }
+  // replace slots with content that will be rendered in that slot (border or blank)
+  {
+    let y = 0;
+    while (y < grid.length) {
+      const row = grid[y];
+      const leftSlotRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      const topLeftSlotRow = topLeftSlotRowMap.get(y);
+      const topRightSlotRow = topRightSlotRowMap.get(y);
+      const bottomLeftSlotRow = bottomLeftSlotRowMap.get(y);
+      const bottomRightSlotRow = bottomRightSlotRowMap.get(y);
+      let x = 0;
+      while (x < row.length) {
+        const cell = row[x];
+        const adapt = (slot) => {
+          const node = slot.adapt(cell);
+          if (node.type === "blank") {
+            return node;
+          }
+          if (cornersOnly) {
+            if (
+              node.type === "border_left" ||
+              node.type === "border_right" ||
+              node.type === "border_top" ||
+              node.type === "border_bottom" ||
+              node.type === "border_half_left" ||
+              node.type === "border_half_right" ||
+              node.type === "border_half_up" ||
+              node.type === "border_half_down"
+            ) {
+              return createBlankNode();
+            }
+          }
+          if (borderSpacing) {
+            if (slot.type === "top_left") {
+              if (!cell.northCell || !cell.northCell.borderBottom) {
+                node.spacingTop = borderSpacing;
+              }
+              if (!cell.westCell || !cell.westCell.borderRight) {
+                node.spacingLeft = borderSpacing;
+              }
+            }
+            if (slot.type === "top_right") {
+              if (!cell.northCell || !cell.northCell.borderBottom) {
+                node.spacingTop = borderSpacing;
+              }
+              node.spacingRight = borderSpacing;
+            }
+            if (slot.type === "bottom_left") {
+              node.spacingBottom = borderSpacing;
+              if (!cell.westCell || !cell.westCell.borderRight) {
+                node.spacingLeft = borderSpacing;
+              }
+            }
+            if (slot.type === "bottom_right") {
+              node.spacingBottom = borderSpacing;
+              node.spacingRight = borderSpacing;
+            }
+          }
+          return node;
+        };
+
+        if (leftSlotRow) {
+          const leftSlot = leftSlotRow[x];
+          if (leftSlot) {
+            const leftSlotNode = adapt(leftSlot);
+            leftSlotRow[x] = leftSlotNode;
+          }
+        }
+        if (rightSlotRow) {
+          const rightSlot = rightSlotRow[x];
+          if (rightSlot) {
+            const rightSlotNode = adapt(rightSlot);
+            rightSlotRow[x] = rightSlotNode;
+          }
+        }
+        if (topSlotRow) {
+          const topSlot = topSlotRow[x];
+          const topSlotNode = adapt(topSlot);
+          topSlotRow[x] = topSlotNode;
+        }
+        if (bottomSlotRow) {
+          const bottomSlot = bottomSlotRow[x];
+          const bottomSlotNode = adapt(bottomSlot);
+          bottomSlotRow[x] = bottomSlotNode;
+        }
+        // corners
+        if (topLeftSlotRow) {
+          const topLeftSlot = topLeftSlotRow[x];
+          if (topLeftSlot) {
+            const topLeftSlotNode = adapt(topLeftSlot);
+            topLeftSlotRow[x] = topLeftSlotNode;
+          }
+        }
+        if (topRightSlotRow) {
+          const topRightSlot = topRightSlotRow[x];
+          if (topRightSlot) {
+            const topRightSlotNode = adapt(topRightSlot);
+            topRightSlotRow[x] = topRightSlotNode;
+          }
+        }
+        if (bottomRightSlotRow) {
+          const bottomRightSlot = bottomRightSlotRow[x];
+          if (bottomRightSlot) {
+            const bottomRightSlotNode = adapt(bottomRightSlot);
+            bottomRightSlotRow[x] = bottomRightSlotNode;
+          }
+        }
+        if (bottomLeftSlotRow) {
+          const bottomLeftSlot = bottomLeftSlotRow[x];
+          if (bottomLeftSlot) {
+            const bottomLeftSlotNode = adapt(bottomLeftSlot);
+            bottomLeftSlotRow[x] = bottomLeftSlotNode;
+          }
+        }
+        x++;
+      }
+      y++;
+    }
+  }
+
+  // measure column and row dimensions (biggest of all cells in the column/row)
+  const columnWidthMap = new Map();
+  const rowHeightMap = new Map();
+  const leftColumnWidthMap = new Map();
+  const rightColumnWidthMap = new Map();
+  const topRowHeightMap = new Map();
+  const bottomRowHeightMap = new Map();
+  {
+    const measureNode = (node) => {
+      const {
+        rects,
+        spacing = 0,
+        spacingLeft = spacing,
+        spacingRight = spacing,
+        spacingTop = spacing,
+        spacingBottom = spacing,
+      } = node;
+      let nodeWidth = -1;
+      for (const rect of rects) {
+        let { width } = rect;
+        if (width === "fill") {
+          continue;
+        }
+        if (spacingLeft || spacingRight) {
+          width += spacingLeft + spacingRight;
+          rect.width = width;
+          const { render } = rect;
+          if (typeof render === "function") {
+            rect.render = (...args) => {
+              const text = render(...args);
+              return " ".repeat(spacingLeft) + text + " ".repeat(spacingRight);
+            };
+          } else {
+            rect.render =
+              " ".repeat(spacingLeft) + render + " ".repeat(spacingRight);
+          }
+        }
+        if (width > nodeWidth) {
+          nodeWidth = width;
+        }
+      }
+      if (spacingTop) {
+        let lineToInsertAbove = spacingTop;
+        while (lineToInsertAbove--) {
+          rects.unshift({
+            width: "fill",
+            render: ({ columnWidth }) => " ".repeat(columnWidth),
+          });
+        }
+      }
+      if (spacingBottom) {
+        let lineToInsertBelow = spacingBottom;
+        while (lineToInsertBelow--) {
+          rects.push({
+            width: "fill",
+            render: ({ columnWidth }) => " ".repeat(columnWidth),
+          });
+        }
+      }
+      const nodeHeight = rects.length;
+      return [nodeWidth, nodeHeight];
+    };
+
+    let y = 0;
+    for (const line of grid) {
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      const leftSlotRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      const topLeftSlotRow = topLeftSlotRowMap.get(y);
+      const topRightSlotRow = topRightSlotRowMap.get(y);
+      const bottomLeftSlotRow = bottomLeftSlotRowMap.get(y);
+      const bottomRightSlotRow = bottomRightSlotRowMap.get(y);
+      let x = 0;
+      for (const cell of line) {
+        if (topSlotRow) {
+          const topSlot = topSlotRow[x];
+          if (topSlot) {
+            const [, topNodeHeight] = measureNode(topSlot);
+            const topRowHeight = topRowHeightMap.get(y) || -1;
+            if (topNodeHeight > topRowHeight) {
+              topRowHeightMap.set(y, topNodeHeight);
+            }
+          }
+        }
+        if (bottomSlotRow) {
+          const bottomSlot = bottomSlotRow[x];
+          if (bottomSlot) {
+            const [, bottomNodeHeight] = measureNode(bottomSlot);
+            const bottomRowHeight = bottomRowHeightMap.get(y) || -1;
+            if (bottomNodeHeight > bottomRowHeight) {
+              bottomRowHeightMap.set(y, bottomNodeHeight);
+            }
+          }
+        }
+        if (leftSlotRow) {
+          const leftSlot = leftSlotRow[x];
+          if (leftSlot) {
+            const [leftNodeWidth] = measureNode(leftSlot);
+            const leftColumnWidth = leftColumnWidthMap.get(x) || -1;
+            if (leftNodeWidth > leftColumnWidth) {
+              leftColumnWidthMap.set(x, leftNodeWidth);
+            }
+          }
+        }
+        if (rightSlotRow) {
+          const rightSlot = rightSlotRow[x];
+          if (rightSlot) {
+            const [rightNodeWidth] = measureNode(rightSlot);
+            const rightColumnWidth = rightColumnWidthMap.get(x) || -1;
+            if (rightNodeWidth > rightColumnWidth) {
+              rightColumnWidthMap.set(x, rightNodeWidth);
+            }
+          }
+        }
+        if (topLeftSlotRow) {
+          const topLeftSlot = topLeftSlotRow[x];
+          if (topLeftSlot) {
+            const [topLeftNodeWidth, topLeftNodeHeight] =
+              measureNode(topLeftSlot);
+            const leftColumnWidth = leftColumnWidthMap.get(x) || -1;
+            if (topLeftNodeWidth > leftColumnWidth) {
+              leftColumnWidthMap.set(x, topLeftNodeWidth);
+            }
+            const topRowHeight = topRowHeightMap.get(y) || -1;
+            if (topLeftNodeHeight > topRowHeight) {
+              topRowHeightMap.set(y, topLeftNodeHeight);
+            }
+          }
+        }
+        if (topRightSlotRow) {
+          const topRightSlot = topRightSlotRow[x];
+          if (topRightSlot) {
+            const [topRightNodeWidth, topRightNodeHeight] =
+              measureNode(topRightSlot);
+            const rightColumnWidth = rightColumnWidthMap.get(x) || -1;
+            if (topRightNodeWidth > rightColumnWidth) {
+              rightColumnWidthMap.set(x, topRightNodeWidth);
+            }
+            const topRowHeight = topRowHeightMap.get(y) || -1;
+            if (topRightNodeHeight > topRowHeight) {
+              topRowHeightMap.set(y, topRightNodeHeight);
+            }
+          }
+        }
+        if (bottomLeftSlotRow) {
+          const bottomLeftSlot = bottomLeftSlotRow[x];
+          if (bottomLeftSlot) {
+            const [bottomLeftNodeWidth, bottomLeftNodeHeight] =
+              measureNode(bottomLeftSlot);
+            const leftColumnWidth = leftColumnWidthMap.get(x) || -1;
+            if (bottomLeftNodeWidth > leftColumnWidth) {
+              leftColumnWidthMap.set(x, bottomLeftNodeWidth);
+            }
+            const bottomRowHeight = bottomRowHeightMap.get(y) || -1;
+            if (bottomLeftNodeHeight > bottomRowHeight) {
+              bottomRowHeightMap.set(y, bottomLeftNodeHeight);
+            }
+          }
+        }
+        if (bottomRightSlotRow) {
+          const bottomRightSlot = bottomRightSlotRow[x];
+          if (bottomRightSlot) {
+            const [bottomRightNodeWidth, bottomRightNodeHeight] =
+              measureNode(bottomRightSlot);
+            const rightColumnWidth = rightColumnWidthMap.get(x) || -1;
+            if (bottomRightNodeWidth > rightColumnWidth) {
+              rightColumnWidthMap.set(x, bottomRightNodeWidth);
+            }
+            const bottomRowHeight = bottomRowHeightMap.get(y) || -1;
+            if (bottomRightNodeHeight > bottomRowHeight) {
+              bottomRowHeightMap.set(y, bottomRightNodeHeight);
+            }
+          }
+        }
+
+        const columnWidth = columnWidthMap.get(x) || -1;
+        const rowHeight = rowHeightMap.get(y) || -1;
+        const [cellWidth, cellHeight] = measureNode(cell);
+        if (cellWidth > columnWidth) {
+          columnWidthMap.set(x, cellWidth);
+        }
+        if (cellHeight > rowHeight) {
+          rowHeightMap.set(y, cellHeight);
+        }
+        x++;
+      }
+      y++;
+    }
+  }
+
+  // render table
+  let log = "";
+  {
+    const renderRow = (
+      nodeArray,
+      { cells, rowHeight, leftSlotRow, rightSlotRow },
+    ) => {
+      let rowText = "";
+      let lastLineIndex = rowHeight;
+      let lineIndex = 0;
+      while (lineIndex !== lastLineIndex) {
+        let x = 0;
+        let lineText = "";
+        for (const node of nodeArray) {
+          const cell = cells[x];
+          const nodeLineText = renderNode(node, {
+            cell,
+            columnWidth: columnWidthMap.get(x),
+            rowHeight,
+            lineIndex,
+          });
+          let leftSlotLineText;
+          let rightSlotLineText;
+          if (leftSlotRow) {
+            const leftSlot = leftSlotRow[x];
+            if (leftSlot) {
+              leftSlotLineText = renderNode(leftSlot, {
+                cell,
+                columnWidth: leftColumnWidthMap.get(x),
+                rowHeight,
+                lineIndex,
+              });
+            }
+          }
+          if (rightSlotRow) {
+            const rightSlot = rightSlotRow[x];
+            if (rightSlot) {
+              rightSlotLineText = renderNode(rightSlot, {
+                cell,
+                columnWidth: rightColumnWidthMap.get(x),
+                rowHeight,
+                lineIndex,
+              });
+            }
+          }
+          if (leftSlotLineText && rightSlotLineText) {
+            lineText += leftSlotLineText + nodeLineText + rightSlotLineText;
+          } else if (leftSlotLineText) {
+            lineText += leftSlotLineText + nodeLineText;
+          } else if (rightSlotLineText) {
+            lineText += nodeLineText + rightSlotLineText;
+          } else {
+            lineText += nodeLineText;
+          }
+          x++;
+        }
+        rowText += lineText;
+        lineIndex++;
+        rowText += "\n";
+      }
+      return rowText;
+    };
+    const renderNode = (node, { cell, columnWidth, rowHeight, lineIndex }) => {
+      let { xAlign, xPadChar = " ", yAlign, yPadChar = " ", rects } = node;
+
+      const nodeHeight = rects.length;
+      let rect;
+      if (yAlign === "start") {
+        if (lineIndex < nodeHeight) {
+          rect = rects[lineIndex];
+        }
+      } else if (yAlign === "center") {
+        const lineMissingAbove = Math.floor((rowHeight - nodeHeight) / 2);
+        // const bottomSpacing = rowHeight - cellHeight - topSpacing;
+        const lineStartIndex = lineMissingAbove;
+        const lineEndIndex = lineMissingAbove + nodeHeight;
+
+        if (lineIndex < lineStartIndex) {
+          if (Array.isArray(yPadChar)) {
+            yPadChar = yPadChar[0];
+          }
+        } else if (lineIndex < lineEndIndex) {
+          const rectIndex = lineIndex - lineStartIndex;
+          rect = rects[rectIndex];
+        } else if (Array.isArray(yPadChar)) {
+          yPadChar = yPadChar[1];
+        }
+      } else {
+        const lineStartIndex = rowHeight - nodeHeight;
+        if (lineIndex >= lineStartIndex) {
+          const rectIndex = lineIndex - lineStartIndex;
+          rect = rects[rectIndex];
+        }
+      }
+
+      const applyStyles = (text, { backgroundColor, color, bold }) => {
+        if (!ansi) {
+          return text;
+        }
+        let textWithStyles = text;
+
+        {
+          if (typeof backgroundColor === "function") {
+            backgroundColor = backgroundColor(cell, { columnWidth });
+          }
+          if (backgroundColor) {
+            textWithStyles = ANSI$1.backgroundColor(
+              textWithStyles,
+              backgroundColor,
+            );
+          }
+        }
+        {
+          if (typeof color === "function") {
+            color = color(cell, { columnWidth });
+          }
+          if (color === undefined && backgroundColor === COLORS.WHITE) {
+            color = COLORS.BLACK;
+          }
+          if (color) {
+            textWithStyles = ANSI$1.color(textWithStyles, color);
+          }
+        }
+        {
+          if (typeof bold === "function") {
+            bold = bold(cell, { columnWidth });
+          }
+          if (bold) {
+            textWithStyles = ANSI$1.effect(textWithStyles, ANSI$1.BOLD);
+          }
+        }
+        return textWithStyles;
+      };
+
+      if (rect) {
+        let { width, render } = rect;
+        let rectText;
+        if (typeof render === "function") {
+          rectText = render({
+            ansi,
+            cell,
+            columnWidth,
+          });
+        } else {
+          rectText = render;
+        }
+        if (width === "fill") {
+          return applyStyles(rectText, rect);
+        }
+        return applyStyles(
+          applyXAlign(rectText, {
+            width,
+            desiredWidth: columnWidth,
+            align: xAlign,
+            padChar: xPadChar,
+          }),
+          rect,
+        );
+      }
+      return applyStyles(
+        applyXAlign(yPadChar, {
+          width: 1,
+          desiredWidth: columnWidth,
+          align: xAlign,
+          padChar: " ",
+        }),
+        node,
+      );
+    };
+
+    let y = 0;
+    for (const row of grid) {
+      {
+        const topSlotRow = topSlotRowMap.get(y);
+        if (topSlotRow) {
+          const topSlotRowText = renderRow(topSlotRow, {
+            cells: row,
+            rowHeight: topRowHeightMap.get(y),
+            leftSlotRow: topLeftSlotRowMap.get(y),
+            rightSlotRow: topRightSlotRowMap.get(y),
+          });
+          log += topSlotRowText;
+        }
+      }
+      {
+        const contentRowText = renderRow(row, {
+          cells: row,
+          rowHeight: rowHeightMap.get(y),
+          leftSlotRow: leftSlotRowMap.get(y),
+          rightSlotRow: rightSlotRowMap.get(y),
+        });
+        log += contentRowText;
+      }
+      {
+        const bottomSlotRow = bottomSlotRowMap.get(y);
+        if (bottomSlotRow) {
+          const bottomSlotRowText = renderRow(bottomSlotRow, {
+            cells: row,
+            rowHeight: bottomRowHeightMap.get(y),
+            leftSlotRow: bottomLeftSlotRowMap.get(y),
+            rightSlotRow: bottomRightSlotRowMap.get(y),
+          });
+          log += bottomSlotRowText;
+        }
+      }
+      y++;
+    }
+  }
+  return log;
+};
+
+const applyXAlign = (text, { width, desiredWidth, align, padChar }) => {
+  const missingWidth = desiredWidth - width;
+  if (missingWidth < 0) {
+    // never supposed to happen because the width of a column
+    // is the biggest width of all cells in this column
+    return text;
+  }
+  if (missingWidth === 0) {
+    return text;
+  }
+  // if (align === "fill") {
+  //   let textRepeated = "";
+  //   let widthFilled = 0;
+  //   while (true) {
+  //     textRepeated += text;
+  //     widthFilled += width;
+  //     if (widthFilled >= desiredWidth) {
+  //       break;
+  //     }
+  //   }
+  //   return textRepeated;
+  // }
+  if (align === "start") {
+    return text + padChar.repeat(missingWidth);
+  }
+  if (align === "center") {
+    const widthMissingLeft = Math.floor(missingWidth / 2);
+    const widthMissingRight = missingWidth - widthMissingLeft;
+    let padStartChar = padChar;
+    let padEndChar = padChar;
+    if (Array.isArray(padChar)) {
+      padStartChar = padChar[0];
+      padEndChar = padChar[1];
+    }
+    return (
+      padStartChar.repeat(widthMissingLeft) +
+      text +
+      padEndChar.repeat(widthMissingRight)
+    );
+  }
+  // "end"
+  return padChar.repeat(missingWidth) + text;
+};
+
+const createCell = (
+  {
+    value,
+    color,
+    backgroundColor,
+    format,
+    bold,
+    unit,
+    unitColor,
+    spacing = 0,
+    spacingLeft = spacing || 1,
+    spacingRight = spacing || 1,
+    spacingTop = spacing,
+    spacingBottom = spacing,
+    xAlign = "start", // "start", "center", "end"
+    yAlign = "start", // "start", "center", "end"
+    maxWidth,
+    maxHeight,
+    border,
+    borderLeft = border,
+    borderRight = border,
+    borderTop = border,
+    borderBottom = border,
+  },
+  { x, y, cellMaxWidth, cellMaxHeight },
+) => {
+  if (maxWidth === undefined) {
+    maxWidth = cellMaxWidth;
+  } else if (maxWidth < 1) {
+    maxWidth = 1;
+  }
+  if (maxHeight === undefined) {
+    maxHeight = cellMaxHeight;
+  } else if (maxHeight < 1) {
+    maxHeight = 1;
+  }
+
+  const rects = [];
+  const updateValue = (value) => {
+    cell.value = value;
+    rects.length = 0;
+    let text = format === "size" ? humanizeFileSize(value) : String(value);
+    let lines = text.split("\n");
+    const lineCount = lines.length;
+    let skippedLineCount;
+    let lastLineIndex = lineCount - 1;
+    if (lineCount > maxHeight) {
+      lines = lines.slice(0, maxHeight - 1);
+      lastLineIndex = maxHeight - 1;
+      skippedLineCount = lineCount - maxHeight + 1;
+      lines.push(`↓ ${skippedLineCount} lines ↓`);
+    }
+
+    let lineIndex = 0;
+
+    for (const line of lines) {
+      const isLastLine = lineIndex === lastLineIndex;
+      let lineWidth = measureTextWidth$1(line);
+      let lineText = line;
+      if (lineWidth > maxWidth) {
+        const skippedBoilerplate = "…";
+        // const skippedCharCount = lineWidth - maxWidth - skippedBoilerplate.length;
+        lineText = lineText.slice(0, maxWidth - skippedBoilerplate.length);
+        lineText += skippedBoilerplate;
+        lineWidth = maxWidth;
+      }
+      if (isLastLine && unit) {
+        lineWidth += ` ${unit}`.length;
+      }
+      rects.push({
+        width: lineWidth,
+        render: ({ ansi }) => {
+          if (isLastLine && unit) {
+            const unitWithStyles =
+              ansi && unitColor ? ANSI$1.color(unit, unitColor) : unit;
+            lineText += ` ${unitWithStyles}`;
+            return lineText;
+          }
+          return lineText;
+        },
+        backgroundColor: cell.backgroundColor,
+        color: cell.color,
+        bold: cell.bold,
+      });
+      lineIndex++;
+    }
+    if (skippedLineCount) {
+      rects[rects.length - 1].color = COLORS.GREY;
+    }
+  };
+
+  const cell = {
+    type: "content",
+    xAlign,
+    yAlign,
+    spacingLeft,
+    spacingRight,
+    spacingTop,
+    spacingBottom,
+    backgroundColor,
+    color,
+    bold,
+    rects,
+    x,
+    y,
+    updateValue,
+
+    border,
+    borderLeft,
+    borderRight,
+    borderTop,
+    borderBottom,
+  };
+
+  updateValue(value);
+
+  return cell;
+};
+
 const escapeChars = (string, replacements) => {
   const charsToEscape = Object.keys(replacements);
   let result = "";
@@ -19323,17 +22196,52 @@ const SIGINT_CALLBACK = {
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
 
+const RED = "red";
+const GREEN = "green";
+const YELLOW = "yellow";
+const BLUE = "blue";
+const MAGENTA = "magenta";
+const CYAN = "cyan";
+const GREY = "grey";
+const WHITE = "white";
+const BLACK = "black";
+
+const TEXT_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[31m",
+  [GREEN]: "\x1b[32m",
+  [YELLOW]: "\x1b[33m",
+  [BLUE]: "\x1b[34m",
+  [MAGENTA]: "\x1b[35m",
+  [CYAN]: "\x1b[36m",
+  [GREY]: "\x1b[90m",
+  [WHITE]: "\x1b[37m",
+  [BLACK]: "\x1b[30m",
+};
+const BACKGROUND_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[41m",
+  [GREEN]: "\x1b[42m",
+  [YELLOW]: "\x1b[43m",
+  [BLUE]: "\x1b[44m",
+  [MAGENTA]: "\x1b[45m",
+  [CYAN]: "\x1b[46m",
+  [GREY]: "\x1b[100m",
+  [WHITE]: "\x1b[47m",
+  [BLACK]: "\x1b[40m",
+};
+
 const createAnsi = ({ supported }) => {
   const ANSI = {
     supported,
 
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED,
+    GREEN,
+    YELLOW,
+    BLUE,
+    MAGENTA,
+    CYAN,
+    GREY,
+    WHITE,
+    BLACK,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -19345,7 +22253,29 @@ const createAnsi = ({ supported }) => {
         // cannot set color of blank chars
         return text;
       }
-      return `${color}${text}${RESET}`;
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForTextColor}${text}${RESET}`;
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor =
+        BACKGROUND_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForBackgroundColor}${text}${RESET}`;
     },
 
     BOLD: "\x1b[1m",
@@ -19362,7 +22292,8 @@ const createAnsi = ({ supported }) => {
       if (text === "") {
         return text;
       }
-      return `${effect}${text}${RESET}`;
+      const ansiEscapeCodeForEffect = effect;
+      return `${ansiEscapeCodeForEffect}${text}${RESET}`;
     },
   };
 
@@ -19719,6 +22650,95 @@ const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
 
+const segmenter = new Intl.Segmenter();
+
+const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
+
+const measureTextWidth = (
+  string,
+  {
+    ambiguousIsNarrow = true,
+    countAnsiEscapeCodes = false,
+    skipEmojis = false,
+  } = {},
+) => {
+  if (typeof string !== "string" || string.length === 0) {
+    return 0;
+  }
+
+  if (!countAnsiEscapeCodes) {
+    string = stripVTControlCharacters(string);
+  }
+
+  if (string.length === 0) {
+    return 0;
+  }
+
+  let width = 0;
+  const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
+
+  for (const { segment: character } of segmenter.segment(string)) {
+    const codePoint = character.codePointAt(0);
+
+    // Ignore control characters
+    if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+      continue;
+    }
+
+    // Ignore zero-width characters
+    if (
+      (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+      codePoint === 0xfe_ff // Zero-width no-break space
+    ) {
+      continue;
+    }
+
+    // Ignore combining characters
+    if (
+      (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+      (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+      (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+      (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+      (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+    ) {
+      continue;
+    }
+
+    // Ignore surrogate pairs
+    if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+      continue;
+    }
+
+    // Ignore variation selectors
+    if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+      continue;
+    }
+
+    // This covers some of the above cases, but we still keep them for performance reasons.
+    if (defaultIgnorableCodePointRegex.test(character)) {
+      continue;
+    }
+
+    if (!skipEmojis && emojiRegex$2().test(character)) {
+      if (process.env.CAPTURING_SIDE_EFFECTS) {
+        if (character === "✔️") {
+          width += 2;
+          continue;
+        }
+      }
+      width += measureTextWidth(character, {
+        skipEmojis: true,
+        countAnsiEscapeCodes: true, // to skip call to stripVTControlCharacters
+      });
+      continue;
+    }
+
+    width += eastAsianWidth$2(codePoint, eastAsianWidthOptions);
+  }
+
+  return width;
+};
+
 /*
  * see also https://github.com/vadimdemedes/ink
  */
@@ -19754,7 +22774,7 @@ const createDynamicLog = ({
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
     for (const logLine of logLines) {
-      const width = stringWidth(logLine);
+      const width = measureTextWidth(logLine);
       if (width === 0) {
         visualLineCount++;
       } else {

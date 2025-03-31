@@ -9,11 +9,11 @@ import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { WebSocketResponse, pickContentType } from "@jsenv/server";
 import { createHash } from "node:crypto";
-import "string-width";
 import "strip-ansi";
 import "../jsenv_core_node_modules.js";
 import "node:os";
 import "node:tty";
+import "node:util";
 import "node:path";
 import "node:module";
 import "@jsenv/js-module-fallback";
@@ -8223,7 +8223,6 @@ const createBuildContentLog = (buildFileContents) => {
     items.push({
       "File type": {
         value: key,
-        quoteAroundStrings: false,
       },
       "File count": {
         value: count,

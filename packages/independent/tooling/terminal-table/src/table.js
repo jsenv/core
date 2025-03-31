@@ -4,6 +4,7 @@
  * https://github.com/tecfu/tty-table
  * https://github.com/zaftzaft/terminal-table
  *
+ * - number alignnment
  *
  * NICE TO HAVE/TO INVESTIGATE
  *

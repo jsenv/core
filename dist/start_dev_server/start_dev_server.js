@@ -8,12 +8,12 @@ import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHt
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { createRequire } from "node:module";
-import "string-width";
 import "strip-ansi";
 import "../jsenv_core_node_modules.js";
 import "node:process";
 import "node:os";
 import "node:tty";
+import "node:util";
 import "node:path";
 import "node:crypto";
 import "@jsenv/js-module-fallback";
