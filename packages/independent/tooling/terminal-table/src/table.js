@@ -7,8 +7,6 @@
  *
  * remaining:
  *
- * - maxWidth sur la cell (+une option cellMaxWidth, cellMaxHeight sur la table)
- *
  * - maxWidth on the table (defaults to stdout.columns, will put ... at the end of the cell when it exceeds the remaining width
  *
  * - max rows, max columns (sur la table) (la dernier ligne/colonne afficheras "and 3 more...")
@@ -402,6 +400,8 @@ export const renderTable = (
     borderSeparatedOnColorConflict,
     borderSpacing = 0,
     cornersOnly = false,
+    cellMaxWidth = 50,
+    cellMaxHeight = 10,
   } = {},
 ) => {
   if (!Array.isArray(inputGrid)) {
@@ -480,7 +480,12 @@ export const renderTable = (
           borderBottom = border,
           ...props
         } = inputCell;
-        const cell = createCell(props, { x, y });
+        const cell = createCell(props, {
+          x,
+          y,
+          cellMaxWidth,
+          cellMaxHeight,
+        });
         const westCell = x === 0 ? null : row[x - 1];
         const northCell = y === 0 ? null : grid[y - 1][x];
         cell.westCell = westCell;
@@ -1411,15 +1416,19 @@ const createCell = (
     spacingBottom = spacing,
     xAlign = "start", // "start", "center", "end"
     yAlign = "start", // "start", "center", "end"
-    maxWidth = 50,
-    maxHeight = 10,
+    maxWidth,
+    maxHeight,
   },
-  { x, y },
+  { x, y, cellMaxWidth, cellMaxHeight },
 ) => {
-  if (maxWidth < 1) {
+  if (maxWidth === undefined) {
+    maxWidth = cellMaxWidth;
+  } else if (maxWidth < 1) {
     maxWidth = 1;
   }
-  if (maxHeight < 1) {
+  if (maxHeight === undefined) {
+    maxHeight = cellMaxHeight;
+  } else if (maxHeight < 1) {
     maxHeight = 1;
   }
 
