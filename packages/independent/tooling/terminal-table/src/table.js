@@ -15,9 +15,11 @@
  *
  * - multiline
  *
- * - max line, max column (la dernier ligne/colonne afficheras "and 3 more...")
+ * - max rows, max columns (sur la table) (la dernier ligne/colonne afficheras "and 3 more...")
  *
- * - maxWidth (defaults to stdout.columns, will put ... at the end of the cell when it exceeds the remaining width
+ * - maxWidth/maxHeight sur la cell (+une option cellMaxWidth, cellMaxHeight sur la table)
+ *
+ * - maxWidth on the table (defaults to stdout.columns, will put ... at the end of the cell when it exceeds the remaining width
  *
  * - colspan/rowspan
  *
@@ -859,10 +861,11 @@ export const renderTable = (
     const measureNode = (node) => {
       const {
         rects,
-        leftSpacing = 0,
-        rightSpacing = 0,
-        topSpacing = 0,
-        bottomSpacing = 0,
+        spacing = 0,
+        leftSpacing = spacing,
+        rightSpacing = spacing,
+        topSpacing = spacing,
+        bottomSpacing = spacing,
       } = node;
       let nodeWidth = -1;
       for (const rect of rects) {
@@ -912,8 +915,37 @@ export const renderTable = (
 
     let y = 0;
     for (const line of grid) {
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      const leftSlotRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
       let x = 0;
       for (const cell of line) {
+        if (topSlotRow) {
+          const topSlot = topSlotRow[x];
+          if (topSlot) {
+            measureNode(topSlot);
+          }
+        }
+        if (bottomSlotRow) {
+          const bottomSlot = bottomSlotRow[x];
+          if (bottomSlot) {
+            measureNode(bottomSlot);
+          }
+        }
+        if (leftSlotRow) {
+          const leftSlot = leftSlotRow[x];
+          if (leftSlot) {
+            measureNode(leftSlot);
+          }
+        }
+        if (rightSlotRow) {
+          const rightSlot = rightSlotRow[x];
+          if (rightSlot) {
+            measureNode(rightSlot);
+          }
+        }
+
         const columnWidth = columnWidthMap.get(x) || -1;
         const rowHeight = rowHeightMap.get(y) || -1;
         const [cellWidth, cellHeight] = measureNode(cell);

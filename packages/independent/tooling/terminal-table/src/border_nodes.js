@@ -41,7 +41,12 @@ const getVerticalLineChar = (style, bold) => {
 };
 
 // sides
-export const createBorderLeftNode = ({ style = "solid", bold, color }) => {
+export const createBorderLeftNode = ({
+  style = "solid",
+  bold,
+  color,
+  spacing,
+}) => {
   const char = getVerticalLineChar(style, bold);
   return {
     type: "border_left",
@@ -50,9 +55,15 @@ export const createBorderLeftNode = ({ style = "solid", bold, color }) => {
     xAlign: "end",
     yAlign: "center",
     yPadChar: char,
+    spacing,
   };
 };
-export const createBorderRightNode = ({ style = "solid", bold, color }) => {
+export const createBorderRightNode = ({
+  style = "solid",
+  bold,
+  color,
+  spacing,
+}) => {
   const char = getVerticalLineChar(style, bold);
   return {
     type: "border_right",
@@ -61,9 +72,15 @@ export const createBorderRightNode = ({ style = "solid", bold, color }) => {
     xAlign: "start",
     yAlign: "center",
     yPadChar: char,
+    spacing,
   };
 };
-export const createBorderTopNode = ({ style = "solid", bold, color }) => {
+export const createBorderTopNode = ({
+  style = "solid",
+  bold,
+  color,
+  spacing,
+}) => {
   const char = getHorizontalLineChar(style, bold);
   return {
     type: "border_top",
@@ -72,9 +89,15 @@ export const createBorderTopNode = ({ style = "solid", bold, color }) => {
       { width: "fill", render: ({ columnWidth }) => char.repeat(columnWidth) },
     ],
     yAlign: "end",
+    spacing,
   };
 };
-export const createBorderBottomNode = ({ style = "solid", bold, color }) => {
+export const createBorderBottomNode = ({
+  style = "solid",
+  bold,
+  color,
+  spacing,
+}) => {
   const char = getHorizontalLineChar(style, bold);
   return {
     type: "border_bottom",
@@ -83,6 +106,7 @@ export const createBorderBottomNode = ({ style = "solid", bold, color }) => {
       { width: "fill", render: ({ columnWidth }) => char.repeat(columnWidth) },
     ],
     yAlign: "start",
+    spacing,
   };
 };
 // half sides

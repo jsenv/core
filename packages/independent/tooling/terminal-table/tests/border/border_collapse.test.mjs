@@ -1,7 +1,3 @@
-/** encore du boulot sur border collapse
- *
- */
-
 import { renderNamedSections } from "@jsenv/humanize";
 import { renderTable } from "@jsenv/terminal-table";
 import { snapshotTableTests } from "@jsenv/terminal-table/tests/snapshot_table_tests.mjs";
