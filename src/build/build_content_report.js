@@ -29,6 +29,7 @@ const humanizeProcessMemoryUsage = (value) => {
   return humanizeMemory(value, { short: true, decimals: 0 });
 };
 export const renderBuildDoneLog = ({
+  entryPointArray,
   duration,
   buildFileContents,
   processCpuUsage,
@@ -37,83 +38,14 @@ export const renderBuildDoneLog = ({
   const buildContentReport = createBuildContentReport(buildFileContents);
 
   let title = "";
-  let content = "";
   const lines = [];
 
-  const filesWrittenCount = buildContentReport.total.count;
-  if (filesWrittenCount === 1) {
-    title = `1 file written`;
+  const entryPointCount = entryPointArray.length;
+  if (entryPointCount === 1) {
+    title = `build done`;
   } else {
-    title = `${filesWrittenCount} files written`;
-    const keys = Object.keys(buildContentReport);
-    const rows = [];
-    let y = 0;
-    let highestPercentage = 0;
-    let highestPercentageY = 0;
-    for (const key of keys) {
-      if (key === "sourcemaps") {
-        continue;
-      }
-      if (key === "total") {
-        continue;
-      }
-      const { count, size, percentage } = buildContentReport[key];
-      if (count === 0) {
-        continue;
-      }
-      const row = [
-        {
-          value: key,
-          borderTop: {},
-          borderBottom: {},
-        },
-        {
-          value: count,
-          borderTop: {},
-          borderBottom: {},
-        },
-        {
-          value: size,
-          format: "size",
-          borderTop: {},
-          borderBottom: {},
-        },
-        {
-          value: percentage,
-          format: "percentage",
-          unit: "%",
-          borderTop: {},
-          borderBottom: {},
-        },
-      ];
-      if (percentage > highestPercentage) {
-        highestPercentage = percentage;
-        highestPercentageY = y;
-      }
-      rows.push(row);
-      y++;
-    }
-    if (rows.length > 1) {
-      const rowWithHighestPercentage = rows[highestPercentageY];
-      for (const cell of rowWithHighestPercentage) {
-        cell.bold = true;
-      }
-      const table = renderTable(rows, {
-        borderCollapse: true,
-        ansi: true,
-      });
-      content += table;
-      content += "\n";
-    }
+    title = `build done (${entryPointCount} entry points)`;
   }
-
-  let sizeLine = `total size: `;
-  sizeLine += humanizeFileSize(buildContentReport.total.size);
-  lines.push(sizeLine);
-
-  let durationLine = `duration: `;
-  durationLine += humanizeDuration(duration, { short: true });
-  lines.push(durationLine);
 
   // cpu usage
   let cpuUsageLine = "cpu: ";
@@ -135,7 +67,86 @@ export const renderBuildDoneLog = ({
   });
   lines.push(memoryUsageLine);
 
-  content += lines.join("\n");
+  // duration
+  let durationLine = `duration: `;
+  durationLine += humanizeDuration(duration, { short: true });
+  lines.push(durationLine);
+
+  // content
+  let filesLine = `content: `;
+  const filesWrittenCount = buildContentReport.total.count;
+  if (filesWrittenCount === 1) {
+    filesLine += "1 file";
+  } else {
+    filesLine += `${filesWrittenCount} files`;
+  }
+  filesLine += " (";
+  filesLine += humanizeFileSize(buildContentReport.total.size);
+  filesLine += ")";
+  lines.push(filesLine);
+
+  // file repartition
+  const keys = Object.keys(buildContentReport);
+  const rows = [];
+  let y = 0;
+  let highestPercentage = 0;
+  let highestPercentageY = 0;
+  for (const key of keys) {
+    if (key === "sourcemaps") {
+      continue;
+    }
+    if (key === "total") {
+      continue;
+    }
+    const { count, size, percentage } = buildContentReport[key];
+    if (count === 0) {
+      continue;
+    }
+    const row = [
+      {
+        value: key,
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: count,
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: size,
+        format: "size",
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: percentage,
+        format: "percentage",
+        unit: "%",
+        borderTop: {},
+        borderBottom: {},
+      },
+    ];
+    if (percentage > highestPercentage) {
+      highestPercentage = percentage;
+      highestPercentageY = y;
+    }
+    rows.push(row);
+    y++;
+  }
+  if (rows.length > 1) {
+    const rowWithHighestPercentage = rows[highestPercentageY];
+    for (const cell of rowWithHighestPercentage) {
+      cell.bold = true;
+    }
+    const table = renderTable(rows, {
+      borderCollapse: true,
+      ansi: true,
+    });
+    lines.push(table);
+  }
+
+  const content = lines.join("\n");
   return `${renderBigSection({
     title,
     content,

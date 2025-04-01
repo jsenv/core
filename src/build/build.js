@@ -364,6 +364,7 @@ export const build = async ({
     processMemoryUsageMonitoring.end();
 
     return renderBuildDoneLog({
+      entryPointArray,
       duration,
       buildFileContents,
       processCpuUsage: processCpuUsageMonitoring.info,
