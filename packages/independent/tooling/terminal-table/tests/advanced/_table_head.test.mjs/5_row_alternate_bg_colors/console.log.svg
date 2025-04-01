@@ -195,7 +195,7 @@
         <text x="127.62" y="727.55" style="white-space:pre" fill="#000000"> 🚀     </text>
         <text x="10" y="746.55">--- product ---</text>
         <text x="10" y="765.55" style="white-space:pre">            ┌──────┬─────────┐</text>
-        <text x="10" y="784.55" style="white-space:pre">  0         │ free │ premium │</text>
+        <text x="10" y="784.55" style="white-space:pre">            │ free │ premium │</text>
         <text x="10" y="803.55">┌───────────┼──────┼─────────┤</text>
         <text x="10" y="822.55" style="white-space:pre">│ feature a │ ✔    │ ✔       │</text>
         <text x="10" y="841.55">├───────────┼──────┼─────────┤</text>

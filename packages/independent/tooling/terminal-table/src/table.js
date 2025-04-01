@@ -691,7 +691,7 @@ export const renderTable = (
         const cell = row[x];
         const { value, format } = cell;
 
-        if (format !== "size" && isFinite(value)) {
+        if (format !== "size" && isFinite(value) && value !== "") {
           if (value % 1 === 0) {
             const { integer } = tokenizeInteger(Math.abs(value));
             const integerFormatted = groupDigits(integer);
