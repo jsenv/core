@@ -10632,6 +10632,15 @@ const build = async ({
       outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
     }
   }
+  let rootPackageDirectoryUrl = packageDirectoryUrl;
+  if (packageDirectoryUrl) {
+    const parentPackageDirectoryUrl = lookupPackageDirectory(
+      new URL("../", packageDirectoryUrl),
+    );
+    if (parentPackageDirectoryUrl) {
+      rootPackageDirectoryUrl = parentPackageDirectoryUrl;
+    }
+  }
 
   const runBuild = async ({ signal }) => {
     const startDate = Date.now();
@@ -10712,11 +10721,11 @@ const build = async ({
             entryPointBuildRelativeUrl,
             buildDirectoryUrl,
           );
-          const sourceUrlToLog = packageDirectoryUrl
-            ? urlToRelativeUrl(sourceUrl, packageDirectoryUrl)
+          const sourceUrlToLog = rootPackageDirectoryUrl
+            ? urlToRelativeUrl(sourceUrl, rootPackageDirectoryUrl)
             : entryPoint.key;
-          const buildUrlToLog = packageDirectoryUrl
-            ? urlToRelativeUrl(buildUrl, packageDirectoryUrl)
+          const buildUrlToLog = rootPackageDirectoryUrl
+            ? urlToRelativeUrl(buildUrl, rootPackageDirectoryUrl)
             : entryPointBuildRelativeUrl;
 
           const entryPointBuildStartMs = Date.now();
