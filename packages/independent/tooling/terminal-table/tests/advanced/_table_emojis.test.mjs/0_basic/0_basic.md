@@ -30,7 +30,6 @@ see [./table_emojis.svg](./table_emojis.svg)
 ├───────┤
 │ ♂     │
 └───────┘
-
 ```
 
 # 3/3 return
