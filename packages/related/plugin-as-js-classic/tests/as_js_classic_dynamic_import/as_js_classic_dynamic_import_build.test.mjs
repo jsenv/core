@@ -2,9 +2,8 @@ import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 const test = async (params) => {
   const snapshotDirectoryUrl = new URL("./snapshots/build/", import.meta.url);
@@ -38,4 +37,5 @@ const test = async (params) => {
 await test({
   bundling: false,
   minification: false,
+  runtimeCompat: { chrome: "55" },
 });

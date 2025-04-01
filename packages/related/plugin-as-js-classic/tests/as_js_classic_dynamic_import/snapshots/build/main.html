@@ -58,7 +58,7 @@
               registerRegistry[document.currentScript.src] = [deps, declare];
               return null;
             }
-            const url = document.currentScript.src || "".concat(window.location.href, "__inline_script__").concat(++inlineScriptCount);
+            const url = document.currentScript.src || `${window.location.href}__inline_script__${++inlineScriptCount}`;
             registerRegistry[url] = [deps, declare];
             return _import(url);
           };
@@ -74,7 +74,7 @@
               window.addEventListener("error", windowErrorCallback);
               script.addEventListener("error", () => {
                 window.removeEventListener("error", windowErrorCallback);
-                reject("An error occured while loading url with <script> for ".concat(url));
+                reject(`An error occured while loading url with <script> for ${url}`);
               });
               script.addEventListener("load", () => {
                 window.removeEventListener("error", windowErrorCallback);
@@ -96,7 +96,7 @@
             // Only add cross origin for actual cross origin
             // this is because Safari triggers for all
             // - https://bugs.webkit.org/show_bug.cgi?id=171566
-            if (url.indexOf("".concat(self.location.origin, "/"))) {
+            if (url.indexOf(`${self.location.origin}/`)) {
               script.crossOrigin = "anonymous";
             }
             script.__s__ = true;
@@ -189,11 +189,11 @@
               credentials: "same-origin"
             });
             if (!response.ok) {
-              throw Error("Failed to fetch module at ".concat(url));
+              throw Error(`Failed to fetch module at ${url}`);
             }
             let source = await response.text();
             if (source.indexOf("//# sourceURL=") < 0) {
-              source += "\n//# sourceURL=".concat(url);
+              source += `\n//# sourceURL=${url}`;
             }
             const register = System.register;
             System.register = (deps, declare) => {
@@ -247,7 +247,7 @@
                 registration = registerRegistry[url];
               }
               if (!registration) {
-                throw new Error("System.register() not called after executing ".concat(url));
+                throw new Error(`System.register() not called after executing ${url}`);
               }
               const _export = (firstArg, secondArg) => {
                 load.hoistedExports = true;
