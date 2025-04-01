@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "40.1.4",
+  "version": "40.1.5",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -49,6 +49,7 @@
   ],
   "sideEffects": [
     "./src/kitchen/client/inline_content.js",
+    "./dist/client/inline_content/inline_content.js",
     "./tests/"
   ],
   "scripts": {
