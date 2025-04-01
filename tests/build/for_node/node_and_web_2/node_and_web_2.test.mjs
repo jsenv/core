@@ -1,9 +1,3 @@
-/**
- * When a js file contains a reference to an other file (.html especially)
- * that is not an import it means this file is an entry point
- * and should be built as a standalone file
- */
-
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
@@ -16,10 +10,10 @@ const run = async () => {
         buildRelativeUrl: "./dir/index.js",
         runtimeCompat: { node: "20" },
       },
-      // "./client/toto.js": {
-      //   buildRelativeUrl: "./client/toto.js",
-      //   runtimeCompat: { chrome: "89" },
-      // },
+      "./client/toto.js": {
+        buildRelativeUrl: "./client/toto.js",
+        runtimeCompat: { chrome: "89" },
+      },
     },
   });
 };
