@@ -16,7 +16,7 @@
         window.resolveXtermReadyPromise = resolve;
       });
     </script>
-    <script type="module">import "/jsenv_terminal_recorder_node_modules.js";
+    <script type="module">import "./jsenv_terminal_recorder_node_modules.js";
 
 const createLzwEncoder = ({ width, height, pixels, colorDepth }) => {
   var EOF = -1;
@@ -1216,7 +1216,7 @@ const initTerminal = ({
 
   log("init", { cols, rows, fontFamily, fontSize, convertEol, gif, video });
 
-  const cssUrl = new URL("/css/xterm.css", import.meta.url);
+  const cssUrl = new URL("./css/xterm.css", import.meta.url);
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.href = cssUrl;

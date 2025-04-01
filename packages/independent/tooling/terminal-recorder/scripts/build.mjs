@@ -6,11 +6,13 @@ await build({
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./client/xterm.html": {
+      base: "./",
       runtimeCompat: { chrome: "100" },
       minification: false,
       versioning: false,
     },
     "./main_browser.js": {
+      base: "./",
       buildRelativeUrl: "terminal_recorder_browser.js",
       runtimeCompat: { chrome: "100" },
       plugins: [

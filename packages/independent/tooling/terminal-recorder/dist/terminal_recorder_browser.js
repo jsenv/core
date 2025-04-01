@@ -1,4 +1,99 @@
-import { stripAnsi, ansiRegex, stringWidth, __jsenv_default_import__ } from "/jsenv_terminal_recorder_node_modules.js";
+import { emojiRegex, eastAsianWidth, stripAnsi, ansiRegex, __jsenv_default_import__ } from "./jsenv_terminal_recorder_node_modules.js";
+
+const createMeasureTextWidth = ({ stripAnsi }) => {
+  const segmenter = new Intl.Segmenter();
+  const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
+
+  const measureTextWidth = (
+    string,
+    {
+      ambiguousIsNarrow = true,
+      countAnsiEscapeCodes = false,
+      skipEmojis = false,
+    } = {},
+  ) => {
+    if (typeof string !== "string" || string.length === 0) {
+      return 0;
+    }
+
+    if (!countAnsiEscapeCodes) {
+      string = stripAnsi(string);
+    }
+
+    if (string.length === 0) {
+      return 0;
+    }
+
+    let width = 0;
+    const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
+
+    for (const { segment: character } of segmenter.segment(string)) {
+      const codePoint = character.codePointAt(0);
+
+      // Ignore control characters
+      if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+        continue;
+      }
+
+      // Ignore zero-width characters
+      if (
+        (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+        codePoint === 0xfe_ff // Zero-width no-break space
+      ) {
+        continue;
+      }
+
+      // Ignore combining characters
+      if (
+        (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+        (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+        (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+        (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+        (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+      ) {
+        continue;
+      }
+
+      // Ignore surrogate pairs
+      if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+        continue;
+      }
+
+      // Ignore variation selectors
+      if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+        continue;
+      }
+
+      // This covers some of the above cases, but we still keep them for performance reasons.
+      if (defaultIgnorableCodePointRegex.test(character)) {
+        continue;
+      }
+
+      if (!skipEmojis && emojiRegex().test(character)) {
+        if (process.env.CAPTURING_SIDE_EFFECTS) {
+          if (character === "✔️") {
+            width += 2;
+            continue;
+          }
+        }
+        width += measureTextWidth(character, {
+          skipEmojis: true,
+          countAnsiEscapeCodes: true, // to skip call to stripAnsi
+        });
+        continue;
+      }
+
+      width += eastAsianWidth(codePoint, eastAsianWidthOptions);
+    }
+
+    return width;
+  };
+  return measureTextWidth;
+};
+
+const measureTextWidth = createMeasureTextWidth({
+  stripAnsi,
+});
 
 // inspired by https://github.com/F1LT3R/parse-ansi/blob/master/index.js
 
@@ -10,12 +105,12 @@ const parseAnsi = (ansi) => {
   const lines = plainText.split("\n");
   const rows = lines.length;
   let columns = 0;
-  lines.forEach((line) => {
+  for (const line of lines) {
     const len = line.length;
     if (len > columns) {
       columns = len;
     }
-  });
+  }
 
   const result = {
     raw: ansi,
@@ -156,7 +251,7 @@ const parseAnsi = (ansi) => {
   let nAnsi = 0;
   let nPlain = 0;
 
-  const bundle = (type, value) => {
+  const bundle = (type, value, { width = 0, height = 0 } = {}) => {
     const chunk = {
       type,
       value,
@@ -165,9 +260,10 @@ const parseAnsi = (ansi) => {
         y,
         n: nPlain,
         raw: nAnsi,
+        width,
+        height,
       },
     };
-
     if (type === "text" || type === "ansi") {
       const style = {};
 
@@ -217,7 +313,7 @@ const parseAnsi = (ansi) => {
   for (const word of words) {
     // Newline character
     if (word === "\n") {
-      const chunk = bundle("newline", "\n");
+      const chunk = bundle("newline", "\n", { height: 1 });
       result.chunks.push(chunk);
       x = 0;
       y += 1;
@@ -227,9 +323,9 @@ const parseAnsi = (ansi) => {
     }
     // Text characters
     if (delimiters.includes(word) === false) {
-      const chunk = bundle("text", word);
+      const width = measureTextWidth(word);
+      const chunk = bundle("text", word, { width });
       result.chunks.push(chunk);
-      const width = stringWidth(word);
       x += width;
       nAnsi += width;
       nPlain += width;
@@ -747,11 +843,24 @@ const renderTerminalSvg = (
         continue;
       }
       const { position } = chunk;
-      const x =
-        offsetLeft + (position.x + leadingWhitespaceWidth(value)) * font.width;
-      const y = offsetTop + position.y + font.lineHeight * position.y;
-      const w = font.width * value.length;
       const attrs = {};
+
+      // Some SVG Implementations drop whitespaces
+      // https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xml:space
+      // and https://codepen.io/dmail/pen/wvLvbbP
+      if (
+        // in the following case we need to preserve whitespaces:
+        // - one or more leading whitespace
+        // - one or more trailing whitespace
+        // - 2 or more whitespace in the middle of the string
+        /^\s+|\s\s|\s+$/.test(value)
+      ) {
+        attrs.style = "white-space:pre";
+      }
+      const x = offsetLeft + position.x * font.width;
+      const y = offsetTop + position.y + font.lineHeight * position.y;
+      const w = font.width * position.width;
+
       if (style.bold) {
         attrs["font-weight"] = "bold";
       }
@@ -821,17 +930,6 @@ const renderTerminalSvg = (
 
   const svgString = svg.renderAsString();
   return svgString;
-};
-
-// Some SVG Implementations drop whitespaces
-// https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xml:space
-// and https://codepen.io/dmail/pen/wvLvbbP
-const leadingWhitespaceWidth = (text) => {
-  if (text.trim() === "") {
-    return 0;
-  }
-  const leadingSpace = text.match(/^\s*/g);
-  return leadingSpace[0].length;
 };
 
 export { parseAnsi, renderTerminalSvg };
