@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
-
-import { createCallOrderer } from "@jsenv/test/src/helpers/call_orderer.js";
+import { createCallOrderer } from "@jsenv/humanize/src/log/call_orderer.js";
 
 {
   const orderCall = createCallOrderer();
