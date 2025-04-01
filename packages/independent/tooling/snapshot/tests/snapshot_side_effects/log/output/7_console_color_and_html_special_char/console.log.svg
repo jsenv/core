@@ -5,7 +5,7 @@
   <foreignObject id="body" y="0" width="100%" height="52.45" overflow="hidden">
     <svg width="129.22" height="42.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
-        <text x="18.4" y="24.55" fill="#cd5555"> Hi[0m &lt;toto&gt;</text>
+        <text x="10" y="24.55" style="white-space:pre" fill="#cd5555"> Hi[0m &lt;toto&gt;</text>
       </g>
     </svg>
   </foreignObject>

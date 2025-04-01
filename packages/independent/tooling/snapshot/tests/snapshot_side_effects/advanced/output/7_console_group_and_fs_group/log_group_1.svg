@@ -6,16 +6,16 @@
     <svg width="465.27" height="137.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">✔ write files in build directory (done in &lt;X&gt; second)</text>
-        <text x="10" y="43.55">--- build files ---  </text>
-        <text x="10" y="62.55">- </text>
+        <text x="10" y="43.55" style="white-space:pre">--- build files ---  </text>
+        <text x="10" y="62.55" style="white-space:pre">- </text>
         <text x="26.8" y="62.55" fill="#7f7f7f">html :</text>
-        <text x="85.61" y="62.55"> 1 (175 B / 91 %)</text>
-        <text x="10" y="81.55">- </text>
-        <text x="26.8" y="81.55" fill="#7f7f7f">js   :</text>
-        <text x="85.61" y="81.55"> 1 (17 B / 9 %)</text>
-        <text x="10" y="100.55">- </text>
+        <text x="77.21" y="62.55" style="white-space:pre"> 1 (175 B / 91 %)</text>
+        <text x="10" y="81.55" style="white-space:pre">- </text>
+        <text x="26.8" y="81.55" style="white-space:pre" fill="#7f7f7f">js   :</text>
+        <text x="77.21" y="81.55" style="white-space:pre"> 1 (17 B / 9 %)</text>
+        <text x="10" y="100.55" style="white-space:pre">- </text>
         <text x="26.8" y="100.55" fill="#7f7f7f">total:</text>
-        <text x="85.61" y="100.55"> 2 (192 B / 100 %)</text>
+        <text x="77.21" y="100.55" style="white-space:pre"> 2 (192 B / 100 %)</text>
         <text x="10" y="119.55">--------------------</text>
       </g>
     </svg>
