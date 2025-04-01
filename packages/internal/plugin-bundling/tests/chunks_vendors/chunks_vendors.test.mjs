@@ -8,11 +8,12 @@ const test = async ({ name, ...params }) => {
     logs: { level: "warn" },
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: snapshotDirectoryUrl,
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
     entryPoints: {
-      "./main.html": "main.html",
+      "./main.html": {
+        ...params,
+      },
     },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
   });
   directorySnapshot.compare();
 };

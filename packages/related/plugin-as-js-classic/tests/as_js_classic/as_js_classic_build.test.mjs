@@ -3,9 +3,8 @@ import { build } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { replaceFileStructureSync } from "@jsenv/filesystem";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 const test = async (params) => {
   const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
@@ -19,12 +18,13 @@ const test = async (params) => {
     logs: { level: "warn" },
     sourceDirectoryUrl,
     buildDirectoryUrl: snapshotDirectoryUrl,
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
     entryPoints: {
-      "./main.html": "main.html",
+      "./main.html": {
+        plugins: [jsenvPluginAsJsClassic()],
+        ...params,
+      },
     },
-    plugins: [jsenvPluginAsJsClassic()],
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
   });
   buildDirectorySnapshot.compare();
   const server = await startFileServer({
