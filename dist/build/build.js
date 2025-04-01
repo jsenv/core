@@ -8222,57 +8222,6 @@ const renderBuildDoneLog = ({
   processMemoryUsage,
 }) => {
   const buildContentReport = createBuildContentReport(buildFileContents);
-  const rows = [];
-  let y = 0;
-  let highestPercentage = 0;
-  let highestPercentageY = 0;
-  for (const key of Object.keys(buildContentReport)) {
-    if (key === "sourcemaps") {
-      continue;
-    }
-    if (key === "total") {
-      continue;
-    }
-    const { count, size, percentage } = buildContentReport[key];
-    if (count === 0) {
-      continue;
-    }
-    const row = [
-      {
-        value: key,
-        borderTop: {},
-        borderBottom: {},
-      },
-      {
-        value: count,
-        borderTop: {},
-        borderBottom: {},
-      },
-      {
-        value: size,
-        format: "size",
-        borderTop: {},
-        borderBottom: {},
-      },
-      {
-        value: percentage,
-        format: "percentage",
-        unit: "%",
-        borderTop: {},
-        borderBottom: {},
-      },
-    ];
-    if (percentage > highestPercentage) {
-      highestPercentage = percentage;
-      highestPercentageY = y;
-    }
-    rows.push(row);
-    y++;
-  }
-  const rowWithHighestPercentage = rows[highestPercentageY];
-  for (const cell of rowWithHighestPercentage) {
-    cell.bold = true;
-  }
 
   let title = "";
   let content = "";
@@ -8283,12 +8232,66 @@ const renderBuildDoneLog = ({
     title = `1 file written`;
   } else {
     title = `${filesWrittenCount} files written`;
-    const table = renderTable(rows, {
-      borderCollapse: true,
-      ansi: true,
-    });
-    content += table;
-    content += "\n";
+    const keys = Object.keys(buildContentReport);
+    const rows = [];
+    let y = 0;
+    let highestPercentage = 0;
+    let highestPercentageY = 0;
+    for (const key of keys) {
+      if (key === "sourcemaps") {
+        continue;
+      }
+      if (key === "total") {
+        continue;
+      }
+      const { count, size, percentage } = buildContentReport[key];
+      if (count === 0) {
+        continue;
+      }
+      const row = [
+        {
+          value: key,
+          borderTop: {},
+          borderBottom: {},
+        },
+        {
+          value: count,
+          borderTop: {},
+          borderBottom: {},
+        },
+        {
+          value: size,
+          format: "size",
+          borderTop: {},
+          borderBottom: {},
+        },
+        {
+          value: percentage,
+          format: "percentage",
+          unit: "%",
+          borderTop: {},
+          borderBottom: {},
+        },
+      ];
+      if (percentage > highestPercentage) {
+        highestPercentage = percentage;
+        highestPercentageY = y;
+      }
+      rows.push(row);
+      y++;
+    }
+    if (rows.length > 1) {
+      const rowWithHighestPercentage = rows[highestPercentageY];
+      for (const cell of rowWithHighestPercentage) {
+        cell.bold = true;
+      }
+      const table = renderTable(rows, {
+        borderCollapse: true,
+        ansi: true,
+      });
+      content += table;
+      content += "\n";
+    }
   }
 
   let sizeLine = `total size: `;
