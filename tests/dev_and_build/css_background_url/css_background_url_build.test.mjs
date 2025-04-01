@@ -3,11 +3,14 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = async () => {
   await build({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./main.css": "main.css" },
-    bundling: false,
-    minification: false,
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
+    entryPoints: {
+      "./main.css": {
+        bundling: false,
+        minification: false,
+      },
+    },
   });
 };
 

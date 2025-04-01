@@ -1,0 +1,16 @@
+{
+  "name": "@jsenv/os-metrics",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/internal/os-metrics"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "sideEffects": false
+}

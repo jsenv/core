@@ -1,7 +1,6 @@
-import stringWidth from "string-width";
-import process$1 from "node:process";
-import os from "node:os";
-import tty from "node:tty";
+import stripAnsi from "strip-ansi";
+import { createSupportsColor, isUnicodeSupported, emojiRegex, eastAsianWidth, clearTerminal, eraseLines, createSupportsColor$1, isUnicodeSupported$1, emojiRegex$1, eastAsianWidth$1, clearTerminal$1, eraseLines$1, createSupportsColor$2, isUnicodeSupported$2, emojiRegex$2, eastAsianWidth$2, clearTerminal$2, eraseLines$2 } from "./jsenv_core_node_modules.js";
+import { stripVTControlCharacters } from "node:util";
 import { existsSync, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$2, watch, realpathSync, readdir, chmod, stat, lstat, promises, unlink, rmdir } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
@@ -62,329 +61,86 @@ const DATA_URL$1 = {
   },
 };
 
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag$2(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-
-const {env: env$2} = process$1;
-
-let flagForceColor$2;
-if (
-	hasFlag$2('no-color')
-	|| hasFlag$2('no-colors')
-	|| hasFlag$2('color=false')
-	|| hasFlag$2('color=never')
-) {
-	flagForceColor$2 = 0;
-} else if (
-	hasFlag$2('color')
-	|| hasFlag$2('colors')
-	|| hasFlag$2('color=true')
-	|| hasFlag$2('color=always')
-) {
-	flagForceColor$2 = 1;
-}
-
-function envForceColor$2() {
-	if (!('FORCE_COLOR' in env$2)) {
-		return;
-	}
-
-	if (env$2.FORCE_COLOR === 'true') {
-		return 1;
-	}
-
-	if (env$2.FORCE_COLOR === 'false') {
-		return 0;
-	}
-
-	if (env$2.FORCE_COLOR.length === 0) {
-		return 1;
-	}
-
-	const level = Math.min(Number.parseInt(env$2.FORCE_COLOR, 10), 3);
-
-	if (![0, 1, 2, 3].includes(level)) {
-		return;
-	}
-
-	return level;
-}
-
-function translateLevel$2(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3,
-	};
-}
-
-function _supportsColor$2(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor$2();
-	if (noFlagForceColor !== undefined) {
-		flagForceColor$2 = noFlagForceColor;
-	}
-
-	const forceColor = sniffFlags ? flagForceColor$2 : noFlagForceColor;
-
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (sniffFlags) {
-		if (hasFlag$2('color=16m')
-			|| hasFlag$2('color=full')
-			|| hasFlag$2('color=truecolor')) {
-			return 3;
-		}
-
-		if (hasFlag$2('color=256')) {
-			return 2;
-		}
-	}
-
-	// Check for Azure DevOps pipelines.
-	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env$2 && 'AGENT_NAME' in env$2) {
-		return 1;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env$2.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process$1.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10
-			&& Number(osRelease[2]) >= 10_586
-		) {
-			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env$2) {
-		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env$2)) {
-			return 3;
-		}
-
-		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env$2) || env$2.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env$2) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env$2.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env$2.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if (env$2.TERM === 'xterm-kitty') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env$2) {
-		const version = Number.parseInt((env$2.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env$2.TERM_PROGRAM) {
-			case 'iTerm.app': {
-				return version >= 3 ? 3 : 2;
-			}
-
-			case 'Apple_Terminal': {
-				return 2;
-			}
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env$2.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env$2.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env$2) {
-		return 1;
-	}
-
-	return min;
-}
-
-function createSupportsColor$2(stream, options = {}) {
-	const level = _supportsColor$2(stream, {
-		streamIsTTY: stream && stream.isTTY,
-		...options,
-	});
-
-	return translateLevel$2(level);
-}
-
-({
-	stdout: createSupportsColor$2({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor$2({isTTY: tty.isatty(2)}),
-});
-
-function isUnicodeSupported$2() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser$2 = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform$2 = globalThis.navigator?.userAgentData?.platform;
-
-platform$2 === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform$2 === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform$2 === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform$2 === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-const ESC$2 = '\u001B[';
-
-!isBrowser$2 && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows$9 = !isBrowser$2 && process$1.platform === 'win32';
-
-isBrowser$2 ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
-const cursorUp$2 = (count = 1) => ESC$2 + count + 'A';
-
-const cursorLeft$2 = ESC$2 + 'G';
-
-const eraseLines$2 = count => {
-	let clear = '';
-
-	for (let i = 0; i < count; i++) {
-		clear += eraseLine$2 + (i < count - 1 ? cursorUp$2() : '');
-	}
-
-	if (count) {
-		clear += cursorLeft$2;
-	}
-
-	return clear;
-};
-const eraseLine$2 = ESC$2 + '2K';
-const eraseScreen$2 = ESC$2 + '2J';
-
-const clearTerminal$2 = isWindows$9
-	? `${eraseScreen$2}${ESC$2}0f`
-	// 1. Erases the screen (Only done in case `2` is not supported)
-	// 2. Erases the whole screen including scrollback buffer
-	// 3. Moves cursor to the top-left position
-	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	:	`${eraseScreen$2}${ESC$2}3J${ESC$2}H`;
-
 const createDetailedMessage$3 = (message, details = {}) => {
-  let string = `${message}`;
+  let text = `${message}`;
+  const namedSectionsText = renderNamedSections$1(details);
+  if (namedSectionsText) {
+    text += `
+${namedSectionsText}`;
+  }
+  return text;
+};
 
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
+const renderNamedSections$1 = (namedSections) => {
+  let text = "";
+  let keys = Object.keys(namedSections);
+  for (const key of keys) {
+    const isLastKey = key === keys[keys.length - 1];
+    const value = namedSections[key];
+    text += `--- ${key} ---
 ${
   Array.isArray(value)
     ? value.join(`
 `)
     : value
 }`;
-  });
-
-  return string;
+    if (!isLastKey) {
+      text += "\n";
+    }
+  }
+  return text;
 };
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET$2 = "\x1b[0m";
 
+const RED$2 = "red";
+const GREEN$2 = "green";
+const YELLOW$2 = "yellow";
+const BLUE$2 = "blue";
+const MAGENTA$2 = "magenta";
+const CYAN$2 = "cyan";
+const GREY$2 = "grey";
+const WHITE$2 = "white";
+const BLACK$2 = "black";
+
+const TEXT_COLOR_ANSI_CODES$2 = {
+  [RED$2]: "\x1b[31m",
+  [GREEN$2]: "\x1b[32m",
+  [YELLOW$2]: "\x1b[33m",
+  [BLUE$2]: "\x1b[34m",
+  [MAGENTA$2]: "\x1b[35m",
+  [CYAN$2]: "\x1b[36m",
+  [GREY$2]: "\x1b[90m",
+  [WHITE$2]: "\x1b[37m",
+  [BLACK$2]: "\x1b[30m",
+};
+const BACKGROUND_COLOR_ANSI_CODES$2 = {
+  [RED$2]: "\x1b[41m",
+  [GREEN$2]: "\x1b[42m",
+  [YELLOW$2]: "\x1b[43m",
+  [BLUE$2]: "\x1b[44m",
+  [MAGENTA$2]: "\x1b[45m",
+  [CYAN$2]: "\x1b[46m",
+  [GREY$2]: "\x1b[100m",
+  [WHITE$2]: "\x1b[47m",
+  [BLACK$2]: "\x1b[40m",
+};
+
 const createAnsi$2 = ({ supported }) => {
   const ANSI = {
     supported,
 
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED: RED$2,
+    GREEN: GREEN$2,
+    YELLOW: YELLOW$2,
+    BLUE: BLUE$2,
+    MAGENTA: MAGENTA$2,
+    CYAN: CYAN$2,
+    GREY: GREY$2,
+    WHITE: WHITE$2,
+    BLACK: BLACK$2,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -396,7 +152,29 @@ const createAnsi$2 = ({ supported }) => {
         // cannot set color of blank chars
         return text;
       }
-      return `${color}${text}${RESET$2}`;
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES$2[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForTextColor}${text}${RESET$2}`;
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor =
+        BACKGROUND_COLOR_ANSI_CODES$2[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForBackgroundColor}${text}${RESET$2}`;
     },
 
     BOLD: "\x1b[1m",
@@ -413,14 +191,15 @@ const createAnsi$2 = ({ supported }) => {
       if (text === "") {
         return text;
       }
-      return `${effect}${text}${RESET$2}`;
+      const ansiEscapeCodeForEffect = effect;
+      return `${ansiEscapeCodeForEffect}${text}${RESET$2}`;
     },
   };
 
   return ANSI;
 };
 
-const processSupportsBasicColor$2 = createSupportsColor$2(process.stdout).hasBasic;
+const processSupportsBasicColor$2 = createSupportsColor(process.stdout).hasBasic;
 
 const ANSI$2 = createAnsi$2({
   supported:
@@ -489,7 +268,7 @@ const createUnicode$2 = ({ supported, ANSI }) => {
 };
 
 const UNICODE$2 = createUnicode$2({
-  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported$2(),
+  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
   ANSI: ANSI$2,
 });
 
@@ -544,6 +323,23 @@ const setDecimalsPrecision$2 = (
   const asFloat = asInteger / coef;
   return number < 0 ? -asFloat : asFloat;
 };
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
 const unitShort$2 = {
   year: "y",
   month: "m",
@@ -911,6 +707,101 @@ const error$2 = (...args) => console.error(...args);
 
 const errorDisabled$2 = () => {};
 
+const createMeasureTextWidth$2 = ({ stripAnsi }) => {
+  const segmenter = new Intl.Segmenter();
+  const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
+
+  const measureTextWidth = (
+    string,
+    {
+      ambiguousIsNarrow = true,
+      countAnsiEscapeCodes = false,
+      skipEmojis = false,
+    } = {},
+  ) => {
+    if (typeof string !== "string" || string.length === 0) {
+      return 0;
+    }
+
+    if (!countAnsiEscapeCodes) {
+      string = stripAnsi(string);
+    }
+
+    if (string.length === 0) {
+      return 0;
+    }
+
+    let width = 0;
+    const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
+
+    for (const { segment: character } of segmenter.segment(string)) {
+      const codePoint = character.codePointAt(0);
+
+      // Ignore control characters
+      if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+        continue;
+      }
+
+      // Ignore zero-width characters
+      if (
+        (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+        codePoint === 0xfe_ff // Zero-width no-break space
+      ) {
+        continue;
+      }
+
+      // Ignore combining characters
+      if (
+        (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+        (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+        (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+        (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+        (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+      ) {
+        continue;
+      }
+
+      // Ignore surrogate pairs
+      if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+        continue;
+      }
+
+      // Ignore variation selectors
+      if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+        continue;
+      }
+
+      // This covers some of the above cases, but we still keep them for performance reasons.
+      if (defaultIgnorableCodePointRegex.test(character)) {
+        continue;
+      }
+
+      if (!skipEmojis && emojiRegex().test(character)) {
+        if (process.env.CAPTURING_SIDE_EFFECTS) {
+          if (character === "✔️") {
+            width += 2;
+            continue;
+          }
+        }
+        width += measureTextWidth(character, {
+          skipEmojis: true,
+          countAnsiEscapeCodes: true, // to skip call to stripAnsi
+        });
+        continue;
+      }
+
+      width += eastAsianWidth(codePoint, eastAsianWidthOptions);
+    }
+
+    return width;
+  };
+  return measureTextWidth;
+};
+
+const measureTextWidth$2 = createMeasureTextWidth$2({
+  stripAnsi: stripVTControlCharacters,
+});
+
 /*
  * see also https://github.com/vadimdemedes/ink
  */
@@ -946,7 +837,7 @@ const createDynamicLog$2 = ({
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
     for (const logLine of logLines) {
-      const width = stringWidth(logLine);
+      const width = measureTextWidth$2(logLine);
       if (width === 0) {
         visualLineCount++;
       } else {
@@ -957,7 +848,7 @@ const createDynamicLog$2 = ({
     if (visualLineCount > rows) {
       if (clearTerminalAllowed) {
         clearAttemptResult = true;
-        return clearTerminal$2;
+        return clearTerminal;
       }
       // the whole log cannot be cleared because it's vertically to long
       // (longer than terminal height)
@@ -970,7 +861,7 @@ const createDynamicLog$2 = ({
     }
 
     clearAttemptResult = true;
-    return eraseLines$2(visualLineCount);
+    return eraseLines(visualLineCount);
   };
 
   const update = (string) => {
@@ -1011,7 +902,8 @@ const createDynamicLog$2 = ({
     update("");
 
     writing = true;
-    callback();
+    callback(update);
+    lastOutput = "";
     writing = false;
 
     update(ouputAfterCallback);
@@ -1877,7 +1769,11 @@ const comparePathnames$1 = (leftPathame, rightPathname) => {
   return 0;
 };
 
-const isWindows$8 = process.platform === "win32";
+const compareFileUrls$1 = (a, b) => {
+  return comparePathnames$1(new URL(a).pathname, new URL(b).pathname);
+};
+
+const isWindows$6 = process.platform === "win32";
 const baseUrlFallback$1 = fileSystemPathToUrl$2(process.cwd());
 
 /**
@@ -1900,7 +1796,7 @@ const ensureWindowsDriveLetter$1 = (url, baseUrl) => {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
-  if (!isWindows$8) {
+  if (!isWindows$6) {
     return url;
   }
 
@@ -2628,7 +2524,7 @@ const writeEntryPermissionsSync$1 = (source, permissions) => {
  */
 
 
-const isWindows$7 = process.platform === "win32";
+const isWindows$5 = process.platform === "win32";
 
 const readEntryStatSync$1 = (
   source,
@@ -2648,7 +2544,7 @@ const readEntryStatSync$1 = (
   return statSyncNaive$1(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$7
+    ...(isWindows$5
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: (error) => {
@@ -3274,12 +3170,12 @@ const callOnceIdlePerFile$1 = (callback, idleMs) => {
   };
 };
 
-const isWindows$6 = process.platform === "win32";
+const isWindows$4 = process.platform === "win32";
 
 const createWatcher$1 = (sourcePath, options) => {
   const watcher = watch(sourcePath, options);
 
-  if (isWindows$6) {
+  if (isWindows$4) {
     watcher.on("error", async (error) => {
       // https://github.com/joyent/node/issues/4337
       if (error.code === "EPERM") {
@@ -4252,7 +4148,7 @@ const applyPackageImportsResolution$1 = (
 };
 
 const applyPackageResolve$1 = (packageSpecifier, resolutionContext) => {
-  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
+  const { parentUrl, conditions, readPackageJson, preservesSymlink, isImport } =
     resolutionContext;
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier");
@@ -4278,7 +4174,7 @@ const applyPackageResolve$1 = (packageSpecifier, resolutionContext) => {
       resolutionContext,
     );
   }
-  if (packageSubpath.endsWith("/")) {
+  if (isImport && packageSubpath.endsWith("/")) {
     throw new Error("invalid module specifier");
   }
   const questionCharIndex = packageName.indexOf("?");
@@ -4622,6 +4518,12 @@ const parsePackageSpecifier$1 = (packageSpecifier) => {
   }
   const packageName = packageSpecifier.slice(0, firstSlashIndex);
   const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  if (afterFirstSlash === "") {
+    return {
+      packageName,
+      packageSubpath: "/",
+    };
+  }
   const packageSubpath = `./${afterFirstSlash}`;
   return {
     packageName,
@@ -4761,13 +4663,17 @@ const mainLegacyResolvers$1 = {
       path: browserMain,
     };
   },
-  node: ({ packageJson }) => {
+  node: ({ packageJson, conditions }) => {
+    if (conditions.includes("import")) {
+      if (typeof packageJson.module === "string") {
+        return { type: "field:module", isMain: true, path: packageJson.module };
+      }
+      if (typeof packageJson.jsnext === "string") {
+        return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
+      }
+    }
     if (typeof packageJson.main === "string") {
-      return {
-        type: "field:main",
-        isMain: true,
-        path: packageJson.main,
-      };
+      return { type: "field:main", isMain: true, path: packageJson.main };
     }
     return null;
   },
@@ -4901,6 +4807,369 @@ const getExtensionsToTry$1 = (magicExtensions, importer) => {
     }
   });
   return Array.from(extensionsSet.values());
+};
+
+const versionFromValue$1 = (value) => {
+  if (typeof value === "number") {
+    return numberToVersion$1(value);
+  }
+  if (typeof value === "string") {
+    return stringToVersion$1(value);
+  }
+  throw new TypeError(`version must be a number or a string, got ${value}`);
+};
+
+const numberToVersion$1 = (number) => {
+  return {
+    major: number,
+    minor: 0,
+    patch: 0,
+  };
+};
+
+const stringToVersion$1 = (string) => {
+  if (string.indexOf(".") > -1) {
+    const parts = string.split(".");
+    return {
+      major: Number(parts[0]),
+      minor: parts[1] ? Number(parts[1]) : 0,
+      patch: parts[2] ? Number(parts[2]) : 0,
+    };
+  }
+
+  if (isNaN(string)) {
+    return {
+      major: 0,
+      minor: 0,
+      patch: 0,
+    };
+  }
+
+  return {
+    major: Number(string),
+    minor: 0,
+    patch: 0,
+  };
+};
+
+const compareTwoVersions$1 = (versionA, versionB) => {
+  const semanticVersionA = versionFromValue$1(versionA);
+  const semanticVersionB = versionFromValue$1(versionB);
+  const majorDiff = semanticVersionA.major - semanticVersionB.major;
+  if (majorDiff > 0) {
+    return majorDiff;
+  }
+  if (majorDiff < 0) {
+    return majorDiff;
+  }
+  const minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+  if (minorDiff > 0) {
+    return minorDiff;
+  }
+  if (minorDiff < 0) {
+    return minorDiff;
+  }
+  const patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+  if (patchDiff > 0) {
+    return patchDiff;
+  }
+  if (patchDiff < 0) {
+    return patchDiff;
+  }
+  return 0;
+};
+
+const versionIsBelow$1 = (versionSupposedBelow, versionSupposedAbove) => {
+  return compareTwoVersions$1(versionSupposedBelow, versionSupposedAbove) < 0;
+};
+
+const findHighestVersion$1 = (...values) => {
+  if (values.length === 0) throw new Error(`missing argument`);
+  return values.reduce((highestVersion, value) => {
+    if (versionIsBelow$1(highestVersion, value)) {
+      return value;
+    }
+    return highestVersion;
+  });
+};
+
+const featuresCompatMap$1 = {
+  script_type_module: {
+    edge: "16",
+    firefox: "60",
+    chrome: "61",
+    safari: "10.1",
+    opera: "48",
+    ios: "10.3",
+    android: "61",
+    samsung: "8.2",
+  },
+  document_current_script: {
+    edge: "12",
+    firefox: "4",
+    chrome: "29",
+    safari: "8",
+    opera: "16",
+    android: "4.4",
+    samsung: "4",
+  },
+  // https://caniuse.com/?search=import.meta
+  import_meta: {
+    android: "9",
+    chrome: "64",
+    edge: "79",
+    firefox: "62",
+    ios: "12",
+    opera: "51",
+    safari: "11.1",
+    samsung: "9.2",
+  },
+  import_meta_resolve: {
+    chrome: "107",
+    edge: "105",
+    firefox: "106",
+    node: "20.0.0",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
+  import_dynamic: {
+    android: "8",
+    chrome: "63",
+    edge: "79",
+    firefox: "67",
+    ios: "11.3",
+    opera: "50",
+    safari: "11.3",
+    samsung: "8.0",
+    node: "13.2",
+  },
+  top_level_await: {
+    edge: "89",
+    chrome: "89",
+    firefox: "89",
+    opera: "75",
+    safari: "15",
+    samsung: "15",
+    ios: "15",
+    node: "14.8",
+  },
+  // https://caniuse.com/import-maps
+  importmap: {
+    edge: "89",
+    chrome: "89",
+    opera: "76",
+    samsung: "15",
+    firefox: "108",
+    safari: "16.4",
+  },
+  import_type_json: {
+    chrome: "123",
+    safari: "17.2",
+  },
+  import_type_css: {
+    chrome: "123",
+  },
+  import_type_text: {},
+  // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility
+  new_stylesheet: {
+    chrome: "73",
+    edge: "79",
+    opera: "53",
+    android: "73",
+  },
+  // https://caniuse.com/?search=worker
+  worker: {
+    ie: "10",
+    edge: "12",
+    firefox: "3.5",
+    chrome: "4",
+    opera: "11.5",
+    safari: "4",
+    ios: "5",
+    android: "4.4",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
+  worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  worker_importmap: {},
+  service_worker: {
+    edge: "17",
+    firefox: "44",
+    chrome: "40",
+    safari: "11.1",
+    opera: "27",
+    ios: "11.3",
+    android: "12.12",
+  },
+  service_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  service_worker_importmap: {},
+  shared_worker: {
+    chrome: "4",
+    edge: "79",
+    firefox: "29",
+    opera: "10.6",
+  },
+  shared_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+  },
+  shared_worker_importmap: {},
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
+  global_this: {
+    edge: "79",
+    firefox: "65",
+    chrome: "71",
+    safari: "12.1",
+    opera: "58",
+    ios: "12.2",
+    android: "94",
+    node: "12",
+  },
+  async_generator_function: {
+    chrome: "63",
+    opera: "50",
+    edge: "79",
+    firefox: "57",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "8",
+    electron: "3",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#browser_compatibility
+  template_literals: {
+    chrome: "41",
+    edge: "12",
+    firefox: "34",
+    opera: "28",
+    safari: "9",
+    ios: "9",
+    android: "4",
+    node: "4",
+  },
+  arrow_function: {
+    chrome: "47",
+    opera: "34",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36",
+  },
+  const_bindings: {
+    chrome: "41",
+    opera: "28",
+    edge: "12",
+    firefox: "46",
+    safari: "10",
+    node: "4",
+    ie: "11",
+    ios: "10",
+    samsung: "3.4",
+    electron: "0.22",
+  },
+  object_properties_shorthand: {
+    chrome: "43",
+    opera: "30",
+    edge: "12",
+    firefox: "33",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.28",
+  },
+  reserved_words: {
+    chrome: "13",
+    opera: "10.50",
+    edge: "12",
+    firefox: "2",
+    safari: "3.1",
+    node: "0.10",
+    ie: "9",
+    android: "4.4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20",
+  },
+  symbols: {
+    chrome: "38",
+    opera: "25",
+    edge: "12",
+    firefox: "36",
+    safari: "9",
+    ios: "9",
+    samsung: "4",
+    node: "0.12",
+  },
+};
+
+const RUNTIME_COMPAT$1 = {
+  featuresCompatMap: featuresCompatMap$1,
+
+  add: (originalRuntimeCompat, feature) => {
+    const featureCompat = getFeatureCompat$1(feature);
+    const runtimeCompat = {
+      ...originalRuntimeCompat,
+    };
+    Object.keys(originalRuntimeCompat).forEach((runtimeName) => {
+      const secondVersion = featureCompat[runtimeName]; // the version supported by the feature
+      if (secondVersion) {
+        const firstVersion = originalRuntimeCompat[runtimeName];
+        runtimeCompat[runtimeName] = findHighestVersion$1(
+          firstVersion,
+          secondVersion,
+        );
+      }
+    });
+    return runtimeCompat;
+  },
+
+  isSupported: (
+    runtimeCompat,
+    feature,
+    featureCompat = getFeatureCompat$1(feature),
+  ) => {
+    const runtimeNames = Object.keys(runtimeCompat);
+    const runtimeWithoutCompat = runtimeNames.find((runtimeName) => {
+      const runtimeVersion = runtimeCompat[runtimeName];
+      const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity";
+      const highestVersion = findHighestVersion$1(
+        runtimeVersion,
+        runtimeVersionCompatible,
+      );
+      return highestVersion !== runtimeVersion;
+    });
+    return !runtimeWithoutCompat;
+  },
+};
+
+const getFeatureCompat$1 = (feature) => {
+  if (typeof feature === "string") {
+    const compat = featuresCompatMap$1[feature];
+    if (!compat) {
+      throw new Error(`"${feature}" feature is unknown`);
+    }
+    return compat;
+  }
+  if (typeof feature !== "object") {
+    throw new TypeError(
+      `feature must be a string or an object, got ${feature}`,
+    );
+  }
+  return feature;
 };
 
 const isSupportedAlgorithm$1 = (algo) => {
@@ -6429,7 +6698,7 @@ const injectAstAfterImport$1 = (programPath, ast) => {
 };
 
 const newStylesheetClientFileUrl$1 = new URL(
-  "./client/new_stylesheet/new_stylesheet.js",
+  "./client/new_stylesheet.js",
   import.meta.url,
 ).href;
 
@@ -6587,7 +6856,7 @@ const getImportAttributes$1 = (importNode) => {
 };
 
 const regeneratorRuntimeClientFileUrl$1 = new URL(
-  "./client/regenerator_runtime/regenerator_runtime.js",
+  "./client/regenerator_runtime.js",
   import.meta.url,
 ).href;
 
@@ -8509,329 +8778,86 @@ const DATA_URL = {
   },
 };
 
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag$1(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-
-const {env: env$1} = process$1;
-
-let flagForceColor$1;
-if (
-	hasFlag$1('no-color')
-	|| hasFlag$1('no-colors')
-	|| hasFlag$1('color=false')
-	|| hasFlag$1('color=never')
-) {
-	flagForceColor$1 = 0;
-} else if (
-	hasFlag$1('color')
-	|| hasFlag$1('colors')
-	|| hasFlag$1('color=true')
-	|| hasFlag$1('color=always')
-) {
-	flagForceColor$1 = 1;
-}
-
-function envForceColor$1() {
-	if (!('FORCE_COLOR' in env$1)) {
-		return;
-	}
-
-	if (env$1.FORCE_COLOR === 'true') {
-		return 1;
-	}
-
-	if (env$1.FORCE_COLOR === 'false') {
-		return 0;
-	}
-
-	if (env$1.FORCE_COLOR.length === 0) {
-		return 1;
-	}
-
-	const level = Math.min(Number.parseInt(env$1.FORCE_COLOR, 10), 3);
-
-	if (![0, 1, 2, 3].includes(level)) {
-		return;
-	}
-
-	return level;
-}
-
-function translateLevel$1(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3,
-	};
-}
-
-function _supportsColor$1(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor$1();
-	if (noFlagForceColor !== undefined) {
-		flagForceColor$1 = noFlagForceColor;
-	}
-
-	const forceColor = sniffFlags ? flagForceColor$1 : noFlagForceColor;
-
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (sniffFlags) {
-		if (hasFlag$1('color=16m')
-			|| hasFlag$1('color=full')
-			|| hasFlag$1('color=truecolor')) {
-			return 3;
-		}
-
-		if (hasFlag$1('color=256')) {
-			return 2;
-		}
-	}
-
-	// Check for Azure DevOps pipelines.
-	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env$1 && 'AGENT_NAME' in env$1) {
-		return 1;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env$1.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process$1.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10
-			&& Number(osRelease[2]) >= 10_586
-		) {
-			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env$1) {
-		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env$1)) {
-			return 3;
-		}
-
-		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env$1) || env$1.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env$1) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env$1.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env$1.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if (env$1.TERM === 'xterm-kitty') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env$1) {
-		const version = Number.parseInt((env$1.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env$1.TERM_PROGRAM) {
-			case 'iTerm.app': {
-				return version >= 3 ? 3 : 2;
-			}
-
-			case 'Apple_Terminal': {
-				return 2;
-			}
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env$1.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env$1.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env$1) {
-		return 1;
-	}
-
-	return min;
-}
-
-function createSupportsColor$1(stream, options = {}) {
-	const level = _supportsColor$1(stream, {
-		streamIsTTY: stream && stream.isTTY,
-		...options,
-	});
-
-	return translateLevel$1(level);
-}
-
-({
-	stdout: createSupportsColor$1({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor$1({isTTY: tty.isatty(2)}),
-});
-
-function isUnicodeSupported$1() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser$1 = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform$1 = globalThis.navigator?.userAgentData?.platform;
-
-platform$1 === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform$1 === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform$1 === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform$1 === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-const ESC$1 = '\u001B[';
-
-!isBrowser$1 && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows$5 = !isBrowser$1 && process$1.platform === 'win32';
-
-isBrowser$1 ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
-const cursorUp$1 = (count = 1) => ESC$1 + count + 'A';
-
-const cursorLeft$1 = ESC$1 + 'G';
-
-const eraseLines$1 = count => {
-	let clear = '';
-
-	for (let i = 0; i < count; i++) {
-		clear += eraseLine$1 + (i < count - 1 ? cursorUp$1() : '');
-	}
-
-	if (count) {
-		clear += cursorLeft$1;
-	}
-
-	return clear;
-};
-const eraseLine$1 = ESC$1 + '2K';
-const eraseScreen$1 = ESC$1 + '2J';
-
-const clearTerminal$1 = isWindows$5
-	? `${eraseScreen$1}${ESC$1}0f`
-	// 1. Erases the screen (Only done in case `2` is not supported)
-	// 2. Erases the whole screen including scrollback buffer
-	// 3. Moves cursor to the top-left position
-	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	:	`${eraseScreen$1}${ESC$1}3J${ESC$1}H`;
-
 const createDetailedMessage$1 = (message, details = {}) => {
-  let string = `${message}`;
+  let text = `${message}`;
+  const namedSectionsText = renderNamedSections(details);
+  if (namedSectionsText) {
+    text += `
+${namedSectionsText}`;
+  }
+  return text;
+};
 
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
+const renderNamedSections = (namedSections) => {
+  let text = "";
+  let keys = Object.keys(namedSections);
+  for (const key of keys) {
+    const isLastKey = key === keys[keys.length - 1];
+    const value = namedSections[key];
+    text += `--- ${key} ---
 ${
   Array.isArray(value)
     ? value.join(`
 `)
     : value
 }`;
-  });
-
-  return string;
+    if (!isLastKey) {
+      text += "\n";
+    }
+  }
+  return text;
 };
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET$1 = "\x1b[0m";
 
+const RED$1 = "red";
+const GREEN$1 = "green";
+const YELLOW$1 = "yellow";
+const BLUE$1 = "blue";
+const MAGENTA$1 = "magenta";
+const CYAN$1 = "cyan";
+const GREY$1 = "grey";
+const WHITE$1 = "white";
+const BLACK$1 = "black";
+
+const TEXT_COLOR_ANSI_CODES$1 = {
+  [RED$1]: "\x1b[31m",
+  [GREEN$1]: "\x1b[32m",
+  [YELLOW$1]: "\x1b[33m",
+  [BLUE$1]: "\x1b[34m",
+  [MAGENTA$1]: "\x1b[35m",
+  [CYAN$1]: "\x1b[36m",
+  [GREY$1]: "\x1b[90m",
+  [WHITE$1]: "\x1b[37m",
+  [BLACK$1]: "\x1b[30m",
+};
+const BACKGROUND_COLOR_ANSI_CODES$1 = {
+  [RED$1]: "\x1b[41m",
+  [GREEN$1]: "\x1b[42m",
+  [YELLOW$1]: "\x1b[43m",
+  [BLUE$1]: "\x1b[44m",
+  [MAGENTA$1]: "\x1b[45m",
+  [CYAN$1]: "\x1b[46m",
+  [GREY$1]: "\x1b[100m",
+  [WHITE$1]: "\x1b[47m",
+  [BLACK$1]: "\x1b[40m",
+};
+
 const createAnsi$1 = ({ supported }) => {
   const ANSI = {
     supported,
 
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED: RED$1,
+    GREEN: GREEN$1,
+    YELLOW: YELLOW$1,
+    BLUE: BLUE$1,
+    MAGENTA: MAGENTA$1,
+    CYAN: CYAN$1,
+    GREY: GREY$1,
+    WHITE: WHITE$1,
+    BLACK: BLACK$1,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -8843,7 +8869,29 @@ const createAnsi$1 = ({ supported }) => {
         // cannot set color of blank chars
         return text;
       }
-      return `${color}${text}${RESET$1}`;
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES$1[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForTextColor}${text}${RESET$1}`;
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor =
+        BACKGROUND_COLOR_ANSI_CODES$1[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForBackgroundColor}${text}${RESET$1}`;
     },
 
     BOLD: "\x1b[1m",
@@ -8860,7 +8908,8 @@ const createAnsi$1 = ({ supported }) => {
       if (text === "") {
         return text;
       }
-      return `${effect}${text}${RESET$1}`;
+      const ansiEscapeCodeForEffect = effect;
+      return `${ansiEscapeCodeForEffect}${text}${RESET$1}`;
     },
   };
 
@@ -8997,6 +9046,23 @@ const setDecimalsPrecision$1 = (
   const asFloat = asInteger / coef;
   return number < 0 ? -asFloat : asFloat;
 };
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
 const unitShort$1 = {
   year: "y",
   month: "m",
@@ -9120,6 +9186,10 @@ const parseMs$1 = (ms) => {
 
 const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
   return inspectBytes(numberOfBytes, { decimals, short });
+};
+
+const humanizeMemory = (metricValue, { decimals, short } = {}) => {
+  return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
 
 const inspectBytes = (
@@ -9367,6 +9437,79 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
+const renderBigSection = (params) => {
+  return renderSection({
+    width: 45,
+    ...params,
+  });
+};
+
+const renderSection = ({
+  title,
+  content,
+  dashColor = ANSI$1.GREY,
+  width = 38,
+  bottomSeparator = true,
+}) => {
+  let section = "";
+
+  if (title) {
+    const titleWidth = stripAnsi(title).length;
+    const minWidthRequired = `--- … ---`.length;
+    const needsTruncate = titleWidth + minWidthRequired >= width;
+    if (needsTruncate) {
+      const titleTruncated = title.slice(0, width - minWidthRequired);
+      const leftDashes = ANSI$1.color("---", dashColor);
+      const rightDashes = ANSI$1.color("---", dashColor);
+      section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
+    } else {
+      const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
+      const dashLeftCount = Math.floor(remainingWidth / 2);
+      const dashRightCount = remainingWidth - dashLeftCount;
+      const leftDashes = ANSI$1.color("-".repeat(dashLeftCount), dashColor);
+      const rightDashes = ANSI$1.color("-".repeat(dashRightCount), dashColor);
+      section += `${leftDashes} ${title} ${rightDashes}`;
+    }
+    section += "\n";
+  } else {
+    const topDashes = ANSI$1.color(`-`.repeat(width), dashColor);
+    section += topDashes;
+    section += "\n";
+  }
+  section += `${content}`;
+  if (bottomSeparator) {
+    section += "\n";
+    const bottomDashes = ANSI$1.color(`-`.repeat(width), dashColor);
+    section += bottomDashes;
+  }
+  return section;
+};
+
+const renderDetails = (data) => {
+  const details = [];
+  for (const key of Object.keys(data)) {
+    const value = data[key];
+    let valueString = "";
+    valueString += ANSI$1.color(`${key}:`, ANSI$1.GREY);
+    const useNonGreyAnsiColor =
+      typeof value === "string" && value.includes("\x1b");
+    valueString += " ";
+    valueString += useNonGreyAnsiColor
+      ? value
+      : ANSI$1.color(String(value), ANSI$1.GREY);
+    details.push(valueString);
+  }
+  if (details.length === 0) {
+    return "";
+  }
+
+  let string = "";
+  string += ` ${ANSI$1.color("(", ANSI$1.GREY)}`;
+  string += details.join(ANSI$1.color(", ", ANSI$1.GREY));
+  string += ANSI$1.color(")", ANSI$1.GREY);
+  return string;
+};
+
 const LOG_LEVEL_OFF$1 = "off";
 
 const LOG_LEVEL_DEBUG$1 = "debug";
@@ -9455,6 +9598,101 @@ const error$1 = (...args) => console.error(...args);
 
 const errorDisabled$1 = () => {};
 
+const createMeasureTextWidth$1 = ({ stripAnsi }) => {
+  const segmenter = new Intl.Segmenter();
+  const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
+
+  const measureTextWidth = (
+    string,
+    {
+      ambiguousIsNarrow = true,
+      countAnsiEscapeCodes = false,
+      skipEmojis = false,
+    } = {},
+  ) => {
+    if (typeof string !== "string" || string.length === 0) {
+      return 0;
+    }
+
+    if (!countAnsiEscapeCodes) {
+      string = stripAnsi(string);
+    }
+
+    if (string.length === 0) {
+      return 0;
+    }
+
+    let width = 0;
+    const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
+
+    for (const { segment: character } of segmenter.segment(string)) {
+      const codePoint = character.codePointAt(0);
+
+      // Ignore control characters
+      if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+        continue;
+      }
+
+      // Ignore zero-width characters
+      if (
+        (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+        codePoint === 0xfe_ff // Zero-width no-break space
+      ) {
+        continue;
+      }
+
+      // Ignore combining characters
+      if (
+        (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+        (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+        (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+        (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+        (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+      ) {
+        continue;
+      }
+
+      // Ignore surrogate pairs
+      if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+        continue;
+      }
+
+      // Ignore variation selectors
+      if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+        continue;
+      }
+
+      // This covers some of the above cases, but we still keep them for performance reasons.
+      if (defaultIgnorableCodePointRegex.test(character)) {
+        continue;
+      }
+
+      if (!skipEmojis && emojiRegex$1().test(character)) {
+        if (process.env.CAPTURING_SIDE_EFFECTS) {
+          if (character === "✔️") {
+            width += 2;
+            continue;
+          }
+        }
+        width += measureTextWidth(character, {
+          skipEmojis: true,
+          countAnsiEscapeCodes: true, // to skip call to stripAnsi
+        });
+        continue;
+      }
+
+      width += eastAsianWidth$1(codePoint, eastAsianWidthOptions);
+    }
+
+    return width;
+  };
+  return measureTextWidth;
+};
+
+const measureTextWidth$1 = createMeasureTextWidth$1({
+  stripAnsi: stripVTControlCharacters,
+});
+
 /*
  * see also https://github.com/vadimdemedes/ink
  */
@@ -9490,7 +9728,7 @@ const createDynamicLog$1 = ({
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
     for (const logLine of logLines) {
-      const width = stringWidth(logLine);
+      const width = measureTextWidth$1(logLine);
       if (width === 0) {
         visualLineCount++;
       } else {
@@ -9555,7 +9793,8 @@ const createDynamicLog$1 = ({
     update("");
 
     writing = true;
-    callback();
+    callback(update);
+    lastOutput = "";
     writing = false;
 
     update(ouputAfterCallback);
@@ -10483,7 +10722,11 @@ const comparePathnames = (leftPathame, rightPathname) => {
   return 0;
 };
 
-const isWindows$4 = process.platform === "win32";
+const compareFileUrls = (a, b) => {
+  return comparePathnames(new URL(a).pathname, new URL(b).pathname);
+};
+
+const isWindows$3 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
 
 /**
@@ -10506,7 +10749,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
-  if (!isWindows$4) {
+  if (!isWindows$3) {
     return url;
   }
 
@@ -11292,7 +11535,7 @@ const writeEntryPermissions = async (source, permissions) => {
  */
 
 
-const isWindows$3 = process.platform === "win32";
+const isWindows$2 = process.platform === "win32";
 
 const readEntryStat = async (
   source,
@@ -11312,7 +11555,7 @@ const readEntryStat = async (
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$3
+    ...(isWindows$2
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: async (error) => {
@@ -11397,7 +11640,7 @@ const writeEntryPermissionsSync = (source, permissions) => {
  */
 
 
-const isWindows$2 = process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
 
 const readEntryStatSync = (
   source,
@@ -11417,7 +11660,7 @@ const readEntryStatSync = (
   return statSyncNaive(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$2
+    ...(isWindows$1
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: (error) => {
@@ -12473,12 +12716,12 @@ const callOnceIdlePerFile = (callback, idleMs) => {
   };
 };
 
-const isWindows$1 = process.platform === "win32";
+const isWindows = process.platform === "win32";
 
 const createWatcher = (sourcePath, options) => {
   const watcher = watch(sourcePath, options);
 
-  if (isWindows$1) {
+  if (isWindows) {
     watcher.on("error", async (error) => {
       // https://github.com/joyent/node/issues/4337
       if (error.code === "EPERM") {
@@ -12993,6 +13236,192 @@ const bufferToEtag = (buffer) => {
   return `"${length.toString(16)}-${hashBase64StringSubset}"`;
 };
 
+// https://nodejs.org/api/packages.html#resolving-user-conditions
+const readCustomConditionsFromProcessArgs = () => {
+  const packageConditions = [];
+  for (const arg of process.execArgv) {
+    if (arg.includes("-C=")) {
+      const packageCondition = arg.slice(0, "-C=".length);
+      packageConditions.push(packageCondition);
+    }
+    if (arg.includes("--conditions=")) {
+      const packageCondition = arg.slice("--conditions=".length);
+      packageConditions.push(packageCondition);
+    }
+  }
+  return packageConditions;
+};
+
+const asDirectoryUrl = (url) => {
+  const { pathname } = new URL(url);
+  if (pathname.endsWith("/")) {
+    return url;
+  }
+  return new URL("./", url).href;
+};
+
+const getParentUrl = (url) => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
+    }
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf(
+        "/",
+        slashLastIndex - 1,
+      );
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+
+const isValidUrl = (url) => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const urlToFilename = (url) => {
+  const { pathname } = new URL(url);
+  const pathnameBeforeLastSlash = pathname.endsWith("/")
+    ? pathname.slice(0, -1)
+    : pathname;
+  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1
+      ? pathnameBeforeLastSlash
+      : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
+  return filename;
+};
+
+const urlToExtension$1 = (url) => {
+  const filename = urlToFilename(url);
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) return "";
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex);
+  return extension;
+};
+
+const defaultLookupPackageScope = (url) => {
+  let scopeUrl = asDirectoryUrl(url);
+  while (scopeUrl !== "file:///") {
+    if (scopeUrl.endsWith("node_modules/")) {
+      return null;
+    }
+    const packageJsonUrlObject = new URL("package.json", scopeUrl);
+    if (existsSync(packageJsonUrlObject)) {
+      return scopeUrl;
+    }
+    scopeUrl = getParentUrl(scopeUrl);
+  }
+  return null;
+};
+
+const defaultReadPackageJson = (packageUrl) => {
+  const packageJsonUrl = new URL("package.json", packageUrl);
+  const buffer = readFileSync(packageJsonUrl);
+  const string = String(buffer);
+  try {
+    return JSON.parse(string);
+  } catch {
+    throw new Error(`Invalid package configuration`);
+  }
+};
+
+// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
+
+const createInvalidModuleSpecifierError = (
+  reason,
+  specifier,
+  { parentUrl },
+) => {
+  const error = new Error(
+    `Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(
+      parentUrl,
+    )}`,
+  );
+  error.code = "INVALID_MODULE_SPECIFIER";
+  return error;
+};
+
+const createInvalidPackageTargetError = (
+  reason,
+  target,
+  { parentUrl, packageDirectoryUrl, key, isImport },
+) => {
+  let message;
+  if (key === ".") {
+    message = `Invalid "exports" main target defined in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+  } else {
+    message = `Invalid "${
+      isImport ? "imports" : "exports"
+    }" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+  }
+  const error = new Error(message);
+  error.code = "INVALID_PACKAGE_TARGET";
+  return error;
+};
+
+const createPackagePathNotExportedError = (
+  subpath,
+  { parentUrl, packageDirectoryUrl },
+) => {
+  let message;
+  if (subpath === ".") {
+    message = `No "exports" main defined in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}`;
+  } else {
+    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}`;
+  }
+  const error = new Error(message);
+  error.code = "PACKAGE_PATH_NOT_EXPORTED";
+  return error;
+};
+
+const createModuleNotFoundError = (specifier, { parentUrl }) => {
+  const error = new Error(
+    `Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`,
+  );
+  error.code = "MODULE_NOT_FOUND";
+  return error;
+};
+
+const createPackageImportNotDefinedError = (
+  specifier,
+  { parentUrl, packageDirectoryUrl },
+) => {
+  const error = new Error(
+    `Package import specifier "${specifier}" is not defined in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}`,
+  );
+  error.code = "PACKAGE_IMPORT_NOT_DEFINED";
+  return error;
+};
+
 const isSpecifierForNodeBuiltin = (specifier) => {
   return (
     specifier.startsWith("node:") ||
@@ -13079,6 +13508,853 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "global",
 ];
 
+/*
+ * https://nodejs.org/api/esm.html#resolver-algorithm-specification
+ * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
+ * deviations from the spec:
+ * - take into account "browser", "module" and "jsnext"
+ * - the check for isDirectory -> throw is delayed is descoped to the caller
+ * - the call to real path ->
+ *   delayed to the caller so that we can decide to
+ *   maintain symlink as facade url when it's outside project directory
+ *   or use the real path when inside
+ */
+
+const applyNodeEsmResolution = ({
+  specifier,
+  parentUrl,
+  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
+  lookupPackageScope = defaultLookupPackageScope,
+  readPackageJson = defaultReadPackageJson,
+  preservesSymlink = false,
+}) => {
+  const resolution = applyPackageSpecifierResolution(specifier, {
+    parentUrl: String(parentUrl),
+    conditions,
+    lookupPackageScope,
+    readPackageJson,
+    preservesSymlink,
+  });
+  const { url } = resolution;
+  if (url.startsWith("file:")) {
+    if (url.includes("%2F") || url.includes("%5C")) {
+      throw createInvalidModuleSpecifierError(
+        `must not include encoded "/" or "\\" characters`,
+        specifier,
+        {
+          parentUrl,
+        },
+      );
+    }
+    return resolution;
+  }
+  return resolution;
+};
+
+const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
+  const { parentUrl } = resolutionContext;
+  // relative specifier
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    if (specifier[0] !== "/") {
+      const browserFieldResolution = applyBrowserFieldResolution(
+        specifier,
+        resolutionContext,
+      );
+      if (browserFieldResolution) {
+        return browserFieldResolution;
+      }
+    }
+    return {
+      type: "relative_specifier",
+      url: new URL(specifier, parentUrl).href,
+    };
+  }
+  if (specifier[0] === "#") {
+    return applyPackageImportsResolution(specifier, resolutionContext);
+  }
+  try {
+    const urlObject = new URL(specifier);
+    if (specifier.startsWith("node:")) {
+      return {
+        type: "node_builtin_specifier",
+        url: specifier,
+      };
+    }
+    return {
+      type: "absolute_specifier",
+      url: urlObject.href,
+    };
+  } catch {
+    // bare specifier
+    const browserFieldResolution = applyBrowserFieldResolution(
+      specifier,
+      resolutionContext,
+    );
+    if (browserFieldResolution) {
+      return browserFieldResolution;
+    }
+    const packageResolution = applyPackageResolve(specifier, resolutionContext);
+    const search = new URL(specifier, "file:///").search;
+    if (search && !new URL(packageResolution.url).search) {
+      packageResolution.url = `${packageResolution.url}${search}`;
+    }
+    return packageResolution;
+  }
+};
+
+const applyBrowserFieldResolution = (specifier, resolutionContext) => {
+  const { parentUrl, conditions, lookupPackageScope, readPackageJson } =
+    resolutionContext;
+  const browserCondition = conditions.includes("browser");
+  if (!browserCondition) {
+    return null;
+  }
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (!packageDirectoryUrl) {
+    return null;
+  }
+  const packageJson = readPackageJson(packageDirectoryUrl);
+  if (!packageJson) {
+    return null;
+  }
+  const { browser } = packageJson;
+  if (!browser) {
+    return null;
+  }
+  if (typeof browser !== "object") {
+    return null;
+  }
+  let url;
+  if (specifier.startsWith(".")) {
+    const specifierUrl = new URL(specifier, parentUrl).href;
+    const specifierRelativeUrl = specifierUrl.slice(packageDirectoryUrl.length);
+    const secifierRelativeNotation = `./${specifierRelativeUrl}`;
+    const browserMapping = browser[secifierRelativeNotation];
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageDirectoryUrl).href;
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${specifierUrl.slice("file:///")}`;
+    }
+  } else {
+    const browserMapping = browser[specifier];
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageDirectoryUrl).href;
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${specifier}`;
+    }
+  }
+  if (url) {
+    return {
+      type: "field:browser",
+      isMain: true,
+      packageDirectoryUrl,
+      packageJson,
+      url,
+    };
+  }
+  return null;
+};
+
+const applyPackageImportsResolution = (
+  internalSpecifier,
+  resolutionContext,
+) => {
+  const { parentUrl, lookupPackageScope, readPackageJson } = resolutionContext;
+  if (internalSpecifier === "#" || internalSpecifier.startsWith("#/")) {
+    throw createInvalidModuleSpecifierError(
+      "not a valid internal imports specifier name",
+      internalSpecifier,
+      resolutionContext,
+    );
+  }
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (packageDirectoryUrl !== null) {
+    const packageJson = readPackageJson(packageDirectoryUrl);
+    const { imports } = packageJson;
+    if (imports !== null && typeof imports === "object") {
+      const resolved = applyPackageImportsExportsResolution(internalSpecifier, {
+        ...resolutionContext,
+        packageDirectoryUrl,
+        packageJson,
+        isImport: true,
+      });
+      if (resolved) {
+        return resolved;
+      }
+    }
+  }
+  throw createPackageImportNotDefinedError(internalSpecifier, {
+    ...resolutionContext,
+    packageDirectoryUrl,
+  });
+};
+
+const applyPackageResolve = (packageSpecifier, resolutionContext) => {
+  const { parentUrl, conditions, readPackageJson, preservesSymlink, isImport } =
+    resolutionContext;
+  if (packageSpecifier === "") {
+    throw new Error("invalid module specifier");
+  }
+  if (
+    conditions.includes("node") &&
+    isSpecifierForNodeBuiltin(packageSpecifier)
+  ) {
+    return {
+      type: "node_builtin_specifier",
+      url: `node:${packageSpecifier}`,
+    };
+  }
+  let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
+  if (
+    packageName[0] === "." ||
+    packageName.includes("\\") ||
+    packageName.includes("%")
+  ) {
+    throw createInvalidModuleSpecifierError(
+      `is not a valid package name`,
+      packageName,
+      resolutionContext,
+    );
+  }
+  if (isImport && packageSubpath.endsWith("/")) {
+    throw new Error("invalid module specifier");
+  }
+  const questionCharIndex = packageName.indexOf("?");
+  if (questionCharIndex > -1) {
+    packageName = packageName.slice(0, questionCharIndex);
+  }
+  const selfResolution = applyPackageSelfResolution(packageSubpath, {
+    ...resolutionContext,
+    packageName,
+  });
+  if (selfResolution) {
+    return selfResolution;
+  }
+  let currentUrl = parentUrl;
+  while (currentUrl !== "file:///") {
+    const packageDirectoryFacadeUrl = new URL(
+      `node_modules/${packageName}/`,
+      currentUrl,
+    ).href;
+    if (!existsSync(new URL(packageDirectoryFacadeUrl))) {
+      currentUrl = getParentUrl(currentUrl);
+      continue;
+    }
+    const packageDirectoryUrl = preservesSymlink
+      ? packageDirectoryFacadeUrl
+      : resolvePackageSymlink(packageDirectoryFacadeUrl);
+    const packageJson = readPackageJson(packageDirectoryUrl);
+    if (packageJson !== null) {
+      const { exports } = packageJson;
+      if (exports !== null && exports !== undefined) {
+        return applyPackageExportsResolution(packageSubpath, {
+          ...resolutionContext,
+          packageDirectoryUrl,
+          packageJson,
+          exports,
+        });
+      }
+    }
+    return applyLegacySubpathResolution(packageSubpath, {
+      ...resolutionContext,
+      packageDirectoryUrl,
+      packageJson,
+    });
+  }
+  throw createModuleNotFoundError(packageName, resolutionContext);
+};
+
+const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
+  const { parentUrl, packageName, lookupPackageScope, readPackageJson } =
+    resolutionContext;
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (!packageDirectoryUrl) {
+    return undefined;
+  }
+  const packageJson = readPackageJson(packageDirectoryUrl);
+  if (!packageJson) {
+    return undefined;
+  }
+  if (packageJson.name !== packageName) {
+    return undefined;
+  }
+  const { exports } = packageJson;
+  if (!exports) {
+    const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
+      ...resolutionContext,
+      packageDirectoryUrl,
+      packageJson,
+    });
+    if (subpathResolution && subpathResolution.type !== "subpath") {
+      return subpathResolution;
+    }
+    return undefined;
+  }
+  return applyPackageExportsResolution(packageSubpath, {
+    ...resolutionContext,
+    packageDirectoryUrl,
+    packageJson,
+  });
+};
+
+// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
+const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
+  if (packageSubpath === ".") {
+    const mainExport = applyMainExportResolution(resolutionContext);
+    if (!mainExport) {
+      throw createPackagePathNotExportedError(
+        packageSubpath,
+        resolutionContext,
+      );
+    }
+    const resolved = applyPackageTargetResolution(mainExport, {
+      ...resolutionContext,
+      key: ".",
+    });
+    if (resolved) {
+      return resolved;
+    }
+    throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
+  }
+  const packageExportsInfo = readExports(resolutionContext);
+  if (
+    packageExportsInfo.type === "object" &&
+    packageExportsInfo.allKeysAreRelative
+  ) {
+    const resolved = applyPackageImportsExportsResolution(packageSubpath, {
+      ...resolutionContext,
+      isImport: false,
+    });
+    if (resolved) {
+      return resolved;
+    }
+  }
+  throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
+};
+
+const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
+  const { packageJson, isImport } = resolutionContext;
+  const matchObject = isImport ? packageJson.imports : packageJson.exports;
+
+  if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
+    const target = matchObject[matchKey];
+    return applyPackageTargetResolution(target, {
+      ...resolutionContext,
+      key: matchKey,
+      isImport,
+    });
+  }
+  const expansionKeys = Object.keys(matchObject)
+    .filter((key) => key.split("*").length === 2)
+    .sort(comparePatternKeys);
+  for (const expansionKey of expansionKeys) {
+    const [patternBase, patternTrailer] = expansionKey.split("*");
+    if (matchKey === patternBase) continue;
+    if (!matchKey.startsWith(patternBase)) continue;
+    if (patternTrailer.length > 0) {
+      if (!matchKey.endsWith(patternTrailer)) continue;
+      if (matchKey.length < expansionKey.length) continue;
+    }
+    const target = matchObject[expansionKey];
+    const subpath = matchKey.slice(
+      patternBase.length,
+      matchKey.length - patternTrailer.length,
+    );
+    return applyPackageTargetResolution(target, {
+      ...resolutionContext,
+      key: matchKey,
+      subpath,
+      pattern: true,
+      isImport,
+    });
+  }
+  return null;
+};
+
+const applyPackageTargetResolution = (target, resolutionContext) => {
+  const {
+    conditions,
+    packageDirectoryUrl,
+    packageJson,
+    key,
+    subpath = "",
+    pattern = false,
+    isImport = false,
+  } = resolutionContext;
+
+  if (typeof target === "string") {
+    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
+      throw new Error("invalid module specifier");
+    }
+    if (target.startsWith("./")) {
+      const targetUrl = new URL(target, packageDirectoryUrl).href;
+      if (!targetUrl.startsWith(packageDirectoryUrl)) {
+        throw createInvalidPackageTargetError(
+          `target must be inside package`,
+          target,
+          resolutionContext,
+        );
+      }
+      return {
+        type: isImport ? "field:imports" : "field:exports",
+        isMain: subpath === "" || subpath === ".",
+        packageDirectoryUrl,
+        packageJson,
+        url: pattern
+          ? targetUrl.replaceAll("*", subpath)
+          : new URL(subpath, targetUrl).href,
+      };
+    }
+    if (!isImport || target.startsWith("../") || isValidUrl(target)) {
+      throw createInvalidPackageTargetError(
+        `target must starst with "./"`,
+        target,
+        resolutionContext,
+      );
+    }
+    return applyPackageResolve(
+      pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
+      {
+        ...resolutionContext,
+        parentUrl: packageDirectoryUrl,
+      },
+    );
+  }
+  if (Array.isArray(target)) {
+    if (target.length === 0) {
+      return null;
+    }
+    let lastResult;
+    let i = 0;
+    while (i < target.length) {
+      const targetValue = target[i];
+      i++;
+      try {
+        const resolved = applyPackageTargetResolution(targetValue, {
+          ...resolutionContext,
+          key: `${key}[${i}]`,
+          subpath,
+          pattern,
+          isImport,
+        });
+        if (resolved) {
+          return resolved;
+        }
+        lastResult = resolved;
+      } catch (e) {
+        if (e.code === "INVALID_PACKAGE_TARGET") {
+          continue;
+        }
+        lastResult = e;
+      }
+    }
+    if (lastResult) {
+      throw lastResult;
+    }
+    return null;
+  }
+  if (target === null) {
+    return null;
+  }
+  if (typeof target === "object") {
+    const keys = Object.keys(target);
+    for (const key of keys) {
+      if (Number.isInteger(key)) {
+        throw new Error("Invalid package configuration");
+      }
+      if (key === "default" || conditions.includes(key)) {
+        const targetValue = target[key];
+        const resolved = applyPackageTargetResolution(targetValue, {
+          ...resolutionContext,
+          key,
+          subpath,
+          pattern,
+          isImport,
+        });
+        if (resolved) {
+          return resolved;
+        }
+      }
+    }
+    return null;
+  }
+  throw createInvalidPackageTargetError(
+    `target must be a string, array, object or null`,
+    target,
+    resolutionContext,
+  );
+};
+
+const readExports = ({ packageDirectoryUrl, packageJson }) => {
+  const packageExports = packageJson.exports;
+  if (Array.isArray(packageExports)) {
+    return {
+      type: "array",
+    };
+  }
+  if (packageExports === null) {
+    return {};
+  }
+  if (typeof packageExports === "object") {
+    const keys = Object.keys(packageExports);
+    const relativeKeys = [];
+    const conditionalKeys = [];
+    keys.forEach((availableKey) => {
+      if (availableKey.startsWith(".")) {
+        relativeKeys.push(availableKey);
+      } else {
+        conditionalKeys.push(availableKey);
+      }
+    });
+    const hasRelativeKey = relativeKeys.length > 0;
+    if (hasRelativeKey && conditionalKeys.length > 0) {
+      throw new Error(
+        `Invalid package configuration: cannot mix relative and conditional keys in package.exports
+--- unexpected keys ---
+${conditionalKeys.map((key) => `"${key}"`).join("\n")}
+--- package directory url ---
+${packageDirectoryUrl}`,
+      );
+    }
+    return {
+      type: "object",
+      hasRelativeKey,
+      allKeysAreRelative: relativeKeys.length === keys.length,
+    };
+  }
+  if (typeof packageExports === "string") {
+    return { type: "string" };
+  }
+  return {};
+};
+
+const parsePackageSpecifier = (packageSpecifier) => {
+  if (packageSpecifier[0] === "@") {
+    const firstSlashIndex = packageSpecifier.indexOf("/");
+    if (firstSlashIndex === -1) {
+      throw new Error("invalid module specifier");
+    }
+    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
+    if (secondSlashIndex === -1) {
+      return {
+        packageName: packageSpecifier,
+        packageSubpath: ".",
+        isScoped: true,
+      };
+    }
+    const packageName = packageSpecifier.slice(0, secondSlashIndex);
+    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
+    const packageSubpath = `./${afterSecondSlash}`;
+    return {
+      packageName,
+      packageSubpath,
+      isScoped: true,
+    };
+  }
+  const firstSlashIndex = packageSpecifier.indexOf("/");
+  if (firstSlashIndex === -1) {
+    return {
+      packageName: packageSpecifier,
+      packageSubpath: ".",
+    };
+  }
+  const packageName = packageSpecifier.slice(0, firstSlashIndex);
+  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  if (afterFirstSlash === "") {
+    return {
+      packageName,
+      packageSubpath: "/",
+    };
+  }
+  const packageSubpath = `./${afterFirstSlash}`;
+  return {
+    packageName,
+    packageSubpath,
+  };
+};
+
+const applyMainExportResolution = (resolutionContext) => {
+  const { packageJson } = resolutionContext;
+  const packageExportsInfo = readExports(resolutionContext);
+  if (
+    packageExportsInfo.type === "array" ||
+    packageExportsInfo.type === "string"
+  ) {
+    return packageJson.exports;
+  }
+  if (packageExportsInfo.type === "object") {
+    if (packageExportsInfo.hasRelativeKey) {
+      return packageJson.exports["."];
+    }
+    return packageJson.exports;
+  }
+  return undefined;
+};
+
+const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
+  const { packageDirectoryUrl, packageJson } = resolutionContext;
+
+  if (packageSubpath === ".") {
+    return applyLegacyMainResolution(packageSubpath, resolutionContext);
+  }
+  const browserFieldResolution = applyBrowserFieldResolution(
+    packageSubpath,
+    resolutionContext,
+  );
+  if (browserFieldResolution) {
+    return browserFieldResolution;
+  }
+  return {
+    type: "subpath",
+    isMain: packageSubpath === ".",
+    packageDirectoryUrl,
+    packageJson,
+    url: new URL(packageSubpath, packageDirectoryUrl).href,
+  };
+};
+
+const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
+  const { conditions, packageDirectoryUrl, packageJson } = resolutionContext;
+  for (const condition of conditions) {
+    const conditionResolver = mainLegacyResolvers[condition];
+    if (!conditionResolver) {
+      continue;
+    }
+    const resolved = conditionResolver(resolutionContext);
+    if (resolved) {
+      return {
+        type: resolved.type,
+        isMain: resolved.isMain,
+        packageDirectoryUrl,
+        packageJson,
+        url: new URL(resolved.path, packageDirectoryUrl).href,
+      };
+    }
+  }
+  return {
+    type: "field:main", // the absence of "main" field
+    isMain: true,
+    packageDirectoryUrl,
+    packageJson,
+    url: new URL("index.js", packageDirectoryUrl).href,
+  };
+};
+const mainLegacyResolvers = {
+  import: ({ packageJson }) => {
+    if (typeof packageJson.module === "string") {
+      return { type: "field:module", isMain: true, path: packageJson.module };
+    }
+    if (typeof packageJson.jsnext === "string") {
+      return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
+    }
+    if (typeof packageJson.main === "string") {
+      return { type: "field:main", isMain: true, path: packageJson.main };
+    }
+    return null;
+  },
+  browser: ({ packageDirectoryUrl, packageJson }) => {
+    const browserMain = (() => {
+      if (typeof packageJson.browser === "string") {
+        return packageJson.browser;
+      }
+      if (
+        typeof packageJson.browser === "object" &&
+        packageJson.browser !== null
+      ) {
+        return packageJson.browser["."];
+      }
+      return "";
+    })();
+
+    if (!browserMain) {
+      if (typeof packageJson.module === "string") {
+        return {
+          type: "field:module",
+          isMain: true,
+          path: packageJson.module,
+        };
+      }
+      return null;
+    }
+    if (
+      typeof packageJson.module !== "string" ||
+      packageJson.module === browserMain
+    ) {
+      return {
+        type: "field:browser",
+        isMain: true,
+        path: browserMain,
+      };
+    }
+    const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
+    const content = readFileSync(browserMainUrlObject, "utf-8");
+    if (
+      (/typeof exports\s*==/.test(content) &&
+        /typeof module\s*==/.test(content)) ||
+      /module\.exports\s*=/.test(content)
+    ) {
+      return {
+        type: "field:module",
+        isMain: true,
+        path: packageJson.module,
+      };
+    }
+    return {
+      type: "field:browser",
+      isMain: true,
+      path: browserMain,
+    };
+  },
+  node: ({ packageJson, conditions }) => {
+    if (conditions.includes("import")) {
+      if (typeof packageJson.module === "string") {
+        return { type: "field:module", isMain: true, path: packageJson.module };
+      }
+      if (typeof packageJson.jsnext === "string") {
+        return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
+      }
+    }
+    if (typeof packageJson.main === "string") {
+      return { type: "field:main", isMain: true, path: packageJson.main };
+    }
+    return null;
+  },
+};
+
+const comparePatternKeys = (keyA, keyB) => {
+  if (!keyA.endsWith("/") && !keyA.includes("*")) {
+    throw new Error("Invalid package configuration");
+  }
+  if (!keyB.endsWith("/") && !keyB.includes("*")) {
+    throw new Error("Invalid package configuration");
+  }
+  const aStarIndex = keyA.indexOf("*");
+  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
+  const bStarIndex = keyB.indexOf("*");
+  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
+  if (baseLengthA > baseLengthB) {
+    return -1;
+  }
+  if (baseLengthB > baseLengthA) {
+    return 1;
+  }
+  if (aStarIndex === -1) {
+    return 1;
+  }
+  if (bStarIndex === -1) {
+    return -1;
+  }
+  if (keyA.length > keyB.length) {
+    return -1;
+  }
+  if (keyB.length > keyA.length) {
+    return 1;
+  }
+  return 0;
+};
+
+const resolvePackageSymlink = (packageDirectoryUrl) => {
+  const packageDirectoryPath = realpathSync(new URL(packageDirectoryUrl));
+  const packageDirectoryResolvedUrl = pathToFileURL(packageDirectoryPath).href;
+  return `${packageDirectoryResolvedUrl}/`;
+};
+
+const applyFileSystemMagicResolution = (
+  fileUrl,
+  { fileStat, magicDirectoryIndex, magicExtensions },
+) => {
+  const result = {
+    stat: null,
+    url: fileUrl,
+    magicExtension: "",
+    magicDirectoryIndex: false,
+    lastENOENTError: null,
+  };
+
+  if (fileStat === undefined) {
+    try {
+      fileStat = readEntryStatSync(new URL(fileUrl));
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        result.lastENOENTError = e;
+        fileStat = null;
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  if (fileStat && fileStat.isFile()) {
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result;
+  }
+  if (fileStat && fileStat.isDirectory()) {
+    if (magicDirectoryIndex) {
+      const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
+      const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
+      const subResult = applyFileSystemMagicResolution(indexFileUrl, {
+        magicDirectoryIndex: false,
+        magicExtensions,
+      });
+      return {
+        ...result,
+        ...subResult,
+        magicDirectoryIndex: true,
+      };
+    }
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result;
+  }
+
+  if (magicExtensions && magicExtensions.length) {
+    const parentUrl = new URL("./", fileUrl).href;
+    const urlFilename = urlToFilename(fileUrl);
+    for (const extensionToTry of magicExtensions) {
+      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
+      let stat;
+      try {
+        stat = readEntryStatSync(new URL(urlCandidate));
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          stat = null;
+        } else {
+          throw e;
+        }
+      }
+      if (stat) {
+        result.stat = stat;
+        result.url = `${fileUrl}${extensionToTry}`;
+        result.magicExtension = extensionToTry;
+        return result;
+      }
+    }
+  }
+  // magic extension not found
+  return result;
+};
+
+const getExtensionsToTry = (magicExtensions, importer) => {
+  if (!magicExtensions) {
+    return [];
+  }
+  const extensionsSet = new Set();
+  magicExtensions.forEach((magicExtension) => {
+    if (magicExtension === "inherit") {
+      const importerExtension = urlToExtension$1(importer);
+      extensionsSet.add(importerExtension);
+    } else {
+      extensionsSet.add(magicExtension);
+    }
+  });
+  return Array.from(extensionsSet.values());
+};
+
 const fileUrlConverter = {
   asFilePath: (fileUrl) => {
     const filePath = urlToFileSystemPath(fileUrl);
@@ -13124,6 +14400,7 @@ const bundleJsModules = async (
     isSupportedOnCurrentClients,
     getPluginMeta,
     kitchen,
+    assetsDirectory,
   } = jsModuleUrlInfos[0].context;
   const graph = jsModuleUrlInfos[0].graph;
   if (buildDirectoryUrl === undefined) {
@@ -13167,8 +14444,8 @@ const bundleJsModules = async (
           workspaces = packageJSON.workspaces;
         }
       }
-      let nodeModuleChunkName = "node_modules";
-      let packagesChunkName = "packages";
+      let nodeModuleChunkName = `node_modules`;
+      let packagesChunkName = `packages`;
 
       if (packageName) {
         let packageNameAsFilename = packageName
@@ -13178,6 +14455,11 @@ const bundleJsModules = async (
         nodeModuleChunkName = `${packageNameAsFilename}_node_modules`;
         packagesChunkName = `${packageNameAsFilename}_packages`;
       }
+      if (assetsDirectory) {
+        nodeModuleChunkName = `${assetsDirectory}${nodeModuleChunkName}`;
+        packagesChunkName = `${assetsDirectory}${packagesChunkName}`;
+      }
+
       chunks[nodeModuleChunkName] = {
         "file:///**/node_modules/": true,
         ...chunks.vendors,
@@ -13575,7 +14857,22 @@ const rollupPluginJsenv = ({
               continue;
             }
             const importUrl = getOriginalUrl(importRollupFileInfo);
-            const rollupSpecifier = `./${importRollupFileInfo.fileName}`;
+            const importerBuildUrl = new URL(
+              rollupFileInfo.fileName,
+              buildDirectoryUrl,
+            ).href;
+            const urlToImport = new URL(
+              importRollupFileInfo.fileName,
+              buildDirectoryUrl,
+            ).href;
+            const specifierRelative = urlToRelativeUrl(
+              urlToImport,
+              importerBuildUrl,
+            );
+            const rollupSpecifier =
+              specifierRelative[0] === "."
+                ? specifierRelative
+                : `./${specifierRelative}`;
             specifierToUrlMap.set(rollupSpecifier, importUrl);
           }
         }
@@ -13645,6 +14942,7 @@ const rollupPluginJsenv = ({
                     reference.specifier,
                   );
                   if (!specifierBeforeRollup) {
+                    // process.emitWarning?
                     console.warn(
                       `cannot remap "${reference.specifier}" back to specifier before rollup, this is unexpected.`,
                     );
@@ -13798,6 +15096,14 @@ const rollupPluginJsenv = ({
             moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
           };
         }
+      }
+      const urlInfo = graph.getUrlInfo(resolvedUrl);
+      if (urlInfo.type === "entry_build") {
+        return {
+          id: resolvedUrl,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+        };
       }
       return {
         id: PATH_AND_URL_CONVERTER.asFilePath(resolvedUrl),
@@ -15496,7 +16802,7 @@ const injectAstAfterImport = (programPath, ast) => {
 };
 
 const newStylesheetClientFileUrl = new URL(
-  "./client/new_stylesheet/new_stylesheet.js",
+  "./client/new_stylesheet.js",
   import.meta.url,
 ).href;
 
@@ -15654,7 +16960,7 @@ const getImportAttributes = (importNode) => {
 };
 
 const regeneratorRuntimeClientFileUrl = new URL(
-  "./client/regenerator_runtime/regenerator_runtime.js",
+  "./client/regenerator_runtime.js",
   import.meta.url,
 ).href;
 
@@ -16284,1027 +17590,433 @@ const jsenvPluginTranspilation = ({
   ];
 };
 
-// https://nodejs.org/api/packages.html#resolving-user-conditions
-const readCustomConditionsFromProcessArgs = () => {
-  const packageConditions = [];
-  for (const arg of process.execArgv) {
-    if (arg.includes("-C=")) {
-      const packageCondition = arg.slice(0, "-C=".length);
-      packageConditions.push(packageCondition);
-    }
-    if (arg.includes("--conditions=")) {
-      const packageCondition = arg.slice("--conditions=".length);
-      packageConditions.push(packageCondition);
-    }
-  }
-  return packageConditions;
+// default runtimeCompat corresponds to
+// "we can keep <script type="module"> intact":
+// so script_type_module + dynamic_import + import_meta
+const browserDefaultRuntimeCompat = {
+  // android: "8",
+  chrome: "64",
+  edge: "79",
+  firefox: "67",
+  ios: "12",
+  opera: "51",
+  safari: "11.3",
+  samsung: "9.2",
 };
 
-const asDirectoryUrl = (url) => {
-  const { pathname } = new URL(url);
-  if (pathname.endsWith("/")) {
-    return url;
-  }
-  return new URL("./", url).href;
+const nodeDefaultRuntimeCompat = {
+  node: process.version.slice(1),
 };
 
-const getParentUrl = (url) => {
-  if (url.startsWith("file://")) {
-    // With node.js new URL('../', 'file:///C:/').href
-    // returns "file:///C:/" instead of "file:///"
-    const resource = url.slice("file://".length);
-    const slashLastIndex = resource.lastIndexOf("/");
-    if (slashLastIndex === -1) {
-      return url;
-    }
-    const lastCharIndex = resource.length - 1;
-    if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = resource.lastIndexOf(
-        "/",
-        slashLastIndex - 1,
-      );
-      if (slashBeforeLastIndex === -1) {
-        return url;
-      }
-      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
-    }
-
-    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+const versionFromValue = (value) => {
+  if (typeof value === "number") {
+    return numberToVersion(value);
   }
-  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+  if (typeof value === "string") {
+    return stringToVersion(value);
+  }
+  throw new TypeError(`version must be a number or a string, got ${value}`);
 };
 
-const isValidUrl = (url) => {
-  try {
-    // eslint-disable-next-line no-new
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const urlToFilename = (url) => {
-  const { pathname } = new URL(url);
-  const pathnameBeforeLastSlash = pathname.endsWith("/")
-    ? pathname.slice(0, -1)
-    : pathname;
-  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
-  const filename =
-    slashLastIndex === -1
-      ? pathnameBeforeLastSlash
-      : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
-  return filename;
-};
-
-const urlToExtension$1 = (url) => {
-  const filename = urlToFilename(url);
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) return "";
-  // if (dotLastIndex === pathname.length - 1) return ""
-  const extension = filename.slice(dotLastIndex);
-  return extension;
-};
-
-const defaultLookupPackageScope = (url) => {
-  let scopeUrl = asDirectoryUrl(url);
-  while (scopeUrl !== "file:///") {
-    if (scopeUrl.endsWith("node_modules/")) {
-      return null;
-    }
-    const packageJsonUrlObject = new URL("package.json", scopeUrl);
-    if (existsSync(packageJsonUrlObject)) {
-      return scopeUrl;
-    }
-    scopeUrl = getParentUrl(scopeUrl);
-  }
-  return null;
-};
-
-const defaultReadPackageJson = (packageUrl) => {
-  const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync(packageJsonUrl);
-  const string = String(buffer);
-  try {
-    return JSON.parse(string);
-  } catch {
-    throw new Error(`Invalid package configuration`);
-  }
-};
-
-// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
-
-const createInvalidModuleSpecifierError = (
-  reason,
-  specifier,
-  { parentUrl },
-) => {
-  const error = new Error(
-    `Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(
-      parentUrl,
-    )}`,
-  );
-  error.code = "INVALID_MODULE_SPECIFIER";
-  return error;
-};
-
-const createInvalidPackageTargetError = (
-  reason,
-  target,
-  { parentUrl, packageDirectoryUrl, key, isImport },
-) => {
-  let message;
-  if (key === ".") {
-    message = `Invalid "exports" main target defined in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
-  } else {
-    message = `Invalid "${
-      isImport ? "imports" : "exports"
-    }" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
-  }
-  const error = new Error(message);
-  error.code = "INVALID_PACKAGE_TARGET";
-  return error;
-};
-
-const createPackagePathNotExportedError = (
-  subpath,
-  { parentUrl, packageDirectoryUrl },
-) => {
-  let message;
-  if (subpath === ".") {
-    message = `No "exports" main defined in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`;
-  } else {
-    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`;
-  }
-  const error = new Error(message);
-  error.code = "PACKAGE_PATH_NOT_EXPORTED";
-  return error;
-};
-
-const createModuleNotFoundError = (specifier, { parentUrl }) => {
-  const error = new Error(
-    `Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`,
-  );
-  error.code = "MODULE_NOT_FOUND";
-  return error;
-};
-
-const createPackageImportNotDefinedError = (
-  specifier,
-  { parentUrl, packageDirectoryUrl },
-) => {
-  const error = new Error(
-    `Package import specifier "${specifier}" is not defined in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`,
-  );
-  error.code = "PACKAGE_IMPORT_NOT_DEFINED";
-  return error;
-};
-
-/*
- * https://nodejs.org/api/esm.html#resolver-algorithm-specification
- * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
- * deviations from the spec:
- * - take into account "browser", "module" and "jsnext"
- * - the check for isDirectory -> throw is delayed is descoped to the caller
- * - the call to real path ->
- *   delayed to the caller so that we can decide to
- *   maintain symlink as facade url when it's outside project directory
- *   or use the real path when inside
- */
-
-const applyNodeEsmResolution = ({
-  specifier,
-  parentUrl,
-  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
-  lookupPackageScope = defaultLookupPackageScope,
-  readPackageJson = defaultReadPackageJson,
-  preservesSymlink = false,
-}) => {
-  const resolution = applyPackageSpecifierResolution(specifier, {
-    parentUrl: String(parentUrl),
-    conditions,
-    lookupPackageScope,
-    readPackageJson,
-    preservesSymlink,
-  });
-  const { url } = resolution;
-  if (url.startsWith("file:")) {
-    if (url.includes("%2F") || url.includes("%5C")) {
-      throw createInvalidModuleSpecifierError(
-        `must not include encoded "/" or "\\" characters`,
-        specifier,
-        {
-          parentUrl,
-        },
-      );
-    }
-    return resolution;
-  }
-  return resolution;
-};
-
-const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
-  const { parentUrl } = resolutionContext;
-  // relative specifier
-  if (
-    specifier[0] === "/" ||
-    specifier.startsWith("./") ||
-    specifier.startsWith("../")
-  ) {
-    if (specifier[0] !== "/") {
-      const browserFieldResolution = applyBrowserFieldResolution(
-        specifier,
-        resolutionContext,
-      );
-      if (browserFieldResolution) {
-        return browserFieldResolution;
-      }
-    }
-    return {
-      type: "relative_specifier",
-      url: new URL(specifier, parentUrl).href,
-    };
-  }
-  if (specifier[0] === "#") {
-    return applyPackageImportsResolution(specifier, resolutionContext);
-  }
-  try {
-    const urlObject = new URL(specifier);
-    if (specifier.startsWith("node:")) {
-      return {
-        type: "node_builtin_specifier",
-        url: specifier,
-      };
-    }
-    return {
-      type: "absolute_specifier",
-      url: urlObject.href,
-    };
-  } catch {
-    // bare specifier
-    const browserFieldResolution = applyBrowserFieldResolution(
-      specifier,
-      resolutionContext,
-    );
-    if (browserFieldResolution) {
-      return browserFieldResolution;
-    }
-    const packageResolution = applyPackageResolve(specifier, resolutionContext);
-    const search = new URL(specifier, "file:///").search;
-    if (search && !new URL(packageResolution.url).search) {
-      packageResolution.url = `${packageResolution.url}${search}`;
-    }
-    return packageResolution;
-  }
-};
-
-const applyBrowserFieldResolution = (specifier, resolutionContext) => {
-  const { parentUrl, conditions, lookupPackageScope, readPackageJson } =
-    resolutionContext;
-  const browserCondition = conditions.includes("browser");
-  if (!browserCondition) {
-    return null;
-  }
-  const packageDirectoryUrl = lookupPackageScope(parentUrl);
-  if (!packageDirectoryUrl) {
-    return null;
-  }
-  const packageJson = readPackageJson(packageDirectoryUrl);
-  if (!packageJson) {
-    return null;
-  }
-  const { browser } = packageJson;
-  if (!browser) {
-    return null;
-  }
-  if (typeof browser !== "object") {
-    return null;
-  }
-  let url;
-  if (specifier.startsWith(".")) {
-    const specifierUrl = new URL(specifier, parentUrl).href;
-    const specifierRelativeUrl = specifierUrl.slice(packageDirectoryUrl.length);
-    const secifierRelativeNotation = `./${specifierRelativeUrl}`;
-    const browserMapping = browser[secifierRelativeNotation];
-    if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageDirectoryUrl).href;
-    } else if (browserMapping === false) {
-      url = `file:///@ignore/${specifierUrl.slice("file:///")}`;
-    }
-  } else {
-    const browserMapping = browser[specifier];
-    if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageDirectoryUrl).href;
-    } else if (browserMapping === false) {
-      url = `file:///@ignore/${specifier}`;
-    }
-  }
-  if (url) {
-    return {
-      type: "field:browser",
-      isMain: true,
-      packageDirectoryUrl,
-      packageJson,
-      url,
-    };
-  }
-  return null;
-};
-
-const applyPackageImportsResolution = (
-  internalSpecifier,
-  resolutionContext,
-) => {
-  const { parentUrl, lookupPackageScope, readPackageJson } = resolutionContext;
-  if (internalSpecifier === "#" || internalSpecifier.startsWith("#/")) {
-    throw createInvalidModuleSpecifierError(
-      "not a valid internal imports specifier name",
-      internalSpecifier,
-      resolutionContext,
-    );
-  }
-  const packageDirectoryUrl = lookupPackageScope(parentUrl);
-  if (packageDirectoryUrl !== null) {
-    const packageJson = readPackageJson(packageDirectoryUrl);
-    const { imports } = packageJson;
-    if (imports !== null && typeof imports === "object") {
-      const resolved = applyPackageImportsExportsResolution(internalSpecifier, {
-        ...resolutionContext,
-        packageDirectoryUrl,
-        packageJson,
-        isImport: true,
-      });
-      if (resolved) {
-        return resolved;
-      }
-    }
-  }
-  throw createPackageImportNotDefinedError(internalSpecifier, {
-    ...resolutionContext,
-    packageDirectoryUrl,
-  });
-};
-
-const applyPackageResolve = (packageSpecifier, resolutionContext) => {
-  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
-    resolutionContext;
-  if (packageSpecifier === "") {
-    throw new Error("invalid module specifier");
-  }
-  if (
-    conditions.includes("node") &&
-    isSpecifierForNodeBuiltin(packageSpecifier)
-  ) {
-    return {
-      type: "node_builtin_specifier",
-      url: `node:${packageSpecifier}`,
-    };
-  }
-  let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
-  if (
-    packageName[0] === "." ||
-    packageName.includes("\\") ||
-    packageName.includes("%")
-  ) {
-    throw createInvalidModuleSpecifierError(
-      `is not a valid package name`,
-      packageName,
-      resolutionContext,
-    );
-  }
-  if (packageSubpath.endsWith("/")) {
-    throw new Error("invalid module specifier");
-  }
-  const questionCharIndex = packageName.indexOf("?");
-  if (questionCharIndex > -1) {
-    packageName = packageName.slice(0, questionCharIndex);
-  }
-  const selfResolution = applyPackageSelfResolution(packageSubpath, {
-    ...resolutionContext,
-    packageName,
-  });
-  if (selfResolution) {
-    return selfResolution;
-  }
-  let currentUrl = parentUrl;
-  while (currentUrl !== "file:///") {
-    const packageDirectoryFacadeUrl = new URL(
-      `node_modules/${packageName}/`,
-      currentUrl,
-    ).href;
-    if (!existsSync(new URL(packageDirectoryFacadeUrl))) {
-      currentUrl = getParentUrl(currentUrl);
-      continue;
-    }
-    const packageDirectoryUrl = preservesSymlink
-      ? packageDirectoryFacadeUrl
-      : resolvePackageSymlink(packageDirectoryFacadeUrl);
-    const packageJson = readPackageJson(packageDirectoryUrl);
-    if (packageJson !== null) {
-      const { exports } = packageJson;
-      if (exports !== null && exports !== undefined) {
-        return applyPackageExportsResolution(packageSubpath, {
-          ...resolutionContext,
-          packageDirectoryUrl,
-          packageJson,
-          exports,
-        });
-      }
-    }
-    return applyLegacySubpathResolution(packageSubpath, {
-      ...resolutionContext,
-      packageDirectoryUrl,
-      packageJson,
-    });
-  }
-  throw createModuleNotFoundError(packageName, resolutionContext);
-};
-
-const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
-  const { parentUrl, packageName, lookupPackageScope, readPackageJson } =
-    resolutionContext;
-  const packageDirectoryUrl = lookupPackageScope(parentUrl);
-  if (!packageDirectoryUrl) {
-    return undefined;
-  }
-  const packageJson = readPackageJson(packageDirectoryUrl);
-  if (!packageJson) {
-    return undefined;
-  }
-  if (packageJson.name !== packageName) {
-    return undefined;
-  }
-  const { exports } = packageJson;
-  if (!exports) {
-    const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
-      ...resolutionContext,
-      packageDirectoryUrl,
-      packageJson,
-    });
-    if (subpathResolution && subpathResolution.type !== "subpath") {
-      return subpathResolution;
-    }
-    return undefined;
-  }
-  return applyPackageExportsResolution(packageSubpath, {
-    ...resolutionContext,
-    packageDirectoryUrl,
-    packageJson,
-  });
-};
-
-// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
-const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
-  if (packageSubpath === ".") {
-    const mainExport = applyMainExportResolution(resolutionContext);
-    if (!mainExport) {
-      throw createPackagePathNotExportedError(
-        packageSubpath,
-        resolutionContext,
-      );
-    }
-    const resolved = applyPackageTargetResolution(mainExport, {
-      ...resolutionContext,
-      key: ".",
-    });
-    if (resolved) {
-      return resolved;
-    }
-    throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
-  }
-  const packageExportsInfo = readExports(resolutionContext);
-  if (
-    packageExportsInfo.type === "object" &&
-    packageExportsInfo.allKeysAreRelative
-  ) {
-    const resolved = applyPackageImportsExportsResolution(packageSubpath, {
-      ...resolutionContext,
-      isImport: false,
-    });
-    if (resolved) {
-      return resolved;
-    }
-  }
-  throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
-};
-
-const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
-  const { packageJson, isImport } = resolutionContext;
-  const matchObject = isImport ? packageJson.imports : packageJson.exports;
-
-  if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
-    const target = matchObject[matchKey];
-    return applyPackageTargetResolution(target, {
-      ...resolutionContext,
-      key: matchKey,
-      isImport,
-    });
-  }
-  const expansionKeys = Object.keys(matchObject)
-    .filter((key) => key.split("*").length === 2)
-    .sort(comparePatternKeys);
-  for (const expansionKey of expansionKeys) {
-    const [patternBase, patternTrailer] = expansionKey.split("*");
-    if (matchKey === patternBase) continue;
-    if (!matchKey.startsWith(patternBase)) continue;
-    if (patternTrailer.length > 0) {
-      if (!matchKey.endsWith(patternTrailer)) continue;
-      if (matchKey.length < expansionKey.length) continue;
-    }
-    const target = matchObject[expansionKey];
-    const subpath = matchKey.slice(
-      patternBase.length,
-      matchKey.length - patternTrailer.length,
-    );
-    return applyPackageTargetResolution(target, {
-      ...resolutionContext,
-      key: matchKey,
-      subpath,
-      pattern: true,
-      isImport,
-    });
-  }
-  return null;
-};
-
-const applyPackageTargetResolution = (target, resolutionContext) => {
-  const {
-    conditions,
-    packageDirectoryUrl,
-    packageJson,
-    key,
-    subpath = "",
-    pattern = false,
-    isImport = false,
-  } = resolutionContext;
-
-  if (typeof target === "string") {
-    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
-      throw new Error("invalid module specifier");
-    }
-    if (target.startsWith("./")) {
-      const targetUrl = new URL(target, packageDirectoryUrl).href;
-      if (!targetUrl.startsWith(packageDirectoryUrl)) {
-        throw createInvalidPackageTargetError(
-          `target must be inside package`,
-          target,
-          resolutionContext,
-        );
-      }
-      return {
-        type: isImport ? "field:imports" : "field:exports",
-        isMain: subpath === "" || subpath === ".",
-        packageDirectoryUrl,
-        packageJson,
-        url: pattern
-          ? targetUrl.replaceAll("*", subpath)
-          : new URL(subpath, targetUrl).href,
-      };
-    }
-    if (!isImport || target.startsWith("../") || isValidUrl(target)) {
-      throw createInvalidPackageTargetError(
-        `target must starst with "./"`,
-        target,
-        resolutionContext,
-      );
-    }
-    return applyPackageResolve(
-      pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
-      {
-        ...resolutionContext,
-        parentUrl: packageDirectoryUrl,
-      },
-    );
-  }
-  if (Array.isArray(target)) {
-    if (target.length === 0) {
-      return null;
-    }
-    let lastResult;
-    let i = 0;
-    while (i < target.length) {
-      const targetValue = target[i];
-      i++;
-      try {
-        const resolved = applyPackageTargetResolution(targetValue, {
-          ...resolutionContext,
-          key: `${key}[${i}]`,
-          subpath,
-          pattern,
-          isImport,
-        });
-        if (resolved) {
-          return resolved;
-        }
-        lastResult = resolved;
-      } catch (e) {
-        if (e.code === "INVALID_PACKAGE_TARGET") {
-          continue;
-        }
-        lastResult = e;
-      }
-    }
-    if (lastResult) {
-      throw lastResult;
-    }
-    return null;
-  }
-  if (target === null) {
-    return null;
-  }
-  if (typeof target === "object") {
-    const keys = Object.keys(target);
-    for (const key of keys) {
-      if (Number.isInteger(key)) {
-        throw new Error("Invalid package configuration");
-      }
-      if (key === "default" || conditions.includes(key)) {
-        const targetValue = target[key];
-        const resolved = applyPackageTargetResolution(targetValue, {
-          ...resolutionContext,
-          key,
-          subpath,
-          pattern,
-          isImport,
-        });
-        if (resolved) {
-          return resolved;
-        }
-      }
-    }
-    return null;
-  }
-  throw createInvalidPackageTargetError(
-    `target must be a string, array, object or null`,
-    target,
-    resolutionContext,
-  );
-};
-
-const readExports = ({ packageDirectoryUrl, packageJson }) => {
-  const packageExports = packageJson.exports;
-  if (Array.isArray(packageExports)) {
-    return {
-      type: "array",
-    };
-  }
-  if (packageExports === null) {
-    return {};
-  }
-  if (typeof packageExports === "object") {
-    const keys = Object.keys(packageExports);
-    const relativeKeys = [];
-    const conditionalKeys = [];
-    keys.forEach((availableKey) => {
-      if (availableKey.startsWith(".")) {
-        relativeKeys.push(availableKey);
-      } else {
-        conditionalKeys.push(availableKey);
-      }
-    });
-    const hasRelativeKey = relativeKeys.length > 0;
-    if (hasRelativeKey && conditionalKeys.length > 0) {
-      throw new Error(
-        `Invalid package configuration: cannot mix relative and conditional keys in package.exports
---- unexpected keys ---
-${conditionalKeys.map((key) => `"${key}"`).join("\n")}
---- package directory url ---
-${packageDirectoryUrl}`,
-      );
-    }
-    return {
-      type: "object",
-      hasRelativeKey,
-      allKeysAreRelative: relativeKeys.length === keys.length,
-    };
-  }
-  if (typeof packageExports === "string") {
-    return { type: "string" };
-  }
-  return {};
-};
-
-const parsePackageSpecifier = (packageSpecifier) => {
-  if (packageSpecifier[0] === "@") {
-    const firstSlashIndex = packageSpecifier.indexOf("/");
-    if (firstSlashIndex === -1) {
-      throw new Error("invalid module specifier");
-    }
-    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
-    if (secondSlashIndex === -1) {
-      return {
-        packageName: packageSpecifier,
-        packageSubpath: ".",
-        isScoped: true,
-      };
-    }
-    const packageName = packageSpecifier.slice(0, secondSlashIndex);
-    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
-    const packageSubpath = `./${afterSecondSlash}`;
-    return {
-      packageName,
-      packageSubpath,
-      isScoped: true,
-    };
-  }
-  const firstSlashIndex = packageSpecifier.indexOf("/");
-  if (firstSlashIndex === -1) {
-    return {
-      packageName: packageSpecifier,
-      packageSubpath: ".",
-    };
-  }
-  const packageName = packageSpecifier.slice(0, firstSlashIndex);
-  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
-  const packageSubpath = `./${afterFirstSlash}`;
+const numberToVersion = (number) => {
   return {
-    packageName,
-    packageSubpath,
+    major: number,
+    minor: 0,
+    patch: 0,
   };
 };
 
-const applyMainExportResolution = (resolutionContext) => {
-  const { packageJson } = resolutionContext;
-  const packageExportsInfo = readExports(resolutionContext);
-  if (
-    packageExportsInfo.type === "array" ||
-    packageExportsInfo.type === "string"
-  ) {
-    return packageJson.exports;
-  }
-  if (packageExportsInfo.type === "object") {
-    if (packageExportsInfo.hasRelativeKey) {
-      return packageJson.exports["."];
-    }
-    return packageJson.exports;
-  }
-  return undefined;
-};
-
-const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
-  const { packageDirectoryUrl, packageJson } = resolutionContext;
-
-  if (packageSubpath === ".") {
-    return applyLegacyMainResolution(packageSubpath, resolutionContext);
-  }
-  const browserFieldResolution = applyBrowserFieldResolution(
-    packageSubpath,
-    resolutionContext,
-  );
-  if (browserFieldResolution) {
-    return browserFieldResolution;
-  }
-  return {
-    type: "subpath",
-    isMain: packageSubpath === ".",
-    packageDirectoryUrl,
-    packageJson,
-    url: new URL(packageSubpath, packageDirectoryUrl).href,
-  };
-};
-
-const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
-  const { conditions, packageDirectoryUrl, packageJson } = resolutionContext;
-  for (const condition of conditions) {
-    const conditionResolver = mainLegacyResolvers[condition];
-    if (!conditionResolver) {
-      continue;
-    }
-    const resolved = conditionResolver(resolutionContext);
-    if (resolved) {
-      return {
-        type: resolved.type,
-        isMain: resolved.isMain,
-        packageDirectoryUrl,
-        packageJson,
-        url: new URL(resolved.path, packageDirectoryUrl).href,
-      };
-    }
-  }
-  return {
-    type: "field:main", // the absence of "main" field
-    isMain: true,
-    packageDirectoryUrl,
-    packageJson,
-    url: new URL("index.js", packageDirectoryUrl).href,
-  };
-};
-const mainLegacyResolvers = {
-  import: ({ packageJson }) => {
-    if (typeof packageJson.module === "string") {
-      return { type: "field:module", isMain: true, path: packageJson.module };
-    }
-    if (typeof packageJson.jsnext === "string") {
-      return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
-    }
-    if (typeof packageJson.main === "string") {
-      return { type: "field:main", isMain: true, path: packageJson.main };
-    }
-    return null;
-  },
-  browser: ({ packageDirectoryUrl, packageJson }) => {
-    const browserMain = (() => {
-      if (typeof packageJson.browser === "string") {
-        return packageJson.browser;
-      }
-      if (
-        typeof packageJson.browser === "object" &&
-        packageJson.browser !== null
-      ) {
-        return packageJson.browser["."];
-      }
-      return "";
-    })();
-
-    if (!browserMain) {
-      if (typeof packageJson.module === "string") {
-        return {
-          type: "field:module",
-          isMain: true,
-          path: packageJson.module,
-        };
-      }
-      return null;
-    }
-    if (
-      typeof packageJson.module !== "string" ||
-      packageJson.module === browserMain
-    ) {
-      return {
-        type: "field:browser",
-        isMain: true,
-        path: browserMain,
-      };
-    }
-    const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
-    const content = readFileSync(browserMainUrlObject, "utf-8");
-    if (
-      (/typeof exports\s*==/.test(content) &&
-        /typeof module\s*==/.test(content)) ||
-      /module\.exports\s*=/.test(content)
-    ) {
-      return {
-        type: "field:module",
-        isMain: true,
-        path: packageJson.module,
-      };
-    }
+const stringToVersion = (string) => {
+  if (string.indexOf(".") > -1) {
+    const parts = string.split(".");
     return {
-      type: "field:browser",
-      isMain: true,
-      path: browserMain,
+      major: Number(parts[0]),
+      minor: parts[1] ? Number(parts[1]) : 0,
+      patch: parts[2] ? Number(parts[2]) : 0,
     };
-  },
-  node: ({ packageJson }) => {
-    if (typeof packageJson.main === "string") {
-      return {
-        type: "field:main",
-        isMain: true,
-        path: packageJson.main,
-      };
-    }
-    return null;
-  },
+  }
+
+  if (isNaN(string)) {
+    return {
+      major: 0,
+      minor: 0,
+      patch: 0,
+    };
+  }
+
+  return {
+    major: Number(string),
+    minor: 0,
+    patch: 0,
+  };
 };
 
-const comparePatternKeys = (keyA, keyB) => {
-  if (!keyA.endsWith("/") && !keyA.includes("*")) {
-    throw new Error("Invalid package configuration");
+const compareTwoVersions = (versionA, versionB) => {
+  const semanticVersionA = versionFromValue(versionA);
+  const semanticVersionB = versionFromValue(versionB);
+  const majorDiff = semanticVersionA.major - semanticVersionB.major;
+  if (majorDiff > 0) {
+    return majorDiff;
   }
-  if (!keyB.endsWith("/") && !keyB.includes("*")) {
-    throw new Error("Invalid package configuration");
+  if (majorDiff < 0) {
+    return majorDiff;
   }
-  const aStarIndex = keyA.indexOf("*");
-  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
-  const bStarIndex = keyB.indexOf("*");
-  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
-  if (baseLengthA > baseLengthB) {
-    return -1;
+  const minorDiff = semanticVersionA.minor - semanticVersionB.minor;
+  if (minorDiff > 0) {
+    return minorDiff;
   }
-  if (baseLengthB > baseLengthA) {
-    return 1;
+  if (minorDiff < 0) {
+    return minorDiff;
   }
-  if (aStarIndex === -1) {
-    return 1;
+  const patchDiff = semanticVersionA.patch - semanticVersionB.patch;
+  if (patchDiff > 0) {
+    return patchDiff;
   }
-  if (bStarIndex === -1) {
-    return -1;
-  }
-  if (keyA.length > keyB.length) {
-    return -1;
-  }
-  if (keyB.length > keyA.length) {
-    return 1;
+  if (patchDiff < 0) {
+    return patchDiff;
   }
   return 0;
 };
 
-const resolvePackageSymlink = (packageDirectoryUrl) => {
-  const packageDirectoryPath = realpathSync(new URL(packageDirectoryUrl));
-  const packageDirectoryResolvedUrl = pathToFileURL(packageDirectoryPath).href;
-  return `${packageDirectoryResolvedUrl}/`;
+const versionIsBelow = (versionSupposedBelow, versionSupposedAbove) => {
+  return compareTwoVersions(versionSupposedBelow, versionSupposedAbove) < 0;
 };
 
-const applyFileSystemMagicResolution = (
-  fileUrl,
-  { fileStat, magicDirectoryIndex, magicExtensions },
-) => {
-  const result = {
-    stat: null,
-    url: fileUrl,
-    magicExtension: "",
-    magicDirectoryIndex: false,
-    lastENOENTError: null,
-  };
-
-  if (fileStat === undefined) {
-    try {
-      fileStat = readEntryStatSync(new URL(fileUrl));
-    } catch (e) {
-      if (e.code === "ENOENT") {
-        result.lastENOENTError = e;
-        fileStat = null;
-      } else {
-        throw e;
-      }
+const findHighestVersion = (...values) => {
+  if (values.length === 0) throw new Error(`missing argument`);
+  return values.reduce((highestVersion, value) => {
+    if (versionIsBelow(highestVersion, value)) {
+      return value;
     }
-  }
-
-  if (fileStat && fileStat.isFile()) {
-    result.stat = fileStat;
-    result.url = fileUrl;
-    return result;
-  }
-  if (fileStat && fileStat.isDirectory()) {
-    if (magicDirectoryIndex) {
-      const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
-      const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
-      const subResult = applyFileSystemMagicResolution(indexFileUrl, {
-        magicDirectoryIndex: false,
-        magicExtensions,
-      });
-      return {
-        ...result,
-        ...subResult,
-        magicDirectoryIndex: true,
-      };
-    }
-    result.stat = fileStat;
-    result.url = fileUrl;
-    return result;
-  }
-
-  if (magicExtensions && magicExtensions.length) {
-    const parentUrl = new URL("./", fileUrl).href;
-    const urlFilename = urlToFilename(fileUrl);
-    for (const extensionToTry of magicExtensions) {
-      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
-      let stat;
-      try {
-        stat = readEntryStatSync(new URL(urlCandidate));
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          stat = null;
-        } else {
-          throw e;
-        }
-      }
-      if (stat) {
-        result.stat = stat;
-        result.url = `${fileUrl}${extensionToTry}`;
-        result.magicExtension = extensionToTry;
-        return result;
-      }
-    }
-  }
-  // magic extension not found
-  return result;
-};
-
-const getExtensionsToTry = (magicExtensions, importer) => {
-  if (!magicExtensions) {
-    return [];
-  }
-  const extensionsSet = new Set();
-  magicExtensions.forEach((magicExtension) => {
-    if (magicExtension === "inherit") {
-      const importerExtension = urlToExtension$1(importer);
-      extensionsSet.add(importerExtension);
-    } else {
-      extensionsSet.add(magicExtension);
-    }
+    return highestVersion;
   });
-  return Array.from(extensionsSet.values());
+};
+
+const featuresCompatMap = {
+  script_type_module: {
+    edge: "16",
+    firefox: "60",
+    chrome: "61",
+    safari: "10.1",
+    opera: "48",
+    ios: "10.3",
+    android: "61",
+    samsung: "8.2",
+  },
+  document_current_script: {
+    edge: "12",
+    firefox: "4",
+    chrome: "29",
+    safari: "8",
+    opera: "16",
+    android: "4.4",
+    samsung: "4",
+  },
+  // https://caniuse.com/?search=import.meta
+  import_meta: {
+    android: "9",
+    chrome: "64",
+    edge: "79",
+    firefox: "62",
+    ios: "12",
+    opera: "51",
+    safari: "11.1",
+    samsung: "9.2",
+  },
+  import_meta_resolve: {
+    chrome: "107",
+    edge: "105",
+    firefox: "106",
+    node: "20.0.0",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#browser_compatibility
+  import_dynamic: {
+    android: "8",
+    chrome: "63",
+    edge: "79",
+    firefox: "67",
+    ios: "11.3",
+    opera: "50",
+    safari: "11.3",
+    samsung: "8.0",
+    node: "13.2",
+  },
+  top_level_await: {
+    edge: "89",
+    chrome: "89",
+    firefox: "89",
+    opera: "75",
+    safari: "15",
+    samsung: "15",
+    ios: "15",
+    node: "14.8",
+  },
+  // https://caniuse.com/import-maps
+  importmap: {
+    edge: "89",
+    chrome: "89",
+    opera: "76",
+    samsung: "15",
+    firefox: "108",
+    safari: "16.4",
+  },
+  import_type_json: {
+    chrome: "123",
+    safari: "17.2",
+  },
+  import_type_css: {
+    chrome: "123",
+  },
+  import_type_text: {},
+  // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility
+  new_stylesheet: {
+    chrome: "73",
+    edge: "79",
+    opera: "53",
+    android: "73",
+  },
+  // https://caniuse.com/?search=worker
+  worker: {
+    ie: "10",
+    edge: "12",
+    firefox: "3.5",
+    chrome: "4",
+    opera: "11.5",
+    safari: "4",
+    ios: "5",
+    android: "4.4",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker#browser_compatibility
+  worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  worker_importmap: {},
+  service_worker: {
+    edge: "17",
+    firefox: "44",
+    chrome: "40",
+    safari: "11.1",
+    opera: "27",
+    ios: "11.3",
+    android: "12.12",
+  },
+  service_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+    android: "80",
+  },
+  service_worker_importmap: {},
+  shared_worker: {
+    chrome: "4",
+    edge: "79",
+    firefox: "29",
+    opera: "10.6",
+  },
+  shared_worker_type_module: {
+    chrome: "80",
+    edge: "80",
+    opera: "67",
+  },
+  shared_worker_importmap: {},
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis#browser_compatibility
+  global_this: {
+    edge: "79",
+    firefox: "65",
+    chrome: "71",
+    safari: "12.1",
+    opera: "58",
+    ios: "12.2",
+    android: "94",
+    node: "12",
+  },
+  async_generator_function: {
+    chrome: "63",
+    opera: "50",
+    edge: "79",
+    firefox: "57",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "8",
+    electron: "3",
+  },
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#browser_compatibility
+  template_literals: {
+    chrome: "41",
+    edge: "12",
+    firefox: "34",
+    opera: "28",
+    safari: "9",
+    ios: "9",
+    android: "4",
+    node: "4",
+  },
+  arrow_function: {
+    chrome: "47",
+    opera: "34",
+    edge: "13",
+    firefox: "45",
+    safari: "10",
+    node: "6",
+    ios: "10",
+    samsung: "5",
+    electron: "0.36",
+  },
+  const_bindings: {
+    chrome: "41",
+    opera: "28",
+    edge: "12",
+    firefox: "46",
+    safari: "10",
+    node: "4",
+    ie: "11",
+    ios: "10",
+    samsung: "3.4",
+    electron: "0.22",
+  },
+  object_properties_shorthand: {
+    chrome: "43",
+    opera: "30",
+    edge: "12",
+    firefox: "33",
+    safari: "9",
+    node: "4",
+    ios: "9",
+    samsung: "4",
+    electron: "0.28",
+  },
+  reserved_words: {
+    chrome: "13",
+    opera: "10.50",
+    edge: "12",
+    firefox: "2",
+    safari: "3.1",
+    node: "0.10",
+    ie: "9",
+    android: "4.4",
+    ios: "6",
+    phantom: "2",
+    samsung: "1",
+    electron: "0.20",
+  },
+  symbols: {
+    chrome: "38",
+    opera: "25",
+    edge: "12",
+    firefox: "36",
+    safari: "9",
+    ios: "9",
+    samsung: "4",
+    node: "0.12",
+  },
+};
+
+const RUNTIME_COMPAT = {
+  featuresCompatMap,
+
+  add: (originalRuntimeCompat, feature) => {
+    const featureCompat = getFeatureCompat(feature);
+    const runtimeCompat = {
+      ...originalRuntimeCompat,
+    };
+    Object.keys(originalRuntimeCompat).forEach((runtimeName) => {
+      const secondVersion = featureCompat[runtimeName]; // the version supported by the feature
+      if (secondVersion) {
+        const firstVersion = originalRuntimeCompat[runtimeName];
+        runtimeCompat[runtimeName] = findHighestVersion(
+          firstVersion,
+          secondVersion,
+        );
+      }
+    });
+    return runtimeCompat;
+  },
+
+  isSupported: (
+    runtimeCompat,
+    feature,
+    featureCompat = getFeatureCompat(feature),
+  ) => {
+    const runtimeNames = Object.keys(runtimeCompat);
+    const runtimeWithoutCompat = runtimeNames.find((runtimeName) => {
+      const runtimeVersion = runtimeCompat[runtimeName];
+      const runtimeVersionCompatible = featureCompat[runtimeName] || "Infinity";
+      const highestVersion = findHighestVersion(
+        runtimeVersion,
+        runtimeVersionCompatible,
+      );
+      return highestVersion !== runtimeVersion;
+    });
+    return !runtimeWithoutCompat;
+  },
+};
+
+const getFeatureCompat = (feature) => {
+  if (typeof feature === "string") {
+    const compat = featuresCompatMap[feature];
+    if (!compat) {
+      throw new Error(`"${feature}" feature is unknown`);
+    }
+    return compat;
+  }
+  if (typeof feature !== "object") {
+    throw new TypeError(
+      `feature must be a string or an object, got ${feature}`,
+    );
+  }
+  return feature;
+};
+
+const inferRuntimeCompatFromClosestPackage = async (
+  sourceUrl,
+  { runtimeType },
+) => {
+  const packageDirectoryUrl = lookupPackageDirectory(sourceUrl);
+  if (!packageDirectoryUrl) {
+    return null;
+  }
+  const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
+  if (!packageJSON) {
+    return null;
+  }
+
+  if (runtimeType === "browser") {
+    const browserlist = packageJSON.browserlist;
+    if (!browserlist) {
+      return null;
+    }
+    const namespace = await import("browserslist");
+    const browserslist = namespace.default;
+    const browserslistConfig = browserslist(browserlist);
+    const runtimeCompat = {};
+    for (const browserNameAndVersion of browserslistConfig) {
+      let [name, version] = browserNameAndVersion.split(" ");
+      if (name === "ios_saf") {
+        name = "ios";
+      }
+      if (Object.keys(browserDefaultRuntimeCompat).includes(name)) {
+        runtimeCompat[name] = version;
+      }
+    }
+    return runtimeCompat;
+  }
+
+  const engines = packageJSON.engines;
+  if (!engines) {
+    return null;
+  }
+  const node = engines.node;
+  const versionMatch = node.match(/[0-9*.]+/);
+  if (!versionMatch) {
+    return null;
+  }
+  return {
+    node: versionMatch[0],
+  };
 };
 
 const isSupportedAlgorithm = (algo) => {
@@ -18137,6 +18849,2980 @@ const applyDefaultExtension = ({ url, importer, defaultExtension }) => {
   return url
 };
 
+const COLORS = {
+  RED: ANSI$1.RED,
+  BLUE: ANSI$1.BLUE,
+  YELLOW: ANSI$1.YELLOW,
+  GREEN: ANSI$1.GREEN,
+  MAGENTA: ANSI$1.MAGENTA,
+  CYAN: ANSI$1.CYAN,
+  WHITE: ANSI$1.WHITE,
+  BLACK: ANSI$1.BLACK,
+  GREY: ANSI$1.GREY,
+};
+
+const pickBorderColor = (...borders) => {
+  if (borders.length === 0) {
+    return borders[0].color;
+  }
+  if (borders.lenth === 2) {
+    const [first, second] = borders;
+    const firstColor = first.color;
+    const secondColor = second.color;
+    return compareTwoColors(firstColor, secondColor) === 1
+      ? secondColor
+      : firstColor;
+  }
+  return borders.map((border) => border.color).sort()[0];
+};
+
+const compareTwoColors = (a, b) => {
+  if (!b && !a) {
+    return 0;
+  }
+  if (!b) {
+    return 1;
+  }
+  if (!a) {
+    return 1;
+  }
+  const aPrio = COLORS_PRIO.indexOf(a);
+  const bPrio = COLORS_PRIO.indexOf(b);
+  return aPrio - bPrio;
+};
+const COLORS_PRIO = [
+  COLORS.GREY,
+  COLORS.WHITE,
+  COLORS.BLACK,
+  COLORS.BLUE,
+  COLORS.CYAN,
+  COLORS.MAGENTA,
+  COLORS.GREEN,
+  COLORS.YELLOW,
+  COLORS.RED,
+];
+
+const groupDigits = (digitsAsString) => {
+  const digitCount = digitsAsString.length;
+  if (digitCount < 4) {
+    return digitsAsString;
+  }
+
+  let digitsWithSeparator = digitsAsString.slice(-3);
+  let remainingDigits = digitsAsString.slice(0, -3);
+  while (remainingDigits.length) {
+    const group = remainingDigits.slice(-3);
+    remainingDigits = remainingDigits.slice(0, -3);
+    digitsWithSeparator = `${group}_${digitsWithSeparator}`;
+  }
+  return digitsWithSeparator;
+};
+
+const tokenizeInteger = (integerValue) => {
+  const integerAsString = String(integerValue);
+  const exponentIndex = integerAsString.indexOf("e");
+  if (exponentIndex === -1) {
+    return { integer: integerAsString };
+  }
+  const digitsAsString = integerAsString.slice(0, exponentIndex);
+  const digitsValue = parseFloat(digitsAsString);
+  const digitParts = tokenizeNonExponentialFloat(digitsValue);
+  const digitsInteger = digitParts.integer;
+  const digitsDecimal = digitParts.decimal;
+  const afterExponent = integerAsString.slice(exponentIndex + 2); // "e" + "+"
+  const numberOfTrailingZero = parseInt(afterExponent);
+  let integer = "";
+  integer = digitsInteger;
+  integer += digitsDecimal;
+  integer += afterExponent;
+  integer += "0".repeat(numberOfTrailingZero);
+  return { integer };
+};
+
+// see https://github.com/shrpne/from-exponential/blob/master/src/index.js
+// https://github.com/shrpne/from-exponential/blob/master/test/index.test.js
+const tokenizeFloat = (floatValue) => {
+  const floatAsString = String(floatValue);
+  const exponentIndex = floatAsString.indexOf("e");
+  if (exponentIndex === -1) {
+    return tokenizeNonExponentialFloat(floatValue);
+  }
+  let decimal = "";
+  let numberOfLeadingZero;
+  const digitsAsString = floatAsString.slice(0, exponentIndex);
+  const digitsValue = parseFloat(digitsAsString);
+  const digitParts = tokenizeNonExponentialFloat(digitsValue);
+  const digitsInteger = digitParts.integer;
+  const digitsDecimal = digitParts.decimal;
+  const decimalSeparator = digitsDecimal ? digitParts.decimalSeparator : ".";
+  const afterExponent = floatAsString.slice(exponentIndex + 2); // "e" + "-"
+  numberOfLeadingZero = parseInt(afterExponent);
+  decimal += "0".repeat(numberOfLeadingZero);
+  decimal += digitsInteger;
+  decimal += digitsDecimal;
+  return {
+    integer: "0",
+    decimalSeparator,
+    decimal,
+  };
+};
+
+const tokenizeNonExponentialFloat = (floatValue) => {
+  const floatString = String(floatValue);
+  const integer = Math.floor(floatValue);
+  const integerAsString = String(integer);
+  const decimalSeparator = floatString[integerAsString.length];
+  const decimal = floatString.slice(integerAsString.length + 1);
+  return {
+    integer: integerAsString,
+    decimalSeparator,
+    decimal,
+  };
+};
+
+// tokenizeFloat(1.2e-7);
+// tokenizeFloat(2e-7);
+
+/**
+ * https://www.w3.org/TR/xml-entity-names/025.html?fbclid=IwZXh0bgNhZW0CMTEAAR0jL81PDwl6kfzRMUvjOSIfmuesvCdqr11lQpOS-9bpx7u1Q2LD1G7fJ1E_aem_URrWt-55lP_byLA6tjLleQ
+ * https://www.w3schools.com/charsets/ref_utf_box.asp
+ *
+ *
+ */
+
+
+// blank node is a fluid node that will take whatever size it will be requested to take
+// this is useful to enforce a given amount of space is taken in x/y
+// It is used to implement borders because any cell can suddenly
+// enable a border on X/Y meaning all previous cells must now have blank spaces where the border is
+const blankNode = {
+  type: "blank",
+  rects: [
+    { width: "fill", render: ({ columnWidth }) => " ".repeat(columnWidth) },
+  ],
+};
+const createBlankNode = () => {
+  return blankNode;
+};
+
+const getHorizontalLineChar = (style, bold) => {
+  const char = {
+    solid: ["─", "━"],
+    dash: ["╌", "╍"],
+    dash_3: ["┄", "┅"],
+    dash_4: ["┈", "┉"],
+    double: ["═", "═"],
+  }[style][bold ? 1 : 0];
+  return char;
+};
+const getVerticalLineChar = (style, bold) => {
+  const char = {
+    solid: ["│", "┃"],
+    dash: ["╎", "╏"],
+    dash_3: ["┆", "┇"],
+    dash_4: ["┊", "┋"],
+    double: ["║", "║"],
+  }[style][bold ? 1 : 0];
+  return char;
+};
+
+// sides
+const createBorderLeftNode = ({ style = "solid", bold, color }) => {
+  const char = getVerticalLineChar(style, bold);
+  return {
+    type: "border_left",
+    rects: [{ width: 1, color, render: char }],
+    xAlign: "end",
+    yAlign: "center",
+    yPadChar: char,
+  };
+};
+const createBorderRightNode = ({ style = "solid", bold, color }) => {
+  const char = getVerticalLineChar(style, bold);
+  return {
+    type: "border_right",
+    rects: [{ width: 1, color, render: char }],
+    xAlign: "start",
+    yAlign: "center",
+    yPadChar: char,
+  };
+};
+const createBorderTopNode = ({ style = "solid", bold, color }) => {
+  const char = getHorizontalLineChar(style, bold);
+  return {
+    type: "border_top",
+    rects: [
+      {
+        width: "fill",
+        color,
+        render: ({ columnWidth }) => char.repeat(columnWidth),
+      },
+    ],
+    yAlign: "end",
+  };
+};
+const createBorderBottomNode = ({ style = "solid", bold, color }) => {
+  const char = getHorizontalLineChar(style, bold);
+  return {
+    type: "border_bottom",
+    rects: [
+      {
+        width: "fill",
+        color,
+        render: ({ columnWidth }) => char.repeat(columnWidth),
+      },
+    ],
+    yAlign: "start",
+  };
+};
+// half sides
+const createBorderHalfLeftNode = ({ style = "solid", bold, color }) => {
+  return {
+    type: "border_half_left",
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╸" : "╴",
+      },
+    ],
+    xAlign: "end",
+    xPadChar: getHorizontalLineChar(style, bold),
+    yAlign: "end",
+  };
+};
+const createBorderHalfRightNode = ({ style = "solid", bold, color }) => {
+  return {
+    type: "border_half_right",
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╺" : "╶",
+      },
+    ],
+    xAlign: "end",
+    xPadChar: getHorizontalLineChar(style, bold),
+    yAlign: "end",
+  };
+};
+const createBorderHalfUpNode = ({ style = "solid", bold, color }) => {
+  return {
+    type: "border_half_up",
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╹" : "╵",
+      },
+    ],
+    xAlign: "start",
+    yAlign: "start",
+    yPadChar: getVerticalLineChar(style, bold),
+  };
+};
+const createBorderHalfDownNode = ({ style = "solid", bold, color }) => {
+  return {
+    type: "border_half_down",
+    rects: [
+      {
+        width: 1,
+        color,
+        render: bold ? "╻" : "╷",
+      },
+    ],
+    xAlign: "end",
+    yAlign: "start",
+    yPadChar: getVerticalLineChar(style, bold),
+  };
+};
+
+const topLeftCharProps = {
+  "╔": { xPadChar: "║", yPadChar: "═" },
+  "╒": { xPadChar: "═", yPadChar: "│" },
+  "╓": { xPadChar: "─", yPadChar: "║" },
+  "┌": { xPadChar: "│", yPadChar: "─" },
+  "┏": { xPadChar: "┃", yPadChar: "━" },
+  "┍": { xPadChar: "━", yPadChar: "│" },
+  "┎": { xPadChar: "┃", yPadChar: "─" },
+  "╭": { xPadChar: "│", yPadChar: "─" },
+};
+const createBorderTopLeftNode = (topBorder, leftBorder) => {
+  const color = pickBorderColor(topBorder, leftBorder);
+  const rounded = topBorder.rounded && leftBorder.rounded;
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = topLeftCharProps[char];
+    return {
+      type: "border_top_left",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "start",
+      yAlign: "start",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const topIsDouble = topBorder.style === "double";
+    const leftIsDouble = leftBorder.style === "double";
+    const bothAreDouble = topIsDouble && leftIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╔");
+    }
+    const onlyTopIsDouble = topIsDouble && !leftIsDouble;
+    if (onlyTopIsDouble) {
+      return innerCreateBorder("╒");
+    }
+    const onlyLeftIsDouble = leftIsDouble && !topIsDouble;
+    if (onlyLeftIsDouble) {
+      return innerCreateBorder("╓");
+    }
+  }
+
+  // bold
+  const topIsBold = topBorder.bold;
+  const leftIsBold = leftBorder.bold;
+  const noneAreBold = !topIsBold && !leftIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder(rounded ? "╭" : "┌");
+  }
+  const bothAreBold = topIsBold && leftIsBold;
+  if (bothAreBold) {
+    return innerCreateBorder("┏");
+  }
+  const onlyTopIsBold = topIsBold && !leftIsBold;
+  if (onlyTopIsBold) {
+    return innerCreateBorder("┍");
+  }
+  // only left is bold
+  return innerCreateBorder("┎");
+};
+
+const topRightCharProps = {
+  "╗": { xPadChar: "║", yPadChar: "═" },
+  "╕": { xPadChar: "═", yPadChar: "│" },
+  "╖": { xPadChar: "─", yPadChar: "║" },
+  "┐": { xPadChar: "│", yPadChar: "─" },
+  "┓": { xPadChar: "┃", yPadChar: "━" },
+  "┑": { xPadChar: "━", yPadChar: "│" },
+  "┒": { xPadChar: "┃", yPadChar: "─" },
+  "╮": { xPadChar: "│", yPadChar: "─" },
+};
+const createBorderTopRightNode = (topBorder, rightBorder) => {
+  const color = pickBorderColor(topBorder, rightBorder);
+  const rounded = topBorder.rounded && rightBorder.rounded;
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = topRightCharProps[char];
+    return {
+      type: "border_top_right",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "end",
+      yAlign: "start",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const topIsDouble = topBorder.style === "double";
+    const rightIsDouble = rightBorder.style === "double";
+    const bothAreDouble = topIsDouble && rightIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╗");
+    }
+    const onlyTopIsDouble = topIsDouble && !rightIsDouble;
+    if (onlyTopIsDouble) {
+      return innerCreateBorder("╕");
+    }
+    const onlyRightIsDouble = rightIsDouble && !topIsDouble;
+    if (onlyRightIsDouble) {
+      return innerCreateBorder("╖");
+    }
+  }
+
+  const topIsBold = topBorder.bold;
+  const rightIsBold = rightBorder.bold;
+  const noneAreBold = !topIsBold && !rightIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder(rounded ? "╮" : "┐");
+  }
+  const bothAreBold = topIsBold && rightIsBold;
+  if (bothAreBold) {
+    return innerCreateBorder("┓");
+  }
+  const onlyTopIsBold = topIsBold && !rightIsBold;
+  if (onlyTopIsBold) {
+    return innerCreateBorder("┑");
+  }
+  // only right is bold
+  return innerCreateBorder("┒");
+};
+const bottomRightCharProps = {
+  "╝": { xPadChar: "║", yPadChar: "═" },
+  "╛": { xPadChar: "═", yPadChar: "│" },
+  "╜": { xPadChar: "─", yPadChar: "║" },
+  "┘": { xPadChar: "│", yPadChar: "─" },
+  "┛": { xPadChar: "┃", yPadChar: "━" },
+  "┙": { xPadChar: "━", yPadChar: "│" },
+  "┚": { xPadChar: "┃", yPadChar: "─" },
+  "╯": { xPadChar: "│", yPadChar: "─" },
+};
+const createBorderBottomRightNode = (bottomBorder, rightBorder) => {
+  const color = pickBorderColor(bottomBorder, rightBorder);
+  const rounded = bottomBorder.rounded && rightBorder.rounded;
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = bottomRightCharProps[char];
+    return {
+      type: "border_bottom_right",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "end",
+      yAlign: "end",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const bottomIsDouble = bottomBorder.style === "double";
+    const rightIsDouble = rightBorder.style === "double";
+    const bothAreDouble = bottomIsDouble && rightIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╝");
+    }
+    const onlyBottomIsDouble = bottomIsDouble && !rightIsDouble;
+    if (onlyBottomIsDouble) {
+      return innerCreateBorder("╛");
+    }
+    const onlyRightIsDouble = rightIsDouble && !bottomIsDouble;
+    if (onlyRightIsDouble) {
+      return innerCreateBorder("╜");
+    }
+  }
+
+  const bottomIsBold = bottomBorder.bold;
+  const rightIsBold = rightBorder.bold;
+  const noneAreBold = !bottomIsBold && !rightIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder(rounded ? "╯" : "┘");
+  }
+  const bothAreBold = bottomIsBold && rightIsBold;
+  if (bothAreBold) {
+    return innerCreateBorder("┛");
+  }
+  const onlyBottomIsBold = bottomIsBold && !rightIsBold;
+  if (onlyBottomIsBold) {
+    return innerCreateBorder("┙");
+  }
+  // only right is bold
+  return innerCreateBorder("┚");
+};
+const bottomLeftCharProps = {
+  "╚": { xPadChar: "║", yPadChar: "═" },
+  "╘": { xPadChar: "═", yPadChar: "│" },
+  "╙": { xPadChar: "─", yPadChar: "║" },
+  "└": { xPadChar: "│", yPadChar: "─" },
+  "┗": { xPadChar: "┃", yPadChar: "━" },
+  "┕": { xPadChar: "━", yPadChar: "│" },
+  "┖": { xPadChar: "┃", yPadChar: "─" },
+  "╰": { xPadChar: "│", yPadChar: "─" },
+};
+const createBorderBottomLeftNode = (bottomBorder, leftBorder) => {
+  const color = pickBorderColor(bottomBorder, leftBorder);
+  const rounded = bottomBorder.rounded && leftBorder.rounded;
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = bottomLeftCharProps[char];
+    return {
+      type: "border_bottom_left",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "start",
+      yAlign: "end",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const bottomIsDouble = bottomBorder.style === "double";
+    const leftIsDouble = leftBorder.style === "double";
+    const bothAreDouble = bottomIsDouble && leftIsDouble;
+    if (bothAreDouble) {
+      return innerCreateBorder("╚");
+    }
+    const onlyBottomIsDouble = bottomIsDouble && !leftIsDouble;
+    if (onlyBottomIsDouble) {
+      return innerCreateBorder("╘");
+    }
+    const onlyLeftIsDouble = leftIsDouble && !bottomIsDouble;
+    if (onlyLeftIsDouble) {
+      return innerCreateBorder("╙");
+    }
+  }
+
+  const bottomIsBold = bottomBorder.bold;
+  const leftIsBold = leftBorder.bold;
+  const noneAreBold = !bottomIsBold && !leftIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder(rounded ? "╰" : "└");
+  }
+  const bothAreBold = bottomIsBold && leftIsBold;
+  if (bothAreBold) {
+    return innerCreateBorder("┗");
+  }
+  const onlyBottomIsBold = bottomIsBold && !leftIsBold;
+  if (onlyBottomIsBold) {
+    return innerCreateBorder("┕");
+  }
+  // only left is bold
+  return innerCreateBorder("┖");
+};
+
+// intersections between 3 borders
+/**
+ * notons aussi que pour double le cas ou 3 bord et 4 borde se connecte ne supporte pas
+ * qu'un des axes ne soit pas double (left/right style et top/bottom peutvent changer mais par exemple il
+ * n'y a pas de cher pour le cas suivant:
+ *
+ * ═ ─
+ *  ║
+ *
+ * Les seuls connecteur dispo sont:
+ *
+ * ╦, ╥ et ╤
+ *
+ * donnant ainsi
+ *
+ * ═╦─  ou   ═╥─  ou  ═╤─
+ *  ║         ║        ║
+ *
+ * ah mais on peut faire ça: (utiliser le top right corner)
+ * et ça rend pas trop mal
+ *
+ * ═╗─
+ *  ║
+ */
+const borderMidTopCharProps = {
+  "╦": { xPadChar: "║", yPadChar: "═" },
+  "╤": { xPadChar: "═", yPadChar: "│" },
+  "╥": { xPadChar: "─", yPadChar: "║" },
+  "╗": { xPadChar: ["═", "─"], yPadChar: "║" },
+  "╔": { xPadChar: ["─", "═"], yPadChar: "║" },
+  "┌": { xPadChar: ["═", "─"], yPadChar: "│" },
+  "┐": { xPadChar: ["─", "═"], yPadChar: "│" },
+  "┬": { xPadChar: "─", yPadChar: "│" },
+  "┳": { xPadChar: "━", yPadChar: "┃" },
+  "┯": { xPadChar: "━", yPadChar: "│" },
+  "┱": { xPadChar: ["━", "─"], yPadChar: "┃" },
+  "┲": { xPadChar: ["─", "━"], yPadChar: "┃" },
+  "┭": { xPadChar: ["━", "─"], yPadChar: "│" },
+  "┮": { xPadChar: ["─", "━"], yPadChar: "┃" },
+  "┰": { xPadChar: "─", yPadChar: "┃" },
+};
+const createBorderMidTopNode = (
+  westBorderTop,
+  downBorder,
+  eastBorderTop,
+) => {
+  const color = pickBorderColor(westBorderTop, downBorder, eastBorderTop);
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = borderMidTopCharProps[char];
+    return {
+      type: "border_mid_top",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "center",
+      yAlign: "start",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const westIsDouble = westBorderTop.style === "double";
+    const downIsDouble = downBorder.style === "double";
+    const eastIsDouble = eastBorderTop.style === "double";
+    const allAreDouble = westIsDouble && downIsDouble && eastIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╦");
+    }
+    const onlyXIsDouble = westIsDouble && !downIsDouble && eastIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╤");
+    }
+    const onlyYIsDouble = !westIsDouble && downIsDouble && !eastIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╥");
+    }
+    const onlyWestAndDownAreDouble =
+      westIsDouble && downIsDouble && !eastIsDouble;
+    if (onlyWestAndDownAreDouble) {
+      return innerCreateBorder("╗");
+    }
+    const onlyEastAndDownAreDouble =
+      !westIsDouble && downIsDouble && eastIsDouble;
+    if (onlyEastAndDownAreDouble) {
+      return innerCreateBorder("╔");
+    }
+    const onlyWestIsDouble = westIsDouble && !downIsDouble && !eastIsDouble;
+    if (onlyWestIsDouble) {
+      return innerCreateBorder("┌");
+    }
+    const onlyEastIsDouble = !westIsDouble && !downIsDouble && eastIsDouble;
+    if (onlyEastIsDouble) {
+      return innerCreateBorder("┐");
+    }
+  }
+
+  const westIsBold = westBorderTop.bold;
+  const downIsBold = downBorder.bold;
+  const rightIsBold = eastBorderTop.bold;
+  const noneAreBold = !westIsBold && !downIsBold && !rightIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┬");
+  }
+  const allAreBold = westIsBold && downIsBold && rightIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┳");
+  }
+  const westAndEastAreBold = westIsBold && !downIsBold && rightIsBold;
+  if (westAndEastAreBold) {
+    return innerCreateBorder("┯");
+  }
+  const westAndDownAreBold = westIsBold && downIsBold && !rightIsBold;
+  if (westAndDownAreBold) {
+    return innerCreateBorder("┱");
+  }
+  const eastAndDownAreBold = !westIsBold && downIsBold && rightIsBold;
+  if (eastAndDownAreBold) {
+    return innerCreateBorder("┲");
+  }
+  const onlyWestIsBold = westIsBold && !downIsBold && !rightIsBold;
+  if (onlyWestIsBold) {
+    return innerCreateBorder("┭");
+  }
+  const onlyEastIsBold = !westIsBold && !downIsBold && rightIsBold;
+  if (onlyEastIsBold) {
+    return innerCreateBorder("┮");
+  }
+  // only down is bold
+  return innerCreateBorder("┰");
+};
+const borderMidBottomCharProps = {
+  "╩": { xPadChar: "║", yPadChar: "═" },
+  "╧": { xPadChar: "═", yPadChar: "│" },
+  "╨": { xPadChar: "─", yPadChar: "║" },
+  "╝": { xPadChar: ["═", "─"], yPadChar: "║" },
+  "╚": { xPadChar: ["─", "═"], yPadChar: "║" },
+  "└": { xPadChar: ["═", "─"], yPadChar: "│" },
+  "┘": { xPadChar: ["─", "═"], yPadChar: "│" },
+  "┴": { xPadChar: "─", yPadChar: "│" },
+  "┻": { xPadChar: "━", yPadChar: "┃" },
+  "┷": { xPadChar: "━", yPadChar: "│" },
+  "┹": { xPadChar: ["━", "─"], yPadChar: "┃" },
+  "┺": { xPadChar: ["─", "━"], yPadChar: "┃" },
+  "┵": { xPadChar: ["━", "─"], yPadChar: "│" },
+  "┶": { xPadChar: ["─", "━"], yPadChar: "┃" },
+  "┸": { xPadChar: "─", yPadChar: "┃" },
+};
+const createBorderMidBottomNode = (
+  westBorderBottom,
+  upBorder,
+  eastBorderBottom,
+) => {
+  const color = pickBorderColor(westBorderBottom, eastBorderBottom, upBorder);
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = borderMidBottomCharProps[char];
+    return {
+      type: "border_mid_bottom",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "center",
+      yAlign: "end",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const westIsDouble = westBorderBottom.style === "double";
+    const upIsDouble = upBorder.style === "double";
+    const eastIsDouble = eastBorderBottom.style === "double";
+    const allAreDouble = westIsDouble && upIsDouble && eastIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╩");
+    }
+    const onlyXIsDouble = westIsDouble && !upIsDouble && eastIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╧");
+    }
+    const onlyYIsDouble = !westIsDouble && upIsDouble && !eastIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╨");
+    }
+    const onlyWestAndUpAreDouble = westIsDouble && upIsDouble && !eastIsDouble;
+    if (onlyWestAndUpAreDouble) {
+      return innerCreateBorder("╝");
+    }
+    const onlyEastAndUpAreDouble = !westIsDouble && upIsDouble && eastIsDouble;
+    if (onlyEastAndUpAreDouble) {
+      return innerCreateBorder("╚");
+    }
+    const onlyWestIsDouble = westIsDouble && !upIsDouble && !eastIsDouble;
+    if (onlyWestIsDouble) {
+      return innerCreateBorder("└");
+    }
+    const onlyEastIsDouble = !westIsDouble && !upIsDouble && eastIsDouble;
+    if (onlyEastIsDouble) {
+      return innerCreateBorder("┘");
+    }
+  }
+
+  const leftIsBold = westBorderBottom.bold;
+  const upIsBold = upBorder.bold;
+  const rightIsBold = eastBorderBottom.bold;
+  const noneAreBold = !leftIsBold && !upIsBold && !rightIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┴");
+  }
+  const allAreBold = leftIsBold && upIsBold && rightIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┻");
+  }
+  const leftAndRightAreBold = leftIsBold && !upIsBold && rightIsBold;
+  if (leftAndRightAreBold) {
+    return innerCreateBorder("┷");
+  }
+  const leftAndUpAreBold = leftIsBold && upIsBold && !rightIsBold;
+  if (leftAndUpAreBold) {
+    return innerCreateBorder("┹");
+  }
+  const rightAndUpAreBold = !leftIsBold && upIsBold && rightIsBold;
+  if (rightAndUpAreBold) {
+    return innerCreateBorder("┺");
+  }
+  const onlyLeftIsBold = leftIsBold && !upIsBold && !rightIsBold;
+  if (onlyLeftIsBold) {
+    return innerCreateBorder("┵");
+  }
+  const onlyRightIsBold = !leftIsBold && !upIsBold && rightIsBold;
+  if (onlyRightIsBold) {
+    return innerCreateBorder("┶");
+  }
+  // only up is bold
+  return innerCreateBorder("┸");
+};
+const borderMifLeftCharProps = {
+  "╠": { xPadChar: "═", yPadChar: "║" },
+  "╟": { xPadChar: "─", yPadChar: "║" },
+  "╞": { xPadChar: "═", yPadChar: "│" },
+  "╚": { xPadChar: "═", yPadChar: ["║", "│"] },
+  "╔": { xPadChar: "═", yPadChar: ["│", "║"] },
+  "┌": { xPadChar: "─", yPadChar: ["║", "│"] },
+  "└": { xPadChar: "─", yPadChar: ["│", "║"] },
+  "├": { xPadChar: "─", yPadChar: "│" },
+  "┣": { xPadChar: "━", yPadChar: "┃" },
+  "┠": { xPadChar: "─", yPadChar: "┃" },
+  "┢": { xPadChar: "━", yPadChar: ["│", "┃"] },
+  "┡": { xPadChar: "━", yPadChar: ["┃", "│"] },
+  "┞": { xPadChar: "─", yPadChar: ["┃", "│"] },
+  "┝": { xPadChar: "━", yPadChar: "│" },
+  "┟": { xPadChar: "─", yPadChar: ["│", "┃"] },
+};
+const createBorderMidLeftNode = (
+  northBorder,
+  middleBorder,
+  southBorder,
+) => {
+  const color = pickBorderColor(middleBorder, northBorder, southBorder);
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = borderMifLeftCharProps[char];
+    return {
+      type: "border_mid_left",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "start",
+      yAlign: "center",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const upIsDouble = northBorder.style === "double";
+    const middleIsDouble = middleBorder.style === "double";
+    const downIsDouble = southBorder.style === "double";
+    const allAreDouble = upIsDouble && middleIsDouble && downIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╠");
+    }
+    const onlyYIsDouble = upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╟");
+    }
+    const onlyXIsDouble = !upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╞");
+    }
+    const onlyUpAndLeftAreDouble =
+      upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyUpAndLeftAreDouble) {
+      return innerCreateBorder("╚");
+    }
+    const onlyDownAndLeftAreDouble =
+      !upIsDouble && middleIsDouble && downIsDouble;
+    if (onlyDownAndLeftAreDouble) {
+      return innerCreateBorder("╔");
+    }
+    const onlyUpIsDouble = upIsDouble && !middleIsDouble && !downIsDouble;
+    if (onlyUpIsDouble) {
+      return innerCreateBorder("┌");
+    }
+    const onlyDownIsDouble = !upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyDownIsDouble) {
+      return innerCreateBorder("└");
+    }
+  }
+
+  const upIsBold = northBorder.bold;
+  const middleIsBold = middleBorder.bold;
+  const downIsBold = southBorder.bold;
+  const nothingIsBold = !upIsBold && !middleIsBold && !downIsBold;
+  if (nothingIsBold) {
+    return innerCreateBorder("├");
+  }
+  const allAreBold = upIsBold && middleIsBold && downIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┣");
+  }
+  const upAndDownAreBold = upIsBold && !middleIsBold && downIsBold;
+  if (upAndDownAreBold) {
+    return innerCreateBorder("┠");
+  }
+  const middleAndDownAreBold = !upIsBold && middleIsBold && downIsBold;
+  if (middleAndDownAreBold) {
+    return innerCreateBorder("┢");
+  }
+  const middleAndUpAreBold = upIsBold && middleIsBold && !downIsBold;
+  if (middleAndUpAreBold) {
+    return innerCreateBorder("┡");
+  }
+  const onlyUpIsBold = upIsBold && !middleIsBold && !downIsBold;
+  if (onlyUpIsBold) {
+    return innerCreateBorder("┞");
+  }
+  const onlyMiddleIsBold = !upIsBold && middleIsBold && !downIsBold;
+  if (onlyMiddleIsBold) {
+    return innerCreateBorder("┝");
+  }
+  // only down is bold
+  return innerCreateBorder("┟");
+};
+const borderMidRightCharProps = {
+  "╣": { xPadChar: "║", yPadChar: "═" },
+  "╢": { xPadChar: "─", yPadChar: "║" },
+  "╡": { xPadChar: "═", yPadChar: "│" },
+  "╝": { xPadChar: "═", yPadChar: ["║", "│"] },
+  "╗": { xPadChar: "═", yPadChar: ["│", "║"] },
+  "┘": { xPadChar: "─", yPadChar: ["║", "│"] },
+  "└": { xPadChar: "─", yPadChar: ["│", "║"] },
+  "┤": { xPadChar: "─", yPadChar: "│" },
+  "┫": { xPadChar: "━", yPadChar: "┃" },
+  "┨": { xPadChar: "─", yPadChar: "┃" },
+  "┪": { xPadChar: "━", yPadChar: ["│", "┃"] },
+  "┩": { xPadChar: "━", yPadChar: ["│", "┃"] },
+  "┦": { xPadChar: "─", yPadChar: ["┃", "│"] },
+  "┥": { xPadChar: "━", yPadChar: "│" },
+  "┧": { xPadChar: "─", yPadChar: ["│", "┃"] },
+};
+const createBorderMidRightNode = (
+  northBorder,
+  middleBorder,
+  southBorder,
+) => {
+  const color = pickBorderColor(middleBorder, northBorder, southBorder);
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = borderMidRightCharProps[char];
+    return {
+      type: "border_mid_right",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "end",
+      yAlign: "center",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const upIsDouble = northBorder.style === "double";
+    const middleIsDouble = middleBorder.style === "double";
+    const downIsDouble = southBorder.style === "double";
+    const allAreDouble = upIsDouble && middleIsDouble && downIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╣");
+    }
+    const onlyYIsDouble = upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╢");
+    }
+    const onlyXIsDouble = !upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╡");
+    }
+    const onlyUpAndRightAreDouble =
+      upIsDouble && middleIsDouble && !downIsDouble;
+    if (onlyUpAndRightAreDouble) {
+      return innerCreateBorder("╝");
+    }
+    const onlyDownAndRightAreDouble =
+      !upIsDouble && middleIsDouble && downIsDouble;
+    if (onlyDownAndRightAreDouble) {
+      return innerCreateBorder("╗");
+    }
+    const onlyUpIsDouble = upIsDouble && !middleIsDouble && !downIsDouble;
+    if (onlyUpIsDouble) {
+      return innerCreateBorder("┘");
+    }
+    const onlyDownIsDouble = !upIsDouble && !middleIsDouble && downIsDouble;
+    if (onlyDownIsDouble) {
+      return innerCreateBorder("└");
+    }
+  }
+
+  const upIsBold = northBorder.bold;
+  const middleIsBold = middleBorder.bold;
+  const downIsBold = southBorder.bold;
+  const noneAreBold = !upIsBold && !middleIsBold && !downIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┤");
+  }
+  const allAreBold = upIsBold && middleIsBold && downIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("┫");
+  }
+  const upAndDownAreBold = upIsBold && !middleIsBold && downIsBold;
+  if (upAndDownAreBold) {
+    return innerCreateBorder("┨");
+  }
+  const middleAndDownAreBold = !upIsBold && middleIsBold && downIsBold;
+  if (middleAndDownAreBold) {
+    return innerCreateBorder("┪");
+  }
+  const middleAndUpAreBold = upIsBold && middleIsBold && !downIsBold;
+  if (middleAndUpAreBold) {
+    return innerCreateBorder("┩");
+  }
+  const onlyUpIsBold = upIsBold && !middleIsBold && !downIsBold;
+  if (onlyUpIsBold) {
+    return innerCreateBorder("┦");
+  }
+  const onlyMiddleIsBold = !upIsBold && middleIsBold && !downIsBold;
+  if (onlyMiddleIsBold) {
+    return innerCreateBorder("┥");
+  }
+  // only down is bold
+  return innerCreateBorder("┧");
+};
+
+// intersection between 4 borders
+const borderMidCharProps = {
+  "╬": { xPadChar: "═", yPadChar: "║" },
+  "╫": { xPadChar: "─", yPadChar: "║" },
+  "╪": { xPadChar: "═", yPadChar: "│" },
+  "╝": { xPadChar: ["═", "─"], yPadChar: ["║", "│"] },
+  "╗": { xPadChar: ["═", "─"], yPadChar: ["│", "║"] },
+  "╔": { xPadChar: ["─", "═"], yPadChar: ["│", "║"] },
+  "╚": { xPadChar: ["─", "═"], yPadChar: ["║", "│"] },
+  "╣": { xPadChar: ["═", "─"], yPadChar: "║" },
+  "╠": { xPadChar: ["─", "═"], yPadChar: "║" },
+  "╦": { xPadChar: "═", yPadChar: ["│", "║"] },
+  "╩": { xPadChar: "═", yPadChar: ["║", "│"] },
+  "├": { xPadChar: ["═", "─"], yPadChar: "│" },
+  "┤": { xPadChar: ["─", "═"], yPadChar: "│" },
+  "┬": { xPadChar: "─", yPadChar: ["║", "│"] },
+  "┴": { xPadChar: "─", yPadChar: ["│", "║"] },
+  "┼": { xPadChar: "─", yPadChar: "│" },
+  "╋": { xPadChar: "━", yPadChar: "┃" },
+  "┿": { xPadChar: "━", yPadChar: "│" },
+  "╂": { xPadChar: "─", yPadChar: "┃" },
+  "╅": { xPadChar: ["━", "─"], yPadChar: ["│", "┃"] },
+  "╃": { xPadChar: ["━", "─"], yPadChar: ["┃", "│"] },
+  "╄": { xPadChar: ["─", "━"], yPadChar: ["┃", "│"] },
+  "╆": { xPadChar: ["─", "━"], yPadChar: ["│", "┃"] },
+  "╉": { xPadChar: ["━", "─"], yPadChar: "┃" },
+  "╇": { xPadChar: "━", yPadChar: ["┃", "│"] },
+  "╊": { xPadChar: ["─", "━"], yPadChar: "┃" },
+  "╈": { xPadChar: "━", yPadChar: ["│", "┃"] },
+  "┽": { xPadChar: ["━", "─"], yPadChar: "│" },
+  "╀": { xPadChar: "─", yPadChar: ["┃", "│"] },
+  "┾": { xPadChar: ["─", "━"], yPadChar: "│" },
+  "╁": { xPadChar: "─", yPadChar: ["│", "┃"] },
+};
+const createBorderMidNode = (
+  leftBorder,
+  upBorder,
+  rightBorder,
+  downBorder,
+) => {
+  const color = pickBorderColor(upBorder, leftBorder, rightBorder, downBorder);
+  const innerCreateBorder = (char) => {
+    const { xPadChar, yPadChar } = borderMidCharProps[char];
+    return {
+      type: "border_mid",
+      rects: [{ width: 1, color, render: char }],
+      xAlign: "center",
+      yAlign: "center",
+      xPadChar,
+      yPadChar,
+    };
+  };
+
+  // double borders
+  {
+    const leftIsDouble = leftBorder.style === "double";
+    const upIsDouble = upBorder.style === "double";
+    const rightIsDouble = rightBorder.style === "double";
+    const downIsDouble = downBorder.style === "double";
+    const allAreDouble =
+      leftIsDouble && upIsDouble && rightIsDouble && downIsDouble;
+    if (allAreDouble) {
+      return innerCreateBorder("╬");
+    }
+    const onlyXIsDouble =
+      leftIsDouble && !upIsDouble && rightIsDouble && !downIsDouble;
+    if (onlyXIsDouble) {
+      return innerCreateBorder("╪");
+    }
+    const onlyYIsDouble =
+      !leftIsDouble && upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyYIsDouble) {
+      return innerCreateBorder("╫");
+    }
+    const onlyLeftAndUpAndDownAreDouble =
+      leftIsDouble && upIsDouble && downIsDouble && !rightIsDouble;
+    if (onlyLeftAndUpAndDownAreDouble) {
+      return innerCreateBorder("╣");
+    }
+    const onlyLeftUpRightAreDouble =
+      leftIsDouble && upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyLeftUpRightAreDouble) {
+      return innerCreateBorder("╩");
+    }
+    const onlyUpAndRightAndDownAreDouble =
+      !leftIsDouble && upIsDouble && rightIsDouble && downIsDouble;
+    if (onlyUpAndRightAndDownAreDouble) {
+      return innerCreateBorder("╠");
+    }
+    const onlyRightDownLeftAreDouble =
+      leftIsDouble && !upIsDouble && rightIsDouble && downIsDouble;
+    if (onlyRightDownLeftAreDouble) {
+      return innerCreateBorder("╦");
+    }
+    const onlyLeftAndUpAreDouble =
+      leftIsDouble && upIsDouble && !rightIsDouble && !downIsDouble;
+    if (onlyLeftAndUpAreDouble) {
+      return innerCreateBorder("╝");
+    }
+    const onlyLeftAndDownAreDouble =
+      leftIsDouble && !upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyLeftAndDownAreDouble) {
+      return innerCreateBorder("╗");
+    }
+    const onlyRightAndDownAreDouble =
+      !leftIsDouble && upIsDouble && rightIsDouble && downIsDouble;
+    if (onlyRightAndDownAreDouble) {
+      return innerCreateBorder("╔");
+    }
+    const onlyRightAndUpAreDouble =
+      !leftIsDouble && upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyRightAndUpAreDouble) {
+      return innerCreateBorder("╚");
+    }
+    const onlyLeftIsDouble =
+      leftIsDouble && !upIsDouble && !rightIsDouble && !downIsDouble;
+    if (onlyLeftIsDouble) {
+      return innerCreateBorder("├");
+    }
+    const onlyRightIsDouble =
+      !leftIsDouble && !upIsDouble && rightIsDouble && !downIsDouble;
+    if (onlyRightIsDouble) {
+      return innerCreateBorder("┤");
+    }
+    const onlyUpIsDouble =
+      !leftIsDouble && upIsDouble && !rightIsDouble && !downIsDouble;
+    if (onlyUpIsDouble) {
+      return innerCreateBorder("┬");
+    }
+    const onlyDownIsDouble =
+      !leftIsDouble && !upIsDouble && !rightIsDouble && downIsDouble;
+    if (onlyDownIsDouble) {
+      return innerCreateBorder("┴");
+    }
+  }
+
+  const leftIsBold = leftBorder.bold;
+  const rightIsBold = rightBorder.bold;
+  const downIsBold = downBorder.bold;
+  const upIsBold = upBorder.bold;
+  const noneAreBold = !leftIsBold && !rightIsBold && !downIsBold && !upIsBold;
+  if (noneAreBold) {
+    return innerCreateBorder("┼");
+  }
+  const allAreBold = leftIsBold && rightIsBold && downIsBold && upIsBold;
+  if (allAreBold) {
+    return innerCreateBorder("╋");
+  }
+  const leftAndRightAreBold =
+    leftIsBold && rightIsBold && !downIsBold && !upIsBold;
+  if (leftAndRightAreBold) {
+    return innerCreateBorder("┿");
+  }
+  const upAndDownAreBold =
+    !leftIsBold && !rightIsBold && downIsBold && upIsBold;
+  if (upAndDownAreBold) {
+    return innerCreateBorder("╂");
+  }
+  const leftAndDownAreBold =
+    leftIsBold && !rightIsBold && downIsBold && !upIsBold;
+  if (leftAndDownAreBold) {
+    return innerCreateBorder("╅");
+  }
+  const leftAndUpAreBold =
+    leftIsBold && !rightIsBold && !downIsBold && upIsBold;
+  if (leftAndUpAreBold) {
+    return innerCreateBorder("╃");
+  }
+  const rightAndUpAreBold =
+    !leftIsBold && rightIsBold && !downIsBold && upIsBold;
+  if (rightAndUpAreBold) {
+    return innerCreateBorder("╄");
+  }
+  const rightAndDownAreBold =
+    !leftIsBold && rightIsBold && downIsBold && !upIsBold;
+  if (rightAndDownAreBold) {
+    return innerCreateBorder("╆");
+  }
+  const leftAndRightAndDownAreBold =
+    leftIsBold && rightIsBold && downIsBold && !upIsBold;
+  if (leftAndRightAndDownAreBold) {
+    return innerCreateBorder("╉");
+  }
+  const leftAndRightAndUpAreBold =
+    leftIsBold && rightIsBold && !downIsBold && upIsBold;
+  if (leftAndRightAndUpAreBold) {
+    return innerCreateBorder("╇");
+  }
+  const upAndRightAndDownAreBold =
+    !leftIsBold && rightIsBold && downIsBold && upIsBold;
+  if (upAndRightAndDownAreBold) {
+    return innerCreateBorder("╊");
+  }
+  const rightAndDownAndLeftAreBold =
+    leftIsBold && rightIsBold && !downIsBold && upIsBold;
+  if (rightAndDownAndLeftAreBold) {
+    return innerCreateBorder("╈");
+  }
+  const onlyLeftIsBold = leftIsBold && !rightIsBold && !downIsBold && !upIsBold;
+  if (onlyLeftIsBold) {
+    return innerCreateBorder("┽");
+  }
+  const onlyUpIsBold = !leftIsBold && !rightIsBold && !downIsBold && upIsBold;
+  if (onlyUpIsBold) {
+    return innerCreateBorder("╀");
+  }
+  const onlyRightIsBold =
+    !leftIsBold && rightIsBold && !downIsBold && !upIsBold;
+  if (onlyRightIsBold) {
+    return innerCreateBorder("┾");
+  }
+  // only down is bold
+  return innerCreateBorder("╁");
+};
+
+const createSkippedColumnTopNode = () => {
+  return {
+    type: "skipped_column_top",
+    rects: [
+      {
+        width: "fill",
+        color: COLORS.GREY,
+        render: ({ columnWidth }) => "┈".repeat(columnWidth),
+      },
+    ],
+    yAlign: "end",
+  };
+};
+const createSkippedColumnBottomNode = () => {
+  return {
+    type: "skipped_column_bottom",
+    rects: [
+      {
+        width: "fill",
+        color: COLORS.GREY,
+        render: ({ columnWidth }) => "┈".repeat(columnWidth),
+      },
+    ],
+    yAlign: "start",
+  };
+};
+const createSkippedColumnTopRightNode = () => {
+  return {
+    type: "skipped_column_top_right",
+    rects: [{ width: 1, color: COLORS.GREY, render: "→" }],
+    xAlign: "end",
+    yAlign: "start",
+    xPadChar: "┈",
+  };
+};
+const createSkippedColumnBottomRightNode = () => {
+  return {
+    type: "skipped_column_bottom_right",
+    rects: [{ width: 1, color: COLORS.GREY, render: "→" }],
+    xAlign: "end",
+    yAlign: "end",
+    xPadChar: "┈",
+  };
+};
+
+const createSkippedRowLeftNode = () => {
+  return {
+    type: "skipped_row_left",
+    rects: [{ width: 1, color: COLORS.GREY, render: "┊" }],
+    xAlign: "end",
+    yAlign: "center",
+    yPadChar: "┊",
+  };
+};
+const createSkippedRowRightNode = () => {
+  return {
+    type: "skipped_row_right",
+    rects: [{ width: 1, color: COLORS.GREY, render: "┊" }],
+    xAlign: "end",
+    yAlign: "center",
+    yPadChar: "┊",
+  };
+};
+const createSkippedRowBottomLeftNode = () => {
+  return {
+    type: "skipped_row_bottom_left",
+    rects: [{ width: 1, color: COLORS.GREY, render: "↓" }],
+    xAlign: "start",
+    yAlign: "center",
+    yPadChar: "┊",
+  };
+};
+const createSkippedRowBottomRightNode = () => {
+  return {
+    type: "skipped_row_bottom_right",
+    rects: [{ width: 1, color: COLORS.GREY, render: "↓" }],
+    xAlign: "end",
+    yAlign: "end",
+    yPadChar: "┊",
+  };
+};
+
+const leftSlot = {
+  type: "left",
+  adapt: (cell) => {
+    const { isSkippedRow, borderLeft } = cell;
+    if (isSkippedRow) {
+      return createSkippedRowLeftNode();
+    }
+    if (borderLeft) {
+      return createBorderLeftNode(borderLeft);
+    }
+    return createBlankNode();
+  },
+};
+const rightSlot = {
+  type: "right",
+  adapt: (cell) => {
+    const { isSkippedColumn, isSkippedRow, borderRight } = cell;
+    if (isSkippedRow) {
+      return createSkippedRowRightNode();
+    }
+    if (isSkippedColumn) {
+      return createBlankNode();
+    }
+    if (borderRight) {
+      return createBorderRightNode(borderRight);
+    }
+    return createBlankNode();
+  },
+};
+const topSlot = {
+  type: "top",
+  adapt: (cell) => {
+    const { isSkippedColumn, borderTop } = cell;
+    if (isSkippedColumn) {
+      return createSkippedColumnTopNode();
+    }
+    if (borderTop) {
+      return createBorderTopNode(borderTop);
+    }
+    return createBlankNode();
+  },
+};
+const bottomSlot = {
+  type: "bottom",
+  adapt: (cell) => {
+    const { isSkippedRow, isSkippedColumn, borderBottom } = cell;
+    if (isSkippedColumn) {
+      return createSkippedColumnBottomNode();
+    }
+    if (isSkippedRow) {
+      return createBlankNode();
+    }
+    if (borderBottom) {
+      return createBorderBottomNode(borderBottom);
+    }
+    return createBlankNode();
+  },
+};
+const topLeftSlot = {
+  type: "top_left",
+  adapt: (cell) => {
+    const { borderTop, borderLeft, westCell, northCell } = cell;
+    if (!borderTop && !borderLeft) {
+      return createBlankNode();
+    }
+
+    let northConnected =
+      northCell && !northCell.borderBottom && northCell.borderLeft;
+    let westConnected = westCell && westCell.borderTop && !westCell.borderRight;
+    let northWestConnected = northConnected && westConnected;
+    if (borderTop && borderLeft) {
+      if (northWestConnected) {
+        return createBorderMidNode(
+          westCell.borderTop,
+          northCell.borderLeft,
+          borderTop,
+          borderLeft,
+        );
+      }
+      if (westConnected) {
+        return createBorderMidTopNode(
+          borderTop,
+          borderLeft,
+          westCell.borderTop,
+        );
+      }
+      if (northConnected) {
+        return createBorderMidLeftNode(
+          northCell.borderLeft,
+          borderTop,
+          borderLeft,
+        );
+      }
+      return createBorderTopLeftNode(borderTop, borderLeft);
+    }
+    if (borderLeft) {
+      northConnected =
+        northCell && (northCell.borderBottom || northCell.borderLeft);
+      northWestConnected = northConnected && westConnected;
+      if (northWestConnected) {
+        return createBorderMidRightNode(
+          northCell.borderLeft || northCell.westCell.borderRight,
+          westCell.borderTop,
+          borderLeft,
+        );
+      }
+      if (westConnected) {
+        return createBorderTopRightNode(westCell.borderTop, borderLeft);
+      }
+      if (northConnected) {
+        return createBorderLeftNode(borderLeft);
+      }
+      return createBorderHalfDownNode(borderLeft);
+    }
+    // borderTop
+    westConnected = westCell && (westCell.borderTop || westCell.borderRight);
+    northWestConnected = northConnected && westConnected;
+    if (northWestConnected) {
+      return createBorderMidBottomNode(
+        borderTop,
+        northCell.borderLeft,
+        westCell.borderTop || northCell.westCell.borderBottom,
+      );
+    }
+    if (northConnected) {
+      return createBorderBottomLeftNode(borderTop, northCell.borderLeft);
+    }
+    if (westConnected) {
+      return createBorderTopNode(borderTop);
+    }
+    return createBorderHalfRightNode(borderTop);
+  },
+};
+const topRightSlot = {
+  type: "top_right",
+  adapt: (cell) => {
+    const { isSkippedColumn, borderTop, borderRight, eastCell, northCell } =
+      cell;
+    if (isSkippedColumn) {
+      return createSkippedColumnTopRightNode();
+    }
+    if (!borderTop && !borderRight) {
+      return createBlankNode();
+    }
+
+    let northConnected =
+      northCell && !northCell.borderBottom && northCell.borderRight;
+    let eastConnected = eastCell && eastCell.borderTop && !eastCell.borderLeft;
+    let northEastConnected = northConnected && eastConnected;
+    if (borderTop && borderRight) {
+      if (northEastConnected) {
+        return createBorderMidNode(
+          borderTop,
+          northCell.borderRight,
+          eastCell.borderTop,
+          borderRight,
+        );
+      }
+      if (northConnected) {
+        return createBorderMidRightNode(
+          northCell.borderRight,
+          borderTop,
+          borderRight,
+        );
+      }
+      if (eastConnected) {
+        return createBorderMidTopNode(
+          borderTop,
+          borderRight,
+          eastCell.borderTop,
+        );
+      }
+      return createBorderTopRightNode(borderTop, borderRight);
+    }
+    if (borderRight) {
+      northConnected =
+        northCell && (northCell.borderBottom || northCell.borderRight);
+      northEastConnected = northConnected && eastConnected;
+      if (northEastConnected) {
+        return createBorderMidLeftNode(
+          northCell.borderRight || northCell.eastCell.borderLeft,
+          eastCell.borderTop,
+          borderRight,
+        );
+      }
+      if (northConnected) {
+        return createBorderRightNode(
+          northCell.borderRight || northCell.borderBottom,
+        );
+      }
+      if (eastConnected) {
+        return createBorderTopLeftNode(eastCell.borderTop, borderRight);
+      }
+      return createBorderHalfDownNode(borderRight);
+    }
+    // borderTop
+    eastConnected = eastCell && (eastCell.borderTop || eastCell.borderLeft);
+    northEastConnected = northConnected && eastConnected;
+    if (northEastConnected) {
+      return createBorderMidBottomNode(
+        borderTop,
+        northCell.borderRight,
+        eastCell.borderTop || eastCell.northCell.borderBottom,
+      );
+    }
+    if (northConnected) {
+      return createBorderBottomRightNode(borderTop, northCell.borderRight);
+    }
+    if (eastConnected) {
+      return createBorderTopNode(borderTop);
+    }
+    return createBorderHalfLeftNode(borderTop);
+  },
+};
+const bottomRightSlot = {
+  type: "bottom_right",
+  adapt: (cell) => {
+    const {
+      isSkippedRow,
+      isSkippedColumn,
+      borderBottom,
+      borderRight,
+      eastCell,
+      southCell,
+    } = cell;
+    if (isSkippedRow) {
+      return createSkippedRowBottomRightNode();
+    }
+    if (isSkippedColumn) {
+      return createSkippedColumnBottomRightNode();
+    }
+    if (!borderBottom && !borderRight) {
+      return createBlankNode();
+    }
+
+    let southConnected =
+      southCell && !southCell.borderTop && southCell.borderRight;
+    let eastConnected =
+      eastCell && eastCell.borderBottom && !eastCell.borderLeft;
+    let southEastConnected = southConnected && eastConnected;
+    if (borderBottom && borderRight) {
+      if (southEastConnected) {
+        return createBorderMidNode(
+          borderBottom,
+          borderRight,
+          eastCell.borderBottom,
+          southCell.borderRight,
+        );
+      }
+      if (eastConnected) {
+        return createBorderMidBottomNode(
+          borderBottom,
+          borderRight,
+          eastCell.borderBottom,
+        );
+      }
+      if (southConnected) {
+        return createBorderMidRightNode(
+          borderRight,
+          borderBottom,
+          southCell.borderRight,
+        );
+      }
+      return createBorderBottomRightNode(borderBottom, borderRight);
+    }
+    if (borderRight) {
+      southConnected =
+        southCell && (southCell.borderTop || southCell.borderRight);
+      southEastConnected = southConnected && eastConnected;
+      if (southEastConnected) {
+        return createBorderMidTopNode(
+          borderRight,
+          southCell.borderTop || southCell.eastCell.borderBottom,
+          eastCell.borderBottom,
+        );
+      }
+      if (eastConnected) {
+        return createBorderBottomLeftNode(eastCell.borderBottom, borderRight);
+      }
+      if (southConnected) {
+        return createBorderRightNode(borderRight);
+      }
+      return createBorderHalfUpNode(borderRight);
+    }
+    // border bottom
+    eastConnected = eastCell && (eastCell.borderBottom || eastCell.borderLeft);
+    southEastConnected = southConnected && eastConnected;
+    if (southEastConnected) {
+      return createBorderMidTopNode(
+        borderBottom,
+        southCell.borderRight,
+        eastCell.borderBottom || eastCell.southCell.borderTop,
+      );
+    }
+    if (southConnected) {
+      return createBorderTopRightNode(borderBottom, southCell.borderRight);
+    }
+    if (eastConnected) {
+      return createBorderBottomNode(borderBottom);
+    }
+    return createBorderHalfLeftNode(borderBottom);
+  },
+};
+const bottomLeftSlot = {
+  type: "bottom_left",
+  adapt: (cell) => {
+    const { isSkippedRow, borderBottom, borderLeft, westCell, southCell } =
+      cell;
+    if (isSkippedRow) {
+      return createSkippedRowBottomLeftNode();
+    }
+    if (!borderBottom && !borderLeft) {
+      return createBlankNode();
+    }
+
+    let southConnected =
+      southCell && !southCell.borderTop && southCell.borderLeft;
+    let westConnected =
+      westCell && westCell.borderBottom && !westCell.borderRight;
+    let southWestConnected = southConnected && westConnected;
+    if (borderBottom && borderLeft) {
+      if (southWestConnected) {
+        return createBorderMidNode(
+          westCell.borderBottom,
+          borderLeft,
+          borderBottom,
+          southCell.borderLeft,
+        );
+      }
+      if (southConnected) {
+        return createBorderMidLeftNode(
+          borderLeft,
+          borderBottom,
+          southCell.borderLeft,
+        );
+      }
+      if (westConnected) {
+        return createBorderMidBottomNode(
+          borderBottom,
+          borderLeft,
+          westCell.borderBottom,
+        );
+      }
+      return createBorderBottomLeftNode(borderBottom, borderLeft);
+    }
+    if (borderLeft) {
+      southConnected =
+        southCell && (southCell.borderTop || southCell.borderLeft);
+      southWestConnected = southConnected && westConnected;
+      if (southWestConnected) {
+        return createBorderMidRightNode(
+          borderLeft,
+          southCell.borderTop || southCell.westCell.borderBottom,
+          southCell.borderLeft || southCell.westCell.borderRight,
+        );
+      }
+      if (westConnected) {
+        return createBorderBottomRightNode(westCell.borderBottom, borderLeft);
+      }
+      if (southConnected) {
+        return createBorderLeftNode(borderLeft);
+      }
+      return createBorderHalfUpNode(borderLeft);
+    }
+    // borderBottom
+    westConnected = westCell && (westCell.borderBottom || westCell.borderRight);
+    southWestConnected = southConnected && westConnected;
+    if (southWestConnected) {
+      return createBorderMidTopNode(
+        westCell.borderBottom || southCell.borderTop,
+        southCell.borderLeft,
+        borderBottom,
+      );
+    }
+    if (southConnected) {
+      return createBorderTopLeftNode(borderBottom, southCell.borderLeft);
+    }
+    if (westConnected) {
+      return createBorderBottomNode(borderBottom);
+    }
+    return createBorderHalfRightNode(borderBottom);
+  },
+};
+
+/**
+ *
+ * https://github.com/Automattic/cli-table
+ * https://github.com/tecfu/tty-table
+ * https://github.com/zaftzaft/terminal-table
+ *
+ * - number alignnment
+ *
+ * NICE TO HAVE/TO INVESTIGATE
+ *
+ * - colspan/rowspan
+ *
+ * - test border style conflict (double -> single heavy)
+ *
+ * - maxWidth on the table (defaults to stdout.columns, will put ... at the end of the cell when it exceeds the remaining width
+ *
+ * - un nouveau style pour les border: "ascii"
+ * sep: "|",
+ * topLeft: "+", topMid: "+", top: "-", topRight: "+",
+ * midLeft: "|", midMid: "+", mid: "-", midRight: "|",
+ * botLeft: "+", botMid: "+", bot: "-", botRight: "+"
+ */
+
+
+const renderTable = (
+  inputGrid,
+  {
+    ansi,
+    indent = 0,
+    borderCollapse,
+    borderSeparatedOnColorConflict,
+    borderSpacing = 0,
+    cornersOnly = false,
+    cellMaxWidth = 50,
+    cellMaxHeight = 10,
+    maxColumns = 10,
+    maxRows = 20,
+    fixLastRow = false,
+  } = {},
+) => {
+  if (!Array.isArray(inputGrid)) {
+    throw new TypeError(`The first arg must be an array, got ${inputGrid}`);
+  }
+  if (inputGrid.length === 0) {
+    return "";
+  }
+  if (maxRows < 2) {
+    maxRows = 2;
+  }
+  if (maxColumns < 2) {
+    maxColumns = 2;
+  }
+
+  let grid = [];
+  // create cells and fill grid
+  {
+    let y = 0;
+    for (const inputRow of inputGrid) {
+      let x = 0;
+      const row = [];
+      for (const inputCell of inputRow) {
+        const cell = createCell(inputCell, {
+          x,
+          y,
+          cellMaxWidth,
+          cellMaxHeight,
+        });
+        row[x] = cell;
+        x++;
+      }
+      grid[y] = row;
+      y++;
+    }
+  }
+  // max rows
+  {
+    const rowCount = grid.length;
+    if (rowCount > maxRows) {
+      const firstRow = grid[0];
+      const gridRespectingMaxRows = [];
+      let skippedRowIndexArray = [];
+      let y = 0;
+      while (y < rowCount) {
+        const row = grid[y];
+        if (y === 0) {
+          gridRespectingMaxRows.push(row);
+        } else if (gridRespectingMaxRows.length < maxRows - 1) {
+          gridRespectingMaxRows.push(row);
+        } else if (fixLastRow && rowCount > 1 && y === rowCount - 1) ; else {
+          skippedRowIndexArray.push(y);
+        }
+        y++;
+      }
+      // push a row
+      const skippedRowCount = skippedRowIndexArray.length;
+      const rowShowingSkippedRows = [];
+      let x = 0;
+      while (x < firstRow.length) {
+        const cellModel = grid[skippedRowIndexArray[0]][x];
+        cellModel.isSkippedRow = true;
+        cellModel.color = COLORS.GREY;
+        cellModel.updateValue(`${skippedRowCount} rows`);
+        rowShowingSkippedRows.push(cellModel);
+        x++;
+      }
+      gridRespectingMaxRows.push(rowShowingSkippedRows);
+      if (fixLastRow && rowCount > 1) {
+        gridRespectingMaxRows.push(grid[rowCount - 1]);
+      }
+      grid = gridRespectingMaxRows;
+    }
+  }
+  // max columns
+  {
+    const firstRow = grid[0];
+    const columnCount = firstRow.length;
+    if (columnCount > maxColumns) {
+      let y = 0;
+      while (y < grid.length) {
+        const row = grid[y];
+        const cellModel = row[maxColumns - 1];
+        const skippedColumnCount = columnCount - maxColumns + 1;
+        const rowRespectingMaxColumns = row.slice(0, maxColumns - 1);
+        cellModel.isSkippedColumn = true;
+        cellModel.color = COLORS.GREY;
+        cellModel.spacingLeft = 1;
+        cellModel.spacingRight = 0;
+        cellModel.updateValue(`${skippedColumnCount} columns`);
+        rowRespectingMaxColumns.push(cellModel);
+        grid[y] = rowRespectingMaxColumns;
+        y++;
+      }
+    }
+  }
+
+  const columnWithLeftSlotSet = new Set();
+  const columnWithRightSlotSet = new Set();
+  const rowHasTopSlot = (y) => topSlotRowMap.has(y);
+  const rowHasBottomSlot = (y) => bottomSlotRowMap.has(y);
+  const columnHasLeftSlot = (x) => columnWithLeftSlotSet.has(x);
+  const columnHasRightSlot = (x) => columnWithRightSlotSet.has(x);
+  const leftSlotRowMap = new Map();
+  const rightSlotRowMap = new Map();
+  const topSlotRowMap = new Map();
+  const bottomSlotRowMap = new Map();
+  // detect borders
+  {
+    const onBorderLeft = (x, y) => {
+      columnWithLeftSlotSet.add(x);
+      const leftSlotRow = leftSlotRowMap.get(y);
+      if (!leftSlotRow) {
+        const leftSlotRow = [];
+        leftSlotRowMap.set(y, leftSlotRow);
+        leftSlotRow[x] = leftSlot;
+      } else {
+        leftSlotRow[x] = leftSlot;
+      }
+    };
+    const onBorderRight = (x, y) => {
+      columnWithRightSlotSet.add(x);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      if (!rightSlotRow) {
+        const rightSlotRow = [];
+        rightSlotRowMap.set(y, rightSlotRow);
+        rightSlotRow[x] = rightSlot;
+      } else {
+        rightSlotRow[x] = rightSlot;
+      }
+    };
+    const onBorderTop = (x, y) => {
+      const topSlotRow = topSlotRowMap.get(y);
+      if (!topSlotRow) {
+        const topSlotRow = [];
+        topSlotRowMap.set(y, topSlotRow);
+        topSlotRow[x] = topSlot;
+      } else {
+        topSlotRow[x] = topSlot;
+      }
+    };
+    const onBorderBottom = (x, y) => {
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      if (!bottomSlotRow) {
+        const bottomSlotRow = [];
+        bottomSlotRowMap.set(y, bottomSlotRow);
+        bottomSlotRow[x] = bottomSlot;
+      } else {
+        bottomSlotRow[x] = bottomSlot;
+      }
+    };
+
+    let y = 0;
+    while (y < grid.length) {
+      let x = 0;
+      const row = grid[y];
+      while (x < row.length) {
+        const cell = row[x];
+        const {
+          border,
+          borderLeft = border,
+          borderRight = border,
+          borderTop = border,
+          borderBottom = border,
+        } = cell;
+        const westCell = x === 0 ? null : row[x - 1];
+        const northCell = y === 0 ? null : grid[y - 1][x];
+        cell.westCell = westCell;
+        cell.northCell = northCell;
+        if (westCell) {
+          westCell.eastCell = cell;
+        }
+        if (northCell) {
+          northCell.southCell = cell;
+        }
+        if (borderLeft) {
+          onBorderLeft(x, y);
+        }
+        if (borderRight) {
+          onBorderRight(x, y);
+        }
+        if (borderTop) {
+          onBorderTop(x, y);
+        }
+        if (borderBottom) {
+          onBorderBottom(x, y);
+        }
+        x++;
+      }
+      y++;
+    }
+  }
+  // border collapse
+  if (borderCollapse) {
+    const getHowToCollapseBorders = (borderToCollapse, intoBorder) => {
+      if (
+        borderSeparatedOnColorConflict &&
+        borderToCollapse.color !== intoBorder.color
+      ) {
+        return null;
+      }
+      return () => {
+        const collapsedBorder = { ...intoBorder };
+        if (!intoBorder.style && borderToCollapse.style) {
+          collapsedBorder.style = borderToCollapse.style;
+        }
+        if (!intoBorder.color && borderToCollapse.color) {
+          collapsedBorder.color = borderToCollapse.color;
+        }
+        return collapsedBorder;
+      };
+    };
+
+    const collapsePreviousRowBottomBorders = (y) => {
+      const firstCellInThatRow = grid[y][0];
+      let cellInThatRow = firstCellInThatRow;
+      const collapseCallbackSet = new Set();
+      while (cellInThatRow) {
+        const borderTop = cellInThatRow.borderTop;
+        if (!borderTop) {
+          return false;
+        }
+        const northCell = cellInThatRow.northCell;
+        const northCellBorderBottom = northCell.borderBottom;
+        if (!northCellBorderBottom) {
+          cellInThatRow = cellInThatRow.eastCell;
+          continue;
+        }
+        const collapseBorders = getHowToCollapseBorders(
+          northCellBorderBottom,
+          borderTop,
+        );
+        if (!collapseBorders) {
+          return false;
+        }
+        const cell = cellInThatRow;
+        collapseCallbackSet.add(() => {
+          cell.borderTop = collapseBorders();
+          northCell.borderBottom = null;
+        });
+        cellInThatRow = cellInThatRow.eastCell;
+      }
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
+      }
+      bottomSlotRowMap.delete(y - 1);
+      return true;
+    };
+    const collapseTopBorders = (y) => {
+      const firstCellInThatRow = grid[y][0];
+      let cellInThatRow = firstCellInThatRow;
+      const collapseCallbackSet = new Set();
+      while (cellInThatRow) {
+        const borderTop = cellInThatRow.borderTop;
+        if (!borderTop) {
+          cellInThatRow = cellInThatRow.eastCell;
+          continue;
+        }
+        const northCell = cellInThatRow.northCell;
+        const northCellBorderBottom = northCell.borderBottom;
+        if (!northCellBorderBottom) {
+          return false;
+        }
+        const collapseBorders = getHowToCollapseBorders(
+          borderTop,
+          northCellBorderBottom,
+        );
+        if (!collapseBorders) {
+          return false;
+        }
+        const cell = cellInThatRow;
+        collapseCallbackSet.add(() => {
+          northCell.borderBottom = collapseBorders();
+          cell.borderTop = null;
+        });
+        cellInThatRow = cellInThatRow.eastCell;
+      }
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
+      }
+      topSlotRowMap.delete(y);
+      return true;
+    };
+    const collapsePreviousColumnRightBorders = (x) => {
+      const firstCellInThatColumn = grid[0][x];
+      let cellInThatColumn = firstCellInThatColumn;
+      const collapseCallbackSet = new Set();
+      while (cellInThatColumn) {
+        const border = cellInThatColumn.borderLeft;
+        if (!border) {
+          return false;
+        }
+        const westCell = cellInThatColumn.westCell;
+        const westCellBorderRight = westCell.borderRight;
+        if (!westCellBorderRight) {
+          cellInThatColumn = cellInThatColumn.southCell;
+          continue;
+        }
+        const collapseBorders = getHowToCollapseBorders(
+          westCellBorderRight,
+          border,
+        );
+        if (!collapseBorders) {
+          return false;
+        }
+        const cell = cellInThatColumn;
+        collapseCallbackSet.add(() => {
+          cell.borderLeft = collapseBorders();
+          westCell.borderRight = null;
+        });
+        cellInThatColumn = cellInThatColumn.southCell;
+      }
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
+      }
+      let y = 0;
+      while (y < grid.length) {
+        const rightSlotRow = rightSlotRowMap.get(y);
+        if (rightSlotRow) {
+          rightSlotRow[x - 1] = undefined;
+        }
+        y++;
+      }
+      columnWithRightSlotSet.delete(x - 1);
+      return true;
+    };
+    const collapseLeftBorders = (x) => {
+      const firstCellInThatColumn = grid[0][x];
+      let cellInThatColumn = firstCellInThatColumn;
+      const collapseCallbackSet = new Set();
+      while (cellInThatColumn) {
+        const border = cellInThatColumn.borderLeft;
+        if (!border) {
+          cellInThatColumn = cellInThatColumn.southCell;
+          continue;
+        }
+        const westCell = cellInThatColumn.westCell;
+        const otherBorder = westCell.borderRight;
+        if (!otherBorder) {
+          return false;
+        }
+        const collapseBorders = getHowToCollapseBorders(border, otherBorder);
+        if (!collapseBorders) {
+          return false;
+        }
+        const cell = cellInThatColumn;
+        collapseCallbackSet.add(() => {
+          westCell.borderRight = collapseBorders();
+          cell.borderLeft = null;
+        });
+        cellInThatColumn = cellInThatColumn.southCell;
+      }
+      for (const collapseCallback of collapseCallbackSet) {
+        collapseCallback();
+      }
+      let y = 0;
+      while (y < grid.length) {
+        const leftSlotRow = leftSlotRowMap.get(y);
+        if (leftSlotRow) {
+          leftSlotRow[x] = undefined;
+        }
+        y++;
+      }
+      columnWithLeftSlotSet.delete(x);
+      return true;
+    };
+
+    {
+      let y = 0;
+      while (y < grid.length) {
+        let x = 0;
+        const row = grid[y];
+        while (x < row.length) {
+          if (
+            x !== row.length - 1 &&
+            columnHasRightSlot(x) &&
+            columnHasLeftSlot(x + 1)
+          ) {
+            collapsePreviousColumnRightBorders(x + 1);
+          }
+          if (x > 0 && columnHasLeftSlot(x) && columnHasRightSlot(x - 1)) {
+            collapseLeftBorders(x);
+          }
+          x++;
+        }
+        if (
+          y !== grid.length - 1 &&
+          rowHasBottomSlot(y) &&
+          rowHasTopSlot(y + 1)
+        ) {
+          collapsePreviousRowBottomBorders(y + 1);
+        }
+        if (y > 0 && rowHasTopSlot(y) && rowHasBottomSlot(y - 1)) {
+          collapseTopBorders(y);
+        }
+        y++;
+      }
+    }
+  }
+  // fill holes in slot rows
+  {
+    let y = 0;
+    while (y < grid.length) {
+      let leftSlotRow = leftSlotRowMap.get(y);
+      let rightSlotRow = rightSlotRowMap.get(y);
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      let x = 0;
+      while (x < grid[y].length) {
+        if (leftSlotRow) {
+          if (!leftSlotRow[x] && columnHasLeftSlot(x)) {
+            leftSlotRow[x] = leftSlot;
+          }
+        } else if (columnHasLeftSlot(x)) {
+          leftSlotRow = [];
+          leftSlotRowMap.set(y, leftSlotRow);
+          leftSlotRow[x] = leftSlot;
+        }
+
+        if (rightSlotRow) {
+          if (!rightSlotRow[x] && columnHasRightSlot(x)) {
+            rightSlotRow[x] = rightSlot;
+          }
+        } else if (columnHasRightSlot(x)) {
+          rightSlotRow = [];
+          rightSlotRowMap.set(y, rightSlotRow);
+          rightSlotRow[x] = rightSlot;
+        }
+
+        if (topSlotRow && !topSlotRow[x]) {
+          topSlotRow[x] = topSlot;
+        }
+        if (bottomSlotRow && !bottomSlotRow[x]) {
+          bottomSlotRow[x] = bottomSlot;
+        }
+        x++;
+      }
+      y++;
+    }
+  }
+  // create corners
+  const topLeftSlotRowMap = new Map();
+  const topRightSlotRowMap = new Map();
+  const bottomLeftSlotRowMap = new Map();
+  const bottomRightSlotRowMap = new Map();
+  {
+    let y = 0;
+    while (y < grid.length) {
+      const leftSlotRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      if (!leftSlotRow && !rightSlotRow) {
+        y++;
+        continue;
+      }
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      if (!topSlotRow && !bottomSlotRow) {
+        y++;
+        continue;
+      }
+      const topLeftSlotRow = [];
+      const topRightSlotRow = [];
+      const bottomLeftSlotRow = [];
+      const bottomRightSlotRow = [];
+      let x = 0;
+      while (x < grid[y].length) {
+        const leftSlot = leftSlotRow && leftSlotRow[x];
+        const rightSlot = rightSlotRow && rightSlotRow[x];
+
+        if (topSlotRow && leftSlot) {
+          topLeftSlotRow[x] = topLeftSlot;
+        }
+        if (topSlotRow && rightSlot) {
+          topRightSlotRow[x] = topRightSlot;
+        }
+        if (bottomSlotRow && leftSlot) {
+          bottomLeftSlotRow[x] = bottomLeftSlot;
+        }
+        if (bottomSlotRow && rightSlot) {
+          bottomRightSlotRow[x] = bottomRightSlot;
+        }
+        x++;
+      }
+      if (topLeftSlotRow.length) {
+        topLeftSlotRowMap.set(y, topLeftSlotRow);
+      }
+      if (topRightSlotRow.length) {
+        topRightSlotRowMap.set(y, topRightSlotRow);
+      }
+      if (bottomLeftSlotRow.length) {
+        bottomLeftSlotRowMap.set(y, bottomLeftSlotRow);
+      }
+      if (bottomRightSlotRow.length) {
+        bottomRightSlotRowMap.set(y, bottomRightSlotRow);
+      }
+      y++;
+    }
+  }
+  // replace slots with content that will be rendered in that slot (border or blank)
+  {
+    let y = 0;
+    while (y < grid.length) {
+      const row = grid[y];
+      const leftSlotRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      const topLeftSlotRow = topLeftSlotRowMap.get(y);
+      const topRightSlotRow = topRightSlotRowMap.get(y);
+      const bottomLeftSlotRow = bottomLeftSlotRowMap.get(y);
+      const bottomRightSlotRow = bottomRightSlotRowMap.get(y);
+      let x = 0;
+      while (x < row.length) {
+        const cell = row[x];
+        const adapt = (slot) => {
+          const node = slot.adapt(cell);
+          if (node.type === "blank") {
+            return node;
+          }
+          if (cornersOnly) {
+            if (
+              node.type === "border_left" ||
+              node.type === "border_right" ||
+              node.type === "border_top" ||
+              node.type === "border_bottom" ||
+              node.type === "border_half_left" ||
+              node.type === "border_half_right" ||
+              node.type === "border_half_up" ||
+              node.type === "border_half_down"
+            ) {
+              return createBlankNode();
+            }
+          }
+          if (borderSpacing) {
+            if (slot.type === "top_left") {
+              if (!cell.northCell || !cell.northCell.borderBottom) {
+                node.spacingTop = borderSpacing;
+              }
+              if (!cell.westCell || !cell.westCell.borderRight) {
+                node.spacingLeft = borderSpacing;
+              }
+            }
+            if (slot.type === "top_right") {
+              if (!cell.northCell || !cell.northCell.borderBottom) {
+                node.spacingTop = borderSpacing;
+              }
+              node.spacingRight = borderSpacing;
+            }
+            if (slot.type === "bottom_left") {
+              node.spacingBottom = borderSpacing;
+              if (!cell.westCell || !cell.westCell.borderRight) {
+                node.spacingLeft = borderSpacing;
+              }
+            }
+            if (slot.type === "bottom_right") {
+              node.spacingBottom = borderSpacing;
+              node.spacingRight = borderSpacing;
+            }
+          }
+          return node;
+        };
+
+        if (leftSlotRow) {
+          const leftSlot = leftSlotRow[x];
+          if (leftSlot) {
+            const leftSlotNode = adapt(leftSlot);
+            leftSlotRow[x] = leftSlotNode;
+          }
+        }
+        if (rightSlotRow) {
+          const rightSlot = rightSlotRow[x];
+          if (rightSlot) {
+            const rightSlotNode = adapt(rightSlot);
+            rightSlotRow[x] = rightSlotNode;
+          }
+        }
+        if (topSlotRow) {
+          const topSlot = topSlotRow[x];
+          const topSlotNode = adapt(topSlot);
+          topSlotRow[x] = topSlotNode;
+        }
+        if (bottomSlotRow) {
+          const bottomSlot = bottomSlotRow[x];
+          const bottomSlotNode = adapt(bottomSlot);
+          bottomSlotRow[x] = bottomSlotNode;
+        }
+        // corners
+        if (topLeftSlotRow) {
+          const topLeftSlot = topLeftSlotRow[x];
+          if (topLeftSlot) {
+            const topLeftSlotNode = adapt(topLeftSlot);
+            topLeftSlotRow[x] = topLeftSlotNode;
+          }
+        }
+        if (topRightSlotRow) {
+          const topRightSlot = topRightSlotRow[x];
+          if (topRightSlot) {
+            const topRightSlotNode = adapt(topRightSlot);
+            topRightSlotRow[x] = topRightSlotNode;
+          }
+        }
+        if (bottomRightSlotRow) {
+          const bottomRightSlot = bottomRightSlotRow[x];
+          if (bottomRightSlot) {
+            const bottomRightSlotNode = adapt(bottomRightSlot);
+            bottomRightSlotRow[x] = bottomRightSlotNode;
+          }
+        }
+        if (bottomLeftSlotRow) {
+          const bottomLeftSlot = bottomLeftSlotRow[x];
+          if (bottomLeftSlot) {
+            const bottomLeftSlotNode = adapt(bottomLeftSlot);
+            bottomLeftSlotRow[x] = bottomLeftSlotNode;
+          }
+        }
+        x++;
+      }
+      y++;
+    }
+  }
+
+  // number align
+  {
+    const largestIntegerInColumnMap = new Map();
+    const largestFloatInColumnMap = new Map();
+    const formatCallbackSet = new Set();
+
+    let y = 0;
+    while (y < grid.length) {
+      const row = grid[y];
+      let x = 0;
+      while (x < row.length) {
+        const cell = row[x];
+        const { value, format } = cell;
+
+        if (format !== "size" && isFinite(value) && value !== "") {
+          if (value % 1 === 0) {
+            const { integer } = tokenizeInteger(Math.abs(value));
+            const integerFormatted = groupDigits(integer);
+            const integerWidth = measureTextWidth$1(integerFormatted);
+            const largestIntegerInColumn =
+              largestIntegerInColumnMap.get(x) || 0;
+            if (integerWidth > largestIntegerInColumn) {
+              largestIntegerInColumnMap.set(x, integerWidth);
+            }
+            formatCallbackSet.add(() => {
+              const integerColumnWidth = largestIntegerInColumnMap.get(cell.x);
+              let integerText = integerFormatted;
+              if (integerWidth < integerColumnWidth) {
+                const padding = integerColumnWidth - integerWidth;
+                integerText = " ".repeat(padding) + integerFormatted;
+              }
+              const floatWidth = largestFloatInColumnMap.get(cell.x);
+              if (floatWidth) {
+                integerText += " ".repeat(floatWidth);
+              }
+              cell.updateValue(integerText);
+            });
+          } else {
+            const { integer, decimalSeparator, decimal } = tokenizeFloat(
+              Math.abs(value),
+            );
+            const integerFormatted = groupDigits(integer);
+            const integerWidth = measureTextWidth$1(integerFormatted);
+            const floatFormatted = groupDigits(decimal);
+            const floatWidth = measureTextWidth$1(floatFormatted);
+            const largestFloatInColumn = largestFloatInColumnMap.get(x) || 0;
+            if (floatWidth > largestFloatInColumn) {
+              largestFloatInColumnMap.set(x, floatWidth);
+            }
+            formatCallbackSet.add(() => {
+              const integerColumnWidth = largestIntegerInColumnMap.get(cell.x);
+              const floatColumnWidth = largestFloatInColumnMap.get(cell.x);
+              let floatText = integerFormatted;
+              if (integerWidth < integerColumnWidth) {
+                const padding = integerColumnWidth - integerWidth;
+                floatText = " ".repeat(padding) + integerFormatted;
+              }
+              floatText += decimalSeparator;
+              floatText += decimal;
+              if (floatWidth < floatColumnWidth) {
+                const padding = floatColumnWidth - floatWidth;
+                floatText += " ".repeat(padding - 1);
+              }
+              cell.updateValue(floatText);
+            });
+          }
+        }
+        x++;
+      }
+      y++;
+    }
+
+    for (const formatCallback of formatCallbackSet) {
+      formatCallback();
+    }
+  }
+
+  // measure column and row dimensions (biggest of all cells in the column/row)
+  const columnWidthMap = new Map();
+  const rowHeightMap = new Map();
+  const leftColumnWidthMap = new Map();
+  const rightColumnWidthMap = new Map();
+  const topRowHeightMap = new Map();
+  const bottomRowHeightMap = new Map();
+  {
+    const measureNode = (node) => {
+      const {
+        rects,
+        spacing = 0,
+        spacingLeft = spacing,
+        spacingRight = spacing,
+        spacingTop = spacing,
+        spacingBottom = spacing,
+      } = node;
+      let nodeWidth = -1;
+      for (const rect of rects) {
+        let { width } = rect;
+        if (width === "fill") {
+          continue;
+        }
+        if (spacingLeft || spacingRight) {
+          width += spacingLeft + spacingRight;
+          rect.width = width;
+          const { render } = rect;
+          if (typeof render === "function") {
+            rect.render = (...args) => {
+              const text = render(...args);
+              return " ".repeat(spacingLeft) + text + " ".repeat(spacingRight);
+            };
+          } else {
+            rect.render =
+              " ".repeat(spacingLeft) + render + " ".repeat(spacingRight);
+          }
+        }
+        if (width > nodeWidth) {
+          nodeWidth = width;
+        }
+      }
+      if (spacingTop) {
+        let lineToInsertAbove = spacingTop;
+        while (lineToInsertAbove--) {
+          rects.unshift({
+            width: "fill",
+            render: ({ columnWidth }) => " ".repeat(columnWidth),
+          });
+        }
+      }
+      if (spacingBottom) {
+        let lineToInsertBelow = spacingBottom;
+        while (lineToInsertBelow--) {
+          rects.push({
+            width: "fill",
+            render: ({ columnWidth }) => " ".repeat(columnWidth),
+          });
+        }
+      }
+      const nodeHeight = rects.length;
+      return [nodeWidth, nodeHeight];
+    };
+
+    let y = 0;
+    for (const line of grid) {
+      const topSlotRow = topSlotRowMap.get(y);
+      const bottomSlotRow = bottomSlotRowMap.get(y);
+      const leftSlotRow = leftSlotRowMap.get(y);
+      const rightSlotRow = rightSlotRowMap.get(y);
+      const topLeftSlotRow = topLeftSlotRowMap.get(y);
+      const topRightSlotRow = topRightSlotRowMap.get(y);
+      const bottomLeftSlotRow = bottomLeftSlotRowMap.get(y);
+      const bottomRightSlotRow = bottomRightSlotRowMap.get(y);
+      let x = 0;
+      for (const cell of line) {
+        if (topSlotRow) {
+          const topSlot = topSlotRow[x];
+          if (topSlot) {
+            const [, topNodeHeight] = measureNode(topSlot);
+            const topRowHeight = topRowHeightMap.get(y) || -1;
+            if (topNodeHeight > topRowHeight) {
+              topRowHeightMap.set(y, topNodeHeight);
+            }
+          }
+        }
+        if (bottomSlotRow) {
+          const bottomSlot = bottomSlotRow[x];
+          if (bottomSlot) {
+            const [, bottomNodeHeight] = measureNode(bottomSlot);
+            const bottomRowHeight = bottomRowHeightMap.get(y) || -1;
+            if (bottomNodeHeight > bottomRowHeight) {
+              bottomRowHeightMap.set(y, bottomNodeHeight);
+            }
+          }
+        }
+        if (leftSlotRow) {
+          const leftSlot = leftSlotRow[x];
+          if (leftSlot) {
+            const [leftNodeWidth] = measureNode(leftSlot);
+            const leftColumnWidth = leftColumnWidthMap.get(x) || -1;
+            if (leftNodeWidth > leftColumnWidth) {
+              leftColumnWidthMap.set(x, leftNodeWidth);
+            }
+          }
+        }
+        if (rightSlotRow) {
+          const rightSlot = rightSlotRow[x];
+          if (rightSlot) {
+            const [rightNodeWidth] = measureNode(rightSlot);
+            const rightColumnWidth = rightColumnWidthMap.get(x) || -1;
+            if (rightNodeWidth > rightColumnWidth) {
+              rightColumnWidthMap.set(x, rightNodeWidth);
+            }
+          }
+        }
+        if (topLeftSlotRow) {
+          const topLeftSlot = topLeftSlotRow[x];
+          if (topLeftSlot) {
+            const [topLeftNodeWidth, topLeftNodeHeight] =
+              measureNode(topLeftSlot);
+            const leftColumnWidth = leftColumnWidthMap.get(x) || -1;
+            if (topLeftNodeWidth > leftColumnWidth) {
+              leftColumnWidthMap.set(x, topLeftNodeWidth);
+            }
+            const topRowHeight = topRowHeightMap.get(y) || -1;
+            if (topLeftNodeHeight > topRowHeight) {
+              topRowHeightMap.set(y, topLeftNodeHeight);
+            }
+          }
+        }
+        if (topRightSlotRow) {
+          const topRightSlot = topRightSlotRow[x];
+          if (topRightSlot) {
+            const [topRightNodeWidth, topRightNodeHeight] =
+              measureNode(topRightSlot);
+            const rightColumnWidth = rightColumnWidthMap.get(x) || -1;
+            if (topRightNodeWidth > rightColumnWidth) {
+              rightColumnWidthMap.set(x, topRightNodeWidth);
+            }
+            const topRowHeight = topRowHeightMap.get(y) || -1;
+            if (topRightNodeHeight > topRowHeight) {
+              topRowHeightMap.set(y, topRightNodeHeight);
+            }
+          }
+        }
+        if (bottomLeftSlotRow) {
+          const bottomLeftSlot = bottomLeftSlotRow[x];
+          if (bottomLeftSlot) {
+            const [bottomLeftNodeWidth, bottomLeftNodeHeight] =
+              measureNode(bottomLeftSlot);
+            const leftColumnWidth = leftColumnWidthMap.get(x) || -1;
+            if (bottomLeftNodeWidth > leftColumnWidth) {
+              leftColumnWidthMap.set(x, bottomLeftNodeWidth);
+            }
+            const bottomRowHeight = bottomRowHeightMap.get(y) || -1;
+            if (bottomLeftNodeHeight > bottomRowHeight) {
+              bottomRowHeightMap.set(y, bottomLeftNodeHeight);
+            }
+          }
+        }
+        if (bottomRightSlotRow) {
+          const bottomRightSlot = bottomRightSlotRow[x];
+          if (bottomRightSlot) {
+            const [bottomRightNodeWidth, bottomRightNodeHeight] =
+              measureNode(bottomRightSlot);
+            const rightColumnWidth = rightColumnWidthMap.get(x) || -1;
+            if (bottomRightNodeWidth > rightColumnWidth) {
+              rightColumnWidthMap.set(x, bottomRightNodeWidth);
+            }
+            const bottomRowHeight = bottomRowHeightMap.get(y) || -1;
+            if (bottomRightNodeHeight > bottomRowHeight) {
+              bottomRowHeightMap.set(y, bottomRightNodeHeight);
+            }
+          }
+        }
+
+        const columnWidth = columnWidthMap.get(x) || -1;
+        const rowHeight = rowHeightMap.get(y) || -1;
+        const [cellWidth, cellHeight] = measureNode(cell);
+        if (cellWidth > columnWidth) {
+          columnWidthMap.set(x, cellWidth);
+        }
+        if (cellHeight > rowHeight) {
+          rowHeightMap.set(y, cellHeight);
+        }
+        x++;
+      }
+      y++;
+    }
+  }
+
+  // render table
+  let log = "";
+  {
+    const renderRow = (
+      nodeArray,
+      { cells, rowHeight, leftSlotRow, rightSlotRow },
+    ) => {
+      let rowText = "";
+      let lastLineIndex = rowHeight;
+      let lineIndex = 0;
+      while (lineIndex !== lastLineIndex) {
+        let x = 0;
+        let lineText = "";
+        for (const node of nodeArray) {
+          const cell = cells[x];
+          const nodeLineText = renderNode(node, {
+            cell,
+            columnWidth: columnWidthMap.get(x),
+            rowHeight,
+            lineIndex,
+          });
+          let leftSlotLineText;
+          let rightSlotLineText;
+          if (leftSlotRow) {
+            const leftSlot = leftSlotRow[x];
+            if (leftSlot) {
+              leftSlotLineText = renderNode(leftSlot, {
+                cell,
+                columnWidth: leftColumnWidthMap.get(x),
+                rowHeight,
+                lineIndex,
+              });
+            }
+          }
+          if (rightSlotRow) {
+            const rightSlot = rightSlotRow[x];
+            if (rightSlot) {
+              rightSlotLineText = renderNode(rightSlot, {
+                cell,
+                columnWidth: rightColumnWidthMap.get(x),
+                rowHeight,
+                lineIndex,
+              });
+            }
+          }
+          if (leftSlotLineText && rightSlotLineText) {
+            lineText += leftSlotLineText + nodeLineText + rightSlotLineText;
+          } else if (leftSlotLineText) {
+            lineText += leftSlotLineText + nodeLineText;
+          } else if (rightSlotLineText) {
+            lineText += nodeLineText + rightSlotLineText;
+          } else {
+            lineText += nodeLineText;
+          }
+          x++;
+        }
+        lineIndex++;
+        if (indent && log) {
+          rowText = " ".repeat(indent) + rowText;
+        }
+        rowText += lineText;
+        rowText += "\n";
+      }
+      return rowText;
+    };
+    const renderNode = (node, { cell, columnWidth, rowHeight, lineIndex }) => {
+      let { xAlign, xPadChar = " ", yAlign, yPadChar = " ", rects } = node;
+
+      const nodeHeight = rects.length;
+      let rect;
+      if (yAlign === "start") {
+        if (lineIndex < nodeHeight) {
+          rect = rects[lineIndex];
+        }
+      } else if (yAlign === "center") {
+        const lineMissingAbove = Math.floor((rowHeight - nodeHeight) / 2);
+        // const bottomSpacing = rowHeight - cellHeight - topSpacing;
+        const lineStartIndex = lineMissingAbove;
+        const lineEndIndex = lineMissingAbove + nodeHeight;
+
+        if (lineIndex < lineStartIndex) {
+          if (Array.isArray(yPadChar)) {
+            yPadChar = yPadChar[0];
+          }
+        } else if (lineIndex < lineEndIndex) {
+          const rectIndex = lineIndex - lineStartIndex;
+          rect = rects[rectIndex];
+        } else if (Array.isArray(yPadChar)) {
+          yPadChar = yPadChar[1];
+        }
+      } else {
+        const lineStartIndex = rowHeight - nodeHeight;
+        if (lineIndex >= lineStartIndex) {
+          const rectIndex = lineIndex - lineStartIndex;
+          rect = rects[rectIndex];
+        }
+      }
+
+      const applyStyles = (text, { backgroundColor, color, bold }) => {
+        if (!ansi) {
+          return text;
+        }
+        let textWithStyles = text;
+
+        {
+          if (typeof backgroundColor === "function") {
+            backgroundColor = backgroundColor(cell, { columnWidth });
+          }
+          if (backgroundColor) {
+            textWithStyles = ANSI$1.backgroundColor(
+              textWithStyles,
+              backgroundColor,
+            );
+          }
+        }
+        {
+          if (typeof color === "function") {
+            color = color(cell, { columnWidth });
+          }
+          if (color === undefined && backgroundColor === COLORS.WHITE) {
+            color = COLORS.BLACK;
+          }
+          if (color) {
+            textWithStyles = ANSI$1.color(textWithStyles, color);
+          }
+        }
+        {
+          if (typeof bold === "function") {
+            bold = bold(cell, { columnWidth });
+          }
+          if (bold) {
+            textWithStyles = ANSI$1.effect(textWithStyles, ANSI$1.BOLD);
+          }
+        }
+        return textWithStyles;
+      };
+
+      if (rect) {
+        let { width, render } = rect;
+        let rectText;
+        if (typeof render === "function") {
+          rectText = render({
+            ansi,
+            cell,
+            columnWidth,
+          });
+        } else {
+          rectText = render;
+        }
+        if (width === "fill") {
+          return applyStyles(rectText, rect);
+        }
+        return applyStyles(
+          applyXAlign(rectText, {
+            width,
+            desiredWidth: columnWidth,
+            align: xAlign,
+            padChar: xPadChar,
+          }),
+          rect,
+        );
+      }
+      return applyStyles(
+        applyXAlign(yPadChar, {
+          width: 1,
+          desiredWidth: columnWidth,
+          align: xAlign,
+          padChar: " ",
+        }),
+        node,
+      );
+    };
+
+    let y = 0;
+    for (const row of grid) {
+      {
+        const topSlotRow = topSlotRowMap.get(y);
+        if (topSlotRow) {
+          const topSlotRowText = renderRow(topSlotRow, {
+            cells: row,
+            rowHeight: topRowHeightMap.get(y),
+            leftSlotRow: topLeftSlotRowMap.get(y),
+            rightSlotRow: topRightSlotRowMap.get(y),
+          });
+          log += topSlotRowText;
+        }
+      }
+      {
+        const contentRowText = renderRow(row, {
+          cells: row,
+          rowHeight: rowHeightMap.get(y),
+          leftSlotRow: leftSlotRowMap.get(y),
+          rightSlotRow: rightSlotRowMap.get(y),
+        });
+        log += contentRowText;
+      }
+      {
+        const bottomSlotRow = bottomSlotRowMap.get(y);
+        if (bottomSlotRow) {
+          const bottomSlotRowText = renderRow(bottomSlotRow, {
+            cells: row,
+            rowHeight: bottomRowHeightMap.get(y),
+            leftSlotRow: bottomLeftSlotRowMap.get(y),
+            rightSlotRow: bottomRightSlotRowMap.get(y),
+          });
+          log += bottomSlotRowText;
+        }
+      }
+      y++;
+    }
+    if (log.endsWith("\n")) {
+      log = log.slice(0, -1); // remove last "\n"
+    }
+  }
+  return log;
+};
+
+const applyXAlign = (text, { width, desiredWidth, align, padChar }) => {
+  const missingWidth = desiredWidth - width;
+  if (missingWidth < 0) {
+    // never supposed to happen because the width of a column
+    // is the biggest width of all cells in this column
+    return text;
+  }
+  if (missingWidth === 0) {
+    return text;
+  }
+  // if (align === "fill") {
+  //   let textRepeated = "";
+  //   let widthFilled = 0;
+  //   while (true) {
+  //     textRepeated += text;
+  //     widthFilled += width;
+  //     if (widthFilled >= desiredWidth) {
+  //       break;
+  //     }
+  //   }
+  //   return textRepeated;
+  // }
+  if (align === "start") {
+    return text + padChar.repeat(missingWidth);
+  }
+  if (align === "center") {
+    const widthMissingLeft = Math.floor(missingWidth / 2);
+    const widthMissingRight = missingWidth - widthMissingLeft;
+    let padStartChar = padChar;
+    let padEndChar = padChar;
+    if (Array.isArray(padChar)) {
+      padStartChar = padChar[0];
+      padEndChar = padChar[1];
+    }
+    return (
+      padStartChar.repeat(widthMissingLeft) +
+      text +
+      padEndChar.repeat(widthMissingRight)
+    );
+  }
+  // "end"
+  return padChar.repeat(missingWidth) + text;
+};
+
+const createCell = (
+  {
+    value,
+    color,
+    backgroundColor,
+    format,
+    bold,
+    unit,
+    unitColor,
+    spacing = 0,
+    spacingLeft = spacing || 1,
+    spacingRight = spacing || 1,
+    spacingTop = spacing,
+    spacingBottom = spacing,
+    xAlign = "start", // "start", "center", "end"
+    yAlign = "start", // "start", "center", "end"
+    maxWidth,
+    maxHeight,
+    border,
+    borderLeft = border,
+    borderRight = border,
+    borderTop = border,
+    borderBottom = border,
+  },
+  { x, y, cellMaxWidth, cellMaxHeight },
+) => {
+  if (maxWidth === undefined) {
+    maxWidth = cellMaxWidth;
+  } else if (maxWidth < 1) {
+    maxWidth = 1;
+  }
+  if (maxHeight === undefined) {
+    maxHeight = cellMaxHeight;
+  } else if (maxHeight < 1) {
+    maxHeight = 1;
+  }
+
+  if (format === "size") {
+    const size = humanizeFileSize(value);
+    const parts = size.split(" ");
+    value = parts[0];
+    unit = parts[1];
+  }
+
+  const rects = [];
+  const updateValue = (value) => {
+    cell.value = value;
+    rects.length = 0;
+    let text = String(value);
+    let lines = text.split("\n");
+    const lineCount = lines.length;
+    let skippedLineCount;
+    let lastLineIndex = lineCount - 1;
+    if (lineCount > maxHeight) {
+      lines = lines.slice(0, maxHeight - 1);
+      lastLineIndex = maxHeight - 1;
+      skippedLineCount = lineCount - maxHeight + 1;
+      lines.push(`↓ ${skippedLineCount} lines ↓`);
+    }
+
+    let lineIndex = 0;
+
+    for (const line of lines) {
+      const isLastLine = lineIndex === lastLineIndex;
+      let lineWidth = measureTextWidth$1(line);
+      let lineText = line;
+      if (lineWidth > maxWidth) {
+        const skippedBoilerplate = "…";
+        // const skippedCharCount = lineWidth - maxWidth - skippedBoilerplate.length;
+        lineText = lineText.slice(0, maxWidth - skippedBoilerplate.length);
+        lineText += skippedBoilerplate;
+        lineWidth = maxWidth;
+      }
+      if (isLastLine && unit) {
+        lineWidth += ` ${unit}`.length;
+      }
+      rects.push({
+        width: lineWidth,
+        render: ({ ansi }) => {
+          if (isLastLine && unit) {
+            const unitWithStyles =
+              ansi && unitColor ? ANSI$1.color(unit, unitColor) : unit;
+            lineText += ` ${unitWithStyles}`;
+            return lineText;
+          }
+          return lineText;
+        },
+        backgroundColor: cell.backgroundColor,
+        color: cell.color,
+        bold: cell.bold,
+      });
+      lineIndex++;
+    }
+    if (skippedLineCount) {
+      rects[rects.length - 1].color = COLORS.GREY;
+    }
+  };
+
+  const cell = {
+    type: "content",
+    xAlign,
+    yAlign,
+    spacingLeft,
+    spacingRight,
+    spacingTop,
+    spacingBottom,
+    format,
+    backgroundColor,
+    color,
+    bold,
+    rects,
+    x,
+    y,
+    updateValue,
+
+    border,
+    borderLeft,
+    borderRight,
+    borderTop,
+    borderBottom,
+  };
+
+  updateValue(value);
+
+  return cell;
+};
+
 const escapeChars = (string, replacements) => {
   const charsToEscape = Object.keys(replacements);
   let result = "";
@@ -18691,311 +22377,56 @@ const SIGINT_CALLBACK = {
   },
 };
 
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-
-const {env} = process$1;
-
-let flagForceColor;
-if (
-	hasFlag('no-color')
-	|| hasFlag('no-colors')
-	|| hasFlag('color=false')
-	|| hasFlag('color=never')
-) {
-	flagForceColor = 0;
-} else if (
-	hasFlag('color')
-	|| hasFlag('colors')
-	|| hasFlag('color=true')
-	|| hasFlag('color=always')
-) {
-	flagForceColor = 1;
-}
-
-function envForceColor() {
-	if (!('FORCE_COLOR' in env)) {
-		return;
-	}
-
-	if (env.FORCE_COLOR === 'true') {
-		return 1;
-	}
-
-	if (env.FORCE_COLOR === 'false') {
-		return 0;
-	}
-
-	if (env.FORCE_COLOR.length === 0) {
-		return 1;
-	}
-
-	const level = Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
-
-	if (![0, 1, 2, 3].includes(level)) {
-		return;
-	}
-
-	return level;
-}
-
-function translateLevel(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3,
-	};
-}
-
-function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor();
-	if (noFlagForceColor !== undefined) {
-		flagForceColor = noFlagForceColor;
-	}
-
-	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
-
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (sniffFlags) {
-		if (hasFlag('color=16m')
-			|| hasFlag('color=full')
-			|| hasFlag('color=truecolor')) {
-			return 3;
-		}
-
-		if (hasFlag('color=256')) {
-			return 2;
-		}
-	}
-
-	// Check for Azure DevOps pipelines.
-	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
-		return 1;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process$1.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10
-			&& Number(osRelease[2]) >= 10_586
-		) {
-			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env) {
-		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env)) {
-			return 3;
-		}
-
-		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if (env.TERM === 'xterm-kitty') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env) {
-		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env.TERM_PROGRAM) {
-			case 'iTerm.app': {
-				return version >= 3 ? 3 : 2;
-			}
-
-			case 'Apple_Terminal': {
-				return 2;
-			}
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env) {
-		return 1;
-	}
-
-	return min;
-}
-
-function createSupportsColor(stream, options = {}) {
-	const level = _supportsColor(stream, {
-		streamIsTTY: stream && stream.isTTY,
-		...options,
-	});
-
-	return translateLevel(level);
-}
-
-({
-	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
-});
-
-function isUnicodeSupported() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
-
-platform === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-const ESC = '\u001B[';
-
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows = !isBrowser && process$1.platform === 'win32';
-
-isBrowser ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
-const cursorUp = (count = 1) => ESC + count + 'A';
-
-const cursorLeft = ESC + 'G';
-
-const eraseLines = count => {
-	let clear = '';
-
-	for (let i = 0; i < count; i++) {
-		clear += eraseLine + (i < count - 1 ? cursorUp() : '');
-	}
-
-	if (count) {
-		clear += cursorLeft;
-	}
-
-	return clear;
-};
-const eraseLine = ESC + '2K';
-const eraseScreen = ESC + '2J';
-
-const clearTerminal = isWindows
-	? `${eraseScreen}${ESC}0f`
-	// 1. Erases the screen (Only done in case `2` is not supported)
-	// 2. Erases the whole screen including scrollback buffer
-	// 3. Moves cursor to the top-left position
-	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	:	`${eraseScreen}${ESC}3J${ESC}H`;
-
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
+
+const RED = "red";
+const GREEN = "green";
+const YELLOW = "yellow";
+const BLUE = "blue";
+const MAGENTA = "magenta";
+const CYAN = "cyan";
+const GREY = "grey";
+const WHITE = "white";
+const BLACK = "black";
+
+const TEXT_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[31m",
+  [GREEN]: "\x1b[32m",
+  [YELLOW]: "\x1b[33m",
+  [BLUE]: "\x1b[34m",
+  [MAGENTA]: "\x1b[35m",
+  [CYAN]: "\x1b[36m",
+  [GREY]: "\x1b[90m",
+  [WHITE]: "\x1b[37m",
+  [BLACK]: "\x1b[30m",
+};
+const BACKGROUND_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[41m",
+  [GREEN]: "\x1b[42m",
+  [YELLOW]: "\x1b[43m",
+  [BLUE]: "\x1b[44m",
+  [MAGENTA]: "\x1b[45m",
+  [CYAN]: "\x1b[46m",
+  [GREY]: "\x1b[100m",
+  [WHITE]: "\x1b[47m",
+  [BLACK]: "\x1b[40m",
+};
 
 const createAnsi = ({ supported }) => {
   const ANSI = {
     supported,
 
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED,
+    GREEN,
+    YELLOW,
+    BLUE,
+    MAGENTA,
+    CYAN,
+    GREY,
+    WHITE,
+    BLACK,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -19007,7 +22438,29 @@ const createAnsi = ({ supported }) => {
         // cannot set color of blank chars
         return text;
       }
-      return `${color}${text}${RESET}`;
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForTextColor}${text}${RESET}`;
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor =
+        BACKGROUND_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForBackgroundColor}${text}${RESET}`;
     },
 
     BOLD: "\x1b[1m",
@@ -19024,14 +22477,15 @@ const createAnsi = ({ supported }) => {
       if (text === "") {
         return text;
       }
-      return `${effect}${text}${RESET}`;
+      const ansiEscapeCodeForEffect = effect;
+      return `${ansiEscapeCodeForEffect}${text}${RESET}`;
     },
   };
 
   return ANSI;
 };
 
-const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+const processSupportsBasicColor = createSupportsColor$2(process.stdout).hasBasic;
 
 const ANSI = createAnsi({
   supported:
@@ -19100,7 +22554,7 @@ const createUnicode = ({ supported, ANSI }) => {
 };
 
 const UNICODE = createUnicode({
-  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
+  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported$2(),
   ANSI,
 });
 
@@ -19155,6 +22609,23 @@ const setDecimalsPrecision = (
   const asFloat = asInteger / coef;
   return number < 0 ? -asFloat : asFloat;
 };
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
 const unitShort = {
   year: "y",
   month: "m",
@@ -19364,6 +22835,101 @@ const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
 
+const createMeasureTextWidth = ({ stripAnsi }) => {
+  const segmenter = new Intl.Segmenter();
+  const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
+
+  const measureTextWidth = (
+    string,
+    {
+      ambiguousIsNarrow = true,
+      countAnsiEscapeCodes = false,
+      skipEmojis = false,
+    } = {},
+  ) => {
+    if (typeof string !== "string" || string.length === 0) {
+      return 0;
+    }
+
+    if (!countAnsiEscapeCodes) {
+      string = stripAnsi(string);
+    }
+
+    if (string.length === 0) {
+      return 0;
+    }
+
+    let width = 0;
+    const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
+
+    for (const { segment: character } of segmenter.segment(string)) {
+      const codePoint = character.codePointAt(0);
+
+      // Ignore control characters
+      if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+        continue;
+      }
+
+      // Ignore zero-width characters
+      if (
+        (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+        codePoint === 0xfe_ff // Zero-width no-break space
+      ) {
+        continue;
+      }
+
+      // Ignore combining characters
+      if (
+        (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+        (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+        (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+        (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+        (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+      ) {
+        continue;
+      }
+
+      // Ignore surrogate pairs
+      if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+        continue;
+      }
+
+      // Ignore variation selectors
+      if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+        continue;
+      }
+
+      // This covers some of the above cases, but we still keep them for performance reasons.
+      if (defaultIgnorableCodePointRegex.test(character)) {
+        continue;
+      }
+
+      if (!skipEmojis && emojiRegex$2().test(character)) {
+        if (process.env.CAPTURING_SIDE_EFFECTS) {
+          if (character === "✔️") {
+            width += 2;
+            continue;
+          }
+        }
+        width += measureTextWidth(character, {
+          skipEmojis: true,
+          countAnsiEscapeCodes: true, // to skip call to stripAnsi
+        });
+        continue;
+      }
+
+      width += eastAsianWidth$2(codePoint, eastAsianWidthOptions);
+    }
+
+    return width;
+  };
+  return measureTextWidth;
+};
+
+const measureTextWidth = createMeasureTextWidth({
+  stripAnsi: stripVTControlCharacters,
+});
+
 /*
  * see also https://github.com/vadimdemedes/ink
  */
@@ -19399,7 +22965,7 @@ const createDynamicLog = ({
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
     for (const logLine of logLines) {
-      const width = stringWidth(logLine);
+      const width = measureTextWidth(logLine);
       if (width === 0) {
         visualLineCount++;
       } else {
@@ -19410,7 +22976,7 @@ const createDynamicLog = ({
     if (visualLineCount > rows) {
       if (clearTerminalAllowed) {
         clearAttemptResult = true;
-        return clearTerminal;
+        return clearTerminal$2;
       }
       // the whole log cannot be cleared because it's vertically to long
       // (longer than terminal height)
@@ -19423,7 +22989,7 @@ const createDynamicLog = ({
     }
 
     clearAttemptResult = true;
-    return eraseLines(visualLineCount);
+    return eraseLines$2(visualLineCount);
   };
 
   const update = (string) => {
@@ -19464,7 +23030,8 @@ const createDynamicLog = ({
     update("");
 
     writing = true;
-    callback();
+    callback(update);
+    lastOutput = "";
     writing = false;
 
     update(ouputAfterCallback);
@@ -19846,4 +23413,4 @@ const assertAndNormalizeDirectoryUrl = (
   return value;
 };
 
-export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, comparePathnames$1 as comparePathnames, comparePathnames as comparePathnames$1, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeFileSize, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };
+export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };

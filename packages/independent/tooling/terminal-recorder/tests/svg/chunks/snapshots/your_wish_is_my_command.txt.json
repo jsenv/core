@@ -6,7 +6,9 @@
       "x": 0,
       "y": 0,
       "n": 0,
-      "raw": 0
+      "raw": 0,
+      "width": 5,
+      "height": 0
     },
     "style": {}
   },
@@ -21,7 +23,9 @@
       "x": 5,
       "y": 0,
       "n": 5,
-      "raw": 5
+      "raw": 5,
+      "width": 0,
+      "height": 0
     },
     "style": {
       "foregroundColor": "red"
@@ -34,7 +38,9 @@
       "x": 5,
       "y": 0,
       "n": 5,
-      "raw": 10
+      "raw": 10,
+      "width": 4,
+      "height": 0
     },
     "style": {
       "foregroundColor": "red"
@@ -51,7 +57,9 @@
       "x": 9,
       "y": 0,
       "n": 9,
-      "raw": 14
+      "raw": 14,
+      "width": 0,
+      "height": 0
     },
     "style": {}
   },
@@ -62,7 +70,9 @@
       "x": 9,
       "y": 0,
       "n": 9,
-      "raw": 19
+      "raw": 19,
+      "width": 3,
+      "height": 0
     },
     "style": {}
   },
@@ -73,7 +83,9 @@
       "x": 12,
       "y": 0,
       "n": 12,
-      "raw": 22
+      "raw": 22,
+      "width": 0,
+      "height": 1
     }
   },
   {
@@ -83,7 +95,9 @@
       "x": 0,
       "y": 1,
       "n": 13,
-      "raw": 23
+      "raw": 23,
+      "width": 1,
+      "height": 0
     },
     "style": {}
   },
@@ -98,7 +112,9 @@
       "x": 1,
       "y": 1,
       "n": 14,
-      "raw": 24
+      "raw": 24,
+      "width": 0,
+      "height": 0
     },
     "style": {
       "backgroundColor": "bgYellow"
@@ -111,7 +127,9 @@
       "x": 1,
       "y": 1,
       "n": 14,
-      "raw": 29
+      "raw": 29,
+      "width": 2,
+      "height": 0
     },
     "style": {
       "backgroundColor": "bgYellow"
@@ -128,7 +146,9 @@
       "x": 3,
       "y": 1,
       "n": 16,
-      "raw": 31
+      "raw": 31,
+      "width": 0,
+      "height": 0
     },
     "style": {}
   },
@@ -139,7 +159,9 @@
       "x": 3,
       "y": 1,
       "n": 16,
-      "raw": 36
+      "raw": 36,
+      "width": 9,
+      "height": 0
     },
     "style": {}
   }

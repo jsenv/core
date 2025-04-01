@@ -8,16 +8,19 @@ if (process.platform !== "darwin") {
 
 const run = async ({ runtimeCompat, versioning, bundling }) => {
   await build({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./main.html": "main.html" },
-    minification: false,
-    runtimeCompat,
-    versioning,
-    bundling,
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
+    entryPoints: {
+      "./main.html": {
+        minification: false,
+        runtimeCompat,
+        versioning,
+        bundling,
+      },
+    },
   });
   const buildServer = await startBuildServer({
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     keepProcessAlive: false,
     port: 0,
   });

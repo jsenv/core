@@ -14,8 +14,16 @@ base/client/node_modules/foo/index.js:1:7
 base/client/main.js:1:7
 --- plugin name ---
 "jsenv:node_esm_resolution"
-  at async run (base/node_module_not_found_build.test.mjs:5:3)
-  at async base/node_module_not_found_build.test.mjs:12:1
+  at createFailedToResolveUrlError (@jsenv/core/src/kitchen/errors.js:16:26)
+  at createResolveUrlError (@jsenv/core/src/kitchen/errors.js:44:32)
+  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:248:13)
+  at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:378:38)
+  at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:42:41)
+  at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:57:23)
+  at onExternalReference (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:130:44)
+  at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:183:7)
+  at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:24:18)
+  at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:193:31)
 ```
 
 ---

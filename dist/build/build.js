@@ -1,17 +1,19 @@
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, distributePercentages, humanizeFileSize, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, comparePathnames$1 as comparePathnames, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, clearDirectorySync, createTaskLog$1 as createTaskLog } from "../jsenv_core_packages.js";
+import { startMonitoringCpuUsage, startMonitoringMemoryUsage } from "@jsenv/os-metrics";
+import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
+import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, renderTable, humanizeFileSize, humanizeDuration, renderDetails, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog } from "../jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { WebSocketResponse, pickContentType } from "@jsenv/server";
 import { createHash } from "node:crypto";
-import "string-width";
-import "node:process";
+import "strip-ansi";
+import "../jsenv_core_node_modules.js";
 import "node:os";
 import "node:tty";
+import "node:util";
 import "node:path";
 import "node:module";
 import "@jsenv/js-module-fallback";
@@ -481,7 +483,7 @@ const assertFetchedContentCompliance = ({ urlInfo, content }) => {
   }
   const { expectedType } = urlInfo.firstReference;
   if (expectedType && urlInfo.type !== expectedType) {
-    if (urlInfo.type === "asset" && urlInfo.context.build) ; else {
+    if (urlInfo.type === "entry_build" && urlInfo.context.build) ; else {
       throw new Error(
         `type must be "${expectedType}", got "${urlInfo.type}" on ${urlInfo.url}`,
       );
@@ -2624,7 +2626,7 @@ const shouldHandleSourcemap = (urlInfo) => {
 };
 
 const inlineContentClientFileUrl = new URL(
-  "../client/inline_content/inline_content.js",
+  "./client/inline_content.js",
   import.meta.url,
 ).href;
 
@@ -2677,7 +2679,7 @@ const createKitchen = ({
       sourcemaps,
       outDirectoryUrl,
     },
-    resolve: (specifier, importer) => {
+    resolve: (specifier, importer = rootDirectoryUrl) => {
       const { url, packageDirectoryUrl, packageJson } = applyNodeEsmResolution({
         conditions: packageConditions,
         parentUrl: importer,
@@ -3335,208 +3337,27 @@ const inferUrlInfoType = (urlInfo) => {
   return expectedType || "other";
 };
 
-const createUrlGraphSummary = (
-  urlGraph,
-  { title = "graph summary" } = {},
-) => {
-  const graphReport = createUrlGraphReport(urlGraph);
-  return `--- ${title} ---  
-${createRepartitionMessage(graphReport)}
---------------------`;
-};
-
-const createUrlGraphReport = (urlGraph) => {
-  const countGroups = {
-    sourcemaps: 0,
-    html: 0,
-    css: 0,
-    js: 0,
-    json: 0,
-    other: 0,
-    total: 0,
-  };
-  const sizeGroups = {
-    sourcemaps: 0,
-    html: 0,
-    css: 0,
-    js: 0,
-    json: 0,
-    other: 0,
-    total: 0,
-  };
-
-  GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
-    urlGraph.rootUrlInfo,
-    (urlInfo) => {
-      // ignore:
-      // - ignored files: we don't know their content
-      // - inline files and data files: they are already taken into account in the file where they appear
-      if (urlInfo.url.startsWith("ignore:")) {
-        return;
-      }
-      if (urlInfo.isInline) {
-        return;
-      }
-      if (urlInfo.url.startsWith("data:")) {
-        return;
-      }
-
-      // file loaded via import assertion are already inside the graph
-      // their js module equivalent are ignored to avoid counting it twice
-      // in the build graph the file targeted by import assertion will likely be gone
-      // and only the js module remain (likely bundled)
-      if (
-        urlInfo.searchParams.has("as_json_module") ||
-        urlInfo.searchParams.has("as_css_module") ||
-        urlInfo.searchParams.has("as_text_module")
-      ) {
-        return;
-      }
-
-      const urlContentSize = Buffer.byteLength(urlInfo.content);
-      const category = determineCategory(urlInfo);
-      if (category === "sourcemap") {
-        countGroups.sourcemaps++;
-        sizeGroups.sourcemaps += urlContentSize;
-        return;
-      }
-      countGroups.total++;
-      sizeGroups.total += urlContentSize;
-      if (category === "html") {
-        countGroups.html++;
-        sizeGroups.html += urlContentSize;
-        return;
-      }
-      if (category === "css") {
-        countGroups.css++;
-        sizeGroups.css += urlContentSize;
-        return;
-      }
-      if (category === "js") {
-        countGroups.js++;
-        sizeGroups.js += urlContentSize;
-        return;
-      }
-      if (category === "json") {
-        countGroups.json++;
-        sizeGroups.json += urlContentSize;
-        return;
-      }
-      countGroups.other++;
-      sizeGroups.other += urlContentSize;
-      return;
-    },
-  );
-
-  const sizesToDistribute = {};
-  Object.keys(sizeGroups).forEach((groupName) => {
-    if (groupName !== "sourcemaps" && groupName !== "total") {
-      sizesToDistribute[groupName] = sizeGroups[groupName];
-    }
-  });
-  const percentageGroups = distributePercentages(sizesToDistribute);
-
-  return {
-    // sourcemaps are special, there size are ignored
-    // so there is no "percentage" associated
-    sourcemaps: {
-      count: countGroups.sourcemaps,
-      size: sizeGroups.sourcemaps,
-      percentage: undefined,
-    },
-
-    html: {
-      count: countGroups.html,
-      size: sizeGroups.html,
-      percentage: percentageGroups.html,
-    },
-    css: {
-      count: countGroups.css,
-      size: sizeGroups.css,
-      percentage: percentageGroups.css,
-    },
-    js: {
-      count: countGroups.js,
-      size: sizeGroups.js,
-      percentage: percentageGroups.js,
-    },
-    json: {
-      count: countGroups.json,
-      size: sizeGroups.json,
-      percentage: percentageGroups.json,
-    },
-    other: {
-      count: countGroups.other,
-      size: sizeGroups.other,
-      percentage: percentageGroups.other,
-    },
-    total: {
-      count: countGroups.total,
-      size: sizeGroups.total,
-      percentage: 100,
-    },
-  };
-};
-
-const determineCategory = (urlInfo) => {
-  if (urlInfo.type === "sourcemap") {
-    return "sourcemap";
-  }
-  if (urlInfo.type === "html") {
-    return "html";
-  }
-  if (urlInfo.type === "css") {
-    return "css";
-  }
-  if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
-    return "js";
-  }
-  if (urlInfo.type === "json") {
-    return "json";
-  }
-  return "other";
-};
-
-const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
-  const addPart = (name, { count, size, percentage }) => {
-    parts.push(
-      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${humanizeFileSize(
-        size,
-      )} / ${percentage} %)`,
-    );
-  };
-
-  const parts = [];
-  // if (sourcemaps.count) {
-  //   parts.push(
-  //     `${ANSI.color(`sourcemaps:`, ANSI.GREY)} ${
-  //       sourcemaps.count
-  //     } (${humanizeFileSize(sourcemaps.size)})`,
-  //   )
-  // }
-  if (html.count) {
-    addPart("html ", html);
-  }
-  if (css.count) {
-    addPart("css  ", css);
-  }
-  if (js.count) {
-    addPart("js   ", js);
-  }
-  if (json.count) {
-    addPart("json ", json);
-  }
-  if (other.count) {
-    addPart("other", other);
-  }
-  addPart("total", total);
-  return `- ${parts.join(`
-- `)}`;
-};
-
 const jsenvPluginDirectoryReferenceEffect = (
   directoryReferenceEffect = "error",
+  { rootDirectoryUrl },
 ) => {
+  let getDirectoryReferenceEffect;
+  if (typeof directoryReferenceEffect === "string") {
+    getDirectoryReferenceEffect = () => directoryReferenceEffect;
+  } else if (typeof directoryReferenceEffect === "function") {
+    getDirectoryReferenceEffect = directoryReferenceEffect;
+  } else if (typeof directoryReferenceEffect === "object") {
+    const associations = URL_META.resolveAssociations(
+      { effect: directoryReferenceEffect },
+      rootDirectoryUrl,
+    );
+    getDirectoryReferenceEffect = (reference) => {
+      const { url } = reference;
+      const meta = URL_META.applyAssociations({ url, associations });
+      return meta.effect || "error";
+    };
+  }
+
   return {
     name: "jsenv:directory_reference_effect",
     appliesDuring: "*",
@@ -3573,12 +3394,8 @@ const jsenvPluginDirectoryReferenceEffect = (
         actionForDirectory = "copy";
       } else if (reference.type === "http_request") {
         actionForDirectory = "preserve";
-      } else if (typeof directoryReferenceEffect === "string") {
-        actionForDirectory = directoryReferenceEffect;
-      } else if (typeof directoryReferenceEffect === "function") {
-        actionForDirectory = directoryReferenceEffect(reference);
       } else {
-        actionForDirectory = "error";
+        actionForDirectory = getDirectoryReferenceEffect(reference);
       }
       reference.actionForDirectory = actionForDirectory;
       if (actionForDirectory !== "copy") {
@@ -3857,7 +3674,7 @@ const jsenvPluginInlining = () => {
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = import.meta.resolve(
-    "../client/html_syntax_error/html_syntax_error.html",
+    "./client/html_syntax_error.html",
   );
 
   return {
@@ -5320,7 +5137,7 @@ const parseAndTransformJsReferences = async (
     let filenameHint;
     if (
       externalReferenceInfo.subtype === "import_dynamic" &&
-      isBareSpecifier(externalReferenceInfo.specifier)
+      isBareSpecifier$2(externalReferenceInfo.specifier)
     ) {
       filenameHint = `${externalReferenceInfo.specifier}.js`;
     }
@@ -5410,7 +5227,7 @@ const parseAndTransformJsReferences = async (
   return { content, sourcemap };
 };
 
-const isBareSpecifier = (specifier) => {
+const isBareSpecifier$2 = (specifier) => {
   if (
     specifier[0] === "/" ||
     specifier.startsWith("./") ||
@@ -5524,7 +5341,6 @@ const jsenvPluginReferenceAnalysis = ({
   inlineContent = true,
   inlineConvertedScript = false,
   fetchInlineUrls = true,
-  directoryReferenceEffect,
 }) => {
   return [
     jsenvPluginDirectoryReferenceAnalysis(),
@@ -5625,18 +5441,18 @@ const jsenvPluginInlineContentFetcher = () => {
 
 
 const createNodeEsmResolver = ({
-  build,
   runtimeCompat,
-  packageConditions,
+  rootDirectoryUrl,
+  packageConditions = {},
   preservesSymlink,
 }) => {
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
-  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-  packageConditions = packageConditions || [
-    ...(build ? [] : readCustomConditionsFromProcessArgs()),
-    nodeRuntimeEnabled ? "node" : "browser",
-    "import",
-  ];
+  const buildPackageConditions = createBuildPackageConditions(
+    packageConditions,
+    {
+      rootDirectoryUrl,
+      runtimeCompat,
+    },
+  );
 
   return (reference) => {
     if (reference.type === "package_json") {
@@ -5657,10 +5473,12 @@ const createNodeEsmResolver = ({
     if (!parentUrl.startsWith("file:")) {
       return null; // let it to jsenv_web_resolution
     }
+    const { specifier } = reference;
+    const conditions = buildPackageConditions(specifier, parentUrl);
     const { url, type, isMain, packageDirectoryUrl } = applyNodeEsmResolution({
-      conditions: packageConditions,
+      conditions,
       parentUrl,
-      specifier: reference.specifier,
+      specifier,
       preservesSymlink,
     });
     // try to give a more meaningful filename after build
@@ -5724,6 +5542,107 @@ const createNodeEsmResolver = ({
   };
 };
 
+const createBuildPackageConditions = (
+  packageConditions,
+  { rootDirectoryUrl, runtimeCompat },
+) => {
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+  const processArgConditions = readCustomConditionsFromProcessArgs();
+  const packageConditionsDefaultResolvers = {};
+  for (const processArgCondition of processArgConditions) {
+    packageConditionsDefaultResolvers[processArgCondition] = true;
+  }
+  const packageConditionResolvers = {
+    ...packageConditionsDefaultResolvers,
+    development: (specifier, importer) => {
+      if (isBareSpecifier$1(specifier)) {
+        const { url } = applyNodeEsmResolution({
+          specifier,
+          parentUrl: importer,
+        });
+        return !url.includes("/node_modules/");
+      }
+      return !importer.includes("/node_modules/");
+    },
+    node: nodeRuntimeEnabled,
+    browser: !nodeRuntimeEnabled,
+    import: true,
+  };
+  for (const condition of Object.keys(packageConditions)) {
+    const value = packageConditions[condition];
+    let customResolver;
+    if (typeof value === "object") {
+      const associations = URL_META.resolveAssociations(
+        { applies: value },
+        (pattern) => {
+          if (isBareSpecifier$1(pattern)) {
+            try {
+              if (pattern.endsWith("/")) {
+                // avoid package path not exported
+                const { packageDirectoryUrl } = applyNodeEsmResolution({
+                  specifier: pattern.slice(0, -1),
+                  parentUrl: rootDirectoryUrl,
+                });
+                return packageDirectoryUrl;
+              }
+              const { url } = applyNodeEsmResolution({
+                specifier: pattern,
+                parentUrl: rootDirectoryUrl,
+              });
+              return url;
+            } catch {
+              return new URL(pattern, rootDirectoryUrl);
+            }
+          }
+          return new URL(pattern, rootDirectoryUrl);
+        },
+      );
+      customResolver = (specifier, importer) => {
+        if (isBareSpecifier$1(specifier)) {
+          const { url } = applyNodeEsmResolution({
+            specifier,
+            parentUrl: importer,
+          });
+          const { applies } = URL_META.applyAssociations({ url, associations });
+          return applies;
+        }
+        return URL_META.applyAssociations({ url: importer, associations })
+          .applies;
+      };
+    } else if (typeof value === "function") {
+      customResolver = value;
+    } else {
+      customResolver = () => value;
+    }
+    const existing = packageConditionResolvers[condition];
+    if (existing) {
+      packageConditionResolvers[condition] = (...args) => {
+        const customResult = customResolver(...args);
+        return customResult === undefined ? existing(...args) : customResult;
+      };
+    } else {
+      packageConditionResolvers[condition] = customResolver;
+    }
+  }
+
+  return (specifier, importer) => {
+    const conditions = [];
+    for (const conditionCandidate of Object.keys(packageConditionResolvers)) {
+      const packageConditionResolver =
+        packageConditionResolvers[conditionCandidate];
+      if (typeof packageConditionResolver === "function") {
+        if (packageConditionResolver(specifier, importer)) {
+          conditions.push(conditionCandidate);
+        }
+      } else if (packageConditionResolver) {
+        conditions.push(conditionCandidate);
+      }
+    }
+    return conditions;
+  };
+};
+
 const addRelationshipWithPackageJson = ({
   reference,
   packageJsonUrl,
@@ -5758,9 +5677,51 @@ const addRelationshipWithPackageJson = ({
   }
 };
 
-const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
+const isBareSpecifier$1 = (specifier) => {
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    return false;
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(specifier);
+    return false;
+  } catch {
+    return true;
+  }
+};
+
+const jsenvPluginNodeEsmResolution = (
+  resolutionConfig = {},
+  packageConditions,
+) => {
   let nodeEsmResolverDefault;
-  const resolvers = {};
+  const resolverMap = new Map();
+  let anyTypeResolver;
+
+  const resolverFromObject = (
+    { preservesSymlink, ...rest },
+    { kitchenContext, urlType },
+  ) => {
+    const unexpectedKeys = Object.keys(rest);
+    if (unexpectedKeys.length) {
+      throw new TypeError(
+        `${unexpectedKeys.join(
+          ",",
+        )}: there is no such configuration on "${urlType}"`,
+      );
+    }
+    return createNodeEsmResolver({
+      build: kitchenContext.build,
+      runtimeCompat: kitchenContext.runtimeCompat,
+      rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
+      packageConditions,
+      preservesSymlink,
+    });
+  };
 
   return {
     name: "jsenv:node_esm_resolution",
@@ -5769,47 +5730,38 @@ const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
       nodeEsmResolverDefault = createNodeEsmResolver({
         build: kitchenContext.build,
         runtimeCompat: kitchenContext.runtimeCompat,
+        rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
         preservesSymlink: true,
+        packageConditions,
       });
-      Object.keys(resolutionConfig).forEach((urlType) => {
+      for (const urlType of Object.keys(resolutionConfig)) {
+        let resolver;
         const config = resolutionConfig[urlType];
         if (config === true) {
-          resolvers[urlType] = (...args) => nodeEsmResolverDefault(...args);
+          resolver = nodeEsmResolverDefault;
         } else if (config === false) {
-          resolvers[urlType] = () => null;
+          // resolverMap.set(urlType, () => null);
+          continue;
         } else if (typeof config === "object") {
-          const {
-            runtimeCompat,
-            packageConditions,
-            preservesSymlink,
-            ...rest
-          } = config;
-          const unexpectedKeys = Object.keys(rest);
-          if (unexpectedKeys.length) {
-            throw new TypeError(
-              `${unexpectedKeys.join(
-                ",",
-              )}: there is no such configuration on "${urlType}"`,
-            );
-          }
-          resolvers[urlType] = createNodeEsmResolver({
-            build: kitchenContext.build,
-            runtimeCompat,
-            packageConditions,
-            preservesSymlink,
-          });
+          resolver = resolverFromObject(config, { kitchenContext, urlType });
         } else {
           throw new TypeError(
-            `config must be true, false or an object, got ${config} on "${urlType}"`,
+            `The value "${config}" for ${urlType} in nodeEsmResolution is invalid: it must be true, false or an object.`,
           );
         }
-      });
 
-      if (resolvers.js_module === undefined) {
-        resolvers.js_module = nodeEsmResolverDefault;
+        if (urlType === "*") {
+          anyTypeResolver = resolver;
+        } else {
+          resolverMap.set(urlType, resolver);
+        }
       }
-      if (resolvers.js_classic === undefined) {
-        resolvers.js_classic = (reference) => {
+
+      if (!resolverMap.has("js_module")) {
+        resolverMap.set("js_module", nodeEsmResolverDefault);
+      }
+      if (!resolverMap.has("js_classic")) {
+        resolverMap.set("js_classic", (reference) => {
           if (reference.subtype === "self_import_scripts_arg") {
             return nodeEsmResolverDefault(reference);
           }
@@ -5818,7 +5770,7 @@ const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
             return nodeEsmResolverDefault(reference);
           }
           return null;
-        };
+        });
       }
     },
     resolveReference: (reference) => {
@@ -5828,8 +5780,14 @@ const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
         return result;
       }
       const urlType = urlTypeFromReference(reference);
-      const resolver = resolvers[urlType];
-      return resolver ? resolver(reference) : null;
+      const resolver = resolverMap.get(urlType);
+      if (resolver) {
+        return resolver(reference);
+      }
+      if (anyTypeResolver) {
+        return anyTypeResolver(reference);
+      }
+      return null;
     },
     // when specifier is prefixed by "file:///@ignore/"
     // we return an empty js module
@@ -6071,7 +6029,7 @@ return {
 
 
 const htmlFileUrlForDirectory = import.meta.resolve(
-  "../client/directory_listing/directory_listing.html",
+  "./client/directory_listing.html",
 );
 
 const jsenvPluginDirectoryListing = ({
@@ -6426,9 +6384,8 @@ const getDirectoryContentItems = ({
       fileUrls.push(fileUrlObject);
     }
   }
-  fileUrls.sort((a, b) => {
-    return comparePathnames(a.pathname, b.pathname);
-  });
+  fileUrls.sort(compareFileUrls);
+
   const items = [];
   for (const fileUrl of fileUrls) {
     const urlRelativeToCurrentDirectory = urlToRelativeUrl(
@@ -7433,7 +7390,7 @@ const htmlNodeCanHotReload = (node) => {
 
 const jsenvPluginImportMetaHot = () => {
   const importMetaHotClientFileUrl = import.meta.resolve(
-    "../client/import_meta_hot/import_meta_hot.js",
+    "./client/import_meta_hot.js",
   );
 
   return {
@@ -7545,7 +7502,7 @@ import.meta.hot = createImportMetaHot(import.meta.url);
 };
 
 const jsenvPluginAutoreloadClient = () => {
-  const autoreloadClientFileUrl = import.meta.resolve("../client/autoreload/autoreload.js");
+  const autoreloadClientFileUrl = import.meta.resolve("./client/autoreload.js");
 
   return {
     name: "jsenv:autoreload_client",
@@ -8064,7 +8021,7 @@ const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html",
 }) => {
-  const ribbonClientFileUrl = import.meta.resolve("../client/ribbon/ribbon.js");
+  const ribbonClientFileUrl = import.meta.resolve("./client/ribbon.js");
   const associations = URL_META.resolveAssociations(
     {
       ribbon: {
@@ -8152,6 +8109,7 @@ const getCorePlugins = ({
 
   referenceAnalysis = {},
   nodeEsmResolution = {},
+  packageConditions,
   magicExtensions,
   magicDirectoryIndex,
   directoryListing = true,
@@ -8222,10 +8180,12 @@ const getCorePlugins = ({
       },
     },
     ...(nodeEsmResolution
-      ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
+      ? [jsenvPluginNodeEsmResolution(nodeEsmResolution, packageConditions)]
       : []),
     jsenvPluginWebResolution(),
-    jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
+    jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect, {
+      rootDirectoryUrl,
+    }),
     jsenvPluginVersionSearchParam(),
 
     // "jsenvPluginSupervisor" MUST be after "jsenvPluginInlining" as it needs inline script to be cooked
@@ -8246,6 +8206,258 @@ const getCorePlugins = ({
   ];
 };
 
+const humanizeProcessCpuUsage = (ratio) => {
+  const percentageAsNumber = ratio * 100;
+  const percentageAsNumberRounded = Math.round(percentageAsNumber);
+  const percentage = `${percentageAsNumberRounded}%`;
+  return percentage;
+};
+const humanizeProcessMemoryUsage = (value) => {
+  return humanizeMemory(value, { short: true, decimals: 0 });
+};
+const renderBuildDoneLog = ({
+  duration,
+  buildFileContents,
+  processCpuUsage,
+  processMemoryUsage,
+}) => {
+  const buildContentReport = createBuildContentReport(buildFileContents);
+
+  let title = "";
+  let content = "";
+  const lines = [];
+
+  const filesWrittenCount = buildContentReport.total.count;
+  if (filesWrittenCount === 1) {
+    title = `1 file written`;
+  } else {
+    title = `${filesWrittenCount} files written`;
+    const keys = Object.keys(buildContentReport);
+    const rows = [];
+    let y = 0;
+    let highestPercentage = 0;
+    let highestPercentageY = 0;
+    for (const key of keys) {
+      if (key === "sourcemaps") {
+        continue;
+      }
+      if (key === "total") {
+        continue;
+      }
+      const { count, size, percentage } = buildContentReport[key];
+      if (count === 0) {
+        continue;
+      }
+      const row = [
+        {
+          value: key,
+          borderTop: {},
+          borderBottom: {},
+        },
+        {
+          value: count,
+          borderTop: {},
+          borderBottom: {},
+        },
+        {
+          value: size,
+          format: "size",
+          borderTop: {},
+          borderBottom: {},
+        },
+        {
+          value: percentage,
+          format: "percentage",
+          unit: "%",
+          borderTop: {},
+          borderBottom: {},
+        },
+      ];
+      if (percentage > highestPercentage) {
+        highestPercentage = percentage;
+        highestPercentageY = y;
+      }
+      rows.push(row);
+      y++;
+    }
+    if (rows.length > 1) {
+      const rowWithHighestPercentage = rows[highestPercentageY];
+      for (const cell of rowWithHighestPercentage) {
+        cell.bold = true;
+      }
+      const table = renderTable(rows, {
+        borderCollapse: true,
+        ansi: true,
+      });
+      content += table;
+      content += "\n";
+    }
+  }
+
+  let sizeLine = `total size: `;
+  sizeLine += humanizeFileSize(buildContentReport.total.size);
+  lines.push(sizeLine);
+
+  let durationLine = `duration: `;
+  durationLine += humanizeDuration(duration, { short: true });
+  lines.push(durationLine);
+
+  // cpu usage
+  let cpuUsageLine = "cpu: ";
+  cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
+  cpuUsageLine += renderDetails({
+    med: humanizeProcessCpuUsage(processCpuUsage.median),
+    min: humanizeProcessCpuUsage(processCpuUsage.min),
+    max: humanizeProcessCpuUsage(processCpuUsage.max),
+  });
+  lines.push(cpuUsageLine);
+
+  // memory usage
+  let memoryUsageLine = "memory: ";
+  memoryUsageLine += `${humanizeProcessMemoryUsage(processMemoryUsage.end)}`;
+  memoryUsageLine += renderDetails({
+    med: humanizeProcessMemoryUsage(processMemoryUsage.median),
+    min: humanizeProcessMemoryUsage(processMemoryUsage.min),
+    max: humanizeProcessMemoryUsage(processMemoryUsage.max),
+  });
+  lines.push(memoryUsageLine);
+
+  content += lines.join("\n");
+  return `${renderBigSection({
+    title,
+    content,
+  })}`;
+};
+
+const createBuildContentReport = (buildFileContents) => {
+  const countGroups = {
+    sourcemaps: 0,
+    html: 0,
+    css: 0,
+    js: 0,
+    json: 0,
+    other: 0,
+    total: 0,
+  };
+  const sizeGroups = {
+    sourcemaps: 0,
+    html: 0,
+    css: 0,
+    js: 0,
+    json: 0,
+    other: 0,
+    total: 0,
+  };
+
+  for (const buildRelativeUrl of Object.keys(buildFileContents)) {
+    const content = buildFileContents[buildRelativeUrl];
+    const contentSize = Buffer.byteLength(content);
+    const category = determineCategory(buildRelativeUrl);
+    if (category === "sourcemap") {
+      countGroups.sourcemaps++;
+      sizeGroups.sourcemaps += contentSize;
+      continue;
+    }
+    countGroups.total++;
+    sizeGroups.total += contentSize;
+    if (category === "html") {
+      countGroups.html++;
+      sizeGroups.html += contentSize;
+      continue;
+    }
+    if (category === "css") {
+      countGroups.css++;
+      sizeGroups.css += contentSize;
+      continue;
+    }
+    if (category === "js") {
+      countGroups.js++;
+      sizeGroups.js += contentSize;
+      continue;
+    }
+    if (category === "json") {
+      countGroups.json++;
+      sizeGroups.json += contentSize;
+      continue;
+    }
+    countGroups.other++;
+    sizeGroups.other += contentSize;
+    continue;
+  }
+
+  const sizesToDistribute = {};
+  for (const groupName of Object.keys(sizeGroups)) {
+    if (groupName !== "sourcemaps" && groupName !== "total") {
+      sizesToDistribute[groupName] = sizeGroups[groupName];
+    }
+  }
+  const percentageGroups = distributePercentages(sizesToDistribute);
+
+  return {
+    // sourcemaps are special, there size are ignored
+    // so there is no "percentage" associated
+    sourcemaps: {
+      count: countGroups.sourcemaps,
+      size: sizeGroups.sourcemaps,
+      percentage: undefined,
+    },
+
+    html: {
+      count: countGroups.html,
+      size: sizeGroups.html,
+      percentage: percentageGroups.html,
+    },
+    css: {
+      count: countGroups.css,
+      size: sizeGroups.css,
+      percentage: percentageGroups.css,
+    },
+    js: {
+      count: countGroups.js,
+      size: sizeGroups.js,
+      percentage: percentageGroups.js,
+    },
+    json: {
+      count: countGroups.json,
+      size: sizeGroups.json,
+      percentage: percentageGroups.json,
+    },
+    other: {
+      count: countGroups.other,
+      size: sizeGroups.other,
+      percentage: percentageGroups.other,
+    },
+    total: {
+      count: countGroups.total,
+      size: sizeGroups.total,
+      percentage: 100,
+    },
+  };
+};
+
+const determineCategory = (buildRelativeUrl) => {
+  if (buildRelativeUrl.endsWith(".map")) {
+    return "sourcemap";
+  }
+  if (buildRelativeUrl.endsWith(".html")) {
+    return "html";
+  }
+  if (buildRelativeUrl.endsWith(".css")) {
+    return "css";
+  }
+  if (
+    buildRelativeUrl.endsWith(".js") ||
+    buildRelativeUrl.endsWith(".mjs") ||
+    buildRelativeUrl.endsWith(".cjs")
+  ) {
+    return "js";
+  }
+  if (buildRelativeUrl.endsWith(".json")) {
+    return "json";
+  }
+  return "other";
+};
+
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
 // so script_type_module + dynamic_import + import_meta
@@ -8261,165 +8473,7 @@ const defaultRuntimeCompat = {
 };
 const logsDefault = {
   level: "info",
-  disabled: false,
-  animation: true,
-};
-const getDefaultBase = (runtimeCompat) =>
-  runtimeCompat.node ? "./" : "/";
-
-const createBuildUrlsGenerator = ({
-  logger,
-  sourceDirectoryUrl,
-  buildDirectoryUrl,
-  assetsDirectory,
-}) => {
-  const cache = {};
-  const getUrlName = (url, urlInfo) => {
-    if (!urlInfo) {
-      return urlToFilename(url);
-    }
-    if (urlInfo.filenameHint) {
-      return urlInfo.filenameHint;
-    }
-    return urlToFilename(url);
-  };
-
-  const buildUrlCache = new Map();
-
-  const associateBuildUrl = (url, buildUrl) => {
-    buildUrlCache.set(url, buildUrl);
-    logger.debug(`associate a build url
-${ANSI.color(url, ANSI.GREY)} ->
-${ANSI.color(buildUrl, ANSI.MAGENTA)}
-      `);
-  };
-
-  const generate = (url, { urlInfo, ownerUrlInfo }) => {
-    const buildUrlFromCache = buildUrlCache.get(url);
-    if (buildUrlFromCache) {
-      return buildUrlFromCache;
-    }
-    if (urlIsInsideOf(url, buildDirectoryUrl)) {
-      buildUrlCache.set(url, url);
-      return url;
-    }
-    if (
-      urlInfo.type === "directory" ||
-      (urlInfo.type === undefined && urlInfo.typeHint === "directory")
-    ) {
-      let directoryPath;
-      if (url === sourceDirectoryUrl) {
-        directoryPath = "";
-      } else if (urlInfo.filenameHint) {
-        directoryPath = urlInfo.filenameHint;
-      } else {
-        directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
-      }
-      const { search } = new URL(url);
-      const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
-      associateBuildUrl(url, buildUrl);
-      return buildUrl;
-    }
-
-    const directoryPath = determineDirectoryPath({
-      sourceDirectoryUrl,
-      assetsDirectory,
-      urlInfo,
-      ownerUrlInfo,
-    });
-    let names = cache[directoryPath];
-    if (!names) {
-      names = [];
-      cache[directoryPath] = names;
-    }
-    const urlObject = new URL(url);
-    let { search, hash } = urlObject;
-    let name = getUrlName(url, urlInfo);
-    let [basename, extension] = splitFileExtension(name);
-    extension = extensionMappings[extension] || extension;
-    let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
-    let integer = 1;
-    while (true) {
-      if (!names.includes(nameCandidate)) {
-        names.push(nameCandidate);
-        break;
-      }
-      integer++;
-      nameCandidate = `${basename}${integer}${extension}`;
-    }
-    const buildUrl = `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
-    associateBuildUrl(url, buildUrl);
-    return buildUrl;
-  };
-
-  return {
-    generate,
-  };
-};
-
-// It's best to generate files with an extension representing what is inside the file
-// and after build js files contains solely js (js or typescript is gone).
-// This way a static file server is already configured to server the correct content-type
-// (otherwise one would have to configure that ".jsx" is "text/javascript")
-// To keep in mind: if you have "user.jsx" and "user.js" AND both file are not bundled
-// you end up with "dist/js/user.js" and "dist/js/user2.js"
-const extensionMappings = {
-  ".jsx": ".js",
-  ".ts": ".js",
-  ".tsx": ".js",
-};
-
-const splitFileExtension = (filename) => {
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) {
-    return [filename, ""];
-  }
-  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
-};
-
-const determineDirectoryPath = ({
-  sourceDirectoryUrl,
-  assetsDirectory,
-  urlInfo,
-  ownerUrlInfo,
-}) => {
-  if (urlInfo.dirnameHint) {
-    return urlInfo.dirnameHint;
-  }
-  if (urlInfo.type === "directory") {
-    return "";
-  }
-  if (urlInfo.isInline) {
-    const parentDirectoryPath = determineDirectoryPath({
-      sourceDirectoryUrl,
-      assetsDirectory,
-      urlInfo: ownerUrlInfo || urlInfo.firstReference.ownerUrlInfo,
-    });
-    return parentDirectoryPath;
-  }
-  const dynamicImportId = urlInfo.searchParams.get("dynamic_import_id");
-  if (dynamicImportId) {
-    return `${assetsDirectory}${dynamicImportId}/`;
-  }
-  if (urlInfo.isEntryPoint && !urlInfo.isDynamicEntryPoint) {
-    return "";
-  }
-  if (urlInfo.type === "importmap") {
-    return "";
-  }
-  if (urlInfo.type === "html") {
-    return `${assetsDirectory}html/`;
-  }
-  if (urlInfo.type === "css") {
-    return `${assetsDirectory}css/`;
-  }
-  if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
-    return `${assetsDirectory}js/`;
-  }
-  if (urlInfo.type === "json") {
-    return `${assetsDirectory}json/`;
-  }
-  return `${assetsDirectory}other/`;
+  animated: true,
 };
 
 // https://bundlers.tooling.report/hashing/avoid-cascade/
@@ -8555,8 +8609,9 @@ const createBuildSpecifierManager = ({
   logger,
   sourceDirectoryUrl,
   buildDirectoryUrl,
-  base,
   assetsDirectory,
+  buildUrlsGenerator,
+  base,
   length = 8,
 
   versioning,
@@ -8564,12 +8619,6 @@ const createBuildSpecifierManager = ({
   versionLength,
   canUseImportmap,
 }) => {
-  const buildUrlsGenerator = createBuildUrlsGenerator({
-    logger,
-    sourceDirectoryUrl,
-    buildDirectoryUrl,
-    assetsDirectory,
-  });
   const placeholderAPI = createPlaceholderAPI({
     length,
   });
@@ -8599,6 +8648,7 @@ const createBuildSpecifierManager = ({
       buildUrl = buildUrlsGenerator.generate(url, {
         urlInfo,
         ownerUrlInfo: reference.ownerUrlInfo,
+        assetsDirectory,
       });
     }
 
@@ -8673,6 +8723,12 @@ const createBuildSpecifierManager = ({
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
       if (ownerUrlInfo.remapReference && !reference.isInline) {
+        if (reference.specifier.startsWith("file:")) {
+          const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.specifier);
+          if (rawUrlInfo && rawUrlInfo.type === "entry_build") {
+            return reference.specifier; // we want to ignore it
+          }
+        }
         const newSpecifier = ownerUrlInfo.remapReference(reference);
         reference.specifier = newSpecifier;
       }
@@ -8705,6 +8761,14 @@ const createBuildSpecifierManager = ({
       return url;
     },
     redirectReference: (reference) => {
+      // don't think this is needed because we'll find the rawUrlInfo
+      // which contains the filenameHint
+      // const otherEntryBuildInfo = getOtherEntryBuildInfo(reference.url);
+      // if (otherEntryBuildInfo) {
+      //   reference.filenameHint = otherEntryBuildInfo.entryUrlInfo.filenameHint;
+      //   return null;
+      // }
+
       let referenceBeforeInlining = reference;
       if (
         referenceBeforeInlining.isInline &&
@@ -8790,7 +8854,6 @@ const createBuildSpecifierManager = ({
         firstReference = firstReference.prev;
       }
       const rawUrl = firstReference.rawUrl || firstReference.url;
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
         finalUrlInfo.remapReference = bundleInfo.remapReference;
@@ -8807,7 +8870,21 @@ const createBuildSpecifierManager = ({
           data: bundleInfo.data,
         };
       }
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       if (rawUrlInfo) {
+        if (rawUrlInfo.type === "entry_build") {
+          const otherEntryBuildInfo = rawUrlInfo.otherEntryBuildInfo;
+          if (
+            // we need to wait ONLY if we are versioning
+            // and only IF the reference can't be remapped globally or by importmap
+            // otherwise we can reference the file right away
+            versioning &&
+            getReferenceVersioningInfo(firstReference).type === "inline"
+          ) {
+            await otherEntryBuildInfo.promise;
+          }
+          finalUrlInfo.otherEntryBuildInfo = otherEntryBuildInfo;
+        }
         return rawUrlInfo;
       }
       // reference injected during "shape":
@@ -9038,6 +9115,15 @@ const createBuildSpecifierManager = ({
           if (urlInfo.url.startsWith("ignore:")) {
             return;
           }
+          if (urlInfo.type === "entry_build") {
+            const otherEntryBuildInfo = urlInfo.otherEntryBuildInfo;
+            const entryUrlInfoVersion =
+              otherEntryBuildInfo.buildFileVersions[
+                otherEntryBuildInfo.buildRelativeUrl
+              ];
+            contentOnlyVersionMap.set(urlInfo, entryUrlInfoVersion);
+            return;
+          }
           let content = urlInfo.content;
           if (urlInfo.type === "html") {
             content = stringifyHtmlAst(
@@ -9077,6 +9163,9 @@ const createBuildSpecifierManager = ({
       const getSetOfUrlInfoInfluencingVersion = (urlInfo) => {
         const placeholderInfluencingVersionSet = new Set();
         const visitContainedPlaceholders = (urlInfo) => {
+          if (urlInfo.type === "entry_build") {
+            return;
+          }
           const referencedContentVersion = contentOnlyVersionMap.get(urlInfo);
           if (!referencedContentVersion) {
             // ignored while traversing graph (not used anymore, inline, ...)
@@ -9121,20 +9210,24 @@ const createBuildSpecifierManager = ({
         contentOnlyUrlInfo,
         contentOnlyVersion,
       ] of contentOnlyVersionMap) {
-        const setOfUrlInfoInfluencingVersion =
-          getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
         const versionPartSet = new Set();
-        versionPartSet.add(contentOnlyVersion);
-        for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
-          const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
-            urlInfoInfluencingVersion,
-          );
-          if (!otherUrlInfoContentVersion) {
-            throw new Error(
-              `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
+        if (contentOnlyUrlInfo.type === "entry_build") {
+          versionPartSet.add(contentOnlyVersion);
+        } else {
+          const setOfUrlInfoInfluencingVersion =
+            getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
+          versionPartSet.add(contentOnlyVersion);
+          for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
+            const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
+              urlInfoInfluencingVersion,
             );
+            if (!otherUrlInfoContentVersion) {
+              throw new Error(
+                `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
+              );
+            }
+            versionPartSet.add(otherUrlInfoContentVersion);
           }
-          versionPartSet.add(otherUrlInfoContentVersion);
         }
         const version = generateVersion(versionPartSet, versionLength);
         versionMap.set(contentOnlyUrlInfo, version);
@@ -9536,6 +9629,7 @@ const createBuildSpecifierManager = ({
       const buildManifest = {};
       const buildContents = {};
       const buildInlineRelativeUrlSet = new Set();
+      const buildFileVersions = {};
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
         (urlInfo) => {
@@ -9549,6 +9643,9 @@ const createBuildSpecifierManager = ({
           ) {
             return;
           }
+          if (urlInfo.type === "entry_build") {
+            return;
+          }
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned = versioning
             ? buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier)
@@ -9557,6 +9654,8 @@ const createBuildSpecifierManager = ({
             buildUrl,
             buildDirectoryUrl,
           );
+          buildFileVersions[buildRelativeUrl] = versionMap.get(urlInfo);
+
           let contentKey;
           // if to guard for html where versioned build specifier is not generated
           if (buildSpecifierVersioned) {
@@ -9595,7 +9694,12 @@ const createBuildSpecifierManager = ({
           }
         });
 
-      return { buildFileContents, buildInlineContents, buildManifest };
+      return {
+        buildFileContents,
+        buildInlineContents,
+        buildManifest,
+        buildFileVersions,
+      };
     },
   };
 };
@@ -9818,6 +9922,164 @@ const asBuildUrlVersioned = ({
   return `${buildDirectoryUrl}${pathname}${search}${hash}`;
 };
 
+// import { ANSI } from "@jsenv/humanize";
+
+const createBuildUrlsGenerator = ({
+  // logger,
+  sourceDirectoryUrl,
+  buildDirectoryUrl,
+}) => {
+  const getUrlName = (url, urlInfo) => {
+    if (!urlInfo) {
+      return urlToFilename(url);
+    }
+    if (urlInfo.filenameHint) {
+      return urlInfo.filenameHint;
+    }
+    return urlToFilename(url);
+  };
+
+  const buildUrlMap = new Map();
+  const associateBuildUrl = (url, buildUrl) => {
+    buildUrlMap.set(url, buildUrl);
+    //     logger.debug(`associate a build url
+    // ${ANSI.color(url, ANSI.GREY)} ->
+    // ${ANSI.color(buildUrl, ANSI.MAGENTA)}
+    // `);
+  };
+
+  const nameSetPerDirectoryMap = new Map();
+  const generate = (url, { urlInfo, ownerUrlInfo, assetsDirectory }) => {
+    const buildUrlFromMap = buildUrlMap.get(url);
+    if (buildUrlFromMap) {
+      return buildUrlFromMap;
+    }
+    if (urlIsInsideOf(url, buildDirectoryUrl)) {
+      associateBuildUrl(url, url);
+      return url;
+    }
+    if (urlInfo.type === "entry_build") {
+      const buildUrl = new URL(urlInfo.filenameHint, buildDirectoryUrl).href;
+      associateBuildUrl(url, buildUrl);
+      return buildUrl;
+    }
+    if (
+      urlInfo.type === "directory" ||
+      (urlInfo.type === undefined && urlInfo.typeHint === "directory")
+    ) {
+      let directoryPath;
+      if (url === sourceDirectoryUrl) {
+        directoryPath = "";
+      } else if (urlInfo.filenameHint) {
+        directoryPath = urlInfo.filenameHint;
+      } else {
+        directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
+      }
+      const { search } = new URL(url);
+      const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
+      associateBuildUrl(url, buildUrl);
+      return buildUrl;
+    }
+
+    const directoryPath = determineDirectoryPath({
+      sourceDirectoryUrl,
+      assetsDirectory,
+      urlInfo,
+      ownerUrlInfo,
+    });
+    let nameSet = nameSetPerDirectoryMap.get(directoryPath);
+    if (!nameSet) {
+      nameSet = new Set();
+      nameSetPerDirectoryMap.set(directoryPath, nameSet);
+    }
+    const urlObject = new URL(url);
+    let { search, hash } = urlObject;
+    let urlName = getUrlName(url, urlInfo);
+    let [basename, extension] = splitFileExtension(urlName);
+    extension = extensionMappings[extension] || extension;
+    let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
+    let integer = 1;
+    while (nameSet.has(nameCandidate)) {
+      integer++;
+      nameCandidate = `${basename}${integer}${extension}`;
+    }
+    const name = nameCandidate;
+    nameSet.add(name);
+    const buildUrl = `${buildDirectoryUrl}${directoryPath}${name}${search}${hash}`;
+    associateBuildUrl(url, buildUrl);
+    return buildUrl;
+  };
+
+  return {
+    generate,
+  };
+};
+
+// It's best to generate files with an extension representing what is inside the file
+// and after build js files contains solely js (js or typescript is gone).
+// This way a static file server is already configured to server the correct content-type
+// (otherwise one would have to configure that ".jsx" is "text/javascript")
+// To keep in mind: if you have "user.jsx" and "user.js" AND both file are not bundled
+// you end up with "dist/js/user.js" and "dist/js/user2.js"
+const extensionMappings = {
+  ".jsx": ".js",
+  ".ts": ".js",
+  ".tsx": ".js",
+};
+
+const splitFileExtension = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return [filename, ""];
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
+};
+
+const determineDirectoryPath = ({
+  sourceDirectoryUrl,
+  assetsDirectory,
+  urlInfo,
+  ownerUrlInfo,
+}) => {
+  if (urlInfo.dirnameHint) {
+    return urlInfo.dirnameHint;
+  }
+  if (urlInfo.type === "directory") {
+    return "";
+  }
+  if (urlInfo.isInline) {
+    const parentDirectoryPath = determineDirectoryPath({
+      sourceDirectoryUrl,
+      assetsDirectory,
+      urlInfo: ownerUrlInfo || urlInfo.firstReference.ownerUrlInfo,
+    });
+    return parentDirectoryPath;
+  }
+  const dynamicImportId = urlInfo.searchParams.get("dynamic_import_id");
+  if (dynamicImportId) {
+    return `${assetsDirectory}${dynamicImportId}/`;
+  }
+  if (urlInfo.isEntryPoint && !urlInfo.isDynamicEntryPoint) {
+    return "";
+  }
+  if (urlInfo.type === "importmap") {
+    return "";
+  }
+  if (urlInfo.type === "html") {
+    return `${assetsDirectory}html/`;
+  }
+  if (urlInfo.type === "css") {
+    return `${assetsDirectory}css/`;
+  }
+  if (urlInfo.type === "js_module" || urlInfo.type === "js_classic") {
+    return `${assetsDirectory}js/`;
+  }
+  if (urlInfo.type === "json") {
+    return `${assetsDirectory}json/`;
+  }
+  return `${assetsDirectory}other/`;
+};
+
 const ensureUnixLineBreaks = (stringOrBuffer) => {
   if (typeof stringOrBuffer === "string") {
     const stringWithLinuxBreaks = stringOrBuffer.replace(/\r\n/g, "\n");
@@ -9926,80 +10188,6 @@ const jsenvPluginMappings = (mappings) => {
 //   url: import.meta.resolve("emoji-regex/index.js"),
 // });
 
-const jsenvPluginSubbuilds = (
-  subBuildParamsArray,
-  { parentBuildParams, onCustomBuildDirectory, buildStart },
-) => {
-  if (subBuildParamsArray.length === 0) {
-    return [];
-  }
-  return subBuildParamsArray.map((subBuildParams, index) => {
-    const defaultChildBuildParams = {};
-    const childBuildParams = {
-      ...parentBuildParams,
-      logs: {
-        level: "warn",
-        disabled: true,
-      },
-      ...defaultChildBuildParams,
-      ...subBuildParams,
-      outDirectoryUrl: new URL(
-        `./subbuild_${index}/`,
-        parentBuildParams.outDirectoryUrl,
-      ),
-    };
-    const subBuildDirectoryUrl = subBuildParams.buildDirectoryUrl;
-    if (subBuildDirectoryUrl) {
-      const subBuildRelativeUrl = urlToRelativeUrl(
-        subBuildDirectoryUrl,
-        parentBuildParams.buildDirectoryUrl,
-      );
-      childBuildParams.base =
-        parentBuildParams.base === "./"
-          ? `./`
-          : subBuildParams.base ||
-            getDefaultBase(
-              childBuildParams.runtimeCompat || defaultRuntimeCompat,
-            );
-      onCustomBuildDirectory(subBuildRelativeUrl);
-    }
-    const buildPromise = buildStart(childBuildParams, index);
-    const entryPointBuildUrlMap = new Map();
-    const entryPointSourceUrlSet = new Set();
-    const entryPointBuildUrlSet = new Set();
-    const childBuildEntryPoints = childBuildParams.entryPoints;
-    for (const key of Object.keys(childBuildEntryPoints)) {
-      const entryPointUrl = new URL(key, childBuildParams.sourceDirectoryUrl)
-        .href;
-      const entryPointBuildUrl = new URL(
-        childBuildEntryPoints[key],
-        childBuildParams.buildDirectoryUrl,
-      ).href;
-      entryPointBuildUrlMap.set(entryPointUrl, entryPointBuildUrl);
-      entryPointSourceUrlSet.add(entryPointUrl);
-      entryPointBuildUrlSet.add(entryPointBuildUrl);
-    }
-
-    return {
-      name: `jsenv:subbuild_${index}`,
-      redirectReference: (reference) => {
-        const entryPointBuildUrl = entryPointBuildUrlMap.get(reference.url);
-        if (!entryPointBuildUrl) {
-          return null;
-        }
-        return entryPointBuildUrl;
-      },
-      fetchUrlContent: async (urlInfo) => {
-        if (!entryPointBuildUrlSet.has(urlInfo.url)) {
-          return;
-        }
-        await buildPromise;
-        urlInfo.typeHint = "asset"; // this ensure the rest of jsenv do not scan or modify the content of this file
-      },
-    };
-  });
-};
-
 /*
  * Build is split in 3 steps:
  * 1. craft
@@ -10032,8 +10220,8 @@ const jsenvPluginSubbuilds = (
  *        Keys are relative to sourceDirectoryUrl
  * @param {object} params.runtimeCompat
  *        Code generated will be compatible with these runtimes
- * @param {string} [params.assetsDirectory=""]
- *        Directory where asset files will be written
+ * @param {string} [params.assetsDirectory]
+ *        Directory where asset files will be written. By default sibling to the entry build file.
  * @param {string|url} [params.base=""]
  *        Urls in build file contents will be prefixed with this string
  * @param {boolean|object} [params.bundling=true]
@@ -10055,54 +10243,29 @@ const jsenvPluginSubbuilds = (
  *        Map build file paths without versioning to versioned file paths
  */
 const build = async ({
-  signal = new AbortController().signal,
-  handleSIGINT = true,
-  logs = logsDefault,
   sourceDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
-  assetsDirectory = "",
-  runtimeCompat = defaultRuntimeCompat,
-  base = getDefaultBase(runtimeCompat),
-  ignore,
+  logs,
 
-  mappings,
-  subbuilds = [],
-  plugins = [],
-  referenceAnalysis = {},
-  nodeEsmResolution,
-  magicExtensions,
-  magicDirectoryIndex,
-  directoryReferenceEffect,
-  scenarioPlaceholders,
-  injections,
-  transpilation = {},
-  bundling = true,
-  minification = !runtimeCompat.node,
-  versioning = !runtimeCompat.node,
-  versioningMethod = "search_param", // "filename", "search_param"
-  versioningViaImportmap = true,
-  versionLength = 8,
-  lineBreakNormalization = process.platform === "win32",
-
-  sourceFilesConfig = {},
-  cooldownBetweenFileEvents,
-  watch = false,
-  http = false,
-
-  buildDirectoryCleanPatterns = {
-    "**/*": true,
-  },
-  sourcemaps = "none",
-  sourcemapsSourcesContent,
-  writeOnFileSystem = true,
   outDirectoryUrl,
-  assetManifest = versioningMethod === "filename",
-  assetManifestFileRelativeUrl = "asset-manifest.json",
+  buildDirectoryCleanPatterns = { "**/*": true },
   returnBuildInlineContents,
   returnBuildManifest,
+  returnBuildFileVersions,
+  signal = new AbortController().signal,
+  handleSIGINT = true,
+
+  writeOnFileSystem = true,
+
+  watch = false,
+  sourceFilesConfig = {},
+  cooldownBetweenFileEvents,
+
   ...rest
 }) => {
+  const entryPointArray = [];
+
   // param validation
   {
     const unexpectedParamNames = Object.keys(rest);
@@ -10111,85 +10274,164 @@ const build = async ({
         `${unexpectedParamNames.join(",")}: there is no such param`,
       );
     }
-    // logs
+    // source and build directory
     {
+      sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        sourceDirectoryUrl,
+        "sourceDirectoryUrl",
+      );
+      buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        buildDirectoryUrl,
+        "buildDirectoryUrl",
+      );
+    }
+    // entry points
+    {
+      if (typeof entryPoints !== "object" || entryPoints === null) {
+        throw new TypeError(
+          `The value "${entryPoints}" for "entryPoints" is invalid: it must be an object.`,
+        );
+      }
+      const keys = Object.keys(entryPoints);
+      const isSingleEntryPoint = keys.length === 1;
+      for (const key of keys) {
+        // key (sourceRelativeUrl)
+        let sourceUrl;
+        let runtimeType;
+        {
+          if (isBareSpecifier(key)) {
+            const packageConditions = ["development", "node", "import"];
+            try {
+              const { url, type } = applyNodeEsmResolution({
+                conditions: packageConditions,
+                parentUrl: sourceDirectoryUrl,
+                specifier: key,
+              });
+              if (type === "field:browser") {
+                runtimeType = "browser";
+              }
+              sourceUrl = url;
+            } catch (e) {
+              throw new Error(
+                `The key "${key}" in "entryPoints" is invalid: it cannot be resolved.`,
+                { cause: e },
+              );
+            }
+          } else {
+            if (!key.startsWith("./")) {
+              throw new TypeError(
+                `The key "${key}" in "entryPoints" is invalid: it must start with "./".`,
+              );
+            }
+
+            try {
+              sourceUrl = new URL(key, sourceDirectoryUrl).href;
+            } catch {
+              throw new TypeError(
+                `The key "${key}" in "entryPoints" is invalid: it must be a relative url.`,
+              );
+            }
+          }
+          if (!urlIsInsideOf(sourceUrl, sourceDirectoryUrl)) {
+            throw new Error(
+              `The key "${key}" in "entryPoints" is invalid: it must be inside the source directory at ${sourceDirectoryUrl}.`,
+            );
+          }
+
+          if (!runtimeType) {
+            const ext = urlToExtension(sourceUrl);
+            if (ext === ".html" || ext === ".css") {
+              runtimeType = "browser";
+            }
+          }
+        }
+
+        // value (entryPointParams)
+        const value = entryPoints[key];
+        {
+          if (value === null || typeof value !== "object") {
+            throw new TypeError(
+              `The value "${value}" in "entryPoints" is invalid: it must be an object.`,
+            );
+          }
+          const forEntryPointOrEmpty = isSingleEntryPoint
+            ? ""
+            : ` for entry point "${key}"`;
+          const unexpectedEntryPointParamNames = Object.keys(value).filter(
+            (key) => !Object.hasOwn(entryPointDefaultParams, key),
+          );
+          if (unexpectedEntryPointParamNames.length) {
+            throw new TypeError(
+              `The value${forEntryPointOrEmpty} contains unknown keys: ${unexpectedEntryPointParamNames.join(",")}.`,
+            );
+          }
+          const { versioningMethod } = value;
+          if (versioningMethod !== undefined) {
+            if (!["filename", "search_param"].includes(versioningMethod)) {
+              throw new TypeError(
+                `The versioningMethod "${versioningMethod}"${forEntryPointOrEmpty} is invalid: it must be "filename" or "search_param".`,
+              );
+            }
+          }
+          const { buildRelativeUrl } = value;
+          if (buildRelativeUrl !== undefined) {
+            let buildUrl;
+            try {
+              buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
+            } catch {
+              throw new TypeError(
+                `The buildRelativeUrl "${buildRelativeUrl}"${forEntryPointOrEmpty} is invalid: it must be a relative url.`,
+              );
+            }
+            if (!urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
+              throw new Error(
+                `The buildRelativeUrl "${buildRelativeUrl}"${forEntryPointOrEmpty} is invalid: it must be inside the build directory at ${buildDirectoryUrl}.`,
+              );
+            }
+          }
+          const { runtimeCompat } = value;
+          if (runtimeCompat !== undefined) {
+            if (runtimeCompat === null || typeof runtimeCompat !== "object") {
+              throw new TypeError(
+                `The runtimeCompat "${runtimeCompat}"${forEntryPointOrEmpty} is invalid: it must be an object.`,
+              );
+            }
+          }
+        }
+
+        entryPointArray.push({
+          key,
+          sourceUrl,
+          sourceRelativeUrl: `./${urlToRelativeUrl(sourceUrl, sourceDirectoryUrl)}`,
+          params: { ...value },
+          runtimeType,
+        });
+      }
+    }
+    // logs
+    if (logs === undefined) {
+      logs = logsDefault;
+    } else {
       if (typeof logs !== "object") {
-        throw new TypeError(`logs must be an object, got ${logs}`);
+        throw new TypeError(
+          `The value "${logs}" is invalid for param logs: it must be an object.`,
+        );
       }
       const unexpectedLogsKeys = Object.keys(logs).filter(
         (key) => !Object.hasOwn(logsDefault, key),
       );
       if (unexpectedLogsKeys.length > 0) {
         throw new TypeError(
-          `${unexpectedLogsKeys.join(",")}: no such key on logs`,
+          `The param logs have unknown params: ${unexpectedLogsKeys.join(",")}.`,
         );
       }
-      logs = { ...logsDefault, ...logs };
     }
-    sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      sourceDirectoryUrl,
-      "sourceDirectoryUrl",
-    );
-    buildDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      buildDirectoryUrl,
-      "buildDirectoryUrl",
-    );
-    if (outDirectoryUrl === undefined) {
-      if (
-        process.env.CAPTURING_SIDE_EFFECTS ||
-        (false)
-      ) {
-        outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl);
-      } else {
-        const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
-        if (packageDirectoryUrl) {
-          outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
-        }
-      }
-    } else if (outDirectoryUrl) {
+    if (outDirectoryUrl !== undefined) {
       outDirectoryUrl = assertAndNormalizeDirectoryUrl(
         outDirectoryUrl,
         "outDirectoryUrl",
       );
     }
-
-    if (typeof entryPoints !== "object" || entryPoints === null) {
-      throw new TypeError(`entryPoints must be an object, got ${entryPoints}`);
-    }
-    const keys = Object.keys(entryPoints);
-    keys.forEach((key) => {
-      if (!key.startsWith("./")) {
-        throw new TypeError(
-          `entryPoints keys must start with "./", found ${key}`,
-        );
-      }
-      const value = entryPoints[key];
-      if (typeof value !== "string") {
-        throw new TypeError(
-          `entryPoints values must be strings, found "${value}" on key "${key}"`,
-        );
-      }
-      if (value.includes("/")) {
-        throw new TypeError(
-          `entryPoints values must be plain strings (no "/"), found "${value}" on key "${key}"`,
-        );
-      }
-    });
-    if (!["filename", "search_param"].includes(versioningMethod)) {
-      throw new TypeError(
-        `versioningMethod must be "filename" or "search_param", got ${versioning}`,
-      );
-    }
-    if (bundling === true) {
-      bundling = {};
-    }
-    if (minification === true) {
-      minification = {};
-    }
-  }
-
-  if (assetsDirectory && assetsDirectory[assetsDirectory.length - 1] !== "/") {
-    assetsDirectory = `${assetsDirectory}/`;
   }
 
   const operation = Abort.startOperation();
@@ -10204,462 +10446,339 @@ const build = async ({
     });
   }
 
-  const runBuild = async ({ signal, logLevel }) => {
-    const logger = createLogger({ logLevel });
-    const createBuildTask = (label) => {
-      return createTaskLog(label, {
-        disabled:
-          logs.disabled || (!logger.levels.debug && !logger.levels.info),
-        animated: logs.animation && !logger.levels.debug,
-      });
-    };
+  const cpuMonitoring = startMonitoringCpuUsage();
+  operation.addEndCallback(cpuMonitoring.stop);
+  const [processCpuUsageMonitoring] = cpuMonitoring;
+  const memoryMonitoring = startMonitoringMemoryUsage();
+  const [processMemoryUsageMonitoring] = memoryMonitoring;
+  const interval = setInterval(() => {
+    processCpuUsageMonitoring.measure();
+    processMemoryUsageMonitoring.measure();
+  }, 500).unref();
+  operation.addEndCallback(() => {
+    clearInterval(interval);
+  });
 
-    const buildOperation = Abort.startOperation();
-    buildOperation.addAbortSignal(signal);
-    const entryPointKeys = Object.keys(entryPoints);
-    if (entryPointKeys.length === 1) {
-      logger.info(`
-build "${entryPointKeys[0]}"`);
-    } else {
-      logger.info(`
-build ${entryPointKeys.length} entry points`);
-    }
-    let explicitJsModuleConversion = false;
-    for (const entryPointKey of entryPointKeys) {
-      if (entryPointKey.includes("?js_module_fallback")) {
-        explicitJsModuleConversion = true;
-        break;
-      }
-      if (entryPointKey.includes("?as_js_classic")) {
-        explicitJsModuleConversion = true;
-        break;
-      }
-    }
-    const entryUrls = [];
-    const contextSharedDuringBuild = {
-      buildStep: "craft",
-      buildDirectoryUrl,
-      assetsDirectory,
-      versioning,
-      versioningViaImportmap,
-    };
-    const rawKitchen = createKitchen({
-      signal,
-      logLevel: logs.level,
-      rootDirectoryUrl: sourceDirectoryUrl,
-      ignore,
-      // during first pass (craft) we keep "ignore:" when a reference is ignored
-      // so that the second pass (shape) properly ignore those urls
-      ignoreProtocol: "keep",
-      build: true,
-      runtimeCompat,
-      initialContext: contextSharedDuringBuild,
-      sourcemaps,
-      sourcemapsSourcesContent,
-      outDirectoryUrl: outDirectoryUrl
-        ? new URL("craft/", outDirectoryUrl)
-        : undefined,
+  const logLevel = logs.level;
+  const logger = createLogger({ logLevel });
+  const animatedLogEnabled =
+    logs.animated &&
+    // canEraseProcessStdout
+    process.stdout.isTTY &&
+    // if there is an error during execution npm will mess up the output
+    // (happens when npm runs several command in a workspace)
+    // so we enable hot replace only when !process.exitCode (no error so far)
+    process.exitCode !== 1;
+  let startBuildLogs = () => {};
+
+  const renderEntyPointBuildDoneLog = (
+    entryBuildInfo,
+    { sourceUrlToLog, buildUrlToLog },
+  ) => {
+    let content = "";
+    content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")}`;
+    // content += " ";
+    // content += ANSI.color("(", ANSI.GREY);
+    // content += ANSI.color(
+    //   humanizeDuration(entryBuildInfo.duration, { short: true }),
+    //   ANSI.GREY,
+    // );
+    // content += ANSI.color(")", ANSI.GREY);
+    content += "\n";
+    return content;
+  };
+  const renderBuildEndLog = ({ duration, buildFileContents }) => {
+    // tell how many files are generated in build directory
+    // tell the repartition?
+    // this is not really useful for single build right?
+
+    processCpuUsageMonitoring.end();
+    processMemoryUsageMonitoring.end();
+
+    return renderBuildDoneLog({
+      duration,
+      buildFileContents,
+      processCpuUsage: processCpuUsageMonitoring.info,
+      processMemoryUsage: processMemoryUsageMonitoring.info,
     });
+  };
 
-    let subbuildResults = [];
+  if (animatedLogEnabled) {
+    startBuildLogs = () => {
+      const startMs = Date.now();
+      let dynamicLog = createDynamicLog();
+      const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+      let frameIndex = 0;
+      let oneWrite = false;
+      const memoryHeapUsedAtStart = memoryUsage().heapUsed;
+      const renderDynamicLog = () => {
+        frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+        let dynamicLogContent = "";
+        dynamicLogContent += `${frames[frameIndex]} `;
+        dynamicLogContent += `building ${entryPointArray.length} entry points`;
 
-    const rawPluginStore = createPluginStore([
-      ...(mappings ? [jsenvPluginMappings(mappings)] : []),
-      ...jsenvPluginSubbuilds(subbuilds, {
-        parentBuildParams: {
-          sourceDirectoryUrl,
-          buildDirectoryUrl,
-          runtimeCompat,
-          bundling,
-          minification,
-          versioning,
-          versioningMethod,
-          outDirectoryUrl,
-          base,
-        },
-        onCustomBuildDirectory: (subBuildRelativeUrl) => {
-          buildDirectoryCleanPatterns = {
-            ...buildDirectoryCleanPatterns,
-            [`${subBuildRelativeUrl}**/*`]: false,
+        const msEllapsed = Date.now() - startMs;
+        const infos = [];
+        const duration = humanizeDuration(msEllapsed, {
+          short: true,
+          decimals: 0,
+          rounded: false,
+        });
+        infos.push(ANSI.color(duration, ANSI.GREY));
+        let memoryUsageColor = ANSI.GREY;
+        const memoryHeapUsed = memoryUsage().heapUsed;
+        if (memoryHeapUsed > 2.5 * memoryHeapUsedAtStart) {
+          memoryUsageColor = ANSI.YELLOW;
+        } else if (memoryHeapUsed > 1.5 * memoryHeapUsedAtStart) {
+          memoryUsageColor = null;
+        }
+        const memoryHeapUsedFormatted = humanizeMemory(memoryHeapUsed, {
+          short: true,
+          decimals: 0,
+        });
+        infos.push(ANSI.color(memoryHeapUsedFormatted, memoryUsageColor));
+
+        const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
+        dynamicLogContent += ` ${ANSI.color(
+          "[",
+          ANSI.GREY,
+        )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
+
+        if (oneWrite) {
+          dynamicLogContent = `\n${dynamicLogContent}`;
+        }
+        dynamicLogContent = `${dynamicLogContent}\n`;
+        return dynamicLogContent;
+      };
+      dynamicLog.update(renderDynamicLog());
+      const interval = setInterval(() => {
+        dynamicLog.update(renderDynamicLog());
+      }, 150).unref();
+      signal.addEventListener("abort", () => {
+        clearInterval(interval);
+      });
+      return {
+        onEntryPointBuildStart: (
+          entryBuildInfo,
+          { sourceUrlToLog, buildUrlToLog },
+        ) => {
+          return () => {
+            oneWrite = true;
+            dynamicLog.clearDuringFunctionCall((write) => {
+              const log = renderEntyPointBuildDoneLog(entryBuildInfo, {
+                sourceUrlToLog,
+                buildUrlToLog,
+              });
+              write(log);
+            }, renderDynamicLog());
           };
         },
-        buildStart: async (params, index) => {
-          const result = await build({
-            ...params,
-            signal,
-            handleSIGINT: false,
-          });
-          subbuildResults[index] = result;
-          return result;
+        onBuildEnd: ({ buildFileContents, duration }) => {
+          clearInterval(interval);
+          dynamicLog.update("");
+          dynamicLog.destroy();
+          dynamicLog = null;
+          logger.info("");
+          logger.info(renderBuildEndLog({ duration, buildFileContents }));
         },
-      }),
-      ...plugins,
-      ...(bundling ? [jsenvPluginBundling(bundling)] : []),
-      ...(minification ? [jsenvPluginMinification(minification)] : []),
-      ...getCorePlugins({
-        rootDirectoryUrl: sourceDirectoryUrl,
-        runtimeCompat,
-        referenceAnalysis,
-        nodeEsmResolution,
-        magicExtensions,
-        magicDirectoryIndex,
-        directoryReferenceEffect,
-        injections,
-        transpilation: {
-          babelHelpersAsImport: !explicitJsModuleConversion,
-          ...transpilation,
-          jsModuleFallback: false,
-        },
-        inlining: false,
-        http,
-        scenarioPlaceholders,
-      }),
-    ]);
-    const rawPluginController = createPluginController(
-      rawPluginStore,
-      rawKitchen,
-    );
-    rawKitchen.setPluginController(rawPluginController);
-
-    {
-      const generateSourceGraph = createBuildTask("generate source graph");
-      try {
-        if (outDirectoryUrl) {
-          await ensureEmptyDirectory(new URL(`craft/`, outDirectoryUrl));
-        }
-        const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
-        await rawRootUrlInfo.dependencies.startCollecting(() => {
-          Object.keys(entryPoints).forEach((key) => {
-            const entryReference = rawRootUrlInfo.dependencies.found({
-              trace: { message: `"${key}" in entryPoints parameter` },
-              isEntryPoint: true,
-              type: "entry_point",
-              specifier: key,
-              filenameHint: entryPoints[key],
-            });
-            entryUrls.push(entryReference.url);
-          });
-        });
-        await rawRootUrlInfo.cookDependencies({
-          operation: buildOperation,
-        });
-      } catch (e) {
-        generateSourceGraph.fail();
-        throw e;
+      };
+    };
+  } else {
+    startBuildLogs = () => {
+      if (entryPointArray.length === 1) {
+        const [singleEntryPoint] = entryPointArray;
+        logger.info(`building ${singleEntryPoint.key}`);
+      } else {
+        logger.info(`building ${entryPointArray.length} entry points`);
       }
-      generateSourceGraph.done();
-    }
+      logger.info("");
+      return {
+        onEntryPointBuildStart: (
+          entryBuildInfo,
+          { sourceUrlToLog, buildUrlToLog },
+        ) => {
+          return () => {
+            logger.info(
+              renderEntyPointBuildDoneLog(entryBuildInfo, {
+                sourceUrlToLog,
+                buildUrlToLog,
+              }),
+            );
+          };
+        },
+        onBuildEnd: ({ buildFileContents, duration }) => {
+          logger.info("");
+          logger.info(renderBuildEndLog({ duration, buildFileContents }));
+        },
+      };
+    };
+  }
 
-    const finalKitchen = createKitchen({
-      name: "shape",
-      logLevel: logs.level,
-      rootDirectoryUrl: sourceDirectoryUrl,
-      // here most plugins are not there
-      // - no external plugin
-      // - no plugin putting reference.mustIgnore on https urls
-      // At this stage it's only about redirecting urls to the build directory
-      // consequently only a subset or urls are supported
-      supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
-      ignore,
-      ignoreProtocol: "remove",
-      build: true,
-      runtimeCompat,
-      initialContext: contextSharedDuringBuild,
-      sourcemaps,
-      sourcemapsComment: "relative",
-      sourcemapsSourcesContent,
-      outDirectoryUrl: outDirectoryUrl
-        ? new URL("shape/", outDirectoryUrl)
-        : undefined,
-    });
-    const buildSpecifierManager = createBuildSpecifierManager({
-      rawKitchen,
-      finalKitchen,
-      logger,
+  // we want to start building the entry point that are deeper
+  // - they are more likely to be small
+  // - they are more likely to be referenced by highter files that will depend on them
+  entryPointArray.sort((a, b) => {
+    return compareFileUrls(a.sourceUrl, b.sourceUrl);
+  });
+
+  const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
+  if (outDirectoryUrl === undefined) {
+    if (
+      process.env.CAPTURING_SIDE_EFFECTS ||
+      (false)
+    ) {
+      outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl).href;
+    } else if (packageDirectoryUrl) {
+      outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+    }
+  }
+  let rootPackageDirectoryUrl = packageDirectoryUrl;
+  if (packageDirectoryUrl) {
+    const parentPackageDirectoryUrl = lookupPackageDirectory(
+      new URL("../", packageDirectoryUrl),
+    );
+    if (parentPackageDirectoryUrl) {
+      rootPackageDirectoryUrl = parentPackageDirectoryUrl;
+    }
+  }
+
+  const runBuild = async ({ signal }) => {
+    const startDate = Date.now();
+    const { onBuildEnd, onEntryPointBuildStart } = startBuildLogs();
+
+    const buildUrlsGenerator = createBuildUrlsGenerator({
       sourceDirectoryUrl,
       buildDirectoryUrl,
-      base,
-      assetsDirectory,
-
-      versioning,
-      versioningMethod,
-      versionLength,
-      canUseImportmap:
-        versioningViaImportmap &&
-        entryUrls.every((finalEntryUrl) => {
-          const entryUrlInfo = rawKitchen.graph.getUrlInfo(finalEntryUrl);
-          return entryUrlInfo.type === "html";
-        }) &&
-        rawKitchen.context.isSupportedOnCurrentClients("importmap"),
     });
-    const finalPluginStore = createPluginStore([
-      jsenvPluginReferenceAnalysis({
-        ...referenceAnalysis,
-        fetchInlineUrls: false,
-        // inlineContent: false,
-      }),
-      jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
-      ...(lineBreakNormalization ? [jsenvPluginLineBreakNormalization()] : []),
-      jsenvPluginJsModuleFallback({
-        remapImportSpecifier: (specifier, parentUrl) => {
-          return buildSpecifierManager.remapPlaceholder(specifier, parentUrl);
-        },
-      }),
-      jsenvPluginInlining(),
-      {
-        name: "jsenv:optimize",
-        appliesDuring: "build",
-        transformUrlContent: async (urlInfo) => {
-          await rawKitchen.pluginController.callAsyncHooks(
-            "optimizeUrlContent",
-            urlInfo,
-            (optimizeReturnValue) => {
-              urlInfo.mutateContent(optimizeReturnValue);
-            },
-          );
-        },
-      },
-      buildSpecifierManager.jsenvPluginMoveToBuildDirectory,
-    ]);
-    const finalPluginController = createPluginController(
-      finalPluginStore,
-      finalKitchen,
-      {
-        initialPuginsMeta: rawKitchen.pluginController.pluginsMeta,
-      },
-    );
-    finalKitchen.setPluginController(finalPluginController);
 
-    const bundlers = {};
-    {
-      for (const plugin of rawKitchen.pluginController.activePlugins) {
-        const bundle = plugin.bundle;
-        if (!bundle) {
-          continue;
-        }
-        if (typeof bundle !== "object") {
-          throw new Error(
-            `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
-          );
-        }
-        for (const type of Object.keys(bundle)) {
-          const bundleFunction = bundle[type];
-          if (!bundleFunction) {
-            continue;
-          }
-          const bundlerForThatType = bundlers[type];
-          if (bundlerForThatType) {
-            // first plugin to define a bundle hook wins
-            continue;
-          }
-          bundlers[type] = {
-            plugin,
-            bundleFunction: bundle[type],
-            urlInfoMap: new Map(),
-          };
+    let someEntryPointUseNode = false;
+    for (const entryPoint of entryPointArray) {
+      let { runtimeCompat } = entryPoint.params;
+      if (runtimeCompat === undefined) {
+        const runtimeCompatFromPackage = inferRuntimeCompatFromClosestPackage(
+          entryPoint.sourceUrl,
+          {
+            runtimeType: entryPoint.runtimeType,
+          },
+        );
+        if (runtimeCompatFromPackage) {
+          entryPoint.params.runtimeCompat = runtimeCompat =
+            runtimeCompatFromPackage;
+        } else {
+          entryPoint.params.runtimeCompat = runtimeCompat =
+            entryPoint.runtimeType === "browser"
+              ? browserDefaultRuntimeCompat
+              : nodeDefaultRuntimeCompat;
         }
       }
-      const addToBundlerIfAny = (rawUrlInfo) => {
-        const bundler = bundlers[rawUrlInfo.type];
-        if (bundler) {
-          bundler.urlInfoMap.set(rawUrlInfo.url, rawUrlInfo);
-        }
-      };
-      // ignore unused urls thanks to "forEachUrlInfoStronglyReferenced"
-      // it avoid bundling things that are not actually used
-      // happens for:
-      // - js import assertions
-      // - conversion to js classic using ?as_js_classic or ?js_module_fallback
-      GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
-        rawKitchen.graph.rootUrlInfo,
-        (rawUrlInfo) => {
-          if (rawUrlInfo.isEntryPoint) {
-            addToBundlerIfAny(rawUrlInfo);
-          }
-          if (rawUrlInfo.type === "html") {
-            for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
-              if (
-                referenceToOther.isResourceHint &&
-                referenceToOther.expectedType === "js_module"
-              ) {
-                const referencedUrlInfo = referenceToOther.urlInfo;
-                if (
-                  referencedUrlInfo &&
-                  // something else than the resource hint is using this url
-                  referencedUrlInfo.referenceFromOthersSet.size > 0
-                ) {
-                  addToBundlerIfAny(referencedUrlInfo);
-                  continue;
-                }
-              }
-              if (referenceToOther.isWeak) {
-                continue;
-              }
-              const referencedUrlInfo = referenceToOther.urlInfo;
-              if (referencedUrlInfo.isInline) {
-                if (referencedUrlInfo.type !== "js_module") {
-                  continue;
-                }
-                addToBundlerIfAny(referencedUrlInfo);
-                continue;
-              }
-              addToBundlerIfAny(referencedUrlInfo);
-            }
-            return;
-          }
-          // File referenced with
-          // - new URL("./file.js", import.meta.url)
-          // - import.meta.resolve("./file.js")
-          // are entry points that should be bundled
-          // For instance we will bundle service worker/workers detected like this
-          if (rawUrlInfo.type === "js_module") {
-            for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
-              if (
-                referenceToOther.type === "js_url" ||
-                referenceToOther.subtype === "import_meta_resolve"
-              ) {
-                const referencedUrlInfo = referenceToOther.urlInfo;
-                let isAlreadyBundled = false;
-                for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
-                  if (referenceFromOther.url === referencedUrlInfo.url) {
-                    if (
-                      referenceFromOther.subtype === "import_dynamic" ||
-                      referenceFromOther.type === "script"
-                    ) {
-                      isAlreadyBundled = true;
-                      break;
-                    }
-                  }
-                }
-                if (!isAlreadyBundled) {
-                  addToBundlerIfAny(referencedUrlInfo);
-                }
-                continue;
-              }
-              if (referenceToOther.type === "js_inline_content") ;
-            }
-          }
+      if (!someEntryPointUseNode && "node" in runtimeCompat) {
+        someEntryPointUseNode = true;
+      }
+    }
+
+    const entryBuildInfoMap = new Map();
+    let entryPointIndex = 0;
+    const entryOutDirSet = new Set();
+    for (const entryPoint of entryPointArray) {
+      let entryOutDirCandidate = `entry_${urlToBasename(entryPoint.sourceRelativeUrl)}/`;
+      let entryInteger = 1;
+      while (entryOutDirSet.has(entryOutDirCandidate)) {
+        entryInteger++;
+        entryOutDirCandidate = `entry_${urlToBasename(entryPoint.sourceRelativeUrl)}_${entryInteger}/`;
+      }
+      const entryOutDirname = entryOutDirCandidate;
+      entryOutDirSet.add(entryOutDirname);
+      const entryOutDirectoryUrl = new URL(entryOutDirname, outDirectoryUrl);
+      const { entryReference, buildEntryPoint } = await prepareEntryPointBuild(
+        {
+          signal,
+          sourceDirectoryUrl,
+          buildDirectoryUrl,
+          outDirectoryUrl: entryOutDirectoryUrl,
+          sourceRelativeUrl: entryPoint.sourceRelativeUrl,
+          buildUrlsGenerator,
+          someEntryPointUseNode,
         },
+        entryPoint.params,
       );
-      for (const type of Object.keys(bundlers)) {
-        const bundler = bundlers[type];
-        const urlInfosToBundle = Array.from(bundler.urlInfoMap.values());
-        if (urlInfosToBundle.length === 0) {
-          continue;
-        }
-        const bundleTask = createBuildTask(`bundle "${type}"`);
-        try {
-          await buildSpecifierManager.applyBundling({
-            bundler,
-            urlInfosToBundle,
-          });
-        } catch (e) {
-          bundleTask.fail();
-          throw e;
-        }
-        bundleTask.done();
-      }
-    }
-
-    {
-      finalKitchen.context.buildStep = "shape";
-      const generateBuildGraph = createBuildTask("generate build graph");
-      try {
-        if (outDirectoryUrl) {
-          await ensureEmptyDirectory(new URL(`shape/`, outDirectoryUrl));
-        }
-        const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
-        await finalRootUrlInfo.dependencies.startCollecting(() => {
-          entryUrls.forEach((entryUrl) => {
-            finalRootUrlInfo.dependencies.found({
-              trace: { message: `entryPoint` },
-              isEntryPoint: true,
-              type: "entry_point",
-              specifier: entryUrl,
-            });
-          });
-        });
-        await finalRootUrlInfo.cookDependencies({
-          operation: buildOperation,
-        });
-      } catch (e) {
-        generateBuildGraph.fail();
-        throw e;
-      }
-      generateBuildGraph.done();
-    }
-
-    {
-      finalKitchen.context.buildStep = "refine";
-
-      const htmlRefineSet = new Set();
-      const registerHtmlRefine = (htmlRefine) => {
-        htmlRefineSet.add(htmlRefine);
-      };
-
-      {
-        await buildSpecifierManager.replacePlaceholders();
-      }
-
-      /*
-       * Update <link rel="preload"> and friends after build (once we know everything)
-       * - Used to remove resource hint targeting an url that is no longer used:
-       *   - because of bundlings
-       *   - because of import assertions transpilation (file is inlined into JS)
-       */
-      {
-        buildSpecifierManager.prepareResyncResourceHints({
-          registerHtmlRefine,
-        });
-      }
-
-      {
-        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-          if (!urlInfo.url.startsWith("file:")) {
-            return;
-          }
-          if (urlInfo.type !== "html") {
-            return;
-          }
-          const htmlAst = parseHtml({
-            html: urlInfo.content,
-            url: urlInfo.url,
-            storeOriginalPositions: false,
-          });
-          for (const htmlRefine of htmlRefineSet) {
-            const htmlMutationCallbackSet = new Set();
-            const registerHtmlMutation = (callback) => {
-              htmlMutationCallbackSet.add(callback);
-            };
-            htmlRefine(htmlAst, { registerHtmlMutation });
-            for (const htmlMutationCallback of htmlMutationCallbackSet) {
-              htmlMutationCallback();
-            }
-          }
-          // cleanup jsenv attributes from html as a last step
-          urlInfo.content = stringifyHtmlAst(htmlAst, {
-            cleanupJsenvAttributes: true,
-            cleanupPositionAttributes: true,
-          });
-        });
-      }
-
-      {
-        const inject = buildSpecifierManager.prepareServiceWorkerUrlInjection();
-        if (inject) {
-          const urlsInjectionInSw = createBuildTask(
-            "inject urls in service worker",
+      const entryPointBuildRelativeUrl = entryPoint.params.buildRelativeUrl;
+      const entryBuildInfo = {
+        index: entryPointIndex,
+        entryReference,
+        entryUrlInfo: entryReference.urlInfo,
+        buildRelativeUrl: entryPointBuildRelativeUrl,
+        buildFileContents: undefined,
+        buildFileVersions: undefined,
+        buildInlineContents: undefined,
+        buildManifest: undefined,
+        duration: null,
+        buildEntryPoint: () => {
+          const sourceUrl = new URL(
+            entryPoint.sourceRelativeUrl,
+            sourceDirectoryUrl,
           );
-          await inject();
-          urlsInjectionInSw.done();
-          buildOperation.throwIfAborted();
-        }
-      }
+          const buildUrl = new URL(
+            entryPointBuildRelativeUrl,
+            buildDirectoryUrl,
+          );
+          const sourceUrlToLog = rootPackageDirectoryUrl
+            ? urlToRelativeUrl(sourceUrl, rootPackageDirectoryUrl)
+            : entryPoint.key;
+          const buildUrlToLog = rootPackageDirectoryUrl
+            ? urlToRelativeUrl(buildUrl, rootPackageDirectoryUrl)
+            : entryPointBuildRelativeUrl;
+
+          const entryPointBuildStartMs = Date.now();
+          const onEntryPointBuildEnd = onEntryPointBuildStart(entryBuildInfo, {
+            sourceUrlToLog,
+            buildUrlToLog,
+          });
+          const promise = (async () => {
+            const result = await buildEntryPoint({
+              getOtherEntryBuildInfo: (url) => {
+                if (url === entryReference.url) {
+                  return null;
+                }
+                const otherEntryBuildInfo = entryBuildInfoMap.get(url);
+                if (!otherEntryBuildInfo) {
+                  return null;
+                }
+                return otherEntryBuildInfo;
+              },
+            });
+            entryBuildInfo.buildFileContents = result.buildFileContents;
+            entryBuildInfo.buildFileVersions = result.buildFileVersions;
+            entryBuildInfo.buildInlineContents = result.buildInlineContents;
+            entryBuildInfo.buildManifest = result.buildManifest;
+            entryBuildInfo.duration = Date.now() - entryPointBuildStartMs;
+            onEntryPointBuildEnd();
+          })();
+          entryBuildInfo.promise = promise;
+          return promise;
+        },
+      };
+      entryBuildInfoMap.set(entryReference.url, entryBuildInfo);
+      entryPointIndex++;
     }
-    const { buildFileContents, buildInlineContents, buildManifest } =
-      buildSpecifierManager.getBuildInfo();
+
+    const promises = [];
+    for (const [, entryBuildInfo] of entryBuildInfoMap) {
+      const promise = entryBuildInfo.buildEntryPoint();
+      promises.push(promise);
+    }
+    await Promise.all(promises);
+
+    const buildFileContents = {};
+    const buildFileVersions = {};
+    const buildInlineContents = {};
+    const buildManifest = {};
+    for (const [, entryBuildInfo] of entryBuildInfoMap) {
+      Object.assign(buildFileContents, entryBuildInfo.buildFileContents);
+      Object.assign(buildFileVersions, entryBuildInfo.buildFileVersions);
+      Object.assign(buildInlineContents, entryBuildInfo.buildInlineContents);
+      Object.assign(buildManifest, entryBuildInfo.buildManifest);
+    }
     if (writeOnFileSystem) {
-      const writingFiles = createBuildTask("write files in build directory");
       clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
       const buildRelativeUrls = Object.keys(buildFileContents);
       buildRelativeUrls.forEach((buildRelativeUrl) => {
@@ -10668,23 +10787,17 @@ build ${entryPointKeys.length} entry points`);
           buildFileContents[buildRelativeUrl],
         );
       });
-      if (versioning && assetManifest && Object.keys(buildManifest).length) {
-        writeFileSync(
-          new URL(assetManifestFileRelativeUrl, buildDirectoryUrl),
-          JSON.stringify(buildManifest, null, "  "),
-        );
-      }
-      writingFiles.done();
     }
-    logger.info(
-      createUrlGraphSummary(finalKitchen.graph, {
-        title: "build files",
-      }),
-    );
+    onBuildEnd({
+      buildFileContents,
+      buildInlineContents,
+      buildManifest,
+      duration: Date.now() - startDate,
+    });
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
       ...(returnBuildManifest ? { buildManifest } : {}),
-      ...(subbuilds.length ? { subbuilds: subbuildResults } : {}),
+      ...(returnBuildFileVersions ? { buildFileVersions } : {}),
     };
   };
 
@@ -10692,7 +10805,6 @@ build ${entryPointKeys.length} entry points`);
     try {
       const result = await runBuild({
         signal: operation.signal,
-        logLevel: logs.level,
       });
       return result;
     } finally {
@@ -10763,6 +10875,585 @@ build ${entryPointKeys.length} entry points`);
   });
   await firstBuildPromise;
   return stopWatchingSourceFiles;
+};
+
+const entryPointDefaultParams = {
+  buildRelativeUrl: undefined,
+  runtimeCompat: defaultRuntimeCompat,
+  plugins: [],
+  mappings: undefined,
+  assetsDirectory: undefined,
+  base: undefined,
+  ignore: undefined,
+
+  bundling: true,
+  minification: true,
+  versioning: true,
+
+  referenceAnalysis: {},
+  nodeEsmResolution: undefined,
+  packageConditions: undefined,
+  magicExtensions: undefined,
+  magicDirectoryIndex: undefined,
+  directoryReferenceEffect: undefined,
+  scenarioPlaceholders: undefined,
+  injections: undefined,
+  transpilation: {},
+
+  versioningMethod: "search_param", // "filename", "search_param"
+  versioningViaImportmap: true,
+  versionLength: 8,
+  lineBreakNormalization: process.platform === "win32",
+
+  http: false,
+
+  sourcemaps: "none",
+  sourcemapsSourcesContent: undefined,
+  assetManifest: false,
+  assetManifestFileRelativeUrl: "asset-manifest.json",
+};
+
+const prepareEntryPointBuild = async (
+  {
+    signal,
+    sourceDirectoryUrl,
+    buildDirectoryUrl,
+    sourceRelativeUrl,
+    outDirectoryUrl,
+    buildUrlsGenerator,
+    someEntryPointUseNode,
+  },
+  entryPointParams,
+) => {
+  let {
+    buildRelativeUrl,
+    runtimeCompat,
+    plugins,
+    mappings,
+    assetsDirectory,
+    base,
+    ignore,
+
+    bundling,
+    minification,
+    versioning,
+
+    referenceAnalysis,
+    nodeEsmResolution,
+    packageConditions,
+    magicExtensions,
+    magicDirectoryIndex,
+    directoryReferenceEffect,
+    scenarioPlaceholders,
+    injections,
+    transpilation,
+
+    versioningMethod,
+    versioningViaImportmap,
+    versionLength,
+    lineBreakNormalization,
+
+    http,
+
+    sourcemaps,
+    sourcemapsSourcesContent,
+    assetManifest,
+    assetManifestFileRelativeUrl,
+  } = {
+    ...entryPointDefaultParams,
+    ...entryPointParams,
+  };
+
+  // param defaults and normalization
+  {
+    if (entryPointParams.buildRelativeUrl === undefined) {
+      buildRelativeUrl = entryPointParams.buildRelativeUrl = sourceRelativeUrl;
+    }
+    const buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
+    entryPointParams.buildRelativeUrl = buildRelativeUrl = urlToRelativeUrl(
+      buildUrl,
+      buildDirectoryUrl,
+    );
+    if (entryPointParams.assetsDirectory === undefined) {
+      const entryBuildUrl = new URL(buildRelativeUrl, buildDirectoryUrl).href;
+      const entryBuildRelativeUrl = urlToRelativeUrl(
+        entryBuildUrl,
+        buildDirectoryUrl,
+      );
+      if (entryBuildRelativeUrl.includes("/")) {
+        const assetDirectoryUrl = new URL("./", entryBuildUrl);
+        assetsDirectory = urlToRelativeUrl(
+          assetDirectoryUrl,
+          buildDirectoryUrl,
+        );
+      } else {
+        assetsDirectory = "";
+      }
+    }
+    if (
+      assetsDirectory &&
+      assetsDirectory[assetsDirectory.length - 1] !== "/"
+    ) {
+      assetsDirectory = `${assetsDirectory}/`;
+    }
+    if (entryPointParams.base === undefined) {
+      base = someEntryPointUseNode ? "./" : "/";
+    }
+    if (entryPointParams.bundling === undefined) {
+      bundling = true;
+    }
+    if (bundling === true) {
+      bundling = {};
+    }
+    if (entryPointParams.minification === undefined) {
+      minification = !someEntryPointUseNode;
+    }
+    if (minification === true) {
+      minification = {};
+    }
+    if (entryPointParams.versioning === undefined) {
+      versioning = !someEntryPointUseNode;
+    }
+    if (entryPointParams.versioningMethod === undefined) {
+      versioningMethod = entryPointDefaultParams.versioningMethod;
+    }
+    if (entryPointParams.assetManifest === undefined) {
+      assetManifest = versioningMethod === "filename";
+    }
+  }
+
+  const buildOperation = Abort.startOperation();
+  buildOperation.addAbortSignal(signal);
+
+  const explicitJsModuleConversion =
+    sourceRelativeUrl.includes("?js_module_fallback") ||
+    sourceRelativeUrl.includes("?as_js_classic");
+  const contextSharedDuringBuild = {
+    buildStep: "craft",
+    buildDirectoryUrl,
+    assetsDirectory,
+    versioning,
+    versioningViaImportmap,
+  };
+  const rawKitchen = createKitchen({
+    signal,
+    logLevel: "warn",
+    rootDirectoryUrl: sourceDirectoryUrl,
+    ignore,
+    // during first pass (craft) we keep "ignore:" when a reference is ignored
+    // so that the second pass (shape) properly ignore those urls
+    ignoreProtocol: "keep",
+    build: true,
+    runtimeCompat,
+    initialContext: contextSharedDuringBuild,
+    sourcemaps,
+    sourcemapsSourcesContent,
+    outDirectoryUrl: outDirectoryUrl
+      ? new URL("craft/", outDirectoryUrl)
+      : undefined,
+  });
+
+  let _getOtherEntryBuildInfo;
+  const rawPluginStore = createPluginStore([
+    ...(mappings ? [jsenvPluginMappings(mappings)] : []),
+    {
+      name: "jsenv:other_entry_point_build_during_craft",
+      fetchUrlContent: async (urlInfo) => {
+        if (!_getOtherEntryBuildInfo) {
+          return null;
+        }
+        const otherEntryBuildInfo = _getOtherEntryBuildInfo(urlInfo.url);
+        if (!otherEntryBuildInfo) {
+          return null;
+        }
+        urlInfo.otherEntryBuildInfo = otherEntryBuildInfo;
+        return {
+          type: "entry_build", // this ensure the rest of jsenv do not try to scan or modify the content
+          content: "", // we don't know yet the content it will be known later
+          filenameHint: otherEntryBuildInfo.entryUrlInfo.filenameHint,
+        };
+      },
+    },
+    ...plugins,
+    ...(bundling ? [jsenvPluginBundling(bundling)] : []),
+    ...(minification ? [jsenvPluginMinification(minification)] : []),
+    ...getCorePlugins({
+      rootDirectoryUrl: sourceDirectoryUrl,
+      runtimeCompat,
+      referenceAnalysis,
+      nodeEsmResolution,
+      packageConditions,
+      magicExtensions,
+      magicDirectoryIndex,
+      directoryReferenceEffect,
+      injections,
+      transpilation: {
+        babelHelpersAsImport: !explicitJsModuleConversion,
+        ...transpilation,
+        jsModuleFallback: false,
+      },
+      inlining: false,
+      http,
+      scenarioPlaceholders,
+    }),
+  ]);
+  const rawPluginController = createPluginController(
+    rawPluginStore,
+    rawKitchen,
+  );
+  rawKitchen.setPluginController(rawPluginController);
+
+  const rawRootUrlInfo = rawKitchen.graph.rootUrlInfo;
+  let entryReference;
+  await rawRootUrlInfo.dependencies.startCollecting(() => {
+    entryReference = rawRootUrlInfo.dependencies.found({
+      trace: { message: `"${sourceRelativeUrl}" from "entryPoints"` },
+      isEntryPoint: true,
+      type: "entry_point",
+      specifier: sourceRelativeUrl,
+      filenameHint: buildRelativeUrl,
+    });
+  });
+
+  return {
+    entryReference,
+    buildEntryPoint: async ({ getOtherEntryBuildInfo }) => {
+      {
+        _getOtherEntryBuildInfo = getOtherEntryBuildInfo;
+        if (outDirectoryUrl) {
+          await ensureEmptyDirectory(new URL(`craft/`, outDirectoryUrl));
+        }
+        await rawRootUrlInfo.cookDependencies({ operation: buildOperation });
+      }
+
+      const finalKitchen = createKitchen({
+        name: "shape",
+        logLevel: "warn",
+        rootDirectoryUrl: sourceDirectoryUrl,
+        // here most plugins are not there
+        // - no external plugin
+        // - no plugin putting reference.mustIgnore on https urls
+        // At this stage it's only about redirecting urls to the build directory
+        // consequently only a subset or urls are supported
+        supportedProtocols: ["file:", "data:", "virtual:", "ignore:"],
+        ignore,
+        ignoreProtocol: "remove",
+        build: true,
+        runtimeCompat,
+        initialContext: contextSharedDuringBuild,
+        sourcemaps,
+        sourcemapsComment: "relative",
+        sourcemapsSourcesContent,
+        outDirectoryUrl: outDirectoryUrl
+          ? new URL("shape/", outDirectoryUrl)
+          : undefined,
+      });
+      const buildSpecifierManager = createBuildSpecifierManager({
+        rawKitchen,
+        finalKitchen,
+        logger: createLogger({ logLevel: "warn" }),
+        sourceDirectoryUrl,
+        buildDirectoryUrl,
+        base,
+        assetsDirectory,
+        buildUrlsGenerator,
+
+        versioning,
+        versioningMethod,
+        versionLength,
+        canUseImportmap:
+          versioningViaImportmap &&
+          rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
+          rawKitchen.context.isSupportedOnCurrentClients("importmap"),
+      });
+      const finalPluginStore = createPluginStore([
+        jsenvPluginReferenceAnalysis({
+          ...referenceAnalysis,
+          fetchInlineUrls: false,
+          // inlineContent: false,
+        }),
+        jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect, {
+          rootDirectoryUrl: sourceDirectoryUrl,
+        }),
+        ...(lineBreakNormalization
+          ? [jsenvPluginLineBreakNormalization()]
+          : []),
+        jsenvPluginJsModuleFallback({
+          remapImportSpecifier: (specifier, parentUrl) => {
+            return buildSpecifierManager.remapPlaceholder(specifier, parentUrl);
+          },
+        }),
+        jsenvPluginInlining(),
+        {
+          name: "jsenv:optimize",
+          appliesDuring: "build",
+          transformUrlContent: async (urlInfo) => {
+            await rawKitchen.pluginController.callAsyncHooks(
+              "optimizeUrlContent",
+              urlInfo,
+              (optimizeReturnValue) => {
+                urlInfo.mutateContent(optimizeReturnValue);
+              },
+            );
+          },
+        },
+        buildSpecifierManager.jsenvPluginMoveToBuildDirectory,
+      ]);
+      const finalPluginController = createPluginController(
+        finalPluginStore,
+        finalKitchen,
+        {
+          initialPuginsMeta: rawKitchen.pluginController.pluginsMeta,
+        },
+      );
+      finalKitchen.setPluginController(finalPluginController);
+
+      bundle: {
+        const bundlerMap = new Map();
+        for (const plugin of rawKitchen.pluginController.activePlugins) {
+          const bundle = plugin.bundle;
+          if (!bundle) {
+            continue;
+          }
+          if (typeof bundle !== "object") {
+            throw new Error(
+              `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
+            );
+          }
+          for (const type of Object.keys(bundle)) {
+            const bundleFunction = bundle[type];
+            if (!bundleFunction) {
+              continue;
+            }
+            if (bundlerMap.has(type)) {
+              // first plugin to define a bundle hook wins
+              continue;
+            }
+            bundlerMap.set(type, {
+              plugin,
+              bundleFunction: bundle[type],
+              urlInfoMap: new Map(),
+            });
+          }
+        }
+        if (bundlerMap.size === 0) {
+          break bundle;
+        }
+        const addToBundlerIfAny = (rawUrlInfo) => {
+          const bundler = bundlerMap.get(rawUrlInfo.type);
+          if (bundler) {
+            bundler.urlInfoMap.set(rawUrlInfo.url, rawUrlInfo);
+          }
+        };
+        // ignore unused urls thanks to "forEachUrlInfoStronglyReferenced"
+        // it avoid bundling things that are not actually used
+        // happens for:
+        // - js import assertions
+        // - conversion to js classic using ?as_js_classic or ?js_module_fallback
+        GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+          rawKitchen.graph.rootUrlInfo,
+          (rawUrlInfo) => {
+            if (rawUrlInfo.isEntryPoint) {
+              addToBundlerIfAny(rawUrlInfo);
+            }
+            if (rawUrlInfo.type === "html") {
+              for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
+                if (
+                  referenceToOther.isResourceHint &&
+                  referenceToOther.expectedType === "js_module"
+                ) {
+                  const referencedUrlInfo = referenceToOther.urlInfo;
+                  if (
+                    referencedUrlInfo &&
+                    // something else than the resource hint is using this url
+                    referencedUrlInfo.referenceFromOthersSet.size > 0
+                  ) {
+                    addToBundlerIfAny(referencedUrlInfo);
+                    continue;
+                  }
+                }
+                if (referenceToOther.isWeak) {
+                  continue;
+                }
+                const referencedUrlInfo = referenceToOther.urlInfo;
+                if (referencedUrlInfo.isInline) {
+                  if (referencedUrlInfo.type !== "js_module") {
+                    continue;
+                  }
+                  addToBundlerIfAny(referencedUrlInfo);
+                  continue;
+                }
+                addToBundlerIfAny(referencedUrlInfo);
+              }
+              return;
+            }
+            // File referenced with
+            // - new URL("./file.js", import.meta.url)
+            // - import.meta.resolve("./file.js")
+            // are entry points that should be bundled
+            // For instance we will bundle service worker/workers detected like this
+            if (rawUrlInfo.type === "js_module") {
+              for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
+                if (
+                  referenceToOther.type === "js_url" ||
+                  referenceToOther.subtype === "import_meta_resolve"
+                ) {
+                  const referencedUrlInfo = referenceToOther.urlInfo;
+                  let isAlreadyBundled = false;
+                  for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
+                    if (referenceFromOther.url === referencedUrlInfo.url) {
+                      if (
+                        referenceFromOther.subtype === "import_dynamic" ||
+                        referenceFromOther.type === "script"
+                      ) {
+                        isAlreadyBundled = true;
+                        break;
+                      }
+                    }
+                  }
+                  if (!isAlreadyBundled) {
+                    addToBundlerIfAny(referencedUrlInfo);
+                  }
+                  continue;
+                }
+                if (referenceToOther.type === "js_inline_content") ;
+              }
+            }
+          },
+        );
+        for (const [, bundler] of bundlerMap) {
+          const urlInfosToBundle = Array.from(bundler.urlInfoMap.values());
+          if (urlInfosToBundle.length === 0) {
+            continue;
+          }
+          await buildSpecifierManager.applyBundling({
+            bundler,
+            urlInfosToBundle,
+          });
+        }
+      }
+
+      {
+        finalKitchen.context.buildStep = "shape";
+        if (outDirectoryUrl) {
+          await ensureEmptyDirectory(new URL(`shape/`, outDirectoryUrl));
+        }
+        const finalRootUrlInfo = finalKitchen.graph.rootUrlInfo;
+        await finalRootUrlInfo.dependencies.startCollecting(() => {
+          finalRootUrlInfo.dependencies.found({
+            trace: { message: `entryPoint` },
+            isEntryPoint: true,
+            type: "entry_point",
+            specifier: entryReference.url,
+          });
+        });
+        await finalRootUrlInfo.cookDependencies({
+          operation: buildOperation,
+        });
+      }
+
+      {
+        finalKitchen.context.buildStep = "refine";
+
+        const htmlRefineSet = new Set();
+        const registerHtmlRefine = (htmlRefine) => {
+          htmlRefineSet.add(htmlRefine);
+        };
+
+        {
+          await buildSpecifierManager.replacePlaceholders();
+        }
+
+        /*
+         * Update <link rel="preload"> and friends after build (once we know everything)
+         * - Used to remove resource hint targeting an url that is no longer used:
+         *   - because of bundlings
+         *   - because of import assertions transpilation (file is inlined into JS)
+         */
+        {
+          buildSpecifierManager.prepareResyncResourceHints({
+            registerHtmlRefine,
+          });
+        }
+
+        {
+          GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
+            if (!urlInfo.url.startsWith("file:")) {
+              return;
+            }
+            if (urlInfo.type !== "html") {
+              return;
+            }
+            const htmlAst = parseHtml({
+              html: urlInfo.content,
+              url: urlInfo.url,
+              storeOriginalPositions: false,
+            });
+            for (const htmlRefine of htmlRefineSet) {
+              const htmlMutationCallbackSet = new Set();
+              const registerHtmlMutation = (callback) => {
+                htmlMutationCallbackSet.add(callback);
+              };
+              htmlRefine(htmlAst, { registerHtmlMutation });
+              for (const htmlMutationCallback of htmlMutationCallbackSet) {
+                htmlMutationCallback();
+              }
+            }
+            // cleanup jsenv attributes from html as a last step
+            urlInfo.content = stringifyHtmlAst(htmlAst, {
+              cleanupJsenvAttributes: true,
+              cleanupPositionAttributes: true,
+            });
+          });
+        }
+
+        {
+          const inject =
+            buildSpecifierManager.prepareServiceWorkerUrlInjection();
+          if (inject) {
+            await inject();
+            buildOperation.throwIfAborted();
+          }
+        }
+      }
+      const {
+        buildFileContents,
+        buildFileVersions,
+        buildInlineContents,
+        buildManifest,
+      } = buildSpecifierManager.getBuildInfo();
+      if (versioning && assetManifest && Object.keys(buildManifest).length) {
+        buildFileContents[assetManifestFileRelativeUrl] = JSON.stringify(
+          buildManifest,
+          null,
+          "  ",
+        );
+      }
+      return {
+        buildFileContents,
+        buildFileVersions,
+        buildInlineContents,
+        buildManifest,
+      };
+    },
+  };
+};
+
+const isBareSpecifier = (specifier) => {
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    return false;
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(specifier);
+    return false;
+  } catch {
+    return true;
+  }
 };
 
 export { build };

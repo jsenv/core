@@ -3,7 +3,7 @@ import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_exe
 
 const run = async ({ runtime }) => {
   await execute({
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("./client/"),
     fileRelativeUrl: `./main.mjs`,
     mirrorConsole: false,
     collectConsole: true,

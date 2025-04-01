@@ -7,14 +7,14 @@
       <g>
         <text x="10" y="24.55">⠋ start dev server</text>
         <text x="10" y="43.55" fill="#11bc79">✔</text>
-        <text x="26.8" y="43.55"> start dev server (done in &lt;X&gt; second)</text>
+        <text x="18.4" y="43.55" style="white-space:pre"> start dev server (done in &lt;X&gt; second)</text>
         <text x="10" y="81.55">- http://127.0.0.1</text>
         <text x="10" y="100.55">- http://127.0.0.1</text>
         <text x="10" y="138.55">Error while handling http://127.0.0.1/js_syntax_error.js:</text>
-        <text x="26.8" y="157.55">  PARSE_ERROR</text>
-        <text x="26.8" y="176.55">  base/client/js_syntax_error.js:1:11</text>
+        <text x="10" y="157.55" style="white-space:pre">  PARSE_ERROR</text>
+        <text x="10" y="176.55" style="white-space:pre">  base/client/js_syntax_error.js:1:11</text>
         <text x="10" y="195.55">1 | const a = (</text>
-        <text x="127.62" y="214.55">              ^</text>
+        <text x="10" y="214.55" style="white-space:pre">              ^</text>
       </g>
     </svg>
   </foreignObject>

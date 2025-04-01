@@ -5,27 +5,28 @@ const buildStory = async (name) => {
   await build({
     handleSIGINT: false,
     logs: { level: "warn" },
-    sourceDirectoryUrl: new URL("./project/client/", import.meta.url),
-    buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./project/client/"),
+    buildDirectoryUrl: import.meta.resolve("./project/dist/"),
     entryPoints: {
-      "./main.html": "main.html",
-    },
-    plugins: [
-      {
-        resolveReference: (reference) => {
-          if (reference.specifier.includes("animal.svg")) {
-            reference.filenameHint = "animal.svg";
-            return new URL(`./project/client/${name}.svg`, import.meta.url);
-          }
-          return null;
+      "./main.html": {
+        plugins: [
+          {
+            resolveReference: (reference) => {
+              if (reference.specifier.includes("animal.svg")) {
+                reference.filenameHint = "animal.svg";
+                return import.meta.resolve(`./project/client/${name}.svg`);
+              }
+              return null;
+            },
+          },
+        ],
+        minification: false,
+        injections: {
+          "**/sw.js": () => ({
+            "self.NAME": name,
+          }),
         },
       },
-    ],
-    minification: false,
-    injections: {
-      "**/sw.js": () => ({
-        "self.NAME": name,
-      }),
     },
   });
 };
@@ -37,7 +38,7 @@ export const buildServer = await startBuildServer({
   logLevel: "warn",
   serverLogLevel: "warn",
   https: { certificate, privateKey },
-  buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
+  buildDirectoryUrl: import.meta.resolve("./project/dist/"),
   buildMainFilePath: "main.html",
   routes: [
     {

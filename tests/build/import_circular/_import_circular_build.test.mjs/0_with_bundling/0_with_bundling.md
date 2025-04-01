@@ -1,4 +1,4 @@
-# [0_with_bundling](../../import_circular_build.test.mjs#L20)
+# [0_with_bundling](../../import_circular_build.test.mjs#L24)
 
 ```js
 run({

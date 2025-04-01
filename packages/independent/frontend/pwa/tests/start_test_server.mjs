@@ -6,7 +6,7 @@ export const startTestServer = async (rest) => {
   const testServer = await startDevServer({
     logLevel: "warn",
     https: { certificate, privateKey },
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
     clientAutoreload: false,
     supervisor: false,
     ...rest,

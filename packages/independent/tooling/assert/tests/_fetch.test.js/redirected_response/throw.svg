@@ -5,11 +5,11 @@
   <foreignObject id="body" y="0" width="100%" height="299.45" overflow="hidden">
     <svg width="431.67" height="289.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
-        <text x="10" y="24.55">AssertionError: </text>
+        <text x="10" y="24.55" style="white-space:pre">AssertionError: </text>
         <text x="144.42" y="24.55" fill="#cd5555">actual</text>
-        <text x="203.23" y="24.55"> and </text>
+        <text x="194.83" y="24.55" style="white-space:pre"> and </text>
         <text x="236.84" y="24.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="24.55"> are different</text>
+        <text x="287.25" y="24.55" style="white-space:pre"> are different</text>
         <text x="10" y="62.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="62.55" fill="#7f7f7f">Response</text>
         <text x="144.42" y="62.55" fill="#7f7f7f">(</text>
@@ -23,7 +23,7 @@
         <text x="60.41" y="81.55" fill="#7f7f7f">e</text>
         <text x="68.81" y="81.55" fill="#7f7f7f">r</text>
         <text x="77.21" y="81.55" fill="#7f7f7f">s</text>
-        <text x="85.61" y="81.55" fill="#7f7f7f">: </text>
+        <text x="85.61" y="81.55" style="white-space:pre" fill="#7f7f7f">: </text>
         <text x="102.42" y="81.55" fill="#7f7f7f">Headers</text>
         <text x="161.22" y="81.55" fill="#7f7f7f">(</text>
         <text x="43.61" y="100.55" fill="#7f7f7f">"</text>
@@ -40,7 +40,7 @@
         <text x="136.02" y="100.55" fill="#DAA520">p</text>
         <text x="144.42" y="100.55" fill="#DAA520">e</text>
         <text x="152.82" y="100.55" fill="#7f7f7f">"</text>
-        <text x="169.63" y="100.55" fill="#7f7f7f"> =&gt; </text>
+        <text x="161.22" y="100.55" style="white-space:pre" fill="#7f7f7f"> =&gt; </text>
         <text x="194.83" y="100.55" fill="#7f7f7f">"</text>
         <text x="203.23" y="100.55" fill="#cd5555">text/plain;charset=UTF-8</text>
         <text x="404.86" y="100.55" fill="#7f7f7f">"</text>
@@ -53,7 +53,7 @@
         <text x="52.01" y="138.55" fill="#7f7f7f">t</text>
         <text x="60.41" y="138.55" fill="#7f7f7f">u</text>
         <text x="68.81" y="138.55" fill="#7f7f7f">s</text>
-        <text x="77.21" y="138.55" fill="#7f7f7f">: </text>
+        <text x="77.21" y="138.55" style="white-space:pre" fill="#7f7f7f">: </text>
         <text x="94.01" y="138.55" fill="#cd5555">200</text>
         <text x="119.22" y="138.55" fill="#7f7f7f">,</text>
         <text x="10" y="157.55" fill="#7f7f7f">}</text>
@@ -71,7 +71,7 @@
         <text x="60.41" y="195.55" fill="#7f7f7f">e</text>
         <text x="68.81" y="195.55" fill="#7f7f7f">r</text>
         <text x="77.21" y="195.55" fill="#7f7f7f">s</text>
-        <text x="85.61" y="195.55" fill="#7f7f7f">: </text>
+        <text x="85.61" y="195.55" style="white-space:pre" fill="#7f7f7f">: </text>
         <text x="102.42" y="195.55" fill="#7f7f7f">Headers</text>
         <text x="161.22" y="195.55" fill="#7f7f7f">(</text>
         <text x="43.61" y="214.55" fill="#7f7f7f">"</text>
@@ -84,7 +84,7 @@
         <text x="102.42" y="214.55" fill="#11bc79">o</text>
         <text x="110.82" y="214.55" fill="#11bc79">n</text>
         <text x="119.22" y="214.55" fill="#7f7f7f">"</text>
-        <text x="136.02" y="214.55" fill="#7f7f7f"> =&gt; </text>
+        <text x="127.62" y="214.55" style="white-space:pre" fill="#7f7f7f"> =&gt; </text>
         <text x="161.22" y="214.55" fill="#7f7f7f">"</text>
         <text x="169.63" y="214.55" fill="#DAA520">h</text>
         <text x="178.03" y="214.55" fill="#DAA520">t</text>
@@ -114,7 +114,7 @@
         <text x="52.01" y="252.55" fill="#7f7f7f">t</text>
         <text x="60.41" y="252.55" fill="#7f7f7f">u</text>
         <text x="68.81" y="252.55" fill="#7f7f7f">s</text>
-        <text x="77.21" y="252.55" fill="#7f7f7f">: </text>
+        <text x="77.21" y="252.55" style="white-space:pre" fill="#7f7f7f">: </text>
         <text x="94.01" y="252.55" fill="#11bc79">302</text>
         <text x="119.22" y="252.55" fill="#7f7f7f">,</text>
         <text x="10" y="271.55" fill="#7f7f7f">}</text>

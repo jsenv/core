@@ -1,30 +1,49 @@
+/**
+ *
+ */
+
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const run = async ({ bundling }) => {
+const run = async ({ bundling, clientBase }) => {
   await build({
+    logs: {
+      level: "warn",
+    },
     sourceDirectoryUrl: import.meta.resolve("./source/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./index.js": "index.js" },
-    runtimeCompat: {
-      node: "20",
-    },
-    bundling,
-    subbuilds: [
-      {
-        sourceDirectoryUrl: import.meta.resolve("./source/"),
-        buildDirectoryUrl: import.meta.resolve("./build/client_built/"),
-        entryPoints: {
-          "./client/main.html": "main.html",
-        },
-        runtimeCompat: { chrome: "89" },
+    entryPoints: {
+      "./index.js": {
+        runtimeCompat: { node: "20" },
+        bundling,
+        versioning: false,
+        minification: false,
       },
-    ],
+      "./client/main.html": {
+        runtimeCompat: { chrome: "89" },
+        bundling,
+        versioning: false,
+        minification: false,
+        base: clientBase,
+      },
+    },
   });
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => run({ bundling: false }));
+  test("0_no_bundling", () =>
+    run({
+      bundling: false,
+    }));
 
-  test("1_with_bundling", () => run({ bundling: true }));
+  test("1_no_bundling_relative_base", () =>
+    run({
+      bundling: false,
+      clientBase: "./",
+    }));
+
+  test("2_with_bundling", () =>
+    run({
+      bundling: true,
+    }));
 });

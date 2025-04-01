@@ -11,16 +11,16 @@ if (process.env.CI) {
 
 const run = async ({ runtime }) => {
   const devServer = await startDevServer({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
     keepProcessAlive: false,
     port: 0,
   });
   return execute({
     runtime,
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("./client/"),
     webServer: {
       origin: devServer.origin,
-      rootDirectoryUrl: new URL("./client/", import.meta.url),
+      rootDirectoryUrl: import.meta.resolve("./client/"),
     },
     fileRelativeUrl: `./main.html`,
   });

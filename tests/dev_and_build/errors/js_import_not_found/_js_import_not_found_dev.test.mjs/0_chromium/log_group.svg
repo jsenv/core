@@ -7,14 +7,14 @@
       <g>
         <text x="10" y="24.55">GET http://127.0.0.1/not_found.js</text>
         <text x="26.8" y="43.55" fill="#DAA520">404</text>
-        <text x="60.41" y="43.55"> Failed to fetch url content</text>
-        <text x="26.8" y="62.55">  base/client/intermediate.js:2:7</text>
-        <text x="26.8" y="81.55">  1 | // eslint-disable-next-line import-x/no-unresolved</text>
-        <text x="26.8" y="100.55">  2 | import "./not_found.js";</text>
-        <text x="110.82" y="119.55">            ^</text>
-        <text x="26.8" y="138.55">  no entry on filesystem</text>
-        <text x="26.8" y="157.55">  --- plugin name ---</text>
-        <text x="26.8" y="176.55">  "jsenv:file_url_fetching"</text>
+        <text x="52.01" y="43.55" style="white-space:pre"> Failed to fetch url content</text>
+        <text x="10" y="62.55" style="white-space:pre">  base/client/intermediate.js:2:7</text>
+        <text x="10" y="81.55" style="white-space:pre">  1 | // eslint-disable-next-line import-x/no-unresolved</text>
+        <text x="10" y="100.55" style="white-space:pre">  2 | import "./not_found.js";</text>
+        <text x="10" y="119.55" style="white-space:pre">            ^</text>
+        <text x="10" y="138.55" style="white-space:pre">  no entry on filesystem</text>
+        <text x="10" y="157.55" style="white-space:pre">  --- plugin name ---</text>
+        <text x="10" y="176.55" style="white-space:pre">  "jsenv:file_url_fetching"</text>
         <text x="10" y="195.55">chromium console.error &gt; Failed to load resource: the server responded with a status of 404 (no entry on filesystem)</text>
       </g>
     </svg>

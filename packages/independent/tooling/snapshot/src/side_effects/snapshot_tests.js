@@ -31,10 +31,17 @@ import { renderSideEffects, renderSmallLink } from "./render_side_effects.js";
  *        Urls of filesystem side effects will be relative to this base directory
  *        Default to the directory containing @sourceFileUrl
  */
+let preconfiguredOptions = null;
 export const snapshotTests = async (
   sourceFileUrl,
   fnRegisteringTest,
-  {
+  options = {},
+) => {
+  if (preconfiguredOptions) {
+    Object.assign(options, preconfiguredOptions);
+    preconfiguredOptions = null;
+  }
+  let {
     outFilePattern = "./_[source_filename]/[filename]",
     filesystemActions,
     rootDirectoryUrl,
@@ -43,11 +50,10 @@ export const snapshotTests = async (
     logEffects,
     filesystemEffects,
     throwWhenDiff = process.env.CI,
-  } = {},
-) => {
+  } = options;
   filesystemActions = {
     "**": "compare",
-    ...filesystemActions,
+    ...options.filesystemActions,
     "**/*.svg": "compare_presence_only",
   };
 
@@ -221,6 +227,17 @@ export const snapshotTests = async (
   outDirectorySnapshot.compare(throwWhenDiff);
 
   return { dirUrlMap, sideEffectsMap };
+};
+// preConfigure is just so that when we update the snapshot test options
+// it does not influence too much the formatting
+// snapshotTests(import.meta.url, ({ test }) => { }, options)
+// becomes
+// snapshotTests.prefConfigure(options)
+// snapshotTests(import.meta.url, ({ test }) => { })
+// which are equivalent
+
+snapshotTests.prefConfigure = (options) => {
+  preconfiguredOptions = options;
 };
 
 // see https://github.com/parshap/node-sanitize-filename/blob/master/index.js

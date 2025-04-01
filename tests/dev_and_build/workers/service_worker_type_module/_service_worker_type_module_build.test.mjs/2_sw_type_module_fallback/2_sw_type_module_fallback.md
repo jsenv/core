@@ -1,4 +1,4 @@
-# [2_sw_type_module_fallback](../../service_worker_type_module_build.test.mjs#L39)
+# [2_sw_type_module_fallback](../../service_worker_type_module_build.test.mjs#L42)
 
 ```js
 run({

@@ -1,0 +1,23 @@
+{
+  "name": "@jsenv/terminal-table",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./src/main.js",
+  "sideEffects": false,
+  "dependencies": {
+    "@jsenv/humanize": "1.4.0"
+  },
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  }
+}

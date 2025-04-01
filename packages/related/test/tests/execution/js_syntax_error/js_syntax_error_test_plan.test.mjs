@@ -10,7 +10,7 @@ import {
 
 const devServer = await startDevServer({
   logLevel: "off",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   keepProcessAlive: false,
   port: 0,
 });
@@ -21,7 +21,7 @@ const { coverage } = await executeTestPlan({
   rootDirectoryUrl: new URL("./", import.meta.url),
   webServer: {
     origin: devServer.origin,
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("./client/"),
   },
   testPlan: {
     "./client/main.html": {

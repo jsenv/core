@@ -1,4 +1,4 @@
-# [0_basic](../../script_classic_and_sourcemap.test.mjs#L22)
+# [0_basic](../../script_classic_and_sourcemap.test.mjs#L25)
 
 ```js
 run()

@@ -15,6 +15,6 @@ await startDevServer({
       logs: true,
     },
   },
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   sourcemaps: "none",
 });

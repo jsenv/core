@@ -5,23 +5,26 @@ const run = async ({ http }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./source/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.js": "main.js" },
-    minification: false,
-    runtimeCompat: { node: "20" },
-    subbuilds: [
-      {
-        buildDirectoryUrl: import.meta.resolve("./build/client/"),
-        entryPoints: { "./client/main.html": "main.html" },
+    entryPoints: {
+      "./main.js": {
+        runtimeCompat: { node: "20" },
+      },
+      "./client/main.html": {
         runtimeCompat: { chrome: "89" },
         http,
-        bundling: { js_module: { chunks: false } },
       },
-    ],
+    },
   });
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_without_http", () => run({ http: false }));
+  test("0_without_http", () =>
+    run({
+      http: false,
+    }));
 
-  test("1_with_http", () => run({ http: true }));
+  test("1_with_http", () =>
+    run({
+      http: true,
+    }));
 });

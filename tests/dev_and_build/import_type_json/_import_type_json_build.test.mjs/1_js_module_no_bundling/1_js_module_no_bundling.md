@@ -1,4 +1,4 @@
-# [1_js_module_no_bundling](../../import_type_json_build.test.mjs#L27)
+# [1_js_module_no_bundling](../../import_type_json_build.test.mjs#L30)
 
 ```js
 run({

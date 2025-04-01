@@ -1,18 +1,7 @@
-# [0_injection](../../injection_not_found_build.test.mjs#L6)
+# [0_injection](../../injection_not_found_build.test.mjs#L23)
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-  injections: {
-    "./main.html": () => {
-      return {
-        __DEMO__: "foo",
-      };
-    },
-  },
-})
+run()
 ```
 
 # 1/3 console.warn
@@ -39,7 +28,7 @@ see [./build/main.html](./build/main.html)
 # 3/3 resolve
 
 ```js
-{}
+undefined
 ```
 
 ---

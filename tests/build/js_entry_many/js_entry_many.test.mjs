@@ -5,14 +5,20 @@ import { copyFileSync } from "@jsenv/filesystem";
 
 const run = async () => {
   await build({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
-      "./a.js": "a.js",
-      "./b.js": "b.js",
+      "./a.js": {
+        bundling: false,
+        minification: false,
+        runtimeCompat: { chrome: "90" },
+      },
+      "./b.js": {
+        bundling: false,
+        minification: false,
+        runtimeCompat: { chrome: "90" },
+      },
     },
-    bundling: false,
-    minification: false,
   });
   copyFileSync({
     from: new URL("./client/a.html", import.meta.url),
@@ -23,7 +29,7 @@ const run = async () => {
     to: new URL("./build/b.html", import.meta.url),
   });
   const buildServer = await startBuildServer({
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     keepProcessAlive: false,
     port: 0,
   });

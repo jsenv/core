@@ -9,17 +9,20 @@ if (process.env.CI) {
 
 const run = async ({ runtimeCompat, sourcemaps }) => {
   await build({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./main.html": "main.html" },
-    bundling: false,
-    minification: false,
-    versioning: true,
-    runtimeCompat,
-    sourcemaps,
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
+    entryPoints: {
+      "./main.html": {
+        bundling: false,
+        minification: false,
+        versioning: true,
+        runtimeCompat,
+        sourcemaps,
+      },
+    },
   });
   const buildServer = await startBuildServer({
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     keepProcessAlive: false,
     port: 0,
   });

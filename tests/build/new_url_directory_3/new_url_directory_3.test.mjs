@@ -8,13 +8,16 @@ const run = ({
 }) => {
   return build({
     sourceDirectoryUrl,
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./main.js": "main.js" },
-    bundling: false,
-    minification: false,
-    assetManifest: true,
-    directoryReferenceEffect,
-    runtimeCompat,
+    buildDirectoryUrl: import.meta.resolve("./build/"),
+    entryPoints: {
+      "./main.js": {
+        bundling: false,
+        minification: false,
+        assetManifest: true,
+        directoryReferenceEffect,
+        runtimeCompat,
+      },
+    },
   });
 };
 

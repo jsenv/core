@@ -12,8 +12,8 @@ export const assertFetchedContentCompliance = ({ urlInfo, content }) => {
   }
   const { expectedType } = urlInfo.firstReference;
   if (expectedType && urlInfo.type !== expectedType) {
-    if (urlInfo.type === "asset" && urlInfo.context.build) {
-      // asset is a valid type during build
+    if (urlInfo.type === "entry_build" && urlInfo.context.build) {
+      // entry_build is a valid type during build
     } else {
       throw new Error(
         `type must be "${expectedType}", got "${urlInfo.type}" on ${urlInfo.url}`,

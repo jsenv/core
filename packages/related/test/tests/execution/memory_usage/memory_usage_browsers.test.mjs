@@ -6,7 +6,7 @@ import { chromium, execute, firefox, webkit } from "@jsenv/test";
 const test = async (params) => {
   const devServer = await startDevServer({
     logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
     keepProcessAlive: false,
     port: 0,
     services: [
@@ -24,10 +24,10 @@ const test = async (params) => {
   });
   const { memoryUsage } = await execute({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("./client/"),
     webServer: {
       origin: devServer.origin,
-      rootDirectoryUrl: new URL("./client/", import.meta.url),
+      rootDirectoryUrl: import.meta.resolve("./client/"),
     },
     fileRelativeUrl: `./main.html`,
     mirrorConsole: false,

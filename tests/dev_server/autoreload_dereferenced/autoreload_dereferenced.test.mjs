@@ -8,7 +8,7 @@ let debug = false;
 let dereferencedCalls = [];
 const devServer = await startDevServer({
   logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   keepProcessAlive: false,
   clientAutoreload: {
     cooldownBetweenFileEvents: 250,

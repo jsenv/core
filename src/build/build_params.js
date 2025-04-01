@@ -13,8 +13,5 @@ export const defaultRuntimeCompat = {
 };
 export const logsDefault = {
   level: "info",
-  disabled: false,
-  animation: true,
+  animated: true,
 };
-export const getDefaultBase = (runtimeCompat) =>
-  runtimeCompat.node ? "./" : "/";

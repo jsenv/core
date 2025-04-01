@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 await startTestServer({
   logLevel: "info",
   serverLogLevel: "info",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   supervisor: false,
   sourceFilesConfig: {
     "./**/main.html": false,

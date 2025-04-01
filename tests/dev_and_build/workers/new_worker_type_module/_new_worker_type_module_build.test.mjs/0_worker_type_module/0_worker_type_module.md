@@ -1,4 +1,4 @@
-# [0_worker_type_module](../../new_worker_type_module_build.test.mjs#L24)
+# [0_worker_type_module](../../new_worker_type_module_build.test.mjs#L27)
 
 ```js
 run({

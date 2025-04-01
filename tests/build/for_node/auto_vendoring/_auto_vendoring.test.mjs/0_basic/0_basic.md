@@ -1,4 +1,4 @@
-# [0_basic](../../auto_vendoring.test.mjs#L33)
+# [0_basic](../../auto_vendoring.test.mjs#L35)
 
 ```js
 run()

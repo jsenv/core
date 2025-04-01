@@ -1,20 +1,53 @@
-import { stripAnsi, stringWidth } from "/jsenv_assert_node_modules.js";
+import { stripAnsi, emojiRegex, eastAsianWidth } from "/jsenv_assert_node_modules.js";
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
+const RED = "red";
+const GREEN = "green";
+const YELLOW = "yellow";
+const BLUE = "blue";
+const MAGENTA = "magenta";
+const CYAN = "cyan";
+const GREY = "grey";
+const WHITE = "white";
+const BLACK = "black";
+const TEXT_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[31m",
+  [GREEN]: "\x1b[32m",
+  [YELLOW]: "\x1b[33m",
+  [BLUE]: "\x1b[34m",
+  [MAGENTA]: "\x1b[35m",
+  [CYAN]: "\x1b[36m",
+  [GREY]: "\x1b[90m",
+  [WHITE]: "\x1b[37m",
+  [BLACK]: "\x1b[30m"
+};
+const BACKGROUND_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[41m",
+  [GREEN]: "\x1b[42m",
+  [YELLOW]: "\x1b[43m",
+  [BLUE]: "\x1b[44m",
+  [MAGENTA]: "\x1b[45m",
+  [CYAN]: "\x1b[46m",
+  [GREY]: "\x1b[100m",
+  [WHITE]: "\x1b[47m",
+  [BLACK]: "\x1b[40m"
+};
 const createAnsi = ({
   supported
 }) => {
   const ANSI = {
     supported,
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED,
+    GREEN,
+    YELLOW,
+    BLUE,
+    MAGENTA,
+    CYAN,
+    GREY,
+    WHITE,
+    BLACK,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -26,7 +59,28 @@ const createAnsi = ({
         // cannot set color of blank chars
         return text;
       }
-      return "".concat(color).concat(text).concat(RESET);
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return "".concat(ansiEscapeCodeForTextColor).concat(text).concat(RESET);
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor = BACKGROUND_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return "".concat(ansiEscapeCodeForBackgroundColor).concat(text).concat(RESET);
     },
     BOLD: "\x1b[1m",
     UNDERLINE: "\x1b[4m",
@@ -42,11 +96,13 @@ const createAnsi = ({
       if (text === "") {
         return text;
       }
-      return "".concat(effect).concat(text).concat(RESET);
+      const ansiEscapeCodeForEffect = effect;
+      return "".concat(ansiEscapeCodeForEffect).concat(text).concat(RESET);
     }
   };
   return ANSI;
 };
+
 const ANSI = createAnsi({
   supported: true
 });
@@ -110,6 +166,7 @@ const createUnicode = ({
   };
   return UNICODE;
 };
+
 const UNICODE = createUnicode({
   supported: true,
   ANSI
@@ -5974,9 +6031,102 @@ const cleanup = () => {
   restore();
 };
 
+const createMeasureTextWidth = ({
+  stripAnsi
+}) => {
+  const segmenter = new Intl.Segmenter();
+  const defaultIgnorableCodePointRegex = /^(?:[\xAD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8]|\uD82F[\uDCA0-\uDCA3]|\uD834[\uDD73-\uDD7A]|[\uDB40-\uDB43][\uDC00-\uDFFF])$/;
+  const measureTextWidth = (string, {
+    ambiguousIsNarrow = true,
+    countAnsiEscapeCodes = false,
+    skipEmojis = false
+  } = {}) => {
+    if (typeof string !== "string" || string.length === 0) {
+      return 0;
+    }
+    if (!countAnsiEscapeCodes) {
+      string = stripAnsi(string);
+    }
+    if (string.length === 0) {
+      return 0;
+    }
+    let width = 0;
+    const eastAsianWidthOptions = {
+      ambiguousAsWide: !ambiguousIsNarrow
+    };
+    for (const {
+      segment: character
+    } of segmenter.segment(string)) {
+      const codePoint = character.codePointAt(0);
+
+      // Ignore control characters
+      if (codePoint <= 0x1f || codePoint >= 0x7f && codePoint <= 0x9f) {
+        continue;
+      }
+
+      // Ignore zero-width characters
+      if (codePoint >= 0x200b && codePoint <= 0x200f ||
+      // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+      codePoint === 0xfeff // Zero-width no-break space
+      ) {
+        continue;
+      }
+
+      // Ignore combining characters
+      if (codePoint >= 0x300 && codePoint <= 0x36f ||
+      // Combining diacritical marks
+      codePoint >= 0x1ab0 && codePoint <= 0x1aff ||
+      // Combining diacritical marks extended
+      codePoint >= 0x1dc0 && codePoint <= 0x1dff ||
+      // Combining diacritical marks supplement
+      codePoint >= 0x20d0 && codePoint <= 0x20ff ||
+      // Combining diacritical marks for symbols
+      codePoint >= 0xfe20 && codePoint <= 0xfe2f // Combining half marks
+      ) {
+        continue;
+      }
+
+      // Ignore surrogate pairs
+      if (codePoint >= 0xd800 && codePoint <= 0xdfff) {
+        continue;
+      }
+
+      // Ignore variation selectors
+      if (codePoint >= 0xfe00 && codePoint <= 0xfe0f) {
+        continue;
+      }
+
+      // This covers some of the above cases, but we still keep them for performance reasons.
+      if (defaultIgnorableCodePointRegex.test(character)) {
+        continue;
+      }
+      if (!skipEmojis && emojiRegex().test(character)) {
+        if (process.env.CAPTURING_SIDE_EFFECTS) {
+          if (character === "✔️") {
+            width += 2;
+            continue;
+          }
+        }
+        width += measureTextWidth(character, {
+          skipEmojis: true,
+          countAnsiEscapeCodes: true // to skip call to stripAnsi
+        });
+        continue;
+      }
+      width += eastAsianWidth(codePoint, eastAsianWidthOptions);
+    }
+    return width;
+  };
+  return measureTextWidth;
+};
+
+const measureTextWidth = createMeasureTextWidth({
+  stripAnsi
+});
+
 // tslint:disable:ordered-imports (keep segmenter first)
 cleanup();
-const measureStringWidth = stringWidth;
+const measureStringWidth = measureTextWidth;
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap
 const createGetWellKnownValuePath = globalObject => {

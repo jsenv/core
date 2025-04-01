@@ -5,17 +5,17 @@
   <foreignObject id="body" y="0" width="100%" height="109.45" overflow="hidden">
     <svg width="414.86" height="99.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
-        <text x="10" y="24.55">AssertionError: </text>
+        <text x="10" y="24.55" style="white-space:pre">AssertionError: </text>
         <text x="144.42" y="24.55" fill="#cd5555">actual</text>
-        <text x="203.23" y="24.55"> and </text>
+        <text x="194.83" y="24.55" style="white-space:pre"> and </text>
         <text x="236.84" y="24.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="24.55"> are different</text>
+        <text x="287.25" y="24.55" style="white-space:pre"> are different</text>
         <text x="10" y="62.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="62.55" fill="#7f7f7f">"</text>
         <text x="85.61" y="62.55" fill="#7f7f7f">1970</text>
         <text x="119.22" y="62.55" fill="#7f7f7f">-01</text>
         <text x="144.42" y="62.55" fill="#7f7f7f">-01</text>
-        <text x="178.03" y="62.55" fill="#cd5555"> 07</text>
+        <text x="169.63" y="62.55" style="white-space:pre" fill="#cd5555"> 07</text>
         <text x="194.83" y="62.55" fill="#7f7f7f">:00</text>
         <text x="220.03" y="62.55" fill="#7f7f7f">:00</text>
         <text x="245.24" y="62.55" fill="#7f7f7f">Z</text>
@@ -25,7 +25,7 @@
         <text x="85.61" y="81.55" fill="#7f7f7f">1970</text>
         <text x="119.22" y="81.55" fill="#7f7f7f">-01</text>
         <text x="144.42" y="81.55" fill="#7f7f7f">-01</text>
-        <text x="178.03" y="81.55" fill="#11bc79"> 09</text>
+        <text x="169.63" y="81.55" style="white-space:pre" fill="#11bc79"> 09</text>
         <text x="194.83" y="81.55" fill="#7f7f7f">:00</text>
         <text x="220.03" y="81.55" fill="#7f7f7f">:00</text>
         <text x="245.24" y="81.55" fill="#7f7f7f">Z</text>

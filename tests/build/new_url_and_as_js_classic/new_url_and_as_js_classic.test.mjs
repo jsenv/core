@@ -7,14 +7,17 @@ import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
 const run = () => {
   return build({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./main.js?as_js_classic": "main.js" },
-    assetsDirectory: "foo/",
-    runtimeCompat: { chrome: "66" },
-    bundling: false,
-    minification: false,
-    plugins: [jsenvPluginAsJsClassic()],
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
+    entryPoints: {
+      "./main.js?as_js_classic": {
+        assetsDirectory: "foo/",
+        runtimeCompat: { chrome: "66" },
+        bundling: false,
+        minification: false,
+        plugins: [jsenvPluginAsJsClassic()],
+      },
+    },
   });
 };
 

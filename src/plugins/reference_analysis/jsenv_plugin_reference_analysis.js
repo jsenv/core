@@ -10,12 +10,9 @@ export const jsenvPluginReferenceAnalysis = ({
   inlineContent = true,
   inlineConvertedScript = false,
   fetchInlineUrls = true,
-  directoryReferenceEffect,
 }) => {
   return [
-    jsenvPluginDirectoryReferenceAnalysis({
-      directoryReferenceEffect,
-    }),
+    jsenvPluginDirectoryReferenceAnalysis(),
     jsenvPluginHtmlReferenceAnalysis({
       inlineContent,
       inlineConvertedScript,

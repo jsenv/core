@@ -1,0 +1,24 @@
+{
+  "name": "@jsenv/terminal-text-size",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "node": "./src/terminal_text_size_node.js",
+      "browser": "./src/terminal_text_size_browser.js"
+    },
+    "./*": "./*"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "emoji-regex-xs": "1.0.0",
+    "get-east-asian-width": "1.3.0",
+    "strip-ansi": "7.1.0"
+  },
+  "devDependencies": {
+    "string-width": "7.2.0"
+  }
+}

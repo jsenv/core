@@ -7,14 +7,15 @@ const test = async (params) => {
   const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logs: { level: "warn" },
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: snapshotDirectoryUrl,
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
     entryPoints: {
-      "./main.html": "main.html",
+      "./main.html": {
+        plugins: [jsenvPluginAsJsClassic()],
+        ...params,
+      },
     },
-    plugins: [jsenvPluginAsJsClassic()],
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
   });
   buildDirectorySnapshot.compare();
 };

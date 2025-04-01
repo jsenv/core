@@ -10,7 +10,9 @@
       "x": 0,
       "y": 0,
       "n": 0,
-      "raw": 0
+      "raw": 0,
+      "width": 0,
+      "height": 0
     },
     "style": {
       "foregroundColor": "red"
@@ -23,7 +25,9 @@
       "x": 0,
       "y": 0,
       "n": 0,
-      "raw": 5
+      "raw": 5,
+      "width": 3,
+      "height": 0
     },
     "style": {
       "foregroundColor": "red"
@@ -40,7 +44,9 @@
       "x": 3,
       "y": 0,
       "n": 3,
-      "raw": 8
+      "raw": 8,
+      "width": 0,
+      "height": 0
     },
     "style": {}
   },
@@ -51,7 +57,9 @@
       "x": 3,
       "y": 0,
       "n": 3,
-      "raw": 13
+      "raw": 13,
+      "width": 0,
+      "height": 1
     }
   },
   {
@@ -65,7 +73,9 @@
       "x": 0,
       "y": 1,
       "n": 4,
-      "raw": 14
+      "raw": 14,
+      "width": 0,
+      "height": 0
     },
     "style": {
       "backgroundColor": "bgGreen"
@@ -78,7 +88,9 @@
       "x": 0,
       "y": 1,
       "n": 4,
-      "raw": 19
+      "raw": 19,
+      "width": 5,
+      "height": 0
     },
     "style": {
       "backgroundColor": "bgGreen"
@@ -95,7 +107,9 @@
       "x": 5,
       "y": 1,
       "n": 9,
-      "raw": 24
+      "raw": 24,
+      "width": 0,
+      "height": 0
     },
     "style": {}
   }

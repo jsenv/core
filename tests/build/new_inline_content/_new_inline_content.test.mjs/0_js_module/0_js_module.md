@@ -2,14 +2,17 @@
 
 ```js
 build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-  bundling: false,
-  minification: false,
-  transpilation: { css: false },
-  runtimeCompat: { chrome: "89" },
-  assetManifest: true,
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
+  buildDirectoryUrl: import.meta.resolve("./build/"),
+  entryPoints: {
+    "./main.html": {
+      bundling: false,
+      minification: false,
+      transpilation: { css: false },
+      runtimeCompat: { chrome: "89" },
+      assetManifest: true,
+    },
+  },
 })
 ```
 

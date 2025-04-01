@@ -15,7 +15,7 @@ if (process.platform !== "win32") {
   const buildServer = await startBuildServer({
     logLevel: "warn",
     // serverLogLevel: "debug",
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     buildMainFilePath: "./main.html",
     keepProcessAlive: false,
     port: 0,

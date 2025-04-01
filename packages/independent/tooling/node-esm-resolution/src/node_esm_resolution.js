@@ -198,7 +198,7 @@ const applyPackageImportsResolution = (
 };
 
 const applyPackageResolve = (packageSpecifier, resolutionContext) => {
-  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
+  const { parentUrl, conditions, readPackageJson, preservesSymlink, isImport } =
     resolutionContext;
   if (packageSpecifier === "") {
     throw new Error("invalid module specifier");
@@ -224,7 +224,7 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       resolutionContext,
     );
   }
-  if (packageSubpath.endsWith("/")) {
+  if (isImport && packageSubpath.endsWith("/")) {
     throw new Error("invalid module specifier");
   }
   const questionCharIndex = packageName.indexOf("?");
@@ -568,6 +568,12 @@ const parsePackageSpecifier = (packageSpecifier) => {
   }
   const packageName = packageSpecifier.slice(0, firstSlashIndex);
   const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  if (afterFirstSlash === "") {
+    return {
+      packageName,
+      packageSubpath: "/",
+    };
+  }
   const packageSubpath = `./${afterFirstSlash}`;
   return {
     packageName,
@@ -707,13 +713,17 @@ const mainLegacyResolvers = {
       path: browserMain,
     };
   },
-  node: ({ packageJson }) => {
+  node: ({ packageJson, conditions }) => {
+    if (conditions.includes("import")) {
+      if (typeof packageJson.module === "string") {
+        return { type: "field:module", isMain: true, path: packageJson.module };
+      }
+      if (typeof packageJson.jsnext === "string") {
+        return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
+      }
+    }
     if (typeof packageJson.main === "string") {
-      return {
-        type: "field:main",
-        isMain: true,
-        path: packageJson.main,
-      };
+      return { type: "field:main", isMain: true, path: packageJson.main };
     }
     return null;
   },

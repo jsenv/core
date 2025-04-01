@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 175.45" background-color="#282c34">
+  <g id="background">
+    <rect x="1" y="1" width="638" height="173.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+  </g>
+  <foreignObject id="body" y="0" width="100%" height="185.45" overflow="hidden">
+    <svg width="238.44" height="175.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+      <g>
+        <text x="10" y="24.55">--- three_column_max_2 ---</text>
+        <text x="10" y="43.55">┌───┬</text>
+        <text x="52.01" y="43.55" fill="#7f7f7f">┈┈┈┈┈┈┈┈┈┈</text>
+        <text x="136.02" y="43.55" fill="#7f7f7f">→</text>
+        <text x="10" y="62.55">│ a │</text>
+        <text x="52.01" y="62.55" style="white-space:pre" fill="#7f7f7f"> 2 columns</text>
+        <text x="10" y="81.55">└───┴</text>
+        <text x="52.01" y="81.55" fill="#7f7f7f">┈┈┈┈┈┈┈┈┈┈</text>
+        <text x="136.02" y="81.55" fill="#7f7f7f">→</text>
+        <text x="10" y="100.55">--- five_column_max_3 ---</text>
+        <text x="10" y="119.55">┌───┬───┬</text>
+        <text x="85.61" y="119.55" fill="#7f7f7f">┈┈┈┈┈┈┈┈┈┈</text>
+        <text x="169.63" y="119.55" fill="#7f7f7f">→</text>
+        <text x="10" y="138.55">│ a │ b │</text>
+        <text x="85.61" y="138.55" style="white-space:pre" fill="#7f7f7f"> 3 columns</text>
+        <text x="10" y="157.55">└───┴───┴</text>
+        <text x="85.61" y="157.55" fill="#7f7f7f">┈┈┈┈┈┈┈┈┈┈</text>
+        <text x="169.63" y="157.55" fill="#7f7f7f">→</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>

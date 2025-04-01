@@ -7,8 +7,8 @@
       <g>
         <text x="10" y="24.55">GET http://127.0.0.1/users</text>
         <text x="26.8" y="43.55" fill="#DAA520">406</text>
-        <text x="60.41" y="43.55"> The server cannot produce a response in any of the media types accepted by the request: "text/css".</text>
-        <text x="26.8" y="62.55">  Available media types: application/json, text/plain.</text>
+        <text x="52.01" y="43.55" style="white-space:pre"> The server cannot produce a response in any of the media types accepted by the request: "text/css".</text>
+        <text x="10" y="62.55" style="white-space:pre">  Available media types: application/json, text/plain.</text>
       </g>
     </svg>
   </foreignObject>

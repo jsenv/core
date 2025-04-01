@@ -1,6 +1,6 @@
 import { startBuildServer } from "@jsenv/core";
 
 await startBuildServer({
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
+  buildDirectoryUrl: import.meta.resolve("./build/"),
   port: 0,
 });

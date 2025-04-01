@@ -3,7 +3,7 @@ import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
 await startDevServer({
   logLevel: "info",
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  rootDirectoryUrl: import.meta.resolve("./client/"),
   port: 5432,
   plugins: [
     jsenvPluginCommonJs({

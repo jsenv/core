@@ -1,7 +1,7 @@
 // inspired by https://github.com/F1LT3R/parse-ansi/blob/master/index.js
 
+import { measureTextWidth } from "@jsenv/terminal-text-size";
 import ansiRegex from "ansi-regex";
-import stringWidth from "string-width";
 import stripAnsi from "strip-ansi";
 
 export const parseAnsi = (ansi) => {
@@ -11,12 +11,12 @@ export const parseAnsi = (ansi) => {
   const lines = plainText.split("\n");
   const rows = lines.length;
   let columns = 0;
-  lines.forEach((line) => {
+  for (const line of lines) {
     const len = line.length;
     if (len > columns) {
       columns = len;
     }
-  });
+  }
 
   const result = {
     raw: ansi,
@@ -158,7 +158,7 @@ export const parseAnsi = (ansi) => {
   let nAnsi = 0;
   let nPlain = 0;
 
-  const bundle = (type, value) => {
+  const bundle = (type, value, { width = 0, height = 0 } = {}) => {
     const chunk = {
       type,
       value,
@@ -167,9 +167,10 @@ export const parseAnsi = (ansi) => {
         y,
         n: nPlain,
         raw: nAnsi,
+        width,
+        height,
       },
     };
-
     if (type === "text" || type === "ansi") {
       const style = {};
 
@@ -219,7 +220,7 @@ export const parseAnsi = (ansi) => {
   for (const word of words) {
     // Newline character
     if (word === "\n") {
-      const chunk = bundle("newline", "\n");
+      const chunk = bundle("newline", "\n", { height: 1 });
       result.chunks.push(chunk);
       x = 0;
       y += 1;
@@ -229,9 +230,9 @@ export const parseAnsi = (ansi) => {
     }
     // Text characters
     if (delimiters.includes(word) === false) {
-      const chunk = bundle("text", word);
+      const width = measureTextWidth(word);
+      const chunk = bundle("text", word, { width });
       result.chunks.push(chunk);
-      const width = stringWidth(word);
       x += width;
       nAnsi += width;
       nPlain += width;

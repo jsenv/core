@@ -1,8 +1,33 @@
 import { createNodeEsmResolver } from "./node_esm_resolver.js";
 
-export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
+export const jsenvPluginNodeEsmResolution = (
+  resolutionConfig = {},
+  packageConditions,
+) => {
   let nodeEsmResolverDefault;
-  const resolvers = {};
+  const resolverMap = new Map();
+  let anyTypeResolver;
+
+  const resolverFromObject = (
+    { preservesSymlink, ...rest },
+    { kitchenContext, urlType },
+  ) => {
+    const unexpectedKeys = Object.keys(rest);
+    if (unexpectedKeys.length) {
+      throw new TypeError(
+        `${unexpectedKeys.join(
+          ",",
+        )}: there is no such configuration on "${urlType}"`,
+      );
+    }
+    return createNodeEsmResolver({
+      build: kitchenContext.build,
+      runtimeCompat: kitchenContext.runtimeCompat,
+      rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
+      packageConditions,
+      preservesSymlink,
+    });
+  };
 
   return {
     name: "jsenv:node_esm_resolution",
@@ -11,47 +36,38 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
       nodeEsmResolverDefault = createNodeEsmResolver({
         build: kitchenContext.build,
         runtimeCompat: kitchenContext.runtimeCompat,
+        rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
         preservesSymlink: true,
+        packageConditions,
       });
-      Object.keys(resolutionConfig).forEach((urlType) => {
+      for (const urlType of Object.keys(resolutionConfig)) {
+        let resolver;
         const config = resolutionConfig[urlType];
         if (config === true) {
-          resolvers[urlType] = (...args) => nodeEsmResolverDefault(...args);
+          resolver = nodeEsmResolverDefault;
         } else if (config === false) {
-          resolvers[urlType] = () => null;
+          // resolverMap.set(urlType, () => null);
+          continue;
         } else if (typeof config === "object") {
-          const {
-            runtimeCompat,
-            packageConditions,
-            preservesSymlink,
-            ...rest
-          } = config;
-          const unexpectedKeys = Object.keys(rest);
-          if (unexpectedKeys.length) {
-            throw new TypeError(
-              `${unexpectedKeys.join(
-                ",",
-              )}: there is no such configuration on "${urlType}"`,
-            );
-          }
-          resolvers[urlType] = createNodeEsmResolver({
-            build: kitchenContext.build,
-            runtimeCompat,
-            packageConditions,
-            preservesSymlink,
-          });
+          resolver = resolverFromObject(config, { kitchenContext, urlType });
         } else {
           throw new TypeError(
-            `config must be true, false or an object, got ${config} on "${urlType}"`,
+            `The value "${config}" for ${urlType} in nodeEsmResolution is invalid: it must be true, false or an object.`,
           );
         }
-      });
 
-      if (resolvers.js_module === undefined) {
-        resolvers.js_module = nodeEsmResolverDefault;
+        if (urlType === "*") {
+          anyTypeResolver = resolver;
+        } else {
+          resolverMap.set(urlType, resolver);
+        }
       }
-      if (resolvers.js_classic === undefined) {
-        resolvers.js_classic = (reference) => {
+
+      if (!resolverMap.has("js_module")) {
+        resolverMap.set("js_module", nodeEsmResolverDefault);
+      }
+      if (!resolverMap.has("js_classic")) {
+        resolverMap.set("js_classic", (reference) => {
           if (reference.subtype === "self_import_scripts_arg") {
             return nodeEsmResolverDefault(reference);
           }
@@ -60,7 +76,7 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
             return nodeEsmResolverDefault(reference);
           }
           return null;
-        };
+        });
       }
     },
     resolveReference: (reference) => {
@@ -70,8 +86,14 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
         return result;
       }
       const urlType = urlTypeFromReference(reference);
-      const resolver = resolvers[urlType];
-      return resolver ? resolver(reference) : null;
+      const resolver = resolverMap.get(urlType);
+      if (resolver) {
+        return resolver(reference);
+      }
+      if (anyTypeResolver) {
+        return anyTypeResolver(reference);
+      }
+      return null;
     },
     // when specifier is prefixed by "file:///@ignore/"
     // we return an empty js module

@@ -6,13 +6,14 @@ const test = async ({ name, ...params }) => {
   const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logs: { level: "warn" },
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: snapshotDirectoryUrl,
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
     entryPoints: {
-      "./main.html": "main.html",
+      "./main.html": {
+        ...params,
+      },
     },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
   });
   directorySnapshot.compare();
 };

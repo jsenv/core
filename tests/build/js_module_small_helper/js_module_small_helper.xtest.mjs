@@ -12,12 +12,12 @@ import { build } from "@jsenv/core";
 const test = async ({ expectedFileCount, ...params }) => {
   const { buildFileContents } = await build({
     logLevel: "warn",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.js": "main.js",
     },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
     ...params,
   });
   const actual = Object.keys(buildFileContents).length;

@@ -10,7 +10,7 @@ await snapshotTestPlanSideEffects(import.meta.url, async ({ test }) => {
   const run = async ({ testPlan }) => {
     const devServer = await startDevServer({
       logLevel: "warn",
-      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      sourceDirectoryUrl: import.meta.resolve("./client/"),
       keepProcessAlive: false,
       port: 0,
     });
@@ -22,7 +22,7 @@ await snapshotTestPlanSideEffects(import.meta.url, async ({ test }) => {
       testPlan,
       webServer: {
         origin: devServer.origin,
-        rootDirectoryUrl: new URL("./client/", import.meta.url),
+        rootDirectoryUrl: import.meta.resolve("./client/"),
       },
       githubCheck: false,
     });

@@ -4,14 +4,19 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = async () => {
   await build({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./src/main.html": "index.html" },
-    bundling: false,
-    minification: false,
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
+    entryPoints: {
+      "./src/main.html": {
+        buildRelativeUrl: "index.html",
+        bundling: false,
+        minification: false,
+        runtimeCompat: { chrome: "56" },
+      },
+    },
   });
   const buildServer = await startBuildServer({
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     keepProcessAlive: false,
     port: 0,
   });

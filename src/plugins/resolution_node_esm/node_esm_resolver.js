@@ -13,22 +13,23 @@ import {
   defaultReadPackageJson,
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
+import { URL_META } from "@jsenv/url-meta";
 import { urlToBasename, urlToExtension } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 
 export const createNodeEsmResolver = ({
-  build,
   runtimeCompat,
-  packageConditions,
+  rootDirectoryUrl,
+  packageConditions = {},
   preservesSymlink,
 }) => {
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
-  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-  packageConditions = packageConditions || [
-    ...(build ? [] : readCustomConditionsFromProcessArgs()),
-    nodeRuntimeEnabled ? "node" : "browser",
-    "import",
-  ];
+  const buildPackageConditions = createBuildPackageConditions(
+    packageConditions,
+    {
+      rootDirectoryUrl,
+      runtimeCompat,
+    },
+  );
 
   return (reference) => {
     if (reference.type === "package_json") {
@@ -49,10 +50,12 @@ export const createNodeEsmResolver = ({
     if (!parentUrl.startsWith("file:")) {
       return null; // let it to jsenv_web_resolution
     }
+    const { specifier } = reference;
+    const conditions = buildPackageConditions(specifier, parentUrl);
     const { url, type, isMain, packageDirectoryUrl } = applyNodeEsmResolution({
-      conditions: packageConditions,
+      conditions,
       parentUrl,
-      specifier: reference.specifier,
+      specifier,
       preservesSymlink,
     });
     // try to give a more meaningful filename after build
@@ -116,6 +119,107 @@ export const createNodeEsmResolver = ({
   };
 };
 
+const createBuildPackageConditions = (
+  packageConditions,
+  { rootDirectoryUrl, runtimeCompat },
+) => {
+  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+  const processArgConditions = readCustomConditionsFromProcessArgs();
+  const packageConditionsDefaultResolvers = {};
+  for (const processArgCondition of processArgConditions) {
+    packageConditionsDefaultResolvers[processArgCondition] = true;
+  }
+  const packageConditionResolvers = {
+    ...packageConditionsDefaultResolvers,
+    development: (specifier, importer) => {
+      if (isBareSpecifier(specifier)) {
+        const { url } = applyNodeEsmResolution({
+          specifier,
+          parentUrl: importer,
+        });
+        return !url.includes("/node_modules/");
+      }
+      return !importer.includes("/node_modules/");
+    },
+    node: nodeRuntimeEnabled,
+    browser: !nodeRuntimeEnabled,
+    import: true,
+  };
+  for (const condition of Object.keys(packageConditions)) {
+    const value = packageConditions[condition];
+    let customResolver;
+    if (typeof value === "object") {
+      const associations = URL_META.resolveAssociations(
+        { applies: value },
+        (pattern) => {
+          if (isBareSpecifier(pattern)) {
+            try {
+              if (pattern.endsWith("/")) {
+                // avoid package path not exported
+                const { packageDirectoryUrl } = applyNodeEsmResolution({
+                  specifier: pattern.slice(0, -1),
+                  parentUrl: rootDirectoryUrl,
+                });
+                return packageDirectoryUrl;
+              }
+              const { url } = applyNodeEsmResolution({
+                specifier: pattern,
+                parentUrl: rootDirectoryUrl,
+              });
+              return url;
+            } catch {
+              return new URL(pattern, rootDirectoryUrl);
+            }
+          }
+          return new URL(pattern, rootDirectoryUrl);
+        },
+      );
+      customResolver = (specifier, importer) => {
+        if (isBareSpecifier(specifier)) {
+          const { url } = applyNodeEsmResolution({
+            specifier,
+            parentUrl: importer,
+          });
+          const { applies } = URL_META.applyAssociations({ url, associations });
+          return applies;
+        }
+        return URL_META.applyAssociations({ url: importer, associations })
+          .applies;
+      };
+    } else if (typeof value === "function") {
+      customResolver = value;
+    } else {
+      customResolver = () => value;
+    }
+    const existing = packageConditionResolvers[condition];
+    if (existing) {
+      packageConditionResolvers[condition] = (...args) => {
+        const customResult = customResolver(...args);
+        return customResult === undefined ? existing(...args) : customResult;
+      };
+    } else {
+      packageConditionResolvers[condition] = customResolver;
+    }
+  }
+
+  return (specifier, importer) => {
+    const conditions = [];
+    for (const conditionCandidate of Object.keys(packageConditionResolvers)) {
+      const packageConditionResolver =
+        packageConditionResolvers[conditionCandidate];
+      if (typeof packageConditionResolver === "function") {
+        if (packageConditionResolver(specifier, importer)) {
+          conditions.push(conditionCandidate);
+        }
+      } else if (packageConditionResolver) {
+        conditions.push(conditionCandidate);
+      }
+    }
+    return conditions;
+  };
+};
+
 const addRelationshipWithPackageJson = ({
   reference,
   packageJsonUrl,
@@ -147,5 +251,22 @@ const addRelationshipWithPackageJson = ({
       packageJsonReference.urlInfo,
       String(packageJsonContentAsBuffer),
     );
+  }
+};
+
+const isBareSpecifier = (specifier) => {
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    return false;
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(specifier);
+    return false;
+  } catch {
+    return true;
   }
 };

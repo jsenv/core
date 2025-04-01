@@ -1,4 +1,4 @@
-# [0_js_module](../../script_type_module_inline_2.test.mjs#L31)
+# [0_js_module](../../script_type_module_inline_2.test.mjs#L34)
 
 ```js
 run({

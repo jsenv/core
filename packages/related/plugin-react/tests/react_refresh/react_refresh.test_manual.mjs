@@ -9,7 +9,7 @@ await startDevServer({
   port: 3589,
   https: { certificate, privateKey },
   acceptAnyIp: true,
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
   plugins: [
     jsenvPluginExplorer({
       groups: {

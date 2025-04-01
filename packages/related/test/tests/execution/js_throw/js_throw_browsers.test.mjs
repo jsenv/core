@@ -5,16 +5,16 @@ import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_exe
 const run = async ({ runtime }) => {
   const devServer = await startDevServer({
     logLevel: "off",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
     keepProcessAlive: false,
     port: 0,
   });
   const result = await execute({
     runtime,
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("./client/"),
     webServer: {
       origin: devServer.origin,
-      rootDirectoryUrl: new URL("./client/", import.meta.url),
+      rootDirectoryUrl: import.meta.resolve("./client/"),
     },
     fileRelativeUrl: `./main.html`,
   });

@@ -9,11 +9,11 @@ const countListeners = () => {
 const beforeBuild = countListeners();
 const buildPromise = build({
   logs: { level: "warn" },
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./client/"),
+  buildDirectoryUrl: import.meta.resolve("./dist/"),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   entryPoints: {
-    "./index.js": "index.js",
+    "./index.js": {},
   },
 });
 const whileBuilding = countListeners();

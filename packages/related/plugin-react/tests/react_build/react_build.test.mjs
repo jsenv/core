@@ -9,16 +9,19 @@ const run = async ({ runtimeCompat, minification }) => {
     new URL("./.jsenv_b/build/cjs_to_esm/", import.meta.url),
   );
   await build({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./main.html": "main.html" },
-    plugins: [jsenvPluginReact({ asJsModuleLogLevel: "warn" })],
-    bundling: false,
-    runtimeCompat,
-    minification,
+    sourceDirectoryUrl: import.meta.resolve("./client/"),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
+    entryPoints: {
+      "./main.html": {
+        plugins: [jsenvPluginReact({ asJsModuleLogLevel: "warn" })],
+        bundling: false,
+        runtimeCompat,
+        minification,
+      },
+    },
   });
   const buildServer = await startBuildServer({
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     keepProcessAlive: false,
     port: 0,
   });

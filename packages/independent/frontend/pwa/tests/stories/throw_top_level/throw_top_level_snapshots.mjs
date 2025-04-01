@@ -5,7 +5,7 @@ import { setupTest } from "@jsenv/pwa/tests/setup_test.mjs";
 
 const debug = false;
 const { testServer, page, browser } = await setupTest({
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  rootDirectoryUrl: import.meta.resolve("./client/"),
   debug,
 });
 const swFileUrl = new URL("./client/sw.js", import.meta.url);

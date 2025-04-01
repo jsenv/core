@@ -10,7 +10,9 @@
       "x": 0,
       "y": 0,
       "n": 0,
-      "raw": 0
+      "raw": 0,
+      "width": 0,
+      "height": 0
     },
     "style": {
       "foregroundColor": "red"
@@ -23,7 +25,9 @@
       "x": 0,
       "y": 0,
       "n": 0,
-      "raw": 5
+      "raw": 5,
+      "width": 1,
+      "height": 0
     },
     "style": {
       "foregroundColor": "red"
@@ -40,7 +44,9 @@
       "x": 1,
       "y": 0,
       "n": 1,
-      "raw": 6
+      "raw": 6,
+      "width": 0,
+      "height": 0
     },
     "style": {}
   }

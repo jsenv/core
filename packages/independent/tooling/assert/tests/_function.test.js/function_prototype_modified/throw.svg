@@ -5,11 +5,11 @@
   <foreignObject id="body" y="0" width="100%" height="337.45" overflow="hidden">
     <svg width="414.86" height="327.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
-        <text x="10" y="24.55">AssertionError: </text>
+        <text x="10" y="24.55" style="white-space:pre">AssertionError: </text>
         <text x="144.42" y="24.55" fill="#cd5555">actual</text>
-        <text x="203.23" y="24.55"> and </text>
+        <text x="194.83" y="24.55" style="white-space:pre"> and </text>
         <text x="236.84" y="24.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="24.55"> are different</text>
+        <text x="287.25" y="24.55" style="white-space:pre"> are different</text>
         <text x="10" y="62.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="62.55" fill="#7f7f7f">function</text>
         <text x="152.82" y="62.55" fill="#cd5555">Foo</text>
@@ -26,14 +26,14 @@
         <text x="77.21" y="100.55" fill="#7f7f7f">y</text>
         <text x="85.61" y="100.55" fill="#7f7f7f">p</text>
         <text x="94.01" y="100.55" fill="#7f7f7f">e</text>
-        <text x="102.42" y="100.55" fill="#7f7f7f">: </text>
+        <text x="102.42" y="100.55" style="white-space:pre" fill="#7f7f7f">: </text>
         <text x="119.22" y="100.55" fill="#7f7f7f">{</text>
         <text x="43.61" y="119.55" fill="#7f7f7f">a</text>
-        <text x="52.01" y="119.55" fill="#7f7f7f">: </text>
+        <text x="52.01" y="119.55" style="white-space:pre" fill="#7f7f7f">: </text>
         <text x="68.81" y="119.55" fill="#7f7f7f">true</text>
         <text x="102.42" y="119.55" fill="#7f7f7f">,</text>
         <text x="43.61" y="138.55" fill="#7f7f7f">b</text>
-        <text x="52.01" y="138.55" fill="#7f7f7f">: </text>
+        <text x="52.01" y="138.55" style="white-space:pre" fill="#7f7f7f">: </text>
         <text x="68.81" y="138.55" fill="#cd5555">false</text>
         <text x="110.82" y="138.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="157.55" fill="#7f7f7f">}</text>
@@ -55,14 +55,14 @@
         <text x="77.21" y="233.55" fill="#7f7f7f">y</text>
         <text x="85.61" y="233.55" fill="#7f7f7f">p</text>
         <text x="94.01" y="233.55" fill="#7f7f7f">e</text>
-        <text x="102.42" y="233.55" fill="#7f7f7f">: </text>
+        <text x="102.42" y="233.55" style="white-space:pre" fill="#7f7f7f">: </text>
         <text x="119.22" y="233.55" fill="#7f7f7f">{</text>
         <text x="43.61" y="252.55" fill="#7f7f7f">a</text>
-        <text x="52.01" y="252.55" fill="#7f7f7f">: </text>
+        <text x="52.01" y="252.55" style="white-space:pre" fill="#7f7f7f">: </text>
         <text x="68.81" y="252.55" fill="#7f7f7f">true</text>
         <text x="102.42" y="252.55" fill="#7f7f7f">,</text>
         <text x="43.61" y="271.55" fill="#7f7f7f">b</text>
-        <text x="52.01" y="271.55" fill="#7f7f7f">: </text>
+        <text x="52.01" y="271.55" style="white-space:pre" fill="#7f7f7f">: </text>
         <text x="68.81" y="271.55" fill="#11bc79">true</text>
         <text x="102.42" y="271.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="290.55" fill="#7f7f7f">}</text>

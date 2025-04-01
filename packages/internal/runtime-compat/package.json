@@ -1,18 +1,12 @@
 {
   "name": "@jsenv/runtime-compat",
-  "version": "1.3.4",
-  "description": "TODO",
+  "version": "1.3.6",
   "license": "MIT",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/internal/runtime-compat"
-  },
-  "engines": {
-    "node": ">=16.13.0"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "type": "module",
   "main": "./src/main.js",
@@ -21,6 +15,8 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/utils": "2.2.1"
+    "@jsenv/utils": "2.3.0",
+    "@jsenv/filesystem": "4.14.6",
+    "browserslist": "4.24.4"
   }
 }

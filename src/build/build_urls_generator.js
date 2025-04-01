@@ -1,13 +1,11 @@
-import { ANSI } from "@jsenv/humanize";
+// import { ANSI } from "@jsenv/humanize";
 import { urlIsInsideOf, urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 
 export const createBuildUrlsGenerator = ({
-  logger,
+  // logger,
   sourceDirectoryUrl,
   buildDirectoryUrl,
-  assetsDirectory,
 }) => {
-  const cache = {};
   const getUrlName = (url, urlInfo) => {
     if (!urlInfo) {
       return urlToFilename(url);
@@ -18,24 +16,29 @@ export const createBuildUrlsGenerator = ({
     return urlToFilename(url);
   };
 
-  const buildUrlCache = new Map();
-
+  const buildUrlMap = new Map();
   const associateBuildUrl = (url, buildUrl) => {
-    buildUrlCache.set(url, buildUrl);
-    logger.debug(`associate a build url
-${ANSI.color(url, ANSI.GREY)} ->
-${ANSI.color(buildUrl, ANSI.MAGENTA)}
-      `);
+    buildUrlMap.set(url, buildUrl);
+    //     logger.debug(`associate a build url
+    // ${ANSI.color(url, ANSI.GREY)} ->
+    // ${ANSI.color(buildUrl, ANSI.MAGENTA)}
+    // `);
   };
 
-  const generate = (url, { urlInfo, ownerUrlInfo }) => {
-    const buildUrlFromCache = buildUrlCache.get(url);
-    if (buildUrlFromCache) {
-      return buildUrlFromCache;
+  const nameSetPerDirectoryMap = new Map();
+  const generate = (url, { urlInfo, ownerUrlInfo, assetsDirectory }) => {
+    const buildUrlFromMap = buildUrlMap.get(url);
+    if (buildUrlFromMap) {
+      return buildUrlFromMap;
     }
     if (urlIsInsideOf(url, buildDirectoryUrl)) {
-      buildUrlCache.set(url, url);
+      associateBuildUrl(url, url);
       return url;
+    }
+    if (urlInfo.type === "entry_build") {
+      const buildUrl = new URL(urlInfo.filenameHint, buildDirectoryUrl).href;
+      associateBuildUrl(url, buildUrl);
+      return buildUrl;
     }
     if (
       urlInfo.type === "directory" ||
@@ -61,27 +64,25 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       urlInfo,
       ownerUrlInfo,
     });
-    let names = cache[directoryPath];
-    if (!names) {
-      names = [];
-      cache[directoryPath] = names;
+    let nameSet = nameSetPerDirectoryMap.get(directoryPath);
+    if (!nameSet) {
+      nameSet = new Set();
+      nameSetPerDirectoryMap.set(directoryPath, nameSet);
     }
     const urlObject = new URL(url);
     let { search, hash } = urlObject;
-    let name = getUrlName(url, urlInfo);
-    let [basename, extension] = splitFileExtension(name);
+    let urlName = getUrlName(url, urlInfo);
+    let [basename, extension] = splitFileExtension(urlName);
     extension = extensionMappings[extension] || extension;
     let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
     let integer = 1;
-    while (true) {
-      if (!names.includes(nameCandidate)) {
-        names.push(nameCandidate);
-        break;
-      }
+    while (nameSet.has(nameCandidate)) {
       integer++;
       nameCandidate = `${basename}${integer}${extension}`;
     }
-    const buildUrl = `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
+    const name = nameCandidate;
+    nameSet.add(name);
+    const buildUrl = `${buildDirectoryUrl}${directoryPath}${name}${search}${hash}`;
     associateBuildUrl(url, buildUrl);
     return buildUrl;
   };

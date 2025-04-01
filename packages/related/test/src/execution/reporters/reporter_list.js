@@ -4,6 +4,9 @@ import {
   createDynamicLog,
   humanizeDuration,
   humanizeMemory,
+  renderBigSection,
+  renderDetails,
+  renderSection,
   UNICODE,
 } from "@jsenv/humanize";
 import { urlToFileSystemPath } from "@jsenv/urls";
@@ -948,77 +951,4 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
     parts.push(`${counters.skipped} ${ANSI.color(`skipped`, COLOR_SKIPPED)}`);
   }
   return `${parts.join(", ")}`;
-};
-
-const renderBigSection = (params) => {
-  return renderSection({
-    width: 45,
-    ...params,
-  });
-};
-
-const renderSection = ({
-  title,
-  content,
-  dashColor = ANSI.GREY,
-  width = 38,
-  bottomSeparator = true,
-}) => {
-  let section = "";
-
-  if (title) {
-    const titleWidth = stripAnsi(title).length;
-    const minWidthRequired = `--- … ---`.length;
-    const needsTruncate = titleWidth + minWidthRequired >= width;
-    if (needsTruncate) {
-      const titleTruncated = title.slice(0, width - minWidthRequired);
-      const leftDashes = ANSI.color("---", dashColor);
-      const rightDashes = ANSI.color("---", dashColor);
-      section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
-    } else {
-      const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
-      const dashLeftCount = Math.floor(remainingWidth / 2);
-      const dashRightCount = remainingWidth - dashLeftCount;
-      const leftDashes = ANSI.color("-".repeat(dashLeftCount), dashColor);
-      const rightDashes = ANSI.color("-".repeat(dashRightCount), dashColor);
-      section += `${leftDashes} ${title} ${rightDashes}`;
-    }
-    section += "\n";
-  } else {
-    const topDashes = ANSI.color(`-`.repeat(width), dashColor);
-    section += topDashes;
-    section += "\n";
-  }
-  section += `${content}`;
-  if (bottomSeparator) {
-    section += "\n";
-    const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
-    section += bottomDashes;
-  }
-  return section;
-};
-
-const renderDetails = (data) => {
-  const details = [];
-  for (const key of Object.keys(data)) {
-    const value = data[key];
-    let valueString = "";
-    valueString += ANSI.color(`${key}:`, ANSI.GREY);
-    const useNonGreyAnsiColor =
-      typeof value === "string" && value.includes("\x1b");
-    valueString += " ";
-    valueString += useNonGreyAnsiColor
-      ? value
-      : ANSI.color(String(value), ANSI.GREY);
-    details.push(valueString);
-  }
-  if (details.length === 0) {
-    return "";
-  }
-
-  let string = "";
-  string += ` ${ANSI.color("(", ANSI.GREY)}`;
-  string += details.join(ANSI.color(", ", ANSI.GREY));
-  string += ANSI.color(")", ANSI.GREY);
-  return string;
 };

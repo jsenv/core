@@ -5,28 +5,29 @@ const buildStory = async (story) => {
   await build({
     handleSIGINT: false,
     logs: { level: "warn" },
-    sourceDirectoryUrl: new URL("./project/src/", import.meta.url),
-    buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./project/src/"),
+    buildDirectoryUrl: import.meta.resolve("./project/dist/"),
     entryPoints: {
-      "./main.html": "main.html",
-    },
-    plugins: [
-      {
-        resolveReference: (reference) => {
-          if (reference.specifier.includes("sw.js")) {
-            reference.filenameHint = "sw.js";
-            return new URL(`./project/src/sw_${story}.js`, import.meta.url);
-          }
-          return null;
+      "./main.html": {
+        plugins: [
+          {
+            resolveReference: (reference) => {
+              if (reference.specifier.includes("sw.js")) {
+                reference.filenameHint = "sw.js";
+                return import.meta.resolve(`./project/src/sw_${story}.js`);
+              }
+              return null;
+            },
+          },
+        ],
+        injections: {
+          "**/sw_*.js": () => ({
+            "self.NAME": story,
+          }),
         },
+        minification: false,
       },
-    ],
-    injections: {
-      "**/sw_*.js": () => ({
-        "self.NAME": story,
-      }),
     },
-    minification: false,
   });
 };
 
@@ -37,7 +38,7 @@ export const buildServer = await startBuildServer({
   logLevel: "warn",
   serverLogLevel: "warn",
   https: { certificate, privateKey },
-  buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
+  buildDirectoryUrl: import.meta.resolve("./project/dist/"),
   buildMainFilePath: "main.html",
   routes: [
     {

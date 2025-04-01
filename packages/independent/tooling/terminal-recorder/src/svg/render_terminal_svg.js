@@ -221,11 +221,24 @@ export const renderTerminalSvg = (
         continue;
       }
       const { position } = chunk;
-      const x =
-        offsetLeft + (position.x + leadingWhitespaceWidth(value)) * font.width;
-      const y = offsetTop + position.y + font.lineHeight * position.y;
-      const w = font.width * value.length;
       const attrs = {};
+
+      // Some SVG Implementations drop whitespaces
+      // https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xml:space
+      // and https://codepen.io/dmail/pen/wvLvbbP
+      if (
+        // in the following case we need to preserve whitespaces:
+        // - one or more leading whitespace
+        // - one or more trailing whitespace
+        // - 2 or more whitespace in the middle of the string
+        /^\s+|\s\s|\s+$/.test(value)
+      ) {
+        attrs.style = "white-space:pre";
+      }
+      const x = offsetLeft + position.x * font.width;
+      const y = offsetTop + position.y + font.lineHeight * position.y;
+      const w = font.width * position.width;
+
       if (style.bold) {
         attrs["font-weight"] = "bold";
       }
@@ -296,15 +309,4 @@ export const renderTerminalSvg = (
 
   const svgString = svg.renderAsString();
   return svgString;
-};
-
-// Some SVG Implementations drop whitespaces
-// https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xml:space
-// and https://codepen.io/dmail/pen/wvLvbbP
-const leadingWhitespaceWidth = (text) => {
-  if (text.trim() === "") {
-    return 0;
-  }
-  const leadingSpace = text.match(/^\s*/g);
-  return leadingSpace[0].length;
 };

@@ -1,4 +1,4 @@
-const executionOrder = [];
+var executionOrder = [];
 
 /* eslint-enable import-x/no-cycle */
 
@@ -10,8 +10,12 @@ function Tag() {
 }
 
 executionOrder.push("data");
-const data = () => "data";
-const Data = () => "Tag: ".concat(Tag());
+var data = function data() {
+  return "data";
+};
+var Data = function Data() {
+  return "Tag: ".concat(Tag());
+};
 
 // tslint:disable:ordered-imports
 

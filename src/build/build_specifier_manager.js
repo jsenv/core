@@ -26,7 +26,6 @@ import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_
 import { prependContent } from "../kitchen/prepend_content.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { isWebWorkerUrlInfo } from "../kitchen/web_workers.js";
-import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import {
   injectGlobalMappings,
   injectImportmapMappings,
@@ -38,8 +37,9 @@ export const createBuildSpecifierManager = ({
   logger,
   sourceDirectoryUrl,
   buildDirectoryUrl,
-  base,
   assetsDirectory,
+  buildUrlsGenerator,
+  base,
   length = 8,
 
   versioning,
@@ -47,12 +47,6 @@ export const createBuildSpecifierManager = ({
   versionLength,
   canUseImportmap,
 }) => {
-  const buildUrlsGenerator = createBuildUrlsGenerator({
-    logger,
-    sourceDirectoryUrl,
-    buildDirectoryUrl,
-    assetsDirectory,
-  });
   const placeholderAPI = createPlaceholderAPI({
     length,
   });
@@ -82,6 +76,7 @@ export const createBuildSpecifierManager = ({
       buildUrl = buildUrlsGenerator.generate(url, {
         urlInfo,
         ownerUrlInfo: reference.ownerUrlInfo,
+        assetsDirectory,
       });
     }
 
@@ -156,6 +151,12 @@ export const createBuildSpecifierManager = ({
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
       if (ownerUrlInfo.remapReference && !reference.isInline) {
+        if (reference.specifier.startsWith("file:")) {
+          const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.specifier);
+          if (rawUrlInfo && rawUrlInfo.type === "entry_build") {
+            return reference.specifier; // we want to ignore it
+          }
+        }
         const newSpecifier = ownerUrlInfo.remapReference(reference);
         reference.specifier = newSpecifier;
       }
@@ -188,6 +189,14 @@ export const createBuildSpecifierManager = ({
       return url;
     },
     redirectReference: (reference) => {
+      // don't think this is needed because we'll find the rawUrlInfo
+      // which contains the filenameHint
+      // const otherEntryBuildInfo = getOtherEntryBuildInfo(reference.url);
+      // if (otherEntryBuildInfo) {
+      //   reference.filenameHint = otherEntryBuildInfo.entryUrlInfo.filenameHint;
+      //   return null;
+      // }
+
       let referenceBeforeInlining = reference;
       if (
         referenceBeforeInlining.isInline &&
@@ -273,7 +282,6 @@ export const createBuildSpecifierManager = ({
         firstReference = firstReference.prev;
       }
       const rawUrl = firstReference.rawUrl || firstReference.url;
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
         finalUrlInfo.remapReference = bundleInfo.remapReference;
@@ -290,7 +298,21 @@ export const createBuildSpecifierManager = ({
           data: bundleInfo.data,
         };
       }
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       if (rawUrlInfo) {
+        if (rawUrlInfo.type === "entry_build") {
+          const otherEntryBuildInfo = rawUrlInfo.otherEntryBuildInfo;
+          if (
+            // we need to wait ONLY if we are versioning
+            // and only IF the reference can't be remapped globally or by importmap
+            // otherwise we can reference the file right away
+            versioning &&
+            getReferenceVersioningInfo(firstReference).type === "inline"
+          ) {
+            await otherEntryBuildInfo.promise;
+          }
+          finalUrlInfo.otherEntryBuildInfo = otherEntryBuildInfo;
+        }
         return rawUrlInfo;
       }
       // reference injected during "shape":
@@ -521,6 +543,15 @@ export const createBuildSpecifierManager = ({
           if (urlInfo.url.startsWith("ignore:")) {
             return;
           }
+          if (urlInfo.type === "entry_build") {
+            const otherEntryBuildInfo = urlInfo.otherEntryBuildInfo;
+            const entryUrlInfoVersion =
+              otherEntryBuildInfo.buildFileVersions[
+                otherEntryBuildInfo.buildRelativeUrl
+              ];
+            contentOnlyVersionMap.set(urlInfo, entryUrlInfoVersion);
+            return;
+          }
           let content = urlInfo.content;
           if (urlInfo.type === "html") {
             content = stringifyHtmlAst(
@@ -560,6 +591,9 @@ export const createBuildSpecifierManager = ({
       const getSetOfUrlInfoInfluencingVersion = (urlInfo) => {
         const placeholderInfluencingVersionSet = new Set();
         const visitContainedPlaceholders = (urlInfo) => {
+          if (urlInfo.type === "entry_build") {
+            return;
+          }
           const referencedContentVersion = contentOnlyVersionMap.get(urlInfo);
           if (!referencedContentVersion) {
             // ignored while traversing graph (not used anymore, inline, ...)
@@ -604,20 +638,24 @@ export const createBuildSpecifierManager = ({
         contentOnlyUrlInfo,
         contentOnlyVersion,
       ] of contentOnlyVersionMap) {
-        const setOfUrlInfoInfluencingVersion =
-          getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
         const versionPartSet = new Set();
-        versionPartSet.add(contentOnlyVersion);
-        for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
-          const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
-            urlInfoInfluencingVersion,
-          );
-          if (!otherUrlInfoContentVersion) {
-            throw new Error(
-              `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
+        if (contentOnlyUrlInfo.type === "entry_build") {
+          versionPartSet.add(contentOnlyVersion);
+        } else {
+          const setOfUrlInfoInfluencingVersion =
+            getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
+          versionPartSet.add(contentOnlyVersion);
+          for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
+            const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
+              urlInfoInfluencingVersion,
             );
+            if (!otherUrlInfoContentVersion) {
+              throw new Error(
+                `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
+              );
+            }
+            versionPartSet.add(otherUrlInfoContentVersion);
           }
-          versionPartSet.add(otherUrlInfoContentVersion);
         }
         const version = generateVersion(versionPartSet, versionLength);
         versionMap.set(contentOnlyUrlInfo, version);
@@ -1019,6 +1057,7 @@ export const createBuildSpecifierManager = ({
       const buildManifest = {};
       const buildContents = {};
       const buildInlineRelativeUrlSet = new Set();
+      const buildFileVersions = {};
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
         (urlInfo) => {
@@ -1032,6 +1071,9 @@ export const createBuildSpecifierManager = ({
           ) {
             return;
           }
+          if (urlInfo.type === "entry_build") {
+            return;
+          }
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned = versioning
             ? buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier)
@@ -1040,6 +1082,8 @@ export const createBuildSpecifierManager = ({
             buildUrl,
             buildDirectoryUrl,
           );
+          buildFileVersions[buildRelativeUrl] = versionMap.get(urlInfo);
+
           let contentKey;
           // if to guard for html where versioned build specifier is not generated
           if (buildSpecifierVersioned) {
@@ -1078,7 +1122,12 @@ export const createBuildSpecifierManager = ({
           }
         });
 
-      return { buildFileContents, buildInlineContents, buildManifest };
+      return {
+        buildFileContents,
+        buildInlineContents,
+        buildManifest,
+        buildFileVersions,
+      };
     },
   };
 };

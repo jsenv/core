@@ -1,4 +1,4 @@
-# [0_basic](../../service_worker_type_classic_build.test.mjs#L25)
+# [0_basic](../../service_worker_type_classic_build.test.mjs#L28)
 
 ```js
 run()
@@ -22,19 +22,19 @@ see [./build/](./build/)
     ],
     "resourcesFromJsenvBuild": {
       "/main.html": {
-        "version": "a3b3b305"
+        "version": "56f4059a"
       },
       "/css/style.css": {
         "version": "2e9d11a2",
         "versionedUrl": "/css/style.css?v=2e9d11a2"
       },
       "/js/a.js": {
-        "version": "76c9c177",
-        "versionedUrl": "/js/a.js?v=76c9c177"
+        "version": "64a14aef",
+        "versionedUrl": "/js/a.js?v=64a14aef"
       },
       "/js/b.js": {
-        "version": "54f517a9",
-        "versionedUrl": "/js/b.js?v=54f517a9"
+        "version": "0761aa10",
+        "versionedUrl": "/js/b.js?v=0761aa10"
       }
     }
   }

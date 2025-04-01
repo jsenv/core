@@ -19,3 +19,4 @@ todo.*
 **/tests/**/.jsenv_b/
 !**/tests/**/_*.test.*/**
 git_ignored/
+.DS_Store

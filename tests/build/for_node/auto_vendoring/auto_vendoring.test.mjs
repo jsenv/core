@@ -21,10 +21,12 @@ writeSymbolicLinkSync({
 const run = async () => {
   await build({
     sourceDirectoryUrl: new URL("./git_ignored/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./main.js": "main_after_build.js" },
-    runtimeCompat: {
-      node: "20",
+    buildDirectoryUrl: import.meta.resolve("./build/"),
+    entryPoints: {
+      "./main.js": {
+        buildRelativeUrl: "./main_after_build.js",
+        runtimeCompat: { node: "20" },
+      },
     },
   });
 };

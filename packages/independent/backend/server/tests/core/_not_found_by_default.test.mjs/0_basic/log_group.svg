@@ -7,8 +7,8 @@
       <g>
         <text x="10" y="24.55">GET http://127.0.0.1/</text>
         <text x="26.8" y="43.55" fill="#DAA520">404</text>
-        <text x="60.41" y="43.55"> The URL / does not exist on this server.</text>
-        <text x="26.8" y="62.55">  The list of existing endpoints is available at /.internal/route_inspector.</text>
+        <text x="52.01" y="43.55" style="white-space:pre"> The URL / does not exist on this server.</text>
+        <text x="10" y="62.55" style="white-space:pre">  The list of existing endpoints is available at /.internal/route_inspector.</text>
       </g>
     </svg>
   </foreignObject>

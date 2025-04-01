@@ -32,6 +32,7 @@ export const getCorePlugins = ({
 
   referenceAnalysis = {},
   nodeEsmResolution = {},
+  packageConditions,
   magicExtensions,
   magicDirectoryIndex,
   directoryListing = true,
@@ -102,10 +103,12 @@ export const getCorePlugins = ({
       },
     },
     ...(nodeEsmResolution
-      ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
+      ? [jsenvPluginNodeEsmResolution(nodeEsmResolution, packageConditions)]
       : []),
     jsenvPluginWebResolution(),
-    jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
+    jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect, {
+      rootDirectoryUrl,
+    }),
     jsenvPluginVersionSearchParam(),
 
     // "jsenvPluginSupervisor" MUST be after "jsenvPluginInlining" as it needs inline script to be cooked

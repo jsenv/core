@@ -7,28 +7,24 @@ const run = async () => {
     logs: { level: "warn" },
     sourceDirectoryUrl: import.meta.resolve("./source/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./index.mjs": "index.mjs" },
-    runtimeCompat: { node: "20" },
-    subbuilds: [
-      {
-        buildDirectoryUrl: import.meta.resolve("./build/client/"),
-        entryPoints: { "./client/main.js": "main.js" },
-        plugins: [jsenvPluginAsJsClassic()],
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
+    entryPoints: {
+      "./index.mjs": {
+        runtimeCompat: { node: "20" },
         mappings: {
           "./client/main.js": "./client/main.js?as_js_classic",
         },
+      },
+      "./client/main.js?as_js_classic": {
+        runtimeCompat: { chrome: "0", firefox: "0" },
+        plugins: [jsenvPluginAsJsClassic()],
         sourcemaps: "file",
         sourcemapsSourcesContent: true,
         bundling: false,
         minification: false,
         versioning: false,
-        runtimeCompat: {
-          chrome: "0",
-          firefox: "0",
-        },
       },
-    ],
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    },
   });
 };
 

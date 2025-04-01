@@ -6,9 +6,11 @@
     <link rel="icon" href="data:,">
   </head>
   <body>
-    <script>window.resultPromise = new Promise(resolve => {
-  window.resolveResultPromise = resolve;
-});</script>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
     <script type="module" src="/js/main.js"></script>
   </body>
 </html>

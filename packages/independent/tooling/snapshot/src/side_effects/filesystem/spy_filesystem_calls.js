@@ -4,7 +4,7 @@
 // https://github.com/tschaub/mock-fs/issues/348
 
 import {
-  comparePathnames,
+  compareFileUrls,
   removeDirectorySync,
   removeFileSync,
   writeFileSync,
@@ -335,12 +335,7 @@ export const spyFilesystemCalls = (
       }
       fileRestoreMap.clear();
       const dirUrls = Array.from(dirRestoreMap.keys());
-      dirUrls.sort((left, right) => {
-        return comparePathnames(
-          new URL(left).pathname,
-          new URL(right).pathname,
-        );
-      });
+      dirUrls.sort(compareFileUrls);
       for (const dirUrl of dirUrls) {
         const restore = dirRestoreMap.get(dirUrl);
         restore();

@@ -1,4 +1,4 @@
-# [0_error](../../new_url_directory.test.mjs#L27)
+# [0_error](../../new_url_directory.test.mjs#L30)
 
 ```js
 run({
@@ -15,7 +15,7 @@ base/client/main.html:15:40
 14 |     <script type="module">
 15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
                                             ^
-  at redirectReference (@jsenv/core/src/plugins/directory_reference_effect/jsenv_plugin_directory_reference_effect.js:56:23)
+  at redirectReference (@jsenv/core/src/plugins/directory_reference_effect/jsenv_plugin_directory_reference_effect.js:71:23)
   at callHook (@jsenv/core/src/plugins/plugin_controller.js:170:25)
   at Object.callHooks (@jsenv/core/src/plugins/plugin_controller.js:212:27)
   at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:219:26)

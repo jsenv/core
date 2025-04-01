@@ -6,16 +6,9 @@
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./index.html": "index.html",
-  },
-  bundling: {
-    js_module: {
-      chunks: {
-        vendors: { "file:///**/node_modules/": true },
-      },
-    },
+    "./index.html": {},
   },
 });

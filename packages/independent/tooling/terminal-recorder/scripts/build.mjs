@@ -4,28 +4,26 @@ import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
-  entryPoints: { "./client/xterm.html": "xterm.html" },
-  runtimeCompat: { chrome: "100" },
-  minification: false,
-  versioning: false,
-  subbuilds: [
-    {
-      buildDirectoryUrl: import.meta.resolve("../dist/client/"),
-      entryPoints: { "./main_browser.js": "terminal_recorder_browser.js" },
+  entryPoints: {
+    "./client/xterm.html": {
+      base: "./",
       runtimeCompat: { chrome: "100" },
-      mappings: {
-        "emoji-regex/index.js": "emoji-regex/index.mjs",
-      },
+      minification: false,
+      versioning: false,
+    },
+    "./main_browser.js": {
+      base: "./",
+      buildRelativeUrl: "terminal_recorder_browser.js",
+      runtimeCompat: { chrome: "100" },
       plugins: [
         jsenvPluginCommonJs({
           include: {
             "file:///**/node_modules/he/": true,
-            "file:///**/node_modules/string-width/": true,
           },
         }),
       ],
       minification: false,
       versioning: false,
     },
-  ],
+  },
 });

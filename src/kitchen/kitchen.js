@@ -74,7 +74,7 @@ export const createKitchen = ({
       sourcemaps,
       outDirectoryUrl,
     },
-    resolve: (specifier, importer) => {
+    resolve: (specifier, importer = rootDirectoryUrl) => {
       const { url, packageDirectoryUrl, packageJson } = applyNodeEsmResolution({
         conditions: packageConditions,
         parentUrl: importer,

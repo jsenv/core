@@ -1,0 +1,13 @@
+{
+  "name": "internal",
+  "private": true,
+  "exports": {
+    ".": {
+      "import": {
+        "development": "./internal_dev.js",
+        "default": "./internal_build.js"
+      }
+    },
+    "./*": "./*"
+  }
+}

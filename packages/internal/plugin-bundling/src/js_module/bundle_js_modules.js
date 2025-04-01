@@ -7,6 +7,7 @@ import {
   injectQueryParams,
   isFileSystemPath,
   urlToBasename,
+  urlToRelativeUrl,
 } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 import { fileUrlConverter } from "../file_url_converter.js";
@@ -36,6 +37,7 @@ export const bundleJsModules = async (
     isSupportedOnCurrentClients,
     getPluginMeta,
     kitchen,
+    assetsDirectory,
   } = jsModuleUrlInfos[0].context;
   const graph = jsModuleUrlInfos[0].graph;
   if (buildDirectoryUrl === undefined) {
@@ -79,8 +81,8 @@ export const bundleJsModules = async (
           workspaces = packageJSON.workspaces;
         }
       }
-      let nodeModuleChunkName = "node_modules";
-      let packagesChunkName = "packages";
+      let nodeModuleChunkName = `node_modules`;
+      let packagesChunkName = `packages`;
 
       if (packageName) {
         let packageNameAsFilename = packageName
@@ -90,6 +92,11 @@ export const bundleJsModules = async (
         nodeModuleChunkName = `${packageNameAsFilename}_node_modules`;
         packagesChunkName = `${packageNameAsFilename}_packages`;
       }
+      if (assetsDirectory) {
+        nodeModuleChunkName = `${assetsDirectory}${nodeModuleChunkName}`;
+        packagesChunkName = `${assetsDirectory}${packagesChunkName}`;
+      }
+
       chunks[nodeModuleChunkName] = {
         "file:///**/node_modules/": true,
         ...chunks.vendors,
@@ -487,7 +494,22 @@ const rollupPluginJsenv = ({
               continue;
             }
             const importUrl = getOriginalUrl(importRollupFileInfo);
-            const rollupSpecifier = `./${importRollupFileInfo.fileName}`;
+            const importerBuildUrl = new URL(
+              rollupFileInfo.fileName,
+              buildDirectoryUrl,
+            ).href;
+            const urlToImport = new URL(
+              importRollupFileInfo.fileName,
+              buildDirectoryUrl,
+            ).href;
+            const specifierRelative = urlToRelativeUrl(
+              urlToImport,
+              importerBuildUrl,
+            );
+            const rollupSpecifier =
+              specifierRelative[0] === "."
+                ? specifierRelative
+                : `./${specifierRelative}`;
             specifierToUrlMap.set(rollupSpecifier, importUrl);
           }
         }
@@ -557,6 +579,7 @@ const rollupPluginJsenv = ({
                     reference.specifier,
                   );
                   if (!specifierBeforeRollup) {
+                    // process.emitWarning?
                     console.warn(
                       `cannot remap "${reference.specifier}" back to specifier before rollup, this is unexpected.`,
                     );
@@ -710,6 +733,14 @@ const rollupPluginJsenv = ({
             moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
           };
         }
+      }
+      const urlInfo = graph.getUrlInfo(resolvedUrl);
+      if (urlInfo.type === "entry_build") {
+        return {
+          id: resolvedUrl,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+        };
       }
       return {
         id: PATH_AND_URL_CONVERTER.asFilePath(resolvedUrl),
