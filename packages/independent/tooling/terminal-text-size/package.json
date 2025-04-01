@@ -1,7 +1,6 @@
 {
   "name": "@jsenv/terminal-text-size",
   "version": "0.0.1",
-  "private": true,
   "type": "module",
   "exports": {
     ".": {
@@ -9,6 +8,9 @@
       "browser": "./src/terminal_text_size_browser.js"
     },
     "./*": "./*"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "sideEffects": false,
   "dependencies": {
