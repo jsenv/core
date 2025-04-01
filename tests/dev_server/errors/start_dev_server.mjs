@@ -45,7 +45,7 @@ export const devServer = await startDevServer({
       refreshInstrumentation: { "file://**/*.jsx": true },
     }),
   ],
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   // sourcemaps: "file",
   // sourcemapsSourcesProtocol: "source-maps://",
   ribbon: false,

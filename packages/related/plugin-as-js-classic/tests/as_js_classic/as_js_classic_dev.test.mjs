@@ -17,7 +17,7 @@ const devServer = await startDevServer({
   logLevel: "warn",
   plugins: [jsenvPluginAsJsClassic()],
   sourceDirectoryUrl,
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   keepProcessAlive: false,
   clientAutoreload: false,
   supervisor: false,

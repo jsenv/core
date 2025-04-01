@@ -13,7 +13,7 @@ const test = async (params) => {
       "./main.html": "main.html",
     },
     plugins: [jsenvPluginAsJsClassic()],
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
     ...params,
   });
   buildDirectorySnapshot.compare();

@@ -17,7 +17,7 @@ const test = async ({ expectedFileCount, ...params }) => {
     entryPoints: {
       "./main.js": "main.js",
     },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
     ...params,
   });
   const actual = Object.keys(buildFileContents).length;

@@ -19,7 +19,7 @@ const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
   sourceDirectoryUrl,
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   keepProcessAlive: false,
   port: 0,
 });

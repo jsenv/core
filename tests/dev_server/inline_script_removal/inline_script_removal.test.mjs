@@ -26,7 +26,7 @@ const devServer = await startDevServer({
   clientAutoreload: {
     cooldownBetweenFileEvents: 250,
   },
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   port: 0,
 });
 const browser = await chromium.launch({ headless: !debug });

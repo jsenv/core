@@ -11,7 +11,7 @@ import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: import.meta.resolve("./client/"),
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   keepProcessAlive: false,
   port: 0,
 });

@@ -27,7 +27,7 @@ const run = async () => {
     logLevel: "warn",
     serverLogLevel: "warn",
     sourceDirectoryUrl: import.meta.resolve("./client/"),
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
     keepProcessAlive: true,
     port: 8888,
     plugins: [jsenvPluginToolbar({ logLevel: "debug" })],

@@ -20,7 +20,7 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": "main.html",
     },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
     ...params,
   });
   buildDirectorySnapshot.compare();

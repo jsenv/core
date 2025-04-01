@@ -28,7 +28,7 @@ const run = async () => {
         },
       },
     ],
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   });
 };
 

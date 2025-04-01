@@ -30,7 +30,7 @@ startDevServer({
   port: 5678,
   sourceDirectoryUrl: import.meta.resolve("./client/"),
   sourceMainFilePath: "main.html",
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   plugins,
   sourcemaps: "file",
   supervisor: {

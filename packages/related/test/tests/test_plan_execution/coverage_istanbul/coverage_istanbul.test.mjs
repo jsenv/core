@@ -21,7 +21,7 @@ await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
       sourceDirectoryUrl: new URL("./", import.meta.url),
       keepProcessAlive: false,
       port: 0,
-      outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+      outDirectoryUrl: import.meta.resolve("./.jsenv/"),
       clientAutoreload: false,
       ribbon: false,
     });

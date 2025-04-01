@@ -15,7 +15,7 @@ const devServer = await startDevServer({
   clientAutoreload: false,
   supervisor: false,
   plugins: [jsenvPluginAsJsClassic()],
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   ribbon: false,
   sourcemaps: "none",
   port: 0,

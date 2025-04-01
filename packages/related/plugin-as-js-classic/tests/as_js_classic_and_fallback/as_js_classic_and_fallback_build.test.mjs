@@ -15,11 +15,10 @@ const test = async (params) => {
     entryPoints: {
       "./main.html": {
         plugins: [jsenvPluginAsJsClassic()],
+        ...params,
       },
     },
-
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
+    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   });
   buildDirectorySnapshot.compare();
   const server = await startFileServer({
