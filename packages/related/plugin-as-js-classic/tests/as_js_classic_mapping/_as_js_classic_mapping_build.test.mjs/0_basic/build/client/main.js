@@ -20,4 +20,4 @@
     return 42;
   };
 });
-//# sourceMappingURL=main.js.map
+//# sourceMappingURL=main.js.map?as_js_classic%3Fas_js_classic

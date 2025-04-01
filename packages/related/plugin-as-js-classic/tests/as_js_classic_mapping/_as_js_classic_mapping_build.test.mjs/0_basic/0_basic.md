@@ -1,4 +1,4 @@
-# [0_basic](../../as_js_classic_mapping_build.test.mjs#L36)
+# [0_basic](../../as_js_classic_mapping_build.test.mjs#L34)
 
 ```js
 run()

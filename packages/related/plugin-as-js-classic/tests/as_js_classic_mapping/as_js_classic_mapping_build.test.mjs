@@ -1,5 +1,3 @@
-// TODO: fix this
-
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
@@ -13,12 +11,12 @@ const run = async () => {
     entryPoints: {
       "./index.mjs": {
         runtimeCompat: { node: "20" },
-      },
-      "./client/main.js": {
-        runtimeCompat: { chrome: "0", firefox: "0" },
         mappings: {
           "./client/main.js": "./client/main.js?as_js_classic",
         },
+      },
+      "./client/main.js?as_js_classic": {
+        runtimeCompat: { chrome: "0", firefox: "0" },
         plugins: [jsenvPluginAsJsClassic()],
         sourcemaps: "file",
         sourcemapsSourcesContent: true,
