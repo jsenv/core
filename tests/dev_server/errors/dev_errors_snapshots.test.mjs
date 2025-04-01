@@ -88,31 +88,30 @@ const run = async ({ browserLauncher, browserName }) => {
   }
   await browser.close();
 };
-await snapshotTests(
-  import.meta.url,
-  ({ test }) => {
-    test("0_chromium", () =>
-      run({
-        browserLauncher: chromium,
-        browserName: "chromium",
-      }));
-    test("1_firefox", () =>
-      run({
-        browserLauncher: firefox,
-        browserName: "firefox",
-      }));
-    test("2_webkit", () =>
-      run({
-        browserLauncher: webkit,
-        browserName: "webkit",
-      }));
+snapshotTests.prefConfigure({
+  filesystemActions: {
+    "**/.jsenv/": "ignore",
+    "**/*.png": "compare_presence_only",
   },
-  {
-    filesystemActions: {
-      "**/.jsenv/": "ignore",
-      "**/*.png": "compare_presence_only",
-    },
-  },
-);
+});
+await snapshotTests(import.meta.url, ({ test }) => {
+  test("0_chromium", () =>
+    run({
+      browserLauncher: chromium,
+      browserName: "chromium",
+    }));
+
+  test("1_firefox", () =>
+    run({
+      browserLauncher: firefox,
+      browserName: "firefox",
+    }));
+
+  test("2_webkit", () =>
+    run({
+      browserLauncher: webkit,
+      browserName: "webkit",
+    }));
+});
 
 await devServer.stop();
