@@ -707,94 +707,100 @@ const error$2 = (...args) => console.error(...args);
 
 const errorDisabled$2 = () => {};
 
-const segmenter$2 = new Intl.Segmenter();
+const createMeasureTextWidth$2 = ({ stripAnsi }) => {
+  const segmenter = new Intl.Segmenter();
+  const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
 
-const defaultIgnorableCodePointRegex$2 = /^\p{Default_Ignorable_Code_Point}$/u;
-
-const measureTextWidth$2 = (
-  string,
-  {
-    ambiguousIsNarrow = true,
-    countAnsiEscapeCodes = false,
-    skipEmojis = false,
-  } = {},
-) => {
-  if (typeof string !== "string" || string.length === 0) {
-    return 0;
-  }
-
-  if (!countAnsiEscapeCodes) {
-    string = stripVTControlCharacters(string);
-  }
-
-  if (string.length === 0) {
-    return 0;
-  }
-
-  let width = 0;
-  const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
-
-  for (const { segment: character } of segmenter$2.segment(string)) {
-    const codePoint = character.codePointAt(0);
-
-    // Ignore control characters
-    if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
-      continue;
+  const measureTextWidth = (
+    string,
+    {
+      ambiguousIsNarrow = true,
+      countAnsiEscapeCodes = false,
+      skipEmojis = false,
+    } = {},
+  ) => {
+    if (typeof string !== "string" || string.length === 0) {
+      return 0;
     }
 
-    // Ignore zero-width characters
-    if (
-      (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
-      codePoint === 0xfe_ff // Zero-width no-break space
-    ) {
-      continue;
+    if (!countAnsiEscapeCodes) {
+      string = stripAnsi(string);
     }
 
-    // Ignore combining characters
-    if (
-      (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
-      (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
-      (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
-      (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
-      (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
-    ) {
-      continue;
+    if (string.length === 0) {
+      return 0;
     }
 
-    // Ignore surrogate pairs
-    if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
-      continue;
-    }
+    let width = 0;
+    const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
 
-    // Ignore variation selectors
-    if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
-      continue;
-    }
+    for (const { segment: character } of segmenter.segment(string)) {
+      const codePoint = character.codePointAt(0);
 
-    // This covers some of the above cases, but we still keep them for performance reasons.
-    if (defaultIgnorableCodePointRegex$2.test(character)) {
-      continue;
-    }
-
-    if (!skipEmojis && emojiRegex().test(character)) {
-      if (process.env.CAPTURING_SIDE_EFFECTS) {
-        if (character === "✔️") {
-          width += 2;
-          continue;
-        }
+      // Ignore control characters
+      if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+        continue;
       }
-      width += measureTextWidth$2(character, {
-        skipEmojis: true,
-        countAnsiEscapeCodes: true, // to skip call to stripVTControlCharacters
-      });
-      continue;
+
+      // Ignore zero-width characters
+      if (
+        (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+        codePoint === 0xfe_ff // Zero-width no-break space
+      ) {
+        continue;
+      }
+
+      // Ignore combining characters
+      if (
+        (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+        (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+        (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+        (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+        (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+      ) {
+        continue;
+      }
+
+      // Ignore surrogate pairs
+      if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+        continue;
+      }
+
+      // Ignore variation selectors
+      if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+        continue;
+      }
+
+      // This covers some of the above cases, but we still keep them for performance reasons.
+      if (defaultIgnorableCodePointRegex.test(character)) {
+        continue;
+      }
+
+      if (!skipEmojis && emojiRegex().test(character)) {
+        if (process.env.CAPTURING_SIDE_EFFECTS) {
+          if (character === "✔️") {
+            width += 2;
+            continue;
+          }
+        }
+        width += measureTextWidth(character, {
+          skipEmojis: true,
+          countAnsiEscapeCodes: true, // to skip call to stripAnsi
+        });
+        continue;
+      }
+
+      width += eastAsianWidth(codePoint, eastAsianWidthOptions);
     }
 
-    width += eastAsianWidth(codePoint, eastAsianWidthOptions);
-  }
-
-  return width;
+    return width;
+  };
+  return measureTextWidth;
 };
+
+const measureTextWidth$2 = createMeasureTextWidth$2({
+  stripAnsi: stripVTControlCharacters,
+});
 
 /*
  * see also https://github.com/vadimdemedes/ink
@@ -9592,94 +9598,100 @@ const error$1 = (...args) => console.error(...args);
 
 const errorDisabled$1 = () => {};
 
-const segmenter$1 = new Intl.Segmenter();
+const createMeasureTextWidth$1 = ({ stripAnsi }) => {
+  const segmenter = new Intl.Segmenter();
+  const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
 
-const defaultIgnorableCodePointRegex$1 = /^\p{Default_Ignorable_Code_Point}$/u;
-
-const measureTextWidth$1 = (
-  string,
-  {
-    ambiguousIsNarrow = true,
-    countAnsiEscapeCodes = false,
-    skipEmojis = false,
-  } = {},
-) => {
-  if (typeof string !== "string" || string.length === 0) {
-    return 0;
-  }
-
-  if (!countAnsiEscapeCodes) {
-    string = stripVTControlCharacters(string);
-  }
-
-  if (string.length === 0) {
-    return 0;
-  }
-
-  let width = 0;
-  const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
-
-  for (const { segment: character } of segmenter$1.segment(string)) {
-    const codePoint = character.codePointAt(0);
-
-    // Ignore control characters
-    if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
-      continue;
+  const measureTextWidth = (
+    string,
+    {
+      ambiguousIsNarrow = true,
+      countAnsiEscapeCodes = false,
+      skipEmojis = false,
+    } = {},
+  ) => {
+    if (typeof string !== "string" || string.length === 0) {
+      return 0;
     }
 
-    // Ignore zero-width characters
-    if (
-      (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
-      codePoint === 0xfe_ff // Zero-width no-break space
-    ) {
-      continue;
+    if (!countAnsiEscapeCodes) {
+      string = stripAnsi(string);
     }
 
-    // Ignore combining characters
-    if (
-      (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
-      (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
-      (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
-      (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
-      (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
-    ) {
-      continue;
+    if (string.length === 0) {
+      return 0;
     }
 
-    // Ignore surrogate pairs
-    if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
-      continue;
-    }
+    let width = 0;
+    const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
 
-    // Ignore variation selectors
-    if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
-      continue;
-    }
+    for (const { segment: character } of segmenter.segment(string)) {
+      const codePoint = character.codePointAt(0);
 
-    // This covers some of the above cases, but we still keep them for performance reasons.
-    if (defaultIgnorableCodePointRegex$1.test(character)) {
-      continue;
-    }
-
-    if (!skipEmojis && emojiRegex$1().test(character)) {
-      if (process.env.CAPTURING_SIDE_EFFECTS) {
-        if (character === "✔️") {
-          width += 2;
-          continue;
-        }
+      // Ignore control characters
+      if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+        continue;
       }
-      width += measureTextWidth$1(character, {
-        skipEmojis: true,
-        countAnsiEscapeCodes: true, // to skip call to stripVTControlCharacters
-      });
-      continue;
+
+      // Ignore zero-width characters
+      if (
+        (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+        codePoint === 0xfe_ff // Zero-width no-break space
+      ) {
+        continue;
+      }
+
+      // Ignore combining characters
+      if (
+        (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+        (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+        (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+        (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+        (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+      ) {
+        continue;
+      }
+
+      // Ignore surrogate pairs
+      if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+        continue;
+      }
+
+      // Ignore variation selectors
+      if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+        continue;
+      }
+
+      // This covers some of the above cases, but we still keep them for performance reasons.
+      if (defaultIgnorableCodePointRegex.test(character)) {
+        continue;
+      }
+
+      if (!skipEmojis && emojiRegex$1().test(character)) {
+        if (process.env.CAPTURING_SIDE_EFFECTS) {
+          if (character === "✔️") {
+            width += 2;
+            continue;
+          }
+        }
+        width += measureTextWidth(character, {
+          skipEmojis: true,
+          countAnsiEscapeCodes: true, // to skip call to stripAnsi
+        });
+        continue;
+      }
+
+      width += eastAsianWidth$1(codePoint, eastAsianWidthOptions);
     }
 
-    width += eastAsianWidth$1(codePoint, eastAsianWidthOptions);
-  }
-
-  return width;
+    return width;
+  };
+  return measureTextWidth;
 };
+
+const measureTextWidth$1 = createMeasureTextWidth$1({
+  stripAnsi: stripVTControlCharacters,
+});
 
 /*
  * see also https://github.com/vadimdemedes/ink
@@ -20524,6 +20536,7 @@ const renderTable = (
   inputGrid,
   {
     ansi,
+    indent = 0,
     borderCollapse,
     borderSeparatedOnColorConflict,
     borderSpacing = 0,
@@ -21478,8 +21491,11 @@ const renderTable = (
           }
           x++;
         }
-        rowText += lineText;
         lineIndex++;
+        if (indent && log) {
+          rowText = " ".repeat(indent) + rowText;
+        }
+        rowText += lineText;
         rowText += "\n";
       }
       return rowText;
@@ -21805,90 +21821,6 @@ const createCell = (
   updateValue(value);
 
   return cell;
-};
-
-const tableFromObjects = (objects, { head, body, foot } = {}) => {
-  const propSet = new Set();
-  for (const object of objects) {
-    const names = Object.getOwnPropertyNames(object);
-    for (const name of names) {
-      propSet.add(name);
-    }
-  }
-  const props = Array.from(propSet);
-  let headRow = [];
-  if (head) {
-    for (const prop of head) {
-      const headCell = {
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-        ...prop,
-      };
-      headRow.push(headCell);
-    }
-  } else {
-    for (const prop of props) {
-      const headCell = {
-        value: prop,
-        borderLeft: {},
-        borderRight: {},
-        borderBottom: {},
-      };
-      headRow.push(headCell);
-    }
-  }
-  headRow[0].borderLeft = null;
-  headRow[headRow.length - 1].borderRight = null;
-
-  const bodyRows = [];
-  let bodyLastRow;
-  for (const object of objects) {
-    const bodyRow = [];
-    let x = 0;
-    for (const prop of props) {
-      const cellProps = body?.[x] || {};
-      const bodyCell = {
-        value: object[prop],
-        borderLeft: {},
-        borderRight: {},
-        ...cellProps,
-      };
-      bodyRow.push(bodyCell);
-      x++;
-    }
-    bodyRow[0].borderLeft = null;
-    bodyRow[bodyRow.length - 1].borderRight = null;
-    bodyRows.push(bodyRow);
-    bodyLastRow = bodyRow;
-  }
-  if (bodyLastRow) {
-    for (const bodyLastLineCell of bodyLastRow) {
-      if (bodyLastLineCell.borderBottom === undefined) {
-        bodyLastLineCell.borderBottom = { color: null };
-      }
-    }
-  }
-
-  const rows = [headRow, ...bodyRows];
-  if (!foot) {
-    return rows;
-  }
-
-  let footRow = [];
-  for (const props of foot) {
-    const footCell = {
-      ...props,
-      borderTop: {},
-      borderLeft: {},
-      borderRight: {},
-    };
-    footRow.push(footCell);
-  }
-  footRow[0].borderLeft = null;
-  footRow[headRow.length - 1].borderRight = null;
-  rows.push(footRow);
-  return rows;
 };
 
 const escapeChars = (string, replacements) => {
@@ -22903,94 +22835,100 @@ const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
 
-const segmenter = new Intl.Segmenter();
+const createMeasureTextWidth = ({ stripAnsi }) => {
+  const segmenter = new Intl.Segmenter();
+  const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
 
-const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
-
-const measureTextWidth = (
-  string,
-  {
-    ambiguousIsNarrow = true,
-    countAnsiEscapeCodes = false,
-    skipEmojis = false,
-  } = {},
-) => {
-  if (typeof string !== "string" || string.length === 0) {
-    return 0;
-  }
-
-  if (!countAnsiEscapeCodes) {
-    string = stripVTControlCharacters(string);
-  }
-
-  if (string.length === 0) {
-    return 0;
-  }
-
-  let width = 0;
-  const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
-
-  for (const { segment: character } of segmenter.segment(string)) {
-    const codePoint = character.codePointAt(0);
-
-    // Ignore control characters
-    if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
-      continue;
+  const measureTextWidth = (
+    string,
+    {
+      ambiguousIsNarrow = true,
+      countAnsiEscapeCodes = false,
+      skipEmojis = false,
+    } = {},
+  ) => {
+    if (typeof string !== "string" || string.length === 0) {
+      return 0;
     }
 
-    // Ignore zero-width characters
-    if (
-      (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
-      codePoint === 0xfe_ff // Zero-width no-break space
-    ) {
-      continue;
+    if (!countAnsiEscapeCodes) {
+      string = stripAnsi(string);
     }
 
-    // Ignore combining characters
-    if (
-      (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
-      (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
-      (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
-      (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
-      (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
-    ) {
-      continue;
+    if (string.length === 0) {
+      return 0;
     }
 
-    // Ignore surrogate pairs
-    if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
-      continue;
-    }
+    let width = 0;
+    const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
 
-    // Ignore variation selectors
-    if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
-      continue;
-    }
+    for (const { segment: character } of segmenter.segment(string)) {
+      const codePoint = character.codePointAt(0);
 
-    // This covers some of the above cases, but we still keep them for performance reasons.
-    if (defaultIgnorableCodePointRegex.test(character)) {
-      continue;
-    }
-
-    if (!skipEmojis && emojiRegex$2().test(character)) {
-      if (process.env.CAPTURING_SIDE_EFFECTS) {
-        if (character === "✔️") {
-          width += 2;
-          continue;
-        }
+      // Ignore control characters
+      if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+        continue;
       }
-      width += measureTextWidth(character, {
-        skipEmojis: true,
-        countAnsiEscapeCodes: true, // to skip call to stripVTControlCharacters
-      });
-      continue;
+
+      // Ignore zero-width characters
+      if (
+        (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+        codePoint === 0xfe_ff // Zero-width no-break space
+      ) {
+        continue;
+      }
+
+      // Ignore combining characters
+      if (
+        (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+        (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+        (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+        (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+        (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+      ) {
+        continue;
+      }
+
+      // Ignore surrogate pairs
+      if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+        continue;
+      }
+
+      // Ignore variation selectors
+      if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+        continue;
+      }
+
+      // This covers some of the above cases, but we still keep them for performance reasons.
+      if (defaultIgnorableCodePointRegex.test(character)) {
+        continue;
+      }
+
+      if (!skipEmojis && emojiRegex$2().test(character)) {
+        if (process.env.CAPTURING_SIDE_EFFECTS) {
+          if (character === "✔️") {
+            width += 2;
+            continue;
+          }
+        }
+        width += measureTextWidth(character, {
+          skipEmojis: true,
+          countAnsiEscapeCodes: true, // to skip call to stripAnsi
+        });
+        continue;
+      }
+
+      width += eastAsianWidth$2(codePoint, eastAsianWidthOptions);
     }
 
-    width += eastAsianWidth$2(codePoint, eastAsianWidthOptions);
-  }
-
-  return width;
+    return width;
+  };
+  return measureTextWidth;
 };
+
+const measureTextWidth = createMeasureTextWidth({
+  stripAnsi: stripVTControlCharacters,
+});
 
 /*
  * see also https://github.com/vadimdemedes/ink
@@ -23475,4 +23413,4 @@ const assertAndNormalizeDirectoryUrl = (
   return value;
 };
 
-export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, tableFromObjects, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };
+export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };

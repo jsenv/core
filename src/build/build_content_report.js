@@ -1,5 +1,13 @@
-import { ANSI, distributePercentages, humanizeFileSize } from "@jsenv/humanize";
-import { renderTable, tableFromObjects } from "@jsenv/terminal-table";
+import {
+  ANSI,
+  distributePercentages,
+  humanizeDuration,
+  humanizeFileSize,
+  humanizeMemory,
+  renderBigSection,
+  renderDetails,
+} from "@jsenv/humanize";
+import { renderTable } from "@jsenv/terminal-table";
 
 export const createBuildContentSummary = (
   buildFileContents,
@@ -11,9 +19,26 @@ ${createRepartitionMessage(buildContentReport, { indent })}
 --------------------`;
 };
 
-export const createBuildContentLog = (buildFileContents) => {
+const humanizeProcessCpuUsage = (ratio) => {
+  const percentageAsNumber = ratio * 100;
+  const percentageAsNumberRounded = Math.round(percentageAsNumber);
+  const percentage = `${percentageAsNumberRounded}%`;
+  return percentage;
+};
+const humanizeProcessMemoryUsage = (value) => {
+  return humanizeMemory(value, { short: true, decimals: 0 });
+};
+export const renderBuildDoneLog = ({
+  duration,
+  buildFileContents,
+  processCpuUsage,
+  processMemoryUsage,
+}) => {
   const buildContentReport = createBuildContentReport(buildFileContents);
-  const items = [];
+  const rows = [];
+  let y = 0;
+  let highestPercentage = 0;
+  let highestPercentageY = 0;
   for (const key of Object.keys(buildContentReport)) {
     if (key === "sourcemaps") {
       continue;
@@ -25,39 +50,93 @@ export const createBuildContentLog = (buildFileContents) => {
     if (count === 0) {
       continue;
     }
-    items.push({
-      "File type": key,
-      "File count": count,
-      "File size": size,
-      "Percentage": percentage,
-    });
+    const row = [
+      {
+        value: key,
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: count,
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: size,
+        format: "size",
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: percentage,
+        format: "percentage",
+        unit: "%",
+        borderTop: {},
+        borderBottom: {},
+      },
+    ];
+    if (percentage > highestPercentage) {
+      highestPercentage = percentage;
+      highestPercentageY = y;
+    }
+    rows.push(row);
+    y++;
+  }
+  const rowWithHighestPercentage = rows[highestPercentageY];
+  for (const cell of rowWithHighestPercentage) {
+    cell.bold = true;
   }
 
-  const table = tableFromObjects(items, {
-    head: [
-      { value: "Files" },
-      { value: "Count" },
-      { value: "Size" },
-      { value: "Percentage" },
-    ],
-    body: [
-      // prettier-multiline
-      {},
-      {},
-      { format: "size" },
-      { format: "percentage", unit: "%" },
-    ],
-    foot: [
-      { value: "Total" },
-      { value: buildContentReport.total.count },
-      { value: buildContentReport.total.size, format: "size" },
-      { value: 100, format: "percentage" },
-    ],
+  let title = "";
+  let content = "";
+  const lines = [];
+
+  const filesWrittenCount = buildContentReport.total.count;
+  if (filesWrittenCount === 1) {
+    title = `1 file written`;
+  } else {
+    title = `${filesWrittenCount} files written`;
+    const table = renderTable(rows, {
+      borderCollapse: true,
+      ansi: true,
+    });
+    content += table;
+    content += "\n";
+  }
+
+  let sizeLine = `total size: `;
+  sizeLine += humanizeFileSize(buildContentReport.total.size);
+  lines.push(sizeLine);
+
+  let durationLine = `duration: `;
+  durationLine += humanizeDuration(duration, { short: true });
+  lines.push(durationLine);
+
+  // cpu usage
+  let cpuUsageLine = "cpu: ";
+  cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
+  cpuUsageLine += renderDetails({
+    med: humanizeProcessCpuUsage(processCpuUsage.median),
+    min: humanizeProcessCpuUsage(processCpuUsage.min),
+    max: humanizeProcessCpuUsage(processCpuUsage.max),
   });
-  return renderTable(table, {
-    borderCollapse: true,
-    ansi: true,
+  lines.push(cpuUsageLine);
+
+  // memory usage
+  let memoryUsageLine = "memory: ";
+  memoryUsageLine += `${humanizeProcessMemoryUsage(processMemoryUsage.end)}`;
+  memoryUsageLine += renderDetails({
+    med: humanizeProcessMemoryUsage(processMemoryUsage.median),
+    min: humanizeProcessMemoryUsage(processMemoryUsage.min),
+    max: humanizeProcessMemoryUsage(processMemoryUsage.max),
   });
+  lines.push(memoryUsageLine);
+
+  content += lines.join("\n");
+  return `${renderBigSection({
+    title,
+    content,
+  })}`;
 };
 
 export const createBuildContentOneLineSummary = (

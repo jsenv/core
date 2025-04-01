@@ -33,8 +33,6 @@ import {
   createTaskLog,
   humanizeDuration,
   humanizeMemory,
-  renderBigSection,
-  renderDetails,
   UNICODE,
 } from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
@@ -69,7 +67,7 @@ import {
 } from "../plugins/plugin_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
-import { createBuildContentLog } from "./build_content_report.js";
+import { renderBuildDoneLog } from "./build_content_report.js";
 import { defaultRuntimeCompat, logsDefault } from "./build_params.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
@@ -362,62 +360,15 @@ export const build = async ({
     // tell the repartition?
     // this is not really useful for single build right?
 
-    let content = "";
-
-    const lines = [];
-
-    let durationLine = `duration: `;
-    durationLine += humanizeDuration(duration, { short: true });
-    lines.push(durationLine);
-
-    const humanizeProcessCpuUsage = (ratio) => {
-      const percentageAsNumber = ratio * 100;
-      const percentageAsNumberRounded = Math.round(percentageAsNumber);
-      const percentage = `${percentageAsNumberRounded}%`;
-      return percentage;
-    };
-
-    const humanizeProcessMemoryUsage = (value) => {
-      return humanizeMemory(value, { short: true, decimals: 0 });
-    };
-
     processCpuUsageMonitoring.end();
     processMemoryUsageMonitoring.end();
 
-    // cpu usage
-    const processCpuUsage = processCpuUsageMonitoring.info;
-    let cpuUsageLine = "cpu: ";
-    cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
-    cpuUsageLine += renderDetails({
-      med: humanizeProcessCpuUsage(processCpuUsage.median),
-      min: humanizeProcessCpuUsage(processCpuUsage.min),
-      max: humanizeProcessCpuUsage(processCpuUsage.max),
+    return renderBuildDoneLog({
+      duration,
+      buildFileContents,
+      processCpuUsage: processCpuUsageMonitoring.info,
+      processMemoryUsage: processMemoryUsageMonitoring.info,
     });
-    lines.push(cpuUsageLine);
-
-    // memory usage
-    const processMemoryUsage = processMemoryUsageMonitoring.info;
-    let memoryUsageLine = "memory: ";
-    memoryUsageLine += `${humanizeProcessMemoryUsage(processMemoryUsage.end)}`;
-    memoryUsageLine += renderDetails({
-      med: humanizeProcessMemoryUsage(processMemoryUsage.median),
-      min: humanizeProcessMemoryUsage(processMemoryUsage.min),
-      max: humanizeProcessMemoryUsage(processMemoryUsage.max),
-    });
-    lines.push(memoryUsageLine);
-
-    content = lines.join("\n");
-    content += "\n";
-    content += "\n";
-    content += createBuildContentLog(buildFileContents);
-
-    return `${renderBigSection({
-      title:
-        entryPointArray.length === 1
-          ? "build done"
-          : `${entryPointArray.length} builds done`,
-      content,
-    })}`;
   };
 
   if (animatedLogEnabled) {

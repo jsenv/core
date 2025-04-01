@@ -45,6 +45,7 @@ export const renderTable = (
   inputGrid,
   {
     ansi,
+    indent = 0,
     borderCollapse,
     borderSeparatedOnColorConflict,
     borderSpacing = 0,
@@ -1000,8 +1001,11 @@ export const renderTable = (
           }
           x++;
         }
-        rowText += lineText;
         lineIndex++;
+        if (indent && log) {
+          rowText = " ".repeat(indent) + rowText;
+        }
+        rowText += lineText;
         rowText += "\n";
       }
       return rowText;

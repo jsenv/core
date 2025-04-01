@@ -2,7 +2,7 @@ import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHt
 import { startMonitoringCpuUsage, startMonitoringMemoryUsage } from "@jsenv/os-metrics";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, tableFromObjects, renderTable, distributePercentages, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog, humanizeDuration, humanizeMemory, renderDetails, renderBigSection } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, renderTable, humanizeFileSize, humanizeDuration, renderDetails, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog } from "../jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
@@ -8206,9 +8206,26 @@ const getCorePlugins = ({
   ];
 };
 
-const createBuildContentLog = (buildFileContents) => {
+const humanizeProcessCpuUsage = (ratio) => {
+  const percentageAsNumber = ratio * 100;
+  const percentageAsNumberRounded = Math.round(percentageAsNumber);
+  const percentage = `${percentageAsNumberRounded}%`;
+  return percentage;
+};
+const humanizeProcessMemoryUsage = (value) => {
+  return humanizeMemory(value, { short: true, decimals: 0 });
+};
+const renderBuildDoneLog = ({
+  duration,
+  buildFileContents,
+  processCpuUsage,
+  processMemoryUsage,
+}) => {
   const buildContentReport = createBuildContentReport(buildFileContents);
-  const items = [];
+  const rows = [];
+  let y = 0;
+  let highestPercentage = 0;
+  let highestPercentageY = 0;
   for (const key of Object.keys(buildContentReport)) {
     if (key === "sourcemaps") {
       continue;
@@ -8220,39 +8237,93 @@ const createBuildContentLog = (buildFileContents) => {
     if (count === 0) {
       continue;
     }
-    items.push({
-      "File type": key,
-      "File count": count,
-      "File size": size,
-      "Percentage": percentage,
-    });
+    const row = [
+      {
+        value: key,
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: count,
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: size,
+        format: "size",
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: percentage,
+        format: "percentage",
+        unit: "%",
+        borderTop: {},
+        borderBottom: {},
+      },
+    ];
+    if (percentage > highestPercentage) {
+      highestPercentage = percentage;
+      highestPercentageY = y;
+    }
+    rows.push(row);
+    y++;
+  }
+  const rowWithHighestPercentage = rows[highestPercentageY];
+  for (const cell of rowWithHighestPercentage) {
+    cell.bold = true;
   }
 
-  const table = tableFromObjects(items, {
-    head: [
-      { value: "Files" },
-      { value: "Count" },
-      { value: "Size" },
-      { value: "Percentage" },
-    ],
-    body: [
-      // prettier-multiline
-      {},
-      {},
-      { format: "size" },
-      { format: "percentage", unit: "%" },
-    ],
-    foot: [
-      { value: "Total" },
-      { value: buildContentReport.total.count },
-      { value: buildContentReport.total.size, format: "size" },
-      { value: 100, format: "percentage" },
-    ],
+  let title = "";
+  let content = "";
+  const lines = [];
+
+  const filesWrittenCount = buildContentReport.total.count;
+  if (filesWrittenCount === 1) {
+    title = `1 file written`;
+  } else {
+    title = `${filesWrittenCount} files written`;
+    const table = renderTable(rows, {
+      borderCollapse: true,
+      ansi: true,
+    });
+    content += table;
+    content += "\n";
+  }
+
+  let sizeLine = `total size: `;
+  sizeLine += humanizeFileSize(buildContentReport.total.size);
+  lines.push(sizeLine);
+
+  let durationLine = `duration: `;
+  durationLine += humanizeDuration(duration, { short: true });
+  lines.push(durationLine);
+
+  // cpu usage
+  let cpuUsageLine = "cpu: ";
+  cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
+  cpuUsageLine += renderDetails({
+    med: humanizeProcessCpuUsage(processCpuUsage.median),
+    min: humanizeProcessCpuUsage(processCpuUsage.min),
+    max: humanizeProcessCpuUsage(processCpuUsage.max),
   });
-  return renderTable(table, {
-    borderCollapse: true,
-    ansi: true,
+  lines.push(cpuUsageLine);
+
+  // memory usage
+  let memoryUsageLine = "memory: ";
+  memoryUsageLine += `${humanizeProcessMemoryUsage(processMemoryUsage.end)}`;
+  memoryUsageLine += renderDetails({
+    med: humanizeProcessMemoryUsage(processMemoryUsage.median),
+    min: humanizeProcessMemoryUsage(processMemoryUsage.min),
+    max: humanizeProcessMemoryUsage(processMemoryUsage.max),
   });
+  lines.push(memoryUsageLine);
+
+  content += lines.join("\n");
+  return `${renderBigSection({
+    title,
+    content,
+  })}`;
 };
 
 const createBuildContentReport = (buildFileContents) => {
@@ -9044,8 +9115,8 @@ const createBuildSpecifierManager = ({
           if (urlInfo.type === "entry_build") {
             const otherEntryBuildInfo = urlInfo.otherEntryBuildInfo;
             const entryUrlInfoVersion =
-              otherEntryBuildInfo.buildManifest[
-                otherEntryBuildInfo.entryUrlInfo.buildRelativeUrl
+              otherEntryBuildInfo.buildFileVersions[
+                otherEntryBuildInfo.buildRelativeUrl
               ];
             contentOnlyVersionMap.set(urlInfo, entryUrlInfoVersion);
             return;
@@ -9089,6 +9160,9 @@ const createBuildSpecifierManager = ({
       const getSetOfUrlInfoInfluencingVersion = (urlInfo) => {
         const placeholderInfluencingVersionSet = new Set();
         const visitContainedPlaceholders = (urlInfo) => {
+          if (urlInfo.type === "entry_build") {
+            return;
+          }
           const referencedContentVersion = contentOnlyVersionMap.get(urlInfo);
           if (!referencedContentVersion) {
             // ignored while traversing graph (not used anymore, inline, ...)
@@ -9552,6 +9626,7 @@ const createBuildSpecifierManager = ({
       const buildManifest = {};
       const buildContents = {};
       const buildInlineRelativeUrlSet = new Set();
+      const buildFileVersions = {};
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
         (urlInfo) => {
@@ -9576,6 +9651,8 @@ const createBuildSpecifierManager = ({
             buildUrl,
             buildDirectoryUrl,
           );
+          buildFileVersions[buildRelativeUrl] = versionMap.get(urlInfo);
+
           let contentKey;
           // if to guard for html where versioned build specifier is not generated
           if (buildSpecifierVersioned) {
@@ -9614,7 +9691,12 @@ const createBuildSpecifierManager = ({
           }
         });
 
-      return { buildFileContents, buildInlineContents, buildManifest };
+      return {
+        buildFileContents,
+        buildInlineContents,
+        buildManifest,
+        buildFileVersions,
+      };
     },
   };
 };
@@ -10167,6 +10249,7 @@ const build = async ({
   buildDirectoryCleanPatterns = { "**/*": true },
   returnBuildInlineContents,
   returnBuildManifest,
+  returnBuildFileVersions,
   signal = new AbortController().signal,
   handleSIGINT = true,
 
@@ -10276,7 +10359,7 @@ const build = async ({
           );
           if (unexpectedEntryPointParamNames.length) {
             throw new TypeError(
-              `The entry point value${forEntryPointOrEmpty} have unknown params: ${unexpectedEntryPointParamNames.join(",")}.`,
+              `The value${forEntryPointOrEmpty} contains unknown keys: ${unexpectedEntryPointParamNames.join(",")}.`,
             );
           }
           const { versioningMethod } = value;
@@ -10406,62 +10489,15 @@ const build = async ({
     // tell the repartition?
     // this is not really useful for single build right?
 
-    let content = "";
-
-    const lines = [];
-
-    let durationLine = `duration: `;
-    durationLine += humanizeDuration(duration, { short: true });
-    lines.push(durationLine);
-
-    const humanizeProcessCpuUsage = (ratio) => {
-      const percentageAsNumber = ratio * 100;
-      const percentageAsNumberRounded = Math.round(percentageAsNumber);
-      const percentage = `${percentageAsNumberRounded}%`;
-      return percentage;
-    };
-
-    const humanizeProcessMemoryUsage = (value) => {
-      return humanizeMemory(value, { short: true, decimals: 0 });
-    };
-
     processCpuUsageMonitoring.end();
     processMemoryUsageMonitoring.end();
 
-    // cpu usage
-    const processCpuUsage = processCpuUsageMonitoring.info;
-    let cpuUsageLine = "cpu: ";
-    cpuUsageLine += `${humanizeProcessCpuUsage(processCpuUsage.end)}`;
-    cpuUsageLine += renderDetails({
-      med: humanizeProcessCpuUsage(processCpuUsage.median),
-      min: humanizeProcessCpuUsage(processCpuUsage.min),
-      max: humanizeProcessCpuUsage(processCpuUsage.max),
+    return renderBuildDoneLog({
+      duration,
+      buildFileContents,
+      processCpuUsage: processCpuUsageMonitoring.info,
+      processMemoryUsage: processMemoryUsageMonitoring.info,
     });
-    lines.push(cpuUsageLine);
-
-    // memory usage
-    const processMemoryUsage = processMemoryUsageMonitoring.info;
-    let memoryUsageLine = "memory: ";
-    memoryUsageLine += `${humanizeProcessMemoryUsage(processMemoryUsage.end)}`;
-    memoryUsageLine += renderDetails({
-      med: humanizeProcessMemoryUsage(processMemoryUsage.median),
-      min: humanizeProcessMemoryUsage(processMemoryUsage.min),
-      max: humanizeProcessMemoryUsage(processMemoryUsage.max),
-    });
-    lines.push(memoryUsageLine);
-
-    content = lines.join("\n");
-    content += "\n";
-    content += "\n";
-    content += createBuildContentLog(buildFileContents);
-
-    return `${renderBigSection({
-      title:
-        entryPointArray.length === 1
-          ? "build done"
-          : `${entryPointArray.length} builds done`,
-      content,
-    })}`;
   };
 
   if (animatedLogEnabled) {
@@ -10653,11 +10689,14 @@ const build = async ({
         },
         entryPoint.params,
       );
+      const entryPointBuildRelativeUrl = entryPoint.params.buildRelativeUrl;
       const entryBuildInfo = {
         index: entryPointIndex,
         entryReference,
         entryUrlInfo: entryReference.urlInfo,
+        buildRelativeUrl: entryPointBuildRelativeUrl,
         buildFileContents: undefined,
+        buildFileVersions: undefined,
         buildInlineContents: undefined,
         buildManifest: undefined,
         duration: null,
@@ -10667,7 +10706,7 @@ const build = async ({
             sourceDirectoryUrl,
           );
           const buildUrl = new URL(
-            entryPoint.params.buildRelativeUrl,
+            entryPointBuildRelativeUrl,
             buildDirectoryUrl,
           );
           const sourceUrlToLog = packageDirectoryUrl
@@ -10675,7 +10714,7 @@ const build = async ({
             : entryPoint.key;
           const buildUrlToLog = packageDirectoryUrl
             ? urlToRelativeUrl(buildUrl, packageDirectoryUrl)
-            : entryPoint.params.buildRelativeUrl;
+            : entryPointBuildRelativeUrl;
 
           const entryPointBuildStartMs = Date.now();
           const onEntryPointBuildEnd = onEntryPointBuildStart(entryBuildInfo, {
@@ -10696,6 +10735,7 @@ const build = async ({
               },
             });
             entryBuildInfo.buildFileContents = result.buildFileContents;
+            entryBuildInfo.buildFileVersions = result.buildFileVersions;
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
             entryBuildInfo.duration = Date.now() - entryPointBuildStartMs;
@@ -10717,10 +10757,12 @@ const build = async ({
     await Promise.all(promises);
 
     const buildFileContents = {};
+    const buildFileVersions = {};
     const buildInlineContents = {};
     const buildManifest = {};
     for (const [, entryBuildInfo] of entryBuildInfoMap) {
       Object.assign(buildFileContents, entryBuildInfo.buildFileContents);
+      Object.assign(buildFileVersions, entryBuildInfo.buildFileVersions);
       Object.assign(buildInlineContents, entryBuildInfo.buildInlineContents);
       Object.assign(buildManifest, entryBuildInfo.buildManifest);
     }
@@ -10743,6 +10785,7 @@ const build = async ({
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
       ...(returnBuildManifest ? { buildManifest } : {}),
+      ...(returnBuildFileVersions ? { buildFileVersions } : {}),
     };
   };
 
@@ -11361,8 +11404,12 @@ const prepareEntryPointBuild = async (
           }
         }
       }
-      const { buildFileContents, buildInlineContents, buildManifest } =
-        buildSpecifierManager.getBuildInfo();
+      const {
+        buildFileContents,
+        buildFileVersions,
+        buildInlineContents,
+        buildManifest,
+      } = buildSpecifierManager.getBuildInfo();
       if (versioning && assetManifest && Object.keys(buildManifest).length) {
         buildFileContents[assetManifestFileRelativeUrl] = JSON.stringify(
           buildManifest,
@@ -11372,6 +11419,7 @@ const prepareEntryPointBuild = async (
       }
       return {
         buildFileContents,
+        buildFileVersions,
         buildInlineContents,
         buildManifest,
       };
