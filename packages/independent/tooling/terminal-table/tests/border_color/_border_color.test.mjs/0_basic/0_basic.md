@@ -17,18 +17,15 @@ run({})
 └───
 ┌───
 │ b 
-
 --- border_collapse ---
 │ a 
 ├───
 │ b 
-
 --- border_collapse_but_separated_if_conflict ---
 │ a 
 └───
 ┌───
 │ b 
-
 ```
 
 </details>

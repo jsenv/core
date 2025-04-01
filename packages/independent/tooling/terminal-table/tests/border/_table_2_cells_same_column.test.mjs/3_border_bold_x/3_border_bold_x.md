@@ -15,81 +15,67 @@ run({
 ───
 ───
  b 
-
 --- bottom_left_and_top_left ---
 ┃ a 
 ┖───
 ┎───
 ┃ b 
-
 --- left_bottom_and_left ---
 ┃ a 
 ┠───
 ┃ b 
-
 --- left_and_top_left ---
 ┃ a 
 ┠───
 ┃ b 
-
 --- bottom_right_and_top_right ---
  a ┃
 ───┚
 ───┒
  b ┃
-
 --- right_bottom_and_right ---
  a ┃
 ───┨
  b ┃
-
 --- right_and_top_right ---
  a ┃
 ───┨
  b ┃
-
 --- top_left_and_bottom_right ---
 ┎───╴
 ┃ a  
   b ┃
 ╶───┚
-
 --- bottom_right_and_top_left ---
   a ┃
 ╶───┚
 ┎───╴
 ┃ b  
-
 --- left_bottom_right ---
 ┃ a  
 ┖───┒
   b ┃
-
 --- left_and_top_right ---
 ┃ a  
 ┖───┒
   b ┃
-
 --- all_but_bottom_and_all_but_top ---
 ┎───┒
 ┃ a ┃
 ┃ b ┃
 ┖───┚
-
 --- all_but_bottom_and_all ---
 ┎───┒
 ┃ a ┃
 ┠───┨
 ┃ b ┃
 ┖───┚
-
 --- all_and_all_but_top ---
 ┎───┒
 ┃ a ┃
 ┠───┨
 ┃ b ┃
 ┖───┚
-
 --- all ---
 ┎───┒
 ┃ a ┃
@@ -97,7 +83,6 @@ run({
 ┎───┒
 ┃ b ┃
 ┖───┚
-
 ```
 
 # 2/2 return

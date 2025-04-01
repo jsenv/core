@@ -14,13 +14,11 @@ run({
 │   │ a │
 │ a │ b │
 └───┴───┘
-
 --- left_two_right_one ---
 ┌───┬───┐
 │ a │   │
 │ b │ a │
 └───┴───┘
-
 --- left_three_right_five ---
 ┌───┬───┐
 │   │ a │
@@ -29,7 +27,6 @@ run({
 │ b │ d │
 │ c │ e │
 └───┴───┘
-
 ```
 
 # 2/2 return

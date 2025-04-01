@@ -20,40 +20,34 @@ run({
 ┌─────────────┼──────────────┤
 │ bottom_left │ bottom_right │
 └─────────────┴──────────────┘
-
 --- top_right_empty ---
 ┌─────────────┐               
 │ top_left    │ top_right     
 ├─────────────┼──────────────┐
 │ bottom_left │ bottom_right │
 └─────────────┴──────────────┘
-
 --- bottom_right_empty ---
 ┌─────────────┬──────────────┐
 │ top_left    │ top_right    │
 ├─────────────┼──────────────┘
 │ bottom_left │ bottom_right  
 └─────────────┘               
-
 --- bottom_left_empty ---
 ┌─────────────┬──────────────┐
 │ top_left    │ top_right    │
 └─────────────┼──────────────┤
   bottom_left │ bottom_right │
               └──────────────┘
-
 --- all ---
 ┌─────────────┬──────────────┐
 │ top_left    │ top_right    │
 ├─────────────┼──────────────┤
 │ bottom_left │ bottom_right │
 └─────────────┴──────────────┘
-
 --- all_3_row ---
 ┌──────────┬──────────┬──────────┐
 │ column_a │ column_b │ column_c │
 └──────────┴──────────┴──────────┘
-
 --- all_3_column ---
 ┌───────┐
 │ row_a │
@@ -62,7 +56,6 @@ run({
 ├───────┤
 │ row_c │
 └───────┘
-
 --- nine_cells_middle_use_yellow_borders ---
 ┌─────────────┬────────┬──────────────┐
 │ top_left    │ top    │ top_right    │
@@ -71,7 +64,6 @@ run({
 ├─────────────┼────────┼──────────────┤
 │ bottom_left │ bottom │ bottom_right │
 └─────────────┴────────┴──────────────┘
-
 ```
 
 </details>

@@ -12,53 +12,42 @@ run({
 ```console
 --- none ---
  a  b  c 
-
 --- left ---
 │ a │ b │ c 
-
 --- left_and_right ---
 │ a ││ b ││ c │
-
 --- top_and_bottom ---
 ━━━━━━━━━
  a  b  c 
 ━━━━━━━━━
-
 --- first_only ---
 ┍━━━┑      
 │ a │ b  c 
 ┕━━━┙      
-
 --- middle_none ---
 ┍━━━┑   ┍━━━┑
 │ a │ b │ c │
 ┕━━━┙   ┕━━━┙
-
 --- last_only ---
       ┍━━━┑
  a  b │ c │
       ┕━━━┙
-
 --- castle ---
 ━━━┑   ┍━━━
  a │ b │ c 
    ┕━━━┙   
-
 --- castle_inverted ---
    ┍━━━┑   
  a │ b │ c 
 ━━━┙   ┕━━━
-
 --- around ---
 ┍━━━┯━━━┯━━━┑
 │ a │ b │ c │
 ┕━━━┷━━━┷━━━┙
-
 --- all ---
 ┍━━━┑┍━━━┑┍━━━┑
 │ a ││ b ││ c │
 ┕━━━┙┕━━━┙┕━━━┙
-
 ```
 
 # 2/2 return

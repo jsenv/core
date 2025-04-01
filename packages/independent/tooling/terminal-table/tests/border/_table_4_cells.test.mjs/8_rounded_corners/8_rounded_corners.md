@@ -15,7 +15,6 @@ run({
 --- none ---
  a  b 
  c  d 
-
 --- around_strange ---
 ╭───┬───╮
 │ a │ b │
@@ -23,7 +22,6 @@ run({
 │   ├───╮
 │ c │ d │
 ╰───┴───╯
-
 --- around_strange_2 ---
 ╭───┬────╮
 │ a │  b │
@@ -31,7 +29,6 @@ run({
 ╭────┤   │
 │ c  │ d │
 ╰────┴───╯
-
 --- around_strange_3 ---
 ╭───┬───╮
 │ a │ b │
@@ -39,46 +36,39 @@ run({
 │   ├───┤
 │ c │ d │
 ╰───┴───╯
-
 --- strange_2 ---
 ╭───┬────╮
 │ a │  b │
 ├───┴┬───┤
 │ c  │ d │
 ╰────┴───╯
-
 --- left_column_full_right_column_split ---
 ╭───┬───╮
 │ a │ b │
 │   ├───┤
 │ c │ d │
 ╰───┴───╯
-
 --- left_column_split_right_column_full ---
 ╭───┬───╮
 │ a │ b │
 ├───┤   │
 │ c │ d │
 ╰───┴───╯
-
 --- first_row_full_second_row_split ---
 ╭───────╮
 │ a   b │
 ├───┬───┤
 │ c │ d │
 ╰───┴───╯
-
 --- first_row_split_second_row_full ---
 ╭───┬───╮
 │ a │ b │
 ├───┴───┤
 │ c   d │
 ╰───────╯
-
 --- first_row_right_second_row_left ---
   a │  b │
 │ c  │ d  
-
 --- first_column_top_second_column_bottom ---
 ───   
  a  b 
@@ -86,35 +76,30 @@ run({
 ───   
  c  d 
    ───
-
 --- four_way_junction_bottom_right ---
 ╭───┬───╮
 │ a │ b │
 ├───┼───┤
 │ c │ d │
 ╰───┴───╯
-
 --- four_way_junction_bottom_left ---
 ╭───┬───╮
 │ a │ b │
 ├───┼───┤
 │ c │ d │
 ╰───┴───╯
-
 --- four_way_junction_top_left ---
 ╭───┬───╮
 │ a │ b │
 ├───┼───┤
 │ c │ d │
 ╰───┴───╯
-
 --- four_way_junction_top_right ---
 ╭───┬───╮
 │ a │ b │
 ├───┼───┤
 │ c │ d │
 ╰───┴───╯
-
 --- all ---
 ╭───╮╭───╮
 │ a ││ b │
@@ -122,7 +107,6 @@ run({
 ╭───╮╭───╮
 │ c ││ d │
 ╰───╯╰───╯
-
 ```
 
 # 2/2 return
