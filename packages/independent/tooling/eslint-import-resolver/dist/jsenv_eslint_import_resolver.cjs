@@ -3,6 +3,7 @@
 var process$1 = require('process');
 var os = require('os');
 var tty = require('tty');
+require('util');
 var node_url = require('url');
 var node_fs = require('fs');
 var node_path = require('path');
@@ -218,6 +219,19 @@ function isUnicodeSupported() {
 		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
 }
 
+function ansiRegex({onlyFirst = false} = {}) {
+	// Valid string terminator sequences are BEL, ESC\, and 0x9c
+	const ST = '(?:\\u0007|\\u001B\\u005C|\\u009C)';
+	const pattern = [
+		`[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?${ST})`,
+		'(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))',
+	].join('|');
+
+	return new RegExp(pattern, onlyFirst ? undefined : 'g');
+}
+
+ansiRegex();
+
 /* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
 
 const isBrowser = globalThis.window?.document !== undefined;
@@ -269,34 +283,56 @@ isBrowser ? () => {
 	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
 } : process$1.cwd;
 
-function ansiRegex({onlyFirst = false} = {}) {
-	// Valid string terminator sequences are BEL, ESC\, and 0x9c
-	const ST = '(?:\\u0007|\\u001B\\u005C|\\u009C)';
-	const pattern = [
-		`[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?${ST})`,
-		'(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))',
-	].join('|');
-
-	return new RegExp(pattern, onlyFirst ? undefined : 'g');
-}
-
-ansiRegex();
-
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
+
+const RED = "red";
+const GREEN = "green";
+const YELLOW = "yellow";
+const BLUE = "blue";
+const MAGENTA = "magenta";
+const CYAN = "cyan";
+const GREY = "grey";
+const WHITE = "white";
+const BLACK = "black";
+
+const TEXT_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[31m",
+  [GREEN]: "\x1b[32m",
+  [YELLOW]: "\x1b[33m",
+  [BLUE]: "\x1b[34m",
+  [MAGENTA]: "\x1b[35m",
+  [CYAN]: "\x1b[36m",
+  [GREY]: "\x1b[90m",
+  [WHITE]: "\x1b[37m",
+  [BLACK]: "\x1b[30m",
+};
+const BACKGROUND_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[41m",
+  [GREEN]: "\x1b[42m",
+  [YELLOW]: "\x1b[43m",
+  [BLUE]: "\x1b[44m",
+  [MAGENTA]: "\x1b[45m",
+  [CYAN]: "\x1b[46m",
+  [GREY]: "\x1b[100m",
+  [WHITE]: "\x1b[47m",
+  [BLACK]: "\x1b[40m",
+};
 
 const createAnsi = ({ supported }) => {
   const ANSI = {
     supported,
 
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED,
+    GREEN,
+    YELLOW,
+    BLUE,
+    MAGENTA,
+    CYAN,
+    GREY,
+    WHITE,
+    BLACK,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -308,7 +344,29 @@ const createAnsi = ({ supported }) => {
         // cannot set color of blank chars
         return text;
       }
-      return `${color}${text}${RESET}`;
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForTextColor}${text}${RESET}`;
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor =
+        BACKGROUND_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForBackgroundColor}${text}${RESET}`;
     },
 
     BOLD: "\x1b[1m",
@@ -325,7 +383,8 @@ const createAnsi = ({ supported }) => {
       if (text === "") {
         return text;
       }
-      return `${effect}${text}${RESET}`;
+      const ansiEscapeCodeForEffect = effect;
+      return `${ansiEscapeCodeForEffect}${text}${RESET}`;
     },
   };
 

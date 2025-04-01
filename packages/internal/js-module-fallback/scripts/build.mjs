@@ -5,34 +5,26 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./main.js": "jsenv_js_module_fallback.js",
-  },
-  ignore: {
-    "file://**/node_modules/": true,
-  },
-  runtimeCompat: {
-    node: "22.1",
-  },
-  scenarioPlaceholders: false,
-  subbuilds: [
-    // "s.js" is used in the build files, it must be compatible as much as possible
-    // so we convert async/await, arrow function, ... to be compatible with
-    // old browsers
-    {
-      buildDirectoryUrl: import.meta.resolve("../dist/client/"),
-      entryPoints: {
-        "./client/s.js?as_js_classic": "s.js",
+    "./main.js": {
+      runtimeCompat: { node: "22.1" },
+      buildRelativeUrl: "./jsenv_js_module_fallback.js",
+      ignore: {
+        "file://**/node_modules/": true,
       },
+      scenarioPlaceholders: false,
+    },
+    "./client/s.js?as_js_classic": {
+      // "s.js" is used in the build files, it must be compatible as much as possible
+      // so we convert async/await, arrow function, ... to be compatible with
+      // old browsers
+      runtimeCompat: { chrome: "0", firefox: "0" },
+      buildRelativeUrl: "./client/s.js",
       plugins: [jsenvPluginAsJsClassic()],
       sourcemaps: "file",
       sourcemapsSourcesContent: true,
       bundling: false,
       minification: false,
       versioning: false,
-      runtimeCompat: {
-        chrome: "0",
-        firefox: "0",
-      },
     },
-  ],
+  },
 });
