@@ -8,7 +8,7 @@
         <text x="10" y="24.55">server started at http://127.0.0.1</text>
         <text x="10" y="43.55">GET http://127.0.0.1/</text>
         <text x="26.8" y="62.55" fill="#cd5555">504</text>
-        <text x="60.41" y="62.55"> server timeout after &lt;X&gt;s waiting to handle request</text>
+        <text x="52.01" y="62.55" style="white-space:pre"> server timeout after &lt;X&gt;s waiting to handle request</text>
       </g>
     </svg>
   </foreignObject>

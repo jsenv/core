@@ -7,10 +7,10 @@
       <g>
         <text x="10" y="24.55">server started at https://127.0.0.1</text>
         <text x="10" y="43.55">GET https://127.0.0.1/main.html</text>
-        <text x="26.8" y="62.55">  Push /script.js</text>
-        <text x="26.8" y="81.55">  Push /style.css</text>
+        <text x="10" y="62.55" style="white-space:pre">  Push /script.js</text>
+        <text x="10" y="81.55" style="white-space:pre">  Push /style.css</text>
         <text x="26.8" y="100.55" fill="#11bc79">200</text>
-        <text x="60.41" y="100.55"> OK</text>
+        <text x="52.01" y="100.55" style="white-space:pre"> OK</text>
       </g>
     </svg>
   </foreignObject>

@@ -11,7 +11,7 @@
         <text x="10" y="81.55">--- error stack ---</text>
         <text x="10" y="100.55">undefined</text>
         <text x="26.8" y="119.55" fill="#cd5555">500</text>
-        <text x="60.41" y="119.55"> Internal Server Error</text>
+        <text x="52.01" y="119.55" style="white-space:pre"> Internal Server Error</text>
       </g>
     </svg>
   </foreignObject>

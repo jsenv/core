@@ -8,7 +8,7 @@
         <text x="10" y="24.55">server started at http://127.0.0.1</text>
         <text x="10" y="43.55">GET http://127.0.0.1/</text>
         <text x="26.8" y="62.55" fill="#11bc79">200</text>
-        <text x="60.41" y="62.55"> OK</text>
+        <text x="52.01" y="62.55" style="white-space:pre"> OK</text>
       </g>
     </svg>
   </foreignObject>

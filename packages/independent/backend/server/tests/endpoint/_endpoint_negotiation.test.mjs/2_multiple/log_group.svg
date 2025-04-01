@@ -7,11 +7,11 @@
       <g>
         <text x="10" y="24.55">GET http://127.0.0.1/users</text>
         <text x="26.8" y="43.55" fill="#DAA520">406</text>
-        <text x="60.41" y="43.55"> The server cannot produce a response in a format acceptable to the client:</text>
-        <text x="26.8" y="62.55">  - content-type The server cannot produce a response in any of the media types accepted by the request: "text/css".</text>
-        <text x="26.8" y="81.55">  Available media types: application/json, text/plain.</text>
-        <text x="26.8" y="100.55">  - language The server cannot produce a response in any of the languages accepted by the request: "de".</text>
-        <text x="26.8" y="119.55">  Available languages: fr, en.</text>
+        <text x="52.01" y="43.55" style="white-space:pre"> The server cannot produce a response in a format acceptable to the client:</text>
+        <text x="10" y="62.55" style="white-space:pre">  - content-type The server cannot produce a response in any of the media types accepted by the request: "text/css".</text>
+        <text x="10" y="81.55" style="white-space:pre">  Available media types: application/json, text/plain.</text>
+        <text x="10" y="100.55" style="white-space:pre">  - language The server cannot produce a response in any of the languages accepted by the request: "de".</text>
+        <text x="10" y="119.55" style="white-space:pre">  Available languages: fr, en.</text>
       </g>
     </svg>
   </foreignObject>

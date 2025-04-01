@@ -10,12 +10,12 @@
         <text x="10" y="62.55">internal error while handling request</text>
         <text x="10" y="81.55">--- error stack ---</text>
         <text x="10" y="100.55">Error: message</text>
-        <text x="43.61" y="119.55">    at base/internal_error.test.mjs:34:19</text>
-        <text x="43.61" y="138.55">    at capture (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/create_capture_side_effects.js:330:29)</text>
-        <text x="43.61" y="157.55">    at snapshotTests (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/snapshot_tests.js:173:33)</text>
-        <text x="43.61" y="176.55">    at async base/internal_error.test.mjs:32:1</text>
+        <text x="10" y="119.55" style="white-space:pre">    at base/internal_error.test.mjs:34:19</text>
+        <text x="10" y="138.55" style="white-space:pre">    at capture (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/create_capture_side_effects.js:330:29)</text>
+        <text x="10" y="157.55" style="white-space:pre">    at snapshotTests (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/snapshot_tests.js:179:33)</text>
+        <text x="10" y="176.55" style="white-space:pre">    at async base/internal_error.test.mjs:32:1</text>
         <text x="26.8" y="195.55" fill="#cd5555">500</text>
-        <text x="60.41" y="195.55"> Internal Server Error</text>
+        <text x="52.01" y="195.55" style="white-space:pre"> Internal Server Error</text>
       </g>
     </svg>
   </foreignObject>
