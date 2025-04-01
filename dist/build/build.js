@@ -1,7 +1,7 @@
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, renderTable, humanizeFileSize, humanizeDuration, renderDetails, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog } from "../jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
@@ -2625,7 +2625,7 @@ const shouldHandleSourcemap = (urlInfo) => {
 };
 
 const inlineContentClientFileUrl = new URL(
-  "./client/inline_content.js",
+  "../client/inline_content/inline_content.js",
   import.meta.url,
 ).href;
 
@@ -3673,7 +3673,7 @@ const jsenvPluginInlining = () => {
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = import.meta.resolve(
-    "./client/html_syntax_error.html",
+    "../client/html_syntax_error/html_syntax_error.html",
   );
 
   return {
@@ -6028,7 +6028,7 @@ return {
 
 
 const htmlFileUrlForDirectory = import.meta.resolve(
-  "./client/directory_listing.html",
+  "../client/directory_listing/directory_listing.html",
 );
 
 const jsenvPluginDirectoryListing = ({
@@ -7389,7 +7389,7 @@ const htmlNodeCanHotReload = (node) => {
 
 const jsenvPluginImportMetaHot = () => {
   const importMetaHotClientFileUrl = import.meta.resolve(
-    "./client/import_meta_hot.js",
+    "../client/import_meta_hot/import_meta_hot.js",
   );
 
   return {
@@ -7501,7 +7501,7 @@ import.meta.hot = createImportMetaHot(import.meta.url);
 };
 
 const jsenvPluginAutoreloadClient = () => {
-  const autoreloadClientFileUrl = import.meta.resolve("./client/autoreload.js");
+  const autoreloadClientFileUrl = import.meta.resolve("../client/autoreload/autoreload.js");
 
   return {
     name: "jsenv:autoreload_client",
@@ -8020,7 +8020,7 @@ const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html",
 }) => {
-  const ribbonClientFileUrl = import.meta.resolve("./client/ribbon.js");
+  const ribbonClientFileUrl = import.meta.resolve("../client/ribbon/ribbon.js");
   const associations = URL_META.resolveAssociations(
     {
       ribbon: {
@@ -8215,6 +8215,7 @@ const humanizeProcessMemoryUsage = (value) => {
   return humanizeMemory(value, { short: true, decimals: 0 });
 };
 const renderBuildDoneLog = ({
+  entryPointArray,
   duration,
   buildFileContents,
   processCpuUsage,
@@ -8223,83 +8224,14 @@ const renderBuildDoneLog = ({
   const buildContentReport = createBuildContentReport(buildFileContents);
 
   let title = "";
-  let content = "";
   const lines = [];
 
-  const filesWrittenCount = buildContentReport.total.count;
-  if (filesWrittenCount === 1) {
-    title = `1 file written`;
+  const entryPointCount = entryPointArray.length;
+  if (entryPointCount === 1) {
+    title = `build done`;
   } else {
-    title = `${filesWrittenCount} files written`;
-    const keys = Object.keys(buildContentReport);
-    const rows = [];
-    let y = 0;
-    let highestPercentage = 0;
-    let highestPercentageY = 0;
-    for (const key of keys) {
-      if (key === "sourcemaps") {
-        continue;
-      }
-      if (key === "total") {
-        continue;
-      }
-      const { count, size, percentage } = buildContentReport[key];
-      if (count === 0) {
-        continue;
-      }
-      const row = [
-        {
-          value: key,
-          borderTop: {},
-          borderBottom: {},
-        },
-        {
-          value: count,
-          borderTop: {},
-          borderBottom: {},
-        },
-        {
-          value: size,
-          format: "size",
-          borderTop: {},
-          borderBottom: {},
-        },
-        {
-          value: percentage,
-          format: "percentage",
-          unit: "%",
-          borderTop: {},
-          borderBottom: {},
-        },
-      ];
-      if (percentage > highestPercentage) {
-        highestPercentage = percentage;
-        highestPercentageY = y;
-      }
-      rows.push(row);
-      y++;
-    }
-    if (rows.length > 1) {
-      const rowWithHighestPercentage = rows[highestPercentageY];
-      for (const cell of rowWithHighestPercentage) {
-        cell.bold = true;
-      }
-      const table = renderTable(rows, {
-        borderCollapse: true,
-        ansi: true,
-      });
-      content += table;
-      content += "\n";
-    }
+    title = `build done (${entryPointCount} entry points)`;
   }
-
-  let sizeLine = `total size: `;
-  sizeLine += humanizeFileSize(buildContentReport.total.size);
-  lines.push(sizeLine);
-
-  let durationLine = `duration: `;
-  durationLine += humanizeDuration(duration, { short: true });
-  lines.push(durationLine);
 
   // cpu usage
   let cpuUsageLine = "cpu: ";
@@ -8321,7 +8253,86 @@ const renderBuildDoneLog = ({
   });
   lines.push(memoryUsageLine);
 
-  content += lines.join("\n");
+  // duration
+  let durationLine = `duration: `;
+  durationLine += humanizeDuration(duration, { short: true });
+  lines.push(durationLine);
+
+  // content
+  let filesLine = `content: `;
+  const filesWrittenCount = buildContentReport.total.count;
+  if (filesWrittenCount === 1) {
+    filesLine += "1 file";
+  } else {
+    filesLine += `${filesWrittenCount} files`;
+  }
+  filesLine += " (";
+  filesLine += humanizeFileSize(buildContentReport.total.size);
+  filesLine += ")";
+  lines.push(filesLine);
+
+  // file repartition
+  const keys = Object.keys(buildContentReport);
+  const rows = [];
+  let y = 0;
+  let highestPercentage = 0;
+  let highestPercentageY = 0;
+  for (const key of keys) {
+    if (key === "sourcemaps") {
+      continue;
+    }
+    if (key === "total") {
+      continue;
+    }
+    const { count, size, percentage } = buildContentReport[key];
+    if (count === 0) {
+      continue;
+    }
+    const row = [
+      {
+        value: key,
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: count,
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: size,
+        format: "size",
+        borderTop: {},
+        borderBottom: {},
+      },
+      {
+        value: percentage,
+        format: "percentage",
+        unit: "%",
+        borderTop: {},
+        borderBottom: {},
+      },
+    ];
+    if (percentage > highestPercentage) {
+      highestPercentage = percentage;
+      highestPercentageY = y;
+    }
+    rows.push(row);
+    y++;
+  }
+  if (rows.length > 1) {
+    const rowWithHighestPercentage = rows[highestPercentageY];
+    for (const cell of rowWithHighestPercentage) {
+      cell.bold = true;
+    }
+    const table = renderTable(rows, {
+      borderCollapse: true,
+      ansi: true,
+    });
+    lines.push(table);
+  }
+
+  const content = lines.join("\n");
   return `${renderBigSection({
     title,
     content,
@@ -10495,6 +10506,7 @@ const build = async ({
     processMemoryUsageMonitoring.end();
 
     return renderBuildDoneLog({
+      entryPointArray,
       duration,
       buildFileContents,
       processCpuUsage: processCpuUsageMonitoring.info,

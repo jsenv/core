@@ -8,11 +8,13 @@ const measures = startMeasures({
 const { build } = await import("@jsenv/core");
 await build({
   logs: { level: "warn" },
-  sourceDirectoryUrl: new URL("./", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("./"),
+  buildDirectoryUrl: import.meta.resolve("./dist/"),
   entryPoints: {
-    "./main.html": "main.min.html",
+    "./main.html": {
+      buildRelativeUrl: "./main.min.html",
+    },
   },
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
 });
 const { duration, memoryHeapTotal, memoryHeapUsed, fsRead, fsWrite } =
   measures.stop();
