@@ -11,11 +11,14 @@ const run = async ({ runtimeCompat, minification }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.html": "main.html" },
-    plugins: [jsenvPluginReact({ asJsModuleLogLevel: "warn" })],
-    bundling: false,
-    runtimeCompat,
-    minification,
+    entryPoints: {
+      "./main.html": {
+        plugins: [jsenvPluginReact({ asJsModuleLogLevel: "warn" })],
+        bundling: false,
+        runtimeCompat,
+        minification,
+      },
+    },
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: import.meta.resolve("./build/"),
