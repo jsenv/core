@@ -9,12 +9,13 @@ const test = async (params) => {
     logs: { level: "warn" },
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    plugins: [jsenvPluginAsJsClassic()],
     outDirectoryUrl: import.meta.resolve("./.jsenv/"),
-    ...params,
+    entryPoints: {
+      "./main.html": {
+        plugins: [jsenvPluginAsJsClassic()],
+        ...params,
+      },
+    },
   });
   buildDirectorySnapshot.compare();
 };
