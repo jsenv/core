@@ -1,10 +1,10 @@
-# [0_basic](../../node_and_web_2.test.mjs#L22)
+# [0_basic](../../code_splitting_2.test.mjs#L22)
 
 ```js
 run()
 ```
 
-# 1/2 write 3 files into "./build/"
+# 1/2 write 4 files into "./build/"
 
 see [./build/](./build/)
 

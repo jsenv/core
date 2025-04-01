@@ -6,12 +6,12 @@ const run = async () => {
     sourceDirectoryUrl: new URL("./source/", import.meta.url),
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
-      "./index.js": {
-        buildRelativeUrl: "./dir/index.js",
+      "./main.js": {
+        buildRelativeUrl: "./main.js",
         runtimeCompat: { node: "20" },
       },
-      "./client/toto.js": {
-        buildRelativeUrl: "./client/toto.js",
+      "./autoreload/client/autoreload.js": {
+        buildRelativeUrl: "./client/autoreload/autoreload.js",
         runtimeCompat: { chrome: "89" },
       },
     },
