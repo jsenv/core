@@ -8268,7 +8268,7 @@ const renderBuildDoneLog = ({
   }
   filesLine += " (";
   filesLine += humanizeFileSize(buildContentReport.total.size);
-  filesLine += " )";
+  filesLine += ")";
   lines.push(filesLine);
 
   // file repartition
