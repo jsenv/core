@@ -591,6 +591,9 @@ export const createBuildSpecifierManager = ({
       const getSetOfUrlInfoInfluencingVersion = (urlInfo) => {
         const placeholderInfluencingVersionSet = new Set();
         const visitContainedPlaceholders = (urlInfo) => {
+          if (urlInfo.type === "entry_build") {
+            return;
+          }
           const referencedContentVersion = contentOnlyVersionMap.get(urlInfo);
           if (!referencedContentVersion) {
             // ignored while traversing graph (not used anymore, inline, ...)
