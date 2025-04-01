@@ -121,6 +121,7 @@ export const build = async ({
   buildDirectoryCleanPatterns = { "**/*": true },
   returnBuildInlineContents,
   returnBuildManifest,
+  returnBuildFileVersions,
   signal = new AbortController().signal,
   handleSIGINT = true,
 
@@ -609,11 +610,14 @@ export const build = async ({
         },
         entryPoint.params,
       );
+      const entryPointBuildRelativeUrl = entryPoint.params.buildRelativeUrl;
       const entryBuildInfo = {
         index: entryPointIndex,
         entryReference,
         entryUrlInfo: entryReference.urlInfo,
+        buildRelativeUrl: entryPointBuildRelativeUrl,
         buildFileContents: undefined,
+        buildFileVersions: undefined,
         buildInlineContents: undefined,
         buildManifest: undefined,
         duration: null,
@@ -623,7 +627,7 @@ export const build = async ({
             sourceDirectoryUrl,
           );
           const buildUrl = new URL(
-            entryPoint.params.buildRelativeUrl,
+            entryPointBuildRelativeUrl,
             buildDirectoryUrl,
           );
           const sourceUrlToLog = packageDirectoryUrl
@@ -631,7 +635,7 @@ export const build = async ({
             : entryPoint.key;
           const buildUrlToLog = packageDirectoryUrl
             ? urlToRelativeUrl(buildUrl, packageDirectoryUrl)
-            : entryPoint.params.buildRelativeUrl;
+            : entryPointBuildRelativeUrl;
 
           const entryPointBuildStartMs = Date.now();
           const onEntryPointBuildEnd = onEntryPointBuildStart(entryBuildInfo, {
@@ -652,6 +656,7 @@ export const build = async ({
               },
             });
             entryBuildInfo.buildFileContents = result.buildFileContents;
+            entryBuildInfo.buildFileVersions = result.buildFileVersions;
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
             entryBuildInfo.duration = Date.now() - entryPointBuildStartMs;
@@ -673,10 +678,12 @@ export const build = async ({
     await Promise.all(promises);
 
     const buildFileContents = {};
+    const buildFileVersions = {};
     const buildInlineContents = {};
     const buildManifest = {};
     for (const [, entryBuildInfo] of entryBuildInfoMap) {
       Object.assign(buildFileContents, entryBuildInfo.buildFileContents);
+      Object.assign(buildFileVersions, entryBuildInfo.buildFileVersions);
       Object.assign(buildInlineContents, entryBuildInfo.buildInlineContents);
       Object.assign(buildManifest, entryBuildInfo.buildManifest);
     }
@@ -699,6 +706,7 @@ export const build = async ({
     return {
       ...(returnBuildInlineContents ? { buildInlineContents } : {}),
       ...(returnBuildManifest ? { buildManifest } : {}),
+      ...(returnBuildFileVersions ? { buildFileVersions } : {}),
     };
   };
 
@@ -1319,8 +1327,12 @@ const prepareEntryPointBuild = async (
           }
         }
       }
-      const { buildFileContents, buildInlineContents, buildManifest } =
-        buildSpecifierManager.getBuildInfo();
+      const {
+        buildFileContents,
+        buildFileVersions,
+        buildInlineContents,
+        buildManifest,
+      } = buildSpecifierManager.getBuildInfo();
       if (versioning && assetManifest && Object.keys(buildManifest).length) {
         buildFileContents[assetManifestFileRelativeUrl] = JSON.stringify(
           buildManifest,
@@ -1330,6 +1342,7 @@ const prepareEntryPointBuild = async (
       }
       return {
         buildFileContents,
+        buildFileVersions,
         buildInlineContents,
         buildManifest,
       };

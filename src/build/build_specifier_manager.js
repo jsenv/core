@@ -546,8 +546,8 @@ export const createBuildSpecifierManager = ({
           if (urlInfo.type === "entry_build") {
             const otherEntryBuildInfo = urlInfo.otherEntryBuildInfo;
             const entryUrlInfoVersion =
-              otherEntryBuildInfo.buildManifest[
-                otherEntryBuildInfo.entryUrlInfo.buildRelativeUrl
+              otherEntryBuildInfo.buildFileVersions[
+                otherEntryBuildInfo.buildRelativeUrl
               ];
             contentOnlyVersionMap.set(urlInfo, entryUrlInfoVersion);
             return;
@@ -1054,6 +1054,7 @@ export const createBuildSpecifierManager = ({
       const buildManifest = {};
       const buildContents = {};
       const buildInlineRelativeUrlSet = new Set();
+      const buildFileVersions = {};
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
         (urlInfo) => {
@@ -1078,6 +1079,8 @@ export const createBuildSpecifierManager = ({
             buildUrl,
             buildDirectoryUrl,
           );
+          buildFileVersions[buildRelativeUrl] = versionMap.get(urlInfo);
+
           let contentKey;
           // if to guard for html where versioned build specifier is not generated
           if (buildSpecifierVersioned) {
@@ -1116,7 +1119,12 @@ export const createBuildSpecifierManager = ({
           }
         });
 
-      return { buildFileContents, buildInlineContents, buildManifest };
+      return {
+        buildFileContents,
+        buildInlineContents,
+        buildManifest,
+        buildFileVersions,
+      };
     },
   };
 };
