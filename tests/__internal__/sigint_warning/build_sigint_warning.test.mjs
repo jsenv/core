@@ -8,7 +8,7 @@ const countListeners = () => {
 
 const beforeBuild = countListeners();
 const buildPromise = build({
-  // logs: { level: "warn" },
+  logs: { level: "warn" },
   sourceDirectoryUrl: import.meta.resolve("./client/"),
   buildDirectoryUrl: import.meta.resolve("./dist/"),
   outDirectoryUrl: import.meta.resolve("./.jsenv/"),

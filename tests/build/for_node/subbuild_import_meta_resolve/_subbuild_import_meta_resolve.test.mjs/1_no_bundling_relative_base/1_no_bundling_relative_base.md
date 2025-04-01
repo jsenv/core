@@ -1,4 +1,4 @@
-# [1_no_bundling_relative_base](../../subbuild_import_meta_resolve.test.mjs#L44)
+# [1_no_bundling_relative_base](../../subbuild_import_meta_resolve.test.mjs#L39)
 
 ```js
 run({

@@ -230,7 +230,7 @@ export const build = async ({
           );
           if (unexpectedEntryPointParamNames.length) {
             throw new TypeError(
-              `The entry point value${forEntryPointOrEmpty} have unknown params: ${unexpectedEntryPointParamNames.join(",")}.`,
+              `The value${forEntryPointOrEmpty} contains unknown keys: ${unexpectedEntryPointParamNames.join(",")}.`,
             );
           }
           const { versioningMethod } = value;

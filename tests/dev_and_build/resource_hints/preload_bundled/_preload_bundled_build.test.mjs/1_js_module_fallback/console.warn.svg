@@ -6,7 +6,7 @@
     <svg width="608.1" height="42.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55" fill="#DAA520">⚠</text>
-        <text x="26.8" y="24.55"> remove resource hint on "base/client/file.js" because it was bundled</text>
+        <text x="18.4" y="24.55" style="white-space:pre"> remove resource hint on "base/client/file.js" because it was bundled</text>
       </g>
     </svg>
   </foreignObject>

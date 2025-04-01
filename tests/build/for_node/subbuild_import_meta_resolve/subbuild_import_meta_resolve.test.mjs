@@ -7,6 +7,9 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = async ({ bundling, clientBase }) => {
   await build({
+    logs: {
+      level: "warn",
+    },
     sourceDirectoryUrl: import.meta.resolve("./source/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
@@ -15,10 +18,6 @@ const run = async ({ bundling, clientBase }) => {
         bundling,
         versioning: false,
         minification: false,
-        logs: {
-          level: "warn",
-          disabled: true,
-        },
       },
       "./client/main.html": {
         runtimeCompat: { chrome: "89" },
@@ -26,10 +25,6 @@ const run = async ({ bundling, clientBase }) => {
         versioning: false,
         minification: false,
         base: clientBase,
-        logs: {
-          level: "warn",
-          disabled: true,
-        },
       },
     },
   });

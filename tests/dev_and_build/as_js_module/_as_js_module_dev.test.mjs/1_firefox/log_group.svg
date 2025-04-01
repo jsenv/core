@@ -7,11 +7,11 @@
       <g>
         <text x="10" y="24.55">GET http://127.0.0.1/favicon.ico</text>
         <text x="26.8" y="43.55" fill="#DAA520">404</text>
-        <text x="60.41" y="43.55"> Failed to fetch url content</text>
-        <text x="26.8" y="62.55">  base/client/main.html</text>
-        <text x="26.8" y="81.55">  no entry on filesystem</text>
-        <text x="26.8" y="100.55">  --- plugin name ---</text>
-        <text x="26.8" y="119.55">  "jsenv:file_url_fetching"</text>
+        <text x="52.01" y="43.55" style="white-space:pre"> Failed to fetch url content</text>
+        <text x="10" y="62.55" style="white-space:pre">  base/client/main.html</text>
+        <text x="10" y="81.55" style="white-space:pre">  no entry on filesystem</text>
+        <text x="10" y="100.55" style="white-space:pre">  --- plugin name ---</text>
+        <text x="10" y="119.55" style="white-space:pre">  "jsenv:file_url_fetching"</text>
       </g>
     </svg>
   </foreignObject>
