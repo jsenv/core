@@ -528,7 +528,22 @@ const rollupPluginJsenv = ({
             const dynamicImportUrl = getOriginalUrl(
               dynamicImportRollupFileInfo,
             );
-            const rollupSpecifier = `./${dynamicImportRollupFileInfo.fileName}`;
+            const importerBuildUrl = new URL(
+              rollupFileInfo.fileName,
+              buildDirectoryUrl,
+            ).href;
+            const urlToImport = new URL(
+              dynamicImportRollupFileInfo.fileName,
+              buildDirectoryUrl,
+            ).href;
+            const specifierRelative = urlToRelativeUrl(
+              urlToImport,
+              importerBuildUrl,
+            );
+            const rollupSpecifier =
+              specifierRelative[0] === "."
+                ? specifierRelative
+                : `./${specifierRelative}`;
             specifierToUrlMap.set(rollupSpecifier, dynamicImportUrl);
           }
         }
