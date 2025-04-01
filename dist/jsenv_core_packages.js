@@ -6700,7 +6700,7 @@ const injectAstAfterImport$1 = (programPath, ast) => {
 };
 
 const newStylesheetClientFileUrl$1 = new URL(
-  "./client/new_stylesheet.js",
+  "./client/new_stylesheet/new_stylesheet.js",
   import.meta.url,
 ).href;
 
@@ -6858,7 +6858,7 @@ const getImportAttributes$1 = (importNode) => {
 };
 
 const regeneratorRuntimeClientFileUrl$1 = new URL(
-  "./client/regenerator_runtime.js",
+  "./client/regenerator_runtime/regenerator_runtime.js",
   import.meta.url,
 ).href;
 
@@ -17066,7 +17066,7 @@ const injectAstAfterImport = (programPath, ast) => {
 };
 
 const newStylesheetClientFileUrl = new URL(
-  "./client/new_stylesheet.js",
+  "./client/new_stylesheet/new_stylesheet.js",
   import.meta.url,
 ).href;
 
@@ -17224,7 +17224,7 @@ const getImportAttributes = (importNode) => {
 };
 
 const regeneratorRuntimeClientFileUrl = new URL(
-  "./client/regenerator_runtime.js",
+  "./client/regenerator_runtime/regenerator_runtime.js",
   import.meta.url,
 ).href;
 

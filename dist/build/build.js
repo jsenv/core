@@ -2625,7 +2625,7 @@ const shouldHandleSourcemap = (urlInfo) => {
 };
 
 const inlineContentClientFileUrl = new URL(
-  "./client/inline_content.js",
+  "../client/inline_content/inline_content.js",
   import.meta.url,
 ).href;
 
@@ -3673,7 +3673,7 @@ const jsenvPluginInlining = () => {
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = import.meta.resolve(
-    "./client/html_syntax_error.html",
+    "../client/html_syntax_error/html_syntax_error.html",
   );
 
   return {
@@ -6028,7 +6028,7 @@ return {
 
 
 const htmlFileUrlForDirectory = import.meta.resolve(
-  "./client/directory_listing.html",
+  "../client/directory_listing/directory_listing.html",
 );
 
 const jsenvPluginDirectoryListing = ({
@@ -7389,7 +7389,7 @@ const htmlNodeCanHotReload = (node) => {
 
 const jsenvPluginImportMetaHot = () => {
   const importMetaHotClientFileUrl = import.meta.resolve(
-    "./client/import_meta_hot.js",
+    "../client/import_meta_hot/import_meta_hot.js",
   );
 
   return {
@@ -7501,7 +7501,7 @@ import.meta.hot = createImportMetaHot(import.meta.url);
 };
 
 const jsenvPluginAutoreloadClient = () => {
-  const autoreloadClientFileUrl = import.meta.resolve("./client/autoreload.js");
+  const autoreloadClientFileUrl = import.meta.resolve("../client/autoreload/autoreload.js");
 
   return {
     name: "jsenv:autoreload_client",
@@ -8020,7 +8020,7 @@ const jsenvPluginRibbon = ({
   rootDirectoryUrl,
   htmlInclude = "/**/*.html",
 }) => {
-  const ribbonClientFileUrl = import.meta.resolve("./client/ribbon.js");
+  const ribbonClientFileUrl = import.meta.resolve("../client/ribbon/ribbon.js");
   const associations = URL_META.resolveAssociations(
     {
       ribbon: {

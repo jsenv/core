@@ -1,5 +1,0 @@
-const autoreloadClientFileUrl = import.meta.resolve(
-  "./client/autoreload/autoreload_client.js",
-);
-
-console.log(autoreloadClientFileUrl);
