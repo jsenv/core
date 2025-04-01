@@ -54,6 +54,7 @@ await build({
         "file://**/node_modules/@jsenv/urls/": false,
         "file://**/node_modules/@jsenv/runtime-compat/": false,
         "file://**/node_modules/@jsenv/utils/": false,
+        "file://**/node_modules/@jsenv/os-metrics/": false,
         "file://**/node_modules/ws/": false,
         "file://**/node_modules/ansi-escapes/": false,
         "file://**/node_modules/is-unicode-supported/": false,

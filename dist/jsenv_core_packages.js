@@ -9,6 +9,8 @@ import { parseJsUrls, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeA
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { convertJsModuleToJsClassic, systemJsClientFileUrlDefault } from "@jsenv/js-module-fallback";
+import { cpus, totalmem, freemem } from "node:os";
+import { cpuUsage, memoryUsage } from "node:process";
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -14355,6 +14357,253 @@ const getExtensionsToTry = (magicExtensions, importer) => {
   return Array.from(extensionsSet.values());
 };
 
+const startMeasuringTotalCpuUsage = () => {
+  let previousCpuArray = cpus();
+  let previousMs = Date.now();
+  let previousCpuUsage = cpuUsage();
+
+  const overall = {
+    inactive: 100,
+    active: 0,
+    system: 0,
+    user: 0,
+  };
+  const thisProcess = {
+    active: 0,
+    system: 0,
+    user: 0,
+  };
+  const details = previousCpuArray.map(() => {
+    return {
+      inactive: 100,
+      active: 0,
+      system: 0,
+      user: 0,
+    };
+  });
+
+  const samples = [];
+  const interval = setInterval(() => {
+    let cpuArray = cpus();
+    const ms = Date.now();
+    const ellapsedMs = ms - previousMs;
+    const cpuUsageSampleArray = [];
+    let overallSystemMs = 0;
+    let overallUserMs = 0;
+    let overallInactiveMs = 0;
+    let overallActiveMs = 0;
+    let overallMsEllapsed = 0;
+    let index = 0;
+    for (const cpu of cpuArray) {
+      const previousCpuTimes = previousCpuArray[index].times;
+      const cpuTimes = cpu.times;
+      const systemMs = cpuTimes.sys - previousCpuTimes.sys;
+      const userMs = cpuTimes.user - previousCpuTimes.user;
+      const activeMs = systemMs + userMs;
+      const inactiveMs = ellapsedMs - activeMs;
+      const cpuUsageSample = {
+        inactive: inactiveMs / ellapsedMs,
+        active: activeMs / ellapsedMs,
+        system: systemMs / ellapsedMs,
+        user: userMs / ellapsedMs,
+      };
+      cpuUsageSampleArray.push(cpuUsageSample);
+
+      overallSystemMs += systemMs;
+      overallUserMs += userMs;
+      overallInactiveMs += inactiveMs;
+      overallActiveMs += activeMs;
+      overallMsEllapsed += ellapsedMs;
+      index++;
+    }
+    const overallUsageSample = {
+      inactive: overallInactiveMs / overallMsEllapsed,
+      active: overallActiveMs / overallMsEllapsed,
+      system: overallSystemMs / overallMsEllapsed,
+      user: overallUserMs / overallMsEllapsed,
+    };
+    previousCpuArray = cpuArray;
+    previousMs = ms;
+
+    const processCpuUsage = cpuUsage();
+    const thisProcessSystemMs = Math.round(
+      (processCpuUsage.system - previousCpuUsage.system) / 1000,
+    );
+    const thisProcessUserMs = Math.round(
+      (processCpuUsage.user - previousCpuUsage.user) / 1000,
+    );
+    previousCpuUsage = processCpuUsage;
+
+    const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
+    const thisProcessInactiveMs = overallMsEllapsed - thisProcessActiveMs;
+    const thisProcessSample = {
+      inactive: thisProcessInactiveMs / overallMsEllapsed,
+      active: thisProcessActiveMs / overallMsEllapsed,
+      system: thisProcessSystemMs / overallMsEllapsed,
+      user: thisProcessUserMs / overallMsEllapsed,
+    };
+    samples.push({
+      cpuUsageSampleArray,
+      overallUsageSample,
+      thisProcessSample,
+    });
+    if (samples.length === 10) {
+      {
+        let index = 0;
+        for (const detail of details) {
+          let systemSum = 0;
+          let userSum = 0;
+          let inactiveSum = 0;
+          let activeSum = 0;
+          for (const sample of samples) {
+            const { cpuUsageSampleArray } = sample;
+            const cpuUsageSample = cpuUsageSampleArray[index];
+            inactiveSum += cpuUsageSample.inactive;
+            activeSum += cpuUsageSample.active;
+            systemSum += cpuUsageSample.system;
+            userSum += cpuUsageSample.user;
+          }
+          Object.assign(detail, {
+            inactive: inactiveSum / samples.length,
+            active: activeSum / samples.length,
+            system: systemSum / samples.length,
+            user: userSum / samples.length,
+          });
+          index++;
+        }
+      }
+      {
+        let overallSystemSum = 0;
+        let overallUserSum = 0;
+        let overallInactiveSum = 0;
+        let overallActiveSum = 0;
+        for (const sample of samples) {
+          const { overallUsageSample } = sample;
+          overallSystemSum += overallUsageSample.system;
+          overallUserSum += overallUsageSample.user;
+          overallInactiveSum += overallUsageSample.inactive;
+          overallActiveSum += overallUsageSample.active;
+        }
+        Object.assign(overall, {
+          inactive: overallInactiveSum / samples.length,
+          active: overallActiveSum / samples.length,
+          system: overallSystemSum / samples.length,
+          user: overallUserSum / samples.length,
+        });
+      }
+      {
+        let thisProcessSystemSum = 0;
+        let thisProcessUserSum = 0;
+        let thisProcessInactiveSum = 0;
+        let thisProcessActiveSum = 0;
+        for (const sample of samples) {
+          const { thisProcessSample } = sample;
+          thisProcessSystemSum += thisProcessSample.system;
+          thisProcessUserSum += thisProcessSample.user;
+          thisProcessInactiveSum += thisProcessSample.inactive;
+          thisProcessActiveSum += thisProcessSample.active;
+        }
+        Object.assign(thisProcess, {
+          inactive: thisProcessInactiveSum / samples.length,
+          active: thisProcessActiveSum / samples.length,
+          system: thisProcessSystemSum / samples.length,
+          user: thisProcessUserSum / samples.length,
+        });
+      }
+      samples.length = 0;
+    }
+  }, 15);
+  interval.unref();
+
+  return {
+    overall,
+    thisProcess,
+    details,
+    stop: () => {
+      clearInterval(interval);
+    },
+  };
+};
+
+const startMonitoringMetric = (measure) => {
+  const metrics = [];
+  const takeMeasure = () => {
+    const value = measure();
+    metrics.push(value);
+    return value;
+  };
+
+  const info = {
+    start: takeMeasure(),
+    min: null,
+    max: null,
+    median: null,
+    end: null,
+  };
+  return {
+    info,
+    measure: takeMeasure,
+    end: () => {
+      info.end = takeMeasure();
+      metrics.sort((a, b) => a - b);
+      info.min = metrics[0];
+      info.max = metrics[metrics.length - 1];
+      info.median = medianFromSortedArray(metrics);
+      metrics.length = 0;
+    },
+  };
+};
+
+const medianFromSortedArray = (array) => {
+  const length = array.length;
+  const isOdd = length % 2 === 1;
+  if (isOdd) {
+    const medianNumberIndex = (length - 1) / 2;
+    const medianNumber = array[medianNumberIndex];
+    return medianNumber;
+  }
+  const rightMiddleNumberIndex = length / 2;
+  const leftMiddleNumberIndex = rightMiddleNumberIndex - 1;
+  const leftMiddleNumber = array[leftMiddleNumberIndex];
+  const rightMiddleNumber = array[rightMiddleNumberIndex];
+  const medianNumber = (leftMiddleNumber + rightMiddleNumber) / 2;
+  return medianNumber;
+};
+
+// https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
+
+
+const startMonitoringCpuUsage = () => {
+  const cpuUsage = startMeasuringTotalCpuUsage();
+  const processCpuUsageMonitoring = startMonitoringMetric(() => {
+    return cpuUsage.thisProcess.active;
+  });
+  const osCpuUsageMonitoring = startMonitoringMetric(() => {
+    return cpuUsage.overall.active;
+  });
+  const result = [processCpuUsageMonitoring, osCpuUsageMonitoring];
+  result.stop = cpuUsage.stop;
+  return result;
+};
+
+const startMonitoringMemoryUsage = () => {
+  const processMemoryUsageMonitoring = startMonitoringMetric(() => {
+    return memoryUsage().rss;
+  });
+  const osMemoryUsageMonitoring = startMonitoringMetric(() => {
+    const total = totalmem();
+    const free = freemem();
+    return total - free;
+  });
+  const stop = () => {
+    processMemoryUsageMonitoring.stop();
+    osMemoryUsageMonitoring.stop();
+  };
+  const result = [processMemoryUsageMonitoring, osMemoryUsageMonitoring];
+  result.stop = stop;
+  return result;
+};
+
 const fileUrlConverter = {
   asFilePath: (fileUrl) => {
     const filePath = urlToFileSystemPath(fileUrl);
@@ -23413,4 +23662,4 @@ const assertAndNormalizeDirectoryUrl = (
   return value;
 };
 
-export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };
+export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, startMonitoringCpuUsage, startMonitoringMemoryUsage, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };

@@ -1,13 +1,12 @@
 import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
-import { startMonitoringCpuUsage, startMonitoringMemoryUsage, getAvailableMemory, countAvailableCpus, getOsVersion } from "@jsenv/os-metrics";
 import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { applyBabelPlugins } from "@jsenv/ast";
-import { memoryUsage } from "node:process";
+import { cpuUsage, memoryUsage } from "node:process";
 import { createSupportsColor, isUnicodeSupported, clearTerminal, eraseLines } from "./jsenv_test_node_modules.js";
 import { measureTextWidth } from "@jsenv/terminal-text-size";
 import { createException } from "@jsenv/exception";
@@ -15,12 +14,12 @@ import crypto from "node:crypto";
 import { dirname } from "node:path";
 import { createServer } from "node:net";
 import { spawn, spawnSync, fork } from "node:child_process";
+import { availableParallelism, cpus, totalmem, release, freemem } from "node:os";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
 import { findFreePort } from "@jsenv/server";
 import { Worker } from "node:worker_threads";
 import he from "he";
-import "node:os";
 import "node:tty";
 
 const createCallbackListNotifiedOnce = () => {
@@ -3732,6 +3731,265 @@ const ensureEmptyDirectory = async (source) => {
   throw new Error(
     `ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`,
   );
+};
+
+const countAvailableCpus = () => {
+  if (typeof availableParallelism === "function") {
+    return availableParallelism();
+  }
+  const cpuArray = cpus();
+  return cpuArray.length || 1;
+};
+
+const getAvailableMemory = () => totalmem();
+
+const getOsVersion = () => release();
+
+const startMeasuringTotalCpuUsage = () => {
+  let previousCpuArray = cpus();
+  let previousMs = Date.now();
+  let previousCpuUsage = cpuUsage();
+
+  const overall = {
+    inactive: 100,
+    active: 0,
+    system: 0,
+    user: 0,
+  };
+  const thisProcess = {
+    active: 0,
+    system: 0,
+    user: 0,
+  };
+  const details = previousCpuArray.map(() => {
+    return {
+      inactive: 100,
+      active: 0,
+      system: 0,
+      user: 0,
+    };
+  });
+
+  const samples = [];
+  const interval = setInterval(() => {
+    let cpuArray = cpus();
+    const ms = Date.now();
+    const ellapsedMs = ms - previousMs;
+    const cpuUsageSampleArray = [];
+    let overallSystemMs = 0;
+    let overallUserMs = 0;
+    let overallInactiveMs = 0;
+    let overallActiveMs = 0;
+    let overallMsEllapsed = 0;
+    let index = 0;
+    for (const cpu of cpuArray) {
+      const previousCpuTimes = previousCpuArray[index].times;
+      const cpuTimes = cpu.times;
+      const systemMs = cpuTimes.sys - previousCpuTimes.sys;
+      const userMs = cpuTimes.user - previousCpuTimes.user;
+      const activeMs = systemMs + userMs;
+      const inactiveMs = ellapsedMs - activeMs;
+      const cpuUsageSample = {
+        inactive: inactiveMs / ellapsedMs,
+        active: activeMs / ellapsedMs,
+        system: systemMs / ellapsedMs,
+        user: userMs / ellapsedMs,
+      };
+      cpuUsageSampleArray.push(cpuUsageSample);
+
+      overallSystemMs += systemMs;
+      overallUserMs += userMs;
+      overallInactiveMs += inactiveMs;
+      overallActiveMs += activeMs;
+      overallMsEllapsed += ellapsedMs;
+      index++;
+    }
+    const overallUsageSample = {
+      inactive: overallInactiveMs / overallMsEllapsed,
+      active: overallActiveMs / overallMsEllapsed,
+      system: overallSystemMs / overallMsEllapsed,
+      user: overallUserMs / overallMsEllapsed,
+    };
+    previousCpuArray = cpuArray;
+    previousMs = ms;
+
+    const processCpuUsage = cpuUsage();
+    const thisProcessSystemMs = Math.round(
+      (processCpuUsage.system - previousCpuUsage.system) / 1000,
+    );
+    const thisProcessUserMs = Math.round(
+      (processCpuUsage.user - previousCpuUsage.user) / 1000,
+    );
+    previousCpuUsage = processCpuUsage;
+
+    const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
+    const thisProcessInactiveMs = overallMsEllapsed - thisProcessActiveMs;
+    const thisProcessSample = {
+      inactive: thisProcessInactiveMs / overallMsEllapsed,
+      active: thisProcessActiveMs / overallMsEllapsed,
+      system: thisProcessSystemMs / overallMsEllapsed,
+      user: thisProcessUserMs / overallMsEllapsed,
+    };
+    samples.push({
+      cpuUsageSampleArray,
+      overallUsageSample,
+      thisProcessSample,
+    });
+    if (samples.length === 10) {
+      {
+        let index = 0;
+        for (const detail of details) {
+          let systemSum = 0;
+          let userSum = 0;
+          let inactiveSum = 0;
+          let activeSum = 0;
+          for (const sample of samples) {
+            const { cpuUsageSampleArray } = sample;
+            const cpuUsageSample = cpuUsageSampleArray[index];
+            inactiveSum += cpuUsageSample.inactive;
+            activeSum += cpuUsageSample.active;
+            systemSum += cpuUsageSample.system;
+            userSum += cpuUsageSample.user;
+          }
+          Object.assign(detail, {
+            inactive: inactiveSum / samples.length,
+            active: activeSum / samples.length,
+            system: systemSum / samples.length,
+            user: userSum / samples.length,
+          });
+          index++;
+        }
+      }
+      {
+        let overallSystemSum = 0;
+        let overallUserSum = 0;
+        let overallInactiveSum = 0;
+        let overallActiveSum = 0;
+        for (const sample of samples) {
+          const { overallUsageSample } = sample;
+          overallSystemSum += overallUsageSample.system;
+          overallUserSum += overallUsageSample.user;
+          overallInactiveSum += overallUsageSample.inactive;
+          overallActiveSum += overallUsageSample.active;
+        }
+        Object.assign(overall, {
+          inactive: overallInactiveSum / samples.length,
+          active: overallActiveSum / samples.length,
+          system: overallSystemSum / samples.length,
+          user: overallUserSum / samples.length,
+        });
+      }
+      {
+        let thisProcessSystemSum = 0;
+        let thisProcessUserSum = 0;
+        let thisProcessInactiveSum = 0;
+        let thisProcessActiveSum = 0;
+        for (const sample of samples) {
+          const { thisProcessSample } = sample;
+          thisProcessSystemSum += thisProcessSample.system;
+          thisProcessUserSum += thisProcessSample.user;
+          thisProcessInactiveSum += thisProcessSample.inactive;
+          thisProcessActiveSum += thisProcessSample.active;
+        }
+        Object.assign(thisProcess, {
+          inactive: thisProcessInactiveSum / samples.length,
+          active: thisProcessActiveSum / samples.length,
+          system: thisProcessSystemSum / samples.length,
+          user: thisProcessUserSum / samples.length,
+        });
+      }
+      samples.length = 0;
+    }
+  }, 15);
+  interval.unref();
+
+  return {
+    overall,
+    thisProcess,
+    details,
+    stop: () => {
+      clearInterval(interval);
+    },
+  };
+};
+
+const startMonitoringMetric = (measure) => {
+  const metrics = [];
+  const takeMeasure = () => {
+    const value = measure();
+    metrics.push(value);
+    return value;
+  };
+
+  const info = {
+    start: takeMeasure(),
+    min: null,
+    max: null,
+    median: null,
+    end: null,
+  };
+  return {
+    info,
+    measure: takeMeasure,
+    end: () => {
+      info.end = takeMeasure();
+      metrics.sort((a, b) => a - b);
+      info.min = metrics[0];
+      info.max = metrics[metrics.length - 1];
+      info.median = medianFromSortedArray(metrics);
+      metrics.length = 0;
+    },
+  };
+};
+
+const medianFromSortedArray = (array) => {
+  const length = array.length;
+  const isOdd = length % 2 === 1;
+  if (isOdd) {
+    const medianNumberIndex = (length - 1) / 2;
+    const medianNumber = array[medianNumberIndex];
+    return medianNumber;
+  }
+  const rightMiddleNumberIndex = length / 2;
+  const leftMiddleNumberIndex = rightMiddleNumberIndex - 1;
+  const leftMiddleNumber = array[leftMiddleNumberIndex];
+  const rightMiddleNumber = array[rightMiddleNumberIndex];
+  const medianNumber = (leftMiddleNumber + rightMiddleNumber) / 2;
+  return medianNumber;
+};
+
+// https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
+
+
+const startMonitoringCpuUsage = () => {
+  const cpuUsage = startMeasuringTotalCpuUsage();
+  const processCpuUsageMonitoring = startMonitoringMetric(() => {
+    return cpuUsage.thisProcess.active;
+  });
+  const osCpuUsageMonitoring = startMonitoringMetric(() => {
+    return cpuUsage.overall.active;
+  });
+  const result = [processCpuUsageMonitoring, osCpuUsageMonitoring];
+  result.stop = cpuUsage.stop;
+  return result;
+};
+
+const startMonitoringMemoryUsage = () => {
+  const processMemoryUsageMonitoring = startMonitoringMetric(() => {
+    return memoryUsage().rss;
+  });
+  const osMemoryUsageMonitoring = startMonitoringMetric(() => {
+    const total = totalmem();
+    const free = freemem();
+    return total - free;
+  });
+  const stop = () => {
+    processMemoryUsageMonitoring.stop();
+    osMemoryUsageMonitoring.stop();
+  };
+  const result = [processMemoryUsageMonitoring, osMemoryUsageMonitoring];
+  result.stop = stop;
+  return result;
 };
 
 const normalizeFileByFileCoveragePaths = (
