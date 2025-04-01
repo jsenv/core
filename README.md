@@ -17,7 +17,7 @@ To try jsenv on your machine, use [@jsenv/cli](./packages/related/cli/#jsenvcli)
 
 For additional details, consult the [documentation](./docs/users/users.md)
 
-# The best parts
+<!-- # The best parts
 
 - **Robust versioning during build**: Avoids <a href="https://bundlers.tooling.report/hashing/avoid-cascade/" target="_blank">cascading hash changes</a><sup>↗</sup>.
 - **Load js module with classic script**: See the [asJsClassic plugin](./docs/users/g_plugins/g_plugins.md#asjsclassic).
@@ -28,7 +28,7 @@ For additional details, consult the [documentation](./docs/users/users.md)
 - **Isolated environment for each test file**: Ensures tests run independently, preventing side effects.
 - Single set of files after build: Simplifies support and deployement with a single set of files.
 - Execute tests in multiple browsers: Supports Chrome, Safari, and Firefox.
-- Extensive browser support during dev: Allows the use of various browsers beyond the latest Chrome, which is useful for reproducing browser-specific bugs.
+- Extensive browser support during dev: Allows the use of various browsers beyond the latest Chrome, which is useful for reproducing browser-specific bugs. -->
 
 <!--
 The following commands can be used to skip the prompt
