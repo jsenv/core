@@ -3,15 +3,15 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = async () => {
   await build({
-    sourceDirectoryUrl: new URL("./source/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
-      "./main.js": {
+      "./source/dev/start_dev_server.js": {
         buildRelativeUrl: "./main.js",
         runtimeCompat: { node: "20" },
       },
-      "./autoreload/client/autoreload.js": {
-        buildRelativeUrl: "./client/autoreload/autoreload.js",
+      "./source/plugins/autoreload/client/autoreload_client.js": {
+        buildRelativeUrl: "./client/autoreload/autoreload_client.js",
         runtimeCompat: { chrome: "89" },
       },
     },

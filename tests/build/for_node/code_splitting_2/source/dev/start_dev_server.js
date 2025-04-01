@@ -1,1 +1,1 @@
-import "../autoreload/autoreload_server.js";
+import "../plugins/autoreload/autoreload_server.js";

@@ -1,5 +1,5 @@
 const autoreloadClientFileUrl = import.meta.resolve(
-  "./client/autoreload/autoreload_client.js",
+  "./client/autoreload_client.js",
 );
 
 console.log(autoreloadClientFileUrl);
