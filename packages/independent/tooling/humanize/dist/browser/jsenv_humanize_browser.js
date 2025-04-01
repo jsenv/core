@@ -1,27 +1,73 @@
 const createDetailedMessage = (message, details = {}) => {
-  let string = "".concat(message);
-  Object.keys(details).forEach(key => {
-    const value = details[key];
-    string += "\n--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
-  });
-  return string;
+  let text = "".concat(message);
+  const namedSectionsText = renderNamedSections(details);
+  if (namedSectionsText) {
+    text += "\n".concat(namedSectionsText);
+  }
+  return text;
+};
+const renderNamedSections = namedSections => {
+  let text = "";
+  let keys = Object.keys(namedSections);
+  for (const key of keys) {
+    const isLastKey = key === keys[keys.length - 1];
+    const value = namedSections[key];
+    text += "--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    if (!isLastKey) {
+      text += "\n";
+    }
+  }
+  return text;
 };
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
+const RED = "red";
+const GREEN = "green";
+const YELLOW = "yellow";
+const BLUE = "blue";
+const MAGENTA = "magenta";
+const CYAN = "cyan";
+const GREY = "grey";
+const WHITE = "white";
+const BLACK = "black";
+const TEXT_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[31m",
+  [GREEN]: "\x1b[32m",
+  [YELLOW]: "\x1b[33m",
+  [BLUE]: "\x1b[34m",
+  [MAGENTA]: "\x1b[35m",
+  [CYAN]: "\x1b[36m",
+  [GREY]: "\x1b[90m",
+  [WHITE]: "\x1b[37m",
+  [BLACK]: "\x1b[30m"
+};
+const BACKGROUND_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[41m",
+  [GREEN]: "\x1b[42m",
+  [YELLOW]: "\x1b[43m",
+  [BLUE]: "\x1b[44m",
+  [MAGENTA]: "\x1b[45m",
+  [CYAN]: "\x1b[46m",
+  [GREY]: "\x1b[100m",
+  [WHITE]: "\x1b[47m",
+  [BLACK]: "\x1b[40m"
+};
 const createAnsi = ({
   supported
 }) => {
   const ANSI = {
     supported,
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED,
+    GREEN,
+    YELLOW,
+    BLUE,
+    MAGENTA,
+    CYAN,
+    GREY,
+    WHITE,
+    BLACK,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -33,7 +79,28 @@ const createAnsi = ({
         // cannot set color of blank chars
         return text;
       }
-      return "".concat(color).concat(text).concat(RESET);
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return "".concat(ansiEscapeCodeForTextColor).concat(text).concat(RESET);
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor = BACKGROUND_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return "".concat(ansiEscapeCodeForBackgroundColor).concat(text).concat(RESET);
     },
     BOLD: "\x1b[1m",
     UNDERLINE: "\x1b[4m",
@@ -49,7 +116,8 @@ const createAnsi = ({
       if (text === "") {
         return text;
       }
-      return "".concat(effect).concat(text).concat(RESET);
+      const ansiEscapeCodeForEffect = effect;
+      return "".concat(ansiEscapeCodeForEffect).concat(text).concat(RESET);
     }
   };
   return ANSI;

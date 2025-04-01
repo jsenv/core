@@ -1,42 +1,89 @@
-import { createSupportsColor, isUnicodeSupported, clearTerminal, eraseLines } from "./jsenv_humanize_node_modules.js";
-import stringWidth from "string-width";
+import { createSupportsColor, isUnicodeSupported, stripAnsi, emojiRegex, eastAsianWidth, clearTerminal, eraseLines } from "./jsenv_humanize_node_modules.js";
+import { stripVTControlCharacters } from "node:util";
 import "node:process";
 import "node:os";
 import "node:tty";
 
 const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`;
+  let text = `${message}`;
+  const namedSectionsText = renderNamedSections(details);
+  if (namedSectionsText) {
+    text += `
+${namedSectionsText}`;
+  }
+  return text;
+};
 
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
+const renderNamedSections = (namedSections) => {
+  let text = "";
+  let keys = Object.keys(namedSections);
+  for (const key of keys) {
+    const isLastKey = key === keys[keys.length - 1];
+    const value = namedSections[key];
+    text += `--- ${key} ---
 ${
   Array.isArray(value)
     ? value.join(`
 `)
     : value
 }`;
-  });
-
-  return string;
+    if (!isLastKey) {
+      text += "\n";
+    }
+  }
+  return text;
 };
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
 
+const RED = "red";
+const GREEN = "green";
+const YELLOW = "yellow";
+const BLUE = "blue";
+const MAGENTA = "magenta";
+const CYAN = "cyan";
+const GREY = "grey";
+const WHITE = "white";
+const BLACK = "black";
+
+const TEXT_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[31m",
+  [GREEN]: "\x1b[32m",
+  [YELLOW]: "\x1b[33m",
+  [BLUE]: "\x1b[34m",
+  [MAGENTA]: "\x1b[35m",
+  [CYAN]: "\x1b[36m",
+  [GREY]: "\x1b[90m",
+  [WHITE]: "\x1b[37m",
+  [BLACK]: "\x1b[30m",
+};
+const BACKGROUND_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[41m",
+  [GREEN]: "\x1b[42m",
+  [YELLOW]: "\x1b[43m",
+  [BLUE]: "\x1b[44m",
+  [MAGENTA]: "\x1b[45m",
+  [CYAN]: "\x1b[46m",
+  [GREY]: "\x1b[100m",
+  [WHITE]: "\x1b[47m",
+  [BLACK]: "\x1b[40m",
+};
+
 const createAnsi = ({ supported }) => {
   const ANSI = {
     supported,
 
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED,
+    GREEN,
+    YELLOW,
+    BLUE,
+    MAGENTA,
+    CYAN,
+    GREY,
+    WHITE,
+    BLACK,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -48,7 +95,29 @@ const createAnsi = ({ supported }) => {
         // cannot set color of blank chars
         return text;
       }
-      return `${color}${text}${RESET}`;
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForTextColor}${text}${RESET}`;
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor =
+        BACKGROUND_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForBackgroundColor}${text}${RESET}`;
     },
 
     BOLD: "\x1b[1m",
@@ -65,7 +134,8 @@ const createAnsi = ({ supported }) => {
       if (text === "") {
         return text;
       }
-      return `${effect}${text}${RESET}`;
+      const ansiEscapeCodeForEffect = effect;
+      return `${ansiEscapeCodeForEffect}${text}${RESET}`;
     },
   };
 
@@ -1337,6 +1407,79 @@ const createCallOrderer = () => {
   return callWhenPreviousExecutionAreDone;
 };
 
+const renderBigSection = (params) => {
+  return renderSection({
+    width: 45,
+    ...params,
+  });
+};
+
+const renderSection = ({
+  title,
+  content,
+  dashColor = ANSI.GREY,
+  width = 38,
+  bottomSeparator = true,
+}) => {
+  let section = "";
+
+  if (title) {
+    const titleWidth = stripAnsi(title).length;
+    const minWidthRequired = `--- … ---`.length;
+    const needsTruncate = titleWidth + minWidthRequired >= width;
+    if (needsTruncate) {
+      const titleTruncated = title.slice(0, width - minWidthRequired);
+      const leftDashes = ANSI.color("---", dashColor);
+      const rightDashes = ANSI.color("---", dashColor);
+      section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
+    } else {
+      const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
+      const dashLeftCount = Math.floor(remainingWidth / 2);
+      const dashRightCount = remainingWidth - dashLeftCount;
+      const leftDashes = ANSI.color("-".repeat(dashLeftCount), dashColor);
+      const rightDashes = ANSI.color("-".repeat(dashRightCount), dashColor);
+      section += `${leftDashes} ${title} ${rightDashes}`;
+    }
+    section += "\n";
+  } else {
+    const topDashes = ANSI.color(`-`.repeat(width), dashColor);
+    section += topDashes;
+    section += "\n";
+  }
+  section += `${content}`;
+  if (bottomSeparator) {
+    section += "\n";
+    const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
+    section += bottomDashes;
+  }
+  return section;
+};
+
+const renderDetails = (data) => {
+  const details = [];
+  for (const key of Object.keys(data)) {
+    const value = data[key];
+    let valueString = "";
+    valueString += ANSI.color(`${key}:`, ANSI.GREY);
+    const useNonGreyAnsiColor =
+      typeof value === "string" && value.includes("\x1b");
+    valueString += " ";
+    valueString += useNonGreyAnsiColor
+      ? value
+      : ANSI.color(String(value), ANSI.GREY);
+    details.push(valueString);
+  }
+  if (details.length === 0) {
+    return "";
+  }
+
+  let string = "";
+  string += ` ${ANSI.color("(", ANSI.GREY)}`;
+  string += details.join(ANSI.color(", ", ANSI.GREY));
+  string += ANSI.color(")", ANSI.GREY);
+  return string;
+};
+
 const LOG_LEVEL_OFF = "off";
 
 const LOG_LEVEL_DEBUG = "debug";
@@ -1425,6 +1568,101 @@ const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
 
+const createMeasureTextWidth = ({ stripAnsi }) => {
+  const segmenter = new Intl.Segmenter();
+  const defaultIgnorableCodePointRegex = /^\p{Default_Ignorable_Code_Point}$/u;
+
+  const measureTextWidth = (
+    string,
+    {
+      ambiguousIsNarrow = true,
+      countAnsiEscapeCodes = false,
+      skipEmojis = false,
+    } = {},
+  ) => {
+    if (typeof string !== "string" || string.length === 0) {
+      return 0;
+    }
+
+    if (!countAnsiEscapeCodes) {
+      string = stripAnsi(string);
+    }
+
+    if (string.length === 0) {
+      return 0;
+    }
+
+    let width = 0;
+    const eastAsianWidthOptions = { ambiguousAsWide: !ambiguousIsNarrow };
+
+    for (const { segment: character } of segmenter.segment(string)) {
+      const codePoint = character.codePointAt(0);
+
+      // Ignore control characters
+      if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) {
+        continue;
+      }
+
+      // Ignore zero-width characters
+      if (
+        (codePoint >= 0x20_0b && codePoint <= 0x20_0f) || // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+        codePoint === 0xfe_ff // Zero-width no-break space
+      ) {
+        continue;
+      }
+
+      // Ignore combining characters
+      if (
+        (codePoint >= 0x3_00 && codePoint <= 0x3_6f) || // Combining diacritical marks
+        (codePoint >= 0x1a_b0 && codePoint <= 0x1a_ff) || // Combining diacritical marks extended
+        (codePoint >= 0x1d_c0 && codePoint <= 0x1d_ff) || // Combining diacritical marks supplement
+        (codePoint >= 0x20_d0 && codePoint <= 0x20_ff) || // Combining diacritical marks for symbols
+        (codePoint >= 0xfe_20 && codePoint <= 0xfe_2f) // Combining half marks
+      ) {
+        continue;
+      }
+
+      // Ignore surrogate pairs
+      if (codePoint >= 0xd8_00 && codePoint <= 0xdf_ff) {
+        continue;
+      }
+
+      // Ignore variation selectors
+      if (codePoint >= 0xfe_00 && codePoint <= 0xfe_0f) {
+        continue;
+      }
+
+      // This covers some of the above cases, but we still keep them for performance reasons.
+      if (defaultIgnorableCodePointRegex.test(character)) {
+        continue;
+      }
+
+      if (!skipEmojis && emojiRegex().test(character)) {
+        if (process.env.CAPTURING_SIDE_EFFECTS) {
+          if (character === "✔️") {
+            width += 2;
+            continue;
+          }
+        }
+        width += measureTextWidth(character, {
+          skipEmojis: true,
+          countAnsiEscapeCodes: true, // to skip call to stripAnsi
+        });
+        continue;
+      }
+
+      width += eastAsianWidth(codePoint, eastAsianWidthOptions);
+    }
+
+    return width;
+  };
+  return measureTextWidth;
+};
+
+const measureTextWidth = createMeasureTextWidth({
+  stripAnsi: stripVTControlCharacters,
+});
+
 /*
  * see also https://github.com/vadimdemedes/ink
  */
@@ -1460,7 +1698,7 @@ const createDynamicLog = ({
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
     for (const logLine of logLines) {
-      const width = stringWidth(logLine);
+      const width = measureTextWidth(logLine);
       if (width === 0) {
         visualLineCount++;
       } else {
@@ -1525,7 +1763,8 @@ const createDynamicLog = ({
     update("");
 
     writing = true;
-    callback();
+    callback(update);
+    lastOutput = "";
     writing = false;
 
     update(ouputAfterCallback);
@@ -1725,4 +1964,4 @@ const createTaskLog = (
   };
 };
 
-export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, startSpinner };
+export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, renderBigSection, renderDetails, renderNamedSections, renderSection, startSpinner };

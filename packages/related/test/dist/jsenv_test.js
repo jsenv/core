@@ -1,15 +1,15 @@
 import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
-import process$1, { cpuUsage, memoryUsage } from "node:process";
-import os, { cpus, totalmem, release, availableParallelism, freemem } from "node:os";
-import tty from "node:tty";
-import stringWidth from "string-width";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
+import { startMonitoringCpuUsage, startMonitoringMemoryUsage, getAvailableMemory, countAvailableCpus, getOsVersion } from "@jsenv/os-metrics";
 import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { applyBabelPlugins } from "@jsenv/ast";
+import { memoryUsage } from "node:process";
+import { createSupportsColor, isUnicodeSupported, clearTerminal, eraseLines } from "./jsenv_test_node_modules.js";
+import { measureTextWidth } from "@jsenv/terminal-text-size";
 import { createException } from "@jsenv/exception";
 import crypto from "node:crypto";
 import { dirname } from "node:path";
@@ -20,6 +20,8 @@ import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-super
 import { findFreePort } from "@jsenv/server";
 import { Worker } from "node:worker_threads";
 import he from "he";
+import "node:os";
+import "node:tty";
 
 const createCallbackListNotifiedOnce = () => {
   let callbacks = [];
@@ -530,329 +532,86 @@ const SIGINT_CALLBACK = {
   },
 };
 
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-
-const {env} = process$1;
-
-let flagForceColor;
-if (
-	hasFlag('no-color')
-	|| hasFlag('no-colors')
-	|| hasFlag('color=false')
-	|| hasFlag('color=never')
-) {
-	flagForceColor = 0;
-} else if (
-	hasFlag('color')
-	|| hasFlag('colors')
-	|| hasFlag('color=true')
-	|| hasFlag('color=always')
-) {
-	flagForceColor = 1;
-}
-
-function envForceColor() {
-	if (!('FORCE_COLOR' in env)) {
-		return;
-	}
-
-	if (env.FORCE_COLOR === 'true') {
-		return 1;
-	}
-
-	if (env.FORCE_COLOR === 'false') {
-		return 0;
-	}
-
-	if (env.FORCE_COLOR.length === 0) {
-		return 1;
-	}
-
-	const level = Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
-
-	if (![0, 1, 2, 3].includes(level)) {
-		return;
-	}
-
-	return level;
-}
-
-function translateLevel(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3,
-	};
-}
-
-function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor();
-	if (noFlagForceColor !== undefined) {
-		flagForceColor = noFlagForceColor;
-	}
-
-	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
-
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (sniffFlags) {
-		if (hasFlag('color=16m')
-			|| hasFlag('color=full')
-			|| hasFlag('color=truecolor')) {
-			return 3;
-		}
-
-		if (hasFlag('color=256')) {
-			return 2;
-		}
-	}
-
-	// Check for Azure DevOps pipelines.
-	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
-		return 1;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process$1.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10
-			&& Number(osRelease[2]) >= 10_586
-		) {
-			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env) {
-		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env)) {
-			return 3;
-		}
-
-		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if (env.TERM === 'xterm-kitty') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env) {
-		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env.TERM_PROGRAM) {
-			case 'iTerm.app': {
-				return version >= 3 ? 3 : 2;
-			}
-
-			case 'Apple_Terminal': {
-				return 2;
-			}
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env) {
-		return 1;
-	}
-
-	return min;
-}
-
-function createSupportsColor(stream, options = {}) {
-	const level = _supportsColor(stream, {
-		streamIsTTY: stream && stream.isTTY,
-		...options,
-	});
-
-	return translateLevel(level);
-}
-
-({
-	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
-});
-
-function isUnicodeSupported() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
-
-platform === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-const ESC = '\u001B[';
-
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows$3 = !isBrowser && process$1.platform === 'win32';
-
-isBrowser ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
-const cursorUp = (count = 1) => ESC + count + 'A';
-
-const cursorLeft = ESC + 'G';
-
-const eraseLines = count => {
-	let clear = '';
-
-	for (let i = 0; i < count; i++) {
-		clear += eraseLine + (i < count - 1 ? cursorUp() : '');
-	}
-
-	if (count) {
-		clear += cursorLeft;
-	}
-
-	return clear;
-};
-const eraseLine = ESC + '2K';
-const eraseScreen = ESC + '2J';
-
-const clearTerminal = isWindows$3
-	? `${eraseScreen}${ESC}0f`
-	// 1. Erases the screen (Only done in case `2` is not supported)
-	// 2. Erases the whole screen including scrollback buffer
-	// 3. Moves cursor to the top-left position
-	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	:	`${eraseScreen}${ESC}3J${ESC}H`;
-
 const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`;
+  let text = `${message}`;
+  const namedSectionsText = renderNamedSections(details);
+  if (namedSectionsText) {
+    text += `
+${namedSectionsText}`;
+  }
+  return text;
+};
 
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
+const renderNamedSections = (namedSections) => {
+  let text = "";
+  let keys = Object.keys(namedSections);
+  for (const key of keys) {
+    const isLastKey = key === keys[keys.length - 1];
+    const value = namedSections[key];
+    text += `--- ${key} ---
 ${
   Array.isArray(value)
     ? value.join(`
 `)
     : value
 }`;
-  });
-
-  return string;
+    if (!isLastKey) {
+      text += "\n";
+    }
+  }
+  return text;
 };
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
 
+const RED = "red";
+const GREEN = "green";
+const YELLOW = "yellow";
+const BLUE = "blue";
+const MAGENTA = "magenta";
+const CYAN = "cyan";
+const GREY = "grey";
+const WHITE = "white";
+const BLACK = "black";
+
+const TEXT_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[31m",
+  [GREEN]: "\x1b[32m",
+  [YELLOW]: "\x1b[33m",
+  [BLUE]: "\x1b[34m",
+  [MAGENTA]: "\x1b[35m",
+  [CYAN]: "\x1b[36m",
+  [GREY]: "\x1b[90m",
+  [WHITE]: "\x1b[37m",
+  [BLACK]: "\x1b[30m",
+};
+const BACKGROUND_COLOR_ANSI_CODES = {
+  [RED]: "\x1b[41m",
+  [GREEN]: "\x1b[42m",
+  [YELLOW]: "\x1b[43m",
+  [BLUE]: "\x1b[44m",
+  [MAGENTA]: "\x1b[45m",
+  [CYAN]: "\x1b[46m",
+  [GREY]: "\x1b[100m",
+  [WHITE]: "\x1b[47m",
+  [BLACK]: "\x1b[40m",
+};
+
 const createAnsi = ({ supported }) => {
   const ANSI = {
     supported,
 
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
+    RED,
+    GREEN,
+    YELLOW,
+    BLUE,
+    MAGENTA,
+    CYAN,
+    GREY,
+    WHITE,
+    BLACK,
     color: (text, color) => {
       if (!ANSI.supported) {
         return text;
@@ -864,7 +623,29 @@ const createAnsi = ({ supported }) => {
         // cannot set color of blank chars
         return text;
       }
-      return `${color}${text}${RESET}`;
+      const ansiEscapeCodeForTextColor = TEXT_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForTextColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForTextColor}${text}${RESET}`;
+    },
+    backgroundColor: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set background color of blank chars
+        return text;
+      }
+      const ansiEscapeCodeForBackgroundColor =
+        BACKGROUND_COLOR_ANSI_CODES[color];
+      if (!ansiEscapeCodeForBackgroundColor) {
+        return text;
+      }
+      return `${ansiEscapeCodeForBackgroundColor}${text}${RESET}`;
     },
 
     BOLD: "\x1b[1m",
@@ -881,7 +662,8 @@ const createAnsi = ({ supported }) => {
       if (text === "") {
         return text;
       }
-      return `${effect}${text}${RESET}`;
+      const ansiEscapeCodeForEffect = effect;
+      return `${ansiEscapeCodeForEffect}${text}${RESET}`;
     },
   };
 
@@ -1012,6 +794,23 @@ const setDecimalsPrecision = (
   const asFloat = asInteger / coef;
   return number < 0 ? -asFloat : asFloat;
 };
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
 const unitShort = {
   year: "y",
   month: "m",
@@ -1334,6 +1133,119 @@ const fillLeft$1 = (value, biggestValue, char = " ") => {
   return padded;
 };
 
+const createCallOrderer = () => {
+  const queue = [];
+  const callWhenPreviousExecutionAreDone = (executionIndex, callback) => {
+    if (queue[executionIndex]) {
+      throw new Error(`${executionIndex} already used`);
+    }
+
+    let allBeforeAreDone = true;
+    if (executionIndex > 0) {
+      let beforeIndex = executionIndex - 1;
+      do {
+        const value = queue[beforeIndex];
+        if (!value) {
+          allBeforeAreDone = false;
+          break;
+        }
+      } while (beforeIndex--);
+    }
+    if (!allBeforeAreDone) {
+      queue[executionIndex] = callback;
+      return;
+    }
+    queue[executionIndex] = true;
+    callback();
+    let afterIndex = executionIndex + 1;
+    while (afterIndex < queue.length) {
+      const value = queue[afterIndex];
+      if (value === undefined) {
+        break;
+      }
+      if (typeof value === "function") {
+        queue[afterIndex] = true;
+        value();
+      }
+      afterIndex++;
+    }
+  };
+  return callWhenPreviousExecutionAreDone;
+};
+
+const renderBigSection = (params) => {
+  return renderSection({
+    width: 45,
+    ...params,
+  });
+};
+
+const renderSection = ({
+  title,
+  content,
+  dashColor = ANSI.GREY,
+  width = 38,
+  bottomSeparator = true,
+}) => {
+  let section = "";
+
+  if (title) {
+    const titleWidth = stripAnsi(title).length;
+    const minWidthRequired = `--- … ---`.length;
+    const needsTruncate = titleWidth + minWidthRequired >= width;
+    if (needsTruncate) {
+      const titleTruncated = title.slice(0, width - minWidthRequired);
+      const leftDashes = ANSI.color("---", dashColor);
+      const rightDashes = ANSI.color("---", dashColor);
+      section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
+    } else {
+      const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
+      const dashLeftCount = Math.floor(remainingWidth / 2);
+      const dashRightCount = remainingWidth - dashLeftCount;
+      const leftDashes = ANSI.color("-".repeat(dashLeftCount), dashColor);
+      const rightDashes = ANSI.color("-".repeat(dashRightCount), dashColor);
+      section += `${leftDashes} ${title} ${rightDashes}`;
+    }
+    section += "\n";
+  } else {
+    const topDashes = ANSI.color(`-`.repeat(width), dashColor);
+    section += topDashes;
+    section += "\n";
+  }
+  section += `${content}`;
+  if (bottomSeparator) {
+    section += "\n";
+    const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
+    section += bottomDashes;
+  }
+  return section;
+};
+
+const renderDetails = (data) => {
+  const details = [];
+  for (const key of Object.keys(data)) {
+    const value = data[key];
+    let valueString = "";
+    valueString += ANSI.color(`${key}:`, ANSI.GREY);
+    const useNonGreyAnsiColor =
+      typeof value === "string" && value.includes("\x1b");
+    valueString += " ";
+    valueString += useNonGreyAnsiColor
+      ? value
+      : ANSI.color(String(value), ANSI.GREY);
+    details.push(valueString);
+  }
+  if (details.length === 0) {
+    return "";
+  }
+
+  let string = "";
+  string += ` ${ANSI.color("(", ANSI.GREY)}`;
+  string += details.join(ANSI.color(", ", ANSI.GREY));
+  string += ANSI.color(")", ANSI.GREY);
+  return string;
+};
+
 const LOG_LEVEL_OFF = "off";
 
 const LOG_LEVEL_DEBUG = "debug";
@@ -1457,7 +1369,7 @@ const createDynamicLog = ({
     const logLines = lastOutput.split(/\r\n|\r|\n/);
     let visualLineCount = 0;
     for (const logLine of logLines) {
-      const width = stringWidth(logLine);
+      const width = measureTextWidth(logLine);
       if (width === 0) {
         visualLineCount++;
       } else {
@@ -1522,7 +1434,8 @@ const createDynamicLog = ({
     update("");
 
     writing = true;
-    callback();
+    callback(update);
+    lastOutput = "";
     writing = false;
 
     update(ouputAfterCallback);
@@ -4457,217 +4370,6 @@ const getCoverageFromTestPlanResults = async (
 
 const isV8Coverage = (coverage) => Boolean(coverage.result);
 
-const createCallOrderer = () => {
-  const queue = [];
-  const callWhenPreviousExecutionAreDone = (executionIndex, callback) => {
-    if (queue[executionIndex]) {
-      throw new Error(`${executionIndex} already used`);
-    }
-
-    let allBeforeAreDone = true;
-    if (executionIndex > 0) {
-      let beforeIndex = executionIndex - 1;
-      do {
-        const value = queue[beforeIndex];
-        if (!value) {
-          allBeforeAreDone = false;
-          break;
-        }
-      } while (beforeIndex--);
-    }
-    if (!allBeforeAreDone) {
-      queue[executionIndex] = callback;
-      return;
-    }
-    queue[executionIndex] = true;
-    callback();
-    let afterIndex = executionIndex + 1;
-    while (afterIndex < queue.length) {
-      const value = queue[afterIndex];
-      if (value === undefined) {
-        break;
-      }
-      if (typeof value === "function") {
-        queue[afterIndex] = true;
-        value();
-      }
-      afterIndex++;
-    }
-  };
-  return callWhenPreviousExecutionAreDone;
-};
-
-// https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
-
-
-const startMeasuringTotalCpuUsage = () => {
-  let previousCpuArray = cpus();
-  let previousMs = Date.now();
-  let previousCpuUsage = cpuUsage();
-
-  const overall = {
-    inactive: 100,
-    active: 0,
-    system: 0,
-    user: 0,
-  };
-  const thisProcess = {
-    active: 0,
-    system: 0,
-    user: 0,
-  };
-  const details = previousCpuArray.map(() => {
-    return {
-      inactive: 100,
-      active: 0,
-      system: 0,
-      user: 0,
-    };
-  });
-
-  const samples = [];
-  const interval = setInterval(() => {
-    let cpuArray = cpus();
-    const ms = Date.now();
-    const ellapsedMs = ms - previousMs;
-    const cpuUsageSampleArray = [];
-    let overallSystemMs = 0;
-    let overallUserMs = 0;
-    let overallInactiveMs = 0;
-    let overallActiveMs = 0;
-    let overallMsEllapsed = 0;
-    let index = 0;
-    for (const cpu of cpuArray) {
-      const previousCpuTimes = previousCpuArray[index].times;
-      const cpuTimes = cpu.times;
-      const systemMs = cpuTimes.sys - previousCpuTimes.sys;
-      const userMs = cpuTimes.user - previousCpuTimes.user;
-      const activeMs = systemMs + userMs;
-      const inactiveMs = ellapsedMs - activeMs;
-      const cpuUsageSample = {
-        inactive: inactiveMs / ellapsedMs,
-        active: activeMs / ellapsedMs,
-        system: systemMs / ellapsedMs,
-        user: userMs / ellapsedMs,
-      };
-      cpuUsageSampleArray.push(cpuUsageSample);
-
-      overallSystemMs += systemMs;
-      overallUserMs += userMs;
-      overallInactiveMs += inactiveMs;
-      overallActiveMs += activeMs;
-      overallMsEllapsed += ellapsedMs;
-      index++;
-    }
-    const overallUsageSample = {
-      inactive: overallInactiveMs / overallMsEllapsed,
-      active: overallActiveMs / overallMsEllapsed,
-      system: overallSystemMs / overallMsEllapsed,
-      user: overallUserMs / overallMsEllapsed,
-    };
-    previousCpuArray = cpuArray;
-    previousMs = ms;
-
-    const processCpuUsage = cpuUsage();
-    const thisProcessSystemMs = Math.round(
-      (processCpuUsage.system - previousCpuUsage.system) / 1000,
-    );
-    const thisProcessUserMs = Math.round(
-      (processCpuUsage.user - previousCpuUsage.user) / 1000,
-    );
-    previousCpuUsage = processCpuUsage;
-
-    const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
-    const thisProcessInactiveMs = overallMsEllapsed - thisProcessActiveMs;
-    const thisProcessSample = {
-      inactive: thisProcessInactiveMs / overallMsEllapsed,
-      active: thisProcessActiveMs / overallMsEllapsed,
-      system: thisProcessSystemMs / overallMsEllapsed,
-      user: thisProcessUserMs / overallMsEllapsed,
-    };
-    samples.push({
-      cpuUsageSampleArray,
-      overallUsageSample,
-      thisProcessSample,
-    });
-    if (samples.length === 10) {
-      {
-        let index = 0;
-        for (const detail of details) {
-          let systemSum = 0;
-          let userSum = 0;
-          let inactiveSum = 0;
-          let activeSum = 0;
-          for (const sample of samples) {
-            const { cpuUsageSampleArray } = sample;
-            const cpuUsageSample = cpuUsageSampleArray[index];
-            inactiveSum += cpuUsageSample.inactive;
-            activeSum += cpuUsageSample.active;
-            systemSum += cpuUsageSample.system;
-            userSum += cpuUsageSample.user;
-          }
-          Object.assign(detail, {
-            inactive: inactiveSum / samples.length,
-            active: activeSum / samples.length,
-            system: systemSum / samples.length,
-            user: userSum / samples.length,
-          });
-          index++;
-        }
-      }
-      {
-        let overallSystemSum = 0;
-        let overallUserSum = 0;
-        let overallInactiveSum = 0;
-        let overallActiveSum = 0;
-        for (const sample of samples) {
-          const { overallUsageSample } = sample;
-          overallSystemSum += overallUsageSample.system;
-          overallUserSum += overallUsageSample.user;
-          overallInactiveSum += overallUsageSample.inactive;
-          overallActiveSum += overallUsageSample.active;
-        }
-        Object.assign(overall, {
-          inactive: overallInactiveSum / samples.length,
-          active: overallActiveSum / samples.length,
-          system: overallSystemSum / samples.length,
-          user: overallUserSum / samples.length,
-        });
-      }
-      {
-        let thisProcessSystemSum = 0;
-        let thisProcessUserSum = 0;
-        let thisProcessInactiveSum = 0;
-        let thisProcessActiveSum = 0;
-        for (const sample of samples) {
-          const { thisProcessSample } = sample;
-          thisProcessSystemSum += thisProcessSample.system;
-          thisProcessUserSum += thisProcessSample.user;
-          thisProcessInactiveSum += thisProcessSample.inactive;
-          thisProcessActiveSum += thisProcessSample.active;
-        }
-        Object.assign(thisProcess, {
-          inactive: thisProcessInactiveSum / samples.length,
-          active: thisProcessActiveSum / samples.length,
-          system: thisProcessSystemSum / samples.length,
-          user: thisProcessUserSum / samples.length,
-        });
-      }
-      samples.length = 0;
-    }
-  }, 15);
-  interval.unref();
-
-  return {
-    overall,
-    thisProcess,
-    details,
-    stop: () => {
-      clearInterval(interval);
-    },
-  };
-};
-
 const githubAnnotationFromError = (
   error,
   { rootDirectoryUrl, execution },
@@ -5955,79 +5657,6 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
   return `${parts.join(", ")}`;
 };
 
-const renderBigSection = (params) => {
-  return renderSection({
-    width: 45,
-    ...params,
-  });
-};
-
-const renderSection = ({
-  title,
-  content,
-  dashColor = ANSI.GREY,
-  width = 38,
-  bottomSeparator = true,
-}) => {
-  let section = "";
-
-  if (title) {
-    const titleWidth = stripAnsi(title).length;
-    const minWidthRequired = `--- … ---`.length;
-    const needsTruncate = titleWidth + minWidthRequired >= width;
-    if (needsTruncate) {
-      const titleTruncated = title.slice(0, width - minWidthRequired);
-      const leftDashes = ANSI.color("---", dashColor);
-      const rightDashes = ANSI.color("---", dashColor);
-      section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
-    } else {
-      const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
-      const dashLeftCount = Math.floor(remainingWidth / 2);
-      const dashRightCount = remainingWidth - dashLeftCount;
-      const leftDashes = ANSI.color("-".repeat(dashLeftCount), dashColor);
-      const rightDashes = ANSI.color("-".repeat(dashRightCount), dashColor);
-      section += `${leftDashes} ${title} ${rightDashes}`;
-    }
-    section += "\n";
-  } else {
-    const topDashes = ANSI.color(`-`.repeat(width), dashColor);
-    section += topDashes;
-    section += "\n";
-  }
-  section += `${content}`;
-  if (bottomSeparator) {
-    section += "\n";
-    const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
-    section += bottomDashes;
-  }
-  return section;
-};
-
-const renderDetails = (data) => {
-  const details = [];
-  for (const key of Object.keys(data)) {
-    const value = data[key];
-    let valueString = "";
-    valueString += ANSI.color(`${key}:`, ANSI.GREY);
-    const useNonGreyAnsiColor =
-      typeof value === "string" && value.includes("\x1b");
-    valueString += " ";
-    valueString += useNonGreyAnsiColor
-      ? value
-      : ANSI.color(String(value), ANSI.GREY);
-    details.push(valueString);
-  }
-  if (details.length === 0) {
-    return "";
-  }
-
-  let string = "";
-  string += ` ${ANSI.color("(", ANSI.GREY)}`;
-  string += details.join(ANSI.color(", ", ANSI.GREY));
-  string += ANSI.color(")", ANSI.GREY);
-  return string;
-};
-
 /*
  * Export a function capable to run a file on a runtime.
  *
@@ -6731,22 +6360,12 @@ const executeTestPlan = async ({
     });
   }
 
-  const cpuUsage = startMeasuringTotalCpuUsage();
-  operation.addEndCallback(cpuUsage.stop);
-  const processCpuUsageMonitoring = startMonitoringMetric(() => {
-    return cpuUsage.thisProcess.active;
-  });
-  const osCpuUsageMonitoring = startMonitoringMetric(() => {
-    return cpuUsage.overall.active;
-  });
-  const processMemoryUsageMonitoring = startMonitoringMetric(() => {
-    return memoryUsage().rss;
-  });
-  const osMemoryUsageMonitoring = startMonitoringMetric(() => {
-    const total = totalmem();
-    const free = freemem();
-    return total - free;
-  });
+  const cpuMonitoring = startMonitoringCpuUsage();
+  operation.addEndCallback(cpuMonitoring.stop);
+  const [processCpuUsageMonitoring, osCpuUsageMonitoring] = cpuMonitoring;
+  const memoryMonitoring = startMonitoringMemoryUsage();
+  const [processMemoryUsageMonitoring, osMemoryUsageMonitoring] =
+    memoryMonitoring;
 
   const timingsOrigin = Date.now();
   const takeTiming = () => {
@@ -6762,9 +6381,9 @@ const executeTestPlan = async ({
             : process.platform === "linux"
               ? "linux"
               : "other",
-      version: release(),
+      version: getOsVersion(),
       availableCpu: countAvailableCpus(),
-      availableMemory: totalmem(),
+      availableMemory: getAvailableMemory(),
     },
     runtime: {
       name: "node",
@@ -7729,59 +7348,6 @@ To fix this warning:
   }
 
   return testPlanResult;
-};
-
-const startMonitoringMetric = (measure) => {
-  const metrics = [];
-  const takeMeasure = () => {
-    const value = measure();
-    metrics.push(value);
-    return value;
-  };
-
-  const info = {
-    start: takeMeasure(),
-    min: null,
-    max: null,
-    median: null,
-    end: null,
-  };
-  return {
-    info,
-    measure: takeMeasure,
-    end: () => {
-      info.end = takeMeasure();
-      metrics.sort((a, b) => a - b);
-      info.min = metrics[0];
-      info.max = metrics[metrics.length - 1];
-      info.median = medianFromSortedArray(metrics);
-      metrics.length = 0;
-    },
-  };
-};
-
-const medianFromSortedArray = (array) => {
-  const length = array.length;
-  const isOdd = length % 2 === 1;
-  if (isOdd) {
-    const medianNumberIndex = (length - 1) / 2;
-    const medianNumber = array[medianNumberIndex];
-    return medianNumber;
-  }
-  const rightMiddleNumberIndex = length / 2;
-  const leftMiddleNumberIndex = rightMiddleNumberIndex - 1;
-  const leftMiddleNumber = array[leftMiddleNumberIndex];
-  const rightMiddleNumber = array[rightMiddleNumberIndex];
-  const medianNumber = (leftMiddleNumber + rightMiddleNumber) / 2;
-  return medianNumber;
-};
-
-const countAvailableCpus = () => {
-  if (typeof availableParallelism === "function") {
-    return availableParallelism();
-  }
-  const cpuArray = cpus();
-  return cpuArray.length || 1;
 };
 
 const mutateCountersBeforeExecutionStarts = (counters) => {

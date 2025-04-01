@@ -1,6 +1,3 @@
-import process$1 from "node:process";
-import os, { networkInterfaces } from "node:os";
-import tty from "node:tty";
 import cluster from "node:cluster";
 import net, { Socket, createServer, isIP } from "node:net";
 import { extname } from "node:path";
@@ -12,6 +9,7 @@ import { createReadStream, existsSync, readFileSync, readdirSync, lstatSync, sta
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { lookup } from "node:dns";
+import { networkInterfaces } from "node:os";
 import { createHash } from "node:crypto";
 
 const createCallbackListNotifiedOnce = () => {
@@ -523,406 +521,35 @@ const SIGINT_CALLBACK = {
   },
 };
 
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-
-const {env} = process$1;
-
-let flagForceColor;
-if (
-	hasFlag('no-color')
-	|| hasFlag('no-colors')
-	|| hasFlag('color=false')
-	|| hasFlag('color=never')
-) {
-	flagForceColor = 0;
-} else if (
-	hasFlag('color')
-	|| hasFlag('colors')
-	|| hasFlag('color=true')
-	|| hasFlag('color=always')
-) {
-	flagForceColor = 1;
-}
-
-function envForceColor() {
-	if (!('FORCE_COLOR' in env)) {
-		return;
-	}
-
-	if (env.FORCE_COLOR === 'true') {
-		return 1;
-	}
-
-	if (env.FORCE_COLOR === 'false') {
-		return 0;
-	}
-
-	if (env.FORCE_COLOR.length === 0) {
-		return 1;
-	}
-
-	const level = Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
-
-	if (![0, 1, 2, 3].includes(level)) {
-		return;
-	}
-
-	return level;
-}
-
-function translateLevel(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3,
-	};
-}
-
-function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor();
-	if (noFlagForceColor !== undefined) {
-		flagForceColor = noFlagForceColor;
-	}
-
-	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
-
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (sniffFlags) {
-		if (hasFlag('color=16m')
-			|| hasFlag('color=full')
-			|| hasFlag('color=truecolor')) {
-			return 3;
-		}
-
-		if (hasFlag('color=256')) {
-			return 2;
-		}
-	}
-
-	// Check for Azure DevOps pipelines.
-	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
-		return 1;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process$1.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10
-			&& Number(osRelease[2]) >= 10_586
-		) {
-			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env) {
-		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env)) {
-			return 3;
-		}
-
-		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if (env.TERM === 'xterm-kitty') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env) {
-		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env.TERM_PROGRAM) {
-			case 'iTerm.app': {
-				return version >= 3 ? 3 : 2;
-			}
-
-			case 'Apple_Terminal': {
-				return 2;
-			}
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env) {
-		return 1;
-	}
-
-	return min;
-}
-
-function createSupportsColor(stream, options = {}) {
-	const level = _supportsColor(stream, {
-		streamIsTTY: stream && stream.isTTY,
-		...options,
-	});
-
-	return translateLevel(level);
-}
-
-({
-	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
-});
-
-function isUnicodeSupported() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
-
-platform === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-!isBrowser && process$1.platform === 'win32';
-
-isBrowser ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
 const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`;
+  let text = `${message}`;
+  const namedSectionsText = renderNamedSections(details);
+  if (namedSectionsText) {
+    text += `
+${namedSectionsText}`;
+  }
+  return text;
+};
 
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
+const renderNamedSections = (namedSections) => {
+  let text = "";
+  let keys = Object.keys(namedSections);
+  for (const key of keys) {
+    const isLastKey = key === keys[keys.length - 1];
+    const value = namedSections[key];
+    text += `--- ${key} ---
 ${
   Array.isArray(value)
     ? value.join(`
 `)
     : value
 }`;
-  });
-
-  return string;
+    if (!isLastKey) {
+      text += "\n";
+    }
+  }
+  return text;
 };
-
-// https://github.com/Marak/colors.js/blob/master/lib/styles.js
-// https://stackoverflow.com/a/75985833/2634179
-const RESET = "\x1b[0m";
-
-const createAnsi = ({ supported }) => {
-  const ANSI = {
-    supported,
-
-    RED: "\x1b[31m",
-    GREEN: "\x1b[32m",
-    YELLOW: "\x1b[33m",
-    BLUE: "\x1b[34m",
-    MAGENTA: "\x1b[35m",
-    CYAN: "\x1b[36m",
-    GREY: "\x1b[90m",
-    color: (text, color) => {
-      if (!ANSI.supported) {
-        return text;
-      }
-      if (!color) {
-        return text;
-      }
-      if (typeof text === "string" && text.trim() === "") {
-        // cannot set color of blank chars
-        return text;
-      }
-      return `${color}${text}${RESET}`;
-    },
-
-    BOLD: "\x1b[1m",
-    UNDERLINE: "\x1b[4m",
-    STRIKE: "\x1b[9m",
-    effect: (text, effect) => {
-      if (!ANSI.supported) {
-        return text;
-      }
-      if (!effect) {
-        return text;
-      }
-      // cannot add effect to empty string
-      if (text === "") {
-        return text;
-      }
-      return `${effect}${text}${RESET}`;
-    },
-  };
-
-  return ANSI;
-};
-
-const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
-
-const ANSI = createAnsi({
-  supported:
-    process.env.FORCE_COLOR === "1" ||
-    processSupportsBasicColor ||
-    // GitHub workflow does support ANSI but "supports-color" returns false
-    // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-    process.env.GITHUB_WORKFLOW,
-});
-
-// see also https://github.com/sindresorhus/figures
-
-const createUnicode = ({ supported, ANSI }) => {
-  const UNICODE = {
-    supported,
-    get COMMAND_RAW() {
-      return UNICODE.supported ? `❯` : `>`;
-    },
-    get OK_RAW() {
-      return UNICODE.supported ? `✔` : `√`;
-    },
-    get FAILURE_RAW() {
-      return UNICODE.supported ? `✖` : `×`;
-    },
-    get DEBUG_RAW() {
-      return UNICODE.supported ? `◆` : `♦`;
-    },
-    get INFO_RAW() {
-      return UNICODE.supported ? `ℹ` : `i`;
-    },
-    get WARNING_RAW() {
-      return UNICODE.supported ? `⚠` : `‼`;
-    },
-    get CIRCLE_CROSS_RAW() {
-      return UNICODE.supported ? `ⓧ` : `(×)`;
-    },
-    get CIRCLE_DOTTED_RAW() {
-      return UNICODE.supported ? `◌` : `*`;
-    },
-    get COMMAND() {
-      return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
-    },
-    get OK() {
-      return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
-    },
-    get FAILURE() {
-      return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
-    },
-    get DEBUG() {
-      return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
-    },
-    get INFO() {
-      return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
-    },
-    get WARNING() {
-      return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
-    },
-    get CIRCLE_CROSS() {
-      return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
-    },
-    get ELLIPSIS() {
-      return UNICODE.supported ? `…` : `...`;
-    },
-  };
-  return UNICODE;
-};
-
-createUnicode({
-  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
-  ANSI,
-});
 
 const LOG_LEVEL_OFF = "off";
 
