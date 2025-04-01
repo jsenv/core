@@ -82,9 +82,11 @@ export const renderBuildDoneLog = ({
     rows.push(row);
     y++;
   }
-  const rowWithHighestPercentage = rows[highestPercentageY];
-  for (const cell of rowWithHighestPercentage) {
-    cell.bold = true;
+  if (rows.length > 1) {
+    const rowWithHighestPercentage = rows[highestPercentageY];
+    for (const cell of rowWithHighestPercentage) {
+      cell.bold = true;
+    }
   }
 
   let title = "";
