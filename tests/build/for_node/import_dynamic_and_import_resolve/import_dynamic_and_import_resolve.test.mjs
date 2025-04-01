@@ -9,17 +9,13 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = async () => {
   await build({
-    sourceDirectoryUrl: new URL("./source/", import.meta.url),
+    sourceDirectoryUrl: import.meta.resolve("./source/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
       "./index.js": {
-        buildRelativeUrl: "./dir/index.js",
+        buildRelativeUrl: "./index.js",
         runtimeCompat: { node: "20" },
       },
-      // "./client/toto.js": {
-      //   buildRelativeUrl: "./client/toto.js",
-      //   runtimeCompat: { chrome: "89" },
-      // },
     },
   });
 };
