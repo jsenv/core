@@ -91,7 +91,7 @@ run(measureTextWidth)
     "x⁤x": 2
   },
   "emojis": {
-    "✔️": 1,
+    "✔️": 2,
     "✅": 2
   }
 }

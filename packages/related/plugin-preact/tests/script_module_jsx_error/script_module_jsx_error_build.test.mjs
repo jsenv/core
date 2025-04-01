@@ -6,10 +6,14 @@ const run = async ({ runtimeCompat }) => {
   await build({
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
-    entryPoints: { "./main.noeslint.html": "main.html" },
-    bundling: false,
-    minification: false,
-    runtimeCompat,
+    entryPoints: {
+      "./main.noeslint.html": {
+        buildRelativeUrl: "./main.html",
+        bundling: false,
+        minification: false,
+        runtimeCompat,
+      },
+    },
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: import.meta.resolve("./build/"),
