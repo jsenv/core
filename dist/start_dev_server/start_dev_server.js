@@ -7,6 +7,7 @@ import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, gene
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript } from "@jsenv/ast";
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
+import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import "strip-ansi";
 import "../jsenv_core_node_modules.js";
@@ -15,7 +16,6 @@ import "node:os";
 import "node:tty";
 import "node:util";
 import "node:path";
-import "node:crypto";
 import "@jsenv/js-module-fallback";
 
 // default runtimeCompat corresponds to
@@ -8138,6 +8138,46 @@ const jsenvPluginCleanHTML = () => {
   };
 };
 
+/**
+ * https://docs.google.com/document/d/1rfKPnxsNuXhnF7AiQZhu9kIwdiMS5hnAI05HBwFuBSM/edit?tab=t.0#heading=h.7nki9mck5t64
+ * https://chromium.googlesource.com/devtools/devtools-frontend/+/main/docs/ecosystem/automatic_workspace_folders.md
+ * https://github.com/ChromeDevTools/vite-plugin-devtools-json
+ */
+
+
+const jsenvPluginChromeDevtoolsJson = () => {
+  const getOrCreateUUID = (kitchen) => {
+    const { outDirectoryUrl } = kitchen.context;
+    const uuidFileUrl = new URL("./uuid.json", outDirectoryUrl);
+    if (existsSync(uuidFileUrl)) {
+      const { uuid } = JSON.parse(readFileSync(uuidFileUrl, "utf8"));
+      return uuid;
+    }
+    const uuid = randomUUID();
+    writeFileSync(uuidFileUrl, JSON.stringify({ uuid }), { });
+    return uuid;
+  };
+
+  return {
+    name: "jsenv_plugin_chrome_devtools_json",
+    appliesDuring: "dev",
+    devServerRoutes: [
+      {
+        route: "GET /.well-known/appspecific/com.chrome.devtools.json",
+        fetch: (request, { kitchen }) => {
+          const { rootDirectoryUrl } = kitchen.context;
+          return Response.json({
+            workspace: {
+              root: urlToFileSystemPath(rootDirectoryUrl),
+              uuid: getOrCreateUUID(kitchen),
+            },
+          });
+        },
+      },
+    ],
+  };
+};
+
 // tslint:disable:ordered-imports
 
 
@@ -8243,6 +8283,7 @@ const getCorePlugins = ({
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
     jsenvPluginCleanHTML(),
+    jsenvPluginChromeDevtoolsJson(),
   ];
 };
 
