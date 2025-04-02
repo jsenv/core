@@ -288,7 +288,8 @@ dist/
 ### 2.2.1 Entry points
 
 The `entryPoints` object defines which source files to include in the build.
-These can be HTML, CSS, JS, etc. The values define the name of the output files in the build directory:
+These can be HTML, CSS, JS, etc. Each entry point value is an object configuring the build.
+For example `buildRelativeUrl` configures the file name in the build directory:
 
 ```js
 import { build } from "@jsenv/build";
