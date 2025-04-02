@@ -178,7 +178,7 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./index.html": "index.html",
+    "./index.html": {},
   },
 });
 ```

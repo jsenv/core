@@ -71,7 +71,7 @@ export const logSideEffects = (logSideEffectsOptions) => {
               const logGroupSideEffect = {
                 code: "log_group",
                 type: `log_group`,
-                value: {},
+                value: {}, // TODO: the concatenation of the logs
                 render: {
                   md: (options) => {
                     const renderLogGroup = () => {

@@ -107,9 +107,8 @@ export const createXmlGenerator = ({
               for (const child of node.children) {
                 innerHTML += "\n  ";
                 innerHTML += "  ".repeat(depth);
-                innerHTML += renderNode(child, {
-                  depth: depth + 1,
-                });
+                const childHtml = renderNode(child, { depth: depth + 1 });
+                innerHTML += childHtml;
               }
               innerHTML += "\n";
               innerHTML += "  ".repeat(depth);

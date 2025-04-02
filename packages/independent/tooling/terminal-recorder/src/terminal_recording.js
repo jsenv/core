@@ -9,7 +9,7 @@
  - we should have a webm video
 */
 
-import prettier from "prettier";
+// import prettier from "prettier";
 import { renderTerminalSvg } from "./svg/render_terminal_svg.js";
 
 const isDev = process.execArgv.includes("--conditions=development");
@@ -151,10 +151,20 @@ export const startTerminalRecording = async ({
     terminalRecords.svg = async () => {
       const ansi = recordedFormats.textInViewport;
       const terminalSvg = renderTerminalSvg(ansi, svg);
-      const terminalSvgFormatted = await prettier.format(terminalSvg, {
-        parser: "html",
-      });
-      return terminalSvgFormatted;
+      // prettier is not able to format svg with <text> elements correctly
+      // see https://github.com/prettier/prettier/issues/14816
+      // const terminalSvgFormatted = await prettier.format(terminalSvg, {
+      //   parser: "html",
+      //   // https://prettier.io/docs/en/options.html#html-whitespace-sensitivity
+      //   // there is some <text style="white-space:pre">
+      //   // and prettier don't respect this by default
+      //   // we enforce it to be strict here
+      //   // ideally prettier would detect the inline style and respect white-space (opening an issue one day would be great)
+      //   // for now le'ts just force it globally
+      //   htmlWhitespaceSensitivity: "strict",
+      // });
+      // return terminalSvgFormatted;
+      return terminalSvg;
     };
     terminalRecords.gif = () => {
       const terminalGifBuffer = Buffer.from(recordedFormats.gif, "binary");

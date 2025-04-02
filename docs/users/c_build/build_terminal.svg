@@ -2,66 +2,60 @@
   xmlns="http://www.w3.org/2000/svg"
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
-  width="640"
-  height="214.45"
+  width="100%"
+  viewBox="0 0 717.31 233.45"
   background-color="#282c34"
 >
   <g id="background">
     <rect
       x="1"
       y="1"
-      width="638"
-      height="212.45"
+      width="715.31"
+      height="231.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
       rx="8"
-    ></rect>
+    />
   </g>
   <g id="header">
     <g transform="translate(20,20)">
-      <circle cx="0" cy="0" r="6" fill="#ff5f57"></circle>
-      <circle cx="20" cy="0" r="6" fill="#febc2e"></circle>
-      <circle cx="40" cy="0" r="6" fill="#28c840"></circle>
+      <circle cx="0" cy="0" r="6" fill="#ff5f57"/>
+      <circle cx="20" cy="0" r="6" fill="#febc2e"/>
+      <circle cx="40" cy="0" r="6" fill="#28c840"/>
     </g>
-    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">Terminal</text>
+    <text fill="#abb2bf" text-anchor="middle" x="358.66" y="20">Terminal</text>
   </g>
-  <foreignObject
-    id="body"
-    y="40"
-    width="100%"
-    height="174.45"
-    overflow="hidden"
-  >
+  <foreignObject id="body" y="40" width="100%" height="193.45" overflow="hidden">
     <svg
-      width="482.08"
-      height="174.45"
+      width="717.31"
+      height="193.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
     >
       <g>
-        <text x="10" y="33.55">build "./index.html"</text>
-        <text x="10" y="52.55" fill="#11bc79">✔</text>
-        <text x="26.8" y="52.55">
-          generate source graph (done in 0.01 second)</text
-        >
-        <text x="10" y="71.55" fill="#11bc79">✔</text>
-        <text x="26.8" y="71.55">
-          generate build graph (done in 0.006 second)</text
-        >
-        <text x="10" y="90.55" fill="#11bc79">✔</text>
-        <text x="26.8" y="90.55">
-          write files in build directory (done in 0.001 second)</text
-        >
-        <text x="10" y="109.55">--- build files --- </text>
-        <text x="10" y="128.55">- </text>
-        <text x="26.8" y="128.55" fill="#7f7f7f">html :</text>
-        <text x="85.61" y="128.55"> 1 (173 B / 100 %)</text>
-        <text x="10" y="147.55">- </text>
-        <text x="26.8" y="147.55" fill="#7f7f7f">total:</text>
-        <text x="85.61" y="147.55"> 1 (173 B / 100 %)</text>
-        <text x="10" y="166.55">--------------------</text>
+        <text x="10" y="14.55">building ./index.html</text>
+        <text x="10" y="52.55" fill="#11bc79">&#x2714;</text>
+        <text x="26.8" y="52.55" fill="#7f7f7f">docs/users/c_build/demo/src/index.html</text>
+        <text x="354.46" y="52.55" fill="#7f7f7f">-&#x3E;</text>
+        <text x="371.26" y="52.55" style="white-space:pre"> docs/users/c_build/demo/dist/index.html</text>
+        <text x="10" y="90.55" fill="#7f7f7f">----------------</text>
+        <text x="144.42" y="90.55" style="white-space:pre"> build done </text>
+        <text x="245.24" y="90.55" fill="#7f7f7f">-----------------</text>
+        <text x="10" y="109.55" style="white-space:pre">cpu: 0% </text>
+        <text x="77.21" y="109.55" fill="#7f7f7f">(med:</text>
+        <text x="127.62" y="109.55" fill="#7f7f7f">0%, min:</text>
+        <text x="203.23" y="109.55" fill="#7f7f7f">0%, max:</text>
+        <text x="278.84" y="109.55" fill="#7f7f7f">0%)</text>
+        <text x="10" y="128.55" style="white-space:pre">memory: 128MB </text>
+        <text x="127.62" y="128.55" fill="#7f7f7f">(med:</text>
+        <text x="178.03" y="128.55" fill="#7f7f7f">127MB, min:</text>
+        <text x="278.84" y="128.55" fill="#7f7f7f">126MB, max:</text>
+        <text x="379.66" y="128.55" fill="#7f7f7f">128MB)</text>
+        <text x="10" y="147.55">duration: 0.01s</text>
+        <text x="10" y="166.55">content: 1 file (173 B)</text>
+        <text x="10" y="185.55" fill="#7f7f7f">---------------------------------------------</text>
       </g>
     </svg>
   </foreignObject>
