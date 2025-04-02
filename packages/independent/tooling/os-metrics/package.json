@@ -1,12 +1,20 @@
 {
   "name": "@jsenv/os-metrics",
   "version": "0.0.1",
-  "type": "module",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/independent/tooling/os-metrics"
   },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
   "main": "./src/main.js",
   "files": [
     "/src/"
