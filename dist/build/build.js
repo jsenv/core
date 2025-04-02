@@ -10618,7 +10618,6 @@ const build = async ({
           };
         },
         onBuildEnd: ({ buildFileContents, duration }) => {
-          logger.info("");
           logger.info(renderBuildEndLog({ duration, buildFileContents }));
         },
       };
