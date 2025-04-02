@@ -2,15 +2,13 @@
 
 [![npm package](https://img.shields.io/npm/v/@jsenv/assert.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/assert)
 
-_@jsenv/assert_ is the NPM package used by jsenv to write tests.
-
-It can be resumed by the following quote:
+A powerful assertion library focused on providing clear, informative, and visual feedback for JavaScript tests.
 
 > equal() is my favorite assertion. If the only available assertion in every test suite was equal(), almost every test suite in the world would be better for it.
 >
 > — Eric Elliot in [Rethinking Unit Test Assertion](https://medium.com/javascript-scene/rethinking-unit-test-assertions-55f59358253f)
 
-## Example
+## Simple Yet Powerful
 
 ```js
 import { assert } from "@jsenv/assert";
@@ -29,15 +27,11 @@ assert({
 
 There is 200+ examples in [./tests/](./tests/readme.md)
 
-## How it works
-
-_assert_ does nothing when comparison is successfull but throws an error when comparison is failing.
-
 ## Features
 
-### Colors
+### Color-Coded Diffs
 
-The message produced have colors that helps to see the diff. Each color have a meaning described below:
+Error messages use colors with specific meanings to make differences clear:
 
 | Color  | Meaning                                       |
 | ------ | --------------------------------------------- |
@@ -46,9 +40,9 @@ The message produced have colors that helps to see the diff. Each color have a m
 | green  | different from actual                         |
 | yellow | exists only in actual / exists only in expect |
 
-### JavaScript aware
+### JavaScript-Aware Comparisons
 
-Comparison understands JavaScript and makes the diff more redable
+The library understands JavaScript types and provides meaningful differences:
 
 ```js
 assert({
@@ -59,9 +53,9 @@ assert({
 
 ![img](./tests/_number.test.js/149_600_000_and_1_464_301/throw.svg)
 
-This includes things like comparison on url parts, date parts, http headers and many more.
+Special handling extends to URLs, dates, HTTP headers, and more.
 
-### Multiline diff
+### Beautiful Multiline String Diffs
 
 ```js
 assert({
@@ -80,7 +74,9 @@ and my brother is joe`,
 
 ![img](./tests/_string_multiline.test.js/second_line_contains_extra_chars/throw.svg)
 
-### Keep long diff readable
+### Smart Formatting for Readability
+
+Long diffs remain readable:
 
 ```js
 assert({
@@ -91,9 +87,9 @@ assert({
 
 ![img](./tests/_max_columns.test.js/long_url_diff_at_end/throw.svg)
 
-### Keep nested diff readable
+### Clear Nested Object Comparisons
 
-When the diff is very deep the message omits the parents to keep the message concise and readable
+For deeply nested objects, the message focuses on the important differences:
 
 ```js
 assert({
@@ -154,15 +150,19 @@ assert({
 
 ![img](./tests/_assert_between.test.js/50_is_too_small/throw.svg)
 
-### And much more
+### Advanced JavaScript Features
 
-- Support comparison between value having circular references
-- Can detect diff on [prototypes](./tests/_prototype.test.js/prototype.test.js.md)
-- Can detect diff on [object integrity](./tests/_object_integrity.test.js/object_integrity.test.js.md) (`Object.freeze`, `Object.seal` and `Object.preventExtensions`)
-- Can detect diff on [property descriptors](./tests/_property_descriptor.test.js/property_descriptor.test.js.md)
-- Can detect diff on [symbols](./tests/_symbol.test.js/symbol.test.js.md)
+`@jsenv/assert` handles complex JavaScript concepts:
 
-## Usage in Node.js
+- Circular references
+- Prototype differences [example](./tests/_prototype.test.js/prototype.test.js.md)
+- Object integrity differences (`Object.freeze`, `Object.seal` and `Object.preventExtensions`) [example](./tests/_object_integrity.test.js/object_integrity.test.js.md)
+- Property descriptor differences [example](./tests/_property_descriptor.test.js/property_descriptor.test.js.md)
+- Symbol differences [example](./tests/_symbol.test.js/symbol.test.js.md)
+
+## Installation
+
+### Node.js
 
 ```console
 npm i --save-dev @jsenv/assert
@@ -177,9 +177,9 @@ assert({
 });
 ```
 
-## Usage in a browser
+### Browser
 
-### Using NPM
+#### Using NPM
 
 ```console
 npm i --save-dev @jsenv/assert
@@ -196,7 +196,7 @@ npm i --save-dev @jsenv/assert
 </script>
 ```
 
-### Using CDN
+#### Using CDN
 
 ```html
 <script type="module">
