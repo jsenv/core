@@ -224,14 +224,16 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./main.html": "index.html",
+    "./main.html": {
+      buildRelativeUrl: "./index.html",
++     runtimeCompat: {
++      chrome: "55",
++      edge: "15",
++      firefox: "52",
++      safari: "11",
++    },
+    },
   },
-+  runtimeCompat: {
-+    chrome: "55",
-+    edge: "15",
-+    firefox: "52",
-+    safari: "11",
-+  },
 });
 ```
 
@@ -295,8 +297,12 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./index.html": "index_after_build.html",
-    "./about.html": "about_after_build.html",
+    "./index.html": {
+      buildRelativeUrl: "./index_after_build.html",
+    },
+    "./about.html": {
+      buildRelativeUrl: "./about_after_build.html",
+    },
   },
 });
 ```
@@ -323,9 +329,10 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./index.html": "index.html",
+    "./index.html": {
+      assetsDirectory: "assets/",
+    },
   },
-  assetsDirectory: "assets/",
 });
 ```
 
@@ -362,11 +369,12 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./index.html": "index.html",
-  },
-  bundling: {
-    js_module: false,
-    css: true,
+    "./index.html": {
+      bundling: {
+        js_module: false,
+        css: true,
+      },
+    },
   },
 });
 ```
@@ -384,14 +392,15 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./index.html": "index.html",
-  },
-  bundling: {
-    js_module: {
-      chunks: {
-        vendors: {
-          "file:///**/node_modules/": true,
-          "./a.js": true,
+    "./index.html": {
+      bundling: {
+        js_module: {
+          chunks: {
+            vendors: {
+              "file:///**/node_modules/": true,
+              "./a.js": true,
+            },
+          },
         },
       },
     },
@@ -423,15 +432,16 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./index.html": "index.html",
-  },
-  minification: {
-    html: false,
-    css: true,
-    js_classic: true,
-    js_module: true,
-    json: false,
-    svg: false,
+    "./index.html": {
+      minification: {
+        html: false,
+        css: true,
+        js_classic: true,
+        js_module: true,
+        json: false,
+        svg: false,
+      },
+    },
   },
 });
 ```
@@ -471,9 +481,10 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./main.html": "index.html",
+    "./main.html": {
+      versioningMethod: "filename",
+    },
   },
-  versioningMethod: "filename",
 });
 ```
 
@@ -493,9 +504,10 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./main.html": "index.html",
+    "./main.html": {
+      versioning: false,
+    },
   },
-  versioning: false,
 });
 ```
 
@@ -517,9 +529,10 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./main.html": "index.html",
+    "./main.html": {
+      base: "https://cdn.example.com",
+    },
   },
-  base: "https://cdn.example.com",
 });
 ```
 
@@ -695,7 +708,7 @@ To start a server for build files, simply run the following:
 import { startBuildServer } from "@jsenv/core";
 
 const buildServer = await startBuildServer({
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   port: 8000,
 });
 ```
