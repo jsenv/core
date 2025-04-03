@@ -8234,6 +8234,7 @@ const getCorePlugins = ({
   http = false,
 
   clientAutoreload,
+  clientAutoreloadOnServerRestart,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
@@ -8303,7 +8304,9 @@ const getCorePlugins = ({
 
     // "jsenvPluginSupervisor" MUST be after "jsenvPluginInlining" as it needs inline script to be cooked
     ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
-    jsenvPluginAutoreloadOnServerRestart(),
+    ...(clientAutoreloadOnServerRestart
+      ? [jsenvPluginAutoreloadOnServerRestart()]
+      : []),
 
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
@@ -8489,6 +8492,7 @@ const startDevServer = async ({
 
   sourceFilesConfig = {},
   clientAutoreload = true,
+  clientAutoreloadOnServerRestart = true,
 
   // runtimeCompat is the runtimeCompat for the build
   // when specified, dev server use it to warn in case
@@ -8670,6 +8674,7 @@ const startDevServer = async ({
         transpilation,
 
         clientAutoreload,
+        clientAutoreloadOnServerRestart,
         cacheControl,
         ribbon,
       }),

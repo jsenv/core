@@ -1,7 +1,7 @@
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog } from "../jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
@@ -8193,6 +8193,7 @@ const getCorePlugins = ({
   http = false,
 
   clientAutoreload,
+  clientAutoreloadOnServerRestart,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
@@ -8262,7 +8263,9 @@ const getCorePlugins = ({
 
     // "jsenvPluginSupervisor" MUST be after "jsenvPluginInlining" as it needs inline script to be cooked
     ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
-    jsenvPluginAutoreloadOnServerRestart(),
+    ...(clientAutoreloadOnServerRestart
+      ? [jsenvPluginAutoreloadOnServerRestart()]
+      : []),
 
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
@@ -8703,6 +8706,7 @@ const createBuildSpecifierManager = ({
   versioningMethod,
   versionLength,
   canUseImportmap,
+  onSourceFileBuild,
 }) => {
   const placeholderAPI = createPlaceholderAPI({
     length,
@@ -8714,18 +8718,18 @@ const createBuildSpecifierManager = ({
 
   const generateReplacement = (reference) => {
     let buildUrl;
+    const buildUrlInfo = reference.urlInfo;
     if (reference.type === "sourcemap_comment") {
       const parentBuildUrl = urlInfoToBuildUrlMap.get(reference.ownerUrlInfo);
       buildUrl = generateSourcemapFileUrl(parentBuildUrl);
       reference.generatedSpecifier = buildUrl;
     } else {
       const url = reference.generatedUrl;
-      let urlInfo;
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
+      let urlInfo;
       if (rawUrlInfo) {
         urlInfo = rawUrlInfo;
       } else {
-        const buildUrlInfo = reference.urlInfo;
         buildUrlInfo.type = reference.expectedType || "asset";
         buildUrlInfo.subtype = reference.expectedSubtype;
         urlInfo = buildUrlInfo;
@@ -8769,6 +8773,31 @@ const createBuildSpecifierManager = ({
       buildSpecifier,
       reference,
     );
+
+    if (buildUrlInfo.sourceUrls) {
+      for (const sourceUrl of buildUrlInfo.sourceUrls) {
+        const rawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
+        if (rawUrlInfo) {
+          onSourceFileBuild({
+            sourceUrlInfo: rawUrlInfo,
+            buildUrlInfo,
+            sourceFileUrl: rawUrlInfo.url,
+            buildFileUrl: buildUrl,
+          });
+        }
+      }
+    } else if (buildUrlInfo.originalUrl) {
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(buildUrlInfo.originalUrl);
+      if (rawUrlInfo) {
+        onSourceFileBuild({
+          sourceUrlInfo: rawUrlInfo,
+          buildUrlInfo,
+          sourceFileUrl: rawUrlInfo.url,
+          buildFileUrl: buildUrl,
+        });
+      }
+    }
+
     return buildGeneratedSpecifier;
   };
   const internalRedirections = new Map();
@@ -8945,6 +8974,7 @@ const createBuildSpecifierManager = ({
         if (!finalUrlInfo.filenameHint && bundleInfo.data.bundleRelativeUrl) {
           finalUrlInfo.filenameHint = bundleInfo.data.bundleRelativeUrl;
         }
+        finalUrlInfo.sourceUrls = bundleInfo.sourceUrls;
         return {
           // url: bundleInfo.url,
           originalUrl: bundleInfo.originalUrl,
@@ -8957,6 +8987,7 @@ const createBuildSpecifierManager = ({
       }
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       if (rawUrlInfo) {
+        // if the rawUrl info had
         if (rawUrlInfo.type === "entry_build") {
           const otherEntryBuildInfo = rawUrlInfo.otherEntryBuildInfo;
           if (
@@ -10731,6 +10762,67 @@ const build = async ({
     const startDate = Date.now();
     const { onBuildEnd, onEntryPointBuildStart } = startBuildLogs();
 
+    const sourceFileBuildCallbackMap = new Map();
+    const registerSourceFileBuildEffect = (url, callback) => {
+      const buildCallbackSet = sourceFileBuildCallbackMap.get(url);
+      if (buildCallbackSet) {
+        buildCallbackSet.add(callback);
+      } else {
+        const set = new Set();
+        set.add(callback);
+        sourceFileBuildCallbackMap.set(url, set);
+      }
+    };
+    const onSourceFileBuild = ({ sourceFileUrl, buildFileUrl }) => {
+      const buildCallbackSet = sourceFileBuildCallbackMap.get(sourceFileUrl);
+      if (buildCallbackSet) {
+        for (const buildCallback of buildCallbackSet) {
+          buildCallback({ buildFileUrl });
+        }
+      }
+    };
+    sync_package_side_effects: {
+      if (!packageDirectoryUrl) {
+        break sync_package_side_effects;
+      }
+      const packageJson = readPackageAtOrNull(packageDirectoryUrl);
+      if (!packageJson) {
+        break sync_package_side_effects;
+      }
+      const { sideEffects } = packageJson;
+      if (!sideEffects || !Array.isArray(sideEffects)) {
+        break sync_package_side_effects;
+      }
+      const sideEffectFileUrlSet = new Set();
+      const packageJsonFileUrl = new URL("./package.json", packageDirectoryUrl)
+        .href;
+      for (const sideEffectFileRelativeUrl of sideEffects) {
+        const sideEffectFileUrl = new URL(
+          sideEffectFileRelativeUrl,
+          packageDirectoryUrl,
+        ).href;
+        sideEffectFileUrlSet.add(sideEffectFileUrl);
+        registerSourceFileBuildEffect(sideEffectFileUrl, ({ buildFileUrl }) => {
+          const urlRelativeToPackage = urlToRelativeUrl(
+            buildFileUrl,
+            packageDirectoryUrl,
+          );
+          if (sideEffectFileUrlSet.has(buildFileUrl)) {
+            return;
+          }
+          sideEffects.push(
+            urlRelativeToPackage[0] === "."
+              ? urlRelativeToPackage
+              : `./${urlRelativeToPackage}`,
+          );
+          writeFileSync(
+            packageJsonFileUrl,
+            JSON.stringify(packageJson, null, "  "),
+          );
+        });
+      }
+    }
+
     const buildUrlsGenerator = createBuildUrlsGenerator({
       sourceDirectoryUrl,
       buildDirectoryUrl,
@@ -10783,6 +10875,7 @@ const build = async ({
           sourceRelativeUrl: entryPoint.sourceRelativeUrl,
           buildUrlsGenerator,
           someEntryPointUseNode,
+          onSourceFileBuild,
         },
         entryPoint.params,
       );
@@ -10866,12 +10959,10 @@ const build = async ({
     if (writeOnFileSystem) {
       clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
       const buildRelativeUrls = Object.keys(buildFileContents);
-      buildRelativeUrls.forEach((buildRelativeUrl) => {
-        writeFileSync(
-          new URL(buildRelativeUrl, buildDirectoryUrl),
-          buildFileContents[buildRelativeUrl],
-        );
-      });
+      for (const buildRelativeUrl of buildRelativeUrls) {
+        const buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
+        writeFileSync(buildUrl, buildFileContents[buildRelativeUrl]);
+      }
     }
     onBuildEnd({
       buildFileContents,
@@ -11007,6 +11098,7 @@ const prepareEntryPointBuild = async (
     outDirectoryUrl,
     buildUrlsGenerator,
     someEntryPointUseNode,
+    onSourceFileBuild,
   },
   entryPointParams,
 ) => {
@@ -11250,6 +11342,7 @@ const prepareEntryPointBuild = async (
           versioningViaImportmap &&
           rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
           rawKitchen.context.isSupportedOnCurrentClients("importmap"),
+        onSourceFileBuild,
       });
       const finalPluginStore = createPluginStore([
         jsenvPluginReferenceAnalysis({
