@@ -9,8 +9,8 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = async () => {
   await build({
-    sourceDirectoryUrl: import.meta.resolve("./client/"),
-    buildDirectoryUrl: import.meta.resolve("./build/"),
+    sourceDirectoryUrl: import.meta.resolve("./root/"),
+    buildDirectoryUrl: import.meta.resolve("./root/build/"),
     entryPoints: {
       "./main.js": {
         runtimeCompat: { chrome: "89" },

@@ -4,9 +4,9 @@
 run()
 ```
 
-# 1/2 write 3 files into "./"
+# 1/2 write 3 files into "./root/"
 
-see [./](./)
+see [./root/](./root/)
 
 # 2/2 resolve
 

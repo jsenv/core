@@ -535,33 +535,45 @@ export const build = async ({
         }
       }
     };
-
-    if (packageDirectoryUrl) {
+    sync_package_side_effects: {
+      if (!packageDirectoryUrl) {
+        break sync_package_side_effects;
+      }
       const packageJson = readPackageAtOrNull(packageDirectoryUrl);
-      if (packageJson) {
-        const { sideEffects } = packageJson;
-        if (sideEffects && Array.isArray(sideEffects)) {
-          for (const sideEffectFileRelativeUrl of sideEffects) {
-            const sideEffectFileUrl = new URL(
-              sideEffectFileRelativeUrl,
-              packageDirectoryUrl,
-            ).href;
-            registerSourceFileBuildEffect(
-              sideEffectFileUrl,
-              ({ buildFileUrl }) => {
-                const urlRelativeToPackage = urlToRelativeUrl(
-                  buildFileUrl,
-                  packageDirectoryUrl,
-                );
-                sideEffects.push(urlRelativeToPackage);
-                writeFileSync(
-                  new URL("./package.json", packageDirectoryUrl),
-                  JSON.stringify(packageJson, null, "  "),
-                );
-              },
-            );
+      if (!packageJson) {
+        break sync_package_side_effects;
+      }
+      const { sideEffects } = packageJson;
+      if (!sideEffects || !Array.isArray(sideEffects)) {
+        break sync_package_side_effects;
+      }
+      const sideEffectFileUrlSet = new Set();
+      const packageJsonFileUrl = new URL("./package.json", packageDirectoryUrl)
+        .href;
+      for (const sideEffectFileRelativeUrl of sideEffects) {
+        const sideEffectFileUrl = new URL(
+          sideEffectFileRelativeUrl,
+          packageDirectoryUrl,
+        ).href;
+        sideEffectFileUrlSet.add(sideEffectFileUrl);
+        registerSourceFileBuildEffect(sideEffectFileUrl, ({ buildFileUrl }) => {
+          const urlRelativeToPackage = urlToRelativeUrl(
+            buildFileUrl,
+            packageDirectoryUrl,
+          );
+          if (sideEffectFileUrlSet.has(buildFileUrl)) {
+            return;
           }
-        }
+          sideEffects.push(
+            urlRelativeToPackage[0] === "."
+              ? urlRelativeToPackage
+              : `./${urlRelativeToPackage}`,
+          );
+          writeFileSync(
+            packageJsonFileUrl,
+            JSON.stringify(packageJson, null, "  "),
+          );
+        });
       }
     }
 
