@@ -46,6 +46,7 @@ export const getCorePlugins = ({
   http = false,
 
   clientAutoreload,
+  clientAutoreloadOnServerRestart,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
@@ -115,7 +116,9 @@ export const getCorePlugins = ({
 
     // "jsenvPluginSupervisor" MUST be after "jsenvPluginInlining" as it needs inline script to be cooked
     ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
-    jsenvPluginAutoreloadOnServerRestart(),
+    ...(clientAutoreloadOnServerRestart
+      ? [jsenvPluginAutoreloadOnServerRestart()]
+      : []),
 
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),

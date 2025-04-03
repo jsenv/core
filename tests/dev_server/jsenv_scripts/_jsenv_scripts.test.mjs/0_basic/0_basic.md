@@ -1,4 +1,4 @@
-# [0_basic](../../jsenv_scripts.test.mjs#L61)
+# [0_basic](../../jsenv_scripts.test.mjs#L66)
 
 ```js
 run()

@@ -76,6 +76,7 @@ export const startDevServer = async ({
 
   sourceFilesConfig = {},
   clientAutoreload = true,
+  clientAutoreloadOnServerRestart = true,
 
   // runtimeCompat is the runtimeCompat for the build
   // when specified, dev server use it to warn in case
@@ -258,6 +259,7 @@ export const startDevServer = async ({
         transpilation,
 
         clientAutoreload,
+        clientAutoreloadOnServerRestart,
         cacheControl,
         ribbon,
       }),

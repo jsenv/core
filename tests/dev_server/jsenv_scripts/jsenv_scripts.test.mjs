@@ -9,6 +9,7 @@ import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 import { chromium } from "playwright";
 
@@ -30,7 +31,8 @@ const run = async () => {
     outDirectoryUrl: import.meta.resolve("./.jsenv/"),
     keepProcessAlive: true,
     port: 8888,
-    plugins: [jsenvPluginToolbar({ logLevel: "debug" })],
+    clientAutoreloadOnServerRestart: false,
+    plugins: [jsenvPluginToolbar({ logLevel: "debug" }), jsenvPluginPreact()],
     // ribbon: false,
     // clientAutoreload: false,
   });
@@ -41,7 +43,9 @@ const run = async () => {
   const page = await launchBrowserPage(browser, { pageErrorEffect: "log" });
   if (debug) {
     page.on("websocket", (websocket) => {
-      websocket.on("close", () => console.log("WebSocket closed"));
+      websocket.on("close", () => {
+        console.log("WebSocket closed");
+      });
       websocket.on("error", (error) =>
         console.error("WebSocket error:", error.message),
       );
@@ -52,6 +56,7 @@ const run = async () => {
   const html = await page.content();
   writeFileSync(new URL("./main_after_exec.html", import.meta.url), html);
   if (!debug) {
+    page.close();
     browser.close();
     devServer.stop(); // required because for some reason the rooms are kept alive
   }

@@ -26,6 +26,7 @@
           "notificationsEnabled": true
         });
       </script>
+      <script type="module" src="/@fs@jsenv/core/node_modules/preact/debug/dist/debug.module.js?v=1.0.0" jsenv-injected-by="jsenv:preact"></script>
       <script src="/@fs@jsenv/core/packages/internal/plugin-supervisor/src/client/supervisor.js" jsenv-injected-by="jsenv:supervisor"></script>
       <script jsenv-injected-by="jsenv:supervisor" content-indented="">
         window.__supervisor__.setup({
@@ -43,7 +44,6 @@
           ]
         });
       </script>
-      <script src="/@fs@jsenv/core/packages/independent/backend/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js" jsenv-injected-by="jsenv:autoreload_on_server_restart" data-ws-endpoint="/.internal/events.websocket"></script>
       <script type="module" jsenv-injected-by="jsenv:autoreload_client" content-indented="">
         import { initAutoreload } from "/@fs@jsenv/core/src/plugins/autoreload/client/autoreload.js";
             
