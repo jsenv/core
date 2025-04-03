@@ -2,6 +2,7 @@
   "name": "test",
   "private": true,
   "sideEffects": [
-    "./src/bar.js"
+    "./src/bar.js",
+    "../build/js/foo.js"
   ]
 }

@@ -1,1 +1,1 @@
-window.foo = true;
+import "./bar.js";

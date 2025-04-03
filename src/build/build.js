@@ -24,6 +24,7 @@ import {
   compareFileUrls,
   ensureEmptyDirectory,
   lookupPackageDirectory,
+  readPackageAtOrNull,
   writeFileSync,
 } from "@jsenv/filesystem";
 import {
@@ -515,6 +516,55 @@ export const build = async ({
     const startDate = Date.now();
     const { onBuildEnd, onEntryPointBuildStart } = startBuildLogs();
 
+    const sourceFileBuildCallbackMap = new Map();
+    const registerSourceFileBuildEffect = (url, callback) => {
+      const buildCallbackSet = sourceFileBuildCallbackMap.get(url);
+      if (buildCallbackSet) {
+        buildCallbackSet.add(callback);
+      } else {
+        const set = new Set();
+        set.add(callback);
+        sourceFileBuildCallbackMap.set(url, set);
+      }
+    };
+    const onSourceFileBuild = ({ sourceFileUrl, buildFileUrl }) => {
+      const buildCallbackSet = sourceFileBuildCallbackMap.get(sourceFileUrl);
+      if (buildCallbackSet) {
+        for (const buildCallback of buildCallbackSet) {
+          buildCallback({ buildFileUrl });
+        }
+      }
+    };
+
+    if (packageDirectoryUrl) {
+      const packageJson = readPackageAtOrNull(packageDirectoryUrl);
+      if (packageJson) {
+        const { sideEffects } = packageJson;
+        if (sideEffects && Array.isArray(sideEffects)) {
+          for (const sideEffectFileRelativeUrl of sideEffects) {
+            const sideEffectFileUrl = new URL(
+              sideEffectFileRelativeUrl,
+              packageDirectoryUrl,
+            ).href;
+            registerSourceFileBuildEffect(
+              sideEffectFileUrl,
+              ({ buildFileUrl }) => {
+                const urlRelativeToPackage = urlToRelativeUrl(
+                  buildFileUrl,
+                  packageDirectoryUrl,
+                );
+                sideEffects.push(urlRelativeToPackage);
+                writeFileSync(
+                  new URL("./package.json", packageDirectoryUrl),
+                  JSON.stringify(packageJson, null, "  "),
+                );
+              },
+            );
+          }
+        }
+      }
+    }
+
     const buildUrlsGenerator = createBuildUrlsGenerator({
       sourceDirectoryUrl,
       buildDirectoryUrl,
@@ -567,6 +617,7 @@ export const build = async ({
           sourceRelativeUrl: entryPoint.sourceRelativeUrl,
           buildUrlsGenerator,
           someEntryPointUseNode,
+          onSourceFileBuild,
         },
         entryPoint.params,
       );
@@ -650,12 +701,10 @@ export const build = async ({
     if (writeOnFileSystem) {
       clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
       const buildRelativeUrls = Object.keys(buildFileContents);
-      buildRelativeUrls.forEach((buildRelativeUrl) => {
-        writeFileSync(
-          new URL(buildRelativeUrl, buildDirectoryUrl),
-          buildFileContents[buildRelativeUrl],
-        );
-      });
+      for (const buildRelativeUrl of buildRelativeUrls) {
+        const buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
+        writeFileSync(buildUrl, buildFileContents[buildRelativeUrl]);
+      }
     }
     onBuildEnd({
       buildFileContents,
@@ -791,6 +840,7 @@ const prepareEntryPointBuild = async (
     outDirectoryUrl,
     buildUrlsGenerator,
     someEntryPointUseNode,
+    onSourceFileBuild,
   },
   entryPointParams,
 ) => {
@@ -1034,6 +1084,7 @@ const prepareEntryPointBuild = async (
           versioningViaImportmap &&
           rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
           rawKitchen.context.isSupportedOnCurrentClients("importmap"),
+        onSourceFileBuild,
       });
       const finalPluginStore = createPluginStore([
         jsenvPluginReferenceAnalysis({

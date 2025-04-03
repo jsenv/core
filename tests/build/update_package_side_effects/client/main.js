@@ -1,1 +1,1 @@
-import.meta.resolve("./foo.js");
+import.meta.resolve("./src/foo.js");

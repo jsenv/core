@@ -20,9 +20,8 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { createHash } from "node:crypto";
-
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
+import { createHash } from "node:crypto";
 import { prependContent } from "../kitchen/prepend_content.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { isWebWorkerUrlInfo } from "../kitchen/web_workers.js";
@@ -46,6 +45,7 @@ export const createBuildSpecifierManager = ({
   versioningMethod,
   versionLength,
   canUseImportmap,
+  onSourceFileBuild,
 }) => {
   const placeholderAPI = createPlaceholderAPI({
     length,
@@ -57,18 +57,18 @@ export const createBuildSpecifierManager = ({
 
   const generateReplacement = (reference) => {
     let buildUrl;
+    const buildUrlInfo = reference.urlInfo;
     if (reference.type === "sourcemap_comment") {
       const parentBuildUrl = urlInfoToBuildUrlMap.get(reference.ownerUrlInfo);
       buildUrl = generateSourcemapFileUrl(parentBuildUrl);
       reference.generatedSpecifier = buildUrl;
     } else {
       const url = reference.generatedUrl;
-      let urlInfo;
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
+      let urlInfo;
       if (rawUrlInfo) {
         urlInfo = rawUrlInfo;
       } else {
-        const buildUrlInfo = reference.urlInfo;
         buildUrlInfo.type = reference.expectedType || "asset";
         buildUrlInfo.subtype = reference.expectedSubtype;
         urlInfo = buildUrlInfo;
@@ -112,6 +112,31 @@ export const createBuildSpecifierManager = ({
       buildSpecifier,
       reference,
     );
+
+    if (buildUrlInfo.sourceUrls) {
+      for (const sourceUrl of buildUrlInfo.sourceUrls) {
+        const rawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
+        if (rawUrlInfo) {
+          onSourceFileBuild({
+            sourceUrlInfo: rawUrlInfo,
+            buildUrlInfo,
+            sourceFileUrl: rawUrlInfo.url,
+            buildFileUrl: buildUrl,
+          });
+        }
+      }
+    } else if (buildUrlInfo.originalUrl) {
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(buildUrlInfo.originalUrl);
+      if (rawUrlInfo) {
+        onSourceFileBuild({
+          sourceUrlInfo: rawUrlInfo,
+          buildUrlInfo,
+          sourceFileUrl: rawUrlInfo.url,
+          buildFileUrl: buildUrl,
+        });
+      }
+    }
+
     return buildGeneratedSpecifier;
   };
   const internalRedirections = new Map();
@@ -288,6 +313,7 @@ export const createBuildSpecifierManager = ({
         if (!finalUrlInfo.filenameHint && bundleInfo.data.bundleRelativeUrl) {
           finalUrlInfo.filenameHint = bundleInfo.data.bundleRelativeUrl;
         }
+        finalUrlInfo.sourceUrls = bundleInfo.sourceUrls;
         return {
           // url: bundleInfo.url,
           originalUrl: bundleInfo.originalUrl,
@@ -300,6 +326,7 @@ export const createBuildSpecifierManager = ({
       }
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       if (rawUrlInfo) {
+        // if the rawUrl info had
         if (rawUrlInfo.type === "entry_build") {
           const otherEntryBuildInfo = rawUrlInfo.otherEntryBuildInfo;
           if (
