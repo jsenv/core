@@ -52,7 +52,7 @@ export const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
 
 export const injectJsenvScript = (
   htmlAst,
-  { type, src, content, initCall, pluginName = "jsenv" },
+  { type, src, content, initCall, pluginName = "jsenv", ...attributes },
 ) => {
   const jsenvScriptsNode = getJsenvScriptsNode(htmlAst);
   if (type === "module") {
@@ -63,6 +63,7 @@ export const injectJsenvScript = (
           "tagName": "script",
           "type": "module",
           "jsenv-injected-by": pluginName,
+          ...attributes,
           "children": `import { ${initCall.callee} } from ${JSON.stringify(src)};
     
 ${initCall.callee}({
@@ -77,6 +78,7 @@ ${initCall.callee}({
         "type": "module",
         src,
         "jsenv-injected-by": pluginName,
+        ...attributes,
       });
       insertHtmlNodeInside(remoteScriptNode, jsenvScriptsNode);
       return;
@@ -86,6 +88,7 @@ ${initCall.callee}({
       "type": "module",
       "jsenv-injected-by": pluginName,
       "children": content,
+      ...attributes,
     });
     insertHtmlNodeInside(jsenvScriptsNode, inlineScriptNode);
     return;
@@ -95,6 +98,7 @@ ${initCall.callee}({
       "tagName": "script",
       src,
       "jsenv-injected-by": pluginName,
+      ...attributes,
     });
     insertHtmlNodeInside(remoteScriptNode, jsenvScriptsNode);
     if (initCall) {
@@ -105,6 +109,7 @@ ${initCall.callee}({
         "children": `${initCall.callee}({
   ${paramsSource}
 });`,
+        ...attributes,
       });
       insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
     }
@@ -114,6 +119,7 @@ ${initCall.callee}({
     "tagName": "script",
     "jsenv-injected-by": pluginName,
     "children": content,
+    ...attributes,
   });
   insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
 };

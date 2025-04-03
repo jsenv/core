@@ -24,6 +24,7 @@ import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_cont
 import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js";
 import { jsenvPluginCleanHTML } from "./clean_html/jsenv_plugin_clean_html.js";
 import { jsenvPluginChromeDevtoolsJson } from "./chrome_devtools_json/jsenv_plugin_chrome_devtools_json.js";
+import { jsenvPluginAutoreloadOnServerRestart } from "./autoreload_on_server_restart/jsenv_plugin_autoreload_on_server_restart.js";
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
@@ -114,6 +115,7 @@ export const getCorePlugins = ({
 
     // "jsenvPluginSupervisor" MUST be after "jsenvPluginInlining" as it needs inline script to be cooked
     ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
+    jsenvPluginAutoreloadOnServerRestart(),
 
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),

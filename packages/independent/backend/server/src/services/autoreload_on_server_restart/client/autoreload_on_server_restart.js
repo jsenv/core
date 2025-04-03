@@ -53,6 +53,9 @@ class JsenvAutoreloadOnServerRestart extends HTMLElement {
       };
 
       const initialWebSocket = await connect();
+      if (!initialWebSocket) {
+        return;
+      }
       initialWebSocket.onclose = async () => {
         console.info("connection to server lost, trying to reconnect");
         const retry = async () => {
@@ -97,12 +100,16 @@ if (!customElements.get("jsenv-autoreload-on-server-restart")) {
   );
 }
 
+const websocketEndpoint =
+  document.currentScript.getAttribute("data-ws-endpoint") ||
+  "/.internal/alive.websocket";
+
 const jsenvAutoreloadOnServerRestartElement =
   new JsenvAutoreloadOnServerRestart({
     url: (() => {
       const websocketScheme =
         self.location.protocol === "https:" ? "wss" : "ws";
-      const websocketUrl = `${websocketScheme}://${self.location.host}/.internal/alive.websocket`;
+      const websocketUrl = `${websocketScheme}://${self.location.host}${websocketEndpoint}`;
       return websocketUrl;
     })(),
   });

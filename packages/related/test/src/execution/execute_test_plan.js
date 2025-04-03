@@ -168,6 +168,14 @@ export const executeTestPlan = async ({
   const [processMemoryUsageMonitoring, osMemoryUsageMonitoring] =
     memoryMonitoring;
 
+  const interval = setInterval(() => {
+    processCpuUsageMonitoring.measure();
+    processMemoryUsageMonitoring.measure();
+  }, 500).unref();
+  operation.addEndCallback(() => {
+    clearInterval(interval);
+  });
+
   const timingsOrigin = Date.now();
   const takeTiming = () => {
     return Date.now() - timingsOrigin;

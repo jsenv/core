@@ -10,7 +10,7 @@ import {
 // const { certificate, privateKey } = requestCertificate();
 await startDevServer({
   serverLogLevel: "info",
-  sourceDirectoryUrl: new URL("../../", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../../"),
   hostname: "127.0.0.1",
   // https: { certificate, privateKey },
   http2: false,
