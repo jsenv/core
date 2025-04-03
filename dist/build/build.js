@@ -10773,16 +10773,26 @@ const build = async ({
         sourceFileBuildCallbackMap.set(url, set);
       }
     };
-    const onSourceFileBuild = ({ sourceFileUrl, buildFileUrl }) => {
+    const onSourceFileBuild = ({
+      sourceUrlInfo,
+      sourceFileUrl,
+      buildFileUrl,
+    }) => {
       const buildCallbackSet = sourceFileBuildCallbackMap.get(sourceFileUrl);
       if (buildCallbackSet) {
         for (const buildCallback of buildCallbackSet) {
-          buildCallback({ buildFileUrl });
+          buildCallback({ sourceUrlInfo, buildFileUrl });
         }
       }
     };
     sync_package_side_effects: {
       if (!packageDirectoryUrl) {
+        break sync_package_side_effects;
+      }
+      if (
+        urlIsInsideOf(packageDirectoryUrl, jsenvCoreDirectoryUrl) ||
+        packageDirectoryUrl === String(jsenvCoreDirectoryUrl)
+      ) {
         break sync_package_side_effects;
       }
       const packageJson = readPackageAtOrNull(packageDirectoryUrl);
@@ -10802,24 +10812,30 @@ const build = async ({
           packageDirectoryUrl,
         ).href;
         sideEffectFileUrlSet.add(sideEffectFileUrl);
-        registerSourceFileBuildEffect(sideEffectFileUrl, ({ buildFileUrl }) => {
-          const urlRelativeToPackage = urlToRelativeUrl(
-            buildFileUrl,
-            packageDirectoryUrl,
-          );
-          if (sideEffectFileUrlSet.has(buildFileUrl)) {
-            return;
-          }
-          sideEffects.push(
-            urlRelativeToPackage[0] === "."
-              ? urlRelativeToPackage
-              : `./${urlRelativeToPackage}`,
-          );
-          writeFileSync(
-            packageJsonFileUrl,
-            JSON.stringify(packageJson, null, "  "),
-          );
-        });
+        registerSourceFileBuildEffect(
+          sideEffectFileUrl,
+          ({ sourceUrlInfo, buildFileUrl }) => {
+            if (sourceUrlInfo.isInline) {
+              return;
+            }
+            const urlRelativeToPackage = urlToRelativeUrl(
+              buildFileUrl,
+              packageDirectoryUrl,
+            );
+            if (sideEffectFileUrlSet.has(buildFileUrl)) {
+              return;
+            }
+            sideEffects.push(
+              urlRelativeToPackage[0] === "."
+                ? urlRelativeToPackage
+                : `./${urlRelativeToPackage}`,
+            );
+            writeFileSync(
+              packageJsonFileUrl,
+              JSON.stringify(packageJson, null, "  "),
+            );
+          },
+        );
       }
     }
 

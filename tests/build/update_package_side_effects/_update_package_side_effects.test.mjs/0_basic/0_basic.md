@@ -4,9 +4,9 @@
 run()
 ```
 
-# 1/2 write 3 files into "./root/"
+# 1/2 write 2 files into "./root/build/"
 
-see [./root/](./root/)
+see [./root/build/](./root/build/)
 
 # 2/2 resolve
 
