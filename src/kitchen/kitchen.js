@@ -351,6 +351,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         isEntryPoint,
         isDynamicEntryPoint,
         filenameHint,
+        contentSideEffects,
       } = fetchUrlContentReturnValue;
       if (content === undefined) {
         content = body;
@@ -382,6 +383,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       if (typeof isDynamicEntryPoint === "boolean") {
         urlInfo.isDynamicEntryPoint = isDynamicEntryPoint;
+      }
+      if (contentSideEffects) {
+        urlInfo.contentSideEffects = contentSideEffects;
       }
       assertFetchedContentCompliance({
         urlInfo,

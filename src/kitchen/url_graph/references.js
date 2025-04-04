@@ -7,7 +7,6 @@ import {
   urlToBasename,
   urlToExtension,
 } from "@jsenv/urls";
-
 import { prependContent } from "../prepend_content.js";
 
 let referenceId = 0;
