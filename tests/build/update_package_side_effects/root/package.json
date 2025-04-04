@@ -3,5 +3,8 @@
   "private": true,
   "sideEffects": [
     "./src/bar.js"
-  ]
+  ],
+  "dependencies": {
+    "bing": "*"
+  }
 }
