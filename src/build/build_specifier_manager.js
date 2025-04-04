@@ -299,6 +299,7 @@ export const createBuildSpecifierManager = ({
           contentType: bundleInfo.contentType,
           sourcemap: bundleInfo.sourcemap,
           data: bundleInfo.data,
+          contentSideEffects: bundleInfo.contentSideEffects,
         };
       }
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
@@ -347,6 +348,7 @@ export const createBuildSpecifierManager = ({
           originalContent: rawUrlInfo.originalContent,
           originalUrl: rawUrlInfo.originalUrl,
           sourcemap: rawUrlInfo.sourcemap,
+          contentSideEffects: rawUrlInfo.contentSideEffects,
         };
       }
       if (firstReference.isInline) {

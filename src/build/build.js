@@ -1057,7 +1057,7 @@ const prepareEntryPointBuild = async (
           appliesDuring: "build",
           transformUrlContent: async (urlInfo) => {
             await rawKitchen.pluginController.callAsyncHooks(
-              "optimizeUrlContent",
+              "optimizeBuildUrlContent",
               urlInfo,
               (optimizeReturnValue) => {
                 urlInfo.mutateContent(optimizeReturnValue);
@@ -1287,33 +1287,33 @@ const prepareEntryPointBuild = async (
         }
 
         refine_hook: {
-          const refineFunctionSet = new Set();
-          const refineAllFunctionSet = new Set();
+          const refineBuildUrlContentCallbackSet = new Set();
+          const refineBuildCallbackSet = new Set();
           for (const plugin of rawKitchen.pluginController.activePlugins) {
-            const refine = plugin.refine;
-            if (refine) {
-              refineFunctionSet.add(refine);
+            const refineBuildUrlContent = plugin.refineBuildUrlContent;
+            if (refineBuildUrlContent) {
+              refineBuildUrlContentCallbackSet.add(refineBuildUrlContent);
             }
-            const refineAll = plugin.refineAll;
-            if (refineAll) {
-              refineAllFunctionSet.add(refineAll);
+            const refineBuild = plugin.refineBuild;
+            if (refineBuild) {
+              refineBuildCallbackSet.add(refineBuild);
             }
           }
-          if (refineFunctionSet.size) {
+          if (refineBuildUrlContentCallbackSet.size) {
             GRAPH_VISITOR.forEach(finalKitchen.graph, (buildUrlInfo) => {
               if (!buildUrlInfo.url.startsWith("file:")) {
                 return;
               }
-              for (const refineFunction of refineFunctionSet) {
-                refineFunction(buildUrlInfo, {
+              for (const refineBuildUrlContentCallback of refineBuildUrlContentCallbackSet) {
+                refineBuildUrlContentCallback(buildUrlInfo, {
                   buildFileUrl: "", // TODO: get if from the specifier manager (or maybe its available?)
                 });
               }
             });
           }
-          if (refineAllFunctionSet.size) {
-            for (const refineAllFunction of refineAllFunctionSet) {
-              refineAllFunction(finalKitchen.graph);
+          if (refineBuildCallbackSet.size) {
+            for (const refineBuildCallback of refineBuildCallbackSet) {
+              refineBuildCallback(finalKitchen.graph);
             }
           }
         }

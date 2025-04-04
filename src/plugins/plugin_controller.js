@@ -293,11 +293,13 @@ const HOOK_NAMES = [
   "transformUrlContent",
   "finalizeUrlContent",
   "bundle", // is called only during build
-  "optimizeUrlContent", // is called only during build
+  "optimizeBuildUrlContent", // is called only during build
   "cooked",
   "augmentResponse", // is called only during dev/tests
   "destroy",
   "effect",
+  "refineBuildUrlContent", // called only during build
+  "refineBuild", // called only during build
 ];
 
 const testAppliesDuring = (plugin, kitchen) => {
@@ -408,7 +410,7 @@ const returnValueAssertions = [
       "fetchUrlContent",
       "transformUrlContent",
       "finalizeUrlContent",
-      "optimizeUrlContent",
+      "optimizeBuildUrlContent",
     ],
     assertion: (valueReturned, urlInfo, { hook }) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {

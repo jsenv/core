@@ -355,6 +355,7 @@ const createReference = ({
     implicitReferenceSet: new Set(),
     isWeak,
     hasVersioningEffect,
+    urlInfoEffectSet: new Set(),
     version,
     injected,
     timing: {},
@@ -761,4 +762,8 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   referencedUrlInfo.entryUrlInfo = reference.isEntryPoint
     ? referencedUrlInfo
     : reference.ownerUrlInfo.entryUrlInfo;
+
+  for (const urlInfoEffect of reference.urlInfoEffectSet) {
+    urlInfoEffect(referencedUrlInfo);
+  }
 };

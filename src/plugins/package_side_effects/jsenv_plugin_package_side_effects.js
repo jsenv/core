@@ -140,6 +140,8 @@ export const jsenvPluginPackageSideEffects = ({ rootDirectoryUrl }) => {
   return {
     name: "jsenv:package_side_effects",
     appliesDuring: "build",
+    // ptet plutot transformReferenceSearchParams pour etre sur d'arriver a la fin
+    // mais bon on let met de toute façon a la fin dans plugins.js
     redirectReference: (reference) => {
       const url = reference.url;
 
@@ -161,16 +163,14 @@ export const jsenvPluginPackageSideEffects = ({ rootDirectoryUrl }) => {
           // } else {
           //  console.log(`no side effect: ${url}`);
           // }
-
-          // TODO: reference.addEffect does not exists yet
-          reference.addEffect((urlInfo) => {
+          reference.urlInfoEffectSet.add((urlInfo) => {
             urlInfo.contentSideEffects.push(sideEffectFromClosestPackage);
           });
         }
         return;
       }
     },
-    refine: (buildUrlInfo) => {
+    refineBuildUrlContent: (buildUrlInfo) => {
       for (const sideEffect of buildUrlInfo.contentSideEffects) {
         if (sideEffect.has) {
           sideEffectBuildFileUrls.push(buildUrlInfo.url);
@@ -178,11 +178,10 @@ export const jsenvPluginPackageSideEffects = ({ rootDirectoryUrl }) => {
         }
       }
     },
-    refineAll: () => {
+    refineBuild: () => {
       if (sideEffectBuildFileUrls.length === 0) {
         return;
       }
-
       let sideEffectsToAdd = [];
       if (sideEffects === false) {
         sideEffectsToAdd = sideEffectBuildFileUrls;
@@ -202,14 +201,15 @@ export const jsenvPluginPackageSideEffects = ({ rootDirectoryUrl }) => {
         }
       }
       if (sideEffectsToAdd.length === 0) {
-        packageJson.sideEffects = sideEffectBuildFileUrls.map(
-          normalizeSideEffectFileUrl,
-        );
-        writeFileSync(
-          packageJsonFileUrl,
-          JSON.stringify(packageJson, null, "  "),
-        );
+        return;
       }
+      packageJson.sideEffects = sideEffectBuildFileUrls.map(
+        normalizeSideEffectFileUrl,
+      );
+      writeFileSync(
+        packageJsonFileUrl,
+        JSON.stringify(packageJson, null, "  "),
+      );
     },
   };
 };
