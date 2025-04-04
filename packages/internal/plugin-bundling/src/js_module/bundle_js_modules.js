@@ -316,18 +316,18 @@ const rollupPluginJsenv = ({
 
   const getModuleSideEffects = (url) => {
     const urlInfo = graph.getUrlInfo(url);
-    if (urlInfo) {
-      if (urlInfo.contentSideEffects.length) {
-        for (const contentSideEffect of urlInfo.contentSideEffects) {
-          if (contentSideEffect.sideEffect.has) {
-            return true;
-          }
-        }
-        return false;
-      }
-      return null;
+    if (!urlInfo) {
+      return null; // we don't know
     }
-    return null;
+    if (urlInfo.contentSideEffects.length === 0) {
+      return null; // we don't know
+    }
+    for (const contentSideEffect of urlInfo.contentSideEffects) {
+      if (contentSideEffect.sideEffect.has) {
+        return true;
+      }
+    }
+    return false;
   };
 
   const resolveImport = (specifier, importer) => {

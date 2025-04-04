@@ -1,9 +1,51 @@
-import { lookupPackageDirectory } from "@jsenv/filesystem";
+import {
+  lookupPackageDirectory,
+  readPackageAtOrNull,
+  writeFileSync,
+} from "@jsenv/filesystem";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { URL_META } from "@jsenv/url-meta";
+import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
+import { jsenvCoreDirectoryUrl } from "../../jsenv_core_directory_url.js";
 
-export const jsenvPluginPackageSideEffects = () => {
+export const jsenvPluginPackageSideEffects = ({ rootDirectoryUrl }) => {
+  const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
+  if (!packageDirectoryUrl) {
+    return [];
+  }
+  if (
+    urlIsInsideOf(packageDirectoryUrl, jsenvCoreDirectoryUrl) ||
+    packageDirectoryUrl === String(jsenvCoreDirectoryUrl)
+  ) {
+    return [];
+  }
+  const packageJson = readPackageAtOrNull(packageDirectoryUrl);
+  if (!packageJson) {
+    return [];
+  }
+  const { sideEffects } = packageJson;
+  if (
+    sideEffects === true ||
+    sideEffects === undefined ||
+    !Array.isArray(sideEffects)
+  ) {
+    return [];
+  }
+
+  const sideEffectFileUrlSet = new Set();
+  const packageJsonFileUrl = new URL("./package.json", packageDirectoryUrl)
+    .href;
+
+  const normalizeSideEffectFileUrl = (url) => {
+    const urlRelativeToPackage = urlToRelativeUrl(url, packageDirectoryUrl);
+    return urlRelativeToPackage[0] === "."
+      ? urlRelativeToPackage
+      : `./${urlRelativeToPackage}`;
+  };
+
+  const sideEffectBuildFileUrls = [];
+
   const packageSideEffectsCacheMap = new Map();
   const readSideEffectInfoFromClosestPackage = (url) => {
     const packageDirectoryUrl = lookupPackageDirectory(url);
@@ -126,6 +168,47 @@ export const jsenvPluginPackageSideEffects = () => {
           });
         }
         return;
+      }
+    },
+    refine: (buildUrlInfo) => {
+      for (const sideEffect of buildUrlInfo.contentSideEffects) {
+        if (sideEffect.has) {
+          sideEffectBuildFileUrls.push(buildUrlInfo.url);
+          return;
+        }
+      }
+    },
+    refineAll: () => {
+      if (sideEffectBuildFileUrls.length === 0) {
+        return;
+      }
+
+      let sideEffectsToAdd = [];
+      if (sideEffects === false) {
+        sideEffectsToAdd = sideEffectBuildFileUrls;
+      } else if (Array.isArray(sideEffects)) {
+        for (const sideEffectFileRelativeUrl of sideEffects) {
+          const sideEffectFileUrl = new URL(
+            sideEffectFileRelativeUrl,
+            packageDirectoryUrl,
+          ).href;
+          sideEffectFileUrlSet.add(sideEffectFileUrl);
+        }
+        for (const url of sideEffectBuildFileUrls) {
+          if (sideEffectFileUrlSet.has(url)) {
+            continue;
+          }
+          sideEffectsToAdd.push(normalizeSideEffectFileUrl(url));
+        }
+      }
+      if (sideEffectsToAdd.length === 0) {
+        packageJson.sideEffects = sideEffectBuildFileUrls.map(
+          normalizeSideEffectFileUrl,
+        );
+        writeFileSync(
+          packageJsonFileUrl,
+          JSON.stringify(packageJson, null, "  "),
+        );
       }
     },
   };

@@ -45,7 +45,6 @@ export const createBuildSpecifierManager = ({
   versioningMethod,
   versionLength,
   canUseImportmap,
-  onSourceFileBuild,
 }) => {
   const placeholderAPI = createPlaceholderAPI({
     length,
@@ -112,42 +111,6 @@ export const createBuildSpecifierManager = ({
       buildSpecifier,
       reference,
     );
-
-    if (buildUrlInfo.sourceUrls) {
-      for (const sourceUrl of buildUrlInfo.sourceUrls) {
-        const rawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
-        if (rawUrlInfo) {
-          rawUrlInfo.data.bundled = true;
-          if (rawUrlInfo.contentSideEffects.length) {
-            buildUrlInfo.contentSideEffects.push(
-              ...rawUrlInfo.contentSideEffects,
-            );
-          }
-          onSourceFileBuild({
-            sourceUrlInfo: rawUrlInfo,
-            buildUrlInfo,
-            sourceFileUrl: rawUrlInfo.url,
-            buildFileUrl: buildUrl,
-          });
-        }
-      }
-    } else if (buildUrlInfo.originalUrl) {
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(buildUrlInfo.originalUrl);
-      if (rawUrlInfo) {
-        if (rawUrlInfo.contentSideEffects.length) {
-          buildUrlInfo.contentSideEffects.push(
-            ...rawUrlInfo.contentSideEffects,
-          );
-        }
-        onSourceFileBuild({
-          sourceUrlInfo: rawUrlInfo,
-          buildUrlInfo,
-          sourceFileUrl: rawUrlInfo.url,
-          buildFileUrl: buildUrl,
-        });
-      }
-    }
-
     return buildGeneratedSpecifier;
   };
   const internalRedirections = new Map();
@@ -164,6 +127,17 @@ export const createBuildSpecifierManager = ({
     );
     for (const url of Object.keys(urlInfosBundled)) {
       const urlInfoBundled = urlInfosBundled[url];
+      const contentSideEffects = [];
+      if (urlInfoBundled.sourceUrls) {
+        for (const sourceUrl of urlInfoBundled.sourceUrls) {
+          const rawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
+          if (rawUrlInfo) {
+            rawUrlInfo.data.bundled = true;
+            contentSideEffects.push(...rawUrlInfo.contentSideEffects);
+          }
+        }
+      }
+      urlInfoBundled.contentSideEffects = contentSideEffects;
       bundleInfoMap.set(url, urlInfoBundled);
     }
   };
