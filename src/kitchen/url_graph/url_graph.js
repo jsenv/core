@@ -3,7 +3,6 @@ import {
   injectQueryParamsIntoSpecifier,
   urlToRelativeUrl,
 } from "@jsenv/urls";
-
 import { createEventEmitter } from "../../helpers/event_emitter.js";
 import { createDependencies } from "./references.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
@@ -213,6 +212,8 @@ const createUrlInfo = (url, context) => {
     contentAst: undefined,
     contentLength: undefined,
     contentFinalized: false,
+    contentSideEffects: [],
+    packageName: null,
 
     sourcemap: null,
     sourcemapIsWrong: false,

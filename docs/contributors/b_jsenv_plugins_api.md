@@ -17,7 +17,7 @@ export const createAJsenvPlugin = () => {
     formatReference: (reference, context) => {},
     fetchUrlContent: async (urlInfo, context) => {},
     transformUrlContent: async (urlInfo, context) => {},
-    optimizeUrlContent: async (urlInfo, context) => {},
+    optimizeBuildUrlContent: async (urlInfo, context) => {},
     serverEvents: {
       myEvent: ({ sendServerEvent }) => {},
     },
@@ -234,7 +234,7 @@ Enabling the plugin above would transform code as follows:
 + console.log("bar");
 ```
 
-## 1.10 optimizeUrlContent
+## 1.10 optimizeBuildUrlContent
 
 Like transformUrlContent but will be called only during build and after all transformUrlContent hooks.
 

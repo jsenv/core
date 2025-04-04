@@ -41,7 +41,7 @@ export const jsenvPluginMinification = ({
       willMinifyJsModule: Boolean(js_module),
       willMinifyJson: Boolean(json),
     },
-    optimizeUrlContent: {
+    optimizeBuildUrlContent: {
       html: htmlMinifier,
       svg: svgMinifier,
       css: cssMinifier,
