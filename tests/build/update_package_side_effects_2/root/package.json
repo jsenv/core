@@ -1,0 +1,8 @@
+{
+  "name": "test",
+  "private": true,
+  "dependencies": {
+    "bing": "*"
+  },
+  "sideEffects": false
+}

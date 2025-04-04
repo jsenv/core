@@ -1,3 +1,12 @@
+// TODO: the side effect stuff
+// should move to the kitchen/ a plugin/whatever
+// and should also be done for dynamic imports
+// I don't know yet where we would do it but likely
+// into the node esm resolver
+// but conceptually the node esm resolution just allows to find
+// the file but a direct import should have the same effect (associating the package data)
+// there is work to do
+
 import { lookupPackageDirectory, readPackageAtOrNull } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
