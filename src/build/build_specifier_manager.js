@@ -117,6 +117,12 @@ export const createBuildSpecifierManager = ({
       for (const sourceUrl of buildUrlInfo.sourceUrls) {
         const rawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
         if (rawUrlInfo) {
+          rawUrlInfo.data.bundled = true;
+          if (rawUrlInfo.contentSideEffects.length) {
+            buildUrlInfo.contentSideEffects.push(
+              ...rawUrlInfo.contentSideEffects,
+            );
+          }
           onSourceFileBuild({
             sourceUrlInfo: rawUrlInfo,
             buildUrlInfo,
@@ -128,6 +134,11 @@ export const createBuildSpecifierManager = ({
     } else if (buildUrlInfo.originalUrl) {
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(buildUrlInfo.originalUrl);
       if (rawUrlInfo) {
+        if (rawUrlInfo.contentSideEffects.length) {
+          buildUrlInfo.contentSideEffects.push(
+            ...rawUrlInfo.contentSideEffects,
+          );
+        }
         onSourceFileBuild({
           sourceUrlInfo: rawUrlInfo,
           buildUrlInfo,
@@ -153,14 +164,6 @@ export const createBuildSpecifierManager = ({
     );
     for (const url of Object.keys(urlInfosBundled)) {
       const urlInfoBundled = urlInfosBundled[url];
-      if (urlInfoBundled.sourceUrls) {
-        for (const sourceUrl of urlInfoBundled.sourceUrls) {
-          const sourceRawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
-          if (sourceRawUrlInfo) {
-            sourceRawUrlInfo.data.bundled = true;
-          }
-        }
-      }
       bundleInfoMap.set(url, urlInfoBundled);
     }
   };
