@@ -1,3 +1,16 @@
+/**
+ * Lorsqu'on bundle un package ayant pas le field sideEffects
+ * alors on fini potentiellement par dire
+ * sideEffect: false
+ * sur le package racine alors qu'on en sait rien
+ * on pourrait mettre un package.json dans dist dans ce cas
+ * qui ne déclare pas le field side effect afin
+ * d'override le package.json du project qui lui dit qu'il ny en a pas
+ *
+ * On part du principe pour le moment que c'est la respo du package racine de déclarer cela
+ *
+ */
+
 import {
   lookupPackageDirectory,
   readPackageAtOrNull,
