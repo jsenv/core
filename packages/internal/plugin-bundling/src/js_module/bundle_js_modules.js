@@ -1,6 +1,14 @@
+// TODO: the side effect stuff
+// should move to the kitchen/ a plugin/whatever
+// and should also be done for dynamic imports
+// I don't know yet where we would do it but likely
+// into the node esm resolver
+// but conceptually the node esm resolution just allows to find
+// the file but a direct import should have the same effect (associating the package data)
+// there is work to do
+
 import { lookupPackageDirectory, readPackageAtOrNull } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
-import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
 import {
@@ -9,7 +17,6 @@ import {
   urlToBasename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
-import { readFileSync } from "node:fs";
 import { fileUrlConverter } from "../file_url_converter.js";
 
 export const bundleJsModules = async (
@@ -307,96 +314,20 @@ const rollupPluginJsenv = ({
     return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
   };
 
-  const packageSideEffectsCacheMap = new Map();
-  const readClosestPackageJsonSideEffects = (url) => {
-    const packageDirectoryUrl = lookupPackageDirectory(url);
-    if (!packageDirectoryUrl) {
-      return undefined;
+  const getModuleSideEffects = (url) => {
+    const urlInfo = graph.getUrlInfo(url);
+    if (!urlInfo) {
+      return null; // we don't know
     }
-    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
-    if (fromCache) {
-      return fromCache.value;
+    if (urlInfo.contentSideEffects.length === 0) {
+      return null; // we don't know
     }
-    try {
-      const packageFileContent = readFileSync(
-        new URL("./package.json", packageDirectoryUrl),
-        "utf8",
-      );
-      const packageJSON = JSON.parse(packageFileContent);
-      return storePackageSideEffect(packageDirectoryUrl, packageJSON);
-    } catch {
-      return storePackageSideEffect(packageDirectoryUrl, null);
-    }
-  };
-  const storePackageSideEffect = (packageDirectoryUrl, packageJson) => {
-    if (!packageJson) {
-      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
-      return undefined;
-    }
-    const value = packageJson.sideEffects;
-    if (Array.isArray(value)) {
-      const sideEffectPatterns = {};
-      for (const v of value) {
-        sideEffectPatterns[v] = true;
+    for (const contentSideEffect of urlInfo.contentSideEffects) {
+      if (contentSideEffect.sideEffect.has) {
+        return true;
       }
-      const associations = URL_META.resolveAssociations(
-        { sideEffects: sideEffectPatterns },
-        packageDirectoryUrl,
-      );
-      const isMatching = (url) => {
-        const meta = URL_META.applyAssociations({ url, associations });
-        return meta.sideEffects || false;
-      };
-      packageSideEffectsCacheMap.set(packageDirectoryUrl, {
-        value: isMatching,
-      });
-      return isMatching;
     }
-    packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
-    return value;
-  };
-
-  const inferSideEffectsFromResolvedUrl = (url) => {
-    if (url.startsWith("ignore:")) {
-      // console.log(`may have side effect: ${url}`);
-      // double ignore we must keep the import
-      return null;
-    }
-    if (isSpecifierForNodeBuiltin(url)) {
-      return false;
-    }
-    const closestPackageJsonSideEffects =
-      readClosestPackageJsonSideEffects(url);
-    if (closestPackageJsonSideEffects === undefined) {
-      // console.log(`may have side effect: ${url}`);
-      return null;
-    }
-    if (typeof closestPackageJsonSideEffects === "function") {
-      const haveSideEffect = closestPackageJsonSideEffects(url);
-      // if (haveSideEffect) {
-      //   console.log(`have side effect: ${url}`);
-      // }
-      return haveSideEffect;
-    }
-    return closestPackageJsonSideEffects;
-  };
-  const getModuleSideEffects = (url, importer) => {
-    if (!url.startsWith("ignore:")) {
-      return inferSideEffectsFromResolvedUrl(url);
-    }
-    url = url.slice("ignore:".length);
-    if (url.startsWith("file:")) {
-      return inferSideEffectsFromResolvedUrl(url);
-    }
-    try {
-      const result = kitchen.resolve(url, importer);
-      if (result.packageDirectoryUrl) {
-        storePackageSideEffect(result.packageDirectoryUrl, result.packageJson);
-      }
-      return inferSideEffectsFromResolvedUrl(url);
-    } catch {
-      return null;
-    }
+    return false;
   };
 
   const resolveImport = (specifier, importer) => {
@@ -408,9 +339,7 @@ const rollupPluginJsenv = ({
 
   const dynamicImportIdSet = new Set();
   const assignDynamicImportId = (urlImportedDynamically) => {
-    const urlInfo = jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
-      urlImportedDynamically,
-    );
+    const urlInfo = kitchen.graph.getUrlInfo(urlImportedDynamically);
     let dynamicImportIdBase =
       urlInfo && urlInfo.filenameHint
         ? filenameWithoutExtension(urlInfo.filenameHint)
@@ -654,10 +583,7 @@ const rollupPluginJsenv = ({
           }
           if (chunkInfo.isDynamicEntry) {
             const originalFileUrl = getOriginalUrl(chunkInfo, true);
-            const urlInfo =
-              jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
-                originalFileUrl,
-              );
+            const urlInfo = kitchen.graph.getUrlInfo(originalFileUrl);
             if (urlInfo && urlInfo.filenameHint) {
               return urlInfo.filenameHint;
             }
