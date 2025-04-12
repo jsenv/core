@@ -11,29 +11,24 @@
  *
  */
 
-import {
-  lookupPackageDirectory,
-  readPackageAtOrNull,
-  writeFileSync,
-} from "@jsenv/filesystem";
+import { lookupPackageDirectory, writeFileSync } from "@jsenv/filesystem";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 import { jsenvCoreDirectoryUrl } from "../../jsenv_core_directory_url.js";
 
-export const jsenvPluginPackageSideEffects = ({ rootDirectoryUrl }) => {
-  const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
-  if (!packageDirectoryUrl) {
+export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
+  if (!packageDirectory.url) {
     return [];
   }
   if (
-    urlIsInsideOf(packageDirectoryUrl, jsenvCoreDirectoryUrl) ||
-    packageDirectoryUrl === String(jsenvCoreDirectoryUrl)
+    urlIsInsideOf(packageDirectory.url, jsenvCoreDirectoryUrl) ||
+    packageDirectory.url === String(jsenvCoreDirectoryUrl)
   ) {
     return [];
   }
-  const packageJson = readPackageAtOrNull(packageDirectoryUrl);
+  const packageJson = packageDirectory.read(packageDirectory.url);
   if (!packageJson) {
     return [];
   }
@@ -47,11 +42,11 @@ export const jsenvPluginPackageSideEffects = ({ rootDirectoryUrl }) => {
   }
 
   const sideEffectFileUrlSet = new Set();
-  const packageJsonFileUrl = new URL("./package.json", packageDirectoryUrl)
+  const packageJsonFileUrl = new URL("./package.json", packageDirectory.url)
     .href;
 
   const normalizeSideEffectFileUrl = (url) => {
-    const urlRelativeToPackage = urlToRelativeUrl(url, packageDirectoryUrl);
+    const urlRelativeToPackage = urlToRelativeUrl(url, packageDirectory.url);
     return urlRelativeToPackage[0] === "."
       ? urlRelativeToPackage
       : `./${urlRelativeToPackage}`;
@@ -202,7 +197,7 @@ export const jsenvPluginPackageSideEffects = ({ rootDirectoryUrl }) => {
         for (const sideEffectFileRelativeUrl of sideEffects) {
           const sideEffectFileUrl = new URL(
             sideEffectFileRelativeUrl,
-            packageDirectoryUrl,
+            packageDirectory.url,
           ).href;
           sideEffectFileUrlSet.add(sideEffectFileUrl);
         }

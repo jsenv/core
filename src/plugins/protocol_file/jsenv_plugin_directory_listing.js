@@ -24,7 +24,6 @@
 
 import {
   compareFileUrls,
-  lookupPackageDirectory,
   readEntryStatSync,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem";
@@ -49,6 +48,7 @@ export const jsenvPluginDirectoryListing = ({
   urlMocks = false,
   autoreload = true,
   directoryContentMagicName,
+  packageDirectory,
   rootDirectoryUrl,
   mainFilePath,
   sourceFilesConfig,
@@ -134,6 +134,7 @@ export const jsenvPluginDirectoryListing = ({
               directoryContentMagicName,
               rootDirectoryUrl,
               mainFilePath,
+              packageDirectory,
               enoent,
             }),
           },
@@ -221,6 +222,7 @@ const generateDirectoryListingInjection = (
   {
     rootDirectoryUrl,
     mainFilePath,
+    packageDirectory,
     request,
     urlMocks,
     directoryContentMagicName,
@@ -240,14 +242,13 @@ const generateDirectoryListingInjection = (
     firstExistingDirectoryUrl,
   });
   package_workspaces: {
-    const packageDirectoryUrl = lookupPackageDirectory(serverRootDirectoryUrl);
-    if (!packageDirectoryUrl) {
+    if (!packageDirectory.url) {
       break package_workspaces;
     }
-    if (String(packageDirectoryUrl) === String(serverRootDirectoryUrl)) {
+    if (String(packageDirectory.url) === String(serverRootDirectoryUrl)) {
       break package_workspaces;
     }
-    rootDirectoryUrl = packageDirectoryUrl;
+    rootDirectoryUrl = packageDirectory.url;
     // if (String(firstExistingDirectoryUrl) === String(serverRootDirectoryUrl)) {
     //   let packageContent;
     //   try {

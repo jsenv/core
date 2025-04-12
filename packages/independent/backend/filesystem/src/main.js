@@ -25,6 +25,7 @@ export { findSelfOrAncestorDirectoryUrl } from "./path_and_url/find_self_or_ance
 // but it's very useful and it's not a problem to have it here (and useful to share this logic)
 export {
   lookupPackageDirectory,
+  createLookupPackageDirectory,
   readPackageAtOrNull,
 } from "./path_and_url/lookup_package_directory.js";
 

@@ -49,6 +49,7 @@ export const createKitchen = ({
   sourcemapsSourcesContent,
   outDirectoryUrl,
   initialContext = {},
+  packageDirectory,
 }) => {
   const logger = createLogger({ logLevel });
 
@@ -63,6 +64,7 @@ export const createKitchen = ({
       logger,
       rootDirectoryUrl,
       mainFilePath,
+      packageDirectory,
       dev,
       build,
       runtimeCompat,
@@ -79,6 +81,8 @@ export const createKitchen = ({
         conditions: packageConditions,
         parentUrl: importer,
         specifier,
+        lookupPackageScope: packageDirectory.find,
+        readPackageJson: packageDirectory.read,
       });
       return { url, packageDirectoryUrl, packageJson };
     },

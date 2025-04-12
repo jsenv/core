@@ -22,8 +22,10 @@ import {
   assertAndNormalizeDirectoryUrl,
   clearDirectorySync,
   compareFileUrls,
+  createLookupPackageDirectory,
   ensureEmptyDirectory,
   lookupPackageDirectory,
+  readPackageAtOrNull,
   writeFileSync,
 } from "@jsenv/filesystem";
 import {
@@ -489,7 +491,21 @@ export const build = async ({
     return compareFileUrls(a.sourceUrl, b.sourceUrl);
   });
 
-  const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
+  const lookupPackageDirectoryUrl = createLookupPackageDirectory();
+  const packageDirectoryCache = new Map();
+  const readPackageDirectory = (url) => {
+    const fromCache = packageDirectoryCache.get(url);
+    if (fromCache !== undefined) {
+      return fromCache;
+    }
+    return readPackageAtOrNull(url);
+  };
+  const packageDirectory = {
+    url: lookupPackageDirectory(sourceDirectoryUrl),
+    find: lookupPackageDirectoryUrl,
+    read: readPackageDirectory,
+  };
+
   if (outDirectoryUrl === undefined) {
     if (
       process.env.CAPTURING_SIDE_EFFECTS ||
@@ -497,18 +513,18 @@ export const build = async ({
         urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
     ) {
       outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl).href;
-    } else if (packageDirectoryUrl) {
-      outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
+    } else if (packageDirectory.url) {
+      outDirectoryUrl = `${packageDirectory.url}.jsenv/`;
     }
   }
-  let rootPackageDirectoryUrl = packageDirectoryUrl;
-  if (packageDirectoryUrl) {
-    const parentPackageDirectoryUrl = lookupPackageDirectory(
-      new URL("../", packageDirectoryUrl),
+  let rootPackageDirectoryUrl;
+  if (packageDirectory.url) {
+    const parentPackageDirectoryUrl = packageDirectory.find(
+      new URL("../", packageDirectory.url),
     );
-    if (parentPackageDirectoryUrl) {
-      rootPackageDirectoryUrl = parentPackageDirectoryUrl;
-    }
+    rootPackageDirectoryUrl = parentPackageDirectoryUrl || packageDirectory.url;
+  } else {
+    rootPackageDirectoryUrl = packageDirectory.url;
   }
 
   const runBuild = async ({ signal }) => {
@@ -565,6 +581,7 @@ export const build = async ({
           buildDirectoryUrl,
           outDirectoryUrl: entryOutDirectoryUrl,
           sourceRelativeUrl: entryPoint.sourceRelativeUrl,
+          packageDirectory,
           buildUrlsGenerator,
           someEntryPointUseNode,
         },
@@ -785,8 +802,9 @@ const prepareEntryPointBuild = async (
     signal,
     sourceDirectoryUrl,
     buildDirectoryUrl,
-    sourceRelativeUrl,
     outDirectoryUrl,
+    sourceRelativeUrl,
+    packageDirectory,
     buildUrlsGenerator,
     someEntryPointUseNode,
   },
@@ -918,6 +936,7 @@ const prepareEntryPointBuild = async (
     outDirectoryUrl: outDirectoryUrl
       ? new URL("craft/", outDirectoryUrl)
       : undefined,
+    packageDirectory,
   });
 
   let _getOtherEntryBuildInfo;
@@ -945,6 +964,7 @@ const prepareEntryPointBuild = async (
     ...(bundling ? [jsenvPluginBundling(bundling)] : []),
     ...(minification ? [jsenvPluginMinification(minification)] : []),
     ...getCorePlugins({
+      packageDirectory,
       rootDirectoryUrl: sourceDirectoryUrl,
       runtimeCompat,
       referenceAnalysis,
@@ -1015,6 +1035,7 @@ const prepareEntryPointBuild = async (
         outDirectoryUrl: outDirectoryUrl
           ? new URL("shape/", outDirectoryUrl)
           : undefined,
+        packageDirectory,
       });
       const buildSpecifierManager = createBuildSpecifierManager({
         rawKitchen,

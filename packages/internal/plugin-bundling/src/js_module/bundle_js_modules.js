@@ -7,7 +7,6 @@
 // the file but a direct import should have the same effect (associating the package data)
 // there is work to do
 
-import { lookupPackageDirectory, readPackageAtOrNull } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
@@ -39,6 +38,7 @@ export const bundleJsModules = async (
     signal,
     logger,
     rootDirectoryUrl,
+    packageDirectory,
     runtimeCompat,
     sourcemaps,
     isSupportedOnCurrentClients,
@@ -80,9 +80,8 @@ export const bundleJsModules = async (
     if (chunks) {
       let workspaces;
       let packageName;
-      const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
-      if (packageDirectoryUrl) {
-        const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
+      if (packageDirectory.url) {
+        const packageJSON = packageDirectory.read(packageDirectory.url);
         if (packageJSON) {
           packageName = packageJSON.name;
           workspaces = packageJSON.workspaces;
@@ -113,7 +112,7 @@ export const bundleJsModules = async (
         for (const workspace of workspaces) {
           const workspacePattern = new URL(
             workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
-            packageDirectoryUrl,
+            packageDirectory.url,
           ).href;
           workspacePatterns[workspacePattern] = true;
         }

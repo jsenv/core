@@ -31,6 +31,7 @@ export const getCorePlugins = ({
   rootDirectoryUrl,
   mainFilePath,
   runtimeCompat,
+  packageDirectory,
   sourceFilesConfig,
 
   referenceAnalysis = {},
@@ -92,6 +93,7 @@ export const getCorePlugins = ({
       directoryListing,
       rootDirectoryUrl,
       mainFilePath,
+      packageDirectory,
       sourceFilesConfig,
     }),
     {
@@ -136,7 +138,7 @@ export const getCorePlugins = ({
     jsenvPluginCleanHTML(),
     jsenvPluginChromeDevtoolsJson(),
     ...(packageSideEffects
-      ? [jsenvPluginPackageSideEffects({ rootDirectoryUrl })]
+      ? [jsenvPluginPackageSideEffects({ packageDirectory })]
       : []),
   ];
 };
