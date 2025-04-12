@@ -246,13 +246,11 @@ const createUrlInfo = (url, context) => {
   Object.defineProperty(urlInfo, "packageDirectoryUrl", {
     enumerable: true,
     configurable: true,
-    writable: true,
     get: () => context.packageDirectory.find(url),
   });
   Object.defineProperty(urlInfo, "packageJSON", {
     enumerable: true,
     configurable: true,
-    writable: true,
     get: () => {
       const packageDirectoryUrl = context.packageDirectory.find(url);
       return packageDirectoryUrl
@@ -263,10 +261,9 @@ const createUrlInfo = (url, context) => {
   Object.defineProperty(urlInfo, "packageName", {
     enumerable: true,
     configurable: true,
-    writable: true,
     get: () => urlInfo.packageJSON?.name,
   });
-  urlInfo.urlInfo.dependencies = createDependencies(urlInfo);
+  urlInfo.dependencies = createDependencies(urlInfo);
   urlInfo.isUsed = () => {
     if (urlInfo.isRoot) {
       return true;
