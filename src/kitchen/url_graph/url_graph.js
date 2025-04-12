@@ -243,7 +243,30 @@ const createUrlInfo = (url, context) => {
   urlInfo.pathname = new URL(url).pathname;
   urlInfo.searchParams = new URL(url).searchParams;
 
-  urlInfo.dependencies = createDependencies(urlInfo);
+  Object.defineProperty(urlInfo, "packageDirectoryUrl", {
+    enumerable: true,
+    configurable: true,
+    writable: true,
+    get: () => context.packageDirectory.find(url),
+  });
+  Object.defineProperty(urlInfo, "packageJSON", {
+    enumerable: true,
+    configurable: true,
+    writable: true,
+    get: () => {
+      const packageDirectoryUrl = context.packageDirectory.find(url);
+      return packageDirectoryUrl
+        ? context.packageDirectory.read(packageDirectoryUrl)
+        : null;
+    },
+  });
+  Object.defineProperty(urlInfo, "packageName", {
+    enumerable: true,
+    configurable: true,
+    writable: true,
+    get: () => urlInfo.packageJSON?.name,
+  });
+  urlInfo.urlInfo.dependencies = createDependencies(urlInfo);
   urlInfo.isUsed = () => {
     if (urlInfo.isRoot) {
       return true;
