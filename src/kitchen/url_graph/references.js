@@ -39,7 +39,14 @@ export const createDependencies = (ownerUrlInfo) => {
       ...props,
     });
     const reference = originalReference.resolve();
-    reference.finalize();
+    if (reference.urlInfo) {
+      return reference;
+    }
+    const kitchen = ownerUrlInfo.kitchen;
+    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
+    reference.urlInfo = urlInfo;
+    addDependency(reference);
+    ownerUrlInfo.context.finalizeReference(reference);
     return reference;
   };
 
@@ -387,17 +394,6 @@ const createReference = ({
     });
     reference.next = referenceRedirected;
     return referenceRedirected;
-  };
-
-  reference.finalize = () => {
-    if (reference.urlInfo) {
-      return;
-    }
-    const kitchen = ownerUrlInfo.kitchen;
-    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
-    reference.urlInfo = urlInfo;
-    addDependency(reference);
-    ownerUrlInfo.context.finalizeReference(reference);
   };
 
   // "formatReference" can be async BUT this is an exception

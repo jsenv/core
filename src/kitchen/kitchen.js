@@ -103,6 +103,9 @@ export const createKitchen = ({
     rootDirectoryUrl,
     kitchen,
   });
+  graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
+    pluginController.callHooks("urlInfoCreated", urlInfoCreated, () => {});
+  });
   kitchen.graph = graph;
 
   const urlInfoTransformer = createUrlInfoTransformer({

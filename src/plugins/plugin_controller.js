@@ -289,6 +289,7 @@ const HOOK_NAMES = [
   "redirectReference",
   "transformReferenceSearchParams",
   "formatReference",
+  "urlInfoCreated",
   "fetchUrlContent",
   "transformUrlContent",
   "finalizeUrlContent",

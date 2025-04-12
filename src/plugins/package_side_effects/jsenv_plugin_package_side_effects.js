@@ -11,11 +11,10 @@
  *
  */
 
-import { lookupPackageDirectory, writeFileSync } from "@jsenv/filesystem";
+import { writeFileSync } from "@jsenv/filesystem";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
-import { readFileSync } from "node:fs";
 import { jsenvCoreDirectoryUrl } from "../../jsenv_core_directory_url.js";
 
 export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
@@ -55,32 +54,27 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   const sideEffectBuildFileUrls = [];
 
   const packageSideEffectsCacheMap = new Map();
-  const readSideEffectInfoFromClosestPackage = (url) => {
-    const packageDirectoryUrl = lookupPackageDirectory(url);
-    if (!packageDirectoryUrl) {
+  const readSideEffectInfoFromClosestPackage = (urlInfo) => {
+    const closestPackageJSON = urlInfo.packageJSON;
+    if (!closestPackageJSON) {
       return undefined;
     }
-    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
+    const fromCache = packageSideEffectsCacheMap.get(urlInfo.url);
     if (fromCache) {
       return fromCache.value;
     }
     try {
-      const packageFileContent = readFileSync(
-        new URL("./package.json", packageDirectoryUrl),
-        "utf8",
-      );
-      const packageJSON = JSON.parse(packageFileContent);
-      return storePackageSideEffect(packageDirectoryUrl, packageJSON);
+      return storePackageSideEffect(urlInfo.url, closestPackageJSON);
     } catch {
-      return storePackageSideEffect(packageDirectoryUrl, null);
+      return storePackageSideEffect(urlInfo.url, null);
     }
   };
-  const storePackageSideEffect = (packageDirectoryUrl, packageJson) => {
-    if (!packageJson) {
+  const storePackageSideEffect = (packageDirectoryUrl, packageJSON) => {
+    if (!packageJSON) {
       packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
       return undefined;
     }
-    const value = packageJson.sideEffects;
+    const value = packageJSON.sideEffects;
     if (Array.isArray(value)) {
       const noSideEffect = {
         has: false,
@@ -148,32 +142,25 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   return {
     name: "jsenv:package_side_effects",
     appliesDuring: "build",
-    // ptet plutot transformReferenceSearchParams pour etre sur d'arriver a la fin
-    // mais bon on let met de toute façon a la fin dans plugins.js
-    redirectReference: (reference) => {
-      const url = reference.url;
-
+    urlInfoCreated: (urlInfo) => {
+      const url = urlInfo.url;
       if (isSpecifierForNodeBuiltin(url)) {
-        reference.addEffect((urlInfo) => {
-          urlInfo.contentSideEffects.push({
-            sideEffect: "no",
-            reason: "node builtin module",
-          });
+        urlInfo.contentSideEffects.push({
+          sideEffect: "no",
+          reason: "node builtin module",
         });
         return;
       }
       if (url.startsWith("file:")) {
         const sideEffectFromClosestPackage =
-          getSideEffectInfoFromClosestPackage(url);
+          getSideEffectInfoFromClosestPackage(urlInfo);
         if (sideEffectFromClosestPackage) {
           // if (sideEffectFromClosestPackage.has) {
           //    console.log(`have side effect: ${url}`);
           // } else {
           //  console.log(`no side effect: ${url}`);
           // }
-          reference.urlInfoEffectSet.add((urlInfo) => {
-            urlInfo.contentSideEffects.push(sideEffectFromClosestPackage);
-          });
+          urlInfo.contentSideEffects.push(sideEffectFromClosestPackage);
         }
         return;
       }
