@@ -43,7 +43,7 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
                 "  ",
               )}</pre>`;
             }
-            return `<pre>${serverInternalError.stack}</pre>`;
+            return `<pre>${escapeHtml(serverInternalError.stack)}</pre>`;
           };
 
           const internalErrorHtmlTemplate = readFileSync(
@@ -114,4 +114,13 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
       return availableContentTypes[bestContentType || "application/json"]();
     },
   };
+};
+
+const escapeHtml = (unsafe) => {
+  return unsafe
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 };

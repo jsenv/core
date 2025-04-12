@@ -402,6 +402,15 @@ To fix this, change "pull_request" for "pull_request_target" in your workflow fi
 See https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request_target`;
 };
 
+const escapeHtml = (unsafe) => {
+  return unsafe
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+};
+
 const jsenvCreateBeforeMergeErrorComment = (
   error,
   { pullRequestBase, pullRequestHead },
@@ -410,7 +419,7 @@ const jsenvCreateBeforeMergeErrorComment = (
 
 **Error:** Error while trying to collect info before merging ${pullRequestHead} into ${pullRequestBase}.
 
-<pre>${error.stack}</pre>
+<pre>${escapeHtml(error.stack)}</pre>
 
 ---`;
 };
@@ -423,7 +432,7 @@ const jsenvCreateCommentForAfterMergeError = (
 
 **Error:** Error while trying to collect info after merging ${pullRequestHead} into ${pullRequestBase}.
 
-<pre>${error.stack}</pre>
+<pre>${escapeHtml(error.stack)}</pre>
 
 ---`;
 };
