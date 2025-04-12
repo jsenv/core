@@ -4,11 +4,17 @@
 run(false)
 ```
 
-# 1/2 write 3 files into "./git_ignored/build/"
+# 1/3 console.warn
 
-see [./git_ignored/build/](./git_ignored/build/)
+```console
+Generated an empty chunk: "foo".
+```
 
-# 2/2 resolve
+# 2/3 write 4 files into "./git_ignored/"
+
+see [./git_ignored/](./git_ignored/)
+
+# 3/3 resolve
 
 ```js
 undefined

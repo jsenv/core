@@ -25,11 +25,7 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
     return [];
   }
   const { sideEffects } = packageJson;
-  if (
-    sideEffects === true ||
-    sideEffects === undefined ||
-    !Array.isArray(sideEffects)
-  ) {
+  if (sideEffects !== false && !Array.isArray(sideEffects)) {
     return [];
   }
 

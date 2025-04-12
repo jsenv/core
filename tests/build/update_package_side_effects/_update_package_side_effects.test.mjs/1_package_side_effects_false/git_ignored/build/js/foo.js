@@ -1,1 +1,1 @@
-global.bar = true;
+
