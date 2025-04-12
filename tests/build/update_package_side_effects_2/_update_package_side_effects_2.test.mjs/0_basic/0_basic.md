@@ -1,10 +1,10 @@
-# [0_basic](../../update_package_side_effects.test.mjs#L25)
+# [0_basic](../../update_package_side_effects_2.test.mjs#L29)
 
 ```js
 run()
 ```
 
-# 1/2 write 3 files into "./root/build/"
+# 1/2 write 2 files into "./root/build/"
 
 see [./root/build/](./root/build/)
 
