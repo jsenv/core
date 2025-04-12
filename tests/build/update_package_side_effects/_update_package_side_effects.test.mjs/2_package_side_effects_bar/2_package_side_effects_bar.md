@@ -4,9 +4,9 @@
 run(["./src/bar.js"])
 ```
 
-# 1/2 write 3 files into "./git_ignored/build/"
+# 1/2 write 4 files into "./git_ignored/"
 
-see [./git_ignored/build/](./git_ignored/build/)
+see [./git_ignored/](./git_ignored/)
 
 # 2/2 resolve
 

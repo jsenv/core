@@ -11,20 +11,13 @@
  *
  */
 
-import { writeFileSync } from "@jsenv/filesystem";
+import { updateJsonFileSync } from "@jsenv/filesystem";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { URL_META } from "@jsenv/url-meta";
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
-import { jsenvCoreDirectoryUrl } from "../../jsenv_core_directory_url.js";
+import { urlToRelativeUrl } from "@jsenv/urls";
 
 export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   if (!packageDirectory.url) {
-    return [];
-  }
-  if (
-    urlIsInsideOf(packageDirectory.url, jsenvCoreDirectoryUrl) ||
-    packageDirectory.url === String(jsenvCoreDirectoryUrl)
-  ) {
     return [];
   }
   const packageJson = packageDirectory.read(packageDirectory.url);
@@ -55,18 +48,24 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
 
   const packageSideEffectsCacheMap = new Map();
   const readSideEffectInfoFromClosestPackage = (urlInfo) => {
+    const closestPackageDirectoryUrl = urlInfo.packageDirectoryUrl;
     const closestPackageJSON = urlInfo.packageJSON;
     if (!closestPackageJSON) {
       return undefined;
     }
-    const fromCache = packageSideEffectsCacheMap.get(urlInfo.url);
+    const fromCache = packageSideEffectsCacheMap.get(
+      closestPackageDirectoryUrl,
+    );
     if (fromCache) {
       return fromCache.value;
     }
     try {
-      return storePackageSideEffect(urlInfo.url, closestPackageJSON);
+      return storePackageSideEffect(
+        closestPackageDirectoryUrl,
+        closestPackageJSON,
+      );
     } catch {
-      return storePackageSideEffect(urlInfo.url, null);
+      return storePackageSideEffect(closestPackageDirectoryUrl, null);
     }
   };
   const storePackageSideEffect = (packageDirectoryUrl, packageJSON) => {
@@ -94,8 +93,11 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
         { sideEffects: sideEffectPatterns },
         packageDirectoryUrl,
       );
-      const getSideEffectInfo = (url) => {
-        const meta = URL_META.applyAssociations({ url, associations });
+      const getSideEffectInfo = (urlInfo) => {
+        const meta = URL_META.applyAssociations({
+          url: urlInfo.url,
+          associations,
+        });
         if (meta.sideEffects) {
           return hasSideEffect;
         }
@@ -127,14 +129,14 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
     });
     return hasSideEffect;
   };
-  const getSideEffectInfoFromClosestPackage = (url) => {
+  const getSideEffectInfoFromClosestPackage = (urlInfo) => {
     const sideEffectInfoFromClosestPackage =
-      readSideEffectInfoFromClosestPackage(url);
+      readSideEffectInfoFromClosestPackage(urlInfo);
     if (sideEffectInfoFromClosestPackage === undefined) {
       return null;
     }
     if (typeof sideEffectInfoFromClosestPackage === "function") {
-      return sideEffectInfoFromClosestPackage(url);
+      return sideEffectInfoFromClosestPackage(urlInfo);
     }
     return sideEffectInfoFromClosestPackage;
   };
@@ -198,13 +200,9 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
       if (sideEffectsToAdd.length === 0) {
         return;
       }
-      packageJson.sideEffects = sideEffectBuildFileUrls.map(
-        normalizeSideEffectFileUrl,
-      );
-      writeFileSync(
-        packageJsonFileUrl,
-        JSON.stringify(packageJson, null, "  "),
-      );
+      updateJsonFileSync(packageJsonFileUrl, {
+        sideEffects: sideEffectBuildFileUrls.map(normalizeSideEffectFileUrl),
+      });
     },
   };
 };

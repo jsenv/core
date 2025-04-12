@@ -322,7 +322,7 @@ const rollupPluginJsenv = ({
       return null; // we don't know
     }
     for (const contentSideEffect of urlInfo.contentSideEffects) {
-      if (contentSideEffect.sideEffect.has) {
+      if (contentSideEffect.has) {
         return true;
       }
     }

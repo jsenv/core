@@ -1,0 +1,11 @@
+{
+  "name": "test",
+  "private": true,
+  "dependencies": {
+    "bing": "*"
+  },
+  "sideEffects": [
+    "./build/test_node_modules.js",
+    "./src/foo.js"
+  ]
+}
