@@ -5,7 +5,8 @@
     "bing": "*"
   },
   "sideEffects": [
+    "./src/bar.js",
     "./build/test_node_modules.js",
-    "./src/foo.js"
+    "./build/js/foo.js"
   ]
 }

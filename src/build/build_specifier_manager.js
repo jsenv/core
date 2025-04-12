@@ -1059,6 +1059,8 @@ export const createBuildSpecifierManager = ({
       };
     },
 
+    getBuildUrl: (urlInfo) => urlInfoToBuildUrlMap.get(urlInfo),
+
     getBuildInfo: () => {
       const buildManifest = {};
       const buildContents = {};

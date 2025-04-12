@@ -87,7 +87,7 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
       };
       const sideEffectPatterns = {};
       for (const v of value) {
-        sideEffectPatterns[v] = true;
+        sideEffectPatterns[v] = v;
       }
       const associations = URL_META.resolveAssociations(
         { sideEffects: sideEffectPatterns },
@@ -98,8 +98,12 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
           url: urlInfo.url,
           associations,
         });
-        if (meta.sideEffects) {
-          return hasSideEffect;
+        const sideEffectKey = meta.sideEffects;
+        if (sideEffectKey) {
+          return {
+            ...hasSideEffect,
+            reason: `"${sideEffectKey}" listed in package.json side effects`,
+          };
         }
         return noSideEffect;
       };
@@ -167,10 +171,10 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
         return;
       }
     },
-    refineBuildUrlContent: (buildUrlInfo) => {
+    refineBuildUrlContent: (buildUrlInfo, { buildUrl }) => {
       for (const sideEffect of buildUrlInfo.contentSideEffects) {
         if (sideEffect.has) {
-          sideEffectBuildFileUrls.push(buildUrlInfo.url);
+          sideEffectBuildFileUrls.push(buildUrl);
           return;
         }
       }
@@ -194,14 +198,19 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
           if (sideEffectFileUrlSet.has(url)) {
             continue;
           }
-          sideEffectsToAdd.push(normalizeSideEffectFileUrl(url));
+          sideEffectsToAdd.push(url);
         }
       }
       if (sideEffectsToAdd.length === 0) {
         return;
       }
+
+      const finalSideEffects = Array.isArray(sideEffects) ? sideEffects : [];
+      for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
+        finalSideEffects.push(normalizeSideEffectFileUrl(sideEffectBuildUrl));
+      }
       updateJsonFileSync(packageJsonFileUrl, {
-        sideEffects: sideEffectBuildFileUrls.map(normalizeSideEffectFileUrl),
+        sideEffects: finalSideEffects,
       });
     },
   };

@@ -1327,7 +1327,7 @@ const prepareEntryPointBuild = async (
               }
               for (const refineBuildUrlContentCallback of refineBuildUrlContentCallbackSet) {
                 refineBuildUrlContentCallback(buildUrlInfo, {
-                  buildFileUrl: "", // TODO: get if from the specifier manager (or maybe its available?)
+                  buildUrl: buildSpecifierManager.getBuildUrl(buildUrlInfo),
                 });
               }
             });
