@@ -14,7 +14,6 @@ const run = async () => {
     entryPoints: {
       "./index.js": {
         runtimeCompat: { node: "20" },
-        packageDependencies: "include",
       },
     },
   });

@@ -146,7 +146,7 @@ export const createKitchen = ({
     }
 
     return (url) => {
-      if (url.startsWith("ignore:")) {
+      if (!url.startsWith("file:")) {
         return false;
       }
       const packageDirectoryUrl = packageDirectory.find(url);
