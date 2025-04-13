@@ -14,7 +14,7 @@
 import { updateJsonFileSync } from "@jsenv/filesystem";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { URL_META } from "@jsenv/url-meta";
-import { urlToRelativeUrl } from "@jsenv/urls";
+import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
 export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   if (!packageDirectory.url) {
@@ -29,15 +29,25 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
     return [];
   }
 
-  const sideEffectFileUrlSet = new Set();
-  const packageJsonFileUrl = new URL("./package.json", packageDirectory.url)
-    .href;
-
   const normalizeSideEffectFileUrl = (url) => {
     const urlRelativeToPackage = urlToRelativeUrl(url, packageDirectory.url);
     return urlRelativeToPackage[0] === "."
       ? urlRelativeToPackage
       : `./${urlRelativeToPackage}`;
+  };
+
+  const updatePackageSideEffects = (sideEffectBuildFileUrls) => {
+    const packageJsonFileUrl = new URL("./package.json", packageDirectory.url)
+      .href;
+    const sideEffectRelativeUrlArray = [];
+    for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
+      sideEffectRelativeUrlArray.push(
+        normalizeSideEffectFileUrl(sideEffectBuildUrl),
+      );
+    }
+    updateJsonFileSync(packageJsonFileUrl, {
+      sideEffects: sideEffectRelativeUrlArray,
+    });
   };
 
   const sideEffectBuildFileUrls = [];
@@ -175,39 +185,43 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
         }
       }
     },
-    refineBuild: () => {
+    refineBuild: (kitchen) => {
       if (sideEffectBuildFileUrls.length === 0) {
         return;
       }
-      let sideEffectsToAdd = [];
       if (sideEffects === false) {
-        sideEffectsToAdd = sideEffectBuildFileUrls;
-      } else if (Array.isArray(sideEffects)) {
+        updatePackageSideEffects(sideEffectBuildFileUrls);
+        return;
+      }
+      const { buildDirectoryUrl } = kitchen.context;
+      const sideEffectFileUrlSet = new Set();
+      if (Array.isArray(sideEffects)) {
+        let packageNeedsUpdate = false;
         for (const sideEffectFileRelativeUrl of sideEffects) {
           const sideEffectFileUrl = new URL(
             sideEffectFileRelativeUrl,
             packageDirectory.url,
           ).href;
-          sideEffectFileUrlSet.add(sideEffectFileUrl);
+          if (
+            urlIsInsideOf(sideEffectFileUrl, buildDirectoryUrl) &&
+            !sideEffectBuildFileUrls.includes(sideEffectFileUrl)
+          ) {
+            packageNeedsUpdate = true;
+          } else {
+            sideEffectFileUrlSet.add(sideEffectFileUrl);
+          }
         }
-        for (const url of sideEffectBuildFileUrls) {
-          if (sideEffectFileUrlSet.has(url)) {
+        for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
+          if (sideEffectFileUrlSet.has(sideEffectBuildUrl)) {
             continue;
           }
-          sideEffectsToAdd.push(url);
+          packageNeedsUpdate = true;
+          sideEffectFileUrlSet.add(sideEffectBuildUrl);
+        }
+        if (packageNeedsUpdate) {
+          updatePackageSideEffects(sideEffectFileUrlSet);
         }
       }
-      if (sideEffectsToAdd.length === 0) {
-        return;
-      }
-
-      const finalSideEffects = Array.isArray(sideEffects) ? sideEffects : [];
-      for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
-        finalSideEffects.push(normalizeSideEffectFileUrl(sideEffectBuildUrl));
-      }
-      updateJsonFileSync(packageJsonFileUrl, {
-        sideEffects: finalSideEffects,
-      });
     },
   };
 };

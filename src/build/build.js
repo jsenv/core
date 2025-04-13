@@ -1339,7 +1339,7 @@ const prepareEntryPointBuild = async (
           }
           if (refineBuildCallbackSet.size) {
             for (const refineBuildCallback of refineBuildCallbackSet) {
-              refineBuildCallback(finalKitchen.graph);
+              refineBuildCallback(finalKitchen);
             }
           }
         }

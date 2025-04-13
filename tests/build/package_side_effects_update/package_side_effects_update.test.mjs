@@ -42,4 +42,6 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("1_package_side_effects_false", () => run(false));
 
   test("2_package_side_effects_bar", () => run(["./src/bar.js"]));
+
+  test("3_package_side_effects_build_foo", () => run(["./build/js/foo.js"]));
 });

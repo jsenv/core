@@ -4,6 +4,7 @@
 - [0_package_side_effects_undefined](0_package_side_effects_undefined/0_package_side_effects_undefined.md)
 - [1_package_side_effects_false](1_package_side_effects_false/1_package_side_effects_false.md)
 - [2_package_side_effects_bar](2_package_side_effects_bar/2_package_side_effects_bar.md)
+- [3_package_side_effects_build_foo](3_package_side_effects_build_foo/3_package_side_effects_build_foo.md)
 
 ---
 
