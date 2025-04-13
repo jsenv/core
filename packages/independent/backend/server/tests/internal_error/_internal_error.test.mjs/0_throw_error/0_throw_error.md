@@ -20,8 +20,8 @@ internal error while handling request
 --- error stack ---
 Error: message
     at base/internal_error.test.mjs:34:19
-    at capture (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/create_capture_side_effects.js:330:29)
-    at snapshotTests (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/snapshot_tests.js:179:33)
+    at capture (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
+    at snapshotTests (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)
     at async base/internal_error.test.mjs:32:1
   500 Internal Server Error
 ```

@@ -20,7 +20,10 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./tests/chunks_vendors/snapshots/0_default/jsenv_plugin_bundling_node_modules.js",
+    "./tests/chunks_vendors/snapshots/1_vendors/vendors.js"
+  ],
   "dependencies": {
     "@jsenv/humanize": "1.4.0",
     "@jsenv/url-meta": "8.5.6",
