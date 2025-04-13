@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "3.6.12",
+  "version": "3.6.13",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -30,6 +30,9 @@
   "sideEffects": [
     "./src/runtime_node/node_child_process_controlled.mjs",
     "./src/runtime_node/node_worker_thread_controlled.mjs",
+    "./dist/js/node_child_process_controlled.mjs",
+    "./dist/js/node_worker_thread_controlled.mjs",
+    "./dist/jsenv_test_node_modules.js",
     "./dist/js/node_child_process_controlled.mjs",
     "./dist/js/node_worker_thread_controlled.mjs"
   ],
