@@ -10,10 +10,18 @@ Jsenv is a suite of tools for JavaScript projects that prioritizes standards and
 
 `@jsenv/core` provides four main tools:
 
-1. **Dev Server**: Serves source files with live reloading to facilitate development.
-2. **Build**: Optimizes source files into a specified directory for production.
-3. **Build Server**: Serves the built files, allowing for testing and verifying the production build.
-4. **Test Runner**: Runs test files concurrently to ensure code reliability.
+1. **Dev Server**: Serves source files with live reloading to facilitate development
+2. **Build**: Optimizes source files into a specified directory for production
+3. **Build Server**: Serves the built files, allowing for testing and verifying the production build
+4. **Test Runner**: Runs test files concurrently to ensure code reliability
+
+## Key Advantages
+
+- **Standards-first approach**: Built on web standards rather than custom abstractions
+- **Robust versioning**: Avoids cascading hash changes during builds
+- **Broad browser compatibility**: Works with modern and older browsers
+- **Isolated testing**: Prevents cross-test contamination
+- **Simple API**: Designed for clarity and ease of use
 
 ## Installation
 
@@ -33,6 +41,18 @@ npx @jsenv/cli
 
 Read more in [@jsenv/cli](./packages/related/cli/#jsenvcli).
 
+## Basic Usage
+
+Start a development server.
+
+```js
+import { startDevServer } from "@jsenv/core";
+
+await startDevServer({
+  sourceDirectoryUrl: import.meta.resolve("./"),
+});
+```
+
 ## Documentation
 
-For comprehensive documentation, see the full [user documentation](./docs/users/users.md)
+For comprehensive documentation, see the full [user documentation](./docs/users/users.md).
