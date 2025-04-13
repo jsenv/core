@@ -551,6 +551,29 @@ ${
   return text;
 };
 
+const errorToHTML = (error) => {
+  const errorIsAPrimitive =
+    error === null ||
+    (typeof error !== "object" && typeof error !== "function");
+
+  if (errorIsAPrimitive) {
+    if (typeof error === "string") {
+      return `<pre>${escapeHtml(error)}</pre>`;
+    }
+    return `<pre>${JSON.stringify(error, null, "  ")}</pre>`;
+  }
+  return `<pre>${escapeHtml(error.stack)}</pre>`;
+};
+
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 const LOG_LEVEL_OFF = "off";
 
 const LOG_LEVEL_DEBUG = "debug";
@@ -3166,8 +3189,11 @@ const getParentDirectoryUrl = (url) => {
   return new URL(url.endsWith("/") ? "../" : "./", url).href;
 };
 
-const findAncestorDirectoryUrl = (url, callback) => {
+const findSelfOrAncestorDirectoryUrl = (url, callback) => {
   url = String(url);
+  if (!url.endsWith("/")) {
+    url = new URL("./", url).href;
+  }
   while (url !== "file:///") {
     if (callback(url)) {
       return url;
@@ -3178,7 +3204,7 @@ const findAncestorDirectoryUrl = (url, callback) => {
 };
 
 const lookupPackageDirectory = (currentUrl) => {
-  return findAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
+  return findSelfOrAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
     const potentialPackageJsonFileUrl = `${ancestorDirectoryUrl}package.json`;
     return existsSync(new URL(potentialPackageJsonFileUrl));
   });
@@ -7477,14 +7503,7 @@ const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
             return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
           };
           const renderHtmlForErrorWithDetails = () => {
-            if (serverInternalErrorIsAPrimitive) {
-              return `<pre>${JSON.stringify(
-                serverInternalError,
-                null,
-                "  ",
-              )}</pre>`;
-            }
-            return `<pre>${serverInternalError.stack}</pre>`;
+            return errorToHTML(serverInternalError);
           };
 
           const internalErrorHtmlTemplate = readFileSync(

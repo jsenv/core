@@ -26,7 +26,8 @@
     "/dist/"
   ],
   "sideEffects": [
-    "./src/client/supervisor.js"
+    "./src/client/supervisor.js",
+    "./dist/js/supervisor.js"
   ],
   "dependencies": {
     "@jsenv/ast": "6.6.7",

@@ -32,7 +32,9 @@
     "/dist/",
     "/src/"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/node/jsenv_humanize_node_modules.js"
+  ],
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"

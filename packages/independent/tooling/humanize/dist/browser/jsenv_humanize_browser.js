@@ -1379,4 +1379,26 @@ const createCallOrderer = () => {
   return callWhenPreviousExecutionAreDone;
 };
 
-export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol };
+const errorToMarkdown = error => {
+  const errorIsAPrimitive = error === null || typeof error !== "object" && typeof error !== "function";
+  if (errorIsAPrimitive) {
+    return "```js\n".concat(error, "\n```");
+  }
+  return "```\n".concat(error.stack, "\n```");
+};
+
+const errorToHTML = error => {
+  const errorIsAPrimitive = error === null || typeof error !== "object" && typeof error !== "function";
+  if (errorIsAPrimitive) {
+    if (typeof error === "string") {
+      return "<pre>".concat(escapeHtml(error), "</pre>");
+    }
+    return "<pre>".concat(JSON.stringify(error, null, "  "), "</pre>");
+  }
+  return "<pre>".concat(escapeHtml(error.stack), "</pre>");
+};
+const escapeHtml = string => {
+  return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+};
+
+export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, distributePercentages, errorToHTML, errorToMarkdown, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol };

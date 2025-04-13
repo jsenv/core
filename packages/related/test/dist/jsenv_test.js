@@ -2054,8 +2054,11 @@ const getParentDirectoryUrl = (url) => {
   return new URL(url.endsWith("/") ? "../" : "./", url).href;
 };
 
-const findAncestorDirectoryUrl = (url, callback) => {
+const findSelfOrAncestorDirectoryUrl = (url, callback) => {
   url = String(url);
+  if (!url.endsWith("/")) {
+    url = new URL("./", url).href;
+  }
   while (url !== "file:///") {
     if (callback(url)) {
       return url;
@@ -3342,7 +3345,7 @@ const writeDirectorySync = (
     if (e.code === "ENOTDIR") {
       let previousNonDirUrl = destinationUrl;
       // we must try all parent directories as long as it fails with ENOTDIR
-      findAncestorDirectoryUrl(destinationUrl, (ancestorUrl) => {
+      findSelfOrAncestorDirectoryUrl(destinationUrl, (ancestorUrl) => {
         try {
           statSync(new URL(ancestorUrl));
           return true;
