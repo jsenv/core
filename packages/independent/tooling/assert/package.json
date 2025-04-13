@@ -48,8 +48,8 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@jsenv/humanize": "workspace:*",
-    "@jsenv/terminal-text-size": "workspace:*",
+    "@jsenv/humanize": "../humanize/",
+    "@jsenv/terminal-text-size": "../terminal-text-size/",
     "graphemer": "1.4.0",
     "strip-ansi": "7.1.0"
   }
