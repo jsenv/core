@@ -795,6 +795,7 @@ const entryPointDefaultParams = {
   sourcemapsSourcesContent: undefined,
   assetManifest: false,
   assetManifestFileRelativeUrl: "asset-manifest.json",
+  packageSideEffects: true,
 };
 
 const prepareEntryPointBuild = async (
@@ -844,6 +845,7 @@ const prepareEntryPointBuild = async (
     sourcemapsSourcesContent,
     assetManifest,
     assetManifestFileRelativeUrl,
+    packageSideEffects,
   } = {
     ...entryPointDefaultParams,
     ...entryPointParams,
@@ -982,7 +984,7 @@ const prepareEntryPointBuild = async (
       inlining: false,
       http,
       scenarioPlaceholders,
-      packageSideEffects: Boolean(bundling), // useful only for rollup
+      packageSideEffects,
     }),
   ]);
   const rawPluginController = createPluginController(
