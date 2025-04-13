@@ -16,6 +16,7 @@ const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
           transpilation: { css: false },
           runtimeCompat: { chrome: "89" },
           assetManifest: true,
+          packageSideEffects: false,
         },
       },
     }));

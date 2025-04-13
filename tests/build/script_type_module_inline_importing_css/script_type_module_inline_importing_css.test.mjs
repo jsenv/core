@@ -11,6 +11,7 @@ const run = async ({ runtimeCompat, bundling }) => {
         minification: false,
         runtimeCompat,
         bundling,
+        packageSideEffects: false,
       },
     },
   });

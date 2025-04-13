@@ -12,6 +12,7 @@ const run = async () => {
         bundling: false,
         minification: false,
         versioning: false,
+        packageSideEffects: false,
       },
     },
   });
