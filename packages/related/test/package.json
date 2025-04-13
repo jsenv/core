@@ -30,10 +30,10 @@
   "sideEffects": [
     "./src/runtime_node/node_child_process_controlled.mjs",
     "./src/runtime_node/node_worker_thread_controlled.mjs",
-    "./dist/json/package.json",
     "./dist/js/node_child_process_controlled.mjs",
     "./dist/js/node_worker_thread_controlled.mjs",
-    "./dist/jsenv_test_node_modules.js"
+    "./dist/jsenv_test_node_modules.js",
+    "./dist/jsenv_test.js"
   ],
   "scripts": {
     "build": "node --conditions=development ./scripts/build.mjs",

@@ -17,6 +17,9 @@ await build({
         return "error";
       },
       scenarioPlaceholders: false,
+      ignore: {
+        "file:///**/playwright-core/package.json": true,
+      },
     },
   },
 });

@@ -1,14 +1,15 @@
-import { URL_META, createException } from "./exception.js";
-import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, existsSync, realpathSync } from "node:fs";
-import { takeCoverage } from "node:v8";
-import { createSupportsColor, isUnicodeSupported, stripAnsi, emojiRegex, eastAsianWidth, clearTerminal, eraseLines } from "./jsenv_test_node_modules.js";
+import { dirname, extname } from "node:path";
+import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, createReadStream, existsSync, realpathSync } from "node:fs";
+import crypto, { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
+import { Agent } from "node:https";
+import { createSupportsColor, isUnicodeSupported, stripAnsi, emojiRegex, eastAsianWidth, clearTerminal, eraseLines } from "./jsenv_test_node_modules.js";
+import { URL_META, createException } from "./exception.js";
+import { takeCoverage } from "node:v8";
 import { createRequire } from "node:module";
 import { applyBabelPlugins } from "@jsenv/ast";
 import { cpuUsage, memoryUsage } from "node:process";
 import { stripVTControlCharacters } from "node:util";
-import crypto from "node:crypto";
-import { dirname } from "node:path";
 import { createServer } from "node:net";
 import { spawn, spawnSync, fork } from "node:child_process";
 import { availableParallelism, cpus, totalmem, release, freemem } from "node:os";
@@ -524,6 +525,57 @@ const SIGINT_CALLBACK = {
     return () => {
       process.removeListener("SIGINT", cb);
     };
+  },
+};
+
+/*
+ * data:[<mediatype>][;base64],<data>
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs#syntax
+ */
+
+/* eslint-env browser, node */
+
+const DATA_URL = {
+  parse: (string) => {
+    const afterDataProtocol = string.slice("data:".length);
+    const commaIndex = afterDataProtocol.indexOf(",");
+    const beforeComma = afterDataProtocol.slice(0, commaIndex);
+
+    let contentType;
+    let base64Flag;
+    if (beforeComma.endsWith(`;base64`)) {
+      contentType = beforeComma.slice(0, -`;base64`.length);
+      base64Flag = true;
+    } else {
+      contentType = beforeComma;
+      base64Flag = false;
+    }
+
+    contentType =
+      contentType === "" ? "text/plain;charset=US-ASCII" : contentType;
+    const afterComma = afterDataProtocol.slice(commaIndex + 1);
+    return {
+      contentType,
+      base64Flag,
+      data: afterComma,
+    };
+  },
+
+  stringify: ({ contentType, base64Flag = true, data }) => {
+    if (!contentType || contentType === "text/plain;charset=US-ASCII") {
+      // can be a buffer or a string, hence check on data.length instead of !data or data === ''
+      if (data.length === 0) {
+        return `data:,`;
+      }
+      if (base64Flag) {
+        return `data:;base64,${data}`;
+      }
+      return `data:,${data}`;
+    }
+    if (base64Flag) {
+      return `data:${contentType};base64,${data}`;
+    }
+    return `data:${contentType},${data}`;
   },
 };
 
@@ -1706,7 +1758,7 @@ const ensurePathnameTrailingSlash = (url) => {
   });
 };
 
-const isFileSystemPath = (value) => {
+const isFileSystemPath$1 = (value) => {
   if (typeof value !== "string") {
     throw new TypeError(
       `isFileSystemPath first arg must be a string, got ${value}`,
@@ -1715,10 +1767,10 @@ const isFileSystemPath = (value) => {
   if (value[0] === "/") {
     return true;
   }
-  return startsWithWindowsDriveLetter(value);
+  return startsWithWindowsDriveLetter$1(value);
 };
 
-const startsWithWindowsDriveLetter = (string) => {
+const startsWithWindowsDriveLetter$1 = (string) => {
   const firstChar = string[0];
   if (!/[a-zA-Z]/.test(firstChar)) return false;
 
@@ -1728,8 +1780,8 @@ const startsWithWindowsDriveLetter = (string) => {
   return true;
 };
 
-const fileSystemPathToUrl = (value) => {
-  if (!isFileSystemPath(value)) {
+const fileSystemPathToUrl$1 = (value) => {
+  if (!isFileSystemPath$1(value)) {
     throw new Error(`value must be a filesystem path, got ${value}`);
   }
   return String(pathToFileURL(value));
@@ -1900,8 +1952,8 @@ const validateDirectoryUrl = (value) => {
   if (value instanceof URL) {
     urlString = value.href;
   } else if (typeof value === "string") {
-    if (isFileSystemPath(value)) {
-      urlString = fileSystemPathToUrl(value);
+    if (isFileSystemPath$1(value)) {
+      urlString = fileSystemPathToUrl$1(value);
     } else {
       try {
         urlString = String(new URL(value));
@@ -1956,8 +2008,8 @@ const validateFileUrl = (value, baseUrl) => {
   if (value instanceof URL) {
     urlString = value.href;
   } else if (typeof value === "string") {
-    if (isFileSystemPath(value)) {
-      urlString = fileSystemPathToUrl(value);
+    if (isFileSystemPath$1(value)) {
+      urlString = fileSystemPathToUrl$1(value);
     } else {
       try {
         urlString = String(new URL(value, baseUrl));
@@ -2054,7 +2106,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
 };
 
 const isWindows$2 = process.platform === "win32";
-const baseUrlFallback = fileSystemPathToUrl(process.cwd());
+const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
 
 /**
  * Some url might be resolved or remapped to url without the windows drive letter.
@@ -2606,6 +2658,223 @@ const readFile = async (value, { as = "buffer" } = {}) => {
   throw new Error(
     `"as" must be one of "buffer","string","json" received "${as}"`,
   );
+};
+
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json", "map"],
+    isTextual: true,
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true,
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true,
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"],
+  },
+  "application/xml": {
+    extensions: ["xml"],
+    isTextual: true,
+  },
+  "application/x-gzip": {
+    extensions: ["gz"],
+  },
+  "application/yaml": {
+    extensions: ["yml", "yaml"],
+    isTextual: true,
+  },
+  "application/wasm": {
+    extensions: ["wasm"],
+  },
+  "application/zip": {
+    extensions: ["zip"],
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"],
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"],
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"],
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"],
+  },
+  "audio/webm": {
+    extensions: ["weba"],
+  },
+  "audio/x-wav": {
+    extensions: ["wav"],
+  },
+  "font/ttf": {
+    extensions: ["ttf"],
+  },
+  "font/woff": {
+    extensions: ["woff"],
+  },
+  "font/woff2": {
+    extensions: ["woff2"],
+  },
+  "image/png": {
+    extensions: ["png"],
+  },
+  "image/gif": {
+    extensions: ["gif"],
+  },
+  "image/jpeg": {
+    extensions: ["jpg"],
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true,
+  },
+  "text/plain": {
+    extensions: ["txt"],
+    isTextual: true,
+  },
+  "text/html": {
+    extensions: ["html"],
+    isTextual: true,
+  },
+  "text/css": {
+    extensions: ["css"],
+    isTextual: true,
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+    isTextual: true,
+  },
+  "text/markdown": {
+    extensions: ["md", "mdx"],
+    isTextual: true,
+  },
+  "text/x-sass": {
+    extensions: ["sass"],
+    isTextual: true,
+  },
+  "text/x-scss": {
+    extensions: ["scss"],
+    isTextual: true,
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"],
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"],
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
+  },
+  "video/ogg": {
+    extensions: ["ogv"],
+  },
+  "video/webm": {
+    extensions: ["webm"],
+  },
+};
+
+const CONTENT_TYPE = {
+  parse: (string) => {
+    const [mediaType, charset] = string.split(";");
+    return { mediaType: normalizeMediaType(mediaType), charset };
+  },
+
+  stringify: ({ mediaType, charset }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+    return mediaType;
+  },
+
+  asMediaType: (value) => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
+    }
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+    return null;
+  },
+
+  isJson: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return (
+      mediaType === "application/json" ||
+      /^application\/\w+\+json$/.test(mediaType)
+    );
+  },
+
+  isTextual: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    }
+    // catch things like application/manifest+json, application/importmap+json
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+    return false;
+  },
+
+  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
+
+  asFileExtension: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+
+  fromExtension: (extension) => {
+    if (extension[0] === ".") {
+      extension = extension.slice(1);
+    }
+    for (const mediaTypeCandidate of Object.keys(mediaTypeInfos)) {
+      const mediaTypeCandidateInfo = mediaTypeInfos[mediaTypeCandidate];
+      if (
+        mediaTypeCandidateInfo.extensions &&
+        mediaTypeCandidateInfo.extensions.includes(extension)
+      ) {
+        return mediaTypeCandidate;
+      }
+    }
+    return "application/octet-stream";
+  },
+
+  fromUrlExtension: (url) => {
+    const { pathname } = new URL(url);
+    const extensionWithDot = extname(pathname);
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+    const extension = extensionWithDot.slice(1);
+    return CONTENT_TYPE.fromExtension(extension);
+  },
+
+  toUrlExtension: (contentType) => {
+    const mediaType = CONTENT_TYPE.asMediaType(contentType);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+};
+
+const normalizeMediaType = (value) => {
+  if (value === "application/javascript") {
+    return "text/javascript";
+  }
+  return value;
 };
 
 const removeEntrySync = (
@@ -3222,6 +3491,1522 @@ const ensureEmptyDirectory = async (source) => {
   throw new Error(
     `ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`,
   );
+};
+
+/**
+
+ A multiple header is a header with multiple values like
+
+ "text/plain, application/json;q=0.1"
+
+ Each, means it's a new value (it's optionally followed by a space)
+
+ Each; mean it's a property followed by =
+ if "" is a string
+ if not it's likely a number
+ */
+
+const parseMultipleHeader = (
+  multipleHeaderString,
+  { validateName = () => true, validateProperty = () => true } = {},
+) => {
+  const values = multipleHeaderString.split(",");
+  const multipleHeader = {};
+  values.forEach((value) => {
+    const valueTrimmed = value.trim();
+    const valueParts = valueTrimmed.split(";");
+    const name = valueParts[0];
+    const nameValidation = validateName(name);
+    if (!nameValidation) {
+      return;
+    }
+    const afterName = valueParts.slice(1);
+    const properties = parseHeaderProperties(afterName, { validateProperty });
+    multipleHeader[name] = properties;
+  });
+  return multipleHeader;
+};
+
+const parseHeaderProperties = (headerProperties, { validateProperty }) => {
+  const properties = {};
+  for (const propertySource of headerProperties) {
+    const [propertyName, propertyValueString] = propertySource
+      .trim()
+      .split("=");
+    const propertyValue = parseHeaderPropertyValue(propertyValueString);
+    const property = { name: propertyName, value: propertyValue };
+    const propertyValidation = validateProperty(property);
+    if (!propertyValidation) {
+      continue;
+    }
+    properties[propertyName] = propertyValue;
+  }
+  return properties;
+};
+
+const parseHeaderPropertyValue = (headerPropertyValueString) => {
+  const firstChar = headerPropertyValueString[0];
+  const lastChar =
+    headerPropertyValueString[headerPropertyValueString.length - 1];
+  if (firstChar === '"' && lastChar === '"') {
+    return headerPropertyValueString.slice(1, -1);
+  }
+  if (isNaN(headerPropertyValueString)) {
+    return headerPropertyValueString;
+  }
+  return parseFloat(headerPropertyValueString);
+};
+
+const pickAcceptedContent = ({
+  availables,
+  accepteds,
+  getAcceptanceScore,
+}) => {
+  let highestScore = -1;
+  let availableWithHighestScore = null;
+  let availableIndex = 0;
+  while (availableIndex < availables.length) {
+    const available = availables[availableIndex];
+    availableIndex++;
+
+    let acceptedIndex = 0;
+    while (acceptedIndex < accepteds.length) {
+      const accepted = accepteds[acceptedIndex];
+      acceptedIndex++;
+
+      const score = getAcceptanceScore(accepted, available);
+      if (score > highestScore) {
+        availableWithHighestScore = available;
+        highestScore = score;
+      }
+    }
+  }
+  return availableWithHighestScore;
+};
+
+const pickContentEncoding = (request, availableEncodings) => {
+  const { headers = {} } = request;
+  const requestAcceptEncodingHeader = headers["accept-encoding"];
+  if (!requestAcceptEncodingHeader) {
+    return null;
+  }
+
+  const encodingsAccepted = parseAcceptEncodingHeader(
+    requestAcceptEncodingHeader,
+  );
+  return pickAcceptedContent({
+    accepteds: encodingsAccepted,
+    availables: availableEncodings,
+    getAcceptanceScore: getEncodingAcceptanceScore,
+  });
+};
+
+const parseAcceptEncodingHeader = (acceptEncodingHeaderString) => {
+  const acceptEncodingHeader = parseMultipleHeader(acceptEncodingHeaderString, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const encodingsAccepted = [];
+  Object.keys(acceptEncodingHeader).forEach((key) => {
+    const { q = 1 } = acceptEncodingHeader[key];
+    const value = key;
+    encodingsAccepted.push({
+      value,
+      quality: q,
+    });
+  });
+  encodingsAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return encodingsAccepted;
+};
+
+const getEncodingAcceptanceScore = ({ value, quality }, availableEncoding) => {
+  if (value === "*") {
+    return quality;
+  }
+
+  // normalize br to brotli
+  if (value === "br") value = "brotli";
+  if (availableEncoding === "br") availableEncoding = "brotli";
+
+  if (value === availableEncoding) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const convertFileSystemErrorToResponseProperties = (error) => {
+  // https://iojs.org/api/errors.html#errors_eacces_permission_denied
+  if (isErrorWithCode(error, "EACCES")) {
+    return {
+      status: 403,
+      statusText: `EACCES: No permission to read file at ${error.path}`,
+    };
+  }
+  if (isErrorWithCode(error, "EPERM")) {
+    return {
+      status: 403,
+      statusText: `EPERM: No permission to read file at ${error.path}`,
+    };
+  }
+  if (isErrorWithCode(error, "ENOENT")) {
+    return {
+      status: 404,
+      statusText: `ENOENT: File not found at ${error.path}`,
+    };
+  }
+  // file access may be temporarily blocked
+  // (by an antivirus scanning it because recently modified for instance)
+  if (isErrorWithCode(error, "EBUSY")) {
+    return {
+      status: 503,
+      statusText: `EBUSY: File is busy ${error.path}`,
+      headers: {
+        "retry-after": 0.01, // retry in 10ms
+      },
+    };
+  }
+  // emfile means there is too many files currently opened
+  if (isErrorWithCode(error, "EMFILE")) {
+    return {
+      status: 503,
+      statusText: "EMFILE: too many file opened",
+      headers: {
+        "retry-after": 0.1, // retry in 100ms
+      },
+    };
+  }
+  if (isErrorWithCode(error, "EISDIR")) {
+    return {
+      status: 500,
+      statusText: `EISDIR: Unexpected directory operation at ${error.path}`,
+    };
+  }
+  return null;
+};
+
+const isErrorWithCode = (error, code) => {
+  return typeof error === "object" && error.code === code;
+};
+
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+
+const bufferToEtag = (buffer) => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expect,got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
+const isFileSystemPath = (value) => {
+  if (typeof value !== "string") {
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    );
+  }
+
+  if (value[0] === "/") {
+    return true;
+  }
+
+  return startsWithWindowsDriveLetter(value);
+};
+
+const startsWithWindowsDriveLetter = (string) => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+
+  return true;
+};
+
+const fileSystemPathToUrl = (value) => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
+  }
+  return String(pathToFileURL(value));
+};
+
+const composeTwoObjects = (
+  firstObject,
+  secondObject,
+  { keysComposition, strict = false, forceLowerCase = false } = {},
+) => {
+  if (forceLowerCase) {
+    return applyCompositionForcingLowerCase(firstObject, secondObject, {
+      keysComposition,
+      strict,
+    });
+  }
+
+  return applyCaseSensitiveComposition(firstObject, secondObject, {
+    keysComposition,
+    strict,
+  });
+};
+
+const applyCaseSensitiveComposition = (
+  firstObject,
+  secondObject,
+  { keysComposition, strict },
+) => {
+  if (strict) {
+    const composed = {};
+    for (const key of Object.keys(keysComposition)) {
+      composed[key] = composeValueAtKey({
+        firstObject,
+        secondObject,
+        keysComposition,
+        key,
+        firstKey: keyExistsIn(key, firstObject) ? key : null,
+        secondKey: keyExistsIn(key, secondObject) ? key : null,
+      });
+    }
+    return composed;
+  }
+
+  const composed = {};
+  Object.keys(firstObject).forEach((key) => {
+    composed[key] = firstObject[key];
+  });
+  Object.keys(secondObject).forEach((key) => {
+    composed[key] = composeValueAtKey({
+      firstObject,
+      secondObject,
+      keysComposition,
+      key,
+      firstKey: keyExistsIn(key, firstObject) ? key : null,
+      secondKey: keyExistsIn(key, secondObject) ? key : null,
+    });
+  });
+  return composed;
+};
+
+const applyCompositionForcingLowerCase = (
+  firstObject,
+  secondObject,
+  { keysComposition, strict },
+) => {
+  if (strict) {
+    const firstObjectKeyMapping = {};
+    Object.keys(firstObject).forEach((key) => {
+      firstObjectKeyMapping[key.toLowerCase()] = key;
+    });
+    const secondObjectKeyMapping = {};
+    Object.keys(secondObject).forEach((key) => {
+      secondObjectKeyMapping[key.toLowerCase()] = key;
+    });
+    Object.keys(keysComposition).forEach((key) => {
+      composed[key] = composeValueAtKey({
+        firstObject,
+        secondObject,
+        keysComposition,
+        key,
+        firstKey: firstObjectKeyMapping[key] || null,
+        secondKey: secondObjectKeyMapping[key] || null,
+      });
+    });
+  }
+
+  const composed = {};
+  Object.keys(firstObject).forEach((key) => {
+    composed[key.toLowerCase()] = firstObject[key];
+  });
+  Object.keys(secondObject).forEach((key) => {
+    const keyLowercased = key.toLowerCase();
+
+    composed[key.toLowerCase()] = composeValueAtKey({
+      firstObject,
+      secondObject,
+      keysComposition,
+      key: keyLowercased,
+      firstKey: keyExistsIn(keyLowercased, firstObject)
+        ? keyLowercased
+        : keyExistsIn(key, firstObject)
+          ? key
+          : null,
+      secondKey: keyExistsIn(keyLowercased, secondObject)
+        ? keyLowercased
+        : keyExistsIn(key, secondObject)
+          ? key
+          : null,
+    });
+  });
+  return composed;
+};
+
+const composeValueAtKey = ({
+  firstObject,
+  secondObject,
+  firstKey,
+  secondKey,
+  key,
+  keysComposition,
+}) => {
+  if (!firstKey) {
+    return secondObject[secondKey];
+  }
+
+  if (!secondKey) {
+    return firstObject[firstKey];
+  }
+
+  const keyForCustomComposition = keyExistsIn(key, keysComposition)
+    ? key
+    : null;
+  if (!keyForCustomComposition) {
+    return secondObject[secondKey];
+  }
+
+  const composeTwoValues = keysComposition[keyForCustomComposition];
+  return composeTwoValues(firstObject[firstKey], secondObject[secondKey]);
+};
+
+const keyExistsIn = (key, object) => {
+  return Object.prototype.hasOwnProperty.call(object, key);
+};
+
+const composeTwoHeaders = (firstHeaders, secondHeaders) => {
+  if (firstHeaders && typeof firstHeaders.entries === "function") {
+    firstHeaders = Object.fromEntries(firstHeaders.entries());
+  }
+  if (secondHeaders && typeof secondHeaders.entries === "function") {
+    secondHeaders = Object.fromEntries(secondHeaders.entries());
+  }
+  return composeTwoObjects(firstHeaders, secondHeaders, {
+    keysComposition: HEADER_NAMES_COMPOSITION,
+    forceLowerCase: true,
+  });
+};
+
+const composeTwoCommaSeparatedValues = (value, nextValue) => {
+  if (!value) {
+    return nextValue;
+  }
+  if (!nextValue) {
+    return value;
+  }
+  const currentValues = value
+    .split(", ")
+    .map((part) => part.trim().toLowerCase());
+  const nextValues = nextValue
+    .split(", ")
+    .map((part) => part.trim().toLowerCase());
+  for (const nextValue of nextValues) {
+    if (!currentValues.includes(nextValue)) {
+      currentValues.push(nextValue);
+    }
+  }
+  return currentValues.join(", ");
+};
+
+const HEADER_NAMES_COMPOSITION = {
+  "accept": composeTwoCommaSeparatedValues,
+  "accept-charset": composeTwoCommaSeparatedValues,
+  "accept-language": composeTwoCommaSeparatedValues,
+  "access-control-allow-headers": composeTwoCommaSeparatedValues,
+  "access-control-allow-methods": composeTwoCommaSeparatedValues,
+  "access-control-allow-origin": composeTwoCommaSeparatedValues,
+  "accept-patch": composeTwoCommaSeparatedValues,
+  "accept-post": composeTwoCommaSeparatedValues,
+  "allow": composeTwoCommaSeparatedValues,
+  // https://www.w3.org/TR/server-timing/
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
+  "server-timing": composeTwoCommaSeparatedValues,
+  // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
+  "vary": composeTwoCommaSeparatedValues,
+};
+
+const asResponseProperties = (value) => {
+  if (value && value instanceof Response) {
+    return {
+      status: value.status,
+      statusText: value.statusText,
+      headers: Object.fromEntries(value.headers),
+      body: value.body,
+      bodyEncoding: value.bodyEncoding,
+    };
+  }
+  return value;
+};
+
+const composeTwoResponses = (firstResponse, secondResponse) => {
+  firstResponse = asResponseProperties(firstResponse);
+  secondResponse = asResponseProperties(secondResponse);
+
+  return composeTwoObjects(firstResponse, secondResponse, {
+    keysComposition: RESPONSE_KEYS_COMPOSITION,
+    strict: true,
+  });
+};
+
+const RESPONSE_KEYS_COMPOSITION = {
+  status: (prevStatus, status) => status,
+  statusText: (prevStatusText, statusText) => statusText,
+  statusMessage: (prevStatusMessage, statusMessage) => statusMessage,
+  headers: composeTwoHeaders,
+  body: (prevBody, body) => body,
+  bodyEncoding: (prevEncoding, encoding) => encoding,
+};
+
+const pickContentType = (request, availableContentTypes) => {
+  const { headers = {} } = request;
+  const requestAcceptHeader = headers.accept;
+  if (!requestAcceptHeader) {
+    return null;
+  }
+
+  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
+  return pickAcceptedContent({
+    accepteds: contentTypesAccepted,
+    availables: availableContentTypes,
+    getAcceptanceScore: getContentTypeAcceptanceScore,
+  });
+};
+
+const parseAcceptHeader = (acceptHeader) => {
+  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const accepts = [];
+  Object.keys(acceptHeaderObject).forEach((key) => {
+    const { q = 1 } = acceptHeaderObject[key];
+    const value = key;
+    accepts.push({
+      value,
+      quality: q,
+    });
+  });
+  accepts.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return accepts;
+};
+
+const getContentTypeAcceptanceScore = (
+  { value, quality },
+  availableContentType,
+) => {
+  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
+  const [availableType, availableSubtype] =
+    decomposeContentType(availableContentType);
+
+  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
+  const subtypeAccepted =
+    acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
+
+  if (typeAccepted && subtypeAccepted) {
+    return quality;
+  }
+  return -1;
+};
+
+const decomposeContentType = (fullType) => {
+  const [type, subtype] = fullType.split("/");
+  return [type, subtype];
+};
+
+const serveDirectory = (
+  url,
+  { headers = {}, rootDirectoryUrl } = {},
+) => {
+  url = String(url);
+  url = url[url.length - 1] === "/" ? url : `${url}/`;
+  const directoryContentArray = readdirSync(new URL(url));
+  const responseProducers = {
+    "application/json": () => {
+      const directoryContentJson = JSON.stringify(
+        directoryContentArray,
+        null,
+        "  ",
+      );
+      return {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "content-length": directoryContentJson.length,
+        },
+        body: directoryContentJson,
+      };
+    },
+    "text/html": () => {
+      const directoryAsHtml = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Directory explorer</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <h1>Content of directory ${url}</h1>
+    <ul>
+      ${directoryContentArray.map((filename) => {
+        const fileUrlObject = new URL(filename, url);
+        const fileUrl = String(fileUrlObject);
+        let fileUrlRelativeToServer = fileUrl.slice(
+          String(rootDirectoryUrl).length,
+        );
+        if (lstatSync(fileUrlObject).isDirectory()) {
+          fileUrlRelativeToServer += "/";
+        }
+        return `<li>
+        <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
+      </li>`;
+      }).join(`
+      `)}
+    </ul>
+  </body>
+</html>`;
+
+      return {
+        status: 200,
+        headers: {
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(directoryAsHtml),
+        },
+        body: directoryAsHtml,
+      };
+    },
+  };
+  const bestContentType = pickContentType(
+    { headers },
+    Object.keys(responseProducers),
+  );
+  return responseProducers[bestContentType || "application/json"]();
+};
+
+/*
+ * This function returns response properties in a plain object like
+ * { status: 200, body: "Hello world" }.
+ * It is meant to be used inside "requestToResponse"
+ */
+
+
+const createFileSystemFetch = (directoryUrl, options) => {
+  return (request, helpers) => {
+    return fetchFileSystem(request, helpers, directoryUrl, options);
+  };
+};
+
+const fetchFileSystem = async (
+  request,
+  helpers,
+  directoryUrl,
+  {
+    etagEnabled = false,
+    etagMemory = true,
+    etagMemoryMaxSize = 1000,
+    mtimeEnabled = false,
+    compressionEnabled = false,
+    compressionSizeThreshold = 1024,
+    cacheControl = etagEnabled || mtimeEnabled
+      ? "private,max-age=0,must-revalidate"
+      : "no-store",
+    canReadDirectory = false,
+    ENOENTFallback = () => {},
+  } = {},
+) => {
+  let directoryUrlString = asUrlString(directoryUrl);
+  if (!directoryUrlString) {
+    throw new TypeError(
+      `directoryUrl must be a string or an url, got ${directoryUrl}`,
+    );
+  }
+  if (!directoryUrlString.startsWith("file://")) {
+    throw new Error(
+      `directoryUrl must start with "file://", got ${directoryUrlString}`,
+    );
+  }
+  if (!directoryUrlString.endsWith("/")) {
+    directoryUrlString = `${directoryUrlString}/`;
+  }
+  let resource;
+  if (request.params && "0" in request.params) {
+    resource = request.params["0"];
+  } else {
+    resource = request.resource.slice(1);
+  }
+  const filesystemUrl = new URL(resource, directoryUrl);
+  const urlString = asUrlString(filesystemUrl);
+
+  if (typeof cacheControl === "function") {
+    cacheControl = cacheControl(request);
+  }
+
+  // here you might be tempted to add || cacheControl === 'no-cache'
+  // but no-cache means resource can be cached but must be revalidated (yeah naming is strange)
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
+  if (cacheControl === "no-store") {
+    if (etagEnabled) {
+      console.warn(`cannot enable etag when cache-control is ${cacheControl}`);
+      etagEnabled = false;
+    }
+    if (mtimeEnabled) {
+      console.warn(`cannot enable mtime when cache-control is ${cacheControl}`);
+      mtimeEnabled = false;
+    }
+  }
+  if (etagEnabled && mtimeEnabled) {
+    console.warn(
+      `cannot enable both etag and mtime, mtime disabled in favor of etag.`,
+    );
+    mtimeEnabled = false;
+  }
+
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return null;
+  }
+
+  const serveFile = async (fileUrl) => {
+    try {
+      const readStatTiming = helpers?.timing("file service>read file stat");
+      const fileStat = statSync(new URL(fileUrl));
+      readStatTiming?.end();
+
+      if (fileStat.isDirectory()) {
+        if (canReadDirectory) {
+          return serveDirectory(fileUrl, {
+            headers: request.headers,
+            canReadDirectory,
+            rootDirectoryUrl: directoryUrl,
+          });
+        }
+        return {
+          status: 403,
+          statusText: "not allowed to read directory",
+        };
+      }
+      // not a file, give up
+      if (!fileStat.isFile()) {
+        return {
+          status: 404,
+        };
+      }
+
+      const clientCacheResponse = await getClientCacheResponse({
+        headers: request.headers,
+        helpers,
+        etagEnabled,
+        etagMemory,
+        etagMemoryMaxSize,
+        mtimeEnabled,
+        fileStat,
+        fileUrl,
+      });
+
+      // send 304 (redirect response to client cache)
+      // because the response body does not have to be transmitted
+      if (clientCacheResponse.status === 304) {
+        return composeTwoResponses(
+          {
+            headers: {
+              ...(cacheControl ? { "cache-control": cacheControl } : {}),
+            },
+          },
+          clientCacheResponse,
+        );
+      }
+
+      let response;
+      if (compressionEnabled && fileStat.size >= compressionSizeThreshold) {
+        const compressedResponse = await getCompressedResponse({
+          headers: request.headers,
+          fileUrl,
+        });
+        if (compressedResponse) {
+          response = compressedResponse;
+        }
+      }
+      if (!response) {
+        response = await getRawResponse({
+          fileStat,
+          fileUrl,
+        });
+      }
+
+      const intermediateResponse = composeTwoResponses(
+        {
+          headers: {
+            ...(cacheControl ? { "cache-control": cacheControl } : {}),
+            // even if client cache is disabled, server can still
+            // send his own cache control but client should just ignore it
+            // and keep sending cache-control: 'no-store'
+            // if not, uncomment the line below to preserve client
+            // desire to ignore cache
+            // ...(headers["cache-control"] === "no-store" ? { "cache-control": "no-store" } : {}),
+          },
+        },
+        response,
+      );
+      return composeTwoResponses(intermediateResponse, clientCacheResponse);
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        const fallbackFileUrl = ENOENTFallback();
+        if (fallbackFileUrl) {
+          return serveFile(fallbackFileUrl);
+        }
+      }
+      return composeTwoResponses(
+        {
+          headers: {
+            ...(cacheControl ? { "cache-control": cacheControl } : {}),
+          },
+        },
+        convertFileSystemErrorToResponseProperties(e) || {},
+      );
+    }
+  };
+
+  return serveFile(`file://${new URL(urlString).pathname}`);
+};
+
+const getClientCacheResponse = async ({
+  headers,
+  helpers,
+  etagEnabled,
+  etagMemory,
+  etagMemoryMaxSize,
+  mtimeEnabled,
+  fileStat,
+  fileUrl,
+}) => {
+  // here you might be tempted to add || headers["cache-control"] === "no-cache"
+  // but no-cache means resource can be cache but must be revalidated (yeah naming is strange)
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#Cacheability
+
+  if (
+    headers["cache-control"] === "no-store" ||
+    // let's disable it on no-cache too
+    headers["cache-control"] === "no-cache"
+  ) {
+    return { status: 200 };
+  }
+
+  if (etagEnabled) {
+    return getEtagResponse({
+      headers,
+      helpers,
+      etagMemory,
+      etagMemoryMaxSize,
+      fileStat,
+      fileUrl,
+    });
+  }
+
+  if (mtimeEnabled) {
+    return getMtimeResponse({
+      headers,
+      fileStat,
+    });
+  }
+
+  return { status: 200 };
+};
+
+const getEtagResponse = async ({
+  headers,
+  helpers,
+  etagMemory,
+  etagMemoryMaxSize,
+  fileUrl,
+  fileStat,
+}) => {
+  const etagTiming = helpers?.timing("file service>generate file etag");
+  const fileContentEtag = await computeEtag({
+    etagMemory,
+    etagMemoryMaxSize,
+    fileUrl,
+    fileStat,
+  });
+  etagTiming?.end();
+
+  const requestHasIfNoneMatchHeader = "if-none-match" in headers;
+  if (
+    requestHasIfNoneMatchHeader &&
+    headers["if-none-match"] === fileContentEtag
+  ) {
+    return {
+      status: 304,
+    };
+  }
+
+  return {
+    status: 200,
+    headers: {
+      etag: fileContentEtag,
+    },
+  };
+};
+
+const ETAG_MEMORY_MAP = new Map();
+const computeEtag = async ({
+  etagMemory,
+  etagMemoryMaxSize,
+  fileUrl,
+  fileStat,
+}) => {
+  if (etagMemory) {
+    const etagMemoryEntry = ETAG_MEMORY_MAP.get(fileUrl);
+    if (
+      etagMemoryEntry &&
+      fileStatAreTheSame(etagMemoryEntry.fileStat, fileStat)
+    ) {
+      return etagMemoryEntry.eTag;
+    }
+  }
+  const fileContentAsBuffer = await new Promise((resolve, reject) => {
+    readFile$1(new URL(fileUrl), (error, buffer) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(buffer);
+      }
+    });
+  });
+  const eTag = bufferToEtag(fileContentAsBuffer);
+  if (etagMemory) {
+    if (ETAG_MEMORY_MAP.size >= etagMemoryMaxSize) {
+      const firstKey = Array.from(ETAG_MEMORY_MAP.keys())[0];
+      ETAG_MEMORY_MAP.delete(firstKey);
+    }
+    ETAG_MEMORY_MAP.set(fileUrl, { fileStat, eTag });
+  }
+  return eTag;
+};
+
+// https://nodejs.org/api/fs.html#fs_class_fs_stats
+const fileStatAreTheSame = (leftFileStat, rightFileStat) => {
+  return fileStatKeysToCompare.every((keyToCompare) => {
+    const leftValue = leftFileStat[keyToCompare];
+    const rightValue = rightFileStat[keyToCompare];
+    return leftValue === rightValue;
+  });
+};
+const fileStatKeysToCompare = [
+  // mtime the the most likely to change, check it first
+  "mtimeMs",
+  "size",
+  "ctimeMs",
+  "ino",
+  "mode",
+  "uid",
+  "gid",
+  "blksize",
+];
+
+const getMtimeResponse = async ({ headers, fileStat }) => {
+  if ("if-modified-since" in headers) {
+    let cachedModificationDate;
+    try {
+      cachedModificationDate = new Date(headers["if-modified-since"]);
+    } catch {
+      return {
+        status: 400,
+        statusText: "if-modified-since header is not a valid date",
+      };
+    }
+
+    const actualModificationDate = dateToSecondsPrecision(fileStat.mtime);
+    if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
+      return {
+        status: 304,
+      };
+    }
+  }
+
+  return {
+    status: 200,
+    headers: {
+      "last-modified": dateToUTCString(fileStat.mtime),
+    },
+  };
+};
+
+const getCompressedResponse = async ({ fileUrl, headers }) => {
+  const contentType = CONTENT_TYPE.fromUrlExtension(fileUrl);
+  if (CONTENT_TYPE.isBinary(contentType)) {
+    return null;
+  }
+  const acceptedCompressionFormat = pickContentEncoding(
+    { headers },
+    Object.keys(availableCompressionFormats),
+  );
+  if (!acceptedCompressionFormat) {
+    return null;
+  }
+
+  const fileReadableStream = fileUrlToReadableStream(fileUrl);
+  const body =
+    await availableCompressionFormats[acceptedCompressionFormat](
+      fileReadableStream,
+    );
+
+  return {
+    status: 200,
+    headers: {
+      "content-type": contentType,
+      "content-encoding": acceptedCompressionFormat,
+      "vary": "accept-encoding",
+    },
+    body,
+  };
+};
+
+const fileUrlToReadableStream = (fileUrl) => {
+  return createReadStream(new URL(fileUrl), {
+    emitClose: true,
+    autoClose: true,
+  });
+};
+
+const availableCompressionFormats = {
+  br: async (fileReadableStream) => {
+    const { createBrotliCompress } = await import("node:zlib");
+    return fileReadableStream.pipe(createBrotliCompress());
+  },
+  deflate: async (fileReadableStream) => {
+    const { createDeflate } = await import("node:zlib");
+    return fileReadableStream.pipe(createDeflate());
+  },
+  gzip: async (fileReadableStream) => {
+    const { createGzip } = await import("node:zlib");
+    return fileReadableStream.pipe(createGzip());
+  },
+};
+
+const getRawResponse = async ({ fileUrl, fileStat }) => {
+  return {
+    status: 200,
+    headers: {
+      "content-type": CONTENT_TYPE.fromUrlExtension(fileUrl),
+      "content-length": fileStat.size,
+    },
+    body: fileUrlToReadableStream(fileUrl),
+  };
+};
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
+const dateToUTCString = (date) => date.toUTCString();
+
+const dateToSecondsPrecision = (date) => {
+  const dateWithSecondsPrecision = new Date(date);
+  dateWithSecondsPrecision.setMilliseconds(0);
+  return dateWithSecondsPrecision;
+};
+
+const asUrlString = (value) => {
+  if (value instanceof URL) {
+    return value.href;
+  }
+  if (typeof value === "string") {
+    if (isFileSystemPath(value)) {
+      return fileSystemPathToUrl(value);
+    }
+    try {
+      const urlObject = new URL(value);
+      return String(urlObject);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+const isFileHandle = (value) => {
+  return value && value.constructor && value.constructor.name === "FileHandle";
+};
+
+const fileHandleToReadableStream = (fileHandle) => {
+  const fileReadableStream =
+    typeof fileHandle.createReadStream === "function"
+      ? fileHandle.createReadStream()
+      : createReadStream(
+          "/toto", // is it ok to pass a fake path like this?
+          {
+            fd: fileHandle.fd,
+            emitClose: true,
+            // autoClose: true
+          },
+        );
+  // I suppose it's required only when doing fs.createReadStream()
+  // and not fileHandle.createReadStream()
+  // fileReadableStream.on("end", () => {
+  //   fileHandle.close()
+  // })
+  return fileReadableStream;
+};
+
+// https://github.com/node-fetch/node-fetch/blob/8c197f8982a238b3c345c64b17bfa92e16b4f7c4/src/response.js#L1
+
+
+const fetchUrl = async (
+  url,
+  {
+    signal = new AbortController().signal,
+    ignoreHttpsError = false,
+    canReadDirectory,
+    contentTypeMap,
+    cacheStrategy,
+    method = "GET",
+    headers = {},
+    ...rest
+  } = {},
+) => {
+  try {
+    url = String(new URL(url));
+  } catch {
+    throw new Error(
+      `fetchUrl first argument must be an absolute url, received ${url}`,
+    );
+  }
+
+  if (url.startsWith("file://")) {
+    const responseProperties = await createFileSystemFetch("file://", {
+      canReadDirectory})(
+      {
+        signal,
+        method,
+        headers,
+        resource: new URL(url).pathname,
+      },
+      {
+        timing: () => {
+          return { end: () => {} };
+        },
+      },
+    );
+    const responseBody = responseProperties.body;
+
+    const response = new Response(
+      typeof responseBody === "string"
+        ? Buffer.from(responseBody)
+        : isFileHandle(responseBody)
+          ? fileHandleToReadableStream(responseBody)
+          : responseBody,
+      {
+        url,
+        status: responseProperties.status,
+        statusText: responseProperties.statusText,
+        headers: responseProperties.headers,
+      },
+    );
+    return response;
+  }
+
+  if (url.startsWith("data:")) {
+    const { contentType, base64Flag, data } = DATA_URL.parse(url);
+    const body = base64Flag ? Buffer.from(data, "base64") : Buffer.from(data);
+    const response = new Response(body, {
+      url,
+      status: 200,
+      headers: {
+        "content-type": contentType,
+      },
+    });
+    return response;
+  }
+
+  const response = await fetch(url, {
+    signal,
+    method,
+    headers,
+    ...(ignoreHttpsError && url.startsWith("https")
+      ? {
+          agent: () => {
+            return new Agent({
+              rejectUnauthorized: false,
+            });
+          },
+        }
+      : {}),
+    ...rest,
+  });
+
+  return response;
+};
+
+const POST = ({ url, body, githubToken, headers }) => {
+  return sendHttpRequest({
+    url,
+    method: "POST",
+    headers: {
+      ...tokenToHeaders(githubToken),
+      "accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...headers,
+    },
+    body: JSON.stringify(body),
+    responseStatusHandlers: {
+      201: async (response) => {
+        const json = await response.json();
+        return json;
+      },
+    },
+  });
+};
+
+const PATCH = ({ signal, url, body, githubToken, headers }) => {
+  return sendHttpRequest({
+    signal,
+    url,
+    method: "PATCH",
+    headers: {
+      ...tokenToHeaders(githubToken),
+      "accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...headers,
+    },
+    body: JSON.stringify(body),
+    responseStatusHandlers: {
+      200: async (response) => {
+        const json = await response.json();
+        return json;
+      },
+    },
+  });
+};
+
+const tokenToHeaders = (token) => {
+  if (!token) {
+    throw new Error(`missing token, request will not be authorized.`);
+  }
+  return {
+    authorization: `token ${token}`,
+  };
+};
+
+const sendHttpRequest = async ({
+  signal,
+  url,
+  method,
+  headers,
+  body,
+  responseStatusHandlers = {},
+}) => {
+  let response;
+  try {
+    response = await fetchUrl(url, {
+      signal,
+      method,
+      headers: {
+        ...(typeof body === "undefined"
+          ? {}
+          : { "content-length": Buffer.byteLength(body) }),
+        ...headers,
+      },
+      body,
+    });
+  } catch (error) {
+    throw new Error(`network error during request.
+--- request method ---
+${method}
+--- request url ---
+${url}
+--- error stack ---
+${error.stack}`);
+  }
+
+  const { status } = response;
+  const responseStatusHandler = responseStatusHandlers[status];
+  if (responseStatusHandler) {
+    return responseStatusHandler(response);
+  }
+  const responseBodyAsJson = await response.json();
+  const error = new Error(`unexpected response status.
+--- response status ---
+${response.status}
+--- response statusText ---
+${response.statusText}
+--- expect response status ---
+${Object.keys(responseStatusHandlers).join(", ")}
+--- request method ---
+${method}
+--- request url ---
+${url}
+--- response json ---
+${(JSON.stringify(responseBodyAsJson), "  ")}`);
+  error.responseStatus = status;
+  throw error;
+};
+
+/**
+ *
+ * https://github.com/IgnusG/jest-report-action/blob/c006b890ba3c3b650e6c55916a643ca82b64133b/tasks/github-api.js#L12
+ * https://docs.github.com/fr/rest/checks/runs?apiVersion=2022-11-28#create-a-check-run
+ */
+
+
+const startGithubCheckRun = async ({
+  logLevel,
+  githubToken,
+  repositoryOwner,
+  repositoryName,
+  commitSha,
+  checkName,
+  checkTitle,
+  checkSummary,
+  checkStatus = "in_progress",
+}) => {
+  if (typeof githubToken !== "string") {
+    throw new TypeError(
+      `githubToken must be a string but received ${githubToken}`,
+    );
+  }
+  if (typeof repositoryOwner !== "string") {
+    throw new TypeError(
+      `repositoryOwner must be a string but received ${repositoryOwner}`,
+    );
+  }
+  if (typeof repositoryName !== "string") {
+    throw new TypeError(
+      `repositoryName must be a string but received ${repositoryName}`,
+    );
+  }
+  if (typeof commitSha !== "string") {
+    throw new TypeError(`commitSha must be a string but received ${commitSha}`);
+  }
+  if (typeof checkName !== "string") {
+    throw new TypeError(`checkName must be a string but received ${checkName}`);
+  }
+
+  const logger = createLogger({ logLevel });
+
+  const checkApiURL = `https://api.github.com/repos/${repositoryOwner}/${repositoryName}/check-runs`;
+  logger.debug(`POST ${checkApiURL} (for commit ${commitSha})`);
+  let check;
+  try {
+    check = await POST({
+      url: checkApiURL,
+      githubToken,
+      headers: {
+        "accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      body: {
+        head_sha: commitSha,
+        status: checkStatus,
+        name: checkName,
+        output: {
+          title: checkTitle,
+          summary: checkSummary,
+        },
+      },
+    });
+    logger.debug(`${UNICODE.OK} check created ${check.html_url}`);
+  } catch (e) {
+    logger.error(
+      createDetailedMessage(`${UNICODE.FAILURE} failed to create check`, {
+        "error stack": e.stack,
+      }),
+    );
+    return { progress: () => {}, fail: () => {}, pass: () => {} };
+  }
+
+  const updateState = async ({
+    status,
+    conclusion,
+    title = check.title,
+    summary = check.summary,
+    annotations = [],
+  }) => {
+    let annotationsSent = 0;
+    const annotationsBatch = annotations.slice(annotationsSent, 50);
+    const body = {
+      ...(status ? { status } : {}),
+      ...(conclusion ? { conclusion } : {}),
+      output: {
+        title: title === undefined ? check.title : title,
+        summary: summary === undefined ? check.summary : summary,
+        ...(annotationsBatch.length ? { annotations: annotationsBatch } : {}),
+      },
+    };
+
+    try {
+      logger.debug(`PATCH check ${check.html_url}
+--- body ---
+${JSON.stringify(body, null, "  ")}`);
+      check = await PATCH({
+        url: check.url,
+        githubToken,
+        body,
+      });
+      logger.debug(`${UNICODE.OK} check updated`);
+    } catch (e) {
+      logger.error(
+        createDetailedMessage(`${UNICODE.FAILURE} failed to update check`, {
+          "error stack": e.stack,
+        }),
+      );
+      return;
+    }
+
+    annotationsSent += annotationsBatch.length;
+    while (annotationsSent < annotations.length) {
+      const annotationsBatch = annotations.slice(annotationsSent, 50);
+      check = await PATCH({
+        url: check.url,
+        githubToken,
+        body: {
+          head_sha: commitSha,
+          output: {
+            annotations: annotationsBatch,
+          },
+        },
+      });
+      annotationsSent += annotationsBatch.length;
+    }
+  };
+
+  let lastProgressCall;
+  let pendingAnnotations = [];
+  let pendingAbortController;
+  let pendingProgressPromise = Promise.resolve();
+  let msBetweenProgressCalls = 500;
+
+  return {
+    progress: async ({ title, summary, annotations = [] }) => {
+      if (check.conclusion === "failure") {
+        throw new Error(`cannot progress() after fail()`);
+      }
+      if (check.conclusion === "success") {
+        throw new Error(`cannot progress() after pass()`);
+      }
+      pendingProgressPromise = (async () => {
+        const nowMs = Date.now();
+        const isFirstCall = !lastProgressCall;
+        lastProgressCall = nowMs;
+        if (isFirstCall) {
+          await updateState({
+            title,
+            summary,
+            annotations,
+          });
+          return;
+        }
+        if (pendingAbortController) {
+          pendingAbortController.abort();
+        }
+        const msEllapsedSinceLastProgressCall = nowMs - lastProgressCall;
+        const msEllapsedIsBigEnough =
+          msEllapsedSinceLastProgressCall > msBetweenProgressCalls;
+        if (msEllapsedIsBigEnough) {
+          annotations = [...pendingAnnotations, ...annotations];
+          pendingAnnotations.length = 0;
+          await updateState({
+            title,
+            summary,
+            annotations,
+          });
+          return;
+        }
+        pendingAnnotations.push(...annotations);
+        pendingAbortController = new AbortController();
+        await new Promise((resolve) => {
+          pendingAbortController.signal.onabort = resolve;
+          setTimeout(resolve, msBetweenProgressCalls);
+        });
+        if (pendingAbortController && pendingAbortController.signal.aborted) {
+          return;
+        }
+        pendingAbortController = null;
+        await updateState({
+          title,
+          summary,
+          annotations,
+        });
+      })();
+      await pendingProgressPromise;
+      pendingProgressPromise = Promise.resolve();
+    },
+    fail: async ({ title, summary, annotations } = {}) => {
+      await pendingProgressPromise;
+      if (pendingAbortController) {
+        pendingAbortController.abort();
+      }
+      if (check.conclusion === "failure") {
+        throw new Error(`already failed`);
+      }
+      if (check.conclusion === "success") {
+        throw new Error(`cannot fail() after pass()`);
+      }
+      return updateState({
+        status: "completed",
+        conclusion: "failure",
+        title,
+        summary,
+        annotations,
+      });
+    },
+    pass: async ({ title, summary, annotations } = {}) => {
+      await pendingProgressPromise;
+      if (pendingAbortController) {
+        pendingAbortController.abort();
+      }
+      if (check.conclusion === "failure") {
+        throw new Error(`cannot pass() after fail()`);
+      }
+      if (check.conclusion === "success") {
+        throw new Error(`already passed`);
+      }
+      return updateState({
+        status: "completed",
+        conclusion: "success",
+        title,
+        summary,
+        annotations,
+      });
+    },
+  };
+};
+
+// https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+const readGitHubWorkflowEnv = () => {
+  const eventName = process.env.GITHUB_EVENT_NAME;
+  if (!eventName) {
+    throw new Error(
+      `missing process.env.GITHUB_EVENT_NAME, we are not in a github workflow`,
+    );
+  }
+  const githubToken = process.env.GITHUB_TOKEN;
+  if (!githubToken) {
+    throw new Error(`missing githubToken`);
+  }
+  const githubRepository = process.env.GITHUB_REPOSITORY;
+  if (!githubRepository) {
+    throw new Error(`missing process.env.GITHUB_REPOSITORY`);
+  }
+  const [repositoryOwner, repositoryName] = githubRepository.split("/");
+  return {
+    rootDirectoryUrl: process.env.GITHUB_WORKSPACE,
+    githubToken,
+    repositoryOwner,
+    repositoryName,
+    commitSha: process.env.GITHUB_SHA,
+  };
 };
 
 // https://nodejs.org/api/packages.html#resolving-user-conditions
@@ -4496,8 +6281,8 @@ const normalizeFileByFileCoveragePaths = (
   Object.keys(fileByFileCoverage).forEach((key) => {
     const fileCoverage = fileByFileCoverage[key];
     const { path } = fileCoverage;
-    const url = isFileSystemPath(path)
-      ? fileSystemPathToUrl(path)
+    const url = isFileSystemPath$1(path)
+      ? fileSystemPathToUrl$1(path)
       : new URL(path, rootDirectoryUrl).href;
     const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
     fileByFileNormalized[`./${relativeUrl}`] = {
@@ -8816,7 +10601,7 @@ ${webServer.rootDirectoryUrl}`);
 // see also https://github.com/microsoft/playwright/releases
 const getBrowserVersion = (browserName) => {
   const playwrightPackageJsonFileUrl = import.meta.resolve(
-    "./json/package.json",
+    "playwright-core/package.json",
   );
   const playwrightBrowsersJsonFileUrl = new URL(
     "./browsers.json",
