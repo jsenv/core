@@ -10,10 +10,11 @@ await build({
   entryPoints: {
     "./index.js": {
       runtimeCompat: { node: "20.0" },
+      packageSideEffects: false,
       plugins: [
         jsenvPluginCommonJs({
           include: {
-            "file://**/node_modules/foo/": true,
+            "file://**/node_modules/second/": true,
           },
         }),
       ],

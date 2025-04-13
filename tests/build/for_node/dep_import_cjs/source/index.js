@@ -1,3 +1,3 @@
-import "first";
+import { start } from "first";
 
-console.log("main");
+start();
