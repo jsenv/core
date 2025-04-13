@@ -5,7 +5,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/shared/urls"
+    "directory": "packages/independent/tooling/urls"
   },
   "publishConfig": {
     "access": "public"
