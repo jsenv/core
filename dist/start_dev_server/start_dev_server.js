@@ -1,22 +1,21 @@
 import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, updateJsonFileSync, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, readPackageAtOrNull } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, updateJsonFileSync, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, readPackageAtOrNull } from "../jsenv_core_packages.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript } from "@jsenv/ast";
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
+import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
-import "strip-ansi";
 import "../jsenv_core_node_modules.js";
 import "node:process";
 import "node:os";
 import "node:tty";
 import "node:util";
 import "node:path";
-import "@jsenv/js-module-fallback";
 
 // default runtimeCompat corresponds to
 // "we can keep <script type="module"> intact":
@@ -2687,10 +2686,9 @@ const shouldHandleSourcemap = (urlInfo) => {
   return true;
 };
 
-const inlineContentClientFileUrl = new URL(
+const inlineContentClientFileUrl = import.meta.resolve(
   "../client/inline_content/inline_content.js",
-  import.meta.url,
-).href;
+);
 
 const createKitchen = ({
   name,
@@ -2699,12 +2697,14 @@ const createKitchen = ({
 
   rootDirectoryUrl,
   mainFilePath,
-  ignore,
-  ignoreProtocol = "remove",
-  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   dev = false,
   build = false,
   runtimeCompat,
+
+  ignore,
+  ignoreProtocol = "remove",
+  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
+
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
@@ -2717,11 +2717,16 @@ const createKitchen = ({
   outDirectoryUrl,
   initialContext = {},
   packageDirectory,
+  packageDependencies,
 }) => {
   const logger = createLogger({ logLevel });
 
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
+
+  if (packageDependencies === "auto") {
+    packageDependencies = build && nodeRuntimeEnabled ? "ignore" : "include";
+  }
 
   const kitchen = {
     context: {
@@ -2792,6 +2797,74 @@ const createKitchen = ({
     const protocolIsSupported = supportedProtocols.includes(protocol);
     return !protocolIsSupported;
   };
+  const isIgnoredBecauseInPackageDependencies = (() => {
+    if (packageDependencies === "include") {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    if (!packageDirectory.url) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    const rootPackageJSON = packageDirectory.read(packageDirectory.url);
+    const dependencies = rootPackageJSON?.dependencies;
+    if (!dependencies) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    const dependencyKeys = Object.keys(dependencies);
+    if (dependencyKeys.length === 0) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+
+    let getEffect;
+    if (packageDependencies === "ignore") {
+      getEffect = (dependencyName) => {
+        if (!dependencyKeys.includes(dependencyName)) {
+          return "include";
+        }
+        return "ignore";
+      };
+    } else if (typeof packageDependencies === "object") {
+      let defaultEffect = "ignore";
+      const dependencyEffectMap = new Map();
+      for (const dependencyKey of Object.keys(packageDependencies)) {
+        const dependencyEffect = packageDependencies[dependencyKey];
+        if (dependencyKey === "*") {
+          defaultEffect = dependencyEffect;
+        } else {
+          dependencyEffectMap.set(dependencyKey, dependencyEffect);
+        }
+      }
+      getEffect = (dependencyName) => {
+        if (!dependencyKeys.includes(dependencyName)) {
+          return "include";
+        }
+        const dependencyEffect = packageDependencies[dependencyName];
+        if (dependencyEffect) {
+          return dependencyEffect;
+        }
+        return defaultEffect;
+      };
+    }
+    return (url) => {
+      if (!url.startsWith("file:")) {
+        return false;
+      }
+      const packageDirectoryUrl = packageDirectory.find(url);
+      if (!packageDirectoryUrl) {
+        return false;
+      }
+      const packageJSON = packageDirectory.read(packageDirectoryUrl);
+      const name = packageJSON?.name;
+      if (!name) {
+        return false;
+      }
+      const effect = getEffect(name);
+      if (effect !== "ignore") {
+        return false;
+      }
+      return true;
+    };
+  })();
+
   let isIgnoredByParam = () => false;
   if (ignore) {
     const associations = URL_META.resolveAssociations(
@@ -2811,7 +2884,11 @@ const createKitchen = ({
     };
   }
   const isIgnored = (url) => {
-    return isIgnoredByProtocol(url) || isIgnoredByParam(url);
+    return (
+      isIgnoredByProtocol(url) ||
+      isIgnoredByParam(url) ||
+      isIgnoredBecauseInPackageDependencies(url)
+    );
   };
   const resolveReference = (reference) => {
     const setReferenceUrl = (referenceUrl) => {
@@ -3301,6 +3378,8 @@ ${urlInfo.firstReference.trace.message}`;
 
   return kitchen;
 };
+
+const FUNCTION_RETURNING_FALSE = () => false;
 
 const debounceCook = (cook) => {
   const pendingDishes = new Map();

@@ -1,21 +1,21 @@
 import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, visitHtmlNodes, analyzeScriptNode, getHtmlNodeText, getHtmlNodeAttribute, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeAttributes, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
+import { jsenvPluginMinification } from "@jsenv/plugin-minification";
+import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, errorToHTML$1 as errorToHTML, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, isSpecifierForNodeBuiltin$1 as isSpecifierForNodeBuiltin, updateJsonFileSync$1 as updateJsonFileSync, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, createLookupPackageDirectory, readPackageAtOrNull$1 as readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, jsenvPluginBundling, jsenvPluginMinification, ensureEmptyDirectory, jsenvPluginJsModuleFallback, createDynamicLog } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, errorToHTML$1 as errorToHTML, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, isSpecifierForNodeBuiltin$1 as isSpecifierForNodeBuiltin, updateJsonFileSync$1 as updateJsonFileSync, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, createLookupPackageDirectory, readPackageAtOrNull$1 as readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, ensureEmptyDirectory, createDynamicLog } from "../jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { WebSocketResponse, pickContentType } from "@jsenv/server";
 import { randomUUID, createHash } from "node:crypto";
-import "strip-ansi";
 import "../jsenv_core_node_modules.js";
 import "node:os";
 import "node:tty";
 import "node:util";
 import "node:path";
-import "node:module";
-import "@jsenv/js-module-fallback";
 
 const getDirectoryWatchPatterns = (
   directoryUrl,
@@ -2646,10 +2646,9 @@ const shouldHandleSourcemap = (urlInfo) => {
   return true;
 };
 
-const inlineContentClientFileUrl = new URL(
+const inlineContentClientFileUrl = import.meta.resolve(
   "../client/inline_content/inline_content.js",
-  import.meta.url,
-).href;
+);
 
 const createKitchen = ({
   name,
@@ -2658,12 +2657,14 @@ const createKitchen = ({
 
   rootDirectoryUrl,
   mainFilePath,
-  ignore,
-  ignoreProtocol = "remove",
-  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   dev = false,
   build = false,
   runtimeCompat,
+
+  ignore,
+  ignoreProtocol = "remove",
+  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
+
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
@@ -2676,11 +2677,16 @@ const createKitchen = ({
   outDirectoryUrl,
   initialContext = {},
   packageDirectory,
+  packageDependencies,
 }) => {
   const logger = createLogger({ logLevel });
 
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
+
+  if (packageDependencies === "auto") {
+    packageDependencies = build && nodeRuntimeEnabled ? "ignore" : "include";
+  }
 
   const kitchen = {
     context: {
@@ -2751,6 +2757,74 @@ const createKitchen = ({
     const protocolIsSupported = supportedProtocols.includes(protocol);
     return !protocolIsSupported;
   };
+  const isIgnoredBecauseInPackageDependencies = (() => {
+    if (packageDependencies === "include") {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    if (!packageDirectory.url) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    const rootPackageJSON = packageDirectory.read(packageDirectory.url);
+    const dependencies = rootPackageJSON?.dependencies;
+    if (!dependencies) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    const dependencyKeys = Object.keys(dependencies);
+    if (dependencyKeys.length === 0) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+
+    let getEffect;
+    if (packageDependencies === "ignore") {
+      getEffect = (dependencyName) => {
+        if (!dependencyKeys.includes(dependencyName)) {
+          return "include";
+        }
+        return "ignore";
+      };
+    } else if (typeof packageDependencies === "object") {
+      let defaultEffect = "ignore";
+      const dependencyEffectMap = new Map();
+      for (const dependencyKey of Object.keys(packageDependencies)) {
+        const dependencyEffect = packageDependencies[dependencyKey];
+        if (dependencyKey === "*") {
+          defaultEffect = dependencyEffect;
+        } else {
+          dependencyEffectMap.set(dependencyKey, dependencyEffect);
+        }
+      }
+      getEffect = (dependencyName) => {
+        if (!dependencyKeys.includes(dependencyName)) {
+          return "include";
+        }
+        const dependencyEffect = packageDependencies[dependencyName];
+        if (dependencyEffect) {
+          return dependencyEffect;
+        }
+        return defaultEffect;
+      };
+    }
+    return (url) => {
+      if (!url.startsWith("file:")) {
+        return false;
+      }
+      const packageDirectoryUrl = packageDirectory.find(url);
+      if (!packageDirectoryUrl) {
+        return false;
+      }
+      const packageJSON = packageDirectory.read(packageDirectoryUrl);
+      const name = packageJSON?.name;
+      if (!name) {
+        return false;
+      }
+      const effect = getEffect(name);
+      if (effect !== "ignore") {
+        return false;
+      }
+      return true;
+    };
+  })();
+
   let isIgnoredByParam = () => false;
   if (ignore) {
     const associations = URL_META.resolveAssociations(
@@ -2770,7 +2844,11 @@ const createKitchen = ({
     };
   }
   const isIgnored = (url) => {
-    return isIgnoredByProtocol(url) || isIgnoredByParam(url);
+    return (
+      isIgnoredByProtocol(url) ||
+      isIgnoredByParam(url) ||
+      isIgnoredBecauseInPackageDependencies(url)
+    );
   };
   const resolveReference = (reference) => {
     const setReferenceUrl = (referenceUrl) => {
@@ -3260,6 +3338,8 @@ ${urlInfo.firstReference.trace.message}`;
 
   return kitchen;
 };
+
+const FUNCTION_RETURNING_FALSE = () => false;
 
 const debounceCook = (cook) => {
   const pendingDishes = new Map();
@@ -11284,6 +11364,7 @@ const entryPointDefaultParams = {
   assetManifest: false,
   assetManifestFileRelativeUrl: "asset-manifest.json",
   packageSideEffects: true,
+  packageDependencies: "auto", // "auto", "ignore", "include"
 };
 
 const prepareEntryPointBuild = async (
@@ -11334,6 +11415,7 @@ const prepareEntryPointBuild = async (
     assetManifest,
     assetManifestFileRelativeUrl,
     packageSideEffects,
+    packageDependencies,
   } = {
     ...entryPointDefaultParams,
     ...entryPointParams,
@@ -11427,6 +11509,7 @@ const prepareEntryPointBuild = async (
       ? new URL("craft/", outDirectoryUrl)
       : undefined,
     packageDirectory,
+    packageDependencies,
   });
 
   let _getOtherEntryBuildInfo;
@@ -11526,6 +11609,7 @@ const prepareEntryPointBuild = async (
           ? new URL("shape/", outDirectoryUrl)
           : undefined,
         packageDirectory,
+        packageDependencies,
       });
       const buildSpecifierManager = createBuildSpecifierManager({
         rawKitchen,

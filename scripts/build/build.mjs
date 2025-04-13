@@ -22,6 +22,7 @@ await build({
             "file:///**/node_modules/@babel/parser/": true,
             "file:///**/node_modules/postcss/": true,
             "file:///**/node_modules/rollup/dist/native.js": true,
+            "file:///**/node_modules/browserlist/": true,
           },
         }),
       ],
@@ -31,14 +32,7 @@ await build({
         },
       },
       packageDependencies: {
-        "@jsenv/ast": "ignore",
-        "@jsenv/js-module-fallback": "include",
-        "@jsenv/plugin-bundling": "include",
-        "@jsenv/plugin-minification": "include",
-        "@jsenv/plugin-supervisor": "include",
-        "@jsenv/plugin-transpilation": "include",
-        "@jsenv/server": "ignore",
-        "@jsenv/sourcemap": "ignore",
+        "@jsenv/plugin-transpilation": "ignore",
       },
       directoryReferenceEffect: {
         // @jsenv/core root dir
