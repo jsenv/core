@@ -25,7 +25,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     body: await response.text(),
   };
   const expect = {
-    url,
+    url: actual.url,
     status: 200,
     statusText: "",
     headers: {
@@ -52,7 +52,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     body: await response.text(),
   };
   const expect = {
-    url,
+    url: actual.url,
     status: 200,
     statusText: "",
     headers: {
@@ -79,7 +79,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     body: await response.text(),
   };
   const expect = {
-    url,
+    url: actual.url,
     status: 404,
     statusText: `ENOENT: File not found at ${urlToFileSystemPath(url)}`,
     headers: {
@@ -123,7 +123,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     body: await response.text(),
   };
   const expect = {
-    url: `${url}/`,
+    url: actual.url,
     status: 201,
     statusText: "Created",
     headers: {
