@@ -6,6 +6,30 @@
 
 Jsenv is a suite of tools for JavaScript projects that prioritizes standards and simplicity, making it ideal for both beginners and those who need straightforward tools.
 
+## Installation
+
+```console
+npm install --save-dev @jsenv/core
+```
+
+> **Compatibility**: Tested on Mac, Windows, and Linux with Node.js 20. Other environments are not officially tested.
+
+## Documentation
+
+For comprehensive documentation, see the full [user documentation](https://github.com/jsenv/core/blob/main/docs/users/users.md).
+
+## Basic Usage
+
+Start a development server:
+
+```js
+import { startDevServer } from "@jsenv/core";
+
+await startDevServer({
+  sourceDirectoryUrl: import.meta.resolve("./"),
+});
+```
+
 ## Core Features
 
 `@jsenv/core` provides four main tools:
@@ -23,14 +47,6 @@ Jsenv is a suite of tools for JavaScript projects that prioritizes standards and
 - **Isolated testing**: Prevents cross-test contamination
 - **Simple API**: Designed for clarity and ease of use
 
-## Installation
-
-```console
-npm install --save-dev @jsenv/core
-```
-
-> **Compatibility**: Tested on Mac, Windows, and Linux with Node.js 20. Other environments are not officially tested.
-
 ## Quick Start
 
 The easiest way to try jsenv is with the CLI:
@@ -39,20 +55,6 @@ The easiest way to try jsenv is with the CLI:
 npx @jsenv/cli
 ```
 
-Read more in [@jsenv/cli](./packages/related/cli/#jsenvcli).
+The CLI provides templates for web applications, React projects, and Node.js packages to get you started quickly.
 
-## Basic Usage
-
-Start a development server.
-
-```js
-import { startDevServer } from "@jsenv/core";
-
-await startDevServer({
-  sourceDirectoryUrl: import.meta.resolve("./"),
-});
-```
-
-## Documentation
-
-For comprehensive documentation, see the full [user documentation](./docs/users/users.md).
+Read more in [@jsenv/cli](https://github.com/jsenv/core/tree/main/packages/related/cli#jsenvcli).
