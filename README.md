@@ -2,50 +2,37 @@
 
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
-Jsenv is a suite of tools that can be used in projects involving JavaScript.
+## Overview
 
-The goal of `@jsenv/core` is to provide the following tools:
+Jsenv is a suite of tools for JavaScript projects that prioritizes standards and simplicity, making it ideal for both beginners and those who need straightforward tools.
 
-1. **dev server**; A server that serves source files, facilitating development with live reloading.
-2. **build**; Optimizes source files into a specified directory for production.
-3. **build server**; Serves the built files, allowing for testing and verifying the production build.
-4. **test runner**; Runs test files concurrently, ensuring code reliability.
+## Core Features
 
-Jsenv prioritizes standards and simplicity, making it ideal for both beginners and those who need straightforward tools without unnecessary complexities.
+`@jsenv/core` provides four main tools:
 
-To try jsenv on your machine, use [@jsenv/cli](./packages/related/cli/#jsenvcli).
+1. **Dev Server**: Serves source files with live reloading to facilitate development.
+2. **Build**: Optimizes source files into a specified directory for production.
+3. **Build Server**: Serves the built files, allowing for testing and verifying the production build.
+4. **Test Runner**: Runs test files concurrently to ensure code reliability.
 
-For additional details, consult the [documentation](./docs/users/users.md)
-
-<!-- # The best parts
-
-- **Robust versioning during build**: Avoids <a href="https://bundlers.tooling.report/hashing/avoid-cascade/" target="_blank">cascading hash changes</a><sup>↗</sup>.
-- **Load js module with classic script**: See the [asJsClassic plugin](./docs/users/g_plugins/g_plugins.md#asjsclassic).
-- **Large browser support after build**: Ensures compatibility with older versions of Firefox, Chrome, and Safari.
-- **Advanced support of top level await**.
-- **Advanced support of web workers**.
-- **Test files are executed like standard files**.
-- **Isolated environment for each test file**: Ensures tests run independently, preventing side effects.
-- Single set of files after build: Simplifies support and deployement with a single set of files.
-- Execute tests in multiple browsers: Supports Chrome, Safari, and Firefox.
-- Extensive browser support during dev: Allows the use of various browsers beyond the latest Chrome, which is useful for reproducing browser-specific bugs. -->
-
-<!--
-The following commands can be used to skip the prompt
-
-| Command                                     |
-| ------------------------------------------- |
-| `npm create jsenv@latest -- --web`          |
-| `npm create jsenv@latest -- --web-preact`   |
-| `npm create jsenv@latest -- --web-react`    |
-| `npm create jsenv@latest -- --node-package` |
--->
-
-<!-- # Installation
+## Installation
 
 ```console
 npm install --save-dev @jsenv/core
 ```
 
-_@jsenv/core_ is tested on Mac, Windows, Linux with Node.js 20.
-Other operating systems and Node.js versions are not tested. -->
+> **Compatibility**: Tested on Mac, Windows, and Linux with Node.js 20. Other environments are not officially tested.
+
+## Quick Start
+
+The easiest way to try jsenv is with the CLI:
+
+```console
+npx @jsenv/cli
+```
+
+Read more in [@jsenv/cli](./packages/related/cli/#jsenvcli).
+
+## Documentation
+
+For comprehensive documentation, see the full [user documentation](./docs/users/users.md)
