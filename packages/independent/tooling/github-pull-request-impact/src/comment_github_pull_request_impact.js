@@ -4,7 +4,7 @@
  */
 
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
-import { createLogger } from "@jsenv/humanize";
+import { createLogger, errorToMarkdown } from "@jsenv/humanize";
 import { fileURLToPath } from "node:url";
 import { createGitHubPullRequestCommentText } from "./internal/create_github_pull_request_comment_text.js";
 import { exec } from "./internal/exec.js";
@@ -402,15 +402,6 @@ To fix this, change "pull_request" for "pull_request_target" in your workflow fi
 See https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request_target`;
 };
 
-const escapeHtml = (unsafe) => {
-  return unsafe
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-};
-
 const jsenvCreateBeforeMergeErrorComment = (
   error,
   { pullRequestBase, pullRequestHead },
@@ -419,7 +410,7 @@ const jsenvCreateBeforeMergeErrorComment = (
 
 **Error:** Error while trying to collect info before merging ${pullRequestHead} into ${pullRequestBase}.
 
-<pre>${escapeHtml(error.stack)}</pre>
+${errorToMarkdown(error)}
 
 ---`;
 };
@@ -432,7 +423,7 @@ const jsenvCreateCommentForAfterMergeError = (
 
 **Error:** Error while trying to collect info after merging ${pullRequestHead} into ${pullRequestBase}.
 
-<pre>${escapeHtml(error.stack)}</pre>
+${errorToMarkdown(error)}
 
 ---`;
 };
