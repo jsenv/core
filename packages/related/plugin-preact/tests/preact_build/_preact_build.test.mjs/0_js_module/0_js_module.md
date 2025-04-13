@@ -1,4 +1,4 @@
-# [0_js_module](../../preact_build.test.mjs#L28)
+# [0_js_module](../../preact_build.test.mjs#L29)
 
 ```js
 run({

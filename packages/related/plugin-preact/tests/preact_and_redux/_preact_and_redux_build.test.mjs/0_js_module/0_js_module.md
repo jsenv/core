@@ -1,4 +1,4 @@
-# [0_js_module](../../preact_and_redux_build.test.mjs#L63)
+# [0_js_module](../../preact_and_redux_build.test.mjs#L64)
 
 ```js
 run({
@@ -16,7 +16,7 @@ run({
 })
 ```
 
-# 1/2 write 7 files into "../../../../../"
+# 1/2 write 6 files into "../../../../../"
 
 see [./@jsenv/core/](./@jsenv/core/)
 
