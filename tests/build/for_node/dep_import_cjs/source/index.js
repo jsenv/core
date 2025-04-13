@@ -1,3 +1,3 @@
-import "foo";
+import "first";
 
 console.log("main");
