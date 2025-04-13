@@ -1,22 +1,18 @@
 {
-  "name": "@jsenv/github-check-run",
-  "version": "0.3.0",
-  "description": "Interact with GitHub check rest API",
+  "name": "@jsenv/urls",
+  "version": "2.7.3",
   "license": "MIT",
-  "author": {
-    "name": "dmail",
-    "email": "dmaillard06@gmail.com"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/tooling/github-check-run"
-  },
-  "engines": {
-    "node": ">=18.1.0"
+    "directory": "packages/independent/tooling/urls"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
   },
   "type": "module",
   "exports": {
@@ -25,10 +21,10 @@
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@jsenv/humanize": "1.5.1"
   }

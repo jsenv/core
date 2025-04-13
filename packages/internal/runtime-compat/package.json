@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/runtime-compat",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -14,8 +14,8 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/utils": "2.3.0",
-    "@jsenv/filesystem": "4.15.0",
+    "@jsenv/utils": "2.3.1",
+    "@jsenv/filesystem": "4.15.1",
     "browserslist": "4.24.4"
   }
 }

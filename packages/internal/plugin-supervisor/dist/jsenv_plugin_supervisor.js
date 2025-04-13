@@ -1,5 +1,5 @@
 import { applyBabelPlugins, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectJsenvScript, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
-import { createRequire } from "node:module";
+import { generateSourcemapDataUrl, SOURCEMAP, getOriginalPosition } from "@jsenv/sourcemap";
 
 const formatDefault = v => v;
 const generateContentFrame = ({
@@ -271,160 +271,6 @@ const pathnameToParentPathname = pathname => {
     return "/";
   }
   return pathname.slice(0, slashLastIndex + 1);
-};
-
-const require = createRequire(import.meta.url);
-// consider using https://github.com/7rulnik/source-map-js
-
-const requireSourcemap = () => {
-  const namespace = require("source-map-js");
-  return namespace;
-};
-
-// https://github.com/mozilla/source-map#sourcemapconsumerprototypeoriginalpositionforgeneratedposition
-const getOriginalPosition = ({
-  sourcemap,
-  line,
-  column,
-  bias
-}) => {
-  const {
-    SourceMapConsumer
-  } = requireSourcemap();
-  const sourceMapConsumer = new SourceMapConsumer(sourcemap);
-  const originalPosition = sourceMapConsumer.originalPositionFor({
-    line,
-    column,
-    bias
-  });
-  return originalPosition;
-};
-
-const generateSourcemapDataUrl = sourcemap => {
-  const asBase64 = Buffer.from(JSON.stringify(sourcemap)).toString("base64");
-  return "data:application/json;charset=utf-8;base64,".concat(asBase64);
-};
-
-const SOURCEMAP = {
-  enabledOnContentType: contentType => {
-    return ["text/javascript", "text/css"].includes(contentType);
-  },
-  readComment: ({
-    contentType,
-    content
-  }) => {
-    const read = {
-      "text/javascript": parseJavaScriptSourcemapComment,
-      "text/css": parseCssSourcemapComment
-    }[contentType];
-    return read ? read(content) : null;
-  },
-  removeComment: ({
-    contentType,
-    content
-  }) => {
-    return SOURCEMAP.writeComment({
-      contentType,
-      content,
-      specifier: ""
-    });
-  },
-  writeComment: ({
-    contentType,
-    content,
-    specifier
-  }) => {
-    const write = {
-      "text/javascript": setJavaScriptSourceMappingUrl,
-      "text/css": setCssSourceMappingUrl
-    }[contentType];
-    return write ? write(content, specifier) : content;
-  }
-};
-const parseJavaScriptSourcemapComment = javaScriptSource => {
-  let sourceMappingUrl;
-  replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, value => {
-    sourceMappingUrl = value;
-  });
-  if (!sourceMappingUrl) {
-    return null;
-  }
-  return {
-    type: "sourcemap_comment",
-    subtype: "js",
-    // we assume it's on last line
-    line: javaScriptSource.split(/\r?\n/).length,
-    // ${"//#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
-    column: "//#".concat(" sourceMappingURL=").length + 1,
-    specifier: sourceMappingUrl
-  };
-};
-const setJavaScriptSourceMappingUrl = (javaScriptSource, sourceMappingFileUrl) => {
-  let replaced;
-  const sourceAfterReplace = replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, () => {
-    replaced = true;
-    return sourceMappingFileUrl ? writeJavaScriptSourceMappingURL(sourceMappingFileUrl) : "";
-  });
-  if (replaced) {
-    return sourceAfterReplace;
-  }
-  return sourceMappingFileUrl ? "".concat(javaScriptSource, "\n").concat(writeJavaScriptSourceMappingURL(sourceMappingFileUrl), "\n") : javaScriptSource;
-};
-const parseCssSourcemapComment = cssSource => {
-  let sourceMappingUrl;
-  replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, value => {
-    sourceMappingUrl = value;
-  });
-  if (!sourceMappingUrl) {
-    return null;
-  }
-  return {
-    type: "sourcemap_comment",
-    subtype: "css",
-    // we assume it's on last line
-    line: cssSource.split(/\r?\n/).length - 1,
-    // ${"//*#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
-    column: "//*#".concat(" sourceMappingURL=").length + 1,
-    specifier: sourceMappingUrl
-  };
-};
-const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
-  let replaced;
-  const sourceAfterReplace = replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, () => {
-    replaced = true;
-    return sourceMappingFileUrl ? writeCssSourceMappingUrl(sourceMappingFileUrl) : "";
-  });
-  if (replaced) {
-    return sourceAfterReplace;
-  }
-  return sourceMappingFileUrl ? "".concat(cssSource, "\n").concat(writeCssSourceMappingUrl(sourceMappingFileUrl), "\n") : cssSource;
-};
-const javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
-const cssSourceMappingUrlCommentRegExp = /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g;
-
-// ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
-const writeJavaScriptSourceMappingURL = value => {
-  return "//#".concat(" sourceMappingURL=", value);
-};
-const writeCssSourceMappingUrl = value => {
-  return "/*# sourceMappingURL=".concat(value, " */");
-};
-const replaceSourceMappingUrl = (source, regexp, callback) => {
-  let lastSourceMappingUrl;
-  let matchSourceMappingUrl;
-  while (matchSourceMappingUrl = regexp.exec(source)) {
-    lastSourceMappingUrl = matchSourceMappingUrl;
-  }
-  if (lastSourceMappingUrl) {
-    const index = lastSourceMappingUrl.index;
-    const before = source.slice(0, index);
-    const after = source.slice(index);
-    const mappedAfter = after.replace(regexp, (match, firstGroup) => {
-      return callback(firstGroup);
-    });
-    return "".concat(before).concat(mappedAfter);
-  }
-  return source;
 };
 
 /*
@@ -994,6 +840,7 @@ const jsenvPluginSupervisor = ({
           if (sourcemap) {
             const original = getOriginalPosition({
               sourcemap,
+              url: file,
               line,
               column
             });

@@ -1,12 +1,16 @@
-import { createException } from "@jsenv/exception";
 import { memoryUsage } from "node:process";
 import { setFlagsFromString } from "node:v8";
 import { runInNewContext } from "node:vm";
 import { parentPort } from "node:worker_threads";
 import { executeUsingDynamicImport } from "../execute_using_dynamic_import.js";
+import { createException } from "../exception.js";
 import "node:fs";
 import "node:perf_hooks";
 import "node:inspector";
+import "../jsenv_test_node_modules.js";
+import "node:os";
+import "node:tty";
+import "node:url";
 
 setFlagsFromString("--expose_gc");
 global.gc = runInNewContext("gc");

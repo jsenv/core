@@ -5,7 +5,6 @@
  */
 
 import { createDetailedMessage, createLogger, UNICODE } from "@jsenv/humanize";
-
 import { PATCH, POST } from "./internal/github_rest_api.js";
 
 export const startGithubCheckRun = async ({

@@ -15,6 +15,7 @@ const run = async () => {
       "./index.js": {
         runtimeCompat: { node: "20" },
         packageSideEffects: false,
+        packageDependencies: "include",
       },
     },
   });

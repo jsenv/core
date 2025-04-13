@@ -26,6 +26,7 @@ import {
   ensureEmptyDirectory,
   lookupPackageDirectory,
   readPackageAtOrNull,
+  updateJsonFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
 import {
@@ -636,6 +637,7 @@ export const build = async ({
             entryBuildInfo.buildFileVersions = result.buildFileVersions;
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
+            entryBuildInfo.buildSideEffectFiles = result.buildSideEffectFiles;
             entryBuildInfo.duration = Date.now() - entryPointBuildStartMs;
             onEntryPointBuildEnd();
           })();
@@ -658,11 +660,15 @@ export const build = async ({
     const buildFileVersions = {};
     const buildInlineContents = {};
     const buildManifest = {};
+    const buildSideEffectUrlSet = new Set();
     for (const [, entryBuildInfo] of entryBuildInfoMap) {
       Object.assign(buildFileContents, entryBuildInfo.buildFileContents);
       Object.assign(buildFileVersions, entryBuildInfo.buildFileVersions);
       Object.assign(buildInlineContents, entryBuildInfo.buildInlineContents);
       Object.assign(buildManifest, entryBuildInfo.buildManifest);
+      for (const buildSideEffectUrl of entryBuildInfo.buildSideEffectFiles) {
+        buildSideEffectUrlSet.add(buildSideEffectUrl);
+      }
     }
     if (writeOnFileSystem) {
       clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
@@ -670,6 +676,70 @@ export const build = async ({
       for (const buildRelativeUrl of buildRelativeUrls) {
         const buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
         writeFileSync(buildUrl, buildFileContents[buildRelativeUrl]);
+      }
+      if (buildSideEffectUrlSet.size) {
+        const normalizeSideEffectFileUrl = (url) => {
+          const urlRelativeToPackage = urlToRelativeUrl(
+            url,
+            packageDirectory.url,
+          );
+          return urlRelativeToPackage[0] === "."
+            ? urlRelativeToPackage
+            : `./${urlRelativeToPackage}`;
+        };
+        const updatePackageSideEffects = (sideEffectUrlSet) => {
+          const packageJsonFileUrl = new URL(
+            "./package.json",
+            packageDirectory.url,
+          ).href;
+          const sideEffectRelativeUrlArray = [];
+          for (const sideEffectUrl of sideEffectUrlSet) {
+            sideEffectRelativeUrlArray.push(
+              normalizeSideEffectFileUrl(sideEffectUrl),
+            );
+          }
+          updateJsonFileSync(packageJsonFileUrl, {
+            sideEffects: sideEffectRelativeUrlArray,
+          });
+        };
+        const sideEffects = readPackageDirectory(
+          packageDirectory.url,
+        )?.sideEffects;
+        if (sideEffects === false) {
+          updatePackageSideEffects(buildSideEffectUrlSet);
+        } else if (Array.isArray(sideEffects)) {
+          const sideEffectUrlSet = new Set();
+          const packageSideEffectUrlSet = new Set();
+          for (const sideEffectFileRelativeUrl of sideEffects) {
+            const sideEffectFileUrl = new URL(
+              sideEffectFileRelativeUrl,
+              packageDirectory.url,
+            ).href;
+            packageSideEffectUrlSet.add(sideEffectFileUrl);
+          }
+          let hasSomeOutdatedSideEffectUrl = false;
+          for (const packageSideEffectUrl of packageSideEffectUrlSet) {
+            if (
+              urlIsInsideOf(packageSideEffectUrl, buildDirectoryUrl) &&
+              !buildSideEffectUrlSet.has(packageSideEffectUrl)
+            ) {
+              hasSomeOutdatedSideEffectUrl = true;
+            } else {
+              sideEffectUrlSet.add(packageSideEffectUrl);
+            }
+          }
+          let hasSomeNewSideEffectsUrl = false;
+          for (const buildSideEffectUrl of buildSideEffectUrlSet) {
+            if (packageSideEffectUrlSet.has(buildSideEffectUrl)) {
+              continue;
+            }
+            hasSomeNewSideEffectsUrl = true;
+            sideEffectUrlSet.add(buildSideEffectUrl);
+          }
+          if (hasSomeOutdatedSideEffectUrl || hasSomeNewSideEffectsUrl) {
+            updatePackageSideEffects(sideEffectUrlSet);
+          }
+        }
       }
     }
     onBuildEnd({
@@ -796,6 +866,7 @@ const entryPointDefaultParams = {
   assetManifest: false,
   assetManifestFileRelativeUrl: "asset-manifest.json",
   packageSideEffects: true,
+  packageDependencies: "auto", // "auto", "ignore", "include"
 };
 
 const prepareEntryPointBuild = async (
@@ -846,6 +917,7 @@ const prepareEntryPointBuild = async (
     assetManifest,
     assetManifestFileRelativeUrl,
     packageSideEffects,
+    packageDependencies,
   } = {
     ...entryPointDefaultParams,
     ...entryPointParams,
@@ -939,6 +1011,7 @@ const prepareEntryPointBuild = async (
       ? new URL("craft/", outDirectoryUrl)
       : undefined,
     packageDirectory,
+    packageDependencies,
   });
 
   let _getOtherEntryBuildInfo;
@@ -1038,6 +1111,7 @@ const prepareEntryPointBuild = async (
           ? new URL("shape/", outDirectoryUrl)
           : undefined,
         packageDirectory,
+        packageDependencies,
       });
       const buildSpecifierManager = createBuildSpecifierManager({
         rawKitchen,
@@ -1245,6 +1319,7 @@ const prepareEntryPointBuild = async (
         });
       }
 
+      const buildSideEffectFiles = [];
       refine: {
         finalKitchen.context.buildStep = "refine";
 
@@ -1332,6 +1407,9 @@ const prepareEntryPointBuild = async (
                 for (const refineBuildUrlContentCallback of refineBuildUrlContentCallbackSet) {
                   refineBuildUrlContentCallback(buildUrlInfo, {
                     buildUrl: buildSpecifierManager.getBuildUrl(buildUrlInfo),
+                    registerBuildSideEffectFile: (buildFileUrl) => {
+                      buildSideEffectFiles.push(buildFileUrl);
+                    },
                   });
                 }
               },
@@ -1362,6 +1440,7 @@ const prepareEntryPointBuild = async (
         buildFileVersions,
         buildInlineContents,
         buildManifest,
+        buildSideEffectFiles,
       };
     },
   };

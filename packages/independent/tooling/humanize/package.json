@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/humanize",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Generate messages meant to read by humans",
   "license": "MIT",
   "repository": {

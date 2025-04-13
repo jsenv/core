@@ -1,12 +1,12 @@
-# [0_basic](../../vendor_and_dynamic_import.test.mjs#L22)
+# [1_include_dependencies](../../vendor_and_dynamic_import.test.mjs#L24)
 
 ```js
-run()
+run({ packageDependencies: "include" })
 ```
 
-# 1/2 write file "./build/main_build.js"
+# 1/2 write 4 files into "./build/"
 
-see [./build/main_build.js](./build/main_build.js)
+see [./build/](./build/)
 
 # 2/2 resolve
 

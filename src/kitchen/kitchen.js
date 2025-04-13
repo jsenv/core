@@ -20,10 +20,9 @@ import { createUrlGraph } from "./url_graph/url_graph.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
 import { urlSpecifierEncoding } from "./url_graph/url_specifier_encoding.js";
 
-const inlineContentClientFileUrl = new URL(
+const inlineContentClientFileUrl = import.meta.resolve(
   "./client/inline_content.js",
-  import.meta.url,
-).href;
+);
 
 export const createKitchen = ({
   name,
@@ -32,12 +31,14 @@ export const createKitchen = ({
 
   rootDirectoryUrl,
   mainFilePath,
-  ignore,
-  ignoreProtocol = "remove",
-  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   dev = false,
   build = false,
   runtimeCompat,
+
+  ignore,
+  ignoreProtocol = "remove",
+  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
+
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
@@ -50,11 +51,16 @@ export const createKitchen = ({
   outDirectoryUrl,
   initialContext = {},
   packageDirectory,
+  packageDependencies,
 }) => {
   const logger = createLogger({ logLevel });
 
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
+
+  if (packageDependencies === "auto") {
+    packageDependencies = build && nodeRuntimeEnabled ? "ignore" : "include";
+  }
 
   const kitchen = {
     context: {
@@ -125,6 +131,82 @@ export const createKitchen = ({
     const protocolIsSupported = supportedProtocols.includes(protocol);
     return !protocolIsSupported;
   };
+  const isIgnoredBecauseInPackageDependencies = (() => {
+    if (packageDependencies === undefined) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    if (packageDependencies === "include") {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    if (!packageDirectory.url) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    const rootPackageJSON = packageDirectory.read(packageDirectory.url);
+    if (!rootPackageJSON) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    const { dependencies = {}, optionalDependencies = {} } = rootPackageJSON;
+    const dependencyKeys = Object.keys(dependencies);
+    const optionalDependencyKeys = Object.keys(optionalDependencies);
+    const dependencySet = new Set([
+      ...dependencyKeys,
+      ...optionalDependencyKeys,
+    ]);
+    if (dependencySet.size === 0) {
+      return FUNCTION_RETURNING_FALSE;
+    }
+
+    let getEffect;
+    if (packageDependencies === "ignore") {
+      getEffect = (dependencyName) => {
+        if (!dependencySet.has(dependencyName)) {
+          return "include";
+        }
+        return "ignore";
+      };
+    } else if (typeof packageDependencies === "object") {
+      let defaultEffect = "ignore";
+      const dependencyEffectMap = new Map();
+      for (const dependencyKey of Object.keys(packageDependencies)) {
+        const dependencyEffect = packageDependencies[dependencyKey];
+        if (dependencyKey === "*") {
+          defaultEffect = dependencyEffect;
+        } else {
+          dependencyEffectMap.set(dependencyKey, dependencyEffect);
+        }
+      }
+      getEffect = (dependencyName) => {
+        if (!dependencySet.has(dependencyName)) {
+          return "include";
+        }
+        const dependencyEffect = packageDependencies[dependencyName];
+        if (dependencyEffect) {
+          return dependencyEffect;
+        }
+        return defaultEffect;
+      };
+    }
+    return (url) => {
+      if (!url.startsWith("file:")) {
+        return false;
+      }
+      const packageDirectoryUrl = packageDirectory.find(url);
+      if (!packageDirectoryUrl) {
+        return false;
+      }
+      const packageJSON = packageDirectory.read(packageDirectoryUrl);
+      const name = packageJSON?.name;
+      if (!name) {
+        return false;
+      }
+      const effect = getEffect(name);
+      if (effect !== "ignore") {
+        return false;
+      }
+      return true;
+    };
+  })();
+
   let isIgnoredByParam = () => false;
   if (ignore) {
     const associations = URL_META.resolveAssociations(
@@ -144,7 +226,11 @@ export const createKitchen = ({
     };
   }
   const isIgnored = (url) => {
-    return isIgnoredByProtocol(url) || isIgnoredByParam(url);
+    return (
+      isIgnoredByProtocol(url) ||
+      isIgnoredByParam(url) ||
+      isIgnoredBecauseInPackageDependencies(url)
+    );
   };
   const resolveReference = (reference) => {
     const setReferenceUrl = (referenceUrl) => {
@@ -634,6 +720,8 @@ ${urlInfo.firstReference.trace.message}`;
 
   return kitchen;
 };
+
+const FUNCTION_RETURNING_FALSE = () => false;
 
 const debounceCook = (cook) => {
   const pendingDishes = new Map();

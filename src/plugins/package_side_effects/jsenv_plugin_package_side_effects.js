@@ -11,10 +11,8 @@
  *
  */
 
-import { updateJsonFileSync } from "@jsenv/filesystem";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { URL_META } from "@jsenv/url-meta";
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
 export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   if (!packageDirectory.url) {
@@ -28,29 +26,6 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   if (sideEffects !== false && !Array.isArray(sideEffects)) {
     return [];
   }
-
-  const normalizeSideEffectFileUrl = (url) => {
-    const urlRelativeToPackage = urlToRelativeUrl(url, packageDirectory.url);
-    return urlRelativeToPackage[0] === "."
-      ? urlRelativeToPackage
-      : `./${urlRelativeToPackage}`;
-  };
-
-  const updatePackageSideEffects = (sideEffectBuildFileUrls) => {
-    const packageJsonFileUrl = new URL("./package.json", packageDirectory.url)
-      .href;
-    const sideEffectRelativeUrlArray = [];
-    for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
-      sideEffectRelativeUrlArray.push(
-        normalizeSideEffectFileUrl(sideEffectBuildUrl),
-      );
-    }
-    updateJsonFileSync(packageJsonFileUrl, {
-      sideEffects: sideEffectRelativeUrlArray,
-    });
-  };
-
-  const sideEffectBuildFileUrls = [];
 
   const packageSideEffectsCacheMap = new Map();
   const readSideEffectInfoFromClosestPackage = (urlInfo) => {
@@ -177,49 +152,14 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
         return;
       }
     },
-    refineBuildUrlContent: (buildUrlInfo, { buildUrl }) => {
+    refineBuildUrlContent: (
+      buildUrlInfo,
+      { buildUrl, registerBuildSideEffectFile },
+    ) => {
       for (const sideEffect of buildUrlInfo.contentSideEffects) {
         if (sideEffect.has) {
-          sideEffectBuildFileUrls.push(buildUrl);
+          registerBuildSideEffectFile(buildUrl);
           return;
-        }
-      }
-    },
-    refineBuild: (kitchen) => {
-      if (sideEffectBuildFileUrls.length === 0) {
-        return;
-      }
-      if (sideEffects === false) {
-        updatePackageSideEffects(sideEffectBuildFileUrls);
-        return;
-      }
-      const { buildDirectoryUrl } = kitchen.context;
-      const sideEffectFileUrlSet = new Set();
-      if (Array.isArray(sideEffects)) {
-        let packageNeedsUpdate = false;
-        for (const sideEffectFileRelativeUrl of sideEffects) {
-          const sideEffectFileUrl = new URL(
-            sideEffectFileRelativeUrl,
-            packageDirectory.url,
-          ).href;
-          if (
-            urlIsInsideOf(sideEffectFileUrl, buildDirectoryUrl) &&
-            !sideEffectBuildFileUrls.includes(sideEffectFileUrl)
-          ) {
-            packageNeedsUpdate = true;
-          } else {
-            sideEffectFileUrlSet.add(sideEffectFileUrl);
-          }
-        }
-        for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
-          if (sideEffectFileUrlSet.has(sideEffectBuildUrl)) {
-            continue;
-          }
-          packageNeedsUpdate = true;
-          sideEffectFileUrlSet.add(sideEffectBuildUrl);
-        }
-        if (packageNeedsUpdate) {
-          updatePackageSideEffects(sideEffectFileUrlSet);
         }
       }
     },

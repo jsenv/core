@@ -18,9 +18,7 @@ await build({
     },
     "./assert_node.js": {
       buildRelativeUrl: "./node/jsenv_assert_node.js",
-      runtimeCompat: {
-        node: "20",
-      },
+      runtimeCompat: { node: "20" },
       plugins: [
         jsenvPluginCommonJs({
           include: {

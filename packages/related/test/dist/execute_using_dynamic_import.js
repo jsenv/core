@@ -1,8 +1,8 @@
-import { createException } from "@jsenv/exception";
 import { writeFileSync } from "node:fs";
 import { memoryUsage } from "node:process";
 import { PerformanceObserver, performance } from "node:perf_hooks";
 import { Session } from "node:inspector";
+import { createException } from "./exception.js";
 
 const startObservingPerformances = () => {
   const measureEntries = [];

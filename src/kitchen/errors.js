@@ -49,6 +49,7 @@ ${reason}`,
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     error.message = createDetailedMessage(error.message, {
       "reference trace": reference.trace.message,
+      ...detailsFromFirstReference(reference),
     });
     return error;
   }
@@ -288,7 +289,11 @@ const detailsFromFirstReference = (reference) => {
 };
 const getFirstReferenceInProject = (reference) => {
   const ownerUrlInfo = reference.ownerUrlInfo;
-  if (!ownerUrlInfo.url.includes("/node_modules/")) {
+  if (
+    !ownerUrlInfo.url.includes("/node_modules/") &&
+    ownerUrlInfo.packageDirectoryUrl ===
+      ownerUrlInfo.context.packageDirectory.url
+  ) {
     return reference;
   }
   return getFirstReferenceInProject(ownerUrlInfo.firstReference);
