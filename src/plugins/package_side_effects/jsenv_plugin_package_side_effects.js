@@ -15,12 +15,8 @@ import { updateJsonFileSync } from "@jsenv/filesystem";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { URL_META } from "@jsenv/url-meta";
 import { urlToRelativeUrl } from "@jsenv/urls";
-import { jsenvCoreDirectoryUrl } from "../../jsenv_core_directory_url.js";
 
-export const jsenvPluginPackageSideEffects = ({
-  rootDirectoryUrl,
-  packageDirectory,
-}) => {
+export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   if (!packageDirectory.url) {
     return [];
   }
@@ -36,10 +32,6 @@ export const jsenvPluginPackageSideEffects = ({
   const sideEffectFileUrlSet = new Set();
   const packageJsonFileUrl = new URL("./package.json", packageDirectory.url)
     .href;
-  const shouldUpdatePackageJSON =
-    import.meta.build ||
-    // only when building @jsenv/core itself (not when running tests or building @jsenv/core/packages/*)
-    rootDirectoryUrl === String(jsenvCoreDirectoryUrl);
 
   const normalizeSideEffectFileUrl = (url) => {
     const urlRelativeToPackage = urlToRelativeUrl(url, packageDirectory.url);
@@ -184,9 +176,6 @@ export const jsenvPluginPackageSideEffects = ({
       }
     },
     refineBuild: () => {
-      if (!shouldUpdatePackageJSON) {
-        return;
-      }
       if (sideEffectBuildFileUrls.length === 0) {
         return;
       }
