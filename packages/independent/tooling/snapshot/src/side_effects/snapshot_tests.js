@@ -2,7 +2,10 @@ import { writeFileSync } from "@jsenv/filesystem";
 import { urlToBasename, urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { takeDirectorySnapshot } from "../filesystem_snapshot.js";
 import { getCallerLocation } from "../get_caller_location.js";
-import { createCaptureSideEffects } from "./create_capture_side_effects.js";
+import {
+  createCaptureSideEffects,
+  ignoreSideEffects,
+} from "./create_capture_side_effects.js";
 import { renderSideEffects, renderSmallLink } from "./render_side_effects.js";
 
 /**
@@ -235,10 +238,11 @@ export const snapshotTests = async (
 // snapshotTests.prefConfigure(options)
 // snapshotTests(import.meta.url, ({ test }) => { })
 // which are equivalent
-
 snapshotTests.prefConfigure = (options) => {
   preconfiguredOptions = options;
 };
+
+snapshotTests.ignoreSideEffects = ignoreSideEffects;
 
 // see https://github.com/parshap/node-sanitize-filename/blob/master/index.js
 const asValidFilename = (string) => {

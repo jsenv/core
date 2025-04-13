@@ -1,3 +1,4 @@
+import { errorToHTML } from "@jsenv/humanize";
 import { readFileSync } from "node:fs";
 import { pickContentType } from "../../content_negotiation/pick_content_type.js";
 import { replacePlaceholdersInHtml } from "../../replace_placeholder_in_html.js";
@@ -36,14 +37,7 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
             return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
           };
           const renderHtmlForErrorWithDetails = () => {
-            if (serverInternalErrorIsAPrimitive) {
-              return `<pre>${JSON.stringify(
-                serverInternalError,
-                null,
-                "  ",
-              )}</pre>`;
-            }
-            return `<pre>${serverInternalError.stack}</pre>`;
+            return errorToHTML(serverInternalError);
           };
 
           const internalErrorHtmlTemplate = readFileSync(

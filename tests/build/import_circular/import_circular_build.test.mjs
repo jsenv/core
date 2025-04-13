@@ -14,10 +14,11 @@ const run = async ({ bundling }) => {
         base: "./",
         bundling,
         runtimeCompat: { node: "0" },
+        packageSideEffects: false,
       },
     },
   });
-  return import(new URL("./build/main.js", import.meta.url));
+  return import(import.meta.resolve("./build/main.js"));
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {

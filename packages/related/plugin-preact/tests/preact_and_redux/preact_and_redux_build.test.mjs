@@ -48,6 +48,7 @@ const run = async ({ runtimeCompat, bundling }) => {
         ],
         runtimeCompat,
         bundling,
+        packageSideEffects: false,
       },
     },
   });

@@ -12,6 +12,8 @@ export { humanizeFileSize, humanizeMemory } from "./byte/byte.js";
 export { distributePercentages } from "./percentage/distribute_percentages.js";
 export { generateContentFrame } from "./content_frame/content_frame.js";
 export { createCallOrderer } from "./log/call_orderer.js";
+export { errorToMarkdown } from "./error/error_to_markdown.js";
+export { errorToHTML } from "./error/error_to_html.js";
 
 // node only
 export { renderSection, renderBigSection } from "./log/section.js";

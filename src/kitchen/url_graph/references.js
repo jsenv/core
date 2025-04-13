@@ -7,7 +7,6 @@ import {
   urlToBasename,
   urlToExtension,
 } from "@jsenv/urls";
-
 import { prependContent } from "../prepend_content.js";
 
 let referenceId = 0;
@@ -40,7 +39,14 @@ export const createDependencies = (ownerUrlInfo) => {
       ...props,
     });
     const reference = originalReference.resolve();
-    reference.finalize();
+    if (reference.urlInfo) {
+      return reference;
+    }
+    const kitchen = ownerUrlInfo.kitchen;
+    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
+    reference.urlInfo = urlInfo;
+    addDependency(reference);
+    ownerUrlInfo.context.finalizeReference(reference);
     return reference;
   };
 
@@ -356,6 +362,7 @@ const createReference = ({
     implicitReferenceSet: new Set(),
     isWeak,
     hasVersioningEffect,
+    urlInfoEffectSet: new Set(),
     version,
     injected,
     timing: {},
@@ -387,17 +394,6 @@ const createReference = ({
     });
     reference.next = referenceRedirected;
     return referenceRedirected;
-  };
-
-  reference.finalize = () => {
-    if (reference.urlInfo) {
-      return;
-    }
-    const kitchen = ownerUrlInfo.kitchen;
-    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
-    reference.urlInfo = urlInfo;
-    addDependency(reference);
-    ownerUrlInfo.context.finalizeReference(reference);
   };
 
   // "formatReference" can be async BUT this is an exception
@@ -762,4 +758,8 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   referencedUrlInfo.entryUrlInfo = reference.isEntryPoint
     ? referencedUrlInfo
     : reference.ownerUrlInfo.entryUrlInfo;
+
+  for (const urlInfoEffect of reference.urlInfoEffectSet) {
+    urlInfoEffect(referencedUrlInfo);
+  }
 };

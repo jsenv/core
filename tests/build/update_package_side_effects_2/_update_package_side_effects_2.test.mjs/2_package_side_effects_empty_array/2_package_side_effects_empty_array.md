@@ -1,12 +1,12 @@
-# [0_basic](../../update_package_side_effects.test.mjs#L25)
+# [2_package_side_effects_empty_array](../../update_package_side_effects_2.test.mjs#L43)
 
 ```js
-run()
+run([])
 ```
 
-# 1/2 write 2 files into "./root/build/"
+# 1/2 write 3 files into "./git_ignored/"
 
-see [./root/build/](./root/build/)
+see [./git_ignored/](./git_ignored/)
 
 # 2/2 resolve
 

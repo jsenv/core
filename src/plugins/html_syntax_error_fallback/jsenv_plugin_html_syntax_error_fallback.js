@@ -1,5 +1,5 @@
 import { parseHtml } from "@jsenv/ast";
-import { generateContentFrame } from "@jsenv/humanize";
+import { errorToHTML, generateContentFrame } from "@jsenv/humanize";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 import { jsenvCoreDirectoryUrl } from "../../jsenv_core_directory_url.js";
@@ -71,18 +71,10 @@ const generateHtmlForSyntaxError = (
       urlWithLineAndColumn,
     )}')`,
     errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
-    syntaxError: escapeHtml(htmlErrorContentFrame),
+    syntaxErrorHTML: errorToHTML(htmlErrorContentFrame),
   };
   const html = replacePlaceholders(htmlForSyntaxError, replacers);
   return html;
-};
-const escapeHtml = (string) => {
-  return string
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 };
 const replacePlaceholders = (html, replacers) => {
   return html.replace(/\$\{(\w+)\}/g, (match, name) => {

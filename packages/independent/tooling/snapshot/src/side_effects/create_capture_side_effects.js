@@ -9,6 +9,8 @@ const executionEffectsDefault = {
   return: true,
 };
 
+let currentCapture = false;
+
 export const createCaptureSideEffects = ({
   sourceFileUrl,
   logEffects = true,
@@ -50,6 +52,7 @@ export const createCaptureSideEffects = ({
     replaceFilesystemWellKnownValues,
   };
   let functionExecutingCount = 0;
+  let ignored = false;
   const capture = (fn, { callSite, baseDirectory } = {}) => {
     const unicodeSupported = UNICODE.supported;
     const ansiSupported = ANSI.supported;
@@ -74,6 +77,7 @@ export const createCaptureSideEffects = ({
     };
     const onSideEffectRemoved = () => {};
     const addSideEffect = (sideEffect) => {
+      if (ignored) return null;
       sideEffects.push(sideEffect);
       onSideEffectAdded(sideEffect);
       return sideEffect;
@@ -286,6 +290,7 @@ export const createCaptureSideEffects = ({
       });
     };
     const onFinally = () => {
+      currentCapture = null;
       delete process.env.CAPTURING_SIDE_EFFECTS;
       UNICODE.supported = unicodeSupported;
       ANSI.supported = ansiSupported;
@@ -326,6 +331,13 @@ export const createCaptureSideEffects = ({
     process.env.CAPTURING_SIDE_EFFECTS = "1";
     functionExecutingCount++;
     let returnedPromise = false;
+    currentCapture = {
+      ignoreWhile: (fn) => {
+        ignored = true;
+        fn();
+        ignored = false;
+      },
+    };
     try {
       const valueReturned = fn();
       if (valueReturned && typeof valueReturned.then === "function") {
@@ -355,7 +367,17 @@ export const createCaptureSideEffects = ({
       }
     }
   };
+  capture.ignoreSideEffects = ignoreSideEffects;
+
   return capture;
+};
+
+export const ignoreSideEffects = (fn) => {
+  if (!currentCapture) {
+    console.warn(`ignoreSideEffects called outside of captureSideEffects`);
+    return;
+  }
+  currentCapture.ignoreWhile(fn);
 };
 
 const RETURN_PROMISE = {};

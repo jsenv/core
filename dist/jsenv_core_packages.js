@@ -1,7 +1,7 @@
 import stripAnsi from "strip-ansi";
 import { createSupportsColor, isUnicodeSupported, emojiRegex, eastAsianWidth, clearTerminal, eraseLines, createSupportsColor$1, isUnicodeSupported$1, emojiRegex$1, eastAsianWidth$1, clearTerminal$1, eraseLines$1, createSupportsColor$2, isUnicodeSupported$2, emojiRegex$2, eastAsianWidth$2, clearTerminal$2, eraseLines$2 } from "./jsenv_core_node_modules.js";
 import { stripVTControlCharacters } from "node:util";
-import { existsSync, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$2, watch, realpathSync, readdir, chmod, stat, lstat, promises, unlink, rmdir } from "node:fs";
+import { existsSync, readFileSync as readFileSync$2, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$2, watch, realpathSync, readdir, chmod, stat, lstat, promises, unlink, rmdir } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -619,6 +619,29 @@ const fillLeft$1 = (value, biggestValue, char = " ") => {
   }
   padded += value;
   return padded;
+};
+
+const errorToHTML$1 = (error) => {
+  const errorIsAPrimitive =
+    error === null ||
+    (typeof error !== "object" && typeof error !== "function");
+
+  if (errorIsAPrimitive) {
+    if (typeof error === "string") {
+      return `<pre>${escapeHtml$1(error)}</pre>`;
+    }
+    return `<pre>${JSON.stringify(error, null, "  ")}</pre>`;
+  }
+  return `<pre>${escapeHtml$1(error.stack)}</pre>`;
+};
+
+const escapeHtml$1 = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 };
 
 const LOG_LEVEL_OFF$2 = "off";
@@ -1867,8 +1890,11 @@ const getParentDirectoryUrl$1 = (url) => {
   return new URL(url.endsWith("/") ? "../" : "./", url).href;
 };
 
-const findAncestorDirectoryUrl$1 = (url, callback) => {
+const findSelfOrAncestorDirectoryUrl$1 = (url, callback) => {
   url = String(url);
+  if (!url.endsWith("/")) {
+    url = new URL("./", url).href;
+  }
   while (url !== "file:///") {
     if (callback(url)) {
       return url;
@@ -1879,10 +1905,23 @@ const findAncestorDirectoryUrl$1 = (url, callback) => {
 };
 
 const lookupPackageDirectory$1 = (currentUrl) => {
-  return findAncestorDirectoryUrl$1(currentUrl, (ancestorDirectoryUrl) => {
+  return findSelfOrAncestorDirectoryUrl$1(currentUrl, (ancestorDirectoryUrl) => {
     const potentialPackageJsonFileUrl = `${ancestorDirectoryUrl}package.json`;
     return existsSync(new URL(potentialPackageJsonFileUrl));
   });
+};
+
+const readPackageAtOrNull$1 = (packageDirectoryUrl) => {
+  try {
+    const packageFileContent = readFileSync$2(
+      new URL("./package.json", packageDirectoryUrl),
+      "utf8",
+    );
+    const packageJSON = JSON.parse(packageFileContent);
+    return packageJSON;
+  } catch {
+    return null;
+  }
 };
 
 /*
@@ -2839,6 +2878,33 @@ const normalizeMediaType$1 = (value) => {
   return value;
 };
 
+const readFileSync$1 = (value, { as } = {}) => {
+  const fileUrl = assertAndNormalizeFileUrl$1(value);
+  if (as === undefined) {
+    const contentType = CONTENT_TYPE$1.fromUrlExtension(fileUrl);
+    if (CONTENT_TYPE$1.isJson(contentType)) {
+      as = "json";
+    } else if (CONTENT_TYPE$1.isTextual(contentType)) {
+      as = "string";
+    } else {
+      as = "buffer";
+    }
+  }
+  const buffer = readFileSync$2(new URL(fileUrl));
+  if (as === "buffer") {
+    return buffer;
+  }
+  if (as === "string") {
+    return buffer.toString();
+  }
+  if (as === "json") {
+    return JSON.parse(buffer.toString());
+  }
+  throw new Error(
+    `"as" must be one of "buffer","string","json" received "${as}"`,
+  );
+};
+
 const removeEntrySync$1 = (
   source,
   {
@@ -3064,7 +3130,7 @@ const writeDirectorySync$1 = (
     if (e.code === "ENOTDIR") {
       let previousNonDirUrl = destinationUrl;
       // we must try all parent directories as long as it fails with ENOTDIR
-      findAncestorDirectoryUrl$1(destinationUrl, (ancestorUrl) => {
+      findSelfOrAncestorDirectoryUrl$1(destinationUrl, (ancestorUrl) => {
         try {
           statSync(new URL(ancestorUrl));
           return true;
@@ -3128,7 +3194,7 @@ const writeFileSync$1 = (destination, content = "", { force } = {}) => {
   const destinationUrl = assertAndNormalizeFileUrl$1(destination);
   const destinationUrlObject = new URL(destinationUrl);
   if (content && content instanceof URL) {
-    content = readFileSync(content);
+    content = readFileSync$2(content);
   }
   try {
     writeFileSync$2(destinationUrlObject, content);
@@ -3151,6 +3217,31 @@ const writeFileSync$1 = (destination, content = "", { force } = {}) => {
       return;
     }
     throw error;
+  }
+};
+
+const updateJsonFileSync$1 = (fileUrl, values = {}) => {
+  try {
+    const jsonString = readFileSync$1(fileUrl, { as: "string" });
+    const json = JSON.parse(jsonString);
+    const newContent = { ...json };
+    for (const key of Object.keys(values)) {
+      const value = values[key];
+      newContent[key] = value;
+    }
+    let jsonFormatted;
+    if (jsonString.startsWith("{\n")) {
+      jsonFormatted = JSON.stringify(newContent, null, "  ");
+    } else {
+      jsonFormatted = JSON.stringify(newContent);
+    }
+    writeFileSync$1(fileUrl, jsonFormatted);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      writeFileSync$1(fileUrl, JSON.stringify(values));
+      return;
+    }
+    throw e;
   }
 };
 
@@ -3791,7 +3882,7 @@ const defaultLookupPackageScope$1 = (url) => {
 
 const defaultReadPackageJson$1 = (packageUrl) => {
   const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync(packageJsonUrl);
+  const buffer = readFileSync$2(packageJsonUrl);
   const string = String(buffer);
   try {
     return JSON.parse(string);
@@ -4647,7 +4738,7 @@ const mainLegacyResolvers$1 = {
       };
     }
     const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
-    const content = readFileSync(browserMainUrlObject, "utf-8");
+    const content = readFileSync$2(browserMainUrlObject, "utf-8");
     if (
       (/typeof exports\s*==/.test(content) &&
         /typeof module\s*==/.test(content)) ||
@@ -6676,7 +6767,7 @@ const injectSideEffectFileIntoBabelAst$1 = ({
     });
     return;
   }
-  const sidEffectFileContent = readFileSync(new URL(sideEffectFileUrl), "utf8");
+  const sidEffectFileContent = readFileSync$2(new URL(sideEffectFileUrl), "utf8");
   const sideEffectFileContentAst = babel.parse(sidEffectFileContent);
   if (isJsModule) {
     injectAstAfterImport$1(programPath, sideEffectFileContentAst);
@@ -9439,6 +9530,29 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
+const errorToHTML = (error) => {
+  const errorIsAPrimitive =
+    error === null ||
+    (typeof error !== "object" && typeof error !== "function");
+
+  if (errorIsAPrimitive) {
+    if (typeof error === "string") {
+      return `<pre>${escapeHtml(error)}</pre>`;
+    }
+    return `<pre>${JSON.stringify(error, null, "  ")}</pre>`;
+  }
+  return `<pre>${escapeHtml(error.stack)}</pre>`;
+};
+
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 const renderBigSection = (params) => {
   return renderSection({
     width: 45,
@@ -10820,8 +10934,11 @@ const getParentDirectoryUrl = (url) => {
   return new URL(url.endsWith("/") ? "../" : "./", url).href;
 };
 
-const findAncestorDirectoryUrl = (url, callback) => {
+const findSelfOrAncestorDirectoryUrl = (url, callback) => {
   url = String(url);
+  if (!url.endsWith("/")) {
+    url = new URL("./", url).href;
+  }
   while (url !== "file:///") {
     if (callback(url)) {
       return url;
@@ -10832,15 +10949,54 @@ const findAncestorDirectoryUrl = (url, callback) => {
 };
 
 const lookupPackageDirectory = (currentUrl) => {
-  return findAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
+  return findSelfOrAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
     const potentialPackageJsonFileUrl = `${ancestorDirectoryUrl}package.json`;
     return existsSync(new URL(potentialPackageJsonFileUrl));
   });
 };
 
+const createLookupPackageDirectory = () => {
+  const cache = new Map();
+  const lookupPackageDirectoryWithCache = (currentUrl) => {
+    const directoryUrls = [];
+    currentUrl = String(currentUrl);
+    if (currentUrl.endsWith("/")) {
+      directoryUrls.push(currentUrl);
+    } else {
+      const directoryUrl = new URL("./", currentUrl).href;
+      directoryUrls.push(directoryUrl);
+      currentUrl = directoryUrl;
+    }
+    while (currentUrl !== "file:///") {
+      const fromCache = cache.get(currentUrl);
+      if (fromCache !== undefined) {
+        return fromCache;
+      }
+      const packageJsonUrlCandidate = `${currentUrl}package.json`;
+      if (existsSync(new URL(packageJsonUrlCandidate))) {
+        for (const directoryUrl of directoryUrls) {
+          cache.set(directoryUrl, currentUrl);
+        }
+        return currentUrl;
+      }
+      const directoryUrl = getParentDirectoryUrl(currentUrl);
+      directoryUrls.push(directoryUrl);
+      currentUrl = directoryUrl;
+    }
+    for (const directoryUrl of directoryUrls) {
+      cache.set(directoryUrl, null);
+    }
+    return null;
+  };
+  lookupPackageDirectoryWithCache.clearCache = () => {
+    cache.clear();
+  };
+  return lookupPackageDirectoryWithCache;
+};
+
 const readPackageAtOrNull = (packageDirectoryUrl) => {
   try {
-    const packageFileContent = readFileSync(
+    const packageFileContent = readFileSync$2(
       new URL("./package.json", packageDirectoryUrl),
       "utf8",
     );
@@ -11994,6 +12150,33 @@ const normalizeMediaType = (value) => {
   return value;
 };
 
+const readFileSync = (value, { as } = {}) => {
+  const fileUrl = assertAndNormalizeFileUrl(value);
+  if (as === undefined) {
+    const contentType = CONTENT_TYPE.fromUrlExtension(fileUrl);
+    if (CONTENT_TYPE.isJson(contentType)) {
+      as = "json";
+    } else if (CONTENT_TYPE.isTextual(contentType)) {
+      as = "string";
+    } else {
+      as = "buffer";
+    }
+  }
+  const buffer = readFileSync$2(new URL(fileUrl));
+  if (as === "buffer") {
+    return buffer;
+  }
+  if (as === "string") {
+    return buffer.toString();
+  }
+  if (as === "json") {
+    return JSON.parse(buffer.toString());
+  }
+  throw new Error(
+    `"as" must be one of "buffer","string","json" received "${as}"`,
+  );
+};
+
 const removeEntrySync = (
   source,
   {
@@ -12219,7 +12402,7 @@ const writeDirectorySync = (
     if (e.code === "ENOTDIR") {
       let previousNonDirUrl = destinationUrl;
       // we must try all parent directories as long as it fails with ENOTDIR
-      findAncestorDirectoryUrl(destinationUrl, (ancestorUrl) => {
+      findSelfOrAncestorDirectoryUrl(destinationUrl, (ancestorUrl) => {
         try {
           statSync(new URL(ancestorUrl));
           return true;
@@ -12283,7 +12466,7 @@ const writeFileSync = (destination, content = "", { force } = {}) => {
   const destinationUrl = assertAndNormalizeFileUrl(destination);
   const destinationUrlObject = new URL(destinationUrl);
   if (content && content instanceof URL) {
-    content = readFileSync(content);
+    content = readFileSync$2(content);
   }
   try {
     writeFileSync$2(destinationUrlObject, content);
@@ -12554,6 +12737,31 @@ const removeDirectoryNaive = (
       }
     });
   });
+};
+
+const updateJsonFileSync = (fileUrl, values = {}) => {
+  try {
+    const jsonString = readFileSync(fileUrl, { as: "string" });
+    const json = JSON.parse(jsonString);
+    const newContent = { ...json };
+    for (const key of Object.keys(values)) {
+      const value = values[key];
+      newContent[key] = value;
+    }
+    let jsonFormatted;
+    if (jsonString.startsWith("{\n")) {
+      jsonFormatted = JSON.stringify(newContent, null, "  ");
+    } else {
+      jsonFormatted = JSON.stringify(newContent);
+    }
+    writeFileSync(fileUrl, jsonFormatted);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      writeFileSync(fileUrl, JSON.stringify(values));
+      return;
+    }
+    throw e;
+  }
 };
 
 const ensureEmptyDirectory = async (source) => {
@@ -13337,7 +13545,7 @@ const defaultLookupPackageScope = (url) => {
 
 const defaultReadPackageJson = (packageUrl) => {
   const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync(packageJsonUrl);
+  const buffer = readFileSync$2(packageJsonUrl);
   const string = String(buffer);
   try {
     return JSON.parse(string);
@@ -14193,7 +14401,7 @@ const mainLegacyResolvers = {
       };
     }
     const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
-    const content = readFileSync(browserMainUrlObject, "utf-8");
+    const content = readFileSync$2(browserMainUrlObject, "utf-8");
     if (
       (/typeof exports\s*==/.test(content) &&
         /typeof module\s*==/.test(content)) ||
@@ -14644,6 +14852,7 @@ const bundleJsModules = async (
     signal,
     logger,
     rootDirectoryUrl,
+    packageDirectory,
     runtimeCompat,
     sourcemaps,
     isSupportedOnCurrentClients,
@@ -14685,9 +14894,8 @@ const bundleJsModules = async (
     if (chunks) {
       let workspaces;
       let packageName;
-      const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
-      if (packageDirectoryUrl) {
-        const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
+      if (packageDirectory.url) {
+        const packageJSON = packageDirectory.read(packageDirectory.url);
         if (packageJSON) {
           packageName = packageJSON.name;
           workspaces = packageJSON.workspaces;
@@ -14718,7 +14926,7 @@ const bundleJsModules = async (
         for (const workspace of workspaces) {
           const workspacePattern = new URL(
             workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
-            packageDirectoryUrl,
+            packageDirectory.url,
           ).href;
           workspacePatterns[workspacePattern] = true;
         }
@@ -14919,96 +15127,29 @@ const rollupPluginJsenv = ({
     return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
   };
 
-  const packageSideEffectsCacheMap = new Map();
-  const readClosestPackageJsonSideEffects = (url) => {
-    const packageDirectoryUrl = lookupPackageDirectory(url);
-    if (!packageDirectoryUrl) {
-      return undefined;
-    }
-    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
-    if (fromCache) {
-      return fromCache.value;
-    }
-    try {
-      const packageFileContent = readFileSync(
-        new URL("./package.json", packageDirectoryUrl),
-        "utf8",
-      );
-      const packageJSON = JSON.parse(packageFileContent);
-      return storePackageSideEffect(packageDirectoryUrl, packageJSON);
-    } catch {
-      return storePackageSideEffect(packageDirectoryUrl, null);
-    }
-  };
-  const storePackageSideEffect = (packageDirectoryUrl, packageJson) => {
-    if (!packageJson) {
-      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
-      return undefined;
-    }
-    const value = packageJson.sideEffects;
-    if (Array.isArray(value)) {
-      const sideEffectPatterns = {};
-      for (const v of value) {
-        sideEffectPatterns[v] = true;
-      }
-      const associations = URL_META.resolveAssociations(
-        { sideEffects: sideEffectPatterns },
-        packageDirectoryUrl,
-      );
-      const isMatching = (url) => {
-        const meta = URL_META.applyAssociations({ url, associations });
-        return meta.sideEffects || false;
-      };
-      packageSideEffectsCacheMap.set(packageDirectoryUrl, {
-        value: isMatching,
-      });
-      return isMatching;
-    }
-    packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
-    return value;
-  };
-
-  const inferSideEffectsFromResolvedUrl = (url) => {
+  const getModuleSideEffects = (url) => {
     if (url.startsWith("ignore:")) {
-      // console.log(`may have side effect: ${url}`);
-      // double ignore we must keep the import
-      return null;
+      url = url.slice("ignore:".length);
     }
     if (isSpecifierForNodeBuiltin(url)) {
       return false;
     }
-    const closestPackageJsonSideEffects =
-      readClosestPackageJsonSideEffects(url);
-    if (closestPackageJsonSideEffects === undefined) {
-      // console.log(`may have side effect: ${url}`);
-      return null;
+    if (urlToExtension$2(url) === ".css") {
+      return true;
     }
-    if (typeof closestPackageJsonSideEffects === "function") {
-      const haveSideEffect = closestPackageJsonSideEffects(url);
-      // if (haveSideEffect) {
-      //   console.log(`have side effect: ${url}`);
-      // }
-      return haveSideEffect;
+    const urlInfo = graph.getUrlInfo(url);
+    if (!urlInfo) {
+      return null; // we don't know
     }
-    return closestPackageJsonSideEffects;
-  };
-  const getModuleSideEffects = (url, importer) => {
-    if (!url.startsWith("ignore:")) {
-      return inferSideEffectsFromResolvedUrl(url);
+    if (urlInfo.contentSideEffects.length === 0) {
+      return null; // we don't know
     }
-    url = url.slice("ignore:".length);
-    if (url.startsWith("file:")) {
-      return inferSideEffectsFromResolvedUrl(url);
-    }
-    try {
-      const result = kitchen.resolve(url, importer);
-      if (result.packageDirectoryUrl) {
-        storePackageSideEffect(result.packageDirectoryUrl, result.packageJson);
+    for (const contentSideEffect of urlInfo.contentSideEffects) {
+      if (contentSideEffect.has) {
+        return true;
       }
-      return inferSideEffectsFromResolvedUrl(url);
-    } catch {
-      return null;
     }
+    return false;
   };
 
   const resolveImport = (specifier, importer) => {
@@ -15020,9 +15161,7 @@ const rollupPluginJsenv = ({
 
   const dynamicImportIdSet = new Set();
   const assignDynamicImportId = (urlImportedDynamically) => {
-    const urlInfo = jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
-      urlImportedDynamically,
-    );
+    const urlInfo = kitchen.graph.getUrlInfo(urlImportedDynamically);
     let dynamicImportIdBase =
       urlInfo && urlInfo.filenameHint
         ? filenameWithoutExtension(urlInfo.filenameHint)
@@ -15266,10 +15405,7 @@ const rollupPluginJsenv = ({
           }
           if (chunkInfo.isDynamicEntry) {
             const originalFileUrl = getOriginalUrl(chunkInfo, true);
-            const urlInfo =
-              jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
-                originalFileUrl,
-              );
+            const urlInfo = kitchen.graph.getUrlInfo(originalFileUrl);
             if (urlInfo && urlInfo.filenameHint) {
               return urlInfo.filenameHint;
             }
@@ -15288,33 +15424,50 @@ const rollupPluginJsenv = ({
         if (isFileSystemPath$1(importer)) {
           importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
-        const urlObject = resolveImport(specifier, importer);
-        if (!urlObject.href.startsWith("file:")) {
-          return { id: specifier, external: true };
+        const resolvedUrlObject = resolveImport(specifier, importer);
+        const resolvedUrl = resolvedUrlObject.href;
+        if (!resolvedUrl.startsWith("file:")) {
+          return {
+            id: specifier,
+            external: true,
+            moduleSideEffects: getModuleSideEffects(resolvedUrl),
+          };
         }
         const searchParamsToAdd =
-          augmentDynamicImportUrlSearchParams(urlObject);
+          augmentDynamicImportUrlSearchParams(resolvedUrlObject);
         if (searchParamsToAdd) {
-          injectQueryParams(urlObject, searchParamsToAdd);
+          injectQueryParams(resolvedUrlObject, searchParamsToAdd);
         }
-        const id = urlObject.href;
-        return { id, external: true };
+        const id = resolvedUrlObject.href;
+        return {
+          id,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(id),
+        };
       }
       if (isolateDynamicImports) {
         if (isFileSystemPath$1(importer)) {
           importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
-        const urlObject = resolveImport(specifier, importer);
-        if (!urlObject.href.startsWith("file:")) {
-          return { id: specifier, external: true };
+        const resolvedUrlObject = resolveImport(specifier, importer);
+        const resolvedUrl = resolvedUrlObject.href;
+        if (!resolvedUrl.startsWith("file:")) {
+          return {
+            id: specifier,
+            external: true,
+            moduleSideEffects: getModuleSideEffects(resolvedUrl),
+          };
         }
-        const importId = assignDynamicImportId(urlObject.href);
-        injectQueryParams(urlObject, {
+        const importId = assignDynamicImportId(resolvedUrlObject.href);
+        injectQueryParams(resolvedUrlObject, {
           dynamic_import_id: importId,
         });
-        const url = urlObject.href;
+        const url = resolvedUrlObject.href;
         const filePath = PATH_AND_URL_CONVERTER.asFilePath(url);
-        return { id: filePath };
+        return {
+          id: filePath,
+          moduleSideEffects: getModuleSideEffects(url),
+        };
       }
       return null;
     },
@@ -15328,21 +15481,21 @@ const rollupPluginJsenv = ({
         return {
           id: resolvedUrl,
           external: true,
-          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          moduleSideEffects: getModuleSideEffects(resolvedUrl),
         };
       }
       if (!importCanBeBundled(resolvedUrl)) {
         return {
           id: resolvedUrl,
           external: true,
-          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          moduleSideEffects: getModuleSideEffects(resolvedUrl),
         };
       }
       if (resolvedUrl.startsWith("ignore:")) {
         return {
           id: resolvedUrl,
           external: true,
-          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          moduleSideEffects: getModuleSideEffects(resolvedUrl),
         };
       }
       if (importer.includes("dynamic_import_id")) {
@@ -15357,7 +15510,7 @@ const rollupPluginJsenv = ({
           return {
             id: PATH_AND_URL_CONVERTER.asFilePath(isolatedResolvedUrl),
             external: false,
-            moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+            moduleSideEffects: getModuleSideEffects(resolvedUrl),
           };
         }
       }
@@ -15366,13 +15519,13 @@ const rollupPluginJsenv = ({
         return {
           id: resolvedUrl,
           external: true,
-          moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          moduleSideEffects: getModuleSideEffects(resolvedUrl),
         };
       }
       return {
         id: PATH_AND_URL_CONVERTER.asFilePath(resolvedUrl),
         external: false,
-        moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+        moduleSideEffects: getModuleSideEffects(resolvedUrl),
       };
     },
     async load(rollupId) {
@@ -15645,7 +15798,7 @@ const jsenvPluginMinification = ({
       willMinifyJsModule: Boolean(js_module),
       willMinifyJson: Boolean(json),
     },
-    optimizeUrlContent: {
+    optimizeBuildUrlContent: {
       html: htmlMinifier,
       svg: svgMinifier,
       css: cssMinifier,
@@ -17042,7 +17195,7 @@ const injectSideEffectFileIntoBabelAst = ({
     });
     return;
   }
-  const sidEffectFileContent = readFileSync(new URL(sideEffectFileUrl), "utf8");
+  const sidEffectFileContent = readFileSync$2(new URL(sideEffectFileUrl), "utf8");
   const sideEffectFileContentAst = babel.parse(sidEffectFileContent);
   if (isJsModule) {
     injectAstAfterImport(programPath, sideEffectFileContentAst);
@@ -23677,4 +23830,4 @@ const assertAndNormalizeDirectoryUrl = (
   return value;
 };
 
-export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, readPackageAtOrNull, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, startMonitoringCpuUsage, startMonitoringMemoryUsage, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };
+export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createLookupPackageDirectory, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, errorToHTML$1 as errorToHTML, errorToHTML as errorToHTML$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, isSpecifierForNodeBuiltin$1 as isSpecifierForNodeBuiltin, isSpecifierForNodeBuiltin as isSpecifierForNodeBuiltin$1, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation$1 as jsenvPluginTranspilation, jsenvPluginTranspilation as jsenvPluginTranspilation$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, readPackageAtOrNull$1 as readPackageAtOrNull, readPackageAtOrNull as readPackageAtOrNull$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, startMonitoringCpuUsage, startMonitoringMemoryUsage, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, updateJsonFileSync$1 as updateJsonFileSync, updateJsonFileSync as updateJsonFileSync$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };

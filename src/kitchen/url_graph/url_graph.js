@@ -3,7 +3,6 @@ import {
   injectQueryParamsIntoSpecifier,
   urlToRelativeUrl,
 } from "@jsenv/urls";
-
 import { createEventEmitter } from "../../helpers/event_emitter.js";
 import { createDependencies } from "./references.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
@@ -213,6 +212,7 @@ const createUrlInfo = (url, context) => {
     contentAst: undefined,
     contentLength: undefined,
     contentFinalized: false,
+    contentSideEffects: [],
 
     sourcemap: null,
     sourcemapIsWrong: false,
@@ -242,6 +242,26 @@ const createUrlInfo = (url, context) => {
   urlInfo.pathname = new URL(url).pathname;
   urlInfo.searchParams = new URL(url).searchParams;
 
+  Object.defineProperty(urlInfo, "packageDirectoryUrl", {
+    enumerable: true,
+    configurable: true,
+    get: () => context.packageDirectory.find(url),
+  });
+  Object.defineProperty(urlInfo, "packageJSON", {
+    enumerable: true,
+    configurable: true,
+    get: () => {
+      const packageDirectoryUrl = context.packageDirectory.find(url);
+      return packageDirectoryUrl
+        ? context.packageDirectory.read(packageDirectoryUrl)
+        : null;
+    },
+  });
+  Object.defineProperty(urlInfo, "packageName", {
+    enumerable: true,
+    configurable: true,
+    get: () => urlInfo.packageJSON?.name,
+  });
   urlInfo.dependencies = createDependencies(urlInfo);
   urlInfo.isUsed = () => {
     if (urlInfo.isRoot) {

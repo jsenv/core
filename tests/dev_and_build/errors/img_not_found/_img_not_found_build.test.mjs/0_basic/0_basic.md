@@ -17,14 +17,14 @@ no entry on filesystem
 "jsenv:file_url_fetching"
   at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:72:24)
   at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:114:14)
-  at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:419:13)
-  at async @jsenv/core/src/kitchen/kitchen.js:488:11
-  at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)
-  at async @jsenv/core/src/kitchen/kitchen.js:486:9
-  at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:670:5)
-  at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:577:7)
+  at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:430:13)
+  at async @jsenv/core/src/kitchen/kitchen.js:499:11
+  at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:29:7)
+  at async @jsenv/core/src/kitchen/kitchen.js:497:9
+  at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:681:5)
+  at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:588:7)
   at async Promise.all (index 0)
-  at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:611:7)
+  at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:622:7)
 ```
 
 ---

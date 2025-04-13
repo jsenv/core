@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/assert",
-  "version": "4.4.5",
+  "version": "4.4.6",
   "description": "One assertion to test everything",
   "license": "MIT",
   "repository": {
@@ -34,7 +34,9 @@
     "/dist/",
     "/src/"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/jsenv_assert_node_modules.js"
+  ],
   "scripts": {
     "dev": "node ./scripts/start_dev_server.mjs",
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
@@ -42,7 +44,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/humanize": "1.4.0",
+    "@jsenv/humanize": "1.5.0",
     "graphemer": "1.4.0"
   },
   "devDependencies": {

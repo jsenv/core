@@ -13,6 +13,7 @@ const run = async ({ runtimeCompat }) => {
         bundling: false,
         minification: false,
         plugins: [jsenvPluginPreact()],
+        packageSideEffects: false,
       },
     },
   });

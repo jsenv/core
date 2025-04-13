@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/humanize",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Generate messages meant to read by humans",
   "license": "MIT",
   "repository": {
@@ -32,7 +32,9 @@
     "/dist/",
     "/src/"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/node/jsenv_humanize_node_modules.js"
+  ],
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"

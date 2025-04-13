@@ -45,7 +45,6 @@ export const createBuildSpecifierManager = ({
   versioningMethod,
   versionLength,
   canUseImportmap,
-  onSourceFileBuild,
 }) => {
   const placeholderAPI = createPlaceholderAPI({
     length,
@@ -112,31 +111,6 @@ export const createBuildSpecifierManager = ({
       buildSpecifier,
       reference,
     );
-
-    if (buildUrlInfo.sourceUrls) {
-      for (const sourceUrl of buildUrlInfo.sourceUrls) {
-        const rawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
-        if (rawUrlInfo) {
-          onSourceFileBuild({
-            sourceUrlInfo: rawUrlInfo,
-            buildUrlInfo,
-            sourceFileUrl: rawUrlInfo.url,
-            buildFileUrl: buildUrl,
-          });
-        }
-      }
-    } else if (buildUrlInfo.originalUrl) {
-      const rawUrlInfo = rawKitchen.graph.getUrlInfo(buildUrlInfo.originalUrl);
-      if (rawUrlInfo) {
-        onSourceFileBuild({
-          sourceUrlInfo: rawUrlInfo,
-          buildUrlInfo,
-          sourceFileUrl: rawUrlInfo.url,
-          buildFileUrl: buildUrl,
-        });
-      }
-    }
-
     return buildGeneratedSpecifier;
   };
   const internalRedirections = new Map();
@@ -153,14 +127,17 @@ export const createBuildSpecifierManager = ({
     );
     for (const url of Object.keys(urlInfosBundled)) {
       const urlInfoBundled = urlInfosBundled[url];
+      const contentSideEffects = [];
       if (urlInfoBundled.sourceUrls) {
         for (const sourceUrl of urlInfoBundled.sourceUrls) {
-          const sourceRawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
-          if (sourceRawUrlInfo) {
-            sourceRawUrlInfo.data.bundled = true;
+          const rawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
+          if (rawUrlInfo) {
+            rawUrlInfo.data.bundled = true;
+            contentSideEffects.push(...rawUrlInfo.contentSideEffects);
           }
         }
       }
+      urlInfoBundled.contentSideEffects = contentSideEffects;
       bundleInfoMap.set(url, urlInfoBundled);
     }
   };
@@ -322,6 +299,7 @@ export const createBuildSpecifierManager = ({
           contentType: bundleInfo.contentType,
           sourcemap: bundleInfo.sourcemap,
           data: bundleInfo.data,
+          contentSideEffects: bundleInfo.contentSideEffects,
         };
       }
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
@@ -370,6 +348,7 @@ export const createBuildSpecifierManager = ({
           originalContent: rawUrlInfo.originalContent,
           originalUrl: rawUrlInfo.originalUrl,
           sourcemap: rawUrlInfo.sourcemap,
+          contentSideEffects: rawUrlInfo.contentSideEffects,
         };
       }
       if (firstReference.isInline) {
@@ -1079,6 +1058,8 @@ export const createBuildSpecifierManager = ({
         }
       };
     },
+
+    getBuildUrl: (urlInfo) => urlInfoToBuildUrlMap.get(urlInfo),
 
     getBuildInfo: () => {
       const buildManifest = {};

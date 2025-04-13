@@ -4,6 +4,7 @@
  *   (no waiting forever for importmap to load and js properly executes)
  */
 
+import { startDevServer } from "@jsenv/core";
 import {
   ensureEmptyDirectorySync,
   replaceFileStructureSync,
@@ -12,13 +13,11 @@ import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 
-import { startDevServer } from "@jsenv/core";
-
 let debug = false;
-const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
-const outputDirectoryUrl = new URL("./output/", import.meta.url);
+const sourceDirectoryUrl = import.meta.resolve("./git_ignored/");
+const outputDirectoryUrl = import.meta.resolve("./output/");
 const writeFileStructureForScenario = (scenario) => {
-  const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
+  const scenarioDirectoryUrl = import.meta.resolve(`./${scenario}/`);
   replaceFileStructureSync({
     from: scenarioDirectoryUrl,
     to: sourceDirectoryUrl,
@@ -49,7 +48,7 @@ const takeScreenshot = async (scenario) => {
   );
 };
 const testScenario = async (scenario) => {
-  const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
+  const scenarioDirectoryUrl = import.meta.resolve(`./${scenario}/`);
   replaceFileStructureSync({
     from: scenarioDirectoryUrl,
     to: sourceDirectoryUrl,

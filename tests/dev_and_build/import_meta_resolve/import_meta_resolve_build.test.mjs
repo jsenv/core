@@ -12,6 +12,7 @@ const run = async ({ runtimeCompat }) => {
         minification: false,
         versioning: false,
         runtimeCompat,
+        packageSideEffects: false,
       },
     },
   });

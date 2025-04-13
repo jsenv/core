@@ -4,7 +4,7 @@
  */
 
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
-import { createLogger } from "@jsenv/humanize";
+import { createLogger, errorToMarkdown } from "@jsenv/humanize";
 import { fileURLToPath } from "node:url";
 import { createGitHubPullRequestCommentText } from "./internal/create_github_pull_request_comment_text.js";
 import { exec } from "./internal/exec.js";
@@ -410,7 +410,7 @@ const jsenvCreateBeforeMergeErrorComment = (
 
 **Error:** Error while trying to collect info before merging ${pullRequestHead} into ${pullRequestBase}.
 
-<pre>${error.stack}</pre>
+${errorToMarkdown(error)}
 
 ---`;
 };
@@ -423,7 +423,7 @@ const jsenvCreateCommentForAfterMergeError = (
 
 **Error:** Error while trying to collect info after merging ${pullRequestHead} into ${pullRequestBase}.
 
-<pre>${error.stack}</pre>
+${errorToMarkdown(error)}
 
 ---`;
 };

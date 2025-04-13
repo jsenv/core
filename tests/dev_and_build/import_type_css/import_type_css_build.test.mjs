@@ -10,6 +10,7 @@ const run = async ({ runtimeCompat, minification }) => {
       "./main.html": {
         runtimeCompat,
         minification,
+        packageSideEffects: false,
       },
     },
   });

@@ -1,4 +1,4 @@
-# [2_with_bundling](../../subbuild_import_meta_resolve.test.mjs#L45)
+# [2_with_bundling](../../subbuild_import_meta_resolve.test.mjs#L47)
 
 ```js
 run({

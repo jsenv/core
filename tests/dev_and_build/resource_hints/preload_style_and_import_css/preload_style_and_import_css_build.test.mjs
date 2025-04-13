@@ -12,6 +12,7 @@ const run = async ({ runtimeCompat, bundling }) => {
         versioning: false,
         runtimeCompat,
         bundling,
+        packageSideEffects: false,
       },
     },
   });

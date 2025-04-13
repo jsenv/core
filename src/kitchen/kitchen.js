@@ -49,6 +49,7 @@ export const createKitchen = ({
   sourcemapsSourcesContent,
   outDirectoryUrl,
   initialContext = {},
+  packageDirectory,
 }) => {
   const logger = createLogger({ logLevel });
 
@@ -63,6 +64,7 @@ export const createKitchen = ({
       logger,
       rootDirectoryUrl,
       mainFilePath,
+      packageDirectory,
       dev,
       build,
       runtimeCompat,
@@ -79,6 +81,8 @@ export const createKitchen = ({
         conditions: packageConditions,
         parentUrl: importer,
         specifier,
+        lookupPackageScope: packageDirectory.find,
+        readPackageJson: packageDirectory.read,
       });
       return { url, packageDirectoryUrl, packageJson };
     },
@@ -98,6 +102,9 @@ export const createKitchen = ({
     name,
     rootDirectoryUrl,
     kitchen,
+  });
+  graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
+    pluginController.callHooks("urlInfoCreated", urlInfoCreated, () => {});
   });
   kitchen.graph = graph;
 
@@ -351,6 +358,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         isEntryPoint,
         isDynamicEntryPoint,
         filenameHint,
+        contentSideEffects,
       } = fetchUrlContentReturnValue;
       if (content === undefined) {
         content = body;
@@ -382,6 +390,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       if (typeof isDynamicEntryPoint === "boolean") {
         urlInfo.isDynamicEntryPoint = isDynamicEntryPoint;
+      }
+      if (contentSideEffects) {
+        urlInfo.contentSideEffects = contentSideEffects;
       }
       assertFetchedContentCompliance({
         urlInfo,

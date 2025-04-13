@@ -11,6 +11,7 @@ build({
       transpilation: { css: false },
       runtimeCompat: { chrome: "89" },
       assetManifest: true,
+      packageSideEffects: false,
     },
   },
 })

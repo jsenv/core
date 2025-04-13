@@ -1,4 +1,3 @@
-import { lookupPackageDirectory, readPackageAtOrNull } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
@@ -7,9 +6,9 @@ import {
   injectQueryParams,
   isFileSystemPath,
   urlToBasename,
+  urlToExtension,
   urlToRelativeUrl,
 } from "@jsenv/urls";
-import { readFileSync } from "node:fs";
 import { fileUrlConverter } from "../file_url_converter.js";
 
 export const bundleJsModules = async (
@@ -32,6 +31,7 @@ export const bundleJsModules = async (
     signal,
     logger,
     rootDirectoryUrl,
+    packageDirectory,
     runtimeCompat,
     sourcemaps,
     isSupportedOnCurrentClients,
@@ -73,9 +73,8 @@ export const bundleJsModules = async (
     if (chunks) {
       let workspaces;
       let packageName;
-      const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
-      if (packageDirectoryUrl) {
-        const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
+      if (packageDirectory.url) {
+        const packageJSON = packageDirectory.read(packageDirectory.url);
         if (packageJSON) {
           packageName = packageJSON.name;
           workspaces = packageJSON.workspaces;
@@ -106,7 +105,7 @@ export const bundleJsModules = async (
         for (const workspace of workspaces) {
           const workspacePattern = new URL(
             workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
-            packageDirectoryUrl,
+            packageDirectory.url,
           ).href;
           workspacePatterns[workspacePattern] = true;
         }
@@ -307,96 +306,29 @@ const rollupPluginJsenv = ({
     return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
   };
 
-  const packageSideEffectsCacheMap = new Map();
-  const readClosestPackageJsonSideEffects = (url) => {
-    const packageDirectoryUrl = lookupPackageDirectory(url);
-    if (!packageDirectoryUrl) {
-      return undefined;
-    }
-    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
-    if (fromCache) {
-      return fromCache.value;
-    }
-    try {
-      const packageFileContent = readFileSync(
-        new URL("./package.json", packageDirectoryUrl),
-        "utf8",
-      );
-      const packageJSON = JSON.parse(packageFileContent);
-      return storePackageSideEffect(packageDirectoryUrl, packageJSON);
-    } catch {
-      return storePackageSideEffect(packageDirectoryUrl, null);
-    }
-  };
-  const storePackageSideEffect = (packageDirectoryUrl, packageJson) => {
-    if (!packageJson) {
-      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
-      return undefined;
-    }
-    const value = packageJson.sideEffects;
-    if (Array.isArray(value)) {
-      const sideEffectPatterns = {};
-      for (const v of value) {
-        sideEffectPatterns[v] = true;
-      }
-      const associations = URL_META.resolveAssociations(
-        { sideEffects: sideEffectPatterns },
-        packageDirectoryUrl,
-      );
-      const isMatching = (url) => {
-        const meta = URL_META.applyAssociations({ url, associations });
-        return meta.sideEffects || false;
-      };
-      packageSideEffectsCacheMap.set(packageDirectoryUrl, {
-        value: isMatching,
-      });
-      return isMatching;
-    }
-    packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
-    return value;
-  };
-
-  const inferSideEffectsFromResolvedUrl = (url) => {
+  const getModuleSideEffects = (url) => {
     if (url.startsWith("ignore:")) {
-      // console.log(`may have side effect: ${url}`);
-      // double ignore we must keep the import
-      return null;
+      url = url.slice("ignore:".length);
     }
     if (isSpecifierForNodeBuiltin(url)) {
       return false;
     }
-    const closestPackageJsonSideEffects =
-      readClosestPackageJsonSideEffects(url);
-    if (closestPackageJsonSideEffects === undefined) {
-      // console.log(`may have side effect: ${url}`);
-      return null;
+    if (urlToExtension(url) === ".css") {
+      return true;
     }
-    if (typeof closestPackageJsonSideEffects === "function") {
-      const haveSideEffect = closestPackageJsonSideEffects(url);
-      // if (haveSideEffect) {
-      //   console.log(`have side effect: ${url}`);
-      // }
-      return haveSideEffect;
+    const urlInfo = graph.getUrlInfo(url);
+    if (!urlInfo) {
+      return null; // we don't know
     }
-    return closestPackageJsonSideEffects;
-  };
-  const getModuleSideEffects = (url, importer) => {
-    if (!url.startsWith("ignore:")) {
-      return inferSideEffectsFromResolvedUrl(url);
+    if (urlInfo.contentSideEffects.length === 0) {
+      return null; // we don't know
     }
-    url = url.slice("ignore:".length);
-    if (url.startsWith("file:")) {
-      return inferSideEffectsFromResolvedUrl(url);
-    }
-    try {
-      const result = kitchen.resolve(url, importer);
-      if (result.packageDirectoryUrl) {
-        storePackageSideEffect(result.packageDirectoryUrl, result.packageJson);
+    for (const contentSideEffect of urlInfo.contentSideEffects) {
+      if (contentSideEffect.has) {
+        return true;
       }
-      return inferSideEffectsFromResolvedUrl(url);
-    } catch {
-      return null;
     }
+    return false;
   };
 
   const resolveImport = (specifier, importer) => {
@@ -408,9 +340,7 @@ const rollupPluginJsenv = ({
 
   const dynamicImportIdSet = new Set();
   const assignDynamicImportId = (urlImportedDynamically) => {
-    const urlInfo = jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
-      urlImportedDynamically,
-    );
+    const urlInfo = kitchen.graph.getUrlInfo(urlImportedDynamically);
     let dynamicImportIdBase =
       urlInfo && urlInfo.filenameHint
         ? filenameWithoutExtension(urlInfo.filenameHint)
@@ -654,10 +584,7 @@ const rollupPluginJsenv = ({
           }
           if (chunkInfo.isDynamicEntry) {
             const originalFileUrl = getOriginalUrl(chunkInfo, true);
-            const urlInfo =
-              jsModuleUrlInfos[0].context.kitchen.graph.getUrlInfo(
-                originalFileUrl,
-              );
+            const urlInfo = kitchen.graph.getUrlInfo(originalFileUrl);
             if (urlInfo && urlInfo.filenameHint) {
               return urlInfo.filenameHint;
             }
@@ -676,33 +603,50 @@ const rollupPluginJsenv = ({
         if (isFileSystemPath(importer)) {
           importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
-        const urlObject = resolveImport(specifier, importer);
-        if (!urlObject.href.startsWith("file:")) {
-          return { id: specifier, external: true };
+        const resolvedUrlObject = resolveImport(specifier, importer);
+        const resolvedUrl = resolvedUrlObject.href;
+        if (!resolvedUrl.startsWith("file:")) {
+          return {
+            id: specifier,
+            external: true,
+            moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          };
         }
         const searchParamsToAdd =
-          augmentDynamicImportUrlSearchParams(urlObject);
+          augmentDynamicImportUrlSearchParams(resolvedUrlObject);
         if (searchParamsToAdd) {
-          injectQueryParams(urlObject, searchParamsToAdd);
+          injectQueryParams(resolvedUrlObject, searchParamsToAdd);
         }
-        const id = urlObject.href;
-        return { id, external: true };
+        const id = resolvedUrlObject.href;
+        return {
+          id,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(id, importer),
+        };
       }
       if (isolateDynamicImports) {
         if (isFileSystemPath(importer)) {
           importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
-        const urlObject = resolveImport(specifier, importer);
-        if (!urlObject.href.startsWith("file:")) {
-          return { id: specifier, external: true };
+        const resolvedUrlObject = resolveImport(specifier, importer);
+        const resolvedUrl = resolvedUrlObject.href;
+        if (!resolvedUrl.startsWith("file:")) {
+          return {
+            id: specifier,
+            external: true,
+            moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          };
         }
-        const importId = assignDynamicImportId(urlObject.href);
-        injectQueryParams(urlObject, {
+        const importId = assignDynamicImportId(resolvedUrlObject.href);
+        injectQueryParams(resolvedUrlObject, {
           dynamic_import_id: importId,
         });
-        const url = urlObject.href;
+        const url = resolvedUrlObject.href;
         const filePath = PATH_AND_URL_CONVERTER.asFilePath(url);
-        return { id: filePath };
+        return {
+          id: filePath,
+          moduleSideEffects: getModuleSideEffects(url, importer),
+        };
       }
       return null;
     },

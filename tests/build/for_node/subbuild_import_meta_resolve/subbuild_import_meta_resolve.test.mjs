@@ -18,6 +18,7 @@ const run = async ({ bundling, clientBase }) => {
         bundling,
         versioning: false,
         minification: false,
+        packageSideEffects: false,
       },
       "./client/main.html": {
         runtimeCompat: { chrome: "89" },
@@ -25,6 +26,7 @@ const run = async ({ bundling, clientBase }) => {
         versioning: false,
         minification: false,
         base: clientBase,
+        packageSideEffects: false,
       },
     },
   });

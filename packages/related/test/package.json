@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "3.6.11",
+  "version": "3.6.12",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -29,7 +29,9 @@
   ],
   "sideEffects": [
     "./src/runtime_node/node_child_process_controlled.mjs",
-    "./src/runtime_node/node_worker_thread_controlled.mjs"
+    "./src/runtime_node/node_worker_thread_controlled.mjs",
+    "./dist/js/node_child_process_controlled.mjs",
+    "./dist/js/node_worker_thread_controlled.mjs"
   ],
   "scripts": {
     "build": "node --conditions=development ./scripts/build.mjs",
@@ -41,16 +43,16 @@
   "dependencies": {
     "@c88/v8-coverage": "0.1.1",
     "@jsenv/abort": "4.3.1",
-    "@jsenv/ast": "6.6.7",
+    "@jsenv/ast": "6.6.9",
     "@jsenv/exception": "1.1.7",
-    "@jsenv/filesystem": "4.14.6",
-    "@jsenv/github-check-run": "0.2.22",
+    "@jsenv/filesystem": "4.15.0",
+    "@jsenv/github-check-run": "0.2.23",
     "@jsenv/node-esm-resolution": "1.2.0",
-    "@jsenv/humanize": "1.4.0",
-    "@jsenv/plugin-supervisor": "1.6.12",
-    "@jsenv/sourcemap": "1.3.4",
+    "@jsenv/humanize": "1.5.0",
+    "@jsenv/plugin-supervisor": "1.6.13",
+    "@jsenv/sourcemap": "1.3.5",
     "@jsenv/url-meta": "8.5.6",
-    "@jsenv/urls": "2.7.1",
+    "@jsenv/urls": "2.7.2",
     "@jsenv/utils": "2.3.0",
     "he": "1.2.0",
     "istanbul-lib-coverage": "3.2.2",

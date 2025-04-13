@@ -1,7 +1,0 @@
-{
-  "name": "test",
-  "private": true,
-  "sideEffects": [
-    "./src/bar.js"
-  ]
-}

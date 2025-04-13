@@ -2,6 +2,7 @@ import {
   assertAndNormalizeDirectoryUrl,
   bufferToEtag,
   lookupPackageDirectory,
+  readPackageAtOrNull,
 } from "@jsenv/filesystem";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
 import {
@@ -240,10 +241,17 @@ export const startDevServer = async ({
     );
     serverStopCallbackSet.add(stopWatchingSourceFiles);
 
+    const packageDirectory = {
+      url: lookupPackageDirectory(sourceDirectoryUrl),
+      find: lookupPackageDirectory,
+      read: readPackageAtOrNull,
+    };
+
     const devServerPluginStore = createPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),
       ...plugins,
       ...getCorePlugins({
+        packageDirectory,
         rootDirectoryUrl: sourceDirectoryUrl,
         mainFilePath: sourceMainFilePath,
         runtimeCompat,
@@ -307,6 +315,7 @@ export const startDevServer = async ({
         outDirectoryUrl: outDirectoryUrl
           ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
           : undefined,
+        packageDirectory,
       });
       kitchen.graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
         const { watch } = URL_META.applyAssociations({

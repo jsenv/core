@@ -1407,6 +1407,44 @@ const createCallOrderer = () => {
   return callWhenPreviousExecutionAreDone;
 };
 
+const errorToMarkdown = (error) => {
+  const errorIsAPrimitive =
+    error === null ||
+    (typeof error !== "object" && typeof error !== "function");
+
+  if (errorIsAPrimitive) {
+    return `\`\`\`js
+${error}
+\`\`\``;
+  }
+  return `\`\`\`
+${error.stack}
+\`\`\``;
+};
+
+const errorToHTML = (error) => {
+  const errorIsAPrimitive =
+    error === null ||
+    (typeof error !== "object" && typeof error !== "function");
+
+  if (errorIsAPrimitive) {
+    if (typeof error === "string") {
+      return `<pre>${escapeHtml(error)}</pre>`;
+    }
+    return `<pre>${JSON.stringify(error, null, "  ")}</pre>`;
+  }
+  return `<pre>${escapeHtml(error.stack)}</pre>`;
+};
+
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 const renderBigSection = (params) => {
   return renderSection({
     width: 45,
@@ -1964,4 +2002,4 @@ const createTaskLog = (
   };
 };
 
-export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, renderBigSection, renderDetails, renderNamedSections, renderSection, startSpinner };
+export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, distributePercentages, errorToHTML, errorToMarkdown, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, renderBigSection, renderDetails, renderNamedSections, renderSection, startSpinner };

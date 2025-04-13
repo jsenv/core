@@ -1,6 +1,6 @@
 import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, updateJsonFileSync, isSpecifierForNodeBuiltin, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, readPackageAtOrNull } from "../jsenv_core_packages.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
@@ -740,7 +740,14 @@ const createDependencies = (ownerUrlInfo) => {
       ...props,
     });
     const reference = originalReference.resolve();
-    reference.finalize();
+    if (reference.urlInfo) {
+      return reference;
+    }
+    const kitchen = ownerUrlInfo.kitchen;
+    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
+    reference.urlInfo = urlInfo;
+    addDependency(reference);
+    ownerUrlInfo.context.finalizeReference(reference);
     return reference;
   };
 
@@ -1056,6 +1063,7 @@ const createReference = ({
     implicitReferenceSet: new Set(),
     isWeak,
     hasVersioningEffect,
+    urlInfoEffectSet: new Set(),
     version,
     injected,
     timing: {},
@@ -1087,17 +1095,6 @@ const createReference = ({
     });
     reference.next = referenceRedirected;
     return referenceRedirected;
-  };
-
-  reference.finalize = () => {
-    if (reference.urlInfo) {
-      return;
-    }
-    const kitchen = ownerUrlInfo.kitchen;
-    const urlInfo = kitchen.graph.reuseOrCreateUrlInfo(reference);
-    reference.urlInfo = urlInfo;
-    addDependency(reference);
-    ownerUrlInfo.context.finalizeReference(reference);
   };
 
   // "formatReference" can be async BUT this is an exception
@@ -1462,6 +1459,10 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   referencedUrlInfo.entryUrlInfo = reference.isEntryPoint
     ? referencedUrlInfo
     : reference.ownerUrlInfo.entryUrlInfo;
+
+  for (const urlInfoEffect of reference.urlInfoEffectSet) {
+    urlInfoEffect(referencedUrlInfo);
+  }
 };
 
 const GRAPH_VISITOR = {};
@@ -1873,6 +1874,7 @@ const createUrlInfo = (url, context) => {
     contentAst: undefined,
     contentLength: undefined,
     contentFinalized: false,
+    contentSideEffects: [],
 
     sourcemap: null,
     sourcemapIsWrong: false,
@@ -1902,6 +1904,26 @@ const createUrlInfo = (url, context) => {
   urlInfo.pathname = new URL(url).pathname;
   urlInfo.searchParams = new URL(url).searchParams;
 
+  Object.defineProperty(urlInfo, "packageDirectoryUrl", {
+    enumerable: true,
+    configurable: true,
+    get: () => context.packageDirectory.find(url),
+  });
+  Object.defineProperty(urlInfo, "packageJSON", {
+    enumerable: true,
+    configurable: true,
+    get: () => {
+      const packageDirectoryUrl = context.packageDirectory.find(url);
+      return packageDirectoryUrl
+        ? context.packageDirectory.read(packageDirectoryUrl)
+        : null;
+    },
+  });
+  Object.defineProperty(urlInfo, "packageName", {
+    enumerable: true,
+    configurable: true,
+    get: () => urlInfo.packageJSON?.name,
+  });
   urlInfo.dependencies = createDependencies(urlInfo);
   urlInfo.isUsed = () => {
     if (urlInfo.isRoot) {
@@ -2694,6 +2716,7 @@ const createKitchen = ({
   sourcemapsSourcesContent,
   outDirectoryUrl,
   initialContext = {},
+  packageDirectory,
 }) => {
   const logger = createLogger({ logLevel });
 
@@ -2708,6 +2731,7 @@ const createKitchen = ({
       logger,
       rootDirectoryUrl,
       mainFilePath,
+      packageDirectory,
       dev,
       build,
       runtimeCompat,
@@ -2724,6 +2748,8 @@ const createKitchen = ({
         conditions: packageConditions,
         parentUrl: importer,
         specifier,
+        lookupPackageScope: packageDirectory.find,
+        readPackageJson: packageDirectory.read,
       });
       return { url, packageDirectoryUrl, packageJson };
     },
@@ -2743,6 +2769,9 @@ const createKitchen = ({
     name,
     rootDirectoryUrl,
     kitchen,
+  });
+  graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
+    pluginController.callHooks("urlInfoCreated", urlInfoCreated, () => {});
   });
   kitchen.graph = graph;
 
@@ -2996,6 +3025,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         isEntryPoint,
         isDynamicEntryPoint,
         filenameHint,
+        contentSideEffects,
       } = fetchUrlContentReturnValue;
       if (content === undefined) {
         content = body;
@@ -3027,6 +3057,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       if (typeof isDynamicEntryPoint === "boolean") {
         urlInfo.isDynamicEntryPoint = isDynamicEntryPoint;
+      }
+      if (contentSideEffects) {
+        urlInfo.contentSideEffects = contentSideEffects;
       }
       assertFetchedContentCompliance({
         urlInfo,
@@ -3444,18 +3477,10 @@ const generateHtmlForSyntaxError = (
       urlWithLineAndColumn,
     )}')`,
     errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
-    syntaxError: escapeHtml(htmlErrorContentFrame),
+    syntaxErrorHTML: errorToHTML(htmlErrorContentFrame),
   };
   const html = replacePlaceholders$1(htmlForSyntaxError, replacers);
   return html;
-};
-const escapeHtml = (string) => {
-  return string
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 };
 const replacePlaceholders$1 = (html, replacers) => {
   return html.replace(/\$\{(\w+)\}/g, (match, name) => {
@@ -3758,15 +3783,18 @@ const HOOK_NAMES = [
   "redirectReference",
   "transformReferenceSearchParams",
   "formatReference",
+  "urlInfoCreated",
   "fetchUrlContent",
   "transformUrlContent",
   "finalizeUrlContent",
   "bundle", // is called only during build
-  "optimizeUrlContent", // is called only during build
+  "optimizeBuildUrlContent", // is called only during build
   "cooked",
   "augmentResponse", // is called only during dev/tests
   "destroy",
   "effect",
+  "refineBuildUrlContent", // called only during build
+  "refineBuild", // called only during build
 ];
 
 const testAppliesDuring = (plugin, kitchen) => {
@@ -3877,7 +3905,7 @@ const returnValueAssertions = [
       "fetchUrlContent",
       "transformUrlContent",
       "finalizeUrlContent",
-      "optimizeUrlContent",
+      "optimizeBuildUrlContent",
     ],
     assertion: (valueReturned, urlInfo, { hook }) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
@@ -5741,6 +5769,7 @@ const jsenvPluginDirectoryListing = ({
   urlMocks = false,
   autoreload = true,
   directoryContentMagicName,
+  packageDirectory,
   rootDirectoryUrl,
   mainFilePath,
   sourceFilesConfig,
@@ -5826,6 +5855,7 @@ const jsenvPluginDirectoryListing = ({
               directoryContentMagicName,
               rootDirectoryUrl,
               mainFilePath,
+              packageDirectory,
               enoent,
             }),
           },
@@ -5912,6 +5942,7 @@ const generateDirectoryListingInjection = (
   {
     rootDirectoryUrl,
     mainFilePath,
+    packageDirectory,
     request,
     urlMocks,
     directoryContentMagicName,
@@ -5930,14 +5961,13 @@ const generateDirectoryListingInjection = (
     firstExistingDirectoryUrl,
   });
   package_workspaces: {
-    const packageDirectoryUrl = lookupPackageDirectory(serverRootDirectoryUrl);
-    if (!packageDirectoryUrl) {
+    if (!packageDirectory.url) {
       break package_workspaces;
     }
-    if (String(packageDirectoryUrl) === String(serverRootDirectoryUrl)) {
+    if (String(packageDirectory.url) === String(serverRootDirectoryUrl)) {
       break package_workspaces;
     }
-    rootDirectoryUrl = packageDirectoryUrl;
+    rootDirectoryUrl = packageDirectory.url;
     // if (String(firstExistingDirectoryUrl) === String(serverRootDirectoryUrl)) {
     //   let packageContent;
     //   try {
@@ -6268,6 +6298,7 @@ const jsenvPluginProtocolFile = ({
   directoryListing,
   rootDirectoryUrl,
   mainFilePath,
+  packageDirectory,
   sourceFilesConfig,
 }) => {
   return [
@@ -6331,6 +6362,7 @@ const jsenvPluginProtocolFile = ({
             directoryContentMagicName,
             rootDirectoryUrl,
             mainFilePath,
+            packageDirectory,
             sourceFilesConfig,
           }),
         ]
@@ -8211,6 +8243,216 @@ const jsenvPluginAutoreloadOnServerRestart = () => {
   };
 };
 
+/**
+ * Lorsqu'on bundle un package ayant pas le field sideEffects
+ * alors on fini potentiellement par dire
+ * sideEffect: false
+ * sur le package racine alors qu'on en sait rien
+ * on pourrait mettre un package.json dans dist dans ce cas
+ * qui ne déclare pas le field side effect afin
+ * d'override le package.json du project qui lui dit qu'il ny en a pas
+ *
+ * On part du principe pour le moment que c'est la respo du package racine de déclarer cela
+ *
+ */
+
+
+const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
+  if (!packageDirectory.url) {
+    return [];
+  }
+  const packageJson = packageDirectory.read(packageDirectory.url);
+  if (!packageJson) {
+    return [];
+  }
+  const { sideEffects } = packageJson;
+  if (sideEffects !== false && !Array.isArray(sideEffects)) {
+    return [];
+  }
+
+  const sideEffectFileUrlSet = new Set();
+  const packageJsonFileUrl = new URL("./package.json", packageDirectory.url)
+    .href;
+
+  const normalizeSideEffectFileUrl = (url) => {
+    const urlRelativeToPackage = urlToRelativeUrl(url, packageDirectory.url);
+    return urlRelativeToPackage[0] === "."
+      ? urlRelativeToPackage
+      : `./${urlRelativeToPackage}`;
+  };
+
+  const sideEffectBuildFileUrls = [];
+
+  const packageSideEffectsCacheMap = new Map();
+  const readSideEffectInfoFromClosestPackage = (urlInfo) => {
+    const closestPackageDirectoryUrl = urlInfo.packageDirectoryUrl;
+    const closestPackageJSON = urlInfo.packageJSON;
+    if (!closestPackageJSON) {
+      return undefined;
+    }
+    const fromCache = packageSideEffectsCacheMap.get(
+      closestPackageDirectoryUrl,
+    );
+    if (fromCache) {
+      return fromCache.value;
+    }
+    try {
+      return storePackageSideEffect(
+        closestPackageDirectoryUrl,
+        closestPackageJSON,
+      );
+    } catch {
+      return storePackageSideEffect(closestPackageDirectoryUrl, null);
+    }
+  };
+  const storePackageSideEffect = (packageDirectoryUrl, packageJSON) => {
+    if (!packageJSON) {
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
+      return undefined;
+    }
+    const value = packageJSON.sideEffects;
+    if (Array.isArray(value)) {
+      const noSideEffect = {
+        has: false,
+        reason: "not listed in package.json side effects",
+        packageDirectoryUrl,
+      };
+      const hasSideEffect = {
+        has: true,
+        reason: "listed in package.json side effects",
+        packageDirectoryUrl,
+      };
+      const sideEffectPatterns = {};
+      for (const v of value) {
+        sideEffectPatterns[v] = v;
+      }
+      const associations = URL_META.resolveAssociations(
+        { sideEffects: sideEffectPatterns },
+        packageDirectoryUrl,
+      );
+      const getSideEffectInfo = (urlInfo) => {
+        const meta = URL_META.applyAssociations({
+          url: urlInfo.url,
+          associations,
+        });
+        const sideEffectKey = meta.sideEffects;
+        if (sideEffectKey) {
+          return {
+            ...hasSideEffect,
+            reason: `"${sideEffectKey}" listed in package.json side effects`,
+          };
+        }
+        return noSideEffect;
+      };
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, {
+        value: getSideEffectInfo,
+      });
+      return getSideEffectInfo;
+    }
+    if (value === false) {
+      const noSideEffect = {
+        has: false,
+        reason: "package.json side effects is false",
+        packageDirectoryUrl,
+      };
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, {
+        value: noSideEffect,
+      });
+      return noSideEffect;
+    }
+    const hasSideEffect = {
+      has: true,
+      reason: "package.json side effects is true",
+      packageDirectoryUrl,
+    };
+    packageSideEffectsCacheMap.set(packageDirectoryUrl, {
+      value: hasSideEffect,
+    });
+    return hasSideEffect;
+  };
+  const getSideEffectInfoFromClosestPackage = (urlInfo) => {
+    const sideEffectInfoFromClosestPackage =
+      readSideEffectInfoFromClosestPackage(urlInfo);
+    if (sideEffectInfoFromClosestPackage === undefined) {
+      return null;
+    }
+    if (typeof sideEffectInfoFromClosestPackage === "function") {
+      return sideEffectInfoFromClosestPackage(urlInfo);
+    }
+    return sideEffectInfoFromClosestPackage;
+  };
+
+  return {
+    name: "jsenv:package_side_effects",
+    appliesDuring: "build",
+    urlInfoCreated: (urlInfo) => {
+      const url = urlInfo.url;
+      if (isSpecifierForNodeBuiltin(url)) {
+        urlInfo.contentSideEffects.push({
+          sideEffect: "no",
+          reason: "node builtin module",
+        });
+        return;
+      }
+      if (url.startsWith("file:")) {
+        const sideEffectFromClosestPackage =
+          getSideEffectInfoFromClosestPackage(urlInfo);
+        if (sideEffectFromClosestPackage) {
+          // if (sideEffectFromClosestPackage.has) {
+          //    console.log(`have side effect: ${url}`);
+          // } else {
+          //  console.log(`no side effect: ${url}`);
+          // }
+          urlInfo.contentSideEffects.push(sideEffectFromClosestPackage);
+        }
+        return;
+      }
+    },
+    refineBuildUrlContent: (buildUrlInfo, { buildUrl }) => {
+      for (const sideEffect of buildUrlInfo.contentSideEffects) {
+        if (sideEffect.has) {
+          sideEffectBuildFileUrls.push(buildUrl);
+          return;
+        }
+      }
+    },
+    refineBuild: () => {
+      if (sideEffectBuildFileUrls.length === 0) {
+        return;
+      }
+      let sideEffectsToAdd = [];
+      if (sideEffects === false) {
+        sideEffectsToAdd = sideEffectBuildFileUrls;
+      } else if (Array.isArray(sideEffects)) {
+        for (const sideEffectFileRelativeUrl of sideEffects) {
+          const sideEffectFileUrl = new URL(
+            sideEffectFileRelativeUrl,
+            packageDirectory.url,
+          ).href;
+          sideEffectFileUrlSet.add(sideEffectFileUrl);
+        }
+        for (const url of sideEffectBuildFileUrls) {
+          if (sideEffectFileUrlSet.has(url)) {
+            continue;
+          }
+          sideEffectsToAdd.push(url);
+        }
+      }
+      if (sideEffectsToAdd.length === 0) {
+        return;
+      }
+
+      const finalSideEffects = Array.isArray(sideEffects) ? sideEffects : [];
+      for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
+        finalSideEffects.push(normalizeSideEffectFileUrl(sideEffectBuildUrl));
+      }
+      updateJsonFileSync(packageJsonFileUrl, {
+        sideEffects: finalSideEffects,
+      });
+    },
+  };
+};
+
 // tslint:disable:ordered-imports
 
 
@@ -8218,6 +8460,7 @@ const getCorePlugins = ({
   rootDirectoryUrl,
   mainFilePath,
   runtimeCompat,
+  packageDirectory,
   sourceFilesConfig,
 
   referenceAnalysis = {},
@@ -8238,6 +8481,7 @@ const getCorePlugins = ({
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
+  packageSideEffects = false,
 } = {}) => {
   if (cacheControl === true) {
     cacheControl = {};
@@ -8278,6 +8522,7 @@ const getCorePlugins = ({
       directoryListing,
       rootDirectoryUrl,
       mainFilePath,
+      packageDirectory,
       sourceFilesConfig,
     }),
     {
@@ -8321,6 +8566,9 @@ const getCorePlugins = ({
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
     jsenvPluginCleanHTML(),
     jsenvPluginChromeDevtoolsJson(),
+    ...(packageSideEffects
+      ? [jsenvPluginPackageSideEffects({ packageDirectory })]
+      : []),
   ];
 };
 
@@ -8655,10 +8903,17 @@ const startDevServer = async ({
     );
     serverStopCallbackSet.add(stopWatchingSourceFiles);
 
+    const packageDirectory = {
+      url: lookupPackageDirectory(sourceDirectoryUrl),
+      find: lookupPackageDirectory,
+      read: readPackageAtOrNull,
+    };
+
     const devServerPluginStore = createPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),
       ...plugins,
       ...getCorePlugins({
+        packageDirectory,
         rootDirectoryUrl: sourceDirectoryUrl,
         mainFilePath: sourceMainFilePath,
         runtimeCompat,
@@ -8721,6 +8976,7 @@ const startDevServer = async ({
         outDirectoryUrl: outDirectoryUrl
           ? new URL(`${runtimeName}@${runtimeVersion}/`, outDirectoryUrl)
           : undefined,
+        packageDirectory,
       });
       kitchen.graph.urlInfoCreatedEventEmitter.on((urlInfoCreated) => {
         const { watch } = URL_META.applyAssociations({

@@ -2,7 +2,7 @@ import { urlToFileSystemPath } from "@jsenv/urls";
 import { mkdirSync, statSync, unlinkSync } from "node:fs";
 
 import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
-import { findAncestorDirectoryUrl } from "../path_and_url/find_ancestor_directory_url.js";
+import { findSelfOrAncestorDirectoryUrl } from "../path_and_url/find_self_or_ancestor_directory_url.js";
 import { readEntryStatSync } from "./stat/read_entry_stat_sync.js";
 import { statsToType } from "./stat/stats_to_type.js";
 
@@ -23,7 +23,7 @@ export const writeDirectorySync = (
     if (e.code === "ENOTDIR") {
       let previousNonDirUrl = destinationUrl;
       // we must try all parent directories as long as it fails with ENOTDIR
-      findAncestorDirectoryUrl(destinationUrl, (ancestorUrl) => {
+      findSelfOrAncestorDirectoryUrl(destinationUrl, (ancestorUrl) => {
         try {
           statSync(new URL(ancestorUrl));
           return true;

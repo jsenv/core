@@ -15,6 +15,7 @@ const run = async () => {
     entryPoints: {
       "./main.html": {
         minification: false,
+        packageSideEffects: false,
       },
     },
   });

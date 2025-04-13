@@ -15,6 +15,7 @@ export const jsenvPluginProtocolFile = ({
   directoryListing,
   rootDirectoryUrl,
   mainFilePath,
+  packageDirectory,
   sourceFilesConfig,
 }) => {
   return [
@@ -78,6 +79,7 @@ export const jsenvPluginProtocolFile = ({
             directoryContentMagicName,
             rootDirectoryUrl,
             mainFilePath,
+            packageDirectory,
             sourceFilesConfig,
           }),
         ]
