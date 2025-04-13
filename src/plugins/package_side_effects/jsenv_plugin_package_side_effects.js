@@ -22,7 +22,10 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   }
   if (
     !import.meta.build &&
-    packageDirectory.read(packageDirectory.url).name === "@jsenv/core"
+    // do not inherit @jsenv/core/package.json while executing jsenv tests
+    packageDirectory.read(packageDirectory.url).name === "@jsenv/core" &&
+    // but allow side effects detection when building @jsenv/core itself
+    packageDirectory.read(packageDirectory.url).name !== "@jsenv/core"
   ) {
     return [];
   }

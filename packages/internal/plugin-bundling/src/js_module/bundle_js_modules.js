@@ -1,4 +1,5 @@
 import { createDetailedMessage } from "@jsenv/humanize";
+import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
 import {
@@ -160,6 +161,7 @@ export const bundleJsModules = async (
             logger,
             rootDirectoryUrl,
             buildDirectoryUrl,
+            packageDirectory,
             graph,
             jsModuleUrlInfos,
             PATH_AND_URL_CONVERTER,
@@ -238,6 +240,7 @@ const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
+  packageDirectory,
   graph,
   jsModuleUrlInfos,
   PATH_AND_URL_CONVERTER,
@@ -305,6 +308,12 @@ const rollupPluginJsenv = ({
   };
 
   const getModuleSideEffects = (url) => {
+    if (url.startsWith("ignore:")) {
+      url = url.slice("ignore:".length);
+    }
+    if (isSpecifierForNodeBuiltin(url)) {
+      return false;
+    }
     const urlInfo = graph.getUrlInfo(url);
     if (!urlInfo) {
       return null; // we don't know
@@ -312,8 +321,14 @@ const rollupPluginJsenv = ({
     if (urlInfo.contentSideEffects.length === 0) {
       return null; // we don't know
     }
-    if (!import.meta.build && urlInfo.packageJSON?.name === "@jsenv/core") {
-      return null; // do as if we don't know (do no inherit side effects from @jsenv/core package.json)
+    if (
+      !import.meta.build &&
+      // do not inherit @jsenv/core/package.json while executing jsenv tests
+      urlInfo.packageJSON?.name === "@jsenv/core" &&
+      // but allow side effects detection when building @jsenv/core itself
+      packageDirectory.read(packageDirectory.url).name !== "@jsenv/core"
+    ) {
+      return null;
     }
     for (const contentSideEffect of urlInfo.contentSideEffects) {
       if (contentSideEffect.has) {
