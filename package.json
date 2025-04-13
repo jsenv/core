@@ -49,7 +49,8 @@
   ],
   "sideEffects": [
     "./src/kitchen/client/inline_content.js",
-    "./dist/client/new_stylesheet/new_stylesheet.js"
+    "./dist/jsenv_core_node_modules.js",
+    "./dist/client/inline_content/inline_content.js"
   ],
   "scripts": {
     "eslint": "npx eslint .",
