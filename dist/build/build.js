@@ -2758,6 +2758,9 @@ const createKitchen = ({
     return !protocolIsSupported;
   };
   const isIgnoredBecauseInPackageDependencies = (() => {
+    if (packageDependencies === undefined) {
+      return FUNCTION_RETURNING_FALSE;
+    }
     if (packageDependencies === "include") {
       return FUNCTION_RETURNING_FALSE;
     }
