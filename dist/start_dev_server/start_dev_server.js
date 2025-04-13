@@ -238,6 +238,7 @@ ${reason}`,
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     error.message = createDetailedMessage(error.message, {
       "reference trace": reference.trace.message,
+      ...detailsFromFirstReference(reference),
     });
     return error;
   }
@@ -477,7 +478,11 @@ const detailsFromFirstReference = (reference) => {
 };
 const getFirstReferenceInProject = (reference) => {
   const ownerUrlInfo = reference.ownerUrlInfo;
-  if (!ownerUrlInfo.url.includes("/node_modules/")) {
+  if (
+    !ownerUrlInfo.url.includes("/node_modules/") &&
+    ownerUrlInfo.packageDirectoryUrl ===
+      ownerUrlInfo.context.packageDirectory.url
+  ) {
     return reference;
   }
   return getFirstReferenceInProject(ownerUrlInfo.firstReference);
@@ -2808,19 +2813,24 @@ const createKitchen = ({
       return FUNCTION_RETURNING_FALSE;
     }
     const rootPackageJSON = packageDirectory.read(packageDirectory.url);
-    const dependencies = rootPackageJSON?.dependencies;
-    if (!dependencies) {
+    if (!rootPackageJSON) {
       return FUNCTION_RETURNING_FALSE;
     }
+    const { dependencies = {}, optionalDependencies = {} } = rootPackageJSON;
     const dependencyKeys = Object.keys(dependencies);
-    if (dependencyKeys.length === 0) {
+    const optionalDependencyKeys = Object.keys(optionalDependencies);
+    const dependencySet = new Set([
+      ...dependencyKeys,
+      ...optionalDependencyKeys,
+    ]);
+    if (dependencySet.size === 0) {
       return FUNCTION_RETURNING_FALSE;
     }
 
     let getEffect;
     if (packageDependencies === "ignore") {
       getEffect = (dependencyName) => {
-        if (!dependencyKeys.includes(dependencyName)) {
+        if (!dependencySet.has(dependencyName)) {
           return "include";
         }
         return "ignore";
@@ -2837,7 +2847,7 @@ const createKitchen = ({
         }
       }
       getEffect = (dependencyName) => {
-        if (!dependencyKeys.includes(dependencyName)) {
+        if (!dependencySet.has(dependencyName)) {
           return "include";
         }
         const dependencyEffect = packageDependencies[dependencyName];
