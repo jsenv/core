@@ -101,8 +101,8 @@ const server = await startServer({
     };
     const expect = {
       name: "AbortError",
-      type: "aborted",
-      message: "The operation was aborted.",
+      type: undefined,
+      message: "This operation was aborted",
     };
     assert({ actual, expect });
   }
