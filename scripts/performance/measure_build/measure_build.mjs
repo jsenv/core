@@ -16,13 +16,13 @@ await build({
     },
   },
 });
-const { duration, memoryHeapTotal, memoryHeapUsed, fsRead, fsWrite } =
+const { duration, memoryHeapTotal, memoryHeapUsed, fsStatCall, fsOpenCall } =
   measures.stop();
 
 export const buildMetrics = {
   "build duration": { value: duration, unit: "ms" },
   "build memory heap used": { value: memoryHeapUsed, unit: "byte" },
   "build memory heap total": { value: memoryHeapTotal, unit: "byte" },
-  "number of fs read operation": { value: fsRead },
-  "number of fs write operation": { value: fsWrite },
+  "number of fs stat operation": { value: fsStatCall },
+  "number of fs open operation": { value: fsOpenCall },
 };

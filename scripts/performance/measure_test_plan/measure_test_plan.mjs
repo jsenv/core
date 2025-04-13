@@ -59,13 +59,13 @@ await executeTestPlan({
   githubCheck: false,
 });
 
-const { duration, memoryHeapUsed, memoryHeapTotal, fsRead, fsWrite } =
+const { duration, memoryHeapUsed, memoryHeapTotal, fsStatCall, fsOpenCall } =
   measures.stop();
 
 export const testPlanMetrics = {
   "test plan duration": { value: duration, unit: "ms" },
   "test plan memory heap used": { value: memoryHeapUsed, unit: "byte" },
   "test plan memory heap total": { value: memoryHeapTotal, unit: "byte" },
-  "number of fs read operation": { value: fsRead },
-  "number of fs write operation": { value: fsWrite },
+  "number of fs stat operation": { value: fsStatCall },
+  "number of fs open operation": { value: fsOpenCall },
 };
