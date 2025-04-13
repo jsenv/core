@@ -1,4 +1,4 @@
-# [0_package_side_effects_undefined](../../update_package_side_effects.test.mjs#L40)
+# [0_package_side_effects_undefined](../../package_side_effects_update.test.mjs#L40)
 
 ```js
 run(undefined)

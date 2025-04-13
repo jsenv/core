@@ -1,10 +1,10 @@
-# [2_package_side_effects_bar](../../update_package_side_effects.test.mjs#L44)
+# [2_package_side_effects_empty_array](../../package_side_effects_update_2.test.mjs#L43)
 
 ```js
-run(["./src/bar.js"])
+run([])
 ```
 
-# 1/2 write 4 files into "./git_ignored/"
+# 1/2 write 3 files into "./git_ignored/"
 
 see [./git_ignored/](./git_ignored/)
 

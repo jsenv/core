@@ -1,9 +1,9 @@
-# [update_package_side_effects.test.mjs](../update_package_side_effects.test.mjs)
+# [package_side_effects_update_2.test.mjs](../package_side_effects_update_2.test.mjs)
 
 
 - [0_package_side_effects_undefined](0_package_side_effects_undefined/0_package_side_effects_undefined.md)
 - [1_package_side_effects_false](1_package_side_effects_false/1_package_side_effects_false.md)
-- [2_package_side_effects_bar](2_package_side_effects_bar/2_package_side_effects_bar.md)
+- [2_package_side_effects_empty_array](2_package_side_effects_empty_array/2_package_side_effects_empty_array.md)
 
 ---
 
