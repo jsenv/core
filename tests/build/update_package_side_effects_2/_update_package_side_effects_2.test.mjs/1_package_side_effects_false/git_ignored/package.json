@@ -4,5 +4,7 @@
   "dependencies": {
     "bing": "*"
   },
-  "sideEffects": false
+  "sideEffects": [
+    "./build/test_node_modules.js"
+  ]
 }
