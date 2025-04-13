@@ -12,7 +12,7 @@
     "test:coverage": "npm run test -- --coverage"
   },
   "devDependencies": {
-    "@jsenv/assert": "4.4.6",
+    "@jsenv/assert": "4.5.1",
     "@jsenv/core": "40.3.1",
     "@jsenv/eslint-config-relax": "1.4.10",
     "@jsenv/test": "3.6.13",

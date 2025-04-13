@@ -1,4 +1,4 @@
-import { stripAnsi, emojiRegex, eastAsianWidth } from "/jsenv_assert_node_modules.js";
+import { stripAnsi, emojiRegex, eastAsianWidth } from "./jsenv_assert_node_modules.js";
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
