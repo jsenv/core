@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "16.0.7",
+  "version": "16.0.8",
   "description": "A modern Node.js HTTP server with declarative routing, content negotiation, and WebSocket support",
   "license": "MIT",
   "author": {
@@ -43,7 +43,7 @@
   "dependencies": {
     "launch-editor": "2.10.0",
     "@jsenv/abort": "4.3.1",
-    "@jsenv/humanize": "1.4.0",
+    "@jsenv/humanize": "1.5.0",
     "@jsenv/url-meta": "8.5.6",
     "@jsenv/utils": "2.3.0",
     "ws": "8.18.1",

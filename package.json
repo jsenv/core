@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "40.2.1",
+  "version": "40.3.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -50,7 +50,10 @@
   "sideEffects": [
     "./src/kitchen/client/inline_content.js",
     "./dist/client/inline_content/inline_content.js",
-    "./dist/client/directory_listing/jsenv_core_node_modules.js"
+    "./dist/client/directory_listing/jsenv_core_node_modules.js",
+    "./dist/jsenv_core_node_modules.js",
+    "./dist/client/new_stylesheet/new_stylesheet.js",
+    "./dist/client/inline_content/inline_content.js"
   ],
   "scripts": {
     "eslint": "npx eslint .",
@@ -79,21 +82,21 @@
   "dependencies": {
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.3.1",
-    "@jsenv/ast": "6.6.7",
-    "@jsenv/filesystem": "4.14.6",
-    "@jsenv/humanize": "1.4.0",
+    "@jsenv/ast": "6.6.8",
+    "@jsenv/filesystem": "4.15.0",
+    "@jsenv/humanize": "1.5.0",
     "@jsenv/importmap": "1.2.2",
     "@jsenv/integrity": "0.0.2",
-    "@jsenv/js-module-fallback": "1.4.5",
+    "@jsenv/js-module-fallback": "1.4.6",
     "@jsenv/node-esm-resolution": "1.2.0",
-    "@jsenv/plugin-bundling": "2.8.8",
+    "@jsenv/plugin-bundling": "2.9.0",
     "@jsenv/plugin-minification": "1.6.2",
-    "@jsenv/plugin-supervisor": "1.6.12",
-    "@jsenv/plugin-transpilation": "1.5.9",
-    "@jsenv/server": "16.0.7",
-    "@jsenv/sourcemap": "1.3.4",
+    "@jsenv/plugin-supervisor": "1.6.13",
+    "@jsenv/plugin-transpilation": "1.5.10",
+    "@jsenv/server": "16.0.8",
+    "@jsenv/sourcemap": "1.3.5",
     "@jsenv/url-meta": "8.5.6",
-    "@jsenv/urls": "2.7.1",
+    "@jsenv/urls": "2.7.2",
     "@jsenv/utils": "2.3.0"
   },
   "devDependencies": {
