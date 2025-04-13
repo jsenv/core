@@ -20,10 +20,9 @@ import { createUrlGraph } from "./url_graph/url_graph.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
 import { urlSpecifierEncoding } from "./url_graph/url_specifier_encoding.js";
 
-const inlineContentClientFileUrl = new URL(
+const inlineContentClientFileUrl = import.meta.resolve(
   "./client/inline_content.js",
-  import.meta.url,
-).href;
+);
 
 export const createKitchen = ({
   name,
@@ -32,12 +31,15 @@ export const createKitchen = ({
 
   rootDirectoryUrl,
   mainFilePath,
-  ignore,
-  ignoreProtocol = "remove",
-  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
   dev = false,
   build = false,
   runtimeCompat,
+
+  ignore,
+  ignoreProtocol = "remove",
+  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
+  ignoreDependencies,
+
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
@@ -55,6 +57,10 @@ export const createKitchen = ({
 
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
+
+  if (ignoreDependencies === undefined) {
+    ignoreDependencies = build && nodeRuntimeEnabled;
+  }
 
   const kitchen = {
     context: {
@@ -125,6 +131,37 @@ export const createKitchen = ({
     const protocolIsSupported = supportedProtocols.includes(protocol);
     return !protocolIsSupported;
   };
+  const isIgnoredBecauseInPackageDependencies = (() => {
+    if (!ignoreDependencies || !packageDirectory.url) {
+      return () => false;
+    }
+    const rootPackageJSON = packageDirectory.read(packageDirectory.url);
+    const dependencies = rootPackageJSON?.dependencies;
+    if (!dependencies) {
+      return () => false;
+    }
+    const dependencySet = new Set(Object.keys(dependencies));
+    if (dependencySet.size === 0) {
+      return () => false;
+    }
+
+    return (url) => {
+      const packageDirectoryUrl = packageDirectory.find(url);
+      if (!packageDirectoryUrl) {
+        return false;
+      }
+      const packageJSON = packageDirectory.read(packageDirectoryUrl);
+      const name = packageJSON?.name;
+      if (!name) {
+        return false;
+      }
+      if (!dependencySet.has(name)) {
+        return false;
+      }
+      return true;
+    };
+  })();
+
   let isIgnoredByParam = () => false;
   if (ignore) {
     const associations = URL_META.resolveAssociations(
@@ -144,7 +181,11 @@ export const createKitchen = ({
     };
   }
   const isIgnored = (url) => {
-    return isIgnoredByProtocol(url) || isIgnoredByParam(url);
+    return (
+      isIgnoredByProtocol(url) ||
+      isIgnoredByParam(url) ||
+      isIgnoredBecauseInPackageDependencies(url)
+    );
   };
   const resolveReference = (reference) => {
     const setReferenceUrl = (referenceUrl) => {
