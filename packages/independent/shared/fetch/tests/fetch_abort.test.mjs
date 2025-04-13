@@ -96,13 +96,11 @@ const server = await startServer({
   } catch (error) {
     const actual = {
       name: error.name,
-      type: error.type,
       message: error.message,
     };
     const expect = {
       name: "AbortError",
-      type: undefined,
-      message: "This operation was aborted",
+      message: "The operation was aborted.",
     };
     assert({ actual, expect });
   }
