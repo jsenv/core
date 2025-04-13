@@ -796,6 +796,7 @@ const entryPointDefaultParams = {
   assetManifest: false,
   assetManifestFileRelativeUrl: "asset-manifest.json",
   packageSideEffects: true,
+  packageDependencies: "auto", // "auto", "ignore", "include"
 };
 
 const prepareEntryPointBuild = async (
@@ -846,6 +847,7 @@ const prepareEntryPointBuild = async (
     assetManifest,
     assetManifestFileRelativeUrl,
     packageSideEffects,
+    packageDependencies,
   } = {
     ...entryPointDefaultParams,
     ...entryPointParams,
@@ -939,6 +941,7 @@ const prepareEntryPointBuild = async (
       ? new URL("craft/", outDirectoryUrl)
       : undefined,
     packageDirectory,
+    packageDependencies,
   });
 
   let _getOtherEntryBuildInfo;
@@ -1038,6 +1041,7 @@ const prepareEntryPointBuild = async (
           ? new URL("shape/", outDirectoryUrl)
           : undefined,
         packageDirectory,
+        packageDependencies,
       });
       const buildSpecifierManager = createBuildSpecifierManager({
         rawKitchen,

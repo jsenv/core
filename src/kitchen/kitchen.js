@@ -38,7 +38,6 @@ export const createKitchen = ({
   ignore,
   ignoreProtocol = "remove",
   supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
-  ignoreDependencies,
 
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -52,14 +51,15 @@ export const createKitchen = ({
   outDirectoryUrl,
   initialContext = {},
   packageDirectory,
+  packageDependencies,
 }) => {
   const logger = createLogger({ logLevel });
 
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
 
-  if (ignoreDependencies === undefined) {
-    ignoreDependencies = build && nodeRuntimeEnabled;
+  if (packageDependencies === "auto") {
+    packageDependencies = build && nodeRuntimeEnabled ? "ignore" : "include";
   }
 
   const kitchen = {
@@ -132,7 +132,7 @@ export const createKitchen = ({
     return !protocolIsSupported;
   };
   const isIgnoredBecauseInPackageDependencies = (() => {
-    if (!ignoreDependencies || !packageDirectory.url) {
+    if (packageDependencies !== "ignore" || !packageDirectory.url) {
       return () => false;
     }
     const rootPackageJSON = packageDirectory.read(packageDirectory.url);
@@ -146,6 +146,9 @@ export const createKitchen = ({
     }
 
     return (url) => {
+      if (url.startsWith("ignore:")) {
+        return false;
+      }
       const packageDirectoryUrl = packageDirectory.find(url);
       if (!packageDirectoryUrl) {
         return false;
