@@ -132,19 +132,52 @@ export const createKitchen = ({
     return !protocolIsSupported;
   };
   const isIgnoredBecauseInPackageDependencies = (() => {
-    if (packageDependencies !== "ignore" || !packageDirectory.url) {
-      return () => false;
+    if (packageDependencies === "include") {
+      return FUNCTION_RETURNING_FALSE;
+    }
+    if (!packageDirectory.url) {
+      return FUNCTION_RETURNING_FALSE;
     }
     const rootPackageJSON = packageDirectory.read(packageDirectory.url);
     const dependencies = rootPackageJSON?.dependencies;
     if (!dependencies) {
-      return () => false;
+      return FUNCTION_RETURNING_FALSE;
     }
-    const dependencySet = new Set(Object.keys(dependencies));
-    if (dependencySet.size === 0) {
-      return () => false;
+    const dependencyKeys = Object.keys(dependencies);
+    if (dependencyKeys.length === 0) {
+      return FUNCTION_RETURNING_FALSE;
     }
 
+    let getEffect;
+    if (packageDependencies === "ignore") {
+      getEffect = (dependencyName) => {
+        if (!dependencyKeys.includes(dependencyName)) {
+          return "include";
+        }
+        return "ignore";
+      };
+    } else if (typeof packageDependencies === "object") {
+      let defaultEffect = "ignore";
+      const dependencyEffectMap = new Map();
+      for (const dependencyKey of Object.keys(packageDependencies)) {
+        const dependencyEffect = packageDependencies[dependencyKey];
+        if (dependencyKey === "*") {
+          defaultEffect = dependencyEffect;
+        } else {
+          dependencyEffectMap.set(dependencyKey, dependencyEffect);
+        }
+      }
+      getEffect = (dependencyName) => {
+        if (!dependencyKeys.includes(dependencyName)) {
+          return "include";
+        }
+        const dependencyEffect = packageDependencies[dependencyName];
+        if (dependencyEffect) {
+          return dependencyEffect;
+        }
+        return defaultEffect;
+      };
+    }
     return (url) => {
       if (!url.startsWith("file:")) {
         return false;
@@ -158,7 +191,8 @@ export const createKitchen = ({
       if (!name) {
         return false;
       }
-      if (!dependencySet.has(name)) {
+      const effect = getEffect(name);
+      if (effect !== "ignore") {
         return false;
       }
       return true;
@@ -678,6 +712,8 @@ ${urlInfo.firstReference.trace.message}`;
 
   return kitchen;
 };
+
+const FUNCTION_RETURNING_FALSE = () => false;
 
 const debounceCook = (cook) => {
   const pendingDishes = new Map();

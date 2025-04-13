@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "16.0.8",
+  "version": "16.1.0",
   "description": "A modern Node.js HTTP server with declarative routing, content negotiation, and WebSocket support",
   "license": "MIT",
   "author": {
@@ -40,16 +40,14 @@
     "build": "node --experimental-import-meta-resolve ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },
-  "dependencies": {
-    "launch-editor": "2.10.0",
-    "@jsenv/abort": "4.3.1",
-    "@jsenv/humanize": "1.5.0",
-    "@jsenv/url-meta": "8.5.6",
-    "@jsenv/utils": "2.3.0",
-    "ws": "8.18.1",
-    "formidable": "3.5.2"
-  },
   "devDependencies": {
+    "launch-editor": "2.10.0",
+    "@jsenv/abort": "file:../../shared/abort",
+    "@jsenv/humanize": "file:../../tooling/humanize",
+    "@jsenv/url-meta": "file:../../shared/url_meta",
+    "@jsenv/utils": "file:../../shared/utils",
+    "ws": "8.18.1",
+    "formidable": "3.5.2",
     "eventsource": "3.0.6",
     "undici": "7.8.0"
   }

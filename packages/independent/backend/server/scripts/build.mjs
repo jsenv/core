@@ -34,9 +34,6 @@ await build({
         "**/*": "error",
       },
       scenarioPlaceholders: false,
-      mappings: {
-        "emoji-regex/index.js": "emoji-regex/index.mjs",
-      },
       plugins: [
         jsenvPluginCommonJs({
           include: {
