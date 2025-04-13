@@ -321,6 +321,9 @@ const rollupPluginJsenv = ({
     if (urlInfo.contentSideEffects.length === 0) {
       return null; // we don't know
     }
+    if (!import.meta.build && urlInfo.packageJSON?.name === "@jsenv/core") {
+      return null; // do as if we don't know (do no inherit side effects from @jsenv/core package.json)
+    }
     for (const contentSideEffect of urlInfo.contentSideEffects) {
       if (contentSideEffect.has) {
         return true;
@@ -601,33 +604,50 @@ const rollupPluginJsenv = ({
         if (isFileSystemPath(importer)) {
           importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
-        const urlObject = resolveImport(specifier, importer);
-        if (!urlObject.href.startsWith("file:")) {
-          return { id: specifier, external: true };
+        const resolvedUrlObject = resolveImport(specifier, importer);
+        const resolvedUrl = resolvedUrlObject.href;
+        if (!resolvedUrl.startsWith("file:")) {
+          return {
+            id: specifier,
+            external: true,
+            moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          };
         }
         const searchParamsToAdd =
-          augmentDynamicImportUrlSearchParams(urlObject);
+          augmentDynamicImportUrlSearchParams(resolvedUrlObject);
         if (searchParamsToAdd) {
-          injectQueryParams(urlObject, searchParamsToAdd);
+          injectQueryParams(resolvedUrlObject, searchParamsToAdd);
         }
-        const id = urlObject.href;
-        return { id, external: true };
+        const id = resolvedUrlObject.href;
+        return {
+          id,
+          external: true,
+          moduleSideEffects: getModuleSideEffects(id, importer),
+        };
       }
       if (isolateDynamicImports) {
         if (isFileSystemPath(importer)) {
           importer = PATH_AND_URL_CONVERTER.asFileUrl(importer);
         }
-        const urlObject = resolveImport(specifier, importer);
-        if (!urlObject.href.startsWith("file:")) {
-          return { id: specifier, external: true };
+        const resolvedUrlObject = resolveImport(specifier, importer);
+        const resolvedUrl = resolvedUrlObject.href;
+        if (!resolvedUrl.startsWith("file:")) {
+          return {
+            id: specifier,
+            external: true,
+            moduleSideEffects: getModuleSideEffects(resolvedUrl, importer),
+          };
         }
-        const importId = assignDynamicImportId(urlObject.href);
-        injectQueryParams(urlObject, {
+        const importId = assignDynamicImportId(resolvedUrlObject.href);
+        injectQueryParams(resolvedUrlObject, {
           dynamic_import_id: importId,
         });
-        const url = urlObject.href;
+        const url = resolvedUrlObject.href;
         const filePath = PATH_AND_URL_CONVERTER.asFilePath(url);
-        return { id: filePath };
+        return {
+          id: filePath,
+          moduleSideEffects: getModuleSideEffects(url, importer),
+        };
       }
       return null;
     },

@@ -138,7 +138,7 @@ export const getCorePlugins = ({
     jsenvPluginCleanHTML(),
     jsenvPluginChromeDevtoolsJson(),
     ...(packageSideEffects
-      ? [jsenvPluginPackageSideEffects({ packageDirectory })]
+      ? [jsenvPluginPackageSideEffects({ rootDirectoryUrl, packageDirectory })]
       : []),
   ];
 };

@@ -20,6 +20,12 @@ export const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
   if (!packageDirectory.url) {
     return [];
   }
+  if (
+    !import.meta.build &&
+    packageDirectory.read(packageDirectory.url).name === "@jsenv/core"
+  ) {
+    return [];
+  }
   const packageJson = packageDirectory.read(packageDirectory.url);
   if (!packageJson) {
     return [];

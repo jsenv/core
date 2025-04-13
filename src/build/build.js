@@ -1321,16 +1321,19 @@ const prepareEntryPointBuild = async (
             }
           }
           if (refineBuildUrlContentCallbackSet.size) {
-            GRAPH_VISITOR.forEach(finalKitchen.graph, (buildUrlInfo) => {
-              if (!buildUrlInfo.url.startsWith("file:")) {
-                return;
-              }
-              for (const refineBuildUrlContentCallback of refineBuildUrlContentCallbackSet) {
-                refineBuildUrlContentCallback(buildUrlInfo, {
-                  buildUrl: buildSpecifierManager.getBuildUrl(buildUrlInfo),
-                });
-              }
-            });
+            GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
+              finalKitchen.graph.rootUrlInfo,
+              (buildUrlInfo) => {
+                if (!buildUrlInfo.url.startsWith("file:")) {
+                  return;
+                }
+                for (const refineBuildUrlContentCallback of refineBuildUrlContentCallbackSet) {
+                  refineBuildUrlContentCallback(buildUrlInfo, {
+                    buildUrl: buildSpecifierManager.getBuildUrl(buildUrlInfo),
+                  });
+                }
+              },
+            );
           }
           if (refineBuildCallbackSet.size) {
             for (const refineBuildCallback of refineBuildCallbackSet) {
