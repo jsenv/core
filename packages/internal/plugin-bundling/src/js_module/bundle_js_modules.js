@@ -6,6 +6,7 @@ import {
   injectQueryParams,
   isFileSystemPath,
   urlToBasename,
+  urlToExtension,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { fileUrlConverter } from "../file_url_converter.js";
@@ -161,7 +162,6 @@ export const bundleJsModules = async (
             logger,
             rootDirectoryUrl,
             buildDirectoryUrl,
-            packageDirectory,
             graph,
             jsModuleUrlInfos,
             PATH_AND_URL_CONVERTER,
@@ -240,7 +240,6 @@ const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
-  packageDirectory,
   graph,
   jsModuleUrlInfos,
   PATH_AND_URL_CONVERTER,
@@ -314,21 +313,15 @@ const rollupPluginJsenv = ({
     if (isSpecifierForNodeBuiltin(url)) {
       return false;
     }
+    if (urlToExtension(url) === ".css") {
+      return true;
+    }
     const urlInfo = graph.getUrlInfo(url);
     if (!urlInfo) {
       return null; // we don't know
     }
     if (urlInfo.contentSideEffects.length === 0) {
       return null; // we don't know
-    }
-    if (
-      !import.meta.build &&
-      // do not inherit @jsenv/core/package.json while executing jsenv tests
-      urlInfo.packageJSON?.name === "@jsenv/core" &&
-      // but allow side effects detection when building @jsenv/core itself
-      packageDirectory.read(packageDirectory.url).name !== "@jsenv/core"
-    ) {
-      return null;
     }
     for (const contentSideEffect of urlInfo.contentSideEffects) {
       if (contentSideEffect.has) {
