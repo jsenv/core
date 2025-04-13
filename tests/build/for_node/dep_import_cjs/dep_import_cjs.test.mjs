@@ -1,7 +1,7 @@
 // we'll test with a dynamic improt in the end
 
 import { build } from "@jsenv/core";
-// import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
 await build({
   sourceDirectoryUrl: import.meta.resolve("./source/"),
@@ -10,6 +10,13 @@ await build({
   entryPoints: {
     "./index.js": {
       runtimeCompat: { node: "20.0" },
+      plugins: [
+        jsenvPluginCommonJs({
+          include: {
+            "file://**/node_modules/foo/": true,
+          },
+        }),
+      ],
     },
   },
 });
