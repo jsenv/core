@@ -50,7 +50,7 @@
     "formidable": "3.5.2"
   },
   "devDependencies": {
-    "eventsource": "3.0.5",
-    "undici": "7.5.0"
+    "eventsource": "3.0.6",
+    "undici": "7.8.0"
   }
 }

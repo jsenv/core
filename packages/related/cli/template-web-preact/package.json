@@ -1,7 +1,7 @@
 {
   "name": "jsenv-template-web-preact",
   "private": true,
-  "version": "0.0.4",
+  "version": "0.0.5",
   "type": "module",
   "scripts": {
     "start": "npm run dev -- --open",
@@ -15,21 +15,21 @@
     "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "dependencies": {
-    "preact": "10.26.4"
+    "preact": "10.26.5"
   },
   "devDependencies": {
     "@babel/plugin-syntax-import-attributes": "7.26.0",
     "@babel/plugin-transform-react-jsx": "7.25.9",
     "@jsenv/assert": "4.4.6",
-    "@jsenv/core": "40.3.0",
+    "@jsenv/core": "40.3.1",
     "@jsenv/plugin-preact": "1.7.9",
-    "@jsenv/plugin-bundling": "2.9.0",
-    "@jsenv/plugin-minification": "1.6.2",
-    "@jsenv/eslint-config-relax": "1.4.7",
+    "@jsenv/plugin-bundling": "2.9.3",
+    "@jsenv/plugin-minification": "1.6.3",
+    "@jsenv/eslint-config-relax": "1.4.10",
     "@jsenv/test": "3.6.12",
-    "eslint": "9.22.0",
+    "eslint": "9.24.0",
     "open": "10.1.0",
-    "@playwright/browser-chromium": "1.51.0",
+    "@playwright/browser-chromium": "1.51.1",
     "prettier": "3.5.3"
   }
 }

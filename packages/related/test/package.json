@@ -43,7 +43,7 @@
   "dependencies": {
     "@c88/v8-coverage": "0.1.1",
     "@jsenv/abort": "4.3.1",
-    "@jsenv/ast": "6.6.8",
+    "@jsenv/ast": "6.6.9",
     "@jsenv/exception": "1.1.7",
     "@jsenv/filesystem": "4.15.0",
     "@jsenv/github-check-run": "0.2.23",

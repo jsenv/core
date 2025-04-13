@@ -32,11 +32,11 @@
   "sideEffects": false,
   "dependencies": {
     "@jsenv/assert": "4.4.6",
-    "@jsenv/ast": "6.6.8",
+    "@jsenv/ast": "6.6.9",
     "@jsenv/exception": "1.1.7",
     "@jsenv/humanize": "1.5.0",
     "@jsenv/filesystem": "4.15.0",
-    "@jsenv/terminal-recorder": "1.5.12",
+    "@jsenv/terminal-recorder": "1.5.14",
     "@jsenv/urls": "2.7.2",
     "@jsenv/utils": "2.3.0",
     "ansi-regex": "6.1.0",

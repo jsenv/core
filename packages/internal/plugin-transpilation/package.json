@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-transpilation",
-  "version": "1.5.10",
+  "version": "1.5.14",
   "description": "TODO",
   "license": "MIT",
   "repository": {
@@ -36,7 +36,7 @@
     "@babel/plugin-syntax-optional-catch-binding": "7.8.3",
     "@babel/plugin-transform-arrow-functions": "7.25.9",
     "@babel/plugin-transform-block-scoped-functions": "7.26.5",
-    "@babel/plugin-transform-block-scoping": "7.25.9",
+    "@babel/plugin-transform-block-scoping": "7.27.0",
     "@babel/plugin-transform-classes": "7.25.9",
     "@babel/plugin-transform-computed-properties": "7.25.9",
     "@babel/plugin-transform-destructuring": "7.25.9",
@@ -49,18 +49,18 @@
     "@babel/plugin-transform-new-target": "7.25.9",
     "@babel/plugin-transform-object-super": "7.25.9",
     "@babel/plugin-transform-parameters": "7.25.9",
-    "@babel/plugin-transform-regenerator": "7.25.9",
+    "@babel/plugin-transform-regenerator": "7.27.0",
     "@babel/plugin-transform-shorthand-properties": "7.25.9",
     "@babel/plugin-transform-spread": "7.25.9",
     "@babel/plugin-transform-sticky-regex": "7.25.9",
     "@babel/plugin-transform-template-literals": "7.26.8",
-    "@babel/plugin-transform-typeof-symbol": "7.26.7",
+    "@babel/plugin-transform-typeof-symbol": "7.27.0",
     "@babel/plugin-transform-unicode-regex": "7.25.9",
-    "@jsenv/ast": "6.6.8",
+    "@jsenv/ast": "6.6.9",
     "@jsenv/runtime-compat": "1.4.1",
-    "@jsenv/js-module-fallback": "1.4.6",
+    "@jsenv/js-module-fallback": "1.4.7",
     "babel-plugin-transform-async-to-promises": "0.8.18",
     "construct-style-sheets-polyfill": "3.1.0",
-    "lightningcss": "1.29.2"
+    "lightningcss": "1.29.3"
   }
 }

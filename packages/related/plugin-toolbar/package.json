@@ -26,10 +26,10 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/ast": "6.6.8"
+    "@jsenv/ast": "6.6.9"
   },
   "devDependencies": {
-    "@preact/signals": "2.0.1"
+    "@preact/signals": "2.0.3"
   },
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
