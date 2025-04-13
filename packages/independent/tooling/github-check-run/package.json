@@ -30,7 +30,6 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/fetch": "1.2.10",
     "@jsenv/humanize": "1.5.0"
   }
 }

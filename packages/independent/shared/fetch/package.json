@@ -34,7 +34,8 @@
   "sideEffects": false,
   "dependencies": {
     "@jsenv/urls": "2.7.2",
-    "@jsenv/server": "16.0.8"
+    "@jsenv/server": "16.0.8",
+    "node-fetch": "3.3.2"
   },
   "devDependencies": {
     "@jsenv/server": "16.0.8"

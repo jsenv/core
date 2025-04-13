@@ -1,3 +1,5 @@
+import { observableFromNodeStream } from "@jsenv/server/src/interfacing_with_node/observable_from_node_stream.js";
+
 export const fetchUsingNodeRequest = async (
   url,
   { signal, method = "GET", headers = {}, body, path, ignoreHttpsError } = {},
@@ -26,11 +28,9 @@ export const fetchUsingNodeRequest = async (
   };
   if (ignoreHttpsError && url.startsWith("https")) {
     const { Agent } = await import("node:https");
-    options.agent = () => {
-      return new Agent({
-        rejectUnauthorized: false,
-      });
-    };
+    options.agent = new Agent({
+      rejectUnauthorized: false,
+    });
   }
 
   const nodeRequest = createNodeRequest(options);
@@ -39,28 +39,35 @@ export const fetchUsingNodeRequest = async (
   }
   nodeRequest.end();
 
-  let responseBodyBufferPromise;
   const nodeResponse = await new Promise((resolve, reject) => {
     nodeRequest.on("error", (error) => {
       console.error(`error event triggered on request to ${url}`);
       reject(error);
     });
     nodeRequest.on("response", (nodeResponse) => {
-      responseBodyBufferPromise = new Promise((resolve, reject) => {
-        const bufferArray = [];
-        nodeResponse.on("error", (e) => {
-          reject(e);
-        });
-        nodeResponse.on("data", (chunk) => {
-          bufferArray.push(chunk);
-        });
-        nodeResponse.on("end", () => {
-          const bodyBuffer = Buffer.concat(bufferArray);
-          resolve(bodyBuffer);
-        });
-      });
       resolve(nodeResponse);
     });
+  });
+  const responseBody = observableFromNodeStream(nodeResponse);
+  // ideally we would not wait for the response to return a response object
+  // for now I can't make node.fetch + Response + all things work together here
+  // and this util is not used in production so it's good enough for now
+  const responseBodyBuffer = await new Promise((resolve, reject) => {
+    const bufferArray = [];
+    responseBody.subscribe(
+      {
+        next: (data) => {
+          bufferArray.push(data);
+        },
+        error: (value) => {
+          reject(value);
+        },
+        complete: () => {
+          resolve(Buffer.concat(bufferArray));
+        },
+      },
+      { signal },
+    );
   });
 
   return {
@@ -68,18 +75,18 @@ export const fetchUsingNodeRequest = async (
     status: nodeResponse.statusCode,
     statusText: nodeResponse.statusMessage,
     headers: new Map(Object.entries(nodeResponse.headers)),
+    body: responseBodyBuffer,
     arrayBuffer: async () => {
-      const responseBodyBuffer = await responseBodyBufferPromise;
       return responseBodyBuffer;
     },
     text: async () => {
-      const responseBodyBuffer = await responseBodyBufferPromise;
-      return responseBodyBuffer.toString();
+      const responseBodyString = responseBodyBuffer.toString();
+      return responseBodyString;
     },
     json: async () => {
-      const responseBodyBuffer = await responseBodyBufferPromise;
       const responseBodyString = responseBodyBuffer.toString();
-      return JSON.parse(responseBodyString);
+      const responseBodyJSON = JSON.parse(responseBodyString);
+      return responseBodyJSON;
     },
   };
 };

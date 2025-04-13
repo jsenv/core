@@ -6,7 +6,8 @@ import {
   isFileHandle,
 } from "@jsenv/server/src/interfacing_with_node/observable_from_file_handle.js";
 import { DATA_URL } from "@jsenv/urls";
-import { fetchUsingNodeRequest } from "./fetch_using_node_request.js";
+import nodeFetch, { Response } from "node-fetch";
+import { Agent } from "node:https";
 
 export const fetchUrl = async (
   url,
@@ -78,11 +79,19 @@ export const fetchUrl = async (
     return response;
   }
 
-  const response = await fetchUsingNodeRequest(url, {
+  const response = await nodeFetch(url, {
     signal,
     method,
     headers,
-    ignoreHttpsError,
+    ...(ignoreHttpsError && url.startsWith("https")
+      ? {
+          agent: () => {
+            return new Agent({
+              rejectUnauthorized: false,
+            });
+          },
+        }
+      : {}),
     ...rest,
   });
 
