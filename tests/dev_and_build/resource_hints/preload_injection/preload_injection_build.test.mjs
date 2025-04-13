@@ -17,6 +17,7 @@ const run = async () => {
           },
         },
         minification: false,
+        packageSideEffects: false,
       },
     },
   });
