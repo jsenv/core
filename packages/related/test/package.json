@@ -40,7 +40,8 @@
     "prepublishOnly": "npm run build"
   },
   "optionalDependencies": {
-    "playwright": "1.x"
+    "playwright": "1.x",
+    "playwright-core": "1.x"
   },
   "dependencies": {
     "@c88/v8-coverage": "0.1.1",
