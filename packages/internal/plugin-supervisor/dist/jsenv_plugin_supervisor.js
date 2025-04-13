@@ -1,431 +1,6 @@
 import { applyBabelPlugins, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectJsenvScript, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
-import { createRequire } from "node:module";
-
-const formatDefault = v => v;
-const generateContentFrame = ({
-  content,
-  line,
-  column,
-  linesAbove = 3,
-  linesBelow = 0,
-  lineMaxWidth = 120,
-  lineNumbersOnTheLeft = true,
-  lineMarker = true,
-  columnMarker = true,
-  format = formatDefault
-} = {}) => {
-  const lineStrings = content.split(/\r?\n/);
-  if (line === 0) line = 1;
-  if (column === undefined) {
-    columnMarker = false;
-    column = 1;
-  }
-  if (column === 0) column = 1;
-  let lineStartIndex = line - 1 - linesAbove;
-  if (lineStartIndex < 0) {
-    lineStartIndex = 0;
-  }
-  let lineEndIndex = line - 1 + linesBelow;
-  if (lineEndIndex > lineStrings.length - 1) {
-    lineEndIndex = lineStrings.length - 1;
-  }
-  if (columnMarker) {
-    // human reader deduce the line when there is a column marker
-    lineMarker = false;
-  }
-  if (line - 1 === lineEndIndex) {
-    lineMarker = false; // useless because last line
-  }
-  let lineIndex = lineStartIndex;
-  let columnsBefore;
-  let columnsAfter;
-  if (column > lineMaxWidth) {
-    columnsBefore = column - Math.ceil(lineMaxWidth / 2);
-    columnsAfter = column + Math.floor(lineMaxWidth / 2);
-  } else {
-    columnsBefore = 0;
-    columnsAfter = lineMaxWidth;
-  }
-  let columnMarkerIndex = column - 1 - columnsBefore;
-  let source = "";
-  while (lineIndex <= lineEndIndex) {
-    const lineString = lineStrings[lineIndex];
-    const lineNumber = lineIndex + 1;
-    const isLastLine = lineIndex === lineEndIndex;
-    const isMainLine = lineNumber === line;
-    lineIndex++;
-    {
-      if (lineMarker) {
-        if (isMainLine) {
-          source += "".concat(format(">", "marker_line"), " ");
-        } else {
-          source += "  ";
-        }
-      }
-      if (lineNumbersOnTheLeft) {
-        // fill with spaces to ensure if line moves from 7,8,9 to 10 the display is still great
-        const asideSource = "".concat(fillLeft(lineNumber, lineEndIndex + 1), " |");
-        source += "".concat(format(asideSource, "line_number_aside"), " ");
-      }
-    }
-    {
-      source += truncateLine(lineString, {
-        start: columnsBefore,
-        end: columnsAfter,
-        prefix: "…",
-        suffix: "…",
-        format
-      });
-    }
-    {
-      if (columnMarker && isMainLine) {
-        source += "\n";
-        if (lineMarker) {
-          source += "  ";
-        }
-        if (lineNumbersOnTheLeft) {
-          const asideSpaces = "".concat(fillLeft(lineNumber, lineEndIndex + 1), " | ").length;
-          source += " ".repeat(asideSpaces);
-        }
-        source += " ".repeat(columnMarkerIndex);
-        source += format("^", "marker_column");
-      }
-    }
-    if (!isLastLine) {
-      source += "\n";
-    }
-  }
-  return source;
-};
-const truncateLine = (line, {
-  start,
-  end,
-  prefix,
-  suffix,
-  format
-}) => {
-  const lastIndex = line.length;
-  if (line.length === 0) {
-    // don't show any ellipsis if the line is empty
-    // because it's not truncated in that case
-    return "";
-  }
-  const startTruncated = start > 0;
-  const endTruncated = lastIndex > end;
-  let from = startTruncated ? start + prefix.length : start;
-  let to = endTruncated ? end - suffix.length : end;
-  if (to > lastIndex) to = lastIndex;
-  if (start >= lastIndex || from === to) {
-    return "";
-  }
-  let result = "";
-  while (from < to) {
-    result += format(line[from], "char");
-    from++;
-  }
-  if (result.length === 0) {
-    return "";
-  }
-  if (startTruncated && endTruncated) {
-    return "".concat(format(prefix, "marker_overflow_left")).concat(result).concat(format(suffix, "marker_overflow_right"));
-  }
-  if (startTruncated) {
-    return "".concat(format(prefix, "marker_overflow_left")).concat(result);
-  }
-  if (endTruncated) {
-    return "".concat(result).concat(format(suffix, "marker_overflow_right"));
-  }
-  return result;
-};
-const fillLeft = (value, biggestValue, char = " ") => {
-  const width = String(value).length;
-  const biggestWidth = String(biggestValue).length;
-  let missingWidth = biggestWidth - width;
-  let padded = "";
-  while (missingWidth--) {
-    padded += char;
-  }
-  padded += value;
-  return padded;
-};
-
-// normalize url search params:
-// Using URLSearchParams to alter the url search params
-// can result into "file:///file.css?css_module"
-// becoming "file:///file.css?css_module="
-// we want to get rid of the "=" and consider it's the same url
-const normalizeUrl = url => {
-  const calledWithString = typeof url === "string";
-  const urlObject = calledWithString ? new URL(url) : url;
-  let urlString = urlObject.href;
-  if (!urlString.includes("?")) {
-    return url;
-  }
-  // disable on data urls (would mess up base64 encoding)
-  if (urlString.startsWith("data:")) {
-    return url;
-  }
-  urlString = urlString.replace(/[=](?=&|$)/g, "");
-  if (calledWithString) {
-    return urlString;
-  }
-  urlObject.href = urlString;
-  return urlObject;
-};
-const injectQueryParams = (url, params) => {
-  const calledWithString = typeof url === "string";
-  const urlObject = calledWithString ? new URL(url) : url;
-  const {
-    searchParams
-  } = urlObject;
-  for (const key of Object.keys(params)) {
-    const value = params[key];
-    if (value === undefined) {
-      searchParams.delete(key);
-    } else {
-      searchParams.set(key, value);
-    }
-  }
-  return normalizeUrl(calledWithString ? urlObject.href : urlObject);
-};
-
-const getCommonPathname = (pathname, otherPathname) => {
-  if (pathname === otherPathname) {
-    return pathname;
-  }
-  let commonPart = "";
-  let commonPathname = "";
-  let i = 0;
-  const length = pathname.length;
-  const otherLength = otherPathname.length;
-  while (i < length) {
-    const char = pathname.charAt(i);
-    const otherChar = otherPathname.charAt(i);
-    i++;
-    if (char === otherChar) {
-      if (char === "/") {
-        commonPart += "/";
-        commonPathname += commonPart;
-        commonPart = "";
-      } else {
-        commonPart += char;
-      }
-    } else {
-      if (char === "/" && i - 1 === otherLength) {
-        commonPart += "/";
-        commonPathname += commonPart;
-      }
-      return commonPathname;
-    }
-  }
-  if (length === otherLength) {
-    commonPathname += commonPart;
-  } else if (otherPathname.charAt(i) === "/") {
-    commonPathname += commonPart;
-  }
-  return commonPathname;
-};
-
-const urlToRelativeUrl = (url, baseUrl, {
-  preferRelativeNotation
-} = {}) => {
-  const urlObject = new URL(url);
-  const baseUrlObject = new URL(baseUrl);
-  if (urlObject.protocol !== baseUrlObject.protocol) {
-    const urlAsString = String(url);
-    return urlAsString;
-  }
-  if (urlObject.username !== baseUrlObject.username || urlObject.password !== baseUrlObject.password || urlObject.host !== baseUrlObject.host) {
-    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
-    return afterUrlScheme;
-  }
-  const {
-    pathname,
-    hash,
-    search
-  } = urlObject;
-  if (pathname === "/") {
-    const baseUrlResourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
-    return baseUrlResourceWithoutLeadingSlash;
-  }
-  const basePathname = baseUrlObject.pathname;
-  const commonPathname = getCommonPathname(pathname, basePathname);
-  if (!commonPathname) {
-    const urlAsString = String(url);
-    return urlAsString;
-  }
-  const specificPathname = pathname.slice(commonPathname.length);
-  const baseSpecificPathname = basePathname.slice(commonPathname.length);
-  if (baseSpecificPathname.includes("/")) {
-    const baseSpecificParentPathname = pathnameToParentPathname(baseSpecificPathname);
-    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(/.*?\//g, "../");
-    const relativeUrl = "".concat(relativeDirectoriesNotation).concat(specificPathname).concat(search).concat(hash);
-    return relativeUrl;
-  }
-  const relativeUrl = "".concat(specificPathname).concat(search).concat(hash);
-  return preferRelativeNotation ? "./".concat(relativeUrl) : relativeUrl;
-};
-const pathnameToParentPathname = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex === -1) {
-    return "/";
-  }
-  return pathname.slice(0, slashLastIndex + 1);
-};
-
-const require = createRequire(import.meta.url);
-// consider using https://github.com/7rulnik/source-map-js
-
-const requireSourcemap = () => {
-  const namespace = require("source-map-js");
-  return namespace;
-};
-
-// https://github.com/mozilla/source-map#sourcemapconsumerprototypeoriginalpositionforgeneratedposition
-const getOriginalPosition = ({
-  sourcemap,
-  line,
-  column,
-  bias
-}) => {
-  const {
-    SourceMapConsumer
-  } = requireSourcemap();
-  const sourceMapConsumer = new SourceMapConsumer(sourcemap);
-  const originalPosition = sourceMapConsumer.originalPositionFor({
-    line,
-    column,
-    bias
-  });
-  return originalPosition;
-};
-
-const generateSourcemapDataUrl = sourcemap => {
-  const asBase64 = Buffer.from(JSON.stringify(sourcemap)).toString("base64");
-  return "data:application/json;charset=utf-8;base64,".concat(asBase64);
-};
-
-const SOURCEMAP = {
-  enabledOnContentType: contentType => {
-    return ["text/javascript", "text/css"].includes(contentType);
-  },
-  readComment: ({
-    contentType,
-    content
-  }) => {
-    const read = {
-      "text/javascript": parseJavaScriptSourcemapComment,
-      "text/css": parseCssSourcemapComment
-    }[contentType];
-    return read ? read(content) : null;
-  },
-  removeComment: ({
-    contentType,
-    content
-  }) => {
-    return SOURCEMAP.writeComment({
-      contentType,
-      content,
-      specifier: ""
-    });
-  },
-  writeComment: ({
-    contentType,
-    content,
-    specifier
-  }) => {
-    const write = {
-      "text/javascript": setJavaScriptSourceMappingUrl,
-      "text/css": setCssSourceMappingUrl
-    }[contentType];
-    return write ? write(content, specifier) : content;
-  }
-};
-const parseJavaScriptSourcemapComment = javaScriptSource => {
-  let sourceMappingUrl;
-  replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, value => {
-    sourceMappingUrl = value;
-  });
-  if (!sourceMappingUrl) {
-    return null;
-  }
-  return {
-    type: "sourcemap_comment",
-    subtype: "js",
-    // we assume it's on last line
-    line: javaScriptSource.split(/\r?\n/).length,
-    // ${"//#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
-    column: "//#".concat(" sourceMappingURL=").length + 1,
-    specifier: sourceMappingUrl
-  };
-};
-const setJavaScriptSourceMappingUrl = (javaScriptSource, sourceMappingFileUrl) => {
-  let replaced;
-  const sourceAfterReplace = replaceSourceMappingUrl(javaScriptSource, javascriptSourceMappingUrlCommentRegexp, () => {
-    replaced = true;
-    return sourceMappingFileUrl ? writeJavaScriptSourceMappingURL(sourceMappingFileUrl) : "";
-  });
-  if (replaced) {
-    return sourceAfterReplace;
-  }
-  return sourceMappingFileUrl ? "".concat(javaScriptSource, "\n").concat(writeJavaScriptSourceMappingURL(sourceMappingFileUrl), "\n") : javaScriptSource;
-};
-const parseCssSourcemapComment = cssSource => {
-  let sourceMappingUrl;
-  replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, value => {
-    sourceMappingUrl = value;
-  });
-  if (!sourceMappingUrl) {
-    return null;
-  }
-  return {
-    type: "sourcemap_comment",
-    subtype: "css",
-    // we assume it's on last line
-    line: cssSource.split(/\r?\n/).length - 1,
-    // ${"//*#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
-    column: "//*#".concat(" sourceMappingURL=").length + 1,
-    specifier: sourceMappingUrl
-  };
-};
-const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
-  let replaced;
-  const sourceAfterReplace = replaceSourceMappingUrl(cssSource, cssSourceMappingUrlCommentRegExp, () => {
-    replaced = true;
-    return sourceMappingFileUrl ? writeCssSourceMappingUrl(sourceMappingFileUrl) : "";
-  });
-  if (replaced) {
-    return sourceAfterReplace;
-  }
-  return sourceMappingFileUrl ? "".concat(cssSource, "\n").concat(writeCssSourceMappingUrl(sourceMappingFileUrl), "\n") : cssSource;
-};
-const javascriptSourceMappingUrlCommentRegexp = /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
-const cssSourceMappingUrlCommentRegExp = /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g;
-
-// ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
-const writeJavaScriptSourceMappingURL = value => {
-  return "//#".concat(" sourceMappingURL=", value);
-};
-const writeCssSourceMappingUrl = value => {
-  return "/*# sourceMappingURL=".concat(value, " */");
-};
-const replaceSourceMappingUrl = (source, regexp, callback) => {
-  let lastSourceMappingUrl;
-  let matchSourceMappingUrl;
-  while (matchSourceMappingUrl = regexp.exec(source)) {
-    lastSourceMappingUrl = matchSourceMappingUrl;
-  }
-  if (lastSourceMappingUrl) {
-    const index = lastSourceMappingUrl.index;
-    const before = source.slice(0, index);
-    const after = source.slice(index);
-    const mappedAfter = after.replace(regexp, (match, firstGroup) => {
-      return callback(firstGroup);
-    });
-    return "".concat(before).concat(mappedAfter);
-  }
-  return source;
-};
+import { urlToRelativeUrl, injectQueryParams } from "@jsenv/urls";
+import { generateSourcemapDataUrl, SOURCEMAP, getOriginalPosition } from "@jsenv/sourcemap";
 
 /*
  * ```js
@@ -904,6 +479,154 @@ const generateCodeToSuperviseScriptWithSrc = ({
   return "window.__supervisor__.superviseScript(".concat(srcEncoded, ");");
 };
 
+const formatDefault = v => v;
+const generateContentFrame = ({
+  content,
+  line,
+  column,
+  linesAbove = 3,
+  linesBelow = 0,
+  lineMaxWidth = 120,
+  lineNumbersOnTheLeft = true,
+  lineMarker = true,
+  columnMarker = true,
+  format = formatDefault
+} = {}) => {
+  const lineStrings = content.split(/\r?\n/);
+  if (line === 0) line = 1;
+  if (column === undefined) {
+    columnMarker = false;
+    column = 1;
+  }
+  if (column === 0) column = 1;
+  let lineStartIndex = line - 1 - linesAbove;
+  if (lineStartIndex < 0) {
+    lineStartIndex = 0;
+  }
+  let lineEndIndex = line - 1 + linesBelow;
+  if (lineEndIndex > lineStrings.length - 1) {
+    lineEndIndex = lineStrings.length - 1;
+  }
+  if (columnMarker) {
+    // human reader deduce the line when there is a column marker
+    lineMarker = false;
+  }
+  if (line - 1 === lineEndIndex) {
+    lineMarker = false; // useless because last line
+  }
+  let lineIndex = lineStartIndex;
+  let columnsBefore;
+  let columnsAfter;
+  if (column > lineMaxWidth) {
+    columnsBefore = column - Math.ceil(lineMaxWidth / 2);
+    columnsAfter = column + Math.floor(lineMaxWidth / 2);
+  } else {
+    columnsBefore = 0;
+    columnsAfter = lineMaxWidth;
+  }
+  let columnMarkerIndex = column - 1 - columnsBefore;
+  let source = "";
+  while (lineIndex <= lineEndIndex) {
+    const lineString = lineStrings[lineIndex];
+    const lineNumber = lineIndex + 1;
+    const isLastLine = lineIndex === lineEndIndex;
+    const isMainLine = lineNumber === line;
+    lineIndex++;
+    {
+      if (lineMarker) {
+        if (isMainLine) {
+          source += "".concat(format(">", "marker_line"), " ");
+        } else {
+          source += "  ";
+        }
+      }
+      if (lineNumbersOnTheLeft) {
+        // fill with spaces to ensure if line moves from 7,8,9 to 10 the display is still great
+        const asideSource = "".concat(fillLeft(lineNumber, lineEndIndex + 1), " |");
+        source += "".concat(format(asideSource, "line_number_aside"), " ");
+      }
+    }
+    {
+      source += truncateLine(lineString, {
+        start: columnsBefore,
+        end: columnsAfter,
+        prefix: "…",
+        suffix: "…",
+        format
+      });
+    }
+    {
+      if (columnMarker && isMainLine) {
+        source += "\n";
+        if (lineMarker) {
+          source += "  ";
+        }
+        if (lineNumbersOnTheLeft) {
+          const asideSpaces = "".concat(fillLeft(lineNumber, lineEndIndex + 1), " | ").length;
+          source += " ".repeat(asideSpaces);
+        }
+        source += " ".repeat(columnMarkerIndex);
+        source += format("^", "marker_column");
+      }
+    }
+    if (!isLastLine) {
+      source += "\n";
+    }
+  }
+  return source;
+};
+const truncateLine = (line, {
+  start,
+  end,
+  prefix,
+  suffix,
+  format
+}) => {
+  const lastIndex = line.length;
+  if (line.length === 0) {
+    // don't show any ellipsis if the line is empty
+    // because it's not truncated in that case
+    return "";
+  }
+  const startTruncated = start > 0;
+  const endTruncated = lastIndex > end;
+  let from = startTruncated ? start + prefix.length : start;
+  let to = endTruncated ? end - suffix.length : end;
+  if (to > lastIndex) to = lastIndex;
+  if (start >= lastIndex || from === to) {
+    return "";
+  }
+  let result = "";
+  while (from < to) {
+    result += format(line[from], "char");
+    from++;
+  }
+  if (result.length === 0) {
+    return "";
+  }
+  if (startTruncated && endTruncated) {
+    return "".concat(format(prefix, "marker_overflow_left")).concat(result).concat(format(suffix, "marker_overflow_right"));
+  }
+  if (startTruncated) {
+    return "".concat(format(prefix, "marker_overflow_left")).concat(result);
+  }
+  if (endTruncated) {
+    return "".concat(result).concat(format(suffix, "marker_overflow_right"));
+  }
+  return result;
+};
+const fillLeft = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
+  let padded = "";
+  while (missingWidth--) {
+    padded += char;
+  }
+  padded += value;
+  return padded;
+};
+
 /*
  * This plugin provides a way for jsenv to supervisor js execution:
  * - Know how many js are executed, when they are done, collect errors, etc...
@@ -994,6 +717,7 @@ const jsenvPluginSupervisor = ({
           if (sourcemap) {
             const original = getOriginalPosition({
               sourcemap,
+              url: file,
               line,
               column
             });

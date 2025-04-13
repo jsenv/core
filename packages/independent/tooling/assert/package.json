@@ -38,8 +38,7 @@
     "/src/"
   ],
   "sideEffects": [
-    "./dist/node/jsenv_assert_node_modules.js",
-    "./dist/browser/jsenv_assert_node_modules.js"
+    "./dist/node/jsenv_assert_node_modules.js"
   ],
   "scripts": {
     "dev": "node ./scripts/start_dev_server.mjs",

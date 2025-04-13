@@ -1,10 +1,9 @@
 import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
 import { startServer } from "@jsenv/server";
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 import { urlToFileSystemPath } from "@jsenv/urls";
-
-import { fetchUrl } from "@jsenv/fetch";
 
 const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
 

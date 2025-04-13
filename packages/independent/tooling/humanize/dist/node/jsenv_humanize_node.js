@@ -1,5 +1,7 @@
-import { createSupportsColor, isUnicodeSupported, stripAnsi, emojiRegex, eastAsianWidth, clearTerminal, eraseLines } from "./jsenv_humanize_node_modules.js";
+import { createSupportsColor, isUnicodeSupported, emojiRegex, eastAsianWidth } from "./jsenv_humanize_node_modules.js";
+import stripAnsi from "strip-ansi";
 import { stripVTControlCharacters } from "node:util";
+import ansiEscapes from "ansi-escapes";
 import "node:process";
 import "node:os";
 import "node:tty";
@@ -1747,7 +1749,7 @@ const createDynamicLog = ({
     if (visualLineCount > rows) {
       if (clearTerminalAllowed) {
         clearAttemptResult = true;
-        return clearTerminal;
+        return ansiEscapes.clearTerminal;
       }
       // the whole log cannot be cleared because it's vertically to long
       // (longer than terminal height)
@@ -1760,7 +1762,7 @@ const createDynamicLog = ({
     }
 
     clearAttemptResult = true;
-    return eraseLines(visualLineCount);
+    return ansiEscapes.eraseLines(visualLineCount);
   };
 
   const update = (string) => {

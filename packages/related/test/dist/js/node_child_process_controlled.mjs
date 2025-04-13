@@ -1,9 +1,13 @@
-import { createException } from "@jsenv/exception";
 import { memoryUsage } from "node:process";
 import { executeUsingDynamicImport } from "../execute_using_dynamic_import.js";
+import { createException } from "../exception.js";
 import "node:fs";
 import "node:perf_hooks";
 import "node:inspector";
+import "../jsenv_test_node_modules.js";
+import "node:os";
+import "node:tty";
+import "node:url";
 
 let memoryHeapUsedAtStart;
 if (process.env.MEASURE_MEMORY_AT_START) {
