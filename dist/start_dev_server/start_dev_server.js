@@ -1,6 +1,6 @@
 import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, updateJsonFileSync, isSpecifierForNodeBuiltin, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, readPackageAtOrNull } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, updateJsonFileSync, jsenvPluginTranspilation, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, readPackageAtOrNull } from "../jsenv_core_packages.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
@@ -8270,15 +8270,25 @@ const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
     return [];
   }
 
-  const sideEffectFileUrlSet = new Set();
-  const packageJsonFileUrl = new URL("./package.json", packageDirectory.url)
-    .href;
-
   const normalizeSideEffectFileUrl = (url) => {
     const urlRelativeToPackage = urlToRelativeUrl(url, packageDirectory.url);
     return urlRelativeToPackage[0] === "."
       ? urlRelativeToPackage
       : `./${urlRelativeToPackage}`;
+  };
+
+  const updatePackageSideEffects = (sideEffectBuildFileUrls) => {
+    const packageJsonFileUrl = new URL("./package.json", packageDirectory.url)
+      .href;
+    const sideEffectRelativeUrlArray = [];
+    for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
+      sideEffectRelativeUrlArray.push(
+        normalizeSideEffectFileUrl(sideEffectBuildUrl),
+      );
+    }
+    updateJsonFileSync(packageJsonFileUrl, {
+      sideEffects: sideEffectRelativeUrlArray,
+    });
   };
 
   const sideEffectBuildFileUrls = [];
@@ -8416,39 +8426,43 @@ const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
         }
       }
     },
-    refineBuild: () => {
+    refineBuild: (kitchen) => {
       if (sideEffectBuildFileUrls.length === 0) {
         return;
       }
-      let sideEffectsToAdd = [];
       if (sideEffects === false) {
-        sideEffectsToAdd = sideEffectBuildFileUrls;
-      } else if (Array.isArray(sideEffects)) {
+        updatePackageSideEffects(sideEffectBuildFileUrls);
+        return;
+      }
+      const { buildDirectoryUrl } = kitchen.context;
+      const sideEffectFileUrlSet = new Set();
+      if (Array.isArray(sideEffects)) {
+        let packageNeedsUpdate = false;
         for (const sideEffectFileRelativeUrl of sideEffects) {
           const sideEffectFileUrl = new URL(
             sideEffectFileRelativeUrl,
             packageDirectory.url,
           ).href;
-          sideEffectFileUrlSet.add(sideEffectFileUrl);
+          if (
+            urlIsInsideOf(sideEffectFileUrl, buildDirectoryUrl) &&
+            !sideEffectBuildFileUrls.includes(sideEffectFileUrl)
+          ) {
+            packageNeedsUpdate = true;
+          } else {
+            sideEffectFileUrlSet.add(sideEffectFileUrl);
+          }
         }
-        for (const url of sideEffectBuildFileUrls) {
-          if (sideEffectFileUrlSet.has(url)) {
+        for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
+          if (sideEffectFileUrlSet.has(sideEffectBuildUrl)) {
             continue;
           }
-          sideEffectsToAdd.push(url);
+          packageNeedsUpdate = true;
+          sideEffectFileUrlSet.add(sideEffectBuildUrl);
+        }
+        if (packageNeedsUpdate) {
+          updatePackageSideEffects(sideEffectFileUrlSet);
         }
       }
-      if (sideEffectsToAdd.length === 0) {
-        return;
-      }
-
-      const finalSideEffects = Array.isArray(sideEffects) ? sideEffects : [];
-      for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
-        finalSideEffects.push(normalizeSideEffectFileUrl(sideEffectBuildUrl));
-      }
-      updateJsonFileSync(packageJsonFileUrl, {
-        sideEffects: finalSideEffects,
-      });
     },
   };
 };
