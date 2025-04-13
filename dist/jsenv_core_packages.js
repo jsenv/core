@@ -14983,7 +14983,6 @@ const bundleJsModules = async (
             logger,
             rootDirectoryUrl,
             buildDirectoryUrl,
-            packageDirectory,
             graph,
             jsModuleUrlInfos,
             PATH_AND_URL_CONVERTER,
@@ -15062,7 +15061,6 @@ const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
   buildDirectoryUrl,
-  packageDirectory,
   graph,
   jsModuleUrlInfos,
   PATH_AND_URL_CONVERTER,
@@ -15135,6 +15133,9 @@ const rollupPluginJsenv = ({
     }
     if (isSpecifierForNodeBuiltin(url)) {
       return false;
+    }
+    if (urlToExtension$2(url) === ".css") {
+      return true;
     }
     const urlInfo = graph.getUrlInfo(url);
     if (!urlInfo) {
