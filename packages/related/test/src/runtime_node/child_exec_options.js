@@ -1,6 +1,5 @@
-import { findFreePort } from "@jsenv/server";
-
 import { createDetailedMessage } from "@jsenv/humanize";
+import { findFreePort } from "@jsenv/server/src/internal/listen.js";
 import { ExecOptions } from "./exec_options.js";
 
 export const createChildExecOptions = async ({

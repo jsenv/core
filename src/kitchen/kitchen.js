@@ -142,19 +142,24 @@ export const createKitchen = ({
       return FUNCTION_RETURNING_FALSE;
     }
     const rootPackageJSON = packageDirectory.read(packageDirectory.url);
-    const dependencies = rootPackageJSON?.dependencies;
-    if (!dependencies) {
+    if (!rootPackageJSON) {
       return FUNCTION_RETURNING_FALSE;
     }
+    const { dependencies = {}, optionalDependencies = {} } = rootPackageJSON;
     const dependencyKeys = Object.keys(dependencies);
-    if (dependencyKeys.length === 0) {
+    const optionalDependencyKeys = Object.keys(optionalDependencies);
+    const dependencySet = new Set([
+      ...dependencyKeys,
+      ...optionalDependencyKeys,
+    ]);
+    if (dependencySet.size === 0) {
       return FUNCTION_RETURNING_FALSE;
     }
 
     let getEffect;
     if (packageDependencies === "ignore") {
       getEffect = (dependencyName) => {
-        if (!dependencyKeys.includes(dependencyName)) {
+        if (!dependencySet.has(dependencyName)) {
           return "include";
         }
         return "ignore";
@@ -171,7 +176,7 @@ export const createKitchen = ({
         }
       }
       getEffect = (dependencyName) => {
-        if (!dependencyKeys.includes(dependencyName)) {
+        if (!dependencySet.has(dependencyName)) {
           return "include";
         }
         const dependencyEffect = packageDependencies[dependencyName];
