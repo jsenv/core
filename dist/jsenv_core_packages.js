@@ -1,6 +1,6 @@
 import { createSupportsColor, isUnicodeSupported, emojiRegex, eastAsianWidth, clearTerminal, eraseLines, createSupportsColor$1, isUnicodeSupported$1, stripAnsi, emojiRegex$1, eastAsianWidth$1, clearTerminal$1, eraseLines$1, createSupportsColor$2, isUnicodeSupported$2, emojiRegex$2, eastAsianWidth$2, clearTerminal$2, eraseLines$2 } from "./jsenv_core_node_modules.js";
 import { stripVTControlCharacters } from "node:util";
-import { existsSync, readFileSync as readFileSync$2, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$2, watch, realpathSync, readdir, chmod, stat, lstat, promises, unlink, rmdir } from "node:fs";
+import { existsSync, readFileSync as readFileSync$1, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$2, watch, realpathSync, readdir, chmod, stat, lstat, promises, unlink, rmdir } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -1908,7 +1908,7 @@ const lookupPackageDirectory$1 = (currentUrl) => {
 
 const readPackageAtOrNull$1 = (packageDirectoryUrl) => {
   try {
-    const packageFileContent = readFileSync$2(
+    const packageFileContent = readFileSync$1(
       new URL("./package.json", packageDirectoryUrl),
       "utf8",
     );
@@ -2873,33 +2873,6 @@ const normalizeMediaType$1 = (value) => {
   return value;
 };
 
-const readFileSync$1 = (value, { as } = {}) => {
-  const fileUrl = assertAndNormalizeFileUrl$1(value);
-  if (as === undefined) {
-    const contentType = CONTENT_TYPE$1.fromUrlExtension(fileUrl);
-    if (CONTENT_TYPE$1.isJson(contentType)) {
-      as = "json";
-    } else if (CONTENT_TYPE$1.isTextual(contentType)) {
-      as = "string";
-    } else {
-      as = "buffer";
-    }
-  }
-  const buffer = readFileSync$2(new URL(fileUrl));
-  if (as === "buffer") {
-    return buffer;
-  }
-  if (as === "string") {
-    return buffer.toString();
-  }
-  if (as === "json") {
-    return JSON.parse(buffer.toString());
-  }
-  throw new Error(
-    `"as" must be one of "buffer","string","json" received "${as}"`,
-  );
-};
-
 const removeEntrySync$1 = (
   source,
   {
@@ -3189,7 +3162,7 @@ const writeFileSync$1 = (destination, content = "", { force } = {}) => {
   const destinationUrl = assertAndNormalizeFileUrl$1(destination);
   const destinationUrlObject = new URL(destinationUrl);
   if (content && content instanceof URL) {
-    content = readFileSync$2(content);
+    content = readFileSync$1(content);
   }
   try {
     writeFileSync$2(destinationUrlObject, content);
@@ -3212,31 +3185,6 @@ const writeFileSync$1 = (destination, content = "", { force } = {}) => {
       return;
     }
     throw error;
-  }
-};
-
-const updateJsonFileSync$1 = (fileUrl, values = {}) => {
-  try {
-    const jsonString = readFileSync$1(fileUrl, { as: "string" });
-    const json = JSON.parse(jsonString);
-    const newContent = { ...json };
-    for (const key of Object.keys(values)) {
-      const value = values[key];
-      newContent[key] = value;
-    }
-    let jsonFormatted;
-    if (jsonString.startsWith("{\n")) {
-      jsonFormatted = JSON.stringify(newContent, null, "  ");
-    } else {
-      jsonFormatted = JSON.stringify(newContent);
-    }
-    writeFileSync$1(fileUrl, jsonFormatted);
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      writeFileSync$1(fileUrl, JSON.stringify(values));
-      return;
-    }
-    throw e;
   }
 };
 
@@ -3877,7 +3825,7 @@ const defaultLookupPackageScope$1 = (url) => {
 
 const defaultReadPackageJson$1 = (packageUrl) => {
   const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync$2(packageJsonUrl);
+  const buffer = readFileSync$1(packageJsonUrl);
   const string = String(buffer);
   try {
     return JSON.parse(string);
@@ -4735,7 +4683,7 @@ const mainLegacyResolvers$1 = {
       };
     }
     const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
-    const content = readFileSync$2(browserMainUrlObject, "utf-8");
+    const content = readFileSync$1(browserMainUrlObject, "utf-8");
     if (
       (/typeof exports\s*==/.test(content) &&
         /typeof module\s*==/.test(content)) ||
@@ -8921,7 +8869,7 @@ const createLookupPackageDirectory = () => {
 
 const readPackageAtOrNull = (packageDirectoryUrl) => {
   try {
-    const packageFileContent = readFileSync$2(
+    const packageFileContent = readFileSync$1(
       new URL("./package.json", packageDirectoryUrl),
       "utf8",
     );
@@ -10087,7 +10035,7 @@ const readFileSync = (value, { as } = {}) => {
       as = "buffer";
     }
   }
-  const buffer = readFileSync$2(new URL(fileUrl));
+  const buffer = readFileSync$1(new URL(fileUrl));
   if (as === "buffer") {
     return buffer;
   }
@@ -10391,7 +10339,7 @@ const writeFileSync = (destination, content = "", { force } = {}) => {
   const destinationUrl = assertAndNormalizeFileUrl(destination);
   const destinationUrlObject = new URL(destinationUrl);
   if (content && content instanceof URL) {
-    content = readFileSync$2(content);
+    content = readFileSync$1(content);
   }
   try {
     writeFileSync$2(destinationUrlObject, content);
@@ -11470,7 +11418,7 @@ const defaultLookupPackageScope = (url) => {
 
 const defaultReadPackageJson = (packageUrl) => {
   const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync$2(packageJsonUrl);
+  const buffer = readFileSync$1(packageJsonUrl);
   const string = String(buffer);
   try {
     return JSON.parse(string);
@@ -12328,7 +12276,7 @@ const mainLegacyResolvers = {
       };
     }
     const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
-    const content = readFileSync$2(browserMainUrlObject, "utf-8");
+    const content = readFileSync$1(browserMainUrlObject, "utf-8");
     if (
       (/typeof exports\s*==/.test(content) &&
         /typeof module\s*==/.test(content)) ||
@@ -18686,4 +18634,4 @@ const assertAndNormalizeDirectoryUrl = (
   return value;
 };
 
-export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createLookupPackageDirectory, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, errorToHTML$1 as errorToHTML, errorToHTML as errorToHTML$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, isSpecifierForNodeBuiltin$1 as isSpecifierForNodeBuiltin, isSpecifierForNodeBuiltin as isSpecifierForNodeBuiltin$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, readPackageAtOrNull$1 as readPackageAtOrNull, readPackageAtOrNull as readPackageAtOrNull$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, startMonitoringCpuUsage, startMonitoringMemoryUsage, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, updateJsonFileSync$1 as updateJsonFileSync, updateJsonFileSync as updateJsonFileSync$1, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };
+export { ANSI$2 as ANSI, ANSI$1, Abort$1 as Abort, Abort as Abort$1, CONTENT_TYPE$1 as CONTENT_TYPE, CONTENT_TYPE as CONTENT_TYPE$1, DATA_URL$1 as DATA_URL, DATA_URL as DATA_URL$1, JS_QUOTES$1 as JS_QUOTES, JS_QUOTES as JS_QUOTES$1, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, RUNTIME_COMPAT as RUNTIME_COMPAT$1, UNICODE$1 as UNICODE, URL_META$1 as URL_META, URL_META as URL_META$1, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, applyFileSystemMagicResolution as applyFileSystemMagicResolution$1, applyNodeEsmResolution$1 as applyNodeEsmResolution, applyNodeEsmResolution as applyNodeEsmResolution$1, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asSpecifierWithoutSearch as asSpecifierWithoutSearch$1, asUrlWithoutSearch$1 as asUrlWithoutSearch, asUrlWithoutSearch as asUrlWithoutSearch$1, assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, assertAndNormalizeDirectoryUrl$1, assertAndNormalizeDirectoryUrl as assertAndNormalizeDirectoryUrl$2, browserDefaultRuntimeCompat, bufferToEtag$1 as bufferToEtag, bufferToEtag as bufferToEtag$1, clearDirectorySync, compareFileUrls$1 as compareFileUrls, compareFileUrls as compareFileUrls$1, comparePathnames, composeTwoImportMaps$1 as composeTwoImportMaps, composeTwoImportMaps as composeTwoImportMaps$1, createDetailedMessage$3 as createDetailedMessage, createDetailedMessage$1, createDynamicLog$1 as createDynamicLog, createLogger$2 as createLogger, createLogger$1, createLogger as createLogger$2, createLookupPackageDirectory, createTaskLog$2 as createTaskLog, createTaskLog$1, createTaskLog as createTaskLog$2, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultLookupPackageScope as defaultLookupPackageScope$1, defaultReadPackageJson$1 as defaultReadPackageJson, defaultReadPackageJson as defaultReadPackageJson$1, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash$2 as ensurePathnameTrailingSlash, ensurePathnameTrailingSlash$1, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, ensureWindowsDriveLetter as ensureWindowsDriveLetter$1, errorToHTML$1 as errorToHTML, errorToHTML as errorToHTML$1, escapeRegexpSpecialChars, generateContentFrame$1 as generateContentFrame, generateContentFrame as generateContentFrame$1, getCallerPosition$1 as getCallerPosition, getCallerPosition as getCallerPosition$1, getExtensionsToTry$1 as getExtensionsToTry, getExtensionsToTry as getExtensionsToTry$1, humanizeDuration$1 as humanizeDuration, humanizeFileSize, humanizeMemory, inferRuntimeCompatFromClosestPackage, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, injectQueryParamsIntoSpecifier as injectQueryParamsIntoSpecifier$1, isFileSystemPath$2 as isFileSystemPath, isFileSystemPath$1, isSpecifierForNodeBuiltin$1 as isSpecifierForNodeBuiltin, isSpecifierForNodeBuiltin as isSpecifierForNodeBuiltin$1, lookupPackageDirectory$1 as lookupPackageDirectory, lookupPackageDirectory as lookupPackageDirectory$1, memoizeByFirstArgument, moveUrl$1 as moveUrl, moveUrl as moveUrl$1, nodeDefaultRuntimeCompat, normalizeImportMap$1 as normalizeImportMap, normalizeImportMap as normalizeImportMap$1, normalizeUrl$1 as normalizeUrl, normalizeUrl as normalizeUrl$1, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, raceProcessTeardownEvents as raceProcessTeardownEvents$1, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readCustomConditionsFromProcessArgs as readCustomConditionsFromProcessArgs$1, readEntryStatSync$1 as readEntryStatSync, readEntryStatSync as readEntryStatSync$1, readPackageAtOrNull$1 as readPackageAtOrNull, readPackageAtOrNull as readPackageAtOrNull$1, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, registerDirectoryLifecycle as registerDirectoryLifecycle$1, renderBigSection, renderDetails, renderTable, renderUrlOrRelativeUrlFilename, resolveImport$1 as resolveImport, resolveImport as resolveImport$1, setUrlBasename$1 as setUrlBasename, setUrlBasename as setUrlBasename$1, setUrlExtension$1 as setUrlExtension, setUrlExtension as setUrlExtension$1, setUrlFilename$1 as setUrlFilename, setUrlFilename as setUrlFilename$1, startMonitoringCpuUsage, startMonitoringMemoryUsage, stringifyUrlSite$1 as stringifyUrlSite, stringifyUrlSite as stringifyUrlSite$1, updateJsonFileSync, urlIsInsideOf$1 as urlIsInsideOf, urlIsInsideOf as urlIsInsideOf$1, urlToBasename$1 as urlToBasename, urlToBasename as urlToBasename$1, urlToExtension$4 as urlToExtension, urlToExtension$2 as urlToExtension$1, urlToExtension as urlToExtension$2, urlToFileSystemPath$1 as urlToFileSystemPath, urlToFileSystemPath as urlToFileSystemPath$1, urlToFilename$3 as urlToFilename, urlToFilename$1, urlToPathname$4 as urlToPathname, urlToPathname$2 as urlToPathname$1, urlToPathname as urlToPathname$2, urlToRelativeUrl$1 as urlToRelativeUrl, urlToRelativeUrl as urlToRelativeUrl$1, validateResponseIntegrity$1 as validateResponseIntegrity, validateResponseIntegrity as validateResponseIntegrity$1, writeFileSync$1 as writeFileSync, writeFileSync as writeFileSync$1 };

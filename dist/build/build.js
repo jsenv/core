@@ -4,7 +4,7 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, errorToHTML$1 as errorToHTML, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, isSpecifierForNodeBuiltin$1 as isSpecifierForNodeBuiltin, updateJsonFileSync$1 as updateJsonFileSync, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, createLookupPackageDirectory, readPackageAtOrNull$1 as readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, ensureEmptyDirectory, createDynamicLog } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, errorToHTML$1 as errorToHTML, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, isSpecifierForNodeBuiltin$1 as isSpecifierForNodeBuiltin, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, createLookupPackageDirectory, readPackageAtOrNull$1 as readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "../jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
@@ -8322,29 +8322,6 @@ const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
     return [];
   }
 
-  const normalizeSideEffectFileUrl = (url) => {
-    const urlRelativeToPackage = urlToRelativeUrl(url, packageDirectory.url);
-    return urlRelativeToPackage[0] === "."
-      ? urlRelativeToPackage
-      : `./${urlRelativeToPackage}`;
-  };
-
-  const updatePackageSideEffects = (sideEffectBuildFileUrls) => {
-    const packageJsonFileUrl = new URL("./package.json", packageDirectory.url)
-      .href;
-    const sideEffectRelativeUrlArray = [];
-    for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
-      sideEffectRelativeUrlArray.push(
-        normalizeSideEffectFileUrl(sideEffectBuildUrl),
-      );
-    }
-    updateJsonFileSync(packageJsonFileUrl, {
-      sideEffects: sideEffectRelativeUrlArray,
-    });
-  };
-
-  const sideEffectBuildFileUrls = [];
-
   const packageSideEffectsCacheMap = new Map();
   const readSideEffectInfoFromClosestPackage = (urlInfo) => {
     const closestPackageDirectoryUrl = urlInfo.packageDirectoryUrl;
@@ -8470,49 +8447,14 @@ const jsenvPluginPackageSideEffects = ({ packageDirectory }) => {
         return;
       }
     },
-    refineBuildUrlContent: (buildUrlInfo, { buildUrl }) => {
+    refineBuildUrlContent: (
+      buildUrlInfo,
+      { buildUrl, registerBuildSideEffectFile },
+    ) => {
       for (const sideEffect of buildUrlInfo.contentSideEffects) {
         if (sideEffect.has) {
-          sideEffectBuildFileUrls.push(buildUrl);
+          registerBuildSideEffectFile(buildUrl);
           return;
-        }
-      }
-    },
-    refineBuild: (kitchen) => {
-      if (sideEffectBuildFileUrls.length === 0) {
-        return;
-      }
-      if (sideEffects === false) {
-        updatePackageSideEffects(sideEffectBuildFileUrls);
-        return;
-      }
-      const { buildDirectoryUrl } = kitchen.context;
-      const sideEffectFileUrlSet = new Set();
-      if (Array.isArray(sideEffects)) {
-        let packageNeedsUpdate = false;
-        for (const sideEffectFileRelativeUrl of sideEffects) {
-          const sideEffectFileUrl = new URL(
-            sideEffectFileRelativeUrl,
-            packageDirectory.url,
-          ).href;
-          if (
-            urlIsInsideOf(sideEffectFileUrl, buildDirectoryUrl) &&
-            !sideEffectBuildFileUrls.includes(sideEffectFileUrl)
-          ) {
-            packageNeedsUpdate = true;
-          } else {
-            sideEffectFileUrlSet.add(sideEffectFileUrl);
-          }
-        }
-        for (const sideEffectBuildUrl of sideEffectBuildFileUrls) {
-          if (sideEffectFileUrlSet.has(sideEffectBuildUrl)) {
-            continue;
-          }
-          packageNeedsUpdate = true;
-          sideEffectFileUrlSet.add(sideEffectBuildUrl);
-        }
-        if (packageNeedsUpdate) {
-          updatePackageSideEffects(sideEffectFileUrlSet);
         }
       }
     },
@@ -11217,6 +11159,7 @@ const build = async ({
             entryBuildInfo.buildFileVersions = result.buildFileVersions;
             entryBuildInfo.buildInlineContents = result.buildInlineContents;
             entryBuildInfo.buildManifest = result.buildManifest;
+            entryBuildInfo.buildSideEffectFiles = result.buildSideEffectFiles;
             entryBuildInfo.duration = Date.now() - entryPointBuildStartMs;
             onEntryPointBuildEnd();
           })();
@@ -11239,11 +11182,15 @@ const build = async ({
     const buildFileVersions = {};
     const buildInlineContents = {};
     const buildManifest = {};
+    const buildSideEffectUrlSet = new Set();
     for (const [, entryBuildInfo] of entryBuildInfoMap) {
       Object.assign(buildFileContents, entryBuildInfo.buildFileContents);
       Object.assign(buildFileVersions, entryBuildInfo.buildFileVersions);
       Object.assign(buildInlineContents, entryBuildInfo.buildInlineContents);
       Object.assign(buildManifest, entryBuildInfo.buildManifest);
+      for (const buildSideEffectUrl of entryBuildInfo.buildSideEffectFiles) {
+        buildSideEffectUrlSet.add(buildSideEffectUrl);
+      }
     }
     if (writeOnFileSystem) {
       clearDirectorySync(buildDirectoryUrl, buildDirectoryCleanPatterns);
@@ -11251,6 +11198,70 @@ const build = async ({
       for (const buildRelativeUrl of buildRelativeUrls) {
         const buildUrl = new URL(buildRelativeUrl, buildDirectoryUrl);
         writeFileSync(buildUrl, buildFileContents[buildRelativeUrl]);
+      }
+      if (buildSideEffectUrlSet.size) {
+        const normalizeSideEffectFileUrl = (url) => {
+          const urlRelativeToPackage = urlToRelativeUrl(
+            url,
+            packageDirectory.url,
+          );
+          return urlRelativeToPackage[0] === "."
+            ? urlRelativeToPackage
+            : `./${urlRelativeToPackage}`;
+        };
+        const updatePackageSideEffects = (sideEffectUrlSet) => {
+          const packageJsonFileUrl = new URL(
+            "./package.json",
+            packageDirectory.url,
+          ).href;
+          const sideEffectRelativeUrlArray = [];
+          for (const sideEffectUrl of sideEffectUrlSet) {
+            sideEffectRelativeUrlArray.push(
+              normalizeSideEffectFileUrl(sideEffectUrl),
+            );
+          }
+          updateJsonFileSync(packageJsonFileUrl, {
+            sideEffects: sideEffectRelativeUrlArray,
+          });
+        };
+        const sideEffects = readPackageDirectory(
+          packageDirectory.url,
+        )?.sideEffects;
+        if (sideEffects === false) {
+          updatePackageSideEffects(buildSideEffectUrlSet);
+        } else if (Array.isArray(sideEffects)) {
+          const sideEffectUrlSet = new Set();
+          const packageSideEffectUrlSet = new Set();
+          for (const sideEffectFileRelativeUrl of sideEffects) {
+            const sideEffectFileUrl = new URL(
+              sideEffectFileRelativeUrl,
+              packageDirectory.url,
+            ).href;
+            packageSideEffectUrlSet.add(sideEffectFileUrl);
+          }
+          let hasSomeOutdatedSideEffectUrl = false;
+          for (const packageSideEffectUrl of packageSideEffectUrlSet) {
+            if (
+              urlIsInsideOf(packageSideEffectUrl, buildDirectoryUrl) &&
+              !buildSideEffectUrlSet.has(packageSideEffectUrl)
+            ) {
+              hasSomeOutdatedSideEffectUrl = true;
+            } else {
+              sideEffectUrlSet.add(packageSideEffectUrl);
+            }
+          }
+          let hasSomeNewSideEffectsUrl = false;
+          for (const buildSideEffectUrl of buildSideEffectUrlSet) {
+            if (packageSideEffectUrlSet.has(buildSideEffectUrl)) {
+              continue;
+            }
+            hasSomeNewSideEffectsUrl = true;
+            sideEffectUrlSet.add(buildSideEffectUrl);
+          }
+          if (hasSomeOutdatedSideEffectUrl || hasSomeNewSideEffectsUrl) {
+            updatePackageSideEffects(sideEffectUrlSet);
+          }
+        }
       }
     }
     onBuildEnd({
@@ -11828,6 +11839,7 @@ const prepareEntryPointBuild = async (
         });
       }
 
+      const buildSideEffectFiles = [];
       {
         finalKitchen.context.buildStep = "refine";
 
@@ -11915,6 +11927,9 @@ const prepareEntryPointBuild = async (
                 for (const refineBuildUrlContentCallback of refineBuildUrlContentCallbackSet) {
                   refineBuildUrlContentCallback(buildUrlInfo, {
                     buildUrl: buildSpecifierManager.getBuildUrl(buildUrlInfo),
+                    registerBuildSideEffectFile: (buildFileUrl) => {
+                      buildSideEffectFiles.push(buildFileUrl);
+                    },
                   });
                 }
               },
@@ -11945,6 +11960,7 @@ const prepareEntryPointBuild = async (
         buildFileVersions,
         buildInlineContents,
         buildManifest,
+        buildSideEffectFiles,
       };
     },
   };
