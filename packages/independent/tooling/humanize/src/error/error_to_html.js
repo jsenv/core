@@ -4,6 +4,9 @@ export const errorToHTML = (error) => {
     (typeof error !== "object" && typeof error !== "function");
 
   if (errorIsAPrimitive) {
+    if (typeof error === "string") {
+      return `<pre>${escapeHtml(error)}</pre>`;
+    }
     return `<pre>${JSON.stringify(error, null, "  ")}</pre>`;
   }
   return `<pre>${escapeHtml(error.stack)}</pre>`;
