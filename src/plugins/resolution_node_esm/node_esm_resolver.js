@@ -139,9 +139,9 @@ const createBuildPackageConditions = (
 
   const conditionDefaultResolvers = {
     "dev:*": devResolver,
-    "development": devResolver,
-    "node": nodeRuntimeEnabled,
-    "browser": !nodeRuntimeEnabled,
+    // "development": devResolver,
+    // "node": nodeRuntimeEnabled,
+    // "browser": !nodeRuntimeEnabled,
     "import": true,
   };
   const conditionResolvers = {
@@ -234,9 +234,10 @@ const createBuildPackageConditions = (
     delete conditionResolvers[wildcardToRemove];
   }
 
+  const conditionCandidateArray = Object.keys(conditionResolvers);
   return (specifier, importer) => {
     const conditions = [];
-    for (const conditionCandidate of Object.keys(conditionResolvers)) {
+    for (const conditionCandidate of conditionCandidateArray) {
       const conditionResolver = conditionResolvers[conditionCandidate];
       if (typeof conditionResolver === "function") {
         if (conditionResolver(specifier, importer)) {

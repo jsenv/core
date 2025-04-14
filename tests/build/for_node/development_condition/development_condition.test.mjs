@@ -42,15 +42,14 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
       packageConditions: {},
     }));
 
-  test.ONLY("1_internal_build", () =>
+  test("1_internal_build", () =>
     run({
       packageConditions: {
         "dev:jsenv": {
           "internal/": false,
         },
       },
-    }),
-  );
+    }));
 
   test("2_external_dev", () =>
     run({
