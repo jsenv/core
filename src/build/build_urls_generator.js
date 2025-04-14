@@ -127,7 +127,7 @@ const determineDirectoryPath = ({
   sourceDirectoryUrl,
   assetsDirectory,
   urlInfo,
-  ownerUrlInfo,
+  ownerUrlInfo = urlInfo.firstReference.ownerUrlInfo,
 }) => {
   if (urlInfo.dirnameHint) {
     return urlInfo.dirnameHint;
@@ -139,13 +139,25 @@ const determineDirectoryPath = ({
     const parentDirectoryPath = determineDirectoryPath({
       sourceDirectoryUrl,
       assetsDirectory,
-      urlInfo: ownerUrlInfo || urlInfo.firstReference.ownerUrlInfo,
+      urlInfo: ownerUrlInfo,
     });
     return parentDirectoryPath;
   }
   const dynamicImportId = urlInfo.searchParams.get("dynamic_import_id");
   if (dynamicImportId) {
-    return `${assetsDirectory}${dynamicImportId}/`;
+    const ancestorImportIds = [];
+    let ancestorUrlInfo = ownerUrlInfo;
+    while (ancestorUrlInfo) {
+      const ancestorDynamicImportId =
+        ancestorUrlInfo.searchParams.get("dynamic_import_id");
+      if (!ancestorDynamicImportId) {
+        break;
+      }
+      ancestorImportIds.push(ancestorDynamicImportId);
+      ancestorUrlInfo = ancestorUrlInfo.firstReference?.ownerUrlInfo;
+    }
+    const importIdPath = [...ancestorImportIds, dynamicImportId].join("/");
+    return `${assetsDirectory}${importIdPath}/`;
   }
   if (urlInfo.isEntryPoint && !urlInfo.isDynamicEntryPoint) {
     return "";
