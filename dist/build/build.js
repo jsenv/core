@@ -4,18 +4,18 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory$1 as lookupPackageDirectory, registerDirectoryLifecycle$1 as registerDirectoryLifecycle, urlToRelativeUrl$1 as urlToRelativeUrl, createDetailedMessage$1 as createDetailedMessage, stringifyUrlSite$1 as stringifyUrlSite, generateContentFrame$1 as generateContentFrame, validateResponseIntegrity$1 as validateResponseIntegrity, urlIsInsideOf$1 as urlIsInsideOf, ensureWindowsDriveLetter$1 as ensureWindowsDriveLetter, setUrlFilename$1 as setUrlFilename, moveUrl$1 as moveUrl, getCallerPosition$1 as getCallerPosition, urlToBasename$1 as urlToBasename, urlToExtension$1 as urlToExtension, asSpecifierWithoutSearch$1 as asSpecifierWithoutSearch, asUrlWithoutSearch$1 as asUrlWithoutSearch, injectQueryParamsIntoSpecifier$1 as injectQueryParamsIntoSpecifier, bufferToEtag$1 as bufferToEtag, isFileSystemPath$1 as isFileSystemPath, urlToPathname$1 as urlToPathname, setUrlBasename$1 as setUrlBasename, urlToFileSystemPath$1 as urlToFileSystemPath, writeFileSync$1 as writeFileSync, createLogger$1 as createLogger, URL_META$1 as URL_META, applyNodeEsmResolution$1 as applyNodeEsmResolution, RUNTIME_COMPAT$1 as RUNTIME_COMPAT, normalizeUrl$1 as normalizeUrl, ANSI$1 as ANSI, CONTENT_TYPE$1 as CONTENT_TYPE, urlToFilename$1 as urlToFilename, DATA_URL$1 as DATA_URL, errorToHTML$1 as errorToHTML, normalizeImportMap$1 as normalizeImportMap, composeTwoImportMaps$1 as composeTwoImportMaps, resolveImport$1 as resolveImport, JS_QUOTES$1 as JS_QUOTES, defaultLookupPackageScope$1 as defaultLookupPackageScope, defaultReadPackageJson$1 as defaultReadPackageJson, readCustomConditionsFromProcessArgs$1 as readCustomConditionsFromProcessArgs, readEntryStatSync$1 as readEntryStatSync, ensurePathnameTrailingSlash$1 as ensurePathnameTrailingSlash, compareFileUrls$1 as compareFileUrls, applyFileSystemMagicResolution$1 as applyFileSystemMagicResolution, getExtensionsToTry$1 as getExtensionsToTry, setUrlExtension$1 as setUrlExtension, isSpecifierForNodeBuiltin$1 as isSpecifierForNodeBuiltin, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl$1 as assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, createLookupPackageDirectory, readPackageAtOrNull$1 as readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog$1 as createTaskLog, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "../jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, urlIsInsideOf, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, createLookupPackageDirectory, readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { WebSocketResponse, pickContentType } from "@jsenv/server";
 import { randomUUID, createHash } from "node:crypto";
-import "../jsenv_core_node_modules.js";
+import "./jsenv_core_node_modules.js";
 import "node:os";
 import "node:tty";
-import "node:util";
 import "node:path";
+import "node:util";
 
 const getDirectoryWatchPatterns = (
   directoryUrl,
@@ -10349,6 +10349,23 @@ const createBuildUrlsGenerator = ({
       return buildUrlFromMap;
     }
     if (urlIsInsideOf(url, buildDirectoryUrl)) {
+      if (ownerUrlInfo.searchParams.has("dynamic_import_id")) {
+        const dynamicImportId =
+          ownerUrlInfo.searchParams.get("dynamic_import_id");
+        const extension = urlToExtension(url);
+        const suffix = `_dynamic_import_id_${dynamicImportId}${extension}`;
+        if (url.endsWith(suffix)) {
+          const nameBeforeSuffix = urlToFilename(url).slice(0, -suffix.length);
+          const ownerDirectoryPath = determineDirectoryPath({
+            sourceDirectoryUrl,
+            assetsDirectory,
+            urlInfo: ownerUrlInfo,
+          });
+          const buildUrl = `${buildDirectoryUrl}${ownerDirectoryPath}${nameBeforeSuffix}${extension}`;
+          associateBuildUrl(url, buildUrl);
+          return buildUrl;
+        }
+      }
       associateBuildUrl(url, url);
       return url;
     }

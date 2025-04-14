@@ -1,13 +1,11 @@
 import { startServer, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvAccessControlAllowedHeaders, createFileSystemFetch } from "@jsenv/server";
 import { existsSync } from "node:fs";
-import { assertAndNormalizeDirectoryUrl$2 as assertAndNormalizeDirectoryUrl, createLogger$2 as createLogger, Abort$1 as Abort, raceProcessTeardownEvents$1 as raceProcessTeardownEvents, createTaskLog$2 as createTaskLog, urlToExtension$2 as urlToExtension, urlToPathname$2 as urlToPathname } from "../jsenv_core_packages.js";
-import "../jsenv_core_node_modules.js";
+import { assertAndNormalizeDirectoryUrl, createLogger, Abort, raceProcessTeardownEvents, createTaskLog, urlToExtension, urlToPathname } from "./jsenv_core_packages.js";
+import "./jsenv_core_node_modules.js";
 import "node:process";
 import "node:os";
 import "node:tty";
 import "node:util";
-import "node:path";
-import "node:crypto";
 import "node:url";
 
 /*
