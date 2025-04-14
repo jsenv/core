@@ -91,10 +91,6 @@ export const bundleJsModules = async (
         nodeModuleChunkName = `${packageNameAsFilename}_node_modules`;
         packagesChunkName = `${packageNameAsFilename}_packages`;
       }
-      if (assetsDirectory) {
-        nodeModuleChunkName = `${assetsDirectory}${nodeModuleChunkName}`;
-        packagesChunkName = `${assetsDirectory}${packagesChunkName}`;
-      }
 
       chunks[nodeModuleChunkName] = {
         "file:///**/node_modules/": true,
@@ -111,7 +107,7 @@ export const bundleJsModules = async (
         }
         chunks[packagesChunkName] = {
           ...workspacePatterns,
-          ...chunks.workspaces,
+          ...chunks.packages,
         };
       }
 
@@ -143,7 +139,18 @@ export const bundleJsModules = async (
         });
         for (const chunkNameCandidate of Object.keys(meta)) {
           if (meta[chunkNameCandidate]) {
-            return chunkNameCandidate;
+            let chunkName = chunkNameCandidate;
+            if (assetsDirectory) {
+              chunkName = `${assetsDirectory}${chunkName}`;
+            }
+            const url = fileUrlConverter.asFileUrl(id);
+            const urlObject = new URL(url);
+            const dynamicImportId =
+              urlObject.searchParams.get("dynamic_import_id");
+            if (dynamicImportId) {
+              chunkName += `?dynamic_import_id=${dynamicImportId}`;
+            }
+            return chunkName;
           }
         }
         return undefined;

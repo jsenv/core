@@ -1,5 +1,10 @@
 // import { ANSI } from "@jsenv/humanize";
-import { urlIsInsideOf, urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  urlIsInsideOf,
+  urlToExtension,
+  urlToFilename,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 
 export const createBuildUrlsGenerator = ({
   // logger,
@@ -32,6 +37,23 @@ export const createBuildUrlsGenerator = ({
       return buildUrlFromMap;
     }
     if (urlIsInsideOf(url, buildDirectoryUrl)) {
+      if (ownerUrlInfo.searchParams.has("dynamic_import_id")) {
+        const dynamicImportId =
+          ownerUrlInfo.searchParams.get("dynamic_import_id");
+        const extension = urlToExtension(url);
+        const suffix = `_dynamic_import_id_${dynamicImportId}${extension}`;
+        if (url.endsWith(suffix)) {
+          const nameBeforeSuffix = urlToFilename(url).slice(0, -suffix.length);
+          const ownerDirectoryPath = determineDirectoryPath({
+            sourceDirectoryUrl,
+            assetsDirectory,
+            urlInfo: ownerUrlInfo,
+          });
+          const buildUrl = `${buildDirectoryUrl}${ownerDirectoryPath}${nameBeforeSuffix}${extension}`;
+          associateBuildUrl(url, buildUrl);
+          return buildUrl;
+        }
+      }
       associateBuildUrl(url, url);
       return url;
     }

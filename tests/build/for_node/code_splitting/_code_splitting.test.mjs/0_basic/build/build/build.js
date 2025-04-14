@@ -1,4 +1,4 @@
-import { FOO$1 as FOO } from "../jsenv_core_node_modules.js";
+import { FOO } from "./jsenv_core_node_modules.js";
 
 const answer = 42;
 
