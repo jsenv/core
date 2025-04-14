@@ -1,5 +1,10 @@
 // import { ANSI } from "@jsenv/humanize";
-import { urlIsInsideOf, urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  injectQueryParams,
+  urlIsInsideOf,
+  urlToFilename,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 
 export const createBuildUrlsGenerator = ({
   // logger,
@@ -40,9 +45,9 @@ export const createBuildUrlsGenerator = ({
         });
         const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
         let buildUrl = `${buildDirectoryUrl}${ownerDirectoryPath}${buildRelativeUrl}`;
-        const buildUrlObject = new URL(buildUrl);
-        buildUrlObject.searchParams.delete("dynamic_import_id");
-        buildUrl = buildUrlObject.href;
+        buildUrl = injectQueryParams(buildUrl, {
+          dynamic_import_id: undefined,
+        });
         associateBuildUrl(url, buildUrl);
         return buildUrl;
       }
@@ -85,7 +90,7 @@ export const createBuildUrlsGenerator = ({
       nameSetPerDirectoryMap.set(directoryPath, nameSet);
     }
     const urlObject = new URL(url);
-    urlObject.searchParams.delete("dynamic_import_id");
+    injectQueryParams(urlObject, { dynamic_import_id: undefined });
     let { search, hash } = urlObject;
     let urlName = getUrlName(url, urlInfo);
     let [basename, extension] = splitFileExtension(urlName);
