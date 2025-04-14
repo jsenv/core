@@ -6,7 +6,7 @@ run({
 })
 ```
 
-# 1/2 write 5 files into "./build/"
+# 1/2 write 6 files into "./build/"
 
 see [./build/](./build/)
 

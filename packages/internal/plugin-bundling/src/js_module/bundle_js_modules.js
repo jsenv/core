@@ -7,6 +7,7 @@ import {
   isFileSystemPath,
   urlToBasename,
   urlToExtension,
+  urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { fileUrlConverter } from "../file_url_converter.js";
@@ -311,7 +312,30 @@ const rollupPluginJsenv = ({
         stripDynamicImportId,
       );
     }
-    return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
+    const buildUrlForRollup = new URL(
+      rollupFileInfo.fileName,
+      buildDirectoryUrl,
+    ).href;
+
+    const importerId = rollupFileInfo.moduleIds[0];
+    const importerUrl = fileUrlConverter.asFileUrl(importerId);
+    const importerUrlObject = new URL(importerUrl);
+    if (importerUrlObject.searchParams.has("dynamic_import_id")) {
+      const dynamicImportId =
+        importerUrlObject.searchParams.get("dynamic_import_id");
+      const extension = urlToExtension(buildUrlForRollup);
+      const suffix = `_dynamic_import_id_${dynamicImportId}${extension}`;
+      if (buildUrlForRollup.endsWith(suffix)) {
+        const nameBeforeSuffix = urlToFilename(buildUrlForRollup).slice(
+          0,
+          -suffix.length,
+        );
+        const directoryUrl = new URL("./", buildUrlForRollup);
+        const buildUrlWithSearchParams = `${directoryUrl}${nameBeforeSuffix}${extension}?dynamic_import_id=${dynamicImportId}`;
+        return buildUrlWithSearchParams;
+      }
+    }
+    return buildUrlForRollup;
   };
 
   const getModuleSideEffects = (url) => {
