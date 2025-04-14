@@ -624,7 +624,9 @@ const URL_META = {
  */
 
 
-const isDev = process.execArgv.includes("--conditions=development");
+const isDev =
+  process.execArgv.includes("--conditions=development") ||
+  process.execArgv.includes("--conditions=dev:jsenv");
 
 const createException = (
   reason,

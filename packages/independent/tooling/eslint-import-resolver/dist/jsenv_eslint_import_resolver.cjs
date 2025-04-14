@@ -1413,6 +1413,9 @@ process.platform === "freebsd";
 
 // https://nodejs.org/api/packages.html#resolving-user-conditions
 const readCustomConditionsFromProcessArgs = () => {
+  if (process.env.IGNORE_PACKAGE_CONDITIONS) {
+    return [];
+  }
   const packageConditions = [];
   for (const arg of process.execArgv) {
     if (arg.includes("-C=")) {
@@ -2143,7 +2146,27 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
       if (Number.isInteger(key)) {
         throw new Error("Invalid package configuration");
       }
-      if (key === "default" || conditions.includes(key)) {
+      let matched;
+      if (key === "default") {
+        matched = true;
+      } else {
+        for (const conditionCandidate of conditions) {
+          if (conditionCandidate === key) {
+            matched = true;
+            break;
+          }
+          if (conditionCandidate.includes("*")) {
+            const conditionCandidateRegex = new RegExp(
+              `^${conditionCandidate.replace(/\*/g, "(.*)")}$`,
+            );
+            if (conditionCandidateRegex.test(key)) {
+              matched = true;
+              break;
+            }
+          }
+        }
+      }
+      if (matched) {
         const targetValue = target[key];
         const resolved = applyPackageTargetResolution(targetValue, {
           ...resolutionContext,

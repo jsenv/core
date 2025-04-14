@@ -10954,7 +10954,46 @@ const build = async ({
     { sourceUrlToLog, buildUrlToLog },
   ) => {
     let content = "";
-    content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")}`;
+
+    const applyColorOnFileRelativeUrl = (fileRelativeUrl, color) => {
+      let parts = fileRelativeUrl.split("/");
+      const filename = parts.pop();
+      let i = 0;
+      while (i < parts.length) {
+        const directoryRelativeUrl = parts.slice(0, i + 1).join("/");
+        const directoryUrl = new URL(
+          `${directoryRelativeUrl}/`,
+          sourceDirectoryUrl,
+        ).href;
+        if (packageDirectory.find(directoryUrl)) {
+          if (i === 0) {
+            return ANSI.color(fileRelativeUrl, color);
+          }
+          // all the things before in grey
+          // all the things after in the color
+          const before = parts.slice(0, i).join("/");
+          const packageDirectory = parts[i];
+          const packageDirectoryStylized = ANSI.color(
+            ANSI.effect(packageDirectory, ANSI.UNDERLINE),
+            color,
+          );
+          let pathColored = ANSI.color(`${before}/`, color);
+          if (i === parts.length - 1) {
+            pathColored += packageDirectoryStylized;
+            pathColored += ANSI.color(`/${filename}`, color);
+            return pathColored;
+          }
+          const after = parts.slice(i + 1).join("/");
+          pathColored += packageDirectoryStylized;
+          pathColored += ANSI.color(`/${after}/${filename}`, color);
+          return pathColored;
+        }
+        i++;
+      }
+      return ANSI.color(fileRelativeUrl, color);
+    };
+
+    content += `${UNICODE.OK} ${applyColorOnFileRelativeUrl(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${applyColorOnFileRelativeUrl(buildUrlToLog, "")}`;
     // content += " ";
     // content += ANSI.color("(", ANSI.GREY);
     // content += ANSI.color(
