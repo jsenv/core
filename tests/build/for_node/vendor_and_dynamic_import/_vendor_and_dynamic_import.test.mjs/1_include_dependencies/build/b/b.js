@@ -1,4 +1,4 @@
-import { c$1 as c } from "../test_node_modules.js";
+import { c } from "./test_node_modules.js";
 
 const b = `b -> ${c}`;
 
