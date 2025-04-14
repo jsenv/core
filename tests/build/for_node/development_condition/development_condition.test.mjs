@@ -32,7 +32,7 @@ const run = async ({ packageConditions }) => {
     },
   });
 };
-
+process.env.IGNORE_PACKAGE_CONDITIONS = "1";
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   // by default
   // - node modules "default" is favored (build)
@@ -70,3 +70,4 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
       },
     }));
 });
+delete process.env.IGNORE_PACKAGE_CONDITIONS;

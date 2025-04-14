@@ -139,16 +139,16 @@ const createBuildPackageConditions = (
 
   const conditionDefaultResolvers = {
     "dev:*": devResolver,
-    // "development": devResolver,
-    // "node": nodeRuntimeEnabled,
-    // "browser": !nodeRuntimeEnabled,
+    "development": devResolver,
+    "node": nodeRuntimeEnabled,
+    "browser": !nodeRuntimeEnabled,
     "import": true,
   };
   const conditionResolvers = {
     ...conditionDefaultResolvers,
   };
 
-  let wildcardToRemoveArray = [];
+  let wildcardToRemoveSet = new Set();
   const addCustomResolver = (condition, customResolver) => {
     for (const conditionCandidate of Object.keys(conditionDefaultResolvers)) {
       if (conditionCandidate.includes("*")) {
@@ -158,7 +158,7 @@ const createBuildPackageConditions = (
         if (conditionRegex.test(condition)) {
           const existingResolver =
             conditionDefaultResolvers[conditionCandidate];
-          wildcardToRemoveArray.push(conditionCandidate);
+          wildcardToRemoveSet.add(conditionCandidate);
           conditionResolvers[condition] = combineTwoPackageConditionResolvers(
             existingResolver,
             customResolver,
@@ -178,9 +178,9 @@ const createBuildPackageConditions = (
     conditionResolvers[condition] = customResolver;
   };
 
-  // for (const processArgCondition of processArgConditions) {
-  //   addCustomResolver(processArgCondition, true);
-  // }
+  for (const processArgCondition of processArgConditions) {
+    addCustomResolver(processArgCondition, true);
+  }
   for (const customCondition of Object.keys(packageConditions)) {
     const value = packageConditions[customCondition];
     let customResolver;
@@ -230,7 +230,7 @@ const createBuildPackageConditions = (
     addCustomResolver(customCondition, customResolver);
   }
 
-  for (const wildcardToRemove of wildcardToRemoveArray) {
+  for (const wildcardToRemove of wildcardToRemoveSet) {
     delete conditionResolvers[wildcardToRemove];
   }
 
