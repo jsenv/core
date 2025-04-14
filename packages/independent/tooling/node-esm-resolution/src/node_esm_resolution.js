@@ -470,27 +470,27 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
       if (Number.isInteger(key)) {
         throw new Error("Invalid package configuration");
       }
-      let condition;
+      let matched;
       if (key === "default") {
-        condition = key;
+        matched = true;
       } else {
         for (const conditionCandidate of conditions) {
           if (conditionCandidate === key) {
-            condition = conditionCandidate;
+            matched = true;
             break;
           }
           if (conditionCandidate.includes("*")) {
-            const regex = new RegExp(
+            const conditionCandidateRegex = new RegExp(
               `^${conditionCandidate.replace(/\*/g, "(.*)")}$`,
             );
-            if (regex.test(key)) {
-              condition = conditionCandidate;
+            if (conditionCandidateRegex.test(key)) {
+              matched = true;
               break;
             }
           }
         }
       }
-      if (condition) {
+      if (matched) {
         const targetValue = target[key];
         const resolved = applyPackageTargetResolution(targetValue, {
           ...resolutionContext,
