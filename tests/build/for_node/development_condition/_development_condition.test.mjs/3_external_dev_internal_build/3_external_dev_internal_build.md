@@ -3,7 +3,7 @@
 ```js
 run({
   packageConditions: {
-    development: {
+    "dev:jsenv": {
       "external/": true,
       "internal/": false,
     },
