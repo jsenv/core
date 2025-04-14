@@ -55,6 +55,7 @@ import {
   urlIsInsideOf,
   urlToBasename,
   urlToExtension,
+  urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { memoryUsage as processMemoryUsage } from "node:process";
@@ -354,41 +355,34 @@ export const build = async ({
     let content = "";
 
     const applyColorOnFileRelativeUrl = (fileRelativeUrl, color) => {
-      let parts = fileRelativeUrl.split("/");
-      const filename = parts.pop();
-      let i = 0;
-      while (i < parts.length) {
-        const directoryRelativeUrl = parts.slice(0, i + 1).join("/");
-        const directoryUrl = new URL(
-          `${directoryRelativeUrl}/`,
-          sourceDirectoryUrl,
-        ).href;
-        if (packageDirectory.find(directoryUrl)) {
-          if (i === 0) {
-            return ANSI.color(fileRelativeUrl, color);
-          }
-          // all the things before in grey
-          // all the things after in the color
-          const before = parts.slice(0, i).join("/");
-          const packageDirectory = parts[i];
-          const packageDirectoryStylized = ANSI.color(
-            ANSI.effect(packageDirectory, ANSI.UNDERLINE),
-            color,
-          );
-          let pathColored = ANSI.color(`${before}/`, color);
-          if (i === parts.length - 1) {
-            pathColored += packageDirectoryStylized;
-            pathColored += ANSI.color(`/${filename}`, color);
-            return pathColored;
-          }
-          const after = parts.slice(i + 1).join("/");
-          pathColored += packageDirectoryStylized;
-          pathColored += ANSI.color(`/${after}/${filename}`, color);
-          return pathColored;
-        }
-        i++;
+      const fileUrl = new URL(fileRelativeUrl, sourceDirectoryUrl);
+      const packageDirectoryUrl = lookupPackageDirectory(fileUrl);
+      if (!packageDirectoryUrl || packageDirectoryUrl === sourceDirectoryUrl) {
+        return ANSI.color(fileRelativeUrl, color);
       }
-      return ANSI.color(fileRelativeUrl, color);
+      const parentDirectoryUrl = new URL("../", packageDirectoryUrl).href;
+      const beforePackageDirectoryName = urlToRelativeUrl(
+        parentDirectoryUrl,
+        sourceDirectoryUrl,
+      );
+      const packageDirectoryName = urlToFilename(packageDirectoryUrl);
+      const afterPackageDirectoryUrl = urlToRelativeUrl(
+        fileUrl,
+        packageDirectoryUrl,
+      );
+      const beforePackageNameStylized = ANSI.color(
+        beforePackageDirectoryName,
+        color,
+      );
+      const packageNameStylized = ANSI.color(
+        ANSI.effect(packageDirectoryName, ANSI.UNDERLINE),
+        color,
+      );
+      const afterPackageNameStylized = ANSI.color(
+        `/${afterPackageDirectoryUrl}`,
+        color,
+      );
+      return `${beforePackageNameStylized}${packageNameStylized}${afterPackageNameStylized}`;
     };
 
     content += `${UNICODE.OK} ${applyColorOnFileRelativeUrl(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${applyColorOnFileRelativeUrl(buildUrlToLog, "")}`;
