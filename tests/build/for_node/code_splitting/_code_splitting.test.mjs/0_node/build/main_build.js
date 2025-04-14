@@ -1,13 +1,13 @@
 const answer = 42;
 
 const startDevServer = async (...args) => {
-  const namespace = await import("./dev/dev.js?dynamic_import_id=dev");
+  const namespace = await import("./dev_server/dev_server.js?dynamic_import_id=dev_server");
   return namespace.startDevServer(...args);
 };
 
-const build = async (...args) => {
-  const namespace = await import("./build/build.js?dynamic_import_id=build");
-  return namespace.build(...args);
+const startBuildServer = async (...args) => {
+  const namespace = await import("./build_server/build_server.js?dynamic_import_id=build_server");
+  return namespace.startBuildServer(...args);
 };
 
-export { answer, build, startDevServer };
+export { answer, startBuildServer, startDevServer };

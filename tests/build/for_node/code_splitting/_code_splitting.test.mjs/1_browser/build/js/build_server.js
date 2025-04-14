@@ -1,10 +1,10 @@
 import { FOO } from "/jsenv_core_node_modules.js";
 import { answer } from "/main_build.js";
 
-const build = async () => {
+const startBuildServer = async () => {
   await import("/js/bar_index.js");
 
-  console.log("build", FOO, answer);
+  console.log("start build server", FOO, answer);
 };
 
-export { build };
+export { startBuildServer };
