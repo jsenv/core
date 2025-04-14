@@ -470,6 +470,8 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
       if (Number.isInteger(key)) {
         throw new Error("Invalid package configuration");
       }
+      // check if the condition has a star in it
+      // if yes check if it matches
       if (key === "default" || conditions.includes(key)) {
         const targetValue = target[key];
         const resolved = applyPackageTargetResolution(targetValue, {
