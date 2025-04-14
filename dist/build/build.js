@@ -10956,15 +10956,18 @@ const build = async ({
     let content = "";
 
     const applyColorOnFileRelativeUrl = (fileRelativeUrl, color) => {
-      const fileUrl = new URL(fileRelativeUrl, sourceDirectoryUrl);
+      const fileUrl = new URL(fileRelativeUrl, rootPackageDirectoryUrl);
       const packageDirectoryUrl = lookupPackageDirectory(fileUrl);
-      if (!packageDirectoryUrl || packageDirectoryUrl === sourceDirectoryUrl) {
+      if (
+        !packageDirectoryUrl ||
+        packageDirectoryUrl === rootPackageDirectoryUrl
+      ) {
         return ANSI.color(fileRelativeUrl, color);
       }
       const parentDirectoryUrl = new URL("../", packageDirectoryUrl).href;
       const beforePackageDirectoryName = urlToRelativeUrl(
         parentDirectoryUrl,
-        sourceDirectoryUrl,
+        rootPackageDirectoryUrl,
       );
       const packageDirectoryName = urlToFilename(packageDirectoryUrl);
       const afterPackageDirectoryUrl = urlToRelativeUrl(
