@@ -7,9 +7,11 @@ import { batch, effect, signal } from "@preact/signals";
 
 let isDev = import.meta.hot || import.meta.dev;
 if (!isDev && typeof process === "object") {
-  isDev =
-    process.execArgv.includes("--conditions=development") ||
-    process.execArgv.includes("--conditions=dev:");
+  isDev = process.execArgv.some(
+    (arg) =>
+      arg.includes("--conditions=development") ||
+      arg.includes("--conditions=dev:"),
+  );
 }
 
 export const sigi = (rootStateObject, { strict = false } = {}) => {
