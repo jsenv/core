@@ -4,7 +4,7 @@
   "imports": {
     "#foo": {
       "dev:jsenv": "./dev.js",
-      "default": "./import.js"
+      "import": "./import.js"
     }
   }
 }

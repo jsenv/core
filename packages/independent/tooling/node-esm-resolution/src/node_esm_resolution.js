@@ -480,9 +480,10 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
             break;
           }
           if (conditionCandidate.includes("*")) {
-            conditionCandidate.replace("*");
-            const conditionBase = conditionCandidate.slice(0, -1);
-            if (key.startsWith(conditionBase)) {
+            const regex = new RegExp(
+              `^${conditionCandidate.replace(/\*/g, "(.*)")}$`,
+            );
+            if (regex.test(key)) {
               condition = conditionCandidate;
               break;
             }
