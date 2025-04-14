@@ -8,15 +8,13 @@
       <circle cx="20" cy="0" r="6" fill="#febc2e"></circle>
       <circle cx="40" cy="0" r="6" fill="#28c840"></circle>
     </g>
-    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">
-      ansi to terminal
-    </text>
+    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">ansi to terminal</text>
   </g>
   <foreignObject id="body" y="40" width="100%" height="193.45" overflow="hidden">
     <svg width="448.47" height="193.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">------------</text>
-        <text x="119.22" y="14.55"> 5 executions ready </text>
+        <text x="110.82" y="14.55" style="white-space:pre"> 5 executions ready </text>
         <text x="278.84" y="14.55" fill="#7f7f7f">-------------</text>
         <text x="10" y="33.55">directory: /mock/</text>
         <text x="10" y="52.55">fragment: 3/3, executing only 5:5</text>
@@ -25,17 +23,17 @@
         <text x="10" y="109.55" fill="#11bc79">✔ 5/5</text>
         <text x="60.41" y="109.55" fill="#11bc79">e.spec.js</text>
         <text x="144.42" y="109.55" fill="#7f7f7f">[&lt;mock&gt;ms]</text>
-        <text x="236.84" y="109.55"> (1 </text>
+        <text x="228.44" y="109.55" style="white-space:pre"> (1 </text>
         <text x="262.04" y="109.55" fill="#11bc79">completed</text>
-        <text x="337.65" y="109.55">, 4 </text>
+        <text x="337.65" y="109.55" style="white-space:pre">, 4 </text>
         <text x="371.26" y="109.55" fill="#7f7f7f">skipped</text>
         <text x="430.07" y="109.55">)</text>
         <text x="10" y="128.55" fill="#7f7f7f">-------------</text>
-        <text x="127.62" y="128.55"> 5 executions done </text>
+        <text x="119.22" y="128.55" style="white-space:pre"> 5 executions done </text>
         <text x="278.84" y="128.55" fill="#7f7f7f">-------------</text>
-        <text x="10" y="147.55">status: 1 </text>
+        <text x="10" y="147.55" style="white-space:pre">status: 1 </text>
         <text x="94.01" y="147.55" fill="#11bc79">completed</text>
-        <text x="169.63" y="147.55">, 4 </text>
+        <text x="169.63" y="147.55" style="white-space:pre">, 4 </text>
         <text x="203.23" y="147.55" fill="#7f7f7f">skipped</text>
         <text x="10" y="166.55">duration: &lt;mock&gt;s</text>
         <text x="10" y="185.55" fill="#7f7f7f">---------------------------------------------</text>

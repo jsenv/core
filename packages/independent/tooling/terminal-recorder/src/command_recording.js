@@ -1,6 +1,5 @@
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { spawn } from "node:child_process";
-
 import { startTerminalRecording } from "./terminal_recording.js";
 
 export const recordCommandToSvg = async (

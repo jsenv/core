@@ -20,10 +20,13 @@ if (process.platform === "win32") {
 }
 
 const terminalAnimatedRecording =
-  (process.execArgv.includes("--conditions=development") ||
-    process.execArgv.includes("--conditions=dev:jsenv")) &&
   !process.env.CI &&
-  !process.env.JSENV;
+  !process.env.JSENV &&
+  process.execArgv.some(
+    (arg) =>
+      arg.includes("--conditions=development") ||
+      arg.includes("--conditions=dev:"),
+  );
 // force unicode and color support on windows
 // to make snapshot predictible on windows (otherwise "✔" would be "√" for instance)
 UNICODE.supported = true;
