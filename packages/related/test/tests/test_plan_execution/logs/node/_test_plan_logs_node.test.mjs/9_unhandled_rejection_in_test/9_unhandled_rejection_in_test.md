@@ -1,4 +1,4 @@
-# [9_unhandled_rejection_in_test](../../test_plan_logs_node.test.mjs#L141)
+# [9_unhandled_rejection_in_test](../../test_plan_logs_node.test.mjs#L149)
 
 ```js
 run({
