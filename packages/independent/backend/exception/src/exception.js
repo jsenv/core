@@ -23,7 +23,9 @@ import { URL_META } from "@jsenv/url-meta";
 import { parseStackTrace } from "errorstacks";
 import { pathToFileURL } from "node:url";
 
-const isDev = process.execArgv.includes("--conditions=development");
+const isDev =
+  process.execArgv.includes("--conditions=development") ||
+  process.execArgv.includes("--conditions=dev:jsenv");
 
 export const createException = (
   reason,
