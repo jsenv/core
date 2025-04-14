@@ -11,7 +11,7 @@ const run = (params) => {
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_dev_first", () => {
+  test("0_dev_star_first", () => {
     return run({
       conditions: ["dev:*", "import"],
     });
