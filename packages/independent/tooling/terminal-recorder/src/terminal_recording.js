@@ -12,11 +12,15 @@
 // import prettier from "prettier";
 import { renderTerminalSvg } from "./svg/render_terminal_svg.js";
 
-const isDev = process.execArgv.includes("--conditions=development");
+const isDev = process.execArgv.some(
+  (arg) =>
+    arg.includes("--conditions=development") ||
+    arg.includes("--conditions=dev:"),
+);
 
 const startLocalServer = async () => {
   if (isDev) {
-    const serverDirectoryUrl = new URL("./client/", import.meta.url);
+    const serverDirectoryUrl = import.meta.resolve("./client/");
     const { startDevServer } = await import("@jsenv/core");
     const devServer = await startDevServer({
       logLevel: "warn",
@@ -30,7 +34,7 @@ const startLocalServer = async () => {
     return devServer;
   }
 
-  const serverDirectoryUrl = new URL("../dist/", import.meta.url);
+  const serverDirectoryUrl = import.meta.resolve("../dist/");
   const { startServer, createFileSystemFetch } = await import("@jsenv/server");
   const server = await startServer({
     logLevel: "warn",
@@ -87,9 +91,13 @@ export const startTerminalRecording = async ({
   page.on("pageerror", (error) => {
     throw error;
   });
-  page.on("console", (consoleMessage) => {
+  const onConsole = (consoleMessage) => {
     console.log(`browser> ${consoleMessage.text()}`);
+  };
+  stopCallbackSet.add(() => {
+    page.off("console", onConsole);
   });
+  page.on("console", onConsole);
   await page.goto(`${server.origin}/xterm.html`);
   await page.evaluate(
     /* eslint-disable no-undef */

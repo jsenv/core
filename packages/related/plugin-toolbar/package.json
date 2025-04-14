@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-toolbar",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./src/jsenv_plugin_toolbar.js",
+        "dev:jsenv": "./src/jsenv_plugin_toolbar.js",
         "default": "./dist/jsenv_plugin_toolbar.js"
       }
     },
@@ -26,7 +26,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/ast": "6.6.10"
+    "@jsenv/ast": "6.6.11"
   },
   "devDependencies": {
     "@preact/signals": "2.0.3"

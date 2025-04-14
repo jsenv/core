@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/humanize",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Generate messages meant to read by humans",
   "license": "MIT",
   "repository": {
@@ -18,11 +18,11 @@
   "exports": {
     ".": {
       "browser": {
-        "development": "./src/main_browser.js",
+        "dev:jsenv": "./src/main_browser.js",
         "default": "./dist/browser/jsenv_humanize_browser.js"
       },
       "node": {
-        "development": "./src/main_node.js",
+        "dev:jsenv": "./src/main_node.js",
         "default": "./dist/node/jsenv_humanize_node.js"
       }
     },

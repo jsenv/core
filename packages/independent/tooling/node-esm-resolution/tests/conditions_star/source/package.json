@@ -1,0 +1,10 @@
+{
+  "name": "root",
+  "type": "module",
+  "imports": {
+    "#foo": {
+      "dev:jsenv": "./dev.js",
+      "import": "./import.js"
+    }
+  }
+}

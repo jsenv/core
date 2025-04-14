@@ -55,6 +55,7 @@ import {
   urlIsInsideOf,
   urlToBasename,
   urlToExtension,
+  urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { memoryUsage as processMemoryUsage } from "node:process";
@@ -170,7 +171,12 @@ export const build = async ({
         let runtimeType;
         {
           if (isBareSpecifier(key)) {
-            const packageConditions = ["development", "node", "import"];
+            const packageConditions = [
+              "development",
+              "dev:*",
+              "node",
+              "import",
+            ];
             try {
               const { url, type } = applyNodeEsmResolution({
                 conditions: packageConditions,
@@ -347,7 +353,42 @@ export const build = async ({
     { sourceUrlToLog, buildUrlToLog },
   ) => {
     let content = "";
-    content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")}`;
+
+    const applyColorOnFileRelativeUrl = (fileRelativeUrl, color) => {
+      const fileUrl = new URL(fileRelativeUrl, rootPackageDirectoryUrl);
+      const packageDirectoryUrl = lookupPackageDirectory(fileUrl);
+      if (
+        !packageDirectoryUrl ||
+        packageDirectoryUrl === rootPackageDirectoryUrl
+      ) {
+        return ANSI.color(fileRelativeUrl, color);
+      }
+      const parentDirectoryUrl = new URL("../", packageDirectoryUrl).href;
+      const beforePackageDirectoryName = urlToRelativeUrl(
+        parentDirectoryUrl,
+        rootPackageDirectoryUrl,
+      );
+      const packageDirectoryName = urlToFilename(packageDirectoryUrl);
+      const afterPackageDirectoryUrl = urlToRelativeUrl(
+        fileUrl,
+        packageDirectoryUrl,
+      );
+      const beforePackageNameStylized = ANSI.color(
+        beforePackageDirectoryName,
+        color,
+      );
+      const packageNameStylized = ANSI.color(
+        ANSI.effect(packageDirectoryName, ANSI.UNDERLINE),
+        color,
+      );
+      const afterPackageNameStylized = ANSI.color(
+        `/${afterPackageDirectoryUrl}`,
+        color,
+      );
+      return `${beforePackageNameStylized}${packageNameStylized}${afterPackageNameStylized}`;
+    };
+
+    content += `${UNICODE.OK} ${applyColorOnFileRelativeUrl(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${applyColorOnFileRelativeUrl(buildUrlToLog, "")}`;
     // content += " ";
     // content += ANSI.color("(", ANSI.GREY);
     // content += ANSI.color(

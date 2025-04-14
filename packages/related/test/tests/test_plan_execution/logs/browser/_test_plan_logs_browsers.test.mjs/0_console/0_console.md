@@ -1,4 +1,4 @@
-# [0_console](../../test_plan_logs_browsers.test.mjs#L122)
+# [0_console](../../test_plan_logs_browsers.test.mjs#L127)
 
 ```js
 run({

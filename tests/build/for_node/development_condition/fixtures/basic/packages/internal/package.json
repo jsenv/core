@@ -4,7 +4,7 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./internal_dev.js",
+        "dev:jsenv": "./internal_dev.js",
         "default": "./internal_build.js"
       }
     },

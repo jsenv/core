@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/pwa",
-  "version": "6.1.7",
+  "version": "6.1.8",
   "description": "Service worker and other progressive web application helpers",
   "license": "MIT",
   "author": {
@@ -31,7 +31,7 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/sigi": "0.0.9"
+    "@jsenv/sigi": "0.1.0"
   },
   "devDependencies": {}
 }

@@ -10,7 +10,9 @@ import {
 } from "@jsenv/test";
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
-process.exit(0); // currently fails in CI with GroupMarkerNotSet(crbug.com/242999
+if (process.env.CI) {
+  process.exit(0); // currently fails in CI with GroupMarkerNotSet(crbug.com/242999
+}
 
 if (process.platform === "win32") {
   // TODO: fix on windows
@@ -18,9 +20,13 @@ if (process.platform === "win32") {
 }
 
 const terminalAnimatedRecording =
-  process.execArgv.includes("--conditions=development") &&
   !process.env.CI &&
-  !process.env.JSENV;
+  !process.env.JSENV &&
+  process.execArgv.some(
+    (arg) =>
+      arg.includes("--conditions=development") ||
+      arg.includes("--conditions=dev:"),
+  );
 // force unicode and color support on windows
 // to make snapshot predictible on windows (otherwise "✔" would be "√" for instance)
 UNICODE.supported = true;

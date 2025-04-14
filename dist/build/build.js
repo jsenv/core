@@ -5669,28 +5669,63 @@ const createBuildPackageConditions = (
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   const processArgConditions = readCustomConditionsFromProcessArgs();
-  const packageConditionsDefaultResolvers = {};
-  for (const processArgCondition of processArgConditions) {
-    packageConditionsDefaultResolvers[processArgCondition] = true;
-  }
-  const packageConditionResolvers = {
-    ...packageConditionsDefaultResolvers,
-    development: (specifier, importer) => {
-      if (isBareSpecifier$1(specifier)) {
-        const { url } = applyNodeEsmResolution({
-          specifier,
-          parentUrl: importer,
-        });
-        return !url.includes("/node_modules/");
-      }
-      return !importer.includes("/node_modules/");
-    },
-    node: nodeRuntimeEnabled,
-    browser: !nodeRuntimeEnabled,
-    import: true,
+  const devResolver = (specifier, importer) => {
+    if (isBareSpecifier$1(specifier)) {
+      const { url } = applyNodeEsmResolution({
+        specifier,
+        parentUrl: importer,
+      });
+      return !url.includes("/node_modules/");
+    }
+    return !importer.includes("/node_modules/");
   };
-  for (const condition of Object.keys(packageConditions)) {
-    const value = packageConditions[condition];
+
+  const conditionDefaultResolvers = {
+    "dev:*": devResolver,
+    "development": devResolver,
+    "node": nodeRuntimeEnabled,
+    "browser": !nodeRuntimeEnabled,
+    "import": true,
+  };
+  const conditionResolvers = {
+    ...conditionDefaultResolvers,
+  };
+
+  let wildcardToRemoveSet = new Set();
+  const addCustomResolver = (condition, customResolver) => {
+    for (const conditionCandidate of Object.keys(conditionDefaultResolvers)) {
+      if (conditionCandidate.includes("*")) {
+        const conditionRegex = new RegExp(
+          `^${conditionCandidate.replace(/\*/g, "(.*)")}$`,
+        );
+        if (conditionRegex.test(condition)) {
+          const existingResolver =
+            conditionDefaultResolvers[conditionCandidate];
+          wildcardToRemoveSet.add(conditionCandidate);
+          conditionResolvers[condition] = combineTwoPackageConditionResolvers(
+            existingResolver,
+            customResolver,
+          );
+          return;
+        }
+      }
+    }
+    const existingResolver = conditionDefaultResolvers[condition];
+    if (existingResolver) {
+      conditionResolvers[condition] = combineTwoPackageConditionResolvers(
+        existingResolver,
+        customResolver,
+      );
+      return;
+    }
+    conditionResolvers[condition] = customResolver;
+  };
+
+  for (const processArgCondition of processArgConditions) {
+    addCustomResolver(processArgCondition, true);
+  }
+  for (const customCondition of Object.keys(packageConditions)) {
+    const value = packageConditions[customCondition];
     let customResolver;
     if (typeof value === "object") {
       const associations = URL_META.resolveAssociations(
@@ -5733,33 +5768,45 @@ const createBuildPackageConditions = (
     } else if (typeof value === "function") {
       customResolver = value;
     } else {
-      customResolver = () => value;
+      customResolver = value;
     }
-    const existing = packageConditionResolvers[condition];
-    if (existing) {
-      packageConditionResolvers[condition] = (...args) => {
-        const customResult = customResolver(...args);
-        return customResult === undefined ? existing(...args) : customResult;
-      };
-    } else {
-      packageConditionResolvers[condition] = customResolver;
-    }
+    addCustomResolver(customCondition, customResolver);
   }
 
+  for (const wildcardToRemove of wildcardToRemoveSet) {
+    delete conditionResolvers[wildcardToRemove];
+  }
+
+  const conditionCandidateArray = Object.keys(conditionResolvers);
   return (specifier, importer) => {
     const conditions = [];
-    for (const conditionCandidate of Object.keys(packageConditionResolvers)) {
-      const packageConditionResolver =
-        packageConditionResolvers[conditionCandidate];
-      if (typeof packageConditionResolver === "function") {
-        if (packageConditionResolver(specifier, importer)) {
+    for (const conditionCandidate of conditionCandidateArray) {
+      const conditionResolver = conditionResolvers[conditionCandidate];
+      if (typeof conditionResolver === "function") {
+        if (conditionResolver(specifier, importer)) {
           conditions.push(conditionCandidate);
         }
-      } else if (packageConditionResolver) {
+      } else if (conditionResolver) {
         conditions.push(conditionCandidate);
       }
     }
     return conditions;
+  };
+};
+
+const combineTwoPackageConditionResolvers = (first, second) => {
+  if (typeof second !== "function") {
+    return second;
+  }
+  return (...args) => {
+    const secondResult = second(...args);
+    if (secondResult !== undefined) {
+      return secondResult;
+    }
+    if (typeof first === "function") {
+      return first(...args);
+    }
+    return first;
   };
 };
 
@@ -10726,7 +10773,12 @@ const build = async ({
         let runtimeType;
         {
           if (isBareSpecifier(key)) {
-            const packageConditions = ["development", "node", "import"];
+            const packageConditions = [
+              "development",
+              "dev:*",
+              "node",
+              "import",
+            ];
             try {
               const { url, type } = applyNodeEsmResolution({
                 conditions: packageConditions,
@@ -10902,7 +10954,42 @@ const build = async ({
     { sourceUrlToLog, buildUrlToLog },
   ) => {
     let content = "";
-    content += `${UNICODE.OK} ${ANSI.color(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${ANSI.color(buildUrlToLog, "")}`;
+
+    const applyColorOnFileRelativeUrl = (fileRelativeUrl, color) => {
+      const fileUrl = new URL(fileRelativeUrl, rootPackageDirectoryUrl);
+      const packageDirectoryUrl = lookupPackageDirectory(fileUrl);
+      if (
+        !packageDirectoryUrl ||
+        packageDirectoryUrl === rootPackageDirectoryUrl
+      ) {
+        return ANSI.color(fileRelativeUrl, color);
+      }
+      const parentDirectoryUrl = new URL("../", packageDirectoryUrl).href;
+      const beforePackageDirectoryName = urlToRelativeUrl(
+        parentDirectoryUrl,
+        rootPackageDirectoryUrl,
+      );
+      const packageDirectoryName = urlToFilename(packageDirectoryUrl);
+      const afterPackageDirectoryUrl = urlToRelativeUrl(
+        fileUrl,
+        packageDirectoryUrl,
+      );
+      const beforePackageNameStylized = ANSI.color(
+        beforePackageDirectoryName,
+        color,
+      );
+      const packageNameStylized = ANSI.color(
+        ANSI.effect(packageDirectoryName, ANSI.UNDERLINE),
+        color,
+      );
+      const afterPackageNameStylized = ANSI.color(
+        `/${afterPackageDirectoryUrl}`,
+        color,
+      );
+      return `${beforePackageNameStylized}${packageNameStylized}${afterPackageNameStylized}`;
+    };
+
+    content += `${UNICODE.OK} ${applyColorOnFileRelativeUrl(sourceUrlToLog, ANSI.GREY)} ${ANSI.color("->", ANSI.GREY)} ${applyColorOnFileRelativeUrl(buildUrlToLog, "")}`;
     // content += " ";
     // content += ANSI.color("(", ANSI.GREY);
     // content += ANSI.color(

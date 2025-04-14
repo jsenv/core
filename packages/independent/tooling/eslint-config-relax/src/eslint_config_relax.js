@@ -137,7 +137,7 @@ export const eslintConfigRelax = ({
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
             rootDirectoryUrl: String(rootDirectoryUrl),
-            packageConditions: ["node", "development", "import"],
+            packageConditions: ["node", "development", "dev:*", "import"],
             logLevel: importResolutionLogLevel,
           },
         },
@@ -157,7 +157,7 @@ export const eslintConfigRelax = ({
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
             rootDirectoryUrl: String(rootDirectoryUrl),
-            packageConditions: ["node", "development"],
+            packageConditions: ["node", "development", "dev:*"],
             logLevel: importResolutionLogLevel,
           },
         },

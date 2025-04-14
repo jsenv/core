@@ -4,7 +4,7 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./z_internal_dev.js",
+        "dev:jsenv": "./z_internal_dev.js",
         "default": "./z_internal_build.js"
       }
     },

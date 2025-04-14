@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-explorer",
-  "version": "1.0.69",
+  "version": "1.0.70",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./src/jsenv_plugin_explorer.js",
+        "dev:jsenv": "./src/jsenv_plugin_explorer.js",
         "default": "./dist/jsenv_plugin_explorer.js"
       }
     },
@@ -27,7 +27,7 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/filesystem": "4.15.1"
+    "@jsenv/filesystem": "4.15.2"
   },
   "scripts": {
     "build": "node ./scripts/build.mjs",

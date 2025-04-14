@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/assert",
-  "version": "4.5.2",
+  "version": "4.5.3",
   "description": "One assertion to test everything",
   "license": "MIT",
   "repository": {
@@ -22,11 +22,11 @@
   "exports": {
     ".": {
       "node": {
-        "development": "./src/assert_node.js",
+        "dev:jsenv": "./src/assert_node.js",
         "default": "./dist/node/jsenv_assert_node.js"
       },
       "browser": {
-        "development": "./src/assert_browser.js",
+        "dev:jsenv": "./src/assert_browser.js",
         "default": "./dist/browser/jsenv_assert_browser.js"
       }
     },

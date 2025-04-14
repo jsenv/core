@@ -11,12 +11,18 @@ import {
 } from "@jsenv/test";
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
-process.exit(0); // currently fails in CI with GroupMarkerNotSet(crbug.com/242999
+if (process.env.CI) {
+  process.exit(0); // currently fails in CI with GroupMarkerNotSet(crbug.com/242999
+}
 
 const terminalAnimatedRecording =
-  process.execArgv.includes("--conditions=development") &&
   !process.env.CI &&
-  !process.env.JSENV;
+  !process.env.JSENV &&
+  process.execArgv.some(
+    (arg) =>
+      arg.includes("--conditions=development") ||
+      arg.includes("--conditions=dev:"),
+  );
 // force unicode and color support on windows
 // to make snapshot predictible on windows (otherwise "✔" would be "√" for instance)
 UNICODE.supported = true;
@@ -24,13 +30,12 @@ ANSI.supported = true;
 
 const run = async ({ fragment }) => {
   const filename = fragment.replace("/", "_");
-  const terminalSnapshotFileUrl = new URL(
+  const terminalSnapshotFileUrl = import.meta.resolve(
     `./output/${filename}.svg`,
-    import.meta.url,
   );
-  const jsonFileUrl = new URL(`./output/${filename}.json`, import.meta.url);
-  const junitXmlFileUrl = new URL(`./output/${filename}.xml`, import.meta.url);
-  const gifFileUrl = new URL(`./output/${filename}.gif`, import.meta.url);
+  const jsonFileUrl = import.meta.resolve(`./output/${filename}.json`);
+  const junitXmlFileUrl = import.meta.resolve(`./output/${filename}.xml`);
+  const gifFileUrl = import.meta.resolve(`./output/${filename}.gif`);
   const testPlanResult = await executeTestPlan({
     logs: {
       type: null,
@@ -89,7 +94,7 @@ const run = async ({ fragment }) => {
           ]
         : []),
     ],
-    rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("./node_client/"),
     testPlan: {
       "**/*.spec.js": {
         group_name: {
