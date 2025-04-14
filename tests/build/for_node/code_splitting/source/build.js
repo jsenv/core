@@ -1,5 +1,6 @@
+import { FOO } from "foo";
 import { answer } from "./shared.js";
 
 export const build = () => {
-  console.log("build", answer);
+  console.log("build", answer, FOO);
 };
