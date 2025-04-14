@@ -8,34 +8,31 @@
       <circle cx="20" cy="0" r="6" fill="#febc2e"></circle>
       <circle cx="40" cy="0" r="6" fill="#28c840"></circle>
     </g>
-    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">
-      ansi to terminal
-    </text>
+    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">ansi to terminal</text>
   </g>
   <foreignObject id="body" y="40" width="100%" height="459.45" overflow="hidden">
     <svg width="582.89" height="459.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">---------------</text>
-        <text x="144.42" y="14.55"> error </text>
+        <text x="136.02" y="14.55" style="white-space:pre"> error </text>
         <text x="194.83" y="14.55" fill="#7f7f7f">----------------</text>
         <text x="10" y="33.55" fill="#7f7f7f">1 |</text>
-        <text x="43.61" y="33.55"> throw new Error("here");</text>
+        <text x="35.2" y="33.55" style="white-space:pre"> throw new Error("here");</text>
         <text x="94.01" y="52.55" fill="#cd5555">^</text>
         <text x="10" y="71.55">Error: here</text>
-        <text x="26.8" y="90.55">
-          at [mock]/error_in_js_module.spec.js:1:7</text>
+        <text x="10" y="90.55" style="white-space:pre">  at [mock]/error_in_js_module.spec.js:1:7</text>
         <text x="10" y="109.55" fill="#7f7f7f">--------------------------------------</text>
         <text x="10" y="128.55" fill="#cd5555">✖ 2/3</text>
         <text x="60.41" y="128.55" fill="#cd5555">error_in_js_classic.spec.html</text>
         <text x="312.45" y="128.55" fill="#7f7f7f">[firefox/&lt;mock&gt;ms]</text>
-        <text x="472.08" y="128.55"> (all </text>
+        <text x="463.67" y="128.55" style="white-space:pre"> (all </text>
         <text x="514.08" y="128.55" fill="#cd5555">failed</text>
         <text x="564.49" y="128.55">)</text>
         <text x="10" y="147.55" fill="#7f7f7f">---------------</text>
-        <text x="144.42" y="147.55"> error </text>
+        <text x="136.02" y="147.55" style="white-space:pre"> error </text>
         <text x="194.83" y="147.55" fill="#7f7f7f">----------------</text>
         <text x="10" y="166.55" fill="#7f7f7f">1 |</text>
-        <text x="43.61" y="166.55"> throw new Error("here");</text>
+        <text x="35.2" y="166.55" style="white-space:pre"> throw new Error("here");</text>
         <text x="94.01" y="185.55" fill="#cd5555">^</text>
         <text x="10" y="204.55">Error: here</text>
         <text x="10" y="223.55">@[mock]/error_in_js_module.spec.js:1:7</text>
@@ -43,22 +40,22 @@
         <text x="10" y="261.55" fill="#cd5555">✖ 3/3</text>
         <text x="60.41" y="261.55" fill="#cd5555">error_in_js_classic.spec.html</text>
         <text x="312.45" y="261.55" fill="#7f7f7f">[webkit/&lt;mock&gt;ms]</text>
-        <text x="463.67" y="261.55"> (all </text>
+        <text x="455.27" y="261.55" style="white-space:pre"> (all </text>
         <text x="505.68" y="261.55" fill="#cd5555">failed</text>
         <text x="556.09" y="261.55">)</text>
         <text x="10" y="280.55" fill="#7f7f7f">---------------</text>
-        <text x="144.42" y="280.55"> error </text>
+        <text x="136.02" y="280.55" style="white-space:pre"> error </text>
         <text x="194.83" y="280.55" fill="#7f7f7f">----------------</text>
         <text x="10" y="299.55" fill="#7f7f7f">1 |</text>
-        <text x="43.61" y="299.55"> throw new Error("here");</text>
+        <text x="35.2" y="299.55" style="white-space:pre"> throw new Error("here");</text>
         <text x="169.63" y="318.55" fill="#cd5555">^</text>
         <text x="10" y="337.55">Error: here</text>
         <text x="10" y="356.55">module code@[mock]/error_in_js_module.spec.js:1:16</text>
         <text x="10" y="375.55" fill="#7f7f7f">--------------------------------------</text>
         <text x="10" y="394.55" fill="#7f7f7f">-------------</text>
-        <text x="127.62" y="394.55"> 3 executions done </text>
+        <text x="119.22" y="394.55" style="white-space:pre"> 3 executions done </text>
         <text x="278.84" y="394.55" fill="#7f7f7f">-------------</text>
-        <text x="10" y="413.55">status: all </text>
+        <text x="10" y="413.55" style="white-space:pre">status: all </text>
         <text x="110.82" y="413.55" fill="#cd5555">failed</text>
         <text x="10" y="432.55">duration: &lt;mock&gt;s</text>
         <text x="10" y="451.55" fill="#7f7f7f">---------------------------------------------</text>

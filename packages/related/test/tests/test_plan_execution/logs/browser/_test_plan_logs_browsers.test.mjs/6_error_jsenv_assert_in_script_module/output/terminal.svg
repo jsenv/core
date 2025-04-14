@@ -8,19 +8,17 @@
       <circle cx="20" cy="0" r="6" fill="#febc2e"></circle>
       <circle cx="40" cy="0" r="6" fill="#28c840"></circle>
     </g>
-    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">
-      ansi to terminal
-    </text>
+    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">ansi to terminal</text>
   </g>
   <foreignObject id="body" y="40" width="100%" height="440.45" overflow="hidden">
     <svg width="708.91" height="440.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="152.82" y="14.55" fill="#cd5555">^</text>
-        <text x="10" y="33.55">AssertionError: </text>
+        <text x="10" y="33.55" style="white-space:pre">AssertionError: </text>
         <text x="144.42" y="33.55" fill="#cd5555">actual</text>
-        <text x="203.23" y="33.55"> and </text>
+        <text x="194.83" y="33.55" style="white-space:pre"> and </text>
         <text x="236.84" y="33.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="33.55"> are different</text>
+        <text x="287.25" y="33.55" style="white-space:pre"> are different</text>
         <text x="10" y="71.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="71.55" fill="#cd5555">1</text>
         <text x="10" y="90.55" fill="#7f7f7f">expect:</text>
@@ -32,25 +30,23 @@
         <text x="10" y="147.55" fill="#cd5555">✖ 3/3</text>
         <text x="60.41" y="147.55" fill="#cd5555">error_jsenv_assert_in_script_module.spec.html</text>
         <text x="446.87" y="147.55" fill="#7f7f7f">[webkit/&lt;mock&gt;ms]</text>
-        <text x="598.1" y="147.55"> (all </text>
+        <text x="589.69" y="147.55" style="white-space:pre"> (all </text>
         <text x="640.1" y="147.55" fill="#cd5555">failed</text>
         <text x="690.51" y="147.55">)</text>
         <text x="10" y="166.55" fill="#7f7f7f">---------------</text>
-        <text x="144.42" y="166.55"> error </text>
+        <text x="136.02" y="166.55" style="white-space:pre"> error </text>
         <text x="194.83" y="166.55" fill="#7f7f7f">----------------</text>
         <text x="10" y="185.55" fill="#7f7f7f">11 |</text>
-        <text x="102.42" y="185.55">
-          import { assert } from "@jsenv/assert";</text>
+        <text x="43.61" y="185.55" style="white-space:pre">       import { assert } from "@jsenv/assert";</text>
         <text x="10" y="204.55" fill="#7f7f7f">12 |</text>
         <text x="10" y="223.55" fill="#7f7f7f">13 |</text>
-        <text x="102.42" y="223.55">
-          assert({ actual: 1, expect: "1" });</text>
+        <text x="43.61" y="223.55" style="white-space:pre">       assert({ actual: 1, expect: "1" });</text>
         <text x="152.82" y="242.55" fill="#cd5555">^</text>
-        <text x="10" y="261.55">AssertionError: </text>
+        <text x="10" y="261.55" style="white-space:pre">AssertionError: </text>
         <text x="144.42" y="261.55" fill="#cd5555">actual</text>
-        <text x="203.23" y="261.55"> and </text>
+        <text x="194.83" y="261.55" style="white-space:pre"> and </text>
         <text x="236.84" y="261.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="261.55"> are different</text>
+        <text x="287.25" y="261.55" style="white-space:pre"> are different</text>
         <text x="10" y="299.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="299.55" fill="#cd5555">1</text>
         <text x="10" y="318.55" fill="#7f7f7f">expect:</text>
@@ -60,9 +56,9 @@
         <text x="547.69" y="337.55">:13:13</text>
         <text x="10" y="356.55" fill="#7f7f7f">--------------------------------------</text>
         <text x="10" y="375.55" fill="#7f7f7f">-------------</text>
-        <text x="127.62" y="375.55"> 3 executions done </text>
+        <text x="119.22" y="375.55" style="white-space:pre"> 3 executions done </text>
         <text x="278.84" y="375.55" fill="#7f7f7f">-------------</text>
-        <text x="10" y="394.55">status: all </text>
+        <text x="10" y="394.55" style="white-space:pre">status: all </text>
         <text x="110.82" y="394.55" fill="#cd5555">failed</text>
         <text x="10" y="413.55">duration: &lt;mock&gt;s</text>
         <text x="10" y="432.55" fill="#7f7f7f">---------------------------------------------</text>

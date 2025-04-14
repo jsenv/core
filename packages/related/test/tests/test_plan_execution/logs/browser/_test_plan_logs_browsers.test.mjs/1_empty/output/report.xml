@@ -3,19 +3,19 @@
   <testcase file="empty.spec.html" name="chromium" time="[time]" timestamp="[timestamp]" tests="1">
     <properties>
       <property name="runtimeName" value="chromium"></property>
-      <property name="runtimeVersion" value="130.0.6723.31"></property>
+      <property name="runtimeVersion" value="134.0.6998.35"></property>
     </properties>
   </testcase>
   <testcase file="empty.spec.html" name="firefox" time="[time]" timestamp="[timestamp]" tests="1">
     <properties>
       <property name="runtimeName" value="firefox"></property>
-      <property name="runtimeVersion" value="131.0"></property>
+      <property name="runtimeVersion" value="135.0"></property>
     </properties>
   </testcase>
   <testcase file="empty.spec.html" name="webkit" time="[time]" timestamp="[timestamp]" tests="1">
     <properties>
       <property name="runtimeName" value="webkit"></property>
-      <property name="runtimeVersion" value="18.0"></property>
+      <property name="runtimeVersion" value="18.4"></property>
     </properties>
   </testcase>
 </testsuite>
