@@ -4,7 +4,7 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, urlIsInsideOf, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, createLookupPackageDirectory, readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, urlIsInsideOf, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, injectQueryParams, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, createLookupPackageDirectory, readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
@@ -9020,7 +9020,6 @@ const createBuildSpecifierManager = ({
       buildUrl = generateSourcemapFileUrl(parentBuildUrl);
       reference.generatedSpecifier = buildUrl;
     } else {
-      const url = reference.generatedUrl;
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
       let urlInfo;
       if (rawUrlInfo) {
@@ -9030,6 +9029,7 @@ const createBuildSpecifierManager = ({
         buildUrlInfo.subtype = reference.expectedSubtype;
         urlInfo = buildUrlInfo;
       }
+      const url = reference.generatedUrl;
       buildUrl = buildUrlsGenerator.generate(url, {
         urlInfo,
         ownerUrlInfo: reference.ownerUrlInfo,
@@ -9207,7 +9207,7 @@ const createBuildSpecifierManager = ({
         js_classic: undefined, // TODO: add comment to explain who is using this
         entry_point: undefined,
         dynamic_import: undefined,
-        dynamic_import_id: undefined,
+        // dynamic_import_id: undefined,
       };
     },
     formatReference: (reference) => {
@@ -10350,21 +10350,18 @@ const createBuildUrlsGenerator = ({
     }
     if (urlIsInsideOf(url, buildDirectoryUrl)) {
       if (ownerUrlInfo.searchParams.has("dynamic_import_id")) {
-        const dynamicImportId =
-          ownerUrlInfo.searchParams.get("dynamic_import_id");
-        const extension = urlToExtension(url);
-        const suffix = `_dynamic_import_id_${dynamicImportId}${extension}`;
-        if (url.endsWith(suffix)) {
-          const nameBeforeSuffix = urlToFilename(url).slice(0, -suffix.length);
-          const ownerDirectoryPath = determineDirectoryPath({
-            sourceDirectoryUrl,
-            assetsDirectory,
-            urlInfo: ownerUrlInfo,
-          });
-          const buildUrl = `${buildDirectoryUrl}${ownerDirectoryPath}${nameBeforeSuffix}${extension}`;
-          associateBuildUrl(url, buildUrl);
-          return buildUrl;
-        }
+        const ownerDirectoryPath = determineDirectoryPath({
+          sourceDirectoryUrl,
+          assetsDirectory,
+          urlInfo: ownerUrlInfo,
+        });
+        const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
+        let buildUrl = `${buildDirectoryUrl}${ownerDirectoryPath}${buildRelativeUrl}`;
+        buildUrl = injectQueryParams(buildUrl, {
+          dynamic_import_id: undefined,
+        });
+        associateBuildUrl(url, buildUrl);
+        return buildUrl;
       }
       associateBuildUrl(url, url);
       return url;
@@ -10386,7 +10383,8 @@ const createBuildUrlsGenerator = ({
       } else {
         directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
       }
-      const { search } = new URL(url);
+      const urlObject = new URL(url);
+      const { search } = urlObject;
       const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
       associateBuildUrl(url, buildUrl);
       return buildUrl;
@@ -10404,6 +10402,7 @@ const createBuildUrlsGenerator = ({
       nameSetPerDirectoryMap.set(directoryPath, nameSet);
     }
     const urlObject = new URL(url);
+    injectQueryParams(urlObject, { dynamic_import_id: undefined });
     let { search, hash } = urlObject;
     let urlName = getUrlName(url, urlInfo);
     let [basename, extension] = splitFileExtension(urlName);
@@ -10450,7 +10449,7 @@ const determineDirectoryPath = ({
   sourceDirectoryUrl,
   assetsDirectory,
   urlInfo,
-  ownerUrlInfo,
+  ownerUrlInfo = urlInfo.firstReference.ownerUrlInfo,
 }) => {
   if (urlInfo.dirnameHint) {
     return urlInfo.dirnameHint;
@@ -10462,13 +10461,29 @@ const determineDirectoryPath = ({
     const parentDirectoryPath = determineDirectoryPath({
       sourceDirectoryUrl,
       assetsDirectory,
-      urlInfo: ownerUrlInfo || urlInfo.firstReference.ownerUrlInfo,
+      urlInfo: ownerUrlInfo,
     });
     return parentDirectoryPath;
   }
   const dynamicImportId = urlInfo.searchParams.get("dynamic_import_id");
   if (dynamicImportId) {
-    return `${assetsDirectory}${dynamicImportId}/`;
+    const ancestorImportIds = [];
+    let ancestorUrlInfo = ownerUrlInfo;
+    let currentImportId = dynamicImportId;
+    while (ancestorUrlInfo) {
+      const ancestorDynamicImportId =
+        ancestorUrlInfo.searchParams.get("dynamic_import_id");
+      if (!ancestorDynamicImportId) {
+        break;
+      }
+      if (ancestorDynamicImportId !== currentImportId) {
+        ancestorImportIds.push(ancestorDynamicImportId);
+        currentImportId = ancestorDynamicImportId;
+      }
+      ancestorUrlInfo = ancestorUrlInfo.firstReference?.ownerUrlInfo;
+    }
+    const importIdPath = [...ancestorImportIds, dynamicImportId].join("/");
+    return `${assetsDirectory}${importIdPath}/`;
   }
   if (urlInfo.isEntryPoint && !urlInfo.isDynamicEntryPoint) {
     return "";

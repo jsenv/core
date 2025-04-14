@@ -157,13 +157,17 @@ const determineDirectoryPath = ({
   if (dynamicImportId) {
     const ancestorImportIds = [];
     let ancestorUrlInfo = ownerUrlInfo;
+    let currentImportId = dynamicImportId;
     while (ancestorUrlInfo) {
       const ancestorDynamicImportId =
         ancestorUrlInfo.searchParams.get("dynamic_import_id");
       if (!ancestorDynamicImportId) {
         break;
       }
-      ancestorImportIds.push(ancestorDynamicImportId);
+      if (ancestorDynamicImportId !== currentImportId) {
+        ancestorImportIds.push(ancestorDynamicImportId);
+        currentImportId = ancestorDynamicImportId;
+      }
       ancestorUrlInfo = ancestorUrlInfo.firstReference?.ownerUrlInfo;
     }
     const importIdPath = [...ancestorImportIds, dynamicImportId].join("/");
