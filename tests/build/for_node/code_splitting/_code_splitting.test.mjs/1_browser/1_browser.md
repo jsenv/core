@@ -1,7 +1,11 @@
-# [1_include_dependencies](../../vendor_and_dynamic_import.test.mjs#L24)
+# [1_browser](../../code_splitting.test.mjs#L28)
 
 ```js
-run({ packageDependencies: "include" })
+run({
+  runtimeCompat: { chrome: "90" },
+  minification: false,
+  versioning: false,
+})
 ```
 
 # 1/2 write 5 files into "./build/"

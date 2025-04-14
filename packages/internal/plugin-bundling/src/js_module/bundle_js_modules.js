@@ -7,6 +7,7 @@ import {
   isFileSystemPath,
   urlToBasename,
   urlToExtension,
+  urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { fileUrlConverter } from "../file_url_converter.js";
@@ -18,7 +19,7 @@ export const bundleJsModules = async (
     include,
     chunks = {},
     strictExports = false,
-    isolateDynamicImports = undefined,
+    codeSplitting,
     preserveDynamicImports = false,
     augmentDynamicImportUrlSearchParams = () => {},
     rollup,
@@ -44,9 +45,10 @@ export const bundleJsModules = async (
     buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
   }
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
-  if (isolateDynamicImports === undefined && nodeRuntimeEnabled) {
-    isolateDynamicImports = true;
+  if (codeSplitting === undefined) {
+    codeSplitting = nodeRuntimeEnabled ? "isolate" : "reuse";
   }
+  const isolateDynamicImports = codeSplitting === "isolate";
 
   const PATH_AND_URL_CONVERTER = {
     asFileUrl: fileUrlConverter.asFileUrl,
@@ -91,10 +93,6 @@ export const bundleJsModules = async (
         nodeModuleChunkName = `${packageNameAsFilename}_node_modules`;
         packagesChunkName = `${packageNameAsFilename}_packages`;
       }
-      if (assetsDirectory) {
-        nodeModuleChunkName = `${assetsDirectory}${nodeModuleChunkName}`;
-        packagesChunkName = `${assetsDirectory}${packagesChunkName}`;
-      }
 
       chunks[nodeModuleChunkName] = {
         "file:///**/node_modules/": true,
@@ -111,7 +109,7 @@ export const bundleJsModules = async (
         }
         chunks[packagesChunkName] = {
           ...workspacePatterns,
-          ...chunks.workspaces,
+          ...chunks.packages,
         };
       }
 
@@ -143,7 +141,18 @@ export const bundleJsModules = async (
         });
         for (const chunkNameCandidate of Object.keys(meta)) {
           if (meta[chunkNameCandidate]) {
-            return chunkNameCandidate;
+            let chunkName = chunkNameCandidate;
+            if (assetsDirectory) {
+              chunkName = `${assetsDirectory}${chunkName}`;
+            }
+            const url = fileUrlConverter.asFileUrl(id);
+            const urlObject = new URL(url);
+            const dynamicImportId =
+              urlObject.searchParams.get("dynamic_import_id");
+            if (dynamicImportId) {
+              chunkName += `?dynamic_import_id=${dynamicImportId}`;
+            }
+            return chunkName;
           }
         }
         return undefined;
@@ -303,7 +312,30 @@ const rollupPluginJsenv = ({
         stripDynamicImportId,
       );
     }
-    return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
+    const buildUrlForRollup = new URL(
+      rollupFileInfo.fileName,
+      buildDirectoryUrl,
+    ).href;
+
+    const importerId = rollupFileInfo.moduleIds[0];
+    const importerUrl = fileUrlConverter.asFileUrl(importerId);
+    const importerUrlObject = new URL(importerUrl);
+    if (importerUrlObject.searchParams.has("dynamic_import_id")) {
+      const dynamicImportId =
+        importerUrlObject.searchParams.get("dynamic_import_id");
+      const extension = urlToExtension(buildUrlForRollup);
+      const suffix = `_dynamic_import_id_${dynamicImportId}${extension}`;
+      if (buildUrlForRollup.endsWith(suffix)) {
+        const nameBeforeSuffix = urlToFilename(buildUrlForRollup).slice(
+          0,
+          -suffix.length,
+        );
+        const directoryUrl = new URL("./", buildUrlForRollup);
+        const buildUrlWithSearchParams = `${directoryUrl}${nameBeforeSuffix}${extension}?dynamic_import_id=${dynamicImportId}`;
+        return buildUrlWithSearchParams;
+      }
+    }
+    return buildUrlForRollup;
   };
 
   const getModuleSideEffects = (url) => {

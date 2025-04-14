@@ -1,5 +1,10 @@
 // import { ANSI } from "@jsenv/humanize";
-import { urlIsInsideOf, urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  injectQueryParams,
+  urlIsInsideOf,
+  urlToFilename,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 
 export const createBuildUrlsGenerator = ({
   // logger,
@@ -32,6 +37,20 @@ export const createBuildUrlsGenerator = ({
       return buildUrlFromMap;
     }
     if (urlIsInsideOf(url, buildDirectoryUrl)) {
+      if (ownerUrlInfo.searchParams.has("dynamic_import_id")) {
+        const ownerDirectoryPath = determineDirectoryPath({
+          sourceDirectoryUrl,
+          assetsDirectory,
+          urlInfo: ownerUrlInfo,
+        });
+        const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
+        let buildUrl = `${buildDirectoryUrl}${ownerDirectoryPath}${buildRelativeUrl}`;
+        buildUrl = injectQueryParams(buildUrl, {
+          dynamic_import_id: undefined,
+        });
+        associateBuildUrl(url, buildUrl);
+        return buildUrl;
+      }
       associateBuildUrl(url, url);
       return url;
     }
@@ -52,7 +71,8 @@ export const createBuildUrlsGenerator = ({
       } else {
         directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
       }
-      const { search } = new URL(url);
+      const urlObject = new URL(url);
+      const { search } = urlObject;
       const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
       associateBuildUrl(url, buildUrl);
       return buildUrl;
@@ -70,6 +90,7 @@ export const createBuildUrlsGenerator = ({
       nameSetPerDirectoryMap.set(directoryPath, nameSet);
     }
     const urlObject = new URL(url);
+    injectQueryParams(urlObject, { dynamic_import_id: undefined });
     let { search, hash } = urlObject;
     let urlName = getUrlName(url, urlInfo);
     let [basename, extension] = splitFileExtension(urlName);
@@ -116,7 +137,7 @@ const determineDirectoryPath = ({
   sourceDirectoryUrl,
   assetsDirectory,
   urlInfo,
-  ownerUrlInfo,
+  ownerUrlInfo = urlInfo.firstReference.ownerUrlInfo,
 }) => {
   if (urlInfo.dirnameHint) {
     return urlInfo.dirnameHint;
@@ -128,13 +149,29 @@ const determineDirectoryPath = ({
     const parentDirectoryPath = determineDirectoryPath({
       sourceDirectoryUrl,
       assetsDirectory,
-      urlInfo: ownerUrlInfo || urlInfo.firstReference.ownerUrlInfo,
+      urlInfo: ownerUrlInfo,
     });
     return parentDirectoryPath;
   }
   const dynamicImportId = urlInfo.searchParams.get("dynamic_import_id");
   if (dynamicImportId) {
-    return `${assetsDirectory}${dynamicImportId}/`;
+    const ancestorImportIds = [];
+    let ancestorUrlInfo = ownerUrlInfo;
+    let currentImportId = dynamicImportId;
+    while (ancestorUrlInfo) {
+      const ancestorDynamicImportId =
+        ancestorUrlInfo.searchParams.get("dynamic_import_id");
+      if (!ancestorDynamicImportId) {
+        break;
+      }
+      if (ancestorDynamicImportId !== currentImportId) {
+        ancestorImportIds.push(ancestorDynamicImportId);
+        currentImportId = ancestorDynamicImportId;
+      }
+      ancestorUrlInfo = ancestorUrlInfo.firstReference?.ownerUrlInfo;
+    }
+    const importIdPath = [...ancestorImportIds, dynamicImportId].join("/");
+    return `${assetsDirectory}${importIdPath}/`;
   }
   if (urlInfo.isEntryPoint && !urlInfo.isDynamicEntryPoint) {
     return "";

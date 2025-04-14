@@ -1,10 +1,12 @@
-# [0_basic](../../code_splitting.test.mjs#L18)
+# [0_node](../../code_splitting.test.mjs#L21)
 
 ```js
-run()
+run({
+  runtimeCompat: { node: "20" },
+})
 ```
 
-# 1/2 write 3 files into "./build/"
+# 1/2 write 6 files into "./build/"
 
 see [./build/](./build/)
 

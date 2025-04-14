@@ -62,7 +62,6 @@ export const createBuildSpecifierManager = ({
       buildUrl = generateSourcemapFileUrl(parentBuildUrl);
       reference.generatedSpecifier = buildUrl;
     } else {
-      const url = reference.generatedUrl;
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(reference.url);
       let urlInfo;
       if (rawUrlInfo) {
@@ -72,6 +71,7 @@ export const createBuildSpecifierManager = ({
         buildUrlInfo.subtype = reference.expectedSubtype;
         urlInfo = buildUrlInfo;
       }
+      const url = reference.generatedUrl;
       buildUrl = buildUrlsGenerator.generate(url, {
         urlInfo,
         ownerUrlInfo: reference.ownerUrlInfo,
@@ -249,7 +249,7 @@ export const createBuildSpecifierManager = ({
         js_classic: undefined, // TODO: add comment to explain who is using this
         entry_point: undefined,
         dynamic_import: undefined,
-        dynamic_import_id: undefined,
+        // dynamic_import_id: undefined,
       };
     },
     formatReference: (reference) => {
