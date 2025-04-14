@@ -33,50 +33,41 @@ const run = async ({ packageConditions }) => {
   });
 };
 
-await run({
-  packageConditions: {
-    "dev:jsenv": {
-      "internal/": false,
-    },
-  },
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  // by default
+  // - node modules "default" is favored (build)
+  // - workspace modules "development" is favored (dev)
+  test("0_default", () =>
+    run({
+      packageConditions: {},
+    }));
+
+  test.ONLY("1_internal_build", () =>
+    run({
+      packageConditions: {
+        "dev:jsenv": {
+          "internal/": false,
+        },
+      },
+    }),
+  );
+
+  test("2_external_dev", () =>
+    run({
+      packageConditions: {
+        "dev:jsenv": {
+          "external/": true,
+        },
+      },
+    }));
+
+  test("3_external_dev_internal_build", () =>
+    run({
+      packageConditions: {
+        "dev:jsenv": {
+          "external/": true,
+          "internal/": false,
+        },
+      },
+    }));
 });
-
-// await snapshotBuildTests(import.meta.url, ({ test }) => {
-//   // by default
-//   // - node modules "default" is favored (build)
-//   // - workspace modules "development" is favored (dev)
-//   test("0_default", () =>
-//     run({
-//       packageConditions: {},
-//     }));
-
-//   test.ONLY("1_internal_build", () =>
-//     run({
-//       packageConditions: {
-//         "dev:jsenv": {
-//           "internal/": false,
-//         },
-//       },
-//     }),
-//   );
-
-//   test.ONLY("2_external_dev", () =>
-//     run({
-//       packageConditions: {
-//         "dev:jsenv": {
-//           "external/": true,
-//         },
-//       },
-//     }),
-//   );
-
-//   test("3_external_dev_internal_build", () =>
-//     run({
-//       packageConditions: {
-//         "dev:jsenv": {
-//           "external/": true,
-//           "internal/": false,
-//         },
-//       },
-//     }));
-// });

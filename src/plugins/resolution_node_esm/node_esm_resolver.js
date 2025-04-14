@@ -136,32 +136,35 @@ const createBuildPackageConditions = (
     }
     return !importer.includes("/node_modules/");
   };
-  const conditionDefaultWildcardResolvers = {
-    "dev:*": devResolver,
-  };
-  const conditionDefaultResolvers = {
-    development: devResolver,
-    node: nodeRuntimeEnabled,
-    browser: !nodeRuntimeEnabled,
-    import: true,
-  };
-  const conditionResolvers = {};
 
+  const conditionDefaultResolvers = {
+    "dev:*": devResolver,
+    "development": devResolver,
+    "node": nodeRuntimeEnabled,
+    "browser": !nodeRuntimeEnabled,
+    "import": true,
+  };
+  const conditionResolvers = {
+    ...conditionDefaultResolvers,
+  };
+
+  let wildcardToRemoveArray = [];
   const addCustomResolver = (condition, customResolver) => {
-    for (const wildcardConditionCandidate of Object.keys(
-      conditionDefaultWildcardResolvers,
-    )) {
-      const conditionRegex = new RegExp(
-        `^${wildcardConditionCandidate.replace(/\*/g, "(.*)")}$`,
-      );
-      if (conditionRegex.test(condition)) {
-        const existingWildcardResolver =
-          conditionDefaultWildcardResolvers[wildcardConditionCandidate];
-        conditionResolvers[condition] = combineTwoPackageConditionResolvers(
-          existingWildcardResolver,
-          customResolver,
+    for (const conditionCandidate of Object.keys(conditionDefaultResolvers)) {
+      if (conditionCandidate.includes("*")) {
+        const conditionRegex = new RegExp(
+          `^${conditionCandidate.replace(/\*/g, "(.*)")}$`,
         );
-        return;
+        if (conditionRegex.test(condition)) {
+          const existingResolver =
+            conditionDefaultResolvers[conditionCandidate];
+          wildcardToRemoveArray.push(conditionCandidate);
+          conditionResolvers[condition] = combineTwoPackageConditionResolvers(
+            existingResolver,
+            customResolver,
+          );
+          return;
+        }
       }
     }
     const existingResolver = conditionDefaultResolvers[condition];
@@ -175,11 +178,11 @@ const createBuildPackageConditions = (
     conditionResolvers[condition] = customResolver;
   };
 
-  for (const processArgCondition of processArgConditions) {
-    addCustomResolver(processArgCondition, true);
-  }
-  for (const condition of Object.keys(packageConditions)) {
-    const value = packageConditions[condition];
+  // for (const processArgCondition of processArgConditions) {
+  //   addCustomResolver(processArgCondition, true);
+  // }
+  for (const customCondition of Object.keys(packageConditions)) {
+    const value = packageConditions[customCondition];
     let customResolver;
     if (typeof value === "object") {
       const associations = URL_META.resolveAssociations(
@@ -224,7 +227,11 @@ const createBuildPackageConditions = (
     } else {
       customResolver = value;
     }
-    addCustomResolver(condition, customResolver);
+    addCustomResolver(customCondition, customResolver);
+  }
+
+  for (const wildcardToRemove of wildcardToRemoveArray) {
+    delete conditionResolvers[wildcardToRemove];
   }
 
   return (specifier, importer) => {
@@ -239,7 +246,6 @@ const createBuildPackageConditions = (
         conditions.push(conditionCandidate);
       }
     }
-    console.log({ specifier, conditions });
     return conditions;
   };
 };
