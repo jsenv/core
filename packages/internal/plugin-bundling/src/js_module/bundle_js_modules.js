@@ -18,7 +18,7 @@ export const bundleJsModules = async (
     include,
     chunks = {},
     strictExports = false,
-    isolateDynamicImports = undefined,
+    codeSplitting,
     preserveDynamicImports = false,
     augmentDynamicImportUrlSearchParams = () => {},
     rollup,
@@ -44,9 +44,10 @@ export const bundleJsModules = async (
     buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
   }
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
-  if (isolateDynamicImports === undefined && nodeRuntimeEnabled) {
-    isolateDynamicImports = true;
+  if (codeSplitting === undefined) {
+    codeSplitting = nodeRuntimeEnabled ? "isolate" : "reuse";
   }
+  const isolateDynamicImports = codeSplitting === "isolate";
 
   const PATH_AND_URL_CONVERTER = {
     asFileUrl: fileUrlConverter.asFileUrl,

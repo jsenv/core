@@ -1,10 +1,14 @@
-# [0_basic](../../code_splitting.test.mjs#L18)
+# [1_browser](../../code_splitting.test.mjs#L28)
 
 ```js
-run()
+run({
+  runtimeCompat: { chrome: "90" },
+  minification: false,
+  versioning: false,
+})
 ```
 
-# 1/2 write 5 files into "./build/"
+# 1/2 write 4 files into "./build/"
 
 see [./build/](./build/)
 
