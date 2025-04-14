@@ -126,10 +126,6 @@ const createBuildPackageConditions = (
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   const processArgConditions = readCustomConditionsFromProcessArgs();
-  const packageConditionsDefaultResolvers = {};
-  for (const processArgCondition of processArgConditions) {
-    packageConditionsDefaultResolvers[processArgCondition] = true;
-  }
   const devResolver = (specifier, importer) => {
     if (isBareSpecifier(specifier)) {
       const { url } = applyNodeEsmResolution({
@@ -140,14 +136,48 @@ const createBuildPackageConditions = (
     }
     return !importer.includes("/node_modules/");
   };
-  const packageConditionResolvers = {
-    ...packageConditionsDefaultResolvers,
-    "development": devResolver,
+  const conditionDefaultWildcardResolvers = {
     "dev:*": devResolver,
-    "node": nodeRuntimeEnabled,
-    "browser": !nodeRuntimeEnabled,
-    "import": true,
   };
+  const conditionDefaultResolvers = {
+    development: devResolver,
+    node: nodeRuntimeEnabled,
+    browser: !nodeRuntimeEnabled,
+    import: true,
+  };
+  const conditionResolvers = {};
+
+  const addCustomResolver = (condition, customResolver) => {
+    for (const wildcardConditionCandidate of Object.keys(
+      conditionDefaultWildcardResolvers,
+    )) {
+      const conditionRegex = new RegExp(
+        `^${wildcardConditionCandidate.replace(/\*/g, "(.*)")}$`,
+      );
+      if (conditionRegex.test(condition)) {
+        const existingWildcardResolver =
+          conditionDefaultWildcardResolvers[wildcardConditionCandidate];
+        conditionResolvers[condition] = combineTwoPackageConditionResolvers(
+          existingWildcardResolver,
+          customResolver,
+        );
+        return;
+      }
+    }
+    const existingResolver = conditionDefaultResolvers[condition];
+    if (existingResolver) {
+      conditionResolvers[condition] = combineTwoPackageConditionResolvers(
+        existingResolver,
+        customResolver,
+      );
+      return;
+    }
+    conditionResolvers[condition] = customResolver;
+  };
+
+  for (const processArgCondition of processArgConditions) {
+    addCustomResolver(processArgCondition, true);
+  }
   for (const condition of Object.keys(packageConditions)) {
     const value = packageConditions[condition];
     let customResolver;
@@ -192,33 +222,41 @@ const createBuildPackageConditions = (
     } else if (typeof value === "function") {
       customResolver = value;
     } else {
-      customResolver = () => value;
+      customResolver = value;
     }
-    const existing = packageConditionResolvers[condition];
-    if (existing) {
-      packageConditionResolvers[condition] = (...args) => {
-        const customResult = customResolver(...args);
-        return customResult === undefined ? existing(...args) : customResult;
-      };
-    } else {
-      packageConditionResolvers[condition] = customResolver;
-    }
+    addCustomResolver(condition, customResolver);
   }
 
   return (specifier, importer) => {
     const conditions = [];
-    for (const conditionCandidate of Object.keys(packageConditionResolvers)) {
-      const packageConditionResolver =
-        packageConditionResolvers[conditionCandidate];
-      if (typeof packageConditionResolver === "function") {
-        if (packageConditionResolver(specifier, importer)) {
+    for (const conditionCandidate of Object.keys(conditionResolvers)) {
+      const conditionResolver = conditionResolvers[conditionCandidate];
+      if (typeof conditionResolver === "function") {
+        if (conditionResolver(specifier, importer)) {
           conditions.push(conditionCandidate);
         }
-      } else if (packageConditionResolver) {
+      } else if (conditionResolver) {
         conditions.push(conditionCandidate);
       }
     }
+    console.log({ specifier, conditions });
     return conditions;
+  };
+};
+
+const combineTwoPackageConditionResolvers = (first, second) => {
+  if (typeof second !== "function") {
+    return second;
+  }
+  return (...args) => {
+    const secondResult = second(...args);
+    if (secondResult !== undefined) {
+      return secondResult;
+    }
+    if (typeof first === "function") {
+      return first(...args);
+    }
+    return first;
   };
 };
 
