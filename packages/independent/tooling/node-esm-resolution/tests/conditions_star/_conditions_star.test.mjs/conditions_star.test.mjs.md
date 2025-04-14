@@ -1,8 +1,8 @@
 # [conditions_star.test.mjs](../conditions_star.test.mjs)
 
 
-- [0_dev_star_first](0_dev_star_first/0_dev_star_first.md)
-- [1_import_first](1_import_first/1_import_first.md)
+- [0_dev_star](0_dev_star/0_dev_star.md)
+- [1_import](1_import/1_import.md)
 
 ---
 

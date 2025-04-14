@@ -11,15 +11,15 @@ const run = (params) => {
 };
 
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_dev_star_first", () => {
+  test("0_dev_star", () => {
     return run({
       conditions: ["dev:*", "import"],
     });
   });
 
-  test("1_import_first", () => {
+  test("1_import", () => {
     return run({
-      conditions: ["import", "dev:*"],
+      conditions: ["import"],
     });
   });
 });

@@ -1,15 +1,15 @@
-# [1_import_first](../../conditions_star.test.mjs#L20)
+# [1_import](../../conditions_star.test.mjs#L20)
 
 ```js
 return run({
-  conditions: ["import", "dev:*"],
+  conditions: ["import"],
 });
 ```
 
 ```js
 {
   "type": "field:imports",
-  "url": "base/source/dev.js"
+  "url": "base/source/import.js"
 }
 ```
 
