@@ -14,7 +14,7 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./src/main.js",
+        "dev:jsenv": "./src/main.js",
         "default": "./dist/jsenv_js_module_fallback.js"
       }
     },

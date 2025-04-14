@@ -22,7 +22,7 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./src/main.js",
+        "dev:jsenv": "./src/main.js",
         "default": "./dist/jsenv_core.js"
       }
     },
@@ -55,9 +55,9 @@
   ],
   "scripts": {
     "eslint": "npx eslint .",
-    "test": "node --conditions=development ./scripts/test/test.mjs",
+    "test": "node --conditions=dev:jsenv ./scripts/test/test.mjs",
     "test:packages": "npm run test -- ./packages/",
-    "build": "node --conditions=development ./scripts/build/build.mjs",
+    "build": "node --conditions=dev:jsenv ./scripts/build/build.mjs",
     "build:packages": "npm run build --workspaces --if-present --conditions=developement",
     "monorepo:sync_packages_versions": "node ./scripts/monorepo/sync_packages_versions.mjs",
     "monorepo:publish": "node ./scripts/monorepo/publish_packages.mjs",
@@ -70,9 +70,9 @@
     "test:snapshot_clear": "npx @jsenv/filesystem clear **/tests/**/side_effects/",
     "test:ci": "CI=1 npm run test",
     "test:packages:ci": "CI=1 npm run workspace:test",
-    "test:only_dev_server_errors": "node --conditions=development ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",
-    "dev": "node --watch --conditions=development ./scripts/dev/dev.mjs",
-    "dev:route-inspector": "node --watch --conditions=development ./packages/independent/backend/server/tests/route_inspector/start_server.js",
+    "test:only_dev_server_errors": "node --conditions=dev:jsenv ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",
+    "dev": "node --watch --conditions=dev:jsenv ./scripts/dev/dev.mjs",
+    "dev:route-inspector": "node --watch --conditions=dev:jsenv ./packages/independent/backend/server/tests/route_inspector/start_server.js",
     "playwright:install": "npx playwright install-deps && npx playwright install",
     "https:setup": "npx @jsenv/https-local setup",
     "prepublishOnly": "npm run build"

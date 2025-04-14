@@ -12,7 +12,9 @@
 // import prettier from "prettier";
 import { renderTerminalSvg } from "./svg/render_terminal_svg.js";
 
-const isDev = process.execArgv.includes("--conditions=development");
+const isDev =
+  process.execArgv.includes("--conditions=development") ||
+  process.execArgv.includes("--conditions=dev:");
 
 const startLocalServer = async () => {
   if (isDev) {

@@ -170,7 +170,12 @@ export const build = async ({
         let runtimeType;
         {
           if (isBareSpecifier(key)) {
-            const packageConditions = ["development", "node", "import"];
+            const packageConditions = [
+              "development",
+              "dev:*",
+              "node",
+              "import",
+            ];
             try {
               const { url, type } = applyNodeEsmResolution({
                 conditions: packageConditions,

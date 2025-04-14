@@ -13,7 +13,7 @@
         "--experimental-json-modules",
         "--experimental-import-meta-resolve",
         "--trace-warnings",
-        "--conditions=development"
+        "--conditions=dev:jsenv"
         // "--preserve-symlinks",
         // "--preserve-symlinks-main"
       ],
@@ -47,7 +47,7 @@
         "--experimental-json-modules",
         "--experimental-import-meta-resolve",
         "--trace-warnings",
-        "--conditions=development",
+        "--conditions=dev:jsenv",
         "--watch"
       ],
       "console": "integratedTerminal",

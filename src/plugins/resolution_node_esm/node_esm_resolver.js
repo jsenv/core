@@ -130,21 +130,23 @@ const createBuildPackageConditions = (
   for (const processArgCondition of processArgConditions) {
     packageConditionsDefaultResolvers[processArgCondition] = true;
   }
+  const devResolver = (specifier, importer) => {
+    if (isBareSpecifier(specifier)) {
+      const { url } = applyNodeEsmResolution({
+        specifier,
+        parentUrl: importer,
+      });
+      return !url.includes("/node_modules/");
+    }
+    return !importer.includes("/node_modules/");
+  };
   const packageConditionResolvers = {
     ...packageConditionsDefaultResolvers,
-    development: (specifier, importer) => {
-      if (isBareSpecifier(specifier)) {
-        const { url } = applyNodeEsmResolution({
-          specifier,
-          parentUrl: importer,
-        });
-        return !url.includes("/node_modules/");
-      }
-      return !importer.includes("/node_modules/");
-    },
-    node: nodeRuntimeEnabled,
-    browser: !nodeRuntimeEnabled,
-    import: true,
+    "development": devResolver,
+    "dev:*": devResolver,
+    "node": nodeRuntimeEnabled,
+    "browser": !nodeRuntimeEnabled,
+    "import": true,
   };
   for (const condition of Object.keys(packageConditions)) {
     const value = packageConditions[condition];

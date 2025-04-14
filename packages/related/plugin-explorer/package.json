@@ -14,7 +14,7 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./src/jsenv_plugin_explorer.js",
+        "dev:jsenv": "./src/jsenv_plugin_explorer.js",
         "default": "./dist/jsenv_plugin_explorer.js"
       }
     },

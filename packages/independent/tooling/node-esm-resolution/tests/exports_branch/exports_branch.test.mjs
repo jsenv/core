@@ -4,7 +4,7 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 
 {
   const { type, url } = applyNodeEsmResolution({
-    conditions: ["browser", "import", "development"],
+    conditions: ["browser", "import", "development", "dev:*"],
     parentUrl: new URL("./root/main.js", import.meta.url),
     specifier: "foo",
   });
@@ -22,7 +22,7 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 
 {
   const { type, url } = applyNodeEsmResolution({
-    conditions: ["import", "development"],
+    conditions: ["import", "development", "dev:*"],
     parentUrl: new URL("./root/main.js", import.meta.url),
     specifier: "foo",
   });

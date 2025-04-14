@@ -20,7 +20,7 @@
     ".": {
       "node": "./src/main.js",
       "browser": {
-        "development": "./src/main_browser.js",
+        "dev:jsenv": "./src/main_browser.js",
         "default": "./dist/terminal_recorder_browser.js"
       }
     },

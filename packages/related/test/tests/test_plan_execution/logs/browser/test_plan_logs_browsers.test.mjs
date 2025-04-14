@@ -12,7 +12,9 @@ import {
 } from "@jsenv/test";
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
-process.exit(0); // currently fails in CI with GroupMarkerNotSet(crbug.com/242999
+if (process.env.CI) {
+  process.exit(0); // currently fails in CI with GroupMarkerNotSet(crbug.com/242999
+}
 
 if (process.platform === "win32") {
   // to fix once got a windows OS to reproduce
@@ -20,7 +22,8 @@ if (process.platform === "win32") {
 }
 
 const terminalAnimatedRecording =
-  process.execArgv.includes("--conditions=development") &&
+  (process.execArgv.includes("--conditions=development") ||
+    process.execArgv.includes("--conditions=dev:jsenv")) &&
   !process.env.CI &&
   !process.env.JSENV;
 // force unicode and color support on windows

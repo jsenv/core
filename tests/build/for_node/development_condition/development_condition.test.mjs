@@ -45,7 +45,7 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("1_internal_build", () =>
     run({
       packageConditions: {
-        development: {
+        "dev:jsenv": {
           "internal/": false,
         },
       },
@@ -54,7 +54,7 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("2_external_dev", () =>
     run({
       packageConditions: {
-        development: {
+        "dev:jsenv": {
           "external/": true,
         },
       },
@@ -63,7 +63,7 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("3_external_dev_internal_build", () =>
     run({
       packageConditions: {
-        development: {
+        "dev:jsenv": {
           "external/": true,
           "internal/": false,
         },

@@ -17,7 +17,7 @@
   "exports": {
     ".": {
       "import": {
-        "development": "./src/main.js",
+        "dev:jsenv": "./src/main.js",
         "default": "./dist/jsenv_test.js"
       }
     },
@@ -36,7 +36,7 @@
     "./dist/jsenv_test.js"
   ],
   "scripts": {
-    "build": "node --conditions=development ./scripts/build.mjs",
+    "build": "node --conditions=dev:jsenv ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },
   "optionalDependencies": {

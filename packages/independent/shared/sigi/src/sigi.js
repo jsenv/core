@@ -9,7 +9,8 @@ const isDev =
   import.meta.hot ||
   import.meta.dev ||
   (typeof process === "object" &&
-    process.execArgv.includes("--conditions=development"));
+    process.execArgv.includes("--conditions=development")) ||
+  process.execArgv.includes("--conditions=dev:");
 
 export const sigi = (rootStateObject, { strict = false } = {}) => {
   if (!isObject(rootStateObject)) {
