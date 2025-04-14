@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/urls",
-  "version": "2.7.3",
+  "version": "2.7.4",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,6 +26,6 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/humanize": "1.5.1"
+    "@jsenv/humanize": "1.5.2"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/terminal-table",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "module",
   "exports": {
     ".": {
@@ -14,7 +14,7 @@
   "main": "./src/main.js",
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/humanize": "1.5.1"
+    "@jsenv/humanize": "1.5.2"
   },
   "scripts": {
     "build": "node ./scripts/build.mjs",
