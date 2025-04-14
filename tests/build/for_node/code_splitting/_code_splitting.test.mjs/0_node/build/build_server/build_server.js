@@ -1,9 +1,9 @@
-import { FOO } from "./jsenv_core_node_modules.js?dynamic_import_id=build_server";
+import { FOO } from "./jsenv_core_node_modules.js";
 
 const answer = 42;
 
 const startBuildServer = async () => {
-  await import("./bar_index/bar_index.js?dynamic_import_id=bar_index");
+  await import("./bar_index/bar_index.js");
 
   console.log("start build server", FOO, answer);
 };

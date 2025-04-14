@@ -39,7 +39,10 @@ export const createBuildUrlsGenerator = ({
           urlInfo: ownerUrlInfo,
         });
         const buildRelativeUrl = urlToRelativeUrl(url, buildDirectoryUrl);
-        const buildUrl = `${buildDirectoryUrl}${ownerDirectoryPath}${buildRelativeUrl}`;
+        let buildUrl = `${buildDirectoryUrl}${ownerDirectoryPath}${buildRelativeUrl}`;
+        const buildUrlObject = new URL(buildUrl);
+        buildUrlObject.searchParams.delete("dynamic_import_id");
+        buildUrl = buildUrlObject.href;
         associateBuildUrl(url, buildUrl);
         return buildUrl;
       }
@@ -63,7 +66,8 @@ export const createBuildUrlsGenerator = ({
       } else {
         directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
       }
-      const { search } = new URL(url);
+      const urlObject = new URL(url);
+      const { search } = urlObject;
       const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
       associateBuildUrl(url, buildUrl);
       return buildUrl;
@@ -81,6 +85,7 @@ export const createBuildUrlsGenerator = ({
       nameSetPerDirectoryMap.set(directoryPath, nameSet);
     }
     const urlObject = new URL(url);
+    urlObject.searchParams.delete("dynamic_import_id");
     let { search, hash } = urlObject;
     let urlName = getUrlName(url, urlInfo);
     let [basename, extension] = splitFileExtension(urlName);

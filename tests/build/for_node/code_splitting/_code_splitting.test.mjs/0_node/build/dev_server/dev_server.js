@@ -1,4 +1,4 @@
-import { FOO } from "./jsenv_core_node_modules.js?dynamic_import_id=dev_server";
+import { FOO } from "./jsenv_core_node_modules.js";
 
 const answer = 42;
 
