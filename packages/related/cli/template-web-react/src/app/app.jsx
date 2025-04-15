@@ -2,7 +2,7 @@ import { useLayoutEffect } from "react";
 import appStyleSheet from "./app.css" with { type: "css" };
 import { Counter } from "./counter.jsx";
 
-const reactLogoUrl = new URL("../react_logo.svg", import.meta.url);
+const reactLogoUrl = import.meta.resolve("../react_logo.svg");
 
 export const App = () => {
   useLayoutEffect(() => {

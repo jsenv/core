@@ -1,5 +1,5 @@
 /*
- * Start a development server for files inside source directory
+ * Start a development server for files inside sourceDirectoryUrl
  * Read more in https://github.com/jsenv/core
  */
 
@@ -8,7 +8,7 @@ import { startDevServer } from "@jsenv/core";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 
 export const devServer = await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   plugins: [
     jsenvPluginReact({
       refreshInstrumentation: true,

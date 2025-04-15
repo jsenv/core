@@ -6,7 +6,7 @@
 import { executeTestPlan, chromium, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
-  rootDirectoryUrl: new URL("../", import.meta.url),
+  rootDirectoryUrl: import.meta.resolve("../"),
   testPlan: {
     "./**/*.test.html": {
       chromium: {
@@ -21,8 +21,8 @@ await executeTestPlan({
   },
   webServer: {
     origin: "http://localhost:3400",
-    moduleUrl: new URL("./dev.mjs", import.meta.url),
+    rootDirectoryUrl: import.meta.resolve("../src/"),
+    moduleUrl: import.meta.resolve("./dev.mjs"),
   },
   coverage: process.argv.includes("--coverage"),
-  githubCheck: false,
 });

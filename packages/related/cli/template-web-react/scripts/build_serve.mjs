@@ -7,7 +7,7 @@ import open from "open";
 import { startBuildServer } from "@jsenv/core";
 
 const buildServer = await startBuildServer({
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   port: 3501,
 });
 if (process.argv.includes("--open")) {

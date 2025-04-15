@@ -1,5 +1,5 @@
 /*
- * Start a development server for files inside source directory url
+ * Start a development server for files inside sourceDirectoryUrl
  * Read more in https://github.com/jsenv/core
  */
 
@@ -8,7 +8,7 @@ import { startDevServer } from "@jsenv/core";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 export const devServer = await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   plugins: [
     jsenvPluginPreact({
       refreshInstrumentation: { "file://**/*.jsx": true },
