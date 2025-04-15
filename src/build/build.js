@@ -894,6 +894,7 @@ const entryPointDefaultParams = {
   scenarioPlaceholders: undefined,
   injections: undefined,
   transpilation: {},
+  preserveComments: undefined,
 
   versioningMethod: "search_param", // "filename", "search_param"
   versioningViaImportmap: true,
@@ -945,6 +946,7 @@ const prepareEntryPointBuild = async (
     scenarioPlaceholders,
     injections,
     transpilation,
+    preserveComments,
 
     versioningMethod,
     versioningViaImportmap,
@@ -1020,6 +1022,9 @@ const prepareEntryPointBuild = async (
     if (entryPointParams.assetManifest === undefined) {
       assetManifest = versioningMethod === "filename";
     }
+    if (entryPointParams.preserveComments === undefined) {
+      preserveComments = someEntryPointUseNode;
+    }
   }
 
   const buildOperation = Abort.startOperation();
@@ -1078,7 +1083,7 @@ const prepareEntryPointBuild = async (
     },
     ...plugins,
     ...(bundling ? [jsenvPluginBundling(bundling)] : []),
-    ...(minification ? [jsenvPluginMinification(minification)] : []),
+    jsenvPluginMinification(minification, { preserveComments }),
     ...getCorePlugins({
       packageDirectory,
       rootDirectoryUrl: sourceDirectoryUrl,

@@ -9,8 +9,7 @@
     <script>
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
-      });
-    </script>
+      });</script>
     <script type="module">const answer = 42;
 
 setTimeout(() => {
@@ -19,7 +18,6 @@ setTimeout(() => {
           answer,
           url: url.replace(window.origin, "window.origin"),
         });
-      }, 100);
-</script>
+      }, 100);</script>
   </body>
 </html>

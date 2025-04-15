@@ -2,21 +2,7 @@ System.register([], function (_export, _context) {
   "use strict";
 
   var arrayWithHoles, nonIterableRest, _slicedToArray, defineProperty;
-  /* @minVersion 7.0.0-beta.0 */
-
   function _iterableToArrayLimit(arr, i) {
-    // this is an expanded form of \`for...of\` that properly supports abrupt completions of
-    // iterators etc. variable names have been minimised to reduce the size of this massive
-    // helper. sometimes spec compliance is annoying :(
-    //
-    // _n = _iteratorNormalCompletion
-    // _d = _didIteratorError
-    // _e = _iteratorError
-    // _i = _iterator
-    // _s = _step
-    // _x = _next
-    // _r = _return
-
     var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
     if (_i == null) return;
     var _arr = [];
@@ -41,26 +27,20 @@ System.register([], function (_export, _context) {
       try {
         if (!_n && _i["return"] != null) {
           _r = _i["return"]();
-          // eslint-disable-next-line no-unsafe-finally
           if (Object(_r) !== _r) return;
         }
       } finally {
-        // eslint-disable-next-line no-unsafe-finally
         if (_d) throw _e;
       }
     }
     return _arr;
   }
-
-  /* eslint-disable no-eq-null, eqeqeq */
   function arrayLikeToArray(arr, len) {
     if (len == null || len > arr.length) len = arr.length;
     var arr2 = new Array(len);
     for (var i = 0; i < len; i++) arr2[i] = arr[i];
     return arr2;
   }
-
-  /* eslint-disable consistent-return */
   function unsupportedIterableToArray(o, minLen) {
     if (!o) return;
     if (typeof o === "string") return arrayLikeToArray(o, minLen);
@@ -69,12 +49,8 @@ System.register([], function (_export, _context) {
     if (n === "Map" || n === "Set") return Array.from(o);
     if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return arrayLikeToArray(o, minLen);
   }
-  /* @minVersion 7.1.5 */
-
-  // https://tc39.es/ecma262/#sec-toprimitive
   function toPrimitive(input, hint) {
     if (typeof input !== "object" || !input) return input;
-    // @ts-expect-error Symbol.toPrimitive might not index {}
     var prim = input[Symbol.toPrimitive];
     if (prim !== undefined) {
       var res = prim.call(input, hint);
@@ -83,19 +59,10 @@ System.register([], function (_export, _context) {
     }
     return (hint === "string" ? String : Number)(input);
   }
-
-  /* @minVersion 7.1.5 */
-
   function toPropertyKey(arg) {
     var key = toPrimitive(arg, "string");
     return typeof key === "symbol" ? key : String(key);
   }
-  /* @minVersion 7.5.0 */
-
-  // This function is different to "Reflect.ownKeys". The enumerableOnly
-  // filters on symbol properties only. Returned string properties are always
-  // enumerable. It is good to use in objectSpread.
-
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
     if (Object.getOwnPropertySymbols) {
@@ -130,7 +97,6 @@ System.register([], function (_export, _context) {
   return {
     setters: [],
     execute: function () {
-      // eslint-disable-next-line consistent-return
       arrayWithHoles = arr => {
         if (Array.isArray(arr)) return arr;
       };
@@ -140,11 +106,6 @@ System.register([], function (_export, _context) {
       _export("_slicedToArray", _slicedToArray = (arr, i) => arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || unsupportedIterableToArray(arr, i) || nonIterableRest());
       defineProperty = (obj, key, value) => {
         key = toPropertyKey(key);
-        // Shortcircuit the slow defineProperty path when possible.
-        // We are trying to avoid issues where setters defined on the
-        // prototype cause side effects under the fast path of simple
-        // assignment. By checking for existence of the property with
-        // the in operator, we can optimize most of this overhead away.
         if (key in obj) {
           Object.defineProperty(obj, key, {
             value,

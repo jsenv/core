@@ -9,8 +9,7 @@
     <script>
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
-      });
-    </script>
+      });</script>
     <a id="link_1" href="a.js"></a>
     <a id="link_2" href="ignore:b.js"></a>
     <script>
@@ -19,7 +18,6 @@
       window.resolveResultPromise({
         ignoreAJsHref: link1.href.replace(window.origin, "window.origin"),
         ignoreIgnoreBJsHref: link2.href.replace(window.origin, "window.origin"),
-      });
-    </script>
+      });</script>
   </body>
 </html>

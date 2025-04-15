@@ -1,3 +1,3 @@
-import { b } from "/b.js?v=f62aaee9";
+import { b } from "/b.js?v=a5ce9f63";
 
 console.log(b);

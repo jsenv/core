@@ -3,7 +3,6 @@ System.register([], function (_export, _context) {
 
   function toPrimitive(input, hint) {
     if (typeof input !== "object" || !input) return input;
-    // @ts-expect-error Symbol.toPrimitive might not index {}
     var prim = input[Symbol.toPrimitive];
     if (prim !== undefined) {
       var res = prim.call(input, hint || "default");

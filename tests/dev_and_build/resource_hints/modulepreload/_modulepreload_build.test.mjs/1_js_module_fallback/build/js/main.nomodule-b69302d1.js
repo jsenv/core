@@ -25,7 +25,6 @@ System.register([], function (_export, _context) {
   return {
     setters: [],
     execute: async function () {
-      // Let browser time to log an eventual warning about preload link not used
       return _await(new Promise(resolve => {
         setTimeout(resolve, 5000);
       }), function () {

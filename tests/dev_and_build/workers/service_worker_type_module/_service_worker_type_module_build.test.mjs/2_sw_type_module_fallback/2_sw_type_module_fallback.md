@@ -18,7 +18,7 @@ see [./build/](./build/)
     "order": [],
     "resourcesFromJsenvBuild": {
       "/main.html": {
-        "version": "4bfab674"
+        "version": "6807439f"
       },
       "/css/style.css": {
         "version": "2e9d11a2",

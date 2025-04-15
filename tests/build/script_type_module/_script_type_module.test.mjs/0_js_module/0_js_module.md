@@ -15,7 +15,7 @@ see [./build/](./build/)
 ```js
 {
   "answer": 42,
-  "url": "window.origin/js/main.js?v=bff3ad6a"
+  "url": "window.origin/js/main.js?v=b21f335f"
 }
 ```
 

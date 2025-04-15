@@ -7,9 +7,9 @@
     <script type="importmap">
       {
         "imports": {
-          "/js/preact.module.js": "/js/preact.module.js?v=cf6cc55b",
-          "/js/hooks.module.js": "/js/hooks.module.js?v=21805d2b",
-          "/js/jsxRuntime.module.js": "/js/jsxRuntime.module.js?v=ac0edf7e"
+          "/js/preact.module.js": "/js/preact.module.js?v=8ee459cf",
+          "/js/hooks.module.js": "/js/hooks.module.js?v=9b1a4fa9",
+          "/js/jsxRuntime.module.js": "/js/jsxRuntime.module.js?v=973cc9bd"
         }
       }
     </script>
@@ -20,12 +20,11 @@
     <script>
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
-      });
-    </script>
+      });</script>
     <script type="module" jsenv-type="module/jsx">import { render } from "/js/preact.module.js";
 import { useEffect } from "/js/hooks.module.js";
 
-// eslint-disable-next-line no-unused-vars
+
 import { jsx as _jsx } from "/js/jsxRuntime.module.js";
 const App = ({
   onFirstRender

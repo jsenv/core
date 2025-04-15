@@ -10,14 +10,12 @@
     <script>
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
-      });
-    </script>
+      });</script>
     <script type="module">const bodyBackgroundColor = getComputedStyle(
         document.body,
       ).backgroundColor;
       window.resolveResultPromise({
         bodyBackgroundColor,
-      });
-</script>
+      });</script>
   </body>
 </html>

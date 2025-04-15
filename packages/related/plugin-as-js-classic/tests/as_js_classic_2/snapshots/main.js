@@ -7,20 +7,20 @@
   };
 })();
 
-/*
- * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
- * with the following changes:
- *
- * - Code can use aync/await, const, etc because this file is compiled (see dist/s.js)
- * - Can use document.currentScript because we don't support IE
- * - auto import inline System.register
- * - auto import first System.register in web workers
- * - queing events in web workers
- * - no support for importmap because jsenv don't need it
- */
+
+
+
+
+
+
+
+
+
+
+
 
 (function () {
-  /* eslint-env browser */
+
 
   const loadRegistry = Object.create(null);
   const registerRegistry = Object.create(null);
@@ -82,8 +82,8 @@
         script.addEventListener("load", () => {
           window.removeEventListener("error", windowErrorCallback);
           document.head.removeChild(script);
-          // Note that if an error occurs that isn't caught by this if statement,
-          // that getRegister will return null and a "did not instantiate" error will be thrown.
+
+
           if (lastWindowErrorUrl === url) {
             reject(lastWindowError);
           } else {
@@ -96,9 +96,9 @@
     const createScript = (url) => {
       const script = document.createElement("script");
       script.async = true;
-      // Only add cross origin for actual cross origin
-      // this is because Safari triggers for all
-      // - https://bugs.webkit.org/show_bug.cgi?id=171566
+
+
+
       if (url.indexOf(`${self.location.origin}/`)) {
         script.crossOrigin = "anonymous";
       }
@@ -108,18 +108,18 @@
     };
   }
   if (isWorker) {
-    /*
-     * SystemJs loads X files before executing the worker/service worker main file
-     * It mean events dispatched during this phase could be missed
-     * A warning like the one below is displayed in chrome devtools:
-     * "Event handler of 'install' event must be added on the initial evaluation of worker script"
-     * To fix that code below listen for these events early and redispatch them later
-     * once the worker file is executed (the listeners are installed)
-     */
+
+
+
+
+
+
+
+
     const firstImportCallbacks = [];
     if (isServiceWorker) {
-      // for service worker there is more events to listen
-      // and, to get rid of the warning, we override self.addEventListener
+
+
       const eventsToCatch = ["message", "install", "activate", "fetch"];
       const eventCallbackProxies = {};
       const firstImportPromise = new Promise((resolve) => {
@@ -352,7 +352,7 @@
     loaded[load.url] = true;
     try {
       if (load.linkPromise) {
-        // load.linkPromise is null once instantiated
+
         await load.linkPromise;
       }
       await Promise.all(
@@ -383,7 +383,7 @@
       return undefined;
     }
 
-    // deps execute first, unless circular
+
     const execute = load.execute;
     load.execute = null;
     const depLoadPromises = [];
@@ -435,7 +435,7 @@
     })();
   };
 
-  // the closest we can get to call(undefined)
+
   const nullContext = Object.freeze(Object.create(null));
 
   const createMeta = (url) => {
@@ -466,18 +466,18 @@ System.register([], function (_export, _context) {
     setters: [],
     execute: function () {
       typeofCurrentScript = typeof document.currentScript;
-      /*
-       * using spread + destructuring generate a dependency to babel helpers
-       * making the code execute async and fails the test
-       * How to fix:
-       * 1. do not use anything requiring babel helpers (painful and hard to predict)
-       * 2. put babel helpers on window/self instead of separate file to share them without having to load a js
-       * (that would be great but it's hard to make it work right now)
-       * 3. inline babel helpers when using ?js_module_fallback (or at least be able to force inline them)
-       * in this scenario
-       *
-       * SOLUTION FOR NOW: 3
-       */
+
+
+
+
+
+
+
+
+
+
+
+
       getResponse = () => {
         return [42];
       };

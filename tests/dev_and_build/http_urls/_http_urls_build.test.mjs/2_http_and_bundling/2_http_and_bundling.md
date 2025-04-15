@@ -12,7 +12,7 @@ see [./build/](./build/)
 
 ```js
 {
-  "url": "window.origin/js/main.js?v=d8b1be0e",
+  "url": "window.origin/js/main.js?v=c99611b3",
   "answer": 42
 }
 ```

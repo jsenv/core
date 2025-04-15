@@ -28,12 +28,9 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
       _objectSpread2 = _buildJsenv_core_packagesJs._objectSpread2;
     }],
     execute: async function () {
-      // this is causing an import to babel helper for object spread
       console.log(_objectSpread2({}, {
         answer: 42
       }));
-      // this would crash the worker if that code was shared and executed
-      // in the worker context
       window.toto = true;
       worker = new Worker(new URL("/worker.nomodule.js", _context.meta.url), {
         type: "classic"

@@ -75,13 +75,10 @@ System.register([__v__("/jsenv_plugin_preact_node_modules.js")], function (_expo
           })
         }), document.querySelector("#app"));
         return _await(renderPromise, function () {
-          // increment
           document.querySelector("#increment").click();
           return _await(new Promise(resolve => {
             setTimeout(resolve, 100);
           }), function () {
-            // decrement
-            // resolve with what we found
             spanContentAfterIncrement = document.querySelector("#counter_value").innerHTML;
             document.querySelector("#decrement").click();
             return _await(new Promise(resolve => {

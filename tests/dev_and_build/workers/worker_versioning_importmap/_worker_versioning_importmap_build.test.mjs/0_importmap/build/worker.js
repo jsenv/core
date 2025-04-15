@@ -1,4 +1,4 @@
-import { ping } from "/js/ping.js?v=1ecb6f99";
+import { ping } from "/js/ping.js?v=44968be0";
 
 self.addEventListener("message", function (e) {
   if (e.data === "ping") {

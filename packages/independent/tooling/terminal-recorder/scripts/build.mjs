@@ -10,6 +10,7 @@ await build({
       runtimeCompat: { chrome: "100" },
       minification: false,
       versioning: false,
+      preserveComments: true,
     },
     "./main_browser.js": {
       base: "./",
@@ -24,6 +25,7 @@ await build({
       ],
       minification: false,
       versioning: false,
+      preserveComments: true,
     },
   },
 });

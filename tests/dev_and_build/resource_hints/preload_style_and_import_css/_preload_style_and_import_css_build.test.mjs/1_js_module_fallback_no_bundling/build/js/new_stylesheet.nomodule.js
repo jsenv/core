@@ -4,10 +4,6 @@ System.register([], function (_export, _context) {
   return {
     setters: [],
     execute: function () {
-      /* eslint-disable */
-      // construct-style-sheets-polyfill@3.1.0
-      // to keep in sync with https://github.com/calebdwilliams/construct-style-sheets
-      // copy pasted into jsenv codebase to inject this code with more ease
       (function () {
         "use strict";
 

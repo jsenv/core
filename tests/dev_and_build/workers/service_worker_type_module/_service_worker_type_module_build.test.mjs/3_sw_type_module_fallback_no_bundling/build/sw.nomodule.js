@@ -1,6 +1,6 @@
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "a738cab3"
+    "version": "12fe6eaa"
   },
   "/css/style.css": {
     "version": "2e9d11a2",
@@ -27,20 +27,20 @@ self.resourcesFromJsenvBuild = {
   };
 })();
 
-/*
- * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
- * with the following changes:
- *
- * - Code can use aync/await, const, etc because this file is compiled (see dist/s.js)
- * - Can use document.currentScript because we don't support IE
- * - auto import inline System.register
- * - auto import first System.register in web workers
- * - queing events in web workers
- * - no support for importmap because jsenv don't need it
- */
+
+
+
+
+
+
+
+
+
+
+
 
 (function () {
-  /* eslint-env browser */
+
 
   const loadRegistry = Object.create(null);
   const registerRegistry = Object.create(null);
@@ -102,8 +102,8 @@ self.resourcesFromJsenvBuild = {
         script.addEventListener("load", () => {
           window.removeEventListener("error", windowErrorCallback);
           document.head.removeChild(script);
-          // Note that if an error occurs that isn't caught by this if statement,
-          // that getRegister will return null and a "did not instantiate" error will be thrown.
+
+
           if (lastWindowErrorUrl === url) {
             reject(lastWindowError);
           } else {
@@ -116,9 +116,9 @@ self.resourcesFromJsenvBuild = {
     const createScript = (url) => {
       const script = document.createElement("script");
       script.async = true;
-      // Only add cross origin for actual cross origin
-      // this is because Safari triggers for all
-      // - https://bugs.webkit.org/show_bug.cgi?id=171566
+
+
+
       if (url.indexOf(`${self.location.origin}/`)) {
         script.crossOrigin = "anonymous";
       }
@@ -128,18 +128,18 @@ self.resourcesFromJsenvBuild = {
     };
   }
   if (isWorker) {
-    /*
-     * SystemJs loads X files before executing the worker/service worker main file
-     * It mean events dispatched during this phase could be missed
-     * A warning like the one below is displayed in chrome devtools:
-     * "Event handler of 'install' event must be added on the initial evaluation of worker script"
-     * To fix that code below listen for these events early and redispatch them later
-     * once the worker file is executed (the listeners are installed)
-     */
+
+
+
+
+
+
+
+
     const firstImportCallbacks = [];
     if (isServiceWorker) {
-      // for service worker there is more events to listen
-      // and, to get rid of the warning, we override self.addEventListener
+
+
       const eventsToCatch = ["message", "install", "activate", "fetch"];
       const eventCallbackProxies = {};
       const firstImportPromise = new Promise((resolve) => {
@@ -372,7 +372,7 @@ self.resourcesFromJsenvBuild = {
     loaded[load.url] = true;
     try {
       if (load.linkPromise) {
-        // load.linkPromise is null once instantiated
+
         await load.linkPromise;
       }
       await Promise.all(
@@ -403,7 +403,7 @@ self.resourcesFromJsenvBuild = {
       return undefined;
     }
 
-    // deps execute first, unless circular
+
     const execute = load.execute;
     load.execute = null;
     const depLoadPromises = [];
@@ -455,7 +455,7 @@ self.resourcesFromJsenvBuild = {
     })();
   };
 
-  // the closest we can get to call(undefined)
+
   const nullContext = Object.freeze(Object.create(null));
 
   const createMeta = (url) => {
@@ -477,7 +477,6 @@ self.resourcesFromJsenvBuild = {
       : () => Object.create(null);
 })();
 
-
 System.register([__v__("/js/a.nomodule.js")], function (_export, _context) {
   "use strict";
 
@@ -494,8 +493,6 @@ System.register([__v__("/js/a.nomodule.js")], function (_export, _context) {
           });
         }
       });
-
-      // trigger jsenv dynamic import for slicedToArray
       fn = ([a]) => {
         console.log(a);
       };

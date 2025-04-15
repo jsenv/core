@@ -13,7 +13,7 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-window.origin/src/?v=d7983b67
+window.origin/src/?v=0f950c07
 ```
 
 ---

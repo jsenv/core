@@ -22,19 +22,19 @@ see [./build/](./build/)
     ],
     "resourcesFromJsenvBuild": {
       "/main.html": {
-        "version": "56f4059a"
+        "version": "8198f902"
       },
       "/css/style.css": {
         "version": "2e9d11a2",
         "versionedUrl": "/css/style.css?v=2e9d11a2"
       },
       "/js/a.js": {
-        "version": "64a14aef",
-        "versionedUrl": "/js/a.js?v=64a14aef"
+        "version": "76c9c177",
+        "versionedUrl": "/js/a.js?v=76c9c177"
       },
       "/js/b.js": {
-        "version": "0761aa10",
-        "versionedUrl": "/js/b.js?v=0761aa10"
+        "version": "54f517a9",
+        "versionedUrl": "/js/b.js?v=54f517a9"
       }
     }
   }

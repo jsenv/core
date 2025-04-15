@@ -8,8 +8,8 @@
     <script>
       ;(function() {
         var __versionMappings__ = {
-          "/js/a.js": "/js/a.js?v=64a14aef",
-          "/js/b.js": "/js/b.js?v=0761aa10"
+          "/js/a.js": "/js/a.js?v=76c9c177",
+          "/js/b.js": "/js/b.js?v=54f517a9"
         };
         window.__v__ = function (specifier) {
           return __versionMappings__[specifier] || specifier
@@ -22,8 +22,7 @@
     <script>
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
-      });
-    </script>
+      });</script>
     <script type="module">const testServiceWorker = async (serviceWorker) => {
         const inspectResponse = await new Promise((resolve) => {
           const { port1, port2 } = new MessageChannel();
@@ -42,7 +41,6 @@
         });
       window.resolveResultPromise({
         inspectResponse: await testServiceWorker(serviceWorker),
-      });
-</script>
+      });</script>
   </body>
 </html>
