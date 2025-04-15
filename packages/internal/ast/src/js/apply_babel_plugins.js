@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 import { createParseError } from "../parse_error.js";
 
 export const applyBabelPlugins = async ({
-  babelPlugins,
+  babelPlugins = [],
   input,
   inputIsJsModule,
   inputUrl,
@@ -16,7 +16,7 @@ export const applyBabelPlugins = async ({
   ast,
   options = {},
 }) => {
-  if (babelPlugins.length === 0) {
+  if (babelPlugins.length === 0 && Object.keys(options).length === 0) {
     return { code: input };
   }
   const { transformAsync, transformFromAstAsync } = await import("@babel/core");

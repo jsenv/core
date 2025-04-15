@@ -1078,7 +1078,7 @@ const prepareEntryPointBuild = async (
     },
     ...plugins,
     ...(bundling ? [jsenvPluginBundling(bundling)] : []),
-    ...(minification ? [jsenvPluginMinification(minification)] : []),
+    jsenvPluginMinification(minification),
     ...getCorePlugins({
       packageDirectory,
       rootDirectoryUrl: sourceDirectoryUrl,

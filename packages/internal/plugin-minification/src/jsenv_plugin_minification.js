@@ -1,16 +1,28 @@
 import { minifyCss } from "./css/css_minification.js";
 import { minifyHtml } from "./html/html_minification.js";
 import { minifyJs } from "./js/js_minification.js";
+import { stripJsComments } from "./js/js_strip_comments.js";
 import { minifyJson } from "./json/json_minification.js";
 
-export const jsenvPluginMinification = ({
-  html = {},
-  css = {},
-  js_classic = {},
-  js_module = {},
-  json = {},
-  svg = {},
-} = {}) => {
+export const jsenvPluginMinification = (options) => {
+  if (options === false) {
+    options = {
+      html: null,
+      css: null,
+      js_classic: null,
+      js_module: null,
+      json: null,
+      svg: null,
+    };
+  }
+  const {
+    html = {},
+    css = {},
+    js_classic = {},
+    js_module = {},
+    json = {},
+    svg = {},
+  } = options;
   const htmlMinifier = html
     ? (urlInfo) => minifyHtml(urlInfo, html === true ? {} : html)
     : null;
@@ -25,7 +37,7 @@ export const jsenvPluginMinification = ({
     : null;
   const jsModuleMinifier = js_module
     ? (urlInfo) => minifyJs(urlInfo, js_module === true ? {} : js_module)
-    : null;
+    : (urlInfo) => stripJsComments(urlInfo);
   const jsonMinifier = json
     ? (urlInfo) => minifyJson(urlInfo, json === true ? {} : html)
     : null;
