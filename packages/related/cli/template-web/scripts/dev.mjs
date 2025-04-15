@@ -7,7 +7,7 @@ import open from "open";
 import { startDevServer } from "@jsenv/core";
 
 export const devServer = await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   port: 3400,
 });
 if (process.argv.includes("--open")) {

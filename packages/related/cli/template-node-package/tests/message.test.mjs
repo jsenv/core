@@ -5,7 +5,6 @@
  */
 
 import { assert } from "@jsenv/assert";
-
 import { getMessage, getMessageAsync } from "jsenv-template-node-package";
 
 {

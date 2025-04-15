@@ -3,7 +3,7 @@ import { initCounter } from "./app/counter.js";
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, mainStyleSheet];
 
-const jsenvLogoUrl = new URL("/jsenv_logo.svg", import.meta.url);
+const jsenvLogoUrl = import.meta.resolve("/jsenv_logo.svg");
 
 document.querySelector("#root").innerHTML = `<h1>Hello world!</h1>
 <img class="logo" src=${jsenvLogoUrl} alt="logo" />

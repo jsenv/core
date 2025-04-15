@@ -1,5 +1,5 @@
 import { eslintConfigRelax } from "@jsenv/eslint-config-relax";
 
 export default eslintConfigRelax({
-  rootDirectoryUrl: new URL("./", import.meta.url),
+  rootDirectoryUrl: import.meta.resolve("./"),
 });
