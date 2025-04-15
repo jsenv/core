@@ -16,7 +16,8 @@ export const applyBabelPlugins = async ({
   ast,
   options = {},
 }) => {
-  if (babelPlugins.length === 0 && Object.keys(options).length === 0) {
+  const { generatorOpts = {} } = options;
+  if (babelPlugins.length === 0 && !optionsAreImpactingResult(options)) {
     return { code: input };
   }
   const { transformAsync, transformFromAstAsync } = await import("@babel/core");
@@ -57,7 +58,7 @@ export const applyBabelPlugins = async ({
     ...options,
     generatorOpts: {
       compact: false,
-      ...(options.generatorOpts || {}),
+      ...generatorOpts,
       ...(inputIsJsModule ? { importAttributesKeyword: "with" } : {}),
     },
   };
@@ -80,6 +81,15 @@ export const applyBabelPlugins = async ({
     }
     throw error;
   }
+};
+
+const optionsAreImpactingResult = ({ generatorOpts }) => {
+  if (generatorOpts) {
+    if (generatorOpts.comments === false) {
+      return true;
+    }
+  }
+  return false;
 };
 
 const normalizeResult = (result) => {

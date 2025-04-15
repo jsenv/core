@@ -4,7 +4,7 @@ import { minifyJs } from "./js/js_minification.js";
 import { stripJsComments } from "./js/js_strip_comments.js";
 import { minifyJson } from "./json/json_minification.js";
 
-export const jsenvPluginMinification = (options, { runtimeCompat }) => {
+export const jsenvPluginMinification = (options, { preserveComments }) => {
   if (options === false) {
     options = {
       html: null,
@@ -15,7 +15,6 @@ export const jsenvPluginMinification = (options, { runtimeCompat }) => {
       svg: null,
     };
   }
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
 
   const {
     html = {},
@@ -36,12 +35,12 @@ export const jsenvPluginMinification = (options, { runtimeCompat }) => {
     : null;
   const jsClassicMinifier = js_classic
     ? (urlInfo) => minifyJs(urlInfo, js_classic === true ? {} : js_classic)
-    : nodeRuntimeEnabled
+    : preserveComments
       ? null
       : (urlInfo) => stripJsComments(urlInfo);
   const jsModuleMinifier = js_module
     ? (urlInfo) => minifyJs(urlInfo, js_module === true ? {} : js_module)
-    : nodeRuntimeEnabled
+    : preserveComments
       ? null
       : (urlInfo) => stripJsComments(urlInfo);
   const jsonMinifier = json
