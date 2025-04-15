@@ -4,9 +4,9 @@
 run()
 ```
 
-# 1/2 write file "./build/main.js"
+# 1/2 write 3 files into "./build/"
 
-see [./build/main.js](./build/main.js)
+see [./build/](./build/)
 
 # 2/2 resolve
 
