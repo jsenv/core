@@ -13,12 +13,12 @@
 })(typeof globalThis !== "undefined" ? globalThis : typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  /* @minVersion 7.1.5 */
 
-  // https://tc39.es/ecma262/#sec-toprimitive
+
+
   function toPrimitive(input, hint) {
     if (typeof input !== "object" || !input) return input;
-    // @ts-expect-error Symbol.toPrimitive might not index {}
+
     var prim = input[Symbol.toPrimitive];
     if (prim !== undefined) {
       var res = prim.call(input, hint);
@@ -28,7 +28,7 @@
     return (hint === "string" ? String : Number)(input);
   }
 
-  /* @minVersion 7.1.5 */
+
 
   function toPropertyKey(arg) {
     var key = toPrimitive(arg, "string");
@@ -36,11 +36,11 @@
   }
   const defineProperty = (obj, key, value) => {
     key = toPropertyKey(key);
-    // Shortcircuit the slow defineProperty path when possible.
-    // We are trying to avoid issues where setters defined on the
-    // prototype cause side effects under the fast path of simple
-    // assignment. By checking for existence of the property with
-    // the in operator, we can optimize most of this overhead away.
+
+
+
+
+
     if (key in obj) {
       Object.defineProperty(obj, key, {
         value,
@@ -54,11 +54,11 @@
     return obj;
   };
 
-  /* @minVersion 7.5.0 */
 
-  // This function is different to "Reflect.ownKeys". The enumerableOnly
-  // filters on symbol properties only. Returned string properties are always
-  // enumerable. It is good to use in objectSpread.
+
+
+
+
 
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
@@ -92,7 +92,7 @@
   }
   const answer = 42;
 
-  // eslint-disable-next-line no-undef
+
   window.ask = () => answer;
   const [value] = [answer];
   console.log(_objectSpread2({}, {

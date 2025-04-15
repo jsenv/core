@@ -1,5 +1,4 @@
 import { sigref } from "@jsenv/sigi";
-
 import {
   canUseServiceWorkers,
   serviceWorkerAPI,
