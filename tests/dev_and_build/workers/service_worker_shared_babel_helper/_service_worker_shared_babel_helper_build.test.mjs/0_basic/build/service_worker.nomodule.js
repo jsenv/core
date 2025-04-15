@@ -1,42 +1,42 @@
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "bd11033c"
+    "version": "d02dd1be"
   },
   "/js/app_loader.nomodule.js": {
     "version": "8988849e",
     "versionedUrl": "/js/app_loader.nomodule.js?v=8988849e"
   },
   "/js/app.nomodule.js": {
-    "version": "b3742180",
-    "versionedUrl": "/js/app.nomodule.js?v=b3742180"
+    "version": "15bfca4d",
+    "versionedUrl": "/js/app.nomodule.js?v=15bfca4d"
   },
   "/js/objectSpread2.nomodule.js": {
-    "version": "fb1dc9f4",
-    "versionedUrl": "/js/objectSpread2.nomodule.js?v=fb1dc9f4"
+    "version": "7fbbab4b",
+    "versionedUrl": "/js/objectSpread2.nomodule.js?v=7fbbab4b"
   },
   "/js/defineProperty.nomodule.js": {
-    "version": "5743374f",
-    "versionedUrl": "/js/defineProperty.nomodule.js?v=5743374f"
+    "version": "0bff9fa8",
+    "versionedUrl": "/js/defineProperty.nomodule.js?v=0bff9fa8"
   },
   "/js/toPropertyKey.nomodule.js": {
     "version": "0c871ea1",
     "versionedUrl": "/js/toPropertyKey.nomodule.js?v=0c871ea1"
   },
   "/js/toPrimitive.nomodule.js": {
-    "version": "08f0d945",
-    "versionedUrl": "/js/toPrimitive.nomodule.js?v=08f0d945"
+    "version": "43cdaded",
+    "versionedUrl": "/js/toPrimitive.nomodule.js?v=43cdaded"
   },
   "/js/slicedToArray.nomodule.js": {
     "version": "77f40001",
     "versionedUrl": "/js/slicedToArray.nomodule.js?v=77f40001"
   },
   "/js/arrayWithHoles.nomodule.js": {
-    "version": "9e36c30f",
-    "versionedUrl": "/js/arrayWithHoles.nomodule.js?v=9e36c30f"
+    "version": "c8687923",
+    "versionedUrl": "/js/arrayWithHoles.nomodule.js?v=c8687923"
   },
   "/js/iterableToArrayLimit.nomodule.js": {
-    "version": "3ba9cead",
-    "versionedUrl": "/js/iterableToArrayLimit.nomodule.js?v=3ba9cead"
+    "version": "8ace9587",
+    "versionedUrl": "/js/iterableToArrayLimit.nomodule.js?v=8ace9587"
   },
   "/js/unsupportedIterableToArray.nomodule.js": {
     "version": "014bfe11",
@@ -56,14 +56,14 @@ self.resourcesFromJsenvBuild = {
 ;(function() {
   var __versionMappings__ = {
     "/js/app_loader.nomodule.js": "/js/app_loader.nomodule.js?v=8988849e",
-    "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=fb1dc9f4",
+    "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=7fbbab4b",
     "/js/slicedToArray.nomodule.js": "/js/slicedToArray.nomodule.js?v=77f40001",
-    "/js/app.nomodule.js": "/js/app.nomodule.js?v=b3742180",
-    "/js/defineProperty.nomodule.js": "/js/defineProperty.nomodule.js?v=5743374f",
+    "/js/app.nomodule.js": "/js/app.nomodule.js?v=15bfca4d",
+    "/js/defineProperty.nomodule.js": "/js/defineProperty.nomodule.js?v=0bff9fa8",
     "/js/toPropertyKey.nomodule.js": "/js/toPropertyKey.nomodule.js?v=0c871ea1",
-    "/js/toPrimitive.nomodule.js": "/js/toPrimitive.nomodule.js?v=08f0d945",
-    "/js/arrayWithHoles.nomodule.js": "/js/arrayWithHoles.nomodule.js?v=9e36c30f",
-    "/js/iterableToArrayLimit.nomodule.js": "/js/iterableToArrayLimit.nomodule.js?v=3ba9cead",
+    "/js/toPrimitive.nomodule.js": "/js/toPrimitive.nomodule.js?v=43cdaded",
+    "/js/arrayWithHoles.nomodule.js": "/js/arrayWithHoles.nomodule.js?v=c8687923",
+    "/js/iterableToArrayLimit.nomodule.js": "/js/iterableToArrayLimit.nomodule.js?v=8ace9587",
     "/js/unsupportedIterableToArray.nomodule.js": "/js/unsupportedIterableToArray.nomodule.js?v=014bfe11",
     "/js/nonIterableRest.nomodule.js": "/js/nonIterableRest.nomodule.js?v=af5b5914",
     "/js/arrayLikeToArray.nomodule.js": "/js/arrayLikeToArray.nomodule.js?v=7ec08ad1"
@@ -124,20 +124,20 @@ function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) 
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-/*
- * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
- * with the following changes:
- *
- * - Code can use aync/await, const, etc because this file is compiled (see dist/s.js)
- * - Can use document.currentScript because we don't support IE
- * - auto import inline System.register
- * - auto import first System.register in web workers
- * - queing events in web workers
- * - no support for importmap because jsenv don't need it
- */
+
+
+
+
+
+
+
+
+
+
+
 
 (function () {
-  /* eslint-env browser */
+
 
   const loadRegistry = Object.create(null);
   const registerRegistry = Object.create(null);
@@ -188,8 +188,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         script.addEventListener("load", () => {
           window.removeEventListener("error", windowErrorCallback);
           document.head.removeChild(script);
-          // Note that if an error occurs that isn't caught by this if statement,
-          // that getRegister will return null and a "did not instantiate" error will be thrown.
+
+
           if (lastWindowErrorUrl === url) {
             reject(lastWindowError);
           } else {
@@ -202,9 +202,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     const createScript = url => {
       const script = document.createElement("script");
       script.async = true;
-      // Only add cross origin for actual cross origin
-      // this is because Safari triggers for all
-      // - https://bugs.webkit.org/show_bug.cgi?id=171566
+
+
+
       if (url.indexOf("".concat(self.location.origin, "/"))) {
         script.crossOrigin = "anonymous";
       }
@@ -214,18 +214,18 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     };
   }
   if (isWorker) {
-    /*
-     * SystemJs loads X files before executing the worker/service worker main file
-     * It mean events dispatched during this phase could be missed
-     * A warning like the one below is displayed in chrome devtools:
-     * "Event handler of 'install' event must be added on the initial evaluation of worker script"
-     * To fix that code below listen for these events early and redispatch them later
-     * once the worker file is executed (the listeners are installed)
-     */
+
+
+
+
+
+
+
+
     const firstImportCallbacks = [];
     if (isServiceWorker) {
-      // for service worker there is more events to listen
-      // and, to get rid of the warning, we override self.addEventListener
+
+
       const eventsToCatch = ["message", "install", "activate", "fetch"];
       const eventCallbackProxies = {};
       const firstImportPromise = new Promise(resolve => {
@@ -461,7 +461,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     return _catch(function () {
       return _invoke(function () {
         if (load.linkPromise) {
-          // load.linkPromise is null once instantiated
+
           return _awaitIgnored(load.linkPromise);
         }
       }, function () {
@@ -491,7 +491,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       return undefined;
     }
 
-    // deps execute first, unless circular
+
     const execute = load.execute;
     load.execute = null;
     const depLoadPromises = [];
@@ -541,7 +541,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     })();
   };
 
-  // the closest we can get to call(undefined)
+
   const nullContext = Object.freeze(Object.create(null));
   const createMeta = url => {
     return {

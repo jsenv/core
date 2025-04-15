@@ -10,12 +10,10 @@
     <script>
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
-      });
-    </script>
+      });</script>
     <script>
       window.resolveResultPromise(
         new URL(document.querySelector('link[rel="icon"]').href).protocol,
-      );
-    </script>
+      );</script>
   </body>
 </html>

@@ -7,6 +7,6 @@ self.resourcesFromJsenvBuild = {
 };
 
 
-/* globals false */
+
 
 console.log({ dev: false });

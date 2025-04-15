@@ -6,7 +6,7 @@
     <script>
       ;(function() {
         var __versionMappings__ = {
-          "/src/": "/src/?v=d7983b67"
+          "/src/": "/src/?v=0f950c07"
         };
         window.__v__ = function (specifier) {
           return __versionMappings__[specifier] || specifier
@@ -19,14 +19,12 @@
     <script>
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
-      });
-    </script>
+      });</script>
     <script type="module">
       const directoryUrl = new URL(__v__("/src/"), import.meta.url).href;
 
       window.resolveResultPromise(
         directoryUrl.replace(window.origin, "window.origin"),
-      );
-    </script>
+      );</script>
   </body>
 </html>

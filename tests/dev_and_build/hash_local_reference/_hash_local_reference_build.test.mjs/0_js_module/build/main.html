@@ -9,12 +9,10 @@
     <script>
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
-      });
-    </script>
+      });</script>
     <a id="link" href="#toto"></a>
     <script>
       const { href } = document.querySelector("#link");
-      window.resolveResultPromise(href.replace(window.origin, "window.origin"));
-    </script>
+      window.resolveResultPromise(href.replace(window.origin, "window.origin"));</script>
   </body>
 </html>

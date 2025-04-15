@@ -4,7 +4,7 @@ const test = async () => {
   await Promise.resolve().then(() => main);
 };
 
-const main = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+const main =              Object.freeze(             Object.defineProperty({
   __proto__: null
 }, Symbol.toStringTag, { value: 'Module' }));
 

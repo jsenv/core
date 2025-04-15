@@ -1,6 +1,6 @@
 ;(function() {
   var __versionMappings__ = {
-    "/js/ping.js": "/js/ping.js?v=267af9a7"
+    "/js/ping.js": "/js/ping.js?v=1ecebb5f"
   };
   self.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier

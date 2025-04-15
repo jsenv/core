@@ -1,6 +1,6 @@
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "4bfab674"
+    "version": "6807439f"
   },
   "/css/style.css": {
     "version": "2e9d11a2",
@@ -55,8 +55,6 @@ self.resourcesFromJsenvBuild = {
     }
     return _await();
   }));
-
-  // trigger jsenv dynamic import for slicedToArray
   const fn = ([a]) => {
     console.log(a);
   };

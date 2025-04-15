@@ -9,8 +9,7 @@
     <script>
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
-      });
-    </script>
+      });</script>
     <script type="module">
       import stylesheet from "/js/index.css.js" ;
       import "/js/index.css2.js?side_effect" ;
@@ -18,7 +17,6 @@
       window.resolveResultPromise({
         stylesheetInstanceOf: stylesheet instanceof CSSStyleSheet,
         bodyBackgroundColor: getComputedStyle(document.body).backgroundColor,
-      });
-    </script>
+      });</script>
   </body>
 </html>

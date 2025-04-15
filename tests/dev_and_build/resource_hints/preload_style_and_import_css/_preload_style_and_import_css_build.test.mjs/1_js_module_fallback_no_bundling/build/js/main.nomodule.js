@@ -29,8 +29,6 @@ System.register(["/js/new_stylesheet.nomodule.js", "/js/style.css.nomodule.js"],
     }],
     execute: async function () {
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, style];
-
-      // Let browser time to log an eventual warning about preload link not used
       return _await(new Promise(resolve => {
         setTimeout(resolve, 5000);
       }), function () {

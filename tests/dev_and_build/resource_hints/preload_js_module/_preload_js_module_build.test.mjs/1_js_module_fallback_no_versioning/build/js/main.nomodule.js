@@ -27,8 +27,6 @@ System.register([], function (_export, _context) {
     execute: async function () {
       console.log(globalThis);
       _context.import("/js/dep.nomodule.js");
-
-      // Let browser time to log an eventual warning about preload link not used
       return _await(new Promise(resolve => {
         setTimeout(resolve, 3000);
       }), function () {

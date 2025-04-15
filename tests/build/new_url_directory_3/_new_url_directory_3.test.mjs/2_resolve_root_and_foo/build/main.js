@@ -1,7 +1,7 @@
 ;
 (function () {
   var __versionMappings__ = {
-    "/": "/?v=91f509a2",
+    "/": "/?v=1152d73e",
     "/foo/": "/foo/?v=empty"
   };
   window.__v__ = function (specifier) {

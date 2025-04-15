@@ -2,18 +2,6 @@ System.register([], function (_export, _context) {
   "use strict";
 
   function _iterableToArrayLimit(arr, i) {
-    // this is an expanded form of \`for...of\` that properly supports abrupt completions of
-    // iterators etc. variable names have been minimised to reduce the size of this massive
-    // helper. sometimes spec compliance is annoying :(
-    //
-    // _n = _iteratorNormalCompletion
-    // _d = _didIteratorError
-    // _e = _iteratorError
-    // _i = _iterator
-    // _s = _step
-    // _x = _next
-    // _r = _return
-
     var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
     if (_i == null) return;
     var _arr = [];
@@ -38,11 +26,9 @@ System.register([], function (_export, _context) {
       try {
         if (!_n && _i["return"] != null) {
           _r = _i["return"]();
-          // eslint-disable-next-line no-unsafe-finally
           if (Object(_r) !== _r) return;
         }
       } finally {
-        // eslint-disable-next-line no-unsafe-finally
         if (_d) throw _e;
       }
     }

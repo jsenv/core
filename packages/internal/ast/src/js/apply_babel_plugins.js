@@ -16,10 +16,12 @@ export const applyBabelPlugins = async ({
   ast,
   options = {},
 }) => {
-  const { generatorOpts = {} } = options;
   if (babelPlugins.length === 0 && !optionsAreImpactingResult(options)) {
     return { code: input };
   }
+
+  const { parserOpts = {}, parserPlugins = [], generatorOpts = {} } = options;
+
   const { transformAsync, transformFromAstAsync } = await import("@babel/core");
   const sourceFileName = inputUrl.startsWith("file:")
     ? urlToFileSystemPath(inputUrl)
@@ -40,6 +42,7 @@ export const applyBabelPlugins = async ({
     // consider using startColumn and startLine for inline scripts?
     // see https://github.com/babel/babel/blob/3ee9db7afe741f4d2f7933c519d8e7672fccb08d/packages/babel-parser/src/options.js#L36-L39
     parserOpts: {
+      ...parserOpts,
       sourceType: inputIsJsModule ? "module" : "classic",
       // allowAwaitOutsideFunction: true,
       plugins: [
@@ -51,7 +54,7 @@ export const applyBabelPlugins = async ({
         "classPrivateProperties",
         "classPrivateMethods",
         ...(useTypeScriptExtension(inputUrl) ? ["typescript"] : []),
-        ...(options.parserPlugins || []),
+        ...parserPlugins,
       ].filter(Boolean),
     },
     plugins: babelPlugins,
