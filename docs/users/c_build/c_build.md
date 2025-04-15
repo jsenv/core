@@ -703,7 +703,9 @@ Same as the `sourcemaps` options in [B) Dev](../b_dev/b_dev.md#28-sourcemaps), b
 
 # 3. How to serve build files
 
-To start a server for build files, simply run the following:
+You can serve build files using any regular web server like Nginx, Apache, or other static file servers.
+
+If you don't already have a server set up, jsenv provides a simple server to help you get started quickly:
 
 ```js
 import { startBuildServer } from "@jsenv/core";
@@ -713,6 +715,8 @@ const buildServer = await startBuildServer({
   port: 8000,
 });
 ```
+
+This is particularly useful for local testing. For production environments, you might prefer using specialized servers optimized for static content delivery.
 
 ## 3.1 buildDirectoryUrl
 
