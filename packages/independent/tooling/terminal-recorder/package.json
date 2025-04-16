@@ -56,6 +56,8 @@
     "@jsenv/core": "../../../",
     "@jsenv/https-local": "../https-local",
     "@jsenv/filesystem": "../filesystem",
+    "@jsenv/snapshot": "../snapshot",
+    "@jsenv/terminal-recorder": "./",
     "@jsenv/plugin-commonjs": "../../related/plugin-commonjs"
   }
 }

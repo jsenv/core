@@ -40,6 +40,8 @@
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/humanize": "../../tooling/humanize",
+    "@jsenv/pwa": "../pwa",
+    "@jsenv/service-worker": "./",
     "playwright": "1.51.1"
   }
 }
