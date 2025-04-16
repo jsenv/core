@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/tooling/humanize"
+    "directory": "packages/tooling/humanize"
   },
   "publishConfig": {
     "access": "public"
@@ -46,7 +46,7 @@
   "devDependencies": {
     "is-unicode-supported": "2.1.0",
     "supports-color": "10.0.0",
-    "@jsenv/core": "../../../",
+    "@jsenv/core": "../..",
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/assert": "../assert",
     "@jsenv/terminal-text-size": "../terminal-text-size"

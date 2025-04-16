@@ -105,7 +105,7 @@ export const reportFileSizeImpactInGitHubPullRequest = async ({
       });
     },
     generatedByLink: {
-      url: "https://github.com/jsenv/core/tree/main/packages/independent/tooling/file-size-impact",
+      url: "https://github.com/jsenv/core/tree/main/packages/tooling/file-size-impact",
       text: "@jsenv/file-size-impact",
     },
     runLink,

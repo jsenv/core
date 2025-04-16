@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/tooling/lighthouse-impact"
+    "directory": "packages/tooling/lighthouse-impact"
   },
   "engines": {
     "node": ">=20.0.0"

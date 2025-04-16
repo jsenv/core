@@ -71,7 +71,7 @@ export const reportPerformanceImpact = async ({
       });
     },
     generatedByLink: {
-      url: "https://github.com/jsenv/core/tree/main/packages/independent/tooling/performance-impact",
+      url: "https://github.com/jsenv/core/tree/main/packages/tooling/performance-impact",
       text: "@jsenv/performance-impact",
     },
     runLink,

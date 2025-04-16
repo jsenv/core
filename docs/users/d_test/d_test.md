@@ -280,7 +280,7 @@ Debugging test execution can be done using browser dev tools:
 
 # 2. Assertions
 
-The example above compares actual and expect without an assertion library. In practice, tests often use assertion libraries. Below is an example using [@jsenv/assert](../../../packages/independent/tooling/assert). Note that any assertion library can be used.
+The example above compares actual and expect without an assertion library. In practice, tests often use assertion libraries. Below is an example using [@jsenv/assert](../../../packages/tooling/assert). Note that any assertion library can be used.
 
 ```diff
 + import { assert } from "@jsenv/assert";

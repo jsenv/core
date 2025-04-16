@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/tooling/package-publish"
+    "directory": "packages/tooling/package-publish"
   },
   "engines": {
     "node": ">=20.0.0"
