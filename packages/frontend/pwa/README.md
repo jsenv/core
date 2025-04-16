@@ -1,24 +1,47 @@
-# pwa [![npm package](https://img.shields.io/npm/v/@jsenv/pwa.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/pwa)
+# @jsenv/pwa [![npm package](https://img.shields.io/npm/v/@jsenv/pwa.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/pwa)
 
-_@jsenv/pwa_ is a tool that can be used to implement the apis required to turn a website into a progressive web application:
+A toolkit to implement progressive web application (PWA) features in your website.
 
-- Add to home screen
-- Service workers
+🏠 Add to home screen functionality  
+🔄 Service worker lifecycle management  
+📱 Display mode detection  
+🛠️ Simple APIs for complex PWA features
 
-# Add to home screen
+## Table of Contents
 
-User can choose to add a shortcut to your website in their device.
-The navigator will then run your website with only your ui in fullscreen.
+- [@jsenv/pwa ](#jsenvpwa-)
+  - [Table of Contents](#table-of-contents)
+  - [Installation](#installation)
+  - [Add to Home Screen](#add-to-home-screen)
+    - [Usage Example](#usage-example)
+    - [API Reference](#api-reference)
+      - [addToHomescreen.isAvailable()](#addtohomescreenisavailable)
+      - [addToHomescreen.listenAvailabilityChange(callback)](#addtohomescreenlistenavailabilitychangecallback)
+      - [addToHomescreen.prompt()](#addtohomescreenprompt)
+      - [displayModeStandalone](#displaymodestandalone)
+  - [Service Worker](#service-worker)
+    - [Usage Example](#usage-example-1)
+    - [API Reference](#api-reference-1)
+      - [createServiceWorkerFacade()](#createserviceworkerfacade)
 
-The following html displays a button enabled when add to home screen is available. Clicking on the button prompt user to add the website to home screen.
+## Installation
+
+```console
+npm install @jsenv/pwa
+```
+
+## Add to Home Screen
+
+Allow users to add your website to their device homescreen, running it in a standalone mode without browser UI.
+
+### Usage Example
 
 ```html
 <!doctype html>
 <html>
   <head>
-    <title>Title</title>
+    <title>PWA Demo</title>
     <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
     <script type="importmap">
       {
         "imports": {
@@ -27,29 +50,10 @@ The following html displays a button enabled when add to home screen is availabl
       }
     </script>
   </head>
-
   <body>
     <button id="add-to-home-screen" disabled>Add to home screen</button>
-    <script type="module">
-      import { addToHomescreen } from "@jsenv/pwa";
 
-      const button = document.querySelector("button#add-to-home-screen");
-
-      button.disabled = !addToHomescreen.isAvailable();
-      addToHomescreen.listenAvailabilityChange(() => {
-        document.querySelector("button#add-to-home-screen").disabled =
-          !addToHomescreen.isAvailable();
-      });
-      button.onclick = () => {
-        addToHomescreen.prompt();
-      };
-    </script>
-    <!--
-    "beforeinstallprompt" event might be dispatched very quickly by the navigator, before
-    <script type="module"> above got a chance to catch it. For this reason, we listen
-    early for this event and store it into window.beforeinstallpromptEvent.
-    When "@jsenv/pwa" is imported it will check window.beforeinstallpromptEvent existence.
-    -->
+    <!-- Listen early for beforeinstallprompt event -->
     <script>
       window.addEventListener(
         "beforeinstallprompt",
@@ -59,53 +63,118 @@ The following html displays a button enabled when add to home screen is availabl
         },
       );
     </script>
+
+    <!-- Handle add to homescreen functionality -->
+    <script type="module">
+      import { addToHomescreen } from "@jsenv/pwa";
+
+      const button = document.querySelector("#add-to-home-screen");
+
+      // Initial state
+      button.disabled = !addToHomescreen.isAvailable();
+
+      // Update when availability changes
+      addToHomescreen.listenAvailabilityChange(() => {
+        button.disabled = !addToHomescreen.isAvailable();
+      });
+
+      // Show prompt when clicked
+      button.onclick = async () => {
+        const accepted = await addToHomescreen.prompt();
+        console.log(accepted ? "User accepted" : "User declined");
+      };
+    </script>
   </body>
 </html>
 ```
 
-## addToHomescreen.isAvailable
+### API Reference
 
-_addToHomescreen.isAvailable_ is a function returning a boolean indicating if addToHomescreen is available. This function must be used to know if you can call [addToHomescreen.prompt](#addToHomescreenprompt).
+#### addToHomescreen.isAvailable()
 
-Add to home screen is available if navigator fired a _beforeinstallprompt_ event
+Returns a boolean indicating if the "Add to Home Screen" feature is available.
 
-## addToHomescreen.listenAvailabilityChange
+```js
+import { addToHomescreen } from "@jsenv/pwa";
 
-_addToHomescreen.listenAvailabilityChange_ is a function that will call a callback when add to home screen becomes available or unavailable.
+if (addToHomescreen.isAvailable()) {
+  // Enable "Add to Home Screen" button
+}
+```
 
-## addToHomescreen.prompt
+The feature is available when the browser has fired a `beforeinstallprompt` event.
 
-_addToHomescreen.prompt_ is an async function that will ask navigator to trigger a prompt to ask user if he wants to add your website to their homescreen. It resolves to a boolean indicating if users accepted or declined the prompt.
+#### addToHomescreen.listenAvailabilityChange(callback)
 
-It can be called many times but always inside a user interaction event handler, such as a click event.
+Registers a callback that will be called whenever the availability of "Add to Home Screen" changes.
 
-## displayModeStandalone
+```js
+import { addToHomescreen } from "@jsenv/pwa";
 
-_displayModeStandalone_ is an object that can be used to know if display mode is standalone or be notified when this changes. The standalone display mode is true when your web page is runned as an application (navigator ui is mostly/fully hidden).
+addToHomescreen.listenAvailabilityChange(() => {
+  const isAvailable = addToHomescreen.isAvailable();
+  console.log(
+    `Add to homescreen is now ${isAvailable ? "available" : "unavailable"}`,
+  );
+});
+```
+
+#### addToHomescreen.prompt()
+
+Prompts the user to add the website to their home screen. Returns a promise that resolves to a boolean indicating whether the user accepted.
+
+```js
+import { addToHomescreen } from "@jsenv/pwa";
+
+button.onclick = async () => {
+  if (!addToHomescreen.isAvailable()) {
+    return;
+  }
+
+  const userAccepted = await addToHomescreen.prompt();
+  if (userAccepted) {
+    console.log("User added the app to home screen");
+  } else {
+    console.log("User declined the add to home screen prompt");
+  }
+};
+```
+
+> **Important**: This must be called inside a user interaction event handler (like click) to work properly.
+
+#### displayModeStandalone
+
+An object to detect if the website is running in standalone mode (added to home screen).
 
 ```js
 import { displayModeStandalone } from "@jsenv/pwa";
 
-displayModeStandalone.get(); // true or false
+// Check current mode
+const isStandalone = displayModeStandalone.get();
+console.log(`Running in ${isStandalone ? "standalone" : "browser"} mode`);
 
+// Listen for mode changes
 displayModeStandalone.listen(() => {
-  displayModeStandalone.get(); // true or false
+  if (displayModeStandalone.get()) {
+    console.log("App is now running in standalone mode");
+  } else {
+    console.log("App is now running in browser mode");
+  }
 });
 ```
 
-# Service worker
+## Service Worker
 
-Service worker allows you to register a script in the navigator. That script is granted with the ability to communicate with browser internal cache and intercept any request made by the navigator. They are designed to make a website capable to work offline and load instantly from cache before wondering if there is any update available. Read more on [MDN documentation about service worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers).
+Service workers enable offline functionality and background updates for your web application.
 
-The raw service worker api offered by navigators is complex to implement. Especially when it comes to updating a service worker. This section shows how to use `@jsenv/pwa` to register and update a service worker.
+### Usage Example
 
 ```html
 <!doctype html>
 <html>
   <head>
-    <title>Title</title>
+    <title>Service Worker Demo</title>
     <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
     <script type="importmap">
       {
         "imports": {
@@ -114,48 +183,58 @@ The raw service worker api offered by navigators is complex to implement. Especi
       }
     </script>
   </head>
-
   <body>
-    <button id="update_check_button" disabled>Check update</button>
-    <p id="update_available_text"></p>
-    <button id="update_activate_button" disabled>Activate update</button>
-    <script type="module" src="./demo.js"></script>
+    <button id="update-check-button" disabled>Check for updates</button>
+    <p id="update-status"></p>
+    <button id="update-activate-button" disabled>Activate update</button>
+
+    <script type="module">
+      import { createServiceWorkerFacade } from "@jsenv/pwa";
+
+      // Create service worker facade
+      const swFacade = createServiceWorkerFacade();
+
+      // Register service worker
+      const registration = navigator.serviceWorker.register("./sw.js");
+      swFacade.setRegistrationPromise(registration);
+
+      // UI elements
+      const updateCheckButton = document.getElementById("update-check-button");
+      const updateStatus = document.getElementById("update-status");
+      const updateActivateButton = document.getElementById(
+        "update-activate-button",
+      );
+
+      // Enable update checking
+      updateCheckButton.disabled = false;
+      updateCheckButton.onclick = async () => {
+        updateStatus.textContent = "Checking for updates...";
+        const found = await swFacade.checkForUpdates();
+        if (!found) {
+          updateStatus.textContent = "No updates found";
+        }
+      };
+
+      // Subscribe to state changes
+      swFacade.subscribe(() => {
+        const { update } = swFacade.state;
+        if (update) {
+          updateStatus.textContent = "Update available!";
+          updateActivateButton.disabled = false;
+          updateActivateButton.onclick = () => {
+            updateActivateButton.disabled = true;
+            update.activate();
+          };
+        } else {
+          updateStatus.textContent = "";
+          updateActivateButton.disabled = true;
+        }
+      });
+    </script>
   </body>
 </html>
 ```
 
-_demo.js_
+### API Reference
 
-```js
-import { createServiceWorkerFacade } from "@jsenv/pwa";
-
-const swFacade = createServiceWorkerFacade();
-
-const registrationPromise = window.navigator.serviceWorker.register("./sw.js");
-swFacade.setRegistrationPromise(registrationPromise);
-
-const updateCheckButton = document.querySelector("#update_check_button");
-updateCheckButton.disabled = false;
-updateCheckButton.onclick = async () => {
-  const found = await swFacade.checkForUpdates();
-  if (!found) {
-    alert("no update found");
-  }
-};
-const updateAvailableText = document.querySelector("#update_available_text");
-const updateActivateButton = document.querySelector("#update_activate_button");
-swFacade.subscribe(() => {
-  const { update } = swFacade.state;
-  if (update) {
-    updateAvailableText.innerHTML = "An update is available !";
-    updateActivateButton.disabled = false;
-    updateActivateButton.onclick = () => {
-      updateActivateButton.disabled = true;
-      update.activate();
-    };
-  } else {
-    updateAvailableText.innerHTML = "";
-    buttonActivateUpdate.disabled = true;
-  }
-});
-```
+#### createServiceWorkerFacade()
