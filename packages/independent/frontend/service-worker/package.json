@@ -32,5 +32,9 @@
   "sideEffects": [
     "./tests/errors/project/dist/jsenv_service_worker_node_modules.js",
     "./tests/update/project/dist/jsenv_service_worker_node_modules.js"
-  ]
+  ],
+  "devDependencies": {
+    "@jsenv/core": "../../../",
+    "@jsenv/https-local": "../../tooling/https-local"
+  }
 }

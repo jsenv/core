@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
-import { ensurePathnameTrailingSlash, urlToFileSystemPath } from "@jsenv/urls";
-
+// https://github.com/un-ts/eslint-plugin-import-x/issues/305
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import {
   copyEntry,
   ensureEmptyDirectory,
@@ -14,11 +14,14 @@ import {
   writeFile,
   writeSymbolicLink,
 } from "@jsenv/filesystem";
+// https://github.com/un-ts/eslint-plugin-import-x/issues/305
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import {
   testDirectoryPresence,
   testFilePresence,
   toSecondsPrecision,
 } from "@jsenv/filesystem/tests/testHelpers.js";
+import { ensurePathnameTrailingSlash, urlToFileSystemPath } from "@jsenv/urls";
 
 const isWindows = process.platform === "win32";
 const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;

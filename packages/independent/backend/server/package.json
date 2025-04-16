@@ -46,12 +46,14 @@
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/abort": "../../shared/abort",
+    "@jsenv/fetch": "../../shared/fetch",
     "@jsenv/humanize": "../../tooling/humanize",
     "@jsenv/url-meta": "../../tooling/url_meta",
     "@jsenv/utils": "../../tooling/utils",
     "ws": "8.18.1",
     "formidable": "3.5.2",
     "eventsource": "3.0.6",
-    "undici": "7.8.0"
+    "undici": "7.8.0",
+    "playwright": "1.51.1"
   }
 }

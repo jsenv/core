@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { resolveUrl } from "@jsenv/urls";
-
+// https://github.com/un-ts/eslint-plugin-import-x/issues/305
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import {
   ensureEmptyDirectory,
   readFile,
@@ -8,6 +9,8 @@ import {
   writeFile,
   writeSymbolicLink,
 } from "@jsenv/filesystem";
+// https://github.com/un-ts/eslint-plugin-import-x/issues/305
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import { testFilePresence } from "@jsenv/filesystem/tests/testHelpers.js";
 
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);

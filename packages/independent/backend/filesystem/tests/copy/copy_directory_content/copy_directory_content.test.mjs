@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
-import { urlToFileSystemPath } from "@jsenv/urls";
-
+// https://github.com/un-ts/eslint-plugin-import-x/issues/305
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import {
   copyDirectoryContent,
   ensureEmptyDirectorySync,
@@ -9,6 +9,7 @@ import {
   writeFile,
   writeFileStructureSync,
 } from "@jsenv/filesystem";
+import { urlToFileSystemPath } from "@jsenv/urls";
 
 const tempDirectoryUrl = new URL("./temp/", import.meta.url);
 
