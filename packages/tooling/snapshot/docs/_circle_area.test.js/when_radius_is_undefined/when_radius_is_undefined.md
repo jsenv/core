@@ -8,8 +8,6 @@ return getCircleArea(undefined);
 TypeError: circleRadius must be a number, received undefined
   at getCircleArea (base/circle_area.test.js:5:11)
   at base/circle_area.test.js:22:12
-  at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
-  at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)
   at async base/circle_area.test.js:12:1
 ```
 

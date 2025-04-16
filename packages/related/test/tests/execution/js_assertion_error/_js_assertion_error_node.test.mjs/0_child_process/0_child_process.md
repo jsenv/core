@@ -17,8 +17,6 @@ AssertionError: actual and expect are different
 actual: "foo"
 expect: "bar"
   at base/client/main.mjs:3:1
-  at async executeUsingDynamicImport (@jsenv/core/packages/related/test/src/runtime_node/execute_using_dynamic_import.js:71:23)
-  at async @jsenv/core/packages/related/test/src/runtime_node/node_child_process_controlled.mjs:122:21
 ```
 
 </details>

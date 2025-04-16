@@ -37,8 +37,6 @@ AssertionError: actual and expect are different
 
 actual: "foo"
 expect: "bar"
-@@jsenv/core/packages/tooling/assert/src/assert_scratch.js:972:46
-assert@@jsenv/core/packages/tooling/assert/src/assert_scratch.js:955:55
 module code@base/client/main.html:13:13
 ```
 
