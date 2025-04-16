@@ -2,12 +2,10 @@
 
 Help to write code accepting an [abortSignal](https://nodejs.org/api/globals.html#class-abortsignal).
 
-- Designed to cleanup by default (removing event listeners, clearing timeouts, ...)
-- Allow to safely bypass max listeners warning when needed
-  - Code can do 20 abortable fetch requests in parallel without warnings
-- Manage multiple abort signals
-  - Compose abort signals from multiple sources
-  - Code can do differents things depending on which signal aborted the operation
+🛑 Create abort hierarchies with parent-child relationships
+📡 Signal propagation across async operations
+⏱️ Timeout-based abort triggers
+🔄 Abort reasons and error handling
 
 # Example
 
