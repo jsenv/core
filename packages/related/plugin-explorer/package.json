@@ -26,11 +26,14 @@
     "/src/"
   ],
   "sideEffects": false,
-  "dependencies": {
-    "@jsenv/filesystem": "4.15.2"
-  },
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@jsenv/filesystem": "4.15.2"
+  },
+  "devDependencies": {
+    "@jsenv/core": "../../../"
   }
 }

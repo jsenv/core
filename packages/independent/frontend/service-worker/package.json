@@ -35,6 +35,10 @@
   ],
   "devDependencies": {
     "@jsenv/core": "../../../",
-    "@jsenv/https-local": "../../tooling/https-local"
+    "@jsenv/https-local": "../../tooling/https-local",
+    "@jsenv/fetch": "../../shared/fetch",
+    "@jsenv/filesystem": "../../tooling/filesystem",
+    "@jsenv/snapshot": "../../tooling/snapshot",
+    "playwright": "1.51.1"
   }
 }
