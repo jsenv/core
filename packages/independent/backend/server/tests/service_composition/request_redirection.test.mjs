@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-
 import { startServer } from "@jsenv/server";
 
 const server = await startServer({

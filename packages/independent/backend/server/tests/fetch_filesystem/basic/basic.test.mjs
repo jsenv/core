@@ -5,9 +5,7 @@ import {
   writeFileStructureSync,
   writeFileSync,
 } from "@jsenv/filesystem";
-
 import { fetchFileSystem } from "@jsenv/server";
-
 import { bufferToEtag } from "@jsenv/server/src/internal/etag.js";
 import { urlToFileSystemPath } from "@jsenv/urls";
 

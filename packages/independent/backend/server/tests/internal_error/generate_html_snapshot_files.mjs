@@ -1,5 +1,4 @@
 import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
-
 import { jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 
 const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url).href;

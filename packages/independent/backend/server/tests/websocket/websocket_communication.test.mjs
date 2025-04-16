@@ -1,7 +1,6 @@
 // organize-imports-ignore
 import { assert } from "@jsenv/assert";
 import { requestCertificate } from "@jsenv/https-local";
-
 import { startServer, WebSocketResponse } from "@jsenv/server";
 import { WebSocket } from "ws";
 

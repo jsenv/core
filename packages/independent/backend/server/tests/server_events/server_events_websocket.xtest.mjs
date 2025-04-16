@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-
 import { ServerEvents, startServer } from "@jsenv/server";
 import { WebSocket } from "ws";
 
