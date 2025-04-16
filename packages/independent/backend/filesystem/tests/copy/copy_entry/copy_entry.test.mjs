@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-
 import {
   copyEntry,
   ensureEmptyDirectory,
@@ -13,7 +12,6 @@ import {
   writeFile,
   writeSymbolicLink,
 } from "@jsenv/filesystem";
-
 import {
   testDirectoryPresence,
   testFilePresence,

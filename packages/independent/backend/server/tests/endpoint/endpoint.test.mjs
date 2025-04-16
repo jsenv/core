@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
-
 import { startServer } from "@jsenv/server";
 
 const apiServer = await startServer({
