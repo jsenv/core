@@ -44,6 +44,7 @@
     "@jsenv/urls": "2.7.4"
   },
   "devDependencies": {
-    "@jsenv/core": "../../../"
+    "@jsenv/core": "../../../",
+    "@jsenv/plugin-as-js-classic": "../plugin-as-js-classic"
   }
 }

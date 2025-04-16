@@ -51,6 +51,7 @@
   "devDependencies": {
     "@jsenv/assert": "../assert",
     "@jsenv/https-local": "./",
+    "@jsenv/performance-impact": "../performance-impact",
     "playwright": "1.51.1"
   }
 }

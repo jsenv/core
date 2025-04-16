@@ -43,5 +43,9 @@
     "pixelmatch": "7.1.0",
     "prettier": "3.5.3",
     "strip-ansi": "7.1.0"
+  },
+  "devDependencies": {
+    "@jsenv/assert": "../assert",
+    "@jsenv/snapshot": "./"
   }
 }

@@ -25,6 +25,7 @@
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/terminal-table": "./",
     "@jsenv/terminal-text-size": "../terminal-text-size",
-    "@jsenv/filesysten": "../../backend/filesystem"
+    "@jsenv/filesystem": "../../backend/filesystem",
+    "@jsenv/terminal-recorder": "../terminal-recorder"
   }
 }
