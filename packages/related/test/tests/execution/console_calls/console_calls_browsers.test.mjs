@@ -1,7 +1,5 @@
 import { startDevServer } from "@jsenv/core";
-
 import { chromium, execute, firefox, webkit } from "@jsenv/test";
-
 import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
 const run = async ({ runtime }) => {

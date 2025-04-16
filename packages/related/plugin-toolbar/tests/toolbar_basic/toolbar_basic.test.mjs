@@ -6,7 +6,6 @@
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
-
 import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 import { chromium } from "playwright";
 

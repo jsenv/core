@@ -38,6 +38,7 @@
     "@jsenv/core": "../../",
     "@jsenv/utils": "../../independent/tooling/utils",
     "@jsenv/filesystem": "../../independent/backend/filesystem",
+    "@jsenv/plugin-toolbar": "./",
     "playwright": "1.51.1"
   }
 }
