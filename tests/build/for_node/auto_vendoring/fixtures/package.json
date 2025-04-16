@@ -4,7 +4,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "dependencies": {
+  "devDependencies": {
     "node-package-a": "*",
     "node-package-b": "*"
   }
