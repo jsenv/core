@@ -1,8 +1,31 @@
-# snapshot
+# @jsenv/snapshot
 
 [![npm package](https://img.shields.io/npm/v/@jsenv/snapshot.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/snapshot)
 
 A powerful snapshot testing tool for JavaScript applications.
+
+📸 Create reliable test snapshots  
+🔄 Track changes in code output over time  
+📝 Generate markdown documentation from tests  
+🧩 Normalize fluctuating values for stable comparisons
+
+## Table of Contents
+
+- [@jsenv/snapshot](#jsenvsnapshot)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction to Snapshot Testing](#introduction-to-snapshot-testing)
+  - [Installation](#installation)
+  - [How `@jsenv/snapshot` Works](#how-jsenvsnapshot-works)
+  - [API Reference](#api-reference)
+    - [takeFileSnapshot(fileUrl)](#takefilesnapshotfileurl)
+    - [takeDirectorySnapshot(directoryUrl)](#takedirectorysnapshotdirectoryurl)
+    - [snapshotTests(testFileUrl, fnRegisteringTests, options)](#snapshotteststestfileurl-fnregisteringtests-options)
+      - [snapshotTests Options](#snapshottests-options)
+  - [Why Use snapshotTests?](#why-use-snapshottests)
+  - [Stable Snapshots Across Environments](#stable-snapshots-across-environments)
+  - [Advanced Examples](#advanced-examples)
+  - [Compatibility](#compatibility)
+  - [Contributing](#contributing)
 
 ## Introduction to Snapshot Testing
 
@@ -17,6 +40,12 @@ Snapshot testing is a technique that:
 
 This approach ensures your code continues to behave as expected by verifying its outputs remain consistent over time.
 
+## Installation
+
+```console
+npm install --save-dev @jsenv/snapshot
+```
+
 ## How `@jsenv/snapshot` Works
 
 When running tests:
@@ -26,7 +55,7 @@ When running tests:
   - In CI environments (`process.env.CI` is set): An error is thrown if differences are detected
   - Locally: No error is thrown, allowing you to review changes with tools like git diff
 
-> **Note**: All functions accept a throwWhenDiff parameter to force errors even in local environments.
+> **Note**: All functions accept a `throwWhenDiff` parameter to force errors even in local environments.
 
 ## API Reference
 
@@ -40,7 +69,7 @@ import { takeFileSnapshot } from "@jsenv/snapshot";
 
 const fileTxtUrl = new URL("./file.txt", import.meta.url);
 const writeFileTxt = (content) => {
-  writeFileSync(writeFileTxt, content);
+  writeFileSync(fileTxtUrl, content);
 };
 
 // take snapshot of "./file.txt"
@@ -66,12 +95,12 @@ const writeManyFiles = () => {
 
 // take snapshot of "./dir/"
 const directorySnapshot = takeDirectorySnapshot(directoryUrl);
-writeFileTxt(directoryUrl);
+writeManyFiles();
 // compare the state of "./dir/" with previous version
 directorySnapshot.compare();
 ```
 
-### snapshotTests(testFileUrl, fnRegistertingTests, options)
+### snapshotTests(testFileUrl, fnRegisteringTests, options)
 
 The most powerful feature of this library - creates readable markdown snapshots of test executions.
 
@@ -105,6 +134,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
 This generates a markdown file documenting how your code behaves in different scenarios.
 See an example at [./docs/\_circle_area.test.js/circle_area.test.js.md](./docs/_circle_area.test.js/circle_area.test.js.md)
 
+#### snapshotTests Options
+
+```js
+await snapshotTests(import.meta.url, fnRegisteringTests, {
+  throwWhenDiff: true, // Force error on snapshot differences (default: false in local, true in CI)
+  formatValue: (value) => {}, // Custom formatter for values
+  trackingConfig: {}, // Track specific resources like network requests or file operations
+});
+```
+
 ## Why Use snapshotTests?
 
 - **Assertion-free testing**: Simply call your functions and let the snapshots document their behavior
@@ -112,20 +151,23 @@ See an example at [./docs/\_circle_area.test.js/circle_area.test.js.md](./docs/_
 - **Visual change reviews**: Code changes are reflected in snapshots, making reviews easy
 - **Side effect tracking**: Automatically captures and documents:
 
-  - Console logs [example](./docs/_log.test.js/log.test.js.md)
-  - Filesystem operations [example](./docs/_filesystem.test.js/filesystem.test.js.md)
+  - Console logs ([example](./docs/_log.test.js/log.test.js.md))
+  - Filesystem operations ([example](./docs/_filesystem.test.js/filesystem.test.js.md))
   - And more
 
-- Fluctuating values are replaced with stable values, see [#Fluctuating values replacement](#fluctuating-values-replacement)
+- **Fluctuating values**: Automatically replaced with stable values for reliable snapshots
 
 ## Stable Snapshots Across Environments
 
 To ensure snapshots remain consistent across different machines and CI environments, `@jsenv/snapshot` automatically normalizes fluctuating values:
 
-- Time values like "2s" become "Xs"
-- Filesystem paths are standardized
-- Network ports in URLs are removed
-- And much more...
+| Fluctuating Value | Stabilized As                 |
+| ----------------- | ----------------------------- |
+| Time durations    | `"Xs"` instead of `"2.34s"`   |
+| Filesystem paths  | Platform-independent paths    |
+| Network ports     | Removed from URLs             |
+| Random IDs        | Consistent placeholder values |
+| Stack traces      | Simplified and normalized     |
 
 This ensures your snapshot tests remain stable regardless of when or where they run.
 
@@ -133,6 +175,12 @@ This ensures your snapshot tests remain stable regardless of when or where they 
 
 - Testing complex assertion behavior: [@jsenv/assert/tests/array.test.js.md](../assert/tests/_array.test.js/array.test.js.md)
 - Testing server-side builds with browser execution: [@jsenv/core/tests/script_type_module_basic.test.mjs](../../../tests/build/basics/script_type_module_basic/_script_type_module_basic.test.mjs/script_type_module_basic.test.mjs.md)
+
+## Compatibility
+
+- Node.js: 16.x and above
+- Works with most JavaScript test runners
+- Compatible with ESM and CommonJS modules
 
 ## Contributing
 
