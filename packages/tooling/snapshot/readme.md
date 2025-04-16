@@ -4,9 +4,9 @@
 
 A powerful snapshot testing tool for JavaScript applications.
 
-📸 Create reliable test snapshots  
-🔄 Track changes in code output over time  
-📝 Generate markdown documentation from tests  
+📸 Create readable, reliable test snapshots  
+🔄 Document code behavior with markdown  
+📊 Track changes in code output over time  
 🧩 Normalize fluctuating values for stable comparisons
 
 ## Table of Contents
@@ -17,11 +17,12 @@ A powerful snapshot testing tool for JavaScript applications.
   - [Installation](#installation)
   - [How `@jsenv/snapshot` Works](#how-jsenvsnapshot-works)
   - [API Reference](#api-reference)
+    - [snapshotTests(testFileUrl, fnRegisteringTests, options)](#snapshotteststestfileurl-fnregisteringtests-options)
+  - [when radius is 10](#when-radius-is-10)
+  - [when radius is null](#when-radius-is-null)
+    - [Why Use snapshotTests?](#why-use-snapshottests)
     - [takeFileSnapshot(fileUrl)](#takefilesnapshotfileurl)
     - [takeDirectorySnapshot(directoryUrl)](#takedirectorysnapshotdirectoryurl)
-    - [snapshotTests(testFileUrl, fnRegisteringTests, options)](#snapshotteststestfileurl-fnregisteringtests-options)
-      - [snapshotTests Options](#snapshottests-options)
-  - [Why Use snapshotTests?](#why-use-snapshottests)
   - [Stable Snapshots Across Environments](#stable-snapshots-across-environments)
   - [Advanced Examples](#advanced-examples)
   - [Compatibility](#compatibility)
@@ -58,6 +59,107 @@ When running tests:
 > **Note**: All functions accept a `throwWhenDiff` parameter to force errors even in local environments.
 
 ## API Reference
+
+### snapshotTests(testFileUrl, fnRegisteringTests, options)
+
+The most powerful feature of this library - creates readable markdown snapshots of test executions.
+
+```js
+import { snapshotTests } from "@jsenv/snapshot";
+
+const getCircleArea = (circleRadius) => {
+  if (isNaN(circleRadius)) {
+    throw new TypeError(
+      `circleRadius must be a number, received ${circleRadius}`,
+    );
+  }
+  return circleRadius * circleRadius * Math.PI;
+};
+
+await snapshotTests(import.meta.url, ({ test }) => {
+  test("when radius is 2", () => {
+    return getCircleArea(2);
+  });
+
+  test("when radius is 10", () => {
+    return getCircleArea(10);
+  });
+
+  test("when radius is null", () => {
+    try {
+      return getCircleArea(null);
+    } catch (e) {
+      return e;
+    }
+  });
+});
+```
+
+This generates a markdown file documenting how your code behaves in different scenarios:
+
+````markdown
+# getCircleArea
+
+## when radius is 2
+
+```js
+getCircleArea(2);
+```
+````
+
+Returns:
+
+```js
+12.566370614359172;
+```
+
+## when radius is 10
+
+```js
+getCircleArea(10);
+```
+
+Returns:
+
+```js
+314.1592653589793;
+```
+
+## when radius is null
+
+```js
+getCircleArea(null);
+```
+
+Throws:
+
+```
+TypeError: circleRadius must be a number, received null
+```
+
+````
+
+See a full example at [./docs/\_circle_area.test.js/circle_area.test.js.md](./docs/_circle_area.test.js/circle_area.test.js.md)
+
+#### snapshotTests Options
+
+```js
+await snapshotTests(import.meta.url, fnRegisteringTests, {
+  throwWhenDiff: true, // Force error on snapshot differences (default: false in local, true in CI)
+  formatValue: (value) => {}, // Custom formatter for values
+  trackingConfig: {}, // Track specific resources like network requests or file operations
+});
+````
+
+#### Why Use snapshotTests?
+
+- **Assertion-free testing**: Simply call your functions and let the snapshots document their behavior
+- **Self-documenting tests**: Markdown files serve as both test validation and documentation
+- **Visual change reviews**: Code changes are reflected in snapshots, making reviews easy
+- **Side effect tracking**: Automatically captures and documents:
+  - Console logs ([example](./docs/_log.test.js/log.test.js.md))
+  - Filesystem operations ([example](./docs/_filesystem.test.js/filesystem.test.js.md))
+  - And more
 
 ### takeFileSnapshot(fileUrl)
 
@@ -99,63 +201,6 @@ writeManyFiles();
 // compare the state of "./dir/" with previous version
 directorySnapshot.compare();
 ```
-
-### snapshotTests(testFileUrl, fnRegisteringTests, options)
-
-The most powerful feature of this library - creates readable markdown snapshots of test executions.
-
-```js
-import { snapshotTests } from "@jsenv/snapshot";
-
-const getCircleArea = (circleRadius) => {
-  if (isNaN(circleRadius)) {
-    throw new TypeError(
-      `circleRadius must be a number, received ${circleRadius}`,
-    );
-  }
-  return circleRadius * circleRadius * Math.PI;
-};
-
-await snapshotTests(import.meta.url, ({ test }) => {
-  test("when radius is 2", () => {
-    return getCircleArea(2);
-  });
-
-  test("when radius is 10", () => {
-    return getCircleArea(10);
-  });
-
-  test("when radius is null", () => {
-    return getCircleArea(null);
-  });
-});
-```
-
-This generates a markdown file documenting how your code behaves in different scenarios.
-See an example at [./docs/\_circle_area.test.js/circle_area.test.js.md](./docs/_circle_area.test.js/circle_area.test.js.md)
-
-#### snapshotTests Options
-
-```js
-await snapshotTests(import.meta.url, fnRegisteringTests, {
-  throwWhenDiff: true, // Force error on snapshot differences (default: false in local, true in CI)
-  formatValue: (value) => {}, // Custom formatter for values
-  trackingConfig: {}, // Track specific resources like network requests or file operations
-});
-```
-
-## Why Use snapshotTests?
-
-- **Assertion-free testing**: Simply call your functions and let the snapshots document their behavior
-- **Self-documenting tests**: Markdown files serve as both test validation and documentation
-- **Visual change reviews**: Code changes are reflected in snapshots, making reviews easy
-- **Side effect tracking**: Automatically captures and documents:
-
-  - Console logs ([example](./docs/_log.test.js/log.test.js.md))
-  - Filesystem operations ([example](./docs/_filesystem.test.js/filesystem.test.js.md))
-  - And more
-
-- **Fluctuating values**: Automatically replaced with stable values for reliable snapshots
 
 ## Stable Snapshots Across Environments
 
