@@ -1,22 +1,63 @@
-# https local
+# HTTPS Local [![npm package](https://img.shields.io/npm/v/@jsenv/https-local.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/https-local)
 
-[![npm package](https://img.shields.io/npm/v/@jsenv/https-local.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/https-local)
+A programmatic way to generate locally trusted certificates for HTTPS development.
 
-A programmatic way to generate locally trusted certificates.
+🔒 Generate certificates trusted by your operating system and browsers  
+🌐 Perfect for local HTTPS development  
+🖥️ Works on macOS, Linux, and Windows  
+⚡ Simple API for certificate management
 
-Generate certificate(s) trusted by your operating system and browsers.
-This certificate can be used to start your development server in HTTPS.
-Works on mac, linux and windows.
+## Table of Contents
 
-# How to use
+- [HTTPS Local ](#https-local-)
+  - [Table of Contents](#table-of-contents)
+  - [Quick Start](#quick-start)
+  - [How to Use](#how-to-use)
+    - [1. Install the Root Certificate](#1-install-the-root-certificate)
+    - [2. Request Certificate for Your Server](#2-request-certificate-for-your-server)
+    - [3. Start the Server](#3-start-the-server)
+  - [Certificate Expiration](#certificate-expiration)
+  - [JavaScript API](#javascript-api)
+    - [requestCertificate](#requestcertificate)
+    - [verifyHostsFile](#verifyhostsfile)
+      - [Auto Update Hosts](#auto-update-hosts)
+    - [installCertificateAuthority](#installcertificateauthority)
+      - [Auto Trust](#auto-trust)
 
-The following steps can be taken to start a local server in https.
+## Quick Start
 
-1. Install the root certificate using https-local
-2. Request certificate for your server
-3. Start that server
+```console
+# Install the package
+npm install @jsenv/https-local
 
-## 1. Install the root certificate
+# Install and trust the root certificate
+npx @jsenv/https-local install --trust
+```
+
+```js
+// In your server file
+import { createServer } from "node:https";
+import { requestCertificate } from "@jsenv/https-local";
+
+const { certificate, privateKey } = requestCertificate();
+const server = createServer(
+  {
+    cert: certificate,
+    key: privateKey,
+  },
+  (request, response) => {
+    response.end("Hello HTTPS world!");
+  },
+).listen(8443, () => {
+  console.log("HTTPS server running at https://localhost:8443");
+});
+```
+
+## How to Use
+
+The following steps can be taken to start a local server in HTTPS:
+
+### 1. Install the Root Certificate
 
 ```console
 npx @jsenv/https-local install --trust
@@ -24,10 +65,10 @@ npx @jsenv/https-local install --trust
 
 This will install a root certificate valid for 20 years.
 
-- Re-executing this command will log the current root certificate validity and trust status.
+- Re-executing this command will log the current root certificate validity and trust status
 - Re-executing this command 20 years later would reinstall a root certificate and re-trust it
 
-## 2. Request certificate for your server
+### 2. Request Certificate for Your Server
 
 _start_dev_server.mjs_
 
@@ -55,33 +96,32 @@ server.listen(8080);
 console.log(`Server listening at https://local.example:8080`);
 ```
 
-## 3. Start the server
+### 3. Start the Server
 
 ```console
 node ./start_dev_server.mjs
 ```
 
-At this stage you have a server running in https.
-The rest of this documentation goes into more details.
+At this stage you have a server running in HTTPS.
 
-# Certificate expiration
+## Certificate Expiration
 
 | Certificate | Expires after | How to renew?                        |
 | ----------- | ------------- | ------------------------------------ |
 | server      | 1 year        | Re-run _requestCertificate_          |
-| authority   | 20 year       | Re-run _installCertificateAuthority_ |
+| authority   | 20 years      | Re-run _installCertificateAuthority_ |
 
-The **server certificate** expires after one year which is the maximum duration allowed by web browsers.
+The **server certificate** expires after one year, which is the maximum duration allowed by web browsers.
 In the unlikely scenario where a local server is running for more than a year without interruption, restart it to re-run requestCertificate.
 
-The **authority root certificate** expires after 20 years which is close to the maximum allowed duration.
-In the very unlikely scenario where you are using the same machine for more than 20 years, re-execute [installCertificateAuthority](#installCertificateAuthority) to update certificate authority then restart your server.
+The **authority root certificate** expires after 20 years, which is close to the maximum allowed duration.
+In the very unlikely scenario where you are using the same machine for more than 20 years, re-execute [installCertificateAuthority](#installcertificateauthority) to update certificate authority then restart your server.
 
-# JavaScript API
+## JavaScript API
 
-## requestCertificate
+### requestCertificate
 
-_requestCertificate_ function returns a certificate and private key that can be used to start a server in HTTPS.
+The `requestCertificate` function returns a certificate and private key that can be used to start a server in HTTPS.
 
 ```js
 import { createServer } from "node:https";
@@ -92,12 +132,11 @@ const { certificate, privateKey } = requestCertificate({
 });
 ```
 
-[installCertificateAuthority](#installCertificateAuthority) must be called before this function.
+[installCertificateAuthority](#installcertificateauthority) must be called before this function.
 
-## verifyHostsFile
+### verifyHostsFile
 
-This function is not mandatory to obtain the https certificates.
-But it is useful to programmatically verify ip mappings that are important for your local server are present in hosts file.
+This function is not mandatory to obtain the HTTPS certificates, but it is useful to programmatically verify IP mappings that are important for your local server are present in hosts file.
 
 ```js
 import { verifyHostsFile } from "@jsenv/https-local";
@@ -109,10 +148,10 @@ await verifyHostsFile({
 });
 ```
 
-Find below logs written in terminal when this function is executed.
+Find below logs written in terminal when this function is executed:
 
 <details>
-  <summary>mac and linux</summary>
+  <summary>Mac and Linux output</summary>
 
 ```console
 > node ./verify_hosts.mjs
@@ -128,7 +167,7 @@ Check hosts file content...
 </details>
 
 <details>
-  <summary>windows</summary>
+  <summary>Windows output</summary>
 
 ```console
 > node ./verify_hosts.mjs
@@ -143,9 +182,9 @@ C:\\Windows\\System32\\Drivers\\etc\\hosts
 
 </details>
 
-### Auto update hosts
+#### Auto Update Hosts
 
-It's possible to update hosts file programmatically using _tryToUpdateHostsFile_.
+It's possible to update hosts file programmatically using `tryToUpdateHostsFile`:
 
 ```js
 import { verifyHostsFile } from "@jsenv/https-local";
@@ -159,7 +198,7 @@ await verifyHostsFile({
 ```
 
 <details>
-  <summary>mac and linux</summary>
+  <summary>Mac and Linux output</summary>
 
 ```console
 Check hosts file content...
@@ -182,7 +221,7 @@ Check hosts file content...
 </details>
 
 <details>
-  <summary>windows</summary>
+  <summary>Windows output</summary>
 
 ```console
 Check hosts file content...
@@ -204,9 +243,9 @@ Check hosts file content...
 
 </details>
 
-## installCertificateAuthority
+### installCertificateAuthority
 
-_installCertificateAuthority_ function generates a certificate authority valid for 20 years.
+The `installCertificateAuthority` function generates a certificate authority valid for 20 years.
 This certificate authority is needed to generate local certificates that will be trusted by the operating system and web browsers.
 
 ```js
@@ -215,12 +254,10 @@ import { installCertificateAuthority } from "@jsenv/https-local";
 await installCertificateAuthority();
 ```
 
-By default, trusting authority root certificate is a manual process. This manual process is documented in [BenMorel/dev-certificates#Import the CA in your browser](https://github.com/BenMorel/dev-certificates/tree/c10cd68945da772f31815b7a36721ddf848ff3a3#import-the-ca-in-your-browser). This process can be done programmatically as explained in [Auto trust](#Auto-trust).
-
-Find below logs written in terminal when this function is executed.
+By default, trusting authority root certificate is a manual process. This manual process is documented in [BenMorel/dev-certificates#Import the CA in your browser](https://github.com/BenMorel/dev-certificates/tree/c10cd68945da772f31815b7a36721ddf848ff3a3#import-the-ca-in-your-browser). This process can be done programmatically as explained in [Auto Trust](#auto-trust).
 
 <details>
-  <summary>mac</summary>
+  <summary>macOS output</summary>
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -232,7 +269,7 @@ Generating authority root certificate with a validity of 20 years...
 ℹ You should add root certificate to firefox
 ```
 
-_second execution logs_
+_Second execution logs_
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -251,7 +288,7 @@ Check if certificate is in firefox...
 </details>
 
 <details>
-  <summary>linux</summary>
+  <summary>Linux output</summary>
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -264,7 +301,7 @@ Generating authority root certificate with a validity of 20 years...
 ℹ You should add certificate to firefox
 ```
 
-_second execution logs_
+_Second execution logs_
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -285,7 +322,7 @@ Check if certificate is in firefox...
 </details>
 
 <details>
-  <summary>windows</summary>
+  <summary>Windows output</summary>
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -297,7 +334,7 @@ Generating authority root certificate with a validity of 20 years...
 ℹ You should add certificate to firefox
 ```
 
-_second execution logs_
+_Second execution logs_
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -315,9 +352,9 @@ Check if certificate is trusted by firefox...
 
 </details>
 
-### Auto trust
+#### Auto Trust
 
-It's possible to trust root certificate programmatically using _tryToTrust_
+It's possible to trust root certificate programmatically using `tryToTrust`:
 
 ```js
 import { installCertificateAuthority } from "@jsenv/https-local";
@@ -328,7 +365,7 @@ await installCertificateAuthority({
 ```
 
 <details>
-  <summary>mac</summary>
+  <summary>macOS output</summary>
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -344,7 +381,7 @@ Adding certificate to firefox...
 ✔ certificate added to Firefox
 ```
 
-_second execution logs_
+_Second execution logs_
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -363,7 +400,7 @@ Check if certificate is in Firefox...
 </details>
 
 <details>
-  <summary>linux</summary>
+  <summary>Linux output</summary>
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -390,7 +427,7 @@ Adding certificate to firefox...
 ✔ certificate added to firefox
 ```
 
-_second execution logs_
+_Second execution logs_
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -411,7 +448,7 @@ Check if certificate is in firefox...
 </details>
 
 <details>
-  <summary>windows</summary>
+  <summary>Windows output</summary>
 
 ```console
 > node ./install_certificate_authority.mjs
@@ -430,7 +467,7 @@ Check if certificate is trusted by firefox...
 ℹ unable to detect if certificate is trusted by firefox (not implemented on windows)
 ```
 
-_second execution logs_
+_Second execution logs_
 
 ```console
 > node ./install_certificate_authority.mjs
