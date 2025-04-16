@@ -63,8 +63,8 @@
     "lightningcss": "1.29.3"
   },
   "devDependencies": {
-    "@jsenv/urls": "../../independent/tooling/urls",
-    "@jsenv/utils": "../../independent/tooling/utils",
-    "@jsenv/sourcemap": "../../independent/tooling/sourcemap"
+    "@jsenv/urls": "../../tooling/urls",
+    "@jsenv/utils": "../../tooling/utils",
+    "@jsenv/sourcemap": "../../tooling/sourcemap"
   }
 }

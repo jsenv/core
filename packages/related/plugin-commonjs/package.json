@@ -39,7 +39,7 @@
     "rollup-plugin-polyfill-node": "0.13.0"
   },
   "devDependencies": {
-    "@jsenv/assert": "../independent/tooling/assert",
+    "@jsenv/assert": "../tooling/assert",
     "playwright": "1.51.1",
     "@jsenv/core": "../../"
   }

@@ -30,7 +30,7 @@
     "@jsenv/core": "*"
   },
   "devDependencies": {
-    "@jsenv/urls": "../../independent/tooling/urls",
+    "@jsenv/urls": "../../tooling/urls",
     "@jsenv/ast": "../ast"
   }
 }

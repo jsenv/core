@@ -45,8 +45,8 @@
   },
   "devDependencies": {
     "@jsenv/ast": "./",
-    "@jsenv/filesystem": "../../independent/tooling/filesystem",
-    "@jsenv/snapshot": "../../independent/tooling/snapshot",
+    "@jsenv/filesystem": "../../tooling/filesystem",
+    "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/assert": "../../indeppendent/tooling/assert"
   }
 }

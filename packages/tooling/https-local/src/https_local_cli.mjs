@@ -38,7 +38,7 @@ npx @jsenv/https-local uninstall
 npx @jsenv/https-local localhost-mapping
   Ensure localhost mapping to 127.0.0.1 is set on the filesystem
 
-https://github.com/jsenv/core/tree/main/packages/independent/https-local
+https://github.com/jsenv/core/tree/main/packages/tooling/https-local
 
 `);
 

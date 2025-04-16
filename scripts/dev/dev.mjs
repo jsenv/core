@@ -26,7 +26,7 @@ await startDevServer({
           "./tests/dev_server/errors/stories/**/*.html": true,
         },
         router: {
-          "./packages/independent/**/router/**/*.html": true,
+          "./packages/tooling/**/router/**/*.html": true,
         },
         tests: {
           "./tests/**/client/main.html": true,

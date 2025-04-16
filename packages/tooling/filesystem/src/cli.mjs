@@ -19,7 +19,7 @@ if (values.help || positionals.length === 0) {
 
 Usage: npx @jsenv/filesystem clear [pattern]
 
-https://github.com/jsenv/core/tree/main/packages/independent/filesystem
+https://github.com/jsenv/core/tree/main/packages/tooling/filesystem
 
 pattern: files matching this pattern will be removed; can use "*" and "**"
 `);

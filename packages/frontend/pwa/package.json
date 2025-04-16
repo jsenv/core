@@ -35,8 +35,8 @@
   },
   "devDependencies": {
     "@jsenv/core": "../../../",
-    "@jsenv/assert": "../../independent/tooling/assert",
-    "@jsenv/https-local": "../../independent/tooling/https-local",
+    "@jsenv/assert": "../../tooling/assert",
+    "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/plugin-explorer": "../../related/plugin-explorer",
     "playwright": "1.51.1"
   }
