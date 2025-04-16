@@ -63,6 +63,7 @@
     "@jsenv/server": "../independent/backend/server",
     "@jsenv/core": "../../",
     "@jsenv/os-metrics": "../../independent/tooling/os-metrics",
+    "@jsenv/importmap": "../../independent/tooling/importmap",
     "@jsenv/plugin-explorer": "../plugin-explorer",
     "@jsenv/abort": "4.3.1",
     "@jsenv/exception": "1.2.0",

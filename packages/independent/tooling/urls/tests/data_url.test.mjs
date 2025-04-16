@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-
 import { DATA_URL } from "@jsenv/urls";
 
 {

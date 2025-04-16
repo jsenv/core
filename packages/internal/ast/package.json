@@ -42,6 +42,7 @@
     "postcss-value-parser": "4.2.0"
   },
   "devDependencies": {
-    "@jsenv/snapshot": "../../independent/tooling/snapshot"
+    "@jsenv/snapshot": "../../independent/tooling/snapshot",
+    "@jsenv/assert": "../../indeppendent/tooling/assert"
   }
 }

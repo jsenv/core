@@ -13,11 +13,15 @@
   },
   "main": "./src/main.js",
   "sideEffects": false,
-  "dependencies": {
-    "@jsenv/humanize": "1.5.2"
-  },
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@jsenv/humanize": "1.5.2"
+  },
+  "devDependencies": {
+    "@jsenv/snapshot": "../snapshot",
+    "@jsenv/terminal-table": "../terminal-table"
   }
 }

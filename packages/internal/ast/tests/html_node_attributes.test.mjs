@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-
 import { getHtmlNodeAttribute, setHtmlNodeAttributes } from "@jsenv/ast";
 
 {

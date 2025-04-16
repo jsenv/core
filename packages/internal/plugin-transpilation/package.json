@@ -64,6 +64,7 @@
   },
   "devDependencies": {
     "@jsenv/urls": "../../independent/tooling/urls",
-    "@jsenv/utils": "../../independent/tooling/utils"
+    "@jsenv/utils": "../../independent/tooling/utils",
+    "@jsenv/sourcemap": "../../independent/tooling/sourcemap"
   }
 }
