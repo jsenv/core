@@ -26,7 +26,7 @@
     "@jsenv/plugin-react": "1.7.13",
     "@jsenv/plugin-bundling": "2.9.5",
     "@jsenv/plugin-minification": "1.7.0",
-    "@jsenv/eslint-config-relax": "1.5.0",
+    "@jsenv/eslint-config-relax": "1.6.0",
     "@jsenv/test": "3.7.3",
     "eslint": "9.24.0",
     "open": "10.1.0",
