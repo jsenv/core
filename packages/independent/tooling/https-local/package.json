@@ -50,6 +50,7 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
-    "@jsenv/https-local": "./"
+    "@jsenv/https-local": "./",
+    "playwright": "1.51.1"
   }
 }

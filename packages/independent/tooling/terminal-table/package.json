@@ -21,7 +21,10 @@
     "@jsenv/humanize": "1.5.2"
   },
   "devDependencies": {
+    "@jsenv/assert": "../assert",
     "@jsenv/snapshot": "../snapshot",
-    "@jsenv/terminal-table": "../terminal-table"
+    "@jsenv/terminal-table": "./",
+    "@jsenv/terminal-text-size": "../terminal-text-size",
+    "@jsenv/filesysten": "../../backend/filesystem"
   }
 }

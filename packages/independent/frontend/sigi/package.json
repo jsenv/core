@@ -32,5 +32,8 @@
   "sideEffects": false,
   "dependencies": {
     "@preact/signals": "2.0.3"
+  },
+  "devDependencies": {
+    "@jsenv/assert": "../../tooling/assert"
   }
 }

@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@jsenv/core": "../../../",
-    "@jsenv/https-local": "../../indepndent/tooling/https-local"
+    "@jsenv/assert": "../../independent/tooling/assert",
+    "@jsenv/https-local": "../../independent/tooling/https-local"
   }
 }
