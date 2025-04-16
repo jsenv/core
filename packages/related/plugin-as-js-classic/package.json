@@ -28,6 +28,9 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../../independent/tooling/assert",
+    "@jsenv/snapshot": "../../independent/tooling/snapshot",
+    "@jsenv/filesystem": "../../independent/backend/filesystem",
+    "@jsenv/plugin-preact": "../plugin-preact",
     "@jsenv/core": "../../../",
     "playwright": "1.51.1"
   }

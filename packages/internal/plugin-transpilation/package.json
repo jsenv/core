@@ -61,5 +61,9 @@
     "babel-plugin-transform-async-to-promises": "0.8.18",
     "construct-style-sheets-polyfill": "3.1.0",
     "lightningcss": "1.29.3"
+  },
+  "devDependencies": {
+    "@jsenv/urls": "../../independent/tooling/urls",
+    "@jsenv/utils": "../../independent/tooling/utils"
   }
 }
