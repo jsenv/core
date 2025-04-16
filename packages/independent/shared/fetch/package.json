@@ -39,6 +39,8 @@
   },
   "devDependencies": {
     "@jsenv/server": "../../independent/backend/server",
-    "@jsenv/assert": "../assert"
+    "@jsenv/filesystem": "../../independent/backend/filesystem",
+    "@jsenv/assert": "../assert",
+    "@jsenv/fetch": "./"
   }
 }
