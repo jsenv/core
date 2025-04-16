@@ -34,7 +34,7 @@
     "globals": "16.0.0",
     "@jsenv/eslint-import-resolver": "8.3.1",
     "@jsenv/urls": "2.7.4",
-    "eslint-plugin-import-x": "4.10.5",
+    "eslint-plugin-import-x": "4.10.2",
     "eslint-plugin-html": "8.1.2",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-regexp": "2.7.0"

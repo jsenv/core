@@ -25,5 +25,10 @@
     "@jsenv/urls": "2.7.4",
     "@jsenv/js-module-fallback": "1.4.11",
     "@jsenv/plugin-bundling": "2.9.5"
+  },
+  "devDependencies": {
+    "@jsenv/assert": "../../independent/tooling/assert",
+    "@jsenv/core": "../../../",
+    "playwright": "1.51.1"
   }
 }

@@ -3,5 +3,9 @@
   "name": "test",
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "node-package-a": "*",
+    "node-package-b": "*"
+  }
 }

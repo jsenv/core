@@ -25,16 +25,18 @@
     "/dist/",
     "/src/"
   ],
+  "scripts": {
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  },
   "dependencies": {
     "@jsenv/ast": "6.7.1"
   },
   "devDependencies": {
     "@preact/signals": "2.0.3",
-    "@jsenv/core": "../../"
-  },
-  "scripts": {
-    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
-    "build": "node ./scripts/build.mjs",
-    "prepublishOnly": "npm run build"
+    "@jsenv/core": "../../",
+    "@jsenv/filesystem": "../../independent/backend/filesystem",
+    "playwright": "1.51.1"
   }
 }
