@@ -3,18 +3,18 @@
     <rect x="1" y="1" width="638" height="287.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
   <foreignObject id="body" y="0" width="100%" height="299.45" overflow="hidden">
-    <svg width="986.16" height="289.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+    <svg width="885.34" height="289.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">OPTIONS http://127.0.0.1/</text>
         <text x="10" y="43.55">internal error while handling request</text>
         <text x="10" y="62.55">--- error stack ---</text>
         <text x="10" y="81.55">Error: here</text>
         <text x="10" y="100.55" style="white-space:pre">    at redirectRequest (base/cors.test.mjs:28:19)</text>
-        <text x="10" y="119.55" style="white-space:pre">    at callHook (@jsenv/core/packages/independent/backend/server/src/service_controller.js:62:25)</text>
-        <text x="10" y="138.55" style="white-space:pre">    at Object.callHooks (@jsenv/core/packages/independent/backend/server/src/service_controller.js:86:27)</text>
-        <text x="10" y="157.55" style="white-space:pre">    at applyRequestInternalRedirection (@jsenv/core/packages/independent/backend/server/src/start_server.js:397:23)</text>
-        <text x="10" y="176.55" style="white-space:pre">    at getResponseProperties (@jsenv/core/packages/independent/backend/server/src/start_server.js:530:17)</text>
-        <text x="10" y="195.55" style="white-space:pre">    at Server.requestEventHandler (@jsenv/core/packages/independent/backend/server/src/start_server.js:696:42)</text>
+        <text x="10" y="119.55" style="white-space:pre">    at callHook (@jsenv/core/packages/backend/server/src/service_controller.js:62:25)</text>
+        <text x="10" y="138.55" style="white-space:pre">    at Object.callHooks (@jsenv/core/packages/backend/server/src/service_controller.js:86:27)</text>
+        <text x="10" y="157.55" style="white-space:pre">    at applyRequestInternalRedirection (@jsenv/core/packages/backend/server/src/start_server.js:397:23)</text>
+        <text x="10" y="176.55" style="white-space:pre">    at getResponseProperties (@jsenv/core/packages/backend/server/src/start_server.js:530:17)</text>
+        <text x="10" y="195.55" style="white-space:pre">    at Server.requestEventHandler (@jsenv/core/packages/backend/server/src/start_server.js:696:42)</text>
         <text x="10" y="214.55" style="white-space:pre">    at Server.emit (node:events:519:35)</text>
         <text x="10" y="233.55" style="white-space:pre">    at parserOnIncoming (node:_http_server:1153:12)</text>
         <text x="10" y="252.55" style="white-space:pre">    at HTTPParser.parserOnHeadersComplete (node:_http_common:117:17)</text>

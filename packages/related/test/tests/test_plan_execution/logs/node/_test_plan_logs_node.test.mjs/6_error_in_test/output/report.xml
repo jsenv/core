@@ -9,7 +9,9 @@
   <error type="Error">1 | throw new Error("here");
           ^
 Error: here
-  at base/node_client/error_in_test.spec.js:1:7</error>
+  at base/node_client/error_in_test.spec.js:1:7
+  at async executeUsingDynamicImport (@jsenv/core/packages/related/test/src/runtime_node/execute_using_dynamic_import.js:71:23)
+  at async @jsenv/core/packages/related/test/src/runtime_node/node_worker_thread_controlled.mjs:95:21</error>
   <testcase file="error_in_test.spec.js" name="child_process" time="[time]" timestamp="[timestamp]" tests="1" errors="1">
     <properties>
       <property name="runtimeName" value="node_child_process"></property>
@@ -19,5 +21,7 @@ Error: here
   <error type="Error">1 | throw new Error("here");
           ^
 Error: here
-  at base/node_client/error_in_test.spec.js:1:7</error>
+  at base/node_client/error_in_test.spec.js:1:7
+  at async executeUsingDynamicImport (@jsenv/core/packages/related/test/src/runtime_node/execute_using_dynamic_import.js:71:23)
+  at async @jsenv/core/packages/related/test/src/runtime_node/node_child_process_controlled.mjs:122:21</error>
 </testsuite>

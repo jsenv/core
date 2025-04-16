@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 118.45" background-color="#282c34">
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 175.45" background-color="#282c34">
   <g id="background">
-    <rect x="1" y="1" width="638" height="116.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+    <rect x="1" y="1" width="638" height="173.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
-  <foreignObject id="body" y="0" width="100%" height="128.45" overflow="hidden">
-    <svg width="414.86" height="118.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+  <foreignObject id="body" y="0" width="100%" height="185.45" overflow="hidden">
+    <svg width="902.14" height="175.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55" style="white-space:pre">AssertionError: </text>
         <text x="144.42" y="24.55" fill="#cd5555">actual</text>
@@ -22,7 +22,10 @@
         <text x="94.01" y="81.55" fill="#11bc79">a</text>
         <text x="102.42" y="81.55" fill="#11bc79">r</text>
         <text x="110.82" y="81.55" fill="#7f7f7f">"</text>
-        <text x="10" y="100.55">@base/client/main.html:13:13</text>
+        <text x="10" y="100.55">AssertionError@@jsenv/core/packages/tooling/assert/src/assert_scratch.js:969:3</text>
+        <text x="10" y="119.55">createAssert/assert.createAssertionError@@jsenv/core/packages/tooling/assert/src/assert_scratch.js:972:28</text>
+        <text x="10" y="138.55">assert@@jsenv/core/packages/tooling/assert/src/assert_scratch.js:955:35</text>
+        <text x="10" y="157.55">@base/client/main.html:13:13</text>
       </g>
     </svg>
   </foreignObject>

@@ -7,6 +7,8 @@ throw new Error("here");
 ```console
 Error: here
   at base/file_then_throw.test.mjs:46:19
+  at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)
+  at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)
   at async snapshotSideEffects.filesystemEffects (base/file_then_throw.test.mjs:42:7)
   at async base/file_then_throw.test.mjs:38:1
 ```
