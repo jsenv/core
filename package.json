@@ -38,14 +38,13 @@
   },
   "packageManager": "npm@11.2.0",
   "workspaces": [
-    "./packages/independent/*",
-    "./packages/independent/backend/*",
-    "./packages/independent/frontend/*",
-    "./packages/independent/tooling/*",
-    "./packages/independent/shared/*",
+    "./packages/back_and_front/*",
+    "./packages/backend/*",
+    "./packages/frontend/*",
     "./packages/internal/*",
     "./packages/related/*",
-    "./packages/related/cli/*"
+    "./packages/related/cli/*",
+    "./packages/tooling/*"
   ],
   "sideEffects": [
     "./src/kitchen/client/inline_content.js",
