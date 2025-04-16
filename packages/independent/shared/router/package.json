@@ -28,5 +28,9 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false
+  "sideEffects": false,
+  "devDependencies": {
+    "preact": "10.26.5",
+    "@preact/signals": "2.0.3"
+  }
 }

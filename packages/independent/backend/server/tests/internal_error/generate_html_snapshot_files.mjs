@@ -1,4 +1,6 @@
 import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
+// https://github.com/un-ts/eslint-plugin-import-x/issues/305
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import { jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 
 const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url).href;

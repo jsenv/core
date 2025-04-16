@@ -1,6 +1,7 @@
-import { assert } from "@jsenv/assert";
-
+// https://github.com/un-ts/eslint-plugin-import-x/issues/305
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import { Abort } from "@jsenv/abort";
+import { assert } from "@jsenv/assert";
 
 // when parent aborts, signal aborts
 {
