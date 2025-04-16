@@ -41,6 +41,7 @@
     "@jsenv/urls": "../../independent/tooling/urls",
     "@jsenv/snapshot": "../../independent/tooling/snapshot",
     "@jsenv/filesystem": "../../independent/backend/filesystem",
-    "@jsenv/humanize": "../../independent/tooling/humanize"
+    "@jsenv/humanize": "../../independent/tooling/humanize",
+    "@jsenv/core": "../../../"
   }
 }

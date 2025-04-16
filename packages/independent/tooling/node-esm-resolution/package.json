@@ -23,5 +23,9 @@
     "/src/",
     "/main.js"
   ],
-  "sideEffects": false
+  "sideEffects": false,
+  "devDependencies": {
+    "@jsenv/assert": "../assert",
+    "@jsenv/node-esm-resolution": "./"
+  }
 }

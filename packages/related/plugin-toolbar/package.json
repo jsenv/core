@@ -36,6 +36,7 @@
   "devDependencies": {
     "@preact/signals": "2.0.3",
     "@jsenv/core": "../../",
+    "@jsenv/utils": "../../independent/tooling/utils",
     "@jsenv/filesystem": "../../independent/backend/filesystem",
     "playwright": "1.51.1"
   }
