@@ -21,6 +21,7 @@ no entry on filesystem
   at async @jsenv/core/src/kitchen/kitchen.js:583:9
   at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:769:5)
   at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:674:7)
+  at async Promise.all (index 0)
   at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:708:7)
 ```
 

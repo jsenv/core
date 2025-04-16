@@ -3,7 +3,7 @@
     <rect x="1" y="1" width="638" height="933.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
   <foreignObject id="body" y="0" width="100%" height="945.45" overflow="hidden">
-    <svg width="1423.03" height="935.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+    <svg width="1322.21" height="935.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">AssertionError: snapshot comparison failed for "scenario.md"</text>
         <text x="10" y="62.55" fill="#7f7f7f">actual:</text>
@@ -358,20 +358,20 @@
         <text x="698.91" y="366.55" fill="#DAA520">e</text>
         <text x="707.31" y="366.55" fill="#DAA520">s</text>
         <text x="715.71" y="366.55" fill="#DAA520">/</text>
-        <text x="724.12" y="366.55" fill="#DAA520">i</text>
-        <text x="732.52" y="366.55" fill="#DAA520">n</text>
-        <text x="740.92" y="366.55" fill="#DAA520">d</text>
-        <text x="749.32" y="366.55" fill="#DAA520">e</text>
-        <text x="757.72" y="366.55" fill="#DAA520">p</text>
-        <text x="766.12" y="366.55" fill="#DAA520">e</text>
-        <text x="774.52" y="366.55" fill="#DAA520">n</text>
-        <text x="782.93" y="366.55" fill="#DAA520">d</text>
-        <text x="791.33" y="366.55" fill="#DAA520">e</text>
+        <text x="724.12" y="366.55" fill="#DAA520">t</text>
+        <text x="732.52" y="366.55" fill="#DAA520">o</text>
+        <text x="740.92" y="366.55" fill="#DAA520">o</text>
+        <text x="749.32" y="366.55" fill="#DAA520">l</text>
+        <text x="757.72" y="366.55" fill="#DAA520">i</text>
+        <text x="766.12" y="366.55" fill="#DAA520">n</text>
+        <text x="774.52" y="366.55" fill="#DAA520">g</text>
+        <text x="782.93" y="366.55" fill="#DAA520">/</text>
+        <text x="791.33" y="366.55" fill="#DAA520">s</text>
         <text x="799.73" y="366.55" fill="#DAA520">n</text>
-        <text x="808.13" y="366.55" fill="#DAA520">t</text>
-        <text x="816.53" y="366.55" fill="#DAA520">/</text>
+        <text x="808.13" y="366.55" fill="#DAA520">a</text>
+        <text x="816.53" y="366.55" fill="#DAA520">p</text>
         <text x="824.93" y="366.55" fill="#DAA520">s</text>
-        <text x="833.33" y="366.55" fill="#DAA520">n</text>
+        <text x="833.33" y="366.55" fill="#DAA520">h</text>
         <text x="841.74" y="366.55" fill="#DAA520">…</text>
         <text x="77.21" y="385.55" style="white-space:pre" fill="#7f7f7f">18| </text>
         <text x="110.82" y="385.55" fill="#DAA520">&lt;</text>
@@ -663,20 +663,20 @@
         <text x="698.91" y="784.55" fill="#DAA520">e</text>
         <text x="707.31" y="784.55" fill="#DAA520">s</text>
         <text x="715.71" y="784.55" fill="#DAA520">/</text>
-        <text x="724.12" y="784.55" fill="#DAA520">i</text>
-        <text x="732.52" y="784.55" fill="#DAA520">n</text>
-        <text x="740.92" y="784.55" fill="#DAA520">d</text>
-        <text x="749.32" y="784.55" fill="#DAA520">e</text>
-        <text x="757.72" y="784.55" fill="#DAA520">p</text>
-        <text x="766.12" y="784.55" fill="#DAA520">e</text>
-        <text x="774.52" y="784.55" fill="#DAA520">n</text>
-        <text x="782.93" y="784.55" fill="#DAA520">d</text>
-        <text x="791.33" y="784.55" fill="#DAA520">e</text>
+        <text x="724.12" y="784.55" fill="#DAA520">t</text>
+        <text x="732.52" y="784.55" fill="#DAA520">o</text>
+        <text x="740.92" y="784.55" fill="#DAA520">o</text>
+        <text x="749.32" y="784.55" fill="#DAA520">l</text>
+        <text x="757.72" y="784.55" fill="#DAA520">i</text>
+        <text x="766.12" y="784.55" fill="#DAA520">n</text>
+        <text x="774.52" y="784.55" fill="#DAA520">g</text>
+        <text x="782.93" y="784.55" fill="#DAA520">/</text>
+        <text x="791.33" y="784.55" fill="#DAA520">s</text>
         <text x="799.73" y="784.55" fill="#DAA520">n</text>
-        <text x="808.13" y="784.55" fill="#DAA520">t</text>
-        <text x="816.53" y="784.55" fill="#DAA520">/</text>
+        <text x="808.13" y="784.55" fill="#DAA520">a</text>
+        <text x="816.53" y="784.55" fill="#DAA520">p</text>
         <text x="824.93" y="784.55" fill="#DAA520">s</text>
-        <text x="833.33" y="784.55" fill="#DAA520">n</text>
+        <text x="833.33" y="784.55" fill="#DAA520">h</text>
         <text x="841.74" y="784.55" fill="#DAA520">…</text>
         <text x="77.21" y="803.55" style="white-space:pre" fill="#DAA520">21| </text>
         <text x="110.82" y="803.55" fill="#DAA520">&lt;</text>
@@ -687,10 +687,10 @@
         <text x="152.82" y="803.55" fill="#DAA520">&gt;</text>
         <text x="77.21" y="822.55" style="white-space:pre" fill="#DAA520">22| </text>
         <text x="10" y="841.55">--- details ---</text>
-        <text x="10" y="860.55">"@jsenv/core/packages/independent/tooling/snapshot/tests/snapshot_tests/file_then_throw/git_ignored/scenario/scenario.md"</text>
+        <text x="10" y="860.55">"@jsenv/core/packages/tooling/snapshot/tests/snapshot_tests/file_then_throw/git_ignored/scenario/scenario.md"</text>
         <text x="10" y="879.55">---------------</text>
-        <text x="10" y="898.55" style="white-space:pre">  at async snapshotSideEffects.filesystemEffects (@jsenv/core/packages/independent/tooling/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:42:7)</text>
-        <text x="10" y="917.55" style="white-space:pre">  at async @jsenv/core/packages/independent/tooling/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:38:1</text>
+        <text x="10" y="898.55" style="white-space:pre">  at async snapshotSideEffects.filesystemEffects (@jsenv/core/packages/tooling/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:42:7)</text>
+        <text x="10" y="917.55" style="white-space:pre">  at async @jsenv/core/packages/tooling/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:38:1</text>
       </g>
     </svg>
   </foreignObject>

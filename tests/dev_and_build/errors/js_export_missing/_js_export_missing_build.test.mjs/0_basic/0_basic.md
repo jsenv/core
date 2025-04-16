@@ -8,14 +8,6 @@ run()
 Error: tests/dev_and_build/errors/js_export_missing/client/main.js (2:9): "answer" is not exported by "tests/dev_and_build/errors/js_export_missing/client/file.js", imported by "tests/dev_and_build/errors/js_export_missing/client/main.js".
 --- frame ---
 1: // eslint-disable-next-line import-x/named
-  at generateBundleWithRollup (@jsenv/core/packages/internal/plugin-bundling/src/js_module/bundle_js_modules.js:238:15)
-  at async bundleJsModules (@jsenv/core/packages/internal/plugin-bundling/src/js_module/bundle_js_modules.js:244:34)
-  at async Object.callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:193:25)
-  at async Object.applyBundling (@jsenv/core/src/build/build_specifier_manager.js:120:29)
-  at async buildEntryPoint (@jsenv/core/src/build/build.js:1342:11)
-  at async @jsenv/core/src/build/build.js:665:28
-  at async runBuild (@jsenv/core/src/build/build.js:698:5)
-  at async Module.build (@jsenv/core/src/build/build.js:801:22)
   at async run (base/js_export_missing_build.test.mjs:6:3) {
   [cause]:  {
     code: "MISSING_EXPORT",

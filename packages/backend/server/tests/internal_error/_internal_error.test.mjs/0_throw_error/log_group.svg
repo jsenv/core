@@ -3,7 +3,7 @@
     <rect x="1" y="1" width="638" height="211.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
   <foreignObject id="body" y="0" width="100%" height="223.45" overflow="hidden">
-    <svg width="1036.57" height="213.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+    <svg width="935.75" height="213.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">server started at http://127.0.0.1</text>
         <text x="10" y="43.55">GET http://127.0.0.1/</text>
@@ -11,8 +11,8 @@
         <text x="10" y="81.55">--- error stack ---</text>
         <text x="10" y="100.55">Error: message</text>
         <text x="10" y="119.55" style="white-space:pre">    at base/internal_error.test.mjs:34:19</text>
-        <text x="10" y="138.55" style="white-space:pre">    at capture (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)</text>
-        <text x="10" y="157.55" style="white-space:pre">    at snapshotTests (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)</text>
+        <text x="10" y="138.55" style="white-space:pre">    at capture (@jsenv/core/packages/tooling/snapshot/src/side_effects/create_capture_side_effects.js:342:29)</text>
+        <text x="10" y="157.55" style="white-space:pre">    at snapshotTests (@jsenv/core/packages/tooling/snapshot/src/side_effects/snapshot_tests.js:182:33)</text>
         <text x="10" y="176.55" style="white-space:pre">    at async base/internal_error.test.mjs:32:1</text>
         <text x="26.8" y="195.55" fill="#cd5555">500</text>
         <text x="52.01" y="195.55" style="white-space:pre"> Internal Server Error</text>
