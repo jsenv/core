@@ -1,125 +1,205 @@
-<!-- https://web.dev/manifest-updates/ -->
+# @jsenv/service-worker [![npm package](https://img.shields.io/npm/v/@jsenv/service-worker.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/service-worker)
 
-# service-worker [![npm package](https://img.shields.io/npm/v/@jsenv/service-worker.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/service-worker)
+A powerful service worker implementation for seamless offline experiences.
 
-_Short description of a service worker:_
+🔄 Smart caching with version-aware invalidation  
+🛠️ Compatible with build workflows (auto-detection of assets)  
+⚡ Optimized for performance and reliability  
+🔌 Simple configuration for any web project
 
-Using a service worker allows to put url(s) into the navigator cache.
-On the next visit navigator requests are served from cache.
-For every url in cache, navigator won't do a request to the network.
-If every url are in cache, website works offline.
+## Introduction
 
-_Jsenv service worker:_
+Service workers enable web applications to work offline by caching resources. The @jsenv/service-worker package provides a simple yet powerful implementation that:
 
-- Ensure cache is reused only when url are versioned
-- Can be connected to a build tool to know urls to put into navigator cache
-- Can be configured with a manual list of urls to cache
+- Ensures cache is reused only when URLs are versioned
+- Connects to build tools to automatically discover cacheable resources
+- Allows manual configuration of URLs to cache
+- Provides smart cache invalidation strategies
 
-# How to use
+## Quick Start
 
-1. Install `@jsenv/service-worker`
+### 1. Install the package
 
 ```console
-npm install @jsenv/worker
+npm install @jsenv/service-worker
 ```
 
-2. Create _service_worker.js_
+### 2. Create a service worker file
 
 ```js
+// service_worker.js
 self.importScripts("@jsenv/service-worker/src/jsenv_service_worker.js");
 
 self.__sw__.init({
-  name: "product-name",
-  // service worker will cache "/" and the "roboto" font
+  name: "my-app",
   resources: {
-    "/": {},
-    "https://fonts.googleapis.com/css2?family=Roboto": {},
+    "/": {}, // Cache root URL
+    "https://fonts.googleapis.com/css2?family=Roboto": {}, // Cache external font
   },
 });
 ```
 
-3. Register service worker
+### 3. Register the service worker
 
 ```js
-window.navigator.serviceWorker.register("./service_worker.js");
+// In your main application code
+if ("serviceWorker" in navigator) {
+  window.navigator.serviceWorker.register("./service_worker.js");
+}
 ```
 
-At this point your website will use jsenv service worker. By default jsenv service worker cache only the root url: `"/"`. It must be configured to cache more urls.
+## Configuration
 
-# Configuration
+Configure the service worker during the `__sw__.init()` call:
 
-Jsenv service worker must be configured during `__sw__.init` call.
-
-Check directly [src/jsenv_service_worker.js](./src/jsenv_service_worker.js) to see the available configuration and what it does.
-
-# Cache invalidation
-
-When service worker updates it will refetch all url from network and put them into cache again. This is mandatory to check if ressource behind url has changed. When an url is versioned there is no need to refetch as it is assumed the ressource for that url will never change. If you know the url is versioned, tell it to the service worker as shown below.
-
-```diff
+```js
 self.__sw__.init({
-  name: "product-name",
+  // Required: Used as prefix for cache storage
+  name: "my-app-name",
+
+  // Optional: Resources to cache (default: { "/": {} })
   resources: {
-    "/": true,
--   "https://fonts.googleapis.com/css2?family=Roboto": {}
-+   "https://fonts.googleapis.com/css2?family=Roboto": { version: '1' }
+    "/": {}, // Root path
+    "/index.html": {}, // Specific file
+    "/assets/styles.css": {}, // CSS file
+    "/assets/app.js": { version: "1.0" }, // Versioned JavaScript file
+    "https://example.com/api": { maxAge: 3600 }, // External URL with max age
   },
-})
+
+  // Optional: Cache name prefix (default: value of "name")
+  cacheNamePrefix: "my-app-cache",
+
+  // Optional: Log level (default: "warn")
+  logLevel: "info", // "debug", "info", "warn", "error", or "off"
+});
 ```
 
-# Symbiosis with jsenv build
+## Smart Cache Invalidation
 
-During build jsenv injects urls to cache at the top of service worker file(s) under a global variable: `self.resourcesFromJsenvBuild`.
+When a service worker updates, it refetches all URLs from the network by default. However, for versioned resources that never change, you can optimize this process:
 
 ```js
+self.__sw__.init({
+  name: "my-app",
+  resources: {
+    "/": {}, // Unversioned: will be refetched on service worker update
+    "/assets/main.a7b3c9d.js": { version: "a7b3c9d" }, // Versioned: won't be refetched
+    "/api/data.json": { maxAge: 3600 }, // Cache for 1 hour (3600 seconds)
+  },
+});
+```
+
+## Integration with Build Tools
+
+@jsenv/service-worker can automatically detect resources during build time. The build process injects discovered URLs at the top of your service worker file under `self.resourcesFromJsenvBuild`.
+
+```js
+// service_worker.js
 self.importScripts("@jsenv/service-worker/src/jsenv_service_worker.js");
 
 self.__sw__.init({
-  name: "product-name",
+  name: "my-app",
   resources: {
-    "/": true,
+    "/": {},
+    // Combine manually specified resources with those from build
     ...(self.resourcesFromJsenvBuild || {}),
   },
 });
 ```
 
-## Jsenv url detection
+### Resource Detection
 
-Jsenv will detect all urls referenced in your files such as:
+Jsenv will automatically detect URLs referenced in your files:
 
 ```html
-<link rel="preload" href="./src/img.png" as="image" />
+<!-- In HTML -->
+<link rel="preload" href="./assets/image.png" as="image" />
 ```
 
 ```css
+/* In CSS */
 body {
-  background-image: url("./src/img.png");
+  background-image: url("./assets/background.png");
 }
 ```
 
 ```js
-new URL("./src/img.png", import.meta.url);
+// In JavaScript
+new URL("./assets/icon.svg", import.meta.url);
 ```
 
-Urls detected during build will be in `self.resourcesFromJsenvBuild`.
+### External Resources
 
-For now the urls with an origin different from your website origin will not. You must add them manually in "resources".
+External resources (from different origins) must be added manually:
 
-```html
-<link
-  rel="preload"
-  href="https://fonts.googleapis.com/css2?family=Roboto"
-  as="font"
-  crossorigin
-/>
-```
-
-```diff
+```js
 self.__sw__.init({
-  cachePrefix: "product-name",
+  name: "my-app",
   resources: {
     "/": {},
-+   "https://fonts.googleapis.com/css2?family=Roboto": {}
+    ...(self.resourcesFromJsenvBuild || {}),
+    // External resources must be added manually
+    "https://fonts.googleapis.com/css2?family=Roboto": {},
+    "https://cdn.example.com/library.js": { version: "2.0" },
   },
-})
+});
 ```
+
+## Advanced Usage
+
+### Custom Fetch Handling
+
+```js
+self.__sw__.init({
+  name: "my-app",
+  resources: {
+    "/": {},
+    "/api/data": {
+      // Custom fetch handler for API responses
+      fetchHandler: async (request) => {
+        try {
+          // Try network first
+          const networkResponse = await fetch(request);
+          if (networkResponse.ok) {
+            return networkResponse;
+          }
+          throw new Error("Network response not ok");
+        } catch (error) {
+          // Fall back to cache
+          const cachedResponse = await caches.match(request);
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Return a custom offline response
+          return new Response(JSON.stringify({ error: "You are offline" }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      },
+    },
+  },
+});
+```
+
+### Precaching Strategies
+
+```js
+self.__sw__.init({
+  name: "my-app",
+  resources: {
+    "/": {},
+    // Core assets (always precached)
+    "/assets/critical.js": { importance: "high" },
+    // Non-critical assets (precached when idle)
+    "/assets/non-critical.js": { importance: "low" },
+  },
+});
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+[MIT](./LICENSE)
