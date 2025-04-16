@@ -3,6 +3,8 @@ import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+// https://github.com/un-ts/eslint-plugin-import-x/issues/305
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 if (

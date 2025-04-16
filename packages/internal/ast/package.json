@@ -40,5 +40,8 @@
     "parse5": "7.2.1",
     "postcss": "8.5.3",
     "postcss-value-parser": "4.2.0"
+  },
+  "devDependencies": {
+    "@jsenv/snapshot": "../../independent/tooling/snapshot"
   }
 }

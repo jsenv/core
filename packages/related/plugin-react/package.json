@@ -39,6 +39,8 @@
     "react-dom": "19.1.0",
     "playwright": "1.51.1",
     "@jsenv/assert": "../../tooling/assert",
-    "@jsenv/filesystem": "../../tooling/filesystem"
+    "@jsenv/filesystem": "../../tooling/filesystem",
+    "@jsenv/https-local": "../../tooling/https-local",
+    "@jsenv/plugin-explorer": "../plugin-explorer"
   }
 }

@@ -1,7 +1,3 @@
-import { writeFileSync } from "@jsenv/filesystem";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-import { readFileSync } from "node:fs";
-
 import {
   createHtmlNode,
   findHtmlNode,
@@ -11,6 +7,9 @@ import {
   parseHtml,
   stringifyHtmlAst,
 } from "@jsenv/ast";
+import { writeFileSync } from "@jsenv/filesystem";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { readFileSync } from "node:fs";
 
 const outputDirectoryUrl = new URL("./output/", import.meta.url);
 const test = (fixtureFilename, mutation) => {

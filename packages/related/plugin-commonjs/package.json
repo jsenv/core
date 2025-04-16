@@ -36,5 +36,8 @@
     "rollup": "4.40.0",
     "rollup-plugin-node-globals": "1.4.0",
     "rollup-plugin-polyfill-node": "0.13.0"
+  },
+  "devDependencies": {
+    "@jsenv/assert": "../independent/tooling/assert"
   }
 }
