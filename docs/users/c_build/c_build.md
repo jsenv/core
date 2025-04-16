@@ -695,7 +695,7 @@ To accomplish this, the code inside sw.js needs to be adjusted as follows:
 + }
 ```
 
-If you don’t have your own service worker, you can use [@jsenv/service-worker](../../../packages/independent/frontend/service-worker)
+If you don’t have your own service worker, you can use [@jsenv/service-worker](../../../packages/frontend/service-worker)
 
 ## 2.10 sourcemaps
 
