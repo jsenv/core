@@ -1,36 +1,83 @@
-# Dynamic import worker
+# Dynamic import worker [![npm package](https://img.shields.io/npm/v/@jsenv/dynamic-import-worker.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/dynamic-import-worker)
 
-[![npm package](https://img.shields.io/npm/v/@jsenv/dynamic-import-worker.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/dynamic-import-worker)
+Bypass Node.js module cache on dynamic imports using worker threads.
 
-Bypass node cache on dynamic import thanks to worker
+🔄 Import modules without cache  
+🧵 Uses worker threads for isolation  
+📦 Extract specific exports from modules  
+⚡ Perfect for testing reloaded modules
 
-# Example
+## Installation
 
-_docs/demo/random_number.mjs_
+```console
+npm install @jsenv/dynamic-import-worker
+```
+
+## Problem
+
+In Node.js, imported modules are cached by their URL. Calling `import()` on the same URL will return the cached module, even if the file has changed:
+
+```js
+// First import (reads from disk)
+const module1 = await import("./module.js");
+
+// Later, even if file changes on disk
+const module2 = await import("./module.js");
+// module2 === module1 (returns cached version)
+```
+
+This behavior makes it challenging to reload modules during development or testing.
+
+## Solution
+
+This package uses Node.js worker threads to perform imports in a separate context, allowing you to bypass the module cache and always import the latest version of a file.
+
+## Usage Examples
+
+### Basic Example
+
+```js
+import { importOneExportFromFile } from "@jsenv/dynamic-import-worker";
+
+const randomNumberFileUrl = import.meta.resolve(
+  "./random_number.mjs#randomNumber",
+);
+
+const randomNumberA = await importOneExportFromFile(randomNumberFileUrl);
+const randomNumberB = await importOneExportFromFile(randomNumberFileUrl);
+
+console.log(randomNumberA); // 0.5362418125287491
+console.log(randomNumberB); // 0.35129949391010595 (different value)
+```
+
+_random_number.mjs_
 
 ```js
 export const randomNumber = Math.random();
 ```
 
-_docs/demo/demo.mjs_
+The export name is specified in the URL fragment.
 
-```js
-import { importOneExportFromFile } from "@jsenv/dynamic-import-worker";
+## How It Works
 
-const randomNumberFileUrl = new URL(
-  "./random_number.mjs#randomNumber",
-  import.meta.url,
-);
+1. Creates a new worker thread for each import
+2. Worker loads the file from disk
+3. Exports are sent back to the main thread
+4. Worker is terminated
 
-const randomNumberA = await importOneExportFromFile(randomNumberExportUrl);
-const randomNumberB = await importOneExportFromFile(randomNumberExportUrl);
+This approach ensures:
 
-console.log(randomNumberA);
-console.log(randomNumberB);
-```
+- No module caching between imports
+- Complete isolation of module execution
+- Fresh evaluation of the module code
 
-```console
-> node ./docs/demo/demo.mjs
-0.5362418125287491
-0.35129949391010595
-```
+## Use Cases
+
+- Testing modules during development
+- Hot reloading configurations
+- Dynamic content that needs fresh evaluation
+- Test runners that need to reload modules
+
+## License
+
+[MIT](./LICENSE)
