@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/shared/abort"
+    "directory": "packages/tooling/abort"
   },
   "publishConfig": {
     "access": "public"
@@ -30,7 +30,7 @@
   ],
   "sideEffects": false,
   "devDependencies": {
-    "@jsenv/assert": "../../independent/tooling/assert",
+    "@jsenv/assert": "../assert",
     "@jsenv/abort": "./"
   }
 }

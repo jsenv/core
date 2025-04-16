@@ -14,7 +14,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/shared/router"
+    "directory": "packages/tooling/router"
   },
   "type": "module",
   "exports": {
@@ -35,7 +35,7 @@
   "devDependencies": {
     "preact": "10.26.5",
     "@preact/signals": "2.0.3",
-    "@jsenv/snapshot": "../../tooling/snapshot",
-    "@jsenv/urls": "../../shared/urls"
+    "@jsenv/snapshot": "../snapshot",
+    "@jsenv/urls": "../urls"
   }
 }

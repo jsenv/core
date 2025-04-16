@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/shared/importmap"
+    "directory": "packages/tooling/importmap"
   },
   "engines": {
     "node": ">=16.13.0"
@@ -27,7 +27,7 @@
   ],
   "sideEffects": false,
   "devDependencies": {
-    "@jsenv/assert": "../../independent/tooling/assert",
+    "@jsenv/assert": "../assert",
     "@jsenv/importmap": "./"
   }
 }

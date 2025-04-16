@@ -10,7 +10,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/shared/fetch"
+    "directory": "packages/tooling/fetch"
   },
   "engines": {
     "node": ">=16.13.0"
@@ -38,8 +38,8 @@
     "node-fetch": "3.3.2"
   },
   "devDependencies": {
-    "@jsenv/server": "../../independent/backend/server",
-    "@jsenv/filesystem": "../../independent/backend/filesystem",
+    "@jsenv/server": "../../backend/server",
+    "@jsenv/filesystem": "../filesystem",
     "@jsenv/assert": "../assert",
     "@jsenv/fetch": "./"
   }
