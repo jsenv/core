@@ -27,9 +27,9 @@
     "@jsenv/plugin-bundling": "2.9.6"
   },
   "devDependencies": {
-    "@jsenv/assert": "../../independent/tooling/assert",
-    "@jsenv/snapshot": "../../independent/tooling/snapshot",
-    "@jsenv/filesystem": "../../independent/backend/filesystem",
+    "@jsenv/assert": "../../tooling/assert",
+    "@jsenv/snapshot": "../../tooling/snapshot",
+    "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-preact": "../plugin-preact",
     "@jsenv/core": "../../../",
     "@jsenv/plugin-as-js-classic": "./",
