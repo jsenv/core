@@ -55,6 +55,7 @@
     "@xterm/xterm": "5.5.0",
     "@jsenv/core": "../../../",
     "@jsenv/https-local": "../https-local",
-    "@jsenv/filesystem": "../filesystem"
+    "@jsenv/filesystem": "../filesystem",
+    "@jsenv/plugin-commonjs": "../../related/plugin-commonjs"
   }
 }

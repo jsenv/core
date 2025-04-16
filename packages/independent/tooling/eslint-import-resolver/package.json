@@ -35,6 +35,7 @@
     "rollup": "4.40.0",
     "@jsenv/assert": "../assert",
     "@jsenv/ast": "../../internal/ast",
+    "@jsenv/urls": "../urls",
     "@jsenv/filesystem": "../filesystem",
     "@jsenv/importmap": "../../shared/importmap",
     "@jsenv/node-esm-resolution": "../../tooling/node-esm-resolution"

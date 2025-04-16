@@ -35,5 +35,8 @@
   },
   "peerDependencies": {
     "@jsenv/core": "*"
+  },
+  "devDependencies": {
+    "@jsenv/snapshot": "../../tooling/snapshot"
   }
 }

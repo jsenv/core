@@ -39,6 +39,7 @@
     "@jsenv/fetch": "../../shared/fetch",
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/snapshot": "../../tooling/snapshot",
+    "@jsenv/humanize": "../../tooling/humanize",
     "playwright": "1.51.1"
   }
 }
