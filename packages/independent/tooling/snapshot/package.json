@@ -43,7 +43,8 @@
     "ansi-regex": "6.1.0",
     "pixelmatch": "7.1.0",
     "prettier": "3.5.3",
-    "strip-ansi": "7.1.0"
+    "strip-ansi": "7.1.0",
+    "pngjs": "7.0.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",

@@ -1,4 +1,8 @@
 {
   "name": "leaf",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "@jsenv/assert": "*",
+    "@jsenv/snapshot": "*"
+  }
 }

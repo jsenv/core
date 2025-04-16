@@ -29,6 +29,9 @@
     "/src/"
   ],
   "sideEffects": false,
+  "dependencies": {
+    "@jsenv/utils": "2.3.1"
+  },
   "devDependencies": {
     "preact": "10.26.5",
     "@preact/signals": "2.0.3",
