@@ -2,7 +2,6 @@ import { writeFileSync } from "@jsenv/filesystem";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
-
 import {
   executeTestPlan,
   nodeWorkerThread,
@@ -10,7 +9,6 @@ import {
   reportAsJunitXml,
   reporterList,
 } from "@jsenv/test";
-
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
 if (process.env.CI) {
