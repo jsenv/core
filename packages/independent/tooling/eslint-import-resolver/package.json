@@ -36,6 +36,6 @@
     "@jsenv/ast": "6.7.1",
     "@jsenv/filesystem": "../filesystem/",
     "@jsenv/importmap": "../../shared/importmap/",
-    "@jsenv/node-esm-resolution": "1.2.1"
+    "@jsenv/node-esm-resolution": "1.2.2"
   }
 }
