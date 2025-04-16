@@ -4,5 +4,9 @@
   "type": "module",
   "workspaces": [
     "./packages/*"
-  ]
+  ],
+  "dependencies": {
+    "external": "*",
+    "z-external": "*"
+  }
 }

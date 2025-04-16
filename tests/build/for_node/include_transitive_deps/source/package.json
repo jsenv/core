@@ -1,4 +1,7 @@
 {
   "private": true,
-  "name": "test"
+  "name": "test",
+  "dependencies": {
+    "a": "*"
+  }
 }

@@ -1,6 +1,8 @@
 // organize-imports-ignore
 import { assert } from "@jsenv/assert";
 import { requestCertificate } from "@jsenv/https-local";
+// https://github.com/un-ts/eslint-plugin-import-x/issues/305
+// eslint-disable-next-line import-x/no-extraneous-dependencies
 import { startServer, WebSocketResponse } from "@jsenv/server";
 import { WebSocket } from "ws";
 
