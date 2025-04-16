@@ -12,7 +12,6 @@
  */
 
 import { Abort } from "@jsenv/abort";
-
 import { spyProcessWarnings } from "@jsenv/abort/tests/process_warnings_spy.mjs";
 import { assert } from "@jsenv/assert";
 import { setMaxListeners } from "node:events";

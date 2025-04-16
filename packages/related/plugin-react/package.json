@@ -41,6 +41,7 @@
     "@jsenv/assert": "../../tooling/assert",
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/https-local": "../../tooling/https-local",
-    "@jsenv/plugin-explorer": "../plugin-explorer"
+    "@jsenv/plugin-explorer": "../plugin-explorer",
+    "@jsenv/plugin-react": "./"
   }
 }

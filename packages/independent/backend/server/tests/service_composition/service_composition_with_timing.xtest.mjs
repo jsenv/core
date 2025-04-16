@@ -1,5 +1,4 @@
 import { startServer } from "@jsenv/server";
-
 import { parseServerTimingHeader } from "@jsenv/server/src/server_timing/timing_header.js";
 import { snapshotTests } from "@jsenv/snapshot";
 

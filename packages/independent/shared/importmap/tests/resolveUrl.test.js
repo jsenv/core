@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-
 import { resolveUrl } from "@jsenv/importmap";
 
 // bare

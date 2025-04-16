@@ -1,6 +1,5 @@
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
-
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 startDevServer({

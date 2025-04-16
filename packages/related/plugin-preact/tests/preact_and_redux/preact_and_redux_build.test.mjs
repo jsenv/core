@@ -3,7 +3,6 @@ import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
-
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 if (

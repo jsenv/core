@@ -2,7 +2,6 @@ import { build, startBuildServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
-
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 
 const run = async ({ runtimeCompat, minification }) => {

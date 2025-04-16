@@ -1,5 +1,4 @@
 import { writeFileSync } from "@jsenv/filesystem";
-
 import { injectSupervisorIntoHTML } from "@jsenv/plugin-supervisor";
 import { snapshotSideEffects } from "@jsenv/snapshot";
 import { urlToFilename } from "@jsenv/urls";

@@ -32,6 +32,7 @@
     "@jsenv/filesystem": "../../independent/backend/filesystem",
     "@jsenv/plugin-preact": "../plugin-preact",
     "@jsenv/core": "../../../",
+    "@jsenv/plugin-as-js-classic": "./",
     "playwright": "1.51.1"
   }
 }
