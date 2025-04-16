@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import {
   copyEntry,
   ensureEmptyDirectory,
@@ -14,8 +13,7 @@ import {
   writeFile,
   writeSymbolicLink,
 } from "@jsenv/filesystem";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import {
   testDirectoryPresence,
   testFilePresence,

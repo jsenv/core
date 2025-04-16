@@ -6,8 +6,7 @@
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 import { chromium } from "playwright";
 

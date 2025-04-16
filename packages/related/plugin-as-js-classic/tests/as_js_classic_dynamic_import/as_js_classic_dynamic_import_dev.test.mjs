@@ -1,8 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 import { chromium } from "playwright";
 

@@ -1,6 +1,5 @@
 import { writeFileSync } from "@jsenv/filesystem";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import { injectSupervisorIntoHTML } from "@jsenv/plugin-supervisor";
 import { snapshotSideEffects } from "@jsenv/snapshot";
 import { urlToFilename } from "@jsenv/urls";

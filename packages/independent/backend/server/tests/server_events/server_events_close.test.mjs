@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import { ServerEvents, startServer } from "@jsenv/server";
 import { closeEventSource, openEventSource } from "./sse_test_helpers.mjs";
 

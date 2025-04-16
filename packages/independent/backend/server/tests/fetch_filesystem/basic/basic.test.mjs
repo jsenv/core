@@ -5,11 +5,9 @@ import {
   writeFileStructureSync,
   writeFileSync,
 } from "@jsenv/filesystem";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import { fetchFileSystem } from "@jsenv/server";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import { bufferToEtag } from "@jsenv/server/src/internal/etag.js";
 import { urlToFileSystemPath } from "@jsenv/urls";
 

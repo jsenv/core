@@ -2,8 +2,7 @@ import { writeFileSync } from "@jsenv/filesystem";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import {
   executeTestPlan,
   nodeWorkerThread,
@@ -11,8 +10,7 @@ import {
   reportAsJunitXml,
   reporterList,
 } from "@jsenv/test";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
 if (process.env.CI) {

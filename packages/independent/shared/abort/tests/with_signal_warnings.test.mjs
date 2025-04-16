@@ -11,11 +11,8 @@
  * UPDATE: not as useful since https://github.com/nodejs/node/pull/55816
  */
 
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
 import { Abort } from "@jsenv/abort";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import { spyProcessWarnings } from "@jsenv/abort/tests/process_warnings_spy.mjs";
 import { assert } from "@jsenv/assert";
 import { setMaxListeners } from "node:events";

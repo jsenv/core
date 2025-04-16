@@ -1,8 +1,5 @@
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
 import { startServer } from "@jsenv/server";
-// https://github.com/un-ts/eslint-plugin-import-x/issues/305
-// eslint-disable-next-line import-x/no-extraneous-dependencies
+
 import { parseServerTimingHeader } from "@jsenv/server/src/server_timing/timing_header.js";
 import { snapshotTests } from "@jsenv/snapshot";
 
