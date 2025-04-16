@@ -1,6 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { ensurePathnameTrailingSlash, urlToFileSystemPath } from "@jsenv/urls";
-
 import {
   copyEntry,
   ensureEmptyDirectory,
@@ -19,6 +17,7 @@ import {
   testFilePresence,
   toSecondsPrecision,
 } from "@jsenv/filesystem/tests/testHelpers.js";
+import { ensurePathnameTrailingSlash, urlToFileSystemPath } from "@jsenv/urls";
 
 const isWindows = process.platform === "win32";
 const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;

@@ -28,5 +28,8 @@
   "dependencies": {
     "@jsenv/filesystem": "4.15.2",
     "@jsenv/humanize": "1.5.2"
+  },
+  "devDependencies": {
+    "@jsenv/assert": "../assert"
   }
 }

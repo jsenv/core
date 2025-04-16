@@ -1,6 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { resolveUrl } from "@jsenv/urls";
-
 import {
   ensureEmptyDirectory,
   readFile,
@@ -9,6 +7,7 @@ import {
   writeSymbolicLink,
 } from "@jsenv/filesystem";
 import { testFilePresence } from "@jsenv/filesystem/tests/testHelpers.js";
+import { resolveUrl } from "@jsenv/urls";
 
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
 

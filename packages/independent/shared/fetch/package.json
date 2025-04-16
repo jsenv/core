@@ -38,6 +38,9 @@
     "node-fetch": "3.3.2"
   },
   "devDependencies": {
-    "@jsenv/server": "16.1.2"
+    "@jsenv/server": "../../independent/backend/server",
+    "@jsenv/filesystem": "../../independent/backend/filesystem",
+    "@jsenv/assert": "../assert",
+    "@jsenv/fetch": "./"
   }
 }

@@ -57,16 +57,26 @@
     "v8-to-istanbul": "9.3.0"
   },
   "devDependencies": {
-    "@jsenv/abort": "4.3.1",
-    "@jsenv/exception": "1.2.0",
-    "@jsenv/filesystem": "4.15.2",
-    "@jsenv/github-check-run": "0.3.1",
-    "@jsenv/node-esm-resolution": "1.2.1",
-    "@jsenv/url-meta": "8.5.7",
-    "@jsenv/urls": "2.7.4",
-    "@jsenv/utils": "2.3.1",
-    "@jsenv/humanize": "1.5.2",
+    "@jsenv/assert": "../independent/tooling/assert",
+    "@jsenv/snapshot": "../independent/tooling/snapshot",
+    "@jsenv/terminal-recorder": "../independent/tooling/terminal-recorder",
+    "@jsenv/server": "../independent/backend/server",
+    "@jsenv/core": "../../",
+    "@jsenv/os-metrics": "../../independent/tooling/os-metrics",
+    "@jsenv/importmap": "../../independent/tooling/importmap",
+    "@jsenv/plugin-explorer": "../plugin-explorer",
+    "@jsenv/test": "./",
+    "@jsenv/abort": "../../independent/tooling/abort",
+    "@jsenv/exception": "../../independent/backend/exception",
+    "@jsenv/filesystem": "../../independent/backend/filesystem",
+    "@jsenv/github-check-run": "../../independent/tooling/github-check-run",
+    "@jsenv/node-esm-resolution": "../../independent/tooling/node-esm-resolution",
+    "@jsenv/url-meta": "../../independent/tooling/url-meta",
+    "@jsenv/urls": "../../independent/tooling/urls",
+    "@jsenv/utils": "../../independent/tooling/utils",
+    "@jsenv/humanize": "../../independent/tooling/humanize",
     "strip-ansi": "7.1.0",
-    "supports-color": "10.0.0"
+    "supports-color": "10.0.0",
+    "prettier": "3.5.3"
   }
 }

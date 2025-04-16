@@ -11,11 +11,10 @@
  * UPDATE: not as useful since https://github.com/nodejs/node/pull/55816
  */
 
-import { assert } from "@jsenv/assert";
-import { setMaxListeners } from "node:events";
-
 import { Abort } from "@jsenv/abort";
 import { spyProcessWarnings } from "@jsenv/abort/tests/process_warnings_spy.mjs";
+import { assert } from "@jsenv/assert";
+import { setMaxListeners } from "node:events";
 
 const getLimitedAbortController = () => {
   const abortController = new AbortController();

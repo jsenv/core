@@ -1,6 +1,5 @@
-import { assert } from "@jsenv/assert";
-
 import { createCallbackListNotifiedOnce } from "@jsenv/abort";
+import { assert } from "@jsenv/assert";
 
 // remove before use
 {

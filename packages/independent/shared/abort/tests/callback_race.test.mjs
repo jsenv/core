@@ -1,6 +1,5 @@
-import { assert } from "@jsenv/assert";
-
 import { raceCallbacks } from "@jsenv/abort";
+import { assert } from "@jsenv/assert";
 
 // can cancel race
 {

@@ -1,7 +1,6 @@
+import { generateContentFrame } from "@jsenv/humanize";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { writeFileSync } from "node:fs";
-
-import { generateContentFrame } from "@jsenv/humanize";
 
 let number = 1;
 const test = (name, params) => {

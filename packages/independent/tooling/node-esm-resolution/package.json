@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/node-esm-resolution",
-  "version": "1.2.1",
+  "version": "1.2.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -23,5 +23,13 @@
     "/src/",
     "/main.js"
   ],
-  "sideEffects": false
+  "sideEffects": false,
+  "dependencies": {
+    "@jsenv/filesystem": "4.15.2"
+  },
+  "devDependencies": {
+    "@jsenv/snapshot": "../snapshot",
+    "@jsenv/assert": "../assert",
+    "@jsenv/node-esm-resolution": "./"
+  }
 }

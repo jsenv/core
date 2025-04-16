@@ -39,6 +39,11 @@
   "devDependencies": {
     "preact": "10.26.5",
     "react-redux": "9.2.0",
-    "redux": "5.0.1"
+    "redux": "5.0.1",
+    "playwright": "1.51.1",
+    "@jsenv/plugin-explorer": "../plugin-explorer",
+    "@jsenv/plugin-commonjs": "../plugin-commonjs",
+    "@jsenv/filesystem": "../../independent/backend/filesystem",
+    "@jsenv/plugin-preact": "./"
   }
 }

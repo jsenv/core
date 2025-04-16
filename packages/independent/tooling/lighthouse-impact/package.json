@@ -35,5 +35,11 @@
     "@jsenv/github-pull-request-impact": "1.8.29",
     "@jsenv/humanize": "1.5.2",
     "lighthouse": "12.5.1"
+  },
+  "devDependencies": {
+    "@jsenv/assert": "../assert",
+    "@jsenv/server": "../../backend/server",
+    "@jsenv/lighthouse-impact": "./",
+    "playwright": "1.51.1"
   }
 }

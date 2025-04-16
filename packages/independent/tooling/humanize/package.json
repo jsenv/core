@@ -45,6 +45,10 @@
   },
   "devDependencies": {
     "is-unicode-supported": "2.1.0",
-    "supports-color": "10.0.0"
+    "supports-color": "10.0.0",
+    "@jsenv/core": "../../../",
+    "@jsenv/snapshot": "../snapshot",
+    "@jsenv/assert": "../assert",
+    "@jsenv/terminal-text-size": "../terminal-text-size"
   }
 }

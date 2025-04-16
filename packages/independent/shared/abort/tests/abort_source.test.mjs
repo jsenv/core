@@ -1,6 +1,5 @@
-import { assert } from "@jsenv/assert";
-
 import { Abort } from "@jsenv/abort";
+import { assert } from "@jsenv/assert";
 
 // abort source can abort the operation,
 {

@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-
 import { applyAlgoToRepresentationData } from "@jsenv/integrity/src/integrity_algorithms.js";
 import { validateResponseIntegrity } from "@jsenv/integrity/src/integrity_validation.js";
 

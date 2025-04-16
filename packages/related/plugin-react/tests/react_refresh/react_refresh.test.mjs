@@ -1,9 +1,8 @@
 import { assert } from "@jsenv/assert";
-import { readFileSync, writeFileSync } from "node:fs";
-import { chromium } from "playwright";
-
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
+import { readFileSync, writeFileSync } from "node:fs";
+import { chromium } from "playwright";
 
 if (process.platform === "win32") {
   process.exit(0);

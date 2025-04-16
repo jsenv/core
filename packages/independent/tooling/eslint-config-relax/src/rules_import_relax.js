@@ -40,6 +40,7 @@ export const rulesImportRelax = {
       allowObject: true,
     },
   ],
+  "import-x/no-extraneous-dependencies": ["error"],
   "import-x/no-self-import": ["error"],
   "import-x/no-cycle": ["error"],
   "import-x/no-useless-path-segments": ["error"],

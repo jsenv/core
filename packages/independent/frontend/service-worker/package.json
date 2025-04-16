@@ -32,5 +32,16 @@
   "sideEffects": [
     "./tests/errors/project/dist/jsenv_service_worker_node_modules.js",
     "./tests/update/project/dist/jsenv_service_worker_node_modules.js"
-  ]
+  ],
+  "devDependencies": {
+    "@jsenv/core": "../../../",
+    "@jsenv/https-local": "../../tooling/https-local",
+    "@jsenv/fetch": "../../shared/fetch",
+    "@jsenv/filesystem": "../../tooling/filesystem",
+    "@jsenv/snapshot": "../../tooling/snapshot",
+    "@jsenv/humanize": "../../tooling/humanize",
+    "@jsenv/pwa": "../pwa",
+    "@jsenv/service-worker": "./",
+    "playwright": "1.51.1"
+  }
 }

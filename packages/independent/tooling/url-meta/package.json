@@ -24,5 +24,8 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false
+  "sideEffects": false,
+  "devDependencies": {
+    "@jsenv/assert": "../assert"
+  }
 }

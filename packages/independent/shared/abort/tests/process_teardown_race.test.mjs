@@ -1,6 +1,5 @@
-import { assert } from "@jsenv/assert";
-
 import { raceProcessTeardownEvents } from "@jsenv/abort";
+import { assert } from "@jsenv/assert";
 
 const test = (eventName) => {
   const numberOfListenersAtStart = process.listeners(eventName).length;

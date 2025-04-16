@@ -38,5 +38,9 @@
     "@jsenv/github-pull-request-impact": "1.8.29",
     "@jsenv/urls": "2.7.4",
     "@jsenv/humanize": "1.5.2"
+  },
+  "devDependencies": {
+    "@jsenv/assert": "../assert",
+    "@jsenv/file-size-impact": "./"
   }
 }

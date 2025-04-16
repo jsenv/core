@@ -49,7 +49,11 @@
   },
   "devDependencies": {
     "@jsenv/humanize": "../humanize/",
+    "@jsenv/snapshot": "../snapshot",
     "@jsenv/terminal-text-size": "../terminal-text-size/",
+    "@jsenv/assert": "./",
+    "@jsenv/core": "../../../",
+    "@jsenv/plugin-commonjs": "../../related/plugin-commonjs",
     "graphemer": "1.4.0",
     "strip-ansi": "7.1.0"
   }

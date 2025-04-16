@@ -29,5 +29,9 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false
+  "sideEffects": false,
+  "devDependencies": {
+    "@jsenv/assert": "../../tooling/assert",
+    "@jsenv/custom-elements-redefine": "./"
+  }
 }
