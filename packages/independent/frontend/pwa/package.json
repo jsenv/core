@@ -37,6 +37,7 @@
     "@jsenv/core": "../../../",
     "@jsenv/assert": "../../independent/tooling/assert",
     "@jsenv/https-local": "../../independent/tooling/https-local",
-    "@jsenv/plugin-explorer": "../../related/plugin-explorer"
+    "@jsenv/plugin-explorer": "../../related/plugin-explorer",
+    "playwright": "1.51.1"
   }
 }

@@ -35,6 +35,8 @@
     "@jsenv/humanize": "1.5.2"
   },
   "devDependencies": {
-    "@jsenv/assert": "../assert"
+    "@jsenv/assert": "../assert",
+    "@jsenv/performance-impact": "./",
+    "@jsenv/test": "../../related/test"
   }
 }
