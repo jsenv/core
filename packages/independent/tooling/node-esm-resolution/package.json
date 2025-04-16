@@ -28,6 +28,7 @@
     "@jsenv/filesystem": "4.15.2"
   },
   "devDependencies": {
+    "@jsenv/snapshot": "../snapshot",
     "@jsenv/assert": "../assert",
     "@jsenv/node-esm-resolution": "./"
   }
