@@ -58,6 +58,7 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../independent/tooling/assert",
+    "@jsenv/core": "../../",
     "@jsenv/abort": "4.3.1",
     "@jsenv/exception": "1.2.0",
     "@jsenv/filesystem": "4.15.2",

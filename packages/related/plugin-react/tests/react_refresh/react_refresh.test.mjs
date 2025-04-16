@@ -1,9 +1,10 @@
 import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
+// https://github.com/un-ts/eslint-plugin-import-x/issues/305
+// eslint-disable-next-line import-x/no-extraneous-dependencies
+import { jsenvPluginReact } from "@jsenv/plugin-react";
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
-
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginReact } from "@jsenv/plugin-react";
 
 if (process.platform === "win32") {
   process.exit(0);
