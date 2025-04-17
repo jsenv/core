@@ -633,7 +633,7 @@ const isDev = process.execArgv.some(
 const createException = (
   reason,
   {
-    jsenvCoreDirectoryUrl = import.meta.resolve("../../../"),
+    jsenvCoreDirectoryUrl = import.meta.resolve("../../../../"),
     rootDirectoryUrl,
     errorTransform = () => {},
   } = {},
