@@ -949,6 +949,52 @@ const extractDriveLetter = (resource) => {
   return null;
 };
 
+const getParentDirectoryUrl = (url) => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
+    }
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf(
+        "/",
+        slashLastIndex - 1,
+      );
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+
+const findSelfOrAncestorDirectoryUrl = (url, callback) => {
+  url = String(url);
+  if (!url.endsWith("/")) {
+    url = new URL("./", url).href;
+  }
+  while (url !== "file:///") {
+    if (callback(url)) {
+      return url;
+    }
+    url = getParentDirectoryUrl(url);
+  }
+  return null;
+};
+
+const lookupPackageDirectory = (currentUrl) => {
+  return findSelfOrAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
+    const potentialPackageJsonFileUrl = `${ancestorDirectoryUrl}package.json`;
+    return node_fs.existsSync(new URL(potentialPackageJsonFileUrl));
+  });
+};
+
 const generateWindowsEPERMErrorMessage = (
   error,
   { operation, path },
@@ -11242,6 +11288,23 @@ const parseHtml = ({ html, url, storeOriginalPositions = true }) => {
   return htmlAst;
 };
 
+const assertImportMap = (value) => {
+  if (value === null) {
+    throw new TypeError(`an importMap must be an object, got null`);
+  }
+
+  const type = typeof value;
+  if (type !== "object") {
+    throw new TypeError(`an importMap must be an object, received ${value}`);
+  }
+
+  if (Array.isArray(value)) {
+    throw new TypeError(
+      `an importMap must be an object, received array ${value}`,
+    );
+  }
+};
+
 // duplicated from @jsenv/log to avoid the dependency
 const createDetailedMessage = (message, details = {}) => {
   let string = `${message}`;
@@ -11258,89 +11321,72 @@ const createDetailedMessage = (message, details = {}) => {
     }`;
   });
 
-  return string
-};
-
-const assertImportMap = (value) => {
-  if (value === null) {
-    throw new TypeError(`an importMap must be an object, got null`)
-  }
-
-  const type = typeof value;
-  if (type !== "object") {
-    throw new TypeError(`an importMap must be an object, received ${value}`)
-  }
-
-  if (Array.isArray(value)) {
-    throw new TypeError(
-      `an importMap must be an object, received array ${value}`,
-    )
-  }
+  return string;
 };
 
 const hasScheme = (string) => {
-  return /^[a-zA-Z]{2,}:/.test(string)
+  return /^[a-zA-Z]{2,}:/.test(string);
+};
+
+const pathnameToParentPathname = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  if (slashLastIndex === -1) {
+    return "/";
+  }
+
+  return pathname.slice(0, slashLastIndex + 1);
 };
 
 const urlToScheme = (urlString) => {
   const colonIndex = urlString.indexOf(":");
-  if (colonIndex === -1) return ""
-  return urlString.slice(0, colonIndex)
-};
-
-const urlToPathname = (urlString) => {
-  return ressourceToPathname(urlToRessource(urlString))
-};
-
-const urlToRessource = (urlString) => {
-  const scheme = urlToScheme(urlString);
-
-  if (scheme === "file") {
-    return urlString.slice("file://".length)
-  }
-
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = urlString.slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    return afterProtocol.slice(pathnameSlashIndex)
-  }
-
-  return urlString.slice(scheme.length + 1)
-};
-
-const ressourceToPathname = (ressource) => {
-  const searchSeparatorIndex = ressource.indexOf("?");
-  return searchSeparatorIndex === -1
-    ? ressource
-    : ressource.slice(0, searchSeparatorIndex)
+  if (colonIndex === -1) return "";
+  return urlString.slice(0, colonIndex);
 };
 
 const urlToOrigin = (urlString) => {
   const scheme = urlToScheme(urlString);
 
   if (scheme === "file") {
-    return "file://"
+    return "file://";
   }
 
   if (scheme === "http" || scheme === "https") {
     const secondProtocolSlashIndex = scheme.length + "://".length;
     const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
 
-    if (pathnameSlashIndex === -1) return urlString
-    return urlString.slice(0, pathnameSlashIndex)
+    if (pathnameSlashIndex === -1) return urlString;
+    return urlString.slice(0, pathnameSlashIndex);
   }
 
-  return urlString.slice(0, scheme.length + 1)
+  return urlString.slice(0, scheme.length + 1);
 };
 
-const pathnameToParentPathname = (pathname) => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex === -1) {
-    return "/"
+const urlToPathname = (urlString) => {
+  return ressourceToPathname(urlToRessource(urlString));
+};
+
+const urlToRessource = (urlString) => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return urlString.slice("file://".length);
   }
 
-  return pathname.slice(0, slashLastIndex + 1)
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = urlString.slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    return afterProtocol.slice(pathnameSlashIndex);
+  }
+
+  return urlString.slice(scheme.length + 1);
+};
+
+const ressourceToPathname = (ressource) => {
+  const searchSeparatorIndex = ressource.indexOf("?");
+  return searchSeparatorIndex === -1
+    ? ressource
+    : ressource.slice(0, searchSeparatorIndex);
 };
 
 // could be useful: https://url.spec.whatwg.org/#url-miscellaneous
@@ -11349,29 +11395,29 @@ const pathnameToParentPathname = (pathname) => {
 const resolveUrl = (specifier, baseUrl) => {
   if (baseUrl) {
     if (typeof baseUrl !== "string") {
-      throw new TypeError(writeBaseUrlMustBeAString({ baseUrl, specifier }))
+      throw new TypeError(writeBaseUrlMustBeAString({ baseUrl, specifier }));
     }
     if (!hasScheme(baseUrl)) {
-      throw new Error(writeBaseUrlMustBeAbsolute({ baseUrl, specifier }))
+      throw new Error(writeBaseUrlMustBeAbsolute({ baseUrl, specifier }));
     }
   }
 
   if (hasScheme(specifier)) {
-    return specifier
+    return specifier;
   }
 
   if (!baseUrl) {
-    throw new Error(writeBaseUrlRequired({ baseUrl, specifier }))
+    throw new Error(writeBaseUrlRequired({ baseUrl, specifier }));
   }
 
   // scheme relative
   if (specifier.slice(0, 2) === "//") {
-    return `${urlToScheme(baseUrl)}:${specifier}`
+    return `${urlToScheme(baseUrl)}:${specifier}`;
   }
 
   // origin relative
   if (specifier[0] === "/") {
-    return `${urlToOrigin(baseUrl)}${specifier}`
+    return `${urlToOrigin(baseUrl)}${specifier}`;
   }
 
   const baseOrigin = urlToOrigin(baseUrl);
@@ -11379,13 +11425,13 @@ const resolveUrl = (specifier, baseUrl) => {
 
   if (specifier === ".") {
     const baseDirectoryPathname = pathnameToParentPathname(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}`
+    return `${baseOrigin}${baseDirectoryPathname}`;
   }
 
   // pathname relative inside
   if (specifier.slice(0, 2) === "./") {
     const baseDirectoryPathname = pathnameToParentPathname(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}${specifier.slice(2)}`
+    return `${baseOrigin}${baseDirectoryPathname}${specifier.slice(2)}`;
   }
 
   // pathname relative outside
@@ -11406,17 +11452,17 @@ const resolveUrl = (specifier, baseUrl) => {
     const resolvedPathname = `${importerFolders.join(
       "/",
     )}/${unresolvedPathname}`;
-    return `${baseOrigin}${resolvedPathname}`
+    return `${baseOrigin}${resolvedPathname}`;
   }
 
   // bare
   if (basePathname === "") {
-    return `${baseOrigin}/${specifier}`
+    return `${baseOrigin}/${specifier}`;
   }
   if (basePathname[basePathname.length] === "/") {
-    return `${baseOrigin}${basePathname}${specifier}`
+    return `${baseOrigin}${basePathname}${specifier}`;
   }
-  return `${baseOrigin}${pathnameToParentPathname(basePathname)}${specifier}`
+  return `${baseOrigin}${pathnameToParentPathname(basePathname)}${specifier}`;
 };
 
 const writeBaseUrlMustBeAString = ({
@@ -11448,7 +11494,7 @@ ${specifier}`;
 
 const tryUrlResolution = (string, url) => {
   const result = resolveUrl(string, url);
-  return hasScheme(result) ? result : null
+  return hasScheme(result) ? result : null;
 };
 
 const resolveSpecifier = (specifier, importer) => {
@@ -11458,14 +11504,14 @@ const resolveSpecifier = (specifier, importer) => {
     specifier.startsWith("./") ||
     specifier.startsWith("../")
   ) {
-    return resolveUrl(specifier, importer)
+    return resolveUrl(specifier, importer);
   }
 
   if (hasScheme(specifier)) {
-    return specifier
+    return specifier;
   }
 
-  return null
+  return null;
 };
 
 const applyImportMap = ({
@@ -11478,7 +11524,7 @@ const applyImportMap = ({
         specifier,
         importer,
       }),
-    )
+    );
   },
   onImportMapping = () => {},
 }) => {
@@ -11489,7 +11535,7 @@ const applyImportMap = ({
         specifier,
         importer,
       }),
-    )
+    );
   }
   if (importer) {
     if (typeof importer !== "string") {
@@ -11498,7 +11544,7 @@ const applyImportMap = ({
           importer,
           specifier,
         }),
-      )
+      );
     }
     if (!hasScheme(importer)) {
       throw new Error(
@@ -11506,7 +11552,7 @@ const applyImportMap = ({
           importer,
           specifier,
         }),
-      )
+      );
     }
   }
 
@@ -11520,7 +11566,7 @@ const applyImportMap = ({
         return (
           scopeSpecifier === importer ||
           specifierIsPrefixOf(scopeSpecifier, importer)
-        )
+        );
       },
     );
     if (scopeSpecifierMatching) {
@@ -11532,7 +11578,7 @@ const applyImportMap = ({
         onImportMapping,
       );
       if (mappingFromScopes !== null) {
-        return mappingFromScopes
+        return mappingFromScopes;
       }
     }
   }
@@ -11546,15 +11592,15 @@ const applyImportMap = ({
       onImportMapping,
     );
     if (mappingFromImports !== null) {
-      return mappingFromImports
+      return mappingFromImports;
     }
   }
 
   if (specifierUrl) {
-    return specifierUrl
+    return specifierUrl;
   }
 
-  throw createBareSpecifierError({ specifier, importer })
+  throw createBareSpecifierError({ specifier, importer });
 };
 
 const applyMappings = (
@@ -11578,7 +11624,7 @@ const applyMappings = (
         before: specifierNormalized,
         after: address,
       });
-      return address
+      return address;
     }
     if (specifierIsPrefixOf(specifierCandidate, specifierNormalized)) {
       const address = mappings[specifierCandidate];
@@ -11593,18 +11639,18 @@ const applyMappings = (
         before: specifierNormalized,
         after: addressFinal,
       });
-      return addressFinal
+      return addressFinal;
     }
   }
 
-  return null
+  return null;
 };
 
 const specifierIsPrefixOf = (specifierHref, href) => {
   return (
     specifierHref[specifierHref.length - 1] === "/" &&
     href.startsWith(specifierHref)
-  )
+  );
 };
 
 const sortImports = (imports) => {
@@ -11616,7 +11662,7 @@ const sortImports = (imports) => {
       mappingsSorted[name] = imports[name];
     });
 
-  return mappingsSorted
+  return mappingsSorted;
 };
 
 const sortScopes = (scopes) => {
@@ -11628,18 +11674,18 @@ const sortScopes = (scopes) => {
       scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
     });
 
-  return scopesSorted
+  return scopesSorted;
 };
 
 const compareLengthOrLocaleCompare = (a, b) => {
-  return b.length - a.length || a.localeCompare(b)
+  return b.length - a.length || a.localeCompare(b);
 };
 
 const normalizeImportMap = (importMap, baseUrl) => {
   assertImportMap(importMap);
 
   if (!isStringOrUrl(baseUrl)) {
-    throw new TypeError(formulateBaseUrlMustBeStringOrUrl({ baseUrl }))
+    throw new TypeError(formulateBaseUrlMustBeStringOrUrl({ baseUrl }));
   }
 
   const { imports, scopes } = importMap;
@@ -11647,19 +11693,19 @@ const normalizeImportMap = (importMap, baseUrl) => {
   return {
     imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
     scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined,
-  }
+  };
 };
 
 const isStringOrUrl = (value) => {
   if (typeof value === "string") {
-    return true
+    return true;
   }
 
   if (typeof URL === "function" && value instanceof URL) {
-    return true
+    return true;
   }
 
-  return false
+  return false;
 };
 
 const normalizeMappings = (mappings, baseUrl) => {
@@ -11675,7 +11721,7 @@ const normalizeMappings = (mappings, baseUrl) => {
           specifier,
         }),
       );
-      return
+      return;
     }
 
     const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
@@ -11689,7 +11735,7 @@ const normalizeMappings = (mappings, baseUrl) => {
           specifier,
         }),
       );
-      return
+      return;
     }
 
     if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
@@ -11699,12 +11745,12 @@ const normalizeMappings = (mappings, baseUrl) => {
           specifier,
         }),
       );
-      return
+      return;
     }
     mappingsNormalized[specifierResolved] = addressUrl;
   });
 
-  return sortImports(mappingsNormalized)
+  return sortImports(mappingsNormalized);
 };
 
 const normalizeScopes = (scopes, baseUrl) => {
@@ -11720,13 +11766,13 @@ const normalizeScopes = (scopes, baseUrl) => {
           baseUrl,
         }),
       );
-      return
+      return;
     }
     const scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
     scopesNormalized[scopeUrl] = scopeValueNormalized;
   });
 
-  return sortScopes(scopesNormalized)
+  return sortScopes(scopesNormalized);
 };
 
 const formulateBaseUrlMustBeStringOrUrl = ({
@@ -11784,9 +11830,9 @@ const pathnameToExtension = (pathname) => {
   }
 
   const dotLastIndex = pathname.lastIndexOf(".");
-  if (dotLastIndex === -1) return ""
+  if (dotLastIndex === -1) return "";
   // if (dotLastIndex === pathname.length - 1) return ""
-  return pathname.slice(dotLastIndex)
+  return pathname.slice(dotLastIndex);
 };
 
 const resolveImport = ({
@@ -11814,20 +11860,20 @@ const resolveImport = ({
     url = applyDefaultExtension({ url, importer, defaultExtension });
   }
 
-  return url
+  return url;
 };
 
 const applyDefaultExtension = ({ url, importer, defaultExtension }) => {
   if (urlToPathname(url).endsWith("/")) {
-    return url
+    return url;
   }
 
   if (typeof defaultExtension === "string") {
     const extension = pathnameToExtension(url);
     if (extension === "") {
-      return `${url}${defaultExtension}`
+      return `${url}${defaultExtension}`;
     }
-    return url
+    return url;
   }
 
   if (defaultExtension === true) {
@@ -11835,11 +11881,11 @@ const applyDefaultExtension = ({ url, importer, defaultExtension }) => {
     if (extension === "" && importer) {
       const importerPathname = urlToPathname(importer);
       const importerExtension = pathnameToExtension(importerPathname);
-      return `${url}${importerExtension}`
+      return `${url}${importerExtension}`;
     }
   }
 
-  return url
+  return url;
 };
 
 const readImportmapFromFile = (importmapFileUrl) => {
@@ -12015,9 +12061,9 @@ const resolve = (
   file,
   {
     logLevel = "error",
-    rootDirectoryUrl,
     packageConditions = ["browser", "import"],
     ambiguousExtensions = [".js", ".html", ".jsx", ".ts", ".tsx"],
+    rootDirectoryUrl,
     importmapFileRelativeUrl,
     caseSensitive = true,
     // NICE TO HAVE: allow more control on when magic resolution applies:
@@ -12026,10 +12072,6 @@ const resolve = (
     magicExtensions,
   },
 ) => {
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-    rootDirectoryUrl,
-    "rootDirectoryUrl",
-  );
   const logger = createLogger({ logLevel });
   logger.debug(`
 resolve import.
@@ -12037,8 +12079,6 @@ resolve import.
 ${source}
 --- importer ---
 ${file}
---- root directory path ---
-${urlToFileSystemPath(rootDirectoryUrl)}
 --- package conditions ---
 ${packageConditions.join(",")}`);
 
@@ -12124,6 +12164,9 @@ ${packageConditions.join(",")}`);
       !nodeInPackageConditions &&
       specifier[0] === "/"
     ) {
+      if (!rootDirectoryUrl) {
+        rootDirectoryUrl = lookupPackageDirectory(importer);
+      }
       return onUrl(new URL(specifier.slice(1), rootDirectoryUrl).href, {
         resolvedBy: "url",
       });
@@ -12253,6 +12296,10 @@ const tryToResolveWithImportmap = ({
           `importmapFileRelativeUrl must be a string, got ${importmapFileRelativeUrl}`,
         );
       }
+      rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        rootDirectoryUrl,
+        "rootDirectoryUrl",
+      );
       const importmapFileUrl = applyUrlResolution(
         importmapFileRelativeUrl,
         rootDirectoryUrl,
