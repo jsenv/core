@@ -1,5 +1,5 @@
 {
-  "name": "sandbox",
+  "name": "@oto/playground",
   "version": "0.0.0",
   "private": true,
   "dependencies": {
