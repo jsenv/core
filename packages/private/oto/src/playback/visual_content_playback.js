@@ -1,5 +1,5 @@
 import { computed, signal } from "@preact/signals";
-import { gamePausedSignal } from "/game_pause/game_pause.js";
+import { gamePausedSignal } from "oto/src/game_pause/game_pause.js";
 
 export const innerVisualContentPlaybackIsPreventedSignal = signal(false);
 export const visualContentPlaybackIsPreventedSignal = computed(() => {

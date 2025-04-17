@@ -6,6 +6,7 @@ import {
   assertAndNormalizeDirectoryUrl,
   ensureWindowsDriveLetter,
   getRealFileSystemUrlSync,
+  lookupPackageDirectory,
 } from "@jsenv/filesystem";
 import {
   applyFileSystemMagicResolution,
@@ -134,6 +135,9 @@ ${packageConditions.join(",")}`);
       !nodeInPackageConditions &&
       specifier[0] === "/"
     ) {
+      if (!rootDirectoryUrl) {
+        rootDirectoryUrl = lookupPackageDirectory(importer);
+      }
       return onUrl(new URL(specifier.slice(1), rootDirectoryUrl).href, {
         resolvedBy: "url",
       });

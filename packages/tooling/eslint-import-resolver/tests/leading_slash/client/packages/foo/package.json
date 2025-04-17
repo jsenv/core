@@ -1,7 +1,0 @@
-{
-  "name": "foo",
-  "private": true,
-  "exports": {
-    "./*": "./src/*"
-  }
-}
