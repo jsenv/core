@@ -46,8 +46,7 @@ export const jsenvPluginNodeEsmResolution = (
         if (config === true) {
           resolver = nodeEsmResolverDefault;
         } else if (config === false) {
-          // resolverMap.set(urlType, () => null);
-          continue;
+          resolver = null;
         } else if (typeof config === "object") {
           resolver = resolverFromObject(config, { kitchenContext, urlType });
         } else {
@@ -61,6 +60,9 @@ export const jsenvPluginNodeEsmResolution = (
         } else {
           resolverMap.set(urlType, resolver);
         }
+      }
+      if (!anyTypeResolver) {
+        anyTypeResolver = nodeEsmResolverDefault;
       }
 
       if (!resolverMap.has("js_module")) {
@@ -87,8 +89,11 @@ export const jsenvPluginNodeEsmResolution = (
       }
       const urlType = urlTypeFromReference(reference);
       const resolver = resolverMap.get(urlType);
-      if (resolver) {
-        return resolver(reference);
+      if (resolver !== undefined) {
+        if (typeof resolver === "function") {
+          return resolver(reference);
+        }
+        return resolver;
       }
       if (anyTypeResolver) {
         return anyTypeResolver(reference);

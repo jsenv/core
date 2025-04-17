@@ -8,10 +8,10 @@ import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { chromium } from "playwright";
 
 let debug = false;
-const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
-const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
+const sourceDirectoryUrl = import.meta.resolve("./git_ignored/");
+const snapshotsDirectoryUrl = import.meta.resolve("./snapshots/");
 replaceFileStructureSync({
-  from: new URL("./fixtures/0_at_start/", import.meta.url),
+  from: import.meta.resolve("./fixtures/0_at_start/"),
   to: sourceDirectoryUrl,
 });
 

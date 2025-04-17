@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./preact_logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ImageData test</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative">
+      <canvas id="start" width="10" height="10"></canvas>
+      <canvas id="middle" width="10" height="10"></canvas>
+      <canvas id="end" width="10" height="10"></canvas>
+    </div>
+    <script type="module">
+      const startCanvas = document.querySelector("#start");
+      const middleCanvas = document.querySelector("#middle");
+      const endCanvas = document.querySelector("#end");
+      const startContext = startCanvas.getContext("2d");
+      const middleContext = middleCanvas.getContext("2d");
+      const endContext = endCanvas.getContext("2d");
+
+      const rToReplace = 255;
+      const gToReplace = 165;
+      const bToReplace = 0;
+      startContext.fillStyle = `rgb(${rToReplace}, ${gToReplace}, ${bToReplace})`;
+      startContext.fillRect(0, 0, startCanvas.width, startCanvas.height);
+      const startImageData = startContext.getImageData(
+        0,
+        0,
+        startCanvas.width,
+        startCanvas.height,
+      );
+      const middleImageData = new ImageData(
+        startCanvas.width,
+        startCanvas.height,
+      );
+      const pixels = startImageData.data;
+      let i = 0;
+      let j = 4 * 100;
+      while (i < j) {
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        if (r === rToReplace && g === gToReplace && b === bToReplace) {
+          pixels[i + 3] = 125; // make it semi transparent
+
+          middleImageData.data[i] = 155;
+          middleImageData.data[i + 1] = 155;
+          middleImageData.data[i + 2] = 155;
+          middleImageData.data[i + 3] = 255;
+        }
+        i += 4;
+      }
+      middleContext.putImageData(startImageData, 0, 0);
+      endContext.putImageData(middleImageData, 0, 0);
+
+      const endImageData = endContext.getImageData(
+        0,
+        0,
+        startCanvas.width,
+        startCanvas.height,
+      );
+      console.log({ startImageData, middleImageData, endImageData });
+    </script>
+  </body>
+</html>
