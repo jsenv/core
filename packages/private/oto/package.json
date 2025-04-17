@@ -6,6 +6,9 @@
   "volta": {
     "node": "22.13.1"
   },
+  "exports": {
+    "./*": "./src/*"
+  },
   "scripts": {
     "start": "npm run dev -- --open",
     "dev": "node ./scripts/dev.mjs",
