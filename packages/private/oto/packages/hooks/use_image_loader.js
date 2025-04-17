@@ -1,5 +1,5 @@
+import { useSubscription } from "hooks/use_subscription.js";
 import { useRef } from "preact/hooks";
-import { useSubscription } from "/utils/use_subscription.js";
 
 export const useImageLoader = (source) => {
   const dataRef = useRef({

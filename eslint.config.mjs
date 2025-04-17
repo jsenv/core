@@ -13,11 +13,12 @@ export default [
       "packages/related/cli/template-web-preact/src/**/*",
       "packages/related/cli/template-web-react/src/**/*",
       "packages/**/frontend/**/*.js",
+      "packages/private/oto/src/**/*.js",
+      "packages/private/oto/src/**/*.jsx",
+      "packages/private/oto/packages/**/*.js",
+      "packages/private/oto/packages/**/*.jsx",
     ],
-    browserAndNodeFiles: [
-      "packages/**/shared/**/*.js",
-      "packages/**/assert/**/*.js",
-    ],
+    browserAndNodeFiles: ["packages/**/assert/**/*.js"],
     jsxPragmaAuto: true,
   }),
   {

@@ -1,5 +1,3 @@
-/* eslint-env browser */
-
 import { batch, computed, effect, signal } from "@preact/signals";
 import { useDrawImage } from "hooks/use_draw_image.js";
 import { useImageLoader } from "hooks/use_image_loader.js";

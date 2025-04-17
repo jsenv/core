@@ -2,5 +2,9 @@
   "name": "router",
   "private": true,
   "type": "module",
-  "main": "./index.js"
+  "main": "./index.js",
+  "dependencies": {
+    "@preact/signals": "2.0.3",
+    "preact": "10.26.5"
+  }
 }
