@@ -42,6 +42,8 @@
     "./packages/backend/*",
     "./packages/frontend/*",
     "./packages/internal/*",
+    "./packages/private/*",
+    "./packages/private/oto/packages/*",
     "./packages/related/*",
     "./packages/related/cli/*",
     "./packages/tooling/*"
@@ -74,7 +76,8 @@
     "dev:route-inspector": "node --watch --conditions=dev:jsenv ./packages/backend/server/tests/route_inspector/start_server.js",
     "playwright:install": "npx playwright install-deps && npx playwright install",
     "https:setup": "npx @jsenv/https-local setup",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "oto:start": "npm run start -w oto"
   },
   "dependencies": {
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
