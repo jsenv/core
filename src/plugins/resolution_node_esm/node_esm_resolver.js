@@ -51,13 +51,33 @@ export const createNodeEsmResolver = ({
       return null; // let it to jsenv_web_resolution
     }
     const { specifier } = reference;
-    const conditions = buildPackageConditions(specifier, parentUrl);
-    const { url, type, isMain, packageDirectoryUrl } = applyNodeEsmResolution({
+    // specifiers like "#something" have a special meaning for Node.js
+    // but can also be used in .css and .html files for example and should not be modified
+    // by node esm resolution
+    const webResolutionFallback =
+      ownerUrlInfo.type === "css" ||
+      ownerUrlInfo.type === "html" ||
+      ownerUrlInfo.type === "svg";
+    const conditions = buildPackageConditions(specifier, parentUrl, {
+      webResolutionFallback,
+    });
+    let resolution;
+    const nodeEsmResolutionParams = {
       conditions,
       parentUrl,
       specifier,
       preservesSymlink,
-    });
+    };
+    if (webResolutionFallback) {
+      try {
+        resolution = applyNodeEsmResolution(nodeEsmResolutionParams);
+      } catch {
+        return null; // delegate to web_resolution plugin
+      }
+    } else {
+      resolution = applyNodeEsmResolution(nodeEsmResolutionParams);
+    }
+    const { url, type, isMain, packageDirectoryUrl } = resolution;
     // try to give a more meaningful filename after build
     if (isMain && packageDirectoryUrl) {
       const basename = urlToBasename(url);
@@ -126,12 +146,26 @@ const createBuildPackageConditions = (
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   const processArgConditions = readCustomConditionsFromProcessArgs();
-  const devResolver = (specifier, importer) => {
+  const devResolver = (specifier, importer, { webResolutionFallback }) => {
     if (isBareSpecifier(specifier)) {
-      const { url } = applyNodeEsmResolution({
-        specifier,
-        parentUrl: importer,
-      });
+      let url;
+      if (webResolutionFallback) {
+        try {
+          const resolution = applyNodeEsmResolution({
+            specifier,
+            parentUrl: importer,
+          });
+          url = resolution.url;
+        } catch {
+          url = new URL(specifier, importer).href;
+        }
+      } else {
+        const resolution = applyNodeEsmResolution({
+          specifier,
+          parentUrl: importer,
+        });
+        url = resolution.url;
+      }
       return !url.includes("/node_modules/");
     }
     return !importer.includes("/node_modules/");
@@ -235,12 +269,12 @@ const createBuildPackageConditions = (
   }
 
   const conditionCandidateArray = Object.keys(conditionResolvers);
-  return (specifier, importer) => {
+  return (specifier, importer, params) => {
     const conditions = [];
     for (const conditionCandidate of conditionCandidateArray) {
       const conditionResolver = conditionResolvers[conditionCandidate];
       if (typeof conditionResolver === "function") {
-        if (conditionResolver(specifier, importer)) {
+        if (conditionResolver(specifier, importer, params)) {
           conditions.push(conditionCandidate);
         }
       } else if (conditionResolver) {
