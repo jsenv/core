@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sprite glow demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative">
+      <div
+        style="
+          position: absolute;
+          width: 200px;
+          height: 200px;
+          background-image: url(&quot;./background.png&quot;);
+          background-position-x: -260px;
+        "
+      ></div>
+      <canvas
+        width="80"
+        height="80"
+        style="width: 200px; height: 200px; position: relative; z-index: 1"
+      ></canvas>
+      <button>Attack</button>
+    </div>
+    <script type="module">
+      import { glow } from "./glow.js";
+
+      const spriteUrl = import.meta.resolve("./sprite.png");
+      const canvas = document.querySelector("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+
+      const replaceColorWithTransparentPixels = (image, color) => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0);
+        const imageData = ctx.getImageData(0, 0, image.width, image.height);
+        const pixels = imageData.data;
+
+        let shouldReplace;
+        const [first] = color;
+        if (typeof first === "object") {
+          shouldReplace = (r, g, b) => {
+            return color.some((c) => {
+              return r === c[0] && g === c[1] && b === c[2];
+            });
+          };
+        } else {
+          const rToReplace = parseInt(color[0]);
+          const gToReplace = parseInt(color[1]);
+          const bToReplace = parseInt(color[2]);
+          shouldReplace = (r, g, b) => {
+            return r === rToReplace && g === gToReplace && b === bToReplace;
+          };
+        }
+
+        for (let i = 0, n = pixels.length; i < n; i += 4) {
+          const r = pixels[i];
+          const g = pixels[i + 1];
+          const b = pixels[i + 2];
+          if (shouldReplace(r, g, b)) {
+            pixels[i + 3] = 0;
+          }
+        }
+        ctx.putImageData(imageData, 0, 0);
+        return canvas;
+      };
+
+      const enemyWidth = canvas.width;
+      const enemyHeight = canvas.height;
+      const image = new Image();
+      image.onload = () => {
+        const source = replaceColorWithTransparentPixels(image, [0, 128, 128]);
+        context.drawImage(
+          source,
+          75,
+          10,
+          enemyWidth,
+          enemyHeight,
+          0,
+          0,
+          enemyWidth,
+          enemyHeight,
+        );
+      };
+      image.src = spriteUrl;
+
+      const button = document.querySelector("button");
+
+      button.onclick = () => {
+        glow(canvas);
+      };
+    </script>
+  </body>
+</html>

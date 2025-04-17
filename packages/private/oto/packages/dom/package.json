@@ -1,0 +1,7 @@
+{
+  "name": "dom",
+  "private": true,
+  "exports": {
+    ".": "./src/dom.js"
+  }
+}

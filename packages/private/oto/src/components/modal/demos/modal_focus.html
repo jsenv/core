@@ -1,0 +1,84 @@
+<!--
+
+This scenario is to test
+1. escape can be used to close modal even when it does not have focusable elements
+2. focus is trapped inside the modal 
+3. focus is restored back to the open button when closed (even when button is rendered by jsx)
+
+-->
+
+<!doctype html>
+<html>
+  <head>
+    <title>Modal focus demo</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { useActiveElement, addActiveElementEffect } from "dom";
+      // eslint-disable-next-line no-unused-vars
+      import { Modal } from "../modal.jsx";
+
+      addActiveElementEffect((el) => {
+        console.log(el);
+      });
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const activeElement = useActiveElement();
+        const [opened, openedSetter] = useState(false);
+        const openDialog = () => {
+          openedSetter(true);
+        };
+        const closeDialog = () => {
+          openedSetter(false);
+        };
+
+        const [secondOpened, secondOpenedSetter] = useState(false);
+        const openSecondDialog = () => {
+          secondOpenedSetter(true);
+        };
+        const closeSecondDialog = () => {
+          secondOpenedSetter(false);
+        };
+
+        return (
+          <>
+            <p>Active element: {activeElement?.id || activeElement?.tagName}</p>
+            <button
+              id="button_open_modal"
+              onClick={() => {
+                openDialog();
+              }}
+            >
+              Open text only modal
+            </button>
+            <Modal
+              id="text_only_modal"
+              opened={opened}
+              onRequestClose={closeDialog}
+            >
+              Hello world
+            </Modal>
+
+            <button onClick={openSecondDialog}>
+              Open modal containing focusable elements
+            </button>
+            <Modal opened={secondOpened} onRequestClose={closeSecondDialog}>
+              <button>A</button>
+              <button>B</button>
+            </Modal>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

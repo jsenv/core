@@ -1,0 +1,132 @@
+<!--
+
+This scenario is to test
+
+1. Modal can have a fixed header and/or a fixed footer
+2. Scroll apply only to the content (not the header and footer)
+
+-->
+
+<!doctype html>
+<html>
+  <head>
+    <title>Modal header and footer demo</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      // eslint-disable-next-line no-unused-vars
+      import { Modal } from "../modal.jsx";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [firstOpened, firstOpenedSetter] = useState(false);
+        const openFirst = () => {
+          firstOpenedSetter(true);
+        };
+        const closeFirst = () => {
+          firstOpenedSetter(false);
+        };
+
+        const [secondOpened, secondOpenedSetter] = useState(false);
+        const openSecond = () => {
+          secondOpenedSetter(true);
+        };
+        const closeSecond = () => {
+          secondOpenedSetter(false);
+        };
+
+        return (
+          <>
+            <button onClick={openFirst}>Open text only modal</button>
+            <Modal
+              opened={firstOpened}
+              onRequestClose={closeFirst}
+              width="400"
+              height="200"
+              insert={{
+                Top: (
+                  <div
+                    style={{
+                      height: "30px",
+                      background: "red",
+                    }}
+                  >
+                    Header
+                  </div>
+                ),
+                Bottom: (
+                  <div
+                    style={{
+                      height: "20px",
+                      background: "orange",
+                    }}
+                  >
+                    Footer
+                  </div>
+                ),
+              }}
+            >
+              <p>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+                eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
+                enim ad minim veniam, quis nostrud exercitation ullamco laboris
+                nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor
+                in reprehenderit in voluptate velit esse cillum dolore eu fugiat
+                nulla pariatur. Excepteur sint occaecat cupidatat non proident,
+                sunt in culpa qui officia deserunt mollit anim id est laborum.
+              </p>
+              <p>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+                eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
+                enim ad minim veniam, quis nostrud exercitation ullamco laboris
+                nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor
+                in reprehenderit in voluptate velit esse cillum dolore eu fugiat
+                nulla pariatur. Excepteur sint occaecat cupidatat non proident,
+                sunt in culpa qui officia deserunt mollit anim id est laborum.
+              </p>
+            </Modal>
+
+            <button onClick={openSecond}>
+              Open modal containing focusable elements
+            </button>
+            <Modal
+              opened={secondOpened}
+              onRequestClose={closeSecond}
+              insert={{
+                Top: (
+                  <div
+                    style={{
+                      height: "60px",
+                      background: "red",
+                    }}
+                  >
+                    Header
+                  </div>
+                ),
+              }}
+            >
+              Small message{" "}
+              <button
+                onClick={() => {
+                  // eslint-disable-next-line no-alert
+                  window.alert("click");
+                }}
+              >
+                Click
+              </button>
+            </Modal>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

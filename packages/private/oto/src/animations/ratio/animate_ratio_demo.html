@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Animate ratio demo</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal, computed } from "@preact/signals";
+      import { animateRatio } from "./animate_ratio.js";
+
+      const ratioSignal = signal(0);
+      const canPlaySignal = computed(() => {
+        return (
+          stateSignal.value === "idle" ||
+          stateSignal.value === "finished" ||
+          stateSignal.value === "paused"
+        );
+      });
+      const canPauseSignal = computed(() => {
+        return stateSignal.value === "running";
+      });
+      const durationSignal = signal(1000);
+      const ratioAnimation = animateRatio({
+        effect: (ratio) => {
+          ratioSignal.value = ratio;
+        },
+        duration: durationSignal.value,
+        autoplay: false,
+      });
+      const stateSignal = ratioAnimation.playbackController.stateSignal;
+      const play = () => {
+        ratioAnimation.duration = durationSignal.value;
+        ratioAnimation.play();
+      };
+      const pause = () => {
+        ratioAnimation.pause();
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div>
+            <div></div>
+
+            <fieldset>
+              <legend>Controls</legend>
+
+              <button disabled={!canPlaySignal.value} onClick={play}>
+                Start
+              </button>
+              <button disabled={!canPauseSignal.value} onClick={pause}>
+                Pause
+              </button>
+              <label>
+                <input
+                  type="number"
+                  value={durationSignal.value}
+                  onInput={(event) => {
+                    durationSignal.value = Number(event.target.valueAsNumber);
+                  }}
+                  min="100"
+                  max="5000"
+                  step="300"
+                />
+                Duration
+              </label>
+            </fieldset>
+
+            <div>
+              <div>state: {stateSignal.value}</div>
+              <div>ratio: {ratioSignal.value}</div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

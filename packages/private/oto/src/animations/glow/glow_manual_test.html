@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./preact_logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Glow test</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative">
+      <fieldset>
+        <legend>Controls</legend>
+        From: <input name="from" type="text" /> To:
+        <input name="to" type="text" />
+        <br />
+        <button name="play">Play</button>
+        <button name="pause">Pause</button>
+        <button name="finish">Finish</button>
+      </fieldset>
+      <div>
+        <canvas id="output"></canvas>
+        <div id="steps"></div>
+      </div>
+    </div>
+    <script type="module">
+      import { glow } from "./glow.js";
+      import { EASING } from "../utils/easing.js";
+
+      const canvas = document.querySelector("canvas");
+      const context = canvas.getContext("2d");
+      context.beginPath(); // Start a new path
+      context.rect(0, 0, canvas.width, canvas.height); // Add a rectangle to the current path
+      context.fill();
+
+      let from = "black";
+      const fromInput = document.querySelector('[name="from"]');
+      fromInput.value = from;
+      fromInput.oninput = () => {
+        from = fromInput.value;
+        update();
+      };
+      let to = "green";
+      const toInput = document.querySelector('[name="to"]');
+      toInput.value = to;
+      toInput.oninput = () => {
+        to = toInput.value;
+        update();
+      };
+
+      let animation;
+      const playButton = document.querySelector('[name="play"]');
+      playButton.onclick = () => {
+        if (!animation) {
+          animation = glow(canvas, {
+            fromColor: from,
+            toColor: to,
+            duration: 1500,
+            iterations: 2,
+            fps: 10,
+            effect: () => {
+              document.querySelector("#steps").innerHTML +=
+                `${animation.color.join(",")}<br />`;
+            },
+            easing: EASING.LINEAR,
+          });
+          animation.onfinish = () => {
+            update();
+          };
+        } else {
+          animation.play();
+        }
+        update();
+      };
+      const pauseButton = document.querySelector('[name="pause"]');
+      pauseButton.onclick = () => {
+        animation.pause();
+        update();
+      };
+      const finishButton = document.querySelector('[name="finish"]');
+      finishButton.onclick = () => {
+        animation.finish();
+        update();
+      };
+
+      const update = () => {
+        if (!animation) {
+          playButton.disabled = false;
+          pauseButton.disabled = true;
+          finishButton.disabled = true;
+          return;
+        }
+        if (animation.playState === "running") {
+          playButton.disabled = true;
+          pauseButton.disabled = false;
+          finishButton.disabled = false;
+          return;
+        }
+        if (animation.playState === "paused") {
+          playButton.disabled = false;
+          pauseButton.disabled = true;
+          finishButton.disabled = false;
+          return;
+        }
+        if (animation.playState === "finished") {
+          playButton.disabled = false;
+          pauseButton.disabled = true;
+          finishButton.disabled = true;
+          return;
+        }
+      };
+      update();
+    </script>
+  </body>
+</html>

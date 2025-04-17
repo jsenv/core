@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Animate element demo</title>
+  </head>
+  <body>
+    <div
+      id="animated_el"
+      style="width: 200px; height: 50px; background: green"
+    ></div>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { computed } from "@preact/signals";
+      import { animateElement } from "./animate_element.js";
+
+      const elementAnimation = animateElement(
+        document.querySelector("#animated_el"),
+        {
+          from: {
+            x: 0,
+          },
+          to: {
+            x: 100,
+          },
+          duration: 1000,
+          onstatechange: (state) => {
+            stateSignal.value = state;
+          },
+          autoplay: false,
+        },
+      );
+      const stateSignal = elementAnimation.playbackController.stateSignal;
+      const canPlaySignal = computed(() => {
+        return (
+          stateSignal.value === "idle" ||
+          stateSignal.value === "finished" ||
+          stateSignal.value === "paused"
+        );
+      });
+      const canPauseSignal = computed(() => {
+        return stateSignal.value === "running";
+      });
+
+      const play = () => {
+        elementAnimation.play();
+      };
+      const pause = () => {
+        elementAnimation.pause();
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div>
+            <div></div>
+
+            <fieldset>
+              <legend>Controls</legend>
+
+              <button disabled={!canPlaySignal.value} onClick={play}>
+                Start
+              </button>
+              <button disabled={!canPauseSignal.value} onClick={pause}>
+                Pause
+              </button>
+            </fieldset>
+
+            <div>
+              <div>state: {stateSignal.value}</div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

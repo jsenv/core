@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Damage demo</title>
+  </head>
+  <body>
+    <div
+      id="animated_el"
+      style="width: 200px; height: 50px; background: green"
+    ></div>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { computed } from "@preact/signals";
+      import { animateDamageDisplay } from "./damage.js";
+      import {
+        useVisualContentPlaybackIsPrevented,
+        preventVisualContentPlayback,
+        allowVisualContentPlayback,
+      } from "/playback/visual_content_playback.js";
+
+      const animation = animateDamageDisplay(
+        document.querySelector("#animated_el"),
+        {
+          duration: 1000,
+          autoplay: false,
+        },
+      );
+      const stateSignal = animation.stateSignal;
+      const canPlaySignal = computed(() => {
+        return (
+          stateSignal.value === "idle" ||
+          stateSignal.value === "finished" ||
+          stateSignal.value === "paused"
+        );
+      });
+      const canPauseSignal = computed(() => {
+        return stateSignal.value === "running";
+      });
+
+      const play = () => {
+        animation.play();
+      };
+      const pause = () => {
+        animation.pause();
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const visualContentPlaybackIsPrevented =
+          useVisualContentPlaybackIsPrevented();
+
+        return (
+          <div>
+            <div></div>
+
+            <fieldset>
+              <legend>Controls</legend>
+              <button disabled={!canPlaySignal.value} onClick={play}>
+                Play
+              </button>
+              <button disabled={!canPauseSignal.value} onClick={pause}>
+                Pause
+              </button>
+              <br />
+              <label>
+                <input
+                  type="checkbox"
+                  checked={visualContentPlaybackIsPrevented}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      preventVisualContentPlayback();
+                    } else {
+                      allowVisualContentPlayback();
+                    }
+                  }}
+                />
+                Prevent animations playback
+              </label>
+            </fieldset>
+
+            <div>
+              <div>state: {stateSignal.value}</div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

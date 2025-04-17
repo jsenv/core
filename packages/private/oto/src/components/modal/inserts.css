@@ -1,0 +1,26 @@
+.inserts_wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-grow: 1;
+  height: 100%;
+}
+
+.insert_main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.insert_top,
+.insert_left,
+.insert_right,
+.insert_bottom {
+  position: relative;
+}
+
+.insert_left,
+.insert_right {
+  overflow: hidden;
+}

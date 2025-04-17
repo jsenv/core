@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Music manager demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { music, useReasonsToBePaused } from "./music.js";
+      import {
+        useMusicGlobalVolume,
+        setMusicGlobalVolume,
+        useMusicsAllMuted,
+        muteAllMusics,
+        unmuteAllMusics,
+        useMusicsAllPaused,
+        playAllMusics,
+        pauseAllMusics,
+        useMultipleMusicPlaybackIsPrevented,
+        preventMultipleMusicPlayback,
+        allowMultipleMusicPlayback,
+      } from "./music_global_controls.js";
+      import { useVolume, useMuted, usePlaybackState } from "../audio_hooks.js";
+      // eslint-disable-next-line no-unused-vars
+      import { Checkbox } from "/components/form/checkbox.jsx";
+      import {
+        useDocumentHidden,
+        simulateDocumentHidden,
+        simulateDocumentVisible,
+      } from "/utils/document_visibility.js";
+
+      const musicA = music({
+        name: "a",
+        url: import.meta.resolve("./sky.mp3"),
+      });
+      // const musicB = music({
+      //   name: "b",
+      //   url: import.meta.resolve("./sky.mp3"),
+      //   volume: 0.5,
+      // });
+
+      // eslint-disable-next-line no-unused-vars
+      const Music = ({ music }) => {
+        const volume = useVolume(music);
+        const muted = useMuted(music);
+        const playbackState = usePlaybackState(music);
+        const reasonsToBePaused = useReasonsToBePaused(music);
+
+        return (
+          <fieldset>
+            <legend>
+              <h2 style="margin:0">{music.name}</h2>
+            </legend>
+            <div>
+              volume:
+              <progress min="0" max="1" value={volume}>
+                {volume}
+              </progress>
+            </div>
+            <div style="margin-top: 10px">
+              <button
+                disabled={muted}
+                onClick={() => {
+                  music.mute();
+                }}
+              >
+                mute
+              </button>
+              <button
+                disabled={!muted}
+                onClick={() => {
+                  music.unmute();
+                }}
+              >
+                unmute
+              </button>
+            </div>
+            <div style="margin-top: 10px">
+              <button
+                disabled={playbackState === "playing"}
+                onClick={() => {
+                  music.play();
+                }}
+              >
+                play
+              </button>
+              <button
+                disabled={playbackState === "paused"}
+                onClick={() => {
+                  music.pause();
+                }}
+              >
+                pause
+              </button>
+              <div>Paused reasons: {reasonsToBePaused.join(", ")}</div>
+            </div>
+          </fieldset>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const MuteAllCheckbox = () => {
+        const musicsAllMuted = useMusicsAllMuted();
+
+        return (
+          <Checkbox
+            checked={musicsAllMuted}
+            onCheck={muteAllMusics}
+            onUncheck={unmuteAllMusics}
+          >
+            Prevent music sound
+          </Checkbox>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const PreventPlaybackCheckbox = () => {
+        const musicsAllPaused = useMusicsAllPaused();
+        return (
+          <Checkbox
+            checked={musicsAllPaused}
+            onCheck={pauseAllMusics}
+            onUnCheck={playAllMusics}
+          >
+            Prevent playback
+          </Checkbox>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const documentHidden = useDocumentHidden();
+        const globalVolume = useMusicGlobalVolume();
+        const multipleMusicPlaybackIsPrevented =
+          useMultipleMusicPlaybackIsPrevented();
+
+        return (
+          <div>
+            <h1>Music Manager</h1>
+
+            <div style="display:flex; flex-direction: column; margin: 10px;">
+              <fieldset>
+                <legend>Global controls</legend>
+
+                <div>
+                  Global volume:
+                  <progress
+                    min="0"
+                    max="1"
+                    value={globalVolume}
+                    style="width: 100px"
+                  >
+                    {globalVolume}
+                  </progress>
+                  <button
+                    disabled={globalVolume === 0}
+                    onClick={() => setMusicGlobalVolume(0, { duration: 3000 })}
+                  >
+                    0
+                  </button>
+                  <button
+                    disabled={globalVolume === 0.2}
+                    onClick={() =>
+                      setMusicGlobalVolume(0.2, { duration: 3000 })
+                    }
+                  >
+                    0.2
+                  </button>
+                  <button
+                    disabled={globalVolume === 0.6}
+                    onClick={() =>
+                      setMusicGlobalVolume(0.6, { duration: 3000 })
+                    }
+                  >
+                    0.6
+                  </button>
+                  <button
+                    disabled={globalVolume === 1}
+                    onClick={() =>
+                      setMusicGlobalVolume(1, {
+                        duration: 3000,
+                      })
+                    }
+                  >
+                    1
+                  </button>
+                </div>
+
+                <br />
+                <Checkbox
+                  checked={multipleMusicPlaybackIsPrevented}
+                  onCheck={preventMultipleMusicPlayback}
+                  onUnCheck={allowMultipleMusicPlayback}
+                >
+                  Prevent multiple music playback
+                </Checkbox>
+                <br />
+                <MuteAllCheckbox />
+                <br />
+                <PreventPlaybackCheckbox />
+                <br />
+                <Checkbox
+                  checked={documentHidden}
+                  onCheck={simulateDocumentHidden}
+                  onUnCheck={simulateDocumentVisible}
+                >
+                  Simulate document hidden
+                </Checkbox>
+                <br />
+                <br />
+
+                <button
+                  onClick={() => {
+                    pauseAllMusics();
+                    setMusicGlobalVolume(0.6);
+                  }}
+                >
+                  set global volume to 0.6 and pause all
+                </button>
+
+                <button
+                  onClick={() => {
+                    pauseAllMusics();
+                    setTimeout(() => {
+                      playAllMusics();
+                    }, 200);
+                  }}
+                >
+                  fast pause play all
+                </button>
+
+                <button
+                  onClick={() => {
+                    simulateDocumentHidden();
+                    setTimeout(() => {
+                      simulateDocumentVisible();
+                    }, 200);
+                  }}
+                >
+                  fast leave back to page
+                </button>
+              </fieldset>
+            </div>
+
+            <div style="display: flex; gap: 10px">
+              <Music music={musicA} />
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

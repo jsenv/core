@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Animate sequence demo</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal, computed, effect } from "@preact/signals";
+      import { animateRatio } from "/animations/ratio/animate_ratio.js";
+      import { createPlaybackSequenceController } from "./playback_sequence.js";
+
+      const firstStepRatioSignal = signal(0);
+      const secondStepRatioSignal = signal(0);
+      const thirdStepRatioSignal = signal(0);
+      const firstStepStateSignal = signal("idle");
+      const secondStepStateSignal = signal("idle");
+      const thirdStepStateSignal = signal("idle");
+
+      const sequence = createPlaybackSequenceController(
+        [
+          () => {
+            const firstRatioAnimation = animateRatio({
+              effect: (ratio) => {
+                firstStepRatioSignal.value = ratio;
+              },
+              duration: 1000,
+            });
+            effect(() => {
+              firstStepStateSignal.value =
+                firstRatioAnimation.playbackController.stateSignal;
+            });
+            return firstRatioAnimation;
+          },
+          () => {
+            const secondRatioAnimation = animateRatio({
+              effect: (ratio) => {
+                secondStepRatioSignal.value = ratio;
+              },
+              duration: 1000,
+            });
+            effect(() => {
+              secondStepStateSignal.value =
+                secondRatioAnimation.playbackController.stateSignal;
+            });
+            return secondRatioAnimation;
+          },
+          () => {
+            const thirdAnimation = animateRatio({
+              effect: (ratio) => {
+                thirdStepRatioSignal.value = ratio;
+              },
+              duration: 1000,
+            });
+
+            effect(() => {
+              thirdStepStateSignal.value =
+                thirdAnimation.playbackController.stateSignal;
+            });
+            return thirdAnimation;
+          },
+        ],
+        {
+          autoplay: false,
+        },
+      );
+      const stateSignal = sequence.playbackController.stateSignal;
+      const canPlaySignal = computed(() => {
+        return (
+          stateSignal.value === "idle" ||
+          stateSignal.value === "finished" ||
+          stateSignal.value === "paused"
+        );
+      });
+      const canPauseSignal = computed(() => {
+        return stateSignal.value === "running";
+      });
+      const play = () => {
+        sequence.play();
+      };
+      const pause = () => {
+        sequence.pause();
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div>
+            <div></div>
+
+            <fieldset>
+              <legend>Controls</legend>
+
+              <button disabled={!canPlaySignal.value} onClick={play}>
+                Play
+              </button>
+              <button disabled={!canPauseSignal.value} onClick={pause}>
+                Pause
+              </button>
+            </fieldset>
+
+            <div>
+              <div>
+                Step A:
+                <div>state: {firstStepStateSignal.value}</div>
+                <div>ratio: {firstStepRatioSignal.value}</div>
+              </div>
+              <div>
+                Step B:
+                <div>state: {secondStepStateSignal.value}</div>
+                <div>ratio: {secondStepRatioSignal.value}</div>
+              </div>
+              <div>
+                Step C:
+                <div>state: {thirdStepStateSignal.value}</div>
+                <div>ratio: {thirdStepRatioSignal.value}</div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "router",
+  "private": true,
+  "type": "module",
+  "main": "./index.js"
+}

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Layout grid</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      .one,
+      .two,
+      .three,
+      .four,
+      .five,
+      .six {
+        border: 1px solid black;
+        width: 100px;
+        height: 200px;
+        padding: 10px;
+        margin: 10px;
+      }
+    </style>
+    <script type="module" jsenv-type="module/jsx">
+      /* eslint-disable no-unused-vars */
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Cell } from "./cell.jsx";
+
+      const App = () => {
+        return (
+          <div style="display: flex;">
+            <div style="display: inline-flex; flex-direction: row; flex-wrap: wrap; justify-content:space-between; flex: 1;">
+              <div class="one">
+                <Cell
+                  x="center"
+                  y="center"
+                  width="50%"
+                  height="50%"
+                  style={{ background: "green" }}
+                >
+                  <Cell width="50%">One</Cell>
+                  <Cell width="...">Two</Cell>
+                </Cell>
+              </div>
+              <div class="two">
+                <Cell
+                  vertical
+                  x="center"
+                  y="center"
+                  width="50%"
+                  height="50%"
+                  style={{ background: "green" }}
+                >
+                  <Cell height="20%">One</Cell>
+                  <Cell height="...">Two</Cell>
+                </Cell>
+              </div>
+              <div class="three">Trois</div>
+              <div class="four">Quatre</div>
+              <div class="five">Cinq</div>
+              <div class="six">Six</div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

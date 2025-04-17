@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Layout flexbox</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        useRef,
+        useState,
+        useErrorBoundary,
+        useEffect,
+      } from "preact/hooks";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [error] = useErrorBoundary();
+        const [events, setEvents] = useState([]);
+        const addEvent = (value) => {
+          setEvents((events) => [...events, value]);
+        };
+        useEffect(() => {
+          if (error) {
+            addEvent(`error ${error.message}`);
+          }
+        }, [error]);
+
+        return (
+          <div>
+            <AnimationUI addEvent={addEvent} />
+            <div>
+              Events:
+              <ul>
+                {events.map((event) => {
+                  return <li>{event}</li>;
+                })}
+              </ul>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const AnimationUI = ({ addEvent }) => {
+        const ref = useRef();
+        const [rendered, setRendered] = useState(true);
+
+        return (
+          <>
+            {rendered ? (
+              <div ref={ref} style="display:inline-block">
+                hello
+              </div>
+            ) : null}
+
+            <fieldset>
+              <legend>Animation controls</legend>
+              <button
+                onClick={() => {
+                  addEvent("animation starts");
+                  const animation = ref.current.animate(
+                    [{ transform: "translateX(200px)" }],
+                    {
+                      duration: 2000,
+                      iterations: 1,
+                      fill: "forwards",
+                    },
+                  );
+                  animation.oncancel = () => {
+                    addEvent("animation canceled");
+                  };
+                  animation.finished.then(() => {
+                    addEvent("animation finished");
+                  });
+                  listenElementRemoval(ref.current, () => {
+                    addEvent("element removed");
+                    animation.cancel();
+                  });
+                }}
+              >
+                animate
+              </button>
+              <button
+                onClick={() => {
+                  addEvent("cancel clicked");
+                  ref.current.getAnimations().forEach((animation) => {
+                    animation.cancel();
+                  });
+                }}
+              >
+                cancel
+              </button>
+            </fieldset>
+
+            <fieldset>
+              <legend>Components controls</legend>
+
+              <button
+                onClick={() => {
+                  setRendered(false);
+                }}
+              >
+                Remove hello
+              </button>
+              <button
+                onClick={() => {
+                  setRendered(true);
+                }}
+              >
+                Restore hello
+              </button>
+            </fieldset>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+
+      const listenElementRemoval = (element, callback) => {
+        const observer = new MutationObserver(function (mutations) {
+          let mutationForRemoval;
+          for (const mutation of mutations) {
+            if (mutation.type !== "childList") {
+              continue;
+            }
+            const { removedNodes } = mutation;
+            if (removedNodes.length === 0) {
+              continue;
+            }
+            for (const removedNode of removedNodes) {
+              if (removedNode === element) {
+                mutationForRemoval = mutation;
+                break;
+              }
+            }
+            if (mutationForRemoval) {
+              break;
+            }
+          }
+          if (mutationForRemoval) {
+            observer.disconnect();
+            callback();
+          }
+        });
+        observer.observe(element.parentNode, { childList: true });
+        return () => {
+          observer.disconnect();
+        };
+      };
+
+      window.addEventListener("unhandledrejection", (event) => {
+        if (event.reason.name === "AbortError") {
+          console.log("unhandled abort error");
+          event.preventDefault();
+        }
+      });
+    </script>
+  </body>
+</html>
