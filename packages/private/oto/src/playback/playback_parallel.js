@@ -1,3 +1,5 @@
+import { createPlaybackAbortError } from "./playback_abort_error.js";
+
 export const createParallelPlaybackController = (
   animations,
   { onremove = () => {}, onfinish = () => {} } = {},
@@ -70,7 +72,7 @@ export const createParallelPlaybackController = (
       }
       parallelAnimation.playState = "removed";
       parallelAnimation.onremove();
-      rejectFinished(createAnimationAbortError());
+      rejectFinished(createPlaybackAbortError());
     },
   };
   parallelAnimation.play();

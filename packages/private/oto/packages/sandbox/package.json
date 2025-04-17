@@ -3,6 +3,6 @@
   "private": true,
   "dependencies": {
     "preact": "10.26.5",
-    "hook": "../hooks"
+    "hooks": "../hooks"
   }
 }

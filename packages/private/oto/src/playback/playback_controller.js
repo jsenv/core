@@ -1,4 +1,5 @@
 import { effect, signal } from "@preact/signals";
+import { createPlaybackAbortError } from "./playback_abort_error.js";
 
 const NOOP = () => {};
 
@@ -151,12 +152,6 @@ export const exposePlaybackControllerProps = (playbackController, object) => {
   };
 };
 
-const createPlaybackAbortError = () => {
-  const playbackAbortError = new Error("Playback aborted");
-  playbackAbortError.name = "AbortError";
-  playbackAbortError.isPlaybackAbortError = true;
-  return playbackAbortError;
-};
 window.addEventListener("unhandledrejection", (event) => {
   const { reason } = event;
   if (reason && reason.name === "AbortError" && reason.isPlaybackAbortError) {

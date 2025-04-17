@@ -18,11 +18,11 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { Lifebar } from "./lifebar.jsx";
-      import { useLocalStorageState } from "hooks/use_local_storage_state.js";
+      import { usePersistentState } from "hooks/use_persistent_state.js";
 
       const App = () => {
-        const [value, valueSetter] = useLocalStorageState("hp", 25);
-        const [max, maxSetter] = useLocalStorageState("hp_max", 40);
+        const [value, valueSetter] = usePersistentState("hp", 25);
+        const [max, maxSetter] = usePersistentState("hp_max", 40);
 
         return (
           <div style="display: flex;">

@@ -11,7 +11,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useRef, useLayoutEffect } from "preact/hooks";
-      import { useLocalStorageState } from "hooks/use_local_storage_state.js";
+      import { usePersistentState } from "hooks/use_persistent_state.js";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -19,22 +19,19 @@
         const secondCanvasRef = useRef();
         const thirdCanvasRef = useRef();
 
-        const [x, xSetter] = useLocalStorageState("x", 50);
-        const [y, ySetter] = useLocalStorageState("y", 25);
-        const [width, widthSetter] = useLocalStorageState("width", 50);
-        const [height, heightSetter] = useLocalStorageState("height", 50);
-        const [size, sizeSetter] = useLocalStorageState("size", 1);
-        const [radius, radiusSetter] = useLocalStorageState("radius", 10);
-        const [topLeft, topLeftSetter] = useLocalStorageState("topLeft", true);
-        const [topRight, topRightSetter] = useLocalStorageState(
-          "topRight",
-          true,
-        );
-        const [bottomRight, bottomRightSetter] = useLocalStorageState(
+        const [x, xSetter] = usePersistentState("x", 50);
+        const [y, ySetter] = usePersistentState("y", 25);
+        const [width, widthSetter] = usePersistentState("width", 50);
+        const [height, heightSetter] = usePersistentState("height", 50);
+        const [size, sizeSetter] = usePersistentState("size", 1);
+        const [radius, radiusSetter] = usePersistentState("radius", 10);
+        const [topLeft, topLeftSetter] = usePersistentState("topLeft", true);
+        const [topRight, topRightSetter] = usePersistentState("topRight", true);
+        const [bottomRight, bottomRightSetter] = usePersistentState(
           "bottomRight",
           true,
         );
-        const [bottomLeft, bottomLeftSetter] = useLocalStorageState(
+        const [bottomLeft, bottomLeftSetter] = usePersistentState(
           "bottomLeft",
           true,
         );
