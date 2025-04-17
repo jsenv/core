@@ -120,6 +120,29 @@ background-image: url("../../logo.png");
 background-image: url("/logo.png");
 ```
 
+You can also reference files using the package name by adding the following to your package.json:
+
+```json
+{
+  "exports": {
+    "./*": "./*"
+  }
+}
+```
+
+This configuration enables referencing any file within your package using the package name as a prefix. For example:
+
+```css
+/* Reference assets directly from your package */
+background-image: url("package-name/src/logo.png");
+```
+
+This approach has several benefits:
+
+- Works consistently regardless of the file's location in your project
+- Simplifies refactoring since paths don't need to be updated when files move
+- Matches Node.js path resolution patterns, avoiding the need to configure tools like VSCode or ESLint to understand where your root directory is (which is necessary when using leading slashes)
+
 ## 1.2 External urls
 
 External URLs (e.g., `https://fonts.googleapis.com/css2?family=Roboto`) are preserved during development and in build outputs.
