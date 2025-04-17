@@ -1,9 +1,9 @@
+import { Box } from "oto/src/components/box/box.jsx";
 import {
   pauseAllMusics,
   playAllMusics,
   useMusicsAllPaused,
 } from "./music/music_global_controls.js";
-import { Box } from "/components/box/box.jsx";
 
 export const ButtonPlayPause = () => {
   const musicsAllPaused = useMusicsAllPaused();
