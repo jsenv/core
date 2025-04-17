@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Text demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+    </style>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { usePersistentState } from "hooks/use_persistent_state.js";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        Text,
+        useTextController,
+      } from "./text.jsx";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const textController = useTextController();
+        return (
+          <div style="display:inline-flex; flex-direction: column">
+            <div style="display:inline-flex; margin: 10px">
+              <div style="margin: 10px; display: inline-flex; background:green">
+                <Text>Hello</Text>
+              </div>
+              <div style="margin: 10px; display: flex; width: 50px; height: 20px; border: 1px solid black; background: green">
+                <Text overflow="hidden">My name is totoro</Text>
+              </div>
+              <div style="margin: 10px; display: flex; width: 50px; height: 20px; border: 1px solid black; background: green">
+                <Text overflow="ellipsis">My name is totoro</Text>
+              </div>
+              <div style="margin: 10px; display: flex; width: 100px; height: 50px; border: 1px solid black; background: green">
+                <Text>
+                  My name is{" "}
+                  <Text fontWeight="bold">
+                    Dam<Text color="red">ie</Text>n
+                  </Text>{" "}
+                  Maillard
+                </Text>
+              </div>
+              <div style="margin: 10px; display: flex; width: 100px; height: 50px; border: 1px solid black; background: green">
+                <Text>
+                  My name is{" "}
+                  <Text fontWeight="bold">Damien and I would like</Text>{" "}
+                </Text>
+              </div>
+            </div>
+
+            <div style="display:inline-flex; margin: 10px">
+              <TextWithForm />{" "}
+            </div>
+
+            <div style="display:inline-flex; margin: 10px">
+              <div style="margin: 10px; display: flex; width: 150px; height: 20px; border: 1px solid black; background: green">
+                <Text overflow="hidden" controller={textController}>
+                  A<br />B
+                </Text>
+              </div>
+              <button
+                disabled={!textController.hasPrev}
+                onClick={() => {
+                  textController.prev();
+                }}
+              >
+                prev
+              </button>
+              <button
+                disabled={!textController.hasNext}
+                onClick={() => {
+                  textController.next();
+                }}
+              >
+                next
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TextWithForm = () => {
+        const [text, textSetter] = usePersistentState("text", "Coucou");
+        const [color, colorSetter] = usePersistentState("color", "black");
+
+        return (
+          <div>
+            <Text fontSize="18px">{text}</Text>
+            <fieldset>
+              <legend>Text props</legend>
+
+              <label>
+                Text:
+                <input
+                  type="text"
+                  value={text}
+                  onInput={(event) => textSetter(event.target.value)}
+                />
+              </label>
+              <br />
+
+              <label>
+                Color:
+                <select
+                  defaultValue={color}
+                  onChange={(e) => {
+                    colorSetter(e.target.value);
+                  }}
+                >
+                  <option value="black">black</option>
+                  <option value="red">red</option>
+                </select>
+              </label>
+            </fieldset>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

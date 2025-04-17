@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-import-resolver",
-  "version": "8.3.1",
+  "version": "8.4.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -34,6 +34,7 @@
   "devDependencies": {
     "rollup": "4.40.0",
     "@jsenv/assert": "../assert",
+    "@jsenv/snapshot": "../snapshot",
     "@jsenv/ast": "../../internal/ast",
     "@jsenv/urls": "../urls",
     "@jsenv/filesystem": "../filesystem",

@@ -1,0 +1,7 @@
+{
+  "name": "matrix",
+  "private": true,
+  "exports": {
+    ".": "./src/matrix.js"
+  }
+}

@@ -1,5 +1,5 @@
-import { hasScheme } from "./internal/hasScheme.js"
-import { resolveUrl } from "./resolveUrl.js"
+import { hasScheme } from "./internal/hasScheme.js";
+import { resolveUrl } from "./resolveUrl.js";
 
 export const resolveSpecifier = (specifier, importer) => {
   if (
@@ -8,12 +8,12 @@ export const resolveSpecifier = (specifier, importer) => {
     specifier.startsWith("./") ||
     specifier.startsWith("../")
   ) {
-    return resolveUrl(specifier, importer)
+    return resolveUrl(specifier, importer);
   }
 
   if (hasScheme(specifier)) {
-    return specifier
+    return specifier;
   }
 
-  return null
-}
+  return null;
+};

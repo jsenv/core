@@ -1,0 +1,49 @@
+{
+  "name": "oto",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "volta": {
+    "node": "22.13.1"
+  },
+  "exports": {
+    "./*": "./"
+  },
+  "scripts": {
+    "start": "npm run dev -- --open",
+    "dev": "node ./scripts/dev.mjs",
+    "test": "node ./scripts/test.mjs",
+    "test:coverage": "npm run test -- --coverage",
+    "build": "node ./scripts/build.mjs",
+    "build:serve": "node ./scripts/build_serve.mjs --open",
+    "eslint": "npx eslint .",
+    "prettier": "prettier --write .",
+    "playwright:install": "npx playwright install-deps && npx playwright install"
+  },
+  "workspaces": [
+    "./packages/*"
+  ],
+  "dependencies": {
+    "@preact/signals": "2.0.3",
+    "preact": "10.26.5",
+    "hooks": "./packages/hooks",
+    "router": "./packages/router",
+    "dom": "./packages/dom",
+    "matrix": "./packages/matrix"
+  },
+  "devDependencies": {
+    "@babel/plugin-syntax-import-attributes": "7.26.0",
+    "@babel/plugin-transform-react-jsx": "7.25.9",
+    "@jsenv/assert": "../../tooling/assert",
+    "@jsenv/core": "../../../",
+    "@jsenv/custom-elements-redefine": "../../frontend/custom-elements-redefine",
+    "@jsenv/eslint-config-relax": "../../tooling/eslint-config-relax",
+    "@jsenv/plugin-preact": "../../related/plugin-preact",
+    "@jsenv/test": "../../related/test",
+    "@playwright/browser-chromium": "1.51.1",
+    "eslint": "9.24.0",
+    "open": "10.1.1",
+    "prettier": "3.5.3",
+    "prettier-plugin-organize-imports": "4.1.0"
+  }
+}

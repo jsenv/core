@@ -13,7 +13,7 @@ npm install @jsenv/importmap
 _composeTwoImportMaps_ takes two _importMap_ and return a single _importMap_ being the composition of the two.
 
 ```js
-import { composeTwoImportMaps } from "@jsenv/importmap"
+import { composeTwoImportMaps } from "@jsenv/importmap";
 
 const importMap = composeTwoImportMaps(
   {
@@ -26,9 +26,9 @@ const importMap = composeTwoImportMaps(
       foo: "whatever",
     },
   },
-)
+);
 
-console.log(JSON.stringify(importMap, null, "  "))
+console.log(JSON.stringify(importMap, null, "  "));
 ```
 
 ```console
@@ -73,7 +73,7 @@ console.log(JSON.stringify(importMap, null, '  ')
 _resolveImport_ returns an import _url_ applying an _importMap_ to _specifier_ and _importer_. The provided _importMap_ must be resolved and sorted to work as expected. You can use [normalizeImportMap](#normalizeimportmap) to do that.
 
 ```js
-import { resolveImport } from "@jsenv/importmap"
+import { resolveImport } from "@jsenv/importmap";
 
 const importUrl = resolveImport({
   specifier: "../index.js",
@@ -83,9 +83,9 @@ const importUrl = resolveImport({
       "http://domain.com/index.js": "http://domain.com/main.js",
     },
   },
-})
+});
 
-console.log(importUrl)
+console.log(importUrl);
 ```
 
 ```console

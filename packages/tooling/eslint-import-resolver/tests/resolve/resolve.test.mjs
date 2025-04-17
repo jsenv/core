@@ -8,7 +8,7 @@ import {
 } from "@jsenv/filesystem";
 import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 
-const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
+const tempDirectoryUrl = import.meta.resolve("./temp/");
 const spyConsoleWarn = () => {
   const consoleWarnCalls = [];
   const { warn } = console;

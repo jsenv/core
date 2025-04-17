@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Lifebar</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+    </style>
+    <script type="module" jsenv-type="module/jsx">
+      /* eslint-disable no-unused-vars */
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Lifebar } from "./lifebar.jsx";
+      import { usePersistentState } from "hooks/use_persistent_state.js";
+
+      const App = () => {
+        const [value, valueSetter] = usePersistentState("hp", 25);
+        const [max, maxSetter] = usePersistentState("hp_max", 40);
+
+        return (
+          <div style="display: flex;">
+            <div style="display: flex; width: 200px;  justify-content: center; flex-direction: column">
+              <fieldset>
+                <legend>6/40 PV</legend>
+                <LifebarUI value={6} max={40} />
+              </fieldset>
+              <fieldset>
+                <legend>86/120 PV</legend>
+                <LifebarUI value={86} max={120} />
+              </fieldset>
+              <fieldset>
+                <legend>860/1200 PV</legend>
+                <LifebarUI value={860} max={1200} />
+              </fieldset>
+            </div>
+            <div>
+              <fieldset>
+                <legend>Interactive</legend>
+                <LifebarUI value={value} max={max} />
+                <label>
+                  Vie:&nbsp;
+                  <input
+                    min="0"
+                    max="1640"
+                    type="number"
+                    value={value}
+                    onInput={(event) => {
+                      valueSetter(parseInt(event.target.value));
+                    }}
+                  />
+                </label>
+                <br />
+                <label>
+                  Vie max:&nbsp;
+                  <input
+                    min="40"
+                    max="1640"
+                    step="40"
+                    type="number"
+                    value={max}
+                    onInput={(event) => {
+                      maxSetter(parseInt(event.target.value));
+                    }}
+                  />
+                </label>
+              </fieldset>
+            </div>
+          </div>
+        );
+      };
+
+      const LifebarUI = (props) => {
+        return (
+          <div style="width: 150px; height: 40px; background: black; border: 2px solid yellow;">
+            <div style="width: 120px; height: 20px; margin-top: 2px; margin-left: 2px;">
+              <Lifebar {...props} />
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

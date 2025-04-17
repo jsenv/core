@@ -1,40 +1,40 @@
-import { assertImportMap } from "./internal/assertImportMap.js"
-import { tryUrlResolution } from "./internal/tryUrlResolution.js"
-import { resolveSpecifier } from "./resolveSpecifier.js"
-import { sortImports, sortScopes } from "./sortImportMap.js"
+import { assertImportMap } from "./internal/assertImportMap.js";
+import { tryUrlResolution } from "./internal/tryUrlResolution.js";
+import { resolveSpecifier } from "./resolveSpecifier.js";
+import { sortImports, sortScopes } from "./sortImportMap.js";
 
 export const normalizeImportMap = (importMap, baseUrl) => {
-  assertImportMap(importMap)
+  assertImportMap(importMap);
 
   if (!isStringOrUrl(baseUrl)) {
-    throw new TypeError(formulateBaseUrlMustBeStringOrUrl({ baseUrl }))
+    throw new TypeError(formulateBaseUrlMustBeStringOrUrl({ baseUrl }));
   }
 
-  const { imports, scopes } = importMap
+  const { imports, scopes } = importMap;
 
   return {
     imports: imports ? normalizeMappings(imports, baseUrl) : undefined,
     scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined,
-  }
-}
+  };
+};
 
 const isStringOrUrl = (value) => {
   if (typeof value === "string") {
-    return true
+    return true;
   }
 
   if (typeof URL === "function" && value instanceof URL) {
-    return true
+    return true;
   }
 
-  return false
-}
+  return false;
+};
 
 const normalizeMappings = (mappings, baseUrl) => {
-  const mappingsNormalized = {}
+  const mappingsNormalized = {};
 
   Object.keys(mappings).forEach((specifier) => {
-    const address = mappings[specifier]
+    const address = mappings[specifier];
 
     if (typeof address !== "string") {
       console.warn(
@@ -42,13 +42,13 @@ const normalizeMappings = (mappings, baseUrl) => {
           address,
           specifier,
         }),
-      )
-      return
+      );
+      return;
     }
 
-    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier
+    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
 
-    const addressUrl = tryUrlResolution(address, baseUrl)
+    const addressUrl = tryUrlResolution(address, baseUrl);
     if (addressUrl === null) {
       console.warn(
         formulateAdressResolutionFailed({
@@ -56,8 +56,8 @@ const normalizeMappings = (mappings, baseUrl) => {
           baseUrl,
           specifier,
         }),
-      )
-      return
+      );
+      return;
     }
 
     if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
@@ -67,42 +67,42 @@ const normalizeMappings = (mappings, baseUrl) => {
           address,
           specifier,
         }),
-      )
-      return
+      );
+      return;
     }
-    mappingsNormalized[specifierResolved] = addressUrl
-  })
+    mappingsNormalized[specifierResolved] = addressUrl;
+  });
 
-  return sortImports(mappingsNormalized)
-}
+  return sortImports(mappingsNormalized);
+};
 
 const normalizeScopes = (scopes, baseUrl) => {
-  const scopesNormalized = {}
+  const scopesNormalized = {};
 
   Object.keys(scopes).forEach((scopeSpecifier) => {
-    const scopeMappings = scopes[scopeSpecifier]
-    const scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl)
+    const scopeMappings = scopes[scopeSpecifier];
+    const scopeUrl = tryUrlResolution(scopeSpecifier, baseUrl);
     if (scopeUrl === null) {
       console.warn(
         formulateScopeResolutionFailed({
           scope: scopeSpecifier,
           baseUrl,
         }),
-      )
-      return
+      );
+      return;
     }
-    const scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl)
-    scopesNormalized[scopeUrl] = scopeValueNormalized
-  })
+    const scopeValueNormalized = normalizeMappings(scopeMappings, baseUrl);
+    scopesNormalized[scopeUrl] = scopeValueNormalized;
+  });
 
-  return sortScopes(scopesNormalized)
-}
+  return sortScopes(scopesNormalized);
+};
 
 const formulateBaseUrlMustBeStringOrUrl = ({
   baseUrl,
 }) => `baseUrl must be a string or an url.
 --- base url ---
-${baseUrl}`
+${baseUrl}`;
 
 const formulateAddressMustBeAString = ({
   specifier,
@@ -111,7 +111,7 @@ const formulateAddressMustBeAString = ({
 --- address ---
 ${address}
 --- specifier ---
-${specifier}`
+${specifier}`;
 
 const formulateAdressResolutionFailed = ({
   address,
@@ -123,7 +123,7 @@ ${address}
 --- base url ---
 ${baseUrl}
 --- specifier ---
-${specifier}`
+${specifier}`;
 
 const formulateAddressUrlRequiresTrailingSlash = ({
   addressURL,
@@ -135,7 +135,7 @@ ${addressURL}
 --- address ---
 ${address}
 --- specifier ---
-${specifier}`
+${specifier}`;
 
 const formulateScopeResolutionFailed = ({
   scope,
@@ -144,4 +144,4 @@ const formulateScopeResolutionFailed = ({
 --- scope ---
 ${scope}
 --- base url ---
-${baseUrl}`
+${baseUrl}`;

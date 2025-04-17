@@ -1,7 +1,7 @@
-import { urlToPathname } from "./internal/urlToPathname.js"
-import { pathnameToExtension } from "./internal/pathnameToExtension.js"
-import { resolveUrl } from "./resolveUrl.js"
-import { applyImportMap } from "./applyImportMap.js"
+import { applyImportMap } from "./applyImportMap.js";
+import { pathnameToExtension } from "./internal/pathnameToExtension.js";
+import { urlToPathname } from "./internal/urlToPathname.js";
+import { resolveUrl } from "./resolveUrl.js";
 
 export const resolveImport = ({
   specifier,
@@ -11,7 +11,7 @@ export const resolveImport = ({
   createBareSpecifierError,
   onImportMapping = () => {},
 }) => {
-  let url
+  let url;
   if (importMap) {
     url = applyImportMap({
       importMap,
@@ -19,39 +19,39 @@ export const resolveImport = ({
       importer,
       createBareSpecifierError,
       onImportMapping,
-    })
+    });
   } else {
-    url = resolveUrl(specifier, importer)
+    url = resolveUrl(specifier, importer);
   }
 
   if (defaultExtension) {
-    url = applyDefaultExtension({ url, importer, defaultExtension })
+    url = applyDefaultExtension({ url, importer, defaultExtension });
   }
 
-  return url
-}
+  return url;
+};
 
 const applyDefaultExtension = ({ url, importer, defaultExtension }) => {
   if (urlToPathname(url).endsWith("/")) {
-    return url
+    return url;
   }
 
   if (typeof defaultExtension === "string") {
-    const extension = pathnameToExtension(url)
+    const extension = pathnameToExtension(url);
     if (extension === "") {
-      return `${url}${defaultExtension}`
+      return `${url}${defaultExtension}`;
     }
-    return url
+    return url;
   }
 
   if (defaultExtension === true) {
-    const extension = pathnameToExtension(url)
+    const extension = pathnameToExtension(url);
     if (extension === "" && importer) {
-      const importerPathname = urlToPathname(importer)
-      const importerExtension = pathnameToExtension(importerPathname)
-      return `${url}${importerExtension}`
+      const importerPathname = urlToPathname(importer);
+      const importerExtension = pathnameToExtension(importerPathname);
+      return `${url}${importerExtension}`;
     }
   }
 
-  return url
-}
+  return url;
+};

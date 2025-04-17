@@ -154,6 +154,7 @@ export const upgradeExternalVersions = async ({
           someInternalUpdate = true;
           internalPackageObject.version = increaseVersion(
             internalPackageObject.version,
+            internalPackageObject.packageUrl,
           );
         }
         internalPackageDeps[externalPackageName] = registryLatestVersion;

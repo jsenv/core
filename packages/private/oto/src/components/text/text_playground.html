@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Text playground</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+    </style>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        Text,
+      } from "./text.jsx";
+      // eslint-disable-next-line no-unused-vars
+      import { EnumSelector } from "oto/src/components/form/enum_selector.jsx";
+      // eslint-disable-next-line no-unused-vars
+      import { SizeSelector } from "oto/src/components/form/size_selector.jsx";
+      import { usePersistentState } from "hooks/use_persistent_state.js";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div style="display:inline-flex; flex-direction: column">
+            <div style="display:inline-flex; margin: 10px">
+              <TextWithForm />
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TextWithForm = () => {
+        const [containerWidth, containerWidthSetter] = useState("auto");
+        const [containerHeight, containerHeightSetter] = useState("auto");
+        const [text, textSetter] = usePersistentState("text", "Coucou");
+        const [color, colorSetter] = useState("black");
+        const [fontSize, fontSizeSetter] = useState(18);
+        const [lineHeight, lineHeightSetter] = usePersistentState(
+          "line_height",
+          1.4,
+        );
+
+        return (
+          <div style="display: flex; flex-direction: column">
+            <div style="border: 1px solid black; width: 500px; height: 150px; ">
+              <div
+                id="container"
+                style={{
+                  display: "inline-flex",
+                  background: "green",
+                  width: containerWidth,
+                  height: containerHeight,
+                  padding: "11.2px",
+                }}
+              >
+                <Text
+                  fontSize={fontSize}
+                  lineHeight={lineHeight}
+                  color={color}
+                  logResize
+                >
+                  {text}
+                </Text>
+              </div>
+            </div>
+            <fieldset>
+              <legend>Text props</legend>
+
+              <label>
+                <textarea
+                  style={{
+                    minWidth: "25em",
+                  }}
+                  onInput={(event) => textSetter(event.target.value)}
+                  columns="120"
+                  rows="3"
+                >
+                  {text}
+                </textarea>
+              </label>
+              <br />
+              <EnumSelector
+                name="color"
+                values={["black", "red", "yellow"]}
+                onChange={(value) => {
+                  colorSetter(value);
+                }}
+              />
+
+              <SizeSelector
+                name="font-size"
+                min="1"
+                max="40"
+                onChange={(value) => {
+                  fontSizeSetter(value);
+                }}
+                em={{
+                  min: 0.1,
+                  max: 2,
+                }}
+              />
+
+              <br />
+              <label>
+                Line height:
+                <input
+                  type="number"
+                  min="0"
+                  max="4"
+                  step="0.1"
+                  value={lineHeight}
+                  onInput={(event) =>
+                    lineHeightSetter(event.target.valueAsNumber)
+                  }
+                />
+              </label>
+
+              <SizeSelector
+                name="container-width"
+                onChange={(value) => {
+                  containerWidthSetter(value);
+                }}
+              />
+
+              <SizeSelector
+                name="container-height"
+                onChange={(value) => {
+                  containerHeightSetter(value);
+                }}
+              />
+            </fieldset>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

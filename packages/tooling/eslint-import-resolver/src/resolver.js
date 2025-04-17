@@ -6,6 +6,7 @@ import {
   assertAndNormalizeDirectoryUrl,
   ensureWindowsDriveLetter,
   getRealFileSystemUrlSync,
+  lookupPackageDirectory,
 } from "@jsenv/filesystem";
 import {
   applyFileSystemMagicResolution,
@@ -31,9 +32,9 @@ export const resolve = (
   file,
   {
     logLevel = "error",
-    rootDirectoryUrl,
     packageConditions = ["browser", "import"],
     ambiguousExtensions = [".js", ".html", ".jsx", ".ts", ".tsx"],
+    rootDirectoryUrl,
     importmapFileRelativeUrl,
     caseSensitive = true,
     // NICE TO HAVE: allow more control on when magic resolution applies:
@@ -42,10 +43,6 @@ export const resolve = (
     magicExtensions,
   },
 ) => {
-  rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-    rootDirectoryUrl,
-    "rootDirectoryUrl",
-  );
   const logger = createLogger({ logLevel });
   logger.debug(`
 resolve import.
@@ -53,8 +50,6 @@ resolve import.
 ${source}
 --- importer ---
 ${file}
---- root directory path ---
-${urlToFileSystemPath(rootDirectoryUrl)}
 --- package conditions ---
 ${packageConditions.join(",")}`);
 
@@ -140,6 +135,9 @@ ${packageConditions.join(",")}`);
       !nodeInPackageConditions &&
       specifier[0] === "/"
     ) {
+      if (!rootDirectoryUrl) {
+        rootDirectoryUrl = lookupPackageDirectory(importer);
+      }
       return onUrl(new URL(specifier.slice(1), rootDirectoryUrl).href, {
         resolvedBy: "url",
       });
@@ -269,6 +267,10 @@ const tryToResolveWithImportmap = ({
           `importmapFileRelativeUrl must be a string, got ${importmapFileRelativeUrl}`,
         );
       }
+      rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        rootDirectoryUrl,
+        "rootDirectoryUrl",
+      );
       const importmapFileUrl = applyUrlResolution(
         importmapFileRelativeUrl,
         rootDirectoryUrl,

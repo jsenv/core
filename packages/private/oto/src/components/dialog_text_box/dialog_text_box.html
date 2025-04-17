@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Dialog text box</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+    </style>
+    <script type="module" jsenv-type="module/jsx">
+      /* eslint-disable no-unused-vars */
+      import { render } from "preact";
+      import { useState, useRef } from "preact/hooks";
+      import { DialogTextBox } from "./dialog_text_box.jsx";
+      import { Text } from "oto/src/components/text/text.jsx";
+
+      const App = () => {
+        return (
+          <div>
+            <div style="margin: 10px; display: flex; width: 100px; border: 1px solid black; background: green">
+              <DialogTextBox>
+                My name is <Text fontWeight="bold">Damien</Text> Maillard
+              </DialogTextBox>
+            </div>
+            <div style="margin: 10px; display: inline-flex; border: 1px solid black; background: green">
+              <DialogTextBox>Hello</DialogTextBox>
+            </div>
+            <div style="margin: 10px; display: inline-flex; border: 1px solid black; background: green">
+              <DialogTextBox>
+                Hel<Text outlineColor="red">lo</Text>
+              </DialogTextBox>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

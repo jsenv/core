@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Layout flexbox</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        useRef,
+        useState,
+        useErrorBoundary,
+        useEffect,
+        useImperativeHandle,
+      } from "preact/hooks";
+      import { forwardRef } from "preact/compat";
+      import { animateElement } from "./animate_element.js";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [error] = useErrorBoundary();
+        const [events, setEvents] = useState([]);
+        const addEvent = (value) => {
+          setEvents((events) => [...events, value]);
+        };
+        useEffect(() => {
+          if (error) {
+            addEvent(`error ${error.message}`);
+          }
+        }, [error]);
+
+        const ref = useRef();
+        const [rendered, setRendered] = useState(true);
+
+        return (
+          <div>
+            {rendered ? <AnimationUI ref={ref} addEvent={addEvent} /> : null}
+            <fieldset>
+              <legend>Animation controls</legend>
+              <button
+                disabled={!rendered}
+                onClick={() => {
+                  ref.current.animate();
+                }}
+              >
+                animate
+              </button>
+              <button
+                onClick={() => {
+                  addEvent("cancel clicked");
+                  ref.current.getAnimations().forEach((animation) => {
+                    animation.cancel();
+                  });
+                }}
+              >
+                cancel
+              </button>
+            </fieldset>
+
+            <fieldset>
+              <legend>Components controls</legend>
+
+              <button
+                onClick={() => {
+                  setRendered(false);
+                }}
+              >
+                Remove hello
+              </button>
+              <button
+                onClick={() => {
+                  setRendered(true);
+                }}
+              >
+                Restore hello
+              </button>
+            </fieldset>
+            <div>
+              Events:
+              <ul>
+                {events.map((event) => {
+                  return <li>{event}</li>;
+                })}
+              </ul>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const AnimationUI = forwardRef(({ addEvent }, ref) => {
+        const innerRef = useRef();
+
+        useImperativeHandle(ref, () => {
+          return {
+            animate: () => {
+              animateElement(innerRef.current, {
+                to: {
+                  x: 200,
+                },
+                duration: 2000,
+                canPlayWhileGloballyPaused: true,
+              });
+            },
+          };
+        });
+
+        return (
+          <div ref={innerRef} style="display:inline-block">
+            hello
+          </div>
+        );
+      });
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

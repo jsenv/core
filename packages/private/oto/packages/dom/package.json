@@ -1,0 +1,10 @@
+{
+  "name": "dom",
+  "private": true,
+  "exports": {
+    ".": "./src/dom.js"
+  },
+  "dependencies": {
+    "@preact/signals": "2.0.3"
+  }
+}

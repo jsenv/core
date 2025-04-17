@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Animate number demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative">
+      <fieldset>
+        <legend>Controls</legend>
+        From: <input name="from" type="number" /> To:
+        <input name="to" type="number" />
+        <br />
+        <button name="play">Play</button>
+        <button name="pause">Pause</button>
+      </fieldset>
+      <div>
+        Number:
+        <span id="output"></span>
+      </div>
+    </div>
+    <script type="module">
+      import { animateNumber } from "./animate_number.js";
+
+      let from = 10;
+      const fromInput = document.querySelector('[name="from"]');
+      fromInput.value = from;
+      fromInput.oninput = () => {
+        from = parseInt(fromInput.value);
+        update();
+      };
+      let to = 0;
+      const toInput = document.querySelector('[name="to"]');
+      toInput.value = to;
+      toInput.oninput = () => {
+        to = parseInt(toInput.value);
+        update();
+      };
+
+      let numberAnimation;
+      const playButton = document.querySelector('[name="play"]');
+      playButton.onclick = () => {
+        if (!numberAnimation) {
+          numberAnimation = animateNumber(from, to, {
+            duration: 1000,
+            fps: 10,
+            effect: (value) => {
+              document.querySelector("#output").innerHTML +=
+                `${Math.round(value)}<br />`;
+            },
+            onfinish: () => {
+              update();
+            },
+          });
+        } else {
+          numberAnimation.play();
+        }
+        update();
+      };
+      const pauseButton = document.querySelector('[name="pause"]');
+      pauseButton.onclick = () => {
+        numberAnimation.pause();
+        update();
+      };
+
+      const update = () => {
+        if (!numberAnimation) {
+          playButton.disabled = false;
+          pauseButton.disabled = true;
+          return;
+        }
+        if (
+          numberAnimation.playbackController.stateSignal.value === "running"
+        ) {
+          playButton.disabled = true;
+          pauseButton.disabled = false;
+          return;
+        }
+        if (numberAnimation.playbackController.stateSignal.value === "paused") {
+          playButton.disabled = false;
+          pauseButton.disabled = true;
+          return;
+        }
+        if (
+          numberAnimation.playbackController.stateSignal.value === "finished"
+        ) {
+          playButton.disabled = false;
+          pauseButton.disabled = true;
+          return;
+        }
+      };
+    </script>
+  </body>
+</html>

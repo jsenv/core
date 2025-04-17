@@ -1,40 +1,40 @@
-import { assertImportMap } from "./internal/assertImportMap.js"
+import { assertImportMap } from "./internal/assertImportMap.js";
 
 export const sortImportMap = (importMap) => {
-  assertImportMap(importMap)
+  assertImportMap(importMap);
 
-  const { imports, scopes } = importMap
+  const { imports, scopes } = importMap;
 
   return {
     ...(imports ? { imports: sortImports(imports) } : {}),
     ...(scopes ? { scopes: sortScopes(scopes) } : {}),
-  }
-}
+  };
+};
 
 export const sortImports = (imports) => {
-  const mappingsSorted = {}
+  const mappingsSorted = {};
 
   Object.keys(imports)
     .sort(compareLengthOrLocaleCompare)
     .forEach((name) => {
-      mappingsSorted[name] = imports[name]
-    })
+      mappingsSorted[name] = imports[name];
+    });
 
-  return mappingsSorted
-}
+  return mappingsSorted;
+};
 
 export const sortScopes = (scopes) => {
-  const scopesSorted = {}
+  const scopesSorted = {};
 
   Object.keys(scopes)
     .sort(compareLengthOrLocaleCompare)
     .forEach((scopeSpecifier) => {
-      scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier])
-    })
+      scopesSorted[scopeSpecifier] = sortImports(scopes[scopeSpecifier]);
+    });
 
-  return scopesSorted
-}
+  return scopesSorted;
+};
 
 const compareLengthOrLocaleCompare = (a, b) => {
-  return b.length - a.length || a.localeCompare(b)
-}
+  return b.length - a.length || a.localeCompare(b);
+};
