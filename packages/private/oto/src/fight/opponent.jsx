@@ -1,14 +1,14 @@
+import { animateDamageDisplay } from "oto/src/animations/damage/damage.js";
+import { animateElement } from "oto/src/animations/element/animate_element.js";
+import { erase } from "oto/src/animations/erase/erase.js";
+import { glow } from "oto/src/animations/glow/glow.js";
+import { Box } from "oto/src/components/box/box.jsx";
+import { Img } from "oto/src/components/img/img.jsx";
+import { Message } from "oto/src/components/message/message.jsx";
+import { Digits } from "oto/src/components/text/digits.jsx";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { SwordAImg } from "./sword_a.jsx";
-import { animateDamageDisplay } from "/animations/damage/damage.js";
-import { animateElement } from "/animations/element/animate_element.js";
-import { erase } from "/animations/erase/erase.js";
-import { glow } from "/animations/glow/glow.js";
-import { Box } from "/components/box/box.jsx";
-import { Img } from "/components/img/img.jsx";
-import { Message } from "/components/message/message.jsx";
-import { Digits } from "/components/text/digits.jsx";
 
 export const Opponent = forwardRef(
   (

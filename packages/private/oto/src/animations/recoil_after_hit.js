@@ -1,6 +1,6 @@
+import { PLAYBACK } from "oto/src/playback/playback.js";
 import { animateElement } from "./element/animate_element.js";
 import { EASING } from "./utils/easing.js";
-import { PLAYBACK } from "/playback/playback.js";
 
 export const animateRecoilAfterHit = (element, { duration } = {}) => {
   let from = 0;

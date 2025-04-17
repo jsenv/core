@@ -1,8 +1,8 @@
 import { computed, effect, signal } from "@preact/signals";
+import { animateNumber } from "oto/src/animations/number/animate_number.js";
+import { EASING } from "oto/src/animations/utils/easing.js";
+import { gamePausedSignal } from "oto/src/game_pause/game_pause.js";
 import { musicVolumePreferenceSignal } from "../audio_preferences.js";
-import { animateNumber } from "/animations/number/animate_number.js";
-import { EASING } from "/animations/utils/easing.js";
-import { gamePausedSignal } from "/game_pause/game_pause.js";
 
 const NO_OP = () => {};
 

@@ -1,8 +1,8 @@
+import { Box } from "oto/src/components/box/box.jsx";
+import { Message } from "oto/src/components/message/message.jsx";
+import { HOVER_TEXT_COLOR } from "oto/src/globals/colors.js";
 import { useState } from "preact/hooks";
 import "./button.css" with { type: "css" };
-import { Box } from "/components/box/box.jsx";
-import { Message } from "/components/message/message.jsx";
-import { HOVER_TEXT_COLOR } from "/globals/colors.js";
 
 export const Button = ({ children, color, ...props }) => {
   const [hovered, hoveredSetter] = useState(false);

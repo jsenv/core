@@ -1,6 +1,6 @@
 import { computed } from "@preact/signals";
-import { pausedRoute } from "/routes.js";
-import { documentHiddenSignal } from "/utils/document_visibility.js";
+import { pausedRoute } from "oto/src/routes.js";
+import { documentHiddenSignal } from "oto/src/utils/document_visibility.js";
 
 const gamePausedRouteIsActiveSignal = pausedRoute.isActiveSignal;
 export const pauseGame = () => {

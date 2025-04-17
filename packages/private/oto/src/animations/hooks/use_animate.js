@@ -1,5 +1,5 @@
+import { useGamePaused } from "oto/src/game_pause/game_pause.js";
 import { useCallback, useEffect, useRef } from "preact/hooks";
-import { useGamePaused } from "/game_pause/game_pause.js";
 
 const noop = () => {};
 

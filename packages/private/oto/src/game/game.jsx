@@ -1,12 +1,16 @@
+import { ButtonMuteUnmute } from "oto/src/audio/button_mute_unmute.jsx";
+import { ButtonPlayPause } from "oto/src/audio/button_play_pause.jsx";
+import { Box, borderWithStroke } from "oto/src/components/box/box.jsx";
+import { Curtain } from "oto/src/components/curtain/curtain.jsx";
+import { Fight } from "oto/src/fight/fight.jsx";
+import {
+  pauseGame,
+  playGame,
+  useGamePaused,
+} from "oto/src/game_pause/game_pause.js";
+import { PauseDialog } from "oto/src/game_pause/pause_dialog.jsx";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import gameStyleSheet from "./game.css" with { type: "css" };
-import { ButtonMuteUnmute } from "/audio/button_mute_unmute.jsx";
-import { ButtonPlayPause } from "/audio/button_play_pause.jsx";
-import { Box, borderWithStroke } from "/components/box/box.jsx";
-import { Curtain } from "/components/curtain/curtain.jsx";
-import { Fight } from "/fight/fight.jsx";
-import { pauseGame, playGame, useGamePaused } from "/game_pause/game_pause.js";
-import { PauseDialog } from "/game_pause/pause_dialog.jsx";
 
 export const Game = () => {
   useLayoutEffect(() => {

@@ -1,5 +1,5 @@
+import { PLAYBACK } from "oto/src/playback/playback.js";
 import { animateRatio } from "../ratio/animate_ratio.js";
-import { PLAYBACK } from "/playback/playback.js";
 
 export const erase = (
   canvas,
