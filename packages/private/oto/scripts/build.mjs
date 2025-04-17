@@ -16,7 +16,6 @@ await build({
       },
       minification: false,
       plugins: [jsenvPluginPreact()],
-    }
+    },
   },
-
 });

@@ -3,7 +3,7 @@
  * Read more in https://github.com/jsenv/core
  */
 
-import { executeTestPlan, chromium, nodeWorkerThread } from "@jsenv/test";
+import { chromium, executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
 await executeTestPlan({
   rootDirectoryUrl: import.meta.resolve("../"),

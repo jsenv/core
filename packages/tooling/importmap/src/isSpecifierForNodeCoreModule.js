@@ -7,8 +7,8 @@ export const isSpecifierForNodeCoreModule = (specifier) => {
   return (
     specifier.startsWith("node:") ||
     NODE_CORE_MODULE_SPECIFIERS.includes(specifier)
-  )
-}
+  );
+};
 
 const NODE_CORE_MODULE_SPECIFIERS = [
   "assert",
@@ -86,4 +86,4 @@ const NODE_CORE_MODULE_SPECIFIERS = [
   "zlib",
   // global is special
   "global",
-]
+];
