@@ -6,11 +6,11 @@ import {
   trapFocusInside,
   trapScrollInside,
 } from "dom";
+import { Box } from "oto/src/components/box/box.jsx";
 import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Inserts } from "./inserts.jsx";
 import modalStyleSheet from "./modal.css" with { type: "css" };
-import { Box } from "/components/box/box.jsx";
 
 const ModalOpened = ({
   id,

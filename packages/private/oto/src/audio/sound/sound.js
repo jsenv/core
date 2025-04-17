@@ -1,5 +1,5 @@
 import { effect, signal } from "@preact/signals";
-import { userActivationSignal } from "/utils/user_activation.js";
+import { userActivationSignal } from "oto/src/utils/user_activation.js";
 
 const soundsAllMutedSignal = signal(false);
 export const useSoundsAllMuted = () => {

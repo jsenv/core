@@ -8,7 +8,7 @@ export const getScrollLeftAndTop = (element) => {
 export const trapScrollInside = (element) => {
   const cleanupCallbackSet = new Set();
   const lockScroll = (el) => {
-    const [scrollbarWidth, scrollbarHeight] = mesureScrollbar(el);
+    const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
     // scrollbar-gutter would work but would display an empty blank space
     const paddingRight = parseInt(getStyle(el, "padding-right"), 0);
     const paddingTop = parseInt(getStyle(el, "padding-top"), 0);
@@ -46,7 +46,7 @@ export const trapScrollInside = (element) => {
 };
 
 // https://davidwalsh.name/detect-scrollbar-width
-export const mesureScrollbar = (scrollableElement) => {
+export const measureScrollbar = (scrollableElement) => {
   const hasXScrollbar =
     scrollableElement.scrollHeight > scrollableElement.clientHeight;
   const hasYScrollbar =

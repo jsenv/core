@@ -1,3 +1,5 @@
+import { FOCUSED_OUTLINE_COLOR } from "oto/src/globals/colors.js";
+import { getAvailableSize } from "oto/src/utils/get_available_size.js";
 import { forwardRef } from "preact/compat";
 import {
   useImperativeHandle,
@@ -8,8 +10,6 @@ import {
 import "./box.css" with { type: "css" };
 import { getInnerSpacingStyles } from "./inner_spacing_styles.js";
 import { MultiBorder, useMultiBorder } from "./multi_border.jsx";
-import { FOCUSED_OUTLINE_COLOR } from "/globals/colors.js";
-import { getAvailableSize } from "/utils/get_available_size.js";
 
 export const borderWithStroke = ({
   color = "black",

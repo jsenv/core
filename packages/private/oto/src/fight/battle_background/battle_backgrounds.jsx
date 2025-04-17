@@ -1,5 +1,5 @@
+import { Img } from "oto/src/components/img/img.jsx";
 import { forwardRef } from "preact/compat";
-import { Img } from "/components/img/img.jsx";
 
 const battleBackgroundsSpritesheetUrl = new URL(
   "./battle_background_spritesheet.png",

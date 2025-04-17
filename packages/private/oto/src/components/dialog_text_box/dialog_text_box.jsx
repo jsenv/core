@@ -1,8 +1,8 @@
 import { useKeyEffect } from "hooks/use_key_effect.js";
+import { Message } from "oto/src/components/message/message.jsx";
+import { useTextController } from "oto/src/components/text/text.jsx";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
-import { Message } from "/components/message/message.jsx";
-import { useTextController } from "/components/text/text.jsx";
 
 const DialogTextBoxComponent = (
   {

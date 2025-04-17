@@ -1,6 +1,6 @@
+import { useFrame } from "oto/src/animations/hooks/use_frame.js";
 import { forwardRef } from "preact/compat";
 import { useLayoutEffect } from "preact/hooks";
-import { useFrame } from "/animations/hooks/use_frame.js";
 
 const otoWalkASvgUrl = new URL("./oto_1.svg", import.meta.url);
 const otoWalkBSvgUrl = new URL("./oto_2.svg", import.meta.url);

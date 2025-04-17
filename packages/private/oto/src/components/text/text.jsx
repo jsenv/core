@@ -1,10 +1,10 @@
 import { useResizeObserver } from "hooks/use_resize_observer.js";
 import { useStructuredMemo } from "hooks/use_structured_memo.js";
+import { getAvailableSize } from "oto/src/utils/get_available_size.js";
+import { resolveSize } from "oto/src/utils/size_resolver.js";
 import { render, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { getAvailableSize } from "/utils/get_available_size.js";
-import { resolveSize } from "/utils/size_resolver.js";
 
 let isUpdatingText = false;
 
