@@ -9,7 +9,7 @@ await build({
       runtimeCompat: { node: "20.0" },
       directoryReferenceEffect: (reference) => {
         if (
-          reference.type === "js_url" &&
+          reference.subtype === "import_meta_resolve" &&
           reference.ownerUrlInfo.url.endsWith("/exception.js")
         ) {
           return "preserve";

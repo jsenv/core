@@ -32,7 +32,7 @@ const isDev = process.execArgv.some(
 export const createException = (
   reason,
   {
-    jsenvCoreDirectoryUrl = import.meta.resolve("../../../../"),
+    jsenvCoreDirectoryUrl = import.meta.resolve("../../../"),
     rootDirectoryUrl,
     errorTransform = () => {},
   } = {},
