@@ -54,10 +54,7 @@ export const createNodeEsmResolver = ({
     // specifiers like "#something" have a special meaning for Node.js
     // but can also be used in .css and .html files for example and should not be modified
     // by node esm resolution
-    const webResolutionFallback =
-      ownerUrlInfo.type === "css" ||
-      ownerUrlInfo.type === "html" ||
-      ownerUrlInfo.type === "svg";
+    const webResolutionFallback = ownerUrlInfo.type !== "js_module";
     const conditions = buildPackageConditions(specifier, parentUrl, {
       webResolutionFallback,
     });
