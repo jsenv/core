@@ -137,12 +137,15 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
           to: version,
         });
         if (!toPublishPackageNames.includes(packageName)) {
-          updateVersion({
-            packageName,
-            from: workspacePackage.packageObject.version,
-            to: increaseVersion(workspacePackage.packageObject.version),
-          });
           if (!workspacePackage.packageObject.private) {
+            updateVersion({
+              packageName,
+              from: workspacePackage.packageObject.version,
+              to: increaseVersion(
+                workspacePackage.packageObject.version,
+                workspacePackage.packageUrl,
+              ),
+            });
             toPublishPackageNames.push(packageName);
           }
         }
@@ -196,7 +199,10 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
         updateVersion({
           packageName,
           from: packageInfo.packageObject.version,
-          to: increaseVersion(packageInfo.packageObject.version),
+          to: increaseVersion(
+            packageInfo.packageObject.version,
+            packageInfo.packageUrl,
+          ),
         });
       }
     });
