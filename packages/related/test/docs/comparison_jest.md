@@ -4,15 +4,11 @@ Comparing `@jsenv/test` and [Jest](https://github.com/jestjs/jest)<sup>↗</sup>
 
 # Introduction
 
-This document is a list of "how to do X" with jest and jsenv. It is split in 2 major parts:
+This document compares how to accomplish common testing tasks with Jest and @jsenv/test. It can help you:
 
-- [Executing tests](#executing-tests)
-- [Writing tests](#writing-tests)
-
-The goal is not to say which one is better. The goal is to help the reader make his own opinion about `@jsenv/test`.  
-This documentation can also be used to migrate from jest to jsenv, or the other way around.
-
-Finally the [conclusion](#conclusion) highlights the best parts of the approach taken by `@jsenv/test`.
+- Understand key differences between these frameworks
+- Make an informed decision about which framework to use
+- Migrate from Jest to @jsenv/test or vice versa
 
 # Executing tests
 
@@ -27,15 +23,15 @@ Jest execute test files inside:
 
 ##### @jsenv/test
 
-Jsenv can execute test files inside:
+@jsenv/test can execute test files inside:
 
-- a child process
-- a worker thread
-- a web browser: Chromium, Webkit, Firefox
+- A child process
+- A worker thread
+- A web browser: Chromium, Webkit, Firefox
 
 Unlike jest, there is no default runtime: files must be explicitely associated with a runtime.
 
-Test file can be executed on one or many times on one or many runtimes. It's possible to execute tests on chromium and on firefox for example.
+Test files can be executed one or many times on one or many runtimes. It's possible to execute tests on both Chromium and Firefox, for example.
 
 ## Executing one test in node
 
@@ -699,18 +695,17 @@ directorySnapshot.compare();
 
 ## Mocks
 
-Mock changes the behaviour of the code too deeply. They end up being:
+Mocks can change code behavior in ways that are:
 
-- surprising
-- (very) hard to maintain
+- Surprising
+- Hard to maintain
 
-There is countless articles explaining why mock should be avoided.
-The simplest strategy to avoid mock:
+There are many articles explaining why mocks should be used cautiously. Better alternatives include:
 
-- Make code more flexible so that test file does not need mock(s).
-- Use integration/end-to-end tests so that do the real things instead of mocking. [playwright](https://playwright.dev/)<sup>↗</sup>, [cypress](https://www.cypress.io/)<sup>↗</sup>, ...
+- Making code more flexible to avoid needing mocks
+- Using integration/end-to-end tests with tools like [playwright](https://playwright.dev/)<sup>↗</sup> or [cypress](https://www.cypress.io/)<sup>↗</sup>
 
-That being said here is how you could mock things with jest and jsenv.
+That said, here's how you can mock with both frameworks:
 
 ### Mock function return value
 
@@ -855,12 +850,12 @@ const testPlanResult = await executeTestPlan({
 
 # Conclusion
 
-`@jsenv/test` allows to write test files like standard files. In the end a test file can be executed directly with Node.js or in a web browser.
+`@jsenv/test` allows to write test files like standard files. In the end a test file can be executed directly with Node.js or in web browsers, offering several advantages:
 
-In that regard:
+- Test files will never become obsolete or unable to run
+- Test files are immediately compatible with other tools
+- You can use VSCode to debug Node.js test files with one click
+- You can use any browser to execute and debug test files
+- It's easier to switch between source files and test files because code works the same way in both
 
-- Test files will never becomes obsolete or unable to run
-- Test files are immediatly compatible with other tools
-- Can use VSCode to debug test files written for Node.js in one click
-- Can use any browser to execute and debug a test file
-- Easier to switch from source files to test files and the other way around: because code is working same way.
+This approach reduces the cognitive load when moving between source and test code, potentially improving developer productivity and test maintainability.
