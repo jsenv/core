@@ -2,8 +2,8 @@ import { signal } from "@preact/signals";
 import {
   createPlaybackController,
   exposePlaybackControllerProps,
-} from "/playback/playback_controller.js";
-import { visualContentPlaybackIsPreventedSignal } from "/playback/visual_content_playback.js";
+} from "oto/src/playback/playback_controller.js";
+import { visualContentPlaybackIsPreventedSignal } from "oto/src/playback/visual_content_playback.js";
 
 export const animateFrames = (
   frames,

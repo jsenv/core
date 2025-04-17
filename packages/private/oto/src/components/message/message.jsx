@@ -1,6 +1,6 @@
+import { Box, borderWithStroke } from "oto/src/components/box/box.jsx";
+import { Text } from "oto/src/components/text/text.jsx";
 import { forwardRef } from "preact/compat";
-import { Box, borderWithStroke } from "/components/box/box.jsx";
-import { Text } from "/components/text/text.jsx";
 
 const MessageComponent = (
   {

@@ -1,5 +1,12 @@
 import { computed, signal } from "@preact/signals";
 import { useKeyEffect } from "hooks/use_key_effect.js";
+import { music } from "oto/src/audio/music/music.js";
+import { sound } from "oto/src/audio/sound/sound.js";
+import { Box, borderWithStroke } from "oto/src/components/box/box.jsx";
+import { Curtain } from "oto/src/components/curtain/curtain.jsx";
+import { DialogTextBox } from "oto/src/components/dialog_text_box/dialog_text_box.jsx";
+import { Lifebar } from "oto/src/components/lifebar/lifebar.jsx";
+import { useGamePaused } from "oto/src/game_pause/game_pause.js";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { Ally } from "./ally.jsx";
 import { MountainAndSkyBattleBackground } from "./battle_background/battle_backgrounds.jsx";
@@ -7,13 +14,6 @@ import { MenuFight } from "./menu_fight.jsx";
 import { Opponent } from "./opponent.jsx";
 import { SwordAImg } from "./sword_a.jsx";
 import { taurus } from "./taurus.js";
-import { music } from "/audio/music/music.js";
-import { sound } from "/audio/sound/sound.js";
-import { Box, borderWithStroke } from "/components/box/box.jsx";
-import { Curtain } from "/components/curtain/curtain.jsx";
-import { DialogTextBox } from "/components/dialog_text_box/dialog_text_box.jsx";
-import { Lifebar } from "/components/lifebar/lifebar.jsx";
-import { useGamePaused } from "/game_pause/game_pause.js";
 
 // const fightStartSoundUrl = import.meta.resolve("../fight/fight_start.ogg");
 const battleMusicUrl = import.meta.resolve("../fight/battle_bg_a.mp3");

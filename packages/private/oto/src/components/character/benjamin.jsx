@@ -1,7 +1,7 @@
+import { useFrame } from "oto/src/animations/hooks/use_frame.js";
+import { Img } from "oto/src/components/img/img.jsx";
 import { forwardRef } from "preact/compat";
 import { useLayoutEffect } from "preact/hooks";
-import { useFrame } from "/animations/hooks/use_frame.js";
-import { Img } from "/components/img/img.jsx";
 
 const characterSpritesheetUrl = new URL(
   "./character_spritesheet.png",

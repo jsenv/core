@@ -1,6 +1,6 @@
+import { animateElement } from "oto/src/animations/element/animate_element.js";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
-import { animateElement } from "/animations/element/animate_element.js";
 
 export const Curtain = forwardRef((props, ref) => {
   const innerRef = useRef();

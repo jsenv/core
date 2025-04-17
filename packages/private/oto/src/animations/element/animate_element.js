@@ -1,9 +1,9 @@
-import { EASING } from "../utils/easing.js";
 import {
   createPlaybackController,
   exposePlaybackControllerProps,
-} from "/playback/playback_controller.js";
-import { visualContentPlaybackIsPreventedSignal } from "/playback/visual_content_playback.js";
+} from "oto/src/playback/playback_controller.js";
+import { visualContentPlaybackIsPreventedSignal } from "oto/src/playback/visual_content_playback.js";
+import { EASING } from "../utils/easing.js";
 
 export const animateElement = (
   element,

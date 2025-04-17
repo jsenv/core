@@ -1,5 +1,5 @@
+import { Img } from "oto/src/components/img/img.jsx";
 import { forwardRef } from "preact/compat";
-import { Img } from "/components/img/img.jsx";
 
 const weaponSpriteSheetUrl = new URL("./weapon.png", import.meta.url);
 

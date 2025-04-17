@@ -1,4 +1,4 @@
-import { ButtonMessage } from "/components/button/button.jsx";
+import { ButtonMessage } from "oto/src/components/button/button.jsx";
 
 export const MenuFight = ({ onAttack }) => {
   return (

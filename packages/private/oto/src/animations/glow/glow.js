@@ -1,7 +1,7 @@
+import { PLAYBACK } from "oto/src/playback/playback.js";
 import { animateColor } from "../color/animate_color.js";
 import { EASING } from "../utils/easing.js";
 import { WELL_KNOWN_COLORS } from "../utils/well_known_colors.js";
-import { PLAYBACK } from "/playback/playback.js";
 
 export const glow = (
   canvas,

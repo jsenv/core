@@ -1,5 +1,5 @@
+import { useVisualContentPlaybackIsPrevented } from "oto/src/playback/visual_content_playback.js";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
-import { useVisualContentPlaybackIsPrevented } from "/playback/visual_content_playback.js";
 
 export const useFrame = (frames, { msBetweenFrames = 350, loop } = {}) => {
   const intervalRef = useRef();

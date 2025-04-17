@@ -1,14 +1,14 @@
 import { computed, effect, signal } from "@preact/signals";
+import { animateNumber } from "oto/src/animations/number/animate_number.js";
+import { EASING } from "oto/src/animations/utils/easing.js";
+import { documentHiddenSignal } from "oto/src/utils/document_visibility.js";
+import { userActivationSignal } from "oto/src/utils/user_activation.js";
 import {
   musicGlobalVolumeSignal,
   musicsAllMutedSignal,
   musicsAllPausedSignal,
   playOneAtATimeSignal,
 } from "./music_global_controls.js";
-import { animateNumber } from "/animations/number/animate_number.js";
-import { EASING } from "/animations/utils/easing.js";
-import { documentHiddenSignal } from "/utils/document_visibility.js";
-import { userActivationSignal } from "/utils/user_activation.js";
 
 let debug = false;
 const fadeInDefaults = {

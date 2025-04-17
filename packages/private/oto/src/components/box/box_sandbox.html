@@ -33,10 +33,10 @@
         Box,
       } from "./box.jsx";
       // eslint-disable-next-line no-unused-vars
-      import { EnumSelector } from "/components/form/enum_selector.jsx";
+      import { EnumSelector } from "oto/src/components/form/enum_selector.jsx";
       // eslint-disable-next-line no-unused-vars
-      import { SizeSelector } from "/components/form/size_selector.jsx";
-      import { useLocalStorageState } from "hooks/use_local_storage_state.js";
+      import { SizeSelector } from "oto/src/components/form/size_selector.jsx";
+      import { usePersistentState } from "hooks/use_persistent_state.js";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -50,7 +50,7 @@
         const [y, ySetter] = useState("start");
         const [contentX, contentXSetter] = useState("start");
         const [contentY, contentYSetter] = useState("start");
-        const [focused, focusedSetter] = useLocalStorageState("focused", false);
+        const [focused, focusedSetter] = usePersistentState("focused", false);
 
         return (
           <>

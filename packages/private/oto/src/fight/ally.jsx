@@ -1,11 +1,11 @@
+import { animateDamageDisplay } from "oto/src/animations/damage/damage.js";
+import { animateElement } from "oto/src/animations/element/animate_element.js";
+import { animateRecoilAfterHit } from "oto/src/animations/recoil_after_hit.js";
+import { Box } from "oto/src/components/box/box.jsx";
+import { Oto } from "oto/src/components/character/oto.jsx";
+import { Digits } from "oto/src/components/text/digits.jsx";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
-import { animateDamageDisplay } from "/animations/damage/damage.js";
-import { animateElement } from "/animations/element/animate_element.js";
-import { animateRecoilAfterHit } from "/animations/recoil_after_hit.js";
-import { Box } from "/components/box/box.jsx";
-import { Oto } from "/components/character/oto.jsx";
-import { Digits } from "/components/text/digits.jsx";
 
 export const Ally = forwardRef((props, ref) => {
   const elementRef = useRef();

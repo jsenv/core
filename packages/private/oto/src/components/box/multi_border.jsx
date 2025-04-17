@@ -1,6 +1,6 @@
 import { useResizeObserver } from "hooks/use_resize_observer.js";
+import { resolveDimensions, resolveSize } from "oto/src/utils/size_resolver.js";
 import { useLayoutEffect, useState } from "preact/hooks";
-import { resolveDimensions, resolveSize } from "/utils/size_resolver.js";
 
 export const useMultiBorder = (ref, borders) => {
   const [fontSize, fontSizeSetter] = useState(16);
