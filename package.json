@@ -34,9 +34,10 @@
     "/src/"
   ],
   "volta": {
-    "node": "23.11.0"
+    "node": "23.11.0",
+    "npm": "11.3.0"
   },
-  "packageManager": "npm@11.2.0",
+  "packageManager": "npm@11.3.0",
   "workspaces": [
     "./packages/back_and_front/*",
     "./packages/backend/*",
