@@ -7,6 +7,9 @@ export const createResolveUrlError = ({
   reference,
   error,
 }) => {
+  if (error.isJsenvCookingError) {
+    return error;
+  }
   const createFailedToResolveUrlError = ({
     name = "RESOLVE_URL_ERROR",
     code = error.code || "RESOLVE_URL_ERROR",
@@ -41,9 +44,8 @@ ${reason}`,
     });
   }
   if (error.code === "MODULE_NOT_FOUND") {
-    const bareSpecifierError = createFailedToResolveUrlError({
-      reason: `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`,
-    });
+    const bareSpecifierError = createFailedToResolveUrlError({});
+    bareSpecifierError.message = `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`;
     return bareSpecifierError;
   }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
@@ -52,6 +54,11 @@ ${reason}`,
       ...detailsFromFirstReference(reference),
     });
     return error;
+  }
+  if (error.code === "PROTOCOL_NOT_SUPPORTED") {
+    const notSupportedError = createFailedToResolveUrlError({});
+    notSupportedError.message = error.message;
+    return notSupportedError;
   }
   return createFailedToResolveUrlError({
     reason: `An error occured during specifier resolution`,
@@ -64,6 +71,9 @@ export const createFetchUrlContentError = ({
   urlInfo,
   error,
 }) => {
+  if (error.isJsenvCookingError) {
+    return error;
+  }
   const createFailedToFetchUrlContentError = ({
     code = error.code || "FETCH_URL_CONTENT_ERROR",
     reason,
@@ -93,7 +103,6 @@ ${reason}`,
     });
     return fetchError;
   };
-
   if (error.code === "EPERM") {
     return createFailedToFetchUrlContentError({
       code: "NOT_ALLOWED",
@@ -137,6 +146,9 @@ export const createTransformUrlContentError = ({
   urlInfo,
   error,
 }) => {
+  if (error.isJsenvCookingError) {
+    return error;
+  }
   if (error.code === "MODULE_NOT_FOUND") {
     return error;
   }
@@ -256,6 +268,9 @@ export const createFinalizeUrlContentError = ({
   urlInfo,
   error,
 }) => {
+  if (error.isJsenvCookingError) {
+    return error;
+  }
   const reference = urlInfo.firstReference;
   const finalizeError = new Error(
     createDetailedMessage(

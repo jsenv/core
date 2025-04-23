@@ -37,7 +37,17 @@ export const createKitchen = ({
 
   ignore,
   ignoreProtocol = "remove",
-  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
+  supportedProtocols = [
+    "file:",
+    "data:",
+    "virtual:",
+    "http:",
+    "https:",
+    "chrome:",
+    "chrome-extension:",
+    "chrome-untrusted:",
+    "isolated-app:",
+  ],
 
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -336,6 +346,21 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       reference.generatedUrl = reference.url;
       reference.generatedSearchParams = reference.searchParams;
+      if (dev) {
+        let url = reference.url;
+        let { protocol } = new URL(url);
+        if (protocol === "ignore:") {
+          url = url.slice("ignore:".length);
+          protocol = new URL(url).protocol;
+        }
+        if (!supportedProtocols.includes(protocol)) {
+          const protocolNotSupportedError = new Error(
+            `Unsupported protocol "${protocol}" for url "${url}"`,
+          );
+          protocolNotSupportedError.code = "PROTOCOL_NOT_SUPPORTED";
+          throw protocolNotSupportedError;
+        }
+      }
       return reference;
     } catch (error) {
       throw createResolveUrlError({

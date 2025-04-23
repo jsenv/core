@@ -185,6 +185,7 @@ export const jsenvPluginSupervisor = ({
                     ? `stack mocked for snapshot`
                     : causeInfo.stack,
                   trace: causeInfo.trace,
+                  isJsenvCookingError: causeInfo.isJsenvCookingError,
                 }
               : null,
             null,
