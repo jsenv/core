@@ -96,12 +96,11 @@ snapshotTests.prefConfigure({
   },
 });
 await snapshotTests(import.meta.url, ({ test }) => {
-  test.ONLY("0_chromium", () =>
+  test("0_chromium", () =>
     run({
       browserLauncher: chromium,
       browserName: "chromium",
-    }),
-  );
+    }));
 
   test("1_firefox", () =>
     run({
