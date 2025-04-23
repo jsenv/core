@@ -48,14 +48,14 @@ const run = async ({ browserLauncher, browserName }) => {
       /* eslint-enable no-undef */
     );
     writeFileSync(
-      new URL(`./output/html/${scenario}.html`, import.meta.url),
+      import.meta.resolve(`./output/html/${scenario}.html`),
       htmlGenerated,
     );
     const sceenshotBuffer = await page
       .locator("jsenv-error-overlay")
       .screenshot();
     writeFileSync(
-      new URL(`./output/screenshots/${scenario}.png`, import.meta.url),
+      import.meta.resolve(`./output/screenshots/${scenario}.png`),
       sceenshotBuffer,
     );
   };

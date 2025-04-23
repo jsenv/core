@@ -7,9 +7,6 @@ export const createResolveUrlError = ({
   reference,
   error,
 }) => {
-  if (error.isJsenvCookingError) {
-    return error;
-  }
   const createFailedToResolveUrlError = ({
     name = "RESOLVE_URL_ERROR",
     code = error.code || "RESOLVE_URL_ERROR",
@@ -146,10 +143,10 @@ export const createTransformUrlContentError = ({
   urlInfo,
   error,
 }) => {
-  if (error.isJsenvCookingError) {
+  if (error.code === "MODULE_NOT_FOUND") {
     return error;
   }
-  if (error.code === "MODULE_NOT_FOUND") {
+  if (error.code === "PROTOCOL_NOT_SUPPORTED") {
     return error;
   }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
