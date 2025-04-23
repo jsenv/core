@@ -2,14 +2,13 @@
   <h1 class="title">
     An error occured
   </h1>
-  <pre class="text"> 7 |   &lt;/head&gt;
- 8 | 
- 9 |   &lt;body&gt;
-10 |     &lt;script type="module" src="./main.js"&gt;&lt;/script&gt;
-                               ^
-Error while loading module
-  [cause]: TRANSFORM_URL_CONTENT_ERROR: "transformUrlContent" error on "js_module"
-  at <a href="javascript:window.fetch('/.internal/open_file/file%3A%2F%2F%2Fjs_module_import_bare_specifier%2Fmain.html%3A10%3A27')">file:///js_module_import_bare_specifier/main.html:10:27</a></pre>
+  <pre class="text">2 | // above 1
+3 | // above 2
+4 | // above 3
+5 | /* before */ import "toto/file.js"; /* after */
+                       ^
+RESOLVE_URL_ERROR: "toto/file.js" is a bare specifier but cannot be remapped to a package
+  at <a href="javascript:window.fetch('/.internal/open_file/file%3A%2F%2F%2Fjs_module_import_bare_specifier%2Fmain.js%3A5%3A20')">file:///js_module_import_bare_specifier/main.js:5:20</a></pre>
   <div class="tip">
     Click outside to close.
   </div>

@@ -25,14 +25,13 @@ ${reason}`,
         },
       ),
     );
-    const trace = getErrorTrace(error, reference);
     defineNonEnumerableProperties(resolveError, {
       isJsenvCookingError: true,
       name,
       code,
       reason,
       asResponse: error.asResponse,
-      trace,
+      trace: error.trace || reference.trace,
     });
     return resolveError;
   };
