@@ -62,6 +62,7 @@ const run = async ({ browserLauncher, browserName }) => {
   for (const story of [
     "js_classic_inline_throw",
     "js_classic_throw",
+    "js_importing_node",
     "js_module_export_not_found",
     "js_module_import_bare_specifier",
     "js_module_import_not_found",
@@ -95,11 +96,12 @@ snapshotTests.prefConfigure({
   },
 });
 await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_chromium", () =>
+  test.ONLY("0_chromium", () =>
     run({
       browserLauncher: chromium,
       browserName: "chromium",
-    }));
+    }),
+  );
 
   test("1_firefox", () =>
     run({

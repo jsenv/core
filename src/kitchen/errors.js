@@ -28,13 +28,14 @@ ${reason}`,
         },
       ),
     );
+    const trace = getErrorTrace(error, reference);
     defineNonEnumerableProperties(resolveError, {
       isJsenvCookingError: true,
       name,
       code,
       reason,
       asResponse: error.asResponse,
-      trace: error.trace || reference.trace,
+      trace,
     });
     return resolveError;
   };
@@ -44,8 +45,9 @@ ${reason}`,
     });
   }
   if (error.code === "MODULE_NOT_FOUND") {
-    const bareSpecifierError = createFailedToResolveUrlError({});
-    bareSpecifierError.message = `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`;
+    const bareSpecifierError = createFailedToResolveUrlError({
+      reason: `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`,
+    });
     return bareSpecifierError;
   }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
@@ -56,8 +58,9 @@ ${reason}`,
     return error;
   }
   if (error.code === "PROTOCOL_NOT_SUPPORTED") {
-    const notSupportedError = createFailedToResolveUrlError({});
-    notSupportedError.message = error.message;
+    const notSupportedError = createFailedToResolveUrlError({
+      reason: error.message,
+    });
     return notSupportedError;
   }
   return createFailedToResolveUrlError({
@@ -71,9 +74,6 @@ export const createFetchUrlContentError = ({
   urlInfo,
   error,
 }) => {
-  if (error.isJsenvCookingError) {
-    return error;
-  }
   const createFailedToFetchUrlContentError = ({
     code = error.code || "FETCH_URL_CONTENT_ERROR",
     reason,
@@ -159,47 +159,8 @@ export const createTransformUrlContentError = ({
     if (error.isJsenvCookingError) {
       return error;
     }
+    const trace = getErrorTrace(error, urlInfo.firstReference);
     const reference = urlInfo.firstReference;
-    let trace = reference.trace;
-    let line = error.line;
-    let column = error.column;
-    if (urlInfo.isInline) {
-      line = trace.line + line;
-      line = line - 1;
-      trace = {
-        ...trace,
-        line,
-        column,
-        codeFrame: generateContentFrame({
-          line,
-          column,
-          content: urlInfo.inlineUrlSite.content,
-        }),
-        message: stringifyUrlSite({
-          url: urlInfo.inlineUrlSite.url,
-          line,
-          column,
-          content: urlInfo.inlineUrlSite.content,
-        }),
-      };
-    } else {
-      trace = {
-        url: urlInfo.url,
-        line,
-        column: error.column,
-        codeFrame: generateContentFrame({
-          line,
-          column: error.column,
-          content: urlInfo.content,
-        }),
-        message: stringifyUrlSite({
-          url: urlInfo.url,
-          line,
-          column: error.column,
-          content: urlInfo.content,
-        }),
-      };
-    }
     const transformError = new Error(
       createDetailedMessage(
         `parse error on "${urlInfo.type}"
@@ -268,9 +229,6 @@ export const createFinalizeUrlContentError = ({
   urlInfo,
   error,
 }) => {
-  if (error.isJsenvCookingError) {
-    return error;
-  }
   const reference = urlInfo.firstReference;
   const finalizeError = new Error(
     createDetailedMessage(
@@ -291,6 +249,49 @@ ${reference.trace.message}`,
     asResponse: error.asResponse,
   });
   return finalizeError;
+};
+
+const getErrorTrace = (error, reference) => {
+  const urlInfo = reference.urlInfo;
+  let trace = reference.trace;
+  let line = error.line;
+  let column = error.column;
+  if (urlInfo.isInline) {
+    line = trace.line + line;
+    line = line - 1;
+    return {
+      ...trace,
+      line,
+      column,
+      codeFrame: generateContentFrame({
+        line,
+        column,
+        content: urlInfo.inlineUrlSite.content,
+      }),
+      message: stringifyUrlSite({
+        url: urlInfo.inlineUrlSite.url,
+        line,
+        column,
+        content: urlInfo.inlineUrlSite.content,
+      }),
+    };
+  }
+  return {
+    url: urlInfo.url,
+    line,
+    column: error.column,
+    codeFrame: generateContentFrame({
+      line,
+      column: error.column,
+      content: urlInfo.content,
+    }),
+    message: stringifyUrlSite({
+      url: urlInfo.url,
+      line,
+      column: error.column,
+      content: urlInfo.content,
+    }),
+  };
 };
 
 const detailsFromFirstReference = (reference) => {

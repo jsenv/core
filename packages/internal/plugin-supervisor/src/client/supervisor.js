@@ -983,16 +983,19 @@ window.__supervisor__ = (() => {
             const { cause = {} } = exception;
             const { trace = {} } = cause;
             const preferCause =
-              cause.code === "MODULE_NOT_FOUND" || cause.isJsenvCookingError;
+              cause.code === "MODULE_NOT_FOUND" ||
+              cause.code === "PROTOCOL_NOT_SUPPORTED";
             const dataToRender = preferCause ? cause : exception;
             root.querySelector(".text").innerHTML = stringifyStack({
               codeFrame: trace.codeFrame
                 ? generateClickableText(trace.codeFrame)
                 : "",
               name: dataToRender.name,
-              message: dataToRender.message
-                ? generateClickableText(dataToRender.message)
-                : "",
+              message: preferCause
+                ? generateClickableText(cause.reason)
+                : dataToRender.message
+                  ? generateClickableText(dataToRender.message)
+                  : "",
               stackTrace: dataToRender.stackTrace
                 ? generateClickableText(dataToRender.stackTrace)
                 : "",
