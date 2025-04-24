@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 1201.45" background-color="#282c34">
+  <g id="background">
+    <rect x="1" y="1" width="638" height="1199.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+  </g>
+  <foreignObject id="body" y="0" width="100%" height="1211.45" overflow="hidden">
+    <svg width="1187.79" height="1201.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+      <g>
+        <text x="10" y="24.55">GET http://127.0.0.1/main.html</text>
+        <text x="26.8" y="43.55" fill="#cd5555">500</text>
+        <text x="52.01" y="43.55" style="white-space:pre"> RESOLVE_URL_ERROR: Failed to resolve url reference</text>
+        <text x="10" y="62.55" style="white-space:pre">  base/client/main.html:14:20</text>
+        <text x="10" y="81.55" style="white-space:pre">  11 |         window.resolveResultPromise = resolve;</text>
+        <text x="10" y="100.55" style="white-space:pre">  12 |       });</text>
+        <text x="10" y="119.55" style="white-space:pre">  13 |     &lt;/script&gt;</text>
+        <text x="10" y="138.55" style="white-space:pre">  14 |     &lt;a id="link_1" href="ignore:a.js"&gt;&lt;/a&gt;</text>
+        <text x="10" y="157.55" style="white-space:pre">                          ^</text>
+        <text x="10" y="176.55" style="white-space:pre">  An error occured during specifier resolution</text>
+        <text x="10" y="195.55" style="white-space:pre">  --- error stack ---</text>
+        <text x="10" y="214.55" style="white-space:pre">  TypeError: Invalid URL</text>
+        <text x="10" y="233.55" style="white-space:pre">      at new URL (node:internal/url:819:25)</text>
+        <text x="10" y="252.55" style="white-space:pre">      at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:357:22)</text>
+        <text x="10" y="271.55" style="white-space:pre">      at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:385:38)</text>
+        <text x="10" y="290.55" style="white-space:pre">      at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:41:41)</text>
+        <text x="10" y="309.55" style="white-space:pre">      at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:63:23)</text>
+        <text x="10" y="328.55" style="white-space:pre">      at createExternalReference (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:190:52)</text>
+        <text x="10" y="347.55" style="white-space:pre">      at visitHref (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:221:22)</text>
+        <text x="10" y="366.55" style="white-space:pre">      at Object.a (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:515:15)</text>
+        <text x="10" y="385.55" style="white-space:pre">      at visitorsInstrumented.&lt;computed&gt; (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:587:20)</text>
+        <text x="10" y="404.55" style="white-space:pre">      at visitNode (@jsenv/core/packages/internal/ast/src/html/html_search.js:8:35)</text>
+        <text x="10" y="423.55" style="white-space:pre">      at createFailedToResolveUrlError (@jsenv/core/src/kitchen/errors.js:16:26)</text>
+        <text x="10" y="442.55" style="white-space:pre">      at createResolveUrlError (@jsenv/core/src/kitchen/errors.js:62:10)</text>
+        <text x="10" y="461.55" style="white-space:pre">      at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:369:13)</text>
+        <text x="10" y="480.55" style="white-space:pre">      at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:385:38)</text>
+        <text x="10" y="499.55" style="white-space:pre">      at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:41:41)</text>
+        <text x="10" y="518.55" style="white-space:pre">      at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:63:23)</text>
+        <text x="10" y="537.55" style="white-space:pre">      at createExternalReference (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:190:52)</text>
+        <text x="10" y="556.55" style="white-space:pre">      at visitHref (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:221:22)</text>
+        <text x="10" y="575.55" style="white-space:pre">      at Object.a (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:515:15)</text>
+        <text x="10" y="594.55" style="white-space:pre">      at visitorsInstrumented.&lt;computed&gt; (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:587:20)</text>
+        <text x="10" y="613.55" style="white-space:pre">    [cause]: RESOLVE_URL_ERROR: Failed to resolve url reference</text>
+        <text x="10" y="632.55" style="white-space:pre">    base/client/main.html:14:20</text>
+        <text x="10" y="651.55" style="white-space:pre">    11 |         window.resolveResultPromise = resolve;</text>
+        <text x="10" y="670.55" style="white-space:pre">    12 |       });</text>
+        <text x="10" y="689.55" style="white-space:pre">    13 |     &lt;/script&gt;</text>
+        <text x="10" y="708.55" style="white-space:pre">    14 |     &lt;a id="link_1" href="ignore:a.js"&gt;&lt;/a&gt;</text>
+        <text x="10" y="727.55" style="white-space:pre">                            ^</text>
+        <text x="10" y="746.55" style="white-space:pre">    An error occured during specifier resolution</text>
+        <text x="10" y="765.55" style="white-space:pre">    --- error stack ---</text>
+        <text x="10" y="784.55" style="white-space:pre">    TypeError: Invalid URL</text>
+        <text x="10" y="803.55" style="white-space:pre">        at new URL (node:internal/url:819:25)</text>
+        <text x="10" y="822.55" style="white-space:pre">        at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:357:22)</text>
+        <text x="10" y="841.55" style="white-space:pre">        at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:385:38)</text>
+        <text x="10" y="860.55" style="white-space:pre">        at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:41:41)</text>
+        <text x="10" y="879.55" style="white-space:pre">        at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:63:23)</text>
+        <text x="10" y="898.55" style="white-space:pre">        at createExternalReference (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:190:52)</text>
+        <text x="10" y="917.55" style="white-space:pre">        at visitHref (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:221:22)</text>
+        <text x="10" y="936.55" style="white-space:pre">        at Object.a (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:515:15)</text>
+        <text x="10" y="955.55" style="white-space:pre">        at visitorsInstrumented.&lt;computed&gt; (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:587:20)</text>
+        <text x="10" y="974.55" style="white-space:pre">        at visitNode (@jsenv/core/packages/internal/ast/src/html/html_search.js:8:35)</text>
+        <text x="10" y="993.55" style="white-space:pre">        at createFailedToResolveUrlError (@jsenv/core/src/kitchen/errors.js:16:26)</text>
+        <text x="10" y="1012.55" style="white-space:pre">        at createResolveUrlError (@jsenv/core/src/kitchen/errors.js:62:10)</text>
+        <text x="10" y="1031.55" style="white-space:pre">        at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:369:13)</text>
+        <text x="10" y="1050.55" style="white-space:pre">        at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:385:38)</text>
+        <text x="10" y="1069.55" style="white-space:pre">        at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:41:41)</text>
+        <text x="10" y="1088.55" style="white-space:pre">        at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:63:23)</text>
+        <text x="10" y="1107.55" style="white-space:pre">        at createExternalReference (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:190:52)</text>
+        <text x="10" y="1126.55" style="white-space:pre">        at visitHref (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:221:22)</text>
+        <text x="10" y="1145.55" style="white-space:pre">        at Object.a (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:515:15)</text>
+        <text x="10" y="1164.55" style="white-space:pre">        at visitorsInstrumented.&lt;computed&gt; (@jsenv/core/src/plugins/reference_analysis/html/jsenv_plugin_html_reference_analysis.js:587:20)</text>
+        <text x="10" y="1183.55">chromium console.error &gt; Failed to load resource: the server responded with a status of 500 ("transformUrlContent" error on "html")</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>
