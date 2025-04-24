@@ -16,11 +16,11 @@
         useDocumentUrl,
         registerRoutes,
         useRouteUrl,
-        useRouteIsMatching,
-        useRouteIsLoading,
-        useRouteLoadIsAborted,
         useUrlBooleanParam,
         setBaseUrl,
+        useRouteLoadingState,
+        // eslint-disable-next-line no-unused-vars
+        Route,
       } from "@jsenv/router";
       // eslint-disable-next-line no-unused-vars
       import { NavControls } from "./nav_controls.jsx";
@@ -51,8 +51,6 @@
           useUrlBooleanParam("opened");
         const pageAUrl = useRouteUrl(pageA);
         const pageBUrl = useRouteUrl(pageB);
-        const fooIsActive = useRouteIsMatching(foo);
-        const barIsActive = useRouteIsMatching(bar);
         const fooUrl = useRouteUrl(foo);
         const barUrl = useRouteUrl(bar);
 
@@ -94,8 +92,8 @@
             <div>
               <div>Pages</div>
               <div style="border: 1px solid black; padding: 10px">
-                <PageA />
-                <PageB />
+                <Route route={pageA} matching={PageA} />
+                <Route route={pageB} matching={PageB} />
               </div>
             </div>
 
@@ -108,31 +106,25 @@
 
             <div>
               <div>ENDPOINT</div>
-              {fooIsActive ? <Foo /> : barIsActive ? <Bar /> : "nothing"}
+              <Route route={foo} loaded={Foo} />
+              <Route route={bar} loaded={Bar} />
             </div>
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const Foo = () => {
         return "foo";
       };
-
-      // eslint-disable-next-line no-unused-vars
       const Bar = () => {
         return "bar";
       };
-
-      // eslint-disable-next-line no-unused-vars
-      const PageA = () => {
-        const isActive = useRouteIsMatching(pageA);
-        const isLoading = useRouteIsLoading(pageA);
-        const isAborted = useRouteLoadIsAborted(pageA);
-        if (!isActive) {
+      const PageA = ({ route }) => {
+        const loadingState = useRouteLoadingState(route);
+        if (loadingState === "idle") {
           return "pageA not active";
         }
-        if (isLoading) {
+        if (loadingState === "loading") {
           return (
             <div>
               page A loading...
@@ -146,24 +138,22 @@
             </div>
           );
         }
-        if (isAborted) {
+        if (loadingState === "aborted") {
           return `page A load aborted`;
         }
         return "page A content";
       };
 
       // eslint-disable-next-line no-unused-vars
-      const PageB = () => {
-        const isActive = useRouteIsMatching(pageB);
-        const isLoading = useRouteIsLoading(pageB);
-        const isAborted = useRouteLoadIsAborted(pageB);
-        if (!isActive) {
+      const PageB = ({ route }) => {
+        const loadingState = useRouteLoadingState(route);
+        if (loadingState === "idle") {
           return "pageB not active";
         }
-        if (isLoading) {
+        if (loadingState === "loading") {
           return "page B loading...";
         }
-        if (isAborted) {
+        if (loadingState === "aborted") {
           return `page B load aborted`;
         }
         return "page B content";
