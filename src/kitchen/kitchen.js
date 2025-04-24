@@ -354,7 +354,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         let { protocol } = new URL(url);
         if (protocol === "ignore:") {
           url = url.slice("ignore:".length);
-          protocol = new URL(url).protocol;
+          protocol = new URL(url, "http://example.com").protocol;
         }
         if (!supportedProtocols.includes(protocol)) {
           const protocolNotSupportedError = new Error(

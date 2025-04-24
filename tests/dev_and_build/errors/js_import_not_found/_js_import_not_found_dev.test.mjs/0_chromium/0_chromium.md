@@ -32,6 +32,8 @@ chromium console.error > Failed to load resource: the server responded with a st
 
 
 # 3/3 resolve
+  <details>
+  <summary>details</summary>
 
 ```js
 {
@@ -78,7 +80,22 @@ chromium console.error > Failed to load resource: the server responded with a st
           "url": "base/client/main.js",
           "serverUrl": "http://127.0.0.1/main.js"
         },
-        "text": "Error while loading module"
+        "text": "Error while loading module",
+        "cause": {
+          "code": "NOT_FOUND",
+          "name": "FETCH_URL_CONTENT_ERROR",
+          "message": "Failed to fetch url content\nbase/client/intermediate.js:2:7\n1 | // eslint-disable-next-line import-x/no-unresolved\n2 | import \"./not_found.js\";\n          ^\nno entry on filesystem\n--- plugin name ---\n\"jsenv:file_url_fetching\"",
+          "reason": "no entry on filesystem",
+          "stack": "FETCH_URL_CONTENT_ERROR: Failed to fetch url content\nbase/client/intermediate.js:2:7\n1 | // eslint-disable-next-line import-x/no-unresolved\n2 | import \"./not_found.js\";\n          ^\nno entry on filesystem\n--- plugin name ---\n\"jsenv:file_url_fetching\"\n    at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:79:24)\n    at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:120:14)\n    at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:544:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async @jsenv/core/src/kitchen/kitchen.js:613:11\n    at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:29:7)\n    at async @jsenv/core/src/kitchen/kitchen.js:611:9\n    at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:777:7)\n    at async Object.fetch (@jsenv/core/src/dev/start_dev_server.js:496:15)\n    at async Object.match (@jsenv/core/packages/backend/server/src/router/router.js:412:28)\n    at async @jsenv/core/packages/backend/server/src/start_server.js:570:42\n    at async getResponseProperties (@jsenv/core/packages/backend/server/src/start_server.js:576:34)\n    at async Server.requestEventHandler (@jsenv/core/packages/backend/server/src/start_server.js:696:36)",
+          "trace": {
+            "codeFrame": "1 | // eslint-disable-next-line import-x/no-unresolved\n2 | import \"./not_found.js\";\n          ^",
+            "message": "base/client/intermediate.js:2:7\n1 | // eslint-disable-next-line import-x/no-unresolved\n2 | import \"./not_found.js\";\n          ^",
+            "url": "base/client/intermediate.js",
+            "line": 2,
+            "column": 7
+          },
+          "isJsenvCookingError": true
+        }
       },
       "value": null,
       "timings": {
@@ -89,6 +106,8 @@ chromium console.error > Failed to load resource: the server responded with a st
   }
 }
 ```
+
+</details>
 
 ---
 
