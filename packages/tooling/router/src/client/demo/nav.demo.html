@@ -25,7 +25,7 @@
       import { NavControls } from "./nav_controls.jsx";
 
       let resolveNavigationToPageA;
-      const { pageA, pageB, foo, bar } = registerRoutes({
+      const [pageA, pageB, foo, bar] = registerRoutes({
         pageA: {
           urlTemplate: "?page=A",
           load: async ({ signal }) => {
