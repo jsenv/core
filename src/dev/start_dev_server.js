@@ -4,7 +4,7 @@ import {
   lookupPackageDirectory,
   readPackageAtOrNull,
 } from "@jsenv/filesystem";
-import { createLogger, createTaskLog } from "@jsenv/humanize";
+import { createLogger, createTaskLog, formatError } from "@jsenv/humanize";
 import {
   composeTwoResponses,
   jsenvAccessControlAllowedHeaders,
@@ -605,7 +605,7 @@ export const startDevServer = async ({
                 url: reference.url,
                 status: 500,
                 statusText: error.reason,
-                statusMessage: error.stack,
+                statusMessage: formatError(error),
                 headers: {
                   "cache-control": "no-store",
                 },

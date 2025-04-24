@@ -14,6 +14,7 @@ export { generateContentFrame } from "./content_frame/content_frame.js";
 export { createCallOrderer } from "./log/call_orderer.js";
 export { errorToMarkdown } from "./error/error_to_markdown.js";
 export { errorToHTML } from "./error/error_to_html.js";
+export { formatError } from "./error/format_error.js";
 
 // node only
 export { renderSection, renderBigSection } from "./log/section.js";

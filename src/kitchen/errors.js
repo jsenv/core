@@ -302,13 +302,15 @@ const detailsFromFirstReference = (reference) => {
 const getFirstReferenceInProject = (reference) => {
   const ownerUrlInfo = reference.ownerUrlInfo;
   if (
+    reference.type !== "http_request" &&
     !ownerUrlInfo.url.includes("/node_modules/") &&
     ownerUrlInfo.packageDirectoryUrl ===
       ownerUrlInfo.context.packageDirectory.url
   ) {
     return reference;
   }
-  return getFirstReferenceInProject(ownerUrlInfo.firstReference);
+  const { firstReference } = ownerUrlInfo;
+  return getFirstReferenceInProject(firstReference);
 };
 
 const detailsFromPluginController = (pluginController) => {
