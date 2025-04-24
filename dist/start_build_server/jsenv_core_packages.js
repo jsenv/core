@@ -511,6 +511,35 @@ const SIGINT_CALLBACK = {
   },
 };
 
+const isFileSystemPath = (value) => {
+  if (typeof value !== "string") {
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    );
+  }
+  if (value[0] === "/") {
+    return true;
+  }
+  return startsWithWindowsDriveLetter(value);
+};
+
+const startsWithWindowsDriveLetter = (string) => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+
+  return true;
+};
+
+const fileSystemPathToUrl = (value) => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`value must be a filesystem path, got ${value}`);
+  }
+  return String(pathToFileURL(value));
+};
+
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
@@ -1460,35 +1489,6 @@ const ensurePathnameTrailingSlash = (url) => {
   return transformUrlPathname(url, (pathname) => {
     return pathname.endsWith("/") ? pathname : `${pathname}/`;
   });
-};
-
-const isFileSystemPath = (value) => {
-  if (typeof value !== "string") {
-    throw new TypeError(
-      `isFileSystemPath first arg must be a string, got ${value}`,
-    );
-  }
-  if (value[0] === "/") {
-    return true;
-  }
-  return startsWithWindowsDriveLetter(value);
-};
-
-const startsWithWindowsDriveLetter = (string) => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-
-  return true;
-};
-
-const fileSystemPathToUrl = (value) => {
-  if (!isFileSystemPath(value)) {
-    throw new Error(`value must be a filesystem path, got ${value}`);
-  }
-  return String(pathToFileURL(value));
 };
 
 const validateDirectoryUrl = (value) => {

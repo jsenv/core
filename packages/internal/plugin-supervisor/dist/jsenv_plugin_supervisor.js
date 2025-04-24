@@ -892,34 +892,37 @@ const jsenvPluginSupervisor = ({
           url
         } = kitchen.resolve(file, kitchen.context.rootDirectoryUrl);
         file = url;
-        const getErrorCauseInfo = () => {
-          const urlInfo = kitchen.graph.getUrlInfo(file);
-          if (!urlInfo) {
+        const urlInfoVisitedSet = new Set();
+        const getErrorCausingRuntimeError = urlInfo => {
+          if (urlInfoVisitedSet.has(urlInfo)) {
             return null;
           }
+          urlInfoVisitedSet.add(urlInfo);
           const {
             error
           } = urlInfo;
           if (error) {
             return error;
           }
-          // search in direct dependencies (404 or 500)
           for (const referenceToOther of urlInfo.referenceToOthersSet) {
             const referencedUrlInfo = referenceToOther.urlInfo;
-            if (referencedUrlInfo.error) {
-              return referencedUrlInfo.error;
+            const referencedCause = getErrorCausingRuntimeError(referencedUrlInfo);
+            if (referencedCause) {
+              return referencedCause;
             }
           }
           return null;
         };
-        const causeInfo = getErrorCauseInfo();
-        const body = JSON.stringify(causeInfo ? {
-          code: causeInfo.code,
-          name: causeInfo.name,
-          message: causeInfo.message,
-          reason: causeInfo.reason,
-          stack: errorBaseUrl ? "stack mocked for snapshot" : causeInfo.stack,
-          trace: causeInfo.trace
+        const urlInfo = kitchen.graph.getUrlInfo(file);
+        const errorCausingRuntimeError = urlInfo ? getErrorCausingRuntimeError(urlInfo) : null;
+        const body = JSON.stringify(errorCausingRuntimeError ? {
+          code: errorCausingRuntimeError.code,
+          name: errorCausingRuntimeError.name,
+          message: errorCausingRuntimeError.message,
+          reason: errorCausingRuntimeError.reason,
+          stack: errorBaseUrl ? "stack mocked for snapshot" : errorCausingRuntimeError.stack,
+          trace: errorCausingRuntimeError.trace,
+          isJsenvCookingError: errorCausingRuntimeError.isJsenvCookingError
         } : null, null, "  ");
         return {
           status: 200,

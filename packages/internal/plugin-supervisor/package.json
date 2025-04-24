@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-supervisor",
-  "version": "1.6.17",
+  "version": "1.7.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -34,8 +34,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/ast": "6.7.1",
-    "@jsenv/sourcemap": "1.3.7"
+    "@jsenv/ast": "6.7.2",
+    "@jsenv/sourcemap": "1.3.8"
   },
   "devDependencies": {
     "@jsenv/urls": "../../tooling/urls",

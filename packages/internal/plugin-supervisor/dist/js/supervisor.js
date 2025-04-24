@@ -983,11 +983,12 @@ window.__supervisor__ = (() => {
             const {
               trace = {}
             } = cause;
-            const dataToRender = cause.code === "MODULE_NOT_FOUND" ? cause : exception;
+            const preferCause = cause.code === "MODULE_NOT_FOUND" || cause.code === "PROTOCOL_NOT_SUPPORTED";
+            const dataToRender = preferCause ? cause : exception;
             root.querySelector(".text").innerHTML = stringifyStack({
               codeFrame: trace.codeFrame ? generateClickableText(trace.codeFrame) : "",
               name: dataToRender.name,
-              message: cause.code === "MODULE_NOT_FOUND" ? generateClickableText(dataToRender.reason) : dataToRender.message ? generateClickableText(dataToRender.message) : "",
+              message: preferCause ? generateClickableText(cause.reason) : dataToRender.message ? generateClickableText(dataToRender.message) : "",
               stackTrace: dataToRender.stackTrace ? generateClickableText(dataToRender.stackTrace) : ""
             });
             if (cause && dataToRender === exception) {

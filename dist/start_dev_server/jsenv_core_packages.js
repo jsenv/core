@@ -5,6 +5,79 @@ import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
+const isFileSystemPath = (value) => {
+  if (typeof value !== "string") {
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    );
+  }
+  if (value[0] === "/") {
+    return true;
+  }
+  return startsWithWindowsDriveLetter(value);
+};
+
+const startsWithWindowsDriveLetter = (string) => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+
+  return true;
+};
+
+const fileSystemPathToUrl = (value) => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`value must be a filesystem path, got ${value}`);
+  }
+  return String(pathToFileURL(value));
+};
+
+const getCallerPosition = () => {
+  const { prepareStackTrace } = Error;
+  Error.prepareStackTrace = (error, stack) => {
+    Error.prepareStackTrace = prepareStackTrace;
+    return stack;
+  };
+  const { stack } = new Error();
+  const callerCallsite = stack[2];
+  const fileName = callerCallsite.getFileName();
+  return {
+    url:
+      fileName && isFileSystemPath(fileName)
+        ? fileSystemPathToUrl(fileName)
+        : fileName,
+    line: callerCallsite.getLineNumber(),
+    column: callerCallsite.getColumnNumber(),
+  };
+};
+
+const urlToFileSystemPath = (url) => {
+  const urlObject = new URL(url);
+  let { origin, pathname, hash } = urlObject;
+  if (urlObject.protocol === "file:") {
+    origin = "file://";
+  }
+  pathname = pathname
+    .split("/")
+    .map((part) => {
+      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
+    })
+    .join("/");
+  if (hash) {
+    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
+  }
+  const urlString = `${origin}${pathname}`;
+  const fileSystemPath = fileURLToPath(urlString);
+  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    return fileSystemPath.slice(0, -1);
+  }
+  return fileSystemPath;
+};
+
 /*
  * data:[<mediatype>][;base64],<data>
  * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs#syntax
@@ -637,6 +710,58 @@ const escapeHtml = (string) => {
     .replace(/'/g, "&#039;");
 };
 
+const formatError = (error) => {
+  let text = "";
+  text += error.stack;
+  const { cause } = error;
+  if (cause) {
+    const formatCause = (cause, depth) => {
+      let causeText = prefixFirstAndIndentRemainingLines({
+        prefix: "  [cause]:",
+        indentation: "  ".repeat(depth + 1),
+        text: cause.stack,
+      });
+      const nestedCause = cause.cause;
+      if (nestedCause) {
+        const nestedCauseText = formatCause(nestedCause, depth + 1);
+        causeText += `\n${nestedCauseText}`;
+      }
+      return causeText;
+    };
+    const causeText = formatCause(cause, 0);
+    text += `\n${causeText}`;
+  }
+  return text;
+};
+
+const prefixFirstAndIndentRemainingLines = ({
+  prefix,
+  indentation,
+  text,
+  trimLines,
+  trimLastLine,
+}) => {
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  if (indentation === undefined) {
+    {
+      indentation = "  "; // prefix + space
+    }
+  }
+  let result = `${prefix} ${firstLine}` ;
+  let i = 0;
+  while (i < lines.length) {
+    const line = trimLines ? lines[i].trim() : lines[i];
+    i++;
+    result += line.length
+      ? `\n${indentation}${line}`
+      : trimLastLine && i === lines.length
+        ? ""
+        : `\n`;
+  }
+  return result;
+};
+
 const LOG_LEVEL_OFF = "off";
 
 const LOG_LEVEL_DEBUG = "debug";
@@ -1262,6 +1387,75 @@ const urlToOrigin$1 = (url) => {
   return new URL(urlString).origin;
 };
 
+const setUrlExtension = (url, extension) => {
+  const origin = urlToOrigin$1(url);
+  const currentExtension = urlToExtension$1(url);
+  if (typeof extension === "function") {
+    extension = extension(currentExtension);
+  }
+  const resource = urlToResource(url);
+  const [pathname, search] = resource.split("?");
+  const pathnameWithoutExtension = currentExtension
+    ? pathname.slice(0, -currentExtension.length)
+    : pathname;
+  let newPathname;
+  if (pathnameWithoutExtension.endsWith("/")) {
+    newPathname = pathnameWithoutExtension.slice(0, -1);
+    newPathname += extension;
+    newPathname += "/";
+  } else {
+    newPathname = pathnameWithoutExtension;
+    newPathname += extension;
+  }
+  return `${origin}${newPathname}${search ? `?${search}` : ""}`;
+};
+
+const setUrlFilename = (url, filename) => {
+  const parentPathname = new URL("./", url).pathname;
+  return transformUrlPathname(url, (pathname) => {
+    if (typeof filename === "function") {
+      filename = filename(pathnameToFilename(pathname));
+    }
+    return `${parentPathname}${filename}`;
+  });
+};
+
+const setUrlBasename = (url, basename) => {
+  return setUrlFilename(url, (filename) => {
+    if (typeof basename === "function") {
+      basename = basename(filenameToBasename(filename));
+    }
+    return `${basename}${urlToExtension$1(url)}`;
+  });
+};
+
+const transformUrlPathname = (url, transformer) => {
+  if (typeof url === "string") {
+    const urlObject = new URL(url);
+    const { pathname } = urlObject;
+    const pathnameTransformed = transformer(pathname);
+    if (pathnameTransformed === pathname) {
+      return url;
+    }
+    let { origin } = urlObject;
+    // origin is "null" for "file://" urls with Node.js
+    if (origin === "null" && urlObject.href.startsWith("file:")) {
+      origin = "file://";
+    }
+    const { search, hash } = urlObject;
+    const urlWithPathnameTransformed = `${origin}${pathnameTransformed}${search}${hash}`;
+    return urlWithPathnameTransformed;
+  }
+  const pathnameTransformed = transformer(url.pathname);
+  url.pathname = pathnameTransformed;
+  return url;
+};
+const ensurePathnameTrailingSlash = (url) => {
+  return transformUrlPathname(url, (pathname) => {
+    return pathname.endsWith("/") ? pathname : `${pathname}/`;
+  });
+};
+
 const asUrlWithoutSearch = (url) => {
   url = String(url);
   if (url.includes("?")) {
@@ -1350,130 +1544,6 @@ const injectQueryParams = (url, params) => {
     }
   }
   return normalizeUrl(calledWithString ? urlObject.href : urlObject);
-};
-
-const setUrlExtension = (url, extension) => {
-  const origin = urlToOrigin$1(url);
-  const currentExtension = urlToExtension$1(url);
-  if (typeof extension === "function") {
-    extension = extension(currentExtension);
-  }
-  const resource = urlToResource(url);
-  const [pathname, search] = resource.split("?");
-  const pathnameWithoutExtension = currentExtension
-    ? pathname.slice(0, -currentExtension.length)
-    : pathname;
-  let newPathname;
-  if (pathnameWithoutExtension.endsWith("/")) {
-    newPathname = pathnameWithoutExtension.slice(0, -1);
-    newPathname += extension;
-    newPathname += "/";
-  } else {
-    newPathname = pathnameWithoutExtension;
-    newPathname += extension;
-  }
-  return `${origin}${newPathname}${search ? `?${search}` : ""}`;
-};
-
-const setUrlFilename = (url, filename) => {
-  const parentPathname = new URL("./", url).pathname;
-  return transformUrlPathname(url, (pathname) => {
-    if (typeof filename === "function") {
-      filename = filename(pathnameToFilename(pathname));
-    }
-    return `${parentPathname}${filename}`;
-  });
-};
-
-const setUrlBasename = (url, basename) => {
-  return setUrlFilename(url, (filename) => {
-    if (typeof basename === "function") {
-      basename = basename(filenameToBasename(filename));
-    }
-    return `${basename}${urlToExtension$1(url)}`;
-  });
-};
-
-const transformUrlPathname = (url, transformer) => {
-  if (typeof url === "string") {
-    const urlObject = new URL(url);
-    const { pathname } = urlObject;
-    const pathnameTransformed = transformer(pathname);
-    if (pathnameTransformed === pathname) {
-      return url;
-    }
-    let { origin } = urlObject;
-    // origin is "null" for "file://" urls with Node.js
-    if (origin === "null" && urlObject.href.startsWith("file:")) {
-      origin = "file://";
-    }
-    const { search, hash } = urlObject;
-    const urlWithPathnameTransformed = `${origin}${pathnameTransformed}${search}${hash}`;
-    return urlWithPathnameTransformed;
-  }
-  const pathnameTransformed = transformer(url.pathname);
-  url.pathname = pathnameTransformed;
-  return url;
-};
-const ensurePathnameTrailingSlash = (url) => {
-  return transformUrlPathname(url, (pathname) => {
-    return pathname.endsWith("/") ? pathname : `${pathname}/`;
-  });
-};
-
-const isFileSystemPath = (value) => {
-  if (typeof value !== "string") {
-    throw new TypeError(
-      `isFileSystemPath first arg must be a string, got ${value}`,
-    );
-  }
-  if (value[0] === "/") {
-    return true;
-  }
-  return startsWithWindowsDriveLetter(value);
-};
-
-const startsWithWindowsDriveLetter = (string) => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-
-  return true;
-};
-
-const fileSystemPathToUrl = (value) => {
-  if (!isFileSystemPath(value)) {
-    throw new Error(`value must be a filesystem path, got ${value}`);
-  }
-  return String(pathToFileURL(value));
-};
-
-const getCallerPosition = () => {
-  const { prepareStackTrace } = Error;
-  Error.prepareStackTrace = (error, stack) => {
-    Error.prepareStackTrace = prepareStackTrace;
-    return stack;
-  };
-  const { stack } = new Error();
-  const callerCallsite = stack[2];
-  const fileName = callerCallsite.getFileName();
-  return {
-    url:
-      fileName && isFileSystemPath(fileName)
-        ? fileSystemPathToUrl(fileName)
-        : fileName,
-    line: callerCallsite.getLineNumber(),
-    column: callerCallsite.getColumnNumber(),
-  };
-};
-
-const resolveUrl$1 = (specifier, baseUrl) => {
-  if (typeof baseUrl === "undefined") {
-    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
-  }
-  return String(new URL(specifier, baseUrl));
 };
 
 const getCommonPathname = (pathname, otherPathname) => {
@@ -1585,6 +1655,13 @@ const moveUrl = ({ url, from, to, preferRelative }) => {
   return absoluteUrl;
 };
 
+const resolveUrl$1 = (specifier, baseUrl) => {
+  if (typeof baseUrl === "undefined") {
+    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
+  }
+  return String(new URL(specifier, baseUrl));
+};
+
 const urlIsInsideOf = (url, otherUrl) => {
   const urlObject = new URL(url);
   const otherUrlObject = new URL(otherUrl);
@@ -1601,31 +1678,6 @@ const urlIsInsideOf = (url, otherUrl) => {
 
   const isInside = urlPathname.startsWith(otherUrlPathname);
   return isInside;
-};
-
-const urlToFileSystemPath = (url) => {
-  const urlObject = new URL(url);
-  let { origin, pathname, hash } = urlObject;
-  if (urlObject.protocol === "file:") {
-    origin = "file://";
-  }
-  pathname = pathname
-    .split("/")
-    .map((part) => {
-      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
-    })
-    .join("/");
-  if (hash) {
-    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
-  }
-  const urlString = `${origin}${pathname}`;
-  const fileSystemPath = fileURLToPath(urlString);
-  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    return fileSystemPath.slice(0, -1);
-  }
-  return fileSystemPath;
 };
 
 const validateDirectoryUrl = (value) => {
@@ -6205,4 +6257,4 @@ const memoizeByFirstArgument = (compute) => {
   return fnWithMemoization;
 };
 
-export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, defaultLookupPackageScope, defaultReadPackageJson, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, memoizeByFirstArgument, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };
+export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, defaultLookupPackageScope, defaultReadPackageJson, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, memoizeByFirstArgument, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };
