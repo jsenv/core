@@ -40,20 +40,24 @@ export const createKitchen = ({
   supportedProtocols = [
     "file:",
     "data:",
+    // eslint-disable-next-line no-script-url
+    "javascript:",
     "virtual:",
+    "ignore:",
     "http:",
     "https:",
     "chrome:",
     "chrome-extension:",
     "chrome-untrusted:",
     "isolated-app:",
-    // eslint-disable-next-line no-script-url
-    "javascript:",
-    "ignore:",
   ],
-  ignoredProtocols = [
-    // eslint-disable-next-line no-script-url
-    "javascript:",
+  includedProtocols = [
+    "file:",
+    "data:",
+    "virtual:",
+    "ignore:",
+    "http:",
+    "https:",
   ],
 
   // during dev/test clientRuntimeCompat is a single runtime
@@ -75,7 +79,7 @@ export const createKitchen = ({
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
   if (nodeRuntimeEnabled) {
-    ignoredProtocols.push("node:");
+    supportedProtocols.push("node:");
   }
 
   if (packageDependencies === "auto") {
@@ -148,11 +152,11 @@ export const createKitchen = ({
 
   const isIgnoredByProtocol = (url) => {
     const { protocol } = new URL(url);
-    const protocolIsIgnored = ignoredProtocols.includes(protocol);
-    if (protocolIsIgnored) {
-      return true;
+    const protocolIsIncluded = includedProtocols.includes(protocol);
+    if (protocolIsIncluded) {
+      return false;
     }
-    return false;
+    return true;
   };
   const isIgnoredBecauseInPackageDependencies = (() => {
     if (packageDependencies === undefined) {
