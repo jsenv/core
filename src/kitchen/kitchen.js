@@ -47,6 +47,9 @@ export const createKitchen = ({
     "chrome-extension:",
     "chrome-untrusted:",
     "isolated-app:",
+    // eslint-disable-next-line no-script-url
+    "javascript:",
+    "ignore:",
   ],
 
   // during dev/test clientRuntimeCompat is a single runtime
