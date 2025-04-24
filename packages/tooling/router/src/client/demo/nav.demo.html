@@ -28,7 +28,7 @@
       let resolveNavigationToPageA;
       setBaseUrl(window.location.href);
       const [pageA, pageB, foo, bar] = registerRoutes({
-        "?page=A": async ({ signal }) => {
+        "GET ?page=A": async ({ signal }) => {
           signal.addEventListener("abort", () => {
             console.log("pageA load aborted");
           });
@@ -36,10 +36,10 @@
             resolveNavigationToPageA = resolve;
           });
         },
-        "?page=B": () => {},
-        "/foo": () => {},
-        "/bar": () => {},
-        "*": () => {
+        "GET ?page=B": () => {},
+        "GET /foo": () => {},
+        "GET /bar": () => {},
+        "GET *": () => {
           // console.log("load fallback");
         },
       });
