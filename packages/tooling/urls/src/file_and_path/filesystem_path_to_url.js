@@ -1,5 +1,4 @@
 import { pathToFileURL } from "node:url";
-
 import { isFileSystemPath } from "./is_filesystem_path.js";
 
 export const fileSystemPathToUrl = (value) => {

@@ -1,4 +1,4 @@
-import { pathnameToExtension } from "./internal/pathname_to_extension.js";
+import { pathnameToExtension } from "../internal/pathname_to_extension.js";
 
 export const resourceToParts = (resource) => {
   const searchSeparatorIndex = resource.indexOf("?");
