@@ -1,5 +1,5 @@
-import { useResizeObserver, registerRoutes, useStructuredMemo, useKeyEffect, useDrawImage, useImageLoader, fromTransformations, useFontFace } from "/oto_packages.js";
-import { d, _, u, k, D, A, F, E, d$1, w, E$1, H, q, y, T, b } from "/oto_node_modules.js";
+import { useResizeObserver, useStructuredMemo, useKeyEffect, useDrawImage, useImageLoader, fromTransformations, useFontFace } from "/oto_packages.js";
+import { d, _, u, k, D, A, F, E, d$1, r, w, K, x, y, E$1, H, q, T, b } from "/oto_node_modules.js";
 
 const goblinFontUrl = new URL(__v__("/other/AGoblinAppears-o2aV.ttf"), import.meta.url).href;
 new URL(__v__("/other/SuperLegendBoy-4w8Y.ttf"), import.meta.url).href;
@@ -1384,6 +1384,1136 @@ window.addEventListener("unhandledrejection", (event) => {
   if (reason && reason.name === "AbortError" && reason.isPlaybackAbortError) {
     event.preventDefault();
   }
+});
+
+const canGoBackSignal = d$1(false);
+const updateCanGoBack = (can) => {
+  canGoBackSignal.value = can;
+};
+const updateCanGoForward = (can) => {
+  canGoBackSignal.value = can;
+};
+
+const documentUrlSignal = d$1(window.location.href);
+const updateDocumentUrl = (value) => {
+  documentUrlSignal.value = value;
+};
+
+const resourceToParts = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?");
+  if (searchSeparatorIndex === -1) {
+    const hashSeparatorIndex = resource.indexOf("#");
+    if (hashSeparatorIndex === -1) {
+      return [resource, "", ""];
+    }
+    const beforeHashSeparator = resource.slice(0, hashSeparatorIndex);
+    const afterHashSeparator = resource.slice(hashSeparatorIndex + 1);
+    return [beforeHashSeparator, "", afterHashSeparator];
+  }
+  const beforeSearchSeparator = resource.slice(0, searchSeparatorIndex);
+  const afterSearchSeparator = resource.slice(searchSeparatorIndex + 1);
+  const hashSeparatorIndex = afterSearchSeparator.indexOf("#");
+  if (hashSeparatorIndex === -1) {
+    return [beforeSearchSeparator, afterSearchSeparator, ""];
+  }
+  const afterSearchSeparatorAndBeforeHashSeparator = afterSearchSeparator.slice(
+    0,
+    hashSeparatorIndex,
+  );
+  const afterHashSeparator = afterSearchSeparator.slice(hashSeparatorIndex + 1);
+  return [
+    beforeSearchSeparator,
+    afterSearchSeparatorAndBeforeHashSeparator,
+    afterHashSeparator,
+  ];
+};
+
+const isEscaped = (i, string) => {
+  let backslashBeforeCount = 0;
+  while (i--) {
+    const previousChar = string[i];
+    if (previousChar === "\\") {
+      backslashBeforeCount++;
+    }
+    break;
+  }
+  const isEven = backslashBeforeCount % 2 === 0;
+  return !isEven;
+};
+
+const escapeChars = (string, replacements) => {
+  const charsToEscape = Object.keys(replacements);
+  let result = "";
+  let last = 0;
+  let i = 0;
+  while (i < string.length) {
+    const char = string[i];
+    i++;
+    if (charsToEscape.includes(char) && !isEscaped(i - 1, string)) {
+      if (last === i - 1) {
+        result += replacements[char];
+      } else {
+        result += `${string.slice(last, i - 1)}${replacements[char]}`;
+      }
+      last = i;
+    }
+  }
+  if (last !== string.length) {
+    result += string.slice(last);
+  }
+  return result;
+};
+
+
+
+const escapeRegexpSpecialChars = (string) => {
+  return escapeChars(String(string), {
+    "/": "\\/",
+    "^": "\\^",
+    "\\": "\\\\",
+    "[": "\\[",
+    "]": "\\]",
+    "(": "\\(",
+    ")": "\\)",
+    "{": "\\{",
+    "}": "\\}",
+    "?": "\\?",
+    "+": "\\+",
+    "*": "\\*",
+    ".": "\\.",
+    "|": "\\|",
+    "$": "\\$",
+  });
+};
+
+const createPattern = (
+  pattern,
+  {
+    namedGroupDelimiter,
+    prepareStringToGenerate = (stringToBuild) => stringToBuild,
+    finalizeGeneratedString = (generatedString) => generatedString,
+  } = {},
+) => {
+  if (pattern === "*") {
+    return {
+      regexp: /.*/,
+      match: () => true,
+      generate: (stringToGenerate) => stringToGenerate,
+      generateExample: (stringToGenerate) => stringToGenerate,
+    };
+  }
+
+  const parts = [];
+  const namedParams = [];
+  let starParamCount = 0;
+  let regexpSource = "";
+  let lastIndex = 0;
+  regexpSource += "^";
+  for (const match of pattern.matchAll(/:\w+|\*/g)) {
+    const string = match[0];
+    const index = match.index;
+    let before = pattern.slice(lastIndex, index);
+    parts.push({ type: "static", value: before });
+    regexpSource += escapeRegexpSpecialChars(before);
+    if (string === "*") {
+      starParamCount++;
+      regexpSource += `(?<star_${starParamCount - 1}>.+)`;
+      parts.push({ type: "star", value: starParamCount - 1 });
+    } else {
+      const paramName = string.slice(1);
+      namedParams.push(paramName);
+      regexpSource += namedGroupDelimiter
+        ? `(?<${paramName}>[^${escapeRegexpSpecialChars(namedGroupDelimiter)}]+)`
+        : `(?<${paramName}>.+)`;
+      parts.push({ type: "named", value: paramName });
+    }
+    lastIndex = index + string.length;
+  }
+  const after = pattern.slice(lastIndex);
+  parts.push({ type: "static", value: after });
+  regexpSource += escapeRegexpSpecialChars(after);
+  regexpSource += "$";
+
+  const regexp = new RegExp(regexpSource);
+
+  const generateWhenPatternIsStatic = () => {
+    return prepareStringToGenerate(pattern);
+  };
+  const generateWhenPatternUsesOnlyStarParams = (...values) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else {
+        generatedString += values[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+  const generateWhenPatternUsesOnlyNamedParams = (namedValues) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else {
+        generatedString += namedValues[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+  const generateWhenPatternUsesNamedAndStarParams = (
+    namedValues,
+    ...values
+  ) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else if (part.type === "named") {
+        generatedString += namedValues[part.value];
+      } else {
+        generatedString += values[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+
+  const isStatic = namedParams.length === 0 && starParamCount === 0;
+  const usesOnlyNamedParams = namedParams.length > 0 && starParamCount === 0;
+  const usesOnlyStarParams = namedParams.length === 0 && starParamCount > 0;
+  const usesNamedAndStarParams = namedParams.length > 0 && starParamCount > 0;
+
+  const generate = isStatic
+    ? generateWhenPatternIsStatic
+    : usesOnlyNamedParams
+      ? generateWhenPatternUsesOnlyNamedParams
+      : usesOnlyStarParams
+        ? generateWhenPatternUsesOnlyStarParams
+        : generateWhenPatternUsesNamedAndStarParams;
+
+  return {
+    regexp,
+    match: (value) => {
+      if (value === undefined) {
+        return null;
+      }
+      const match = String(value).match(regexp);
+      if (!match) {
+        return null;
+      }
+      const groups = match.groups;
+      if (groups && Object.keys(groups).length) {
+        const stars = [];
+        const named = {};
+        for (const key of Object.keys(groups)) {
+          if (key.startsWith("star_")) {
+            const index = parseInt(key.slice("star_".length));
+            stars[index] = groups[key];
+          } else {
+            named[key] = groups[key];
+          }
+        }
+        return {
+          named: Object.keys(named).length === 0 ? null : named,
+          stars: stars.length === 0 ? null : stars,
+        };
+      }
+      return { named: null, stars: null };
+    },
+    generate,
+    generateExample: () => {
+      if (usesNamedAndStarParams) {
+        return generate(
+          generateNamedParamsExample(namedParams),
+          ...generateStarParamsExample(starParamCount),
+        );
+      }
+      if (usesOnlyNamedParams) {
+        return generate(generateNamedParamsExample(namedParams));
+      }
+      if (usesOnlyStarParams) {
+        return generate(...generateStarParamsExample(starParamCount));
+      }
+      return generate();
+    },
+  };
+};
+
+const composeTwoMatchResults = (left, right) => {
+  if (!left || !right) {
+    return false;
+  }
+  let named;
+  const leftNamed = left.named;
+  const rightNamed = right.named;
+  if (leftNamed && rightNamed) {
+    named = { ...leftNamed, ...rightNamed };
+  } else if (leftNamed) {
+    named = leftNamed;
+  } else if (rightNamed) {
+    named = rightNamed;
+  }
+  let stars;
+  const leftStars = left.stars;
+  const rightStars = right.stars;
+  if (leftStars && rightStars) {
+    stars = [...leftStars, ...rightStars];
+  } else if (leftStars) {
+    stars = leftStars;
+  } else if (rightStars) {
+    stars = rightStars;
+  }
+  return { named, stars };
+};
+
+const PATTERN = {
+  create: createPattern,
+  composeTwoMatchResults,
+  createKeyValue: (object) => {
+    const patternMap = new Map();
+    const keys = Object.keys(object);
+    for (const key of keys) {
+      const value = object[key];
+      if (typeof value === "function") {
+        patternMap.set(key, {
+          match: (value) => {
+            return Boolean(value(value));
+          },
+          generate: () => {
+            return "?";
+          },
+        });
+      } else {
+        const valuePattern = PATTERN.create(value);
+        patternMap.set(key, valuePattern);
+      }
+    }
+    return {
+      match: (objectToMatch) => {
+        const namedValues = {};
+        for (const [key, pattern] of patternMap) {
+          const value = objectToMatch[key];
+          const matchResult = pattern.match(value);
+          if (!matchResult) {
+            return false;
+          }
+          const named = matchResult.named;
+          Object.assign(namedValues, named);
+        }
+        return namedValues;
+      },
+      generate: (values) => {
+        const generatedObject = {};
+        for (const [key, pattern] of patternMap) {
+          generatedObject[key] = pattern.generate(values);
+        }
+        return generatedObject;
+      },
+      generateExample: () => {
+        const generatedObject = {};
+        for (const [key, pattern] of patternMap) {
+          generatedObject[key] = pattern.generateExample();
+        }
+        return generatedObject;
+      },
+    };
+  },
+};
+
+const generateNamedParamsExample = (namedParams) => {
+  const namedParamValues = {};
+  for (const name of namedParams) {
+    namedParamValues[name] = name;
+  }
+  return namedParamValues;
+};
+const generateStarParamsExample = (starParamCount) => {
+  const starValues = [];
+  while (starValues.length < starParamCount) {
+    starValues.push(starValues.length);
+  }
+  return starValues;
+};
+
+const createResourcePattern = (pattern) => {
+  const [pathnamePatternString, searchPatternString, hashPatternString] =
+    resourceToParts(pattern);
+
+  const pathnamePattern = PATTERN.create(pathnamePatternString, {
+    namedGroupDelimiter: "/",
+  });
+  let searchPattern;
+  if (searchPatternString) {
+    const searchParams = Object.fromEntries(
+      new URLSearchParams(searchPatternString),
+    );
+    searchPattern = PATTERN.createKeyValue(searchParams);
+  }
+  let hashPattern;
+  if (hashPatternString) {
+    hashPattern = PATTERN.create(hashPatternString, {
+      namedGroupDelimiter: "&",
+    });
+  }
+
+  return {
+    match: (resource) => {
+      const [pathname, search, hash] = resourceToParts(resource);
+      let result = pathnamePattern.match(pathname);
+      if (!result) {
+        return null;
+      }
+
+      let searchResult;
+      let hashResult;
+      if (searchPattern) {
+        const searchParams = Object.fromEntries(new URLSearchParams(search));
+        searchResult = searchPattern.match(searchParams);
+        if (!searchResult) {
+          return null;
+        }
+        if (result.named) {
+          Object.assign(result.named, searchResult);
+        } else {
+          result.named = searchResult;
+        }
+      }
+      if (hashPattern) {
+        hashResult = hashPattern.match(hash);
+        if (!hashResult) {
+          return null;
+        }
+        result = PATTERN.composeTwoMatchResults(result, hashResult);
+      }
+      return result;
+    },
+    generate: (...args) => {
+      let resource = "";
+      resource += pathnamePattern.generate(...args);
+      if (searchPatternString) {
+        const generatedSearchParams = searchPattern.generate(args[0]);
+        const searchParams = new URLSearchParams();
+        for (const key of Object.keys(generatedSearchParams)) {
+          searchParams.set(key, generatedSearchParams[key]);
+        }
+        const search = searchParams.toString();
+        resource += `?${search}`;
+      }
+      if (hashPatternString) {
+        resource += `#${hashPattern.generate(args[0])}`;
+      }
+      return resource;
+    },
+    generateExample: () => {
+      let resourceExample = "";
+      resourceExample += pathnamePattern.generateExample();
+      if (searchPatternString) {
+        resourceExample += `?${searchPattern.generateExample()}`;
+      }
+      if (hashPatternString) {
+        resourceExample += `#${hashPattern.generateExample()}`;
+      }
+      return resourceExample;
+    },
+  };
+};
+
+
+
+
+
+
+
+
+
+
+
+
+const createRoutes = (description, create = createRoute) => {
+  const routeArray = [];
+  for (const key of Object.keys(description)) {
+    const handler = description[key];
+    if (key === "*") {
+      const route = create({
+        methodPattern: "*",
+        resourcePattern: "*",
+        handler,
+      });
+      routeArray.push(route);
+    } else {
+      const [methodPattern, resourcePattern] = key.split(" ");
+      const route = create({
+        methodPattern,
+        resourcePattern,
+        handler,
+      });
+      routeArray.push(route);
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  return routeArray;
+};
+
+const createRoute = ({ methodPattern, resourcePattern, handler }) => {
+  const resourcePatternParsed = createResourcePattern(resourcePattern);
+  const route = {
+    methodPattern,
+    resourcePattern,
+    match: ({ method, resource }) => {
+      if (route.methodPattern !== method && route.methodPattern !== "*") {
+        return false;
+      }
+      const matchResult = resourcePatternParsed.match(resource);
+      if (!matchResult) {
+        return false;
+      }
+      return matchResult;
+    },
+    build: (url, params) => {
+      return resourcePatternParsed.build(url, params);
+    },
+    handler,
+  };
+
+  return route;
+};
+
+const documentIsRoutingSignal = d$1(false);
+const startDocumentRouting = () => {
+  documentIsRoutingSignal.value = true;
+};
+const endDocumentRouting = () => {
+  documentIsRoutingSignal.value = false;
+};
+
+const normalizeUrl = (url) => {
+  url = String(url);
+  if (url.includes("?")) {
+
+    if (url.startsWith("data:")) {
+      return url;
+    }
+    return url.replace(/[=](?=&|$)/g, "");
+  }
+  return url;
+};
+
+const documentIsLoadingSignal = d$1(true);
+if (document.readyState === "complete") {
+  documentIsLoadingSignal.value = false;
+} else {
+  document.addEventListener("readystatechange", () => {
+    if (document.readyState === "complete") {
+      documentIsLoadingSignal.value = false;
+    }
+  });
+}
+
+updateCanGoBack(true);
+updateCanGoForward(true);
+updateDocumentUrl(window.location.href);
+
+const installNavigation$2 = ({ applyRouting }) => {
+  window.addEventListener(
+    "click",
+    (e) => {
+      if (e.target.tagName === "A") {
+        const href = e.target.href;
+        if (href && href.startsWith(window.location.origin)) {
+          e.preventDefault();
+          window.history.pushState(null, null, e.target.href);
+        }
+      }
+    },
+    { capture: true },
+  );
+  window.addEventListener(
+    "submit",
+    () => {
+
+
+
+    },
+    { capture: true },
+  );
+  window.addEventListener("popstate", async (popstateEvent) => {
+    if (abortRouting) {
+      abortRouting();
+    }
+    let abortController = new AbortController();
+    abortRouting = () => {
+      abortController.abort();
+    };
+    const url = documentUrlSignal.peek();
+    updateDocumentUrl(url);
+    const routingPromise = applyRouting({
+      url,
+      state: popstateEvent.state,
+      stopSignal: abortController.signal,
+    });
+    try {
+      await routingPromise;
+    } finally {
+      abortController = null;
+      abortRouting = null;
+    }
+  });
+  window.history.replaceState(null, null, window.location.href);
+};
+let abortRouting;
+
+const goTo$2 = async (url, { state, replace } = {}) => {
+  const currentUrl = documentUrlSignal.peek();
+  if (url === currentUrl) {
+    return;
+  }
+  if (replace) {
+    window.history.replaceState(state, null, url);
+  } else {
+    window.history.pushState(state, null, url);
+  }
+};
+
+
+
+
+
+
+
+
+updateDocumentUrl(navigation.currentEntry.url);
+navigation.addEventListener("currententrychange", () => {
+  updateDocumentUrl(navigation.currentEntry.url);
+});
+
+updateCanGoBack(navigation.canGoBack);
+updateCanGoForward(navigation.canGoForward);
+navigation.addEventListener("currententrychange", () => {
+  updateCanGoBack(navigation.canGoBack);
+  updateCanGoForward(navigation.canGoForward);
+});
+navigation.addEventListener("navigatesuccess", () => {
+  updateCanGoBack(navigation.canGoBack);
+  updateCanGoForward(navigation.canGoForward);
+});
+
+let isReloadFromNavigationAPI = false;
+const navigationReload = navigation.reload;
+navigation.reload = () => {
+  isReloadFromNavigationAPI = true;
+  navigationReload.call(navigation);
+  isReloadFromNavigationAPI = false;
+};
+
+const installNavigation$1 = ({ applyRouting, routingWhile }) => {
+  navigation.addEventListener("navigate", (event) => {
+    if (!event.canIntercept) {
+      return;
+    }
+    if (event.hashChange || event.downloadRequest !== null) {
+      return;
+    }
+    if (
+      !event.userInitiated &&
+      event.navigationType === "reload" &&
+      event.isTrusted &&
+      !isReloadFromNavigationAPI
+    ) {
+
+
+      return;
+    }
+    const url = event.destination.url;
+    const state = event.state;
+    const { signal } = event;
+    const method = event.info?.method || "GET";
+    const formData = event.formData || event.info?.formData;
+    const formUrl = event.info?.formUrl;
+    const abortSignal = signal;
+    const stopSignal = signalToStopSignal(signal);
+
+    event.intercept({
+      handler: async () => {
+        if (event.info?.action) {
+
+
+
+
+          await routingWhile(event.info.action, {
+            signal,
+            formData,
+          });
+          return;
+        }
+        if (formUrl) {
+          const finishedPromise = event.target.transition.finished;
+          (async () => {
+            try {
+              await finishedPromise;
+            } finally {
+              navigation.navigate(window.location.href, { history: "replace" });
+            }
+          })();
+        }
+        await applyRouting({
+          method,
+          sourceUrl: url,
+          targetUrl: formUrl || url,
+          formData,
+          state,
+          abortSignal,
+          stopSignal,
+          reload: event.navigationType === "reload",
+        });
+      },
+    });
+  });
+  navigation.navigate(window.location.href, { history: "replace" });
+};
+let callEffect = () => {};
+const signalToStopSignal = (signal) => {
+  callEffect();
+  const stopAbortController = new AbortController();
+  const stopSignal = stopAbortController.signal;
+  signal.addEventListener("abort", async () => {
+    const timeout = setTimeout(() => {
+      callEffect = () => {};
+      stopAbortController.abort();
+    });
+    callEffect = () => {
+      clearTimeout(timeout);
+    };
+  });
+  return stopSignal;
+};
+
+const goTo$1 = (url, { state, replace } = {}) => {
+  if (replace) {
+    navigation.navigate(url, { state, history: "replace" });
+    return;
+  }
+  const currentUrl = documentUrlSignal.peek();
+  if (url === currentUrl) {
+    return;
+  }
+  const entries = navigation.entries();
+  const prevEntry = entries[navigation.currentEntry.index - 1];
+  if (prevEntry && prevEntry.url === url) {
+    goBack();
+    return;
+  }
+  const nextEntry = entries[navigation.currentEntry.index + 1];
+  if (nextEntry && nextEntry.url === url) {
+    goForward();
+    return;
+  }
+  navigation.navigate(url, { state });
+};
+const goBack = () => {
+  navigation.back();
+};
+const goForward = () => {
+  navigation.forward();
+};
+
+const canUseNavigation = Boolean(window.navigation);
+const installNavigation = canUseNavigation
+  ? installNavigation$1
+  : installNavigation$2;
+
+const goTo = canUseNavigation ? goTo$1 : goTo$2;
+
+let debug = true;
+const IDLE = { id: "idle" };
+const LOADING = { id: "loading" };
+const ABORTED = { id: "aborted" };
+const LOADED = { id: "loaded" };
+const FAILED = { id: "failed" };
+
+const getDocumentUrl = () => {
+  const documentUrl = documentUrlSignal.value;
+  const documentUrlObject = new URL(documentUrl);
+  documentUrlObject.search = "";
+  return documentUrlObject;
+};
+
+let baseUrl = window.location.origin;
+const routerUIReadyPromise = new Promise((resolve) => {
+});
+const routeSet = new Set();
+const matchingRouteSet = new Set();
+const routeAbortEnterMap = new Map();
+const createAndRegisterRoute = ({
+  methodPattern,
+  resourcePattern,
+  handler,
+}) => {
+  resourcePattern = resourceFromUrl(resourcePattern);
+  const resourcePatternParsed = createResourcePattern(resourcePattern);
+  const route = {
+    methodPattern,
+    resourcePattern,
+    loadData: handler,
+    loadUI: null,
+    renderUI: null,
+    node: null,
+    buildUrl: (params) => {
+      const documentUrl = getDocumentUrl();
+      const documentUrlWithRoute = resourcePatternParsed.generate(
+        documentUrl,
+        params,
+      );
+      return normalizeUrl(documentUrlWithRoute);
+    },
+    isMatchingSignal: d$1(false),
+    loadingStateSignal: d$1(IDLE),
+    errorSignal: d$1(null),
+    dataSignal: d$1(undefined),
+    error: null,
+    data: undefined,
+    params: {},
+    match: ({ method, resource }) => {
+      if (route.methodPattern !== method && route.methodPattern !== "*") {
+        return false;
+      }
+      const matchResult = resourcePatternParsed.match(resource);
+      if (!matchResult) {
+        return false;
+      }
+      return matchResult;
+    },
+    enter: async ({ signal, resource, formData }) => {
+
+
+
+
+      const enterAbortController = new AbortController();
+      const enterAbortSignal = enterAbortController.signal;
+      const abort = () => {
+        {
+          console.log(`abort entering "${route}"`);
+        }
+        route.loadingStateSignal.value = ABORTED;
+        enterAbortController.abort();
+      };
+      signal.addEventListener("abort", abort);
+      routeAbortEnterMap.set(route, abort);
+
+      route.isMatchingSignal.value = true;
+      route.loadingStateSignal.value = LOADING;
+      route.errorSignal.value = null;
+      matchingRouteSet.add(route);
+      {
+        console.log(`"${route}": entering route`);
+      }
+      try {
+        const loadDataPromise = (async () => {
+          if (!route.loadData) {
+            return;
+          }
+          const data = await route.loadData({
+            signal: enterAbortSignal,
+            params: resourcePatternParsed.match(resource),
+            formData,
+          });
+          route.dataSignal.value = data;
+        })();
+        const loadUIPromise = (async () => {
+          await routerUIReadyPromise;
+          if (!route.loadUI) {
+            return;
+          }
+          if (enterAbortSignal.aborted) {
+            return;
+          }
+          await route.loadUI({ signal: enterAbortSignal });
+        })();
+
+        await loadDataPromise;
+        await loadUIPromise;
+        route.loadingStateSignal.value = LOADED;
+
+        const renderUIPromise = (async () => {
+          if (!route.renderUI) {
+            return;
+          }
+          if (enterAbortSignal.aborted) {
+            return;
+          }
+          route.node = await route.renderUI();
+        })();
+        await renderUIPromise;
+
+        if (debug) {
+          console.log(`"${route}": route enter end`);
+        }
+      } catch (e) {
+        r(() => {
+          route.reportError(e);
+          route.loadingStateSignal.value = FAILED;
+        });
+        routeAbortEnterMap.delete(route);
+        throw e;
+      }
+    },
+    reportError: (e) => {
+      route.errorSignal.value = e;
+    },
+    leave: () => {
+      const routeAbortEnter = routeAbortEnterMap.get(route);
+      if (routeAbortEnter) {
+        {
+          console.log(`"${route}": aborting route enter`);
+        }
+        routeAbortEnterMap.delete(route);
+        routeAbortEnter();
+      }
+      {
+        console.log(`"${route}": leaving route`);
+      }
+      route.isMatchingSignal.value = false;
+      route.loadingStateSignal.value = IDLE;
+      matchingRouteSet.delete(route);
+    },
+    activate: (params) => {
+      const documentUrlWithRoute = route.buildUrl(params);
+      goTo(documentUrlWithRoute);
+    },
+    toString: () => {
+      if (route.methodPattern === "*" && route.resourcePattern === "*") {
+        return "*";
+      }
+      return `${route.methodPattern} ${route.resourcePattern}`;
+    },
+  };
+  E(() => {
+    route.data = route.dataSignal.value;
+  });
+  E(() => {
+    route.error = route.errorSignal.value;
+  });
+  E(() => {
+    const documentUrl = documentUrlSignal.value;
+    const documentResource = resourceFromUrl(documentUrl);
+    route.params = route.match({ method: "GET", resource: documentResource });
+  });
+  routeSet.add(route);
+  return route;
+};
+const registerRoutes = (description) => {
+  const routes = createRoutes(description, createAndRegisterRoute);
+  installNavigation({ applyRouting, routingWhile });
+  return routes;
+};
+
+
+
+
+
+const applyRouting = async ({
+  method,
+
+  sourceUrl,
+  targetUrl,
+  formData,
+  state,
+  stopSignal,
+  reload,
+}) => {
+  const sourceResource = resourceFromUrl(sourceUrl);
+  const targetResource = resourceFromUrl(targetUrl);
+  {
+    console.log(
+      `start routing ${method} ${targetResource} against ${routeSet.size} routes`,
+    );
+  }
+  const nextMatchingRouteSet = new Set();
+  const matchRouteAgainst = (route, methodCandidate, resourceCandidate) => {
+    const urlObject = new URL(resourceCandidate, baseUrl);
+    const matchParams = {
+      method: methodCandidate,
+      resource: resourceCandidate,
+      state,
+      searchParams: urlObject.searchParams,
+      pathname: urlObject.pathname,
+      hash: urlObject.hash,
+      formData,
+    };
+    return route.match(matchParams);
+  };
+
+  for (const routeCandidate of routeSet) {
+    const isMatchingTargetUrl = matchRouteAgainst(
+      routeCandidate,
+      method,
+      targetResource,
+    );
+    if (isMatchingTargetUrl) {
+      nextMatchingRouteSet.add(routeCandidate);
+    }
+  }
+  if (nextMatchingRouteSet.size === 0) {
+    {
+      console.log("no route has matched");
+    }
+  }
+  const routeToLeaveSet = new Set();
+  const routeToEnterSet = new Set();
+  for (const activeRoute of matchingRouteSet) {
+    if (nextMatchingRouteSet.has(activeRoute)) {
+      continue;
+    }
+    if (sourceResource !== targetResource) {
+
+
+
+      if (matchRouteAgainst(activeRoute, "GET", sourceResource)) {
+        {
+          console.log(
+            `${activeRoute.ressource}: stays active while navigating to ${targetResource}`,
+          );
+        }
+        continue;
+      }
+    }
+    routeToLeaveSet.add(activeRoute);
+  }
+  for (const nextMatchingRoute of nextMatchingRouteSet) {
+    const nextMatchingRouteLoadingState =
+      nextMatchingRoute.loadingStateSignal.peek();
+    const nextMatchingRouteError = nextMatchingRoute.errorSignal.peek();
+    if (
+      reload ||
+      !matchingRouteSet.has(nextMatchingRoute) ||
+      nextMatchingRouteLoadingState === ABORTED ||
+      nextMatchingRouteError
+    ) {
+      routeToEnterSet.add(nextMatchingRoute);
+    }
+  }
+  nextMatchingRouteSet.clear();
+  for (const routeToLeave of routeToLeaveSet) {
+    routeToLeave.leave();
+  }
+  if (routeToEnterSet.size === 0) {
+    {
+      console.log("no effect on routes, early return");
+    }
+    return;
+  }
+  {
+    console.log("routing started");
+  }
+  await routingWhile(async () => {
+    const promises = [];
+    for (const routeToEnter of routeToEnterSet) {
+      const routeEnterPromise = routeToEnter.enter({
+        signal: stopSignal,
+        resource: targetResource,
+        formData,
+      });
+      promises.push(routeEnterPromise);
+    }
+    await Promise.all(promises);
+  });
+};
+const routingWhile = async (fn, ...args) => {
+  startDocumentRouting();
+  try {
+    await fn(...args);
+  } finally {
+    endDocumentRouting();
+  }
+};
+
+const resourceFromUrl = (url) => {
+  url = String(url);
+  if (url[0] === "/") {
+    url = url.slice(1);
+  }
+
+  const urlObject = new URL(url, baseUrl);
+  const resource = urlObject.href.slice(urlObject.origin.length);
+  return resource;
+};
+
+w(() => {
+  const documentIsLoading = documentIsLoadingSignal.value;
+  if (documentIsLoading) {
+    return "document_loading";
+  }
+  const documentIsRouting = documentIsRoutingSignal.value;
+  if (documentIsRouting) {
+    return "document_routing";
+  }
+  return "complete";
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const FormContext = K();
+D(({
+  formAction,
+  children,
+  ...props
+}, ref) => {
+  const innerRef = A();
+  const [, formActionMapRef] = x(FormContext);
+  F(ref, () => innerRef.current);
+  y(() => {
+    return () => {
+      formActionMapRef.current.delete(innerRef.current);
+    };
+  }, []);
+  return u("button", {
+    ref: innerRef,
+    ...props,
+    onClick: clickEvent => {
+      if (props.onClick) {
+        props.onClick(clickEvent);
+      }
+      formActionMapRef.current.set(innerRef.current, formAction);
+    },
+    children: children
+  });
 });
 
 const { paused } = registerRoutes({

@@ -1,6 +1,6 @@
 import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, readPackageAtOrNull } from "./jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, formatError, readPackageAtOrNull } from "./jsenv_core_packages.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
@@ -242,6 +242,12 @@ ${reason}`,
     });
     return error;
   }
+  if (error.code === "PROTOCOL_NOT_SUPPORTED") {
+    const notSupportedError = createFailedToResolveUrlError({
+      reason: error.message,
+    });
+    return notSupportedError;
+  }
   return createFailedToResolveUrlError({
     reason: `An error occured during specifier resolution`,
     ...detailsFromValueThrown(error),
@@ -282,7 +288,6 @@ ${reason}`,
     });
     return fetchError;
   };
-
   if (error.code === "EPERM") {
     return createFailedToFetchUrlContentError({
       code: "NOT_ALLOWED",
@@ -329,6 +334,9 @@ const createTransformUrlContentError = ({
   if (error.code === "MODULE_NOT_FOUND") {
     return error;
   }
+  if (error.code === "PROTOCOL_NOT_SUPPORTED") {
+    return error;
+  }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     return error;
   }
@@ -336,47 +344,8 @@ const createTransformUrlContentError = ({
     if (error.isJsenvCookingError) {
       return error;
     }
+    const trace = getErrorTrace(error, urlInfo.firstReference);
     const reference = urlInfo.firstReference;
-    let trace = reference.trace;
-    let line = error.line;
-    let column = error.column;
-    if (urlInfo.isInline) {
-      line = trace.line + line;
-      line = line - 1;
-      trace = {
-        ...trace,
-        line,
-        column,
-        codeFrame: generateContentFrame({
-          line,
-          column,
-          content: urlInfo.inlineUrlSite.content,
-        }),
-        message: stringifyUrlSite({
-          url: urlInfo.inlineUrlSite.url,
-          line,
-          column,
-          content: urlInfo.inlineUrlSite.content,
-        }),
-      };
-    } else {
-      trace = {
-        url: urlInfo.url,
-        line,
-        column: error.column,
-        codeFrame: generateContentFrame({
-          line,
-          column: error.column,
-          content: urlInfo.content,
-        }),
-        message: stringifyUrlSite({
-          url: urlInfo.url,
-          line,
-          column: error.column,
-          content: urlInfo.content,
-        }),
-      };
-    }
     const transformError = new Error(
       createDetailedMessage(
         `parse error on "${urlInfo.type}"
@@ -467,9 +436,55 @@ ${reference.trace.message}`,
   return finalizeError;
 };
 
+const getErrorTrace = (error, reference) => {
+  const urlInfo = reference.urlInfo;
+  let trace = reference.trace;
+  let line = error.line;
+  let column = error.column;
+  if (urlInfo.isInline) {
+    line = trace.line + line;
+    line = line - 1;
+    return {
+      ...trace,
+      line,
+      column,
+      codeFrame: generateContentFrame({
+        line,
+        column,
+        content: urlInfo.inlineUrlSite.content,
+      }),
+      message: stringifyUrlSite({
+        url: urlInfo.inlineUrlSite.url,
+        line,
+        column,
+        content: urlInfo.inlineUrlSite.content,
+      }),
+    };
+  }
+  return {
+    url: urlInfo.url,
+    line,
+    column: error.column,
+    codeFrame: generateContentFrame({
+      line,
+      column: error.column,
+      content: urlInfo.content,
+    }),
+    message: stringifyUrlSite({
+      url: urlInfo.url,
+      line,
+      column: error.column,
+      content: urlInfo.content,
+    }),
+  };
+};
+
 const detailsFromFirstReference = (reference) => {
   const referenceInProject = getFirstReferenceInProject(reference);
-  if (referenceInProject === reference) {
+  if (
+    referenceInProject === reference ||
+    referenceInProject.type === "http_request"
+  ) {
     return {};
   }
   return {
@@ -478,6 +493,9 @@ const detailsFromFirstReference = (reference) => {
 };
 const getFirstReferenceInProject = (reference) => {
   const ownerUrlInfo = reference.ownerUrlInfo;
+  if (ownerUrlInfo.isRoot) {
+    return reference;
+  }
   if (
     !ownerUrlInfo.url.includes("/node_modules/") &&
     ownerUrlInfo.packageDirectoryUrl ===
@@ -485,7 +503,8 @@ const getFirstReferenceInProject = (reference) => {
   ) {
     return reference;
   }
-  return getFirstReferenceInProject(ownerUrlInfo.firstReference);
+  const { firstReference } = ownerUrlInfo;
+  return getFirstReferenceInProject(firstReference);
 };
 
 const detailsFromPluginController = (pluginController) => {
@@ -2708,7 +2727,28 @@ const createKitchen = ({
 
   ignore,
   ignoreProtocol = "remove",
-  supportedProtocols = ["file:", "data:", "virtual:", "http:", "https:"],
+  supportedProtocols = [
+    "file:",
+    "data:",
+    // eslint-disable-next-line no-script-url
+    "javascript:",
+    "virtual:",
+    "ignore:",
+    "http:",
+    "https:",
+    "chrome:",
+    "chrome-extension:",
+    "chrome-untrusted:",
+    "isolated-app:",
+  ],
+  includedProtocols = [
+    "file:",
+    "data:",
+    "virtual:",
+    "ignore:",
+    "http:",
+    "https:",
+  ],
 
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -2728,6 +2768,9 @@ const createKitchen = ({
 
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   const packageConditions = [nodeRuntimeEnabled ? "node" : "browser", "import"];
+  if (nodeRuntimeEnabled) {
+    supportedProtocols.push("node:");
+  }
 
   if (packageDependencies === "auto") {
     packageDependencies = build && nodeRuntimeEnabled ? "ignore" : "include";
@@ -2799,8 +2842,11 @@ const createKitchen = ({
 
   const isIgnoredByProtocol = (url) => {
     const { protocol } = new URL(url);
-    const protocolIsSupported = supportedProtocols.includes(protocol);
-    return !protocolIsSupported;
+    const protocolIsIncluded = includedProtocols.includes(protocol);
+    if (protocolIsIncluded) {
+      return false;
+    }
+    return true;
   };
   const isIgnoredBecauseInPackageDependencies = (() => {
     if (packageDependencies === undefined) {
@@ -3007,6 +3053,21 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       }
       reference.generatedUrl = reference.url;
       reference.generatedSearchParams = reference.searchParams;
+      if (dev) {
+        let url = reference.url;
+        let { protocol } = new URL(url);
+        if (protocol === "ignore:") {
+          url = url.slice("ignore:".length);
+          protocol = new URL(url, "http://example.com").protocol;
+        }
+        if (!supportedProtocols.includes(protocol)) {
+          const protocolNotSupportedError = new Error(
+            `Unsupported protocol "${protocol}" for url "${url}"`,
+          );
+          protocolNotSupportedError.code = "PROTOCOL_NOT_SUPPORTED";
+          throw protocolNotSupportedError;
+        }
+      }
       return reference;
     } catch (error) {
       throw createResolveUrlError({
@@ -6548,6 +6609,9 @@ const jsenvPluginProtocolFile = ({
       name: "jsenv:directory_as_json",
       appliesDuring: "*",
       fetchUrlContent: (urlInfo) => {
+        if (!urlInfo.url.startsWith("file:")) {
+          return null;
+        }
         const { firstReference } = urlInfo;
         let { fsStat } = firstReference;
         if (!fsStat) {
@@ -9399,7 +9463,7 @@ const startDevServer = async ({
                 url: reference.url,
                 status: 500,
                 statusText: error.reason,
-                statusMessage: error.stack,
+                statusMessage: formatError(error),
                 headers: {
                   "cache-control": "no-store",
                 },

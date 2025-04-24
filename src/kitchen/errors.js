@@ -53,6 +53,12 @@ ${reason}`,
     });
     return error;
   }
+  if (error.code === "PROTOCOL_NOT_SUPPORTED") {
+    const notSupportedError = createFailedToResolveUrlError({
+      reason: error.message,
+    });
+    return notSupportedError;
+  }
   return createFailedToResolveUrlError({
     reason: `An error occured during specifier resolution`,
     ...detailsFromValueThrown(error),
@@ -93,7 +99,6 @@ ${reason}`,
     });
     return fetchError;
   };
-
   if (error.code === "EPERM") {
     return createFailedToFetchUrlContentError({
       code: "NOT_ALLOWED",
@@ -140,6 +145,9 @@ export const createTransformUrlContentError = ({
   if (error.code === "MODULE_NOT_FOUND") {
     return error;
   }
+  if (error.code === "PROTOCOL_NOT_SUPPORTED") {
+    return error;
+  }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     return error;
   }
@@ -147,47 +155,8 @@ export const createTransformUrlContentError = ({
     if (error.isJsenvCookingError) {
       return error;
     }
+    const trace = getErrorTrace(error, urlInfo.firstReference);
     const reference = urlInfo.firstReference;
-    let trace = reference.trace;
-    let line = error.line;
-    let column = error.column;
-    if (urlInfo.isInline) {
-      line = trace.line + line;
-      line = line - 1;
-      trace = {
-        ...trace,
-        line,
-        column,
-        codeFrame: generateContentFrame({
-          line,
-          column,
-          content: urlInfo.inlineUrlSite.content,
-        }),
-        message: stringifyUrlSite({
-          url: urlInfo.inlineUrlSite.url,
-          line,
-          column,
-          content: urlInfo.inlineUrlSite.content,
-        }),
-      };
-    } else {
-      trace = {
-        url: urlInfo.url,
-        line,
-        column: error.column,
-        codeFrame: generateContentFrame({
-          line,
-          column: error.column,
-          content: urlInfo.content,
-        }),
-        message: stringifyUrlSite({
-          url: urlInfo.url,
-          line,
-          column: error.column,
-          content: urlInfo.content,
-        }),
-      };
-    }
     const transformError = new Error(
       createDetailedMessage(
         `parse error on "${urlInfo.type}"
@@ -278,9 +247,55 @@ ${reference.trace.message}`,
   return finalizeError;
 };
 
+const getErrorTrace = (error, reference) => {
+  const urlInfo = reference.urlInfo;
+  let trace = reference.trace;
+  let line = error.line;
+  let column = error.column;
+  if (urlInfo.isInline) {
+    line = trace.line + line;
+    line = line - 1;
+    return {
+      ...trace,
+      line,
+      column,
+      codeFrame: generateContentFrame({
+        line,
+        column,
+        content: urlInfo.inlineUrlSite.content,
+      }),
+      message: stringifyUrlSite({
+        url: urlInfo.inlineUrlSite.url,
+        line,
+        column,
+        content: urlInfo.inlineUrlSite.content,
+      }),
+    };
+  }
+  return {
+    url: urlInfo.url,
+    line,
+    column: error.column,
+    codeFrame: generateContentFrame({
+      line,
+      column: error.column,
+      content: urlInfo.content,
+    }),
+    message: stringifyUrlSite({
+      url: urlInfo.url,
+      line,
+      column: error.column,
+      content: urlInfo.content,
+    }),
+  };
+};
+
 const detailsFromFirstReference = (reference) => {
   const referenceInProject = getFirstReferenceInProject(reference);
-  if (referenceInProject === reference) {
+  if (
+    referenceInProject === reference ||
+    referenceInProject.type === "http_request"
+  ) {
     return {};
   }
   return {
@@ -289,6 +304,9 @@ const detailsFromFirstReference = (reference) => {
 };
 const getFirstReferenceInProject = (reference) => {
   const ownerUrlInfo = reference.ownerUrlInfo;
+  if (ownerUrlInfo.isRoot) {
+    return reference;
+  }
   if (
     !ownerUrlInfo.url.includes("/node_modules/") &&
     ownerUrlInfo.packageDirectoryUrl ===
@@ -296,7 +314,8 @@ const getFirstReferenceInProject = (reference) => {
   ) {
     return reference;
   }
-  return getFirstReferenceInProject(ownerUrlInfo.firstReference);
+  const { firstReference } = ownerUrlInfo;
+  return getFirstReferenceInProject(firstReference);
 };
 
 const detailsFromPluginController = (pluginController) => {

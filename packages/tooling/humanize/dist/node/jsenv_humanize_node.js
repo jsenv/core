@@ -1447,6 +1447,58 @@ const escapeHtml = (string) => {
     .replace(/'/g, "&#039;");
 };
 
+const formatError = (error) => {
+  let text = "";
+  text += error.stack;
+  const { cause } = error;
+  if (cause) {
+    const formatCause = (cause, depth) => {
+      let causeText = prefixFirstAndIndentRemainingLines({
+        prefix: "  [cause]:",
+        indentation: "  ".repeat(depth + 1),
+        text: cause.stack,
+      });
+      const nestedCause = cause.cause;
+      if (nestedCause) {
+        const nestedCauseText = formatCause(nestedCause, depth + 1);
+        causeText += `\n${nestedCauseText}`;
+      }
+      return causeText;
+    };
+    const causeText = formatCause(cause, 0);
+    text += `\n${causeText}`;
+  }
+  return text;
+};
+
+const prefixFirstAndIndentRemainingLines = ({
+  prefix,
+  indentation,
+  text,
+  trimLines,
+  trimLastLine,
+}) => {
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  if (indentation === undefined) {
+    {
+      indentation = "  "; // prefix + space
+    }
+  }
+  let result = `${prefix} ${firstLine}` ;
+  let i = 0;
+  while (i < lines.length) {
+    const line = trimLines ? lines[i].trim() : lines[i];
+    i++;
+    result += line.length
+      ? `\n${indentation}${line}`
+      : trimLastLine && i === lines.length
+        ? ""
+        : `\n`;
+  }
+  return result;
+};
+
 const renderBigSection = (params) => {
   return renderSection({
     width: 45,
@@ -2004,4 +2056,4 @@ const createTaskLog = (
   };
 };
 
-export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, distributePercentages, errorToHTML, errorToMarkdown, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, renderBigSection, renderDetails, renderNamedSections, renderSection, startSpinner };
+export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, distributePercentages, errorToHTML, errorToMarkdown, formatError, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, renderBigSection, renderDetails, renderNamedSections, renderSection, startSpinner };

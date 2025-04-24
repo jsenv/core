@@ -88,6 +88,9 @@ export const jsenvPluginProtocolFile = ({
       name: "jsenv:directory_as_json",
       appliesDuring: "*",
       fetchUrlContent: (urlInfo) => {
+        if (!urlInfo.url.startsWith("file:")) {
+          return null;
+        }
         const { firstReference } = urlInfo;
         let { fsStat } = firstReference;
         if (!fsStat) {

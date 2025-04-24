@@ -1,4 +1,4 @@
-import { getCommonPathname } from "./common_pathname.js";
+import { getCommonPathname } from "./composition/common_pathname.js";
 
 export const urlToRelativeUrl = (
   url,

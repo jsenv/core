@@ -1,14 +1,68 @@
 'use strict';
 
+var node_url = require('url');
 var process$1 = require('process');
 var os = require('os');
 var tty = require('tty');
 require('util');
-var node_url = require('url');
 var node_fs = require('fs');
 var node_path = require('path');
 require('crypto');
 var node_module = require('module');
+
+const isFileSystemPath = (value) => {
+  if (typeof value !== "string") {
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    );
+  }
+  if (value[0] === "/") {
+    return true;
+  }
+  return startsWithWindowsDriveLetter(value);
+};
+
+const startsWithWindowsDriveLetter = (string) => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+
+  return true;
+};
+
+const fileSystemPathToUrl = (value) => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`value must be a filesystem path, got ${value}`);
+  }
+  return String(node_url.pathToFileURL(value));
+};
+
+const urlToFileSystemPath = (url) => {
+  const urlObject = new URL(url);
+  let { origin, pathname, hash } = urlObject;
+  if (urlObject.protocol === "file:") {
+    origin = "file://";
+  }
+  pathname = pathname
+    .split("/")
+    .map((part) => {
+      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
+    })
+    .join("/");
+  if (hash) {
+    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
+  }
+  const urlString = `${origin}${pathname}`;
+  const fileSystemPath = node_url.fileURLToPath(urlString);
+  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    return fileSystemPath.slice(0, -1);
+  }
+  return fileSystemPath;
+};
 
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
@@ -717,60 +771,6 @@ const ensurePathnameTrailingSlash = (url) => {
   return transformUrlPathname(url, (pathname) => {
     return pathname.endsWith("/") ? pathname : `${pathname}/`;
   });
-};
-
-const isFileSystemPath = (value) => {
-  if (typeof value !== "string") {
-    throw new TypeError(
-      `isFileSystemPath first arg must be a string, got ${value}`,
-    );
-  }
-  if (value[0] === "/") {
-    return true;
-  }
-  return startsWithWindowsDriveLetter(value);
-};
-
-const startsWithWindowsDriveLetter = (string) => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-
-  return true;
-};
-
-const fileSystemPathToUrl = (value) => {
-  if (!isFileSystemPath(value)) {
-    throw new Error(`value must be a filesystem path, got ${value}`);
-  }
-  return String(node_url.pathToFileURL(value));
-};
-
-const urlToFileSystemPath = (url) => {
-  const urlObject = new URL(url);
-  let { origin, pathname, hash } = urlObject;
-  if (urlObject.protocol === "file:") {
-    origin = "file://";
-  }
-  pathname = pathname
-    .split("/")
-    .map((part) => {
-      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
-    })
-    .join("/");
-  if (hash) {
-    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
-  }
-  const urlString = `${origin}${pathname}`;
-  const fileSystemPath = node_url.fileURLToPath(urlString);
-  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    return fileSystemPath.slice(0, -1);
-  }
-  return fileSystemPath;
 };
 
 const validateDirectoryUrl = (value) => {

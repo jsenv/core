@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/urls",
-  "version": "2.7.4",
+  "version": "2.8.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -17,7 +17,8 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/main.js"
+      "browser": "./src/main_browser.js",
+      "node": "./src/main_node.js"
     },
     "./*": "./*"
   },
@@ -26,7 +27,7 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/humanize": "1.5.2"
+    "@jsenv/humanize": "1.6.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",

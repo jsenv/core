@@ -24,8 +24,8 @@
   "dependencies": {
     "anchor-markdown-header": "0.7.0",
     "marked": "15.0.8",
-    "@jsenv/filesystem": "4.15.2",
-    "@jsenv/urls": "2.7.4",
-    "@jsenv/ast": "6.7.1"
+    "@jsenv/filesystem": "4.15.3",
+    "@jsenv/urls": "2.8.0",
+    "@jsenv/ast": "6.7.2"
   }
 }
