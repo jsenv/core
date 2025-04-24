@@ -292,7 +292,10 @@ const getErrorTrace = (error, reference) => {
 
 const detailsFromFirstReference = (reference) => {
   const referenceInProject = getFirstReferenceInProject(reference);
-  if (referenceInProject === reference) {
+  if (
+    referenceInProject === reference ||
+    referenceInProject.type === "http_request"
+  ) {
     return {};
   }
   return {
@@ -301,8 +304,11 @@ const detailsFromFirstReference = (reference) => {
 };
 const getFirstReferenceInProject = (reference) => {
   const ownerUrlInfo = reference.ownerUrlInfo;
+  console.log("ownerUrlInfo", ownerUrlInfo.url);
+  if (ownerUrlInfo.isRoot) {
+    return reference;
+  }
   if (
-    reference.type !== "http_request" &&
     !ownerUrlInfo.url.includes("/node_modules/") &&
     ownerUrlInfo.packageDirectoryUrl ===
       ownerUrlInfo.context.packageDirectory.url
