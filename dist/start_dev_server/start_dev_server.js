@@ -2741,6 +2741,11 @@ const createKitchen = ({
     "javascript:",
     "ignore:",
   ],
+  ignoredProtocols = [
+    // eslint-disable-next-line no-script-url
+    "javascript:",
+    "ignore:",
+  ],
 
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -2832,7 +2837,14 @@ const createKitchen = ({
   const isIgnoredByProtocol = (url) => {
     const { protocol } = new URL(url);
     const protocolIsSupported = supportedProtocols.includes(protocol);
-    return !protocolIsSupported;
+    if (!protocolIsSupported) {
+      return true;
+    }
+    const protocolIsIgnored = ignoredProtocols.includes(protocol);
+    if (protocolIsIgnored) {
+      return true;
+    }
+    return false;
   };
   const isIgnoredBecauseInPackageDependencies = (() => {
     if (packageDependencies === undefined) {
@@ -6595,6 +6607,9 @@ const jsenvPluginProtocolFile = ({
       name: "jsenv:directory_as_json",
       appliesDuring: "*",
       fetchUrlContent: (urlInfo) => {
+        if (!urlInfo.url.startsWith("file:")) {
+          return null;
+        }
         const { firstReference } = urlInfo;
         let { fsStat } = firstReference;
         if (!fsStat) {

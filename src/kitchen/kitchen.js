@@ -51,6 +51,11 @@ export const createKitchen = ({
     "javascript:",
     "ignore:",
   ],
+  ignoredProtocols = [
+    // eslint-disable-next-line no-script-url
+    "javascript:",
+    "ignore:",
+  ],
 
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
@@ -142,7 +147,14 @@ export const createKitchen = ({
   const isIgnoredByProtocol = (url) => {
     const { protocol } = new URL(url);
     const protocolIsSupported = supportedProtocols.includes(protocol);
-    return !protocolIsSupported;
+    if (!protocolIsSupported) {
+      return true;
+    }
+    const protocolIsIgnored = ignoredProtocols.includes(protocol);
+    if (protocolIsIgnored) {
+      return true;
+    }
+    return false;
   };
   const isIgnoredBecauseInPackageDependencies = (() => {
     if (packageDependencies === undefined) {

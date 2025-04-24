@@ -12,9 +12,6 @@ await build({
         firefox: "67",
         safari: "11.3",
       },
-      ignore: {
-        "/**/node_modules/@jsenv/ast/": true, // cannot inline "parse5", "@babel/core" and "postcss"
-      },
       minification: false,
       versioning: false,
     },
