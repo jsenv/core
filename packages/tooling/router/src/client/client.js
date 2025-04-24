@@ -2,6 +2,7 @@ export { useCanGoBack, useCanGoForward } from "./can_go_back_forward.js";
 export { useDocumentUrl } from "./document_url.js";
 export {
   registerRoutes,
+  setBaseUrl,
   useRouteData,
   useRouteError,
   useRouteIsLoading,

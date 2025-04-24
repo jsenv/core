@@ -55,7 +55,7 @@ const createAndRegisterRoute = ({
     node: null,
     buildUrl: (params) => {
       const documentUrl = getDocumentUrl();
-      const documentUrlWithRoute = resourcePatternParsed.build(
+      const documentUrlWithRoute = resourcePatternParsed.generate(
         documentUrl,
         params,
       );

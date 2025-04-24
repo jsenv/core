@@ -20,36 +20,27 @@
         useRouteIsLoading,
         useRouteLoadIsAborted,
         useUrlBooleanParam,
+        setBaseUrl,
       } from "@jsenv/router";
       // eslint-disable-next-line no-unused-vars
       import { NavControls } from "./nav_controls.jsx";
 
       let resolveNavigationToPageA;
+      setBaseUrl(window.location.href);
       const [pageA, pageB, foo, bar] = registerRoutes({
-        pageA: {
-          urlTemplate: "?page=A",
-          load: async ({ signal }) => {
-            signal.addEventListener("abort", () => {
-              console.log("pageA load aborted");
-            });
-            await new Promise((resolve) => {
-              resolveNavigationToPageA = resolve;
-            });
-          },
+        "?page=A": async ({ signal }) => {
+          signal.addEventListener("abort", () => {
+            console.log("pageA load aborted");
+          });
+          await new Promise((resolve) => {
+            resolveNavigationToPageA = resolve;
+          });
         },
-        pageB: {
-          urlTemplate: "?page=B",
-        },
-        foo: {
-          urlTemplate: "/foo",
-        },
-        bar: {
-          urlTemplate: "/bar",
-        },
-        fallback: {
-          load: () => {
-            // console.log("load fallback");
-          },
+        "?page=B": () => {},
+        "/foo": () => {},
+        "/bar": () => {},
+        "*": () => {
+          // console.log("load fallback");
         },
       });
 
