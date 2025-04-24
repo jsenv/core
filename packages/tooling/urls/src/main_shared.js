@@ -44,11 +44,8 @@ export {
   windowsFilePathToUrl,
   replaceBackSlashesWithSlashes,
 } from "./file_and_path/windows_file_path_utils.js";
-export { getCallerPosition } from "./file_and_path/caller_position.js";
-export { fileSystemPathToUrl } from "./file_and_path/filesystem_path_to_url.js";
 export { isFileSystemPath } from "./file_and_path/is_filesystem_path.js";
 export { resolveUrl } from "./file_and_path/resolve_url.js";
 export { resolveDirectoryUrl } from "./file_and_path/resolve_directory_url.js";
-export { urlToFileSystemPath } from "./file_and_path/url_to_filesystem_path.js";
 export { urlIsInsideOf } from "./file_and_path/url_is_inside_of.js";
 export { yieldAncestorUrls } from "./file_and_path/yield_ancestor_urls.js";
