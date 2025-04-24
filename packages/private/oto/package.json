@@ -27,7 +27,7 @@
     "@preact/signals": "2.0.3",
     "preact": "10.26.5",
     "hooks": "./packages/hooks",
-    "router": "./packages/router",
+    "@jsenv/router": "./packages/router",
     "dom": "./packages/dom",
     "matrix": "./packages/matrix"
   },

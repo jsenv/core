@@ -493,7 +493,6 @@ const detailsFromFirstReference = (reference) => {
 };
 const getFirstReferenceInProject = (reference) => {
   const ownerUrlInfo = reference.ownerUrlInfo;
-  console.log("ownerUrlInfo", ownerUrlInfo.url);
   if (ownerUrlInfo.isRoot) {
     return reference;
   }
@@ -2738,6 +2737,9 @@ const createKitchen = ({
     "chrome-extension:",
     "chrome-untrusted:",
     "isolated-app:",
+    // eslint-disable-next-line no-script-url
+    "javascript:",
+    "ignore:",
   ],
 
   // during dev/test clientRuntimeCompat is a single runtime
@@ -3042,7 +3044,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         let { protocol } = new URL(url);
         if (protocol === "ignore:") {
           url = url.slice("ignore:".length);
-          protocol = new URL(url).protocol;
+          protocol = new URL(url, "http://example.com").protocol;
         }
         if (!supportedProtocols.includes(protocol)) {
           const protocolNotSupportedError = new Error(

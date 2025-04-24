@@ -1,4 +1,4 @@
-import { registerRoutes } from "router";
+import { registerRoutes } from "@jsenv/router";
 
 const { paused } = registerRoutes({
   paused: {
