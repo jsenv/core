@@ -304,7 +304,6 @@ const detailsFromFirstReference = (reference) => {
 };
 const getFirstReferenceInProject = (reference) => {
   const ownerUrlInfo = reference.ownerUrlInfo;
-  console.log("ownerUrlInfo", ownerUrlInfo.url);
   if (ownerUrlInfo.isRoot) {
     return reference;
   }
