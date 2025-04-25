@@ -643,7 +643,7 @@ export const startDevServer = async ({
           body: response.body,
         });
         return {
-          status: 200,
+          status: response.status,
           headers: {
             "content-type": "application/json",
             "content-length": Buffer.byteLength(body),
