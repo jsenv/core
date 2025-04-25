@@ -17,12 +17,12 @@ const ABORTED = { id: "aborted" };
 const LOADED = { id: "loaded" };
 const FAILED = { id: "failed" };
 
-const getDocumentUrl = () => {
-  const documentUrl = documentUrlSignal.value;
-  const documentUrlObject = new URL(documentUrl);
-  documentUrlObject.search = "";
-  return documentUrlObject;
-};
+// const getDocumentUrl = () => {
+//   const documentUrl = documentUrlSignal.value;
+//   const documentUrlObject = new URL(documentUrl);
+//   documentUrlObject.search = "";
+//   return documentUrlObject;
+// };
 
 let baseUrl = window.location.origin;
 export const setBaseUrl = (v) => {
@@ -60,12 +60,8 @@ const createAndRegisterRoute = ({
     renderUI: null,
     node: null,
     buildUrl: (params) => {
-      const documentUrl = getDocumentUrl();
-      const documentUrlWithRoute = resourcePatternParsed.generate(
-        documentUrl,
-        params,
-      );
-      return normalizeUrl(documentUrlWithRoute);
+      const routeUrl = resourcePatternParsed.generate(params);
+      return normalizeUrl(routeUrl);
     },
     isMatchingSignal: signal(false),
     loadingStateSignal: signal(IDLE),
@@ -274,7 +270,7 @@ const applyRouting = async ({
       if (matchRouteAgainst(activeRoute, "GET", sourceResource)) {
         if (debug) {
           console.log(
-            `${activeRoute.ressource}: stays active while navigating to ${targetResource}`,
+            `${activeRoute.resourcePattern}: stays active while navigating to ${targetResource}`,
           );
         }
         continue;

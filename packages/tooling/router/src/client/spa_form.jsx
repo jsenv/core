@@ -73,7 +73,9 @@ export const SPAForm = ({ action, method, children }) => {
 export const DeleteLink = ({ href, children, ...rest }) => {
   return (
     <SPAForm action={href} method="DELETE">
-      <span {...rest}>{children}</span>
+      <button type="submit" {...rest}>
+        {children}
+      </button>
     </SPAForm>
   );
 };
