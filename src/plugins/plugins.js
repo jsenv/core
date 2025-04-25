@@ -46,6 +46,7 @@ export const getCorePlugins = ({
   transpilation = true,
   inlining = true,
   http = false,
+  spa,
 
   clientAutoreload,
   clientAutoreloadOnServerRestart,
@@ -88,6 +89,7 @@ export const getCorePlugins = ({
      */
     jsenvPluginProtocolHttp(http),
     jsenvPluginProtocolFile({
+      spa,
       magicExtensions,
       magicDirectoryIndex,
       directoryListing,

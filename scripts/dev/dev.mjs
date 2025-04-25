@@ -16,6 +16,7 @@ await startDevServer({
   http2: false,
   port: 3456,
   // supervisor: { logs: true },
+  spa: false,
   plugins: [
     jsenvPluginControlledResource(),
     jsenvPluginJSONFileManager(),

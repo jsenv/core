@@ -8,6 +8,7 @@ import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const jsenvPluginFsRedirection = ({
+  spa = true,
   directoryContentMagicName,
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
@@ -97,6 +98,7 @@ export const jsenvPluginFsRedirection = ({
         // 3. The url pathname does not ends with "/"
         //    In that case we assume client explicitely asks to load a directory
         if (
+          spa &&
           !urlToExtension(urlObject) &&
           !urlToPathname(urlObject).endsWith("/")
         ) {

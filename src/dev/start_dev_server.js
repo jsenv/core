@@ -96,6 +96,7 @@ export const startDevServer = async ({
   ribbon = true,
   // toolbar = false,
   onKitchenCreated = () => {},
+  spa,
 
   sourcemaps = "inline",
   sourcemapsSourcesContent,
@@ -265,6 +266,7 @@ export const startDevServer = async ({
         supervisor,
         injections,
         transpilation,
+        spa,
 
         clientAutoreload,
         clientAutoreloadOnServerRestart,

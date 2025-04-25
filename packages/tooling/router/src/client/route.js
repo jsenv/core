@@ -149,6 +149,7 @@ const createAndRegisterRoute = ({
         if (debug) {
           console.log(`"${route}": route enter end`);
         }
+        routeAbortEnterMap.delete(route);
       } catch (e) {
         batch(() => {
           route.reportError(e);

@@ -52,8 +52,8 @@ TODO: create a UI the allow the following:
       import { setBaseUrl } from "../route.js";
 
       setBaseUrl(window.location.href);
-      const [ROOT, GET_ALL, GET_ONE, EDIT_ONE, DELETE_ONE] = registerRoutes({
-        "GET /?route=json_files": async ({ signal }) => {
+      const [GET_ALL, GET_ONE, EDIT_ONE, DELETE_ONE, ROOT] = registerRoutes({
+        "GET /json_files": async ({ signal }) => {
           const response = await fetch("/json_files", { signal });
           if (!response.ok) {
             throw new Error(
@@ -63,21 +63,21 @@ TODO: create a UI the allow the following:
           const responseJson = await response.json();
           return responseJson;
         },
-        "GET /?route=json_files/:id": async ({ signal, params }) => {
+        "GET /json_files/:id": async ({ signal, params }) => {
           const response = await fetch(`/json_files/${params.id}`, {
             signal,
           });
           const responseJSON = await response.json();
           return responseJSON;
         },
-        "GET /?route=json_files/:id/edit": async ({ signal, params }) => {
+        "GET /json_files/:id/edit": async ({ signal, params }) => {
           const response = await fetch(`/json_files/${params.id}`, {
             signal,
           });
           const responseJSON = await response.json();
           return responseJSON;
         },
-        "DELETE /?route=json_files/:id": async ({ signal, params }) => {
+        "DELETE /json_files/:id": async ({ signal, params }) => {
           const response = await fetch(`/json_files/${params.id}`, {
             method: "DELETE",
             signal,
