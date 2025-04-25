@@ -46,6 +46,7 @@ TODO: create a UI the allow the following:
         // eslint-disable-next-line no-unused-vars
         SPAForm,
         useSPAFormStatus,
+        useRouteIsLoading,
         // eslint-disable-next-line no-unused-vars
         DeleteLink,
       } from "@jsenv/router";
@@ -78,6 +79,7 @@ TODO: create a UI the allow the following:
           return responseJSON;
         },
         "DELETE /json_files/:id": async ({ signal, params }) => {
+          await new Promise((resolve) => setTimeout(resolve, 500));
           const response = await fetch(`/json_files/${params.id}`, {
             method: "DELETE",
             signal,
@@ -146,6 +148,7 @@ TODO: create a UI the allow the following:
                 const seeJsonFileUrl = useRouteUrl(GET_ONE, { id: name });
                 const editJsonFileUrl = useRouteUrl(EDIT_ONE, { id: name });
                 const deleteJsonFileUrl = useRouteUrl(DELETE_ONE, { id: name });
+                const deleteRouteIsLoading = useRouteIsLoading(DELETE_ONE);
 
                 return (
                   <li key={name}>
@@ -153,7 +156,12 @@ TODO: create a UI the allow the following:
                       {name}
                       <a href={seeJsonFileUrl}>View</a>
                       <a href={editJsonFileUrl}>Edit</a>
-                      <DeleteLink href={deleteJsonFileUrl}>Delete</DeleteLink>
+                      <DeleteLink
+                        disabled={deleteRouteIsLoading}
+                        href={deleteJsonFileUrl}
+                      >
+                        Delete
+                      </DeleteLink>
                     </div>
                   </li>
                 );

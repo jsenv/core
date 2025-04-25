@@ -295,7 +295,8 @@ const applyRouting = async ({
       } else if (hasError) {
         routeToEnterSet.add(nextMatchingRoute);
       } else if (matchingRouteSet.has(nextMatchingRoute)) {
-        // already entered
+        routeToLeaveSet.add(nextMatchingRoute);
+        routeToEnterSet.add(nextMatchingRoute);
       } else {
         routeToEnterSet.add(nextMatchingRoute);
       }
