@@ -1,5 +1,5 @@
-import { writeFileSync } from "@jsenv/filesystem";
-import { readdirSync, readFileSync } from "node:fs";
+import { removeFileSync, writeFileSync } from "@jsenv/filesystem";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 export const jsenvPluginControlledResource = () => {
   let resolve;
@@ -87,6 +87,9 @@ export const jsenvPluginJSONFileManager = () => {
         fetch: async (request) => {
           const { id } = request.params;
           const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
+          if (existsSync(jsonFileUrl)) {
+            return { status: 409 };
+          }
           const jsonFileContent = await request.buffer();
           writeFileSync(jsonFileUrl, jsonFileContent);
           return new Response(jsonFileContent, { status: 201 });
@@ -106,6 +109,15 @@ export const jsenvPluginJSONFileManager = () => {
           const body = JSON.stringify(jsonFileContentAsObject);
           writeFileSync(jsonFileUrl, body);
           return Response.json(body);
+        },
+      },
+      {
+        endpoint: "DELETE /json_files/:id",
+        fetch: async (request) => {
+          const { id } = request.params;
+          const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
+          removeFileSync(jsonFileUrl, { allowUseless: true });
+          return Response.json(null);
         },
       },
     ],

@@ -46,11 +46,13 @@ TODO: create a UI the allow the following:
         // eslint-disable-next-line no-unused-vars
         SPAForm,
         useSPAFormStatus,
+        // eslint-disable-next-line no-unused-vars
+        DeleteLink,
       } from "@jsenv/router";
       import { setBaseUrl } from "../route.js";
 
       setBaseUrl(window.location.href);
-      const [ROOT, GET_ALL, GET_ONE, EDIT_ONE] = registerRoutes({
+      const [ROOT, GET_ALL, GET_ONE, EDIT_ONE, DELETE_ONE] = registerRoutes({
         "GET /": () => {},
         "GET /?route=json_files": async ({ signal }) => {
           const response = await fetch("/json_files", { signal });
@@ -75,6 +77,18 @@ TODO: create a UI the allow the following:
           });
           const responseJSON = await response.json();
           return responseJSON;
+        },
+        "DELETE /?route=json_files/:id": async ({ signal, params }) => {
+          const response = await fetch(`/json_files/${params.id}`, {
+            method: "DELETE",
+            signal,
+          });
+          if (!response.ok) {
+            throw new Error(
+              `DELETE /json_files/${params.id} failed with status ${response.status}`,
+            );
+          }
+          return null;
         },
         "*": () => {},
       });
@@ -141,6 +155,7 @@ TODO: create a UI the allow the following:
               {nameArray.map((name) => {
                 const seeJsonFileUrl = useRouteUrl(GET_ONE, { id: name });
                 const editJsonFileUrl = useRouteUrl(EDIT_ONE, { id: name });
+                const deleteJsonFileUrl = useRouteUrl(DELETE_ONE, { id: name });
 
                 return (
                   <li key={name}>
@@ -148,30 +163,56 @@ TODO: create a UI the allow the following:
                       {name}
                       <a href={seeJsonFileUrl}>View</a>
                       <a href={editJsonFileUrl}>Edit</a>
+                      <DeleteLink href={deleteJsonFileUrl}>Delete</DeleteLink>
                     </div>
                   </li>
                 );
               })}
             </ul>
-            <details>
-              <summary className="button">Add new file</summary>
-              <form>
-                <label>
-                  File name:
-                  <input type="text" name="name" value="" />
-                </label>
-                <br />
-                <label>
-                  File content:
-                  <textarea name="content"></textarea>
-                </label>
-                <br />
-                <button type="submit" onClick={() => {}}>
-                  Create file
-                </button>
-              </form>
-            </details>
+            <CreateFile />
           </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CreateFile = () => {
+        return (
+          <details>
+            <summary className="button">Add new file</summary>
+            <SPAForm
+              action={async ({ signal, formData }) => {
+                const name = formData.get("name");
+                //const content = formData.get("content");
+                const response = await fetch(`/json_files/${name}`, {
+                  method: "POST",
+                  signal,
+                  body: formData,
+                });
+                if (!response.ok) {
+                  throw new Error(
+                    `POST /json_files/${name} failed with status ${response.status}`,
+                  );
+                }
+                const responseJSON = await response.json();
+                return responseJSON;
+              }}
+              method="POST"
+            >
+              <label>
+                File name:
+                <input type="text" name="name" value="" required />
+              </label>
+              <br />
+              <label>
+                File content:
+                <textarea name="content"></textarea>
+              </label>
+              <br />
+              <button type="submit" onClick={() => {}}>
+                Create file
+              </button>
+            </SPAForm>
+          </details>
         );
       };
       const JSONFileView = ({ route }) => {
