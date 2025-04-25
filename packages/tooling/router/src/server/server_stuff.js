@@ -1,4 +1,5 @@
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "@jsenv/filesystem";
+import { readdirSync, readFileSync } from "node:fs";
 
 export const jsenvPluginControlledResource = () => {
   let resolve;
@@ -46,13 +47,16 @@ export const jsenvPluginJSONFileManager = () => {
       {
         endpoint: "GET /json_files",
         fetch: () => {
-          const jsonFiles = readdirSync(jsonDirectoryUrl);
-          return Response.json(jsonFiles);
+          try {
+            const jsonFiles = readdirSync(jsonDirectoryUrl);
+            return Response.json(jsonFiles);
+          } catch (e) {
+            if (e.code === "ENOENT") {
+              return Response.json([]);
+            }
+            throw e;
+          }
         },
-      },
-      {
-        endpoint: "POST /json_files",
-        fetch: () => {},
       },
       {
         endpoint: "GET /json_files/:id",
@@ -79,6 +83,16 @@ export const jsenvPluginJSONFileManager = () => {
         },
       },
       {
+        endpoint: "POST /json_files/:id",
+        fetch: async (request) => {
+          const { id } = request.params;
+          const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
+          const jsonFileContent = await request.buffer();
+          writeFileSync(jsonFileUrl, jsonFileContent);
+          return new Response(jsonFileContent, { status: 201 });
+        },
+      },
+      {
         endpoint: "PATCH /json_files/:id",
         acceptedMediaTypes: ["multipart/form-data"],
         fetch: async (request, { id }) => {
@@ -91,14 +105,7 @@ export const jsenvPluginJSONFileManager = () => {
           Object.assign(jsonFileContentAsObject, fields);
           const body = JSON.stringify(jsonFileContentAsObject);
           writeFileSync(jsonFileUrl, body);
-          return {
-            status: 200,
-            headers: {
-              "content-type": "application/json",
-              "content-length": Buffer.byteLength(body),
-            },
-            body,
-          };
+          return Response.json(body);
         },
       },
     ],

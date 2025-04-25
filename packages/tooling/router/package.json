@@ -36,6 +36,7 @@
     "preact": "10.26.5",
     "@preact/signals": "2.0.4",
     "@jsenv/snapshot": "../snapshot",
+    "@jsenv/filesystem": "../filesystem",
     "@jsenv/urls": "../urls"
   }
 }
