@@ -40,6 +40,7 @@ await build({
             "file:///**/node_modules/ws/": true,
             "file:///**/node_modules/once/": true,
             "file:///**/node_modules/dezalgo/": true,
+            "file:///**/node_modules/@paralleldrive/cuid2/": true,
           },
         }),
       ],
