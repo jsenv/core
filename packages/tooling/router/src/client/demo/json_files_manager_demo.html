@@ -17,6 +17,22 @@ TODO: create a UI the allow the following:
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JSON files manager demo</title>
+    <style>
+      summary.button {
+        background-color: buttonface;
+        margin: 0em;
+        padding-block: 1px;
+        padding-inline: 6px;
+        border-width: 2px;
+        color: buttontext;
+        display: inline-block;
+        padding-block: 1px;
+        padding-inline: 6px;
+        border-width: 2px;
+        border-style: outset;
+        border-color: buttonborder;
+      }
+    </style>
   </head>
   <body>
     <div id="root" style="position: relative"></div>
@@ -92,7 +108,7 @@ TODO: create a UI the allow the following:
                     border: "1px solid black",
                   }}
                 >
-                  A
+                  List of JSON files
                 </a>
               </div>
             </nav>
@@ -114,23 +130,48 @@ TODO: create a UI the allow the following:
       const JSONFileList = ({ route }) => {
         const nameArray = route.data;
 
-        return (
-          <ul>
-            {nameArray.map((name) => {
-              const seeJsonFileUrl = useRouteUrl(GET_ONE, { id: name });
-              const editJsonFileUrl = useRouteUrl(EDIT_ONE, { id: name });
+        // maybe the button to create a file should just be a details
+        // displaying a form to actually create the file
+        // that might be better
 
-              return (
-                <li key={name}>
-                  <div style="display: flex; gap: 10px;">
-                    {name}
-                    <a href={seeJsonFileUrl}>View</a>
-                    <a href={editJsonFileUrl}>Edit</a>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+        return (
+          <>
+            <p>List of JSON files found:</p>
+            <ul>
+              {nameArray.map((name) => {
+                const seeJsonFileUrl = useRouteUrl(GET_ONE, { id: name });
+                const editJsonFileUrl = useRouteUrl(EDIT_ONE, { id: name });
+
+                return (
+                  <li key={name}>
+                    <div style="display: flex; gap: 10px;">
+                      {name}
+                      <a href={seeJsonFileUrl}>View</a>
+                      <a href={editJsonFileUrl}>Edit</a>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <details>
+              <summary className="button">Add new file</summary>
+              <form>
+                <label>
+                  File name:
+                  <input type="text" name="name" value="" />
+                </label>
+                <br />
+                <label>
+                  File content:
+                  <textarea name="content"></textarea>
+                </label>
+                <br />
+                <button type="submit" onClick={() => {}}>
+                  Create file
+                </button>
+              </form>
+            </details>
+          </>
         );
       };
       const JSONFileView = ({ route }) => {

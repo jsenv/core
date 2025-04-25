@@ -25,6 +25,8 @@ const RouteErrorDefaultComponent = ({ route }) => {
 // and it's relatively hard to finally realize it's because the route is declared twice
 export const Route = ({
   route,
+  // ideally each route is mutually exclusive, when this is not the case AND the two routes should not match at the same time
+  // then a route can give an array of routes preventing itself to match
   routesPreventingThisOne,
   always,
   matching,
