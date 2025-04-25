@@ -1,7 +1,7 @@
 // tslint:disable:ordered-imports
 
-export { DATA_URL } from "./data_url.js";
-export { stringifyUrlSite } from "./url_trace.js";
+export { DATA_URL } from "./shared/data_url.js";
+export { stringifyUrlSite } from "./shared/url_trace.js";
 export {
   setUrlFilename,
   setUrlBasename,
@@ -9,7 +9,7 @@ export {
   ensurePathnameTrailingSlash,
   removePathnameTrailingSlash,
   asUrlUntilPathname,
-} from "./composition/set_url_part.js";
+} from "./shared/set_url_part.js";
 export {
   asUrlWithoutSearch,
   asSpecifierWithoutSearch,
@@ -20,32 +20,32 @@ export {
   injectQueryParamWithoutEncoding,
   injectQueryParamIntoSpecifierWithoutEncoding,
   renderUrlOrRelativeUrlFilename,
-} from "./query_params/query_params.js";
+} from "./shared/query_params.js";
+export { moveUrl } from "./shared/move_url.js";
+export { urlToRelativeUrl } from "./shared/url_to_relative_url.js";
 // composition
-export { moveUrl } from "./move_url.js";
-export { urlToBasename } from "./composition/url_to_basename.js";
-export { urlToExtension } from "./composition/url_to_extension.js";
-export { urlToFilename } from "./composition/url_to_filename.js";
-export { urlToOrigin } from "./composition/url_to_origin.js";
-export { urlToParentUrl } from "./composition/url_to_parent_url.js";
-export { urlToPathname } from "./composition/url_to_pathname.js";
-export { urlToRelativeUrl } from "./url_to_relative_url.js";
-export { urlToResource } from "./composition/url_to_resource.js";
-export { urlToScheme } from "./composition/url_to_scheme.js";
-export { getCommonPathname } from "./composition/common_pathname.js";
+export { urlToBasename } from "./shared/url_to_basename.js";
+export { urlToExtension } from "./shared/url_to_extension.js";
+export { urlToFilename } from "./shared/url_to_filename.js";
+export { urlToOrigin } from "./shared/url_to_origin.js";
+export { urlToParentUrl } from "./shared/url_to_parent_url.js";
+export { urlToPathname } from "./shared/url_to_pathname.js";
+export { urlToResource } from "./shared/url_to_resource.js";
+export { urlToScheme } from "./shared/url_to_scheme.js";
+export { getCommonPathname } from "./shared/common_pathname.js";
 export {
   resourceToParts,
   resourceToPathname,
   resourceToExtension,
-} from "./composition/resource_to_parts.js";
+} from "./shared/resource_to_parts.js";
 // file_and_path
 export {
   startsWithWindowsDriveLetter,
   windowsFilePathToUrl,
   replaceBackSlashesWithSlashes,
-} from "./file_and_path/windows_file_path_utils.js";
-export { isFileSystemPath } from "./file_and_path/is_filesystem_path.js";
-export { resolveUrl } from "./file_and_path/resolve_url.js";
-export { resolveDirectoryUrl } from "./file_and_path/resolve_directory_url.js";
-export { urlIsInsideOf } from "./file_and_path/url_is_inside_of.js";
-export { yieldAncestorUrls } from "./file_and_path/yield_ancestor_urls.js";
+} from "./shared/windows_file_path_utils.js";
+export { isFileSystemPath } from "./shared/is_filesystem_path.js";
+export { resolveUrl } from "./shared/resolve_url.js";
+export { resolveDirectoryUrl } from "./shared/resolve_directory_url.js";
+export { urlIsInsideOf } from "./shared/url_is_inside_of.js";
+export { yieldAncestorUrls } from "./shared/yield_ancestor_urls.js";

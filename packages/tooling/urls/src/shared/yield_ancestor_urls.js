@@ -1,4 +1,4 @@
-import { ensurePathnameTrailingSlash } from "../composition/set_url_part.js";
+import { ensurePathnameTrailingSlash } from "./set_url_part.js";
 
 export function* yieldAncestorUrls(url, rootUrl, { yieldSelf } = {}) {
   url = String(url);
