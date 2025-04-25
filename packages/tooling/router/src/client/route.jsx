@@ -25,6 +25,7 @@ const RouteErrorDefaultComponent = ({ route }) => {
 // and it's relatively hard to finally realize it's because the route is declared twice
 export const Route = ({
   route,
+  notRoutes,
   always,
   matching,
   loading,
@@ -39,6 +40,7 @@ export const Route = ({
     return (
       <RouteWithLoadedSync
         route={route}
+        notRoutes={notRoutes}
         matching={matching}
         loading={loading}
         error={error}
@@ -50,6 +52,7 @@ export const Route = ({
     return (
       <RouteWithLoadedAsync
         route={route}
+        notRoutes={notRoutes}
         matching={matching}
         loading={loading}
         error={error}
@@ -61,6 +64,7 @@ export const Route = ({
     return (
       <RouteWithMatchingSync
         route={route}
+        notRoutes={notRoutes}
         matching={matching}
         loading={loading}
         error={error}
@@ -76,10 +80,18 @@ export const Route = ({
 };
 
 // cas le plus courant: le composant qu'on veut render est disponible
-const RouteWithLoadedSync = ({ route, matching, error, loading, loaded }) => {
+const RouteWithLoadedSync = ({
+  route,
+  notRoutes,
+  matching,
+  error,
+  loading,
+  loaded,
+}) => {
   return (
     <RouteHandler
       route={route}
+      notRoutes={notRoutes}
       RouteMatching={matching || RouteMatchingDefaultComponent}
       RouteLoading={loading || RouteLoadingDefaultComponent}
       RouteError={error || RouteErrorDefaultComponent}
@@ -90,6 +102,7 @@ const RouteWithLoadedSync = ({ route, matching, error, loading, loaded }) => {
 // cas du code splitting, on doit faire un import dynamique pour obtenir le composant qu'on veut render
 const RouteWithLoadedAsync = ({
   route,
+  notRoutes,
   matching,
   error,
   loading,
@@ -106,6 +119,7 @@ const RouteWithLoadedAsync = ({
   return (
     <RouteHandler
       route={route}
+      notRoutes={notRoutes}
       RouteMatching={matching || RouteMatchingDefaultComponent}
       RouteLoading={loading || RouteLoadingDefaultComponent}
       RouteError={error || RouteErrorDefaultComponent}
@@ -115,10 +129,17 @@ const RouteWithLoadedAsync = ({
 };
 // cas plus rare: on veut affiche le composant des qu'il match et gérer soit-meme
 // la logique pendant que la route load (en omettant la prop "loading")
-const RouteWithMatchingSync = ({ route, matching, loading, error }) => {
+const RouteWithMatchingSync = ({
+  route,
+  notRoutes,
+  matching,
+  loading,
+  error,
+}) => {
   return (
     <RouteHandler
       route={route}
+      notRoutes={notRoutes}
       RouteMatching={matching}
       RouteLoading={loading || matching}
       RouteError={error || RouteErrorDefaultComponent}
@@ -130,12 +151,22 @@ const RouteWithMatchingSync = ({ route, matching, loading, error }) => {
 
 const RouteHandler = ({
   route,
+  notRoutes,
   RouteMatching,
   RouteLoading,
   RouteError,
   RouteLoaded,
 }) => {
-  const routeIsMatching = useRouteIsMatching(route);
+  let routeIsMatching = useRouteIsMatching(route);
+  if (notRoutes) {
+    for (const notRoute of notRoutes) {
+      const notRouteIsMatching = useRouteIsMatching(notRoute);
+      if (notRouteIsMatching) {
+        routeIsMatching = false;
+      }
+    }
+  }
+
   const routeIsLoading = useRouteIsLoading(route);
   const routeError = useRouteError(route);
   const routeIsLoaded = useRouteIsLoaded(route);

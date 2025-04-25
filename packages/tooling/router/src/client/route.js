@@ -26,7 +26,9 @@ const getDocumentUrl = () => {
 
 let baseUrl = window.location.origin;
 export const setBaseUrl = (v) => {
-  baseUrl = v;
+  const urlObject = new URL(v);
+  urlObject.search = "";
+  baseUrl = urlObject.href;
 };
 
 let routerUIReady = false;
