@@ -53,7 +53,6 @@ TODO: create a UI the allow the following:
 
       setBaseUrl(window.location.href);
       const [ROOT, GET_ALL, GET_ONE, EDIT_ONE, DELETE_ONE] = registerRoutes({
-        "GET /": () => {},
         "GET /?route=json_files": async ({ signal }) => {
           const response = await fetch("/json_files", { signal });
           if (!response.ok) {
@@ -90,7 +89,7 @@ TODO: create a UI the allow the following:
           }
           return null;
         },
-        "*": () => {},
+        "GET /": () => {},
       });
 
       // eslint-disable-next-line no-unused-vars
@@ -129,11 +128,7 @@ TODO: create a UI the allow the following:
 
             <h1>Content</h1>
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
-              <Route
-                route={ROOT}
-                routesPreventingThisOne={[GET_ALL, GET_ONE, EDIT_ONE]}
-                loaded={() => <div>Root</div>}
-              />
+              <Route route={ROOT} loaded={() => <div>Root</div>} />
               <Route route={GET_ALL} loaded={JSONFileList} />
               <Route route={GET_ONE} loaded={JSONFileView} />
               <Route route={EDIT_ONE} loaded={JSONFileEdit} />

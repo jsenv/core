@@ -62,6 +62,8 @@ export const SPAForm = ({ action, method, children }) => {
         formStatusSetter({ pending: false });
       }}
       method={method === "get" ? "get" : "post"}
+      data-action={typeof action === "string" ? action : undefined}
+      data-method={method}
     >
       <FormContext.Provider value={[formStatus, formActionMapRef]}>
         {children}

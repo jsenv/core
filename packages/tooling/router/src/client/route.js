@@ -60,8 +60,10 @@ const createAndRegisterRoute = ({
     renderUI: null,
     node: null,
     buildUrl: (params) => {
-      const routeUrl = resourcePatternParsed.generate(params);
-      return normalizeUrl(routeUrl);
+      const routeResource = resourcePatternParsed.generate(params);
+      const routeUrl = new URL(routeResource, window.location).href;
+      const routeUrlNormalized = normalizeUrl(routeUrl);
+      return routeUrlNormalized;
     },
     isMatchingSignal: signal(false),
     loadingStateSignal: signal(IDLE),
@@ -185,6 +187,12 @@ const createAndRegisterRoute = ({
       }
       return `${route.methodPattern} ${route.resourcePattern}`;
     },
+    // Not working by design because there is no room
+    // to call addRoutePreventingThisOne before navigating to routes
+    routePreventingThisOneSet: new Set(),
+    addRoutePreventingThisOne: (otherRoute) => {
+      route.routePreventingThisOneSet.add(otherRoute);
+    },
   };
   effect(() => {
     route.data = route.dataSignal.value;
@@ -259,37 +267,55 @@ const applyRouting = async ({
   }
   const routeToLeaveSet = new Set();
   const routeToEnterSet = new Set();
+  for (const nextMatchingRoute of nextMatchingRouteSet) {
+    let otherRoutePreventingThisOne = null;
+    for (const routePreventingThisOne of nextMatchingRoute.routePreventingThisOneSet) {
+      if (nextMatchingRouteSet.has(routePreventingThisOne)) {
+        otherRoutePreventingThisOne = routePreventingThisOne;
+        break;
+      }
+    }
+    if (otherRoutePreventingThisOne) {
+      nextMatchingRouteSet.delete(nextMatchingRoute);
+      if (debug) {
+        console.log(
+          `${nextMatchingRoute.methodPattern} ${nextMatchingRoute.resourcePattern}: prevented by ${otherRoutePreventingThisOne.resourcePattern}`,
+        );
+      }
+    } else {
+      const isAborted = nextMatchingRoute.loadingStateSignal.peek() === ABORTED;
+      const hasError = nextMatchingRoute.errorSignal.peek();
+      if (reload) {
+        routeToEnterSet.add(nextMatchingRoute);
+      } else if (isAborted) {
+        routeToEnterSet.add(nextMatchingRoute);
+      } else if (hasError) {
+        routeToEnterSet.add(nextMatchingRoute);
+      } else if (matchingRouteSet.has(nextMatchingRoute)) {
+        // already entered
+      } else {
+        routeToEnterSet.add(nextMatchingRoute);
+      }
+    }
+  }
   for (const activeRoute of matchingRouteSet) {
     if (nextMatchingRouteSet.has(activeRoute)) {
       continue;
     }
     if (sourceResource !== targetResource) {
       // when we route to a new url but we stay on the current url
-      // until routing is done (POST/PATCH/PUT)
+      // until routing is done (POST/PATCH/PUT) (what about DELETE?)
       // then we keep the route active during that time
       if (matchRouteAgainst(activeRoute, "GET", sourceResource)) {
         if (debug) {
           console.log(
-            `${activeRoute.resourcePattern}: stays active while navigating to ${targetResource}`,
+            `${activeRoute.methodPattern} ${activeRoute.resourcePattern}: stays active while navigating to ${targetResource}`,
           );
         }
         continue;
       }
     }
     routeToLeaveSet.add(activeRoute);
-  }
-  for (const nextMatchingRoute of nextMatchingRouteSet) {
-    const nextMatchingRouteLoadingState =
-      nextMatchingRoute.loadingStateSignal.peek();
-    const nextMatchingRouteError = nextMatchingRoute.errorSignal.peek();
-    if (
-      reload ||
-      !matchingRouteSet.has(nextMatchingRoute) ||
-      nextMatchingRouteLoadingState === ABORTED ||
-      nextMatchingRouteError
-    ) {
-      routeToEnterSet.add(nextMatchingRoute);
-    }
   }
   nextMatchingRouteSet.clear();
   for (const routeToLeave of routeToLeaveSet) {

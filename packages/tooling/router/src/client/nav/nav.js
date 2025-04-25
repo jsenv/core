@@ -81,16 +81,6 @@ export const installNavigation = ({ applyRouting, routingWhile }) => {
           });
           return;
         }
-        if (formUrl) {
-          const finishedPromise = event.target.transition.finished;
-          (async () => {
-            try {
-              await finishedPromise;
-            } finally {
-              navigation.navigate(window.location.href, { history: "replace" });
-            }
-          })();
-        }
         await applyRouting({
           method,
           sourceUrl: url,
@@ -101,6 +91,16 @@ export const installNavigation = ({ applyRouting, routingWhile }) => {
           stopSignal,
           reload: event.navigationType === "reload",
         });
+        if (formUrl) {
+          const finishedPromise = event.target.transition.finished;
+          (async () => {
+            try {
+              await finishedPromise;
+            } finally {
+              navigation.navigate(window.location.href, { history: "replace" });
+            }
+          })();
+        }
       },
     });
   });
