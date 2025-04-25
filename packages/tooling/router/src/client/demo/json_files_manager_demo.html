@@ -67,8 +67,8 @@ TODO: create a UI the allow the following:
           const response = await fetch(`/json_files/${params.id}`, {
             signal,
           });
-          const responseJSON = await response.json();
-          return responseJSON;
+          const responseText = await response.text();
+          return responseText;
         },
         "GET /json_files/:id/edit": async ({ signal, params }) => {
           const response = await fetch(`/json_files/${params.id}`, {

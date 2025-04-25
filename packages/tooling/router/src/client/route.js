@@ -111,9 +111,11 @@ const createAndRegisterRoute = ({
           if (!route.loadData) {
             return;
           }
+          const { named, stars } = resourcePatternParsed.match(resource);
+          const params = { ...named, ...stars };
           const data = await route.loadData({
             signal: enterAbortSignal,
-            params: resourcePatternParsed.match(resource),
+            params,
             formData,
           });
           route.dataSignal.value = data;
