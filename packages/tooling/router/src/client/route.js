@@ -29,9 +29,13 @@ export const setBaseUrl = (v) => {
   baseUrl = v;
 };
 
+let routerUIReady = false;
 let resolveRouterUIReadyPromise;
 const routerUIReadyPromise = new Promise((resolve) => {
-  resolveRouterUIReadyPromise = resolve;
+  resolveRouterUIReadyPromise = () => {
+    routerUIReady = true;
+    resolve();
+  };
 });
 export const onRouterUILoaded = () => {
   resolveRouterUIReadyPromise();
@@ -115,7 +119,9 @@ const createAndRegisterRoute = ({
           route.dataSignal.value = data;
         })();
         const loadUIPromise = (async () => {
-          await routerUIReadyPromise;
+          if (!routerUIReady) {
+            await routerUIReadyPromise;
+          }
           if (!route.loadUI) {
             return;
           }
