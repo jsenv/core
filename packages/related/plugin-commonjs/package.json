@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../tooling/assert",
-    "playwright": "1.51.1",
+    "playwright": "1.52.0",
     "@jsenv/core": "../../"
   }
 }

@@ -42,6 +42,6 @@
     "@jsenv/humanize": "../../tooling/humanize",
     "@jsenv/pwa": "../pwa",
     "@jsenv/service-worker": "./",
-    "playwright": "1.51.1"
+    "playwright": "1.52.0"
   }
 }

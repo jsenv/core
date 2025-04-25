@@ -40,6 +40,6 @@
     "@jsenv/assert": "../assert",
     "@jsenv/server": "../../backend/server",
     "@jsenv/lighthouse-impact": "./",
-    "playwright": "1.51.1"
+    "playwright": "1.52.0"
   }
 }

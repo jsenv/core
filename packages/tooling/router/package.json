@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "preact": "10.26.5",
-    "@preact/signals": "2.0.3",
+    "@preact/signals": "2.0.4",
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/urls": "../urls"
   }

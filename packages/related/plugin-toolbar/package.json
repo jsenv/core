@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-toolbar",
-  "version": "1.5.11",
+  "version": "1.5.12",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,14 +31,14 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/ast": "6.7.2"
+    "@jsenv/ast": "6.7.3"
   },
   "devDependencies": {
-    "@preact/signals": "2.0.3",
+    "@preact/signals": "2.0.4",
     "@jsenv/core": "../../",
     "@jsenv/utils": "../../tooling/utils",
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-toolbar": "./",
-    "playwright": "1.51.1"
+    "playwright": "1.52.0"
   }
 }

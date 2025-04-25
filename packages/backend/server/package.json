@@ -57,9 +57,9 @@
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/server": "./",
     "ws": "8.18.1",
-    "formidable": "3.5.2",
+    "formidable": "3.5.4",
     "eventsource": "3.0.6",
     "undici": "7.8.0",
-    "playwright": "1.51.1"
+    "playwright": "1.52.0"
   }
 }

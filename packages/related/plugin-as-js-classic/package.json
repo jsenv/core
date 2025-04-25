@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-as-js-classic",
-  "version": "1.6.16",
+  "version": "1.6.17",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -23,7 +23,7 @@
   "sideEffects": false,
   "dependencies": {
     "@jsenv/urls": "2.8.0",
-    "@jsenv/js-module-fallback": "1.4.12",
+    "@jsenv/js-module-fallback": "1.4.13",
     "@jsenv/plugin-bundling": "2.9.7"
   },
   "devDependencies": {
@@ -33,6 +33,6 @@
     "@jsenv/plugin-preact": "../plugin-preact",
     "@jsenv/core": "../../../",
     "@jsenv/plugin-as-js-classic": "./",
-    "playwright": "1.51.1"
+    "playwright": "1.52.0"
   }
 }

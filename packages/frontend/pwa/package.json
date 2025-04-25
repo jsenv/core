@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/pwa",
-  "version": "6.1.8",
+  "version": "6.1.9",
   "description": "Service worker and other progressive web application helpers",
   "license": "MIT",
   "author": {
@@ -31,13 +31,13 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/sigi": "0.1.0"
+    "@jsenv/sigi": "0.1.1"
   },
   "devDependencies": {
     "@jsenv/core": "../../../",
     "@jsenv/assert": "../../tooling/assert",
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/plugin-explorer": "../../related/plugin-explorer",
-    "playwright": "1.51.1"
+    "playwright": "1.52.0"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-react",
-  "version": "1.7.15",
+  "version": "1.7.16",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -25,7 +25,7 @@
     "@babel/plugin-transform-react-jsx": "7.25.9",
     "@babel/plugin-transform-react-jsx-development": "7.25.9",
     "@babel/plugin-transform-react-jsx-source": "7.25.9",
-    "@jsenv/ast": "6.7.2",
+    "@jsenv/ast": "6.7.3",
     "@jsenv/plugin-commonjs": "2.10.12",
     "@jsenv/sourcemap": "1.3.8",
     "@jsenv/url-meta": "8.5.7",
@@ -37,7 +37,7 @@
   "devDependencies": {
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "playwright": "1.51.1",
+    "playwright": "1.52.0",
     "@jsenv/assert": "../../tooling/assert",
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/https-local": "../../tooling/https-local",

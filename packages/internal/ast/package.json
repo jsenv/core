@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/ast",
-  "version": "6.7.2",
+  "version": "6.7.3",
   "description": "Parse and transform HTML, CSS and JS",
   "license": "MIT",
   "repository": {
@@ -39,7 +39,7 @@
     "acorn": "8.14.1",
     "acorn-import-attributes": "1.9.5",
     "acorn-walk": "8.3.4",
-    "parse5": "7.2.1",
+    "parse5": "7.3.0",
     "postcss": "8.5.3",
     "postcss-value-parser": "4.2.0"
   },

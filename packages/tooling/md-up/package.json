@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/md-up",
-  "version": "0.1.35",
+  "version": "0.1.36",
   "license": "MIT",
   "private": true,
   "repository": {
@@ -23,9 +23,9 @@
   ],
   "dependencies": {
     "anchor-markdown-header": "0.7.0",
-    "marked": "15.0.8",
+    "marked": "15.0.11",
     "@jsenv/filesystem": "4.15.3",
     "@jsenv/urls": "2.8.0",
-    "@jsenv/ast": "6.7.2"
+    "@jsenv/ast": "6.7.3"
   }
 }
