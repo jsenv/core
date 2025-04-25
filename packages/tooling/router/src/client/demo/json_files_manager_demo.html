@@ -101,7 +101,7 @@ TODO: create a UI the allow the following:
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
               <Route
                 route={ROOT}
-                notRoutes={[GET_ALL, GET_ONE, EDIT_ONE]}
+                routesPreventingThisOne={[GET_ALL, GET_ONE, EDIT_ONE]}
                 loaded={() => <div>Root</div>}
               />
               <Route route={GET_ALL} loaded={JSONFileList} />
