@@ -17,6 +17,7 @@ import {
   defineGettersOnPropertiesDerivedFromContent,
   defineGettersOnPropertiesDerivedFromOriginalContent,
 } from "./url_content.js";
+import { replacePlaceholders } from "./url_info_injections.js";
 
 export const createUrlInfoTransformer = ({
   logger,
@@ -195,12 +196,16 @@ export const createUrlInfoTransformer = ({
       contentLength,
       sourcemap,
       sourcemapIsWrong,
+      contentInjections,
     } = transformations;
     if (type) {
       urlInfo.type = type;
     }
     if (contentType) {
       urlInfo.contentType = contentType;
+    }
+    if (contentInjections) {
+      Object.assign(urlInfo.contentInjections, contentInjections);
     }
     const contentModified = setContentProperties(urlInfo, {
       content,
@@ -399,6 +404,15 @@ export const createUrlInfoTransformer = ({
   const endTransformations = (urlInfo, transformations) => {
     if (transformations) {
       applyTransformations(urlInfo, transformations);
+    }
+    const { contentInjections } = urlInfo;
+    if (contentInjections && Object.keys(contentInjections).length > 0) {
+      const injectionTransformations = replacePlaceholders(
+        urlInfo.content,
+        contentInjections,
+        urlInfo,
+      );
+      applyTransformations(urlInfo, injectionTransformations);
     }
     applyContentEffects(urlInfo);
     urlInfo.contentFinalized = true;

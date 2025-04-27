@@ -213,6 +213,7 @@ const createUrlInfo = (url, context) => {
     contentLength: undefined,
     contentFinalized: false,
     contentSideEffects: [],
+    contentInjections: {},
 
     sourcemap: null,
     sourcemapIsWrong: false,

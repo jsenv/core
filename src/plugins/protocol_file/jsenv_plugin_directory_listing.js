@@ -37,7 +37,6 @@ import {
 } from "@jsenv/urls";
 import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { getDirectoryWatchPatterns } from "../../helpers/watch_source_files.js";
-import { replacePlaceholders } from "../injections/jsenv_plugin_injections.js";
 import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";
 
 const htmlFileUrlForDirectory = import.meta.resolve(
@@ -124,22 +123,18 @@ export const jsenvPluginDirectoryListing = ({
         }
         const request = urlInfo.context.request;
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
-        return replacePlaceholders(
-          urlInfo.content,
-          {
-            ...generateDirectoryListingInjection(requestedUrl, {
-              autoreload,
-              request,
-              urlMocks,
-              directoryContentMagicName,
-              rootDirectoryUrl,
-              mainFilePath,
-              packageDirectory,
-              enoent,
-            }),
-          },
-          urlInfo,
-        );
+        return {
+          contentInjections: generateDirectoryListingInjection(requestedUrl, {
+            autoreload,
+            request,
+            urlMocks,
+            directoryContentMagicName,
+            rootDirectoryUrl,
+            mainFilePath,
+            packageDirectory,
+            enoent,
+          }),
+        };
       },
     },
     devServerRoutes: [

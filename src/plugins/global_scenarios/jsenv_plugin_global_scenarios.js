@@ -5,21 +5,16 @@
  * That will be replaced with true/false
  */
 
-import {
-  INJECTIONS,
-  replacePlaceholders,
-} from "../injections/jsenv_plugin_injections.js";
+import { INJECTIONS } from "../../kitchen/url_graph/url_info_injections.js";
 
 export const jsenvPluginGlobalScenarios = () => {
   const transformIfNeeded = (urlInfo) => {
-    return replacePlaceholders(
-      urlInfo.content,
-      {
+    return {
+      contentInjections: {
         __DEV__: INJECTIONS.optional(urlInfo.context.dev),
         __BUILD__: INJECTIONS.optional(urlInfo.context.build),
       },
-      urlInfo,
-    );
+    };
   };
 
   return {
