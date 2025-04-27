@@ -1,6 +1,10 @@
 /*
  * This plugin provides a way for jsenv to supervisor js execution:
  * - Know how many js are executed, when they are done, collect errors, etc...
+ *
+ * TODO:
+ * When an HTML file got "contentInjections" we need to apply them to the content
+ * we are extracting from the HTML and that is put into a file
  */
 
 import { generateContentFrame } from "@jsenv/humanize";

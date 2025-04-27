@@ -37,6 +37,7 @@ import {
 } from "@jsenv/urls";
 import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { getDirectoryWatchPatterns } from "../../helpers/watch_source_files.js";
+import { replacePlaceholders } from "../../kitchen/url_graph/url_info_injections.js";
 import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";
 
 const htmlFileUrlForDirectory = import.meta.resolve(
@@ -123,8 +124,9 @@ export const jsenvPluginDirectoryListing = ({
         }
         const request = urlInfo.context.request;
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
-        return {
-          contentInjections: generateDirectoryListingInjection(requestedUrl, {
+        const directoryListingInjections = generateDirectoryListingInjection(
+          requestedUrl,
+          {
             autoreload,
             request,
             urlMocks,
@@ -133,8 +135,16 @@ export const jsenvPluginDirectoryListing = ({
             mainFilePath,
             packageDirectory,
             enoent,
-          }),
-        };
+          },
+        );
+        // we must replace now because supervisor might hide the js code from the HTML
+        // in that case we would not be able to inject variables
+        // There is a TODO in jsenv_plugin_supervisor.js to make this better
+        return replacePlaceholders(
+          urlInfo.content,
+          directoryListingInjections,
+          urlInfo,
+        );
       },
     },
     devServerRoutes: [
