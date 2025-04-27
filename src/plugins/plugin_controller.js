@@ -418,11 +418,14 @@ const returnValueAssertions = [
         return { content: valueReturned };
       }
       if (typeof valueReturned === "object") {
-        const { content, body } = valueReturned;
+        const { content, contentInjections, body } = valueReturned;
         if (urlInfo.url.startsWith("ignore:")) {
           return undefined;
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
+          if (contentInjections) {
+            return undefined;
+          }
           throw new Error(
             `Unexpected "content" returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string or a buffer; got ${content}`,
           );

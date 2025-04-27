@@ -206,6 +206,9 @@ export const createUrlInfoTransformer = ({
     }
     if (contentInjections) {
       Object.assign(urlInfo.contentInjections, contentInjections);
+      if (content === undefined) {
+        return;
+      }
     }
     const contentModified = setContentProperties(urlInfo, {
       content,

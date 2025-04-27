@@ -102,6 +102,9 @@ export const jsenvPluginFsRedirection = ({
           !urlToExtension(urlObject) &&
           !urlToPathname(urlObject).endsWith("/")
         ) {
+          // let's first check the presence of "index.html" in the parent directory, recursively
+          // if none, then we serve the main
+          // also we want to put the HTML file in the content
           const { mainFilePath, rootDirectoryUrl } =
             reference.ownerUrlInfo.context;
           return new URL(mainFilePath, rootDirectoryUrl);
