@@ -5,10 +5,16 @@ const result = injectPlaceholderReplacements(
   `const foo = __FOO__
 const t = __FOO__
 const bar = __BAR__`,
-  {
-    __FOO__: "hello",
-    __BAR__: "world",
-  },
+  [
+    {
+      key: "__FOO__",
+      value: "hello",
+    },
+    {
+      key: "__BAR__",
+      value: "world",
+    },
+  ],
   {
     type: "js_module",
   },
