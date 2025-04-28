@@ -4021,7 +4021,7 @@ const convertJsModuleToJsClassic = async ({
     inputUrl,
     outputUrl,
   });
-  const sourcemap = await composeTwoSourcemaps(inputSourcemap, map);
+  const sourcemap = composeTwoSourcemaps(inputSourcemap, map);
   return {
     content: code,
     sourcemap,
