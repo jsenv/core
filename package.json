@@ -78,6 +78,8 @@
     "https:setup": "npx @jsenv/https-local setup",
     "prepublishOnly": "npm run build",
     "database:install": "npx @jsenv/database install",
+    "database:start": "npx @jsenv/database start",
+    "database:stop": "npx @jsenv/database stop",
     "oto:start": "npm run start -w oto"
   },
   "dependencies": {
