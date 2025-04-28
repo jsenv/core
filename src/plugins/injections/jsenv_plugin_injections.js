@@ -1,7 +1,19 @@
 import { URL_META } from "@jsenv/url-meta";
-import { asUrlWithoutSearch } from "@jsenv/urls";
+import { asUrlWithoutSearch, urlToRelativeUrl } from "@jsenv/urls";
 
 export const jsenvPluginInjections = (rawAssociations) => {
+  const getDefaultInjections = (urlInfo) => {
+    if (urlInfo.context.dev && urlInfo.type === "html") {
+      const relativeUrl = urlToRelativeUrl(
+        urlInfo.url,
+        urlInfo.context.rootDirectoryUrl,
+      );
+      return {
+        HTML_ROOT_URL: `/${relativeUrl}`,
+      };
+    }
+    return null;
+  };
   let getInjections = null;
 
   return {
@@ -29,16 +41,24 @@ export const jsenvPluginInjections = (rawAssociations) => {
       }
     },
     transformUrlContent: async (urlInfo) => {
+      const defaultInjections = getDefaultInjections(urlInfo);
       if (!getInjections) {
-        return null;
+        return {
+          contentInjections: defaultInjections,
+        };
       }
       const injectionsResult = getInjections(urlInfo);
       if (!injectionsResult) {
-        return null;
+        return {
+          contentInjections: defaultInjections,
+        };
       }
       const injections = await injectionsResult;
       return {
-        contentInjections: injections,
+        contentInjections: {
+          ...defaultInjections,
+          ...injections,
+        },
       };
     },
   };

@@ -76,7 +76,7 @@ export const getCorePlugins = ({
 
   return [
     jsenvPluginReferenceAnalysis(referenceAnalysis),
-    ...(injections ? [jsenvPluginInjections(injections)] : []),
+    jsenvPluginInjections(injections),
     jsenvPluginTranspilation(transpilation),
     // "jsenvPluginInlining" must be very soon because all other plugins will react differently once they see the file is inlined
     ...(inlining ? [jsenvPluginInlining()] : []),
