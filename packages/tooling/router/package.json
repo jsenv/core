@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/router",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "private": true,
   "description": "Url matching and routing",
   "publishConfig": {
@@ -36,6 +36,7 @@
     "preact": "10.26.5",
     "@preact/signals": "2.0.4",
     "@jsenv/snapshot": "../snapshot",
+    "@jsenv/filesystem": "../filesystem",
     "@jsenv/urls": "../urls"
   }
 }

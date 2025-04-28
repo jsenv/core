@@ -11,11 +11,18 @@ export const createRoutes = (description, create = createRoute) => {
         handler,
       });
       routeArray.push(route);
-    } else {
+    } else if (key.includes(" ")) {
       const [methodPattern, resourcePattern] = key.split(" ");
       const route = create({
         methodPattern,
         resourcePattern,
+        handler,
+      });
+      routeArray.push(route);
+    } else {
+      const route = create({
+        methodPattern: "GET",
+        resourcePattern: key,
         handler,
       });
       routeArray.push(route);

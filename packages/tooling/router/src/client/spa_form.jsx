@@ -62,11 +62,23 @@ export const SPAForm = ({ action, method, children }) => {
         formStatusSetter({ pending: false });
       }}
       method={method === "get" ? "get" : "post"}
+      data-action={typeof action === "string" ? action : undefined}
+      data-method={method}
     >
       <FormContext.Provider value={[formStatus, formActionMapRef]}>
         {children}
       </FormContext.Provider>
     </form>
+  );
+};
+
+export const DeleteLink = ({ href, children, ...rest }) => {
+  return (
+    <SPAForm action={href} method="DELETE">
+      <button type="submit" {...rest}>
+        {children}
+      </button>
+    </SPAForm>
   );
 };
 

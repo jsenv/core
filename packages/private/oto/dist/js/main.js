@@ -1840,11 +1840,18 @@ const createRoutes = (description, create = createRoute) => {
         handler,
       });
       routeArray.push(route);
-    } else {
+    } else if (key.includes(" ")) {
       const [methodPattern, resourcePattern] = key.split(" ");
       const route = create({
         methodPattern,
         resourcePattern,
+        handler,
+      });
+      routeArray.push(route);
+    } else {
+      const route = create({
+        methodPattern: "GET",
+        resourcePattern: key,
         handler,
       });
       routeArray.push(route);
@@ -2071,16 +2078,6 @@ const installNavigation$1 = ({ applyRouting, routingWhile }) => {
           });
           return;
         }
-        if (formUrl) {
-          const finishedPromise = event.target.transition.finished;
-          (async () => {
-            try {
-              await finishedPromise;
-            } finally {
-              navigation.navigate(window.location.href, { history: "replace" });
-            }
-          })();
-        }
         await applyRouting({
           method,
           sourceUrl: url,
@@ -2091,6 +2088,16 @@ const installNavigation$1 = ({ applyRouting, routingWhile }) => {
           stopSignal,
           reload: event.navigationType === "reload",
         });
+        if (formUrl) {
+          const finishedPromise = event.target.transition.finished;
+          (async () => {
+            try {
+              await finishedPromise;
+            } finally {
+              navigation.navigate(window.location.href, { history: "replace" });
+            }
+          })();
+        }
       },
     });
   });
@@ -2156,14 +2163,16 @@ const ABORTED = { id: "aborted" };
 const LOADED = { id: "loaded" };
 const FAILED = { id: "failed" };
 
-const getDocumentUrl = () => {
-  const documentUrl = documentUrlSignal.value;
-  const documentUrlObject = new URL(documentUrl);
-  documentUrlObject.search = "";
-  return documentUrlObject;
-};
+
+
+
+
+
+
 
 let baseUrl = window.location.origin;
+
+let routerUIReady = false;
 const routerUIReadyPromise = new Promise((resolve) => {
 });
 const routeSet = new Set();
@@ -2184,12 +2193,10 @@ const createAndRegisterRoute = ({
     renderUI: null,
     node: null,
     buildUrl: (params) => {
-      const documentUrl = getDocumentUrl();
-      const documentUrlWithRoute = resourcePatternParsed.generate(
-        documentUrl,
-        params,
-      );
-      return normalizeUrl(documentUrlWithRoute);
+      const routeResource = resourcePatternParsed.generate(params);
+      const routeUrl = new URL(routeResource, window.location).href;
+      const routeUrlNormalized = normalizeUrl(routeUrl);
+      return routeUrlNormalized;
     },
     isMatchingSignal: d$1(false),
     loadingStateSignal: d$1(IDLE),
@@ -2237,15 +2244,19 @@ const createAndRegisterRoute = ({
           if (!route.loadData) {
             return;
           }
+          const { named, stars } = resourcePatternParsed.match(resource);
+          const params = { ...named, ...stars };
           const data = await route.loadData({
             signal: enterAbortSignal,
-            params: resourcePatternParsed.match(resource),
+            params,
             formData,
           });
           route.dataSignal.value = data;
         })();
         const loadUIPromise = (async () => {
-          await routerUIReadyPromise;
+          if (!routerUIReady) {
+            await routerUIReadyPromise;
+          }
           if (!route.loadUI) {
             return;
           }
@@ -2273,6 +2284,7 @@ const createAndRegisterRoute = ({
         if (debug) {
           console.log(`"${route}": route enter end`);
         }
+        routeAbortEnterMap.delete(route);
       } catch (e) {
         r(() => {
           route.reportError(e);
@@ -2310,6 +2322,12 @@ const createAndRegisterRoute = ({
         return "*";
       }
       return `${route.methodPattern} ${route.resourcePattern}`;
+    },
+
+
+    routePreventingThisOneSet: new Set(),
+    addRoutePreventingThisOne: (otherRoute) => {
+      route.routePreventingThisOneSet.add(otherRoute);
     },
   };
   E(() => {
@@ -2385,6 +2403,38 @@ const applyRouting = async ({
   }
   const routeToLeaveSet = new Set();
   const routeToEnterSet = new Set();
+  for (const nextMatchingRoute of nextMatchingRouteSet) {
+    let otherRoutePreventingThisOne = null;
+    for (const routePreventingThisOne of nextMatchingRoute.routePreventingThisOneSet) {
+      if (nextMatchingRouteSet.has(routePreventingThisOne)) {
+        otherRoutePreventingThisOne = routePreventingThisOne;
+        break;
+      }
+    }
+    if (otherRoutePreventingThisOne) {
+      nextMatchingRouteSet.delete(nextMatchingRoute);
+      {
+        console.log(
+          `${nextMatchingRoute.methodPattern} ${nextMatchingRoute.resourcePattern}: prevented by ${otherRoutePreventingThisOne.resourcePattern}`,
+        );
+      }
+    } else {
+      const isAborted = nextMatchingRoute.loadingStateSignal.peek() === ABORTED;
+      const hasError = nextMatchingRoute.errorSignal.peek();
+      if (reload) {
+        routeToEnterSet.add(nextMatchingRoute);
+      } else if (isAborted) {
+        routeToEnterSet.add(nextMatchingRoute);
+      } else if (hasError) {
+        routeToEnterSet.add(nextMatchingRoute);
+      } else if (matchingRouteSet.has(nextMatchingRoute)) {
+        routeToLeaveSet.add(nextMatchingRoute);
+        routeToEnterSet.add(nextMatchingRoute);
+      } else {
+        routeToEnterSet.add(nextMatchingRoute);
+      }
+    }
+  }
   for (const activeRoute of matchingRouteSet) {
     if (nextMatchingRouteSet.has(activeRoute)) {
       continue;
@@ -2396,26 +2446,13 @@ const applyRouting = async ({
       if (matchRouteAgainst(activeRoute, "GET", sourceResource)) {
         {
           console.log(
-            `${activeRoute.ressource}: stays active while navigating to ${targetResource}`,
+            `${activeRoute.methodPattern} ${activeRoute.resourcePattern}: stays active while navigating to ${targetResource}`,
           );
         }
         continue;
       }
     }
     routeToLeaveSet.add(activeRoute);
-  }
-  for (const nextMatchingRoute of nextMatchingRouteSet) {
-    const nextMatchingRouteLoadingState =
-      nextMatchingRoute.loadingStateSignal.peek();
-    const nextMatchingRouteError = nextMatchingRoute.errorSignal.peek();
-    if (
-      reload ||
-      !matchingRouteSet.has(nextMatchingRoute) ||
-      nextMatchingRouteLoadingState === ABORTED ||
-      nextMatchingRouteError
-    ) {
-      routeToEnterSet.add(nextMatchingRoute);
-    }
   }
   nextMatchingRouteSet.clear();
   for (const routeToLeave of routeToLeaveSet) {

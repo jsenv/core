@@ -15,4 +15,4 @@ export const startBuildServer = async (...args) => {
 };
 
 // others
-export { INJECTIONS } from "./plugins/injections/jsenv_plugin_injections.js";
+export { INJECTIONS } from "./kitchen/url_graph/url_info_injections.js";

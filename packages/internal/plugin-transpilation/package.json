@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-transpilation",
-  "version": "1.5.20",
+  "version": "1.5.21",
   "description": "TODO",
   "license": "MIT",
   "repository": {
@@ -57,7 +57,7 @@
     "@babel/plugin-transform-typeof-symbol": "7.27.0",
     "@babel/plugin-transform-unicode-regex": "7.25.9",
     "@jsenv/ast": "6.7.3",
-    "@jsenv/js-module-fallback": "1.4.13",
+    "@jsenv/js-module-fallback": "1.4.14",
     "babel-plugin-transform-async-to-promises": "0.8.18",
     "construct-style-sheets-polyfill": "3.1.0",
     "lightningcss": "1.29.3"

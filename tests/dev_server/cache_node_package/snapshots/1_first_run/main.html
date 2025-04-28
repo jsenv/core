@@ -8,6 +8,11 @@
   <body>
     <jsenv-scripts>
       <script src="/@fs@jsenv/core/packages/backend/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js" jsenv-injected-by="jsenv:autoreload_on_server_restart" data-ws-endpoint="/.internal/events.websocket"></script>
+      <script jsenv-injected-by="jsenv:inject_globals" content-indented="">
+        Object.assign(window, {
+          "HTML_ROOT_PATHNAME": "/main.html"
+        });
+      </script>
     </jsenv-scripts>
   
 

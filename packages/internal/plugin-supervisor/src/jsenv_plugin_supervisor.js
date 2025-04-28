@@ -1,6 +1,7 @@
 /*
  * This plugin provides a way for jsenv to supervisor js execution:
  * - Know how many js are executed, when they are done, collect errors, etc...
+ *
  */
 
 import { generateContentFrame } from "@jsenv/humanize";
@@ -256,6 +257,12 @@ export const jsenvPluginSupervisor = ({
                   contentType: "text/javascript",
                   content: textContent,
                 });
+              for (const key of Object.keys(htmlUrlInfo.contentInjections)) {
+                const value = htmlUrlInfo.contentInjections[key];
+                if (htmlUrlInfo.context.isPlaceholderInjection(value)) {
+                  inlineScriptReference.urlInfo.contentInjections[key] = value;
+                }
+              }
               return inlineScriptReference.generatedSpecifier;
             },
             sourcemaps: htmlUrlInfo.kitchen.context.sourcemaps,

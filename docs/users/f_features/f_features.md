@@ -120,7 +120,7 @@ It is possible to control in which files node esm resolution applies, code below
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
 + nodeEsmResolution: {
 +    html: true,
 +    css: true,
@@ -131,7 +131,7 @@ await startDevServer({
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: new URL("../dist/", import.meta.url),
   entryPoints: { "./main.html": "main.html" },
 + nodeEsmResolution: {
@@ -168,7 +168,7 @@ Disabling Magic Extensions:
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL('../', import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve('../'),
 +  magicExtensions: null,
 +  magicDirectoryIndex: false,
 });
@@ -176,8 +176,8 @@ await startDevServer({
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: { "./main.html": "main.html" },
 +  magicExtensions: null,
 +  magicDirectoryIndex: false,
@@ -217,7 +217,7 @@ console.log(window.__ENV__);
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   injections: {
     "./main.js": () => {
       return { __ENV__: "dev" };
@@ -230,6 +230,7 @@ The browser will see the following file content:
 
 ```diff
 // eslint-disable-next-line no-undef
+- window.__ENV__ = __ENV__;
 + window.__ENV__ = "dev";
 console.log(window.__ENV__);
 ```
@@ -240,8 +241,8 @@ console.log(window.__ENV__);
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: { "./main.html": "main.html" },
   injections: {
     "./main.js": () => {
@@ -255,6 +256,7 @@ The build file content:
 
 ```diff
 // eslint-disable-next-line no-undef
+- window.__ENV__ = __ENV__;
 + window.__ENV__ = "build";
 console.log(window.__ENV__);
 ```
@@ -278,7 +280,7 @@ import { startDevServer } from "@jsenv/core";
 import { getInjections } from "./utils.mjs";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
   injections: getInjections(),
 });
 
@@ -287,8 +289,8 @@ import { build } from "@jsenv/core";
 import { getInjections } from "./utils.mjs";
 
 await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: { "./main.html": "main.html" },
   injections: getInjections(),
 });

@@ -17,6 +17,22 @@ TODO: create a UI the allow the following:
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JSON files manager demo</title>
+    <style>
+      summary.button {
+        background-color: buttonface;
+        margin: 0em;
+        padding-block: 1px;
+        padding-inline: 6px;
+        border-width: 2px;
+        color: buttontext;
+        display: inline-block;
+        padding-block: 1px;
+        padding-inline: 6px;
+        border-width: 2px;
+        border-style: outset;
+        border-color: buttonborder;
+      }
+    </style>
   </head>
   <body>
     <div id="root" style="position: relative"></div>
@@ -30,36 +46,55 @@ TODO: create a UI the allow the following:
         // eslint-disable-next-line no-unused-vars
         SPAForm,
         useSPAFormStatus,
+        useRouteIsLoading,
+        // eslint-disable-next-line no-unused-vars
+        DeleteLink,
       } from "@jsenv/router";
-      import { setBaseUrl } from "../route.js";
 
-      setBaseUrl(window.location.href);
-      const [GET_ALL, GET_ONE, EDIT_ONE] = registerRoutes({
-        // "GET /": () => {},
-        "GET /?route=json_files": async ({ signal }) => {
+      const [GET_ALL, GET_ONE, EDIT_ONE, DELETE_ONE, ROOT] = registerRoutes({
+        "GET /json_files": async ({ signal }) => {
           const response = await fetch("/json_files", { signal });
+          if (!response.ok) {
+            throw new Error(
+              `GET /json_files failed with status ${response.status}`,
+            );
+          }
           const responseJson = await response.json();
           return responseJson;
         },
-        "GET /?route=json_files/:id": async ({ signal, params }) => {
+        "GET /json_files/:id": async ({ signal, params }) => {
+          const response = await fetch(`/json_files/${params.id}`, {
+            signal,
+          });
+          const responseText = await response.text();
+          return responseText;
+        },
+        "GET /json_files/:id/edit": async ({ signal, params }) => {
           const response = await fetch(`/json_files/${params.id}`, {
             signal,
           });
           const responseJSON = await response.json();
           return responseJSON;
         },
-        "GET /?route=json_files/:id/edit": async ({ signal, params }) => {
+        "DELETE /json_files/:id": async ({ signal, params }) => {
+          await new Promise((resolve) => setTimeout(resolve, 500));
           const response = await fetch(`/json_files/${params.id}`, {
+            method: "DELETE",
             signal,
           });
-          const responseJSON = await response.json();
-          return responseJSON;
+          if (!response.ok) {
+            throw new Error(
+              `DELETE /json_files/${params.id} failed with status ${response.status}`,
+            );
+          }
+          return null;
         },
-        "*": () => {},
+        "GET /": () => {},
       });
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
+        const rootUrl = useRouteUrl(ROOT);
         const listUrl = useRouteUrl(GET_ALL);
 
         return (
@@ -68,7 +103,7 @@ TODO: create a UI the allow the following:
             <nav style="display: flex; gap: 0px">
               <div style="display: flex; flex-direction: column; width: 200px">
                 <a
-                  href="/packages/tooling/router/src/client/demo/form_demo.html"
+                  href={rootUrl}
                   style={{
                     padding: "10px",
                     border: "1px solid black",
@@ -86,13 +121,14 @@ TODO: create a UI the allow the following:
                     border: "1px solid black",
                   }}
                 >
-                  A
+                  List of JSON files
                 </a>
               </div>
             </nav>
 
             <h1>Content</h1>
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
+              <Route route={ROOT} loaded={() => <div>Root</div>} />
               <Route route={GET_ALL} loaded={JSONFileList} />
               <Route route={GET_ONE} loaded={JSONFileView} />
               <Route route={EDIT_ONE} loaded={JSONFileEdit} />
@@ -102,24 +138,77 @@ TODO: create a UI the allow the following:
       };
       const JSONFileList = ({ route }) => {
         const nameArray = route.data;
-
         return (
-          <ul>
-            {nameArray.map((name) => {
-              const seeJsonFileUrl = useRouteUrl(GET_ONE, { id: name });
-              const editJsonFileUrl = useRouteUrl(EDIT_ONE, { id: name });
+          <>
+            <p>List of JSON files found:</p>
+            <ul>
+              {nameArray.map((name) => {
+                const seeJsonFileUrl = useRouteUrl(GET_ONE, { id: name });
+                const editJsonFileUrl = useRouteUrl(EDIT_ONE, { id: name });
+                const deleteJsonFileUrl = useRouteUrl(DELETE_ONE, { id: name });
+                const deleteRouteIsLoading = useRouteIsLoading(DELETE_ONE);
 
-              return (
-                <li key={name}>
-                  <div style="display: flex; gap: 10px;">
-                    {name}
-                    <a href={seeJsonFileUrl}>View</a>
-                    <a href={editJsonFileUrl}>Edit</a>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                return (
+                  <li key={name}>
+                    <div style="display: flex; gap: 10px;">
+                      {name}
+                      <a href={seeJsonFileUrl}>View</a>
+                      <a href={editJsonFileUrl}>Edit</a>
+                      <DeleteLink
+                        disabled={deleteRouteIsLoading}
+                        href={deleteJsonFileUrl}
+                      >
+                        Delete
+                      </DeleteLink>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <CreateFile />
+          </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CreateFile = () => {
+        return (
+          <details>
+            <summary className="button">Add new file</summary>
+            <SPAForm
+              action={async ({ signal, formData }) => {
+                const name = formData.get("name");
+                //const content = formData.get("content");
+                const response = await fetch(`/json_files/${name}`, {
+                  method: "POST",
+                  signal,
+                  body: formData,
+                });
+                if (!response.ok) {
+                  throw new Error(
+                    `POST /json_files/${name} failed with status ${response.status}`,
+                  );
+                }
+                const responseJSON = await response.json();
+                return responseJSON;
+              }}
+              method="POST"
+            >
+              <label>
+                File name:
+                <input type="text" name="name" value="" required />
+              </label>
+              <br />
+              <label>
+                File content:
+                <textarea name="content"></textarea>
+              </label>
+              <br />
+              <button type="submit" onClick={() => {}}>
+                Create file
+              </button>
+            </SPAForm>
+          </details>
         );
       };
       const JSONFileView = ({ route }) => {

@@ -1,7 +1,11 @@
+import "@jsenv/ast";
 import "@jsenv/sourcemap";
 
 const injectionSymbol = Symbol.for("jsenv_injection");
 const INJECTIONS = {
+  global: (value) => {
+    return { [injectionSymbol]: "global", value };
+  },
   optional: (value) => {
     return { [injectionSymbol]: "optional", value };
   },

@@ -17,6 +17,7 @@ import {
   defineGettersOnPropertiesDerivedFromContent,
   defineGettersOnPropertiesDerivedFromOriginalContent,
 } from "./url_content.js";
+import { applyContentInjections } from "./url_info_injections.js";
 
 export const createUrlInfoTransformer = ({
   logger,
@@ -195,6 +196,7 @@ export const createUrlInfoTransformer = ({
       contentLength,
       sourcemap,
       sourcemapIsWrong,
+      contentInjections,
     } = transformations;
     if (type) {
       urlInfo.type = type;
@@ -202,13 +204,23 @@ export const createUrlInfoTransformer = ({
     if (contentType) {
       urlInfo.contentType = contentType;
     }
-    const contentModified = setContentProperties(urlInfo, {
-      content,
-      contentAst,
-      contentEtag,
-      contentLength,
-    });
-
+    if (Object.hasOwn(transformations, "contentInjections")) {
+      if (contentInjections) {
+        Object.assign(urlInfo.contentInjections, contentInjections);
+      }
+      if (content === undefined) {
+        return;
+      }
+    }
+    let contentModified;
+    if (Object.hasOwn(transformations, "content")) {
+      contentModified = setContentProperties(urlInfo, {
+        content,
+        contentAst,
+        contentEtag,
+        contentLength,
+      });
+    }
     if (
       sourcemap &&
       mayHaveSourcemap(urlInfo) &&
@@ -399,6 +411,15 @@ export const createUrlInfoTransformer = ({
   const endTransformations = (urlInfo, transformations) => {
     if (transformations) {
       applyTransformations(urlInfo, transformations);
+    }
+    const { contentInjections } = urlInfo;
+    if (contentInjections && Object.keys(contentInjections).length > 0) {
+      const injectionTransformations = applyContentInjections(
+        urlInfo.content,
+        contentInjections,
+        urlInfo,
+      );
+      applyTransformations(urlInfo, injectionTransformations);
     }
     applyContentEffects(urlInfo);
     urlInfo.contentFinalized = true;

@@ -37,7 +37,6 @@ import {
 } from "@jsenv/urls";
 import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { getDirectoryWatchPatterns } from "../../helpers/watch_source_files.js";
-import { replacePlaceholders } from "../injections/jsenv_plugin_injections.js";
 import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";
 
 const htmlFileUrlForDirectory = import.meta.resolve(
@@ -124,22 +123,22 @@ export const jsenvPluginDirectoryListing = ({
         }
         const request = urlInfo.context.request;
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
-        return replacePlaceholders(
-          urlInfo.content,
+        const directoryListingInjections = generateDirectoryListingInjection(
+          requestedUrl,
           {
-            ...generateDirectoryListingInjection(requestedUrl, {
-              autoreload,
-              request,
-              urlMocks,
-              directoryContentMagicName,
-              rootDirectoryUrl,
-              mainFilePath,
-              packageDirectory,
-              enoent,
-            }),
+            autoreload,
+            request,
+            urlMocks,
+            directoryContentMagicName,
+            rootDirectoryUrl,
+            mainFilePath,
+            packageDirectory,
+            enoent,
           },
-          urlInfo,
         );
+        return {
+          contentInjections: directoryListingInjections,
+        };
       },
     },
     devServerRoutes: [
@@ -158,8 +157,10 @@ export const jsenvPluginDirectoryListing = ({
               directoryRelativeUrl,
               rootDirectoryUrl,
             );
-            const closestDirectoryUrl =
-              getFirstExistingDirectoryUrl(requestedUrl);
+            const closestDirectoryUrl = getFirstExistingDirectoryUrl(
+              requestedUrl,
+              rootDirectoryUrl,
+            );
             const sendMessage = (message) => {
               websocket.send(JSON.stringify(message));
             };
@@ -375,15 +376,15 @@ const generateDirectoryListingInjection = (
   };
 };
 const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
-  let firstExistingDirectoryUrl = new URL("./", requestedUrl);
-  while (!existsSync(firstExistingDirectoryUrl)) {
-    firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
-    if (!urlIsInsideOf(firstExistingDirectoryUrl, serverRootDirectoryUrl)) {
-      firstExistingDirectoryUrl = new URL(serverRootDirectoryUrl);
+  let directoryUrlCandidate = new URL("./", requestedUrl);
+  while (!existsSync(directoryUrlCandidate)) {
+    directoryUrlCandidate = new URL("../", directoryUrlCandidate);
+    if (!urlIsInsideOf(directoryUrlCandidate, serverRootDirectoryUrl)) {
+      directoryUrlCandidate = new URL(serverRootDirectoryUrl);
       break;
     }
   }
-  return firstExistingDirectoryUrl;
+  return directoryUrlCandidate;
 };
 const getDirectoryContentItems = ({
   serverRootDirectoryUrl,
