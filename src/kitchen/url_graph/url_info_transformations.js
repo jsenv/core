@@ -204,8 +204,10 @@ export const createUrlInfoTransformer = ({
     if (contentType) {
       urlInfo.contentType = contentType;
     }
-    if (contentInjections) {
-      Object.assign(urlInfo.contentInjections, contentInjections);
+    if (Object.hasOwn(transformations, "contentInjections")) {
+      if (contentInjections) {
+        Object.assign(urlInfo.contentInjections, contentInjections);
+      }
       if (content === undefined) {
         return;
       }

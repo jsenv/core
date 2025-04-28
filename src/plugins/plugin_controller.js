@@ -418,12 +418,12 @@ const returnValueAssertions = [
         return { content: valueReturned };
       }
       if (typeof valueReturned === "object") {
-        const { content, contentInjections, body } = valueReturned;
+        const { content, body } = valueReturned;
         if (urlInfo.url.startsWith("ignore:")) {
           return undefined;
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
-          if (contentInjections) {
+          if (Object.hasOwn(valueReturned, "contentInjections")) {
             return undefined;
           }
           throw new Error(
