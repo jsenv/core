@@ -212,13 +212,15 @@ export const createUrlInfoTransformer = ({
         return;
       }
     }
-    const contentModified = setContentProperties(urlInfo, {
-      content,
-      contentAst,
-      contentEtag,
-      contentLength,
-    });
-
+    let contentModified;
+    if (Object.hasOwn(transformations, "content")) {
+      contentModified = setContentProperties(urlInfo, {
+        content,
+        contentAst,
+        contentEtag,
+        contentLength,
+      });
+    }
     if (
       sourcemap &&
       mayHaveSourcemap(urlInfo) &&
