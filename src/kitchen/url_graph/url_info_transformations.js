@@ -17,7 +17,7 @@ import {
   defineGettersOnPropertiesDerivedFromContent,
   defineGettersOnPropertiesDerivedFromOriginalContent,
 } from "./url_content.js";
-import { replacePlaceholders } from "./url_info_injections.js";
+import { applyContentInjections } from "./url_info_injections.js";
 
 export const createUrlInfoTransformer = ({
   logger,
@@ -414,7 +414,7 @@ export const createUrlInfoTransformer = ({
     }
     const { contentInjections } = urlInfo;
     if (contentInjections && Object.keys(contentInjections).length > 0) {
-      const injectionTransformations = replacePlaceholders(
+      const injectionTransformations = applyContentInjections(
         urlInfo.content,
         contentInjections,
         urlInfo,

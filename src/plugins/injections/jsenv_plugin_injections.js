@@ -1,5 +1,6 @@
 import { URL_META } from "@jsenv/url-meta";
 import { asUrlWithoutSearch, urlToRelativeUrl } from "@jsenv/urls";
+import { INJECTIONS } from "../../kitchen/url_graph/url_info_injections.js";
 
 export const jsenvPluginInjections = (rawAssociations) => {
   const getDefaultInjections = (urlInfo) => {
@@ -9,7 +10,7 @@ export const jsenvPluginInjections = (rawAssociations) => {
         urlInfo.context.rootDirectoryUrl,
       );
       return {
-        HTML_ROOT_URL: `/${relativeUrl}`,
+        HTML_ROOT_URL: INJECTIONS.global(`/${relativeUrl}`),
       };
     }
     return null;
