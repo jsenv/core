@@ -4,7 +4,7 @@ import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, m
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
-import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript } from "@jsenv/ast";
+import { parseHtml, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, applyBabelPlugins, generateUrlForInlineContent, parseJsWithAcorn, injectJsenvScript, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, analyzeLinkNode } from "@jsenv/ast";
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
@@ -1898,6 +1898,7 @@ const createUrlInfo = (url, context) => {
     contentLength: undefined,
     contentFinalized: false,
     contentSideEffects: [],
+    contentInjections: {},
 
     sourcemap: null,
     sourcemapIsWrong: false,
@@ -2265,6 +2266,170 @@ const getContentEtag = (content) => {
   return bufferToEtag(Buffer.from(content));
 };
 
+const injectionSymbol = Symbol.for("jsenv_injection");
+const INJECTIONS = {
+  global: (value) => {
+    return { [injectionSymbol]: "global", value };
+  },
+  optional: (value) => {
+    return { [injectionSymbol]: "optional", value };
+  },
+};
+
+const applyContentInjections = (content, contentInjections, urlInfo) => {
+  const keys = Object.keys(contentInjections);
+  const globals = {};
+  const placeholderReplacements = [];
+  for (const key of keys) {
+    const contentInjection = contentInjections[key];
+    if (contentInjection && contentInjection[injectionSymbol]) {
+      const valueBehindSymbol = contentInjection[injectionSymbol];
+      if (valueBehindSymbol === "global") {
+        globals[key] = contentInjection.value;
+      } else if (valueBehindSymbol === "optional") {
+        placeholderReplacements.push({
+          key,
+          isOptional: true,
+          value: contentInjection.value,
+        });
+      } else {
+        throw new Error(`unknown injection type "${valueBehindSymbol}"`);
+      }
+    } else {
+      placeholderReplacements.push({
+        key,
+        value: contentInjection,
+      });
+    }
+  }
+
+  const needGlobalsInjection = Object.keys(globals).length > 0;
+  const needPlaceholderReplacements = placeholderReplacements.length > 0;
+
+  if (needGlobalsInjection && needPlaceholderReplacements) {
+    const globalInjectionResult = injectGlobals(content, globals, urlInfo);
+    const replaceInjectionResult = injectPlaceholderReplacements(
+      globalInjectionResult.content,
+      placeholderReplacements,
+      urlInfo,
+    );
+    return {
+      content: replaceInjectionResult.content,
+      sourcemap: composeTwoSourcemaps(
+        globalInjectionResult.sourcemap,
+        replaceInjectionResult.sourcemap,
+      ),
+    };
+  }
+  if (needGlobalsInjection) {
+    return injectGlobals(content, globals, urlInfo);
+  }
+  if (needPlaceholderReplacements) {
+    return injectPlaceholderReplacements(
+      content,
+      placeholderReplacements,
+      urlInfo,
+    );
+  }
+  return null;
+};
+
+const injectPlaceholderReplacements = (
+  content,
+  placeholderReplacements,
+  urlInfo,
+) => {
+  const magicSource = createMagicSource(content);
+  for (const { key, isOptional, value } of placeholderReplacements) {
+    let index = content.indexOf(key);
+    if (index === -1) {
+      if (!isOptional) {
+        urlInfo.context.logger.warn(
+          `placeholder "${key}" not found in ${urlInfo.url}.
+--- suggestion a ---
+Add "${key}" in that file.
+--- suggestion b ---
+Fix eventual typo in "${key}"?
+--- suggestion c ---
+Mark injection as optional using INJECTIONS.optional():
+import { INJECTIONS } from "@jsenv/core";
+
+return {
+"${key}": INJECTIONS.optional(${JSON.stringify(value)}),
+};`,
+        );
+      }
+      continue;
+    }
+
+    while (index !== -1) {
+      const start = index;
+      const end = index + key.length;
+      magicSource.replace({
+        start,
+        end,
+        replacement:
+          urlInfo.type === "js_classic" ||
+          urlInfo.type === "js_module" ||
+          urlInfo.type === "html"
+            ? JSON.stringify(value, null, "  ")
+            : value,
+      });
+      index = content.indexOf(key, end);
+    }
+  }
+  return magicSource.toContentAndSourcemap();
+};
+
+const injectGlobals = (content, globals, urlInfo) => {
+  if (urlInfo.type === "html") {
+    return globalInjectorOnHtml(content, globals, urlInfo);
+  }
+  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+    return globalsInjectorOnJs(content, globals, urlInfo);
+  }
+  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
+};
+const globalInjectorOnHtml = (content, globals, urlInfo) => {
+  // ideally we would inject an importmap but browser support is too low
+  // (even worse for worker/service worker)
+  // so for now we inject code into entry points
+  const htmlAst = parseHtml({
+    html: content,
+    url: urlInfo.url,
+    storeOriginalPositions: false,
+  });
+  const clientCode = generateClientCodeForGlobals(globals, {
+    isWebWorker: false,
+  });
+  injectJsenvScript(htmlAst, {
+    content: clientCode,
+    pluginName: "jsenv:inject_globals",
+  });
+  return {
+    content: stringifyHtmlAst(htmlAst),
+  };
+};
+const globalsInjectorOnJs = (content, globals, urlInfo) => {
+  const clientCode = generateClientCodeForGlobals(globals, {
+    isWebWorker:
+      urlInfo.subtype === "worker" ||
+      urlInfo.subtype === "service_worker" ||
+      urlInfo.subtype === "shared_worker",
+  });
+  const magicSource = createMagicSource(content);
+  magicSource.prepend(clientCode);
+  return magicSource.toContentAndSourcemap();
+};
+const generateClientCodeForGlobals = (globals, { isWebWorker = false }) => {
+  const globalName = isWebWorker ? "self" : "window";
+  return `Object.assign(${globalName}, ${JSON.stringify(
+    globals,
+    null,
+    "  ",
+  )});`;
+};
+
 const createUrlInfoTransformer = ({
   logger,
   sourcemaps,
@@ -2442,6 +2607,7 @@ const createUrlInfoTransformer = ({
       contentLength,
       sourcemap,
       sourcemapIsWrong,
+      contentInjections,
     } = transformations;
     if (type) {
       urlInfo.type = type;
@@ -2449,13 +2615,23 @@ const createUrlInfoTransformer = ({
     if (contentType) {
       urlInfo.contentType = contentType;
     }
-    const contentModified = setContentProperties(urlInfo, {
-      content,
-      contentAst,
-      contentEtag,
-      contentLength,
-    });
-
+    if (Object.hasOwn(transformations, "contentInjections")) {
+      if (contentInjections) {
+        Object.assign(urlInfo.contentInjections, contentInjections);
+      }
+      if (content === undefined) {
+        return;
+      }
+    }
+    let contentModified;
+    if (Object.hasOwn(transformations, "content")) {
+      contentModified = setContentProperties(urlInfo, {
+        content,
+        contentAst,
+        contentEtag,
+        contentLength,
+      });
+    }
     if (
       sourcemap &&
       mayHaveSourcemap(urlInfo) &&
@@ -2646,6 +2822,15 @@ const createUrlInfoTransformer = ({
   const endTransformations = (urlInfo, transformations) => {
     if (transformations) {
       applyTransformations(urlInfo, transformations);
+    }
+    const { contentInjections } = urlInfo;
+    if (contentInjections && Object.keys(contentInjections).length > 0) {
+      const injectionTransformations = applyContentInjections(
+        urlInfo.content,
+        contentInjections,
+        urlInfo,
+      );
+      applyTransformations(urlInfo, injectionTransformations);
     }
     applyContentEffects(urlInfo);
     urlInfo.contentFinalized = true;
@@ -3632,10 +3817,10 @@ const generateHtmlForSyntaxError = (
     errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
     syntaxErrorHTML: errorToHTML(htmlErrorContentFrame),
   };
-  const html = replacePlaceholders$1(htmlForSyntaxError, replacers);
+  const html = replacePlaceholders(htmlForSyntaxError, replacers);
   return html;
 };
-const replacePlaceholders$1 = (html, replacers) => {
+const replacePlaceholders = (html, replacers) => {
   return html.replace(/\$\{(\w+)\}/g, (match, name) => {
     const replacer = replacers[name];
     if (replacer === undefined) {
@@ -4070,6 +4255,9 @@ const returnValueAssertions = [
           return undefined;
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
+          if (Object.hasOwn(valueReturned, "contentInjections")) {
+            return undefined;
+          }
           throw new Error(
             `Unexpected "content" returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string or a buffer; got ${content}`,
           );
@@ -5877,103 +6065,6 @@ const FILE_AND_SERVER_URLS_CONVERTER = {
   },
 };
 
-const jsenvPluginInjections = (rawAssociations) => {
-  let resolvedAssociations;
-
-  return {
-    name: "jsenv:injections",
-    appliesDuring: "*",
-    init: (context) => {
-      resolvedAssociations = URL_META.resolveAssociations(
-        { injectionsGetter: rawAssociations },
-        context.rootDirectoryUrl,
-      );
-    },
-    transformUrlContent: async (urlInfo) => {
-      const { injectionsGetter } = URL_META.applyAssociations({
-        url: asUrlWithoutSearch(urlInfo.url),
-        associations: resolvedAssociations,
-      });
-      if (!injectionsGetter) {
-        return null;
-      }
-      if (typeof injectionsGetter !== "function") {
-        throw new TypeError("injectionsGetter must be a function");
-      }
-      const injections = await injectionsGetter(urlInfo);
-      if (!injections) {
-        return null;
-      }
-      const keys = Object.keys(injections);
-      if (keys.length === 0) {
-        return null;
-      }
-      return replacePlaceholders(urlInfo.content, injections, urlInfo);
-    },
-  };
-};
-
-const injectionSymbol = Symbol.for("jsenv_injection");
-const INJECTIONS = {
-  optional: (value) => {
-    return { [injectionSymbol]: "optional", value };
-  },
-};
-
-// we export this because it is imported by jsenv_plugin_placeholder.js and unit test
-const replacePlaceholders = (content, replacements, urlInfo) => {
-  const magicSource = createMagicSource(content);
-  for (const key of Object.keys(replacements)) {
-    let index = content.indexOf(key);
-    const replacement = replacements[key];
-    let isOptional;
-    let value;
-    if (replacement && replacement[injectionSymbol]) {
-      const valueBehindSymbol = replacement[injectionSymbol];
-      isOptional = valueBehindSymbol === "optional";
-      value = replacement.value;
-    } else {
-      value = replacement;
-    }
-    if (index === -1) {
-      if (!isOptional) {
-        urlInfo.context.logger.warn(
-          `placeholder "${key}" not found in ${urlInfo.url}.
---- suggestion a ---
-Add "${key}" in that file.
---- suggestion b ---
-Fix eventual typo in "${key}"?
---- suggestion c ---
-Mark injection as optional using INJECTIONS.optional():
-import { INJECTIONS } from "@jsenv/core";
-
-return {
-  "${key}": INJECTIONS.optional(${JSON.stringify(value)}),
-};`,
-        );
-      }
-      continue;
-    }
-
-    while (index !== -1) {
-      const start = index;
-      const end = index + key.length;
-      magicSource.replace({
-        start,
-        end,
-        replacement:
-          urlInfo.type === "js_classic" ||
-          urlInfo.type === "js_module" ||
-          urlInfo.type === "html"
-            ? JSON.stringify(value, null, "  ")
-            : value,
-      });
-      index = content.indexOf(key, end);
-    }
-  }
-  return magicSource.toContentAndSourcemap();
-};
-
 /*
  * NICE TO HAVE:
  * 
@@ -6083,22 +6174,22 @@ const jsenvPluginDirectoryListing = ({
         }
         const request = urlInfo.context.request;
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
-        return replacePlaceholders(
-          urlInfo.content,
+        const directoryListingInjections = generateDirectoryListingInjection(
+          requestedUrl,
           {
-            ...generateDirectoryListingInjection(requestedUrl, {
-              autoreload,
-              request,
-              urlMocks,
-              directoryContentMagicName,
-              rootDirectoryUrl,
-              mainFilePath,
-              packageDirectory,
-              enoent,
-            }),
+            autoreload,
+            request,
+            urlMocks,
+            directoryContentMagicName,
+            rootDirectoryUrl,
+            mainFilePath,
+            packageDirectory,
+            enoent,
           },
-          urlInfo,
         );
+        return {
+          contentInjections: directoryListingInjections,
+        };
       },
     },
     devServerRoutes: [
@@ -6117,8 +6208,10 @@ const jsenvPluginDirectoryListing = ({
               directoryRelativeUrl,
               rootDirectoryUrl,
             );
-            const closestDirectoryUrl =
-              getFirstExistingDirectoryUrl(requestedUrl);
+            const closestDirectoryUrl = getFirstExistingDirectoryUrl(
+              requestedUrl,
+              rootDirectoryUrl,
+            );
             const sendMessage = (message) => {
               websocket.send(JSON.stringify(message));
             };
@@ -6332,15 +6425,15 @@ const generateDirectoryListingInjection = (
   };
 };
 const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
-  let firstExistingDirectoryUrl = new URL("./", requestedUrl);
-  while (!existsSync(firstExistingDirectoryUrl)) {
-    firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
-    if (!urlIsInsideOf(firstExistingDirectoryUrl, serverRootDirectoryUrl)) {
-      firstExistingDirectoryUrl = new URL(serverRootDirectoryUrl);
+  let directoryUrlCandidate = new URL("./", requestedUrl);
+  while (!existsSync(directoryUrlCandidate)) {
+    directoryUrlCandidate = new URL("../", directoryUrlCandidate);
+    if (!urlIsInsideOf(directoryUrlCandidate, serverRootDirectoryUrl)) {
+      directoryUrlCandidate = new URL(serverRootDirectoryUrl);
       break;
     }
   }
-  return firstExistingDirectoryUrl;
+  return directoryUrlCandidate;
 };
 const getDirectoryContentItems = ({
   serverRootDirectoryUrl,
@@ -6384,6 +6477,7 @@ const getDirectoryContentItems = ({
 };
 
 const jsenvPluginFsRedirection = ({
+  spa = true,
   directoryContentMagicName,
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
@@ -6473,11 +6567,19 @@ const jsenvPluginFsRedirection = ({
         // 3. The url pathname does not ends with "/"
         //    In that case we assume client explicitely asks to load a directory
         if (
+          spa &&
           !urlToExtension(urlObject) &&
           !urlToPathname(urlObject).endsWith("/")
         ) {
-          const { mainFilePath, rootDirectoryUrl } =
+          const { requestedUrl, rootDirectoryUrl, mainFilePath } =
             reference.ownerUrlInfo.context;
+          const closestHtmlRootFile = getClosestHtmlRootFile(
+            requestedUrl,
+            rootDirectoryUrl,
+          );
+          if (closestHtmlRootFile) {
+            return closestHtmlRootFile;
+          }
           return new URL(mainFilePath, rootDirectoryUrl);
         }
         return null;
@@ -6527,9 +6629,34 @@ const resolveSymlink = (fileUrl) => {
   return realUrlObject.href;
 };
 
+const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
+  let directoryUrl = new URL("./", requestedUrl);
+  while (true) {
+    const indexHtmlFileUrl = new URL(`index.html`, directoryUrl);
+    if (existsSync(indexHtmlFileUrl)) {
+      return indexHtmlFileUrl.href;
+    }
+    const htmlFileUrlCandidate = new URL(
+      `${urlToFilename(directoryUrl)}.html`,
+      directoryUrl,
+    );
+    if (existsSync(htmlFileUrlCandidate)) {
+      return htmlFileUrlCandidate.href;
+    }
+    if (
+      !urlIsInsideOf(directoryUrl, serverRootDirectoryUrl) ||
+      directoryUrl.href === serverRootDirectoryUrl
+    ) {
+      return null;
+    }
+    directoryUrl = new URL("../", directoryUrl);
+  }
+};
+
 const directoryContentMagicName = "...";
 
 const jsenvPluginProtocolFile = ({
+  spa,
   magicExtensions,
   magicDirectoryIndex,
   preserveSymlinks,
@@ -6541,6 +6668,7 @@ const jsenvPluginProtocolFile = ({
 }) => {
   return [
     jsenvPluginFsRedirection({
+      spa,
       directoryContentMagicName,
       magicExtensions,
       magicDirectoryIndex,
@@ -6868,6 +6996,69 @@ const jsenvPluginDirectoryReferenceEffect = (
           : `ignore:${reference.specifier}`;
       }
       return null;
+    },
+  };
+};
+
+const jsenvPluginInjections = (rawAssociations) => {
+  const getDefaultInjections = (urlInfo) => {
+    if (urlInfo.context.dev && urlInfo.type === "html") {
+      const relativeUrl = urlToRelativeUrl(
+        urlInfo.url,
+        urlInfo.context.rootDirectoryUrl,
+      );
+      return {
+        HTML_ROOT_PATHNAME: INJECTIONS.global(`/${relativeUrl}`),
+      };
+    }
+    return null;
+  };
+  let getInjections = null;
+
+  return {
+    name: "jsenv:injections",
+    appliesDuring: "*",
+    init: (context) => {
+      if (rawAssociations && Object.keys(rawAssociations).length > 0) {
+        const resolvedAssociations = URL_META.resolveAssociations(
+          { injectionsGetter: rawAssociations },
+          context.rootDirectoryUrl,
+        );
+        getInjections = (urlInfo) => {
+          const { injectionsGetter } = URL_META.applyAssociations({
+            url: asUrlWithoutSearch(urlInfo.url),
+            associations: resolvedAssociations,
+          });
+          if (!injectionsGetter) {
+            return null;
+          }
+          if (typeof injectionsGetter !== "function") {
+            throw new TypeError("injectionsGetter must be a function");
+          }
+          return injectionsGetter(urlInfo);
+        };
+      }
+    },
+    transformUrlContent: async (urlInfo) => {
+      const defaultInjections = getDefaultInjections(urlInfo);
+      if (!getInjections) {
+        return {
+          contentInjections: defaultInjections,
+        };
+      }
+      const injectionsResult = getInjections(urlInfo);
+      if (!injectionsResult) {
+        return {
+          contentInjections: defaultInjections,
+        };
+      }
+      const injections = await injectionsResult;
+      return {
+        contentInjections: {
+          ...defaultInjections,
+          ...injections,
+        },
+      };
     },
   };
 };
@@ -7317,6 +7508,8 @@ const babelPluginMetadataExpressionPaths = (
  * - replaced by true: When scenario matches (import.meta.dev and it's the dev server)
  * - left as is to be evaluated to undefined (import.meta.build but it's the dev server)
  * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
+ *
+ * TODO: ideally during dev we would keep import.meta.dev and ensure we set it to true rather than replacing it with true?
  */
 
 
@@ -7422,14 +7615,12 @@ const babelPluginMetadataImportMetaScenarios = () => {
 
 const jsenvPluginGlobalScenarios = () => {
   const transformIfNeeded = (urlInfo) => {
-    return replacePlaceholders(
-      urlInfo.content,
-      {
+    return {
+      contentInjections: {
         __DEV__: INJECTIONS.optional(urlInfo.context.dev),
         __BUILD__: INJECTIONS.optional(urlInfo.context.build),
       },
-      urlInfo,
-    );
+    };
   };
 
   return {
@@ -8672,6 +8863,7 @@ const getCorePlugins = ({
   transpilation = true,
   inlining = true,
   http = false,
+  spa,
 
   clientAutoreload,
   clientAutoreloadOnServerRestart,
@@ -8701,7 +8893,7 @@ const getCorePlugins = ({
 
   return [
     jsenvPluginReferenceAnalysis(referenceAnalysis),
-    ...(injections ? [jsenvPluginInjections(injections)] : []),
+    jsenvPluginInjections(injections),
     jsenvPluginTranspilation(transpilation),
     // "jsenvPluginInlining" must be very soon because all other plugins will react differently once they see the file is inlined
     ...(inlining ? [jsenvPluginInlining()] : []),
@@ -8714,6 +8906,7 @@ const getCorePlugins = ({
      */
     jsenvPluginProtocolHttp(http),
     jsenvPluginProtocolFile({
+      spa,
       magicExtensions,
       magicDirectoryIndex,
       directoryListing,
@@ -8956,6 +9149,7 @@ const startDevServer = async ({
   ribbon = true,
   // toolbar = false,
   onKitchenCreated = () => {},
+  spa,
 
   sourcemaps = "inline",
   sourcemapsSourcesContent,
@@ -9124,6 +9318,7 @@ const startDevServer = async ({
         supervisor,
         injections,
         transpilation,
+        spa,
 
         clientAutoreload,
         clientAutoreloadOnServerRestart,
@@ -9501,7 +9696,7 @@ const startDevServer = async ({
           body: response.body,
         });
         return {
-          status: 200,
+          status: response.status,
           headers: {
             "content-type": "application/json",
             "content-length": Buffer.byteLength(body),

@@ -5,79 +5,6 @@ import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
-const isFileSystemPath = (value) => {
-  if (typeof value !== "string") {
-    throw new TypeError(
-      `isFileSystemPath first arg must be a string, got ${value}`,
-    );
-  }
-  if (value[0] === "/") {
-    return true;
-  }
-  return startsWithWindowsDriveLetter(value);
-};
-
-const startsWithWindowsDriveLetter = (string) => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-
-  return true;
-};
-
-const fileSystemPathToUrl = (value) => {
-  if (!isFileSystemPath(value)) {
-    throw new Error(`value must be a filesystem path, got ${value}`);
-  }
-  return String(pathToFileURL(value));
-};
-
-const getCallerPosition = () => {
-  const { prepareStackTrace } = Error;
-  Error.prepareStackTrace = (error, stack) => {
-    Error.prepareStackTrace = prepareStackTrace;
-    return stack;
-  };
-  const { stack } = new Error();
-  const callerCallsite = stack[2];
-  const fileName = callerCallsite.getFileName();
-  return {
-    url:
-      fileName && isFileSystemPath(fileName)
-        ? fileSystemPathToUrl(fileName)
-        : fileName,
-    line: callerCallsite.getLineNumber(),
-    column: callerCallsite.getColumnNumber(),
-  };
-};
-
-const urlToFileSystemPath = (url) => {
-  const urlObject = new URL(url);
-  let { origin, pathname, hash } = urlObject;
-  if (urlObject.protocol === "file:") {
-    origin = "file://";
-  }
-  pathname = pathname
-    .split("/")
-    .map((part) => {
-      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
-    })
-    .join("/");
-  if (hash) {
-    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
-  }
-  const urlString = `${origin}${pathname}`;
-  const fileSystemPath = fileURLToPath(urlString);
-  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    return fileSystemPath.slice(0, -1);
-  }
-  return fileSystemPath;
-};
-
 /*
  * data:[<mediatype>][;base64],<data>
  * https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs#syntax
@@ -1379,35 +1306,33 @@ const urlToExtension$1 = (url) => {
   return pathnameToExtension$1(pathname);
 };
 
-const urlToOrigin$1 = (url) => {
-  const urlString = String(url);
-  if (urlString.startsWith("file://")) {
-    return `file://`;
-  }
-  return new URL(urlString).origin;
-};
+const setUrlExtension = (
+  url,
+  extension,
+  { trailingSlash = "preserve" } = {},
+) => {
+  return transformUrlPathname(url, (pathname) => {
+    const currentExtension = urlToExtension$1(url);
+    if (typeof extension === "function") {
+      extension = extension(currentExtension);
+    }
+    const pathnameWithoutExtension = currentExtension
+      ? pathname.slice(0, -currentExtension.length)
+      : pathname;
 
-const setUrlExtension = (url, extension) => {
-  const origin = urlToOrigin$1(url);
-  const currentExtension = urlToExtension$1(url);
-  if (typeof extension === "function") {
-    extension = extension(currentExtension);
-  }
-  const resource = urlToResource(url);
-  const [pathname, search] = resource.split("?");
-  const pathnameWithoutExtension = currentExtension
-    ? pathname.slice(0, -currentExtension.length)
-    : pathname;
-  let newPathname;
-  if (pathnameWithoutExtension.endsWith("/")) {
-    newPathname = pathnameWithoutExtension.slice(0, -1);
-    newPathname += extension;
-    newPathname += "/";
-  } else {
-    newPathname = pathnameWithoutExtension;
-    newPathname += extension;
-  }
-  return `${origin}${newPathname}${search ? `?${search}` : ""}`;
+    if (pathnameWithoutExtension.endsWith("/")) {
+      let pathnameWithExtension;
+      pathnameWithExtension = pathnameWithoutExtension.slice(0, -1);
+      pathnameWithExtension += extension;
+      if (trailingSlash === "preserve") {
+        pathnameWithExtension += "/";
+      }
+      return pathnameWithExtension;
+    }
+    let pathnameWithExtension = pathnameWithoutExtension;
+    pathnameWithExtension += extension;
+    return pathnameWithExtension;
+  });
 };
 
 const setUrlFilename = (url, filename) => {
@@ -1655,6 +1580,28 @@ const moveUrl = ({ url, from, to, preferRelative }) => {
   return absoluteUrl;
 };
 
+const isFileSystemPath = (value) => {
+  if (typeof value !== "string") {
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    );
+  }
+  if (value[0] === "/") {
+    return true;
+  }
+  return startsWithWindowsDriveLetter(value);
+};
+
+const startsWithWindowsDriveLetter = (string) => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+
+  return true;
+};
+
 const resolveUrl$1 = (specifier, baseUrl) => {
   if (typeof baseUrl === "undefined") {
     throw new TypeError(`baseUrl missing to resolve ${specifier}`);
@@ -1678,6 +1625,57 @@ const urlIsInsideOf = (url, otherUrl) => {
 
   const isInside = urlPathname.startsWith(otherUrlPathname);
   return isInside;
+};
+
+const fileSystemPathToUrl = (value) => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`value must be a filesystem path, got ${value}`);
+  }
+  return String(pathToFileURL(value));
+};
+
+const getCallerPosition = () => {
+  const { prepareStackTrace } = Error;
+  Error.prepareStackTrace = (error, stack) => {
+    Error.prepareStackTrace = prepareStackTrace;
+    return stack;
+  };
+  const { stack } = new Error();
+  const callerCallsite = stack[2];
+  const fileName = callerCallsite.getFileName();
+  return {
+    url:
+      fileName && isFileSystemPath(fileName)
+        ? fileSystemPathToUrl(fileName)
+        : fileName,
+    line: callerCallsite.getLineNumber(),
+    column: callerCallsite.getColumnNumber(),
+  };
+};
+
+const urlToFileSystemPath = (url) => {
+  const urlObject = new URL(url);
+  let { origin, pathname, hash } = urlObject;
+  if (urlObject.protocol === "file:") {
+    origin = "file://";
+  }
+  pathname = pathname
+    .split("/")
+    .map((part) => {
+      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
+    })
+    .join("/");
+  if (hash) {
+    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
+  }
+  const urlString = `${origin}${pathname}`;
+  const fileSystemPath = fileURLToPath(urlString);
+  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    return fileSystemPath.slice(0, -1);
+  }
+  return fileSystemPath;
 };
 
 const validateDirectoryUrl = (value) => {
