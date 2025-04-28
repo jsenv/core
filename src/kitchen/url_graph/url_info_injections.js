@@ -90,7 +90,7 @@ Mark injection as optional using INJECTIONS.optional():
 import { INJECTIONS } from "@jsenv/core";
 
 return {
-"${key}": INJECTIONS.optional(${JSON.stringify(value)}),
+  "${key}": INJECTIONS.optional(${JSON.stringify(value)}),
 };`,
         );
       }

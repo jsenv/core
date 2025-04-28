@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
-import { replacePlaceholders } from "@jsenv/core/src/kitchen/url_graph/url_info_injections.js";
+import { injectPlaceholderReplacements } from "@jsenv/core/src/kitchen/url_graph/url_info_injections.js";
 
-const result = replacePlaceholders(
+const result = injectPlaceholderReplacements(
   `const foo = __FOO__
 const t = __FOO__
 const bar = __BAR__`,
