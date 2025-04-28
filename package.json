@@ -77,6 +77,7 @@
     "playwright:install": "npx playwright install-deps && npx playwright install",
     "https:setup": "npx @jsenv/https-local setup",
     "prepublishOnly": "npm run build",
+    "database:install": "npx @jsenv/database install",
     "oto:start": "npm run start -w oto"
   },
   "dependencies": {

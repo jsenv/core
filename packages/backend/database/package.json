@@ -24,6 +24,7 @@
     ".": "./src/main.js",
     "./*": "./*"
   },
+  "bin": "./src/cli.mjs",
   "main": "./src/main.js",
   "files": [
     "/src/"
