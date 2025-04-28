@@ -50,9 +50,7 @@ TODO: create a UI the allow the following:
         // eslint-disable-next-line no-unused-vars
         DeleteLink,
       } from "@jsenv/router";
-      import { setBaseUrl } from "../route.js";
 
-      setBaseUrl(window.location.href);
       const [GET_ALL, GET_ONE, EDIT_ONE, DELETE_ONE, ROOT] = registerRoutes({
         "GET /json_files": async ({ signal }) => {
           const response = await fetch("/json_files", { signal });

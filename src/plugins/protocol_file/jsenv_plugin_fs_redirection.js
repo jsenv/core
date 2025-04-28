@@ -3,8 +3,13 @@ import {
   applyFileSystemMagicResolution,
   getExtensionsToTry,
 } from "@jsenv/node-esm-resolution";
-import { urlToExtension, urlToPathname } from "@jsenv/urls";
-import { realpathSync } from "node:fs";
+import {
+  urlIsInsideOf,
+  urlToExtension,
+  urlToFilename,
+  urlToPathname,
+} from "@jsenv/urls";
+import { existsSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const jsenvPluginFsRedirection = ({
@@ -102,11 +107,15 @@ export const jsenvPluginFsRedirection = ({
           !urlToExtension(urlObject) &&
           !urlToPathname(urlObject).endsWith("/")
         ) {
-          // let's first check the presence of "index.html" in the parent directory, recursively
-          // if none, then we serve the main
-          // also we want to put the HTML file in the content
-          const { mainFilePath, rootDirectoryUrl } =
+          const { requestedUrl, rootDirectoryUrl, mainFilePath } =
             reference.ownerUrlInfo.context;
+          const closestHtmlRootFile = getClosestHtmlRootFile(
+            requestedUrl,
+            rootDirectoryUrl,
+          );
+          if (closestHtmlRootFile) {
+            return closestHtmlRootFile;
+          }
           return new URL(mainFilePath, rootDirectoryUrl);
         }
         return null;
@@ -154,4 +163,28 @@ const resolveSymlink = (fileUrl) => {
     realUrlObject.pathname += `/`;
   }
   return realUrlObject.href;
+};
+
+const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
+  let directoryUrl = new URL("./", requestedUrl);
+  while (true) {
+    const indexHtmlFileUrl = new URL(`index.html`, directoryUrl);
+    if (existsSync(indexHtmlFileUrl)) {
+      return indexHtmlFileUrl.href;
+    }
+    const htmlFileUrlCandidate = new URL(
+      `${urlToFilename(directoryUrl)}.html`,
+      directoryUrl,
+    );
+    if (existsSync(htmlFileUrlCandidate)) {
+      return htmlFileUrlCandidate.href;
+    }
+    if (
+      !urlIsInsideOf(directoryUrl, serverRootDirectoryUrl) ||
+      directoryUrl.href === serverRootDirectoryUrl
+    ) {
+      return null;
+    }
+    directoryUrl = new URL("../", directoryUrl);
+  }
 };

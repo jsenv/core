@@ -6,6 +6,8 @@
  * - replaced by true: When scenario matches (import.meta.dev and it's the dev server)
  * - left as is to be evaluated to undefined (import.meta.build but it's the dev server)
  * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
+ *
+ * TODO: ideally during dev we would keep import.meta.dev and ensure we set it to true rather than replacing it with true?
  */
 
 import { applyBabelPlugins } from "@jsenv/ast";

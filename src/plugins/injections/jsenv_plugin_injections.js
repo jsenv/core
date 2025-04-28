@@ -10,7 +10,7 @@ export const jsenvPluginInjections = (rawAssociations) => {
         urlInfo.context.rootDirectoryUrl,
       );
       return {
-        HTML_ROOT_URL: INJECTIONS.global(`/${relativeUrl}`),
+        HTML_ROOT_PATHNAME: INJECTIONS.global(`/${relativeUrl}`),
       };
     }
     return null;

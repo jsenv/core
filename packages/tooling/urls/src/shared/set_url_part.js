@@ -1,30 +1,34 @@
 import { filenameToBasename } from "./url_to_basename.js";
 import { urlToExtension } from "./url_to_extension.js";
 import { pathnameToFilename } from "./url_to_filename.js";
-import { urlToOrigin } from "./url_to_origin.js";
-import { urlToResource } from "./url_to_resource.js";
 
-export const setUrlExtension = (url, extension) => {
-  const origin = urlToOrigin(url);
-  const currentExtension = urlToExtension(url);
-  if (typeof extension === "function") {
-    extension = extension(currentExtension);
-  }
-  const resource = urlToResource(url);
-  const [pathname, search] = resource.split("?");
-  const pathnameWithoutExtension = currentExtension
-    ? pathname.slice(0, -currentExtension.length)
-    : pathname;
-  let newPathname;
-  if (pathnameWithoutExtension.endsWith("/")) {
-    newPathname = pathnameWithoutExtension.slice(0, -1);
-    newPathname += extension;
-    newPathname += "/";
-  } else {
-    newPathname = pathnameWithoutExtension;
-    newPathname += extension;
-  }
-  return `${origin}${newPathname}${search ? `?${search}` : ""}`;
+export const setUrlExtension = (
+  url,
+  extension,
+  { trailingSlash = "preserve" } = {},
+) => {
+  return transformUrlPathname(url, (pathname) => {
+    const currentExtension = urlToExtension(url);
+    if (typeof extension === "function") {
+      extension = extension(currentExtension);
+    }
+    const pathnameWithoutExtension = currentExtension
+      ? pathname.slice(0, -currentExtension.length)
+      : pathname;
+
+    if (pathnameWithoutExtension.endsWith("/")) {
+      let pathnameWithExtension;
+      pathnameWithExtension = pathnameWithoutExtension.slice(0, -1);
+      pathnameWithExtension += extension;
+      if (trailingSlash === "preserve") {
+        pathnameWithExtension += "/";
+      }
+      return pathnameWithExtension;
+    }
+    let pathnameWithExtension = pathnameWithoutExtension;
+    pathnameWithExtension += extension;
+    return pathnameWithExtension;
+  });
 };
 
 export const setUrlFilename = (url, filename) => {

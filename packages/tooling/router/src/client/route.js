@@ -24,7 +24,9 @@ const FAILED = { id: "failed" };
 //   return documentUrlObject;
 // };
 
-let baseUrl = window.location.origin;
+let baseUrl = import.meta.dev
+  ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
+  : window.location.origin;
 export const setBaseUrl = (v) => {
   const urlObject = new URL(v);
   urlObject.search = "";
