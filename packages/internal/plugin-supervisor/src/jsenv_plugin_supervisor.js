@@ -257,10 +257,12 @@ export const jsenvPluginSupervisor = ({
                   contentType: "text/javascript",
                   content: textContent,
                 });
-              Object.assign(
-                inlineScriptReference.urlInfo.contentInjections,
-                htmlUrlInfo.contentInjections,
-              );
+              for (const key of Object.keys(htmlUrlInfo.contentInjections)) {
+                const value = htmlUrlInfo.contentInjections[key];
+                if (htmlUrlInfo.context.isPlaceholderInjection(value)) {
+                  inlineScriptReference.urlInfo.contentInjections[key] = value;
+                }
+              }
               return inlineScriptReference.generatedSpecifier;
             },
             sourcemaps: htmlUrlInfo.kitchen.context.sourcemaps,

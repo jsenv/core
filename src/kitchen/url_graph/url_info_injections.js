@@ -11,6 +11,12 @@ export const INJECTIONS = {
   },
 };
 
+export const isPlaceholderInjection = (value) => {
+  return (
+    !value || !value[injectionSymbol] || value[injectionSymbol] !== "global"
+  );
+};
+
 export const applyContentInjections = (content, contentInjections, urlInfo) => {
   const keys = Object.keys(contentInjections);
   const globals = {};
