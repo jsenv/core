@@ -88,13 +88,16 @@ Command:
     throw new Error(`Unsupported operating system: ${platformName}`);
   },
   setup: async () => {
+    const { config } = await import("dotenv");
     const { default: postgres } = await import("postgres");
+
+    config({ path: ".env.dev" });
 
     if (!process.env.DB_NAME) {
       throw new Error("process.env.DB_NAME is not set");
     }
-    if (!process.env.DB_USER_ROLE) {
-      throw new Error("process.env.DB_USER_ROLE is not set");
+    if (!process.env.DB_USER_ROLE_NAME) {
+      throw new Error("process.env.DB_USER_ROLE_NAME is not set");
     }
     if (!process.env.DB_USER_NAME) {
       throw new Error("process.env.DB_USER_NAME is not set");
@@ -106,7 +109,7 @@ Command:
     const host = process.env.DB_HOST || "localhost";
     const port = process.env.DB_PORT || 5432;
     const databaseName = process.env.DB_NAME;
-    const userRole = process.env.DB_USER_ROLE;
+    const userRoleName = process.env.DB_USER_ROLE_NAME;
     const username = process.env.DB_USER_NAME;
     const password = process.env.DB_USER_PASSWORD;
 
@@ -120,42 +123,46 @@ Command:
       username: defaultUsername,
       password: "",
     });
+    const setupIndent = "  ";
     console.log(`${UNICODE.OK} Connected to database`);
+    console.log("");
 
-    admin_role_setup: {
-      console.log(`${UNICODE.INFO} Check role "${userRole}":`);
+    role_setup: {
+      console.log(`- Check role "${userRoleName}":`);
       const roles = await sql`
 SELECT
   rolname AS role_name,
   rolcreatedb as can_create_db,
   rolcanlogin as can_login
 FROM pg_roles
-WHERE rolname=${userRole};`;
+WHERE rolname=${userRoleName};`;
       if (roles.length === 0) {
         console.log(
-          `  ${UNICODE.INFO} Role "${userRole}" not found, creating it...`,
+          `${setupIndent}${UNICODE.INFO} Role "${userRoleName}" not found, creating it...`,
         );
-        await sql`CREATE ROLE ${sql(userRole)} LOGIN CREATEDB;`;
-        console.log(`${UNICODE.OK} Role "${userRole}" created`);
+        await sql`CREATE ROLE ${sql(userRoleName)} LOGIN CREATEDB;`;
+        console.log(
+          `${setupIndent}${UNICODE.OK} Role "${userRoleName}" created`,
+        );
       } else {
         const [{ role_name, can_create_db, can_login }] = roles;
         if (can_create_db && can_login) {
           console.log(
-            `  ${UNICODE.OK} "${role_name}" role exists with the right attributes.`,
+            `${setupIndent}${UNICODE.OK} "${role_name}" role exists with the right attributes.`,
           );
         } else {
           console.log(
-            `  ${UNICODE.INFO} LOGIN and CREATEDB attributes are missing on role "${userRole}".`,
+            `${setupIndent}${UNICODE.INFO} LOGIN and CREATEDB attributes are missing on role "${userRoleName}".`,
           );
-          await sql`ALTER ROLE ${sql(userRole)} LOGIN CREATEDB;`;
+          await sql`ALTER ROLE ${sql(userRoleName)} LOGIN CREATEDB;`;
           console.log(
-            `  ${UNICODE.OK} LOGIN and CREATEDB attributes added to role "${userRole}".`,
+            `${setupIndent}${UNICODE.OK} LOGIN and CREATEDB attributes added to role "${userRoleName}".`,
           );
         }
       }
     }
     user_setup: {
-      console.log(`${UNICODE.INFO} Check user "${username}":`);
+      console.log(`- Check user "${username}":`);
       const users = await sql`
 SELECT
   usename AS user_name,
@@ -163,12 +170,12 @@ SELECT
 FROM pg_user
 WHERE usename=${username};`;
       if (users.length === 0) {
-        console.log(`  ${UNICODE.INFO} not found, creating it...`);
+        console.log(`${setupIndent}${UNICODE.INFO} not found, creating it...`);
         await sql`CREATE USER ${sql(username)} WITH PASSWORD '${sql(password)}';`;
-        console.log(`  ${UNICODE.OK} "${username}" created`);
-        await sql`GRANT ${sql(userRole)} TO ${sql(username)};`;
+        console.log(`${setupIndent}${UNICODE.OK} "${username}" created`);
+        await sql`GRANT ${sql(userRoleName)} TO ${sql(username)};`;
         console.log(
-          `  ${UNICODE.OK} Role "${userRole}" granted to user "${username}"`,
+          `${setupIndent}${UNICODE.OK} Role "${userRoleName}" granted to user "${username}"`,
         );
       } else {
         const roleGrantResults = await sql`
@@ -179,34 +186,44 @@ JOIN pg_roles r ON m.roleid = r.oid
 WHERE u.usename = ${username}`;
         if (roleGrantResults.length === 0) {
           console.log(
-            `  ${UNICODE.INFO} Role "${userRole}" is missing on user.`,
+            `${setupIndent}${UNICODE.INFO} Role "${userRoleName}" is missing on user.`,
           );
-          await sql`GRANT ${sql(userRole)} TO ${sql(username)};`;
-          console.log(`  ${UNICODE.OK} Role "${userRole}" assigned to user.`);
+          await sql`GRANT ${sql(userRoleName)} TO ${sql(username)};`;
+          console.log(
+            `${setupIndent}${UNICODE.OK} Role "${userRoleName}" assigned to user.`,
+          );
         } else {
-          console.log(`  ${UNICODE.OK} User found with role "${userRole}".`);
+          console.log(
+            `${setupIndent}${UNICODE.OK} User found with role "${userRoleName}".`,
+          );
         }
       }
     }
     database_setup: {
-      console.log(`${UNICODE.INFO} Check database "${databaseName}":`);
+      console.log(`- Check database "${databaseName}":`);
       const databases = await sql`
 SELECT 1
 FROM pg_database
 WHERE datname = ${databaseName};`;
       if (databases.length === 0) {
-        console.log(`  ${UNICODE.INFO} not found, creating it...`);
+        console.log(`${setupIndent}${UNICODE.INFO} not found, creating it...`);
         await sql`CREATE DATABASE ${sql(databaseName)} OWNER ${sql(username)}`;
-        console.log(`  ${UNICODE.OK} Database "${databaseName}" created.`);
+        console.log(
+          `${setupIndent}${UNICODE.OK} Database "${databaseName}" created.`,
+        );
       } else {
-        console.log(`  ${UNICODE.OK} Database "${databaseName}" found.`);
+        console.log(
+          `${setupIndent}${UNICODE.OK} Database "${databaseName}" found.`,
+        );
       }
     }
+
+    console.log("");
+    console.log(`${UNICODE.INFO} Disconnecting from database...`);
     await sql.end();
+    console.log(`${UNICODE.OK} Disconnected`);
   },
 };
-
-await commands.setup();
 
 const { values, positionals } = parseArgs({ options, allowPositionals: true });
 if (values.help || positionals.length === 0) {

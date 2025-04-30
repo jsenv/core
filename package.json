@@ -80,7 +80,7 @@
     "database:install": "npx @jsenv/database install",
     "database:start": "npx @jsenv/database start",
     "database:stop": "npx @jsenv/database stop",
-    "database:setup": "npx @jsenv/database setup -- --env-file=.env.dev",
+    "database:setup": "npx @jsenv/database setup",
     "oto:start": "npm run start -w oto"
   },
   "dependencies": {
