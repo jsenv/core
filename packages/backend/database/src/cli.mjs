@@ -91,7 +91,12 @@ Command:
     const { config } = await import("dotenv");
     const { default: postgres } = await import("postgres");
 
-    config({ path: ".env.dev" });
+    config({
+      path:
+        process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod"
+          ? ".env.prod"
+          : ".env.dev",
+    });
 
     if (!process.env.DB_NAME) {
       throw new Error("process.env.DB_NAME is not set");
