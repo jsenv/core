@@ -90,9 +90,27 @@ Command:
   setup: async () => {
     const { default: postgres } = await import("postgres");
 
+    if (!process.env.DB_NAME) {
+      throw new Error("process.env.DB_NAME is not set");
+    }
+    if (!process.env.DB_USER_ROLE) {
+      throw new Error("process.env.DB_USER_ROLE is not set");
+    }
+    if (!process.env.DB_USER_NAME) {
+      throw new Error("process.env.DB_USER_NAME is not set");
+    }
+    if (!process.env.DB_USER_PASSWORD) {
+      throw new Error("process.env.DB_USER_PASSWORD is not set");
+    }
+
+    const host = process.env.DB_HOST || "localhost";
+    const port = process.env.DB_PORT || 5432;
+    const databaseName = process.env.DB_NAME;
+    const userRole = process.env.DB_USER_ROLE;
+    const username = process.env.DB_USER_NAME;
+    const password = process.env.DB_USER_PASSWORD;
+
     const defaultUsername = execSync("whoami").toString().trim();
-    const host = "localhost";
-    const port = 5432;
     const databaseUrl = `postgresql://${defaultUsername}@${host}:${port}`;
     console.log(`${UNICODE.INFO} Connecting to ${databaseUrl}`);
     const sql = postgres({
@@ -104,27 +122,21 @@ Command:
     });
     console.log(`${UNICODE.OK} Connected to database`);
 
-    // TODO: read this from secrets.json?
-    const databaseName = "jsenv";
-    const adminRole = "admin";
-    const username = "me";
-    const password = "password";
-
     admin_role_setup: {
-      console.log(`${UNICODE.INFO} Check role "${adminRole}":`);
+      console.log(`${UNICODE.INFO} Check role "${userRole}":`);
       const roles = await sql`
 SELECT
   rolname AS role_name,
   rolcreatedb as can_create_db,
   rolcanlogin as can_login
 FROM pg_roles
-WHERE rolname=${adminRole};`;
+WHERE rolname=${userRole};`;
       if (roles.length === 0) {
         console.log(
-          `  ${UNICODE.INFO} Role "${adminRole}" not found, creating it...`,
+          `  ${UNICODE.INFO} Role "${userRole}" not found, creating it...`,
         );
-        await sql`CREATE ROLE ${sql(adminRole)} LOGIN CREATEDB;`;
-        console.log(`${UNICODE.OK} Role "${adminRole}" created`);
+        await sql`CREATE ROLE ${sql(userRole)} LOGIN CREATEDB;`;
+        console.log(`${UNICODE.OK} Role "${userRole}" created`);
       } else {
         const [{ role_name, can_create_db, can_login }] = roles;
         if (can_create_db && can_login) {
@@ -133,11 +145,11 @@ WHERE rolname=${adminRole};`;
           );
         } else {
           console.log(
-            `  ${UNICODE.INFO} LOGIN and CREATEDB attributes are missing on role "${adminRole}".`,
+            `  ${UNICODE.INFO} LOGIN and CREATEDB attributes are missing on role "${userRole}".`,
           );
-          await sql`ALTER ROLE ${sql(adminRole)} LOGIN CREATEDB;`;
+          await sql`ALTER ROLE ${sql(userRole)} LOGIN CREATEDB;`;
           console.log(
-            `  ${UNICODE.OK} LOGIN and CREATEDB attributes added to role "${adminRole}".`,
+            `  ${UNICODE.OK} LOGIN and CREATEDB attributes added to role "${userRole}".`,
           );
         }
       }
@@ -154,9 +166,9 @@ WHERE usename=${username};`;
         console.log(`  ${UNICODE.INFO} not found, creating it...`);
         await sql`CREATE USER ${sql(username)} WITH PASSWORD '${sql(password)}';`;
         console.log(`  ${UNICODE.OK} "${username}" created`);
-        await sql`GRANT ${sql(adminRole)} TO ${sql(username)};`;
+        await sql`GRANT ${sql(userRole)} TO ${sql(username)};`;
         console.log(
-          `  ${UNICODE.OK} Role "${adminRole}" granted to user "${username}"`,
+          `  ${UNICODE.OK} Role "${userRole}" granted to user "${username}"`,
         );
       } else {
         const roleGrantResults = await sql`
@@ -167,12 +179,12 @@ JOIN pg_roles r ON m.roleid = r.oid
 WHERE u.usename = ${username}`;
         if (roleGrantResults.length === 0) {
           console.log(
-            `  ${UNICODE.INFO} Role "${adminRole}" is missing on user.`,
+            `  ${UNICODE.INFO} Role "${userRole}" is missing on user.`,
           );
-          await sql`GRANT ${sql(adminRole)} TO ${sql(username)};`;
-          console.log(`  ${UNICODE.OK} Role "${adminRole}" assigned to user.`);
+          await sql`GRANT ${sql(userRole)} TO ${sql(username)};`;
+          console.log(`  ${UNICODE.OK} Role "${userRole}" assigned to user.`);
         } else {
-          console.log(`  ${UNICODE.OK} User found with role "${adminRole}".`);
+          console.log(`  ${UNICODE.OK} User found with role "${userRole}".`);
         }
       }
     }
