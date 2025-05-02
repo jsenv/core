@@ -132,7 +132,9 @@
     "playwright": "1.52.0",
     "preact": "10.26.5",
     "prettier": "3.5.3",
+    "prettier-plugin-embed": "0.5.0",
     "prettier-plugin-organize-imports": "4.1.0",
+    "prettier-plugin-sql": "0.19.0",
     "strip-ansi": "7.1.0"
   }
 }

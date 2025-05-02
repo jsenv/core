@@ -1,4 +1,12 @@
 trailingComma: "all"
 quoteProps: "consistent"
-plugins: ["prettier-plugin-organize-imports"]
+plugins:
+  [
+    "prettier-plugin-organize-imports",
+    "prettier-plugin-sql",
+    "prettier-plugin-embed",
+  ]
 organizeImportsSkipDestructiveCodeActions: true
+embeddedSqlTags: ["sql"]
+language: "postgresql"
+keywordCase: "upper"

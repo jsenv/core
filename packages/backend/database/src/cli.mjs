@@ -135,12 +135,15 @@ Command:
     role_setup: {
       console.log(`- Check role "${userRoleName}":`);
       const roles = await sql`
-SELECT
-  rolname AS role_name,
-  rolcreatedb as can_create_db,
-  rolcanlogin as can_login
-FROM pg_roles
-WHERE rolname=${userRoleName};`;
+        SELECT
+          rolname AS role_name,
+          rolcreatedb AS can_create_db,
+          rolcanlogin AS can_login
+        FROM
+          pg_roles
+        WHERE
+          rolname = ${userRoleName};
+      `;
       if (roles.length === 0) {
         console.log(
           `${setupIndent}${UNICODE.INFO} Role "${userRoleName}" not found, creating it...`,
@@ -169,14 +172,21 @@ WHERE rolname=${userRoleName};`;
     user_setup: {
       console.log(`- Check user "${username}":`);
       const users = await sql`
-SELECT
-  usename AS user_name,
-  usecreatedb AS can_create_db
-FROM pg_user
-WHERE usename=${username};`;
+        SELECT
+          usename AS user_name,
+          usecreatedb AS can_create_db
+        FROM
+          pg_user
+        WHERE
+          usename = ${username};
+      `;
       if (users.length === 0) {
         console.log(`${setupIndent}${UNICODE.INFO} not found, creating it...`);
-        await sql`CREATE USER ${sql(username)} WITH PASSWORD '${sql(password)}';`;
+        await sql`
+          CREATE USER ${sql(username)}
+          WITH
+            PASSWORD '${sql(password)}';
+        `;
         console.log(`${setupIndent}${UNICODE.OK} "${username}" created`);
         await sql`GRANT ${sql(userRoleName)} TO ${sql(username)};`;
         console.log(
@@ -184,11 +194,15 @@ WHERE usename=${username};`;
         );
       } else {
         const roleGrantResults = await sql`
-SELECT 1
-FROM pg_user u
-JOIN pg_auth_members m ON u.usesysid = m.member
-JOIN pg_roles r ON m.roleid = r.oid
-WHERE u.usename = ${username}`;
+          SELECT
+            1
+          FROM
+            pg_user u
+            JOIN pg_auth_members m ON u.usesysid = m.member
+            JOIN pg_roles r ON m.roleid = r.oid
+          WHERE
+            u.usename = ${username}
+        `;
         if (roleGrantResults.length === 0) {
           console.log(
             `${setupIndent}${UNICODE.INFO} Role "${userRoleName}" is missing on user.`,
@@ -207,12 +221,16 @@ WHERE u.usename = ${username}`;
     database_setup: {
       console.log(`- Check database "${databaseName}":`);
       const databases = await sql`
-SELECT 1
-FROM pg_database
-WHERE datname = ${databaseName};`;
+        SELECT
+          1
+        FROM
+          pg_database
+        WHERE
+          datname = ${databaseName};
+      `;
       if (databases.length === 0) {
         console.log(`${setupIndent}${UNICODE.INFO} not found, creating it...`);
-        await sql`CREATE DATABASE ${sql(databaseName)} OWNER ${sql(username)}`;
+        await sql.unsafe`CREATE DATABASE ${databaseName} OWNER ${username}`;
         console.log(
           `${setupIndent}${UNICODE.OK} Database "${databaseName}" created.`,
         );
