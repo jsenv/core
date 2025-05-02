@@ -6,7 +6,7 @@
 import { render } from "preact";
 import { signal, effect } from "@preact/signals";
 import { useTable } from "./use_table.js";
-import { createColumnHelper, getCoreRowModel } from "@tanstack/table-core";
+import { getCoreRowModel } from "@tanstack/table-core";
 import "./database_explorer.css" with { type: "css" };
 
 const tablePublicFilterSignal = signal(false);
@@ -51,43 +51,50 @@ const App = () => {
   );
 };
 
-const columnHelper = createColumnHelper();
 const columns = [
-  columnHelper.accessor("schemaname", {
+  {
+    accessor: "schemaname",
     cell: (info) => info.getValue(),
     footer: (info) => info.column.id,
-  }),
-  columnHelper.accessor((row) => row.tablename, {
+  },
+  {
+    accessor: (row) => row.tablename,
     id: "Name",
     cell: (info) => <i>{info.getValue()}</i>,
     header: () => <span>Name</span>,
     footer: (info) => info.column.id,
-  }),
-  columnHelper.accessor("tableowner", {
+  },
+  {
+    accessor: "tableowner",
     header: () => "Owner",
     cell: (info) => info.renderValue(),
     footer: (info) => info.column.id,
-  }),
-  columnHelper.accessor("tablespace", {
+  },
+  {
+    accessor: "tablespace",
     header: () => <span>Table space</span>,
     footer: (info) => info.column.id,
-  }),
-  columnHelper.accessor("hasindexes", {
+  },
+  {
+    accessor: "hasindexes",
     header: () => "Has indexes",
     footer: (info) => info.column.id,
-  }),
-  columnHelper.accessor("hasrules", {
+  },
+  {
+    accessor: "hasrules",
     header: () => "Has rules",
     footer: (info) => info.column.id,
-  }),
-  columnHelper.accessor("hastriggers", {
+  },
+  {
+    accessor: "hastriggers",
     header: () => "Has triggers",
     footer: (info) => info.column.id,
-  }),
-  columnHelper.accessor("rowsecurity", {
+  },
+  {
+    accessor: "rowsecurity",
     header: () => "Row security",
     footer: (info) => info.column.id,
-  }),
+  },
 ];
 
 const TableList = () => {
