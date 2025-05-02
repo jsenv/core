@@ -763,7 +763,7 @@
         if (routes.length === 0) {
           return null;
         }
-        return html` <${FiltersPanel} routes=${routes} /> `;
+        return html` <${FiltersPanel} routes="${routes}" /> `;
       };
 
       const App = () => {
@@ -776,11 +776,11 @@
         return html`
           <div
             class="progress-bar"
-            style=${{
+            style="${{
               width: typeof Number(width) === "number" ? `${width}px` : width,
               height:
                 typeof Number(height) === "number" ? `${height}px` : height,
-            }}
+            }}"
           >
             <div class="progress-container progress-indeterminate">
               <div class="progress-bar-long"></div>
@@ -795,13 +795,13 @@
         const routeLoadingError = routeLoadingErrorSignal.value;
 
         if (loading) {
-          return html`<${ProgressBar} width="150" loading=${true} />`;
+          return html`<${ProgressBar} width="150" loading="${true}" />`;
         }
 
         if (routeLoadingError) {
           return html`<p>
-            Error loading routes: ${routeLoadingError.message}
-          </p>`;
+              Error loading routes: ${routeLoadingError.message}
+            </p>`;
         }
 
         if (!routes || routes.length === 0) {
@@ -809,10 +809,10 @@
         }
 
         return html`<div class="route_container">
-          <div class="route_list">
-            ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
-          </div>
-        </div>`;
+            <div class="route_list">
+              ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
+            </div>
+          </div>`;
       };
 
       const documentUrlSignal = signal(window.location.href);
@@ -912,10 +912,10 @@
             <div class="filter_container">
               <div class="filter_list">
                 <div class="filter_item">
-                  <${MethodFilter} routes=${routes} />
+                  <${MethodFilter} routes="${routes}" />
                 </div>
                 <div class="filter_item">
-                  <${PackageFilter} routes=${routes} />
+                  <${PackageFilter} routes="${routes}" />
                 </div>
               </div>
             </div>
@@ -957,12 +957,14 @@
                 <span
                   class="filter_text"
                   data-method="all"
-                  style=${{
+                  style="${{
                     borderImageSource: gradient,
-                  }}
+                  }}"
                   >all</span
                 >
-                <span class="filter_count">${routes.length}</span>
+                <span class="filter_count"
+                  >${routes.length}</span
+                >
               `,
               selected: !selectedMethod,
             },
@@ -970,7 +972,9 @@
               return {
                 value: availableMethodName,
                 text: html`
-                  <span class="filter_text" data-method="${availableMethodName}"
+                  <span
+                    class="filter_text"
+                    data-method="${availableMethodName}"
                     >${availableMethodName}
                   </span>
                   <span class="filter_count">
@@ -985,10 +989,10 @@
           return html`
             <${FilterSelector}
               label="Methods"
-              options=${options}
-              onChange=${(methodToSelect) => {
+              options="${options}"
+              onChange="${(methodToSelect) => {
                 setSelectedMethod(methodToSelect);
-              }}
+              }}"
             />
           `;
         };
@@ -1023,10 +1027,10 @@
           return html`
             <${FilterSelector}
               label="Packages"
-              options=${options}
-              onChange=${(packageNameToSelect) => {
+              options="${options}"
+              onChange="${(packageNameToSelect) => {
                 setSelectedPackageName(packageNameToSelect);
-              }}
+              }}"
             />
           `;
         };
@@ -1047,60 +1051,60 @@
                 <form ref=${formRef} class="filter_form">
                   ${options.map((option) => {
                     return html`<label>
-                      <input
-                        type="${multiple ? "checkbox" : "radio"}"
-                        name="${label}"
-                        checked=${option.selected}
-                        value=${option.value}
-                        onChange=${multiple
-                          ? () => {
-                              const formNode = formRef.current;
-                              // even if we create a checkbox list the HTML spec
-                              // return a radio node list and we have to gather the checked values
-                              const radioNodeList = formNode.elements[label];
-                              const selectedValues = [];
-                              for (const checkboxNode of Array.from(
-                                radioNodeList,
-                              )) {
-                                if (checkboxNode.checked) {
-                                  selectedValues.push(checkboxNode.value);
+                        <input
+                          type="${multiple ? "checkbox" : "radio"}"
+                          name="${label}"
+                          checked="${option.selected}"
+                          value="${option.value}"
+                          onChange="${multiple
+                            ? () => {
+                                const formNode = formRef.current;
+                                // even if we create a checkbox list the HTML spec
+                                // return a radio node list and we have to gather the checked values
+                                const radioNodeList = formNode.elements[label];
+                                const selectedValues = [];
+                                for (const checkboxNode of Array.from(
+                                  radioNodeList,
+                                )) {
+                                  if (checkboxNode.checked) {
+                                    selectedValues.push(checkboxNode.value);
+                                  }
                                 }
+                                onChange(selectedValues);
                               }
-                              onChange(selectedValues);
-                            }
-                          : () => {
-                              const formNode = formRef.current;
-                              const radioNodeList = formNode.elements[label];
-                              const selectedValue = radioNodeList.value;
-                              onChange(selectedValue);
-                            }}
-                      />
-                      ${option.text}
-                    </label>`;
+                            : () => {
+                                const formNode = formRef.current;
+                                const radioNodeList = formNode.elements[label];
+                                const selectedValue = radioNodeList.value;
+                                onChange(selectedValue);
+                              }}"
+                        />
+                        ${option.text}
+                      </label>`;
                   })}
                 </form>
                 ${
                   actions &&
                   html` <div class="filter_actions">
-                    <button
-                      type="button"
-                      class="filter_button"
-                      onClick=${() => {
-                        onChange(options.map((option) => option.value));
-                      }}
-                    >
-                      Select All
-                    </button>
-                    <button
-                      type="button"
-                      class="filter_button"
-                      onClick=${() => {
-                        onChange([]);
-                      }}
-                    >
-                      Clear All
-                    </button>
-                  </div>`
+                      <button
+                        type="button"
+                        class="filter_button"
+                        onClick="${() => {
+                          onChange(options.map((option) => option.value));
+                        }}"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        class="filter_button"
+                        onClick="${() => {
+                          onChange([]);
+                        }}"
+                      >
+                        Clear All
+                      </button>
+                    </div>`
                 }
               </div>`;
         };
@@ -1133,36 +1137,43 @@
         }
 
         return html`<details
-          class="route_details"
-          onToggle=${(e) => {
-            setOpened(e.newState === "open");
-          }}
-          data-method=${method}
-        >
-          <summary>
-            <div class="route_summary_container">
-              <span class="route_method">${method}</span>
-              <p class="route_resource">${resource}</p>
-              <span style="flex:1"></span>
-              <${RouteBadge} meta=${meta} />
-              ${opened ? html`<${ArrowUp} />` : html`<${ArrowDown} />`}
-            </div>
-          </summary>
-          <${RouteDetailsContent}
-            method=${method}
-            resource=${resource}
-            description=${description}
-            availableMediaTypes=${availableMediaTypes}
-            availableLanguages=${availableLanguages}
-            availableVersions=${availableVersions}
-            availableEncodings=${availableEncodings}
-            acceptedMediaTypes=${acceptedMediaTypes}
-            websocket=${websocket}
-            clientCodeExample=${clientCodeExample}
-            declarationSource=${declarationSource}
-            meta=${meta}
-          />
-        </details>`;
+            class="route_details"
+            onToggle="${(e) => {
+              setOpened(e.newState === "open");
+            }}"
+            data-method="${method}"
+          >
+            <summary>
+              <div class="route_summary_container">
+                <span class="route_method">${method}</span>
+                <p class="route_resource">${resource}</p>
+                ${method === "GET"
+                  ? html`<a
+                        style="display:inline-flex; margin-left: 5px;"
+                        href="${resource}"
+                        ><${OpenLink}
+                      /></a>`
+                  : null}
+                <span style="flex:1"></span>
+                <${RouteBadge} meta="${meta}" />
+                ${opened ? html`<${ArrowUp} />` : html`<${ArrowDown} />`}
+              </div>
+            </summary>
+            <${RouteDetailsContent}
+              method="${method}"
+              resource="${resource}"
+              description="${description}"
+              availableMediaTypes="${availableMediaTypes}"
+              availableLanguages="${availableLanguages}"
+              availableVersions="${availableVersions}"
+              availableEncodings="${availableEncodings}"
+              acceptedMediaTypes="${acceptedMediaTypes}"
+              websocket="${websocket}"
+              clientCodeExample="${clientCodeExample}"
+              declarationSource="${declarationSource}"
+              meta="${meta}"
+            />
+          </details>`;
       };
 
       const RouteBadge = ({ meta }) => {
@@ -1171,9 +1182,9 @@
         }
         let text = meta.packageName;
         let title = `This endpoint is declared by ${meta.packageName}`;
-        return html`<span title=${title} class="route_owner_name"
-          >${text}</span
-        >`;
+        return html`<span title="${title}" class="route_owner_name"
+            >${text}</span
+          >`;
       };
 
       const RouteDetailsContent = ({
@@ -1191,51 +1202,51 @@
         meta,
       }) => {
         return html`<div class="route_details_content">
-          <${RoutedeclarationSource}
-            meta=${meta}
-            declarationSource=${declarationSource}
-          />
-          <p style="margin-top: 0"><strong>Description:</strong></p>
-          <p class="route_description">
-            ${description || "No description available"}
-          </p>
-          ${availableMediaTypes.length > 0 &&
-          html`<${RouteContentNegotiationSection}
-            type="content-type"
-            title="Available media types"
-            availableValues=${availableMediaTypes}
-          />`}
-          ${availableLanguages.length > 0 &&
-          html`<${RouteContentNegotiationSection}
-            type="language"
-            title="Available languages"
-            availableValues=${availableLanguages}
-          />`}
-          ${availableVersions.length > 0 &&
-          html`<${RouteContentNegotiationSection}
-            type="version"
-            title="Available versions"
-            availableValues=${availableVersions}
-          />`}
-          ${availableEncodings.length > 0 &&
-          html`<${RouteContentNegotiationSection}
-            type="encoding"
-            title="Available encodings"
-            availableValues=${availableEncodings}
-          />`}
-          ${acceptedMediaTypes.length > 0 &&
-          html`<${RouteAcceptableContentSection}
-            acceptedMediaTypes=${acceptedMediaTypes}
-          />`}
-          <p style="margin-bottom:0; font-weight:bold">Example:</p>
-          <${RouteCodeExample}
-            method=${method}
-            resource=${resource}
-            availableMediaTypes=${availableMediaTypes}
-            websocket=${websocket}
-            clientCodeExample=${clientCodeExample}
-          />
-        </div>`;
+            <${RoutedeclarationSource}
+              meta="${meta}"
+              declarationSource="${declarationSource}"
+            />
+            <p style="margin-top: 0"><strong>Description:</strong></p>
+            <p class="route_description">
+              ${description || "No description available"}
+            </p>
+            ${availableMediaTypes.length > 0 &&
+            html`<${RouteContentNegotiationSection}
+                type="content-type"
+                title="Available media types"
+                availableValues="${availableMediaTypes}"
+              />`}
+            ${availableLanguages.length > 0 &&
+            html`<${RouteContentNegotiationSection}
+                type="language"
+                title="Available languages"
+                availableValues="${availableLanguages}"
+              />`}
+            ${availableVersions.length > 0 &&
+            html`<${RouteContentNegotiationSection}
+                type="version"
+                title="Available versions"
+                availableValues="${availableVersions}"
+              />`}
+            ${availableEncodings.length > 0 &&
+            html`<${RouteContentNegotiationSection}
+                type="encoding"
+                title="Available encodings"
+                availableValues="${availableEncodings}"
+              />`}
+            ${acceptedMediaTypes.length > 0 &&
+            html`<${RouteAcceptableContentSection}
+                acceptedMediaTypes="${acceptedMediaTypes}"
+              />`}
+            <p style="margin-bottom:0; font-weight:bold">Example:</p>
+            <${RouteCodeExample}
+              method="${method}"
+              resource="${resource}"
+              availableMediaTypes="${availableMediaTypes}"
+              websocket="${websocket}"
+              clientCodeExample="${clientCodeExample}"
+            />
+          </div>`;
       };
       const RoutedeclarationSource = ({ meta, declarationSource }) => {
         if (!declarationSource) {
@@ -1244,8 +1255,8 @@
         return html`<p style="margin-top: 0"><strong>Declaration:</strong></p>
           <p>
             <${RouteDeclarationText}
-              ownerLink=${meta.ownerLink}
-              declarationLink=${meta.declarationLink}
+              ownerLink="${meta.ownerLink}"
+              declarationLink="${meta.declarationLink}"
             />
           </p>`;
       };
@@ -1259,23 +1270,23 @@
         availableValues,
       }) => {
         return html`<div class="route_content_nego" data-nego-type="${type}">
-          <p class="route_content_nego_title">${title}:</p>
-          <ul>
-            ${availableValues.map(
-              (availableValue) => html`<li>${availableValue}</li>`,
-            )}
-          </ul>
-        </div>`;
+            <p class="route_content_nego_title">${title}:</p>
+            <ul>
+              ${availableValues.map(
+                (availableValue) => html`<li>${availableValue}</li>`,
+              )}
+            </ul>
+          </div>`;
       };
       const RouteAcceptableContentSection = ({ acceptedMediaTypes }) => {
         return html`<div class="route_accepted_content_type">
-          <p><strong>Accepted content types:</strong></p>
-          <ul>
-            ${acceptedMediaTypes.map(
-              (acceptedMediaType) => html`<li>${acceptedMediaType}</li>`,
-            )}
-          </ul>
-        </div>`;
+            <p><strong>Accepted content types:</strong></p>
+            <ul>
+              ${acceptedMediaTypes.map(
+                (acceptedMediaType) => html`<li>${acceptedMediaType}</li>`,
+              )}
+            </ul>
+          </div>`;
       };
 
       const RouteCodeExample = ({
@@ -1327,33 +1338,50 @@
         }
 
         return html`<code-block lang="js" data-escaped data-copy-button
-          >${jsSource}</code-block
-        >`;
+            >${jsSource}</code-block
+          >`;
       };
 
       const ArrowDown = () => {
         return html`<svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 -960 960 960"
-          width="24"
-          height="24"
-          fill="currentColor"
-          class="arrow_down"
-        >
-          <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
-        </svg>`;
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 -960 960 960"
+            width="24"
+            height="24"
+            fill="currentColor"
+            class="arrow_down"
+          >
+            <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
+          </svg>`;
       };
       const ArrowUp = () => {
         return html`<svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 -960 960 960"
-          width="24"
-          height="24"
-          fill="currentColor"
-          class="arrow_up"
-        >
-          <path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" />
-        </svg>`;
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 -960 960 960"
+            width="24"
+            height="24"
+            fill="currentColor"
+            class="arrow_up"
+          >
+            <path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" />
+          </svg>`;
+      };
+      const OpenLink = () => {
+        return html`<svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 64 64"
+            stroke-width="3"
+            stroke="currentColor"
+            fill="none"
+            width="24"
+            height="24"
+          >
+            <path
+              d="M55.4,32V53.58a1.81,1.81,0,0,1-1.82,1.82H10.42A1.81,1.81,0,0,1,8.6,53.58V10.42A1.81,1.81,0,0,1,10.42,8.6H32"
+            />
+            <polyline points="40.32 8.6 55.4 8.6 55.4 24.18" />
+            <line x1="19.32" y1="45.72" x2="54.61" y2="8.91" />
+          </svg>`;
       };
 
       render(html`<${Sidebar} />`, document.querySelector("aside"));

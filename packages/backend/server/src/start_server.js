@@ -557,7 +557,7 @@ export const startServer = async ({
             );
           },
         };
-        serviceController.callAsyncHooks(
+        await serviceController.callAsyncHooks(
           "augmentRouteFetchSecondArg",
           request,
           fetchSecondArg,
