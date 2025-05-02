@@ -240,6 +240,27 @@ Command:
         );
       }
     }
+    schemas_setup: {
+      const schemaFiles = process.env.DB_SCHEMA_FILES;
+      if (!schemaFiles) {
+        console.log(
+          `${setupIndent}${UNICODE.INFO} No schema files configured, skipping...`,
+        );
+        break schemas_setup;
+      }
+
+      const { listFilesMatching } = await import("@jsenv/filesystem");
+      const patterns = {};
+      for (const pattern of schemaFiles.split(", ")) {
+        patterns[pattern] = true;
+      }
+      const files = await listFilesMatching({
+        patterns,
+      });
+      console.log(files);
+    }
+
+    // TODO: execute schema/*.sql files
 
     console.log("");
     console.log(`${UNICODE.INFO} Disconnecting from database...`);
@@ -247,6 +268,8 @@ Command:
     console.log(`${UNICODE.OK} Disconnected`);
   },
 };
+
+await commands.setup();
 
 const { values, positionals } = parseArgs({ options, allowPositionals: true });
 if (values.help || positionals.length === 0) {
