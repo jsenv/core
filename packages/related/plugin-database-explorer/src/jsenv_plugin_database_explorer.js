@@ -54,8 +54,20 @@ export const jsenvPluginDatabaseExplorer = () => {
       {
         endpoint: "GET /.internal/database/api/tables",
         declarationSource: import.meta.url,
-        fetch: () => {
-          // TODO: get the list of tables
+        fetch: async (request) => {
+          const publicFilter = request.url.searchParams.has("public");
+          const results = await sql`
+            SELECT
+              *
+            FROM
+              pg_tables ${publicFilter
+              ? sql`
+                  WHERE
+                    schemaname = 'public'
+                `
+              : sql``}
+          `;
+          return Response.json(results);
         },
       },
     ],
