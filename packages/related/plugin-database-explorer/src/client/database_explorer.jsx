@@ -5,9 +5,7 @@
 
 import { render } from "preact";
 import { signal, effect } from "@preact/signals";
-import { useTable } from "./use_table.js";
-import { getCoreRowModel } from "@tanstack/table-core";
-import "./database_explorer.css" with { type: "css" };
+import { Table } from "./table.jsx";
 
 const tablePublicFilterSignal = signal(false);
 const tableArraySignal = signal([]);
@@ -58,7 +56,7 @@ const columns = [
     footer: (info) => info.column.id,
   },
   {
-    accessor: (row) => row.tablename,
+    accessor: "tablename",
     id: "Name",
     cell: (info) => <i>{info.getValue()}</i>,
     header: () => <span>Name</span>,
@@ -99,71 +97,7 @@ const columns = [
 
 const TableList = () => {
   const tableArray = tableArraySignal.value;
-  const { getHeaderGroups, getRowModel, getFooterGroups } = useTable({
-    columns,
-    data: tableArray,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
-  return (
-    <table>
-      <thead>
-        {getHeaderGroups().map((headerGroup) => (
-          <tr key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <th key={header.id}>
-                {header.isPlaceholder ? null : (
-                  <header.column.columnDef.header {...header.getContext()} />
-                )}
-              </th>
-            ))}
-          </tr>
-        ))}
-      </thead>
-      <TableBody rows={getRowModel().rows} />
-      <tfoot>
-        {getFooterGroups().map((footerGroup) => (
-          <tr key={footerGroup.id}>
-            {footerGroup.headers.map((header) => (
-              <th key={header.id}>
-                {header.isPlaceholder ? null : (
-                  <header.column.columnDef.footer {...header.getContext()} />
-                )}
-              </th>
-            ))}
-          </tr>
-        ))}
-      </tfoot>
-    </table>
-  );
-};
-
-const TableBody = ({ rows }) => {
-  return (
-    <tbody>
-      {rows.map((row) => (
-        <TableBodyRow key={row.id} cells={row.getVisibleCells()} />
-      ))}
-    </tbody>
-  );
-};
-const TableBodyRow = ({ cells }) => {
-  return (
-    <tr>
-      {cells.map((cell) => (
-        <TableBodyCell key={cell.id} cell={cell} />
-      ))}
-    </tr>
-  );
-};
-const TableBodyCell = ({ cell }) => {
-  const CellComponent = cell.column.columnDef.cell;
-  const cellProps = cell.getContext();
-  return (
-    <td>
-      <CellComponent {...cellProps} />
-    </td>
-  );
+  return <Table columns={columns} data={tableArray} />;
 };
 
 render(<App />, document.querySelector("#app"));
