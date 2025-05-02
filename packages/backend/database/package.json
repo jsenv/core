@@ -36,6 +36,7 @@
     "@jsenv/humanize": "1.6.0",
     "@jsenv/url-meta": "8.5.7",
     "@jsenv/filesystem": "4.15.3",
+    "@jsenv/urls": "2.8.0",
     "dotenv": "16.5.0"
   },
   "devDependencies": {}
