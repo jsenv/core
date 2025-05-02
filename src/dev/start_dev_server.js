@@ -248,7 +248,7 @@ export const startDevServer = async ({
       read: readPackageAtOrNull,
     };
 
-    const devServerPluginStore = createPluginStore([
+    const devServerPluginStore = await createPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),
       ...plugins,
       ...getCorePlugins({
@@ -274,7 +274,7 @@ export const startDevServer = async ({
         ribbon,
       }),
     ]);
-    const getOrCreateKitchen = (request) => {
+    const getOrCreateKitchen = async (request) => {
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
         request.headers["user-agent"] || "",
       );
@@ -397,7 +397,7 @@ export const startDevServer = async ({
           );
         },
       );
-      const devServerPluginController = createPluginController(
+      const devServerPluginController = await createPluginController(
         devServerPluginStore,
         kitchen,
       );
@@ -413,8 +413,8 @@ export const startDevServer = async ({
 
     finalServices.push({
       name: "jsenv:dev_server_routes",
-      augmentRouteFetchSecondArg: (request) => {
-        const kitchen = getOrCreateKitchen(request);
+      augmentRouteFetchSecondArg: async (request) => {
+        const kitchen = await getOrCreateKitchen(request);
         return { kitchen };
       },
       routes: [

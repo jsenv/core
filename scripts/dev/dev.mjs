@@ -6,7 +6,7 @@ import {
   jsenvPluginControlledResource,
   jsenvPluginJSONFileManager,
 } from "@jsenv/router/src/server/server_stuff.js";
-import { jsenvPluginDatabaseWebUI } from "@jsenv/plugin-database-web-ui";
+import { jsenvPluginDatabaseExplorer } from "@jsenv/plugin-database-explorer";
 
 // const { certificate, privateKey } = requestCertificate();
 await startDevServer({
@@ -34,6 +34,6 @@ await startDevServer({
         },
       },
     }),
-    jsenvPluginDatabaseWebUI(),
+    jsenvPluginDatabaseExplorer(),
   ],
 });

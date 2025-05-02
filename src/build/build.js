@@ -1061,7 +1061,7 @@ const prepareEntryPointBuild = async (
   });
 
   let _getOtherEntryBuildInfo;
-  const rawPluginStore = createPluginStore([
+  const rawPluginStore = await createPluginStore([
     ...(mappings ? [jsenvPluginMappings(mappings)] : []),
     {
       name: "jsenv:other_entry_point_build_during_craft",
@@ -1106,7 +1106,7 @@ const prepareEntryPointBuild = async (
       packageSideEffects,
     }),
   ]);
-  const rawPluginController = createPluginController(
+  const rawPluginController = await createPluginController(
     rawPluginStore,
     rawKitchen,
   );
@@ -1177,7 +1177,7 @@ const prepareEntryPointBuild = async (
           rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
           rawKitchen.context.isSupportedOnCurrentClients("importmap"),
       });
-      const finalPluginStore = createPluginStore([
+      const finalPluginStore = await createPluginStore([
         jsenvPluginReferenceAnalysis({
           ...referenceAnalysis,
           fetchInlineUrls: false,
@@ -1210,7 +1210,7 @@ const prepareEntryPointBuild = async (
         },
         buildSpecifierManager.jsenvPluginMoveToBuildDirectory,
       ]);
-      const finalPluginController = createPluginController(
+      const finalPluginController = await createPluginController(
         finalPluginStore,
         finalKitchen,
         {
