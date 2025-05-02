@@ -6,6 +6,7 @@ import { render } from "preact";
 import { useMemo } from "preact/hooks";
 import { signal, effect } from "@preact/signals";
 import { useTable } from "react-table";
+import "./database_explorer.css" with { type: "css" };
 
 const tablePublicFilterSignal = signal(false);
 const tableArraySignal = signal([]);
