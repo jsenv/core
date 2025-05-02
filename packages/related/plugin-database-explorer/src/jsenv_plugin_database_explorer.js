@@ -55,7 +55,7 @@ export const jsenvPluginDatabaseExplorer = () => {
         endpoint: "GET /.internal/database/api/tables",
         declarationSource: import.meta.url,
         fetch: async (request) => {
-          const publicFilter = request.url.searchParams.has("public");
+          const publicFilter = request.searchParams.has("public");
           const results = await sql`
             SELECT
               *

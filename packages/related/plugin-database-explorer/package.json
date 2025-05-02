@@ -33,7 +33,8 @@
   "dependencies": {
     "postgres": "3.4.5",
     "@jsenv/urls": "2.8.0",
-    "@jsenv/database": "0.0.1"
+    "@jsenv/database": "0.0.1",
+    "react-table": "7.8.0"
   },
   "devDependencies": {
     "preact": "10.26.5",
