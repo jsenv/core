@@ -123,6 +123,7 @@
     "@jsenv/url-meta": "workspace:*",
     "@jsenv/urls": "workspace:*",
     "@jsenv/utils": "workspace:*",
+    "@jsenv/plugin-database-web-ui": "workspace:*",
     "@playwright/browser-chromium": "1.52.0",
     "@playwright/browser-firefox": "1.52.0",
     "@playwright/browser-webkit": "1.52.0",

@@ -1,0 +1,40 @@
+{
+  "name": "@jsenv/plugin-database-web-ui",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/related/plugin-database-web-ui"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "dev:jsenv": "./src/jsenv_plugin_database_web_ui.js",
+        "default": "./dist/jsenv_plugin_database_web_ui.js"
+      }
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/dist/",
+    "/src/"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "postgres": "3.4.5"
+  },
+  "devDependencies": {
+    "@preact/signals": "2.0.4",
+    "@jsenv/core": "../../../"
+  }
+}
