@@ -1,4 +1,10 @@
-import { urlToPathname, urlToExtension, urlIsInsideOf } from "@jsenv/urls";
+import {
+  urlToPathname,
+  urlToExtension,
+  urlIsInsideOf,
+  ensurePathnameTrailingSlash,
+} from "@jsenv/urls";
+import { readParamsFromContext, connectAs } from "@jsenv/database";
 
 const databaseExplorerHtmlFileUrl = import.meta.resolve(
   "./client/database_explorer.html",
@@ -6,16 +12,25 @@ const databaseExplorerHtmlFileUrl = import.meta.resolve(
 
 export const jsenvPluginDatabaseExplorer = () => {
   let databaseExplorerRootDirectoryUrl;
+  let sql;
 
   return {
     name: "jsenv:database_explorer",
-    init: ({ rootDirectoryUrl }) => {
+    init: async ({ rootDirectoryUrl }) => {
+      const { username, password, database } = readParamsFromContext();
+      sql = connectAs({ username, password, database });
       databaseExplorerRootDirectoryUrl = new URL(
         "./.internal/database/",
         rootDirectoryUrl,
       ).href;
     },
     redirectReference: (reference) => {
+      if (
+        ensurePathnameTrailingSlash(reference.url) ===
+        databaseExplorerRootDirectoryUrl
+      ) {
+        return databaseExplorerHtmlFileUrl;
+      }
       if (
         urlIsInsideOf(reference.url, databaseExplorerRootDirectoryUrl) &&
         !urlToExtension(reference.url) &&

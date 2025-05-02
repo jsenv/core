@@ -32,7 +32,8 @@
   },
   "dependencies": {
     "postgres": "3.4.5",
-    "@jsenv/urls": "2.8.0"
+    "@jsenv/urls": "2.8.0",
+    "@jsenv/database": "0.0.1"
   },
   "devDependencies": {
     "@preact/signals": "2.0.4",

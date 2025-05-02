@@ -1,52 +1,31 @@
-import { config } from "dotenv";
-import postgres from "postgres";
 import { UNICODE } from "@jsenv/humanize";
-import { execSync } from "node:child_process";
+import postgres from "postgres";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { pathToFileURL, fileURLToPath } from "node:url";
-// import { readFileSync } from "node:fs";
+import { readParamsFromContext } from "../read_params_from_context.js";
 
-config({
-  path:
-    process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod"
-      ? ".env.prod"
-      : ".env.dev",
-});
-
-if (!process.env.DB_NAME) {
-  throw new Error("process.env.DB_NAME is not set");
-}
-if (!process.env.DB_USER_ROLE_NAME) {
-  throw new Error("process.env.DB_USER_ROLE_NAME is not set");
-}
-if (!process.env.DB_USER_NAME) {
-  throw new Error("process.env.DB_USER_NAME is not set");
-}
-if (!process.env.DB_USER_PASSWORD) {
-  throw new Error("process.env.DB_USER_PASSWORD is not set");
-}
-
-const host = process.env.DB_HOST || "localhost";
-const port = process.env.DB_PORT || 5432;
-const databaseName = process.env.DB_NAME;
-const userRoleName = process.env.DB_USER_ROLE_NAME;
-const username = process.env.DB_USER_NAME;
-const password = process.env.DB_USER_PASSWORD;
-
-const defaultUsername = execSync("whoami").toString().trim();
+const {
+  host,
+  port,
+  defaultUsername,
+  userRoleName,
+  username,
+  database,
+  password,
+} = readParamsFromContext();
 const databaseUrl = `postgresql://${defaultUsername}@${host}:${port}`;
 console.log(`${UNICODE.INFO} Connecting to ${databaseUrl}...`);
 const sql = postgres({
-  host: "localhost",
-  port: 5432,
-  database: "postgres",
+  host,
+  port,
   username: defaultUsername,
   password: "",
+  database: "postgres",
 });
-const setupIndent = "  ";
 console.log(`${UNICODE.OK} Connected to database`);
 console.log("");
 
+const setupIndent = "  ";
 role_setup: {
   console.log(`- Setup role "${userRoleName}":`);
   const roles = await sql`
@@ -132,25 +111,21 @@ user_setup: {
   }
 }
 database_setup: {
-  console.log(`- Setup database "${databaseName}":`);
+  console.log(`- Setup database "${database}":`);
   const databases = await sql`
     SELECT
       1
     FROM
       pg_database
     WHERE
-      datname = ${databaseName};
+      datname = ${database};
   `;
   if (databases.length === 0) {
     console.log(`${setupIndent}${UNICODE.INFO} not found, creating it...`);
-    await sql.unsafe`CREATE DATABASE ${databaseName} OWNER ${username}`;
-    console.log(
-      `${setupIndent}${UNICODE.OK} Database "${databaseName}" created.`,
-    );
+    await sql.unsafe`CREATE DATABASE ${database} OWNER ${username}`;
+    console.log(`${setupIndent}${UNICODE.OK} Database "${database}" created.`);
   } else {
-    console.log(
-      `${setupIndent}${UNICODE.OK} Database "${databaseName}" found.`,
-    );
+    console.log(`${setupIndent}${UNICODE.OK} Database "${database}" found.`);
   }
 }
 schemas_setup: {
