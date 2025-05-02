@@ -1,7 +1,6 @@
 {
   "name": "@jsenv/plugin-database-explorer",
   "version": "0.0.1",
-  "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -34,7 +33,7 @@
     "postgres": "3.4.5",
     "@jsenv/urls": "2.8.0",
     "@jsenv/database": "0.0.1",
-    "react-table": "7.8.0"
+    "@tanstack/table-core": "8.21.3"
   },
   "devDependencies": {
     "preact": "10.26.5",
