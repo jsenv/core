@@ -53,31 +53,39 @@ const App = () => {
 
 const columnHelper = createColumnHelper();
 const columns = [
-  columnHelper.accessor("firstName", {
+  columnHelper.accessor("schemaname", {
     cell: (info) => info.getValue(),
     footer: (info) => info.column.id,
   }),
-  columnHelper.accessor((row) => row.lastName, {
-    id: "lastName",
+  columnHelper.accessor((row) => row.tablename, {
+    id: "Name",
     cell: (info) => <i>{info.getValue()}</i>,
-    header: () => <span>Last Name</span>,
+    header: () => <span>Name</span>,
     footer: (info) => info.column.id,
   }),
-  columnHelper.accessor("age", {
-    header: () => "Age",
+  columnHelper.accessor("tableowner", {
+    header: () => "Owner",
     cell: (info) => info.renderValue(),
     footer: (info) => info.column.id,
   }),
-  columnHelper.accessor("visits", {
-    header: () => <span>Visits</span>,
+  columnHelper.accessor("tablespace", {
+    header: () => <span>Table space</span>,
     footer: (info) => info.column.id,
   }),
-  columnHelper.accessor("status", {
-    header: "Status",
+  columnHelper.accessor("hasindexes", {
+    header: () => "Has indexes",
     footer: (info) => info.column.id,
   }),
-  columnHelper.accessor("progress", {
-    header: "Profile Progress",
+  columnHelper.accessor("hasrules", {
+    header: () => "Has rules",
+    footer: (info) => info.column.id,
+  }),
+  columnHelper.accessor("hastriggers", {
+    header: () => "Has triggers",
+    footer: (info) => info.column.id,
+  }),
+  columnHelper.accessor("rowsecurity", {
+    header: () => "Row security",
     footer: (info) => info.column.id,
   }),
 ];
@@ -90,11 +98,9 @@ const TableList = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  console.log(getHeaderGroups());
-
   return (
     <table>
-      {/* <thead>
+      <thead>
         {getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
@@ -106,9 +112,9 @@ const TableList = () => {
             ))}
           </tr>
         ))}
-      </thead> */}
-      <TableBody row={getRowModel().rows} />
-      {/* <tfoot>
+      </thead>
+      <TableBody rows={getRowModel().rows} />
+      <tfoot>
         {getFooterGroups().map((footerGroup) => (
           <tr key={footerGroup.id}>
             {footerGroup.headers.map((header) => (
@@ -120,7 +126,7 @@ const TableList = () => {
             ))}
           </tr>
         ))}
-      </tfoot> */}
+      </tfoot>
     </table>
   );
 };
@@ -134,16 +140,22 @@ const TableBody = ({ rows }) => {
     </tbody>
   );
 };
-
 const TableBodyRow = ({ cells }) => {
   return (
     <tr>
       {cells.map((cell) => (
-        <td key={cell.id}>
-          <cell.column.columnDef.cell {...cell.getContext()} />
-        </td>
+        <TableBodyCell key={cell.id} cell={cell} />
       ))}
     </tr>
+  );
+};
+const TableBodyCell = ({ cell }) => {
+  const CellComponent = cell.column.columnDef.cell;
+  const cellProps = cell.getContext();
+  return (
+    <td>
+      <CellComponent {...cellProps} />
+    </td>
   );
 };
 
