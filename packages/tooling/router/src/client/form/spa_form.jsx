@@ -21,7 +21,7 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { canUseNavigation } from "./router.js";
+import { canUseNavigation } from "../router.js";
 
 const FormContext = createContext();
 export const useSPAFormStatus = () => {
@@ -29,7 +29,9 @@ export const useSPAFormStatus = () => {
   return formStatus;
 };
 
-export const SPAForm = ({ action, method, children }) => {
+export const SPAForm = ({ action, method = "get", children }) => {
+  method = method.toLowerCase();
+
   const [formStatus, formStatusSetter] = useState({
     pending: false,
     error: null,
@@ -88,10 +90,10 @@ const SPAFormButton = forwardRef(({ formAction, children, ...props }, ref) => {
       ref={innerRef}
       {...props}
       onClick={(clickEvent) => {
+        formActionMapRef.current.set(innerRef.current, formAction);
         if (props.onClick) {
           props.onClick(clickEvent);
         }
-        formActionMapRef.current.set(innerRef.current, formAction);
       }}
     >
       {children}

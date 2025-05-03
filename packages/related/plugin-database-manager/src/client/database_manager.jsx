@@ -6,8 +6,8 @@ import { Table } from "./table.jsx";
 const tablePublicFilterSignal = signal(false);
 const tableInfoSignal = signal({ columns: [], data: [] });
 
-const [PATCH_TABLE_PROP] = registerRoutes({
-  "PATCH /.internal/database/api/tables/:name/:prop": async ({
+const [PUT_TABLE_PROP] = registerRoutes({
+  "PUT /.internal/database/api/tables/:name/:prop": async ({
     params,
     formData,
   }) => {
@@ -19,6 +19,13 @@ const [PATCH_TABLE_PROP] = registerRoutes({
       headers: { "content-type": "application/json" },
       body: JSON.stringify(value),
     });
+    const { data, ...rest } = tableInfoSignal.value;
+    const table = data.find((table) => table.tablename === name);
+    table[prop] = value;
+    tableInfoSignal.value = {
+      ...rest,
+      data: [...data],
+    };
   },
 });
 
@@ -39,6 +46,8 @@ const App = () => {
       <h1>Database Manager</h1>
       <p>Explore and manage your database.</p>
 
+      <TableList />
+
       <form>
         <label>
           <input
@@ -55,8 +64,6 @@ const App = () => {
           Public
         </label>
       </form>
-
-      <TableList />
     </div>
   );
 };
@@ -70,20 +77,21 @@ const TableNameCell = ({ name }) => {
 };
 
 const BooleanCell = ({ tableName, columnName, checked }) => {
-  const patchTablePropUrl = useRouteUrl(PATCH_TABLE_PROP, {
+  const putTablePropUrl = useRouteUrl(PUT_TABLE_PROP, {
     name: tableName,
     prop: columnName,
   });
   return (
-    <SPAForm action={patchTablePropUrl} method="PATCH">
+    <SPAForm action={putTablePropUrl} method="GET">
       <input
         type="checkbox"
+        name="value"
         checked={checked}
         onChange={(e) => {
-          if (e.target.checked) {
-            // we need the fetch
-          } else {
-          }
+          const form = e.target.form;
+          console.log("submitting", form);
+          debugger;
+          form.submit();
         }}
         readOnly
       />
@@ -120,10 +128,11 @@ const TableList = () => {
       header: () => <span>{columnName}</span>,
       cell: (info) => {
         const value = info.getValue();
-        // TODO: how to get table name here
-        debugger;
+        const tableName = info.row.original.tablename;
         return (
-          <CellDefaultComponent column={column}>{value}</CellDefaultComponent>
+          <CellDefaultComponent tableName={tableName} column={column}>
+            {value}
+          </CellDefaultComponent>
         );
       },
       footer: (info) => info.column.id,
