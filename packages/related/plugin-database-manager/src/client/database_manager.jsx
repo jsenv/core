@@ -1,14 +1,26 @@
-// TODO: SPA
-// ability to get the list of tables (everything for now)
-// and so on
-// https://tanstack.com/table/v8/docs/framework/react/examples/basic
-
 import { render } from "preact";
 import { signal, effect } from "@preact/signals";
+import { registerRoutes, SPAForm, useRouteUrl } from "@jsenv/router";
 import { Table } from "./table.jsx";
 
 const tablePublicFilterSignal = signal(false);
 const tableInfoSignal = signal({ columns: [], data: [] });
+
+const [PATCH_TABLE_PROP] = registerRoutes({
+  "PATCH /.internal/database/api/tables/:name/:prop": async ({
+    params,
+    formData,
+  }) => {
+    const name = params.name;
+    const prop = params.prop;
+    const value = formData.get("value");
+    await fetch(`/.internal/database/api/tables/${name}/${prop}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(value),
+    });
+  },
+});
 
 effect(async () => {
   const tablePublicFilter = tablePublicFilterSignal.value;
@@ -18,14 +30,6 @@ effect(async () => {
   const tables = await response.json();
   tableInfoSignal.value = tables;
 });
-
-const updateTableName = async (tableName, newName) => {
-  await fetch(`/.internal/database/api/tables/${tableName}/name`, {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(newName),
-  });
-};
 
 const App = () => {
   const tablePublicFilter = tablePublicFilterSignal.value;
@@ -65,9 +69,13 @@ const TableNameCell = ({ name }) => {
   );
 };
 
-const BooleanCell = ({ checked }) => {
+const BooleanCell = ({ tableName, columnName, checked }) => {
+  const patchTablePropUrl = useRouteUrl(PATCH_TABLE_PROP, {
+    name: tableName,
+    prop: columnName,
+  });
   return (
-    <form>
+    <SPAForm action={patchTablePropUrl} method="PATCH">
       <input
         type="checkbox"
         checked={checked}
@@ -79,16 +87,22 @@ const BooleanCell = ({ checked }) => {
         }}
         readOnly
       />
-    </form>
+    </SPAForm>
   );
 };
 
-const CellDefaultComponent = ({ column, children }) => {
+const CellDefaultComponent = ({ tableName, column, children }) => {
   if (column.name === "tablename") {
     return <TableNameCell name={children} />;
   }
   if (column.data_type === "boolean") {
-    return <BooleanCell column={column} checked={children} />;
+    return (
+      <BooleanCell
+        tableName={tableName}
+        columnName={column.column_name}
+        checked={children}
+      />
+    );
   }
   return String(children);
 };
@@ -106,6 +120,7 @@ const TableList = () => {
       header: () => <span>{columnName}</span>,
       cell: (info) => {
         const value = info.getValue();
+        // TODO: how to get table name here
         debugger;
         return (
           <CellDefaultComponent column={column}>{value}</CellDefaultComponent>

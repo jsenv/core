@@ -1,3 +1,8 @@
+/**
+ *
+ *  https://tanstack.com/table/v8/docs/framework/react/examples/basic
+ */
+
 import { useMemo } from "preact/hooks";
 import { useTable } from "./use_table.js";
 import { getCoreRowModel } from "@tanstack/table-core";
