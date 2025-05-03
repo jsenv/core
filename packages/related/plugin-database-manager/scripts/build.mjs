@@ -4,7 +4,7 @@ await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
-    "./jsenv_plugin_database_explorer.js": {
+    "./jsenv_plugin_database_manager.js": {
       runtimeCompat: {
         node: "16.2.0",
         chrome: "64",

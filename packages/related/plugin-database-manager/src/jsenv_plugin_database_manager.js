@@ -6,20 +6,20 @@ import {
 } from "@jsenv/urls";
 import { readParamsFromContext, connectAs } from "@jsenv/database";
 
-const databaseExplorerHtmlFileUrl = import.meta.resolve(
-  "./client/database_explorer.html",
+const databaseManagerHtmlFileUrl = import.meta.resolve(
+  "./client/database_manager.html",
 );
 
-export const jsenvPluginDatabaseExplorer = () => {
-  let databaseExplorerRootDirectoryUrl;
+export const jsenvPluginDatabaseManager = () => {
+  let databaseManagerRootDirectoryUrl;
   let sql;
 
   return {
-    name: "jsenv:database_explorer",
+    name: "jsenv:database_manager",
     init: async ({ rootDirectoryUrl }) => {
       const { username, password, database } = readParamsFromContext();
       sql = connectAs({ username, password, database });
-      databaseExplorerRootDirectoryUrl = new URL(
+      databaseManagerRootDirectoryUrl = new URL(
         "./.internal/database/",
         rootDirectoryUrl,
       ).href;
@@ -27,16 +27,16 @@ export const jsenvPluginDatabaseExplorer = () => {
     redirectReference: (reference) => {
       if (
         ensurePathnameTrailingSlash(reference.url) ===
-        databaseExplorerRootDirectoryUrl
+        databaseManagerRootDirectoryUrl
       ) {
-        return databaseExplorerHtmlFileUrl;
+        return databaseManagerHtmlFileUrl;
       }
       if (
-        urlIsInsideOf(reference.url, databaseExplorerRootDirectoryUrl) &&
+        urlIsInsideOf(reference.url, databaseManagerRootDirectoryUrl) &&
         !urlToExtension(reference.url) &&
         !urlToPathname(reference.url).endsWith("/")
       ) {
-        return databaseExplorerHtmlFileUrl;
+        return databaseManagerHtmlFileUrl;
       }
       return null;
     },
@@ -44,7 +44,7 @@ export const jsenvPluginDatabaseExplorer = () => {
     devServerRoutes: [
       {
         endpoint: "GET /.internal/database",
-        description: "Explore and manage database using a Web interface",
+        description: "Manage database using a Web interface",
         declarationSource: import.meta.url,
         fetch: () => {
           // is done by redirectReference

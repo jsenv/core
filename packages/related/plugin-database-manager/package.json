@@ -1,11 +1,11 @@
 {
-  "name": "@jsenv/plugin-database-explorer",
+  "name": "@jsenv/plugin-database-manager",
   "version": "0.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/related/plugin-database-explorer"
+    "directory": "packages/related/plugin-database-manager"
   },
   "publishConfig": {
     "access": "public"
@@ -15,7 +15,7 @@
     ".": {
       "import": {
         "dev:jsenv": "./src/main.js",
-        "default": "./dist/jsenv_plugin_database_explorer.js"
+        "default": "./dist/jsenv_plugin_database_manager.js"
       }
     },
     "./*": "./*"

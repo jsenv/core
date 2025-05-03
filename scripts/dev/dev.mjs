@@ -6,7 +6,7 @@ import {
   jsenvPluginControlledResource,
   jsenvPluginJSONFileManager,
 } from "@jsenv/router/src/server/server_stuff.js";
-import { jsenvPluginDatabaseExplorer } from "@jsenv/plugin-database-explorer";
+import { jsenvPluginDatabaseManager } from "@jsenv/plugin-database-manager";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
 // const { certificate, privateKey } = requestCertificate();
@@ -35,7 +35,7 @@ await startDevServer({
         },
       },
     }),
-    jsenvPluginDatabaseExplorer(),
+    jsenvPluginDatabaseManager(),
     jsenvPluginCommonJs({
       include: { "/**/node_modules/react-table/": true },
     }),
