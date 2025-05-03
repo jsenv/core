@@ -29,50 +29,67 @@ export const useSPAFormStatus = () => {
   return formStatus;
 };
 
-export const SPAForm = ({ action, method = "get", children }) => {
-  method = method.toLowerCase();
-
-  const [formStatus, formStatusSetter] = useState({
-    pending: false,
-    error: null,
-    method,
-    action,
-  });
-  const formActionMapRef = useRef(new Map());
-
-  return (
-    <form
-      onSubmit={async (submitEvent) => {
-        formStatusSetter({ pending: true, error: null });
-        submitEvent.preventDefault();
-        const formData = new FormData(submitEvent.currentTarget);
-        const actionToPerform =
-          formActionMapRef.current.get(submitEvent.submitter) || action;
-        try {
-          await applyRoutingOnFormSubmission({
-            method,
-            formData,
-            action: actionToPerform,
-          });
-        } catch (e) {
-          formStatusSetter({ pending: false, error: e });
-          return;
-        }
-        // the data we don't need them here, we can read them from the route
-        // by the way the error is likely also stored on the PATH route
-        // but for now let's ignore
-        formStatusSetter({ pending: false });
-      }}
-      method={method === "get" ? "get" : "post"}
-      data-action={typeof action === "string" ? action : undefined}
-      data-method={method}
-    >
-      <FormContext.Provider value={[formStatus, formActionMapRef]}>
-        {children}
-      </FormContext.Provider>
-    </form>
-  );
+const submit = HTMLFormElement.prototype.submit;
+HTMLFormElement.prototype.submit = function (...args) {
+  const form = this;
+  if (form.hasAttribute("data-method")) {
+    console.warn("You must use form.requestSubmit() instead of form.submit()");
+    return form.requestSubmit();
+  }
+  return submit.apply(this, args);
 };
+
+export const SPAForm = forwardRef(
+  ({ action, method = "get", children }, ref) => {
+    const innerRef = useRef();
+
+    method = method.toLowerCase();
+
+    const [formStatus, formStatusSetter] = useState({
+      pending: false,
+      error: null,
+      method,
+      action,
+    });
+    const formActionMapRef = useRef(new Map());
+
+    useImperativeHandle(ref, () => innerRef.current);
+
+    return (
+      <form
+        ref={innerRef}
+        onSubmit={async (submitEvent) => {
+          formStatusSetter({ pending: true, error: null });
+          submitEvent.preventDefault();
+          const formData = new FormData(submitEvent.currentTarget);
+          const actionToPerform =
+            formActionMapRef.current.get(submitEvent.submitter) || action;
+          try {
+            await applyRoutingOnFormSubmission({
+              method,
+              formData,
+              action: actionToPerform,
+            });
+          } catch (e) {
+            formStatusSetter({ pending: false, error: e });
+            return;
+          }
+          // the data we don't need them here, we can read them from the route
+          // by the way the error is likely also stored on the PATH route
+          // but for now let's ignore
+          formStatusSetter({ pending: false });
+        }}
+        method={method === "get" ? "get" : "post"}
+        data-action={typeof action === "string" ? action : undefined}
+        data-method={method}
+      >
+        <FormContext.Provider value={[formStatus, formActionMapRef]}>
+          {children}
+        </FormContext.Provider>
+      </form>
+    );
+  },
+);
 
 const SPAFormButton = forwardRef(({ formAction, children, ...props }, ref) => {
   const innerRef = useRef();

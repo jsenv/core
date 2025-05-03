@@ -89,9 +89,7 @@ const BooleanCell = ({ tableName, columnName, checked }) => {
         checked={checked}
         onChange={(e) => {
           const form = e.target.form;
-          console.log("submitting", form);
-          debugger;
-          form.submit();
+          form.requestSubmit();
         }}
         readOnly
       />
