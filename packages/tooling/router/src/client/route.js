@@ -55,7 +55,7 @@ const createAndRegisterRoute = ({
   resourcePattern = resourceFromUrl(resourcePattern);
   const resourcePatternParsed = createResourcePattern(resourcePattern);
   const route = {
-    methodPattern,
+    methodPattern: methodPattern.toUpperCase(),
     resourcePattern,
     loadData: handler,
     loadUI: null,
@@ -75,7 +75,10 @@ const createAndRegisterRoute = ({
     data: undefined,
     params: {},
     match: ({ method, resource }) => {
-      if (route.methodPattern !== method && route.methodPattern !== "*") {
+      if (
+        route.methodPattern !== method.toUpperCase() &&
+        route.methodPattern !== "*"
+      ) {
         return false;
       }
       const matchResult = resourcePatternParsed.match(resource);

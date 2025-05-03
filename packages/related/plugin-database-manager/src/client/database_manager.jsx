@@ -16,7 +16,10 @@ const [PUT_TABLE_PROP] = registerRoutes({
     const value = formData.get("value");
     await fetch(`/.internal/database/api/tables/${name}/${prop}`, {
       method: "PUT",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+      },
       body: JSON.stringify(value),
     });
     const { data, ...rest } = tableInfoSignal.value;
@@ -82,7 +85,7 @@ const BooleanCell = ({ tableName, columnName, checked }) => {
     prop: columnName,
   });
   return (
-    <SPAForm action={putTablePropUrl} method="GET">
+    <SPAForm action={putTablePropUrl} method="PUT">
       <input
         type="checkbox"
         name="value"

@@ -94,7 +94,7 @@ export const jsenvPluginDatabaseManager = () => {
             ALTER TABLE ${sql(tableName)}
             RENAME TO ${sql(tableNewName)};
           `;
-          return Response.json({ name: newName });
+          return Response.json({ name: tableNewName });
         },
       },
     ],
