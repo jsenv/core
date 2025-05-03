@@ -26,6 +26,6 @@
     "marked": "15.0.11",
     "@jsenv/filesystem": "4.15.3",
     "@jsenv/urls": "2.8.0",
-    "@jsenv/ast": "6.7.3"
+    "@jsenv/ast": "6.7.6"
   }
 }

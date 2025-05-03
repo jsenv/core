@@ -56,7 +56,14 @@ export const upgradeExternalVersions = async ({
     for (const internalPackageName of internalPackageNames) {
       const internalPackage = internalPackages[internalPackageName];
       const internalPackageObject = internalPackage.packageObject;
-      const { dependencies = {}, devDependencies = {} } = internalPackageObject;
+      const {
+        dependencies = {},
+        devDependencies = {},
+        private: isPrivate,
+      } = internalPackageObject;
+      if (isPrivate) {
+        continue;
+      }
       const dependencyNames = Object.keys(dependencies);
       dependencyNames.forEach((dependencyName) => {
         addExternalPackage({
