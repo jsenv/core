@@ -24,7 +24,7 @@ const App = () => {
 
   return (
     <div>
-      <h1>Database Explorer</h1>
+      <h1>Database Manager</h1>
       <p>Explore and manage your database.</p>
 
       <form>
@@ -98,6 +98,10 @@ const columns = [
 const TableList = () => {
   const { columns: toto, data } = tableInfoSignal.value;
   console.log(toto);
+
+  // faurait les ordonner par ordinal position
+  // on mettra column_name
+  // le type servira surement, par example boolean on mettra un checkbox
 
   return <Table columns={columns} data={data} />;
 };

@@ -116,7 +116,7 @@
     "@jsenv/os-metrics": "workspace:*",
     "@jsenv/performance-impact": "workspace:*",
     "@jsenv/plugin-as-js-classic": "workspace:*",
-    "@jsenv/plugin-database-explorer": "workspace:*",
+    "@jsenv/plugin-database-manager": "workspace:*",
     "@jsenv/router": "workspace:*",
     "@jsenv/runtime-compat": "workspace:*",
     "@jsenv/snapshot": "workspace:*",
