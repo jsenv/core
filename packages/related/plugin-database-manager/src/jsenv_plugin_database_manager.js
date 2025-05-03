@@ -1,3 +1,8 @@
+/**
+ *
+ * - nom des tables au singulier
+ */
+
 import {
   urlToPathname,
   urlToExtension,
@@ -76,6 +81,20 @@ export const jsenvPluginDatabaseManager = () => {
               : sql``}
           `;
           return Response.json({ columns, data });
+        },
+      },
+      {
+        endpoint: "PUT /.internal/database/api/tables/:name/name",
+        declarationSource: import.meta.url,
+        acceptedMediaTypes: ["application/json"],
+        fetch: async (request) => {
+          const tableName = request.params.name;
+          const tableNewName = await request.json();
+          await sql`
+            ALTER TABLE ${sql(tableName)}
+            RENAME TO ${sql(tableNewName)};
+          `;
+          return Response.json({ name: newName });
         },
       },
     ],

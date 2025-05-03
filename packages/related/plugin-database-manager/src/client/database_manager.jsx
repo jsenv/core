@@ -49,61 +49,24 @@ const App = () => {
   );
 };
 
-const columns = [
-  {
-    accessorKey: "schemaname",
-    cell: (info) => info.getValue(),
-    footer: (info) => info.column.id,
-  },
-  {
-    accessorKey: "tablename",
-    id: "Name",
-    cell: (info) => <i>{info.getValue()}</i>,
-    header: () => <span>Name</span>,
-    footer: (info) => info.column.id,
-  },
-  {
-    accessorKey: "tableowner",
-    header: () => "Owner",
-    cell: (info) => info.renderValue(),
-    footer: (info) => info.column.id,
-  },
-  {
-    accessorKey: "tablespace",
-    header: () => <span>Table space</span>,
-    footer: (info) => info.column.id,
-  },
-  {
-    accessorKey: "hasindexes",
-    header: () => "Has indexes",
-    footer: (info) => info.column.id,
-  },
-  {
-    accessorKey: "hasrules",
-    header: () => "Has rules",
-    footer: (info) => info.column.id,
-  },
-  {
-    accessorKey: "hastriggers",
-    header: () => "Has triggers",
-    footer: (info) => info.column.id,
-  },
-  {
-    accessorKey: "rowsecurity",
-    header: () => "Row security",
-    footer: (info) => info.column.id,
-  },
-];
-
 const TableList = () => {
-  const { columns: toto, data } = tableInfoSignal.value;
-  console.log(toto);
+  const { columns, data } = tableInfoSignal.value;
+  columns.sort((a, b) => {
+    return a.ordinal_position - b.ordinal_position;
+  });
+  const tableColumns = columns.map((column) => {
+    return {
+      accessorKey: column.column_name,
+      header: () => <span>{column.column_name}</span>,
+      cell: (info) => {
+        const value = info.getValue();
+        return String(value);
+      },
+      footer: (info) => info.column.id,
+    };
+  });
 
-  // faurait les ordonner par ordinal position
-  // on mettra column_name
-  // le type servira surement, par example boolean on mettra un checkbox
-
-  return <Table columns={columns} data={data} />;
+  return <Table columns={tableColumns} data={data} />;
 };
 
 render(<App />, document.querySelector("#app"));
