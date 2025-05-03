@@ -19,6 +19,14 @@ effect(async () => {
   tableInfoSignal.value = tables;
 });
 
+const updateTableName = async (tableName, newName) => {
+  await fetch(`/.internal/database/api/tables/${tableName}/name`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(newName),
+  });
+};
+
 const App = () => {
   const tablePublicFilter = tablePublicFilterSignal.value;
 
@@ -49,18 +57,59 @@ const App = () => {
   );
 };
 
+const TableNameCell = ({ name }) => {
+  return (
+    <div>
+      <span>{name}</span>
+    </div>
+  );
+};
+
+const BooleanCell = ({ checked }) => {
+  return (
+    <form>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => {
+          if (e.target.checked) {
+            // we need the fetch
+          } else {
+          }
+        }}
+        readOnly
+      />
+    </form>
+  );
+};
+
+const CellDefaultComponent = ({ column, children }) => {
+  if (column.name === "tablename") {
+    return <TableNameCell name={children} />;
+  }
+  if (column.data_type === "boolean") {
+    return <BooleanCell column={column} checked={children} />;
+  }
+  return String(children);
+};
+
 const TableList = () => {
   const { columns, data } = tableInfoSignal.value;
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
   });
   const tableColumns = columns.map((column) => {
+    const columnName = column.column_name;
+
     return {
-      accessorKey: column.column_name,
-      header: () => <span>{column.column_name}</span>,
+      accessorKey: columnName,
+      header: () => <span>{columnName}</span>,
       cell: (info) => {
         const value = info.getValue();
-        return String(value);
+        debugger;
+        return (
+          <CellDefaultComponent column={column}>{value}</CellDefaultComponent>
+        );
       },
       footer: (info) => info.column.id,
     };

@@ -72,16 +72,6 @@ export const SPAForm = ({ action, method, children }) => {
   );
 };
 
-export const DeleteLink = ({ href, children, ...rest }) => {
-  return (
-    <SPAForm action={href} method="DELETE">
-      <button type="submit" {...rest}>
-        {children}
-      </button>
-    </SPAForm>
-  );
-};
-
 const SPAFormButton = forwardRef(({ formAction, children, ...props }, ref) => {
   const innerRef = useRef();
   const [, formActionMapRef] = useContext(FormContext);
