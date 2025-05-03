@@ -8,7 +8,11 @@ export const Table = ({ columns, data }) => {
     () => getExtraColumns(columns, data),
     [columns, data],
   );
-  const { getHeaderGroups, getRowModel, getFooterGroups } = useTable({
+  const {
+    getHeaderGroups,
+    getRowModel,
+    // getFooterGroups
+  } = useTable({
     columns: extraColumns ? [...columns, ...extraColumns] : columns,
     data,
     getCoreRowModel: getCoreRowModel(),
@@ -30,7 +34,7 @@ export const Table = ({ columns, data }) => {
         ))}
       </thead>
       <TableBody rows={getRowModel().rows} />
-      <tfoot>
+      {/* <tfoot>
         {getFooterGroups().map((footerGroup) => (
           <tr key={footerGroup.id}>
             {footerGroup.headers.map((header) => (
@@ -42,7 +46,7 @@ export const Table = ({ columns, data }) => {
             ))}
           </tr>
         ))}
-      </tfoot>
+      </tfoot> */}
     </table>
   );
 };
@@ -79,6 +83,7 @@ const getExtraColumns = (columns, values) => {
   for (const extraColumnKey of extraColumnSet) {
     const extraColumn = {
       accessor: extraColumnKey,
+      id: extraColumnKey,
       cell: (info) => info.getValue(),
       header: () => <span>{extraColumnKey}</span>,
       footer: (info) => info.column.id,

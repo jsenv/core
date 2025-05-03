@@ -8,7 +8,7 @@ import { signal, effect } from "@preact/signals";
 import { Table } from "./table.jsx";
 
 const tablePublicFilterSignal = signal(false);
-const tableArraySignal = signal([]);
+const tableInfoSignal = signal({ columns: [], data: [] });
 
 effect(async () => {
   const tablePublicFilter = tablePublicFilterSignal.value;
@@ -16,7 +16,7 @@ effect(async () => {
     `/.internal/database/api/tables?public=${tablePublicFilter}`,
   );
   const tables = await response.json();
-  tableArraySignal.value = tables;
+  tableInfoSignal.value = tables;
 });
 
 const App = () => {
@@ -51,53 +51,55 @@ const App = () => {
 
 const columns = [
   {
-    accessor: "schemaname",
+    accessorKey: "schemaname",
     cell: (info) => info.getValue(),
     footer: (info) => info.column.id,
   },
   {
-    accessor: "tablename",
+    accessorKey: "tablename",
     id: "Name",
     cell: (info) => <i>{info.getValue()}</i>,
     header: () => <span>Name</span>,
     footer: (info) => info.column.id,
   },
   {
-    accessor: "tableowner",
+    accessorKey: "tableowner",
     header: () => "Owner",
     cell: (info) => info.renderValue(),
     footer: (info) => info.column.id,
   },
   {
-    accessor: "tablespace",
+    accessorKey: "tablespace",
     header: () => <span>Table space</span>,
     footer: (info) => info.column.id,
   },
   {
-    accessor: "hasindexes",
+    accessorKey: "hasindexes",
     header: () => "Has indexes",
     footer: (info) => info.column.id,
   },
   {
-    accessor: "hasrules",
+    accessorKey: "hasrules",
     header: () => "Has rules",
     footer: (info) => info.column.id,
   },
   {
-    accessor: "hastriggers",
+    accessorKey: "hastriggers",
     header: () => "Has triggers",
     footer: (info) => info.column.id,
   },
   {
-    accessor: "rowsecurity",
+    accessorKey: "rowsecurity",
     header: () => "Row security",
     footer: (info) => info.column.id,
   },
 ];
 
 const TableList = () => {
-  const tableArray = tableArraySignal.value;
-  return <Table columns={columns} data={tableArray} />;
+  const { columns: toto, data } = tableInfoSignal.value;
+  console.log(toto);
+
+  return <Table columns={columns} data={data} />;
 };
 
 render(<App />, document.querySelector("#app"));

@@ -55,8 +55,16 @@ export const jsenvPluginDatabaseExplorer = () => {
         endpoint: "GET /.internal/database/api/tables",
         declarationSource: import.meta.url,
         fetch: async (request) => {
-          const publicFilter = request.searchParams.has("public");
-          const results = await sql`
+          const publicFilter = request.searchParams.has("public"); // TODO: a dynamic filter param
+          const columns = await sql`
+            SELECT
+              *
+            FROM
+              information_schema.columns
+            WHERE
+              table_name = 'pg_tables'
+          `;
+          const data = await sql`
             SELECT
               *
             FROM
@@ -67,7 +75,7 @@ export const jsenvPluginDatabaseExplorer = () => {
                 `
               : sql``}
           `;
-          return Response.json(results);
+          return Response.json({ columns, data });
         },
       },
     ],
