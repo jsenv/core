@@ -79,7 +79,7 @@ const TableNameCell = ({ name }) => {
   );
 };
 
-const BooleanCell = ({ tableName, columnName, checked }) => {
+const BooleanCell = ({ isUpdatable, tableName, columnName, checked }) => {
   const putTablePropUrl = useRouteUrl(PUT_TABLE_PROP, {
     name: tableName,
     prop: columnName,
@@ -88,13 +88,13 @@ const BooleanCell = ({ tableName, columnName, checked }) => {
     <SPAForm action={putTablePropUrl} method="PUT">
       <input
         type="checkbox"
+        disabled={!isUpdatable}
         name="value"
         checked={checked}
         onChange={(e) => {
           const form = e.target.form;
           form.requestSubmit();
         }}
-        readOnly
       />
     </SPAForm>
   );
@@ -107,6 +107,9 @@ const CellDefaultComponent = ({ tableName, column, children }) => {
   if (column.data_type === "boolean") {
     return (
       <BooleanCell
+        isUpdatable={
+          column.is_updatable === "YES" || column.column_name === "rowsecurity"
+        }
         tableName={tableName}
         columnName={column.column_name}
         checked={children}

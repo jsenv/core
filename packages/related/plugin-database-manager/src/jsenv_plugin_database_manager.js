@@ -22,6 +22,8 @@ export const jsenvPluginDatabaseManager = () => {
   return {
     name: "jsenv:database_manager",
     init: async ({ rootDirectoryUrl }) => {
+      // surement mieux que je me logue comme superuser
+      // sinon je peux pas changer les owner etc
       const { username, password, database } = readParamsFromContext();
       sql = connectAs({ username, password, database });
       databaseManagerRootDirectoryUrl = new URL(
@@ -95,6 +97,25 @@ export const jsenvPluginDatabaseManager = () => {
             RENAME TO ${sql(tableNewName)};
           `;
           return Response.json({ name: tableNewName });
+        },
+      },
+      {
+        endpoint: "PUT /.internal/database/api/tables/:name/rowsecurity",
+        declarationSource: import.meta.url,
+        acceptedMediaTypes: ["application/json"],
+        fetch: async (request) => {
+          const tableName = request.params.name;
+          const value = await request.json();
+          if (value === "on") {
+            await sql`
+              ALTER TABLE ${sql(tableName)} ENABLE ROW LEVEL SECURITY;
+            `;
+          } else {
+            await sql`
+              ALTER TABLE ${sql(tableName)} DISABLE ROW LEVEL SECURITY;
+            `;
+          }
+          return Response.json({ rowsecurity: value === "on" });
         },
       },
     ],
