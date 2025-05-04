@@ -24,14 +24,15 @@ aside {
 }
 aside > * {
   margin-bottom: 20px;
-  overflow: hidden;
-  overflow-y: auto;
+  overflow: auto;
   border-right: 1px solid #e0e0e0;
   background: #f5f5f5;
   height: 100%;
 }
 nav > details {
-  margin: 15px;
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
 }
 nav > details > summary {
   cursor: pointer;
@@ -46,6 +47,15 @@ nav > details summary svg {
 }
 nav > details:open summary svg {
   transform: rotate(0deg);
+}
+nav > details > ul {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  padding-inline-start: 20px;
+}
+nav > details > ul > li {
+  display: flex;
 }
 main {
   flex-grow: 1;

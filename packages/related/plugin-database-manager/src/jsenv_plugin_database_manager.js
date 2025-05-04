@@ -4,7 +4,6 @@
  */
 
 import {
-  urlToPathname,
   urlToExtension,
   urlIsOrIsInsideOf,
   ensurePathnameTrailingSlash,
@@ -34,14 +33,9 @@ export const jsenvPluginDatabaseManager = () => {
         return null;
       }
       const urlWithTrailingSlash = ensurePathnameTrailingSlash(reference.url);
-
       if (
-        urlIsOrIsInsideOf(
-          urlWithTrailingSlash,
-          databaseManagerRootDirectoryUrl,
-        ) &&
         !urlToExtension(reference.url) &&
-        !urlToPathname(reference.url).endsWith("/")
+        urlIsOrIsInsideOf(urlWithTrailingSlash, databaseManagerRootDirectoryUrl)
       ) {
         return databaseManagerHtmlFileUrl;
       }
