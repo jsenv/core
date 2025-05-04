@@ -1,5 +1,5 @@
 import { signal, effect } from "@preact/signals";
-import { Details } from "@jsenv/router";
+import { useDetails } from "@jsenv/router";
 
 const navbarInfoSignal = signal({ currentUser: null, users: [] });
 effect(async () => {
@@ -33,8 +33,10 @@ const DatabaseNavGroupUsers = () => {
 };
 
 const DatabaseNavGroup = ({ label, items }) => {
+  const detailsProps = useDetails(label);
+
   return (
-    <Details urlParam={label}>
+    <details {...detailsProps}>
       <summary>
         <ArrowDown />
         {label}
@@ -48,7 +50,7 @@ const DatabaseNavGroup = ({ label, items }) => {
           );
         })}
       </ul>
-    </Details>
+    </details>
   );
 };
 
