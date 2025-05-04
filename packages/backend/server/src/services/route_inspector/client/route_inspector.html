@@ -81,31 +81,34 @@
       aside {
         width: 250px;
         flex-shrink: 0;
-        border-radius: 6px;
-        overflow: hidden;
-        background: var(--background-color);
         transition:
           width 0.3s ease,
           margin-left 0.3s ease;
-        max-height: calc(100vh - 40px);
-        overflow-y: auto;
+        height: 100%;
         margin-right: 20px;
-        padding-top: 20px;
-        padding-left: 10px;
+        position: fixed;
       }
       main {
         flex-grow: 1;
         flex-basis: 0;
         min-width: 0;
         transition: margin-left 0.3s ease;
-        padding-top: 10px;
+        padding-top: 20px;
         padding-right: 20px;
+        margin-left: 280px;
       }
 
       .header_row {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 10px;
+      }
+      .header_title {
+        margin: 0;
+        line-height: 1;
+        display: flex;
+        gap: 10px;
+        align-items: center;
       }
       .note_button_open {
         background: none;
@@ -430,8 +433,10 @@
         margin-bottom: 20px;
         border-radius: 4px;
         overflow: hidden;
-        border: 1px solid var(--border-color);
+        overflow-y: auto;
+        border-right: 1px solid var(--border-color);
         background: var(--secondary-color);
+        height: 100%;
       }
       .filter_container::marker {
         display: none;
@@ -450,7 +455,6 @@
       }
       .filter_list {
         background: var(--background-color);
-        border-top: 1px solid var(--border-color);
         overflow: hidden;
       }
       .filter_item {
@@ -571,28 +575,31 @@
       <aside></aside>
       <main>
         <div class="header_row">
-          <h1 style="margin: 0">Route inspector</h1>
-          <button
-            class="note_button_open"
-            aria-label="Show information"
-            title="About HTTP Methods"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="24"
-              height="24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+          <h1 class="header_title">
+            Route inspector
+            <button
+              class="note_button_open"
+              aria-label="Show information"
+              title="About HTTP Methods"
             >
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            </button>
+          </h1>
+
           <div style="flex: 1"></div>
           <div class="theme-toggle">
             <button id="theme-toggle-btn" aria-label="Toggle dark/light mode">

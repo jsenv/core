@@ -2,6 +2,7 @@ import { render } from "preact";
 import { signal, effect } from "@preact/signals";
 import { registerRoutes, SPAForm, useRouteUrl } from "@jsenv/router";
 import { Table } from "./table.jsx";
+import { DatabaseNavbar } from "./database_navbar.jsx";
 
 const tablePublicFilterSignal = signal(false);
 const tableInfoSignal = signal({ columns: [], data: [] });
@@ -46,27 +47,32 @@ const App = () => {
 
   return (
     <div>
-      <h1>Database Manager</h1>
-      <p>Explore and manage your database.</p>
+      <aside>
+        <DatabaseNavbar />
+      </aside>
+      <main>
+        <h1>Database Manager</h1>
+        <p>Explore and manage your database.</p>
 
-      <TableList />
+        <TableList />
 
-      <form>
-        <label>
-          <input
-            type="checkbox"
-            checked={tablePublicFilter}
-            onChange={(e) => {
-              if (e.target.checked) {
-                tablePublicFilterSignal.value = true;
-              } else {
-                tablePublicFilterSignal.value = false;
-              }
-            }}
-          ></input>
-          Public
-        </label>
-      </form>
+        <form>
+          <label>
+            <input
+              type="checkbox"
+              checked={tablePublicFilter}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  tablePublicFilterSignal.value = true;
+                } else {
+                  tablePublicFilterSignal.value = false;
+                }
+              }}
+            ></input>
+            Public
+          </label>
+        </form>
+      </main>
     </div>
   );
 };

@@ -57,6 +57,25 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
+        endpoint: "GET /.internal/database/api/nav",
+        description:
+          "Get info about the database that can be used to build a navbar",
+        declarationSource: import.meta.url,
+        fetch: async () => {
+          const currentUsername = await sql`
+            SELECT
+              current_user
+          `;
+          const users = await sql`
+            SELECT
+              *
+            FROM
+              pg_roles
+          `;
+          return Response.json({ currentUsername, users });
+        },
+      },
+      {
         endpoint: "GET /.internal/database/api/tables",
         declarationSource: import.meta.url,
         fetch: async (request) => {
