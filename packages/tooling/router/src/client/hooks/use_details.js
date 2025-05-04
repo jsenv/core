@@ -1,7 +1,9 @@
 import { useUrlBooleanParam } from "../url.js";
 
-export const useDetails = (urlParam) => {
-  const [opened, openDetails, closeDetails] = useUrlBooleanParam(urlParam);
+export const useDetails = (urlParam, { replace = true } = {}) => {
+  const [opened, openDetails, closeDetails] = useUrlBooleanParam(urlParam, {
+    replace,
+  });
 
   return {
     open: opened,
