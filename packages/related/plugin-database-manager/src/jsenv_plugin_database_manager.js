@@ -119,14 +119,19 @@ export const jsenvPluginDatabaseManager = () => {
       // https://wiki.postgresql.org/wiki/Alter_column_position#Add_columns_and_move_data
       {
         endpoint:
-          "PUT /.internal/database/api/tables/:name/columns/:columnName/ordinal_position",
+          "PUT /.internal/database/api/tables/:name/columns/:columnName/move_before",
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
           const tableName = request.params.name;
           const columnName = request.params.columnName;
-          const value = await request.json();
-          // first I need to know the current column position and type
+          const beforeColumnName = await request.json();
+          if (columnName === beforeColumnName) {
+            return Response.json(
+              `Column and before column are the same :${columnName}`,
+              { status: 400 },
+            );
+          }
           const columns = await sql`
             SELECT
               ordinal_position,
@@ -137,67 +142,147 @@ export const jsenvPluginDatabaseManager = () => {
               table_name = ${sql(tableName)}
               AND column_name = ${sql(columnName)}
           `;
-          const columnIndex = columns.findIndex(
-            (column) => column.column_name === columnName,
-          );
-          const column = columns[columnIndex];
-          if (column.ordinal_position === value) {
-            return Response.json({ ordinal_position: value });
-          }
-          const columnAfterThisOneArray = columns.slice(columnIndex + 1);
-          add_new_columns: {
-            let query = `ALTER TABLE ${sql(tableName)}`;
-            const addInstructions = [];
-            for (const columnAfterThisOne of columnAfterThisOneArray) {
-              addInstructions.push(
-                `ADD COLUMN ${sql(columnAfterThisOne.column_name)}_temp ${sql(
-                  columnAfterThisOne.data_type,
-                )}`,
-              );
+          let columnIndex;
+          let beforeColumnIndex;
+          {
+            let index;
+            while (index < columns.length) {
+              const columnCandidate = columns[index];
+              if (columnCandidate.column_name === columnName) {
+                columnIndex = index;
+                if (beforeColumnIndex === undefined) {
+                  continue;
+                }
+                break;
+              }
+              if (columnCandidate.column_name === beforeColumnName) {
+                beforeColumnIndex = index;
+                if (columnIndex === undefined) {
+                  continue;
+                }
+                break;
+              }
             }
-            query += ` `;
+          }
+          if (columnIndex === undefined) {
+            return Response.json(
+              `Column ${columnName} not found in table ${tableName}`,
+              { status: 404 },
+            );
+          }
+          if (beforeColumnIndex === undefined) {
+            return Response.json(
+              `Column ${beforeColumnName} not found in table ${tableName}`,
+              { status: 404 },
+            );
+          }
+          if (beforeColumnIndex === columnIndex - 1) {
+            return Response.json("", { status: 204 });
+          }
+
+          const addInstructions = [];
+          const setInstructions = [];
+          const removeInstructions = [];
+          const renameInstructions = [];
+          /**
+           *  - a|b|c
+           *  - I want to move b before a
+           *  1. COPY a = a_temp and c=c_temp
+           *  -> a|b|c|a_temp|c_temp
+           *  3. REMOVE a and c
+           *  -> b|a_temp|c_temp
+           *  4. RENAME a_temp to a and c_temp to c
+           *  -> b|a|c
+           */
+          {
+            {
+              let indexBefore = beforeColumnIndex;
+              while (indexBefore--) {
+                const columnBefore = columns[indexBefore];
+                addInstructions.push(
+                  `ADD COLUMN ${sql(columnBefore.column_name)}_temp ${sql(
+                    columnBefore.data_type,
+                  )}`,
+                );
+                setInstructions.push(
+                  `${sql(columnBefore.column_name)}_temp = ${sql(
+                    columnBefore.column_name,
+                  )}`,
+                );
+                removeInstructions.push(
+                  `DROP COLUMN ${sql(columnBefore.column_name)} cascade`,
+                );
+                renameInstructions.push(
+                  `ALTER TABLE ${sql(tableName)} RENAME COLUMN ${sql(
+                    columnBefore.column_name,
+                  )}_temp TO ${sql(columnBefore.column_name)}`,
+                );
+              }
+            }
+            {
+              let indexAfter = columnIndex + 1;
+              while (indexAfter < columns.length) {
+                const columnAfter = columns[indexAfter];
+                addInstructions.push(
+                  `ADD COLUMN ${sql(columnAfter.column_name)}_temp ${sql(
+                    columnAfter.data_type,
+                  )}`,
+                );
+                setInstructions.push(
+                  `${sql(columnAfter.column_name)}_temp = ${sql(
+                    columnAfter.column_name,
+                  )}`,
+                );
+                removeInstructions.push(
+                  `DROP COLUMN ${sql(columnAfter.column_name)} cascade`,
+                );
+                renameInstructions.push(
+                  `ALTER TABLE ${sql(tableName)} RENAME COLUMN ${sql(
+                    columnAfter.column_name,
+                  )}_temp TO ${sql(columnAfter.column_name)}`,
+                );
+                indexAfter++;
+              }
+            }
+          }
+
+          let query = "";
+          copy_new_columns: {
+            query += "\n";
+            query += `# add new columns`;
+            query += "\n";
+            query = `ALTER TABLE ${sql(tableName)} `;
             query += addInstructions.join(", ");
             query += `;`;
-            await sql(query);
-          }
-          update_new_columns: {
-            let query = `ALTER TABLE ${sql(tableName)}`;
-            const copyInstructions = [];
-            for (const columnAfterThisOne of columnAfterThisOneArray) {
-              copyInstructions.push(
-                `${sql(columnAfterThisOne.column_name)}_temp = ${sql(
-                  columnAfterThisOne.column_name,
-                )}`,
-              );
+            {
+              query += "\n";
+              query += `# update new columns`;
+              query += "\n";
+              query += `ALTER TABLE ${sql(tableName)}`;
+              query += ` SET`;
+              query += setInstructions.join(", ");
+              query += `;`;
             }
-            query += ` SET`;
-            query += copyInstructions.join(", ");
-            query += `;`;
-            await sql(query);
           }
           remove_old_columns: {
-            let query = `ALTER TABLE ${sql(tableName)}`;
-            const removeInstructions = [];
-            for (const columnAfterThisOne of columnAfterThisOneArray) {
-              removeInstructions.push(
-                `DROP COLUMN ${sql(columnAfterThisOne.column_name)} cascade`,
-              );
-            }
-            query += ` `;
+            query += "\n";
+            query += `# remove old columns`;
+            query += "\n";
+            query += `ALTER TABLE ${sql(tableName)} `;
             query += removeInstructions.join(", ");
             query += `;`;
-            await sql(query);
           }
           rename_new_columns: {
-            for (const columnAfterThisOne of columnAfterThisOneArray) {
-              await sql(
-                `ALTER TABLE ${sql(tableName)} RENAME COLUMN ${sql(columnAfterThisOne.column_name)}_temp TO ${sql(
-                  columnAfterThisOne.column_name,
-                )}`,
-              );
-            }
+            query += "\n";
+            query += `# rename new columns`;
+            query += "\n";
+            query += renameInstructions.join("\n");
+            query += "\n";
           }
-          return Response.json({ ordinal_position: value });
+          // here we want to check how the query look like
+          debugger;
+          await sql.unsafe(query);
+          return Response.json(null, { status: 204 });
         },
       },
     ],
