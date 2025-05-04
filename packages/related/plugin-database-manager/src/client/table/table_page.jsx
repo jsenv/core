@@ -1,7 +1,7 @@
-import { Route, SPAForm, useRouteUrl } from "@jsenv/router";
-import { Table } from "../table.jsx";
+import { Route } from "@jsenv/router";
 import { tableInfoSignal, tablePublicFilterSignal } from "./table_signals.js";
 import { GET_TABLES_ROUTE, PUT_TABLE_ROUTE } from "./table_routes.js";
+import { DatabaseTable } from "../components/database_table.jsx";
 
 export const TableRoutes = () => {
   return <Route route={GET_TABLES_ROUTE} loaded={TablePage} />;
@@ -9,10 +9,11 @@ export const TableRoutes = () => {
 
 const TablePage = () => {
   const tablePublicFilter = tablePublicFilterSignal.value;
+  const { columns, data } = tableInfoSignal.value;
 
   return (
     <>
-      <TableList />
+      <DatabaseTable column={columns} data={data} putRoute={PUT_TABLE_ROUTE} />
 
       <form>
         <label>
@@ -32,79 +33,4 @@ const TablePage = () => {
       </form>
     </>
   );
-};
-
-const TableList = () => {
-  const { columns, data } = tableInfoSignal.value;
-  columns.sort((a, b) => {
-    return a.ordinal_position - b.ordinal_position;
-  });
-  const tableColumns = columns.map((column) => {
-    const columnName = column.column_name;
-
-    return {
-      accessorKey: columnName,
-      header: () => <span>{columnName}</span>,
-      cell: (info) => {
-        const value = info.getValue();
-        const tableName = info.row.original.tablename;
-        return (
-          <CellDefaultComponent tableName={tableName} column={column}>
-            {value}
-          </CellDefaultComponent>
-        );
-      },
-      footer: (info) => info.column.id,
-    };
-  });
-
-  return <Table columns={tableColumns} data={data} />;
-};
-
-const TableNameCell = ({ name }) => {
-  return (
-    <div>
-      <span>{name}</span>
-    </div>
-  );
-};
-
-const BooleanCell = ({ isUpdatable, tableName, columnName, checked }) => {
-  const putTablePropUrl = useRouteUrl(PUT_TABLE_ROUTE, {
-    name: tableName,
-    prop: columnName,
-  });
-  return (
-    <SPAForm action={putTablePropUrl} method="PUT">
-      <input
-        type="checkbox"
-        disabled={!isUpdatable}
-        name="value"
-        checked={checked}
-        onChange={(e) => {
-          const form = e.target.form;
-          form.requestSubmit();
-        }}
-      />
-    </SPAForm>
-  );
-};
-
-const CellDefaultComponent = ({ tableName, column, children }) => {
-  if (column.name === "tablename") {
-    return <TableNameCell name={children} />;
-  }
-  if (column.data_type === "boolean") {
-    return (
-      <BooleanCell
-        isUpdatable={
-          column.is_updatable === "YES" || column.column_name === "rowsecurity"
-        }
-        tableName={tableName}
-        columnName={column.column_name}
-        checked={children}
-      />
-    );
-  }
-  return String(children);
 };
