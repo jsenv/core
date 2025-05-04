@@ -1,10 +1,9 @@
+import "./router.js"; // must be the first import (so that setBaseUrl is called for any other import)
 import { render } from "preact";
-import { Route } from "@jsenv/router";
 import "./database_manager.css" with { type: "css" };
 import { DatabaseNavbar } from "./database_navbar.jsx";
-import { TablePage } from "./table/table_page.jsx";
-import { UserPage } from "./user/user_page.jsx";
-import { GET_TABLES, GET_USER } from "./routes.js";
+import { TableRoutes } from "./table/table_page.jsx";
+import { UserRoutes } from "./user/user_page.jsx";
 
 const App = () => {
   return (
@@ -15,8 +14,8 @@ const App = () => {
       <main>
         <h1 title="Explore and manager your database">Database Manager</h1>
 
-        <Route route={GET_TABLES} loaded={TablePage} />
-        <Route route={GET_USER} loaded={UserPage} />
+        <UserRoutes />
+        <TableRoutes />
       </main>
     </div>
   );

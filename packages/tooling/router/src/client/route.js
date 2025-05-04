@@ -37,12 +37,16 @@ let routerUIReady = false;
 let resolveRouterUIReadyPromise;
 const routerUIReadyPromise = new Promise((resolve) => {
   resolveRouterUIReadyPromise = () => {
-    routerUIReady = true;
     resolve();
   };
 });
 export const onRouterUILoaded = () => {
+  if (routerUIReady) {
+    return;
+  }
+  routerUIReady = true;
   resolveRouterUIReadyPromise();
+  installNavigation({ applyRouting, routingWhile });
 };
 const routeSet = new Set();
 const matchingRouteSet = new Set();
@@ -216,9 +220,12 @@ const createAndRegisterRoute = ({
   routeSet.add(route);
   return route;
 };
+export const registerRoute = (description) => {
+  const routes = createRoutes(description, createAndRegisterRoute);
+  return routes[0];
+};
 export const registerRoutes = (description) => {
   const routes = createRoutes(description, createAndRegisterRoute);
-  installNavigation({ applyRouting, routingWhile });
   return routes;
 };
 

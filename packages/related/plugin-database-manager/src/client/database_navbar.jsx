@@ -14,7 +14,7 @@
 import { signal, effect } from "@preact/signals";
 import { useDetails, useRouteUrl } from "@jsenv/router";
 import { UserWithHatSvg, UserSvg, UserWithCheckSvg } from "./user_svgs.jsx";
-import { GET_USER } from "./routes.js";
+import { GET_USER_ROUTE } from "./user/user_routes.js";
 
 const navbarInfoSignal = signal({ currentUser: null, users: [] });
 effect(async () => {
@@ -54,7 +54,7 @@ const DatabaseNavGroupUsers = () => {
     return 0;
   });
   const items = users.map((user) => {
-    const seeUserUrl = useRouteUrl(GET_USER, { name: user.rolname });
+    const seeUserUrl = useRouteUrl(GET_USER_ROUTE, { name: user.rolname });
 
     return {
       text: (

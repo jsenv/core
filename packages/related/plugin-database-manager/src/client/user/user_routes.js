@@ -1,4 +1,6 @@
-export const userRoutes = {
+import { registerRoute } from "@jsenv/router";
+
+export const GET_USER_ROUTE = registerRoute({
   "GET /.internal/database/users/:name": async ({ params, signal }) => {
     const name = params.name;
     const response = await fetch(`/.internal/database/api/users/${name}`, {
@@ -7,4 +9,4 @@ export const userRoutes = {
     const data = await response.json();
     return data;
   },
-};
+});

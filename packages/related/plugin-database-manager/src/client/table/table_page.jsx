@@ -1,9 +1,13 @@
-import { SPAForm, useRouteUrl } from "@jsenv/router";
+import { Route, SPAForm, useRouteUrl } from "@jsenv/router";
 import { Table } from "../table.jsx";
 import { tableInfoSignal, tablePublicFilterSignal } from "./table_signals.js";
-import { PUT_TABLE_PROP } from "../routes.js";
+import { GET_TABLES_ROUTE, PUT_TABLE_ROUTE } from "./table_routes.js";
 
-export const TablePage = () => {
+export const TableRoutes = () => {
+  return <Route route={GET_TABLES_ROUTE} loaded={TablePage} />;
+};
+
+const TablePage = () => {
   const tablePublicFilter = tablePublicFilterSignal.value;
 
   return (
@@ -66,7 +70,7 @@ const TableNameCell = ({ name }) => {
 };
 
 const BooleanCell = ({ isUpdatable, tableName, columnName, checked }) => {
-  const putTablePropUrl = useRouteUrl(PUT_TABLE_PROP, {
+  const putTablePropUrl = useRouteUrl(PUT_TABLE_ROUTE, {
     name: tableName,
     prop: columnName,
   });
