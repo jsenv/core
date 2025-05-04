@@ -16,6 +16,10 @@ body {
     color 0.3s ease;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 aside {
   width: 250px;
   flex-shrink: 0;
@@ -32,7 +36,8 @@ aside > * {
 nav > details {
   display: flex;
   flex-direction: column;
-  padding: 15px;
+  margin-top: 15px;
+  margin-bottom: 15px;
 }
 nav > details > summary {
   cursor: pointer;
@@ -41,6 +46,8 @@ nav > details > summary {
   flex-direction: row;
   align-items: center;
   user-select: none;
+  padding-left: 15px;
+  padding-right: 15px;
 }
 nav > details summary svg {
   transform: rotate(-90deg);
@@ -48,14 +55,17 @@ nav > details summary svg {
 nav > details:open summary svg {
   transform: rotate(0deg);
 }
-nav > details > ul {
+.nav_group_list {
   display: flex;
   flex-direction: column;
   margin-top: 0;
-  padding-inline-start: 20px;
+  margin-bottom: 0;
+  padding-left: 35px;
+  padding-right: 15px;
+  width: fit-content;
 }
-nav > details > ul > li {
-  display: flex;
+.nav_group_list_item {
+  display: block;
 }
 main {
   flex-grow: 1;

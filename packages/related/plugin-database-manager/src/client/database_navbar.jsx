@@ -50,10 +50,10 @@ const DatabaseNavGroup = ({ label, items }) => {
         <ArrowDown />
         {label}
       </summary>
-      <ul>
+      <ul className="nav_group_list">
         {items.map((item) => {
           return (
-            <li key={item.url}>
+            <li className="nav_group_list_item" key={item.url}>
               <DatabaseNavItem
                 url={item.url}
                 text={item.text}
@@ -69,9 +69,11 @@ const DatabaseNavGroup = ({ label, items }) => {
 
 const DatabaseNavItem = ({ url, text, icon }) => {
   return (
-    <a href={url} style="display: flex; gap: 0.2em; align-items: center;">
+    <a
+      href={url}
+      style="display: flex; gap: 0.2em; align-items: center; white-space: nowrap;"
+    >
       {icon}
-
       {text}
     </a>
   );
