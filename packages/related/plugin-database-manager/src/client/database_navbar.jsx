@@ -1,3 +1,16 @@
+/**
+ * - ability to select a user
+ *   -> would open the user in <main> + naviguate in the url
+ *   -> a visual indicator would show it's selected
+ *
+ *   the page displaying a user needs to be done
+ * - ability to rename by enter
+ * - a button to create an item (user) in the group (like in vscode)
+ * by default would create a user at the bottom of the list of regular user
+ * (we would resort afterwards to ensure it's at the correct location once created)
+ * - cmd + backspace would allow to delete a user (after a confirm)
+ */
+
 import { signal, effect } from "@preact/signals";
 import { useDetails } from "@jsenv/router";
 import { UserWithHatSvg, UserSvg, UserWithCheckSvg } from "./user_svgs.jsx";

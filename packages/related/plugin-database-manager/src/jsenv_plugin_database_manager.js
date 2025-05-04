@@ -75,6 +75,26 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
+        endpoint: "GET /.internal/database/api/users/:name",
+        declarationSource: import.meta.url,
+        fetch: async (request) => {
+          const username = request.params.name;
+          const results = await sql`
+            SELECT
+              *
+            FROM
+              pg_roles
+            WHERE
+              rolname = ${username}
+          `;
+          if (results.length === 0) {
+            return Response.json(`User ${username} not found`, { status: 404 });
+          }
+          const user = results[0];
+          return Response.json({ user });
+        },
+      },
+      {
         endpoint: "GET /.internal/database/api/tables",
         declarationSource: import.meta.url,
         fetch: async (request) => {
