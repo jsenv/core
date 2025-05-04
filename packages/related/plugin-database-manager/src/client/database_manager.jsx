@@ -2,6 +2,7 @@ import { render } from "preact";
 import { signal, effect } from "@preact/signals";
 import { registerRoutes, SPAForm, useRouteUrl } from "@jsenv/router";
 import { Table } from "./table.jsx";
+import "./database_manager.css" with { type: "css" };
 import { DatabaseNavbar } from "./database_navbar.jsx";
 
 const tablePublicFilterSignal = signal(false);
@@ -51,8 +52,7 @@ const App = () => {
         <DatabaseNavbar />
       </aside>
       <main>
-        <h1>Database Manager</h1>
-        <p>Explore and manage your database.</p>
+        <h1 title="Explore and manager your database">Database Manager</h1>
 
         <TableList />
 
