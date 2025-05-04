@@ -1,4 +1,4 @@
-export const urlIsInsideOf = (url, otherUrl) => {
+export const urlIsOrIsInsideOf = (url, otherUrl) => {
   const urlObject = new URL(url);
   const otherUrlObject = new URL(otherUrl);
 
@@ -9,7 +9,7 @@ export const urlIsInsideOf = (url, otherUrl) => {
   const urlPathname = urlObject.pathname;
   const otherUrlPathname = otherUrlObject.pathname;
   if (urlPathname === otherUrlPathname) {
-    return false;
+    return true;
   }
 
   const isInside = urlPathname.startsWith(otherUrlPathname);

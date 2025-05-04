@@ -1,10 +1,9 @@
 import { assert } from "@jsenv/assert";
-
-import { urlIsInsideOf } from "@jsenv/urls";
+import { urlIsOrIsInsideOf } from "@jsenv/urls";
 
 // different origins
 {
-  const actual = urlIsInsideOf(
+  const actual = urlIsOrIsInsideOf(
     "http://example.com/directory/file.js",
     "http://example.fr/directory/",
   );
@@ -14,17 +13,17 @@ import { urlIsInsideOf } from "@jsenv/urls";
 
 // same urls
 {
-  const actual = urlIsInsideOf(
+  const actual = urlIsOrIsInsideOf(
     "file:///directory/file.js",
     "file:///directory/file.js",
   );
-  const expect = false;
+  const expect = true;
   assert({ actual, expect });
 }
 
 // outside
 {
-  const actual = urlIsInsideOf(
+  const actual = urlIsOrIsInsideOf(
     "file:///whatever/file.js",
     "file:///directory/",
   );
@@ -34,7 +33,7 @@ import { urlIsInsideOf } from "@jsenv/urls";
 
 // inside
 {
-  const actual = urlIsInsideOf(
+  const actual = urlIsOrIsInsideOf(
     "file:///directory/file.js",
     "file:///directory/",
   );
@@ -44,7 +43,7 @@ import { urlIsInsideOf } from "@jsenv/urls";
 
 // deep inside
 {
-  const actual = urlIsInsideOf(
+  const actual = urlIsOrIsInsideOf(
     "file:///directory/subdirectory/file.js",
     "file:///directory/",
   );

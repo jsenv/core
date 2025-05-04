@@ -1,6 +1,6 @@
 import { Abort, raceCallbacks } from "@jsenv/abort";
 import { createDetailedMessage } from "@jsenv/humanize";
-import { urlIsInsideOf } from "@jsenv/urls";
+import { urlIsOrIsInsideOf } from "@jsenv/urls";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 import { readFileSync, writeFileSync } from "node:fs";
 import { composeTwoFileByFileIstanbulCoverages } from "../coverage/istanbul_coverage_composition.js";
@@ -57,7 +57,7 @@ export const createRuntimeUsingPlaywright = ({
     coverageFileUrl,
   }) => {
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
-    if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+    if (!urlIsOrIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       throw new Error(`Cannot execute file that is outside web server root directory
 --- file --- 
 ${fileUrl}

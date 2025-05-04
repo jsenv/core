@@ -31,7 +31,7 @@ import { pickContentType, WebSocketResponse } from "@jsenv/server";
 import {
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
-  urlIsInsideOf,
+  urlIsOrIsInsideOf,
   urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
@@ -379,7 +379,7 @@ const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
   let directoryUrlCandidate = new URL("./", requestedUrl);
   while (!existsSync(directoryUrlCandidate)) {
     directoryUrlCandidate = new URL("../", directoryUrlCandidate);
-    if (!urlIsInsideOf(directoryUrlCandidate, serverRootDirectoryUrl)) {
+    if (!urlIsOrIsInsideOf(directoryUrlCandidate, serverRootDirectoryUrl)) {
       directoryUrlCandidate = new URL(serverRootDirectoryUrl);
       break;
     }
