@@ -58,7 +58,7 @@ export const jsenvPluginDatabaseManager = () => {
           "Get info about the database that can be used to build a navbar",
         declarationSource: import.meta.url,
         fetch: async () => {
-          const currentUsername = await sql`
+          const currentUserResult = await sql`
             SELECT
               current_user
           `;
@@ -68,7 +68,10 @@ export const jsenvPluginDatabaseManager = () => {
             FROM
               pg_roles
           `;
-          return Response.json({ currentUsername, users });
+          return Response.json({
+            currentUserName: currentUserResult[0].current_user,
+            users,
+          });
         },
       },
       {

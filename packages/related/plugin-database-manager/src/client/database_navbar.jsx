@@ -17,23 +17,29 @@ export const DatabaseNavbar = () => {
 };
 
 const DatabaseNavGroupUsers = () => {
-  const {
-    // currentUser,
-    users,
-  } = navbarInfoSignal.value;
+  const { currentUserName, users } = navbarInfoSignal.value;
 
   const items = users.map((user) => {
     return {
-      icon: user.rolname.startsWith("pg_") ? (
-        <span style="width: 1em; height: 1em">
-          <PgUserSvg color="#333" />
-        </span>
-      ) : (
-        <span style="width: 1em; height: 1em">
-          <UserSvg color="#333" />
-        </span>
+      text: (
+        <>
+          {user.rolname.startsWith("pg_") ? (
+            <span style="width: 1em; height: 1em">
+              <PgUserSvg color="#333" />
+            </span>
+          ) : (
+            <span style="width: 1em; height: 1em">
+              <UserSvg color="#333" />
+            </span>
+          )}
+          {user.rolname === currentUserName ? (
+            <span style="width: 1em; height: 1em">
+              <ActiveUserSvg />
+            </span>
+          ) : null}
+          <span>{user.rolname}</span>
+        </>
       ),
-      text: <span>{user.rolname}</span>,
       url: `/.internal/database/api/users/${user.rolname}`,
     };
   });
@@ -79,13 +85,29 @@ const DatabaseNavItem = ({ url, text, icon }) => {
   );
 };
 
+const ActiveUserSvg = () => {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+      width="100%"
+      height="100%"
+    >
+      <path
+        d="m 8 0 c -3.3125 0 -6 2.6875 -6 6 c 0.007812 0.710938 0.136719 1.414062 0.386719 2.078125 l -0.015625 -0.003906 c 0.636718 1.988281 3.78125 5.082031 5.625 6.929687 h 0.003906 v -0.003906 c 1.507812 -1.507812 3.878906 -3.925781 5.046875 -5.753906 c 0.261719 -0.414063 0.46875 -0.808594 0.585937 -1.171875 l -0.019531 0.003906 c 0.25 -0.664063 0.382813 -1.367187 0.386719 -2.078125 c 0 -3.3125 -2.683594 -6 -6 -6 z m 0 3.691406 c 1.273438 0 2.308594 1.035156 2.308594 2.308594 s -1.035156 2.308594 -2.308594 2.308594 c -1.273438 -0.003906 -2.304688 -1.035156 -2.304688 -2.308594 c -0.003906 -1.273438 1.03125 -2.304688 2.304688 -2.308594 z m 0 0"
+        fill="#2e3436"
+      />
+    </svg>
+  );
+};
+
 const UserSvg = ({ color = "currentColor" }) => {
   return (
     <svg
-      width="100%"
-      height="100%"
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
+      width="100%"
+      height="100%"
       fill="none"
     >
       <path
@@ -115,9 +137,13 @@ const PgUserSvg = ({ color = "currentColor" }) => {
       height="100%"
       fill="none"
     >
-      <g>
-        <UserSvg color={color} />
-      </g>
+      <path
+        d="M4 21C4 17.4735 6.60771 14.5561 10 14.0709M19.8726 15.2038C19.8044 15.2079 19.7357 15.21 19.6667 15.21C18.6422 15.21 17.7077 14.7524 17 14C16.2923 14.7524 15.3578 15.2099 14.3333 15.2099C14.2643 15.2099 14.1956 15.2078 14.1274 15.2037C14.0442 15.5853 14 15.9855 14 16.3979C14 18.6121 15.2748 20.4725 17 21C18.7252 20.4725 20 18.6121 20 16.3979C20 15.9855 19.9558 15.5853 19.8726 15.2038ZM15 7C15 9.20914 13.2091 11 11 11C8.79086 11 7 9.20914 7 7C7 4.79086 8.79086 3 11 3C13.2091 3 15 4.79086 15 7Z"
+        stroke={color}
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
     </svg>
   );
 };
