@@ -18,6 +18,7 @@ export {
   useRouterIsBusy,
   useRouterReadyState,
 } from "./router_ready_state.js";
-export { SPAForm, useSPAFormStatus } from "./form/spa_form.jsx";
-export { DeleteLink } from "./form/delete_link.jsx";
+export { Details } from "./components/details.jsx";
+export { SPAForm, useSPAFormStatus } from "./components/spa_form.jsx";
+export { DeleteLink } from "./components/delete_link.jsx";
 export { useUrlBooleanParam, withUrlStringParam } from "./url.js";
