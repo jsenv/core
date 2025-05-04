@@ -1,8 +1,10 @@
-import { registerRoutes } from "@jsenv/router";
+import { registerRoutes, setBaseUrl } from "@jsenv/router";
 import { tableRoutes } from "./table/table_routes.js";
 import { userRoutes } from "./user/user_routes.js";
 
-const [GET_TABLES, GET_USER, PUT_TABLE_PROP] = registerRoutes({
+setBaseUrl(new URL("/.internal/database/", window.location.href));
+
+const [GET_TABLES, PUT_TABLE_PROP, GET_USER] = registerRoutes({
   ...tableRoutes,
   ...userRoutes,
 });
