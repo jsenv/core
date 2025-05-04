@@ -19,6 +19,25 @@ export const DatabaseNavbar = () => {
 const DatabaseNavGroupUsers = () => {
   const { currentUserName, users } = navbarInfoSignal.value;
 
+  users.sort((a, b) => {
+    const aIsCurrent = a.rolname === currentUserName;
+    if (aIsCurrent) {
+      return -1;
+    }
+    const bIsCurrent = b.rolname === currentUserName;
+    if (bIsCurrent) {
+      return 1;
+    }
+    const aIsPg = a.rolname.startsWith("pg_");
+    const bIsPg = b.rolname.startsWith("pg_");
+    if (aIsPg && !bIsPg) {
+      return 1;
+    }
+    if (bIsPg && !aIsPg) {
+      return -1;
+    }
+    return 0;
+  });
   const items = users.map((user) => {
     return {
       text: (
