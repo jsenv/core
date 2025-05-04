@@ -196,6 +196,7 @@ export const eslintConfigRelax = ({
                     "clip-rule",
                     "dominant-baseline",
                     "fill-opacity",
+                    "fill-rule",
                     "font-family",
                     "font-size",
                     "font-weight",

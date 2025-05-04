@@ -23,15 +23,15 @@ const DatabaseNavGroupUsers = () => {
     return {
       text: (
         <>
-          {user.rolname.startsWith("pg_") ? (
-            <span style="width: 1em; height: 1em">
+          <span style="width: 1em; height: 1em">
+            {user.rolname.startsWith("pg_") ? (
               <PgUserSvg color="#333" />
-            </span>
-          ) : (
-            <span style="width: 1em; height: 1em">
+            ) : user.rolsuper ? (
+              <SuperUserSvg color="#333" />
+            ) : (
               <UserSvg color="#333" />
-            </span>
-          )}
+            )}
+          </span>
           {user.rolname === currentUserName ? (
             <span style="width: 1em; height: 1em">
               <ActiveUserSvg />
@@ -127,7 +127,6 @@ const UserSvg = ({ color = "currentColor" }) => {
     </svg>
   );
 };
-
 const PgUserSvg = ({ color = "currentColor" }) => {
   return (
     <svg
@@ -143,6 +142,24 @@ const PgUserSvg = ({ color = "currentColor" }) => {
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
+      />
+    </svg>
+  );
+};
+const SuperUserSvg = ({ color = "currentColor" }) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width="100%"
+      height="100%"
+      fill="none"
+    >
+      <path
+        fill-rule="evenodd"
+        clip-rule="evenodd"
+        d="M12.4472 1.10557C12.1657 0.964809 11.8343 0.964809 11.5528 1.10557L4.55279 4.60557C4.214 4.77496 4 5.12123 4 5.5C4 5.87877 4.214 6.22504 4.55279 6.39443L6.58603 7.41105C6.21046 8.19525 6 9.07373 6 10C6 11.8604 6.84668 13.523 8.17572 14.6235C4.98421 15.7459 3 18.2474 3 21C3 21.5523 3.44772 22 4 22C4.55228 22 5 21.5523 5 21C5 18.7306 7.3553 16 12 16C16.6447 16 19 18.7306 19 21C19 21.5523 19.4477 22 20 22C20.5523 22 21 21.5523 21 21C21 18.2474 19.0158 15.7459 15.8243 14.6235C17.1533 13.523 18 11.8604 18 10C18 9.07373 17.7895 8.19525 17.414 7.41105L19.4472 6.39443C19.786 6.22504 20 5.87877 20 5.5C20 5.12123 19.786 4.77496 19.4472 4.60557L12.4472 1.10557ZM12 14C14.2091 14 16 12.2091 16 10C16 9.39352 15.8656 8.81975 15.6248 8.30566L12.4472 9.89443C12.1657 10.0352 11.8343 10.0352 11.5528 9.89443L8.37525 8.30566C8.13443 8.81975 8 9.39352 8 10C8 12.2091 9.79086 14 12 14ZM8.44695 6.10544L7.23607 5.5L12 3.11803L16.7639 5.5L15.5531 6.10544L12 7.88197L8.44695 6.10544Z"
+        fill={color}
       />
     </svg>
   );
