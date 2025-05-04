@@ -209,6 +209,7 @@ export const eslintConfigRelax = ({
                     "stroke-opacity",
                     "stroke-linejoin",
                     "stroke-linecap",
+                    "stroke-miterlimit",
                     "text-anchor",
                     "text-decoration",
                     "text-rendering",
