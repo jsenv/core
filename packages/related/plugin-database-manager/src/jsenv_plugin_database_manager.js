@@ -79,6 +79,7 @@ export const jsenvPluginDatabaseManager = () => {
         declarationSource: import.meta.url,
         fetch: async (request) => {
           const username = request.params.name;
+          const columns = await getTableColumns(sql, "pg_roles");
           const results = await sql`
             SELECT
               *
@@ -91,7 +92,7 @@ export const jsenvPluginDatabaseManager = () => {
             return Response.json(`User ${username} not found`, { status: 404 });
           }
           const user = results[0];
-          return Response.json({ user });
+          return Response.json({ columns, user });
         },
       },
       {
@@ -99,14 +100,7 @@ export const jsenvPluginDatabaseManager = () => {
         declarationSource: import.meta.url,
         fetch: async (request) => {
           const publicFilter = request.searchParams.has("public"); // TODO: a dynamic filter param
-          const columns = await sql`
-            SELECT
-              *
-            FROM
-              information_schema.columns
-            WHERE
-              table_name = 'pg_tables'
-          `;
+          const columns = await getTableColumns(sql, "pg_tables");
           const data = await sql`
             SELECT
               *
@@ -325,4 +319,16 @@ export const jsenvPluginDatabaseManager = () => {
       },
     ],
   };
+};
+
+const getTableColumns = async (sql, tableName) => {
+  const columns = await sql`
+    SELECT
+      *
+    FROM
+      information_schema.columns
+    WHERE
+      table_name = ${tableName}
+  `;
+  return columns;
 };

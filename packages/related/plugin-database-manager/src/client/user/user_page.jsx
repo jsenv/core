@@ -6,6 +6,7 @@ export const UserRoutes = () => {
 };
 
 const UserPage = ({ route }) => {
+  // TODO: make a FORM
   const user = route.data;
   return JSON.stringify(user);
 };
