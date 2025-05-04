@@ -6,7 +6,7 @@
 import {
   urlToPathname,
   urlToExtension,
-  urlIsInsideOf,
+  urlIsOrIsInsideOf,
   ensurePathnameTrailingSlash,
 } from "@jsenv/urls";
 import { readParamsFromContext, connectAs } from "@jsenv/database";
@@ -30,14 +30,16 @@ export const jsenvPluginDatabaseManager = () => {
       ).href;
     },
     redirectReference: (reference) => {
-      if (
-        ensurePathnameTrailingSlash(reference.url) ===
-        databaseManagerRootDirectoryUrl
-      ) {
-        return databaseManagerHtmlFileUrl;
+      if (!reference.url.startsWith("file:")) {
+        return null;
       }
+      const urlWithTrailingSlash = ensurePathnameTrailingSlash(reference.url);
+
       if (
-        urlIsInsideOf(reference.url, databaseManagerRootDirectoryUrl) &&
+        urlIsOrIsInsideOf(
+          urlWithTrailingSlash,
+          databaseManagerRootDirectoryUrl,
+        ) &&
         !urlToExtension(reference.url) &&
         !urlToPathname(reference.url).endsWith("/")
       ) {
