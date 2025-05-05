@@ -38,7 +38,7 @@
     "@jsenv/ast": "../../internal/ast",
     "@jsenv/urls": "../urls",
     "@jsenv/filesystem": "../filesystem",
-    "@jsenv/importmap": "../../shared/importmap",
-    "@jsenv/node-esm-resolution": "../../tooling/node-esm-resolution"
+    "@jsenv/importmap": "../importmap",
+    "@jsenv/node-esm-resolution": "../node-esm-resolution"
   }
 }

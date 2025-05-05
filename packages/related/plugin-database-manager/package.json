@@ -33,7 +33,7 @@
     "postgres": "3.4.5",
     "@jsenv/urls": "2.8.0",
     "@jsenv/database": "0.0.1",
-    "@jsenv/router": "0.0.1",
+    "@jsenv/router": "0.0.9",
     "@tanstack/table-core": "8.21.3"
   },
   "devDependencies": {

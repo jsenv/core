@@ -133,6 +133,7 @@
     "open": "10.1.2",
     "playwright": "1.52.0",
     "preact": "10.26.5",
+    "preact-iso": "2.9.1",
     "prettier": "3.5.3",
     "prettier-plugin-embed": "0.5.0",
     "prettier-plugin-organize-imports": "4.1.0",
