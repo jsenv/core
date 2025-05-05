@@ -164,9 +164,9 @@ export const jsenvPluginDatabaseManager = () => {
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
-          const tableName = request.params.tableName;
-          const columnName = request.params.columnName;
-          const rowId = request.params.rowId;
+          // const tableName = request.params.tableName;
+          // const columnName = request.params.columnName;
+          // const rowId = request.params.rowId;
         },
       },
       // https://wiki.postgresql.org/wiki/Alter_column_position#Add_columns_and_move_data

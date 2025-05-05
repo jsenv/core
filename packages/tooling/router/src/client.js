@@ -26,5 +26,5 @@ export {
   useSPAFormStatus,
 } from "./client/components/spa_form.jsx";
 export { SPADeleteButton } from "./client/components/spa_delete_button.jsx";
-export { SPACheckBox } from "./client/components/spa_checkbox.jsx";
+export { SPACheckbox } from "./client/components/spa_checkbox.jsx";
 export { useUrlBooleanParam, withUrlStringParam } from "./client/url.js";

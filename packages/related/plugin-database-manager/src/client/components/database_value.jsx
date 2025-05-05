@@ -1,4 +1,4 @@
-import { SPAForm, useRouteUrl } from "@jsenv/router";
+import { useRouteUrl, SPACheckbox } from "@jsenv/router";
 
 export const DatabaseValue = ({ tableName, column, value, ...rest }) => {
   if (column.name === "tablename") {
@@ -34,17 +34,11 @@ const BooleanValue = ({
     columnName,
   });
   return (
-    <SPAForm action={putTablePropUrl} method="PUT">
-      <input
-        type="checkbox"
-        disabled={!isWritable}
-        name="value"
-        checked={checked}
-        onChange={(e) => {
-          const form = e.target.form;
-          form.requestSubmit();
-        }}
-      />
-    </SPAForm>
+    <SPACheckbox
+      action={putTablePropUrl}
+      method="PUT"
+      disabled={!isWritable}
+      checked={checked}
+    />
   );
 };
