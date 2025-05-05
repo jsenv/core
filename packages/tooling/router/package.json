@@ -19,10 +19,10 @@
   "type": "module",
   "exports": {
     ".": {
-      "node": "./src/server/server.js",
-      "browser": "./src/client/client.js"
+      "node": "./src/server.js",
+      "browser": "./src/client.js"
     },
-    "./client": "./src/client/client.js",
+    "./client": "./src/client.js",
     "./*": "./*"
   },
   "files": [
