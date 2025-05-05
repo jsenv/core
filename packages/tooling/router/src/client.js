@@ -19,6 +19,10 @@ export {
   useRouterIsBusy,
   useRouterReadyState,
 } from "./client/router_ready_state.js";
+export {
+  ErrorBoundaryContext,
+  useResetErrorBoundary,
+} from "./client/hooks/use_reset_error_boundary.js";
 export { useDetails } from "./client/hooks/use_details.js";
 export {
   SPAForm,

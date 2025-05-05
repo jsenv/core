@@ -1,6 +1,6 @@
 import { SPACheckbox } from "@jsenv/router";
 
-export const DatabaseValue = ({ column, value, ...rest }) => {
+export const DatabaseValue = ({ label, column, value, ...rest }) => {
   if (column.name === "tablename") {
     return <TableNameValue name={value} />;
   }
@@ -8,6 +8,7 @@ export const DatabaseValue = ({ column, value, ...rest }) => {
     return (
       <BooleanValue
         columnName={column.column_name}
+        label={label}
         isWritable
         checked={value}
         {...rest}
@@ -21,14 +22,21 @@ const TableNameValue = ({ name }) => {
   return <span>{name}</span>;
 };
 
-const BooleanValue = ({ columnName, isWritable, checked, getAction }) => {
+const BooleanValue = ({
+  columnName,
+  isWritable,
+  checked,
+  getAction,
+  ...rest
+}) => {
   const action = getAction({ columnName });
   return (
     <SPACheckbox
-      action={action}
       method="PUT"
+      action={action}
       disabled={!isWritable}
       checked={checked}
+      {...rest}
     />
   );
 };

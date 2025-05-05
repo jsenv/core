@@ -16,6 +16,7 @@ export const PUT_USER_ROUTE = registerRoute({
     params,
     formData,
   }) => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     const columnName = params.columnName;
     const value = formData.get("value");
     const response = await fetch(
