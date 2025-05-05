@@ -7,6 +7,7 @@ export const RectangleLoading = ({ color = "#383a36", radius = 0 }) => {
       viewBox="0 0 40 40"
       width="100%"
       height="100%"
+      style="overflow: visible"
       xmlns="http://www.w3.org/2000/svg"
     >
       {/* Base rectangle outline */}
@@ -52,7 +53,7 @@ export const RectangleLoading = ({ color = "#383a36", radius = 0 }) => {
       </path>
 
       {/* Leading dot that "pulls" the segment */}
-      <circle r="5.5" opacity="0.8" fill={color}>
+      <circle r="3.5" opacity="0.8" fill={color}>
         <animateMotion
           path={`
               M ${1 + radius},1
@@ -67,6 +68,8 @@ export const RectangleLoading = ({ color = "#383a36", radius = 0 }) => {
             `}
           dur="1.8s"
           repeatCount="indefinite"
+          rotate="auto"
+          begin="-0.45s"
         />
       </circle>
     </svg>
