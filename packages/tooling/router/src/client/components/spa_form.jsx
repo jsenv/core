@@ -91,33 +91,35 @@ export const SPAForm = forwardRef(
   },
 );
 
-const SPAFormButton = forwardRef(({ formAction, children, ...props }, ref) => {
-  const innerRef = useRef();
-  const [, formActionMapRef] = useContext(FormContext);
-  useImperativeHandle(ref, () => innerRef.current);
+export const SPAButton = forwardRef(
+  ({ formAction, children, ...props }, ref) => {
+    const innerRef = useRef();
+    const [, formActionMapRef] = useContext(FormContext);
+    useImperativeHandle(ref, () => innerRef.current);
 
-  useEffect(() => {
-    return () => {
-      formActionMapRef.current.delete(innerRef.current);
-    };
-  }, []);
+    useEffect(() => {
+      return () => {
+        formActionMapRef.current.delete(innerRef.current);
+      };
+    }, []);
 
-  return (
-    <button
-      ref={innerRef}
-      {...props}
-      onClick={(clickEvent) => {
-        formActionMapRef.current.set(innerRef.current, formAction);
-        if (props.onClick) {
-          props.onClick(clickEvent);
-        }
-      }}
-    >
-      {children}
-    </button>
-  );
-});
-SPAForm.Button = SPAFormButton;
+    return (
+      <button
+        ref={innerRef}
+        {...props}
+        onClick={(clickEvent) => {
+          formActionMapRef.current.set(innerRef.current, formAction);
+          if (props.onClick) {
+            props.onClick(clickEvent);
+          }
+        }}
+      >
+        {children}
+      </button>
+    );
+  },
+);
+SPAForm.Button = SPAButton;
 
 const applyRoutingOnFormSubmission = canUseNavigation
   ? async ({ method, formData, action }) => {

@@ -20,6 +20,11 @@ export {
   useRouterReadyState,
 } from "./router_ready_state.js";
 export { useDetails } from "./hooks/use_details.js";
-export { SPAForm, useSPAFormStatus } from "./components/spa_form.jsx";
-export { DeleteLink } from "./components/delete_link.jsx";
+export {
+  SPAForm,
+  SPAButton,
+  useSPAFormStatus,
+} from "./components/spa_form.jsx";
+export { SPADeleteButton } from "./components/spa_delete_button.jsx";
+export { SPACheckBox } from "./components/spa_checkbox.jsx";
 export { useUrlBooleanParam, withUrlStringParam } from "./url.js";
