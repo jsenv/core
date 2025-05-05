@@ -63,6 +63,7 @@ export const installNavigation = ({ applyRouting, routingWhile }) => {
       });
     }
     const method = event.info?.method || "GET";
+    const formAction = event.info?.formAction;
     const formData = event.formData || event.info?.formData;
     const formUrl = event.info?.formUrl;
     const abortSignal = signal;
@@ -70,12 +71,12 @@ export const installNavigation = ({ applyRouting, routingWhile }) => {
 
     event.intercept({
       handler: async () => {
-        if (event.info?.action) {
+        if (formAction && !formAction.route) {
           // here we pass signal and not stopSignal because:
           // any navigation or window.stop must stop this action
           // unlike for routes where window.stop() prevent route from loading
           // but an other nav does not as long as the route keeps matching
-          await routingWhile(event.info.action, {
+          await routingWhile(formAction, {
             signal,
             formData,
           });
@@ -85,6 +86,7 @@ export const installNavigation = ({ applyRouting, routingWhile }) => {
           method,
           sourceUrl: url,
           targetUrl: formUrl || url,
+          formAction,
           formData,
           state,
           abortSignal,

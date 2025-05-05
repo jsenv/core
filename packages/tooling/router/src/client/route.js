@@ -8,14 +8,10 @@ import {
 import { documentUrlSignal } from "./document_url.js";
 import { normalizeUrl } from "./normalize_url.js";
 import { goTo, installNavigation } from "./router.js";
+import { IDLE, LOADING, ABORTED, LOADED, FAILED } from "./route_status.js";
 
 let debug = true;
 let debugDocumentRouting = true;
-const IDLE = { id: "idle" };
-const LOADING = { id: "loading" };
-const ABORTED = { id: "aborted" };
-const LOADED = { id: "loaded" };
-const FAILED = { id: "failed" };
 
 // const getDocumentUrl = () => {
 //   const documentUrl = documentUrlSignal.value;
@@ -48,7 +44,144 @@ const createAndRegisterRoute = ({
   methodPattern,
   resourcePattern,
   handler,
+  isAction,
 }) => {
+  const enter = async ({ signal, resource, formAction, formData }) => {
+    // here we must pass a signal that gets aborted when
+    // 1. any route is stopped (browser stop button)
+    // 2. route is left
+    // if we reach the end we can safely clear the current load signals
+    const enterAbortController = new AbortController();
+    const enterAbortSignal = enterAbortController.signal;
+    const abort = (reason) => {
+      if (debug) {
+        console.log(`abort entering "${route}"`);
+      }
+      route.loadingStateSignal.value = ABORTED;
+      enterAbortController.abort(reason);
+    };
+    signal.addEventListener("abort", () => {
+      abort(signal.reason);
+    });
+    routeAbortEnterMap.set(route, abort);
+
+    route.isMatchingSignal.value = true;
+    route.loadingStateSignal.value = LOADING;
+    route.errorSignal.value = null;
+    matchingRouteSet.add(route);
+    if (debug) {
+      console.log(`"${route}": entering route`);
+    }
+
+    if (formAction) {
+      formAction.isMatchingSignal.value = true;
+      formAction.loadingStateSignal.value = true;
+      formAction.errorSignal.value = null;
+    }
+
+    try {
+      const promisesToWait = [];
+      if (route.loadData && !enterAbortSignal.aborted) {
+        const loadDataPromise = (async () => {
+          const { named, stars } = resourcePatternParsed.match(resource);
+          const params = { ...named, ...stars };
+          const data = await route.loadData({
+            signal: enterAbortSignal,
+            params,
+            formData,
+          });
+          route.dataSignal.value = data;
+        })();
+        promisesToWait.push(loadDataPromise);
+      }
+      if (route.loadUI && !enterAbortSignal.aborted) {
+        const loadUIPromise = (async () => {
+          await route.loadUI({ signal: enterAbortSignal });
+        })();
+        promisesToWait.push(loadUIPromise);
+      }
+      if (promisesToWait.length) {
+        await Promise.all(promisesToWait);
+      }
+      route.loadingStateSignal.value = LOADED;
+      if (formAction) {
+        formAction.loadingStateSignal.value = LOADED;
+      }
+      if (route.renderUI && !enterAbortSignal.aborted) {
+        route.node = await route.renderUI();
+      }
+      if (debug) {
+        console.log(`"${route}": route enter end`);
+      }
+      routeAbortEnterMap.delete(route);
+      if (!route.renderUI) {
+        route.leave(`"${route}" has no renderUI`);
+      }
+    } catch (e) {
+      routeAbortEnterMap.delete(route);
+      if (!route.renderUI) {
+        route.leave(`"${route}" error`);
+      }
+      if (enterAbortSignal.aborted && e === enterAbortSignal.reason) {
+        if (formAction) {
+          formAction.loadingStateSignal.value = FAILED;
+        }
+        route.loadingStateSignal.value = ABORTED;
+        return;
+      }
+      batch(() => {
+        route.reportError(e);
+        route.loadingStateSignal.value = FAILED;
+        if (formAction) {
+          formAction.loadingStateSignal.value = FAILED;
+          formAction.errorSignal.value = e;
+        }
+      });
+      throw e;
+    }
+  };
+  const reportError = (e) => {
+    route.errorSignal.value = e;
+  };
+  const leave = (reason) => {
+    const routeAbortEnter = routeAbortEnterMap.get(route);
+    if (routeAbortEnter) {
+      if (debug) {
+        console.log(`"${route}": aborting route enter`);
+      }
+      routeAbortEnterMap.delete(route);
+      routeAbortEnter(reason);
+    }
+    if (debug) {
+      console.log(`"${route}": leaving route`);
+    }
+    route.isMatchingSignal.value = false;
+    route.loadingStateSignal.value = IDLE;
+    matchingRouteSet.delete(route);
+  };
+
+  if (isAction) {
+    const route = {
+      loadData: handler,
+      loadUI: null,
+      renderUI: null,
+      node: null,
+      isMatchingSignal: signal(false),
+      loadingStateSignal: signal(IDLE),
+      errorSignal: signal(null),
+      error: null,
+      match: ({ formAction }) => formAction.route === route,
+      enter,
+      leave,
+      reportError,
+      toString: () => handler.name,
+    };
+    effect(() => {
+      route.error = route.errorSignal.value;
+    });
+    routeSet.add(route);
+    return route;
+  }
   methodPattern = methodPattern.toUpperCase();
   resourcePattern = resourceFromUrl(resourcePattern);
   const resourcePatternParsed = createResourcePattern(resourcePattern);
@@ -85,102 +218,9 @@ const createAndRegisterRoute = ({
       }
       return matchResult;
     },
-    enter: async ({ signal, resource, formData }) => {
-      // here we must pass a signal that gets aborted when
-      // 1. any route is stopped (browser stop button)
-      // 2. route is left
-      // if we reach the end we can safely clear the current load signals
-      const enterAbortController = new AbortController();
-      const enterAbortSignal = enterAbortController.signal;
-      const abort = (reason) => {
-        if (debug) {
-          console.log(`abort entering "${route}"`);
-        }
-        route.loadingStateSignal.value = ABORTED;
-        enterAbortController.abort(reason);
-      };
-      signal.addEventListener("abort", () => {
-        abort(signal.reason);
-      });
-      routeAbortEnterMap.set(route, abort);
-
-      route.isMatchingSignal.value = true;
-      route.loadingStateSignal.value = LOADING;
-      route.errorSignal.value = null;
-      matchingRouteSet.add(route);
-      if (debug) {
-        console.log(`"${route}": entering route`);
-      }
-      try {
-        const promisesToWait = [];
-        if (route.loadData && !enterAbortSignal.aborted) {
-          const loadDataPromise = (async () => {
-            const { named, stars } = resourcePatternParsed.match(resource);
-            const params = { ...named, ...stars };
-            const data = await route.loadData({
-              signal: enterAbortSignal,
-              params,
-              formData,
-            });
-            route.dataSignal.value = data;
-          })();
-          promisesToWait.push(loadDataPromise);
-        }
-        if (route.loadUI && !enterAbortSignal.aborted) {
-          const loadUIPromise = (async () => {
-            await route.loadUI({ signal: enterAbortSignal });
-          })();
-          promisesToWait.push(loadUIPromise);
-        }
-        if (promisesToWait.length) {
-          await Promise.all(promisesToWait);
-        }
-        route.loadingStateSignal.value = LOADED;
-        if (route.renderUI && !enterAbortSignal.aborted) {
-          route.node = await route.renderUI();
-        }
-        if (debug) {
-          console.log(`"${route}": route enter end`);
-        }
-        routeAbortEnterMap.delete(route);
-        if (!route.renderUI) {
-          route.leave(`"${route}" has no renderUI`);
-        }
-      } catch (e) {
-        routeAbortEnterMap.delete(route);
-        if (!route.renderUI) {
-          route.leave(`"${route}" error`);
-        }
-        if (enterAbortSignal.aborted && e === enterAbortSignal.reason) {
-          route.loadingStateSignal.value = ABORTED;
-          return;
-        }
-        batch(() => {
-          route.reportError(e);
-          route.loadingStateSignal.value = FAILED;
-        });
-        throw e;
-      }
-    },
-    reportError: (e) => {
-      route.errorSignal.value = e;
-    },
-    leave: (reason) => {
-      const routeAbortEnter = routeAbortEnterMap.get(route);
-      if (routeAbortEnter) {
-        if (debug) {
-          console.log(`"${route}": aborting route enter`);
-        }
-        routeAbortEnterMap.delete(route);
-        routeAbortEnter(reason);
-      }
-      if (debug) {
-        console.log(`"${route}": leaving route`);
-      }
-      route.isMatchingSignal.value = false;
-      route.loadingStateSignal.value = IDLE;
-      matchingRouteSet.delete(route);
-    },
+    enter,
+    leave,
+    reportError,
     activate: (params) => {
       const documentUrlWithRoute = route.buildUrl(params);
       goTo(documentUrlWithRoute);
@@ -190,12 +230,6 @@ const createAndRegisterRoute = ({
         return "*";
       }
       return `${route.methodPattern} ${route.resourcePattern}`;
-    },
-    // Not working by design because there is no room
-    // to call addRoutePreventingThisOne before navigating to routes
-    routePreventingThisOneSet: new Set(),
-    addRoutePreventingThisOne: (otherRoute) => {
-      route.routePreventingThisOneSet.add(otherRoute);
     },
   };
   effect(() => {
@@ -220,12 +254,20 @@ export const registerRoutes = (description) => {
   const routes = createRoutes(description, createAndRegisterRoute);
   return routes;
 };
+export const registerAction = (fn) => {
+  const action = createAndRegisterRoute({
+    handler: fn,
+    isAction: true,
+  });
+  return action;
+};
 
 const applyRouting = async ({
   method,
   // maybe rename url into resource (because we can't do anything about url outside out domain I guess? TO BE TESTED)
   // sourceUrl,
   targetUrl,
+  formAction,
   formData,
   state,
   stopSignal,
@@ -250,6 +292,7 @@ const applyRouting = async ({
       pathname: urlObject.pathname,
       hash: urlObject.hash,
       formData,
+      formAction,
     };
     return route.match(matchParams);
   };
@@ -329,6 +372,7 @@ const applyRouting = async ({
       const routeEnterPromise = routeToEnter.enter({
         signal: stopSignal,
         resource: targetResource,
+        formAction,
         formData,
       });
       promises.push(routeEnterPromise);

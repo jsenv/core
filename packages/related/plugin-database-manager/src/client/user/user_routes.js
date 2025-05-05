@@ -1,4 +1,4 @@
-import { registerRoute } from "@jsenv/router";
+import { registerRoute, registerAction } from "@jsenv/router";
 
 export const GET_USER_ROUTE = registerRoute({
   "GET /.internal/database/users/:name": async ({ params, signal }) => {
@@ -11,17 +11,14 @@ export const GET_USER_ROUTE = registerRoute({
   },
 });
 
-export const PUT_USER_ROUTE = registerRoute({
-  "PUT /.internal/database/api/users/:columnName": async ({
-    params,
-    formData,
-  }) => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const columnName = params.columnName;
+export const PUT_USER_ACTION = registerAction(
+  async ({ columnName, formData, signal }) => {
+    await new Promise((resolve) => setTimeout(resolve, 100000));
     const value = formData.get("value");
     const response = await fetch(
       `/.internal/database/api/users/${columnName}`,
       {
+        signal,
         method: "PUT",
         headers: {
           "accept": "application/json",
@@ -36,4 +33,4 @@ export const PUT_USER_ROUTE = registerRoute({
       );
     }
   },
-});
+);

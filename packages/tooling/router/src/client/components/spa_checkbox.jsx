@@ -1,20 +1,20 @@
 import { SPAForm } from "./spa_form.jsx";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import { useOptimisticUIState } from "./use_optimistic_ui_state.js";
-import { useSPAFormStatus } from "../hooks/use_spa_form_status.js";
+import { useActionStatus } from "../hooks/use_action.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 import "./spa_checkbox.css" with { type: "css" };
 
 export const SPACheckbox = ({ action, method = "PUT", ...rest }) => {
   return (
     <SPAForm action={action} method={method}>
-      <SPACheckboxInput {...rest} />
+      <SPACheckboxInput action={action} {...rest} />
     </SPAForm>
   );
 };
 
-const SPACheckboxInput = ({ label, checked, ...rest }) => {
-  const { pending } = useSPAFormStatus();
+const SPACheckboxInput = ({ action, label, checked, ...rest }) => {
+  const { pending } = useActionStatus(action);
   const [optimisticUIState, setOptimisticUIState] =
     useOptimisticUIState(checked);
   const inputRef = useRef(null);

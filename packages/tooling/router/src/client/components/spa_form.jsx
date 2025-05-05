@@ -76,7 +76,7 @@ export const SPAForm = forwardRef(
             formActionMapRef.current.get(submitEvent.submitter) || action;
           try {
             await applyRoutingOnFormSubmission({
-              method,
+              method: method.toUpperCase(),
               formData,
               action: actionToPerform,
             });
@@ -134,26 +134,15 @@ SPAForm.Button = SPAButton;
 const applyRoutingOnFormSubmission = canUseNavigation
   ? async ({ method, formData, action }) => {
       const startNav = async () => {
-        if (typeof action === "function") {
-          await navigation.navigate(window.location.href, {
-            history: "replace",
-            info: {
-              action,
-              formData,
-            },
-          }).finished;
-        } else {
-          await navigation.navigate(window.location.href, {
-            history: "replace",
-            info: {
-              method: method.toUpperCase(),
-              formData,
-              formUrl: action,
-            },
-          }).finished;
-        }
+        await navigation.navigate(window.location.href, {
+          history: "replace",
+          info: {
+            method,
+            formData,
+            formAction: action,
+          },
+        }).finished;
       };
-
       try {
         await startNav();
       } catch (e) {

@@ -1,6 +1,7 @@
 export { useCanGoBack, useCanGoForward } from "./client/can_go_back_forward.js";
 export { useDocumentUrl } from "./client/document_url.js";
 export {
+  registerAction,
   registerRoutes,
   registerRoute,
   setBaseUrl,
@@ -12,6 +13,7 @@ export {
   useRouteLoadingState,
   useRouteUrl,
 } from "./client/route.js";
+export { useAction, useActionStatus } from "./client/hooks/use_action.js";
 export { Route } from "./client/route.jsx";
 export { goBack, goForward, goTo, reload, stopLoad } from "./client/router.js";
 export {

@@ -1,6 +1,10 @@
-import { ErrorBoundaryContext, Route, useRouteUrl } from "@jsenv/router";
+/**
+ *
+ */
+
+import { ErrorBoundaryContext, Route, useAction } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
-import { GET_USER_ROUTE, PUT_USER_ROUTE } from "./user_routes.js";
+import { GET_USER_ROUTE, PUT_USER_ACTION } from "./user_routes.js";
 import { DatabaseValue } from "../components/database_value.jsx";
 
 export const UserRoutes = () => {
@@ -38,7 +42,7 @@ const UserFields = ({ route }) => {
               column={column}
               value={value}
               getAction={() => {
-                return useRouteUrl(PUT_USER_ROUTE, { columnName });
+                return useAction(PUT_USER_ACTION, { columnName });
               }}
             />
           </li>
