@@ -27,7 +27,7 @@ const UserPage = ({ route }) => {
           return (
             <li key={index}>
               <DatabaseValue
-                label={columnName}
+                label={<span>{columnName}:</span>}
                 column={column}
                 value={value}
                 getAction={() => {

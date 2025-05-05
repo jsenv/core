@@ -17,7 +17,7 @@ export const SPACheckbox = ({ action, method = "PUT", label, ...rest }) => {
     <SPAForm action={action} method={method}>
       {label ? (
         <label>
-          <span>{label}:</span>
+          {label}
           {input}
         </label>
       ) : (
