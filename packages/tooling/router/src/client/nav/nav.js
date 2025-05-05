@@ -90,6 +90,7 @@ export const installNavigation = ({ applyRouting, routingWhile }) => {
           abortSignal,
           stopSignal,
           reload: event.navigationType === "reload",
+          isReplace: event.navigationType === "replace",
         });
         if (formUrl) {
           const finishedPromise = event.target.transition.finished;

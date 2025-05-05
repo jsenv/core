@@ -247,7 +247,8 @@ const applyRouting = async ({
   formData,
   state,
   stopSignal,
-  reload,
+  isReload,
+  isReplace,
 }) => {
   const sourceResource = resourceFromUrl(sourceUrl);
   const targetResource = resourceFromUrl(targetUrl);
@@ -306,15 +307,18 @@ const applyRouting = async ({
     } else {
       const isAborted = nextMatchingRoute.loadingStateSignal.peek() === ABORTED;
       const hasError = nextMatchingRoute.errorSignal.peek();
-      if (reload) {
+      if (isReload) {
         routeToEnterSet.add(nextMatchingRoute);
       } else if (isAborted) {
         routeToEnterSet.add(nextMatchingRoute);
       } else if (hasError) {
         routeToEnterSet.add(nextMatchingRoute);
       } else if (matchingRouteSet.has(nextMatchingRoute)) {
-        routeToLeaveSet.add(nextMatchingRoute);
-        routeToEnterSet.add(nextMatchingRoute);
+        if (isReplace) {
+        } else {
+          routeToLeaveSet.add(nextMatchingRoute);
+          routeToEnterSet.add(nextMatchingRoute);
+        }
       } else {
         routeToEnterSet.add(nextMatchingRoute);
       }
