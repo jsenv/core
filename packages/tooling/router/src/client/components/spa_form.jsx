@@ -20,6 +20,7 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  useCallback,
 } from "preact/hooks";
 import { canUseNavigation } from "../router.js";
 
@@ -42,7 +43,16 @@ HTMLFormElement.prototype.submit = function (...args) {
 export const SPAForm = forwardRef(
   ({ action, method = "get", children }, ref) => {
     const innerRef = useRef();
-    const [, setError] = useState(null);
+    // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
+    // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
+    // To change if https://github.com/preactjs/preact/issues/4754 lands
+    const [unhandledRejection, resetUnhandledRejection] =
+      useUnhandledRejection();
+    useEffect(() => {
+      if (unhandledRejection) {
+        throw unhandledRejection;
+      }
+    }, [unhandledRejection]);
 
     method = method.toLowerCase();
 
@@ -60,6 +70,7 @@ export const SPAForm = forwardRef(
       <form
         ref={innerRef}
         onSubmit={async (submitEvent) => {
+          resetUnhandledRejection();
           formStatusSetter({ pending: true, error: null });
           submitEvent.preventDefault();
           const formData = new FormData(submitEvent.currentTarget);
@@ -73,12 +84,8 @@ export const SPAForm = forwardRef(
             });
           } catch (e) {
             formStatusSetter({ pending: false, error: e });
-            // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
-            // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
-            setError(() => {
-              throw e;
-            });
-            return;
+            e.__handled__ = true;
+            throw e;
           }
           // the data we don't need them here, we can read them from the route
           // by the way the error is likely also stored on the PATH route
@@ -96,6 +103,28 @@ export const SPAForm = forwardRef(
     );
   },
 );
+
+const useUnhandledRejection = () => {
+  const [unhandledRejectionReason, setUnhandledRejectionReason] =
+    useState(null);
+  useEffect(() => {
+    const handleUnhandledRejection = (event) => {
+      event.preventDefault();
+      setUnhandledRejectionReason(event.reason);
+    };
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    return () => {
+      window.removeEventListener(
+        "unhandledrejection",
+        handleUnhandledRejection,
+      );
+    };
+  }, []);
+  const reset = useCallback(() => {
+    setUnhandledRejectionReason(null);
+  }, []);
+  return [unhandledRejectionReason, reset];
+};
 
 export const SPAButton = forwardRef(
   ({ formAction, children, ...props }, ref) => {
