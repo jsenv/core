@@ -9,8 +9,17 @@ export const UserRoutes = () => {
 
 const UserPage = ({ route }) => {
   const [error, resetError] = useErrorBoundary();
-  const { columns, user } = route.data;
 
+  return (
+    <ErrorBoundaryContext.Provider value={resetError}>
+      {error && <p>An error occurred: {error.message}</p>}
+      <UserFields route={route} />
+    </ErrorBoundaryContext.Provider>
+  );
+};
+
+const UserFields = ({ route }) => {
+  const { columns, user } = route.data;
   const fields = columns.map((column) => {
     return {
       column,
@@ -19,25 +28,22 @@ const UserPage = ({ route }) => {
   });
 
   return (
-    <ErrorBoundaryContext.Provider value={resetError}>
-      {error && <p>An error occurred: {error.message}</p>}
-      <ul>
-        {fields.map(({ column, value }, index) => {
-          const columnName = column.column_name;
-          return (
-            <li key={index}>
-              <DatabaseValue
-                label={<span>{columnName}:</span>}
-                column={column}
-                value={value}
-                getAction={() => {
-                  return useRouteUrl(PUT_USER_ROUTE, { columnName });
-                }}
-              />
-            </li>
-          );
-        })}
-      </ul>
-    </ErrorBoundaryContext.Provider>
+    <ul>
+      {fields.map(({ column, value }, index) => {
+        const columnName = column.column_name;
+        return (
+          <li key={index}>
+            <DatabaseValue
+              label={<span>{columnName}:</span>}
+              column={column}
+              value={value}
+              getAction={() => {
+                return useRouteUrl(PUT_USER_ROUTE, { columnName });
+              }}
+            />
+          </li>
+        );
+      })}
+    </ul>
   );
 };

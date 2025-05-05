@@ -12,7 +12,6 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { createContext } from "preact";
 import { forwardRef } from "preact/compat";
 import {
   useContext,
@@ -23,12 +22,7 @@ import {
 } from "preact/hooks";
 import { useResetErrorBoundary } from "../hooks/use_reset_error_boundary.js";
 import { canUseNavigation } from "../router.js";
-
-const FormContext = createContext();
-export const useSPAFormStatus = () => {
-  const [formStatus] = useContext(FormContext);
-  return formStatus;
-};
+import { FormContext } from "../hooks/use_spa_form_status.js";
 
 const submit = HTMLFormElement.prototype.submit;
 HTMLFormElement.prototype.submit = function (...args) {
