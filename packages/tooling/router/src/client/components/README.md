@@ -10,23 +10,23 @@ When users interact with forms, three different states exist simultaneously:
 
 ## Recommended User Experience Flow
 
-When Form Is Submitted
+### When Form Is Submitted
 
 1. **Preserve UI State**: Maintain the user's inputs in the interface
 2. **Disable Interaction**: Prevent further input while processing the request
 3. **Show Loading Indicator**: Display a spinner near the submit button
    > Note: This may be unnecessary as browsers indicate loading state
 
-If Request Fails
+### If Request Fails
 
 When `form.pending` becomes `false` after failure:
 
 - **Re-enable UI**: Allow user interaction again
 - **Remove Loading Indicators**: Clear any spinners/loading states
-- **Revert UI**: Reset display to match frontend memory state by setting `UIStateRef.current = undefined`
+- **Revert UI**: Reset display to match frontend memory state by setting `UIStateRef.current = frontendMemoryState`
 - **Preserve Frontend State**: No need to update client-side state model
 
-If Request Succeeds
+### If Request Succeeds
 
 When `form.pending` becomes `false` after success:
 
@@ -37,4 +37,27 @@ When `form.pending` becomes `false` after success:
   - In most cases, UI already reflects the server state
   - If server returns modified data, UI will update accordingly
 
-See [./use_ui_or_frontend_state.js](./use_ui_or_frontend_state.js)
+## Usage Example
+
+```jsx
+import { useOptimisticUIState } from "./use_optimistic_ui_state.js";
+
+function EditableField({ serverData, onSubmit }) {
+  const [value, setValue] = useOptimisticUIState(serverData);
+
+  return (
+    <form action={onSubmit}>
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        disabled={form.pending}
+      />
+      <button type="submit" disabled={form.pending}>
+        {form.pending ? "Saving..." : "Save"}
+      </button>
+    </form>
+  );
+}
+
+See [./use_optimistic_ui_state.js](./use_optimistic_ui_state.js) for implementation details.
+```
