@@ -105,6 +105,20 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
+        endpoint: "PUT /.internal/database/api/users/:userName/:columnName",
+        declarationSource: import.meta.url,
+        acceptedMediaTypes: ["application/json"],
+        fetch: async (request) => {
+          const userName = request.params.userName;
+          const columnName = request.params.columnName;
+          const value = await request.json();
+          await sql`
+            ALTER ROLE ${sql(userName)} ${sql(columnName)} = ${sql(value)};
+          `;
+          return Response.json({ [columnName]: value });
+        },
+      },
+      {
         endpoint: "GET /.internal/database/api/tables",
         declarationSource: import.meta.url,
         fetch: async (request) => {
@@ -163,7 +177,7 @@ export const jsenvPluginDatabaseManager = () => {
           "PUT /.internal/database/api/tables/:tableName/columns/:columnName/rows/:rowId",
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
-        fetch: async (request) => {
+        fetch: async () => {
           // const tableName = request.params.tableName;
           // const columnName = request.params.columnName;
           // const rowId = request.params.rowId;

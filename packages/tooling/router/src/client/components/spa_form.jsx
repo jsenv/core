@@ -42,6 +42,7 @@ HTMLFormElement.prototype.submit = function (...args) {
 export const SPAForm = forwardRef(
   ({ action, method = "get", children }, ref) => {
     const innerRef = useRef();
+    const [, setError] = useState(null);
 
     method = method.toLowerCase();
 
@@ -72,6 +73,11 @@ export const SPAForm = forwardRef(
             });
           } catch (e) {
             formStatusSetter({ pending: false, error: e });
+            // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
+            // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
+            setError(() => {
+              throw e;
+            });
             return;
           }
           // the data we don't need them here, we can read them from the route

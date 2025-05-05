@@ -18,13 +18,21 @@ export const PUT_USER_ROUTE = registerRoute({
   }) => {
     const columnName = params.columnName;
     const value = formData.get("value");
-    await fetch(`/.internal/database/api/users/${columnName}`, {
-      method: "PUT",
-      headers: {
-        "accept": "application/json",
-        "content-type": "application/json",
+    const response = await fetch(
+      `/.internal/database/api/users/${columnName}`,
+      {
+        method: "PUT",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(value),
       },
-      body: JSON.stringify(value),
-    });
+    );
+    if (!response.ok) {
+      throw new Error(
+        `Failed to update user: ${response.status} ${response.statusText}`,
+      );
+    }
   },
 });
