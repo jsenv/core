@@ -98,14 +98,16 @@ const createAndRegisterRoute = ({
       // if we reach the end we can safely clear the current load signals
       const enterAbortController = new AbortController();
       const enterAbortSignal = enterAbortController.signal;
-      const abort = () => {
+      const abort = (reason) => {
         if (debug) {
           console.log(`abort entering "${route}"`);
         }
         route.loadingStateSignal.value = ABORTED;
-        enterAbortController.abort();
+        enterAbortController.abort(reason);
       };
-      signal.addEventListener("abort", abort);
+      signal.addEventListener("abort", () => {
+        abort(signal.reason);
+      });
       routeAbortEnterMap.set(route, abort);
 
       route.isMatchingSignal.value = true;
@@ -162,25 +164,29 @@ const createAndRegisterRoute = ({
         }
         routeAbortEnterMap.delete(route);
       } catch (e) {
+        routeAbortEnterMap.delete(route);
+        if (enterAbortSignal.aborted && e === enterAbortSignal.reason) {
+          route.loadingStateSignal.value = ABORTED;
+          return;
+        }
         batch(() => {
           route.reportError(e);
           route.loadingStateSignal.value = FAILED;
         });
-        routeAbortEnterMap.delete(route);
         throw e;
       }
     },
     reportError: (e) => {
       route.errorSignal.value = e;
     },
-    leave: () => {
+    leave: (reason) => {
       const routeAbortEnter = routeAbortEnterMap.get(route);
       if (routeAbortEnter) {
         if (debug) {
           console.log(`"${route}": aborting route enter`);
         }
         routeAbortEnterMap.delete(route);
-        routeAbortEnter();
+        routeAbortEnter(reason);
       }
       if (debug) {
         console.log(`"${route}": leaving route`);
@@ -335,7 +341,8 @@ const applyRouting = async ({
   }
   nextMatchingRouteSet.clear();
   for (const routeToLeave of routeToLeaveSet) {
-    routeToLeave.leave();
+    const firstRoute = Array.from(routeToEnterSet.values())[0];
+    routeToLeave.leave(`Navigating to ${firstRoute}`);
   }
   if (routeToEnterSet.size === 0) {
     if (debug) {
