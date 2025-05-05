@@ -72,7 +72,7 @@ const RectangleLoading = ({ color = "#383a36", radius = 0 }) => {
       height="100%"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Path that represents the rectangle outline */}
+      {/* Primary animation - short segment rotating around */}
       <path
         d={`
           M ${1 + radius},1
@@ -87,17 +87,47 @@ const RectangleLoading = ({ color = "#383a36", radius = 0 }) => {
         `}
         fill="none"
         stroke={color}
-        opacity={0.5}
-        strokeWidth="2"
+        opacity={0.6}
+        strokeWidth="1.5"
         strokeLinecap="round"
-        strokeDasharray={`${pathLength * 0.15} ${pathLength * 0.85}`}
+        strokeDasharray={`${pathLength * 0.1} ${pathLength * 0.9}`}
         strokeDashoffset="0"
       >
         <animate
           attributeName="stroke-dashoffset"
           from={pathLength}
           to="0"
-          dur="1.5s"
+          dur="2s"
+          repeatCount="indefinite"
+        />
+      </path>
+
+      {/* Secondary animation - opposite direction, different size */}
+      <path
+        d={`
+          M ${1 + radius},1
+          L ${39 - radius},1
+          A ${radius},${radius} 0 0 1 39,${1 + radius}
+          L 39,${39 - radius}
+          A ${radius},${radius} 0 0 1 ${39 - radius},39
+          L ${1 + radius},39
+          A ${radius},${radius} 0 0 1 1,${39 - radius}
+          L 1,${1 + radius}
+          A ${radius},${radius} 0 0 1 ${1 + radius},1
+        `}
+        fill="none"
+        stroke={color}
+        opacity={0.4}
+        strokeWidth="1"
+        strokeLinecap="round"
+        strokeDasharray={`${pathLength * 0.05} ${pathLength * 0.95}`}
+        strokeDashoffset="0"
+      >
+        <animate
+          attributeName="stroke-dashoffset"
+          from="0"
+          to={pathLength}
+          dur="3s"
           repeatCount="indefinite"
         />
       </path>
@@ -109,7 +139,7 @@ const RectangleLoading = ({ color = "#383a36", radius = 0 }) => {
         width="38"
         height="38"
         fill="none"
-        stroke="rgba(0,0,0,0.05)"
+        stroke="rgba(0,0,0,0.03)"
         strokeWidth="1"
         rx={radius}
       />
