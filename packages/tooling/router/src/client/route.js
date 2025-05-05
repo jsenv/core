@@ -34,18 +34,11 @@ export const setBaseUrl = (v) => {
 };
 
 let routerUIReady = false;
-let resolveRouterUIReadyPromise;
-const routerUIReadyPromise = new Promise((resolve) => {
-  resolveRouterUIReadyPromise = () => {
-    resolve();
-  };
-});
 export const onRouterUILoaded = () => {
   if (routerUIReady) {
     return;
   }
   routerUIReady = true;
-  resolveRouterUIReadyPromise();
   installNavigation({ applyRouting, routingWhile });
 };
 const routeSet = new Set();
@@ -56,10 +49,11 @@ const createAndRegisterRoute = ({
   resourcePattern,
   handler,
 }) => {
+  methodPattern = methodPattern.toUpperCase();
   resourcePattern = resourceFromUrl(resourcePattern);
   const resourcePatternParsed = createResourcePattern(resourcePattern);
   const route = {
-    methodPattern: methodPattern.toUpperCase(),
+    methodPattern,
     resourcePattern,
     loadData: handler,
     loadUI: null,
@@ -118,53 +112,45 @@ const createAndRegisterRoute = ({
         console.log(`"${route}": entering route`);
       }
       try {
-        const loadDataPromise = (async () => {
-          if (!route.loadData) {
-            return;
-          }
-          const { named, stars } = resourcePatternParsed.match(resource);
-          const params = { ...named, ...stars };
-          const data = await route.loadData({
-            signal: enterAbortSignal,
-            params,
-            formData,
-          });
-          route.dataSignal.value = data;
-        })();
-        const loadUIPromise = (async () => {
-          if (!routerUIReady) {
-            await routerUIReadyPromise;
-          }
-          if (!route.loadUI) {
-            return;
-          }
-          if (enterAbortSignal.aborted) {
-            return;
-          }
-          await route.loadUI({ signal: enterAbortSignal });
-        })();
-
-        await loadDataPromise;
-        await loadUIPromise;
+        const promisesToWait = [];
+        if (route.loadData && !enterAbortSignal.aborted) {
+          const loadDataPromise = (async () => {
+            const { named, stars } = resourcePatternParsed.match(resource);
+            const params = { ...named, ...stars };
+            const data = await route.loadData({
+              signal: enterAbortSignal,
+              params,
+              formData,
+            });
+            route.dataSignal.value = data;
+          })();
+          promisesToWait.push(loadDataPromise);
+        }
+        if (route.loadUI && !enterAbortSignal.aborted) {
+          const loadUIPromise = (async () => {
+            await route.loadUI({ signal: enterAbortSignal });
+          })();
+          promisesToWait.push(loadUIPromise);
+        }
+        if (promisesToWait.length) {
+          await Promise.all(promisesToWait);
+        }
         route.loadingStateSignal.value = LOADED;
-
-        const renderUIPromise = (async () => {
-          if (!route.renderUI) {
-            return;
-          }
-          if (enterAbortSignal.aborted) {
-            return;
-          }
+        if (route.renderUI && !enterAbortSignal.aborted) {
           route.node = await route.renderUI();
-        })();
-        await renderUIPromise;
-
+        }
         if (debug) {
           console.log(`"${route}": route enter end`);
         }
         routeAbortEnterMap.delete(route);
+        if (!route.renderUI) {
+          route.leave(`"${route}" has no renderUI`);
+        }
       } catch (e) {
         routeAbortEnterMap.delete(route);
+        if (!route.renderUI) {
+          route.leave(`"${route}" error`);
+        }
         if (enterAbortSignal.aborted && e === enterAbortSignal.reason) {
           route.loadingStateSignal.value = ABORTED;
           return;
@@ -235,14 +221,10 @@ export const registerRoutes = (description) => {
   return routes;
 };
 
-/**
- *
- */
-
 const applyRouting = async ({
   method,
   // maybe rename url into resource (because we can't do anything about url outside out domain I guess? TO BE TESTED)
-  sourceUrl,
+  // sourceUrl,
   targetUrl,
   formData,
   state,
@@ -250,14 +232,14 @@ const applyRouting = async ({
   isReload,
   isReplace,
 }) => {
-  const sourceResource = resourceFromUrl(sourceUrl);
+  // const sourceResource = resourceFromUrl(sourceUrl);
   const targetResource = resourceFromUrl(targetUrl);
   if (debug) {
     console.log(
       `start routing ${method} ${targetResource} against ${routeSet.size} routes`,
     );
   }
-  const nextMatchingRouteSet = new Set();
+
   const matchRouteAgainst = (route, methodCandidate, resourceCandidate) => {
     const urlObject = new URL(resourceCandidate, baseUrl);
     const matchParams = {
@@ -272,6 +254,7 @@ const applyRouting = async ({
     return route.match(matchParams);
   };
 
+  const nextMatchingRouteSet = new Set();
   for (const routeCandidate of routeSet) {
     const isMatchingTargetUrl = matchRouteAgainst(
       routeCandidate,
@@ -289,57 +272,40 @@ const applyRouting = async ({
   }
   const routeToLeaveSet = new Set();
   const routeToEnterSet = new Set();
+  let nextMatchFullyOffscreen = true;
   for (const nextMatchingRoute of nextMatchingRouteSet) {
-    let otherRoutePreventingThisOne = null;
-    for (const routePreventingThisOne of nextMatchingRoute.routePreventingThisOneSet) {
-      if (nextMatchingRouteSet.has(routePreventingThisOne)) {
-        otherRoutePreventingThisOne = routePreventingThisOne;
-        break;
-      }
+    if (nextMatchingRoute.loadUI || nextMatchingRoute.renderUI) {
+      nextMatchFullyOffscreen = false;
     }
-    if (otherRoutePreventingThisOne) {
-      nextMatchingRouteSet.delete(nextMatchingRoute);
-      if (debug) {
-        console.log(
-          `${nextMatchingRoute.methodPattern} ${nextMatchingRoute.resourcePattern}: prevented by ${otherRoutePreventingThisOne.resourcePattern}`,
-        );
+    const isAborted = nextMatchingRoute.loadingStateSignal.peek() === ABORTED;
+    const hasError = nextMatchingRoute.errorSignal.peek();
+    if (isReload) {
+      routeToEnterSet.add(nextMatchingRoute);
+    } else if (isAborted) {
+      routeToEnterSet.add(nextMatchingRoute);
+    } else if (hasError) {
+      routeToEnterSet.add(nextMatchingRoute);
+    } else if (matchingRouteSet.has(nextMatchingRoute)) {
+      if (isReplace) {
+      } else {
+        routeToLeaveSet.add(nextMatchingRoute);
+        routeToEnterSet.add(nextMatchingRoute);
       }
     } else {
-      const isAborted = nextMatchingRoute.loadingStateSignal.peek() === ABORTED;
-      const hasError = nextMatchingRoute.errorSignal.peek();
-      if (isReload) {
-        routeToEnterSet.add(nextMatchingRoute);
-      } else if (isAborted) {
-        routeToEnterSet.add(nextMatchingRoute);
-      } else if (hasError) {
-        routeToEnterSet.add(nextMatchingRoute);
-      } else if (matchingRouteSet.has(nextMatchingRoute)) {
-        if (isReplace) {
-        } else {
-          routeToLeaveSet.add(nextMatchingRoute);
-          routeToEnterSet.add(nextMatchingRoute);
-        }
-      } else {
-        routeToEnterSet.add(nextMatchingRoute);
-      }
+      routeToEnterSet.add(nextMatchingRoute);
     }
   }
   for (const activeRoute of matchingRouteSet) {
     if (nextMatchingRouteSet.has(activeRoute)) {
       continue;
     }
-    if (sourceResource !== targetResource) {
-      // when we route to a new url but we stay on the current url
-      // until routing is done (POST/PATCH/PUT) (what about DELETE?)
-      // then we keep the route active during that time
-      if (matchRouteAgainst(activeRoute, "GET", sourceResource)) {
-        if (debug) {
-          console.log(
-            `${activeRoute.methodPattern} ${activeRoute.resourcePattern}: stays active while navigating to ${targetResource}`,
-          );
-        }
-        continue;
+    if (nextMatchFullyOffscreen) {
+      if (debug) {
+        console.log(
+          `${activeRoute.methodPattern} ${activeRoute.resourcePattern}: stays active while navigating to ${targetResource}`,
+        );
       }
+      continue;
     }
     routeToLeaveSet.add(activeRoute);
   }

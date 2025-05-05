@@ -171,7 +171,7 @@ const applyRoutingOnFormSubmission = canUseNavigation
           await navigation.navigate(window.location.href, {
             history: "replace",
             info: {
-              method,
+              method: method.toUpperCase(),
               formData,
               formUrl: action,
             },
