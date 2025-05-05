@@ -32,14 +32,14 @@ export const DatabaseNavbar = () => {
 };
 
 const DatabaseNavGroupUsers = () => {
-  const { currentUserName, users } = navbarInfoSignal.value;
+  const { currentUser, users } = navbarInfoSignal.value;
 
   users.sort((a, b) => {
-    const aIsCurrent = a.rolname === currentUserName;
+    const aIsCurrent = a.rolname === currentUser.rolname;
     if (aIsCurrent) {
       return -1;
     }
-    const bIsCurrent = b.rolname === currentUserName;
+    const bIsCurrent = b.rolname === currentUser.rolname;
     if (bIsCurrent) {
       return 1;
     }
@@ -68,7 +68,7 @@ const DatabaseNavGroupUsers = () => {
               <UserSvg color="#333" />
             )}
           </span>
-          {user.rolname === currentUserName ? (
+          {user.rolname === currentUser.rolname ? (
             <span style="width: 1em; height: 1em">
               <ActiveUserSvg />
             </span>

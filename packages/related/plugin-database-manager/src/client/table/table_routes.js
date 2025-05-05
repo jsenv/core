@@ -13,15 +13,15 @@ export const GET_TABLES_ROUTE = registerRoute({
   },
 });
 
-export const PUT_TABLE_ROUTE = registerRoute({
-  "PUT /.internal/database/api/tables/:name/:prop": async ({
+export const UPDATE_TABLE_ROUTE = registerRoute({
+  "PUT /.internal/database/api/tables/:tableName/:columnName": async ({
     params,
     formData,
   }) => {
-    const name = params.name;
-    const prop = params.prop;
+    const tableName = params.tableName;
+    const columnName = params.prop;
     const value = formData.get("value");
-    await fetch(`/.internal/database/api/tables/${name}/${prop}`, {
+    await fetch(`/.internal/database/api/tables/${tableName}/${columnName}`, {
       method: "PUT",
       headers: {
         "accept": "application/json",
@@ -30,11 +30,13 @@ export const PUT_TABLE_ROUTE = registerRoute({
       body: JSON.stringify(value),
     });
     const { data, ...rest } = tableInfoSignal.value;
-    const table = data.find((table) => table.tablename === name);
-    table[prop] = value;
-    tableInfoSignal.value = {
-      ...rest,
-      data: [...data],
-    };
+    const tableClient = data.find((table) => table.tablename === tableName);
+    if (tableClient) {
+      tableClient[columnName] = value;
+      tableInfoSignal.value = {
+        ...rest,
+        data: [...data],
+      };
+    }
   },
 });

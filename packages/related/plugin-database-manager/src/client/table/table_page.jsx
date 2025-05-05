@@ -1,6 +1,6 @@
 import { Route } from "@jsenv/router";
 import { tableInfoSignal, tablePublicFilterSignal } from "./table_signals.js";
-import { GET_TABLES_ROUTE, PUT_TABLE_ROUTE } from "./table_routes.js";
+import { GET_TABLES_ROUTE, UPDATE_TABLE_ROUTE } from "./table_routes.js";
 import { DatabaseTable } from "../components/database_table.jsx";
 
 export const TableRoutes = () => {
@@ -13,8 +13,11 @@ const TablePage = () => {
 
   return (
     <>
-      <DatabaseTable column={columns} data={data} putRoute={PUT_TABLE_ROUTE} />
-
+      <DatabaseTable
+        column={columns}
+        data={data}
+        putRoute={UPDATE_TABLE_ROUTE}
+      />
       <form>
         <label>
           <input

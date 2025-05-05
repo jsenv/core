@@ -62,6 +62,15 @@ export const jsenvPluginDatabaseManager = () => {
             SELECT
               current_user
           `;
+          const currentUsername = currentUserResult[0].current_user;
+          const currentUserResults = await sql`
+            SELECT
+              *
+            FROM
+              pg_roles
+            WHERE
+              rolname = ${currentUsername}
+          `;
           const users = await sql`
             SELECT
               *
@@ -69,7 +78,7 @@ export const jsenvPluginDatabaseManager = () => {
               pg_roles
           `;
           return Response.json({
-            currentUserName: currentUserResult[0].current_user,
+            currentUser: currentUserResults[0],
             users,
           });
         },
@@ -116,11 +125,11 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
-        endpoint: "PUT /.internal/database/api/tables/:name/name",
+        endpoint: "PUT /.internal/database/api/tables/:tableName/columns/name",
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
-          const tableName = request.params.name;
+          const tableName = request.params.tableName;
           const tableNewName = await request.json();
           await sql`
             ALTER TABLE ${sql(tableName)}
@@ -130,11 +139,12 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
-        endpoint: "PUT /.internal/database/api/tables/:name/rowsecurity",
+        endpoint:
+          "PUT /.internal/database/api/tables/:tableName/columns/rowsecurity",
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
-          const tableName = request.params.name;
+          const tableName = request.params.tableName;
           const value = await request.json();
           if (value === "on") {
             await sql`
@@ -146,6 +156,17 @@ export const jsenvPluginDatabaseManager = () => {
             `;
           }
           return Response.json({ rowsecurity: value === "on" });
+        },
+      },
+      {
+        endpoint:
+          "PUT /.internal/database/api/tables/:tableName/columns/:columnName/rows/:rowId",
+        declarationSource: import.meta.url,
+        acceptedMediaTypes: ["application/json"],
+        fetch: async (request) => {
+          const tableName = request.params.tableName;
+          const columnName = request.params.columnName;
+          const rowId = request.params.rowId;
         },
       },
       // https://wiki.postgresql.org/wiki/Alter_column_position#Add_columns_and_move_data

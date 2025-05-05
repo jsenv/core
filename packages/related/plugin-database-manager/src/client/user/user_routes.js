@@ -10,3 +10,21 @@ export const GET_USER_ROUTE = registerRoute({
     return data;
   },
 });
+
+export const PUT_USER_ROUTE = registerRoute({
+  "PUT /.internal/database/api/users/:columnName": async ({
+    params,
+    formData,
+  }) => {
+    const columnName = params.columnName;
+    const value = formData.get("value");
+    await fetch(`/.internal/database/api/users/${columnName}`, {
+      method: "PUT",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(value),
+    });
+  },
+});
