@@ -1,13 +1,12 @@
-import { useRouteUrl, SPACheckbox } from "@jsenv/router";
+import { SPACheckbox } from "@jsenv/router";
 
-export const DatabaseValue = ({ tableName, column, value, ...rest }) => {
+export const DatabaseValue = ({ column, value, ...rest }) => {
   if (column.name === "tablename") {
     return <TableNameValue name={value} />;
   }
   if (column.data_type === "boolean") {
     return (
       <BooleanValue
-        tableName={tableName}
         columnName={column.column_name}
         isWritable
         checked={value}
@@ -22,20 +21,11 @@ const TableNameValue = ({ name }) => {
   return <span>{name}</span>;
 };
 
-const BooleanValue = ({
-  tableName,
-  columnName,
-  isWritable,
-  checked,
-  putRoute,
-}) => {
-  const putTablePropUrl = useRouteUrl(putRoute, {
-    tableName,
-    columnName,
-  });
+const BooleanValue = ({ columnName, isWritable, checked, getAction }) => {
+  const action = getAction({ columnName });
   return (
     <SPACheckbox
-      action={putTablePropUrl}
+      action={action}
       method="PUT"
       disabled={!isWritable}
       checked={checked}

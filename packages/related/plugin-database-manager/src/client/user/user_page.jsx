@@ -1,4 +1,4 @@
-import { Route } from "@jsenv/router";
+import { Route, useRouteUrl } from "@jsenv/router";
 import { GET_USER_ROUTE, PUT_USER_ROUTE } from "./user_routes.js";
 import { DatabaseValue } from "../components/database_value.jsx";
 
@@ -19,16 +19,16 @@ const UserPage = ({ route }) => {
   return (
     <ul>
       {fields.map(({ column, value }, index) => {
-        console.log(column);
         return (
           <li key={index}>
             <label>
               <span>{column.column_name}:</span>
               <DatabaseValue
-                tableName="pg_roles"
                 column={column}
                 value={value}
-                putRoute={PUT_USER_ROUTE}
+                getAction={({ columnName }) => {
+                  return useRouteUrl(PUT_USER_ROUTE, { columnName });
+                }}
               />
             </label>
           </li>
