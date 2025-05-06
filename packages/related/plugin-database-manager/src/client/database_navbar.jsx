@@ -12,7 +12,7 @@
  */
 
 import { signal, effect } from "@preact/signals";
-import { useDetails, SPALink } from "@jsenv/router";
+import { useDetails, SPALink, useRouteIsMatching } from "@jsenv/router";
 import { UserWithHatSvg, UserSvg, UserWithCheckSvg } from "./user_svgs.jsx";
 import { GET_ROLE_ROUTE } from "./role/role_routes.js";
 
@@ -55,6 +55,8 @@ const DatabaseNavGroupRoles = () => {
   });
   const items = roles.map((role) => {
     const roleName = role.rolname;
+    const isCurrent = roleName === currentRole.rolname;
+    const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { roleName });
 
     return (
       <SPALink
@@ -73,12 +75,18 @@ const DatabaseNavGroupRoles = () => {
               <UserSvg color="#333" />
             )}
           </span>
-          {roleName === currentRole.rolname ? (
+          {isCurrent ? (
             <span style="width: 1em; height: 1em">
               <ActiveUserSvg />
             </span>
           ) : null}
-          <span>{roleName}</span>
+          <span
+            style={{
+              background: isOpened ? "lightgrey" : "none",
+            }}
+          >
+            {roleName}
+          </span>
         </>
       </SPALink>
     );

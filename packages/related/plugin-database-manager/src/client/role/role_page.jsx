@@ -17,18 +17,24 @@ const RolePage = ({ route }) => {
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
       {error && <p>An error occurred: {error.message}</p>}
-      <UserFields route={route} />
+      <RoleFields route={route} />
+      <a
+        href="https://www.postgresql.org/docs/14/sql-alterrole.html"
+        target="_blank"
+      >
+        ALTER ROLE documentation
+      </a>
     </ErrorBoundaryContext.Provider>
   );
 };
 
-const UserFields = ({ route }) => {
-  const { columns, user } = route.data;
+const RoleFields = ({ route }) => {
+  const { columns, role } = route.data;
   let roleName;
 
   const fields = columns.map((column) => {
     const columnName = column.column_name;
-    const value = user[columnName];
+    const value = role[columnName];
     if (columnName === "rolname") {
       roleName = value;
     }

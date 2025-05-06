@@ -30,8 +30,22 @@ export const useRouteLoadingState = (route) => {
   return "loaded";
 };
 
-export const useRouteIsMatching = (route) => {
-  return route.isMatchingSignal.value;
+export const useRouteIsMatching = (route, paramsToMatch) => {
+  const isMatching = route.isMatchingSignal.value;
+  const params = route.paramsSignal.value;
+  if (!isMatching) {
+    return false;
+  }
+  if (paramsToMatch) {
+    for (const key of Object.keys(paramsToMatch)) {
+      const valueToMatch = paramsToMatch[key];
+      const routeParamValue = params[key];
+      if (routeParamValue !== valueToMatch) {
+        return false;
+      }
+    }
+  }
+  return true;
 };
 
 export const useRouteIsLoading = (route) => {

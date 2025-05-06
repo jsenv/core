@@ -9,6 +9,7 @@ import {
   ensurePathnameTrailingSlash,
 } from "@jsenv/urls";
 import { readParamsFromContext, connectAs } from "@jsenv/database";
+import { alterRoleQuery } from "./sql/alter_role_queries.js";
 
 const databaseManagerHtmlFileUrl = import.meta.resolve(
   "./client/database_manager.html",
@@ -113,9 +114,7 @@ export const jsenvPluginDatabaseManager = () => {
           const roleName = request.params.roleName;
           const columnName = request.params.columnName;
           const value = await request.json();
-          await sql`
-            ALTER ROLE ${sql(roleName)} ${sql(columnName)} = ${sql(value)};
-          `;
+          await alterRoleQuery(sql, roleName, columnName, value);
           return Response.json({ [columnName]: value });
         },
       },
