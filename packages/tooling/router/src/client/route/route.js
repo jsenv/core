@@ -4,6 +4,7 @@ import { normalizeUrl } from "../normalize_url.js";
 import { goTo, installNavigation } from "../router.js";
 import { IDLE, LOADING, ABORTED, LOADED, FAILED } from "./route_status.js";
 import { routingWhile } from "../document_routing.js";
+import { applyAction } from "../action/action.js";
 
 let debug = true;
 
@@ -39,7 +40,7 @@ export const onRouterUILoaded = () => {
     return;
   }
   routerUIReady = true;
-  installNavigation({ applyRouting, routingWhile });
+  installNavigation({ applyRouting, applyAction });
 };
 
 const routeAbortEnterMap = new Map();

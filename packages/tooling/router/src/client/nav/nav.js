@@ -35,7 +35,7 @@ navigation.reload = () => {
   isReloadFromNavigationAPI = false;
 };
 
-export const installNavigation = ({ applyRouting, routingWhile }) => {
+export const installNavigation = ({ applyRouting, applyAction }) => {
   navigation.addEventListener("navigate", (event) => {
     if (!event.canIntercept) {
       return;
@@ -71,12 +71,12 @@ export const installNavigation = ({ applyRouting, routingWhile }) => {
 
     event.intercept({
       handler: async () => {
-        if (formAction && !formAction.route) {
+        if (formAction) {
           // here we pass signal and not stopSignal because:
           // any navigation or window.stop must stop this action
           // unlike for routes where window.stop() prevent route from loading
           // but an other nav does not as long as the route keeps matching
-          await routingWhile(formAction, {
+          await applyAction(formAction, {
             signal,
             formData,
           });
