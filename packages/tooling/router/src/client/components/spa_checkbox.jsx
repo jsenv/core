@@ -6,6 +6,7 @@ import {
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { useActionStatus } from "../action/action_hooks.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
+import { useDebounceTrue } from "../hooks/use_debounce_true.js";
 import "./spa_checkbox.css" with { type: "css" };
 
 export const SPACheckbox = ({ action, method = "PUT", ...rest }) => {
@@ -18,6 +19,7 @@ export const SPACheckbox = ({ action, method = "PUT", ...rest }) => {
 
 const SPACheckboxInput = ({ action, label, checked, ...rest }) => {
   const { pending } = useActionStatus(action);
+  const shouldShowSpinner = useDebounceTrue(pending, 300);
   const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
     checked,
     action.params.columnName,
@@ -32,7 +34,7 @@ const SPACheckboxInput = ({ action, label, checked, ...rest }) => {
 
   const input = (
     <div style="display:inline-flex;position: relative; ">
-      {pending && (
+      {shouldShowSpinner && (
         <div style="position: absolute; inset: 0">
           <RectangleLoading />
         </div>
