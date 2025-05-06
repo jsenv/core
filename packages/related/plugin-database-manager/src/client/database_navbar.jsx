@@ -12,7 +12,7 @@
  */
 
 import { signal, effect } from "@preact/signals";
-import { useDetails, useRouteUrl } from "@jsenv/router";
+import { useDetails, useRoute } from "@jsenv/router";
 import { UserWithHatSvg, UserSvg, UserWithCheckSvg } from "./user_svgs.jsx";
 import { GET_USER_ROUTE } from "./user/user_routes.js";
 
@@ -54,7 +54,7 @@ const DatabaseNavGroupUsers = () => {
     return 0;
   });
   const items = users.map((user) => {
-    const seeUserUrl = useRouteUrl(GET_USER_ROUTE, { name: user.rolname });
+    const userRoute = useRoute(GET_USER_ROUTE, { name: user.rolname });
 
     return {
       text: (
@@ -76,7 +76,7 @@ const DatabaseNavGroupUsers = () => {
           <span>{user.rolname}</span>
         </>
       ),
-      url: seeUserUrl,
+      url: userRoute.url,
     };
   });
 
