@@ -17,9 +17,7 @@ export const SPACheckbox = ({ action, method = "PUT", ...rest }) => {
 };
 
 const SPACheckboxInput = ({ action, label, checked, ...rest }) => {
-  const { pending, aborted } = useActionStatus(action);
-  // console.log(`action ${action.params.columnName}`, { pending, aborted });
-
+  const { pending } = useActionStatus(action);
   const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
     checked,
     action.params.columnName,

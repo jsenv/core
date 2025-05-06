@@ -67,50 +67,61 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
     const formData = event.formData || event.info?.formData;
     const formUrl = event.info?.formUrl;
     const abortSignal = signal;
-    const stopSignal = signalToStopSignal(signal);
+
+    const stopAbortController = new AbortController();
+    const stopSignal = stopAbortController.signal;
+    const removeStopButtonClickDetector = detectBrowserStopButtonClick(
+      signal,
+      () => {
+        stopAbortController.abort("stop button clicked");
+      },
+    );
 
     event.intercept({
       handler: async () => {
+        let handle;
         if (formAction) {
-          try {
+          handle = async () => {
             await applyAction(formAction, {
               signal: stopSignal,
               formData,
             });
-          } catch (e) {
-            console.error(e); // browser remains silent in case of error during handler so we explicitely log the error to the console
-            throw e;
-          }
-          return;
+          };
+        } else {
+          handle = async () => {
+            await applyRouting({
+              method,
+              sourceUrl: url,
+              targetUrl: formUrl || url,
+              formAction,
+              formData,
+              state,
+              abortSignal,
+              stopSignal,
+              reload: event.navigationType === "reload",
+              isReplace: event.navigationType === "replace",
+            });
+            if (formUrl) {
+              const finishedPromise = event.target.transition.finished;
+              (async () => {
+                try {
+                  await finishedPromise;
+                } finally {
+                  navigation.navigate(window.location.href, {
+                    history: "replace",
+                  });
+                }
+              })();
+            }
+          };
         }
         try {
-          await applyRouting({
-            method,
-            sourceUrl: url,
-            targetUrl: formUrl || url,
-            formAction,
-            formData,
-            state,
-            abortSignal,
-            stopSignal,
-            reload: event.navigationType === "reload",
-            isReplace: event.navigationType === "replace",
-          });
-          if (formUrl) {
-            const finishedPromise = event.target.transition.finished;
-            (async () => {
-              try {
-                await finishedPromise;
-              } finally {
-                navigation.navigate(window.location.href, {
-                  history: "replace",
-                });
-              }
-            })();
-          }
+          await handle();
         } catch (e) {
           console.error(e); // browser remains silent in case of error during handler so we explicitely log the error to the console
           throw e;
+        } finally {
+          removeStopButtonClickDetector();
         }
       },
     });
@@ -118,17 +129,36 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
   navigation.navigate(window.location.href, { history: "replace" });
 };
 let callEffect = () => {};
-const signalToStopSignal = (signal) => {
+
+/**
+ * There is 2 distinct reason to abort a navigation:
+ * - the user clicked the browser stop button
+ * - the user navigate to an other page
+ *
+ * When navigating to an other page we don't want to abort anything, the routing does that
+ * When clicking the stop button we want to cancel everything
+ *
+ * To detect that when aborted, we wait a setTimeout to see if we receive a new navigation
+ * If yes it means this is an abort due to a new navigation
+ * Otherwise it's an abort due to the stop button
+ *
+ * On top of that stop button must cancel X navigation so the last navigation detecting the stop click
+ * is notifying any current navigation that stop button was clicked
+ */
+const browserStopButtonClickCallbackSet = new Set();
+const detectBrowserStopButtonClick = (navigateEventSignal, callback) => {
   callEffect();
-  const stopAbortController = new AbortController();
-  const stopSignal = stopAbortController.signal;
-  signal.addEventListener("abort", async () => {
+  browserStopButtonClickCallbackSet.add(callback);
+  navigateEventSignal.addEventListener("abort", async () => {
     const timeout = setTimeout(() => {
       callEffect = () => {};
       if (debug) {
         console.log("aborted because stop");
       }
-      stopAbortController.abort();
+      for (const browserStopButtonClickCallback of browserStopButtonClickCallbackSet) {
+        browserStopButtonClickCallback();
+      }
+      browserStopButtonClickCallbackSet.clear();
     });
     callEffect = () => {
       if (debug) {
@@ -137,7 +167,10 @@ const signalToStopSignal = (signal) => {
       clearTimeout(timeout);
     };
   });
-  return stopSignal;
+
+  return () => {
+    browserStopButtonClickCallbackSet.delete(callback);
+  };
 };
 
 export const goTo = (url, { state, replace } = {}) => {
