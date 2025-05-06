@@ -128,6 +128,7 @@ export const applyRouting = async ({
   };
   const routeToLeaveSet = new Set();
   const routeToEnterMap = new Map();
+  const routeToKeepActiveSet = new Set();
   for (const routeCandidate of routeSet) {
     const matchResult = routeCandidate.match(targetResource, matchParams);
     if (!matchResult) {
@@ -155,7 +156,7 @@ export const applyRouting = async ({
       } else if (isAborted) {
         routeToEnterMap.set(routeCandidate, enterParams);
       } else {
-        // no need to enter the route, it's already active
+        routeToKeepActiveSet.add(routeCandidate);
       }
     } else {
       routeToEnterMap.set(routeCandidate, enterParams);
@@ -168,11 +169,18 @@ export const applyRouting = async ({
     return;
   }
   if (routeToEnterMap.size === 0) {
-    if (debug) {
-      console.log("no route matching, leaving current routes");
-    }
+    const routeLeftSet = new Set();
     for (const routeToLeave of matchingRouteSet) {
+      if (routeToKeepActiveSet.has(routeToLeave)) {
+        continue;
+      }
+      routeLeftSet.add(routeToLeave);
       leaveRoute(routeToLeave, `Navigating to ${targetResource}`);
+    }
+    if (debug) {
+      console.log(`does not match new routes.
+route still active: ${routeToKeepActiveSet.size === 0 ? "none" : Array.from(routeToKeepActiveSet).join(", ")}
+route left: ${routeLeftSet.size === 0 ? "none" : Array.from(routeLeftSet).join(", ")}`);
     }
     return;
   }
