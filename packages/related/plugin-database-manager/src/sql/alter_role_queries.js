@@ -1,7 +1,9 @@
 export const alterRoleQuery = async (sql, roleName, columnName, value) => {
   const keywords = booleanOptionKeywords[columnName];
   if (keywords) {
-    return sql`ALTER ROLE ${sql(roleName)} ${sql(keywords[value ? 0 : 1])}`;
+    return sql`
+      ALTER ROLE ${sql(roleName)} ${sql.unsafe(keywords[value ? 0 : 1])}
+    `;
   }
   return null;
 };
