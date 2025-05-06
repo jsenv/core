@@ -1,7 +1,9 @@
 import { IDLE, LOADING, ABORTED, LOADED } from "./route_status.js";
+import { documentUrlSignal } from "../document_url.js";
 
 export const useRouteUrl = (route, params) => {
-  return route.buildUrl(params);
+  const documentUrl = documentUrlSignal.value;
+  return route.buildUrl(documentUrl, params);
 };
 
 export const useRouteStatus = (route) => {

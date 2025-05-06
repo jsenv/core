@@ -52,10 +52,19 @@ export const registerRoute = (resourcePattern, handler) => {
     loadUI: null,
     renderUI: null,
     node: null,
-    buildUrl: (params) => {
+    buildUrl: (url, params) => {
       const routeResource = resourcePatternParsed.generate(params);
-      const routeUrl = new URL(routeResource, window.location).href;
-      const routeUrlNormalized = normalizeUrl(routeUrl);
+      const routeUrlObject = new URL(routeResource, baseUrl);
+      const urlObject = new URL(url);
+      const searchParams = urlObject.searchParams;
+      for (const [key, value] of searchParams) {
+        routeUrlObject.searchParams.append(key, value);
+      }
+      const hash = urlObject.hash;
+      if (!routeUrlObject.hash) {
+        routeUrlObject.hash = hash;
+      }
+      const routeUrlNormalized = normalizeUrl(routeUrlObject);
       return routeUrlNormalized;
     },
     urlSignal: signal(null),
@@ -78,7 +87,7 @@ export const registerRoute = (resourcePattern, handler) => {
       route.errorSignal.value = e;
     },
     activate: (params) => {
-      const documentUrlWithRoute = route.buildUrl(params);
+      const documentUrlWithRoute = route.buildUrl(window.location.href, params);
       goTo(documentUrlWithRoute);
     },
     toString: () => {
@@ -138,7 +147,7 @@ export const applyRouting = async ({
       ...matchResult.named,
       ...matchResult.stars,
     };
-    const routeUrl = routeCandidate.buildUrl(params);
+    const routeUrl = routeCandidate.buildUrl(targetUrl, params);
     const currentRouteUrl = routeCandidate.urlSignal.peek();
     const enterParams = {
       signal: stopSignal,
