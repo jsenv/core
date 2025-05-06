@@ -1,8 +1,7 @@
-export { useCanGoBack, useCanGoForward } from "./client/can_go_back_forward.js";
+export { useCanGoBack, useCanGoForward } from "./client/back_and_forward.js";
 export { useDocumentUrl } from "./client/document_url.js";
 export {
   registerAction,
-  registerRoutes,
   registerRoute,
   setBaseUrl,
   useRouteData,

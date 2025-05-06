@@ -1,4 +1,4 @@
-import { updateCanGoBack, updateCanGoForward } from "../can_go_back_forward.js";
+import { updateCanGoBack, updateCanGoForward } from "../back_and_forward.js";
 import { documentIsLoadingSignal } from "../document_loading.js";
 import { documentIsRoutingSignal } from "../document_routing.js";
 import { documentUrlSignal, updateDocumentUrl } from "../document_url.js";

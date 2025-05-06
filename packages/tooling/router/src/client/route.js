@@ -1,6 +1,5 @@
 import { batch, effect, signal } from "@preact/signals";
 import { createResourcePattern } from "../shared/resource_pattern.js";
-import { createRoutes } from "../shared/routes.js";
 import {
   endDocumentRouting,
   startDocumentRouting,
@@ -246,13 +245,13 @@ const createAndRegisterRoute = ({
   routeSet.add(route);
   return route;
 };
-export const registerRoute = (description) => {
-  const routes = createRoutes(description, createAndRegisterRoute);
-  return routes[0];
-};
-export const registerRoutes = (description) => {
-  const routes = createRoutes(description, createAndRegisterRoute);
-  return routes;
+export const registerRoute = (resourcePattern, handler) => {
+  const route = createAndRegisterRoute({
+    methodPattern: "GET",
+    resourcePattern,
+    handler,
+  });
+  return route;
 };
 export const registerAction = (fn) => {
   const action = createAndRegisterRoute({
@@ -267,7 +266,6 @@ const applyRouting = async ({
   // maybe rename url into resource (because we can't do anything about url outside out domain I guess? TO BE TESTED)
   // sourceUrl,
   targetUrl,
-  formAction,
   formData,
   state,
   stopSignal,

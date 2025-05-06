@@ -51,3 +51,15 @@ const DeleteUser = ({ id }) => {
   return <button disabled={pending} onClick={deleteUserAction}></button>;
 };
 ```
+
+## Note to self
+
+Generic GET routes are working fine without having to have X instance per route because
+when I click on a route with a UI it gets reloaded even if it's the current route
+(do we want this? because it means clicking a link where we already are will reload the page)
+
+I need to recall why we reload the page even if we are already on it. I guess we should not.
+
+Consequently we'll have to implement something looking like the thing for action for get routes
+the route needs to be instantiated with params to represent where we are
+then we can assume we are on the route or not

@@ -1,7 +1,8 @@
 import { registerRoute, registerAction } from "@jsenv/router";
 
-export const GET_USER_ROUTE = registerRoute({
-  "GET /.internal/database/users/:name": async ({ params, signal }) => {
+export const GET_USER_ROUTE = registerRoute(
+  "/.internal/database/users/:name",
+  async ({ params, signal }) => {
     const name = params.name;
     const response = await fetch(`/.internal/database/api/users/${name}`, {
       signal,
@@ -9,7 +10,7 @@ export const GET_USER_ROUTE = registerRoute({
     const data = await response.json();
     return data;
   },
-});
+);
 
 export const PUT_USER_ACTION = registerAction(
   async ({ columnName, formData, signal }) => {
