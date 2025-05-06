@@ -3,7 +3,7 @@ import { render } from "preact";
 import "./database_manager.css" with { type: "css" };
 import { DatabaseNavbar } from "./database_navbar.jsx";
 import { TableRoutes } from "./table/table_page.jsx";
-import { UserRoutes } from "./user/user_page.jsx";
+import { RoleRoutes } from "./role/role_page.jsx";
 
 const App = () => {
   return (
@@ -14,7 +14,7 @@ const App = () => {
       <main>
         <h1 title="Explore and manager your database">Database Manager</h1>
 
-        <UserRoutes />
+        <RoleRoutes />
         <TableRoutes />
       </main>
     </div>

@@ -4,14 +4,14 @@
 
 import { ErrorBoundaryContext, Route, useAction } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
-import { GET_USER_ROUTE, PUT_USER_ACTION } from "./user_routes.js";
+import { GET_ROLE_ROUTE, PUT_ROLE_ACTION } from "./role_routes.js";
 import { DatabaseValue } from "../components/database_value.jsx";
 
-export const UserRoutes = () => {
-  return <Route route={GET_USER_ROUTE} loaded={UserPage} />;
+export const RoleRoutes = () => {
+  return <Route route={GET_ROLE_ROUTE} loaded={RolePage} />;
 };
 
-const UserPage = ({ route }) => {
+const RolePage = ({ route }) => {
   const [error, resetError] = useErrorBoundary();
 
   return (
@@ -24,25 +24,35 @@ const UserPage = ({ route }) => {
 
 const UserFields = ({ route }) => {
   const { columns, user } = route.data;
+  let roleName;
+
   const fields = columns.map((column) => {
+    const columnName = column.column_name;
+    const value = user[columnName];
+    if (columnName === "rolname") {
+      roleName = value;
+    }
     return {
       column,
-      value: user[column.column_name],
+      value,
     };
   });
 
   return (
     <ul>
-      {fields.map(({ column, value }, index) => {
+      {fields.map(({ column, value }) => {
         const columnName = column.column_name;
         return (
-          <li key={index}>
+          <li key={columnName}>
             <DatabaseValue
               label={<span>{columnName}:</span>}
               column={column}
               value={value}
               getAction={() => {
-                return useAction(PUT_USER_ACTION, { columnName });
+                return useAction(PUT_ROLE_ACTION, {
+                  roleName,
+                  columnName,
+                });
               }}
             />
           </li>

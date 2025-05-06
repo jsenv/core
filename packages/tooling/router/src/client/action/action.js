@@ -155,7 +155,7 @@ const compareTwoJsValues = (a, b, seenSet = new Set()) => {
   return true;
 };
 
-export const applyAction = async (action, { signal }) => {
+export const applyAction = async (action, { signal, formData }) => {
   await routingWhile(async () => {
     const abortController = new AbortController();
     const abortSignal = abortController.signal;
@@ -178,7 +178,7 @@ export const applyAction = async (action, { signal }) => {
         action.executionStateSignal.value = EXECUTING;
         action.errorSignal.value = null;
       });
-      const data = await action.fn({ signal });
+      const data = await action.fn({ signal, formData });
       if (abortSignal.aborted) {
         return;
       }

@@ -1,10 +1,10 @@
 import { registerRoute, registerAction } from "@jsenv/router";
 
-export const GET_USER_ROUTE = registerRoute(
-  "/.internal/database/users/:name",
+export const GET_ROLE_ROUTE = registerRoute(
+  "/.internal/database/roles/:roleName",
   async ({ params, signal }) => {
-    const name = params.name;
-    const response = await fetch(`/.internal/database/api/users/${name}`, {
+    const roleName = params.roleName;
+    const response = await fetch(`/.internal/database/api/roles/${roleName}`, {
       signal,
     });
     const data = await response.json();
@@ -12,12 +12,11 @@ export const GET_USER_ROUTE = registerRoute(
   },
 );
 
-export const PUT_USER_ACTION = registerAction(
-  async ({ columnName, formData, signal }) => {
-    await new Promise((resolve) => setTimeout(resolve, 100000));
+export const PUT_ROLE_ACTION = registerAction(
+  async ({ roleName, columnName, formData, signal }) => {
     const value = formData.get("value");
     const response = await fetch(
-      `/.internal/database/api/users/${columnName}`,
+      `/.internal/database/api/roles/${roleName}/${columnName}`,
       {
         signal,
         method: "PUT",
@@ -30,7 +29,7 @@ export const PUT_USER_ACTION = registerAction(
     );
     if (!response.ok) {
       throw new Error(
-        `Failed to update user: ${response.status} ${response.statusText}`,
+        `Failed to update role: ${response.status} ${response.statusText}`,
       );
     }
   },

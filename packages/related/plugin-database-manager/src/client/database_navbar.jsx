@@ -14,9 +14,9 @@
 import { signal, effect } from "@preact/signals";
 import { useDetails, useRouteUrl } from "@jsenv/router";
 import { UserWithHatSvg, UserSvg, UserWithCheckSvg } from "./user_svgs.jsx";
-import { GET_USER_ROUTE } from "./user/user_routes.js";
+import { GET_ROLE_ROUTE } from "./role/role_routes.js";
 
-const navbarInfoSignal = signal({ currentUser: null, users: [] });
+const navbarInfoSignal = signal({ currentRole: null, roles: [] });
 effect(async () => {
   const response = await fetch(`/.internal/database/api/nav`);
   const data = await response.json();
@@ -26,20 +26,20 @@ effect(async () => {
 export const DatabaseNavbar = () => {
   return (
     <nav>
-      <DatabaseNavGroupUsers />
+      <DatabaseNavGroupRoles />
     </nav>
   );
 };
 
-const DatabaseNavGroupUsers = () => {
-  const { currentUser, users } = navbarInfoSignal.value;
+const DatabaseNavGroupRoles = () => {
+  const { currentRole, roles } = navbarInfoSignal.value;
 
-  users.sort((a, b) => {
-    const aIsCurrent = a.rolname === currentUser.rolname;
+  roles.sort((a, b) => {
+    const aIsCurrent = a.rolname === currentRole.rolname;
     if (aIsCurrent) {
       return -1;
     }
-    const bIsCurrent = b.rolname === currentUser.rolname;
+    const bIsCurrent = b.rolname === currentRole.rolname;
     if (bIsCurrent) {
       return 1;
     }
@@ -53,34 +53,35 @@ const DatabaseNavGroupUsers = () => {
     }
     return 0;
   });
-  const items = users.map((user) => {
-    const userRouteUrl = useRouteUrl(GET_USER_ROUTE, { name: user.rolname });
+  const items = roles.map((role) => {
+    const roleName = role.rolname;
+    const itemRouteUrl = useRouteUrl(GET_ROLE_ROUTE, { roleName });
 
     return {
       text: (
         <>
           <span style="width: 1em; height: 1em">
-            {user.rolname.startsWith("pg_") ? (
+            {roleName.startsWith("pg_") ? (
               <UserWithCheckSvg color="#333" />
-            ) : user.rolsuper ? (
+            ) : role.rolsuper ? (
               <UserWithHatSvg color="#333" />
             ) : (
               <UserSvg color="#333" />
             )}
           </span>
-          {user.rolname === currentUser.rolname ? (
+          {roleName === currentRole.rolname ? (
             <span style="width: 1em; height: 1em">
               <ActiveUserSvg />
             </span>
           ) : null}
-          <span>{user.rolname}</span>
+          <span>{roleName}</span>
         </>
       ),
-      url: userRouteUrl,
+      url: itemRouteUrl,
     };
   });
 
-  return <DatabaseNavGroup label="users" items={items} />;
+  return <DatabaseNavGroup label="roles" items={items} />;
 };
 
 const DatabaseNavGroup = ({ label, items }) => {

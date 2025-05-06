@@ -58,36 +58,36 @@ export const jsenvPluginDatabaseManager = () => {
           "Get info about the database that can be used to build a navbar",
         declarationSource: import.meta.url,
         fetch: async () => {
-          const currentUserResult = await sql`
+          const currentRoleResult = await sql`
             SELECT
               current_user
           `;
-          const currentUsername = currentUserResult[0].current_user;
-          const currentUserResults = await sql`
+          const currentRoleName = currentRoleResult[0].current_user;
+          const currentRoleResults = await sql`
             SELECT
               *
             FROM
               pg_roles
             WHERE
-              rolname = ${currentUsername}
+              rolname = ${currentRoleName}
           `;
-          const users = await sql`
+          const roles = await sql`
             SELECT
               *
             FROM
               pg_roles
           `;
           return Response.json({
-            currentUser: currentUserResults[0],
-            users,
+            currentRole: currentRoleResults[0],
+            roles,
           });
         },
       },
       {
-        endpoint: "GET /.internal/database/api/users/:name",
+        endpoint: "GET /.internal/database/api/roles/:roleName",
         declarationSource: import.meta.url,
         fetch: async (request) => {
-          const username = request.params.name;
+          const roleName = request.params.roleName;
           const columns = await getTableColumns(sql, "pg_roles");
           const results = await sql`
             SELECT
@@ -95,25 +95,26 @@ export const jsenvPluginDatabaseManager = () => {
             FROM
               pg_roles
             WHERE
-              rolname = ${username}
+              rolname = ${roleName}
           `;
           if (results.length === 0) {
-            return Response.json(`User ${username} not found`, { status: 404 });
+            return Response.json(`Role ${roleName} not found`, { status: 404 });
           }
-          const user = results[0];
-          return Response.json({ columns, user });
+          const role = results[0];
+          return Response.json({ columns, role });
         },
       },
+      // when dropping roles, consider this: https://neon.tech/postgresql/postgresql-administration/postgresql-drop-role
       {
-        endpoint: "PUT /.internal/database/api/users/:userName/:columnName",
+        endpoint: "PUT /.internal/database/api/roles/:roleName/:columnName",
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
-          const userName = request.params.userName;
+          const roleName = request.params.roleName;
           const columnName = request.params.columnName;
           const value = await request.json();
           await sql`
-            ALTER ROLE ${sql(userName)} ${sql(columnName)} = ${sql(value)};
+            ALTER ROLE ${sql(roleName)} ${sql(columnName)} = ${sql(value)};
           `;
           return Response.json({ [columnName]: value });
         },
