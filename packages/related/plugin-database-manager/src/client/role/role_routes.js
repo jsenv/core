@@ -28,9 +28,12 @@ export const PUT_ROLE_ACTION = registerAction(
       },
     );
     if (!response.ok) {
-      throw new Error(
+      const error = await response.json();
+      const updateRoleError = new Error(
         `Failed to update role: ${response.status} ${response.statusText}`,
       );
+      updateRoleError.stack = error.stack;
+      throw updateRoleError;
     }
   },
 );

@@ -16,7 +16,7 @@ const RolePage = ({ route }) => {
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
-      {error && <p>An error occurred: {error.message}</p>}
+      {error && <ErrorDetails error={error} />}
       <RoleFields route={route} />
       <a
         href="https://www.postgresql.org/docs/14/sql-alterrole.html"
@@ -25,6 +25,17 @@ const RolePage = ({ route }) => {
         ALTER ROLE documentation
       </a>
     </ErrorBoundaryContext.Provider>
+  );
+};
+
+const ErrorDetails = ({ error }) => {
+  return (
+    <details>
+      <summary>{error.message}</summary>
+      <pre>
+        <code>{error.stack}</code>
+      </pre>
+    </details>
   );
 };
 
