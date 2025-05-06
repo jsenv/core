@@ -12,7 +12,7 @@
  */
 
 import { signal, effect } from "@preact/signals";
-import { useDetails, useRouteUrl } from "@jsenv/router";
+import { useDetails, SPALink } from "@jsenv/router";
 import { UserWithHatSvg, UserSvg, UserWithCheckSvg } from "./user_svgs.jsx";
 import { GET_ROLE_ROUTE } from "./role/role_routes.js";
 
@@ -55,10 +55,14 @@ const DatabaseNavGroupRoles = () => {
   });
   const items = roles.map((role) => {
     const roleName = role.rolname;
-    const itemRouteUrl = useRouteUrl(GET_ROLE_ROUTE, { roleName });
 
-    return {
-      text: (
+    return (
+      <SPALink
+        key={roleName}
+        route={GET_ROLE_ROUTE}
+        routeParams={{ roleName }}
+        style="display: flex; gap: 0.2em; align-items: center; white-space: nowrap;"
+      >
         <>
           <span style="width: 1em; height: 1em">
             {roleName.startsWith("pg_") ? (
@@ -76,9 +80,8 @@ const DatabaseNavGroupRoles = () => {
           ) : null}
           <span>{roleName}</span>
         </>
-      ),
-      url: itemRouteUrl,
-    };
+      </SPALink>
+    );
   });
 
   return <DatabaseNavGroup label="roles" items={items} />;
@@ -97,28 +100,12 @@ const DatabaseNavGroup = ({ label, items }) => {
         {items.map((item) => {
           return (
             <li className="nav_group_list_item" key={item.url}>
-              <DatabaseNavItem
-                url={item.url}
-                text={item.text}
-                icon={item.icon}
-              />
+              {item}
             </li>
           );
         })}
       </ul>
     </details>
-  );
-};
-
-const DatabaseNavItem = ({ url, text, icon }) => {
-  return (
-    <a
-      href={url}
-      style="display: flex; gap: 0.2em; align-items: center; white-space: nowrap;"
-    >
-      {icon}
-      {text}
-    </a>
   );
 };
 
