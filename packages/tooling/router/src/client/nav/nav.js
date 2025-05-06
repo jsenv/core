@@ -9,7 +9,7 @@ import { documentIsLoadingSignal } from "../document_loading.js";
 import { documentIsRoutingSignal } from "../document_routing.js";
 import { documentUrlSignal, updateDocumentUrl } from "../document_url.js";
 
-let debug = false;
+let debug = true;
 
 updateDocumentUrl(navigation.currentEntry.url);
 navigation.addEventListener("currententrychange", () => {

@@ -67,7 +67,11 @@ const createActionWithParams = (action, params) => {
         }
       }
     },
-    toString: () => action.fn.name || action.fn.toString(),
+    toString: () => {
+      const name = action.fn.name || "anonymous";
+      const paramsString = JSON.stringify(actionWithParams.params);
+      return `${name}(${paramsString})`;
+    },
   };
   disposeDataSignalEffect = effect(() => {
     actionWithParams.data = actionWithParams.dataSignal.value;
@@ -167,6 +171,9 @@ export const applyAction = async (action, { signal }) => {
     });
 
     try {
+      if (debug) {
+        console.log(`executing action ${action}`);
+      }
       batch(() => {
         action.executionStateSignal.value = EXECUTING;
         action.errorSignal.value = null;
@@ -174,6 +181,9 @@ export const applyAction = async (action, { signal }) => {
       const data = await action.fn({ signal });
       if (abortSignal.aborted) {
         return;
+      }
+      if (debug) {
+        console.log(`${action} execution done`);
       }
       batch(() => {
         action.executionStateSignal.value = DONE;
