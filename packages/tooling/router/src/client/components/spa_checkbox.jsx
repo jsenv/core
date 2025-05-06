@@ -14,10 +14,12 @@ export const SPACheckbox = ({ action, method = "PUT", ...rest }) => {
 };
 
 const SPACheckboxInput = ({ action, label, checked, ...rest }) => {
-  const { pending } = useActionStatus(action);
+  const { pending, aborted } = useActionStatus(action);
   const [optimisticUIState, setOptimisticUIState] =
     useOptimisticUIState(checked);
   const inputRef = useRef(null);
+
+  console.log("aborted", aborted, optimisticUIState);
 
   useLayoutEffect(() => {
     if (pending) {

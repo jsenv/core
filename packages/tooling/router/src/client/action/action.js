@@ -1,6 +1,8 @@
-import { signal, effect } from "@preact/signals";
-import { IDLE, EXECUTING, DONE, FAILED } from "./action_status.js";
+import { signal, effect, batch } from "@preact/signals";
+import { IDLE, EXECUTING, DONE, FAILED, ABORTED } from "./action_status.js";
 import { routingWhile } from "../document_routing.js";
+
+let debug = true;
 
 const actionSet = new Set();
 const actionWithParamsSetMap = new Map();
@@ -66,6 +68,7 @@ const createActionWithParams = (action, params) => {
         }
       }
     },
+    toString: () => action.fn.name || action.fn.toString(),
   };
   disposeDataSignalEffect = effect(() => {
     actionWithParams.data = actionWithParams.dataSignal.value;
@@ -152,14 +155,40 @@ const compareTwoJsValues = (a, b, seenSet = new Set()) => {
 
 export const applyAction = async (action, { signal }) => {
   await routingWhile(async () => {
+    const abortController = new AbortController();
+    const abortSignal = abortController.signal;
+    const abort = (reason) => {
+      if (debug) {
+        console.log(`abort action "${action}"`);
+      }
+      console.log("set action as aborted tototo");
+      action.executionStateSignal.value = ABORTED;
+      abortController.abort(reason);
+    };
+    signal.addEventListener("abort", () => {
+      abort(signal.reason);
+    });
+
     try {
-      action.executionStateSignal.value = EXECUTING;
+      batch(() => {
+        action.executionStateSignal.value = EXECUTING;
+        action.errorSignal.value = null;
+      });
       const data = await action.fn({ signal });
-      action.executionStateSignal.value = DONE;
-      action.dataSignal.value = data;
+      batch(() => {
+        action.executionStateSignal.value = DONE;
+        action.dataSignal.value = data;
+      });
     } catch (e) {
-      action.executionStateSignal.value = FAILED;
-      action.errorSignal.value = e;
+      if (abortSignal.aborted && e === abortSignal.reason) {
+        console.log("set action as aborted");
+        action.executionStateSignal.value = ABORTED;
+        return;
+      }
+      batch(() => {
+        action.executionStateSignal.value = FAILED;
+        action.errorSignal.value = e;
+      });
     }
   });
 };

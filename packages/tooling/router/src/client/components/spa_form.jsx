@@ -35,7 +35,7 @@ HTMLFormElement.prototype.submit = function (...args) {
 };
 
 export const SPAForm = forwardRef(
-  ({ action, method = "get", children }, ref) => {
+  ({ action: formAction, method = "get", children }, ref) => {
     const innerRef = useRef();
     // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
     // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
@@ -53,9 +53,10 @@ export const SPAForm = forwardRef(
 
     const [formStatus, formStatusSetter] = useState({
       pending: false,
+      aborted: false,
       error: null,
       method,
-      action,
+      action: formAction,
     });
     const formActionMapRef = useRef(new Map());
 
@@ -65,29 +66,50 @@ export const SPAForm = forwardRef(
       <form
         ref={innerRef}
         onSubmit={async (submitEvent) => {
+          submitEvent.preventDefault();
           if (resetErrorBoundary) {
             resetErrorBoundary();
           }
           setError(null);
-          formStatusSetter({ pending: true, error: null });
-          submitEvent.preventDefault();
+          const action =
+            formActionMapRef.current.get(submitEvent.submitter) || formAction;
+          formStatusSetter({
+            pending: true,
+            aborted: false,
+            error: null,
+            method,
+            action,
+          });
           const formData = new FormData(submitEvent.currentTarget);
-          const actionToPerform =
-            formActionMapRef.current.get(submitEvent.submitter) || action;
           try {
             await applyRoutingOnFormSubmission({
               method: method.toUpperCase(),
               formData,
-              action: actionToPerform,
+              action,
+            });
+            // the data we don't need them here, we can read them from the route
+            // by the way the error is likely also stored on the PATH route
+            // but for now let's ignore
+            formStatusSetter({
+              pending: false,
+              aborted: false,
+              error: null,
+              method,
+              action,
             });
           } catch (e) {
-            formStatusSetter({ pending: false, error: e });
-            setError(e);
+            if (e && e.name === "AbortError") {
+            } else {
+              formStatusSetter({
+                pending: false,
+                aborted: false,
+                error: e,
+                method,
+                action,
+              });
+              setError(e);
+            }
           }
-          // the data we don't need them here, we can read them from the route
-          // by the way the error is likely also stored on the PATH route
-          // but for now let's ignore
-          formStatusSetter({ pending: false });
         }}
         method={method === "get" ? "get" : "post"}
         data-action={typeof action === "string" ? action : undefined}
@@ -143,14 +165,7 @@ const applyRoutingOnFormSubmission = canUseNavigation
           },
         }).finished;
       };
-      try {
-        await startNav();
-      } catch (e) {
-        if (e && e.name === "AbortError") {
-          return;
-        }
-        throw e;
-      }
+      await startNav();
     }
   : () => {
       // TODO
