@@ -3,9 +3,8 @@ import {
   useRef,
   // useLayoutEffect
 } from "preact/hooks";
-import { useSPAFormStatus } from "./use_spa_form_status.js";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
-// import { useActionStatus } from "../action/action_hooks.js";
+import { useActionStatus } from "../action/action_hooks.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 import "./spa_checkbox.css" with { type: "css" };
 
@@ -18,13 +17,10 @@ export const SPACheckbox = ({ action, method = "PUT", ...rest }) => {
 };
 
 const SPACheckboxInput = ({ action, label, checked, ...rest }) => {
-  // const { pending, aborted } = useActionStatus(action);
-  const { pending } = useSPAFormStatus();
+  const { pending } = useActionStatus(action);
   const [optimisticUIState, setOptimisticUIState] =
     useOptimisticUIState(checked);
   const inputRef = useRef(null);
-
-  console.log("optimistic value", optimisticUIState);
 
   // useLayoutEffect(() => {
   //   if (pending) {
