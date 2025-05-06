@@ -1,7 +1,11 @@
 import { SPAForm } from "./spa_form.jsx";
-import { useRef, useLayoutEffect } from "preact/hooks";
-import { useOptimisticUIState } from "./use_optimistic_ui_state.js";
-import { useActionStatus } from "../action/action_hooks.js";
+import {
+  useRef,
+  // useLayoutEffect
+} from "preact/hooks";
+import { useSPAFormStatus } from "./use_spa_form_status.js";
+import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
+// import { useActionStatus } from "../action/action_hooks.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 import "./spa_checkbox.css" with { type: "css" };
 
@@ -14,18 +18,19 @@ export const SPACheckbox = ({ action, method = "PUT", ...rest }) => {
 };
 
 const SPACheckboxInput = ({ action, label, checked, ...rest }) => {
-  const { pending, aborted } = useActionStatus(action);
+  // const { pending, aborted } = useActionStatus(action);
+  const { pending } = useSPAFormStatus();
   const [optimisticUIState, setOptimisticUIState] =
     useOptimisticUIState(checked);
   const inputRef = useRef(null);
 
-  console.log("aborted", aborted, optimisticUIState);
+  console.log("optimistic value", optimisticUIState);
 
-  useLayoutEffect(() => {
-    if (pending) {
-      // show the loading stuff, ensure we match checkbox size and color somehow
-    }
-  }, [pending]);
+  // useLayoutEffect(() => {
+  //   if (pending) {
+  //     // show the loading stuff, ensure we match checkbox size and color somehow
+  //   }
+  // }, [pending, aborted]);
 
   const input = (
     <div style="display:inline-flex;position: relative; ">

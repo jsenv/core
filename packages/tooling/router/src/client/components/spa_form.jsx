@@ -22,7 +22,7 @@ import {
 } from "preact/hooks";
 import { useResetErrorBoundary } from "../hooks/use_reset_error_boundary.js";
 import { canUseNavigation } from "../router.js";
-import { FormContext } from "../hooks/use_spa_form_status.js";
+import { FormContext } from "./use_spa_form_status.js";
 
 const submit = HTMLFormElement.prototype.submit;
 HTMLFormElement.prototype.submit = function (...args) {
@@ -87,9 +87,6 @@ export const SPAForm = forwardRef(
               formData,
               action,
             });
-            // the data we don't need them here, we can read them from the route
-            // by the way the error is likely also stored on the PATH route
-            // but for now let's ignore
             formStatusSetter({
               pending: false,
               aborted: false,
@@ -99,6 +96,13 @@ export const SPAForm = forwardRef(
             });
           } catch (e) {
             if (e && e.name === "AbortError") {
+              formStatusSetter({
+                pending: false,
+                aborted: true,
+                error: null,
+                method,
+                action,
+              });
             } else {
               formStatusSetter({
                 pending: false,
@@ -112,7 +116,6 @@ export const SPAForm = forwardRef(
           }
         }}
         method={method === "get" ? "get" : "post"}
-        data-action={typeof action === "string" ? action : undefined}
         data-method={method}
       >
         <FormContext.Provider value={[formStatus, formActionMapRef]}>
@@ -155,17 +158,14 @@ SPAForm.Button = SPAButton;
 
 const applyRoutingOnFormSubmission = canUseNavigation
   ? async ({ method, formData, action }) => {
-      const startNav = async () => {
-        await navigation.navigate(window.location.href, {
-          history: "replace",
-          info: {
-            method,
-            formData,
-            formAction: action,
-          },
-        }).finished;
-      };
-      await startNav();
+      await navigation.navigate(window.location.href, {
+        history: "replace",
+        info: {
+          method,
+          formData,
+          formAction: action,
+        },
+      }).finished;
     }
   : () => {
       // TODO

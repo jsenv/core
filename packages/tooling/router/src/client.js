@@ -23,7 +23,7 @@ export {
   ErrorBoundaryContext,
   useResetErrorBoundary,
 } from "./client/hooks/use_reset_error_boundary.js";
-export { useSPAFormStatus } from "./client/hooks/use_spa_form_status.js";
+export { useSPAFormStatus } from "./client/components/use_spa_form_status.js";
 export { useDetails } from "./client/hooks/use_details.js";
 export { SPAForm, SPAButton } from "./client/components/spa_form.jsx";
 export { SPADeleteButton } from "./client/components/spa_delete_button.jsx";

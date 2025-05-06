@@ -161,9 +161,8 @@ export const applyAction = async (action, { signal }) => {
       if (debug) {
         console.log(`abort action "${action}"`);
       }
-      console.log("set action as aborted tototo");
-      action.executionStateSignal.value = ABORTED;
       abortController.abort(reason);
+      action.executionStateSignal.value = ABORTED;
     };
     signal.addEventListener("abort", () => {
       abort(signal.reason);
