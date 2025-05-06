@@ -33,7 +33,6 @@ export const registerAction = (fn) => {
   actionSet.add(action);
   return action;
 };
-
 const createActionWithParams = (action, params) => {
   let disposeDataSignalEffect;
   let disposeErrorSignalEffect;
@@ -78,7 +77,6 @@ const createActionWithParams = (action, params) => {
   });
   return actionWithParams;
 };
-
 const compareTwoJsValues = (a, b, seenSet = new Set()) => {
   if (a === b) {
     return true;
@@ -174,20 +172,22 @@ export const applyAction = async (action, { signal }) => {
         action.errorSignal.value = null;
       });
       const data = await action.fn({ signal });
+      if (abortSignal.aborted) {
+        return;
+      }
       batch(() => {
         action.executionStateSignal.value = DONE;
         action.dataSignal.value = data;
       });
     } catch (e) {
       if (abortSignal.aborted && e === abortSignal.reason) {
-        console.log("set action as aborted");
         action.executionStateSignal.value = ABORTED;
-        return;
+      } else {
+        batch(() => {
+          action.executionStateSignal.value = FAILED;
+          action.errorSignal.value = e;
+        });
       }
-      batch(() => {
-        action.executionStateSignal.value = FAILED;
-        action.errorSignal.value = e;
-      });
     }
   });
 };

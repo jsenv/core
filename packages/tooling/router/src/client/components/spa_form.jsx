@@ -13,6 +13,7 @@
  */
 
 import { forwardRef } from "preact/compat";
+import { ABORTED } from "../action/action_status.js";
 import {
   useContext,
   useEffect,
@@ -81,38 +82,21 @@ export const SPAForm = forwardRef(
             action,
           });
           const formData = new FormData(submitEvent.currentTarget);
-          try {
-            await applyRoutingOnFormSubmission({
-              method: method.toUpperCase(),
-              formData,
-              action,
-            });
-            formStatusSetter({
-              pending: false,
-              aborted: false,
-              error: null,
-              method,
-              action,
-            });
-          } catch (e) {
-            if (e && e.name === "AbortError") {
-              formStatusSetter({
-                pending: false,
-                aborted: true,
-                error: null,
-                method,
-                action,
-              });
-            } else {
-              formStatusSetter({
-                pending: false,
-                aborted: false,
-                error: e,
-                method,
-                action,
-              });
-              setError(e);
-            }
+          await applyRoutingOnFormSubmission({
+            method: method.toUpperCase(),
+            formData,
+            action,
+          });
+          const error = action.errorSignal.peek();
+          formStatusSetter({
+            pending: false,
+            aborted: action.executionStateSignal.peek() === ABORTED,
+            error,
+            method,
+            action,
+          });
+          if (error) {
+            setError(error);
           }
         }}
         method={method === "get" ? "get" : "post"}
@@ -158,14 +142,22 @@ SPAForm.Button = SPAButton;
 
 const applyRoutingOnFormSubmission = canUseNavigation
   ? async ({ method, formData, action }) => {
-      await navigation.navigate(window.location.href, {
-        history: "replace",
-        info: {
-          method,
-          formData,
-          formAction: action,
-        },
-      }).finished;
+      try {
+        await navigation.navigate(window.location.href, {
+          history: "replace",
+          info: {
+            method,
+            formData,
+            formAction: action,
+          },
+        }).finished;
+      } catch (e) {
+        if (e.name === "AbortError") {
+          return;
+        }
+        console.error(e);
+        throw e;
+      }
     }
   : () => {
       // TODO

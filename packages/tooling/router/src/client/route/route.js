@@ -225,6 +225,7 @@ const enterRoute = async (route, { signal, url, params }) => {
     }
     route.loadingStateSignal.value = ABORTED;
     enterAbortController.abort(reason);
+    routeAbortEnterMap.delete(route);
   };
   signal.addEventListener("abort", () => {
     abort(signal.reason);
@@ -245,7 +246,7 @@ const enterRoute = async (route, { signal, url, params }) => {
 
   try {
     const promisesToWait = [];
-    if (route.loadData && !enterAbortSignal.aborted) {
+    if (route.loadData) {
       const loadDataPromise = (async () => {
         const data = await route.loadData({
           signal: enterAbortSignal,
@@ -255,7 +256,7 @@ const enterRoute = async (route, { signal, url, params }) => {
       })();
       promisesToWait.push(loadDataPromise);
     }
-    if (route.loadUI && !enterAbortSignal.aborted) {
+    if (route.loadUI) {
       const loadUIPromise = (async () => {
         await route.loadUI({ signal: enterAbortSignal });
       })();
@@ -263,24 +264,23 @@ const enterRoute = async (route, { signal, url, params }) => {
     }
     if (promisesToWait.length) {
       await Promise.all(promisesToWait);
+      if (enterAbortSignal.aborted) {
+        return;
+      }
     }
     route.loadingStateSignal.value = LOADED;
-
-    if (route.renderUI && !enterAbortSignal.aborted) {
+    if (route.renderUI) {
       route.node = await route.renderUI();
+      if (enterAbortSignal.aborted) {
+        return;
+      }
     }
     if (debug) {
       console.log(`"${route}": route enter end`);
     }
     routeAbortEnterMap.delete(route);
-    if (!route.renderUI) {
-      route.leave(`"${route}" has no renderUI`);
-    }
   } catch (e) {
     routeAbortEnterMap.delete(route);
-    if (!route.renderUI) {
-      route.leave(`"${route}" error`);
-    }
     if (enterAbortSignal.aborted && e === enterAbortSignal.reason) {
       route.loadingStateSignal.value = ABORTED;
       return;
@@ -298,7 +298,6 @@ const leaveRoute = (route, reason) => {
     if (debug) {
       console.log(`"${route}": aborting route enter`);
     }
-    routeAbortEnterMap.delete(route);
     routeAbortEnter(reason);
   }
   if (debug) {

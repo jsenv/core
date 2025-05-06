@@ -72,14 +72,15 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
     event.intercept({
       handler: async () => {
         if (formAction) {
-          // here we pass signal and not stopSignal because:
-          // any navigation or window.stop must stop this action
-          // unlike for routes where window.stop() prevent route from loading
-          // but an other nav does not as long as the route keeps matching
-          await applyAction(formAction, {
-            signal,
-            formData,
-          });
+          try {
+            await applyAction(formAction, {
+              signal: stopSignal,
+              formData,
+            });
+          } catch (e) {
+            console.error(e); // browser remains silent in case of error during handler so we explicitely log the error to the console
+            throw e;
+          }
           return;
         }
         try {

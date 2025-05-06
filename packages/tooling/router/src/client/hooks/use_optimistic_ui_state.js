@@ -1,13 +1,19 @@
 import { useRef, useLayoutEffect, useCallback, useState } from "preact/hooks";
 import { useSPAFormStatus } from "../components/use_spa_form_status.js";
 
-export const useOptimisticUIState = (frontendMemoryState) => {
+export const useOptimisticUIState = (frontendMemoryState, name) => {
   const { pending, aborted } = useSPAFormStatus();
   const optimisticStateRef = useRef(frontendMemoryState);
   const [, setAborted] = useState(false);
 
+  console.log(`optimistic ${name}`, { pending, aborted });
+
   useLayoutEffect(() => {
-    if (!pending || aborted) {
+    if (!pending) {
+      // console.log("stop being pending");
+      optimisticStateRef.current = frontendMemoryState;
+    } else if (aborted) {
+      // console.log("aborted");
       optimisticStateRef.current = frontendMemoryState;
     }
   }, [frontendMemoryState, pending, aborted]);
@@ -21,7 +27,7 @@ export const useOptimisticUIState = (frontendMemoryState) => {
     if (aborted) {
       setAborted(true);
     }
-  }, [frontendMemoryState, aborted]);
+  }, [aborted]);
 
   const setOptimisticState = useCallback((value) => {
     optimisticStateRef.current = value;
