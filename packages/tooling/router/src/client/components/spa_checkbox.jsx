@@ -1,7 +1,7 @@
 import { SPAForm } from "./spa_form.jsx";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import { useOptimisticUIState } from "./use_optimistic_ui_state.js";
-import { useActionStatus } from "../hooks/use_action.js";
+import { useActionStatus } from "../action/action_hooks.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 import "./spa_checkbox.css" with { type: "css" };
 

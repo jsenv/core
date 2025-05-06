@@ -59,6 +59,7 @@ export const registerRoute = (resourcePattern, handler) => {
       return routeUrlNormalized;
     },
     urlSignal: signal(null),
+    paramsSignal: signal({}),
     isMatchingSignal: signal(false),
     loadingStateSignal: signal(IDLE),
     errorSignal: signal(null),
@@ -81,14 +82,14 @@ export const registerRoute = (resourcePattern, handler) => {
       goTo(documentUrlWithRoute);
     },
     toString: () => {
-      if (route.methodPattern === "*" && route.resourcePattern === "*") {
-        return "*";
-      }
-      return `${route.methodPattern} ${route.resourcePattern}`;
+      return `${route.resourcePattern}`;
     },
   };
   effect(() => {
     route.url = route.urlSignal.value;
+  });
+  effect(() => {
+    route.params = route.paramsSignal.value;
   });
   effect(() => {
     route.data = route.dataSignal.value;
@@ -126,19 +127,23 @@ export const applyRouting = async ({
     hash: targetUrlObject.hash,
   };
   const routeToLeaveSet = new Set();
-  const routeToEnterMap = new Set();
+  const routeToEnterMap = new Map();
   for (const routeCandidate of routeSet) {
     const matchResult = routeCandidate.match(targetResource, matchParams);
     if (!matchResult) {
       continue;
     }
-    const routeUrl = routeCandidate.buildUrl(matchResult);
+    const params = {
+      ...matchResult.named,
+      ...matchResult.stars,
+    };
+    const routeUrl = routeCandidate.buildUrl(params);
     const currentRouteUrl = routeCandidate.urlSignal.peek();
     const enterParams = {
       signal: stopSignal,
       url: routeUrl,
       resource: targetResource,
-      params: matchResult,
+      params,
     };
     if (routeUrl === currentRouteUrl) {
       const hasError = routeCandidate.errorSignal.peek();
@@ -214,6 +219,7 @@ const enterRoute = async (route, { signal, url, params }) => {
   matchingRouteSet.add(route);
   batch(() => {
     route.urlSignal.value = url;
+    route.paramsSignal.value = params;
     route.isMatchingSignal.value = true;
     route.loadingStateSignal.value = LOADING;
     route.errorSignal.value = null;
@@ -225,7 +231,7 @@ const enterRoute = async (route, { signal, url, params }) => {
       const loadDataPromise = (async () => {
         const data = await route.loadData({
           signal: enterAbortSignal,
-          params: { ...params.named, ...params.stars },
+          params,
         });
         route.dataSignal.value = data;
       })();

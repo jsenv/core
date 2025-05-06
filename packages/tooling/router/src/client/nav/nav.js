@@ -82,27 +82,34 @@ export const installNavigation = ({ applyRouting, routingWhile }) => {
           });
           return;
         }
-        await applyRouting({
-          method,
-          sourceUrl: url,
-          targetUrl: formUrl || url,
-          formAction,
-          formData,
-          state,
-          abortSignal,
-          stopSignal,
-          reload: event.navigationType === "reload",
-          isReplace: event.navigationType === "replace",
-        });
-        if (formUrl) {
-          const finishedPromise = event.target.transition.finished;
-          (async () => {
-            try {
-              await finishedPromise;
-            } finally {
-              navigation.navigate(window.location.href, { history: "replace" });
-            }
-          })();
+        try {
+          await applyRouting({
+            method,
+            sourceUrl: url,
+            targetUrl: formUrl || url,
+            formAction,
+            formData,
+            state,
+            abortSignal,
+            stopSignal,
+            reload: event.navigationType === "reload",
+            isReplace: event.navigationType === "replace",
+          });
+          if (formUrl) {
+            const finishedPromise = event.target.transition.finished;
+            (async () => {
+              try {
+                await finishedPromise;
+              } finally {
+                navigation.navigate(window.location.href, {
+                  history: "replace",
+                });
+              }
+            })();
+          }
+        } catch (e) {
+          console.error(e); // browser remains silent in case of error during handler so we explicitely log the error to the console
+          throw e;
         }
       },
     });

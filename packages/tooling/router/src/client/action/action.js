@@ -13,7 +13,7 @@ export const registerAction = (fn) => {
       let actionWithParamsSet = actionWithParamsSetMap.get(action);
       if (!actionWithParamsSet) {
         actionWithParamsSet = new Set();
-        actionWithParamsSetMap.add(action, actionWithParamsSet);
+        actionWithParamsSetMap.set(action, actionWithParamsSet);
         const actionWithParams = createActionWithParams(action, params);
         actionWithParamsSet.add(actionWithParams);
         return actionWithParams;
@@ -64,15 +64,15 @@ const createActionWithParams = (action, params) => {
     },
   };
   removeDataSignalEffect = effect(() => {
-    action.data = action.dataSignal.value;
+    actionWithParams.data = actionWithParams.dataSignal.value;
   });
   removeErrorSignalEffect = effect(() => {
-    action.error = action.errorSignal.value;
+    actionWithParams.error = actionWithParams.errorSignal.value;
   });
   return actionWithParams;
 };
 
-const compareTwoJsValues = (a, b) => {
+const compareTwoJsValues = (a, b, seenSet = new Set()) => {
   if (a === b) {
     return true;
   }
@@ -93,6 +93,22 @@ const compareTwoJsValues = (a, b) => {
   if (aType !== bType) {
     return false;
   }
+  const aIsPrimitive = aType !== "object" && aType !== "function";
+  const bIsPrimitive = bType !== "object" && bType !== "function";
+  if (aIsPrimitive !== bIsPrimitive) {
+    return false;
+  }
+  if (aIsPrimitive && bIsPrimitive) {
+    return a === b;
+  }
+  if (seenSet.has(a)) {
+    return false;
+  }
+  if (seenSet.has(b)) {
+    return false;
+  }
+  seenSet.add(a);
+  seenSet.add(b);
   const aIsArray = Array.isArray(a);
   const bIsArray = Array.isArray(b);
   if (aIsArray !== bIsArray) {
@@ -107,7 +123,7 @@ const compareTwoJsValues = (a, b) => {
     while (i < a.length) {
       const aValue = a[i];
       const bValue = b[i];
-      if (!compareTwoJsValues(aValue, bValue)) {
+      if (!compareTwoJsValues(aValue, bValue, seenSet)) {
         return false;
       }
       i++;
@@ -123,7 +139,7 @@ const compareTwoJsValues = (a, b) => {
   for (const key of aKeys) {
     const aValue = a[key];
     const bValue = b[key];
-    if (!compareTwoJsValues(aValue, bValue)) {
+    if (!compareTwoJsValues(aValue, bValue, seenSet)) {
       return false;
     }
   }
