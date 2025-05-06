@@ -5,6 +5,16 @@ export const alterRoleQuery = async (sql, roleName, columnName, value) => {
       ALTER ROLE ${sql(roleName)} ${sql.unsafe(keywords[value ? 0 : 1])}
     `;
   }
+  if (columnName === "rolvaliduntil") {
+    return sql` ALTER ROLE ${sql(roleName)} VALID UNTIL '${sql.unsafe(value)}'`;
+  }
+  if (columnName === "rolconnlimit") {
+    return sql`
+      ALTER ROLE ${sql(roleName)} CONNECTION
+      LIMIT
+        ${sql.unsafe(value)}
+    `;
+  }
   return null;
 };
 
