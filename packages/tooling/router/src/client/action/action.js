@@ -33,8 +33,8 @@ export const registerAction = (fn) => {
 };
 
 const createActionWithParams = (action, params) => {
-  let removeDataSignalEffect;
-  let removeErrorSignalEffect;
+  let disposeDataSignalEffect;
+  let disposeErrorSignalEffect;
   const actionWithParams = {
     params,
     action,
@@ -56,17 +56,21 @@ const createActionWithParams = (action, params) => {
     unsubscribe: () => {
       actionWithParams.subscribeCount--;
       if (actionWithParams.subscribeCount === 0) {
-        removeDataSignalEffect();
-        removeDataSignalEffect = null;
-        removeErrorSignalEffect();
-        removeErrorSignalEffect = null;
+        if (disposeDataSignalEffect) {
+          disposeDataSignalEffect();
+          disposeDataSignalEffect = null;
+        }
+        if (disposeErrorSignalEffect) {
+          disposeErrorSignalEffect();
+          disposeErrorSignalEffect = null;
+        }
       }
     },
   };
-  removeDataSignalEffect = effect(() => {
+  disposeDataSignalEffect = effect(() => {
     actionWithParams.data = actionWithParams.dataSignal.value;
   });
-  removeErrorSignalEffect = effect(() => {
+  disposeErrorSignalEffect = effect(() => {
     actionWithParams.error = actionWithParams.errorSignal.value;
   });
   return actionWithParams;
