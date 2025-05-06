@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from "preact/hooks";
 import { signal } from "@preact/signals";
-import { LOADING } from "../route_status.js";
+import { EXECUTING, ABORTED } from "./action_status.js";
 
 const routeActionParamsSet = new Map();
 export const useAction = (route, params = {}) => {
@@ -54,7 +54,6 @@ export const useAction = (route, params = {}) => {
 
   return action;
 };
-
 const compareParams = (a, b) => {
   if (a === b) {
     return true;
@@ -67,7 +66,8 @@ export const useActionStatus = (action) => {
   // je peux pas faire ça:
   // puisque la route est partagé par les actions
   // il faut bel et bien que je mette cet action quelque part
-  const pending = action.loadingStateSignal.value === LOADING;
+  const pending = action.executionStateSignal.value === EXECUTING;
   const error = action.errorSignal.value;
-  return { pending, error };
+  const aborted = action.executionStateSignal.value === ABORTED;
+  return { aborted, pending, error };
 };

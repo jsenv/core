@@ -4,13 +4,13 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
+import { onRouterUILoaded } from "./route.js";
 import {
-  onRouterUILoaded,
   useRouteError,
   useRouteIsLoaded,
   useRouteIsLoading,
   useRouteIsMatching,
-} from "./route.js";
+} from "./route_hooks.js";
 
 const RouteMatchingDefaultComponent = () => null;
 const RouteLoadingDefaultComponent = () => null;

@@ -1,9 +1,16 @@
 export { useCanGoBack, useCanGoForward } from "./client/back_and_forward.js";
 export { useDocumentUrl } from "./client/document_url.js";
+export { registerRoute, setBaseUrl } from "./client/route/route.js";
+export { registerAction } from "./client/action/action.js";
+export { useAction, useActionStatus } from "./client/action/action_hooks.js";
+export { Route } from "./client/route/route.jsx";
+export { goBack, goForward, goTo, reload, stopLoad } from "./client/router.js";
 export {
-  registerAction,
-  registerRoute,
-  setBaseUrl,
+  useCanStopLoad,
+  useRouterIsBusy,
+  useRouterReadyState,
+} from "./client/router_ready_state.js";
+export {
   useRouteData,
   useRouteError,
   useRouteIsLoading,
@@ -11,15 +18,7 @@ export {
   useRouteLoadIsAborted,
   useRouteLoadingState,
   useRouteUrl,
-} from "./client/route.js";
-export { useAction, useActionStatus } from "./client/hooks/use_action.js";
-export { Route } from "./client/route.jsx";
-export { goBack, goForward, goTo, reload, stopLoad } from "./client/router.js";
-export {
-  useCanStopLoad,
-  useRouterIsBusy,
-  useRouterReadyState,
-} from "./client/router_ready_state.js";
+} from "./client/route/route_hooks.js";
 export {
   ErrorBoundaryContext,
   useResetErrorBoundary,
