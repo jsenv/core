@@ -1,5 +1,7 @@
 import { SPAForm } from "./spa_form.jsx";
+import { useRef } from "preact/hooks";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
+import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
 
@@ -26,21 +28,20 @@ const InputInteger = ({ action, value, ...rest }) => {
     value,
     action.params.columnName,
   );
+  const inputRef = useRef(null);
+  useRequestSubmitOnChange(inputRef);
 
   return (
     <LoaderBackground pending={pending}>
       <input
         {...rest}
+        ref={inputRef}
         type="number"
         name="value"
         disabled={pending}
         value={optimisticUIState}
         onInput={(e) => {
           setOptimisticUIState(e.target.valueAsNumber);
-        }}
-        onChange={(e) => {
-          const form = e.target.form;
-          form.requestSubmit();
         }}
       />
     </LoaderBackground>

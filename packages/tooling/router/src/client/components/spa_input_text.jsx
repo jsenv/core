@@ -1,6 +1,7 @@
 import { SPAForm } from "./spa_form.jsx";
-import { useRef, useLayoutEffect } from "preact/hooks";
+import { useRef } from "preact/hooks";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
+import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
 
@@ -28,17 +29,7 @@ const InputText = ({ action, value, ...rest }) => {
     action.params.columnName,
   );
   const inputRef = useRef(null);
-  // see https://github.com/preactjs/preact/issues/1034#issuecomment-2857877043
-  useLayoutEffect(() => {
-    const onChange = (e) => {
-      const form = e.target.form;
-      form.requestSubmit();
-    };
-    inputRef.current.addEventListener("change", onChange);
-    return () => {
-      inputRef.current.removeEventListener("change", onChange);
-    };
-  }, []);
+  useRequestSubmitOnChange(inputRef);
 
   return (
     <LoaderBackground pending={pending}>
