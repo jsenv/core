@@ -12,7 +12,7 @@
  */
 
 import { effect } from "@preact/signals";
-import { useState } from "preact/hooks";
+import { useState, useRef, useLayoutEffect } from "preact/hooks";
 import { useDetails, SPALink, useRouteIsMatching } from "@jsenv/router";
 import {
   UserWithHatSvg,
@@ -131,20 +131,12 @@ const DatabaseNavGroupRoles = () => {
     >
       <ul className="nav_group_list">
         {newItem !== null && (
-          <li className="nav_group_list_item">
-            <span style="display: flex; gap: 0.2em; align-items: center; white-space: nowrap;">
-              <span style="display: flex; width: 1em; height: 1em">
-                <EnterNameIconSvg />
-              </span>
-              <input
-                type="text"
-                onBlur={() => {
-                  // si on a rien rentré on le cré pas, sinon oui on le cré
-                  setNewItem(null);
-                }}
-              ></input>
-            </span>
-          </li>
+          <NewItem
+            onBlur={() => {
+              // si on a rien rentré on le cré pas, sinon oui on le cré
+              setNewItem(null);
+            }}
+          />
         )}
         {items.map((item) => {
           return (
@@ -155,6 +147,26 @@ const DatabaseNavGroupRoles = () => {
         })}
       </ul>
     </DatabaseNavGroup>
+  );
+};
+
+const NewItem = (props) => {
+  // autoFocus does not work so we focus in a useLayoutEffect,
+  // see https://github.com/preactjs/preact/issues/1255
+  const inputRef = useRef();
+  useLayoutEffect(() => {
+    inputRef.current.focus();
+  });
+
+  return (
+    <li className="nav_group_list_item">
+      <span style="display: flex; gap: 0.2em; align-items: center; white-space: nowrap;">
+        <span style="display: flex; width: 1em; height: 1em">
+          <EnterNameIconSvg />
+        </span>
+        <input ref={inputRef} autoFocus type="text" {...props}></input>
+      </span>
+    </li>
   );
 };
 
