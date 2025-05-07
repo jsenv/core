@@ -6,6 +6,7 @@ import { ErrorBoundaryContext, Route, useAction } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { GET_ROLE_ROUTE, PUT_ROLE_ACTION } from "./role_routes.js";
 import { DatabaseValue } from "../components/database_value.jsx";
+import { useRoleColumns, useRole } from "./role_signals.js";
 
 export const RoleRoutes = () => {
   return <Route route={GET_ROLE_ROUTE} loaded={RolePage} />;
@@ -39,16 +40,14 @@ const ErrorDetails = ({ error }) => {
   );
 };
 
-const RoleFields = ({ route }) => {
-  const { columns, role } = route.data;
-  let roleName;
+const RoleFields = () => {
+  const roleName = GET_ROLE_ROUTE.params.roleName;
+  const columns = useRoleColumns();
+  const role = useRole(roleName);
 
   const fields = columns.map((column) => {
     const columnName = column.column_name;
     const value = role[columnName];
-    if (columnName === "rolname") {
-      roleName = value;
-    }
     return {
       column,
       value,

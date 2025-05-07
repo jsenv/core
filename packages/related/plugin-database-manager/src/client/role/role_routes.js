@@ -1,4 +1,5 @@
 import { registerRoute, registerAction } from "@jsenv/router";
+import { setRoleColumns, updateRole } from "./role_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
   "/.internal/database/roles/:roleName",
@@ -7,8 +8,9 @@ export const GET_ROLE_ROUTE = registerRoute(
     const response = await fetch(`/.internal/database/api/roles/${roleName}`, {
       signal,
     });
-    const data = await response.json();
-    return data;
+    const { columns, role } = await response.json();
+    setRoleColumns(columns);
+    updateRole(role.rolname, role);
   },
 );
 
@@ -35,5 +37,6 @@ export const PUT_ROLE_ACTION = registerAction(
       updateRoleError.stack = error.stack;
       throw updateRoleError;
     }
+    updateRole(roleName, { [columnName]: value });
   },
 );

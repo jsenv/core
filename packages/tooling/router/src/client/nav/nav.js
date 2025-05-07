@@ -62,7 +62,6 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
         console.log("nav aborted");
       });
     }
-    const method = event.info?.method || "GET";
     const formAction = event.info?.formAction;
     const formData = event.formData || event.info?.formData;
     const formUrl = event.info?.formUrl;
@@ -90,15 +89,12 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
         } else {
           handle = async () => {
             await applyRouting({
-              method,
               sourceUrl: url,
               targetUrl: formUrl || url,
-              formAction,
-              formData,
               state,
               abortSignal,
               stopSignal,
-              reload: event.navigationType === "reload",
+              isReload: event.navigationType === "reload",
               isReplace: event.navigationType === "replace",
             });
             if (formUrl) {
