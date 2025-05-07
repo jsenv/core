@@ -65,12 +65,10 @@ const RoleFields = ({ route }) => {
               label={<span>{columnName}:</span>}
               column={column}
               value={value}
-              getAction={() => {
-                return useAction(PUT_ROLE_ACTION, {
-                  roleName,
-                  columnName,
-                });
-              }}
+              action={useAction(PUT_ROLE_ACTION, {
+                roleName,
+                columnName,
+              })}
             />
           </li>
         );

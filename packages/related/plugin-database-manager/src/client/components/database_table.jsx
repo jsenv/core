@@ -1,7 +1,8 @@
 import { Table } from "./table.jsx";
 import { DatabaseValue } from "./database_value.jsx";
+import { useAction } from "@jsenv/router";
 
-export const DatabaseTable = ({ columns, data, putRoute }) => {
+export const DatabaseTable = ({ columns, action, data }) => {
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
   });
@@ -18,7 +19,7 @@ export const DatabaseTable = ({ columns, data, putRoute }) => {
           <DatabaseValue
             tableName={tableName}
             column={column}
-            putRoute={putRoute}
+            action={useAction(action, { tableName, columnName })}
             value={value}
           />
         );

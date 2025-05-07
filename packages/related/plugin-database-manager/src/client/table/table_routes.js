@@ -1,8 +1,9 @@
-import { registerRoute } from "@jsenv/router";
+import { registerRoute, registerAction } from "@jsenv/router";
 import { tableInfoSignal, tablePublicFilterSignal } from "./table_signals.js";
 
-export const GET_TABLES_ROUTE = registerRoute({
-  "GET /.internal/database/tables": async ({ signal }) => {
+export const GET_TABLES_ROUTE = registerRoute(
+  "GET /.internal/database/tables",
+  async ({ signal }) => {
     const tablePublicFilter = tablePublicFilterSignal.value;
     const response = await fetch(
       `/.internal/database/api/tables?public=${tablePublicFilter}`,
@@ -11,15 +12,10 @@ export const GET_TABLES_ROUTE = registerRoute({
     const tables = await response.json();
     tableInfoSignal.value = tables;
   },
-});
+);
 
-export const UPDATE_TABLE_ROUTE = registerRoute({
-  "PUT /.internal/database/api/tables/:tableName/:columnName": async ({
-    params,
-    formData,
-  }) => {
-    const tableName = params.tableName;
-    const columnName = params.prop;
+export const UPDATE_TABLE_ACTION = registerAction(
+  async ({ tableName, columnName, formData }) => {
     const value = formData.get("value");
     await fetch(`/.internal/database/api/tables/${tableName}/${columnName}`, {
       method: "PUT",
@@ -39,4 +35,4 @@ export const UPDATE_TABLE_ROUTE = registerRoute({
       };
     }
   },
-});
+);

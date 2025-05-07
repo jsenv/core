@@ -1,48 +1,48 @@
 import { SPAForm } from "./spa_form.jsx";
-import { useRef } from "preact/hooks";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
 
-export const SPACheckbox = ({ action, label, method = "PUT", ...rest }) => {
-  const checkbox = <Checkbox action={action} {...rest} />;
+export const SPAInputDateAndTime = ({
+  action,
+  method = "PUT",
+  label,
+  ...rest
+}) => {
+  const input = <InputDateAndTime action={action} {...rest} />;
 
   return (
     <SPAForm action={action} method={method}>
       {label ? (
         <label>
           {label}
-          {checkbox}
+          {input}
         </label>
       ) : (
-        checkbox
+        input
       )}
     </SPAForm>
   );
 };
 
-const Checkbox = ({ action, checked, ...rest }) => {
+const InputDateAndTime = ({ action, value, ...rest }) => {
   const { pending } = useActionStatus(action);
   const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
-    checked,
+    value,
     action.params.columnName,
   );
-  const inputRef = useRef(null);
 
   return (
     <LoaderBackground pending={pending}>
       <input
         {...rest}
-        ref={inputRef}
-        type="checkbox"
+        type="datetime-local"
         name="value"
-        onChange={(e) => {
-          setOptimisticUIState(e.target.checked);
-          const form = e.target.form;
-          form.requestSubmit();
-        }}
-        checked={optimisticUIState}
         disabled={pending}
+        value={optimisticUIState}
+        onInput={(e) => {
+          setOptimisticUIState(e.target.value);
+        }}
       />
     </LoaderBackground>
   );

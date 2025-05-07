@@ -1,42 +1,22 @@
-import { SPACheckbox } from "@jsenv/router";
+import { SPACheckbox, SPAInputDateAndTime } from "@jsenv/router";
 
-export const DatabaseValue = ({ label, column, value, ...rest }) => {
+export const DatabaseValue = ({ column, ...rest }) => {
   if (column.name === "tablename") {
+    const { value } = rest;
     return <TableNameValue name={value} />;
   }
   if (column.data_type === "boolean") {
-    return (
-      <BooleanValue
-        columnName={column.column_name}
-        label={label}
-        isWritable
-        checked={value}
-        {...rest}
-      />
-    );
+    const { value, ...props } = rest;
+    return <SPACheckbox checked={value} {...props} />;
   }
+  if (column.data_type === "timestamp with time zone") {
+    const props = rest;
+    return <SPAInputDateAndTime {...props} />;
+  }
+  const { value } = rest;
   return String(value);
 };
 
 const TableNameValue = ({ name }) => {
   return <span>{name}</span>;
-};
-
-const BooleanValue = ({
-  columnName,
-  isWritable,
-  checked,
-  getAction,
-  ...rest
-}) => {
-  const action = getAction({ columnName });
-  return (
-    <SPACheckbox
-      method="PUT"
-      action={action}
-      disabled={!isWritable}
-      checked={checked}
-      {...rest}
-    />
-  );
 };
