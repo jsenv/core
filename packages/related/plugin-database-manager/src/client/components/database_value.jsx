@@ -1,4 +1,8 @@
-import { SPACheckbox, SPAInputDateAndTime } from "@jsenv/router";
+import {
+  SPACheckbox,
+  SPAInputDateAndTime,
+  SPAInputInteger,
+} from "@jsenv/router";
 
 export const DatabaseValue = ({ column, ...rest }) => {
   if (column.name === "tablename") {
@@ -12,6 +16,10 @@ export const DatabaseValue = ({ column, ...rest }) => {
   if (column.data_type === "timestamp with time zone") {
     const props = rest;
     return <SPAInputDateAndTime {...props} />;
+  }
+  if (column.data_type === "integer") {
+    const props = rest;
+    return <SPAInputInteger {...props} />;
   }
   const { value } = rest;
   return String(value);
