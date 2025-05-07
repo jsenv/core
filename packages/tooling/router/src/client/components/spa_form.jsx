@@ -59,6 +59,7 @@ export const SPAForm = forwardRef(
       if (error) {
         if (errorCustomValidityRef) {
           errorCustomValidityRef.current.setCustomValidity(error.message);
+          innerRef.current.requestSubmit(); // will display the message
         } else {
           error.__handled__ = true; // prevent jsenv from displaying it
           throw error;
@@ -67,6 +68,13 @@ export const SPAForm = forwardRef(
         errorCustomValidityRef.current.setCustomValidity("");
       }
     }, [error, errorCustomValidityRef]);
+    useEffect(() => {
+      if (errorCustomValidityRef) {
+        errorCustomValidityRef.current.oninput = () => {
+          errorCustomValidityRef.current.setCustomValidity("");
+        };
+      }
+    }, []);
 
     method = method.toLowerCase();
 
