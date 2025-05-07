@@ -1,6 +1,5 @@
 import { signal } from "@preact/signals";
 
-// export const currentRoleSignal = signal(null);
 export const roleColumnsSignal = signal([]);
 export const useRoleColumns = () => {
   return roleColumnsSignal.value;
