@@ -26,6 +26,7 @@ const InputInteger = ({ action, value, ...rest }) => {
     value,
     action.params.columnName,
   );
+  console.log("integer value", { value, optimisticUIState });
 
   return (
     <LoaderBackground pending={pending}>
@@ -36,7 +37,7 @@ const InputInteger = ({ action, value, ...rest }) => {
         disabled={pending}
         value={optimisticUIState}
         onInput={(e) => {
-          setOptimisticUIState(e.target.value);
+          setOptimisticUIState(e.target.valueAsNumber);
         }}
         onChange={(e) => {
           const form = e.target.form;

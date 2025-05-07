@@ -86,7 +86,8 @@ export const SPAForm = forwardRef(
             for (const [key, mapping] of Object.entries(formDataMappings)) {
               const value = formData.get(key);
               if (value) {
-                formData.set(key, mapping(value));
+                const valueMapped = mapping(value);
+                formData.set(key, valueMapped);
               }
             }
           }

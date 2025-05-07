@@ -10,7 +10,7 @@ export const useOptimisticUIState = (frontendMemoryState) => {
   useLayoutEffect(() => {
     if (pendingPreviousRef.current && !pending) {
       optimisticStateRef.current = frontendMemoryState;
-      // console.log("done, frontend memory state is ", frontendMemoryState);
+      console.log("done, frontend memory state is ", frontendMemoryState);
     } else if (!abortedPreviousRef.current && aborted) {
       optimisticStateRef.current = frontendMemoryState;
     }

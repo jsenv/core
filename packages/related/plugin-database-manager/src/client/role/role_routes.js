@@ -16,7 +16,10 @@ export const GET_ROLE_ROUTE = registerRoute(
 
 export const PUT_ROLE_ACTION = registerAction(
   async ({ roleName, columnName, formData, signal }) => {
-    const value = formData.get("value");
+    let value = formData.get("value");
+    if (columnName === "rolconnlimit") {
+      value = parseInt(value, 10);
+    }
     const response = await fetch(
       `/.internal/database/api/roles/${roleName}/${columnName}`,
       {
