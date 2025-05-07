@@ -36,7 +36,7 @@ HTMLFormElement.prototype.submit = function (...args) {
 };
 
 export const SPAForm = forwardRef(
-  ({ action: formAction, method = "get", children }, ref) => {
+  ({ action: formAction, method = "get", formDataMappings, children }, ref) => {
     const innerRef = useRef();
     // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
     // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
@@ -82,6 +82,14 @@ export const SPAForm = forwardRef(
             action,
           });
           const formData = new FormData(submitEvent.currentTarget);
+          if (formDataMappings) {
+            for (const [key, mapping] of Object.entries(formDataMappings)) {
+              const value = formData.get(key);
+              if (value) {
+                formData.set(key, mapping(value));
+              }
+            }
+          }
           await applyRoutingOnFormSubmission({
             method: method.toUpperCase(),
             formData,
