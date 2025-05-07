@@ -1,4 +1,7 @@
 /**
+ * TODO: when action throw sync + click enter
+ * the error handling is different: to fix
+ *
  * Here we want the same behaviour as web standards:
  *
  * 1. When submitting the form URL does not change
@@ -42,7 +45,7 @@ export const SPAForm = forwardRef(
       method = "get",
       formDataMappings,
       children,
-      customValidityErrorRef,
+      errorCustomValidityRef,
     },
     ref,
   ) => {
@@ -54,14 +57,16 @@ export const SPAForm = forwardRef(
     const resetErrorBoundary = useResetErrorBoundary();
     useEffect(() => {
       if (error) {
-        if (customValidityErrorRef) {
-          customValidityErrorRef.current.setCustomValidity(error.message);
+        if (errorCustomValidityRef) {
+          errorCustomValidityRef.current.setCustomValidity(error.message);
         } else {
           error.__handled__ = true; // prevent jsenv from displaying it
           throw error;
         }
+      } else if (errorCustomValidityRef) {
+        errorCustomValidityRef.current.setCustomValidity("");
       }
-    }, [error, customValidityErrorRef]);
+    }, [error, errorCustomValidityRef]);
 
     method = method.toLowerCase();
 

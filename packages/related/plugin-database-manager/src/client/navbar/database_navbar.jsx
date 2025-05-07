@@ -109,6 +109,7 @@ const DatabaseNavGroupRoles = () => {
 
   return (
     <DatabaseNavGroup
+      urlParam="roles"
       label={
         <span style="display: flex; flex: 1; gap: 0.2em; align-items: center;">
           ROLES
@@ -175,8 +176,8 @@ const NewItem = (props) => {
   );
 };
 
-const DatabaseNavGroup = ({ label, children }) => {
-  const detailsProps = useDetails(label);
+const DatabaseNavGroup = ({ urlParam, label, children }) => {
+  const detailsProps = useDetails(urlParam);
 
   return (
     <details {...detailsProps}>

@@ -10,7 +10,7 @@ export const SPACheckbox = ({ action, label, method = "PUT", ...rest }) => {
   const checkbox = <Checkbox ref={inputRef} action={action} {...rest} />;
 
   return (
-    <SPAForm action={action} method={method} customValidityErrorRef={inputRef}>
+    <SPAForm action={action} method={method} errorCustomValidityRef={inputRef}>
       {label ? (
         <label>
           {label}
@@ -23,14 +23,14 @@ export const SPACheckbox = ({ action, label, method = "PUT", ...rest }) => {
   );
 };
 
-const Checkbox = forwardRef(({ action, checked, ...rest }) => {
+const Checkbox = forwardRef(({ action, checked, ...rest }, ref) => {
   const { pending } = useActionStatus(action);
   const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
     checked,
     action.params.columnName,
   );
   const innerRef = useRef(null);
-  useImperativeHandle(innerRef, () => innerRef.current);
+  useImperativeHandle(ref, () => innerRef.current);
 
   return (
     <LoaderBackground pending={pending}>
