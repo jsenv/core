@@ -45,6 +45,9 @@ const RoleFields = () => {
   const columns = useRoleColumns();
   const role = useRole(roleName);
 
+  columns.sort((a, b) => {
+    return a.ordinal_position - b.ordinal_position;
+  });
   const fields = columns.map((column) => {
     const columnName = column.column_name;
     const value = role[columnName];

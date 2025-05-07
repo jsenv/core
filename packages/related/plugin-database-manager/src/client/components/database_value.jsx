@@ -2,6 +2,7 @@ import {
   SPACheckbox,
   SPAInputDateAndTime,
   SPAInputInteger,
+  SPAInputText,
 } from "@jsenv/router";
 
 export const DatabaseValue = ({ column, ...rest }) => {
@@ -20,6 +21,10 @@ export const DatabaseValue = ({ column, ...rest }) => {
   if (column.data_type === "integer") {
     const props = rest;
     return <SPAInputInteger {...props} />;
+  }
+  if (column.data_type === "name") {
+    const props = rest;
+    return <SPAInputText {...props} />;
   }
   const { value } = rest;
   return String(value);

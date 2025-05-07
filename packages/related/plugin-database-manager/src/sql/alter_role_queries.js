@@ -1,4 +1,10 @@
 export const alterRoleQuery = async (sql, roleName, columnName, value) => {
+  if (columnName === "rolname") {
+    return sql`
+      ALTER ROLE ${sql(roleName)}
+      RENAME TO ${sql.unsafe(value)}
+    `;
+  }
   const keywords = booleanOptionKeywords[columnName];
   if (keywords) {
     return sql`

@@ -8,6 +8,14 @@ export const GET_ROLE_ROUTE = registerRoute(
     const response = await fetch(`/.internal/database/api/roles/${roleName}`, {
       signal,
     });
+    if (!response.ok) {
+      const error = await response.json();
+      const getRoleError = new Error(
+        `Failed to get role: ${response.status} ${response.statusText}`,
+      );
+      getRoleError.stack = error.stack;
+      throw getRoleError;
+    }
     const { columns, role } = await response.json();
     setRoleColumns(columns);
     updateRole(role.rolname, role);

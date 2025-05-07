@@ -24,6 +24,7 @@ export {
   useResetErrorBoundary,
 } from "./client/hooks/use_reset_error_boundary.js";
 export { SPAInputInteger } from "./client/components/spa_input_integer.jsx";
+export { SPAInputText } from "./client/components/spa_input_text.jsx";
 export { SPALink } from "./client/components/spa_link.jsx";
 export { SPAInputDateAndTime } from "./client/components/spa_input_date_and_time.jsx";
 export { useSPAFormStatus } from "./client/components/use_spa_form_status.js";
