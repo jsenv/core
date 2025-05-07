@@ -26,7 +26,6 @@ const InputInteger = ({ action, value, ...rest }) => {
     value,
     action.params.columnName,
   );
-  console.log("integer value", { value, optimisticUIState });
 
   return (
     <LoaderBackground pending={pending}>
