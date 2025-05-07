@@ -114,7 +114,14 @@ export const jsenvPluginDatabaseManager = () => {
           const roleName = request.params.roleName;
           const columnName = request.params.columnName;
           const value = await request.json();
-          await alterRoleQuery(sql, roleName, columnName, value);
+          try {
+            await alterRoleQuery(sql, roleName, columnName, value);
+          } catch (e) {
+            if (e.code === "42704") {
+              return Response.json({ message: e.message }, { status: 404 });
+            }
+            throw e;
+          }
           return Response.json({ [columnName]: value });
         },
       },

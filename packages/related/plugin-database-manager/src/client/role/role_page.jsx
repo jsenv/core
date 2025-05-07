@@ -1,5 +1,6 @@
 /**
- *
+ * TODO: when updating role name we must navigate to the new role name
+ * but we can do so only at the end of the action
  */
 
 import { ErrorBoundaryContext, Route, useAction } from "@jsenv/router";
@@ -50,7 +51,7 @@ const RoleFields = () => {
   });
   const fields = columns.map((column) => {
     const columnName = column.column_name;
-    const value = role[columnName];
+    const value = role ? role[columnName] : undefined;
     return {
       column,
       value,

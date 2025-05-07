@@ -13,7 +13,7 @@ export const GET_ROLE_ROUTE = registerRoute(
       const getRoleError = new Error(
         `Failed to get role: ${response.status} ${response.statusText}`,
       );
-      getRoleError.stack = error.stack;
+      getRoleError.stack = error.stack || error.message;
       throw getRoleError;
     }
     const { columns, role } = await response.json();
@@ -45,7 +45,7 @@ export const PUT_ROLE_ACTION = registerAction(
       const updateRoleError = new Error(
         `Failed to update role: ${response.status} ${response.statusText}`,
       );
-      updateRoleError.stack = error.stack;
+      updateRoleError.stack = error.stack || error.message;
       throw updateRoleError;
     }
     updateRole(roleName, { [columnName]: value });
