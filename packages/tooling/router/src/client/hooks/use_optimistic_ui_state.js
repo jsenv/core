@@ -5,17 +5,17 @@ export const useOptimisticUIState = (frontendMemoryState) => {
   const { pending, aborted } = useSPAFormStatus();
   const optimisticStateRef = useRef(frontendMemoryState);
   const [, setAborted] = useState(false);
-
-  // console.log(`optimistic ${name}`, { pending, aborted });
-
+  const pendingPreviousRef = useRef(pending);
+  const abortedPreviousRef = useRef(aborted);
   useLayoutEffect(() => {
-    if (!pending) {
-      // console.log("stop being pending");
+    if (pendingPreviousRef.current && !pending) {
       optimisticStateRef.current = frontendMemoryState;
-    } else if (aborted) {
-      // console.log("aborted");
+      // console.log("done, frontend memory state is ", frontendMemoryState);
+    } else if (!abortedPreviousRef.current && aborted) {
       optimisticStateRef.current = frontendMemoryState;
     }
+    pendingPreviousRef.current = pending;
+    abortedPreviousRef.current = aborted;
   }, [frontendMemoryState, pending, aborted]);
 
   useLayoutEffect(() => {
