@@ -49,10 +49,10 @@ nav > details > summary {
   padding-left: 15px;
   padding-right: 15px;
 }
-nav > details summary svg {
+details .summary_marker {
   transform: rotate(-90deg);
 }
-nav > details:open summary svg {
+nav > details:open .summary_marker {
   transform: rotate(0deg);
 }
 .nav_group_list {
@@ -62,7 +62,7 @@ nav > details:open summary svg {
   margin-bottom: 0;
   padding-left: 35px;
   padding-right: 15px;
-  width: fit-content;
+  /* width: fit-content; */
 }
 .nav_group_list_item {
   display: block;

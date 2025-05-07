@@ -13,7 +13,12 @@
 
 import { effect } from "@preact/signals";
 import { useDetails, SPALink, useRouteIsMatching } from "@jsenv/router";
-import { UserWithHatSvg, UserSvg, UserWithCheckSvg } from "../user_svgs.jsx";
+import {
+  UserWithHatSvg,
+  UserSvg,
+  UserWithCheckSvg,
+  UserWithPlusSvg,
+} from "../user_svgs.jsx";
 import { GET_ROLE_ROUTE } from "../role/role_routes.js";
 import {
   setCurrentRole,
@@ -89,6 +94,8 @@ const DatabaseNavGroupRoles = () => {
           ) : null}
           <span
             style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
               background: isOpened ? "lightgrey" : "none",
             }}
           >
@@ -99,7 +106,20 @@ const DatabaseNavGroupRoles = () => {
     );
   });
 
-  return <DatabaseNavGroup label="roles" items={items} />;
+  return (
+    <DatabaseNavGroup
+      label={
+        <span style="display: flex; flex: 1; gap: 0.2em; align-items: center;">
+          ROLES
+          <span style="display: flex; flex: 1"></span>
+          <span style="display: flex; width: 1em; height: 1em">
+            <UserWithPlusSvg />
+          </span>
+        </span>
+      }
+      items={items}
+    />
+  );
 };
 
 const DatabaseNavGroup = ({ label, items }) => {
@@ -108,7 +128,9 @@ const DatabaseNavGroup = ({ label, items }) => {
   return (
     <details {...detailsProps}>
       <summary>
-        <ArrowDown />
+        <span className="summary_marker" style="width: 24px; height: 24px">
+          <ArrowDown />
+        </span>
         {label}
       </summary>
       <ul className="nav_group_list">
@@ -128,9 +150,9 @@ const ActiveUserSvg = () => {
   return (
     <svg
       viewBox="0 0 16 16"
-      xmlns="http://www.w3.org/2000/svg"
       width="100%"
       height="100%"
+      xmlns="http://www.w3.org/2000/svg"
     >
       <path
         d="m 8 0 c -3.3125 0 -6 2.6875 -6 6 c 0.007812 0.710938 0.136719 1.414062 0.386719 2.078125 l -0.015625 -0.003906 c 0.636718 1.988281 3.78125 5.082031 5.625 6.929687 h 0.003906 v -0.003906 c 1.507812 -1.507812 3.878906 -3.925781 5.046875 -5.753906 c 0.261719 -0.414063 0.46875 -0.808594 0.585937 -1.171875 l -0.019531 0.003906 c 0.25 -0.664063 0.382813 -1.367187 0.386719 -2.078125 c 0 -3.3125 -2.683594 -6 -6 -6 z m 0 3.691406 c 1.273438 0 2.308594 1.035156 2.308594 2.308594 s -1.035156 2.308594 -2.308594 2.308594 c -1.273438 -0.003906 -2.304688 -1.035156 -2.304688 -2.308594 c -0.003906 -1.273438 1.03125 -2.304688 2.304688 -2.308594 z m 0 0"
@@ -143,11 +165,9 @@ const ActiveUserSvg = () => {
 const ArrowDown = () => {
   return (
     <svg
-      xmlns="http://www.w3.org/2000/svg"
       viewBox="0 -960 960 960"
-      width="24"
-      height="24"
       fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
     >
       <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
     </svg>
