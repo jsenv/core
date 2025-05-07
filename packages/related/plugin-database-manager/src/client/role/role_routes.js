@@ -1,4 +1,4 @@
-import { registerRoute, registerAction } from "@jsenv/router";
+import { registerRoute, registerAction, goTo } from "@jsenv/router";
 import { setRoleColumns, updateRole } from "./role_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
@@ -49,5 +49,15 @@ export const PUT_ROLE_ACTION = registerAction(
       throw updateRoleError;
     }
     updateRole(roleName, { [columnName]: value });
+    if (
+      columnName === "rolname" &&
+      GET_ROLE_ROUTE.isMatchingSignal.peek() &&
+      GET_ROLE_ROUTE.params.roleName === roleName
+    ) {
+      const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
+        roleName: value,
+      });
+      goTo(roleUrl, { replace: true });
+    }
   },
 );
