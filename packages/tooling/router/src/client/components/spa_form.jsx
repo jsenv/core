@@ -36,7 +36,16 @@ HTMLFormElement.prototype.submit = function (...args) {
 };
 
 export const SPAForm = forwardRef(
-  ({ action: formAction, method = "get", formDataMappings, children }, ref) => {
+  (
+    {
+      action: formAction,
+      method = "get",
+      formDataMappings,
+      children,
+      customValidityErrorRef,
+    },
+    ref,
+  ) => {
     const innerRef = useRef();
     // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
     // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
@@ -45,10 +54,14 @@ export const SPAForm = forwardRef(
     const resetErrorBoundary = useResetErrorBoundary();
     useEffect(() => {
       if (error) {
-        error.__handled__ = true; // prevent jsenv from displaying it
-        throw error;
+        if (customValidityErrorRef) {
+          customValidityErrorRef.current.setCustomValidity(error.message);
+        } else {
+          error.__handled__ = true; // prevent jsenv from displaying it
+          throw error;
+        }
       }
-    }, [error]);
+    }, [error, customValidityErrorRef]);
 
     method = method.toLowerCase();
 

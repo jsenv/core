@@ -149,6 +149,13 @@ const NavGroupListItem = ({ children }) => {
 };
 
 const NewItem = (props) => {
+  // il faudrait un spa input text, celui ci se brancherait sur le onchange/enter
+  // donc comme les autres, juste il aura autofocus
+  // aussi il faut donc lui passer la route, pendant qu'on crée il est disabled
+  // il faudrait vérif que le nom n'existe pas déja
+  // on fera avec customValidity (vérif que ca marche avec requestSubmit dailleurs)
+  // dailleurs on pourrait ptet faire ¸a aussi pour les erreurs serveurs
+
   // autoFocus does not work so we focus in a useLayoutEffect,
   // see https://github.com/preactjs/preact/issues/1255
   const inputRef = useRef();
