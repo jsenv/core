@@ -26,6 +26,27 @@ export const DatabaseValue = ({ column, ...rest }) => {
     const props = rest;
     return <SPAInputText {...props} />;
   }
+  if (column.data_type === "oid") {
+    return (
+      <span>
+        <span>{column.column_name}: </span>
+        <span>{rest.value}</span>
+      </span>
+    );
+  }
+  if (column.column_name === "rolpassword") {
+    return <SPAInputText {...rest} />;
+  }
+  if (column.column_name === "rolconfig") {
+    // rolconfig something custom like client_min_messages
+    // see https://www.postgresql.org/docs/14/config-setting.html#CONFIG-SETTING-NAMES-VALUES
+    return (
+      <span>
+        <span>{column.column_name}: </span>
+        <span>{String(rest.value)}</span>
+      </span>
+    );
+  }
   const { value } = rest;
   return String(value);
 };

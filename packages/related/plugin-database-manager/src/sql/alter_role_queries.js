@@ -1,5 +1,8 @@
 export const alterRoleQuery = async (sql, roleName, columnName, value) => {
   if (columnName === "rolname") {
+    if (roleName === value) {
+      return null;
+    }
     return sql`
       ALTER ROLE ${sql(roleName)}
       RENAME TO ${sql.unsafe(value)}
@@ -12,7 +15,7 @@ export const alterRoleQuery = async (sql, roleName, columnName, value) => {
     `;
   }
   if (columnName === "rolvaliduntil") {
-    return sql` ALTER ROLE ${sql(roleName)} VALID UNTIL '${sql.unsafe(value)}'`;
+    return sql`ALTER ROLE ${sql(roleName)} VALID UNTIL '${sql.unsafe(value)}'`;
   }
   if (columnName === "rolconnlimit") {
     return sql`
@@ -20,6 +23,12 @@ export const alterRoleQuery = async (sql, roleName, columnName, value) => {
       LIMIT
         ${sql.unsafe(value)}
     `;
+  }
+  if (columnName === "rolpassword") {
+    if (value) {
+      return sql`ALTER ROLE ${sql(roleName)} PASSWORD '${sql.unsafe(value)}' `;
+    }
+    return sql`ALTER ROLE ${sql(roleName)} PASSWORD NULL`;
   }
   return null;
 };
