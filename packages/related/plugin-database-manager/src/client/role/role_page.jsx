@@ -1,8 +1,3 @@
-/**
- * TODO: when updating role name we must navigate to the new role name
- * but we can do so only at the end of the action
- */
-
 import { ErrorBoundaryContext, Route, useAction } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { GET_ROLE_ROUTE, PUT_ROLE_ACTION } from "./role_routes.js";

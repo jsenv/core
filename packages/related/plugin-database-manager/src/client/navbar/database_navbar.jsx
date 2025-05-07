@@ -11,16 +11,22 @@
  * - cmd + backspace would allow to delete a user (after a confirm)
  */
 
-import { signal, effect } from "@preact/signals";
+import { effect } from "@preact/signals";
 import { useDetails, SPALink, useRouteIsMatching } from "@jsenv/router";
-import { UserWithHatSvg, UserSvg, UserWithCheckSvg } from "./user_svgs.jsx";
-import { GET_ROLE_ROUTE } from "./role/role_routes.js";
+import { UserWithHatSvg, UserSvg, UserWithCheckSvg } from "../user_svgs.jsx";
+import { GET_ROLE_ROUTE } from "../role/role_routes.js";
+import {
+  setCurrentRole,
+  appendRoles,
+  useCurrentRole,
+  useRoleList,
+} from "../role/role_signals.js";
 
-const navbarInfoSignal = signal({ currentRole: null, roles: [] });
 effect(async () => {
   const response = await fetch(`/.internal/database/api/nav`);
-  const data = await response.json();
-  navbarInfoSignal.value = data;
+  const { currentRole, roles } = await response.json();
+  setCurrentRole(currentRole);
+  appendRoles(roles);
 });
 
 export const DatabaseNavbar = () => {
@@ -32,7 +38,8 @@ export const DatabaseNavbar = () => {
 };
 
 const DatabaseNavGroupRoles = () => {
-  const { currentRole, roles } = navbarInfoSignal.value;
+  const currentRole = useCurrentRole();
+  const roles = useRoleList();
 
   roles.sort((a, b) => {
     const aIsCurrent = a.rolname === currentRole.rolname;

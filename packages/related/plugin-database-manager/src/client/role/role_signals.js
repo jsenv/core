@@ -10,6 +10,31 @@ export const setRoleColumns = (value) => {
 };
 
 export const roleListSignal = signal([]);
+export const useRoleList = () => {
+  return roleListSignal.value;
+};
+export const appendRoles = (roles) => {
+  const existingRoles = roleListSignal.peek();
+  if (existingRoles.length === 0) {
+    roleListSignal.value = roles;
+    return;
+  }
+  const rolesUpdated = [];
+  const existingRoleMap = new Map();
+  for (const existingRole of existingRoles) {
+    rolesUpdated.push(existingRole);
+    existingRoleMap.set(existingRole.rolname, existingRole);
+  }
+  for (const role of roles) {
+    const existingRole = existingRoleMap.get(role.rolname);
+    if (existingRole) {
+      Object.assign(existingRole, role);
+    } else {
+      rolesUpdated.push(role);
+    }
+  }
+  roleListSignal.value = rolesUpdated;
+};
 export const useRole = (roleName) => {
   const roles = roleListSignal.value;
   const role = roles.find((role) => role.rolname === roleName);
@@ -28,4 +53,13 @@ export const updateRole = (roleName, props) => {
     roles[roleIndex] = { ...role, ...props };
     roleListSignal.value = [...roles];
   }
+};
+
+export const currentRoleSignal = signal(null);
+export const useCurrentRole = () => {
+  return currentRoleSignal.value;
+};
+export const setCurrentRole = (value) => {
+  currentRoleSignal.value = value;
+  updateRole(value.rolname, value);
 };
