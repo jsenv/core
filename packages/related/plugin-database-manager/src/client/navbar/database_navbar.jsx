@@ -76,33 +76,31 @@ const DatabaseNavGroupRoles = () => {
         key={roleName}
         route={GET_ROLE_ROUTE}
         routeParams={{ roleName }}
-        style="display: flex; gap: 0.2em; align-items: center; white-space: nowrap;"
+        className="nav_group_list_item_content"
       >
-        <>
+        <span style="width: 1em; height: 1em">
+          {roleName.startsWith("pg_") ? (
+            <UserWithCheckSvg color="#333" />
+          ) : role.rolsuper ? (
+            <UserWithHatSvg color="#333" />
+          ) : (
+            <UserSvg color="#333" />
+          )}
+        </span>
+        {isCurrent ? (
           <span style="width: 1em; height: 1em">
-            {roleName.startsWith("pg_") ? (
-              <UserWithCheckSvg color="#333" />
-            ) : role.rolsuper ? (
-              <UserWithHatSvg color="#333" />
-            ) : (
-              <UserSvg color="#333" />
-            )}
+            <ActiveUserSvg />
           </span>
-          {isCurrent ? (
-            <span style="width: 1em; height: 1em">
-              <ActiveUserSvg />
-            </span>
-          ) : null}
-          <span
-            style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              background: isOpened ? "lightgrey" : "none",
-            }}
-          >
-            {roleName}
-          </span>
-        </>
+        ) : null}
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            background: isOpened ? "lightgrey" : "none",
+          }}
+        >
+          {roleName}
+        </span>
       </SPALink>
     );
   });
@@ -139,15 +137,15 @@ const DatabaseNavGroupRoles = () => {
           />
         )}
         {items.map((item) => {
-          return (
-            <li className="nav_group_list_item" key={item.url}>
-              {item}
-            </li>
-          );
+          return <NavGroupListItem key={item.url}>{item}</NavGroupListItem>;
         })}
       </ul>
     </DatabaseNavGroup>
   );
+};
+
+const NavGroupListItem = ({ children }) => {
+  return <li className="nav_group_list_item">{children}</li>;
 };
 
 const NewItem = (props) => {
@@ -159,14 +157,14 @@ const NewItem = (props) => {
   });
 
   return (
-    <li className="nav_group_list_item">
-      <span style="display: flex; gap: 0.2em; align-items: center; white-space: nowrap;">
+    <NavGroupListItem>
+      <span className="nav_group_list_item_content">
         <span style="display: flex; width: 1em; height: 1em">
           <EnterNameIconSvg />
         </span>
         <input ref={inputRef} autoFocus type="text" {...props}></input>
       </span>
-    </li>
+    </NavGroupListItem>
   );
 };
 

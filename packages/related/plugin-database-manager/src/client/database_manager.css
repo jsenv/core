@@ -78,7 +78,14 @@ nav > details:open .summary_marker {
   /* width: fit-content; */
 }
 .nav_group_list_item {
-  display: block;
+  display: flex;
+}
+.nav_group_list_item_content {
+  align-items: center;
+  white-space: nowrap;
+  display: flex;
+  gap: 0.2em;
+  min-width: 0; /* https://css-tricks.com/flexbox-truncated-text/#aa-the-solution-is-min-width-0-on-the-flex-child */
 }
 main {
   flex-grow: 1;
