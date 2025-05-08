@@ -1,6 +1,4 @@
 /**
- * TODO: when action throw sync + click enter
- * the error handling is different: to fix
  *
  * Here we want the same behaviour as web standards:
  *
@@ -23,6 +21,7 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  useLayoutEffect,
 } from "preact/hooks";
 import { useResetErrorBoundary } from "../hooks/use_reset_error_boundary.js";
 import { canUseNavigation } from "../router.js";
@@ -45,6 +44,11 @@ export const SPAForm = forwardRef(
       method = "get",
       formDataMappings,
       children,
+      // custom validity is great as long as you don't have many error hapenning in parallel
+      // in that case only the last once will be displayed
+      // ideally they would all be displayed
+      // but for this we would have to implement our own way to display errors
+      // for now we'll stick to the custom validity api
       errorCustomValidityRef,
     },
     ref,
@@ -55,7 +59,7 @@ export const SPAForm = forwardRef(
     // To change if https://github.com/preactjs/preact/issues/4754 lands
     const [error, setError] = useState(null);
     const resetErrorBoundary = useResetErrorBoundary();
-    useEffect(() => {
+    useLayoutEffect(() => {
       if (error) {
         if (errorCustomValidityRef) {
           errorCustomValidityRef.current.setCustomValidity(error.message);
@@ -68,7 +72,7 @@ export const SPAForm = forwardRef(
         errorCustomValidityRef.current.setCustomValidity("");
       }
     }, [error, errorCustomValidityRef]);
-    useEffect(() => {
+    useLayoutEffect(() => {
       if (errorCustomValidityRef) {
         errorCustomValidityRef.current.oninput = () => {
           errorCustomValidityRef.current.setCustomValidity("");
