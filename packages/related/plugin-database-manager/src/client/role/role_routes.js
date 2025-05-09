@@ -61,3 +61,28 @@ export const PUT_ROLE_ACTION = registerAction(
     }
   },
 );
+
+export const POST_ROLE_ACTION = registerAction(async ({ formData }) => {
+  // eslint-disable-next-line no-alert
+  window.alert(`creating role named ${formData.get("rolname")}`);
+
+  // const response = await fetch(`/.internal/database/api/roles`, {
+  //   signal,
+  //   method: "POST",
+  //   headers: {
+  //     "accept": "application/json",
+  //     "content-type": "application/json",
+  //   },
+  //   body: JSON.stringify(Object.fromEntries(formData)),
+  // });
+  // if (!response.ok) {
+  //   const error = await response.json();
+  //   const createRoleError = new Error(
+  //     `Failed to create role: ${response.status} ${response.statusText}`,
+  //   );
+  //   createRoleError.stack = error.stack || error.message;
+  //   throw createRoleError;
+  // }
+  // const { role } = await response.json();
+  // updateRole(role.rolname, role);
+});

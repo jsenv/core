@@ -1,26 +1,26 @@
 /**
- * - ability to select a user
- *   -> would open the user in <main> + naviguate in the url
- *   -> a visual indicator would show it's selected
- *
- *   the page displaying a user needs to be done
+ * - escape should cancel role creation
+ * - a custon validity message when role name already exists
  * - ability to rename by enter
- * - a button to create an item (user) in the group (like in vscode)
- * by default would create a user at the bottom of the list of regular user
- * (we would resort afterwards to ensure it's at the correct location once created)
- * - cmd + backspace would allow to delete a user (after a confirm)
+ * - cmd + backspace would allow to delete a role (after a confirm)
  */
 
 import { effect } from "@preact/signals";
-import { useState, useRef, useLayoutEffect } from "preact/hooks";
-import { useDetails, SPALink, useRouteIsMatching } from "@jsenv/router";
+import { useState } from "preact/hooks";
+import {
+  useDetails,
+  SPALink,
+  SPAInputText,
+  useRouteIsMatching,
+  useAction,
+} from "@jsenv/router";
 import {
   UserWithHatSvg,
   UserSvg,
   UserWithCheckSvg,
   UserWithPlusSvg,
 } from "../user_svgs.jsx";
-import { GET_ROLE_ROUTE } from "../role/role_routes.js";
+import { GET_ROLE_ROUTE, POST_ROLE_ACTION } from "../role/role_routes.js";
 import {
   setCurrentRole,
   appendRoles,
@@ -131,7 +131,7 @@ const DatabaseNavGroupRoles = () => {
       <ul className="nav_group_list">
         {newItem !== null && (
           <NewItem
-            onBlur={() => {
+            onCancel={() => {
               // si on a rien rentré on le cré pas, sinon oui on le cré
               setNewItem(null);
             }}
@@ -149,7 +149,7 @@ const NavGroupListItem = ({ children }) => {
   return <li className="nav_group_list_item">{children}</li>;
 };
 
-const NewItem = (props) => {
+const NewItem = ({ onCancel }) => {
   // il faudrait un spa input text, celui ci se brancherait sur le onchange/enter
   // donc comme les autres, juste il aura autofocus
   // aussi il faut donc lui passer la route, pendant qu'on crée il est disabled
@@ -157,20 +157,24 @@ const NewItem = (props) => {
   // on fera avec customValidity (vérif que ca marche avec requestSubmit dailleurs)
   // dailleurs on pourrait ptet faire ¸a aussi pour les erreurs serveurs
 
-  // autoFocus does not work so we focus in a useLayoutEffect,
-  // see https://github.com/preactjs/preact/issues/1255
-  const inputRef = useRef();
-  useLayoutEffect(() => {
-    inputRef.current.focus();
-  });
-
   return (
     <NavGroupListItem>
       <span className="nav_group_list_item_content">
         <span style="display: flex; width: 1em; height: 1em">
           <EnterNameIconSvg />
         </span>
-        <input ref={inputRef} autoFocus type="text" {...props}></input>
+        <SPAInputText
+          name="rolname"
+          autoFocus
+          required
+          action={useAction(POST_ROLE_ACTION)}
+          // onBlur={(e) => {
+          //   const value = e.target.value;
+          //   if (value.trim() === "") {
+          //     onCancel();
+          //   }
+          // }}
+        />
       </span>
     </NavGroupListItem>
   );

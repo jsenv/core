@@ -98,3 +98,7 @@ main {
 main h1 {
   margin-top: 0;
 }
+
+input[data-interacting]:invalid {
+  outline-color: red;
+}
