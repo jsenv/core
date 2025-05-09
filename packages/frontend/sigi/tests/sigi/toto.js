@@ -1,17 +1,22 @@
 import { signal, effect, computed } from "@preact/signals";
 import { randomUUID } from "node:crypto";
 
-const arraySignalStore = (arraySignal, idPropertyName = "id") => {
-  effect(() => {
-    const array = arraySignal.value;
-    for (const object of array) {
-      if (!object.__id__) {
-        object.__id__ = randomUUID();
-      }
-    }
-  });
+const arraySignalStore = (initialItems = [], idPropertyName = "id") => {
+  const initialArray = [];
+  for (const props of initialItems) {
+    initialArray.push({
+      __id__: randomUUID(),
+      ...props,
+    });
+  }
+  const arraySignal = signal(initialArray);
 
   const currentItemIdSignal = signal(null);
+  const setCurrentItem = (props) => {
+    const currentItemId = props[idPropertyName];
+    const item = upsertOne(currentItemId, props);
+    currentItemIdSignal.value = item.__id__;
+  };
   const currentItemSignal = computed(() => {
     const currentItemId = currentItemIdSignal.value;
     const array = arraySignal.value;
@@ -25,18 +30,7 @@ const arraySignalStore = (arraySignal, idPropertyName = "id") => {
     }
     return null;
   });
-  const setCurrentItem = (item) => {
-    const id = item[idPropertyName];
-    const existingItem = arraySignal.value.find(
-      (itemCandidate) => itemCandidate[idPropertyName] === id,
-    );
-    if (existingItem) {
-      currentItemIdSignal.value = existingItem.__id__;
-    } else {
-      item.__id__ = randomUUID();
-      arraySignal.value.push(item);
-    }
-  };
+
   const onItemPropertyChange = (itemSignal, propertyName, callback) => {
     const NOT_FOUND = {};
     const propertyValueSignal = computed(() => {
@@ -71,45 +65,30 @@ const arraySignalStore = (arraySignal, idPropertyName = "id") => {
     });
   };
 
-  const upsertMany = (items) => {
-    const array = arraySignal.peek();
-    if (array.length === 0) {
-      arraySignal.value = items;
-      return;
-    }
-    const arrayUpdated = [];
-    const existingItemMap = new Map();
-    for (const existingItem of array) {
-      arrayUpdated.push(existingItem);
-      existingItemMap.set(existingItem[idPropertyName], existingItem);
-    }
-    for (const item of items) {
-      const existingItem = existingItemMap.get(item[idPropertyName]);
-      if (existingItem) {
-        Object.assign(existingItem, item);
-      } else {
-        arrayUpdated.push(item);
-      }
-    }
-    arraySignal.value = arrayUpdated;
-  };
   const upsertOne = (id, props) => {
     const array = arraySignal.peek();
     let found = false;
     const arrayUpdated = [];
+    let item;
     for (const existingItem of array) {
       if (existingItem[idPropertyName] === id) {
         found = true;
         Object.assign(existingItem, props);
         arrayUpdated.push(existingItem);
+        item = existingItem;
       } else {
         arrayUpdated.push(existingItem);
       }
     }
     if (!found) {
-      arrayUpdated.push(props);
+      item = {
+        __id__: randomUUID(),
+        ...props,
+      };
+      arrayUpdated.push(item);
     }
     arraySignal.value = arrayUpdated;
+    return item;
   };
   const removeOne = (id) => {
     const array = arraySignal.peek();
@@ -127,26 +106,64 @@ const arraySignalStore = (arraySignal, idPropertyName = "id") => {
     }
   };
 
+  const upsertMany = (propsArray) => {
+    const array = arraySignal.peek();
+    if (array.length === 0) {
+      const arrayUpdated = [];
+      for (const props of propsArray) {
+        arrayUpdated.push({
+          __id__: randomUUID(),
+          ...props,
+        });
+      }
+      arraySignal.value = arrayUpdated;
+      return arrayUpdated;
+    }
+    const arrayUpdated = [];
+    const existingItemMap = new Map();
+    for (const existingItem of array) {
+      arrayUpdated.push(existingItem);
+      existingItemMap.set(existingItem[idPropertyName], existingItem);
+    }
+    for (const props of propsArray) {
+      const id = props[idPropertyName];
+      const existingItem = existingItemMap.get(id);
+      if (existingItem) {
+        Object.assign(existingItem, props);
+      } else {
+        const item = {
+          __id__: randomUUID(),
+          ...props,
+        };
+        arrayUpdated.push(item);
+      }
+    }
+    arraySignal.value = arrayUpdated;
+    return arrayUpdated;
+  };
+
   return {
     currentItemSignal,
     setCurrentItem,
     onItemPropertyChange,
     onItemRemoved,
-    upsertMany,
     upsertOne,
     removeOne,
+    upsertMany,
   };
 };
 
-const listSignal = signal([
-  {
-    name: "a",
-  },
-  {
-    name: "b",
-  },
-]);
-const arrayStore = arraySignalStore(listSignal, "name");
+const arrayStore = arraySignalStore(
+  [
+    {
+      name: "a",
+    },
+    {
+      name: "b",
+    },
+  ],
+  "name",
+);
 
 arrayStore.setCurrentItem({ name: "a" });
 
