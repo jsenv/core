@@ -61,7 +61,7 @@ const RoleFields = () => {
   });
   const fields = columns.map((column) => {
     const columnName = column.column_name;
-    const value = role ? role[columnName] : undefined;
+    const value = role ? role[columnName] : "";
     return {
       column,
       value,
