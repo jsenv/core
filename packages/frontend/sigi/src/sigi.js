@@ -13,20 +13,19 @@ export const sigi = (rootValue) => {
   return getOrCreateProxy(rootValue);
 };
 
-const proxyCacheWeakMap = new WeakMap();
+const proxyWeakMap = new WeakMap();
 const getOrCreateProxy = (value) => {
-  const existingProxy = proxyCacheWeakMap.get(value);
+  const existingProxy = proxyWeakMap.get(value);
   if (existingProxy) {
     return existingProxy;
   }
   const proxy = new Proxy(value, objectHandlers);
   ignoreWeakSet.add(proxy);
-  proxyCacheWeakMap.set(value, proxy);
+  proxyWeakMap.set(value, proxy);
   return proxy;
 };
 
 const signalMapWeakMap = new WeakMap();
-const proxyWeakMap = new WeakMap();
 const objectHandlers = {
   get: (target, key, receiver) => {
     let signalsMap = signalMapWeakMap.get(receiver);
@@ -43,9 +42,6 @@ const objectHandlers = {
       }
     }
     let value = Reflect.get(target, key, receiver);
-    if (typeof value === "function") {
-      return undefined;
-    }
     if (typeof key === "symbol" && wellKnownSymbolSet.has(key)) {
       return value;
     }
@@ -62,15 +58,14 @@ const objectHandlers = {
   },
   set: (target, key, value, receiver) => {
     const descriptor = Object.getOwnPropertyDescriptor(target, key);
-    if (descriptor && typeof descriptor?.set === "function") {
+    if (descriptor && typeof descriptor.set === "function") {
       return Reflect.set(target, key, value, receiver);
     }
-    let signalMap = proxyWeakMap.get(receiver);
+    let signalMap = signalMapWeakMap.get(receiver);
     if (!signalMap) {
       signalMap = new Map();
-      proxyWeakMap.set(receiver, signalMap);
+      signalMapWeakMap.set(receiver, signalMap);
     }
-
     let internal;
     if (shouldProxy(value)) {
       internal = getOrCreateProxy(value);
