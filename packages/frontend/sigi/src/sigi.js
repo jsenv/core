@@ -52,7 +52,7 @@ const objectHandlers = {
       }
       signalForThisKey = signal(value);
       signalsMap.set(key, signalForThisKey);
-      return value;
+      return signalForThisKey.value; // we must read value to subscribe, it we return value, we won't subscribe
     }
     return signalForThisKey.value;
   },

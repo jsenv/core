@@ -1,5 +1,5 @@
 import { sigi } from "@jsenv/sigi";
-// import { effect } from "@preact/signals";
+import { effect } from "@preact/signals";
 import { snapshotTests } from "@jsenv/snapshot";
 
 await snapshotTests(import.meta.url, ({ test }) => {
@@ -16,20 +16,16 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return values;
   });
 
-  test("0_array_of_objects", () => {
-    const state = sigi([]);
+  test("1_effect", async () => {
+    const state = sigi({
+      a: 1,
+    });
     const values = [];
-    values.push(`start: ${state}`);
-    state.push({
-      name: "a",
+    effect(() => {
+      values.push(`effect: ${state.a}`);
     });
-    state.push({
-      name: "b",
-    });
-
-    values.push(`get: ${state.a[0].b}`);
-    state.a[0].b++;
-    values.push(`get after increment: ${state.a[0].b}`);
+    state.a++;
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     return values;
   });

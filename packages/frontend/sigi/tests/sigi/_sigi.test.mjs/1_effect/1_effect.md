@@ -1,22 +1,23 @@
-# [0_get_set_get](../../sigi.test.mjs#L6)
+# [1_effect](../../sigi.test.mjs#L19)
 
 ```js
 const state = sigi({
   a: 1,
 });
-
 const values = [];
-values.push(`get: ${state.a}`);
+effect(() => {
+  values.push(`effect: ${state.a}`);
+});
 state.a++;
-values.push(`get after increment: ${state.a}`);
+await new Promise((resolve) => setTimeout(resolve, 10));
 
 return values;
 ```
 
 ```js
 [
-  "get: 1",
-  "get after increment: 2"
+  "effect: 1",
+  "effect: 2"
 ]
 ```
 
