@@ -19,59 +19,6 @@ export const arraySignalStore = (
   }
   const arraySignal = signal(initialArray);
 
-  const currentItemIdSignal = signal(null);
-  const setCurrentItem = (props) => {
-    const item = upsert(props);
-    currentItemIdSignal.value = item[clientIdSymbol];
-  };
-  const currentItemSignal = computed(() => {
-    const currentItemId = currentItemIdSignal.value;
-    const array = arraySignal.value;
-    if (!currentItemId) {
-      return null;
-    }
-    for (const item of array) {
-      if (item[clientIdSymbol] === currentItemId) {
-        return item;
-      }
-    }
-    return null;
-  });
-
-  const onItemPropertyChange = (itemSignal, propertyName, callback) => {
-    const NOT_FOUND = {};
-    const propertyValueSignal = computed(() => {
-      // eslint-disable-next-line no-unused-expressions
-      arraySignal.value; // register array signal as dependency
-      const item = itemSignal.value;
-      return item ? item[propertyName] : NOT_FOUND;
-    });
-    const propertyValuePreviousSignal = signal(propertyValueSignal.value);
-    return effect(() => {
-      const propertyValuePrevious = propertyValuePreviousSignal.value;
-      const propertyValue = propertyValueSignal.value;
-      propertyValuePreviousSignal.value = propertyValue;
-      if (
-        propertyValue !== propertyValuePrevious &&
-        propertyValue !== NOT_FOUND &&
-        propertyValuePrevious !== NOT_FOUND
-      ) {
-        callback(propertyValuePrevious, propertyValue);
-      }
-    });
-  };
-  const onItemRemoved = (itemSignal, callback) => {
-    const itemPreviousSignal = signal(itemSignal.value);
-    return effect(() => {
-      const item = itemSignal.value;
-      const itemPrevious = itemPreviousSignal.value;
-      itemPreviousSignal.value = itemPrevious;
-      if (itemPrevious && !item) {
-        callback(itemPrevious);
-      }
-    });
-  };
-
   const getByUniquePropertyName = (id) => {
     const array = arraySignal.peek();
     for (const item of array) {
@@ -188,13 +135,87 @@ export const arraySignalStore = (
     return array;
   };
 
+  const itemSignal = () => {
+    const clientIdSignal = signal(null);
+    const setItem = (props) => {
+      const item = upsert(props);
+      const itemClientId = item[clientIdSymbol];
+      clientIdSignal.value = itemClientId;
+    };
+    const itemSignal = computed(() => {
+      const clientId = clientIdSignal.value;
+      const array = arraySignal.value;
+      if (!clientId) {
+        return null;
+      }
+      for (const item of array) {
+        if (item[clientIdSymbol] === clientId) {
+          return item;
+        }
+      }
+      return null;
+    });
+    return [itemSignal, setItem, clientIdSignal];
+  };
+  const deriveItemSignal = (getter) => {
+    const idSignal = computed(getter);
+    const [innerItemSignal, , clientIdSignal] = itemSignal();
+    effect(() => {
+      const id = idSignal.value;
+      const array = arraySignal.value;
+      for (const itemCandidate of array) {
+        const itemCandidateId = itemCandidate[uniquePropertyName];
+        const itemCandidateClientId = itemCandidate[clientIdSymbol];
+        if (itemCandidateId === id) {
+          clientIdSignal.value = itemCandidateClientId;
+          return;
+        }
+      }
+    });
+    return innerItemSignal;
+  };
+  const onItemPropertyChange = (itemSignal, propertyName, callback) => {
+    const NOT_FOUND = {};
+    const propertyValueSignal = computed(() => {
+      // eslint-disable-next-line no-unused-expressions
+      arraySignal.value; // register array signal as dependency
+      const item = itemSignal.value;
+      return item ? item[propertyName] : NOT_FOUND;
+    });
+    const propertyValuePreviousSignal = signal(propertyValueSignal.value);
+    return effect(() => {
+      const propertyValuePrevious = propertyValuePreviousSignal.value;
+      const propertyValue = propertyValueSignal.value;
+      propertyValuePreviousSignal.value = propertyValue;
+      if (
+        propertyValue !== propertyValuePrevious &&
+        propertyValue !== NOT_FOUND &&
+        propertyValuePrevious !== NOT_FOUND
+      ) {
+        callback(propertyValue, propertyValuePrevious);
+      }
+    });
+  };
+  const onItemRemoved = (itemSignal, callback) => {
+    const itemPreviousSignal = signal(itemSignal.value);
+    return effect(() => {
+      const item = itemSignal.value;
+      const itemPrevious = itemPreviousSignal.value;
+      itemPreviousSignal.value = itemPrevious;
+      console.log(item, itemPrevious);
+      if (itemPrevious && !item) {
+        callback(itemPrevious);
+      }
+    });
+  };
+
   return {
     arraySignal,
     getByUniquePropertyName,
     upsert,
     drop,
-    currentItemSignal,
-    setCurrentItem,
+    itemSignal,
+    deriveItemSignal,
     onItemPropertyChange,
     onItemRemoved,
   };

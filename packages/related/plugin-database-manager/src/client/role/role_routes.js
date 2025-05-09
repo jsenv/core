@@ -21,17 +21,19 @@ export const GET_ROLE_ROUTE = registerRoute(
     roleStore.upsert(role.rolname, role);
   },
 );
-roleStore.onItemPropertyChange(
-  roleStore.currentItemSignal,
-  "rolname",
-  (previousRolname, rolname) => {
-    const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
-      roleName: rolname,
-    });
-    goTo(roleUrl, { replace: true });
-  },
-);
-roleStore.onItemRemoved(roleStore.currentItemSignal, () => {
+const activeRoleSignal = roleStore.deriveItemSignal(() => {
+  const isMatching = GET_ROLE_ROUTE.isMatchingSignal.value;
+  const params = GET_ROLE_ROUTE.paramsSignal.value;
+  return isMatching ? params.roleName : null;
+});
+roleStore.onItemPropertyChange(activeRoleSignal, "rolname", (rolname) => {
+  const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
+    roleName: rolname,
+  });
+  goTo(roleUrl, { replace: true });
+});
+roleStore.onItemRemoved(activeRoleSignal, () => {
+  debugger;
   goTo(GET_ROLE_ROUTE.url, { replace: true });
 });
 

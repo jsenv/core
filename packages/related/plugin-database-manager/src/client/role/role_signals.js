@@ -16,10 +16,8 @@ export const useRoleList = () => {
 export const useRole = (roleName) => {
   return roleStore.getByUniquePropertyName(roleName);
 };
-export const currentRoleSignal = roleStore.currentItemSignal;
+const [currentRoleSignal, setCurrentRole] = roleStore.itemSignal();
 export const useCurrentRole = () => {
-  return roleStore.currentItemSignal.value;
+  return currentRoleSignal.value;
 };
-export const setCurrentRole = (value) => {
-  roleStore.setCurrentItem(value);
-};
+export { setCurrentRole };
