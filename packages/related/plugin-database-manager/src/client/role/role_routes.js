@@ -1,4 +1,5 @@
 import { registerRoute, registerAction, goTo } from "@jsenv/router";
+import { computed } from "@preact/signals";
 import { roleStore, setRoleColumns } from "./role_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
@@ -21,19 +22,18 @@ export const GET_ROLE_ROUTE = registerRoute(
     roleStore.upsert(role.rolname, role);
   },
 );
-const activeRoleSignal = roleStore.deriveItemSignal(() => {
+const activeRoleNameSignal = computed(() => {
   const isMatching = GET_ROLE_ROUTE.isMatchingSignal.value;
   const params = GET_ROLE_ROUTE.paramsSignal.value;
   return isMatching ? params.roleName : null;
 });
-roleStore.onItemPropertyChange(activeRoleSignal, "rolname", (rolname) => {
+roleStore.onRenameId(activeRoleNameSignal, (rolname) => {
   const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
     roleName: rolname,
   });
   goTo(roleUrl, { replace: true });
 });
-roleStore.onItemRemoved(activeRoleSignal, () => {
-  debugger;
+roleStore.onDeleteId(activeRoleNameSignal, () => {
   goTo(GET_ROLE_ROUTE.url, { replace: true });
 });
 

@@ -174,11 +174,15 @@ const detectBrowserStopButtonClick = (navigateEventSignal, callback) => {
 };
 
 export const goTo = (url, { state, replace } = {}) => {
+  const currentUrl = documentUrlSignal.peek();
   if (replace) {
+    if (url === currentUrl) {
+      navigation.reload();
+      return;
+    }
     navigation.navigate(url, { state, history: "replace" });
     return;
   }
-  const currentUrl = documentUrlSignal.peek();
   if (url === currentUrl) {
     return;
   }
