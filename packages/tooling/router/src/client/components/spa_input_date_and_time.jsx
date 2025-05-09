@@ -35,14 +35,14 @@ export const SPAInputDateAndTime = ({
   );
 };
 
-const InputDateAndTime = ({ action, value, ...rest }) => {
+const InputDateAndTime = ({ action, value, name, ...rest }) => {
   // replace any trailling .000Z (milliseconds from time) because input does not support that
   value = value ? convertToLocalTimezone(value) : value;
 
   const { pending } = useActionStatus(action);
   const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
     value,
-    action.params.columnName,
+    name,
   );
   const inputRef = useRef(null);
   useRequestSubmitOnChange(inputRef);
@@ -53,8 +53,9 @@ const InputDateAndTime = ({ action, value, ...rest }) => {
         {...rest}
         ref={inputRef}
         type="datetime-local"
-        disabled={pending}
+        name={name}
         value={optimisticUIState}
+        disabled={pending}
         onInput={(e) => {
           setOptimisticUIState(e.target.value);
         }}

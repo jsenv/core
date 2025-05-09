@@ -22,11 +22,11 @@ export const SPAInputInteger = ({ action, method = "PUT", label, ...rest }) => {
   );
 };
 
-const InputInteger = ({ action, value, ...rest }) => {
+const InputInteger = ({ action, value, name, ...rest }) => {
   const { pending } = useActionStatus(action);
   const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
     value,
-    action.params.columnName,
+    name,
   );
   const inputRef = useRef(null);
   useRequestSubmitOnChange(inputRef);
@@ -37,8 +37,9 @@ const InputInteger = ({ action, value, ...rest }) => {
         {...rest}
         ref={inputRef}
         type="number"
-        disabled={pending}
+        name={name}
         value={optimisticUIState}
+        disabled={pending}
         onInput={(e) => {
           setOptimisticUIState(e.target.valueAsNumber);
         }}

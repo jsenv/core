@@ -22,11 +22,11 @@ export const SPAInputText = ({ action, method = "PUT", label, ...rest }) => {
   );
 };
 
-const InputText = ({ action, value, ...rest }) => {
+const InputText = ({ action, name, value, ...rest }) => {
   const { pending } = useActionStatus(action);
   const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
     value,
-    action.params.columnName,
+    name,
   );
   const inputRef = useRef(null);
   useRequestSubmitOnChange(inputRef);
@@ -37,8 +37,9 @@ const InputText = ({ action, value, ...rest }) => {
         {...rest}
         ref={inputRef}
         type="text"
-        disabled={pending}
+        name={name}
         value={optimisticUIState}
+        disabled={pending}
         onInput={(e) => {
           setOptimisticUIState(e.target.value);
         }}

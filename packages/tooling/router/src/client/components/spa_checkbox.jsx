@@ -4,6 +4,7 @@ import { forwardRef } from "preact/compat";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
+import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 
 export const SPACheckbox = ({ action, label, method = "PUT", ...rest }) => {
   const inputRef = useRef(null);
@@ -23,14 +24,15 @@ export const SPACheckbox = ({ action, label, method = "PUT", ...rest }) => {
   );
 };
 
-const Checkbox = forwardRef(({ action, checked, ...rest }, ref) => {
+const Checkbox = forwardRef(({ action, name, checked, ...rest }, ref) => {
   const { pending } = useActionStatus(action);
   const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
     checked,
-    action.params.columnName,
+    name,
   );
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
+  useRequestSubmitOnChange(innerRef);
 
   return (
     <LoaderBackground pending={pending}>
@@ -38,13 +40,12 @@ const Checkbox = forwardRef(({ action, checked, ...rest }, ref) => {
         {...rest}
         ref={innerRef}
         type="checkbox"
-        onChange={(e) => {
-          setOptimisticUIState(e.target.checked);
-          const form = e.target.form;
-          form.requestSubmit();
-        }}
+        name={name}
         checked={optimisticUIState}
         disabled={pending}
+        onInput={(e) => {
+          setOptimisticUIState(e.target.checked);
+        }}
       />
     </LoaderBackground>
   );
