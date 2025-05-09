@@ -16,20 +16,21 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return values;
   });
 
-  // test("1_effect", () => {
-  //   const state = sigi({
-  //     a: 1,
-  //   });
+  test("0_array_of_objects", () => {
+    const state = sigi([]);
+    const values = [];
+    values.push(`start: ${state}`);
+    state.push({
+      name: "a",
+    });
+    state.push({
+      name: "b",
+    });
 
-  //   const values = [state.a];
+    values.push(`get: ${state.a[0].b}`);
+    state.a[0].b++;
+    values.push(`get after increment: ${state.a[0].b}`);
 
-  //   values.push(`start: ${state.a}`);
-  //   // effect(() => {
-  //   //   values.push(`effect: ${state.a}`);
-  //   // });
-  //   state.a++;
-  //   values.push(`after increment: ${state.a}`);
-
-  //   return values;
-  // });
+    return values;
+  });
 });
