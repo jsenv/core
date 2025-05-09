@@ -54,6 +54,8 @@ export const SPAForm = forwardRef(
     ref,
   ) => {
     const innerRef = useRef();
+    useImperativeHandle(ref, () => innerRef.current);
+
     // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
     // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
     // To change if https://github.com/preactjs/preact/issues/4754 lands
@@ -91,14 +93,14 @@ export const SPAForm = forwardRef(
     });
     const formActionMapRef = useRef(new Map());
 
-    useImperativeHandle(ref, () => innerRef.current);
+    const submittingRef = useRef(false);
 
     return (
       <form
         ref={innerRef}
         onSubmit={async (submitEvent) => {
           submitEvent.preventDefault();
-          if (formStatus.pending) {
+          if (submittingRef.current) {
             /**
              * Without this check, when user types in <input> then hit enter 2 http requests are sent
              * - First one is correct
@@ -117,6 +119,7 @@ export const SPAForm = forwardRef(
              */
             return;
           }
+          submittingRef.current = true;
           if (resetErrorBoundary) {
             resetErrorBoundary();
           }
@@ -145,6 +148,7 @@ export const SPAForm = forwardRef(
             formData,
             action,
           });
+          submittingRef.current = false;
           const error = action.errorSignal.peek();
           formStatusSetter({
             pending: false,
