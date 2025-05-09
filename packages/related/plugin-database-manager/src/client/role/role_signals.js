@@ -12,7 +12,7 @@ export const roleListSignal = signal([]);
 export const useRoleList = () => {
   return roleListSignal.value;
 };
-export const appendRoles = (roles) => {
+export const upsertRoles = (roles) => {
   const existingRoles = roleListSignal.peek();
   if (existingRoles.length === 0) {
     roleListSignal.value = roles;
@@ -39,7 +39,7 @@ export const useRole = (roleName) => {
   const role = roles.find((role) => role.rolname === roleName);
   return role;
 };
-export const updateRole = (roleName, props) => {
+export const upsertRole = (roleName, props) => {
   const roles = roleListSignal.peek();
   const roleIndex = roles.findIndex(
     (roleCandidate) => roleCandidate.rolname === roleName,
@@ -75,5 +75,5 @@ export const useCurrentRole = () => {
 };
 export const setCurrentRole = (value) => {
   currentRoleSignal.value = value;
-  updateRole(value.rolname, value);
+  upsertRole(value.rolname, value);
 };

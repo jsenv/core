@@ -1,5 +1,6 @@
 import { SPAForm } from "./spa_form.jsx";
 import { forwardRef } from "preact/compat";
+import { fromFunction } from "../action/action.js";
 import { useRef, useLayoutEffect, useImperativeHandle } from "preact/hooks";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
@@ -7,34 +8,35 @@ import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
 import { useDataInteracting } from "./use_data_interacting.js";
 
-export const SPAInputText = ({
-  action,
-  onActionSuccess,
-  method = "PUT",
-  label,
-  ...rest
-}) => {
-  const inputRef = useRef(null);
-  const input = <InputText ref={inputRef} action={action} {...rest} />;
+export const SPAInputText = forwardRef(
+  ({ action, onActionSuccess, method = "PUT", label, ...rest }, ref) => {
+    if (typeof action === "function") {
+      action = fromFunction(action);
+    }
 
-  return (
-    <SPAForm
-      action={action}
-      method={method}
-      errorCustomValidityRef={inputRef}
-      onActionSuccess={onActionSuccess}
-    >
-      {label ? (
-        <label>
-          {label}
-          {input}
-        </label>
-      ) : (
-        input
-      )}
-    </SPAForm>
-  );
-};
+    const innerRef = useRef(null);
+    useImperativeHandle(ref, () => innerRef.current);
+    const input = <InputText ref={innerRef} action={action} {...rest} />;
+
+    return (
+      <SPAForm
+        action={action}
+        method={method}
+        errorCustomValidityRef={innerRef}
+        onActionSuccess={onActionSuccess}
+      >
+        {label ? (
+          <label>
+            {label}
+            {input}
+          </label>
+        ) : (
+          input
+        )}
+      </SPAForm>
+    );
+  },
+);
 
 const InputText = forwardRef(
   ({ autoFocus, required, action, name, value, ...rest }, ref) => {

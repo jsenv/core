@@ -1,5 +1,5 @@
 import { registerRoute, registerAction, goTo } from "@jsenv/router";
-import { setRoleColumns, updateRole, removeRole } from "./role_signals.js";
+import { setRoleColumns, upsertRole, removeRole } from "./role_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
   "/.internal/database/roles/:roleName",
@@ -18,7 +18,7 @@ export const GET_ROLE_ROUTE = registerRoute(
     }
     const { columns, role } = await response.json();
     setRoleColumns(columns);
-    updateRole(role.rolname, role);
+    upsertRole(role.rolname, role);
   },
 );
 
@@ -48,7 +48,7 @@ export const PUT_ROLE_ACTION = registerAction(
       updateRoleError.stack = error.stack || error.message;
       throw updateRoleError;
     }
-    updateRole(roleName, { [columnName]: value });
+    upsertRole(roleName, { [columnName]: value });
     if (
       columnName === "rolname" &&
       GET_ROLE_ROUTE.isMatchingSignal.peek() &&
@@ -82,7 +82,7 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
     throw createRoleError;
   }
   const role = await response.json();
-  updateRole(role.rolname, role);
+  upsertRole(role.rolname, role);
 });
 
 export const DELETE_ROLE_ACTION = registerAction(
