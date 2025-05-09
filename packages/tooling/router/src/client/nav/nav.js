@@ -120,6 +120,10 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
           removeStopButtonClickDetector();
         }
       },
+      // https://github.com/WICG/navigation-api?tab=readme-ov-file#focus-management
+      // without this, after clicking <a href="...">, the focus does to document.body
+      // which is problematic for shortcuts for instance
+      focusReset: "manual",
     });
   });
   navigation.navigate(window.location.href, { history: "replace" });

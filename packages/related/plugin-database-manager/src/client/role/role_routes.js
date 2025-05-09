@@ -84,3 +84,24 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
   const role = await response.json();
   updateRole(role.rolname, role);
 });
+
+export const DELETE_ROLE_ACTION = registerAction(
+  async ({ roleName, signal }) => {
+    const response = await fetch(`/.internal/database/api/roles/${roleName}`, {
+      signal,
+      method: "DELETE",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      const deleteRoleError = new Error(
+        `Failed to delete role: ${response.status} ${response.statusText}`,
+      );
+      deleteRoleError.stack = error.stack || error.message;
+      throw deleteRoleError;
+    }
+  },
+);

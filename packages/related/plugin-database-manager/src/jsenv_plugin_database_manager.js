@@ -156,6 +156,22 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
+        endpoint: "DELETE /.internal/database/api/roles/:roleName",
+        declarationSource: import.meta.url,
+        fetch: async (request) => {
+          const roleName = request.params.roleName;
+          try {
+            await sql`DROP ROLE ${sql(roleName)}`;
+            return Response.json(null, { status: 204 });
+          } catch (e) {
+            if (e.code === "42704") {
+              return Response.json(e, { status: 404, statusText: e.message });
+            }
+            return Response.json(e, { status: 500 });
+          }
+        },
+      },
+      {
         endpoint: "GET /.internal/database/api/tables",
         declarationSource: import.meta.url,
         fetch: async (request) => {

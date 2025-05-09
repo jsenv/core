@@ -20,7 +20,11 @@ import {
   UserWithCheckSvg,
   UserWithPlusSvg,
 } from "../user_svgs.jsx";
-import { GET_ROLE_ROUTE, POST_ROLE_ACTION } from "../role/role_routes.js";
+import {
+  GET_ROLE_ROUTE,
+  POST_ROLE_ACTION,
+  DELETE_ROLE_ACTION,
+} from "../role/role_routes.js";
 import {
   setCurrentRole,
   appendRoles,
@@ -70,6 +74,7 @@ const DatabaseNavGroupRoles = () => {
     const roleName = role.rolname;
     const isCurrent = roleName === currentRole.rolname;
     const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { roleName });
+    const deleteAction = useAction(DELETE_ROLE_ACTION, { roleName });
 
     return (
       <SPALink
@@ -77,6 +82,8 @@ const DatabaseNavGroupRoles = () => {
         route={GET_ROLE_ROUTE}
         routeParams={{ roleName }}
         className="nav_group_list_item_content"
+        deleteShortcutAction={deleteAction}
+        deleteShortcutConfirmContent={`Are you sure you want to delete the role "${roleName}"?`}
       >
         <span style="width: 1em; height: 1em">
           {roleName.startsWith("pg_") ? (
