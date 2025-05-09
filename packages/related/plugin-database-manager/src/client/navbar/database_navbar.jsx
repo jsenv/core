@@ -120,7 +120,9 @@ const DatabaseNavGroupRoles = () => {
             style="width: 22px; height: 22px; cursor: pointer;"
             onClick={(e) => {
               e.preventDefault();
-              setNewItem("");
+              if (newItem === null) {
+                setNewItem("");
+              }
             }}
           >
             <UserWithPlusSvg />
@@ -168,12 +170,18 @@ const NewItem = ({ onCancel }) => {
           autoFocus
           required
           action={useAction(POST_ROLE_ACTION)}
-          // onBlur={(e) => {
-          //   const value = e.target.value;
-          //   if (value.trim() === "") {
-          //     onCancel();
-          //   }
-          // }}
+          onKeydown={(e) => {
+            if (e.key === "Escape") {
+              e.target.value = "";
+              e.target.blur();
+            }
+          }}
+          onBlur={(e) => {
+            const value = e.target.value;
+            if (value.trim() === "") {
+              onCancel();
+            }
+          }}
         />
       </span>
     </NavGroupListItem>
