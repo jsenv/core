@@ -53,6 +53,18 @@ export const updateRole = (roleName, props) => {
     roleListSignal.value = [...roles];
   }
 };
+export const removeRole = (roleName) => {
+  const roles = roleListSignal.peek();
+  const rolesWithoutThisOne = [];
+  for (const roleCandidate of roles) {
+    if (roleCandidate.rolname !== roleName) {
+      rolesWithoutThisOne.push(roleCandidate);
+    }
+  }
+  if (rolesWithoutThisOne.length !== roles.length) {
+    roleListSignal.value = rolesWithoutThisOne;
+  }
+};
 
 export const currentRoleSignal = signal(null);
 export const useCurrentRole = () => {

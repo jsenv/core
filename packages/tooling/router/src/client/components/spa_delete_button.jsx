@@ -1,8 +1,8 @@
 import { SPAForm } from "./spa_form.jsx";
 
-export const SPADeleteButton = ({ href, children, ...rest }) => {
+export const SPADeleteButton = ({ action, children, ...rest }) => {
   return (
-    <SPAForm action={href} method="DELETE">
+    <SPAForm action={action} method="DELETE">
       <button type="submit" {...rest}>
         {children}
       </button>

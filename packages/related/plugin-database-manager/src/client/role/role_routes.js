@@ -1,5 +1,5 @@
 import { registerRoute, registerAction, goTo } from "@jsenv/router";
-import { setRoleColumns, updateRole } from "./role_signals.js";
+import { setRoleColumns, updateRole, removeRole } from "./role_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
   "/.internal/database/roles/:roleName",
@@ -103,5 +103,6 @@ export const DELETE_ROLE_ACTION = registerAction(
       deleteRoleError.stack = error.stack || error.message;
       throw deleteRoleError;
     }
+    removeRole(roleName);
   },
 );

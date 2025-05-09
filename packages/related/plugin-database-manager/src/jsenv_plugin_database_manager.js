@@ -162,12 +162,12 @@ export const jsenvPluginDatabaseManager = () => {
           const roleName = request.params.roleName;
           try {
             await sql`DROP ROLE ${sql(roleName)}`;
-            return Response.json(null, { status: 204 });
+            return new Response(null, { status: 204 });
           } catch (e) {
             if (e.code === "42704") {
               return Response.json(e, { status: 404, statusText: e.message });
             }
-            return Response.json(e, { status: 500 });
+            return Response.json(e, { status: 500, statusText: e.message });
           }
         },
       },

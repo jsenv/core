@@ -50,26 +50,17 @@ export const DatabaseNavbar = () => {
 const DatabaseNavGroupRoles = () => {
   const currentRole = useCurrentRole();
   const roles = useRoleList();
-
-  roles.sort((a, b) => {
-    const aIsCurrent = a.rolname === currentRole.rolname;
-    if (aIsCurrent) {
-      return -1;
-    }
-    const bIsCurrent = b.rolname === currentRole.rolname;
-    if (bIsCurrent) {
-      return 1;
-    }
-    const aIsPg = a.rolname.startsWith("pg_");
-    const bIsPg = b.rolname.startsWith("pg_");
-    if (aIsPg && !bIsPg) {
-      return 1;
-    }
-    if (bIsPg && !aIsPg) {
-      return -1;
-    }
-    return 0;
-  });
+  // roles.sort((a, b) => {
+  //   const aIsPg = a.rolname.startsWith("pg_");
+  //   const bIsPg = b.rolname.startsWith("pg_");
+  //   if (aIsPg && !bIsPg) {
+  //     return 1;
+  //   }
+  //   if (bIsPg && !aIsPg) {
+  //     return -1;
+  //   }
+  //   return 0;
+  // });
   const items = roles.map((role) => {
     const roleName = role.rolname;
     const isCurrent = roleName === currentRole.rolname;
@@ -143,6 +134,9 @@ const DatabaseNavGroupRoles = () => {
       }
     >
       <ul className="nav_group_list">
+        {items.map((item) => {
+          return <NavGroupListItem key={item.url}>{item}</NavGroupListItem>;
+        })}
         {newItem !== null && (
           <NewItem
             onCancel={() => {
@@ -151,9 +145,6 @@ const DatabaseNavGroupRoles = () => {
             }}
           />
         )}
-        {items.map((item) => {
-          return <NavGroupListItem key={item.url}>{item}</NavGroupListItem>;
-        })}
       </ul>
     </DatabaseNavGroup>
   );

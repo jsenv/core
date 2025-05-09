@@ -1,6 +1,15 @@
-import { ErrorBoundaryContext, Route, useAction } from "@jsenv/router";
+import {
+  ErrorBoundaryContext,
+  Route,
+  useAction,
+  SPADeleteButton,
+} from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
-import { GET_ROLE_ROUTE, PUT_ROLE_ACTION } from "./role_routes.js";
+import {
+  GET_ROLE_ROUTE,
+  PUT_ROLE_ACTION,
+  DELETE_ROLE_ACTION,
+} from "./role_routes.js";
 import { DatabaseValue } from "../components/database_value.jsx";
 import { useRoleColumns, useRole } from "./role_signals.js";
 
@@ -10,11 +19,17 @@ export const RoleRoutes = () => {
 
 const RolePage = ({ route }) => {
   const [error, resetError] = useErrorBoundary();
+  const deleteRoleAction = useAction(DELETE_ROLE_ACTION, {
+    roleName: GET_ROLE_ROUTE.params.roleName,
+  });
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
       {error && <ErrorDetails error={error} />}
       <RoleFields route={route} />
+
+      <SPADeleteButton action={deleteRoleAction}>Delete</SPADeleteButton>
+
       <a
         href="https://www.postgresql.org/docs/14/sql-alterrole.html"
         target="_blank"
