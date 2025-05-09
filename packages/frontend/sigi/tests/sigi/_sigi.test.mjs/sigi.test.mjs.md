@@ -3,6 +3,7 @@
 
 - [0_get_set_get](0_get_set_get/0_get_set_get.md)
 - [1_effect](1_effect/1_effect.md)
+- [2_renaming_into_array](2_renaming_into_array/2_renaming_into_array.md)
 
 ---
 

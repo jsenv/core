@@ -2,7 +2,7 @@
  * https://github.com/luisherranz/deepsignal/blob/main/packages/deepsignal/core/src/index.ts
  *
  */
-import { signal, computed } from "@preact/signals";
+import { signal, computed, effect } from "@preact/signals";
 
 export const sigi = (rootValue) => {
   if (!shouldProxy(rootValue)) {
@@ -11,6 +11,36 @@ export const sigi = (rootValue) => {
     );
   }
   return getOrCreateProxy(rootValue);
+};
+
+const signalWeakMap = new WeakMap();
+const getOrCreateSignal = (value) => {
+  const signalForThisValue = signal(value);
+  // eslint-disable-next-line no-unused-expressions
+  signalForThisValue.value; // force subscription
+  signalWeakMap.set(value, signalForThisValue);
+};
+
+sigi.prev = (rootValue) => {
+  const valueSignal = signal(rootValue);
+  const prevValueSignal = signal(undefined);
+
+  effect(() => {
+    const newValue = valueSignal.value;
+    prevValueSignal.value = structuredClone(newValue);
+  });
+
+  return {
+    get value() {
+      return valueSignal.value;
+    },
+    set value(newValue) {
+      valueSignal.value = newValue;
+    },
+    get previous() {
+      return prevValueSignal.value;
+    },
+  };
 };
 
 const proxyWeakMap = new WeakMap();
@@ -22,6 +52,8 @@ const getOrCreateProxy = (value) => {
   const proxy = new Proxy(value, objectHandlers);
   ignoreWeakSet.add(proxy);
   proxyWeakMap.set(value, proxy);
+  getOrCreateSignal(value);
+
   return proxy;
 };
 

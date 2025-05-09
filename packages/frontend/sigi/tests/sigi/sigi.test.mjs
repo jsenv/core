@@ -1,5 +1,5 @@
 import { sigi } from "@jsenv/sigi";
-import { effect } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
 import { snapshotTests } from "@jsenv/snapshot";
 
 await snapshotTests(import.meta.url, ({ test }) => {
@@ -27,6 +27,25 @@ await snapshotTests(import.meta.url, ({ test }) => {
     state.a++;
     await new Promise((resolve) => setTimeout(resolve, 10));
 
+    return values;
+  });
+
+  test("2_renaming_into_array", () => {
+    const state = signal([{ name: "a" }, { name: "b" }]);
+    const currentItemSignal = signal({ name: "a" });
+    const values = [];
+    effect(() => {
+      const currentItem = currentItemSignal.value;
+      for (const item of state) {
+        if (item.name === currentItem.name) {
+          const prev = sigi.prev(item);
+          if (prev.value.name !== item.name) {
+            values.push(`renamed from: ${prev.value.name}, to: ${item.name}`);
+          }
+        }
+      }
+    });
+    state[0].name = "a_renamed";
     return values;
   });
 });
