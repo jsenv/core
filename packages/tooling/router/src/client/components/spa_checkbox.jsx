@@ -7,11 +7,15 @@ import { useActionStatus } from "../action/action_hooks.js";
 import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 
 export const SPACheckbox = ({ action, label, method = "PUT", ...rest }) => {
-  const inputRef = useRef(null);
-  const checkbox = <Checkbox ref={inputRef} action={action} {...rest} />;
+  const checkboxRef = useRef(null);
+  const checkbox = <Checkbox ref={checkboxRef} action={action} {...rest} />;
 
   return (
-    <SPAForm action={action} method={method} errorCustomValidityRef={inputRef}>
+    <SPAForm
+      action={action}
+      method={method}
+      errorCustomValidityRef={checkboxRef}
+    >
       {label ? (
         <label>
           {label}

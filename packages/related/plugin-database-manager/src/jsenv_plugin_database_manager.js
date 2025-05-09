@@ -118,11 +118,41 @@ export const jsenvPluginDatabaseManager = () => {
             await alterRoleQuery(sql, roleName, columnName, value);
           } catch (e) {
             if (e.code === "42704") {
-              return Response.json({ message: e.message }, { status: 404 });
+              return Response.json(e, { status: 404, statusText: e.message });
             }
             throw e;
           }
           return Response.json({ [columnName]: value });
+        },
+      },
+      {
+        endpoint: "POST /.internal/database/api/roles",
+        declarationSource: import.meta.url,
+        acceptedMediaTypes: ["application/json"],
+        fetch: async (request) => {
+          const role = await request.json();
+          let { rolname } = role;
+          // ideally we would support more options like
+          // const { rolname, ...options} = role and pass them to the sql query
+          // as documented in https://www.postgresql.org/docs/current/sql-createrole.html
+          // but we need only the name for now
+          try {
+            await sql`CREATE ROLE ${sql(rolname)}`;
+            const [role] = await sql`
+              SELECT
+                *
+              FROM
+                pg_roles
+              WHERE
+                rolname = ${rolname}
+            `;
+            return Response.json(role);
+          } catch (e) {
+            if (e.code === "42710") {
+              return Response.json(e, { status: 409, statusText: e.message });
+            }
+            return Response.json(e, { status: 500 });
+          }
         },
       },
       {
