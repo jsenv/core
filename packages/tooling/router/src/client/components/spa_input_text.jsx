@@ -1,6 +1,5 @@
 import { SPAForm } from "./spa_form.jsx";
 import { forwardRef } from "preact/compat";
-import { fromFunction } from "../action/action.js";
 import { useRef, useLayoutEffect, useImperativeHandle } from "preact/hooks";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
@@ -10,10 +9,6 @@ import { useDataInteracting } from "./use_data_interacting.js";
 
 export const SPAInputText = forwardRef(
   ({ action, onActionSuccess, method = "PUT", label, ...rest }, ref) => {
-    if (typeof action === "function") {
-      action = fromFunction(action);
-    }
-
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
     const input = <InputText ref={innerRef} action={action} {...rest} />;

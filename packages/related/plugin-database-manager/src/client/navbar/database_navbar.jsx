@@ -27,7 +27,7 @@ import {
 } from "../role/role_routes.js";
 import {
   setCurrentRole,
-  appendRoles,
+  upsertRoles,
   useCurrentRole,
   useRoleList,
 } from "../role/role_signals.js";
@@ -36,7 +36,7 @@ effect(async () => {
   const response = await fetch(`/.internal/database/api/nav`);
   const { currentRole, roles } = await response.json();
   setCurrentRole(currentRole);
-  appendRoles(roles);
+  upsertRoles(roles);
 });
 
 export const DatabaseNavbar = () => {
@@ -48,7 +48,6 @@ export const DatabaseNavbar = () => {
 };
 
 const DatabaseNavGroupRoles = () => {
-  const currentRole = useCurrentRole();
   const roles = useRoleList();
   // roles.sort((a, b) => {
   //   const aIsPg = a.rolname.startsWith("pg_");
@@ -62,45 +61,7 @@ const DatabaseNavGroupRoles = () => {
   //   return 0;
   // });
   const items = roles.map((role) => {
-    const roleName = role.rolname;
-    const isCurrent = roleName === currentRole.rolname;
-    const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { roleName });
-    const deleteAction = useAction(DELETE_ROLE_ACTION, { roleName });
-
-    return (
-      <SPALink
-        key={roleName}
-        route={GET_ROLE_ROUTE}
-        routeParams={{ roleName }}
-        className="nav_group_list_item_content"
-        deleteShortcutAction={deleteAction}
-        deleteShortcutConfirmContent={`Are you sure you want to delete the role "${roleName}"?`}
-      >
-        <span style="width: 1em; height: 1em">
-          {roleName.startsWith("pg_") ? (
-            <UserWithCheckSvg color="#333" />
-          ) : role.rolsuper ? (
-            <UserWithHatSvg color="#333" />
-          ) : (
-            <UserSvg color="#333" />
-          )}
-        </span>
-        {isCurrent ? (
-          <span style="width: 1em; height: 1em">
-            <ActiveUserSvg />
-          </span>
-        ) : null}
-        <span
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            background: isOpened ? "lightgrey" : "none",
-          }}
-        >
-          {roleName}
-        </span>
-      </SPALink>
-    );
+    return <NavListItemRole key={role.rolname} role={role} />;
   });
 
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -153,6 +114,49 @@ const DatabaseNavGroupRoles = () => {
         )}
       </ul>
     </DatabaseNavGroup>
+  );
+};
+
+const NavListItemRole = ({ role }) => {
+  const currentRole = useCurrentRole();
+  const roleName = role.rolname;
+  const isCurrent = roleName === currentRole?.rolname;
+  const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { roleName });
+  const deleteAction = useAction(DELETE_ROLE_ACTION, { roleName });
+
+  return (
+    <SPALink
+      key={roleName}
+      route={GET_ROLE_ROUTE}
+      routeParams={{ roleName }}
+      className="nav_group_list_item_content"
+      deleteShortcutAction={deleteAction}
+      deleteShortcutConfirmContent={`Are you sure you want to delete the role "${roleName}"?`}
+    >
+      <span style="width: 1em; height: 1em">
+        {roleName.startsWith("pg_") ? (
+          <UserWithCheckSvg color="#333" />
+        ) : role.rolsuper ? (
+          <UserWithHatSvg color="#333" />
+        ) : (
+          <UserSvg color="#333" />
+        )}
+      </span>
+      {isCurrent ? (
+        <span style="width: 1em; height: 1em">
+          <ActiveUserSvg />
+        </span>
+      ) : null}
+      <span
+        style={{
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          background: isOpened ? "lightgrey" : "none",
+        }}
+      >
+        {roleName}
+      </span>
+    </SPALink>
   );
 };
 
