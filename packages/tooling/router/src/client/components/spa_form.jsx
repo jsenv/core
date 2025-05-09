@@ -92,7 +92,6 @@ export const SPAForm = forwardRef(
       action: formAction,
     });
     const formActionMapRef = useRef(new Map());
-
     const submittingRef = useRef(false);
 
     return (
@@ -148,7 +147,9 @@ export const SPAForm = forwardRef(
             formData,
             action,
           });
-          submittingRef.current = false;
+          setTimeout(() => {
+            submittingRef.current = false;
+          }, 0);
           const error = action.errorSignal.peek();
           formStatusSetter({
             pending: false,
