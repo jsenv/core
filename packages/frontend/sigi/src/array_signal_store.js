@@ -184,7 +184,7 @@ export const arraySignalStore = (
     });
     const propertyValuePreviousSignal = signal(propertyValueSignal.value);
     return effect(() => {
-      const propertyValuePrevious = propertyValuePreviousSignal.value;
+      const propertyValuePrevious = propertyValuePreviousSignal.peek();
       const propertyValue = propertyValueSignal.value;
       propertyValuePreviousSignal.value = propertyValue;
       if (
@@ -197,15 +197,33 @@ export const arraySignalStore = (
     });
   };
   const onItemRemoved = (itemSignal, callback) => {
-    const itemPreviousSignal = signal(itemSignal.value);
-    return effect(() => {
+    const clientIdSignal = computed(() => {
       const item = itemSignal.value;
-      const itemPrevious = itemPreviousSignal.value;
-      itemPreviousSignal.value = itemPrevious;
-      console.log(item, itemPrevious);
-      if (itemPrevious && !item) {
-        callback(itemPrevious);
+      return item ? item[clientIdSymbol] : null;
+    });
+    const clientIdArraySignal = computed(() => {
+      const array = arraySignal.value;
+      const clientIdArray = [];
+      for (const item of array) {
+        clientIdArray.push(item[clientIdSymbol]);
       }
+      return clientIdArray;
+    });
+    const clientIdArrayPreviousSignal = signal([...clientIdArraySignal.value]);
+    return effect(() => {
+      const clientIdToTrack = clientIdSignal.value;
+      const clientIdArray = clientIdArraySignal.value;
+      const clientIdArrayPrevious = clientIdArrayPreviousSignal.peek();
+      clientIdArrayPreviousSignal.value = [...clientIdArray];
+      let foundBefore = clientIdArrayPrevious.includes(clientIdToTrack);
+      if (!foundBefore) {
+        return;
+      }
+      const foundAfter = clientIdArray.includes(clientIdToTrack);
+      if (foundAfter) {
+        return;
+      }
+      callback(clientIdToTrack);
     });
   };
 
