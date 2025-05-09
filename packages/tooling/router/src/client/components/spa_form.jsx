@@ -50,6 +50,7 @@ export const SPAForm = forwardRef(
       // but for this we would have to implement our own way to display errors
       // for now we'll stick to the custom validity api
       errorCustomValidityRef,
+      onActionSuccess,
     },
     ref,
   ) => {
@@ -151,13 +152,18 @@ export const SPAForm = forwardRef(
             submittingRef.current = false;
           }, 0);
           const error = action.errorSignal.peek();
+          const aborted = action.executionStateSignal.peek() === ABORTED;
           formStatusSetter({
             pending: false,
-            aborted: action.executionStateSignal.peek() === ABORTED,
+            aborted,
             error,
             method,
             action,
           });
+          const success = !error && !aborted;
+          if (success && onActionSuccess) {
+            onActionSuccess();
+          }
           if (error) {
             setError(error);
           }

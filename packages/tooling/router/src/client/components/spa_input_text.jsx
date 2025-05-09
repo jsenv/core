@@ -7,12 +7,23 @@ import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
 import { useDataInteracting } from "./use_data_interacting.js";
 
-export const SPAInputText = ({ action, method = "PUT", label, ...rest }) => {
+export const SPAInputText = ({
+  action,
+  onActionSuccess,
+  method = "PUT",
+  label,
+  ...rest
+}) => {
   const inputRef = useRef(null);
   const input = <InputText ref={inputRef} action={action} {...rest} />;
 
   return (
-    <SPAForm action={action} method={method} errorCustomValidityRef={inputRef}>
+    <SPAForm
+      action={action}
+      method={method}
+      errorCustomValidityRef={inputRef}
+      onActionSuccess={onActionSuccess}
+    >
       {label ? (
         <label>
           {label}

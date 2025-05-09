@@ -143,6 +143,9 @@ const DatabaseNavGroupRoles = () => {
               // si on a rien rentré on le cré pas, sinon oui on le cré
               setNewItem(null);
             }}
+            onActionSuccess={() => {
+              setNewItem(null);
+            }}
           />
         )}
       </ul>
@@ -154,7 +157,7 @@ const NavGroupListItem = ({ children }) => {
   return <li className="nav_group_list_item">{children}</li>;
 };
 
-const NewItem = ({ onCancel }) => {
+const NewItem = ({ onCancel, onActionSuccess }) => {
   // il faudrait un spa input text, celui ci se brancherait sur le onchange/enter
   // donc comme les autres, juste il aura autofocus
   // aussi il faut donc lui passer la route, pendant qu'on crée il est disabled
@@ -185,6 +188,7 @@ const NewItem = ({ onCancel }) => {
               onCancel();
             }
           }}
+          onActionSuccess={onActionSuccess}
         />
       </span>
     </NavGroupListItem>
