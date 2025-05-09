@@ -29,7 +29,7 @@ export const effectWithPrevious = (inputSignals, callback) => {
       previousValues.push(previousValue);
       values.push(value);
       if (previousValue !== value) {
-        previousSignal.value = value;
+        previousSignal.value = structuredClone(value);
       }
       i++;
     }

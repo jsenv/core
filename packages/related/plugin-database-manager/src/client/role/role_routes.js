@@ -29,6 +29,9 @@ export const GET_ROLE_ROUTE = registerRoute(
 );
 // cool mais marche pas lorsqu'on modifie l'id dans l'url, il faudrait modifier
 // autre chose, ou alors que le front assigne un id en plus (oui c'est ca la soluce)
+// donc soit on met un id dans le signal, soit on fait un truc encore different par dessus signal
+// qui permet de detecter les changements de valeur sur un objet doné
+// donc il faudrait bien un id par objet
 effectWithPrevious([roleListSignal], ([roleListPrevious], [roleList]) => {
   const getRoleRouteIsMatching = GET_ROLE_ROUTE.isMatchingSignal.value;
   const getRoleRouteParams = GET_ROLE_ROUTE.paramsSignal.value;
@@ -39,19 +42,21 @@ effectWithPrevious([roleListSignal], ([roleListPrevious], [roleList]) => {
   const rolePreviousList = roleListPrevious.find(
     (role) => role.rolname === getRouteRolename,
   );
-  const roleCurrentList = roleList.find(
-    (role) => role.rolname === getRouteRolename,
-  );
-  if (
-    rolePreviousList &&
-    roleCurrentList &&
-    rolePreviousList !== roleCurrentList
-  ) {
-    // rolname has changed
-    const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
-      roleName: roleCurrentList.rolname,
-    });
-    goTo(roleUrl, { replace: true });
+  if (!rolePreviousList) {
+    return;
+  }
+  // find in the new list
+  for (const role of roleList) {
+    if (
+      role.__id__ === rolePreviousList.__id__ &&
+      role.rolname !== rolePreviousList.rolname
+    ) {
+      // rolname has changed
+      const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
+        roleName: role.rolname,
+      });
+      goTo(roleUrl, { replace: true });
+    }
   }
 });
 

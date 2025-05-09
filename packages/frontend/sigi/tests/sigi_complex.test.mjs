@@ -7,11 +7,11 @@
  */
 
 import { assert } from "@jsenv/assert";
-import { sigi } from "@jsenv/sigi";
+import { sigiAdvanced } from "@jsenv/sigi";
 
 // warning when on get property that does not exists + state is not extensible
 {
-  const { state } = sigi(Object.preventExtensions({ foo: true }));
+  const { state } = sigiAdvanced(Object.preventExtensions({ foo: true }));
   const consoleWarnings = [];
   const { warn } = console;
   console.warn = (warning) => {
@@ -32,7 +32,7 @@ import { sigi } from "@jsenv/sigi";
 
 // preventExtensions is respected
 {
-  const { mutate } = sigi(
+  const { mutate } = sigiAdvanced(
     Object.preventExtensions({
       nested: Object.preventExtensions({ foo: true }),
     }),
@@ -51,7 +51,7 @@ import { sigi } from "@jsenv/sigi";
 
 // in operator
 {
-  const { state } = sigi({ foo: true });
+  const { state } = sigiAdvanced({ foo: true });
   const foo = "foo" in state;
   const bar = "bar" in state;
   const actual = { foo, bar };
@@ -61,7 +61,7 @@ import { sigi } from "@jsenv/sigi";
 
 // Object.getOwnPropertyDescriptor
 {
-  const { state } = sigi({ foo: true });
+  const { state } = sigiAdvanced({ foo: true });
   const fooDescriptor = Object.getOwnPropertyDescriptor(state, "foo");
   const barDescriptor = Object.getOwnPropertyDescriptor(state, "bar");
   const actual = {
@@ -82,7 +82,7 @@ import { sigi } from "@jsenv/sigi";
 
 // Object.hasOwn
 {
-  const { state } = sigi({ foo: true });
+  const { state } = sigiAdvanced({ foo: true });
   const foo = Object.hasOwn(state, "foo");
   const bar = Object.hasOwn(state, "bar");
   const actual = { foo, bar };
@@ -92,8 +92,8 @@ import { sigi } from "@jsenv/sigi";
 
 // Object.isExtensible
 {
-  const extensible = sigi({});
-  const nonExtensible = sigi(Object.preventExtensions({}));
+  const extensible = sigiAdvanced({});
+  const nonExtensible = sigiAdvanced(Object.preventExtensions({}));
   const actual = {
     extensible: Object.isExtensible(extensible.state),
     nonExtensible: Object.isExtensible(nonExtensible.state),
@@ -107,7 +107,7 @@ import { sigi } from "@jsenv/sigi";
 
 // Object.create(null)
 {
-  const { state } = sigi(Object.create(null));
+  const { state } = sigiAdvanced(Object.create(null));
   const actual = Object.getPrototypeOf(state);
   const expect = null;
   assert({ actual, expect });
@@ -122,7 +122,7 @@ import { sigi } from "@jsenv/sigi";
     enumerable: true,
   });
   try {
-    sigi(stateObject);
+    sigiAdvanced(stateObject);
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
@@ -139,7 +139,7 @@ import { sigi } from "@jsenv/sigi";
     consoleWarnings.push(warning);
   };
   try {
-    const { mutate } = sigi({ isLogged: true }, { strict: true });
+    const { mutate } = sigiAdvanced({ isLogged: true }, { strict: true });
     mutate({ isLogged: 1 });
     const actual = consoleWarnings;
     const expect = [

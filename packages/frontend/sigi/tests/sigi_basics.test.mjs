@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert";
-import { sigi } from "@jsenv/sigi";
+import { sigiAdvanced } from "@jsenv/sigi";
 
 // state nested prop can be read
 {
-  const { state } = sigi({
+  const { state } = sigiAdvanced({
     foo: true,
     nested: {
       name: "yes",
@@ -16,7 +16,7 @@ import { sigi } from "@jsenv/sigi";
 
 // from primitive to object
 {
-  const { mutate, subscribe } = sigi({
+  const { mutate, subscribe } = sigiAdvanced({
     foo: null,
   });
   const calls = [];
@@ -43,7 +43,7 @@ import { sigi } from "@jsenv/sigi";
 
 // from object to primitive
 {
-  const { mutate, subscribe } = sigi({
+  const { mutate, subscribe } = sigiAdvanced({
     foo: { version: 1 },
   });
   const calls = [];
@@ -70,7 +70,7 @@ import { sigi } from "@jsenv/sigi";
 
 // can subscribe to top level changes
 {
-  const { mutate, subscribe } = sigi({ age: 10 });
+  const { mutate, subscribe } = sigiAdvanced({ age: 10 });
   const calls = [];
   subscribe(({ age }) => {
     calls.push(age);
@@ -91,7 +91,7 @@ import { sigi } from "@jsenv/sigi";
 
 // subscribe callback not called when something else changes
 {
-  const { subscribe, mutate } = sigi({ age: 10 });
+  const { subscribe, mutate } = sigiAdvanced({ age: 10 });
   const calls = [];
   subscribe(({ age }) => {
     calls.push(age);
@@ -112,7 +112,7 @@ import { sigi } from "@jsenv/sigi";
 
 // can subscribe to nested changes
 {
-  const { subscribe, mutate } = sigi({ nested: { color: "blue" } });
+  const { subscribe, mutate } = sigiAdvanced({ nested: { color: "blue" } });
   const calls = [];
   subscribe(({ nested }) => {
     calls.push(nested.color);
@@ -133,7 +133,7 @@ import { sigi } from "@jsenv/sigi";
 
 // extending root state with mutate
 {
-  const { mutate, subscribe } = sigi({
+  const { mutate, subscribe } = sigiAdvanced({
     foo: true,
   });
   const calls = [];
@@ -162,7 +162,7 @@ import { sigi } from "@jsenv/sigi";
 // it means you cannot update one item of the array
 // the entire array is watched as a primitive (like a string/number/boolean,...)
 {
-  const { subscribe, mutate } = sigi({ users: ["a", "b"] });
+  const { subscribe, mutate } = sigiAdvanced({ users: ["a", "b"] });
   const calls = [];
   subscribe(({ users }) => {
     calls.push(users);
@@ -185,7 +185,7 @@ import { sigi } from "@jsenv/sigi";
   }
   const userA = new User("a");
   const userB = new User("b");
-  const { subscribe, mutate } = sigi({ user: userA });
+  const { subscribe, mutate } = sigiAdvanced({ user: userA });
   const calls = [];
   subscribe(({ user }) => {
     calls.push(user);
@@ -198,7 +198,7 @@ import { sigi } from "@jsenv/sigi";
 
 // reading non existent prop twice
 {
-  const { state } = sigi({
+  const { state } = sigiAdvanced({
     foo: true,
   });
   const values = [];
@@ -211,7 +211,7 @@ import { sigi } from "@jsenv/sigi";
 
 // throw if attempt to set prop
 {
-  const { state } = sigi({ foo: true });
+  const { state } = sigiAdvanced({ foo: true });
   try {
     state.foo = false;
     throw new Error("should throw");
@@ -226,7 +226,7 @@ import { sigi } from "@jsenv/sigi";
 
 // throw if attempt to delete prop
 {
-  const { state } = sigi({ foo: true });
+  const { state } = sigiAdvanced({ foo: true });
   try {
     delete state.foo;
     throw new Error("should throw");
@@ -241,7 +241,7 @@ import { sigi } from "@jsenv/sigi";
 
 // throw if attempt to define prop
 {
-  const { state } = sigi({ foo: true });
+  const { state } = sigiAdvanced({ foo: true });
   try {
     Object.defineProperty(state, "foo", {
       value: false,
@@ -263,7 +263,7 @@ import { sigi } from "@jsenv/sigi";
 {
   const originalState = { nested: { foo: true } };
   const originalNested = originalState.nested;
-  const { mutate } = sigi(originalState);
+  const { mutate } = sigiAdvanced(originalState);
   mutate({ nested: { foo: false } });
   const nestedPreserved = originalNested === originalState.nested;
   const foo = originalState.nested.foo;
