@@ -1,5 +1,11 @@
 import { registerRoute, registerAction, goTo } from "@jsenv/router";
-import { setRoleColumns, upsertRole, removeRole } from "./role_signals.js";
+import {
+  roleListSignal,
+  setRoleColumns,
+  upsertRole,
+  removeRole,
+} from "./role_signals.js";
+import { effectWithPrevious } from "../effect_with_previous.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
   "/.internal/database/roles/:roleName",
@@ -21,6 +27,33 @@ export const GET_ROLE_ROUTE = registerRoute(
     upsertRole(role.rolname, role);
   },
 );
+// cool mais marche pas lorsqu'on modifie l'id dans l'url, il faudrait modifier
+// autre chose, ou alors que le front assigne un id en plus (oui c'est ca la soluce)
+effectWithPrevious([roleListSignal], ([roleListPrevious], [roleList]) => {
+  const getRoleRouteIsMatching = GET_ROLE_ROUTE.isMatchingSignal.value;
+  const getRoleRouteParams = GET_ROLE_ROUTE.paramsSignal.value;
+  if (!getRoleRouteIsMatching) {
+    return;
+  }
+  const getRouteRolename = getRoleRouteParams.roleName;
+  const rolePreviousList = roleListPrevious.find(
+    (role) => role.rolname === getRouteRolename,
+  );
+  const roleCurrentList = roleList.find(
+    (role) => role.rolname === getRouteRolename,
+  );
+  if (
+    rolePreviousList &&
+    roleCurrentList &&
+    rolePreviousList !== roleCurrentList
+  ) {
+    // rolname has changed
+    const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
+      roleName: roleCurrentList.rolname,
+    });
+    goTo(roleUrl, { replace: true });
+  }
+});
 
 export const PUT_ROLE_ACTION = registerAction(
   async ({ roleName, columnName, formData, signal }) => {
@@ -49,16 +82,6 @@ export const PUT_ROLE_ACTION = registerAction(
       throw updateRoleError;
     }
     upsertRole(roleName, { [columnName]: value });
-    if (
-      columnName === "rolname" &&
-      GET_ROLE_ROUTE.isMatchingSignal.peek() &&
-      GET_ROLE_ROUTE.params.roleName === roleName
-    ) {
-      const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
-        roleName: value,
-      });
-      goTo(roleUrl, { replace: true });
-    }
   },
 );
 

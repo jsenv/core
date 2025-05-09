@@ -34,24 +34,28 @@ export const upsertRoles = (roles) => {
   }
   roleListSignal.value = rolesUpdated;
 };
+export const upsertRole = (roleName, role) => {
+  const roles = roleListSignal.peek();
+  let found = false;
+  const rolesUpdated = [];
+  for (const existingRole of roles) {
+    if (existingRole.rolname === roleName) {
+      found = true;
+      Object.assign(existingRole, role);
+      rolesUpdated.push(existingRole);
+    } else {
+      rolesUpdated.push(existingRole);
+    }
+  }
+  if (!found) {
+    rolesUpdated.push(role);
+  }
+  roleListSignal.value = rolesUpdated;
+};
 export const useRole = (roleName) => {
   const roles = roleListSignal.value;
   const role = roles.find((role) => role.rolname === roleName);
   return role;
-};
-export const upsertRole = (roleName, props) => {
-  const roles = roleListSignal.peek();
-  const roleIndex = roles.findIndex(
-    (roleCandidate) => roleCandidate.rolname === roleName,
-  );
-  if (roleIndex === -1) {
-    roles.push(props);
-    roleListSignal.value = [...roles];
-  } else {
-    const role = roles[roleIndex];
-    roles[roleIndex] = { ...role, ...props };
-    roleListSignal.value = [...roles];
-  }
 };
 export const removeRole = (roleName) => {
   const roles = roleListSignal.peek();
