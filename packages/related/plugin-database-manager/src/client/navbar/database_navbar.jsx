@@ -6,7 +6,7 @@
  */
 
 import { effect } from "@preact/signals";
-import { useState } from "preact/hooks";
+import { useState, useCallback } from "preact/hooks";
 import {
   useDetails,
   SPALink,
@@ -103,7 +103,13 @@ const DatabaseNavGroupRoles = () => {
     );
   });
 
-  const [newItem, setNewItem] = useState(null);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const startCreatingNew = useCallback(() => {
+    setIsCreatingNew(true);
+  }, [setIsCreatingNew]);
+  const stopCreatingNew = useCallback(() => {
+    setIsCreatingNew(false);
+  }, [setIsCreatingNew]);
 
   return (
     <DatabaseNavGroup
@@ -113,7 +119,6 @@ const DatabaseNavGroupRoles = () => {
           ROLES
           <span style="display: flex; flex: 1"></span>
           <button
-            disabled={Boolean(newItem)}
             className="summary_action_icon"
             style="width: 22px; height: 22px; cursor: pointer;"
             onMouseDown={(e) => {
@@ -123,9 +128,7 @@ const DatabaseNavGroupRoles = () => {
             }}
             onClick={(e) => {
               e.preventDefault();
-              if (newItem === null) {
-                setNewItem("");
-              }
+              startCreatingNew();
             }}
           >
             <UserWithPlusSvg />
@@ -137,14 +140,14 @@ const DatabaseNavGroupRoles = () => {
         {items.map((item) => {
           return <NavGroupListItem key={item.url}>{item}</NavGroupListItem>;
         })}
-        {newItem !== null && (
+        {isCreatingNew && (
           <NewItem
             onCancel={() => {
               // si on a rien rentré on le cré pas, sinon oui on le cré
-              setNewItem(null);
+              stopCreatingNew();
             }}
             onActionSuccess={() => {
-              setNewItem(null);
+              stopCreatingNew();
             }}
           />
         )}
@@ -178,8 +181,7 @@ const NewItem = ({ onCancel, onActionSuccess }) => {
           action={useAction(POST_ROLE_ACTION)}
           onKeydown={(e) => {
             if (e.key === "Escape") {
-              e.target.value = "";
-              e.target.blur();
+              onCancel();
             }
           }}
           onBlur={(e) => {

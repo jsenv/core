@@ -21,7 +21,9 @@ await startDevServer({
   plugins: [
     jsenvPluginControlledResource(),
     jsenvPluginJSONFileManager(),
-    jsenvPluginPreact(),
+    jsenvPluginPreact({
+      // refreshInstrumentation: true
+    }),
     jsenvPluginExplorer({
       groups: {
         errors: {
