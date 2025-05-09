@@ -37,7 +37,6 @@ const InputInteger = ({ action, value, ...rest }) => {
         {...rest}
         ref={inputRef}
         type="number"
-        name="value"
         disabled={pending}
         value={optimisticUIState}
         onInput={(e) => {

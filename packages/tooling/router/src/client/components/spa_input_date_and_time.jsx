@@ -53,7 +53,6 @@ const InputDateAndTime = ({ action, value, ...rest }) => {
         {...rest}
         ref={inputRef}
         type="datetime-local"
-        name="value"
         disabled={pending}
         value={optimisticUIState}
         onInput={(e) => {

@@ -37,7 +37,6 @@ const InputText = ({ action, value, ...rest }) => {
         {...rest}
         ref={inputRef}
         type="text"
-        name="value"
         disabled={pending}
         value={optimisticUIState}
         onInput={(e) => {

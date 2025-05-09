@@ -38,7 +38,6 @@ const Checkbox = forwardRef(({ action, checked, ...rest }, ref) => {
         {...rest}
         ref={innerRef}
         type="checkbox"
-        name="value"
         onChange={(e) => {
           setOptimisticUIState(e.target.checked);
           const form = e.target.form;
