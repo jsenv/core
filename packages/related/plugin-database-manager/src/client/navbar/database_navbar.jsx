@@ -27,7 +27,7 @@ import {
 } from "../role/role_routes.js";
 import {
   setCurrentRole,
-  upsertRoles,
+  roleStore,
   useCurrentRole,
   useRoleList,
 } from "../role/role_signals.js";
@@ -36,7 +36,7 @@ effect(async () => {
   const response = await fetch(`/.internal/database/api/nav`);
   const { currentRole, roles } = await response.json();
   setCurrentRole(currentRole);
-  upsertRoles(roles);
+  roleStore.upsert(roles);
 });
 
 export const DatabaseNavbar = () => {

@@ -1,11 +1,5 @@
 import { registerRoute, registerAction, goTo } from "@jsenv/router";
-import {
-  roleListSignal,
-  setRoleColumns,
-  upsertRole,
-  removeRole,
-} from "./role_signals.js";
-import { effectWithPrevious } from "../effect_with_previous.js";
+import { roleStore, setRoleColumns } from "./role_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
   "/.internal/database/roles/:roleName",
@@ -24,40 +18,21 @@ export const GET_ROLE_ROUTE = registerRoute(
     }
     const { columns, role } = await response.json();
     setRoleColumns(columns);
-    upsertRole(role.rolname, role);
+    roleStore.upsert(role.rolname, role);
   },
 );
-// cool mais marche pas lorsqu'on modifie l'id dans l'url, il faudrait modifier
-// autre chose, ou alors que le front assigne un id en plus (oui c'est ca la soluce)
-// donc soit on met un id dans le signal, soit on fait un truc encore different par dessus signal
-// qui permet de detecter les changements de valeur sur un objet doné
-// donc il faudrait bien un id par objet
-effectWithPrevious([roleListSignal], ([roleListPrevious], [roleList]) => {
-  const getRoleRouteIsMatching = GET_ROLE_ROUTE.isMatchingSignal.value;
-  const getRoleRouteParams = GET_ROLE_ROUTE.paramsSignal.value;
-  if (!getRoleRouteIsMatching) {
-    return;
-  }
-  const getRouteRolename = getRoleRouteParams.roleName;
-  const rolePreviousList = roleListPrevious.find(
-    (role) => role.rolname === getRouteRolename,
-  );
-  if (!rolePreviousList) {
-    return;
-  }
-  // find in the new list
-  for (const role of roleList) {
-    if (
-      role.__id__ === rolePreviousList.__id__ &&
-      role.rolname !== rolePreviousList.rolname
-    ) {
-      // rolname has changed
-      const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
-        roleName: role.rolname,
-      });
-      goTo(roleUrl, { replace: true });
-    }
-  }
+roleStore.onItemPropertyChange(
+  roleStore.currentItemSignal,
+  "rolname",
+  (previousRolname, rolname) => {
+    const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
+      roleName: rolname,
+    });
+    goTo(roleUrl, { replace: true });
+  },
+);
+roleStore.onItemRemoved(roleStore.currentItemSignal, () => {
+  goTo(GET_ROLE_ROUTE.url, { replace: true });
 });
 
 export const PUT_ROLE_ACTION = registerAction(
@@ -86,7 +61,7 @@ export const PUT_ROLE_ACTION = registerAction(
       updateRoleError.stack = error.stack || error.message;
       throw updateRoleError;
     }
-    upsertRole(roleName, { [columnName]: value });
+    roleStore.upsert(roleName, { [columnName]: value });
   },
 );
 
@@ -110,7 +85,7 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
     throw createRoleError;
   }
   const role = await response.json();
-  upsertRole(role.rolname, role);
+  roleStore.upsert(role);
 });
 
 export const DELETE_ROLE_ACTION = registerAction(
@@ -131,6 +106,6 @@ export const DELETE_ROLE_ACTION = registerAction(
       deleteRoleError.stack = error.stack || error.message;
       throw deleteRoleError;
     }
-    removeRole(roleName);
+    roleStore.drop(roleName);
   },
 );

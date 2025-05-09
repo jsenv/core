@@ -34,7 +34,8 @@
     "@jsenv/urls": "2.8.0",
     "@jsenv/database": "0.0.1",
     "@jsenv/router": "0.0.9",
-    "@tanstack/table-core": "8.21.3"
+    "@tanstack/table-core": "8.21.3",
+    "@jsenv/sigi": "0.1.1"
   },
   "devDependencies": {
     "preact": "10.26.5",
