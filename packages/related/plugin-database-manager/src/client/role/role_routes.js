@@ -22,18 +22,18 @@ export const GET_ROLE_ROUTE = registerRoute(
     roleStore.upsert(role.rolname, role);
   },
 );
-const activeRoleNameSignal = computed(() => {
+const activeRoleSignal = computed(() => {
   const isMatching = GET_ROLE_ROUTE.isMatchingSignal.value;
   const params = GET_ROLE_ROUTE.paramsSignal.value;
-  return isMatching ? params.roleName : null;
+  return isMatching ? roleStore.select("rolname", params.roleName) : null;
 });
-roleStore.onRenameId(activeRoleNameSignal, (rolname) => {
+roleStore.propertyChangeEffect(activeRoleSignal, "rolname", (rolname) => {
   const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
     roleName: rolname,
   });
   goTo(roleUrl, { replace: true });
 });
-roleStore.onDeleteId(activeRoleNameSignal, () => {
+roleStore.deleteEffect(activeRoleSignal, () => {
   goTo(GET_ROLE_ROUTE.url, { replace: true });
 });
 

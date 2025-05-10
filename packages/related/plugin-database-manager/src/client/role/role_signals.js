@@ -9,15 +9,19 @@ export const setRoleColumns = (value) => {
   roleColumnsSignal.value = value;
 };
 
-export const roleStore = arraySignalStore([], "rolname");
+export const roleStore = arraySignalStore([], "oid");
 export const useRoleList = () => {
   return roleStore.arraySignal.value;
 };
 export const useRole = (roleName) => {
-  return roleStore.getByUniquePropertyName(roleName);
+  return roleStore.select("rolname", roleName);
 };
-const [currentRoleSignal, setCurrentRole] = roleStore.itemSignal();
+const currentRoleSignal = signal(null);
 export const useCurrentRole = () => {
-  return currentRoleSignal.value;
+  const currentRole = currentRoleSignal.value;
+  return currentRole ? roleStore.select("oid", currentRole.oid) : null;
 };
-export { setCurrentRole };
+export const setCurrentRole = (value) => {
+  currentRoleSignal.value = value;
+  roleStore.upsert(value);
+};
