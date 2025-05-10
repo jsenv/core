@@ -1,10 +1,18 @@
 import { performance } from "node:perf_hooks";
 import { jsenvPluginHtmlSyntaxErrorFallback } from "./html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 
-export const createPluginStore = (plugins) => {
+export const createPluginStore = async (plugins) => {
   const allDevServerRoutes = [];
   const pluginArray = [];
-  const addPlugin = (plugin) => {
+
+  const pluginPromises = [];
+  const addPlugin = async (plugin) => {
+    if (plugin && typeof plugin.then === "function") {
+      pluginPromises.push(plugin);
+      const value = await plugin;
+      addPlugin(value);
+      return;
+    }
     if (Array.isArray(plugin)) {
       for (const subplugin of plugin) {
         addPlugin(subplugin);
@@ -29,15 +37,15 @@ export const createPluginStore = (plugins) => {
   for (const plugin of plugins) {
     addPlugin(plugin);
   }
+  await Promise.all(pluginPromises);
 
   return {
     pluginArray,
-
     allDevServerRoutes,
   };
 };
 
-export const createPluginController = (
+export const createPluginController = async (
   pluginStore,
   kitchen,
   { initialPuginsMeta = {} } = {},
@@ -60,7 +68,7 @@ export const createPluginController = (
       pluginCandidate.destroy?.();
       continue;
     }
-    const initPluginResult = initPlugin(pluginCandidate, kitchen);
+    const initPluginResult = await initPlugin(pluginCandidate, kitchen);
     if (!initPluginResult) {
       pluginCandidate.destroy?.();
       continue;
@@ -339,12 +347,12 @@ const testAppliesDuring = (plugin, kitchen) => {
     `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
   );
 };
-const initPlugin = (plugin, kitchen) => {
+const initPlugin = async (plugin, kitchen) => {
   const { init } = plugin;
   if (!init) {
     return true;
   }
-  const initReturnValue = init(kitchen.context, { plugin });
+  const initReturnValue = await init(kitchen.context, { plugin });
   if (initReturnValue === false) {
     return false;
   }

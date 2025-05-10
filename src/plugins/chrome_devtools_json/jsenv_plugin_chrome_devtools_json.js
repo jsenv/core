@@ -28,6 +28,7 @@ export const jsenvPluginChromeDevtoolsJson = () => {
     devServerRoutes: [
       {
         endpoint: "GET /.well-known/appspecific/com.chrome.devtools.json",
+        declarationSource: import.meta.url,
         fetch: (request, { kitchen }) => {
           const { rootDirectoryUrl } = kitchen.context;
           return Response.json({

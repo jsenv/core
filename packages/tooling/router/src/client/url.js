@@ -19,7 +19,7 @@ const signalForUrlParam = (name, getter) => {
   return signalForFirstCall;
 };
 
-export const useUrlBooleanParam = (name) => {
+export const useUrlBooleanParam = (name, { replace }) => {
   const urlBooleanParamSignal = signalForUrlBooleanParam(name);
   const urlBooleanParam = urlBooleanParamSignal.value;
   const enable = useCallback(() => {
@@ -27,15 +27,15 @@ export const useUrlBooleanParam = (name) => {
       documentUrlSignal.peek(),
       name,
     );
-    goTo(urlWithBooleanParam);
-  }, [name]);
+    goTo(urlWithBooleanParam, { replace });
+  }, [name, replace]);
   const disable = useCallback(() => {
     const urlWithoutBooleanParam = withoutUrlBooleanParam(
       documentUrlSignal.peek(),
       name,
     );
-    goTo(urlWithoutBooleanParam);
-  }, [name]);
+    goTo(urlWithoutBooleanParam, { replace });
+  }, [name, replace]);
   return [urlBooleanParam, enable, disable];
 };
 const signalForUrlBooleanParam = (name) => {

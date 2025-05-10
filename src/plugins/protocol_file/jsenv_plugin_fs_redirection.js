@@ -4,7 +4,7 @@ import {
   getExtensionsToTry,
 } from "@jsenv/node-esm-resolution";
 import {
-  urlIsInsideOf,
+  urlIsOrIsInsideOf,
   urlToExtension,
   urlToFilename,
   urlToPathname,
@@ -179,10 +179,7 @@ const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
     if (existsSync(htmlFileUrlCandidate)) {
       return htmlFileUrlCandidate.href;
     }
-    if (
-      !urlIsInsideOf(directoryUrl, serverRootDirectoryUrl) ||
-      directoryUrl.href === serverRootDirectoryUrl
-    ) {
+    if (!urlIsOrIsInsideOf(directoryUrl, serverRootDirectoryUrl)) {
       return null;
     }
     directoryUrl = new URL("../", directoryUrl);

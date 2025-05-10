@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "bierner.comment-tagged-templates",
+    "frigus02.vscode-sql-tagged-template-literals-syntax-only",
+    "yzhang.markdown-all-in-one",
+    "bierner.jsdoc-markdown-highlighting",
+    "vitaliymaz.vscode-svg-previewer",
+    "redhat.vscode-yaml",
+    "irongeek.vscode-env",
+    "codeandstuff.package-json-upgrade"
+  ]
+}

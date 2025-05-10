@@ -1,7 +1,7 @@
 import {
   setUrlBasename,
   startsWithWindowsDriveLetter,
-  urlIsInsideOf,
+  urlIsOrIsInsideOf,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
@@ -62,10 +62,7 @@ export const filesystemSideEffects = (
       };
       const getUrlInsideOutDirectory = (url, generateOutFileUrl) => {
         if (baseDirectory) {
-          if (
-            url.href === baseDirectory.href ||
-            urlIsInsideOf(url, baseDirectory)
-          ) {
+          if (urlIsOrIsInsideOf(url, baseDirectory)) {
             const outRelativeUrl = urlToRelativeUrl(url, baseDirectory);
             return generateOutFileUrl(outRelativeUrl);
           }
@@ -85,7 +82,7 @@ export const filesystemSideEffects = (
             if (
               (nextSideEffect.code === "write_file" ||
                 nextSideEffect.code === "write_directory") &&
-              urlIsInsideOf(nextSideEffect.value.url, sideEffect.value.url)
+              urlIsOrIsInsideOf(nextSideEffect.value.url, sideEffect.value.url)
             ) {
               skip();
               stop();

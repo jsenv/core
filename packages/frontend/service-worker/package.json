@@ -36,7 +36,7 @@
   "devDependencies": {
     "@jsenv/core": "../../../",
     "@jsenv/https-local": "../../tooling/https-local",
-    "@jsenv/fetch": "../../shared/fetch",
+    "@jsenv/fetch": "../../tooling/fetch",
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/humanize": "../../tooling/humanize",

@@ -11,4 +11,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
       a,
     };
   });
+
+  test("1_two_named", () => {
+    const pattern = createResourcePattern("/before/:name/name");
+    const match = pattern.match("/before/foo/name");
+    return {
+      match,
+    };
+  });
 });

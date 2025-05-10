@@ -32,13 +32,13 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "rollup": "4.40.0",
+    "rollup": "4.40.1",
     "@jsenv/assert": "../assert",
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/ast": "../../internal/ast",
     "@jsenv/urls": "../urls",
     "@jsenv/filesystem": "../filesystem",
-    "@jsenv/importmap": "../../shared/importmap",
-    "@jsenv/node-esm-resolution": "../../tooling/node-esm-resolution"
+    "@jsenv/importmap": "../importmap",
+    "@jsenv/node-esm-resolution": "../node-esm-resolution"
   }
 }

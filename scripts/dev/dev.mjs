@@ -6,6 +6,8 @@ import {
   jsenvPluginControlledResource,
   jsenvPluginJSONFileManager,
 } from "@jsenv/router/src/server/server_stuff.js";
+import { jsenvPluginDatabaseManager } from "@jsenv/plugin-database-manager";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
 // const { certificate, privateKey } = requestCertificate();
 await startDevServer({
@@ -19,7 +21,9 @@ await startDevServer({
   plugins: [
     jsenvPluginControlledResource(),
     jsenvPluginJSONFileManager(),
-    jsenvPluginPreact(),
+    jsenvPluginPreact({
+      // refreshInstrumentation: true
+    }),
     jsenvPluginExplorer({
       groups: {
         errors: {
@@ -32,6 +36,10 @@ await startDevServer({
           "./tests/**/client/main.html": true,
         },
       },
+    }),
+    jsenvPluginDatabaseManager(),
+    jsenvPluginCommonJs({
+      include: { "/**/node_modules/react-table/": true },
     }),
   ],
 });
