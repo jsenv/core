@@ -19,7 +19,7 @@ export const GET_ROLE_ROUTE = registerRoute(
     }
     const { columns, role } = await response.json();
     setRoleColumns(columns);
-    roleStore.upsert(role.rolname, role);
+    roleStore.upsert(role);
   },
 );
 const activeRoleSignal = computed(() => {
@@ -63,7 +63,7 @@ export const PUT_ROLE_ACTION = registerAction(
       updateRoleError.stack = error.stack || error.message;
       throw updateRoleError;
     }
-    roleStore.upsert(roleName, { [columnName]: value });
+    roleStore.upsert("rolname", roleName, { [columnName]: value });
   },
 );
 

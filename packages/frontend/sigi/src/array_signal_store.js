@@ -4,17 +4,17 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
   const arraySignal = signal(initialArray);
 
   const select = (property, value) => {
-    const array = arraySignal.value;
-    for (const item of array) {
-      if (item[property] === value) {
-        return item;
+    const array = arraySignal.peek();
+    for (const itemCandidate of array) {
+      const valueCandidate = itemCandidate[property];
+      if (valueCandidate === value) {
+        return itemCandidate;
       }
     }
     return null;
   };
   const upsert = (...args) => {
     const array = arraySignal.peek();
-
     if (args.length === 1 && Array.isArray(args[0])) {
       const propsArray = args[0];
       if (array.length === 0) {
@@ -48,17 +48,24 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     let isNew = true;
     let updated = false;
     const arrayUpdated = [];
-    let id;
+    let property;
+    let value;
     let props;
     if (args.length === 1) {
+      property = idKey;
+      value = args[0][idKey];
       props = args[0];
-      id = props[idKey];
     } else if (args.length === 2) {
-      id = args[0];
+      property = idKey;
+      value = args[0];
       props = args[1];
+    } else if (args.length === 3) {
+      property = args[0];
+      value = args[1];
+      props = args[2];
     }
     for (const existingItem of array) {
-      if (existingItem[idKey] === id) {
+      if (existingItem[property] === value) {
         isNew = false;
         updated = assign(existingItem, props);
         arrayUpdated.push(existingItem);
@@ -136,7 +143,7 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       const item = itemSignal.value;
       if (item) {
         itemSignalCopy.value = item;
-      } else {
+      } else if (itemSignalCopy.peek()) {
         // not found, it was likely deleted
         // but maybe it was renamed so we need
         // the other effect to be sure
@@ -145,7 +152,6 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     const valueSignal = computed(() => {
       const item = itemSignalCopy.value;
       const array = arraySignal.value;
-
       if (!item) {
         return NOT_FOUND;
       }
@@ -226,7 +232,7 @@ const assign = (item, props) => {
       const value = item[key];
       if (newValue !== value) {
         modified = true;
-        item[key] = value;
+        item[key] = newValue;
       }
     } else {
       modified = true;

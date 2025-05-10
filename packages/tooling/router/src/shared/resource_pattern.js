@@ -25,7 +25,7 @@ export const createResourcePattern = (pattern) => {
   return {
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
-      let result = pathnamePattern.match(pathname);
+      let result = pathnamePattern.match(decodeURIComponent(pathname));
       if (!result) {
         return null;
       }
