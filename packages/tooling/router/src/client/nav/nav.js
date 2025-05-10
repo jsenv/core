@@ -29,9 +29,9 @@ navigation.addEventListener("navigatesuccess", () => {
 
 let isReloadFromNavigationAPI = false;
 const navigationReload = navigation.reload;
-navigation.reload = () => {
+navigation.reload = (...args) => {
   isReloadFromNavigationAPI = true;
-  navigationReload.call(navigation);
+  navigationReload.call(navigation, ...args);
   isReloadFromNavigationAPI = false;
 };
 
@@ -96,6 +96,7 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
               stopSignal,
               isReload: event.navigationType === "reload",
               isReplace: event.navigationType === "replace",
+              info: event.info,
             });
             if (formUrl) {
               const finishedPromise = event.target.transition.finished;
@@ -173,11 +174,16 @@ const detectBrowserStopButtonClick = (navigateEventSignal, callback) => {
   };
 };
 
-export const goTo = (url, { state, replace } = {}) => {
+export const goTo = (url, { state, replace, routesLoaded } = {}) => {
   const currentUrl = documentUrlSignal.peek();
   if (replace) {
     if (url === currentUrl) {
-      navigation.reload();
+      navigation.reload({
+        state,
+        info: {
+          routesLoaded,
+        },
+      });
       return;
     }
     navigation.navigate(url, { state, history: "replace" });

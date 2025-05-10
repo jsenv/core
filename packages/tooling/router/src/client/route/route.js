@@ -119,6 +119,7 @@ export const applyRouting = async ({
   state,
   stopSignal,
   isReload,
+  info,
   // isReplace,
 }) => {
   // const sourceResource = resourceFromUrl(sourceUrl);
@@ -159,7 +160,13 @@ export const applyRouting = async ({
     if (routeUrl === currentRouteUrl) {
       const hasError = routeCandidate.errorSignal.peek();
       const isAborted = routeCandidate.loadingStateSignal.peek() === ABORTED;
-      if (isReload) {
+      if (
+        info &&
+        info.routesLoaded &&
+        info.routesLoaded.includes(routeCandidate)
+      ) {
+        routeToKeepActiveSet.add(routeCandidate);
+      } else if (isReload) {
         routeToEnterMap.set(routeCandidate, enterParams);
       } else if (hasError) {
         routeToEnterMap.set(routeCandidate, enterParams);

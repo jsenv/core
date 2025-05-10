@@ -22,19 +22,31 @@ export const GET_ROLE_ROUTE = registerRoute(
     roleStore.upsert(role);
   },
 );
-const activeRoleSignal = computed(() => {
-  const isMatching = GET_ROLE_ROUTE.isMatchingSignal.value;
-  const params = GET_ROLE_ROUTE.paramsSignal.value;
-  return isMatching ? roleStore.select("rolname", params.roleName) : null;
-});
-roleStore.propertyChangeEffect(activeRoleSignal, "rolname", (rolname) => {
-  const roleUrl = GET_ROLE_ROUTE.buildUrl(window.location.href, {
-    roleName: rolname,
+
+const connectGETAndStore = (route, store, { itemKey, paramKey }) => {
+  const activeItemSignal = computed(() => {
+    const isMatching = route.isMatchingSignal.value;
+    const params = route.paramsSignal.value;
+    if (!isMatching) {
+      return null;
+    }
+    const activeItem = roleStore.select(itemKey, params[paramKey]);
+    return activeItem;
   });
-  goTo(roleUrl, { replace: true });
-});
-roleStore.deleteEffect(activeRoleSignal, () => {
-  goTo(GET_ROLE_ROUTE.url, { replace: true });
+
+  store.propertyChangeEffect(activeItemSignal, itemKey, (value) => {
+    const routeUrl = route.buildUrl(window.location.href, {
+      [paramKey]: value,
+    });
+    goTo(routeUrl, { replace: true, routesLoaded: [route] });
+  });
+  store.deleteEffect(activeItemSignal, () => {
+    goTo(route.url, { replace: true });
+  });
+};
+connectGETAndStore(GET_ROLE_ROUTE, roleStore, {
+  itemKey: "rolname",
+  paramKey: "roleName",
 });
 
 export const PUT_ROLE_ACTION = registerAction(

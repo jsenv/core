@@ -4,7 +4,7 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
   const arraySignal = signal(initialArray);
 
   const select = (property, value) => {
-    const array = arraySignal.peek();
+    const array = arraySignal.value;
     for (const itemCandidate of array) {
       const valueCandidate = itemCandidate[property];
       if (valueCandidate === value) {
