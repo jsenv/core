@@ -4,10 +4,10 @@ import { roleStore, setRoleColumns, setRoleDatabases } from "./role_signals.js";
 import { databaseStore } from "../database/database_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
-  "/.internal/database/roles/:roleName",
+  "/.internal/database/roles/:rolname",
   async ({ params, signal }) => {
-    const roleName = params.roleName;
-    const response = await fetch(`/.internal/database/api/roles/${roleName}`, {
+    const rolname = params.rolname;
+    const response = await fetch(`/.internal/database/api/roles/${rolname}`, {
       signal,
     });
     if (!response.ok) {
@@ -27,19 +27,16 @@ export const GET_ROLE_ROUTE = registerRoute(
   },
 );
 
-connectStoreAndRoute(roleStore, GET_ROLE_ROUTE, {
-  itemKey: "rolname",
-  paramKey: "roleName",
-});
+connectStoreAndRoute(roleStore, GET_ROLE_ROUTE, "rolname");
 
 export const PUT_ROLE_ACTION = registerAction(
-  async ({ roleName, columnName, formData, signal }) => {
+  async ({ rolname, columnName, formData, signal }) => {
     let value = formData.get(columnName);
     if (columnName === "rolconnlimit") {
       value = parseInt(value, 10);
     }
     const response = await fetch(
-      `/.internal/database/api/roles/${roleName}/${columnName}`,
+      `/.internal/database/api/roles/${rolname}/${columnName}`,
       {
         signal,
         method: "PUT",
@@ -58,12 +55,12 @@ export const PUT_ROLE_ACTION = registerAction(
       updateRoleError.stack = error.stack || error.message;
       throw updateRoleError;
     }
-    roleStore.upsert("rolname", roleName, { [columnName]: value });
+    roleStore.upsert("rolname", rolname, { [columnName]: value });
   },
 );
 
 export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
-  const roleName = formData.get("rolname");
+  const rolname = formData.get("rolname");
   const response = await fetch(`/.internal/database/api/roles`, {
     signal,
     method: "POST",
@@ -71,7 +68,7 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
       "accept": "application/json",
       "content-type": "application/json",
     },
-    body: JSON.stringify({ rolname: roleName }),
+    body: JSON.stringify({ rolname }),
   });
   if (!response.ok) {
     const error = await response.json();
@@ -86,8 +83,8 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
 });
 
 export const DELETE_ROLE_ACTION = registerAction(
-  async ({ roleName, signal }) => {
-    const response = await fetch(`/.internal/database/api/roles/${roleName}`, {
+  async ({ rolname, signal }) => {
+    const response = await fetch(`/.internal/database/api/roles/${rolname}`, {
       signal,
       method: "DELETE",
       headers: {
@@ -103,6 +100,6 @@ export const DELETE_ROLE_ACTION = registerAction(
       deleteRoleError.stack = error.stack || error.message;
       throw deleteRoleError;
     }
-    roleStore.drop("rolname", roleName);
+    roleStore.drop("rolname", rolname);
   },
 );

@@ -119,22 +119,22 @@ const DatabaseNavGroupRoles = () => {
 
 const NavListItemRole = ({ role }) => {
   const currentRole = useCurrentRole();
-  const roleName = role.rolname;
-  const isCurrent = roleName === currentRole?.rolname;
-  const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { roleName });
-  const deleteAction = useAction(DELETE_ROLE_ACTION, { roleName });
+  const rolname = role.rolname;
+  const isCurrent = rolname === currentRole?.rolname;
+  const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { rolname });
+  const deleteAction = useAction(DELETE_ROLE_ACTION, { rolname });
 
   return (
     <SPALink
-      key={roleName}
+      key={rolname}
       route={GET_ROLE_ROUTE}
-      routeParams={{ roleName }}
+      routeParams={{ rolname }}
       className="nav_group_list_item_content"
       deleteShortcutAction={deleteAction}
-      deleteShortcutConfirmContent={`Are you sure you want to delete the role "${roleName}"?`}
+      deleteShortcutConfirmContent={`Are you sure you want to delete the role "${rolname}"?`}
     >
       <span style="width: 1em; height: 1em">
-        {roleName.startsWith("pg_") ? (
+        {rolname.startsWith("pg_") ? (
           <UserWithCheckSvg color="#333" />
         ) : role.rolsuper ? (
           <UserWithHatSvg color="#333" />
@@ -154,7 +154,7 @@ const NavListItemRole = ({ role }) => {
           background: isOpened ? "lightgrey" : "none",
         }}
       >
-        {roleName}
+        {rolname}
       </span>
     </SPALink>
   );

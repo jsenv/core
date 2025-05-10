@@ -85,10 +85,10 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
-        endpoint: "GET /.internal/database/api/roles/:roleName",
+        endpoint: "GET /.internal/database/api/roles/:rolname",
         declarationSource: import.meta.url,
         fetch: async (request) => {
-          const roleName = request.params.roleName;
+          const rolname = request.params.rolname;
           const columns = await getTableColumns(sql, "pg_roles");
           const results = await sql`
             SELECT
@@ -96,10 +96,10 @@ export const jsenvPluginDatabaseManager = () => {
             FROM
               pg_roles
             WHERE
-              rolname = ${roleName}
+              rolname = ${rolname}
           `;
           if (results.length === 0) {
-            return Response.json(`Role ${roleName} not found`, { status: 404 });
+            return Response.json(`Role ${rolname} not found`, { status: 404 });
           }
           const role = results[0];
           const privileges = await sql`
@@ -111,7 +111,7 @@ export const jsenvPluginDatabaseManager = () => {
             FROM
               information_schema.table_privileges
             WHERE
-              grantee = ${roleName}
+              grantee = ${rolname}
           `;
           const objects = await sql`
             SELECT
@@ -123,7 +123,7 @@ export const jsenvPluginDatabaseManager = () => {
               JOIN pg_roles ON pg_roles.oid = pg_class.relowner
               LEFT JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
             WHERE
-              pg_roles.rolname = ${roleName}
+              pg_roles.rolname = ${rolname}
               AND pg_class.relkind IN ('r', 'v', 'm', 'S', 'f')
             ORDER BY
               pg_namespace.nspname,
@@ -136,7 +136,7 @@ export const jsenvPluginDatabaseManager = () => {
               pg_database
               JOIN pg_roles ON pg_roles.oid = pg_database.datdba
             WHERE
-              pg_roles.rolname = ${roleName}
+              pg_roles.rolname = ${rolname}
           `;
           return Response.json({
             role,
@@ -149,15 +149,15 @@ export const jsenvPluginDatabaseManager = () => {
       },
       // when dropping roles, consider this: https://neon.tech/postgresql/postgresql-administration/postgresql-drop-role
       {
-        endpoint: "PUT /.internal/database/api/roles/:roleName/:columnName",
+        endpoint: "PUT /.internal/database/api/roles/:rolname/:columnName",
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
-          const roleName = request.params.roleName;
+          const rolname = request.params.rolname;
           const columnName = request.params.columnName;
           const value = await request.json();
           try {
-            await alterRoleQuery(sql, roleName, columnName, value);
+            await alterRoleQuery(sql, rolname, columnName, value);
           } catch (e) {
             if (e.code === "42704") {
               return Response.json(e, { status: 404, statusText: e.message });
@@ -198,12 +198,12 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
-        endpoint: "DELETE /.internal/database/api/roles/:roleName",
+        endpoint: "DELETE /.internal/database/api/roles/:rolname",
         declarationSource: import.meta.url,
         fetch: async (request) => {
-          const roleName = request.params.roleName;
+          const rolname = request.params.rolname;
           try {
-            await sql`DROP ROLE ${sql(roleName)}`;
+            await sql`DROP ROLE ${sql(rolname)}`;
             return new Response(null, { status: 204 });
           } catch (e) {
             if (e.code === "42704") {

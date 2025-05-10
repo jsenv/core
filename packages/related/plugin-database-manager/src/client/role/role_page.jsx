@@ -20,14 +20,14 @@ export const RoleRoutes = () => {
 
 const RolePage = () => {
   const [error, resetError] = useErrorBoundary();
-  const roleName = useRouteParam(GET_ROLE_ROUTE, "roleName");
-  const deleteRoleAction = useAction(DELETE_ROLE_ACTION, { roleName });
-  const role = useRole(roleName);
+  const rolname = useRouteParam(GET_ROLE_ROUTE, "rolname");
+  const deleteRoleAction = useAction(DELETE_ROLE_ACTION, { rolname });
+  const role = useRole(rolname);
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
       {error && <ErrorDetails error={error} />}
-      <h1>{roleName}</h1>
+      <h1>{rolname}</h1>
       <RoleFields role={role} />
       <RoleDatabases />
       <SPADeleteButton action={deleteRoleAction}>Delete</SPADeleteButton>
@@ -79,7 +79,7 @@ const RoleFields = ({ role }) => {
               column={column}
               value={value}
               action={useAction(PUT_ROLE_ACTION, {
-                roleName: role.rolname,
+                rolname: role.rolname,
                 columnName,
               })}
             />

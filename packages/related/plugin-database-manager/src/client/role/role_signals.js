@@ -23,8 +23,8 @@ export const roleStore = arraySignalStore([], "oid");
 export const useRoleList = () => {
   return roleStore.arraySignal.value;
 };
-export const useRole = (roleName) => {
-  return roleStore.select("rolname", roleName);
+export const useRole = (rolname) => {
+  return roleStore.select("rolname", rolname);
 };
 const currentRoleSignal = signal(null);
 export const useCurrentRole = () => {
