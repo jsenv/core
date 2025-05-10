@@ -72,16 +72,18 @@ const RoleFields = ({ role }) => {
     <ul>
       {fields.map(({ column, value }) => {
         const columnName = column.column_name;
+        const action = useAction(PUT_ROLE_ACTION, {
+          rolname: role.rolname,
+          columnName,
+        });
+
         return (
           <li key={columnName}>
             <DatabaseValue
               label={<span>{columnName}:</span>}
               column={column}
               value={value}
-              action={useAction(PUT_ROLE_ACTION, {
-                rolname: role.rolname,
-                columnName,
-              })}
+              action={action}
             />
           </li>
         );

@@ -2,9 +2,39 @@ import { signal, effect, computed } from "@preact/signals";
 
 export const arraySignalStore = (initialArray = [], idKey = "id") => {
   const arraySignal = signal(initialArray);
+  const idSetSignal = computed(() => {
+    const array = arraySignal.value;
+    const idSet = new Set();
+    for (const item of array) {
+      idSet.add(item[idKey]);
+    }
+    return idSet;
+  });
+  const previousIdSetSignal = signal(new Set(idSetSignal.peek()));
+  const idChangeCallbackSet = new Set();
+  effect(() => {
+    const idSet = idSetSignal.value;
+    const previousIdSet = previousIdSetSignal.peek();
+    previousIdSetSignal.value = new Set(idSet);
+    for (const idChangeCallback of idChangeCallbackSet) {
+      idChangeCallback(idSet, previousIdSet);
+    }
+  });
+  // to speep up reading
+  const idMapSignal = computed(() => {
+    const array = arraySignal.value;
+    const idMap = new Map();
+    for (const item of array) {
+      idMap.set(item[idKey], item);
+    }
+    return idMap;
+  });
 
   const select = (property, value) => {
     const array = arraySignal.value;
+    if (property === idKey) {
+      return idMapSignal.value.get(value);
+    }
     for (const itemCandidate of array) {
       const valueCandidate = itemCandidate[property];
       if (valueCandidate === value) {
@@ -14,16 +44,13 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     return null;
   };
   const selectAll = (objects) => {
-    const idSet = new Set();
-    for (const object of objects) {
-      idSet.add(object[idKey]);
-    }
-    const array = arraySignal.value;
     const result = [];
-    for (const itemCandidate of array) {
-      const itemCandidateId = itemCandidate[idKey];
-      if (idSet.has(itemCandidateId)) {
-        result.push(itemCandidate);
+    const idMap = idMapSignal.value;
+    for (const object of objects) {
+      const id = object[idKey];
+      const item = idMap.get(id);
+      if (item) {
+        result.push(item);
       }
     }
     return result;
@@ -39,17 +66,28 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       let hasNew = false;
       let hasUpdate = false;
       const arrayUpdated = [];
-      const existingItemMap = new Map();
-      for (const existingItem of array) {
+      const existingEntryMap = new Map();
+      let index = 0;
+      while (index < array.length) {
+        const existingItem = array[index];
         arrayUpdated.push(existingItem);
-        existingItemMap.set(existingItem[idKey], existingItem);
+        existingEntryMap.set(existingItem[idKey], {
+          existingItem,
+          existingItemIndex: index,
+        });
+        index++;
       }
+
       for (const props of propsArray) {
         const id = props[idKey];
-        const existingItem = existingItemMap.get(id);
-        if (existingItem) {
-          const updated = assign(existingItem, props);
-          hasUpdate = hasUpdate || updated;
+        const existingEntry = existingEntryMap.get(id);
+        if (existingEntry) {
+          const { existingItem, existingItemIndex } = existingEntry;
+          const itemWithPropsOrItem = assign(existingItem, props);
+          if (itemWithPropsOrItem !== existingItem) {
+            hasUpdate = hasUpdate || true;
+            arrayUpdated[existingItemIndex] = itemWithPropsOrItem;
+          }
         } else {
           hasNew = true;
           arrayUpdated.push(props);
@@ -82,8 +120,11 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     for (const existingItem of array) {
       if (existingItem[property] === value) {
         isNew = false;
-        updated = assign(existingItem, props);
-        arrayUpdated.push(existingItem);
+        const itemWithPropsOrItem = assign(existingItem, props);
+        if (itemWithPropsOrItem !== existingItem) {
+          updated = true;
+        }
+        arrayUpdated.push(itemWithPropsOrItem);
       } else {
         arrayUpdated.push(existingItem);
       }
@@ -144,6 +185,29 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     return array;
   };
 
+  const selectAsStableSignal = (property, value) => {
+    const idToTrackSignal = signal(null);
+    effect(() => {
+      const array = arraySignal.value;
+      for (const itemCandidate of array) {
+        const valueCandidate = itemCandidate[property];
+        if (valueCandidate === value) {
+          const idToTrack = itemCandidate[idKey];
+          idToTrackSignal.value = idToTrack;
+          break;
+        }
+      }
+    });
+    const selectedItemSignal = signal(null);
+    effect(() => {
+      const idToTrack = idToTrackSignal.value;
+      const idMap = idMapSignal.value;
+      const selectedItem = idToTrack ? idMap.get(idToTrack) : null;
+      selectedItemSignal.value = selectedItem;
+    });
+    return selectedItemSignal;
+  };
+
   /**
    * Both propertyChangeEffect and deleteEffect might receive a signal
    * That starts to return a falsy value because it rely on a given property to find an item
@@ -163,32 +227,25 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     callback,
   ) => {
     const NOT_FOUND = { label: "not_found" };
-    const itemSignalCopy = signal(itemSignal.peek());
+    const idToTrackSignal = signal(null);
     effect(() => {
       const item = itemSignal.value;
       if (item) {
-        itemSignalCopy.value = item;
-      } else if (itemSignalCopy.peek()) {
+        idToTrackSignal.value = item[idKey];
+      } else if (idToTrackSignal.peek()) {
         // not found, it was likely deleted
         // but maybe it was renamed so we need
         // the other effect to be sure
       }
     });
     const valueSignal = computed(() => {
-      const item = itemSignalCopy.value;
-      const array = arraySignal.value;
-      if (!item) {
+      const idToTrack = idToTrackSignal.value;
+      const idMap = idMapSignal.value;
+      if (!idToTrack) {
         return NOT_FOUND;
       }
-      const value = item[property];
-      const itemId = item[idKey];
-      for (const itemCandidate of array) {
-        const itemCandidateId = itemCandidate[idKey];
-        if (itemCandidateId === itemId) {
-          return value;
-        }
-      }
-      return NOT_FOUND;
+      const item = idMap.get(idToTrack);
+      return item ? item[property] : NOT_FOUND;
     });
     const previousValueSignal = signal(valueSignal.peek());
 
@@ -217,29 +274,21 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
         // the other effect to be sure
       }
     });
-    const idSetSignal = computed(() => {
-      const array = arraySignal.value;
-      const idSet = new Set();
-      for (const item of array) {
-        idSet.add(item[idKey]);
-      }
-      return idSet;
-    });
-    const previousIdSetSignal = signal(new Set(idSetSignal.peek()));
-
-    return effect(() => {
+    const detectIdDeleted = (idSet, previousIdSet) => {
       const idToTrack = idToTrackSignal.value;
-      const idSet = idSetSignal.value;
-      const previousIdSet = previousIdSetSignal.peek();
-      previousIdSetSignal.value = new Set(idSet);
       if (idToTrack && previousIdSet.has(idToTrack) && !idSet.has(idToTrack)) {
         callback(idToTrack);
       }
-    });
+    };
+    idChangeCallbackSet.add(detectIdDeleted);
+    return () => {
+      idChangeCallbackSet.delete(detectIdDeleted);
+    };
   };
 
   return {
     arraySignal,
+    selectAsStableSignal,
     select,
     selectAll,
     upsert,
@@ -252,20 +301,21 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
 
 const assign = (item, props) => {
   let modified = false;
+  const itemWithProps = { ...item };
   for (const key of Object.keys(props)) {
     const newValue = props[key];
     if (key in item) {
       const value = item[key];
       if (newValue !== value) {
         modified = true;
-        item[key] = newValue;
+        itemWithProps[key] = newValue;
       }
     } else {
       modified = true;
-      item[key] = newValue;
+      itemWithProps[key] = newValue;
     }
   }
-  return modified;
+  return modified ? itemWithProps : item;
 };
 
 // const arrayStore = arraySignalStore(
