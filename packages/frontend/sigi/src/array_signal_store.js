@@ -13,6 +13,21 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     }
     return null;
   };
+  const selectAll = (objects) => {
+    const idSet = new Set();
+    for (const object of objects) {
+      idSet.add(object[idKey]);
+    }
+    const array = arraySignal.value;
+    const result = [];
+    for (const itemCandidate of array) {
+      const itemCandidateId = itemCandidate[idKey];
+      if (idSet.has(itemCandidateId)) {
+        result.push(itemCandidate);
+      }
+    }
+    return result;
+  };
   const upsert = (...args) => {
     const array = arraySignal.peek();
     if (args.length === 1 && Array.isArray(args[0])) {
@@ -226,6 +241,7 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
   return {
     arraySignal,
     select,
+    selectAll,
     upsert,
     drop,
 

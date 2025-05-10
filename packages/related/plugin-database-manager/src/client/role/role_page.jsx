@@ -12,22 +12,24 @@ import {
   DELETE_ROLE_ACTION,
 } from "./role_routes.js";
 import { DatabaseValue } from "../components/database_value.jsx";
-import { useRoleColumns, useRole } from "./role_signals.js";
+import { useRoleColumns, useRole, useRoleDatabases } from "./role_signals.js";
 
 export const RoleRoutes = () => {
   return <Route route={GET_ROLE_ROUTE} loaded={RolePage} />;
 };
 
-const RolePage = ({ route }) => {
+const RolePage = () => {
   const [error, resetError] = useErrorBoundary();
   const roleName = useRouteParam(GET_ROLE_ROUTE, "roleName");
   const deleteRoleAction = useAction(DELETE_ROLE_ACTION, { roleName });
+  const role = useRole(roleName);
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
       {error && <ErrorDetails error={error} />}
-      <RoleFields route={route} />
-
+      <h1>{roleName}</h1>
+      <RoleFields role={role} />
+      <RoleDatabases />
       <SPADeleteButton action={deleteRoleAction}>Delete</SPADeleteButton>
 
       <a
@@ -51,10 +53,8 @@ const ErrorDetails = ({ error }) => {
   );
 };
 
-const RoleFields = () => {
-  const roleName = useRouteParam(GET_ROLE_ROUTE, "roleName");
+const RoleFields = ({ role }) => {
   const columns = useRoleColumns();
-  const role = useRole(roleName);
 
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
@@ -79,7 +79,7 @@ const RoleFields = () => {
               column={column}
               value={value}
               action={useAction(PUT_ROLE_ACTION, {
-                roleName,
+                roleName: role.rolname,
                 columnName,
               })}
             />
@@ -87,5 +87,21 @@ const RoleFields = () => {
         );
       })}
     </ul>
+  );
+};
+
+const RoleDatabases = () => {
+  const databases = useRoleDatabases();
+
+  return (
+    <div>
+      <h2>Databases</h2>
+      <ul>
+        {databases.map((database) => {
+          const databaseName = database.datname;
+          return <li key={databaseName}>{databaseName}</li>;
+        })}
+      </ul>
+    </div>
   );
 };

@@ -1,5 +1,6 @@
 import { signal } from "@preact/signals";
 import { arraySignalStore } from "@jsenv/sigi";
+import { databaseStore } from "../database/database_signals.js";
 
 export const roleColumnsSignal = signal([]);
 export const useRoleColumns = () => {
@@ -7,6 +8,15 @@ export const useRoleColumns = () => {
 };
 export const setRoleColumns = (value) => {
   roleColumnsSignal.value = value;
+};
+
+const roleDatabasesSignal = signal();
+export const useRoleDatabases = () => {
+  const roleDatabases = roleDatabasesSignal.value;
+  return roleDatabases ? databaseStore.selectAll(roleDatabases) : [];
+};
+export const setRoleDatabases = (value) => {
+  roleDatabasesSignal.value = value;
 };
 
 export const roleStore = arraySignalStore([], "oid");

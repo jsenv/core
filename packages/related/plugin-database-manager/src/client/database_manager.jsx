@@ -12,7 +12,7 @@ const App = () => {
         <DatabaseNavbar />
       </aside>
       <main>
-        <h1 title="Explore and manager your database">Database Manager</h1>
+        {/* <h1 title="Explore and manager your database">Database Manager</h1> */}
 
         <RoleRoutes />
         <TableRoutes />

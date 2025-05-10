@@ -102,7 +102,49 @@ export const jsenvPluginDatabaseManager = () => {
             return Response.json(`Role ${roleName} not found`, { status: 404 });
           }
           const role = results[0];
-          return Response.json({ columns, role });
+          const privileges = await sql`
+            SELECT
+              grantor,
+              table_schema,
+              table_name,
+              privilege_type
+            FROM
+              information_schema.table_privileges
+            WHERE
+              grantee = ${roleName}
+          `;
+          const objects = await sql`
+            SELECT
+              pg_class.relname AS object_name,
+              pg_class.relkind AS object_type,
+              pg_namespace.nspname AS schema_name
+            FROM
+              pg_class
+              JOIN pg_roles ON pg_roles.oid = pg_class.relowner
+              LEFT JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
+            WHERE
+              pg_roles.rolname = ${roleName}
+              AND pg_class.relkind IN ('r', 'v', 'm', 'S', 'f')
+            ORDER BY
+              pg_namespace.nspname,
+              pg_class.relname
+          `;
+          const databases = await sql`
+            SELECT
+              pg_database.*
+            FROM
+              pg_database
+              JOIN pg_roles ON pg_roles.oid = pg_database.datdba
+            WHERE
+              pg_roles.rolname = ${roleName}
+          `;
+          return Response.json({
+            role,
+            databases,
+            objects,
+            privileges,
+            columns,
+          });
         },
       },
       // when dropping roles, consider this: https://neon.tech/postgresql/postgresql-administration/postgresql-drop-role
