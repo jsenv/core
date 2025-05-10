@@ -6,6 +6,10 @@ export const useRouteUrl = (route, params) => {
   return route.buildUrl(documentUrl, params);
 };
 
+export const useRouteParam = (route, paramName) => {
+  return route.paramsSignal.value[paramName];
+};
+
 export const useRouteStatus = (route) => {
   const pending = route.loadingStateSignal.value === LOADING;
   const error = route.errorSignal.value;

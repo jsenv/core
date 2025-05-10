@@ -3,6 +3,7 @@ import {
   Route,
   useAction,
   SPADeleteButton,
+  useRouteParam,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import {
@@ -19,9 +20,8 @@ export const RoleRoutes = () => {
 
 const RolePage = ({ route }) => {
   const [error, resetError] = useErrorBoundary();
-  const deleteRoleAction = useAction(DELETE_ROLE_ACTION, {
-    roleName: GET_ROLE_ROUTE.params.roleName,
-  });
+  const roleName = useRouteParam(GET_ROLE_ROUTE, "roleName");
+  const deleteRoleAction = useAction(DELETE_ROLE_ACTION, { roleName });
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
@@ -52,7 +52,7 @@ const ErrorDetails = ({ error }) => {
 };
 
 const RoleFields = () => {
-  const roleName = GET_ROLE_ROUTE.params.roleName;
+  const roleName = useRouteParam(GET_ROLE_ROUTE, "roleName");
   const columns = useRoleColumns();
   const role = useRole(roleName);
 

@@ -18,6 +18,7 @@ export {
   useRouteLoadIsAborted,
   useRouteLoadingState,
   useRouteUrl,
+  useRouteParam,
 } from "./client/route/route_hooks.js";
 export {
   ErrorBoundaryContext,
