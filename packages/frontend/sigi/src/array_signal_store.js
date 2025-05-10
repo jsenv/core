@@ -2,14 +2,19 @@ import { signal, effect, computed } from "@preact/signals";
 
 export const arraySignalStore = (initialArray = [], idKey = "id") => {
   const arraySignal = signal(initialArray);
-  const idSetSignal = computed(() => {
+  const derivedSignal = computed(() => {
     const array = arraySignal.value;
-    const idSet = new Set();
+    const idSet = new Set(); // will be used to detect id changes (deletion, addition)
+    const idMap = new Map(); // used to speep up finding item by id
     for (const item of array) {
-      idSet.add(item[idKey]);
+      const id = item[idKey];
+      idSet.add(id);
+      idMap.set(id, item);
     }
-    return idSet;
+    return [idSet, idMap];
   });
+  const idSetSignal = computed(() => derivedSignal.value[0]);
+  const idMapSignal = computed(() => derivedSignal.value[1]);
   const previousIdSetSignal = signal(new Set(idSetSignal.peek()));
   const idChangeCallbackSet = new Set();
   effect(() => {
@@ -20,23 +25,18 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       idChangeCallback(idSet, previousIdSet);
     }
   });
-  // to speep up reading
-  const idMapSignal = computed(() => {
-    const array = arraySignal.value;
-    const idMap = new Map();
-    for (const item of array) {
-      idMap.set(item[idKey], item);
-    }
-    return idMap;
-  });
 
   const select = (property, value) => {
     const array = arraySignal.value;
+    const idMap = idMapSignal.value;
     if (property === idKey) {
-      return idMapSignal.value.get(value);
+      return idMap.get(value);
     }
     for (const itemCandidate of array) {
-      const valueCandidate = itemCandidate[property];
+      const valueCandidate =
+        typeof property === "function"
+          ? property(itemCandidate)
+          : itemCandidate[property];
       if (valueCandidate === value) {
         return itemCandidate;
       }
@@ -71,7 +71,8 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       while (index < array.length) {
         const existingItem = array[index];
         arrayUpdated.push(existingItem);
-        existingEntryMap.set(existingItem[idKey], {
+        const id = existingItem[idKey];
+        existingEntryMap.set(id, {
           existingItem,
           existingItemIndex: index,
         });
@@ -117,16 +118,20 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       value = args[1];
       props = args[2];
     }
-    for (const existingItem of array) {
-      if (existingItem[property] === value) {
+    for (const itemCandidate of array) {
+      const itemCandidateValue =
+        typeof property === "function"
+          ? property(itemCandidate)
+          : itemCandidate[property];
+      if (itemCandidateValue === value) {
         isNew = false;
-        const itemWithPropsOrItem = assign(existingItem, props);
-        if (itemWithPropsOrItem !== existingItem) {
+        const itemWithPropsOrItem = assign(itemCandidate, props);
+        if (itemWithPropsOrItem !== itemCandidate) {
           updated = true;
         }
         arrayUpdated.push(itemWithPropsOrItem);
       } else {
-        arrayUpdated.push(existingItem);
+        arrayUpdated.push(itemCandidate);
       }
     }
     if (isNew) {
@@ -171,41 +176,21 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     const array = arraySignal.peek();
     const arrayWithoutItemToDrop = [];
     let found = false;
-    for (const existingItem of array) {
-      const valueCandidate = existingItem[property];
-      if (valueCandidate === value) {
+    for (const itemCandidate of array) {
+      const itemCandidateValue =
+        typeof property === "function"
+          ? property(itemCandidate)
+          : itemCandidate[property];
+      if (itemCandidateValue === value) {
         found = true;
       } else {
-        arrayWithoutItemToDrop.push(existingItem);
+        arrayWithoutItemToDrop.push(itemCandidate);
       }
     }
     if (found) {
       arraySignal.value = arrayWithoutItemToDrop;
     }
     return array;
-  };
-
-  const selectAsStableSignal = (property, value) => {
-    const idToTrackSignal = signal(null);
-    effect(() => {
-      const array = arraySignal.value;
-      for (const itemCandidate of array) {
-        const valueCandidate = itemCandidate[property];
-        if (valueCandidate === value) {
-          const idToTrack = itemCandidate[idKey];
-          idToTrackSignal.value = idToTrack;
-          break;
-        }
-      }
-    });
-    const selectedItemSignal = signal(null);
-    effect(() => {
-      const idToTrack = idToTrackSignal.value;
-      const idMap = idMapSignal.value;
-      const selectedItem = idToTrack ? idMap.get(idToTrack) : null;
-      selectedItemSignal.value = selectedItem;
-    });
-    return selectedItemSignal;
   };
 
   /**
@@ -220,12 +205,7 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
    * But we still want to detect the rename or the deletion of such an item
    * So we use a signal not reset when it becomes null + rely on item id to find it back in the array
    */
-  const propertyChangeEffect = (
-    itemSignal,
-    // one day property might be allowed to be a function to support nested property or abstract property
-    property,
-    callback,
-  ) => {
+  const propertyChangeEffect = (itemSignal, property, callback) => {
     const NOT_FOUND = { label: "not_found" };
     const idToTrackSignal = signal(null);
     effect(() => {
@@ -245,7 +225,11 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
         return NOT_FOUND;
       }
       const item = idMap.get(idToTrack);
-      return item ? item[property] : NOT_FOUND;
+      return item
+        ? typeof property === "function"
+          ? property(item)
+          : item[property]
+        : NOT_FOUND;
     });
     const previousValueSignal = signal(valueSignal.peek());
 
@@ -288,7 +272,6 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
 
   return {
     arraySignal,
-    selectAsStableSignal,
     select,
     selectAll,
     upsert,
