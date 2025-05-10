@@ -99,6 +99,6 @@ export const DELETE_ROLE_ACTION = registerAction(
       deleteRoleError.stack = error.stack || error.message;
       throw deleteRoleError;
     }
-    roleStore.drop(roleName);
+    roleStore.drop("rolname", roleName);
   },
 );

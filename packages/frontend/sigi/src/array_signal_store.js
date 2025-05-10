@@ -82,8 +82,9 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       arraySignal.value = arrayUpdated;
     }
   };
-  const drop = (data) => {
-    if (Array.isArray(data)) {
+  const drop = (...args) => {
+    if (args.length === 1 && Array.isArray(args[0])) {
+      const data = args[0];
       const array = arraySignal.peek();
       const arrayWithoutDroppedItems = [];
       let hasFound = false;
@@ -102,12 +103,21 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       }
       return arrayWithoutDroppedItems;
     }
-    const idToRemove = data;
+    let property;
+    let value;
+    if (args.length === 1) {
+      property = idKey;
+      value = args[0];
+    } else {
+      property = args[0];
+      value = args[1];
+    }
     const array = arraySignal.peek();
     const arrayWithoutItemToDrop = [];
     let found = false;
     for (const existingItem of array) {
-      if (existingItem[idKey] === idToRemove) {
+      const valueCandidate = existingItem[property];
+      if (valueCandidate === value) {
         found = true;
       } else {
         arrayWithoutItemToDrop.push(existingItem);
