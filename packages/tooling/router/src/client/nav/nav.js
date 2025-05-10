@@ -208,8 +208,8 @@ export const stopLoad = () => {
     return;
   }
 };
-export const reload = () => {
-  navigation.reload();
+export const reload = (params) => {
+  navigation.reload(params);
 };
 export const goBack = () => {
   navigation.back();

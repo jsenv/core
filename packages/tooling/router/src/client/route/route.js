@@ -1,7 +1,7 @@
 import { batch, effect, signal } from "@preact/signals";
 import { createResourcePattern } from "../../shared/resource_pattern.js";
 import { normalizeUrl } from "../normalize_url.js";
-import { goTo, installNavigation } from "../router.js";
+import { goTo, reload, installNavigation } from "../router.js";
 import { IDLE, LOADING, ABORTED, LOADED, FAILED } from "./route_status.js";
 import { routingWhile } from "../document_routing.js";
 import { applyAction } from "../action/action.js";
@@ -94,7 +94,7 @@ export const registerRoute = (resourcePattern, handler) => {
       goTo(routeUrl, { replace: true, routesLoaded: [route] });
     },
     reload: () => {
-      goTo(route.url, { reload: true });
+      reload();
     },
     toString: () => {
       return `${route.resourcePattern}`;
