@@ -58,9 +58,6 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
     const { signal } = event;
     if (debug) {
       console.log("receive navigate event");
-      signal.addEventListener("abort", () => {
-        console.log("nav aborted");
-      });
     }
     const formAction = event.info?.formAction;
     const formData = event.formData || event.info?.formData;
@@ -153,18 +150,13 @@ const detectBrowserStopButtonClick = (navigateEventSignal, callback) => {
   navigateEventSignal.addEventListener("abort", async () => {
     const timeout = setTimeout(() => {
       callEffect = () => {};
-      if (debug) {
-        console.log("aborted because stop");
-      }
+
       for (const browserStopButtonClickCallback of browserStopButtonClickCallbackSet) {
         browserStopButtonClickCallback();
       }
       browserStopButtonClickCallbackSet.clear();
     });
     callEffect = () => {
-      if (debug) {
-        console.log("aborted because new navigation");
-      }
       clearTimeout(timeout);
     };
   });
@@ -178,15 +170,14 @@ export const goTo = (url, { state, replace, routesLoaded } = {}) => {
   const currentUrl = documentUrlSignal.peek();
   if (replace) {
     if (url === currentUrl) {
-      navigation.reload({
-        state,
-        info: {
-          routesLoaded,
-        },
-      });
+      navigation.reload({ state, info: { routesLoaded } });
       return;
     }
-    navigation.navigate(url, { state, history: "replace" });
+    navigation.navigate(url, {
+      state,
+      history: "replace",
+      info: { routesLoaded },
+    });
     return;
   }
   if (url === currentUrl) {

@@ -1,5 +1,5 @@
-import { registerRoute, registerAction, goTo } from "@jsenv/router";
-import { computed } from "@preact/signals";
+import { registerRoute, registerAction } from "@jsenv/router";
+import { connectStoreAndRoute } from "@jsenv/sigi";
 import { roleStore, setRoleColumns } from "./role_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
@@ -23,28 +23,7 @@ export const GET_ROLE_ROUTE = registerRoute(
   },
 );
 
-const connectGETAndStore = (route, store, { itemKey, paramKey }) => {
-  const activeItemSignal = computed(() => {
-    const isMatching = route.isMatchingSignal.value;
-    const params = route.paramsSignal.value;
-    if (!isMatching) {
-      return null;
-    }
-    const activeItem = roleStore.select(itemKey, params[paramKey]);
-    return activeItem;
-  });
-
-  store.propertyChangeEffect(activeItemSignal, itemKey, (value) => {
-    const routeUrl = route.buildUrl(window.location.href, {
-      [paramKey]: value,
-    });
-    goTo(routeUrl, { replace: true, routesLoaded: [route] });
-  });
-  store.deleteEffect(activeItemSignal, () => {
-    goTo(route.url, { replace: true });
-  });
-};
-connectGETAndStore(GET_ROLE_ROUTE, roleStore, {
+connectStoreAndRoute(roleStore, GET_ROLE_ROUTE, {
   itemKey: "rolname",
   paramKey: "roleName",
 });

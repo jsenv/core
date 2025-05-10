@@ -87,9 +87,14 @@ export const registerRoute = (resourcePattern, handler) => {
     reportError: (e) => {
       route.errorSignal.value = e;
     },
-    activate: (params) => {
-      const documentUrlWithRoute = route.buildUrl(window.location.href, params);
-      goTo(documentUrlWithRoute);
+    replaceParams: (params) => {
+      route.paramsSignal.value = params;
+      const routeUrl = route.buildUrl(window.location.href, params);
+      route.urlSignal.value = routeUrl;
+      goTo(routeUrl, { replace: true, routesLoaded: [route] });
+    },
+    reload: () => {
+      goTo(route.url, { reload: true });
     },
     toString: () => {
       return `${route.resourcePattern}`;
@@ -119,8 +124,8 @@ export const applyRouting = async ({
   state,
   stopSignal,
   isReload,
-  info,
   // isReplace,
+  info,
 }) => {
   // const sourceResource = resourceFromUrl(sourceUrl);
   const targetResource = resourceFromUrl(targetUrl);
@@ -141,6 +146,14 @@ export const applyRouting = async ({
   const routeToEnterMap = new Map();
   const routeToKeepActiveSet = new Set();
   for (const routeCandidate of routeSet) {
+    if (
+      info &&
+      info.routesLoaded &&
+      info.routesLoaded.includes(routeCandidate)
+    ) {
+      routeToKeepActiveSet.add(routeCandidate);
+      continue;
+    }
     const matchResult = routeCandidate.match(targetResource, matchParams);
     if (!matchResult) {
       continue;
@@ -160,13 +173,7 @@ export const applyRouting = async ({
     if (routeUrl === currentRouteUrl) {
       const hasError = routeCandidate.errorSignal.peek();
       const isAborted = routeCandidate.loadingStateSignal.peek() === ABORTED;
-      if (
-        info &&
-        info.routesLoaded &&
-        info.routesLoaded.includes(routeCandidate)
-      ) {
-        routeToKeepActiveSet.add(routeCandidate);
-      } else if (isReload) {
+      if (isReload) {
         routeToEnterMap.set(routeCandidate, enterParams);
       } else if (hasError) {
         routeToEnterMap.set(routeCandidate, enterParams);
