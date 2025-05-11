@@ -27,13 +27,14 @@ export const setActiveRoleColumns = (value) => {
 };
 const activeRoleDatabaseIdArraySignal = signal([]);
 export const useActiveRoleDatabases = () => {
-  return databaseStore.selectAll(activeRoleDatabaseIdArraySignal.value);
+  const databaseIdArray = activeRoleDatabaseIdArraySignal.value;
+  const databases = databaseStore.selectAll(databaseIdArray);
+  return databases;
 };
 export const setActiveRoleDatabases = (databases) => {
   databases = databaseStore.upsert(databases);
-  activeRoleDatabaseIdArraySignal.value = databases.map(
-    (database) => database.oid,
-  );
+  const databaseIdArray = databases.map((database) => database.oid);
+  activeRoleDatabaseIdArraySignal.value = databaseIdArray;
 };
 
 const currentRoleSignal = signal(null);

@@ -53,11 +53,10 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     }
     return null;
   };
-  const selectAll = (objects) => {
+  const selectAll = (idArray) => {
     const result = [];
     const idMap = idMapSignal.value;
-    for (const object of objects) {
-      const id = object[idKey];
+    for (const id of idArray) {
       const item = idMap.get(id);
       if (item) {
         result.push(item);
