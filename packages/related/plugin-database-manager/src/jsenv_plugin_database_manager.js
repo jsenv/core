@@ -432,21 +432,32 @@ export const jsenvPluginDatabaseManager = () => {
       {
         name: "postgres_sql_error_handler",
         handleError: (e) => {
-          // TODO: catch only postgres errors
+          if (!e || e.name !== "PostgresError") {
+            return null;
+          }
+          let message = e.message;
+          if (e.detail) {
+            message += ` (${e.detail})`;
+          }
           const errorData = {
             ...e,
-            message: e.message,
+            message,
           };
-
+          if (e.code === "2BP01") {
+            return Response.json(errorData, {
+              status: 409,
+              statusText: message,
+            });
+          }
           if (e.code === "42704") {
             return Response.json(errorData, {
               status: 404,
-              statusText: e.message,
+              statusText: message,
             });
           }
           return Response.json(errorData, {
             status: 500,
-            statusText: e.message,
+            statusText: message,
           });
         },
       },
