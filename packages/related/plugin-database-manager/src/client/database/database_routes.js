@@ -9,7 +9,7 @@ import {
 } from "./database_signals.js";
 
 export const GET_DATABASE_ROUTE = registerRoute(
-  "/.internal/database/databases/:datname",
+  "/databases/:datname",
   async ({ params, signal }) => {
     const datname = params.datname;
     const response = await fetch(

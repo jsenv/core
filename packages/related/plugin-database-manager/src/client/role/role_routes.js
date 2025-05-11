@@ -8,7 +8,7 @@ import {
 } from "./role_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
-  "/.internal/database/roles/:rolname",
+  "/roles/:rolname",
   async ({ params, signal }) => {
     const rolname = params.rolname;
     const response = await fetch(`/.internal/database/api/roles/${rolname}`, {
