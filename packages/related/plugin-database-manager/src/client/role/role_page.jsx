@@ -4,6 +4,7 @@ import {
   useAction,
   SPADeleteButton,
   useRouteParam,
+  SPALink,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import {
@@ -11,6 +12,7 @@ import {
   PUT_ROLE_ACTION,
   DELETE_ROLE_ACTION,
 } from "./role_routes.js";
+import { GET_DATABASE_ROUTE } from "../database/database_routes.js";
 import { DatabaseValue } from "../components/database_value.jsx";
 import {
   useActiveRoleColumns,
@@ -104,8 +106,14 @@ const RoleDatabases = () => {
       <h2>Databases</h2>
       <ul>
         {databases.map((database) => {
-          const databaseName = database.datname;
-          return <li key={databaseName}>{databaseName}</li>;
+          const datname = database.datname;
+          return (
+            <li key={datname}>
+              <SPALink route={GET_DATABASE_ROUTE} routeParams={{ datname }}>
+                {datname}
+              </SPALink>
+            </li>
+          );
         })}
       </ul>
     </div>

@@ -1,10 +1,40 @@
+import { signal } from "@preact/signals";
 import { databaseStore } from "./database_store.js";
 import { roleStore } from "../role/role_store.js";
 
-export const setDatabase = (database) => {
-  databaseStore.upsert(database);
+const activeDatabaseIdSignal = signal(null);
+const activeDatabaseColumnsSignal = signal([]);
+const activeDatabaseOwnerRoleIdSignal = signal(null);
+export const useActiveDatabase = () => {
+  const activeDatabaseId = activeDatabaseIdSignal.value;
+  const activeDatabase = roleStore.select(activeDatabaseId);
+  return activeDatabase;
 };
-export const setDatabaseColumns = () => {};
-export const setDatabaseOwnerRole = (database, ownerRole) => {
-  roleStore.update(ownerRole);
+export const useActiveDatabaseColumns = () => {
+  return activeDatabaseColumnsSignal.value;
+};
+export const useActiveDatabaseOwnerRole = () => {
+  const activeDatabaseOwnerRoleId = activeDatabaseOwnerRoleIdSignal.value;
+  const activeDatabaseOwnerRole = roleStore.select(activeDatabaseOwnerRoleId);
+  return activeDatabaseOwnerRole;
+};
+
+export const setActiveDatabase = (database) => {
+  if (database) {
+    databaseStore.upsert(database);
+    activeDatabaseIdSignal.value = database.oid;
+  } else {
+    activeDatabaseIdSignal.value = null;
+  }
+};
+export const setActiveDatabaseColumns = (columns) => {
+  activeDatabaseColumnsSignal.value = columns;
+};
+export const setActiveDatabaseOwnerRole = (ownerRole) => {
+  if (ownerRole) {
+    roleStore.upsert(ownerRole);
+    activeDatabaseOwnerRoleIdSignal.value = ownerRole.oid;
+  } else {
+    activeDatabaseOwnerRoleIdSignal.value = null;
+  }
 };

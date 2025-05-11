@@ -3,9 +3,9 @@ import { connectStoreAndRoute } from "@jsenv/sigi";
 import { roleStore } from "../role/role_store.js";
 import { databaseStore } from "./database_store.js";
 import {
-  setDatabase,
-  setDatabaseColumns,
-  setDatabaseOwnerRole,
+  setActiveDatabase,
+  setActiveDatabaseColumns,
+  setActiveDatabaseOwnerRole,
 } from "./database_signals.js";
 
 export const GET_DATABASE_ROUTE = registerRoute(
@@ -25,9 +25,9 @@ export const GET_DATABASE_ROUTE = registerRoute(
       throw getError;
     }
     const { database, ownerRole, columns } = await response.json();
-    setDatabase(database);
-    setDatabaseColumns(columns);
-    setDatabaseOwnerRole(database, ownerRole);
+    setActiveDatabase(database);
+    setActiveDatabaseColumns(columns);
+    setActiveDatabaseOwnerRole(database, ownerRole);
   },
 );
 connectStoreAndRoute(databaseStore, GET_DATABASE_ROUTE, "datname");
@@ -54,6 +54,33 @@ export const POST_DATABASE_ACTION = registerAction(
     }
     const database = await response.json();
     databaseStore.upsert(database);
+  },
+);
+
+export const PUT_DATABASE_ACTION = registerAction(
+  async ({ datname, columnName, formData, signal }) => {
+    let value = formData.get(columnName);
+    const response = await fetch(
+      `/.internal/database/api/databases/${datname}/${value}`,
+      {
+        signal,
+        method: "PUT",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(value),
+      },
+    );
+    if (!response.ok) {
+      const error = await response.json();
+      const putError = new Error(
+        `Failed to update database: ${response.status} ${response.statusText}`,
+      );
+      putError.stack = error.stack || error.message;
+      throw putError;
+    }
+    roleStore.upsert("datname", datname, { [columnName]: value });
   },
 );
 

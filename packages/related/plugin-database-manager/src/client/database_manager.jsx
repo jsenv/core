@@ -4,6 +4,7 @@ import "./database_manager.css" with { type: "css" };
 import { DatabaseNavbar } from "./navbar/database_navbar.jsx";
 import { TableRoutes } from "./table/table_page.jsx";
 import { RoleRoutes } from "./role/role_page.jsx";
+import { DatabaseRoutes } from "./database/database_page.jsx";
 
 const App = () => {
   return (
@@ -15,6 +16,7 @@ const App = () => {
         {/* <h1 title="Explore and manager your database">Database Manager</h1> */}
 
         <RoleRoutes />
+        <DatabaseRoutes />
         <TableRoutes />
       </main>
     </div>

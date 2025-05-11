@@ -242,8 +242,9 @@ export const jsenvPluginDatabaseManager = () => {
           if (results.length === 0) {
             return null;
           }
+          const columns = await getTableColumns(sql, "pg_database");
           const [database] = results;
-          return database;
+          return { database, columns };
         },
         PUT: async (datname, colname, value) => {
           await alterDatabaseQuery(sql, datname, colname, value);
