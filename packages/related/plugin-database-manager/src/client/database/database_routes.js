@@ -1,8 +1,8 @@
 import { registerRoute, registerAction } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
-import { roleStore } from "../role/role_signals.js";
+import { roleStore } from "../role/role_store.js";
+import { databaseStore } from "./database_store.js";
 import {
-  databaseStore,
   setDatabase,
   setDatabaseColumns,
   setDatabaseOwnerRole,

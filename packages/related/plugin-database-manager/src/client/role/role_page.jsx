@@ -12,7 +12,11 @@ import {
   DELETE_ROLE_ACTION,
 } from "./role_routes.js";
 import { DatabaseValue } from "../components/database_value.jsx";
-import { useRoleColumns, useRole, useRoleDatabases } from "./role_signals.js";
+import {
+  useActiveRoleColumns,
+  useActiveRole,
+  useActiveRoleDatabases,
+} from "./role_signals.js";
 
 export const RoleRoutes = () => {
   return <Route route={GET_ROLE_ROUTE} loaded={RolePage} />;
@@ -22,7 +26,7 @@ const RolePage = () => {
   const [error, resetError] = useErrorBoundary();
   const rolname = useRouteParam(GET_ROLE_ROUTE, "rolname");
   const deleteRoleAction = useAction(DELETE_ROLE_ACTION, { rolname });
-  const role = useRole(rolname);
+  const role = useActiveRole();
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
@@ -54,7 +58,7 @@ const ErrorDetails = ({ error }) => {
 };
 
 const RoleFields = ({ role }) => {
-  const columns = useRoleColumns();
+  const columns = useActiveRoleColumns();
 
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
@@ -93,7 +97,7 @@ const RoleFields = ({ role }) => {
 };
 
 const RoleDatabases = () => {
-  const databases = useRoleDatabases();
+  const databases = useActiveRoleDatabases();
 
   return (
     <div>

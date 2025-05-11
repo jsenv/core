@@ -1,7 +1,11 @@
 import { registerRoute, registerAction } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
-import { roleStore, setRoleColumns, setRoleDatabases } from "./role_signals.js";
-import { databaseStore } from "../database/database_signals.js";
+import { roleStore } from "./role_store.js";
+import {
+  setActiveRole,
+  setActiveRoleColumns,
+  setActiveRoleDatabases,
+} from "./role_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
   "/.internal/database/roles/:rolname",
@@ -19,11 +23,9 @@ export const GET_ROLE_ROUTE = registerRoute(
       throw getRoleError;
     }
     const { role, databases, columns } = await response.json();
-
-    databaseStore.upsert(databases);
-    roleStore.upsert(role);
-    setRoleDatabases(databases);
-    setRoleColumns(columns);
+    setActiveRole(role);
+    setActiveRoleDatabases(databases);
+    setActiveRoleColumns(columns);
   },
 );
 

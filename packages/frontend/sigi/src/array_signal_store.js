@@ -61,7 +61,7 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       const propsArray = args[0];
       if (array.length === 0) {
         arraySignal.value = propsArray;
-        return;
+        return propsArray;
       }
       let hasNew = false;
       let hasUpdate = false;
@@ -96,11 +96,12 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       }
       if (hasNew || hasUpdate) {
         arraySignal.value = arrayUpdated;
+        return arrayUpdated;
       }
-      return;
+      return array;
     }
-    let isNew = true;
-    let updated = false;
+    let existingItem = null;
+    let updatedItem = null;
     const arrayUpdated = [];
     let property;
     let value;
@@ -124,24 +125,27 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
           ? property(itemCandidate)
           : itemCandidate[property];
       if (itemCandidateValue === value) {
-        isNew = false;
         const itemWithPropsOrItem = assign(itemCandidate, props);
-        if (itemWithPropsOrItem !== itemCandidate) {
-          updated = true;
+        if (itemWithPropsOrItem === itemCandidate) {
+          existingItem = itemCandidate;
+        } else {
+          updatedItem = itemWithPropsOrItem;
         }
         arrayUpdated.push(itemWithPropsOrItem);
       } else {
         arrayUpdated.push(itemCandidate);
       }
     }
-    if (isNew) {
-      arrayUpdated.push(props);
-      arraySignal.value = arrayUpdated;
-      return;
+    if (existingItem) {
+      return existingItem;
     }
-    if (updated) {
+    if (updatedItem) {
       arraySignal.value = arrayUpdated;
+      return updatedItem;
     }
+    arrayUpdated.push(props);
+    arraySignal.value = arrayUpdated;
+    return props;
   };
   const drop = (...args) => {
     if (args.length === 1 && Array.isArray(args[0])) {
@@ -161,8 +165,9 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       }
       if (hasFound) {
         arraySignal.value = arrayWithoutDroppedItems;
+        return arrayWithoutDroppedItems;
       }
-      return arrayWithoutDroppedItems;
+      return array;
     }
     let property;
     let value;
@@ -189,6 +194,7 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     }
     if (found) {
       arraySignal.value = arrayWithoutItemToDrop;
+      return arrayWithoutItemToDrop;
     }
     return array;
   };

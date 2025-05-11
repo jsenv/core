@@ -25,8 +25,8 @@ import {
   POST_ROLE_ACTION,
   DELETE_ROLE_ACTION,
 } from "../role/role_routes.js";
+import { roleStore } from "../role/role_store.js";
 import {
-  roleStore,
   setCurrentRole,
   useCurrentRole,
   useRoleList,

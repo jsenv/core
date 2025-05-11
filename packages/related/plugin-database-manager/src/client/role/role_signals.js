@@ -1,31 +1,39 @@
 import { signal } from "@preact/signals";
-import { arraySignalStore } from "@jsenv/sigi";
-import { databaseStore } from "../database/database_signals.js";
+import { roleStore } from "./role_store.js";
+import { databaseStore } from "../database/database_store.js";
 
-export const roleColumnsSignal = signal([]);
-export const useRoleColumns = () => {
-  return roleColumnsSignal.value;
-};
-export const setRoleColumns = (value) => {
-  roleColumnsSignal.value = value;
-};
-
-const roleDatabasesSignal = signal();
-export const useRoleDatabases = () => {
-  const roleDatabases = roleDatabasesSignal.value;
-  return roleDatabases ? databaseStore.selectAll(roleDatabases) : [];
-};
-export const setRoleDatabases = (value) => {
-  roleDatabasesSignal.value = value;
-};
-
-export const roleStore = arraySignalStore([], "oid");
 export const useRoleList = () => {
   return roleStore.arraySignal.value;
 };
 export const useRole = (rolname) => {
   return roleStore.select("rolname", rolname);
 };
+const activeRoleIdSignal = signal(null);
+export const useActiveRole = () => {
+  return roleStore.select(activeRoleIdSignal.value);
+};
+export const setActiveRole = (role) => {
+  role = roleStore.upsert(role);
+  activeRoleIdSignal.value = role.oid;
+};
+const activeRoleColumnsSignal = signal([]);
+export const useActiveRoleColumns = () => {
+  return activeRoleColumnsSignal.value;
+};
+export const setActiveRoleColumns = (value) => {
+  activeRoleColumnsSignal.value = value;
+};
+const activeRoleDatabaseIdArraySignal = signal([]);
+export const useActiveRoleDatabases = () => {
+  return databaseStore.selectAll(activeRoleDatabaseIdArraySignal.value);
+};
+export const setActiveRoleDatabases = (databases) => {
+  databases = databaseStore.upsert(databases);
+  activeRoleDatabaseIdArraySignal.value = databases.map(
+    (database) => database.oid,
+  );
+};
+
 const currentRoleSignal = signal(null);
 export const useCurrentRole = () => {
   const currentRole = currentRoleSignal.value;
