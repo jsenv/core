@@ -337,11 +337,58 @@
         }
       }
 
-      .route_list {
+      .route_container > * {
         margin-top: 20px;
         flex-grow: 1;
         min-width: 0; /* Prevent flexbox from expanding beyond available space */
       }
+      .route_group_details {
+        margin: 0 0 15px;
+      }
+      .summary_marker {
+        width: 24px;
+        height: 24px;
+      }
+      .route_group_details > summary {
+        cursor: pointer;
+        list-style: none;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 7px;
+      }
+      .route_group_details > summary::marker {
+        display: none;
+      }
+      .route_group_details:open > summary .summary_marker {
+        transform: rotate(-180deg);
+      }
+      .route_group_summary_container {
+        display: flex;
+        align-items: center;
+        padding: 5px;
+      }
+      .route_group_name {
+        border-radius: 3px;
+        color: #fff;
+        font-family: sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        min-width: 80px;
+        padding: 6px 0;
+        text-align: center;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+        background: var(--method-color);
+      }
+      .route_group_description {
+        margin-left: 8px;
+        font-family: monospace;
+        font-size: 16px;
+        font-weight: 600;
+        word-break: break-word;
+        margin-top: 0;
+        margin-bottom: 0;
+        user-select: none;
+      }
+
       .route_details {
         margin-bottom: 8px;
         box-shadow: 0 0 3px rgba(0, 0, 0, 0.19);
@@ -357,6 +404,9 @@
       }
       .route_details > summary::marker {
         display: none;
+      }
+      .route_details:open > summary .summary_marker {
+        transform: rotate(180deg);
       }
       .route_summary_container {
         display: flex;
@@ -384,25 +434,32 @@
         margin-top: 0;
         margin-bottom: 0;
       }
-      .route_details[data-method="HEAD"] {
+      .route_details[data-method="HEAD"],
+      .route_group_details[data-method="HEAD"] {
         --method-color: var(--method-head-color);
       }
-      .route_details[data-method="OPTIONS"] {
+      .route_details[data-method="OPTIONS"],
+      .route_group_details[data-method="OPTIONS"] {
         --method-color: var(--method-options-color);
       }
-      .route_details[data-method="GET"] {
+      .route_details[data-method="GET"],
+      .route_group_details[data-method="GET"] {
         --method-color: var(--method-get-color);
       }
-      .route_details[data-method="POST"] {
+      .route_details[data-method="POST"],
+      .route_group_details[data-method="POST"] {
         --method-color: var(--method-post-color);
       }
-      .route_details[data-method="PUT"] {
+      .route_details[data-method="PUT"],
+      .route_group_details[data-method="PUT"] {
         --method-color: var(--method-put-color);
       }
-      .route_details[data-method="PATCH"] {
+      .route_details[data-method="PATCH"],
+      .route_group_details[data-method="PATCH"] {
         --method-color: var(--method-patch-color);
       }
-      .route_details[data-method="DELETE"] {
+      .route_details[data-method="DELETE"],
+      .route_group_details[data-method="DELETE"] {
         --method-color: var(--method-delete-color);
       }
 
@@ -449,7 +506,7 @@
         justify-content: space-between;
         user-select: none;
       }
-      .filter:open .arrow_down {
+      .filter:open > summary .summary_marker {
         transform: rotate(180deg);
       }
       .summary_text {
@@ -717,7 +774,7 @@
       import { render } from "preact";
       import { html } from "htm/preact";
       import { signal, computed } from "@preact/signals";
-      import { useState, useRef, useCallback } from "preact/hooks";
+      import { useRef, useCallback } from "preact/hooks";
 
       const routesLoadingSignal = signal(false);
       const routeLoadingErrorSignal = signal(null);
@@ -790,7 +847,7 @@
         return html`
           <div>
             <${Toolbox} />
-            <${RouteList} />
+            <${RouteResults} />
           </div>`;
       };
       const ProgressBar = ({ width = "100%", height = 6, loading }) => {
@@ -813,10 +870,11 @@
           </div>
         `;
       };
-      const RouteList = () => {
+      const RouteResults = () => {
         const routes = routesSignal.value;
         const loading = routesLoadingSignal.value;
         const routeLoadingError = routeLoadingErrorSignal.value;
+        const [groupBy] = useGroupByUrlStringParam();
 
         if (loading) {
           return html`<${ProgressBar} width="150" loading="${true}" />`;
@@ -833,9 +891,55 @@
         }
 
         return html`<div class="route_container">
-            <div class="route_list">
-              ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
-            </div>
+            ${groupBy
+              ? html`<${RouteGroups} groupBy="${groupBy}" routes="${routes}" />`
+              : html`<${RouteList} routes="${routes}" />`}
+          </div>`;
+      };
+
+      const RouteGroups = ({ groupBy, routes }) => {
+        const groups = {};
+        for (const route of routes) {
+          const groupKey = route[groupBy];
+          if (!groups[groupKey]) {
+            groups[groupKey] = [];
+          }
+          groups[groupKey].push(route);
+        }
+
+        return html`
+          <ul style="margin-left: 0; padding: 0">
+            <li style="list-style: none; padding: 0;">
+              ${Object.entries(groups).map(([groupKey, groupRoutes]) => {
+                return html`
+                  <details
+                    class="route_group_details"
+                    data-method="${groupKey}"
+                  >
+                    <summary>
+                      <div class="route_group_summary_container">
+                        <span class="route_group_name">${groupKey}</span>
+                        <span class="route_group_description">
+                          <span class="filter_count">
+                            ${groupRoutes.length}
+                          </span>
+                        </span>
+                        <span style="flex: 1"></span>
+                        <span class="summary_marker">
+                          <${ArrowDown} />
+                        </span>
+                      </div>
+                    </summary>
+                    <${RouteList} routes="${groupRoutes}" />
+                  </details>`;
+              })}
+            </li>
+          </ul>`;
+      };
+
+      const RouteList = ({ routes }) => {
+        return html`<div class="route_list">
+            ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
           </div>`;
       };
 
@@ -1181,7 +1285,7 @@
           return html`<details open class="filter">
                 <summary class="filter_summary">
                   <span class="summary_text">${label}</span>
-                  <${ArrowDown} />
+                  <span class="summary_marker"><${ArrowDown} /></span>
                 </summary>
                 <form ref=${formRef} class="filter_form">
                   ${options.map((option) => {
@@ -1259,7 +1363,6 @@
         clientCodeExample,
         declarationSource,
       }) => {
-        const [opened, setOpened] = useState(false);
         const [selectedMethod] = useUrlStringParam("method");
         const [selectedPackageName] = usePackageUrlStringParam();
 
@@ -1271,28 +1374,20 @@
           return null;
         }
 
-        return html`<details
-            class="route_details"
-            onToggle="${(e) => {
-              setOpened(e.newState === "open");
-            }}"
-            data-method="${method}"
-          >
-            <summary>
-              <div class="route_summary_container">
-                <span class="route_method">${method}</span>
-                <p class="route_resource">${resource}</p>
-                ${method === "GET"
-                  ? html`<a
-                        style="display:inline-flex; margin-left: 5px;"
-                        href="${resource}"
-                        ><${OpenLink}
-                      /></a>`
-                  : null}
-                <span style="flex:1"></span>
-                <${RouteBadge} meta="${meta}" />
-                ${opened ? html`<${ArrowUp} />` : html`<${ArrowDown} />`}
-              </div>
+        return html`<details class="route_details" data-method="${method}">
+            <summary class="route_summary_container">
+              <span class="route_method">${method}</span>
+              <p class="route_resource">${resource}</p>
+              ${method === "GET"
+                ? html`<a
+                      style="display:inline-flex; margin-left: 5px;"
+                      href="${resource}"
+                      ><${OpenLink}
+                    /></a>`
+                : null}
+              <span style="flex:1"></span>
+              <${RouteBadge} meta="${meta}" />
+              <span class="summary_marker"><${ArrowDown} /></span>
             </summary>
             <${RouteDetailsContent}
               method="${method}"
@@ -1487,18 +1582,6 @@
             xmlns="http://www.w3.org/2000/svg"
           >
             <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
-          </svg>`;
-      };
-      const ArrowUp = () => {
-        return html`<svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 -960 960 960"
-            width="24"
-            height="24"
-            fill="currentColor"
-            class="arrow_up"
-          >
-            <path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" />
           </svg>`;
       };
       const OpenLink = () => {
