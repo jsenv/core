@@ -915,6 +915,13 @@
         };
       }
 
+      const useGroupByUrlStringParam = () => {
+        const availableGroupByValues = ["method", "package"];
+        return useUrlStringParam("groupBy", {
+          availableValues: availableGroupByValues,
+        });
+      };
+
       const useMethodUrlStringParam = () => {
         const availableMethodNames = availableMethodNamesSignal.value;
         return useUrlStringParam("method", {
@@ -942,6 +949,9 @@
           return html`
             <div class="filter_container">
               <div class="filter_list">
+                <div class="filter_item">
+                  <${GroupSelector} />
+                </div>
                 <div class="filter_item">
                   <${MethodFilter} routes="${routes}" />
                 </div>
@@ -1006,6 +1016,52 @@
           return methodColor;
         };
 
+        const GroupSelector = () => {
+          const [groupBy, setGroupBy] = useGroupByUrlStringParam();
+          const label = html`
+            <span>
+              Group by: ${groupBy || "no group"}
+            </span>`;
+          const options = [
+            {
+              value: "",
+              text: html`
+                <span class="filter_text">
+                  no group
+                </span>
+              `,
+              selected: !groupBy,
+            },
+            {
+              value: "method",
+              text: html`
+                <span class="filter_text">
+                  method
+                </span>
+              `,
+              selected: groupBy === "method",
+            },
+            {
+              value: "package",
+              text: html`
+                <span class="filter_text">
+                  package
+                </span>
+              `,
+              selected: groupBy === "package",
+            },
+          ];
+
+          return html`
+            <${FilterSelector}
+              label="${label}"
+              options="${options}"
+              onChange="${(groupByToSelect) => {
+                setGroupBy(groupByToSelect);
+              }}"
+            />
+          `;
+        };
         const MethodFilter = ({ routes }) => {
           const availableMethodNames = availableMethodNamesSignal.value;
           const availableMethodRepartition = methodRepartitionSignal.value;
