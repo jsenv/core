@@ -9,7 +9,8 @@ import {
   ensurePathnameTrailingSlash,
 } from "@jsenv/urls";
 import { readParamsFromContext, connectAs } from "@jsenv/database";
-import { alterRoleQuery } from "./sql/alter_role_queries.js";
+import { alterRoleQuery } from "./sql/alter_role_query.js";
+import { alterDatabaseQuery } from "./sql/alter_database_query.js";
 
 const databaseManagerHtmlFileUrl = import.meta.resolve(
   "./client/database_manager.html",
@@ -28,6 +29,11 @@ export const jsenvPluginDatabaseManager = () => {
         fetch: async (request) => {
           const id = request.params.id;
           const object = await GET(id);
+          if (!object) {
+            return Response.json(`${resource} "${id}" not found`, {
+              status: 404,
+            });
+          }
           return Response.json(object);
         },
       };
@@ -151,7 +157,7 @@ export const jsenvPluginDatabaseManager = () => {
               rolname = ${rolname}
           `;
           if (results.length === 0) {
-            return Response.json(`Role ${rolname} not found`, { status: 404 });
+            return null;
           }
           const columns = await getTableColumns(sql, "pg_roles");
           const role = results[0];
@@ -221,6 +227,41 @@ export const jsenvPluginDatabaseManager = () => {
         // when dropping roles, consider this: https://neon.tech/postgresql/postgresql-administration/postgresql-drop-role
         DELETE: async (rolname) => {
           await sql`DROP ROLE ${sql(rolname)}`;
+        },
+      }),
+      ...createRESTRoutes("databases", {
+        GET: async (datname) => {
+          const results = await sql`
+            SELECT
+              *
+            FROM
+              pg_database
+            WHERE
+              datname = ${datname}
+          `;
+          if (results.length === 0) {
+            return null;
+          }
+          const [database] = results;
+          return database;
+        },
+        PUT: async (datname, colname, value) => {
+          await alterDatabaseQuery(sql, datname, colname, value);
+        },
+        POST: async ({ datname }) => {
+          await sql`CREATE ROLE ${sql(datname)}`;
+          const [database] = await sql`
+            SELECT
+              *
+            FROM
+              pg_database
+            WHERE
+              datname = ${datname}
+          `;
+          return database;
+        },
+        DELETE: async (datname) => {
+          await sql`DROP DATABASE ${sql(datname)}`;
         },
       }),
       {
