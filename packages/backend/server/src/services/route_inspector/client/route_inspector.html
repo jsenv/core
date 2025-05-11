@@ -509,7 +509,6 @@
         overflow: hidden;
       }
       .filter_text[data-method] {
-        border-left: 5px solid var(--method-color);
         padding-left: 4px;
       }
       .filter_text[data-method="all"] {
@@ -568,6 +567,12 @@
           var(--primary-color) 15%,
           transparent
         );
+      }
+
+      .status_pill {
+        display: flex;
+        align-self: stretch;
+        width: 0.4em;
       }
     </style>
     <div class="container">
@@ -920,17 +925,7 @@
       let Toolbox;
       groups: {
         Toolbox = () => {
-          const routes = routesSignal.value;
-
-          const availableMethodNames = availableMethodNamesSignal.value;
-          const [groupBy, setGroupBy] = useUrlStringParam("groupBy", {
-            availableValues: ["method", "package"],
-          });
-
-          return html`
-            <${DetailsMenu} label="Group by">
-            </${DetailsMenu}>
-          `;
+          return html``;
         };
       }
 
@@ -950,50 +945,77 @@
             </div>
           `;
         };
+
+        const StatusPill = ({ children, color }) => {
+          return html`
+            <span
+              class="status_pill"
+              style="${{
+                background: color,
+              }}"
+            >
+              ${children}
+            </span>`;
+        };
+        const buildLinearGradient = (colors) => {
+          const percentagePerColor = Math.floor(100 / (colors.length - 1));
+          const gradientSteps = [];
+          let progress = 0;
+          let index = 0;
+          for (const color of colors) {
+            if (index === colors.length - 1) {
+              progress = 100;
+            }
+            gradientSteps.push(`${color} ${progress}%`);
+            progress += percentagePerColor;
+            index++;
+          }
+          const gradient = `linear-gradient(to bottom, ${gradientSteps.join(", ")})`;
+          return gradient;
+        };
+        const MethodsStatusPill = ({ methodNames }) => {
+          if (methodNames.length === 1) {
+            return html`
+            <${StatusPill}
+                color="${getMethodColor(methodNames[0])}"
+              />
+          `;
+          }
+          const colors = methodNames.map((methodName) =>
+            getMethodColor(methodName),
+          );
+          const linearGradient = buildLinearGradient(colors);
+          return html`
+            <${StatusPill}
+              color="${linearGradient}"
+            />
+          `;
+        };
+
+        const getMethodColor = (methodName) => {
+          const bodyStyle = window.getComputedStyle(document.body);
+          const methodColor = bodyStyle.getPropertyValue(
+            `--method-${methodName.toLowerCase()}-color`,
+          );
+          return methodColor;
+        };
+
         const MethodFilter = ({ routes }) => {
           const availableMethodNames = availableMethodNamesSignal.value;
           const availableMethodRepartition = methodRepartitionSignal.value;
           const [selectedMethod, setSelectedMethod] = useMethodUrlStringParam();
 
-          // "all" border image is a combination of available method colors
-          const getMethodColor = (methodName) => {
-            const bodyStyle = window.getComputedStyle(document.body);
-            const methodColor = bodyStyle.getPropertyValue(
-              `--method-${methodName.toLowerCase()}-color`,
-            );
-            return methodColor;
-          };
-          const percentagePerColor = Math.floor(
-            100 / (availableMethodNames.length - 1),
-          );
-          const gradientSteps = [];
-          let progress = 0;
-          let index = 0;
-          for (const methodName of availableMethodNames) {
-            if (index === availableMethodNames.length - 1) {
-              progress = 100;
-            }
-            gradientSteps.push(`${getMethodColor(methodName)} ${progress}%`);
-            progress += percentagePerColor;
-            index++;
-          }
-          const gradient = `linear-gradient(to bottom, ${gradientSteps.join(", ")})`;
-
           const options = [
             {
               value: "",
               text: html`
-                <span
-                  class="filter_text"
-                  data-method="all"
-                  style="${{
-                    borderImageSource: gradient,
-                  }}"
-                  >all</span
-                >
-                <span class="filter_count"
-                  >${routes.length}</span
-                >
+                <${MethodsStatusPill}
+                  methodNames="${availableMethodNames}"
+                />
+                <span class="filter_text" data-method="all">all</span>
+                <span class="filter_count">
+                  ${routes.length}
+                </span>
               `,
               selected: !selectedMethod,
             },
@@ -1001,10 +1023,14 @@
               return {
                 value: availableMethodName,
                 text: html`
+                  <${MethodsStatusPill}
+                    methodNames="${[availableMethodName]}"
+                  />
                   <span
                     class="filter_text"
                     data-method="${availableMethodName}"
-                    >${availableMethodName}
+                  >
+                    ${availableMethodName}
                   </span>
                   <span class="filter_count">
                     ${availableMethodRepartition[availableMethodName]}
