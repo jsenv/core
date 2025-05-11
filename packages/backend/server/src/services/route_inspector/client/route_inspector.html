@@ -368,7 +368,6 @@
       }
       .route_group_name {
         border-radius: 3px;
-        color: #fff;
         font-family: sans-serif;
         font-size: 14px;
         font-weight: 700;
@@ -376,6 +375,9 @@
         padding: 6px 0;
         text-align: center;
         text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+      }
+      .route_group_details[data-method] .route_group_name {
+        color: #fff;
         background: var(--method-color);
       }
       .route_group_description {
@@ -914,7 +916,7 @@
                 return html`
                   <details
                     class="route_group_details"
-                    data-method="${groupKey}"
+                    data-method="${groupBy === "method" ? groupKey : undefined}"
                   >
                     <summary>
                       <div class="route_group_summary_container">
