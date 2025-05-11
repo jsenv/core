@@ -49,6 +49,19 @@ export const DatabaseValue = ({ column, ...rest }) => {
       </span>
     );
   }
+  if (column.data_type === "xid") {
+    return <SPAInputText readOnly name={columnName} {...rest} />;
+  }
+  if (column.column_name === "datacl") {
+    // datacl is a custom type
+    // see https://www.postgresql.org/docs/14/sql-grant.html
+    return (
+      <span>
+        <span>{column.column_name}: </span>
+        <span>{String(rest.value)}</span>
+      </span>
+    );
+  }
   const { value } = rest;
   return String(value);
 };

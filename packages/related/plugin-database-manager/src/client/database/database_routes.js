@@ -27,7 +27,7 @@ export const GET_DATABASE_ROUTE = registerRoute(
     const { database, ownerRole, columns } = await response.json();
     setActiveDatabase(database);
     setActiveDatabaseColumns(columns);
-    setActiveDatabaseOwnerRole(database, ownerRole);
+    setActiveDatabaseOwnerRole(ownerRole);
   },
 );
 connectStoreAndRoute(databaseStore, GET_DATABASE_ROUTE, "datname");
