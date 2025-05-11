@@ -991,7 +991,6 @@
             />
           `;
         };
-
         const getMethodColor = (methodName) => {
           const bodyStyle = window.getComputedStyle(document.body);
           const methodColor = bodyStyle.getPropertyValue(
@@ -1043,7 +1042,16 @@
 
           return html`
             <${FilterSelector}
-              label="Methods"
+              label="${html`<span
+                  style="display: flex; align-items: center; gap: 5px"
+                >
+                  <${MethodsStatusPill}
+                    methodNames="${selectedMethod
+                      ? [selectedMethod]
+                      : availableMethodNames}"
+                  />
+                  <span>Methods</span>
+                </span>`}"
               options="${options}"
               onChange="${(methodToSelect) => {
                 setSelectedMethod(methodToSelect);
