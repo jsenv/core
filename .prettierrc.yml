@@ -7,6 +7,9 @@ plugins:
     "prettier-plugin-embed",
   ]
 organizeImportsSkipDestructiveCodeActions: true
-embeddedSqlTags: ["sql"]
+# https://github.com/un-ts/prettier/tree/master/packages/sql#parser-options
 language: "postgresql"
+database: "postgresql"
 keywordCase: "upper"
+# https://github.com/Sec-ant/prettier-plugin-embed?tab=readme-ov-file#sql
+embeddedSqlParser: "postgresql"

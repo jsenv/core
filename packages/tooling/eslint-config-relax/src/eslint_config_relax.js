@@ -217,6 +217,7 @@ export const eslintConfigRelax = ({
                     "underline-position",
                     "underline-thickness",
                     "word-spacing",
+                    "onFocusOut",
                   ],
                 },
               ],
