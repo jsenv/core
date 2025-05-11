@@ -19,6 +19,62 @@ export const jsenvPluginDatabaseManager = () => {
   let databaseManagerRootDirectoryUrl;
   let sql;
 
+  const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
+    const routes = [];
+    if (GET) {
+      const getRoute = {
+        endpoint: `GET /.internal/database/api/${resource}/:id`,
+        declarationSource: import.meta.url,
+        fetch: async (request) => {
+          const id = request.params.id;
+          const object = await GET(id);
+          return Response.json(object);
+        },
+      };
+      routes.push(getRoute);
+    }
+    if (POST) {
+      const postRoute = {
+        endpoint: `PUT /.internal/database/api/${resource}`,
+        declarationSource: import.meta.url,
+        acceptedMediaTypes: ["application/json"],
+        fetch: async (request) => {
+          const properties = await request.json();
+          const object = await POST(properties);
+          return Response.json(object, { status: 201 });
+        },
+      };
+      routes.push(postRoute);
+    }
+    if (PUT) {
+      const putRoute = {
+        endpoint: `PUT /.internal/database/api/${resource}/:id/:property`,
+        declarationSource: import.meta.url,
+        fetch: async (request) => {
+          const id = request.params.id;
+          const property = request.params.property;
+          const value = await request.json();
+          await PUT(id, property, value);
+          return Response.json({ [property]: value });
+        },
+      };
+      routes.push(putRoute);
+    }
+    if (DELETE) {
+      const deleteRoute = {
+        endpoint: `DELETE /.internal/database/api/${resource}/:id`,
+        declarationSource: import.meta.url,
+        fetch: async (request) => {
+          const id = request.params.id;
+          await DELETE(id);
+          return new Response(null, { status: 204 });
+        },
+      };
+      routes.push(deleteRoute);
+    }
+    return routes;
+  };
+
   return {
     name: "jsenv:database_manager",
     init: async ({ rootDirectoryUrl }) => {
@@ -84,12 +140,8 @@ export const jsenvPluginDatabaseManager = () => {
           });
         },
       },
-      {
-        endpoint: "GET /.internal/database/api/roles/:rolname",
-        declarationSource: import.meta.url,
-        fetch: async (request) => {
-          const rolname = request.params.rolname;
-          const columns = await getTableColumns(sql, "pg_roles");
+      ...createRESTRoutes("roles", {
+        GET: async (rolname) => {
           const results = await sql`
             SELECT
               *
@@ -101,18 +153,19 @@ export const jsenvPluginDatabaseManager = () => {
           if (results.length === 0) {
             return Response.json(`Role ${rolname} not found`, { status: 404 });
           }
+          const columns = await getTableColumns(sql, "pg_roles");
           const role = results[0];
-          const privileges = await sql`
-            SELECT
-              grantor,
-              table_schema,
-              table_name,
-              privilege_type
-            FROM
-              information_schema.table_privileges
-            WHERE
-              grantee = ${rolname}
-          `;
+          //  const privileges = await sql`
+          //     SELECT
+          //       grantor,
+          //       table_schema,
+          //       table_name,
+          //       privilege_type
+          //     FROM
+          //       information_schema.table_privileges
+          //     WHERE
+          //       grantee = ${rolname}
+          //   `;
           const objects = await sql`
             SELECT
               pg_class.relname AS object_name,
@@ -138,35 +191,18 @@ export const jsenvPluginDatabaseManager = () => {
             WHERE
               pg_roles.rolname = ${rolname}
           `;
-          return Response.json({
+          return {
             role,
             databases,
             objects,
-            privileges,
+            // privileges,
             columns,
-          });
+          };
         },
-      },
-      // when dropping roles, consider this: https://neon.tech/postgresql/postgresql-administration/postgresql-drop-role
-      {
-        endpoint: "PUT /.internal/database/api/roles/:rolname/:columnName",
-        declarationSource: import.meta.url,
-        acceptedMediaTypes: ["application/json"],
-        fetch: async (request) => {
-          const rolname = request.params.rolname;
-          const columnName = request.params.columnName;
-          const value = await request.json();
-          await alterRoleQuery(sql, rolname, columnName, value);
-          return Response.json({ [columnName]: value });
+        PUT: async (rolname, colname, value) => {
+          await alterRoleQuery(sql, rolname, colname, value);
         },
-      },
-      {
-        endpoint: "POST /.internal/database/api/roles",
-        declarationSource: import.meta.url,
-        acceptedMediaTypes: ["application/json"],
-        fetch: async (request) => {
-          const roleToCreate = await request.json();
-          let { rolname } = roleToCreate;
+        POST: async ({ rolname }) => {
           // ideally we would support more options like
           // const { rolname, ...options} = role and pass them to the sql query
           // as documented in https://www.postgresql.org/docs/current/sql-createrole.html
@@ -180,19 +216,13 @@ export const jsenvPluginDatabaseManager = () => {
             WHERE
               rolname = ${rolname}
           `;
-          return Response.json(role);
+          return role;
         },
-      },
-      {
-        endpoint: "DELETE /.internal/database/api/roles/:rolname",
-        declarationSource: import.meta.url,
-        fetch: async (request) => {
-          const rolname = request.params.rolname;
-
+        // when dropping roles, consider this: https://neon.tech/postgresql/postgresql-administration/postgresql-drop-role
+        DELETE: async (rolname) => {
           await sql`DROP ROLE ${sql(rolname)}`;
-          return new Response(null, { status: 204 });
         },
-      },
+      }),
       {
         endpoint: "GET /.internal/database/api/tables",
         declarationSource: import.meta.url,
