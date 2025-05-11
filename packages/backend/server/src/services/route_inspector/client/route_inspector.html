@@ -452,6 +452,13 @@
       .filter:open .arrow_down {
         transform: rotate(180deg);
       }
+      .summary_text {
+        overflow: hidden;
+        width: 100%;
+        display: block;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
       .filter_list {
         background: var(--background-color);
         overflow: hidden;
@@ -1040,18 +1047,20 @@
             }),
           ];
 
+          const label = html`<span
+              style="display: flex; align-items: center; gap: 5px"
+            >
+              <${MethodsStatusPill}
+                methodNames="${selectedMethod
+                  ? [selectedMethod]
+                  : availableMethodNames}"
+              />
+              <span>Methods: ${selectedMethod || "all"}</span>
+            </span>`;
+
           return html`
             <${FilterSelector}
-              label="${html`<span
-                  style="display: flex; align-items: center; gap: 5px"
-                >
-                  <${MethodsStatusPill}
-                    methodNames="${selectedMethod
-                      ? [selectedMethod]
-                      : availableMethodNames}"
-                  />
-                  <span>Methods</span>
-                </span>`}"
+              label="${label}"
               options="${options}"
               onChange="${(methodToSelect) => {
                 setSelectedMethod(methodToSelect);
@@ -1087,9 +1096,16 @@
               };
             }),
           ];
+
+          const label = html`
+            <span>
+              Packages: ${selectedPackageName || "all"}
+            </span>
+          `;
+
           return html`
             <${FilterSelector}
-              label="Packages"
+              label="${label}"
               options="${options}"
               onChange="${(packageNameToSelect) => {
                 setSelectedPackageName(packageNameToSelect);
@@ -1108,7 +1124,7 @@
 
           return html`<details open class="filter">
                 <summary class="filter_summary">
-                  ${label}
+                  <span class="summary_text">${label}</span>
                   <${ArrowDown} />
                 </summary>
                 <form ref=${formRef} class="filter_form">
