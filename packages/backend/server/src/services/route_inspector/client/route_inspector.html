@@ -933,8 +933,7 @@
           `;
         };
 
-        const DetailsMenu = ({ label }) => {
-          const style = /*css */ `
+        const style = /*css */ `
           .select_details {
             
           }
@@ -966,10 +965,32 @@
             border-color: rgb(69, 76, 84);
             transition-duration: .1s;
           }
+
+          .select_details_menu {
+            position: absolute;
+            top: auto;
+            width: 300px;
+            height: auto;
+            max-height: 480px;
+            margin: 8px 0 16px 0;
+            font-size: 12px;
+            border-width: 1px;
+            border-style: solid;
+            border-color: rgb(69, 76, 84);
+            border-radius: 6px;
+            background-color: white;
+            display: flex;
+          }
           `;
 
+        const DetailsMenu = ({ label }) => {
           return html`
-            <details class="select_details">
+            <details
+              class="select_details"
+              onFocusOut="${(e) => {
+                e.currentTarget.open = false;
+              }}"
+            >
               <style>
                 ${style}
               </style>
@@ -977,6 +998,7 @@
                 <span>${label}</span>
                 <${DropdownIcon} width="12" height="12" />
               </summary>
+              <div class="select_details_menu">Coucou</div>
             </details>
           `;
         };
