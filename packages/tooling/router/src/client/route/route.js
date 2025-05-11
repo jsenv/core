@@ -318,8 +318,11 @@ const leaveRoute = (route, reason) => {
     console.log(`"${route}": leaving route`);
   }
   batch(() => {
+    route.urlSignal.value = null;
+    route.paramsSignal.value = {};
     route.isMatchingSignal.value = false;
     route.loadingStateSignal.value = IDLE;
+    route.errorSignal.value = null;
   });
   matchingRouteSet.delete(route);
 };
