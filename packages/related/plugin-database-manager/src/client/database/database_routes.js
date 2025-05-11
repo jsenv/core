@@ -31,7 +31,6 @@ export const GET_DATABASE_ROUTE = registerRoute(
   },
 );
 connectStoreAndRoute(databaseStore, GET_DATABASE_ROUTE, "datname");
-
 export const POST_DATABASE_ACTION = registerAction(
   async ({ signal, formData }) => {
     const datname = formData.get("datname");
@@ -56,7 +55,6 @@ export const POST_DATABASE_ACTION = registerAction(
     databaseStore.upsert(database);
   },
 );
-
 export const PUT_DATABASE_ACTION = registerAction(
   async ({ datname, columnName, formData, signal }) => {
     let value = formData.get(columnName);
@@ -83,7 +81,6 @@ export const PUT_DATABASE_ACTION = registerAction(
     roleStore.upsert("datname", datname, { [columnName]: value });
   },
 );
-
 export const DELETE_DATABASE_ACTION = registerAction(
   async ({ datname, signal }) => {
     const response = await fetch(

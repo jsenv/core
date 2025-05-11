@@ -1,7 +1,7 @@
 import "./router.js"; // must be the first import (so that setBaseUrl is called for any other import)
 import { render } from "preact";
 import "./database_manager.css" with { type: "css" };
-import { DatabaseNavbar } from "./navbar/database_navbar.jsx";
+import { Navbar } from "./navbar/navbar.jsx";
 import { TableRoutes } from "./table/table_page.jsx";
 import { RoleRoutes } from "./role/role_page.jsx";
 import { DatabaseRoutes } from "./database/database_page.jsx";
@@ -10,7 +10,7 @@ const App = () => {
   return (
     <div>
       <aside>
-        <DatabaseNavbar />
+        <Navbar />
       </aside>
       <main>
         {/* <h1 title="Explore and manager your database">Database Manager</h1> */}

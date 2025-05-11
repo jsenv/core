@@ -39,7 +39,7 @@ effect(async () => {
   roleStore.upsert(roles);
 });
 
-export const DatabaseNavbar = () => {
+export const Navbar = () => {
   return (
     <nav>
       <DatabaseNavGroupRoles />
@@ -60,6 +60,7 @@ const DatabaseNavGroupRoles = () => {
   //   }
   //   return 0;
   // });
+  console.log(roles);
   const items = roles.map((role) => {
     return <NavListItemRole key={role.rolname} role={role} />;
   });
