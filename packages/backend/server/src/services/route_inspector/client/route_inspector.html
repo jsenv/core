@@ -358,8 +358,8 @@
       .route_group_details > summary::marker {
         display: none;
       }
-      .route_group_details:open > summary .summary_marker {
-        transform: rotate(-180deg);
+      .route_group_details[open] > summary .summary_marker {
+        transform: rotate(180deg);
       }
       .route_group_summary_container {
         display: flex;
@@ -1285,7 +1285,9 @@
           return html`<details open class="filter">
                 <summary class="filter_summary">
                   <span class="summary_text">${label}</span>
-                  <span class="summary_marker"><${ArrowDown} /></span>
+                  <span class="summary_marker">
+                    <${ArrowDown} />
+                  </span>
                 </summary>
                 <form ref=${formRef} class="filter_form">
                   ${options.map((option) => {
@@ -1387,7 +1389,9 @@
                 : null}
               <span style="flex:1"></span>
               <${RouteBadge} meta="${meta}" />
-              <span class="summary_marker"><${ArrowDown} /></span>
+              <span class="summary_marker">
+                <${ArrowDown} />
+              </span>
             </summary>
             <${RouteDetailsContent}
               method="${method}"
@@ -1575,7 +1579,6 @@
       const ArrowDown = ({ width = 24, height = 24 }) => {
         return html`<svg
             viewBox="0 -960 960 960"
-            class="arrow_down"
             width="${width}"
             height="${height}"
             fill="currentColor"
