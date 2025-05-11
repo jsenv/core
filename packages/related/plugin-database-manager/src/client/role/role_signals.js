@@ -32,17 +32,21 @@ export const useActiveRoleDatabases = () => {
   return databases;
 };
 export const setActiveRoleDatabases = (databases) => {
-  databases = databaseStore.upsert(databases);
+  databaseStore.upsert(databases);
   const databaseIdArray = databases.map((database) => database.oid);
   activeRoleDatabaseIdArraySignal.value = databaseIdArray;
 };
 
-const currentRoleSignal = signal(null);
+const currentRoleIdSignal = signal(null);
 export const useCurrentRole = () => {
-  const currentRole = currentRoleSignal.value;
-  return currentRole ? roleStore.select("oid", currentRole.oid) : null;
+  const currentRoleId = currentRoleIdSignal.value;
+  return roleStore.select(currentRoleId);
 };
-export const setCurrentRole = (value) => {
-  currentRoleSignal.value = value;
-  roleStore.upsert(value);
+export const setCurrentRole = (role) => {
+  if (role) {
+    roleStore.upsert(role);
+    currentRoleIdSignal.value = role.oid;
+  } else {
+    currentRoleIdSignal.value = null;
+  }
 };
