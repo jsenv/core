@@ -26,9 +26,19 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     }
   });
 
-  const select = (property, value) => {
+  const select = (...args) => {
     const array = arraySignal.value;
     const idMap = idMapSignal.value;
+
+    let property;
+    let value;
+    if (args.length === 1) {
+      property = idKey;
+      value = args[0];
+    } else if (args.length === 2) {
+      property = args[0];
+      value = args[1];
+    }
     if (property === idKey) {
       return idMap.get(value);
     }

@@ -10,7 +10,9 @@ export const useRole = (rolname) => {
 };
 const activeRoleIdSignal = signal(null);
 export const useActiveRole = () => {
-  return roleStore.select(activeRoleIdSignal.value);
+  const activeRoleId = activeRoleIdSignal.value;
+  const activeRole = roleStore.select(activeRoleId);
+  return activeRole;
 };
 export const setActiveRole = (role) => {
   role = roleStore.upsert(role);
