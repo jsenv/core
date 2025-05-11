@@ -14,11 +14,9 @@ export const useActiveDatabaseColumns = () => {
   return activeDatabaseColumnsSignal.value;
 };
 export const useActiveDatabaseOwnerRole = () => {
-  const activeDatabaseOwnerRoleId = activeDatabaseOwnerRoleIdSignal.value;
-  const activeDatabaseOwnerRole = databaseStore.select(
-    activeDatabaseOwnerRoleId,
-  );
-  return activeDatabaseOwnerRole;
+  const ownerRoleId = activeDatabaseOwnerRoleIdSignal.value;
+  const ownerRole = roleStore.select(ownerRoleId);
+  return ownerRole;
 };
 
 export const setActiveDatabase = (database) => {

@@ -233,18 +233,29 @@ export const jsenvPluginDatabaseManager = () => {
         GET: async (datname) => {
           const results = await sql`
             SELECT
-              *
+              pg_database.*,
+              role.rolname AS owner_rolname
             FROM
               pg_database
+              LEFT JOIN pg_roles role ON pg_database.datdba = role.oid
             WHERE
-              datname = ${datname}
+              pg_database.datname = ${datname}
           `;
           if (results.length === 0) {
             return null;
           }
           const columns = await getTableColumns(sql, "pg_database");
           const [database] = results;
-          return { database, columns };
+          const ownerRole = database.datdba
+            ? {
+                oid: database.datdba,
+                rolname: database.owner_rolname,
+              }
+            : null;
+          delete database.datdba;
+          delete database.owner_rolname;
+
+          return { database, ownerRole, columns };
         },
         PUT: async (datname, colname, value) => {
           await alterDatabaseQuery(sql, datname, colname, value);

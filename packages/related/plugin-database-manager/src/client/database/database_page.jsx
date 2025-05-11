@@ -4,8 +4,10 @@ import {
   useAction,
   SPADeleteButton,
   useRouteParam,
+  SPALink,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
+import { GET_ROLE_ROUTE } from "../role/role_routes.js";
 import {
   GET_DATABASE_ROUTE,
   PUT_DATABASE_ACTION,
@@ -15,6 +17,7 @@ import { DatabaseValue } from "../components/database_value.jsx";
 import {
   useActiveDatabase,
   useActiveDatabaseColumns,
+  useActiveDatabaseOwnerRole,
 } from "./database_signals.js";
 
 export const DatabaseRoutes = () => {
@@ -35,7 +38,7 @@ const DatabasePage = () => {
       <SPADeleteButton action={deleteAction}>Delete</SPADeleteButton>
 
       <a
-        href="https://www.postgresql.org/docs/14/sql-alterrole.html"
+        href="https://www.postgresql.org/docs/14/sql-alterdatabase.html"
         target="_blank"
       >
         ALTER DATABASE documentation
@@ -57,28 +60,34 @@ const ErrorDetails = ({ error }) => {
 
 const DatabaseFields = ({ database }) => {
   const columns = useActiveDatabaseColumns();
+  const ownerRole = useActiveDatabaseOwnerRole();
 
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
   });
-  const fields = columns.map((column) => {
-    const columnName = column.column_name;
-    const value = database ? database[columnName] : "";
-    return {
-      column,
-      value,
-    };
-  });
 
   return (
     <ul>
-      {fields.map(({ column, value }) => {
+      {columns.map((column) => {
         const columnName = column.column_name;
+        const value = database ? database[columnName] : "";
         const action = useAction(PUT_DATABASE_ACTION, {
           datname: database.datname,
           columnName,
         });
 
+        if (columnName === "datdba") {
+          // we will display this elswhere
+          return (
+            <SPALink
+              key={columnName}
+              route={GET_ROLE_ROUTE}
+              routeParams={{ rolname: ownerRole.rolname }}
+            >
+              {ownerRole.rolname}
+            </SPALink>
+          );
+        }
         return (
           <li key={columnName}>
             <DatabaseValue
