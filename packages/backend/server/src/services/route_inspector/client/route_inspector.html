@@ -902,7 +902,10 @@
       const RouteGroups = ({ groupBy, routes }) => {
         const groups = {};
         for (const route of routes) {
-          const groupKey = route[groupBy];
+          const groupKey =
+            groupBy === "method"
+              ? route.method
+              : route.meta.packageName || NO_PACKAGE_NAME;
           if (!groups[groupKey]) {
             groups[groupKey] = [];
           }
