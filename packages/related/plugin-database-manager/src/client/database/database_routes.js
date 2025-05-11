@@ -1,7 +1,12 @@
 import { registerRoute, registerAction } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
 import { roleStore } from "../role/role_signals.js";
-import { databaseStore, setDatabaseColumns } from "./database_signals.js";
+import {
+  databaseStore,
+  setDatabase,
+  setDatabaseColumns,
+  setDatabaseOwnerRole,
+} from "./database_signals.js";
 
 export const GET_DATABASE_ROUTE = registerRoute(
   "/.internal/database/databases/:datname",
@@ -20,10 +25,9 @@ export const GET_DATABASE_ROUTE = registerRoute(
       throw getError;
     }
     const { database, ownerRole, columns } = await response.json();
-
-    roleStore.upsert(ownerRole);
+    setDatabase(database);
     setDatabaseColumns(columns);
-    databaseStore.upsert(database);
+    setDatabaseOwnerRole(database, ownerRole);
   },
 );
 connectStoreAndRoute(databaseStore, GET_DATABASE_ROUTE, "datname");
