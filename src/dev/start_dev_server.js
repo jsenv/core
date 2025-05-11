@@ -617,6 +617,7 @@ export const startDevServer = async ({
         },
       ],
     });
+    finalServices.push(...devServerPluginStore.allDevServerServices);
   }
   // jsenv error handler service
   {

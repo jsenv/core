@@ -156,14 +156,7 @@ export const jsenvPluginDatabaseManager = () => {
           const rolname = request.params.rolname;
           const columnName = request.params.columnName;
           const value = await request.json();
-          try {
-            await alterRoleQuery(sql, rolname, columnName, value);
-          } catch (e) {
-            if (e.code === "42704") {
-              return Response.json(e, { status: 404, statusText: e.message });
-            }
-            throw e;
-          }
+          await alterRoleQuery(sql, rolname, columnName, value);
           return Response.json({ [columnName]: value });
         },
       },
@@ -172,29 +165,22 @@ export const jsenvPluginDatabaseManager = () => {
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
-          const role = await request.json();
-          let { rolname } = role;
+          const roleToCreate = await request.json();
+          let { rolname } = roleToCreate;
           // ideally we would support more options like
           // const { rolname, ...options} = role and pass them to the sql query
           // as documented in https://www.postgresql.org/docs/current/sql-createrole.html
           // but we need only the name for now
-          try {
-            await sql`CREATE ROLE ${sql(rolname)}`;
-            const [role] = await sql`
-              SELECT
-                *
-              FROM
-                pg_roles
-              WHERE
-                rolname = ${rolname}
-            `;
-            return Response.json(role);
-          } catch (e) {
-            if (e.code === "42710") {
-              return Response.json(e, { status: 409, statusText: e.message });
-            }
-            return Response.json(e, { status: 500 });
-          }
+          await sql`CREATE ROLE ${sql(rolname)}`;
+          const [role] = await sql`
+            SELECT
+              *
+            FROM
+              pg_roles
+            WHERE
+              rolname = ${rolname}
+          `;
+          return Response.json(role);
         },
       },
       {
@@ -202,15 +188,9 @@ export const jsenvPluginDatabaseManager = () => {
         declarationSource: import.meta.url,
         fetch: async (request) => {
           const rolname = request.params.rolname;
-          try {
-            await sql`DROP ROLE ${sql(rolname)}`;
-            return new Response(null, { status: 204 });
-          } catch (e) {
-            if (e.code === "42704") {
-              return Response.json(e, { status: 404, statusText: e.message });
-            }
-            return Response.json(e, { status: 500, statusText: e.message });
-          }
+
+          await sql`DROP ROLE ${sql(rolname)}`;
+          return new Response(null, { status: 204 });
         },
       },
       {
@@ -445,6 +425,29 @@ export const jsenvPluginDatabaseManager = () => {
           debugger;
           await sql.unsafe(query);
           return Response.json(null, { status: 204 });
+        },
+      },
+    ],
+    devServerServices: [
+      {
+        name: "postgres_sql_error_handler",
+        handleError: (e) => {
+          // TODO: catch only postgres errors
+          const errorData = {
+            ...e,
+            message: e.message,
+          };
+
+          if (e.code === "42704") {
+            return Response.json(errorData, {
+              status: 404,
+              statusText: e.message,
+            });
+          }
+          return Response.json(errorData, {
+            status: 500,
+            statusText: e.message,
+          });
         },
       },
     ],

@@ -3,6 +3,7 @@ import { jsenvPluginHtmlSyntaxErrorFallback } from "./html_syntax_error_fallback
 
 export const createPluginStore = async (plugins) => {
   const allDevServerRoutes = [];
+  const allDevServerServices = [];
   const pluginArray = [];
 
   const pluginPromises = [];
@@ -31,6 +32,12 @@ export const createPluginStore = async (plugins) => {
         allDevServerRoutes.push(devServerRoute);
       }
     }
+    if (plugin.devServerServices) {
+      const devServerServices = plugin.devServerServices;
+      for (const devServerService of devServerServices) {
+        allDevServerServices.push(devServerService);
+      }
+    }
     pluginArray.push(plugin);
   };
   addPlugin(jsenvPluginHtmlSyntaxErrorFallback());
@@ -42,6 +49,7 @@ export const createPluginStore = async (plugins) => {
   return {
     pluginArray,
     allDevServerRoutes,
+    allDevServerServices,
   };
 };
 
@@ -120,6 +128,7 @@ export const createPluginController = async (
         key === "serverEvents" ||
         key === "mustStayFirst" ||
         key === "devServerRoutes" ||
+        key === "devServerServices" ||
         key === "effect"
       ) {
         continue;
@@ -293,6 +302,7 @@ export const createPluginController = async (
 const HOOK_NAMES = [
   "init",
   "devServerRoutes", // is called only during dev/tests
+  "devServerServices", // is called only during dev/tests
   "resolveReference",
   "redirectReference",
   "transformReferenceSearchParams",
