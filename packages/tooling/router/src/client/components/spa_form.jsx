@@ -50,6 +50,7 @@ export const SPAForm = forwardRef(
       // but for this we would have to implement our own way to display errors
       // for now we'll stick to the custom validity api
       errorCustomValidityRef,
+      onActionStart,
       onActionSuccess,
       ...rest
     },
@@ -138,6 +139,9 @@ export const SPAForm = forwardRef(
             method,
             action,
           });
+          if (onActionStart) {
+            onActionStart(innerRef.current);
+          }
           const formData = new FormData(submitEvent.currentTarget);
           if (formDataMappings) {
             for (const [key, mapping] of Object.entries(formDataMappings)) {

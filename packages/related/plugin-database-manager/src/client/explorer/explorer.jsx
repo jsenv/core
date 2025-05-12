@@ -128,12 +128,7 @@ const ExplorerGroupItemRole = ({ role }) => {
   const currentRole = useCurrentRole();
   const rolname = role.rolname;
   const isCurrent = rolname === currentRole?.rolname;
-  const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { rolname });
   const deleteAction = useAction(DELETE_ROLE_ACTION, { rolname });
-  const renameAction = useAction(PUT_ROLE_ACTION, {
-    rolname,
-    columnName: "rolname",
-  });
 
   const linkRef = useRef();
   const [isRenaming, setIsRenaming] = useState(false);
@@ -141,13 +136,20 @@ const ExplorerGroupItemRole = ({ role }) => {
     setIsRenaming(true);
   }, [setIsRenaming]);
   const stopRenaming = useCallback(() => {
-    console.log(linkRef.current);
-    // linkRef.current.focus();
     setIsRenaming(false);
+    setTimeout(() => {
+      console.log(linkRef.current);
+    }, 100);
   }, [setIsRenaming]);
+
+  // works only if there is no nav
+  const prevIsRenamingRef = useRef(isRenaming);
+  const autoFocus = prevIsRenamingRef.current && !isRenaming;
+  prevIsRenamingRef.current = isRenaming;
 
   return (
     <SPALink
+      autoFocus={autoFocus}
       ref={linkRef}
       key={rolname}
       route={GET_ROLE_ROUTE}
@@ -177,31 +179,47 @@ const ExplorerGroupItemRole = ({ role }) => {
           <ActiveUserSvg />
         </span>
       ) : null}
-      {isRenaming ? (
-        <RoleNameInput
-          value={rolname}
-          action={renameAction}
-          onCancel={() => {
-            stopRenaming();
-            linkRef.current.focus();
-          }}
-          onActionSuccess={() => {
-            stopRenaming();
-            console.log("stop renaming", linkRef.current);
-          }}
-        />
-      ) : (
-        <span
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            background: isOpened ? "lightgrey" : "none",
-          }}
-        >
-          {rolname}
-        </span>
-      )}
+      <RolnameOrRenameInput
+        rolname={rolname}
+        isRenaming={isRenaming}
+        stopRenaming={stopRenaming}
+      />
     </SPALink>
+  );
+};
+
+const RolnameOrRenameInput = ({ rolname, isRenaming, stopRenaming }) => {
+  const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { rolname });
+  const renameAction = useAction(PUT_ROLE_ACTION, {
+    rolname,
+    columnName: "rolname",
+  });
+
+  if (isRenaming) {
+    return (
+      <RoleNameInput
+        autoSelect
+        value={rolname}
+        action={renameAction}
+        onCancel={() => {
+          stopRenaming();
+        }}
+        onActionSuccess={() => {
+          stopRenaming();
+        }}
+      />
+    );
+  }
+  return (
+    <span
+      style={{
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        background: isOpened ? "lightgrey" : "none",
+      }}
+    >
+      {rolname}
+    </span>
   );
 };
 

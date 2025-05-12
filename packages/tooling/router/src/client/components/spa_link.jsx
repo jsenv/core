@@ -1,4 +1,4 @@
-import { useRef, useImperativeHandle } from "preact/hooks";
+import { useRef, useImperativeHandle, useLayoutEffect } from "preact/hooks";
 import { forwardRef } from "preact/compat";
 import { useRouteUrl } from "../route/route_hooks.js";
 import { SPAForm } from "./spa_form.jsx";
@@ -6,6 +6,7 @@ import { SPAForm } from "./spa_form.jsx";
 export const SPALink = forwardRef(
   (
     {
+      autoFocus,
       route,
       routeParams,
       deleteShortcutAction,
@@ -17,6 +18,14 @@ export const SPALink = forwardRef(
   ) => {
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
+
+    useLayoutEffect(() => {
+      if (autoFocus) {
+        const link = innerRef.current;
+        link.focus();
+      }
+    }, [autoFocus]);
+
     const routeUrl = useRouteUrl(route, routeParams);
     if (!deleteShortcutAction) {
       return (

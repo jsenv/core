@@ -8,7 +8,10 @@ import { useActionStatus } from "../action/action_hooks.js";
 import { useDataActive } from "./use_data_active.js";
 
 export const SPAInputText = forwardRef(
-  ({ action, onActionSuccess, method = "PUT", label, ...rest }, ref) => {
+  (
+    { action, onActionSuccess, onActionStart, method = "PUT", label, ...rest },
+    ref,
+  ) => {
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
     const input = <InputText ref={innerRef} action={action} {...rest} />;
@@ -18,6 +21,7 @@ export const SPAInputText = forwardRef(
         action={action}
         method={method}
         errorCustomValidityRef={innerRef}
+        onActionStart={onActionStart}
         onActionSuccess={onActionSuccess}
       >
         {label ? (
@@ -34,7 +38,7 @@ export const SPAInputText = forwardRef(
 );
 
 const InputText = forwardRef(
-  ({ autoFocus, required, action, name, value, ...rest }, ref) => {
+  ({ autoFocus, autoSelect, required, action, name, value, ...rest }, ref) => {
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
     const { pending } = useActionStatus(action);
@@ -51,6 +55,9 @@ const InputText = forwardRef(
       if (autoFocus) {
         const input = innerRef.current;
         input.focus();
+        if (autoSelect) {
+          input.select();
+        }
       }
     }, [autoFocus]);
 
