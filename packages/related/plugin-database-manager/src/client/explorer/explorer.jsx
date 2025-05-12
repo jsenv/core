@@ -216,13 +216,15 @@ const RolnameOrRenameInput = ({ role, isRenaming, stopRenaming }) => {
           stopRenaming();
         }}
         onInput={(e) => {
-          const name = e.target.value;
-          if (otherNameSet.has(name)) {
-            e.target.setCustomValidity(
-              `Role "${name}" already exists. Please choose another name.`,
+          const input = e.target;
+          const inputValue = input.value;
+          if (otherNameSet.has(inputValue)) {
+            input.setCustomValidity(
+              `Role "${inputValue}" already exists. Please choose another name.`,
             );
+            input.reportValidity();
           } else {
-            e.target.setCustomValidity("");
+            input.setCustomValidity("");
           }
         }}
       />

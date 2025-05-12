@@ -96,7 +96,7 @@ const useRequired = (inputRef, value) => {
     }
     const oninput = () => {
       if (input.validity.valueMissing) {
-        input.form.requestSubmit();
+        input.reportValidity();
       }
     };
     const onblur = () => {

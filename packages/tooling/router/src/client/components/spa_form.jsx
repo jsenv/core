@@ -75,7 +75,7 @@ export const SPAForm = forwardRef(
             errorCustomValidityRef.current.removeAttribute("data-error", "");
           };
           inputDisplayingError.addEventListener("input", oninput);
-          innerRef.current.requestSubmit(); // will display the message
+          inputDisplayingError.reportValidity(); // will display the message
           return () => {
             inputDisplayingError.removeEventListener("input", oninput);
           };
