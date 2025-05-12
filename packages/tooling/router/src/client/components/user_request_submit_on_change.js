@@ -1,10 +1,18 @@
 import { useLayoutEffect } from "preact/hooks";
 
 // see https://github.com/preactjs/preact/issues/1034#issuecomment-2857877043
-export const useRequestSubmitOnChange = (inputRef) => {
+export const useRequestSubmitOnChange = (
+  inputRef,
+  { preventWhenValueMissing } = {},
+) => {
   useLayoutEffect(() => {
-    const onChange = (e) => {
-      const submitter = e.target;
+    const input = inputRef.current;
+    const onChange = () => {
+      if (preventWhenValueMissing && input.validity.valueMissing) {
+        // it would display the message twice, see https://codepen.io/dmail/pen/dPPwvGW
+        return;
+      }
+      const submitter = input;
       const form = submitter.form;
       // do not pass submitter to requestSubmit() because we can't pass any submitter
       // for instance browser would throw
@@ -12,9 +20,9 @@ export const useRequestSubmitOnChange = (inputRef) => {
       // if we pass <input type="text">
       form.requestSubmit();
     };
-    inputRef.current.addEventListener("change", onChange);
+    input.addEventListener("change", onChange);
     return () => {
-      inputRef.current.removeEventListener("change", onChange);
+      input.removeEventListener("change", onChange);
     };
-  }, []);
+  }, [preventWhenValueMissing]);
 };

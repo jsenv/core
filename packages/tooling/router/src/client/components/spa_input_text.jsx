@@ -38,7 +38,10 @@ export const SPAInputText = forwardRef(
 );
 
 const InputText = forwardRef(
-  ({ autoFocus, autoSelect, required, action, name, value, ...rest }, ref) => {
+  (
+    { autoFocus, autoSelect, required, action, name, value, onInput, ...rest },
+    ref,
+  ) => {
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
     const { pending } = useActionStatus(action);
@@ -46,7 +49,8 @@ const InputText = forwardRef(
       value,
       name,
     );
-    useRequestSubmitOnChange(innerRef);
+    useRequestSubmitOnChange(innerRef, { preventWhenValueMissing: true });
+    useRequired(innerRef, value);
 
     useDataActive(innerRef);
     // autoFocus does not work so we focus in a useLayoutEffect,
@@ -74,8 +78,8 @@ const InputText = forwardRef(
           onInput={(e) => {
             const input = e.target;
             setOptimisticUIState(input.value);
-            if (input.validity.valueMissing) {
-              input.form.requestSubmit();
+            if (onInput) {
+              onInput(e);
             }
           }}
         />
@@ -83,3 +87,30 @@ const InputText = forwardRef(
     );
   },
 );
+
+const useRequired = (inputRef, value) => {
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (!input.required) {
+      return null;
+    }
+    const oninput = () => {
+      if (input.validity.valueMissing) {
+        input.form.requestSubmit();
+      }
+    };
+    const onblur = () => {
+      if (input.validity.valueMissing) {
+        // dont keep the invalid invalid and empty, restore
+        // the value when user stops interacting
+        input.value = value;
+      }
+    };
+    input.addEventListener("input", oninput);
+    input.addEventListener("blur", onblur);
+    return () => {
+      input.removeEventListener("input", oninput);
+      input.removeEventListener("blur", onblur);
+    };
+  }, []);
+};

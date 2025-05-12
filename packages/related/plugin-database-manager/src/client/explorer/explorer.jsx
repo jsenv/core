@@ -179,7 +179,7 @@ const ExplorerGroupItemRole = ({ role }) => {
         </span>
       ) : null}
       <RolnameOrRenameInput
-        rolname={rolname}
+        role={role}
         isRenaming={isRenaming}
         stopRenaming={stopRenaming}
       />
@@ -187,14 +187,23 @@ const ExplorerGroupItemRole = ({ role }) => {
   );
 };
 
-const RolnameOrRenameInput = ({ rolname, isRenaming, stopRenaming }) => {
+const RolnameOrRenameInput = ({ role, isRenaming, stopRenaming }) => {
+  const rolname = role.rolname;
   const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { rolname });
   const renameAction = useAction(PUT_ROLE_ACTION, {
     rolname,
     columnName: "rolname",
   });
+  const roles = useRoleList();
 
   if (isRenaming) {
+    const otherNameSet = new Set();
+    for (const roleCandidate of roles) {
+      if (roleCandidate === role) {
+        continue;
+      }
+      otherNameSet.add(roleCandidate.rolname);
+    }
     return (
       <RoleNameInput
         autoSelect
@@ -205,6 +214,16 @@ const RolnameOrRenameInput = ({ rolname, isRenaming, stopRenaming }) => {
         }}
         onActionSuccess={() => {
           stopRenaming();
+        }}
+        onInput={(e) => {
+          const name = e.target.value;
+          if (otherNameSet.has(name)) {
+            e.target.setCustomValidity(
+              `Role "${name}" already exists. Please choose another name.`,
+            );
+          } else {
+            e.target.setCustomValidity("");
+          }
         }}
       />
     );

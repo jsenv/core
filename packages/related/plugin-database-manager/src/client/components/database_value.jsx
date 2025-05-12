@@ -26,7 +26,7 @@ export const DatabaseValue = ({ column, ...rest }) => {
   }
   if (column.data_type === "name") {
     const props = rest;
-    return <SPAInputText name={columnName} {...props} />;
+    return <SPAInputText required name={columnName} {...props} />;
   }
   if (column.data_type === "oid") {
     return (

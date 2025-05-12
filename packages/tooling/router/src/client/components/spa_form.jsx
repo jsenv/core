@@ -65,19 +65,30 @@ export const SPAForm = forwardRef(
     const [error, setError] = useState(null);
     const resetErrorBoundary = useResetErrorBoundary();
     useLayoutEffect(() => {
-      if (error) {
-        if (errorCustomValidityRef) {
-          errorCustomValidityRef.current.setCustomValidity(error.message);
-          errorCustomValidityRef.current.setAttribute("data-error", "");
+      if (errorCustomValidityRef) {
+        if (error) {
+          const inputDisplayingError = errorCustomValidityRef.current;
+          inputDisplayingError.setCustomValidity(error.message);
+          inputDisplayingError.setAttribute("data-error", "");
+          const oninput = () => {
+            errorCustomValidityRef.current.setCustomValidity("");
+            errorCustomValidityRef.current.removeAttribute("data-error", "");
+          };
+          inputDisplayingError.addEventListener("input", oninput);
           innerRef.current.requestSubmit(); // will display the message
-        } else {
-          error.__handled__ = true; // prevent jsenv from displaying it
-          throw error;
+          return () => {
+            inputDisplayingError.removeEventListener("input", oninput);
+          };
         }
-      } else if (errorCustomValidityRef) {
         errorCustomValidityRef.current.setCustomValidity("");
         errorCustomValidityRef.current.removeAttribute("data-error", "");
+        return null;
       }
+      if (error) {
+        error.__handled__ = true; // prevent jsenv from displaying it
+        throw error;
+      }
+      return null;
     }, [error, errorCustomValidityRef]);
     useLayoutEffect(() => {
       if (errorCustomValidityRef) {
