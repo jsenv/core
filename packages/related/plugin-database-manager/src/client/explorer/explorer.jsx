@@ -260,8 +260,8 @@ const RoleNameInput = ({ action, onCancel, onActionSuccess, ...rest }) => {
         }
       }}
       onBlur={(e) => {
-        const value = e.target.value;
-        if (value.trim() === "") {
+        const input = e.target;
+        if (!input.validity.valid) {
           onCancel();
         }
       }}
