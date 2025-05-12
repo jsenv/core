@@ -66,38 +66,27 @@ export const SPAForm = forwardRef(
     const resetErrorBoundary = useResetErrorBoundary();
     useLayoutEffect(() => {
       if (errorCustomValidityRef) {
-        if (error) {
-          const inputDisplayingError = errorCustomValidityRef.current;
-          inputDisplayingError.setCustomValidity(error.message);
-          inputDisplayingError.setAttribute("data-error", "");
-          const oninput = () => {
-            errorCustomValidityRef.current.setCustomValidity("");
-            errorCustomValidityRef.current.removeAttribute("data-error", "");
-          };
-          inputDisplayingError.addEventListener("input", oninput);
-          inputDisplayingError.reportValidity(); // will display the message
-          return () => {
-            inputDisplayingError.removeEventListener("input", oninput);
-          };
+        const inputDisplayingError = errorCustomValidityRef.current;
+        const { customValidation } = inputDisplayingError;
+        if (!customValidation) {
+          console.error(
+            "SPAForm: customValidation missing on",
+            inputDisplayingError,
+          );
+          return;
         }
-        errorCustomValidityRef.current.setCustomValidity("");
-        errorCustomValidityRef.current.removeAttribute("data-error", "");
-        return null;
+        if (error) {
+          customValidation.set("form_error", error.message);
+        } else {
+          customValidation.delete("form_error");
+        }
+        return;
       }
       if (error) {
         error.__handled__ = true; // prevent jsenv from displaying it
         throw error;
       }
-      return null;
     }, [error, errorCustomValidityRef]);
-    useLayoutEffect(() => {
-      if (errorCustomValidityRef) {
-        errorCustomValidityRef.current.oninput = () => {
-          errorCustomValidityRef.current.setCustomValidity("");
-          errorCustomValidityRef.current.removeAttribute("data-error");
-        };
-      }
-    }, []);
 
     method = method.toLowerCase();
 

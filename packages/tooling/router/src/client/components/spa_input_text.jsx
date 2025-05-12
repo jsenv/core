@@ -6,6 +6,7 @@ import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
 import { useDataActive } from "./use_data_active.js";
+import { createCustomValidityWrapper } from "./custom_validity_wrapper.js";
 
 export const SPAInputText = forwardRef(
   (
@@ -13,7 +14,10 @@ export const SPAInputText = forwardRef(
     ref,
   ) => {
     const innerRef = useRef(null);
-    useImperativeHandle(ref, () => innerRef.current);
+    useImperativeHandle(ref, () => {
+      const input = innerRef.current;
+      return input;
+    });
     const input = <InputText ref={innerRef} action={action} {...rest} />;
 
     return (
@@ -43,7 +47,12 @@ const InputText = forwardRef(
     ref,
   ) => {
     const innerRef = useRef(null);
-    useImperativeHandle(ref, () => innerRef.current);
+    useImperativeHandle(ref, () => {
+      const input = innerRef.current;
+      const customValidation = createCustomValidityWrapper(input);
+      input.customValidation = customValidation;
+      return input;
+    });
     const { pending } = useActionStatus(action);
     const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
       value,

@@ -5,6 +5,7 @@ import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
 import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
+import { createCustomValidityWrapper } from "./custom_validity_wrapper.js";
 
 export const SPACheckbox = ({ action, label, method = "PUT", ...rest }) => {
   const checkboxRef = useRef(null);
@@ -36,7 +37,12 @@ const Checkbox = forwardRef(({ action, name, checked, ...rest }, ref) => {
     { revertOnFailure: true },
   );
   const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
+  useImperativeHandle(ref, () => {
+    const input = innerRef.current;
+    const customValidation = createCustomValidityWrapper(input);
+    input.customValidation = customValidation;
+    return input;
+  });
   useRequestSubmitOnChange(innerRef);
 
   return (
