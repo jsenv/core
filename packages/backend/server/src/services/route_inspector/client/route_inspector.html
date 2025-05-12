@@ -371,6 +371,7 @@
         padding: 5px;
       }
       .route_group_name {
+        display: flex;
         border-radius: 3px;
         font-family: sans-serif;
         font-size: 14px;
@@ -379,6 +380,7 @@
         padding: 6px 0;
         text-align: center;
         text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+        gap: 0.3em;
       }
       .route_group_description {
         margin-left: 8px;
@@ -904,7 +906,7 @@
         const groups = {};
         for (const route of routes) {
           const groupKey =
-            groupBy === "method"
+            groupBy === "by_method"
               ? route.method
               : route.meta.packageName || NO_PACKAGE_NAME;
           if (!groups[groupKey]) {
@@ -917,16 +919,29 @@
           <ul style="margin-left: 0; padding: 0">
             <li style="list-style: none; padding: 0;">
               ${Object.entries(groups).map(([groupKey, groupRoutes]) => {
+                const groupText =
+                  groupBy === "by_method"
+                    ? html`<span
+                          style="margin-left: 0.5em; display: inline-flex; gap: 0.5em;"
+                        >
+                          <${MethodsStatusPill} methodNames="${[groupKey]}" />
+                          <span>${groupKey}</span>
+                        </span>`
+                    : html`<span>${groupKey}</span>`;
+
                 return html`
                   <details
                     class="route_group_details"
-                    data-method="${groupBy === "method" ? groupKey : undefined}"
+                    data-method="${groupBy === "by_method"
+                      ? groupKey
+                      : undefined}"
                   >
                     <summary>
                       <div class="route_group_summary_container">
-                        <span class="route_group_name"
-                          >${groupBy}: ${groupKey}</span
-                        >
+                        <span class="route_group_name">
+                          ${groupBy === "by_method" ? "method" : "package"}:
+                          ${groupText}
+                        </span>
                         <span class="route_group_description">
                           <span class="filter_count">
                             ${groupRoutes.length}
@@ -1028,7 +1043,7 @@
       }
 
       const useGroupByUrlStringParam = () => {
-        const availableGroupByValues = ["method", "package"];
+        const availableGroupByValues = ["by_method", "by_package"];
         return useUrlStringParam("groupBy", {
           availableValues: availableGroupByValues,
         });
@@ -1055,6 +1070,59 @@
         };
       }
 
+      const StatusPill = ({ children, color }) => {
+        return html`
+            <span
+            class="status_pill"
+            style="${{
+              background: color,
+            }}"
+          >
+            ${children}
+          </span>`;
+      };
+      const buildLinearGradient = (colors) => {
+        const percentagePerColor = Math.floor(100 / (colors.length - 1));
+        const gradientSteps = [];
+        let progress = 0;
+        let index = 0;
+        for (const color of colors) {
+          if (index === colors.length - 1) {
+            progress = 100;
+          }
+          gradientSteps.push(`${color} ${progress}%`);
+          progress += percentagePerColor;
+          index++;
+        }
+        const gradient = `linear-gradient(to bottom, ${gradientSteps.join(", ")})`;
+        return gradient;
+      };
+      const MethodsStatusPill = ({ methodNames }) => {
+        if (methodNames.length === 1) {
+          return html`
+            <${StatusPill}
+              color="${getMethodColor(methodNames[0])}"
+            />
+          `;
+        }
+        const colors = methodNames.map((methodName) =>
+          getMethodColor(methodName),
+        );
+        const linearGradient = buildLinearGradient(colors);
+        return html`
+            <${StatusPill}
+            color="${linearGradient}"
+          />
+          `;
+      };
+      const getMethodColor = (methodName) => {
+        const bodyStyle = window.getComputedStyle(document.body);
+        const methodColor = bodyStyle.getPropertyValue(
+          `--method-${methodName.toLowerCase()}-color`,
+        );
+        return methodColor;
+      };
+
       let FiltersPanel;
       filters: {
         FiltersPanel = ({ routes }) => {
@@ -1075,92 +1143,39 @@
           `;
         };
 
-        const StatusPill = ({ children, color }) => {
-          return html`
-            <span
-              class="status_pill"
-              style="${{
-                background: color,
-              }}"
-            >
-              ${children}
-            </span>`;
-        };
-        const buildLinearGradient = (colors) => {
-          const percentagePerColor = Math.floor(100 / (colors.length - 1));
-          const gradientSteps = [];
-          let progress = 0;
-          let index = 0;
-          for (const color of colors) {
-            if (index === colors.length - 1) {
-              progress = 100;
-            }
-            gradientSteps.push(`${color} ${progress}%`);
-            progress += percentagePerColor;
-            index++;
-          }
-          const gradient = `linear-gradient(to bottom, ${gradientSteps.join(", ")})`;
-          return gradient;
-        };
-        const MethodsStatusPill = ({ methodNames }) => {
-          if (methodNames.length === 1) {
-            return html`
-            <${StatusPill}
-                color="${getMethodColor(methodNames[0])}"
-              />
-          `;
-          }
-          const colors = methodNames.map((methodName) =>
-            getMethodColor(methodName),
-          );
-          const linearGradient = buildLinearGradient(colors);
-          return html`
-            <${StatusPill}
-              color="${linearGradient}"
-            />
-          `;
-        };
-        const getMethodColor = (methodName) => {
-          const bodyStyle = window.getComputedStyle(document.body);
-          const methodColor = bodyStyle.getPropertyValue(
-            `--method-${methodName.toLowerCase()}-color`,
-          );
-          return methodColor;
-        };
-
         const GroupSelector = () => {
           const [groupBy, setGroupBy] = useGroupByUrlStringParam();
           const label = html`
             <span>
-              Group by: ${groupBy || "no group"}
+              Group: ${groupBy || "none"}
             </span>`;
           const options = [
             {
               value: "",
               text: html`
                 <span class="filter_text">
-                  no group
+                  none
                 </span>
               `,
               selected: !groupBy,
             },
             {
-              value: "method",
+              value: "by_method",
               text: html`
                 <span class="filter_text">
-                  method
+                  by method
                 </span>
               `,
-              selected: groupBy === "method",
+              selected: groupBy === "by_method",
             },
             {
-              value: "package",
+              value: "by_package",
               text: html`
                 <span class="filter_text">
-                  package
+                  by package
                 </span>
               `,
-              selected: groupBy === "package",
+              selected: groupBy === "by_package",
             },
           ];
 
