@@ -80,7 +80,7 @@ const ExplorerGroupRoles = () => {
     <ExplorerGroup
       urlParam="roles"
       label={
-        <span style="display: flex; flex: 1; gap: 0.2em; align-items: center;">
+        <span className="summary_label">
           ROLES
           <span style="display: flex; flex: 1"></span>
           <button

@@ -40,6 +40,14 @@
   transform: rotate(0deg);
 }
 
+.summary_label {
+  display: flex;
+  flex: 1;
+  gap: 0.2em;
+  align-items: center;
+  padding-right: 0.5em;
+}
+
 .explorer_group_list {
   display: flex;
   flex-direction: column;
@@ -57,6 +65,7 @@
   display: flex;
   gap: 0.2em;
   min-width: 0; /* https://css-tricks.com/flexbox-truncated-text/#aa-the-solution-is-min-width-0-on-the-flex-child */
+  overflow: hidden;
 }
 
 input[data-interacting]:invalid {
