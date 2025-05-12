@@ -64,7 +64,7 @@ const ExplorerGroupRoles = () => {
   //   return 0;
   // });
   const items = roles.map((role) => {
-    return <ExplorerGroupItemRole key={role.rolname} role={role} />;
+    return <ExplorerGroupItemRole key={role.oid} role={role} />;
   });
 
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -142,7 +142,6 @@ const ExplorerGroupItemRole = ({ role }) => {
     }, 100);
   }, [setIsRenaming]);
 
-  // works only if there is no nav
   const prevIsRenamingRef = useRef(isRenaming);
   const autoFocus = prevIsRenamingRef.current && !isRenaming;
   prevIsRenamingRef.current = isRenaming;
