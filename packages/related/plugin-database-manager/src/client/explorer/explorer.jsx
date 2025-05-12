@@ -31,6 +31,7 @@ import {
   useCurrentRole,
   useRoleList,
 } from "../role/role_signals.js";
+import "./explorer.css" with { type: "css" };
 
 effect(async () => {
   const response = await fetch(`/.internal/database/api/nav`);
@@ -39,15 +40,18 @@ effect(async () => {
   roleStore.upsert(roles);
 });
 
-export const Navbar = () => {
+export const Explorer = () => {
   return (
-    <nav>
-      <DatabaseNavGroupRoles />
+    <nav className="explorer">
+      <div className="explorer_head">
+        <h2>Explorer</h2>
+      </div>
+      <ExplorerGroupRoles />
     </nav>
   );
 };
 
-const DatabaseNavGroupRoles = () => {
+const ExplorerGroupRoles = () => {
   const roles = useRoleList();
   // roles.sort((a, b) => {
   //   const aIsPg = a.rolname.startsWith("pg_");
@@ -60,9 +64,8 @@ const DatabaseNavGroupRoles = () => {
   //   }
   //   return 0;
   // });
-  console.log(roles);
   const items = roles.map((role) => {
-    return <NavListItemRole key={role.rolname} role={role} />;
+    return <ExplorerGroupItemRole key={role.rolname} role={role} />;
   });
 
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -74,7 +77,7 @@ const DatabaseNavGroupRoles = () => {
   }, [setIsCreatingNew]);
 
   return (
-    <DatabaseNavGroup
+    <ExplorerGroup
       urlParam="roles"
       label={
         <span style="display: flex; flex: 1; gap: 0.2em; align-items: center;">
@@ -98,9 +101,9 @@ const DatabaseNavGroupRoles = () => {
         </span>
       }
     >
-      <ul className="nav_group_list">
+      <ul className="explorer_group_list">
         {items.map((item) => {
-          return <NavGroupListItem key={item.url}>{item}</NavGroupListItem>;
+          return <ExplorerGroupItem key={item.url}>{item}</ExplorerGroupItem>;
         })}
         {isCreatingNew && (
           <NewItem
@@ -114,11 +117,11 @@ const DatabaseNavGroupRoles = () => {
           />
         )}
       </ul>
-    </DatabaseNavGroup>
+    </ExplorerGroup>
   );
 };
 
-const NavListItemRole = ({ role }) => {
+const ExplorerGroupItemRole = ({ role }) => {
   const currentRole = useCurrentRole();
   const rolname = role.rolname;
   const isCurrent = rolname === currentRole?.rolname;
@@ -130,7 +133,7 @@ const NavListItemRole = ({ role }) => {
       key={rolname}
       route={GET_ROLE_ROUTE}
       routeParams={{ rolname }}
-      className="nav_group_list_item_content"
+      className="explorer_group_item_content"
       deleteShortcutAction={deleteAction}
       deleteShortcutConfirmContent={`Are you sure you want to delete the role "${rolname}"?`}
     >
@@ -161,8 +164,8 @@ const NavListItemRole = ({ role }) => {
   );
 };
 
-const NavGroupListItem = ({ children }) => {
-  return <li className="nav_group_list_item">{children}</li>;
+const ExplorerGroupItem = ({ children }) => {
+  return <li className="explorer_group_item">{children}</li>;
 };
 
 const NewItem = ({ onCancel, onActionSuccess }) => {
@@ -174,8 +177,8 @@ const NewItem = ({ onCancel, onActionSuccess }) => {
   // dailleurs on pourrait ptet faire ¸a aussi pour les erreurs serveurs
 
   return (
-    <NavGroupListItem>
-      <span className="nav_group_list_item_content">
+    <ExplorerGroupItem>
+      <span className="explorer_group_item_content">
         <span style="display: flex; width: 1em; height: 1em">
           <EnterNameIconSvg />
         </span>
@@ -198,11 +201,11 @@ const NewItem = ({ onCancel, onActionSuccess }) => {
           onActionSuccess={onActionSuccess}
         />
       </span>
-    </NavGroupListItem>
+    </ExplorerGroupItem>
   );
 };
 
-const DatabaseNavGroup = ({ urlParam, label, children }) => {
+const ExplorerGroup = ({ urlParam, label, children }) => {
   const detailsProps = useDetails(urlParam);
 
   return (
@@ -258,16 +261,3 @@ const ArrowDown = () => {
     </svg>
   );
 };
-// const ArrowUp = () => {
-//   return (
-//     <svg
-//       xmlns="http://www.w3.org/2000/svg"
-//       viewBox="0 -960 960 960"
-//       width="24"
-//       height="24"
-//       fill="currentColor"
-//     >
-//       <path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" />
-//     </svg>
-//   );
-// };

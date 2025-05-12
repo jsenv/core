@@ -1,0 +1,57 @@
+.explorer_head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.explorer_head h2 {
+  margin-left: 24px;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  font-size: 16px;
+  user-select: none;
+}
+
+.explorer > details {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #e0e0e0;
+}
+.explorer > details:last-of-type {
+  border-bottom: none;
+}
+.explorer > details > summary {
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  user-select: none;
+  font-size: 14px;
+}
+.explorer > details:open .summary_marker {
+  transform: rotate(0deg);
+}
+
+.explorer_group_list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-left: 24px;
+  padding-right: 15px;
+  /* width: fit-content; */
+}
+.explorer_group_item {
+  display: flex;
+}
+.explorer_group_item_content {
+  align-items: center;
+  white-space: nowrap;
+  display: flex;
+  gap: 0.2em;
+  min-width: 0; /* https://css-tricks.com/flexbox-truncated-text/#aa-the-solution-is-min-width-0-on-the-flex-child */
+}
+
+input[data-interacting]:invalid {
+  outline-color: red;
+}
