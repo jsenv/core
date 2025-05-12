@@ -24,12 +24,12 @@
  * to ensure form submission is blocked.
  * - We need something to help CSS display :invalid only when condition 4 is met
  *
- * -> We put [data-interacting] when user starts typing and we remove it when input is blurred
+ * -> We put [data-active] when user starts typing and we remove it when input is blurred
  */
 
 import { useLayoutEffect } from "preact/hooks";
 
-export const useDataInteracting = (inputRef) => {
+export const useDataActive = (inputRef) => {
   useLayoutEffect(() => {
     const input = inputRef.current;
 
@@ -37,11 +37,11 @@ export const useDataInteracting = (inputRef) => {
       input.addEventListener("input", oninput);
     };
     const onblur = () => {
-      input.removeAttribute("data-interacting", "");
+      input.removeAttribute("data-active", "");
     };
     const oninput = () => {
       input.removeEventListener("input", oninput);
-      input.setAttribute("data-interacting", "");
+      input.setAttribute("data-active", "");
     };
 
     input.addEventListener("focus", onfocus);

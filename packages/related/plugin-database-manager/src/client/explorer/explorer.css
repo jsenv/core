@@ -40,6 +40,23 @@
   transform: rotate(0deg);
 }
 
+.explorer > details .summary_marker {
+  transform: rotate(-90deg);
+}
+.explorer > details .summary_action_icon {
+  display: none;
+  width: 1em;
+  height: 1em;
+  padding: 0;
+  border: 0;
+}
+.explorer > details .summary_action_icon:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+.explorer > details:open .summary_action_icon {
+  display: block;
+}
+
 .summary_label {
   display: flex;
   flex: 1;
@@ -66,8 +83,4 @@
   gap: 0.2em;
   min-width: 0; /* https://css-tricks.com/flexbox-truncated-text/#aa-the-solution-is-min-width-0-on-the-flex-child */
   overflow: hidden;
-}
-
-input[data-interacting]:invalid {
-  outline-color: red;
 }

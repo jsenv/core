@@ -67,6 +67,7 @@ export const SPAForm = forwardRef(
       if (error) {
         if (errorCustomValidityRef) {
           errorCustomValidityRef.current.setCustomValidity(error.message);
+          errorCustomValidityRef.current.setAttribute("data-error", "");
           innerRef.current.requestSubmit(); // will display the message
         } else {
           error.__handled__ = true; // prevent jsenv from displaying it
@@ -74,12 +75,14 @@ export const SPAForm = forwardRef(
         }
       } else if (errorCustomValidityRef) {
         errorCustomValidityRef.current.setCustomValidity("");
+        errorCustomValidityRef.current.removeAttribute("data-error", "");
       }
     }, [error, errorCustomValidityRef]);
     useLayoutEffect(() => {
       if (errorCustomValidityRef) {
         errorCustomValidityRef.current.oninput = () => {
           errorCustomValidityRef.current.setCustomValidity("");
+          errorCustomValidityRef.current.removeAttribute("data-error");
         };
       }
     }, []);

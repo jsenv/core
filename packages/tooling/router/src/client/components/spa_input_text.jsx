@@ -5,7 +5,7 @@ import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
-import { useDataInteracting } from "./use_data_interacting.js";
+import { useDataActive } from "./use_data_active.js";
 
 export const SPAInputText = forwardRef(
   ({ action, onActionSuccess, method = "PUT", label, ...rest }, ref) => {
@@ -44,7 +44,7 @@ const InputText = forwardRef(
     );
     useRequestSubmitOnChange(innerRef);
 
-    useDataInteracting(innerRef);
+    useDataActive(innerRef);
     // autoFocus does not work so we focus in a useLayoutEffect,
     // see https://github.com/preactjs/preact/issues/1255
     useLayoutEffect(() => {

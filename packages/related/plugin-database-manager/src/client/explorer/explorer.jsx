@@ -1,6 +1,4 @@
 /**
- * - escape should cancel role creation
- * - a custon validity message when role name already exists
  * - ability to rename by enter
  * - cmd + backspace would allow to delete a role (after a confirm)
  */
@@ -23,6 +21,7 @@ import {
 import {
   GET_ROLE_ROUTE,
   POST_ROLE_ACTION,
+  PUT_ROLE_ACTION,
   DELETE_ROLE_ACTION,
 } from "../role/role_routes.js";
 import { roleStore } from "../role/role_store.js";
@@ -131,6 +130,13 @@ const ExplorerGroupItemRole = ({ role }) => {
   const isCurrent = rolname === currentRole?.rolname;
   const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { rolname });
   const deleteAction = useAction(DELETE_ROLE_ACTION, { rolname });
+  const renameAction = useAction(PUT_ROLE_ACTION, {
+    rolname,
+    columnName: "rolname",
+  });
+
+  const renameInput = <RoleNameInput action={renameAction} />;
+  console.log(renameInput);
 
   return (
     <SPALink
@@ -140,6 +146,13 @@ const ExplorerGroupItemRole = ({ role }) => {
       className="explorer_group_item_content"
       deleteShortcutAction={deleteAction}
       deleteShortcutConfirmContent={`Are you sure you want to delete the role "${rolname}"?`}
+      onKeydown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          // turn into edit mode
+        }
+      }}
     >
       <span style="width: 1em; height: 1em">
         {rolname.startsWith("pg_") ? (
@@ -172,36 +185,40 @@ const ExplorerGroupItem = ({ children }) => {
   return <li className="explorer_group_item">{children}</li>;
 };
 
-const NewItem = ({ onCancel, onActionSuccess }) => {
-  // il faudrait un spa input text, celui ci se brancherait sur le onchange/enter
-  // donc comme les autres, juste il aura autofocus
-  // aussi il faut donc lui passer la route, pendant qu'on crée il est disabled
-  // il faudrait vérif que le nom n'existe pas déja
-  // on fera avec customValidity (vérif que ca marche avec requestSubmit dailleurs)
-  // dailleurs on pourrait ptet faire ¸a aussi pour les erreurs serveurs
+const RoleNameInput = ({ action, onCancel, onActionSuccess }) => {
+  return (
+    <SPAInputText
+      name="rolname"
+      autoFocus
+      required
+      action={action}
+      onKeydown={(e) => {
+        if (e.key === "Escape") {
+          onCancel();
+        }
+      }}
+      onBlur={(e) => {
+        const value = e.target.value;
+        if (value.trim() === "") {
+          onCancel();
+        }
+      }}
+      onActionSuccess={onActionSuccess}
+    />
+  );
+};
 
+const NewItem = ({ onCancel, onActionSuccess }) => {
+  const createRoleAction = useAction(POST_ROLE_ACTION);
   return (
     <ExplorerGroupItem>
       <span className="explorer_group_item_content">
         <span style="display: flex; width: 1em; height: 1em">
           <EnterNameIconSvg />
         </span>
-        <SPAInputText
-          name="rolname"
-          autoFocus
-          required
-          action={useAction(POST_ROLE_ACTION)}
-          onKeydown={(e) => {
-            if (e.key === "Escape") {
-              onCancel();
-            }
-          }}
-          onBlur={(e) => {
-            const value = e.target.value;
-            if (value.trim() === "") {
-              onCancel();
-            }
-          }}
+        <RoleNameInput
+          action={createRoleAction}
+          onCancel={onCancel}
           onActionSuccess={onActionSuccess}
         />
       </span>

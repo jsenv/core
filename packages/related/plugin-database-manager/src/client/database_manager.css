@@ -38,23 +38,6 @@ aside > * {
   height: 100%;
 }
 
-details .summary_marker {
-  transform: rotate(-90deg);
-}
-details .summary_action_icon {
-  display: none;
-  width: 1em;
-  height: 1em;
-  padding: 0;
-  border: 0;
-}
-details .summary_action_icon:hover {
-  background: rgba(0, 0, 0, 0.1);
-}
-details:open .summary_action_icon {
-  display: block;
-}
-
 main {
   flex-grow: 1;
   flex-basis: 0;
@@ -65,4 +48,9 @@ main {
 }
 main h1 {
   margin-top: 0;
+}
+
+input[data-active]:invalid,
+input[data-error]:invalid {
+  outline-color: red;
 }
