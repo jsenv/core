@@ -41,7 +41,7 @@ export const jsenvPluginDatabaseManager = () => {
     }
     if (POST) {
       const postRoute = {
-        endpoint: `PUT /.internal/database/api/${resource}`,
+        endpoint: `POST /.internal/database/api/${resource}`,
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {

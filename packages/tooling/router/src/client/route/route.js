@@ -97,7 +97,8 @@ export const registerRoute = (resourcePattern, handler) => {
       reload();
     },
     toString: () => {
-      return `${route.resourcePattern}`;
+      const isMatching = route.isMatchingSignal.peek();
+      return isMatching ? route.url : route.resourcePattern;
     },
   };
   effect(() => {

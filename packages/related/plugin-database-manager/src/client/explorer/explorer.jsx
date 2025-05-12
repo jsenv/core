@@ -4,7 +4,7 @@
  */
 
 import { effect } from "@preact/signals";
-import { useState, useCallback } from "preact/hooks";
+import { useState, useCallback, useRef } from "preact/hooks";
 import {
   useDetails,
   SPALink,
@@ -135,11 +135,20 @@ const ExplorerGroupItemRole = ({ role }) => {
     columnName: "rolname",
   });
 
-  const renameInput = <RoleNameInput action={renameAction} />;
-  console.log(renameInput);
+  const linkRef = useRef();
+  const [isRenaming, setIsRenaming] = useState(false);
+  const startRenaming = useCallback(() => {
+    setIsRenaming(true);
+  }, [setIsRenaming]);
+  const stopRenaming = useCallback(() => {
+    console.log(linkRef.current);
+    // linkRef.current.focus();
+    setIsRenaming(false);
+  }, [setIsRenaming]);
 
   return (
     <SPALink
+      ref={linkRef}
       key={rolname}
       route={GET_ROLE_ROUTE}
       routeParams={{ rolname }}
@@ -147,10 +156,10 @@ const ExplorerGroupItemRole = ({ role }) => {
       deleteShortcutAction={deleteAction}
       deleteShortcutConfirmContent={`Are you sure you want to delete the role "${rolname}"?`}
       onKeydown={(e) => {
-        if (e.key === "Enter") {
+        if (e.key === "Enter" && !isRenaming) {
           e.preventDefault();
           e.stopPropagation();
-          // turn into edit mode
+          startRenaming();
         }
       }}
     >
@@ -168,15 +177,23 @@ const ExplorerGroupItemRole = ({ role }) => {
           <ActiveUserSvg />
         </span>
       ) : null}
-      <span
-        style={{
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          background: isOpened ? "lightgrey" : "none",
-        }}
-      >
-        {rolname}
-      </span>
+      {isRenaming ? (
+        <RoleNameInput
+          action={renameAction}
+          onCancel={stopRenaming}
+          onActionSuccess={stopRenaming}
+        />
+      ) : (
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            background: isOpened ? "lightgrey" : "none",
+          }}
+        >
+          {rolname}
+        </span>
+      )}
     </SPALink>
   );
 };
