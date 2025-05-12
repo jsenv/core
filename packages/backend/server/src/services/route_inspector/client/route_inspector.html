@@ -55,6 +55,10 @@
         color: dodgerblue;
       }
 
+      html {
+        scrollbar-gutter: stable both-edges;
+      }
+
       body {
         font-family:
           system-ui,
@@ -376,10 +380,6 @@
         text-align: center;
         text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
       }
-      .route_group_details[data-method] .route_group_name {
-        color: #fff;
-        background: var(--method-color);
-      }
       .route_group_description {
         margin-left: 8px;
         font-family: monospace;
@@ -524,6 +524,7 @@
       }
       .filter_item {
         margin: 15px;
+        margin-left: 0;
       }
       .filter_badge {
         background-color: var(--primary-color);
@@ -923,7 +924,9 @@
                   >
                     <summary>
                       <div class="route_group_summary_container">
-                        <span class="route_group_name">${groupKey}</span>
+                        <span class="route_group_name"
+                          >${groupBy}: ${groupKey}</span
+                        >
                         <span class="route_group_description">
                           <span class="filter_count">
                             ${groupRoutes.length}
