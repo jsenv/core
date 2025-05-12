@@ -179,9 +179,16 @@ const ExplorerGroupItemRole = ({ role }) => {
       ) : null}
       {isRenaming ? (
         <RoleNameInput
+          value={rolname}
           action={renameAction}
-          onCancel={stopRenaming}
-          onActionSuccess={stopRenaming}
+          onCancel={() => {
+            stopRenaming();
+            linkRef.current.focus();
+          }}
+          onActionSuccess={() => {
+            stopRenaming();
+            console.log("stop renaming", linkRef.current);
+          }}
         />
       ) : (
         <span
@@ -202,15 +209,17 @@ const ExplorerGroupItem = ({ children }) => {
   return <li className="explorer_group_item">{children}</li>;
 };
 
-const RoleNameInput = ({ action, onCancel, onActionSuccess }) => {
+const RoleNameInput = ({ action, onCancel, onActionSuccess, ...rest }) => {
   return (
     <SPAInputText
       name="rolname"
       autoFocus
       required
       action={action}
-      onKeydown={(e) => {
+      autoComplete="off" // just because sometime it catches the escape key
+      onKeyDown={(e) => {
         if (e.key === "Escape") {
+          e.target.value = rest.value; // reset value to original to prevent "change" (that would submit)
           onCancel();
         }
       }}
@@ -221,6 +230,7 @@ const RoleNameInput = ({ action, onCancel, onActionSuccess }) => {
         }
       }}
       onActionSuccess={onActionSuccess}
+      {...rest}
     />
   );
 };

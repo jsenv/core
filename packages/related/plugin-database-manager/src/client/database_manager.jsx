@@ -24,3 +24,8 @@ const App = () => {
 };
 
 render(<App />, document.querySelector("#app"));
+
+if (import.meta.hot) {
+  // jsenv router does not support hot reload (yet)
+  import.meta.hot.decline();
+}
