@@ -16,9 +16,7 @@ export const GET_ROLE_ROUTE = registerRoute(
     });
     if (!response.ok) {
       const error = await response.json();
-      const getRoleError = new Error(
-        `Failed to get role: ${response.status} ${response.statusText}`,
-      );
+      const getRoleError = new Error(`Failed to get role: ${error.message}`);
       getRoleError.stack = error.stack || error.message;
       throw getRoleError;
     }
@@ -52,7 +50,7 @@ export const PUT_ROLE_ACTION = registerAction(
     if (!response.ok) {
       const error = await response.json();
       const updateRoleError = new Error(
-        `Failed to update role: ${response.status} ${response.statusText}`,
+        `Failed to update role: ${error.message}`,
       );
       updateRoleError.stack = error.stack || error.message;
       throw updateRoleError;
@@ -75,7 +73,7 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
   if (!response.ok) {
     const error = await response.json();
     const createRoleError = new Error(
-      `Failed to create role: ${response.status} ${response.statusText}`,
+      `Failed to create role: ${error.message}`,
     );
     createRoleError.stack = error.stack || error.message;
     throw createRoleError;
@@ -97,7 +95,7 @@ export const DELETE_ROLE_ACTION = registerAction(
     if (!response.ok) {
       const error = await response.json();
       const deleteRoleError = new Error(
-        `Failed to delete role: ${response.status} ${response.statusText}`,
+        `Failed to delete role: ${error.message}`,
       );
       deleteRoleError.stack = error.stack || error.message;
       throw deleteRoleError;

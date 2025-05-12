@@ -72,9 +72,7 @@ export const PUT_DATABASE_ACTION = registerAction(
     );
     if (!response.ok) {
       const error = await response.json();
-      const putError = new Error(
-        `Failed to update database: ${response.status} ${response.statusText}`,
-      );
+      const putError = new Error(`Failed to update database: ${error.message}`);
       putError.stack = error.stack || error.message;
       throw putError;
     }
