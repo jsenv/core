@@ -1,10 +1,14 @@
 import { useRef, useCallback } from "preact/hooks";
 import { useSPAFormStatus } from "../components/use_spa_form_status.js";
 
-export const useOptimisticUIState = (frontendMemoryState) => {
+export const useOptimisticUIState = (
+  frontendMemoryState,
+  name,
+  { revertOnFailure } = {},
+) => {
   const { pending } = useSPAFormStatus();
   const optimisticStateRef = useRef(frontendMemoryState);
-  if (!pending) {
+  if (!pending && revertOnFailure) {
     optimisticStateRef.current = frontendMemoryState;
   }
   const setOptimisticState = useCallback((value) => {

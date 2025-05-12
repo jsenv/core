@@ -33,6 +33,7 @@ const Checkbox = forwardRef(({ action, name, checked, ...rest }, ref) => {
   const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
     checked,
     name,
+    { revertOnFailure: true },
   );
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
