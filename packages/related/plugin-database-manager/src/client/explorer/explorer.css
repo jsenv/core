@@ -16,6 +16,10 @@
   flex-direction: column;
   border-bottom: 1px solid #e0e0e0;
 }
+.explorer_group_content {
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
 .explorer > details:last-of-type {
   border-bottom: none;
 }
@@ -27,6 +31,10 @@
   align-items: center;
   user-select: none;
   font-size: 14px;
+  border: 1px solid transparent;
+}
+.explorer > details > summary:focus {
+  border-color: lightblue;
 }
 .explorer > details:open .summary_marker {
   transform: rotate(0deg);
@@ -38,7 +46,6 @@
   margin-top: 0;
   margin-bottom: 0;
   padding-left: 24px;
-  padding-right: 15px;
   /* width: fit-content; */
 }
 .explorer_group_item {

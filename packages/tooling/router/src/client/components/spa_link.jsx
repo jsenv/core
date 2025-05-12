@@ -55,7 +55,11 @@ const LinkWithDeleteShortcut = ({
         }
       }}
     >
-      <SPAForm ref={formRef} action={deleteShortcutAction}></SPAForm>
+      <SPAForm
+        ref={formRef}
+        action={deleteShortcutAction}
+        data-hidden
+      ></SPAForm>
       {children}
     </a>
   );

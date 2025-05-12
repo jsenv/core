@@ -216,7 +216,7 @@ const ExplorerGroup = ({ urlParam, label, children }) => {
         </span>
         {label}
       </summary>
-      {children}
+      <div className="explorer_group_content">{children}</div>
     </details>
   );
 };

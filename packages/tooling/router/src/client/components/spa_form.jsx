@@ -51,6 +51,7 @@ export const SPAForm = forwardRef(
       // for now we'll stick to the custom validity api
       errorCustomValidityRef,
       onActionSuccess,
+      ...rest
     },
     ref,
   ) => {
@@ -97,6 +98,7 @@ export const SPAForm = forwardRef(
 
     return (
       <form
+        {...rest}
         ref={innerRef}
         onSubmit={async (submitEvent) => {
           submitEvent.preventDefault();

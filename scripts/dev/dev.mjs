@@ -22,7 +22,7 @@ await startDevServer({
     jsenvPluginControlledResource(),
     jsenvPluginJSONFileManager(),
     jsenvPluginPreact({
-      // refreshInstrumentation: true
+      refreshInstrumentation: true,
     }),
     jsenvPluginExplorer({
       groups: {
