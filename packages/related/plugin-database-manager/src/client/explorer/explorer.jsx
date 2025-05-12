@@ -81,7 +81,11 @@ const ExplorerGroupRoles = () => {
       urlParam="roles"
       label={
         <span className="summary_label">
-          ROLES
+          <span style="display: flex; align-items: center; gap: 3px">
+            ROLES
+            <span style="color: rgba(28, 43, 52, 0.4)">({roles.length})</span>
+          </span>
+
           <span style="display: flex; flex: 1"></span>
           <button
             className="summary_action_icon"
