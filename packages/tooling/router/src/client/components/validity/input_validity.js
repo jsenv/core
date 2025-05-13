@@ -1,31 +1,36 @@
 /**
- * TODO:
+ * Input Validity Manager
  *
- * j'aimerais que le type d'erreur influe le comportement:
+ * This module provides utilities to manage HTML input validation in a more controlled
+ * and user-friendly way than the default browser behavior. It addresses several limitations
+ * of the native HTML5 validation:
  *
- * required -> si on blur on reprend la valeure précédente
- * escape key -> on revient a la valeur précédente
- * custom validity genre name already taken -> on garde la valeur actuelle
- * et meme on blur on garde le bord rouge et le message ne se reset que lorsqu'on input
- * custom validity erreur serveur -> on garde la valeur actuelle
- * pareil que précédent
+ * 1. Controls when validation errors are shown to avoid premature error displays
+ * 2. Provides a key-based custom validation system to manage multiple validation sources
+ * 3. Adds escape key support to cancel input operations
+ * 4. Enhances required field behavior with improved UX
  *
- * mais tout ca doit etre configurable
- *
- * par example le code de useRequired
- * ca va juste venir ici et faire partie de comment on gere ce type de validation
- * et on pourra controler chaque type de validation
- *
- * -> le code de use_required vient ici
- * -> le code de use_data_active vient ici
- *
+ * Usage:
+ *   const validity = createInputValidity(inputElement, { onCancel: () => { ... } });
+ *   validity.addCustomValidity("unique_name", "Name already exists");
+ *   validity.removeCustomValidity("unique_name");
  */
 
 import "./input_validity.css" with { type: "css" };
 
 const wrapperWeakMap = new WeakMap();
 
+/**
+ * Creates an input validity controller for the specified input element
+ *
+ * @param {HTMLInputElement} input - The input element to enhance with validity features
+ * @param {Object} options - Configuration options
+ * @param {Function} [options.onCancel] - Callback triggered when the input operation is cancelled
+ * @returns {Object} An object with methods to control input validity
+ */
 export const createInputValidity = (input, { onCancel } = {}) => {
+  // Cache management - retrieves existing controller if one exists for this input
+  // or creates a new one to avoid duplicating event listeners
   const fromCache = wrapperWeakMap.get(input);
   if (fromCache) {
     const { inputValidity, cancelCallbackSet } = fromCache;
@@ -36,6 +41,11 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   }
 
   const cancelCallbackSet = new Set();
+  /**
+   * Triggers all registered cancel callbacks
+   * This is called when user presses Escape or when required fields are
+   * abandoned without input
+   */
   const triggerOnCancel = () => {
     for (const cancelCallback of cancelCallbackSet) {
       cancelCallback();
@@ -56,6 +66,14 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   };
   wrapperWeakMap.set(input, { inputValidity, cancelCallbackSet });
 
+  /**
+   * Attaches an event listener to the input element that will be automatically
+   * removed when the validity controller is cleaned up
+   *
+   * @param {string} eventName - The DOM event name to listen for
+   * @param {Function} eventCallback - Event handler function
+   * @returns {Function} A function that removes this specific event listener
+   */
   const addSelfCleanedEventListenerOnInput = (eventName, eventCallback) => {
     input.addEventListener(eventName, eventCallback);
     const remove = () => {
@@ -66,32 +84,14 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   };
 
   /**
-   * The following html
+   * Visual validation feedback enhancement
    *
-   * ```html
-   * <style>
-   *   input:invalid {
-   *     outline-color: red;
-   *   }
-   * </style>
+   * Prevents inputs from appearing invalid before user interaction by:
+   * 1. Adding a data-active attribute when user starts typing
+   * 2. Removing it when input loses focus
    *
-   * <input required>
-   * ```
-   *
-   * Would make input red without user interaction.
-   *
-   * Here we want to change that for the required validity check:
-   *
-   * 1. When user don't interact, input:invalid should not be visible
-   * 2. When user focus the input, input:invalid should not be visible
-   * 3. When user start typing, input:invalid does not match so we're good
-   * 4. While typing if user makes input empty, input:invalid matches and should be visible
-   *
-   * - It's important to keep input:invalid matching and required attribute at all times
-   * to ensure form submission is blocked.
-   * - We need something to help CSS display :invalid only when condition 4 is met
-   *
-   * -> We put [data-active] when user starts typing and we remove it when input is blurred
+   * CSS can then use [data-active]:invalid to only show validation errors
+   * after user interaction, while still maintaining form validation integrity.
    */
   debounce_invalid_by_interaction: {
     addSelfCleanedEventListenerOnInput("input", () => {
@@ -103,11 +103,14 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   }
 
   /**
-   * Many part of code might want to set a custom validity message
-   * When the error is gone, we want to the the custom validity message
-   * But there is no way for a given part of the app to know if all other errors still applies
+   * Key-based custom validation system
    *
-   * Here we are going to give ability to set/unset a custom validity message by key
+   * Allows different parts of an application to set validation errors
+   * independently without interfering with each other. Each validation
+   * message is associated with a unique key.
+   *
+   * This solves the problem where multiple validation sources might
+   * conflict when trying to set/clear custom validation messages.
    */
   keyed_custom_validity: {
     const validityMessageMap = new Map();
@@ -123,6 +126,14 @@ export const createInputValidity = (input, { onCancel } = {}) => {
     };
 
     let wasJustSet = false;
+    /**
+     * Sets a custom validation message associated with the specified key
+     * The message will be displayed immediately and persist until explicitly removed
+     * or until the user modifies the input (unless set during the input event)
+     *
+     * @param {string} key - Unique identifier for this validation message
+     * @param {string} message - The validation error message to display
+     */
     inputValidity.addCustomValidity = (key, message) => {
       validityMessageMap.set(key, message);
       setAndReportValidity(message);
@@ -132,6 +143,12 @@ export const createInputValidity = (input, { onCancel } = {}) => {
       }, 0);
     };
 
+    /**
+     * Removes a previously set custom validation message
+     * If no other validation messages exist, the input will return to valid state
+     *
+     * @param {string} key - The key of the validation message to remove
+     */
     inputValidity.removeCustomValidity = (key) => {
       validityMessageMap.delete(key);
       if (validityMessageMap.size === 0) {
@@ -148,6 +165,13 @@ export const createInputValidity = (input, { onCancel } = {}) => {
     });
   }
 
+  /**
+   * Escape key handler
+   *
+   * Provides standardized behavior when user presses Escape:
+   * triggers the onCancel callback which typically reverts to previous value
+   * or exits editing mode.
+   */
   cancel_on_escape: {
     addSelfCleanedEventListenerOnInput("keydown", (event) => {
       if (event.key === "Escape") {
@@ -156,6 +180,14 @@ export const createInputValidity = (input, { onCancel } = {}) => {
     });
   }
 
+  /**
+   * Enhanced required field behavior
+   *
+   * Improves UX for required fields by:
+   * 1. Showing validation errors immediately when typing if field becomes empty
+   * 2. Treating blur events on empty required fields as cancellation
+   *    (assuming user doesn't want to complete the action)
+   */
   required: {
     addSelfCleanedEventListenerOnInput("input", () => {
       if (input.validity.valueMissing) {
@@ -170,6 +202,12 @@ export const createInputValidity = (input, { onCancel } = {}) => {
     });
   }
 
+  /**
+   * Enter key validation outside forms
+   *
+   * Makes the Enter key trigger validation even when input is not within a form,
+   * providing consistent behavior with form-embedded inputs.
+   */
   enter_report_validity_outside_form: {
     addSelfCleanedEventListenerOnInput("keydown", (event) => {
       if (!input.form && event.key === "Enter") {
