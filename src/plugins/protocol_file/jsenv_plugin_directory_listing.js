@@ -86,7 +86,7 @@ export const jsenvPluginDirectoryListing = ({
             return null;
           }
         }
-        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent&requestedUrl=${encodeURIComponent(requestedUrl)}`;
+        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
       }
       const isDirectory = fsStat?.isDirectory();
       if (!isDirectory) {
@@ -116,7 +116,6 @@ export const jsenvPluginDirectoryListing = ({
         if (!urlNotFound) {
           return null;
         }
-        const requestedUrl = urlInfo.searchParams.get("requestedUrl");
 
         urlInfo.headers["cache-control"] = "no-cache";
         const enoent = urlInfo.searchParams.has("enoent");
@@ -126,6 +125,10 @@ export const jsenvPluginDirectoryListing = ({
         }
         const request = urlInfo.context.request;
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
+        const requestedUrl = new URL(
+          request.resource.slice(1),
+          rootDirectoryUrl,
+        ).href;
         const directoryListingInjections = generateDirectoryListingInjection(
           urlNotFound,
           {
