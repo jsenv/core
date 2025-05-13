@@ -90,12 +90,14 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   /**
    * Visual validation feedback enhancement
    *
-   * Prevents inputs from appearing invalid before user interaction by:
-   * 1. Adding a data-active attribute when user starts typing
-   * 2. Removing it when input loses focus
+   * Controls when and how validation errors are displayed to the user:
+   * 1. Uses a data-validity-feedback attribute to indicate active validation state
+   * 2. Shows validation errors immediately when appropriate
+   * 3. Removes validation state indicators when input loses focus
+   * 4. Maintains validation state for form-embedded elements on form submission
    *
-   * CSS can then use [data-active]:invalid to only show validation errors
-   * after user interaction, while still maintaining form validation integrity.
+   * This allows CSS to style invalid inputs only when appropriate,
+   * preventing premature error displays while maintaining validation integrity.
    */
   let reportValidity = () => {
     input.reportValidity();
@@ -110,6 +112,17 @@ export const createInputValidity = (input, { onCancel } = {}) => {
     }
   });
 
+  /**
+   * Temporarily removes validation attributes to hide browser validation tooltips
+   *
+   * This is a workaround for browsers that don't automatically hide validation
+   * tooltips when programmatically clearing validation errors. The function:
+   * 1. Saves all validation attribute values
+   * 2. Temporarily removes these attributes
+   * 3. Restores them in the next event loop to maintain validation behavior
+   *
+   * This solution addresses a UI inconsistency in browsers without requiring extra CSS.
+   */
   const removeValidityToLetBrowserTooltipHide = () => {
     if (input.validity.valid) {
       return;
@@ -149,6 +162,11 @@ export const createInputValidity = (input, { onCancel } = {}) => {
    * independently without interfering with each other. Each validation
    * message is associated with a unique key.
    *
+   * When multiple validation messages exist:
+   * - All are stored in the internal map
+   * - The first message encountered is displayed to the user
+   * - Removing any key will update the displayed message or clear it if no errors remain
+   *
    * This solves the problem where multiple validation sources might
    * conflict when trying to set/clear custom validation messages.
    */
@@ -156,15 +174,18 @@ export const createInputValidity = (input, { onCancel } = {}) => {
     const validityMessageMap = new Map();
     /**
      * Sets a custom validation message associated with the specified key
-     * The message will be displayed immediately and persist until explicitly removed
-     * or until the user modifies the input (unless set during the input event)
+     *
+     * When called, this method will:
+     * 1. Store the validation message in an internal map
+     * 2. Apply the message to the input element
+     * 3. If the input is not focused, show validation feedback and focus the input
+     * 4. Set up an event listener to clear this specific error on the first input event
      *
      * @param {string} key - Unique identifier for this validation message
      * @param {string} message - The validation error message to display
      */
     inputValidity.addCustomValidity = (key, message) => {
       validityMessageMap.set(key, message);
-      console.log("custom", message);
       input.setCustomValidity(message);
       if (document.activeElement !== input) {
         // called outside "input" event
@@ -179,7 +200,11 @@ export const createInputValidity = (input, { onCancel } = {}) => {
 
     /**
      * Removes a previously set custom validation message
-     * If no other validation messages exist, the input will return to valid state
+     *
+     * This method:
+     * 1. Removes the specified validation key from the internal map
+     * 2. If no validation messages remain, clears the input's custom validity state
+     * 3. Ensures any lingering browser validation tooltips are hidden
      *
      * @param {string} key - The key of the validation message to remove
      */
@@ -211,12 +236,13 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   }
 
   /**
-   * Enhanced required field behavior
+   * Enhanced empty field handling
    *
-   * Improves UX for required fields by:
-   * 1. Showing validation errors immediately when typing if field becomes empty
-   * 2. Treating blur events on empty required fields as cancellation
-   *    (assuming user doesn't want to complete the action)
+   * Improves UX by treating blur events on empty inputs as a cancellation,
+   * assuming the user doesn't want to complete the action.
+   *
+   * This is especially useful for optional fields or when a user starts
+   * an edit operation but changes their mind.
    */
   cancel_on_blur_empty: {
     addSelfCleanedEventListenerOnInput("blur", () => {
@@ -229,8 +255,10 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   /**
    * Enter key validation outside forms
    *
-   * Makes the Enter key trigger validation even when input is not within a form,
+   * Makes the Enter key trigger validation display even when input is not within a form,
    * providing consistent behavior with form-embedded inputs.
+   *
+   * This is particularly useful for standalone inputs that still need validation feedback.
    */
   enter_report_validity_outside_form: {
     addSelfCleanedEventListenerOnInput("keydown", (event) => {
