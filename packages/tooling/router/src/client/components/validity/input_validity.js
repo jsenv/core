@@ -73,6 +73,9 @@ const _createInputValidity = (input) => {
         removeCustomValidity: () => inputValidity.removeCustomValidity(key),
         unsubscribe: () => {
           subscribeCount--;
+          if (onCancel) {
+            cancelCallbackSet.delete(onCancel);
+          }
           if (subscribeCount > 0) {
             return;
           }
@@ -137,6 +140,10 @@ const _createInputValidity = (input) => {
       }
       input.setAttribute("data-validity-feedback", "");
     }
+    const rm = addSelfCleanedEventListenerOnInput("input", () => {
+      validityTooltipDisplayed = false;
+      rm();
+    });
   });
 
   /**

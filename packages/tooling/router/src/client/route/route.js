@@ -6,7 +6,7 @@ import { normalizeUrl } from "../normalize_url.js";
 import { goTo, installNavigation, reload } from "../router.js";
 import { ABORTED, FAILED, IDLE, LOADED, LOADING } from "./route_status.js";
 
-let debug = true;
+let debug = false;
 
 let baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href

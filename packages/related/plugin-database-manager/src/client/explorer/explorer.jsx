@@ -236,15 +236,19 @@ const RoleRenameInput = ({ role, stopRenaming }) => {
       autoSelect
       value={rolname}
       action={renameAction}
-      onCancel={() => {
+      onCancel={(reason) => {
+        console.log("cancel", reason);
         stopRenaming();
       }}
       onSubmitEnd={() => {
+        console.log("submit end");
         stopRenaming();
       }}
       onInput={(e) => {
         const input = e.target;
         const inputValue = input.value;
+        const hasConflict = otherNameSet.has(inputValue);
+        console.log({ hasConflict });
         if (otherNameSet.has(inputValue)) {
           addNameConflict(
             `Role "${inputValue}" already exists. Please choose another name.`,

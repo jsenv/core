@@ -154,7 +154,7 @@ export const SPAForm = forwardRef(
             } else {
               setError(error);
             }
-          } else {
+          } else if (onSubmitEnd) {
             onSubmitEnd();
           }
         }}

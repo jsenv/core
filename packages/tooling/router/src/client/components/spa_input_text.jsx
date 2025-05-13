@@ -83,10 +83,10 @@ const InputText = forwardRef(
     );
     useRequestSubmitOnChange(innerRef, { preventWhenValueMissing: true });
     useValidity(innerRef, null, {
-      onCancel: () => {
+      onCancel: (reason) => {
         innerRef.current.value = value;
         if (onCancel) {
-          onCancel();
+          onCancel(reason);
         }
       },
     });
