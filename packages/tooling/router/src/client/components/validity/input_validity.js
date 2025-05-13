@@ -110,6 +110,38 @@ export const createInputValidity = (input, { onCancel } = {}) => {
     }
   });
 
+  const removeValidityToLetBrowserTooltipHide = () => {
+    if (input.validity.valid) {
+      return;
+    }
+    const validationAttributes = [
+      "pattern",
+      "min",
+      "max",
+      "required",
+      "minlength",
+      "maxlength",
+    ];
+    const savedAttributeMap = new Map();
+    for (const validationAttribute of validationAttributes) {
+      if (input.hasAttribute(validationAttribute)) {
+        savedAttributeMap.set(
+          validationAttribute,
+          input.getAttribute(validationAttribute),
+        );
+        input.removeAttribute(validationAttribute);
+      }
+    }
+    queueMicrotask(() => {
+      for (const [attr, value] of savedAttributeMap) {
+        input.setAttribute(attr, value);
+      }
+    });
+  };
+  cancelCallbackSet.add(() => {
+    removeValidityToLetBrowserTooltipHide();
+  });
+
   /**
    * Key-based custom validation system
    *
@@ -135,7 +167,13 @@ export const createInputValidity = (input, { onCancel } = {}) => {
       console.log("custom", message);
       input.setCustomValidity(message);
       if (document.activeElement !== input) {
+        // called outside "input" event
         reportValidity();
+        input.focus();
+        const remove = addSelfCleanedEventListenerOnInput("input", () => {
+          remove();
+          inputValidity.removeCustomValidity(key);
+        });
       }
     };
 
@@ -149,6 +187,7 @@ export const createInputValidity = (input, { onCancel } = {}) => {
       validityMessageMap.delete(key);
       if (validityMessageMap.size === 0) {
         input.setCustomValidity("");
+        removeValidityToLetBrowserTooltipHide();
       }
     };
   }
@@ -163,6 +202,8 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   cancel_on_escape: {
     addSelfCleanedEventListenerOnInput("keydown", (event) => {
       if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
         input.blur();
         triggerOnCancel();
       }

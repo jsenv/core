@@ -50,6 +50,30 @@
 
       import { createInputValidity } from "./input_validity.js";
 
+      const withForm = document.querySelector("#with_form");
+      withForm.onkeydown = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          withForm.form.requestSubmit();
+        }
+      };
+      const withFormInputValidity = createInputValidity(withForm, {
+        onCancel: () => {
+          withForm.value = "b";
+        },
+      });
+      const withFormAddButton = document.querySelector("#with_form_add");
+      const withFormRemoveButton = document.querySelector("#with_form_remove");
+      withFormAddButton.onclick = () => {
+        withFormInputValidity.addCustomValidity(
+          "custom_error",
+          "Custom error message",
+        );
+      };
+      withFormRemoveButton.onclick = () => {
+        withFormInputValidity.removeCustomValidity("custom_error");
+      };
+
       const withoutForm = document.querySelector("#without_form");
       const withoutFormInputValidity = createInputValidity(withoutForm, {
         onCancel: () => {
@@ -68,30 +92,6 @@
       };
       withoutFormRemoveButton.onclick = () => {
         withoutFormInputValidity.removeCustomValidity("custom_error");
-      };
-
-      const withForm = document.querySelector("#with_form");
-      withForm.onkeydown = (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          withForm.form.requestSubmit();
-        }
-      };
-      const withFormInputValidity = createInputValidity(withForm, {
-        onCancel: () => {
-          withoutForm.value = "b";
-        },
-      });
-      const withFormAddButton = document.querySelector("#with_form_add");
-      const withFormRemoveButton = document.querySelector("#with_form_remove");
-      withFormAddButton.onclick = () => {
-        withFormInputValidity.addCustomValidity(
-          "custom_error",
-          "Custom error message",
-        );
-      };
-      withFormRemoveButton.onclick = () => {
-        withFormInputValidity.removeCustomValidity("custom_error");
       };
 
       const enable = document.querySelector("#enable");
