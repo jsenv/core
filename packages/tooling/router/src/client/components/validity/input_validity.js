@@ -145,7 +145,7 @@ export const createInputValidity = (input, { onCancel } = {}) => {
         input.removeAttribute(validationAttribute);
       }
     }
-    queueMicrotask(() => {
+    setTimeout(() => {
       for (const [attr, value] of savedAttributeMap) {
         input.setAttribute(attr, value);
       }
@@ -212,7 +212,9 @@ export const createInputValidity = (input, { onCancel } = {}) => {
       validityMessageMap.delete(key);
       if (validityMessageMap.size === 0) {
         input.setCustomValidity("");
-        removeValidityToLetBrowserTooltipHide();
+        if (document.activeElement !== input) {
+          removeValidityToLetBrowserTooltipHide();
+        }
       }
     };
   }
