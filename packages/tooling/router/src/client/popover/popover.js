@@ -184,17 +184,13 @@ class JsenvPopover extends HTMLElement {
       svgPath.setAttribute("d", path);
     };
 
-    requestAnimationFrame(() => {
-      updateSvgPath();
-    });
-
+    updateSvgPath();
     let rafId = null;
     const resizeObserver = new ResizeObserver(() => {
       // Cancel any pending animation frame
       if (rafId) {
         cancelAnimationFrame(rafId);
       }
-
       // Schedule a new update on next animation frame
       rafId = requestAnimationFrame(updateSvgPath);
     });
@@ -223,7 +219,6 @@ const followPosition = (
 
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
-
     // For bottom position (arrow points up to the input)
     if (position === "bottom") {
       element.style.position = "absolute";
@@ -241,8 +236,7 @@ const followPosition = (
       element.style.transform = "translateX(-50%)";
     }
   };
-
-  const observer = new IntersectionObserver((entries) => {
+  const intersectionObserver = new IntersectionObserver((entries) => {
     for (const entry of entries) {
       // Si l'élément cible est visible
       if (entry.isIntersecting) {
@@ -259,8 +253,9 @@ const followPosition = (
       }
     }
   }, options);
-
   updatePosition();
+  intersectionObserver.observe(elementToFollow);
+
   let rafId = null;
   const resizeObserver = new ResizeObserver(() => {
     if (rafId) {
@@ -271,7 +266,7 @@ const followPosition = (
   resizeObserver.observe(elementToFollow);
 
   return () => {
-    observer.disconnect();
+    intersectionObserver.disconnect();
     resizeObserver.disconnect();
   };
 };
@@ -288,31 +283,31 @@ export const showPopover = (
     arrowDirection = "down"; // Arrow points down when popover is above the element
   }
   const jsenvPopover = new JsenvPopover(innerHtml, { arrowDirection });
-  document.body.appendChild(jsenvPopover);
-
-  // Wait for the popover to be positioned and rendered
-  setTimeout(() => {
-    // Check if the popover is partially out of view
-    const popoverRect = jsenvPopover.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-
-    if (popoverRect.bottom > viewportHeight) {
-      // Calculate how much we need to scroll to show the popover
-      // without affecting its position relative to the element
-      const scrollAmount = popoverRect.bottom - viewportHeight + 20; // Add 20px padding
-
-      // Smoothly scroll just enough to show the popover
-      window.scrollBy({
-        top: scrollAmount,
-        behavior: "smooth",
-      });
-    }
-  }, 50);
 
   const stopFollowingPosition = followPosition(jsenvPopover, elementToFollow, {
     position,
     topSpacing: strokeWidth + arrowHeight / 2,
   });
+
+  document.body.appendChild(jsenvPopover);
+
+  // Wait for the popover to be positioned and rendered
+
+  // Check if the popover is partially out of view
+  const popoverRect = jsenvPopover.getBoundingClientRect();
+  const viewportHeight = window.innerHeight;
+
+  if (popoverRect.bottom > viewportHeight) {
+    // Calculate how much we need to scroll to show the popover
+    // without affecting its position relative to the element
+    const scrollAmount = popoverRect.bottom - viewportHeight + 20; // Add 20px padding
+
+    // Smoothly scroll just enough to show the popover
+    window.scrollBy({
+      top: scrollAmount,
+      behavior: "smooth",
+    });
+  }
 
   return () => {
     stopFollowingPosition();
