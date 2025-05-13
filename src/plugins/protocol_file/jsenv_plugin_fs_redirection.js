@@ -172,10 +172,8 @@ const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
     if (existsSync(indexHtmlFileUrl)) {
       return indexHtmlFileUrl.href;
     }
-    const htmlFileUrlCandidate = new URL(
-      `${urlToFilename(directoryUrl)}.html`,
-      directoryUrl,
-    );
+    const filename = urlToFilename(directoryUrl);
+    const htmlFileUrlCandidate = new URL(`${filename}.html`, directoryUrl);
     if (existsSync(htmlFileUrlCandidate)) {
       return htmlFileUrlCandidate.href;
     }
