@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Validity demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div id="app">
+      <h1>Validity demo</h1>
+
+      <h2>Input without form</h2>
+      <input id="without_form" type="text" required value="a" />
+      <button id="without_form_add">Add custom error</button>
+      <button id="without_form_remove">Remove custom error</button>
+
+      <h2>Input with form</h2>
+      <form action="javascript:void(0)">
+        <input id="with_form" type="text" required value="b" />
+        <button id="with_form_add">Add custom error</button>
+        <button id="with_form_remove">Remove custom error</button>
+      </form>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { createInputValidity } from "./input_validity.js";
+
+      const withoutForm = document.querySelector("#without_form");
+
+      const withoutFormInputValidity = createInputValidity(withoutForm, {
+        onCancel: () => {
+          withoutForm.value = "a";
+        },
+      });
+      const withoutFormAddButton = document.querySelector("#without_form_add");
+      const withoutFormRemoveButton = document.querySelector(
+        "#without_form_remove",
+      );
+      withoutFormAddButton.onclick = () => {
+        withoutFormInputValidity.addCustomValidity(
+          "custom_error",
+          "Custom error message",
+        );
+      };
+      withoutFormRemoveButton.onclick = () => {
+        withoutFormInputValidity.removeCustomValidity("custom_error");
+      };
+
+      const withForm = document.querySelector("#with_form");
+
+      const withFormInputValidity = createInputValidity(withForm, {
+        onCancel: () => {
+          withoutForm.value = "b";
+        },
+      });
+      const withFormAddButton = document.querySelector("#with_form_add");
+      const withFormRemoveButton = document.querySelector("#with_form_remove");
+      withFormAddButton.onclick = () => {
+        withFormInputValidity.addCustomValidity(
+          "custom_error",
+          "Custom error message",
+        );
+      };
+      withFormRemoveButton.onclick = () => {
+        withFormInputValidity.removeCustomValidity("custom_error");
+      };
+    </script>
+  </body>
+</html>

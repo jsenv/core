@@ -96,30 +96,3 @@ const InputText = forwardRef(
     );
   },
 );
-
-const useRequired = (inputRef, value) => {
-  useLayoutEffect(() => {
-    const input = inputRef.current;
-    if (!input.required) {
-      return null;
-    }
-    const oninput = () => {
-      if (input.validity.valueMissing) {
-        input.reportValidity();
-      }
-    };
-    const onblur = () => {
-      if (input.validity.valueMissing) {
-        // dont keep the invalid invalid and empty, restore
-        // the value when user stops interacting
-        input.value = value;
-      }
-    };
-    input.addEventListener("input", oninput);
-    input.addEventListener("blur", onblur);
-    return () => {
-      input.removeEventListener("input", oninput);
-      input.removeEventListener("blur", onblur);
-    };
-  }, []);
-};

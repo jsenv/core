@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Validity demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef } from "preact/hooks";
+      import { useValidity } from "./use_validity.js";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div>
+            <h1>Validity demo</h1>
+
+            <h2>Input without form</h2>
+            <InputRequiredWithoutForm />
+
+            <h2>Input with form</h2>
+            <InputRequiredWithForm />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputRequiredWithoutForm = () => {
+        const inputRef = useRef(null);
+        useValidity(inputRef);
+
+        return <input ref={inputRef} type="text" required value="a" />;
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputRequiredWithForm = () => {
+        const formRef = useRef(null);
+        const inputRef = useRef(null);
+        useValidity(inputRef, formRef);
+
+        return (
+          // eslint-disable-next-line no-script-url
+          <form ref={formRef} action="javascript:void(0)">
+            <input ref={inputRef} type="text" required value="a" />
+          </form>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

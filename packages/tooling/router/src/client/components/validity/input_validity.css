@@ -1,0 +1,4 @@
+input[data-active]:invalid,
+input[data-error]:invalid {
+  outline-color: red;
+}
