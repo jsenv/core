@@ -20,6 +20,7 @@ export {
   useRouteUrl,
   useRouteParam,
 } from "./client/route/route_hooks.js";
+export { useValidity } from "./client/components/validity/use_validity.js";
 export {
   ErrorBoundaryContext,
   useResetErrorBoundary,

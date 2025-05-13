@@ -5,28 +5,40 @@ import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
-import { useDataActive } from "./use_data_active.js";
-import { createCustomValidityWrapper } from "./custom_validity_wrapper.js";
+import { useValidity } from "./validity/use_validity.js";
 
 export const SPAInputText = forwardRef(
-  (
-    { action, onActionSuccess, onActionStart, method = "PUT", label, ...rest },
-    ref,
-  ) => {
+  ({ action, onPending, method = "PUT", label, ...rest }, ref) => {
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => {
       const input = innerRef.current;
       return input;
     });
+    // custom validity is great as long as you don't have many error hapenning in parallel
+    // in that case only the last once will be displayed
+    // ideally they would all be displayed
+    // but for this we would have to implement our own way to display errors
+    // for now we'll stick to the custom validity api
+    const [addFormErrorValidity, removeFormErrorValidity] =
+      useValidity(innerRef);
     const input = <InputText ref={innerRef} action={action} {...rest} />;
 
     return (
       <SPAForm
         action={action}
         method={method}
-        errorCustomValidityRef={innerRef}
-        onActionStart={onActionStart}
-        onActionSuccess={onActionSuccess}
+        onPending={async (pendingInfo) => {
+          if (onPending) {
+            onPending(pendingInfo);
+          }
+
+          removeFormErrorValidity();
+          try {
+            await pendingInfo.finished;
+          } catch (e) {
+            addFormErrorValidity(e);
+          }
+        }}
       >
         {label ? (
           <label>
@@ -43,14 +55,22 @@ export const SPAInputText = forwardRef(
 
 const InputText = forwardRef(
   (
-    { autoFocus, autoSelect, required, action, name, value, onInput, ...rest },
+    {
+      autoFocus,
+      autoSelect,
+      required,
+      action,
+      name,
+      value,
+      onCancel,
+      onInput,
+      ...rest
+    },
     ref,
   ) => {
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => {
       const input = innerRef.current;
-      const customValidation = createCustomValidityWrapper(input);
-      input.customValidation = customValidation;
       return input;
     });
     const { pending } = useActionStatus(action);
@@ -59,9 +79,15 @@ const InputText = forwardRef(
       name,
     );
     useRequestSubmitOnChange(innerRef, { preventWhenValueMissing: true });
-    useRequired(innerRef, value);
+    useValidity(innerRef, null, {
+      onCancel: () => {
+        innerRef.current.value = value;
+        if (onCancel) {
+          onCancel();
+        }
+      },
+    });
 
-    useDataActive(innerRef);
     // autoFocus does not work so we focus in a useLayoutEffect,
     // see https://github.com/preactjs/preact/issues/1255
     useLayoutEffect(() => {

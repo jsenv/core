@@ -44,14 +44,7 @@ export const SPAForm = forwardRef(
       method = "get",
       formDataMappings,
       children,
-      // custom validity is great as long as you don't have many error hapenning in parallel
-      // in that case only the last once will be displayed
-      // ideally they would all be displayed
-      // but for this we would have to implement our own way to display errors
-      // for now we'll stick to the custom validity api
-      errorCustomValidityRef,
-      onActionStart,
-      onActionSuccess,
+      onPending,
       ...rest
     },
     ref,
@@ -65,28 +58,11 @@ export const SPAForm = forwardRef(
     const [error, setError] = useState(null);
     const resetErrorBoundary = useResetErrorBoundary();
     useLayoutEffect(() => {
-      if (errorCustomValidityRef) {
-        const inputDisplayingError = errorCustomValidityRef.current;
-        const { customValidation } = inputDisplayingError;
-        if (!customValidation) {
-          console.error(
-            "SPAForm: customValidation missing on",
-            inputDisplayingError,
-          );
-          return;
-        }
-        if (error) {
-          customValidation.set("form_error", error.message);
-        } else {
-          customValidation.delete("form_error");
-        }
-        return;
-      }
       if (error) {
         error.__handled__ = true; // prevent jsenv from displaying it
         throw error;
       }
-    }, [error, errorCustomValidityRef]);
+    }, [error]);
 
     method = method.toLowerCase();
 
@@ -139,9 +115,6 @@ export const SPAForm = forwardRef(
             method,
             action,
           });
-          if (onActionStart) {
-            onActionStart(innerRef.current);
-          }
           const formData = new FormData(submitEvent.currentTarget);
           if (formDataMappings) {
             for (const [key, mapping] of Object.entries(formDataMappings)) {
@@ -151,6 +124,19 @@ export const SPAForm = forwardRef(
                 formData.set(key, valueMapped);
               }
             }
+          }
+
+          let _resolve;
+          let _reject;
+          if (onPending) {
+            const finished = new Promise((resolve, reject) => {
+              _resolve = resolve;
+              _reject = reject;
+            });
+            const pendingInfo = {
+              finished,
+            };
+            onPending(pendingInfo);
           }
           await applyRoutingOnFormSubmission({
             method: method.toUpperCase(),
@@ -169,11 +155,13 @@ export const SPAForm = forwardRef(
             method,
             action,
           });
-          const success = !error && !aborted;
-          if (success && onActionSuccess) {
-            onActionSuccess();
-          }
-          if (error) {
+          if (_resolve) {
+            if (error) {
+              _reject(error);
+            } else {
+              _resolve({ aborted });
+            }
+          } else if (error) {
             setError(error);
           }
         }}

@@ -5,12 +5,14 @@
 
 import { effect } from "@preact/signals";
 import { useState, useCallback, useRef } from "preact/hooks";
+import { forwardRef } from "preact/compat";
 import {
   useDetails,
   SPALink,
   SPAInputText,
   useRouteIsMatching,
   useAction,
+  useValidity,
 } from "@jsenv/router";
 import {
   UserWithHatSvg,
@@ -114,7 +116,8 @@ const ExplorerGroupRoles = () => {
               // si on a rien rentré on le cré pas, sinon oui on le cré
               stopCreatingNew();
             }}
-            onActionSuccess={() => {
+            onPending={async (pendingInfo) => {
+              await pendingInfo.finished;
               stopCreatingNew();
             }}
           />
@@ -190,45 +193,9 @@ const ExplorerGroupItemRole = ({ role }) => {
 const RolnameOrRenameInput = ({ role, isRenaming, stopRenaming }) => {
   const rolname = role.rolname;
   const isOpened = useRouteIsMatching(GET_ROLE_ROUTE, { rolname });
-  const renameAction = useAction(PUT_ROLE_ACTION, {
-    rolname,
-    columnName: "rolname",
-  });
-  const roles = useRoleList();
 
   if (isRenaming) {
-    const otherNameSet = new Set();
-    for (const roleCandidate of roles) {
-      if (roleCandidate === role) {
-        continue;
-      }
-      otherNameSet.add(roleCandidate.rolname);
-    }
-    return (
-      <RoleNameInput
-        autoSelect
-        value={rolname}
-        action={renameAction}
-        onCancel={() => {
-          stopRenaming();
-        }}
-        onActionSuccess={() => {
-          stopRenaming();
-        }}
-        onInput={(e) => {
-          const input = e.target;
-          const inputValue = input.value;
-          if (otherNameSet.has(inputValue)) {
-            input.customValidation.set(
-              "name_conlict",
-              `Role "${inputValue}" already exists. Please choose another name.`,
-            );
-          } else {
-            input.customValidation.delete("name_conflict");
-          }
-        }}
-      />
-    );
+    return <RoleRenameInput role={role} stopRenaming={stopRenaming} />;
   }
   return (
     <span
@@ -243,37 +210,78 @@ const RolnameOrRenameInput = ({ role, isRenaming, stopRenaming }) => {
   );
 };
 
-const ExplorerGroupItem = ({ children }) => {
-  return <li className="explorer_group_item">{children}</li>;
-};
+const RoleRenameInput = ({ role, stopRenaming }) => {
+  const roles = useRoleList();
+  const rolname = role.rolname;
 
-const RoleNameInput = ({ action, onCancel, onActionSuccess, ...rest }) => {
+  const renameAction = useAction(PUT_ROLE_ACTION, {
+    rolname,
+    columnName: "rolname",
+  });
+  const inputRef = useRef();
+  const [addNameConflict, removeNameConflict] = useValidity(
+    inputRef,
+    "name_conflict",
+  );
+  const otherNameSet = new Set();
+  for (const roleCandidate of roles) {
+    if (roleCandidate === role) {
+      continue;
+    }
+    otherNameSet.add(roleCandidate.rolname);
+  }
+
   return (
-    <SPAInputText
-      name="rolname"
-      autoFocus
-      required
-      action={action}
-      autoComplete="off" // just because sometime it catches the escape key
-      onKeyDown={(e) => {
-        if (e.key === "Escape") {
-          e.target.value = rest.value; // reset value to original to prevent "change" (that would submit)
-          onCancel();
-        }
+    <RoleNameInput
+      ref={inputRef}
+      autoSelect
+      value={rolname}
+      action={renameAction}
+      onCancel={() => {
+        stopRenaming();
       }}
-      onBlur={(e) => {
+      onPending={async (pendingInfo) => {
+        await pendingInfo.finished;
+        stopRenaming();
+      }}
+      onInput={(e) => {
         const input = e.target;
-        if (!input.validity.valid) {
-          onCancel();
+        const inputValue = input.value;
+        if (otherNameSet.has(inputValue)) {
+          addNameConflict(
+            `Role "${inputValue}" already exists. Please choose another name.`,
+          );
+        } else {
+          removeNameConflict();
         }
       }}
-      onActionSuccess={onActionSuccess}
-      {...rest}
     />
   );
 };
 
-const NewItem = ({ onCancel, onActionSuccess }) => {
+const ExplorerGroupItem = ({ children }) => {
+  return <li className="explorer_group_item">{children}</li>;
+};
+
+const RoleNameInput = forwardRef(
+  ({ action, onCancel, onPending, ...rest }, ref) => {
+    return (
+      <SPAInputText
+        ref={ref}
+        name="rolname"
+        autoFocus
+        required
+        action={action}
+        autoComplete="off" // just because sometime it catches the escape key
+        onCancel={onCancel}
+        onPending={onPending}
+        {...rest}
+      />
+    );
+  },
+);
+
+const NewItem = ({ onCancel, onPending }) => {
   const createRoleAction = useAction(POST_ROLE_ACTION);
   return (
     <ExplorerGroupItem>
@@ -284,7 +292,7 @@ const NewItem = ({ onCancel, onActionSuccess }) => {
         <RoleNameInput
           action={createRoleAction}
           onCancel={onCancel}
-          onActionSuccess={onActionSuccess}
+          onPending={onPending}
         />
       </span>
     </ExplorerGroupItem>

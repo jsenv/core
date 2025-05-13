@@ -4,18 +4,35 @@ import { forwardRef } from "preact/compat";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
-import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
-import { createCustomValidityWrapper } from "./custom_validity_wrapper.js";
+import { useValidity } from "./validity/use_validity.js";
 
-export const SPACheckbox = ({ action, label, method = "PUT", ...rest }) => {
+export const SPACheckbox = ({
+  action,
+  label,
+  method = "PUT",
+  onPending,
+  ...rest
+}) => {
   const checkboxRef = useRef(null);
+  const [addFormErrorValidity, removeFormErrorValidity] =
+    useValidity(checkboxRef);
   const checkbox = <Checkbox ref={checkboxRef} action={action} {...rest} />;
 
   return (
     <SPAForm
       action={action}
       method={method}
-      errorCustomValidityRef={checkboxRef}
+      onPending={async (pendingInfo) => {
+        if (onPending) {
+          onPending(pendingInfo);
+        }
+        removeFormErrorValidity();
+        try {
+          await pendingInfo.finished;
+        } catch (e) {
+          addFormErrorValidity(e);
+        }
+      }}
     >
       {label ? (
         <label>
@@ -39,11 +56,13 @@ const Checkbox = forwardRef(({ action, name, checked, ...rest }, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => {
     const input = innerRef.current;
-    const customValidation = createCustomValidityWrapper(input);
-    input.customValidation = customValidation;
     return input;
   });
-  useRequestSubmitOnChange(innerRef);
+  useValidity(innerRef, null, {
+    onCancel: () => {
+      innerRef.current.checked = checked;
+    },
+  });
 
   return (
     <LoaderBackground pending={pending}>
