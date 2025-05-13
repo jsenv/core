@@ -28,7 +28,10 @@ const wrapperWeakMap = new WeakMap();
  * @param {Function} [options.onCancel] - Callback triggered when the input operation is cancelled
  * @returns {Object} An object with methods to control input validity
  */
-export const createInputValidity = (input, { onCancel } = {}) => {
+export const createInputValidity = (
+  input,
+  { requestSubmitOnChange = true, onCancel } = {},
+) => {
   // Cache management - retrieves existing controller if one exists for this input
   // or creates a new one to avoid duplicating event listeners
   const fromCache = wrapperWeakMap.get(input);
@@ -229,10 +232,11 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   cancel_on_escape: {
     addSelfCleanedEventListenerOnInput("keydown", (event) => {
       if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
         input.blur();
         triggerOnCancel();
+        if (input.isConnected) {
+          input.focus();
+        }
       }
     });
   }
@@ -266,6 +270,24 @@ export const createInputValidity = (input, { onCancel } = {}) => {
     addSelfCleanedEventListenerOnInput("keydown", (event) => {
       if (!input.form && event.key === "Enter") {
         reportValidity();
+      }
+    });
+  }
+
+  if (requestSubmitOnChange) {
+    addSelfCleanedEventListenerOnInput("change", () => {
+      const form = input.form;
+      if (!form) {
+        return;
+      }
+      if (input.validity.valueMissing) {
+        // considered as cancellation
+        return;
+      }
+      if (input.checkValidity()) {
+        form.requestSubmit();
+      } else {
+        input.reportValidity();
       }
     });
   }
