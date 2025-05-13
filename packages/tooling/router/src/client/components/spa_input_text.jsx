@@ -8,7 +8,10 @@ import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 import { useValidity } from "./validity/use_validity.js";
 
 export const SPAInputText = forwardRef(
-  ({ action, onPending, method = "PUT", label, ...rest }, ref) => {
+  (
+    { action, onSubmitStart, onSubmitError, method = "PUT", label, ...rest },
+    ref,
+  ) => {
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => {
       const input = innerRef.current;
@@ -27,16 +30,16 @@ export const SPAInputText = forwardRef(
       <SPAForm
         action={action}
         method={method}
-        onPending={async (pendingInfo) => {
-          if (onPending) {
-            onPending(pendingInfo);
-          }
-
+        onSubmitStart={() => {
           removeFormErrorValidity();
-          try {
-            await pendingInfo.finished;
-          } catch (e) {
-            addFormErrorValidity(e);
+          if (onSubmitStart) {
+            onSubmitStart();
+          }
+        }}
+        onSubmitError={(e) => {
+          addFormErrorValidity(e);
+          if (onSubmitError) {
+            onSubmitError(e);
           }
         }}
       >

@@ -44,7 +44,9 @@ export const SPAForm = forwardRef(
       method = "get",
       formDataMappings,
       children,
-      onPending,
+      onSubmitStart,
+      onSubmitError,
+      onSubmitEnd,
       ...rest
     },
     ref,
@@ -126,17 +128,8 @@ export const SPAForm = forwardRef(
             }
           }
 
-          let _resolve;
-          let _reject;
-          if (onPending) {
-            const finished = new Promise((resolve, reject) => {
-              _resolve = resolve;
-              _reject = reject;
-            });
-            const pendingInfo = {
-              finished,
-            };
-            onPending(pendingInfo);
+          if (onSubmitStart) {
+            onSubmitStart();
           }
           await applyRoutingOnFormSubmission({
             method: method.toUpperCase(),
@@ -155,14 +148,14 @@ export const SPAForm = forwardRef(
             method,
             action,
           });
-          if (_resolve) {
-            if (error) {
-              _reject(error);
+          if (error) {
+            if (onSubmitError) {
+              onSubmitError(error);
             } else {
-              _resolve({ aborted });
+              setError(error);
             }
-          } else if (error) {
-            setError(error);
+          } else {
+            onSubmitEnd();
           }
         }}
         method={method === "get" ? "get" : "post"}

@@ -116,8 +116,7 @@ const ExplorerGroupRoles = () => {
               // si on a rien rentré on le cré pas, sinon oui on le cré
               stopCreatingNew();
             }}
-            onPending={async (pendingInfo) => {
-              await pendingInfo.finished;
+            onSubmitEnd={() => {
               stopCreatingNew();
             }}
           />
@@ -240,8 +239,7 @@ const RoleRenameInput = ({ role, stopRenaming }) => {
       onCancel={() => {
         stopRenaming();
       }}
-      onPending={async (pendingInfo) => {
-        await pendingInfo.finished;
+      onSubmitEnd={() => {
         stopRenaming();
       }}
       onInput={(e) => {
@@ -263,25 +261,22 @@ const ExplorerGroupItem = ({ children }) => {
   return <li className="explorer_group_item">{children}</li>;
 };
 
-const RoleNameInput = forwardRef(
-  ({ action, onCancel, onPending, ...rest }, ref) => {
-    return (
-      <SPAInputText
-        ref={ref}
-        name="rolname"
-        autoFocus
-        required
-        action={action}
-        autoComplete="off" // just because sometime it catches the escape key
-        onCancel={onCancel}
-        onPending={onPending}
-        {...rest}
-      />
-    );
-  },
-);
+const RoleNameInput = forwardRef(({ action, onCancel, ...rest }, ref) => {
+  return (
+    <SPAInputText
+      ref={ref}
+      name="rolname"
+      autoFocus
+      required
+      action={action}
+      autoComplete="off" // just because sometime it catches the escape key
+      onCancel={onCancel}
+      {...rest}
+    />
+  );
+});
 
-const NewItem = ({ onCancel, onPending }) => {
+const NewItem = ({ onCancel, ...rest }) => {
   const createRoleAction = useAction(POST_ROLE_ACTION);
   return (
     <ExplorerGroupItem>
@@ -292,7 +287,7 @@ const NewItem = ({ onCancel, onPending }) => {
         <RoleNameInput
           action={createRoleAction}
           onCancel={onCancel}
-          onPending={onPending}
+          {...rest}
         />
       </span>
     </ExplorerGroupItem>

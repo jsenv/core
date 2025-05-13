@@ -10,7 +10,8 @@ export const SPACheckbox = ({
   action,
   label,
   method = "PUT",
-  onPending,
+  onSubmitStart,
+  onSubmitError,
   ...rest
 }) => {
   const checkboxRef = useRef(null);
@@ -22,15 +23,16 @@ export const SPACheckbox = ({
     <SPAForm
       action={action}
       method={method}
-      onPending={async (pendingInfo) => {
-        if (onPending) {
-          onPending(pendingInfo);
-        }
+      onSubmitStart={() => {
         removeFormErrorValidity();
-        try {
-          await pendingInfo.finished;
-        } catch (e) {
-          addFormErrorValidity(e);
+        if (onSubmitStart) {
+          onSubmitStart();
+        }
+      }}
+      onSubmitError={(e) => {
+        addFormErrorValidity(e);
+        if (onSubmitError) {
+          onSubmitError(e);
         }
       }}
     >
