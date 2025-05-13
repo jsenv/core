@@ -39,7 +39,7 @@ const css = /*css*/ `
   height: 100%;
   z-index: 0;
   overflow: visible;
-  
+  pointer-events: none;
 }
 
 .popover_border {
@@ -60,7 +60,7 @@ const html = /* html */ `<style>
   </div>`;
 
 class JsenvPopover extends HTMLElement {
-  constructor(innerHTML, { position }) {
+  constructor(innerHTML, { arrowDirection }) {
     super();
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = html;
@@ -68,7 +68,7 @@ class JsenvPopover extends HTMLElement {
 
     const content = popoverElement.querySelector(".popover_content");
     content.innerHTML = innerHTML;
-    this.position = position;
+    this.arrowDirection = arrowDirection;
   }
 
   connectedCallback() {
@@ -76,7 +76,7 @@ class JsenvPopover extends HTMLElement {
     const popoverElement = shadowRoot.querySelector(".popover");
     const svg = popoverElement.querySelector(".popover_svg");
     const svgPath = popoverElement.querySelector(".popover_border");
-    const position = this.position;
+    const arrowDirection = this.arrowDirection;
 
     let prevWidth = 0;
     let prevHeight = 0;
@@ -93,45 +93,29 @@ class JsenvPopover extends HTMLElement {
       // Make SVG slightly larger to accommodate the arrow
       const arrowSize = 5;
       const arrowWidth = 8;
+
       let viewBoxWidth = width;
       let viewBoxHeight = height;
-      let translateX = 0;
-      let translateY = 0;
 
-      // Adjust SVG viewbox and positioning based on arrow direction
-      if (position === "bottom") {
-        // For arrow pointing down (toward the element below)
+      // Position SVG to extend beyond popover based on arrow position
+      if (arrowDirection === "down") {
+        // For arrow pointing down
         viewBoxHeight += arrowSize;
-      } else if (position === "top") {
-        // For arrow pointing up (toward the element above)
+        svg.style.height = `${height + arrowSize}px`;
+        svg.style.top = "0px";
+      } else if (arrowDirection === "up") {
+        // For arrow pointing up
         viewBoxHeight += arrowSize;
-        svg.style.transform = `translateY(-${arrowSize}px)`;
+        svg.style.height = `${height + arrowSize}px`;
+        svg.style.top = `-${arrowSize}px`;
       }
 
       svg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
-      svg.style.transform = `translate(${translateX}px, ${-translateY}px)`;
 
       const radius = 4; // Border radius
       let path;
 
-      if (position === "top") {
-        const arrowMiddle = width / 2;
-
-        path = `
-          M ${radius} 0
-          H ${width - radius}
-          Q ${width} 0, ${width} ${radius}
-          V ${height - radius}
-          Q ${width} ${height}, ${width - radius} ${height}
-          H ${arrowMiddle + arrowWidth / 2}
-          L ${arrowMiddle} ${viewBoxHeight}
-          L ${arrowMiddle - arrowWidth / 2} ${height}
-          H ${radius}
-          Q 0 ${height}, 0 ${height - radius}
-          V ${radius}
-          Q 0 0, ${radius} 0
-          Z`;
-      } else if (position === "bottom") {
+      if (arrowDirection === "up") {
         // Arrow pointing up
         const arrowMiddle = width / 2;
 
@@ -148,6 +132,24 @@ class JsenvPopover extends HTMLElement {
           Q 0 ${viewBoxHeight}, 0 ${viewBoxHeight - radius}
           V ${arrowSize + radius}
           Q 0 ${arrowSize}, ${radius} ${arrowSize}
+          Z`;
+      } else if (arrowDirection === "down") {
+        // Arrow pointing down
+        const arrowMiddle = width / 2;
+
+        path = `
+          M ${radius} 0
+          H ${width - radius}
+          Q ${width} 0, ${width} ${radius}
+          V ${height - radius}
+          Q ${width} ${height}, ${width - radius} ${height}
+          H ${arrowMiddle + arrowWidth / 2}
+          L ${arrowMiddle} ${viewBoxHeight}
+          L ${arrowMiddle - arrowWidth / 2} ${height}
+          H ${radius}
+          Q 0 ${height}, 0 ${height - radius}
+          V ${radius}
+          Q 0 0, ${radius} 0
           Z`;
       }
 
@@ -251,7 +253,7 @@ export const showPopover = (
   innerHtml,
   { position = "bottom" } = {},
 ) => {
-  const jsenvPopover = new JsenvPopover(innerHtml, { position });
+  const jsenvPopover = new JsenvPopover(innerHtml, { arrowDirection: "up" });
   document.body.appendChild(jsenvPopover);
   const stopFollowingPosition = followPosition(jsenvPopover, elementToFollow, {
     position,
