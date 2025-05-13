@@ -1,4 +1,4 @@
-import { registerRoute, registerAction } from "@jsenv/router";
+import { registerAction, registerRoute } from "@jsenv/router";
 import { tableInfoSignal, tablePublicFilterSignal } from "./table_signals.js";
 
 export const GET_TABLES_ROUTE = registerRoute("/tables", async ({ signal }) => {

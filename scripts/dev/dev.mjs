@@ -1,13 +1,13 @@
 import { startDevServer } from "@jsenv/core";
 // import { requestCertificate } from "@jsenv/https-local";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+import { jsenvPluginDatabaseManager } from "@jsenv/plugin-database-manager";
 import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import {
   jsenvPluginControlledResource,
   jsenvPluginJSONFileManager,
 } from "@jsenv/router/src/server/server_stuff.js";
-import { jsenvPluginDatabaseManager } from "@jsenv/plugin-database-manager";
-import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
 // const { certificate, privateKey } = requestCertificate();
 await startDevServer({

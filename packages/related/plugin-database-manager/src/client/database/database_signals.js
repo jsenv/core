@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
-import { databaseStore } from "./database_store.js";
 import { roleStore } from "../role/role_store.js";
+import { databaseStore } from "./database_store.js";
 
 const activeDatabaseIdSignal = signal(null);
 const activeDatabaseColumnsSignal = signal([]);

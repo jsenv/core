@@ -2,7 +2,7 @@
  * https://github.com/luisherranz/deepsignal/blob/main/packages/deepsignal/core/src/index.ts
  *
  */
-import { signal, computed, effect } from "@preact/signals";
+import { computed, effect, signal } from "@preact/signals";
 
 export const sigi = (rootValue) => {
   if (!shouldProxy(rootValue)) {

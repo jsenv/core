@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useCallback } from "preact/hooks";
+import { useCallback, useLayoutEffect, useRef } from "preact/hooks";
 import { createInputValidity } from "./input_validity.js";
 
 export const useValidity = (inputRef, key, { onCancel } = {}) => {

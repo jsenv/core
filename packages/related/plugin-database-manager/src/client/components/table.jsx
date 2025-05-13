@@ -3,10 +3,10 @@
  *  https://tanstack.com/table/v8/docs/framework/react/examples/basic
  */
 
-import { useMemo } from "preact/hooks";
-import { useTable } from "./use_table.js";
 import { getCoreRowModel } from "@tanstack/table-core";
+import { useMemo } from "preact/hooks";
 import "./table.css" with { type: "css" };
+import { useTable } from "./use_table.js";
 
 export const Table = ({ columns, data }) => {
   const extraColumns = useMemo(

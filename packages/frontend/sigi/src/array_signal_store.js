@@ -1,4 +1,4 @@
-import { signal, effect, computed } from "@preact/signals";
+import { computed, effect, signal } from "@preact/signals";
 
 export const arraySignalStore = (initialArray = [], idKey = "id") => {
   const arraySignal = signal(initialArray);

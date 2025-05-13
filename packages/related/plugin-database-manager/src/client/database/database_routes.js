@@ -1,12 +1,12 @@
-import { registerRoute, registerAction } from "@jsenv/router";
+import { registerAction, registerRoute } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
 import { roleStore } from "../role/role_store.js";
-import { databaseStore } from "./database_store.js";
 import {
   setActiveDatabase,
   setActiveDatabaseColumns,
   setActiveDatabaseOwnerRole,
 } from "./database_signals.js";
+import { databaseStore } from "./database_store.js";
 
 export const GET_DATABASE_ROUTE = registerRoute(
   "/databases/:datname",

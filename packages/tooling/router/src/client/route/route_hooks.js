@@ -1,5 +1,5 @@
-import { IDLE, LOADING, ABORTED, LOADED } from "./route_status.js";
 import { documentUrlSignal } from "../document_url.js";
+import { ABORTED, IDLE, LOADED, LOADING } from "./route_status.js";
 
 export const useRouteUrl = (route, params) => {
   const documentUrl = documentUrlSignal.value;

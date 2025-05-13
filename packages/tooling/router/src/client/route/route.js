@@ -1,10 +1,10 @@
 import { batch, effect, signal } from "@preact/signals";
 import { createResourcePattern } from "../../shared/resource_pattern.js";
-import { normalizeUrl } from "../normalize_url.js";
-import { goTo, reload, installNavigation } from "../router.js";
-import { IDLE, LOADING, ABORTED, LOADED, FAILED } from "./route_status.js";
-import { routingWhile } from "../document_routing.js";
 import { applyAction } from "../action/action.js";
+import { routingWhile } from "../document_routing.js";
+import { normalizeUrl } from "../normalize_url.js";
+import { goTo, installNavigation, reload } from "../router.js";
+import { ABORTED, FAILED, IDLE, LOADED, LOADING } from "./route_status.js";
 
 let debug = true;
 

@@ -3,35 +3,35 @@
  * - cmd + backspace would allow to delete a role (after a confirm)
  */
 
-import { effect } from "@preact/signals";
-import { useState, useCallback, useRef } from "preact/hooks";
-import { forwardRef } from "preact/compat";
 import {
-  useDetails,
-  SPALink,
   SPAInputText,
-  useRouteIsMatching,
+  SPALink,
   useAction,
+  useDetails,
+  useRouteIsMatching,
   useValidity,
 } from "@jsenv/router";
+import { effect } from "@preact/signals";
+import { forwardRef } from "preact/compat";
+import { useCallback, useRef, useState } from "preact/hooks";
 import {
-  UserWithHatSvg,
-  UserSvg,
-  UserWithCheckSvg,
-  UserWithPlusSvg,
-} from "../user_svgs.jsx";
-import {
+  DELETE_ROLE_ACTION,
   GET_ROLE_ROUTE,
   POST_ROLE_ACTION,
   PUT_ROLE_ACTION,
-  DELETE_ROLE_ACTION,
 } from "../role/role_routes.js";
-import { roleStore } from "../role/role_store.js";
 import {
   setCurrentRole,
   useCurrentRole,
   useRoleList,
 } from "../role/role_signals.js";
+import { roleStore } from "../role/role_store.js";
+import {
+  UserSvg,
+  UserWithCheckSvg,
+  UserWithHatSvg,
+  UserWithPlusSvg,
+} from "../user_svgs.jsx";
 import "./explorer.css" with { type: "css" };
 
 effect(async () => {

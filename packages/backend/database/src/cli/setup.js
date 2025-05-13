@@ -1,7 +1,7 @@
 import { UNICODE } from "@jsenv/humanize";
-import postgres from "postgres";
 import { urlToRelativeUrl } from "@jsenv/urls";
-import { pathToFileURL, fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import postgres from "postgres";
 import { readParamsFromContext } from "../read_params_from_context.js";
 
 const {

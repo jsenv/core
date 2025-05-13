@@ -1,4 +1,4 @@
-import { signal, effect } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
 
 const cacheSet = new Set();
 export const effectWithPrevious = (inputSignals, callback) => {

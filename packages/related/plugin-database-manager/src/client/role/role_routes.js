@@ -1,11 +1,11 @@
-import { registerRoute, registerAction } from "@jsenv/router";
+import { registerAction, registerRoute } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
-import { roleStore } from "./role_store.js";
 import {
   setActiveRole,
   setActiveRoleColumns,
   setActiveRoleDatabases,
 } from "./role_signals.js";
+import { roleStore } from "./role_store.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
   "/roles/:rolname",

@@ -1,22 +1,22 @@
 import {
   ErrorBoundaryContext,
   Route,
-  useAction,
   SPADeleteButton,
-  useRouteParam,
   SPALink,
+  useAction,
+  useRouteParam,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
+import { DatabaseValue } from "../components/database_value.jsx";
+import { GET_DATABASE_ROUTE } from "../database/database_routes.js";
 import {
+  DELETE_ROLE_ACTION,
   GET_ROLE_ROUTE,
   PUT_ROLE_ACTION,
-  DELETE_ROLE_ACTION,
 } from "./role_routes.js";
-import { GET_DATABASE_ROUTE } from "../database/database_routes.js";
-import { DatabaseValue } from "../components/database_value.jsx";
 import {
-  useActiveRoleColumns,
   useActiveRole,
+  useActiveRoleColumns,
   useActiveRoleDatabases,
 } from "./role_signals.js";
 

@@ -1,5 +1,5 @@
 import { useEffect } from "preact/hooks";
-import { EXECUTING, ABORTED } from "./action_status.js";
+import { ABORTED, EXECUTING } from "./action_status.js";
 
 export const useAction = (action, params = {}) => {
   const actionWithParams = action.withParams(params);

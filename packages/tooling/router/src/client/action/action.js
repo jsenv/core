@@ -1,6 +1,6 @@
-import { signal, effect, batch } from "@preact/signals";
-import { IDLE, EXECUTING, DONE, FAILED, ABORTED } from "./action_status.js";
+import { batch, effect, signal } from "@preact/signals";
 import { routingWhile } from "../document_routing.js";
+import { ABORTED, DONE, EXECUTING, FAILED, IDLE } from "./action_status.js";
 
 let debug = true;
 

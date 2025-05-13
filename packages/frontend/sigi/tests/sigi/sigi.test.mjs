@@ -1,6 +1,6 @@
 import { sigi } from "@jsenv/sigi";
-import { effect, signal } from "@preact/signals";
 import { snapshotTests } from "@jsenv/snapshot";
+import { effect, signal } from "@preact/signals";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_get_set_get", () => {

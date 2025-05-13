@@ -1,9 +1,9 @@
-import { SPAForm } from "./spa_form.jsx";
 import { useRef } from "preact/hooks";
-import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
-import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
-import { LoaderBackground } from "./loader_background.jsx";
 import { useActionStatus } from "../action/action_hooks.js";
+import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
+import { LoaderBackground } from "./loader_background.jsx";
+import { SPAForm } from "./spa_form.jsx";
+import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 
 export const SPAInputInteger = ({ action, method = "PUT", label, ...rest }) => {
   const input = <InputInteger action={action} {...rest} />;

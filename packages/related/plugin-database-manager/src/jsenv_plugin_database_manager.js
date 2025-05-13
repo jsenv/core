@@ -3,14 +3,14 @@
  * - nom des tables au singulier
  */
 
+import { connectAs, readParamsFromContext } from "@jsenv/database";
 import {
-  urlToExtension,
-  urlIsOrIsInsideOf,
   ensurePathnameTrailingSlash,
+  urlIsOrIsInsideOf,
+  urlToExtension,
 } from "@jsenv/urls";
-import { readParamsFromContext, connectAs } from "@jsenv/database";
-import { alterRoleQuery } from "./sql/alter_role_query.js";
 import { alterDatabaseQuery } from "./sql/alter_database_query.js";
+import { alterRoleQuery } from "./sql/alter_role_query.js";
 
 const databaseManagerHtmlFileUrl = import.meta.resolve(
   "./client/database_manager.html",

@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
-import { roleStore } from "./role_store.js";
 import { databaseStore } from "../database/database_store.js";
+import { roleStore } from "./role_store.js";
 
 export const useRoleList = () => {
   return roleStore.arraySignal.value;

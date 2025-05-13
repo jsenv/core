@@ -1,6 +1,6 @@
-import { Table } from "./table.jsx";
-import { DatabaseValue } from "./database_value.jsx";
 import { useAction } from "@jsenv/router";
+import { DatabaseValue } from "./database_value.jsx";
+import { Table } from "./table.jsx";
 
 export const DatabaseTable = ({ columns, action, data }) => {
   columns.sort((a, b) => {
