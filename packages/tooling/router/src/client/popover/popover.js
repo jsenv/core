@@ -45,7 +45,7 @@ const css = /*css*/ `
 .popover_border {
   fill: white;
   stroke: red;
-  stroke-width: 4px;
+  stroke-width: 10px;
 }
 `;
 
@@ -91,10 +91,10 @@ class JsenvPopover extends HTMLElement {
       prevHeight = height;
 
       // Make SVG slightly larger to accommodate the arrow
-      const strokeWidth = 4;
+      const strokeWidth = 10;
       const arrowSize = 5;
       const arrowWidth = 8;
-      const effectiveArrowSize = arrowSize + strokeWidth / 2;
+      const effectiveArrowSize = arrowSize + strokeWidth;
 
       let viewBoxWidth = width;
       let viewBoxHeight = height;
@@ -198,9 +198,9 @@ const followPosition = (
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
 
-    const strokeWith = 4;
+    const strokeWidth = 10;
     const arrowSize = 5; // Same as in the SVG path creation (reduced size)
-    const offset = arrowSize + strokeWith / 2; // Add half the stroke width
+    const offset = arrowSize + strokeWidth; // Add half the stroke width
 
     if (position === "top") {
       // Position popover above the element with arrow pointing down
