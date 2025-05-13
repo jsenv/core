@@ -135,7 +135,7 @@ export const createInputValidity = (input, { onCancel } = {}) => {
      * 2. When addCustomValidity is called outside an input event, we still want
      *    subsequent user typing to clear the error message
      *
-     * Using setImmediate ensures the flag is reset after the current event loop,
+     * Using queueMicrotask ensures the flag is reset after the current event loop,
      * allowing us to differentiate between:
      * - The same input event that triggered validation
      * - Subsequent input events from user typing (which should clear the error)
@@ -156,7 +156,7 @@ export const createInputValidity = (input, { onCancel } = {}) => {
       // Reset the flag after the current event loop completes
       // This ensures we only ignore input events that are part of
       // the same synchronous execution context
-      setImmediate(() => {
+      queueMicrotask(() => {
         wasJustSet = false;
       });
     };

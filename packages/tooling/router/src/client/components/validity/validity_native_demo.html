@@ -10,6 +10,11 @@
     <div id="app">
       <h1>Validity demo</h1>
 
+      <label>
+        <input id="enable" checked type="checkbox" />
+        Enable error when contains letter "c"
+      </label>
+
       <h2>Input without form</h2>
       <input id="without_form" type="text" required value="a" />
       <button id="without_form_add">Add custom error</button>
@@ -30,7 +35,6 @@
       import { createInputValidity } from "./input_validity.js";
 
       const withoutForm = document.querySelector("#without_form");
-
       const withoutFormInputValidity = createInputValidity(withoutForm, {
         onCancel: () => {
           withoutForm.value = "a";
@@ -51,7 +55,6 @@
       };
 
       const withForm = document.querySelector("#with_form");
-
       const withFormInputValidity = createInputValidity(withForm, {
         onCancel: () => {
           withoutForm.value = "b";
@@ -68,6 +71,28 @@
       withFormRemoveButton.onclick = () => {
         withFormInputValidity.removeCustomValidity("custom_error");
       };
+
+      const enable = document.querySelector("#enable");
+      withoutForm.addEventListener("input", () => {
+        if (enable.checked && withoutForm.value.includes("c")) {
+          withoutFormInputValidity.addCustomValidity(
+            "contains_c",
+            "The letter 'c' is not allowed",
+          );
+        } else {
+          withoutFormInputValidity.removeCustomValidity("contains_c");
+        }
+      });
+      withForm.addEventListener("input", () => {
+        if (enable.checked && withForm.value.includes("c")) {
+          withFormInputValidity.addCustomValidity(
+            "contains_c",
+            "The letter 'c' is not allowed",
+          );
+        } else {
+          withFormInputValidity.removeCustomValidity("contains_c");
+        }
+      });
     </script>
   </body>
 </html>
