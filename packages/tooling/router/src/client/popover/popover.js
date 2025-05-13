@@ -51,11 +51,13 @@ const css = /*css*/ `
 const html = /* html */ `<style>
     ${css}
   </style>
-  <div class="popover">
-    <svg class="popover_svg" preserveAspectRatio="none">
-      <path class="popover_border" d=""></path>
-    </svg>
-    <div class="popover_content">Default message</div>
+  <div class="popover_wrapper">
+    <div class="popover">
+      <svg class="popover_svg" preserveAspectRatio="none">
+        <path class="popover_border" d=""></path>
+      </svg>
+      <div class="popover_content">Default message</div>
+    </div>
   </div>`;
 
 const strokeWidth = 10;
@@ -67,23 +69,32 @@ class JsenvPopover extends HTMLElement {
     super();
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = html;
-    const popoverElement = root.querySelector(".popover");
 
+    const popoverElement = root.querySelector(".popover");
     const content = popoverElement.querySelector(".popover_content");
     content.innerHTML = innerHTML;
     this.arrowDirection = arrowDirection;
 
+    // Apply appropriate styling based on arrow direction
+    if (arrowDirection === "up") {
+      popoverElement.style.marginTop = `${arrowHeight}px`;
+    } else if (arrowDirection === "down") {
+      popoverElement.style.marginBottom = `${arrowHeight}px`;
+    }
+
+    // Basic styles for the custom element
     this.style.display = "block";
     this.style.overflow = "visible";
-    // Make sure the element takes the full height of its content
     this.style.height = "auto";
+    this.style.position = "relative";
   }
 
   connectedCallback() {
     const shadowRoot = this.shadowRoot;
+    const wrapper = shadowRoot.querySelector(".popover_wrapper");
     const popoverElement = shadowRoot.querySelector(".popover");
-    const svg = popoverElement.querySelector(".popover_svg");
-    const svgPath = popoverElement.querySelector(".popover_border");
+    const svg = shadowRoot.querySelector(".popover_svg");
+    const svgPath = shadowRoot.querySelector(".popover_border");
     const arrowDirection = this.arrowDirection;
 
     let prevWidth = 0;
@@ -91,6 +102,7 @@ class JsenvPopover extends HTMLElement {
     const updateSvgPath = () => {
       const width = popoverElement.offsetWidth;
       const height = popoverElement.offsetHeight;
+
       // Only update if dimensions actually changed
       if (width === prevWidth && height === prevHeight) {
         return;
@@ -98,32 +110,42 @@ class JsenvPopover extends HTMLElement {
       prevWidth = width;
       prevHeight = height;
 
-      // Make SVG slightly larger to accommodate the arrow
-      const effectiveArrowSize = arrowWidth + strokeWidth;
-
+      // Calculate the total height including arrow
+      let totalHeight;
       let viewBoxWidth = width;
-      let viewBoxHeight = height;
+      let viewBoxHeight;
 
-      // Position SVG to extend beyond popover based on arrow position
-      if (arrowDirection === "down") {
+      if (arrowDirection === "up") {
+        // For arrow pointing up, the SVG covers both arrow and box
+        totalHeight = height + arrowHeight;
+        viewBoxHeight = totalHeight;
+
+        // Position SVG to cover the entire component including arrow
+        svg.style.width = `${width}px`;
+        svg.style.height = `${totalHeight}px`;
+
+        // No negative positioning - SVG starts at the top of wrapper
+        // The popover body has margin-top to account for the arrow
+      } else if (arrowDirection === "down") {
         // For arrow pointing down
-        viewBoxHeight += effectiveArrowSize;
-        svg.style.height = `${height + effectiveArrowSize}px`;
-        svg.style.top = "0px";
-      } else if (arrowDirection === "up") {
-        // For arrow pointing up
-        viewBoxHeight += arrowHeight;
-        svg.style.height = `${height + arrowHeight}px`;
-        svg.style.top = `-${arrowHeight}px`; // Move SVG up by arrowSize pixels
+        totalHeight = height + arrowHeight;
+        viewBoxHeight = totalHeight;
+
+        svg.style.width = `${width}px`;
+        svg.style.height = `${totalHeight}px`;
       }
 
+      // Update the wrapper height to account for everything
+      wrapper.style.height = `${totalHeight}px`;
+
+      // Set SVG viewBox
       svg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
 
-      const radius = 4; // Border radius
+      // Create path based on arrow direction
+      const radius = 4;
       let path;
 
       if (arrowDirection === "up") {
-        // Arrow pointing up
         const arrowMiddle = width / 2;
 
         path = `
@@ -141,7 +163,6 @@ class JsenvPopover extends HTMLElement {
           Q 0 ${arrowHeight}, ${radius} ${arrowHeight}
           Z`;
       } else if (arrowDirection === "down") {
-        // Arrow pointing down
         const arrowMiddle = width / 2;
 
         path = `
@@ -208,7 +229,7 @@ const followPosition = (
       element.style.position = "absolute";
       // Position the popover so the arrow tip exactly touches the bottom of input
       // This is arrowSize pixels above where the main popover body starts
-      element.style.top = `${elementRect.bottom + topSpacing}px`;
+      element.style.top = `${elementRect.bottom + topSpacing - arrowHeight}px`;
       element.style.left = `${elementRect.left + elementRect.width / 2}px`;
       element.style.transform = "translateX(-50%)";
     }
