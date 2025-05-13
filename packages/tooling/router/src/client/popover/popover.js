@@ -21,8 +21,6 @@ donc idéalement le mettre dans le meme parent ou etre capable de suivre s'il bo
 
 const css = /*css*/ `
 .popover {
-  border: 1px solid rgb(69, 76, 84);
-  border-radius: 4px;
   padding: 5px;
   background-color: white;
   box-shadow: 3px 4px 4px rgba(0, 0, 0, 0.2);
@@ -44,7 +42,7 @@ const css = /*css*/ `
 }
 
 .popover_border {
-  fill: none;
+  fill: white;
   stroke: red;
   stroke-width: 1px;
 }
@@ -61,7 +59,7 @@ const html = /* html */ `<style>
   </div>`;
 
 class JsenvPopover extends HTMLElement {
-  constructor(innerHTML) {
+  constructor(innerHTML, { position }) {
     super();
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = html;
@@ -69,6 +67,7 @@ class JsenvPopover extends HTMLElement {
 
     const content = popoverElement.querySelector(".popover_content");
     content.innerHTML = innerHTML;
+    this.position = position;
   }
 
   connectedCallback() {
@@ -76,6 +75,7 @@ class JsenvPopover extends HTMLElement {
     const popoverElement = shadowRoot.querySelector(".popover");
     const svg = popoverElement.querySelector(".popover_svg");
     const svgPath = popoverElement.querySelector(".popover_border");
+    const position = this.position;
 
     let prevWidth = 0;
     let prevHeight = 0;
@@ -88,23 +88,68 @@ class JsenvPopover extends HTMLElement {
       }
       prevWidth = width;
       prevHeight = height;
-      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
-      // Create path for rectangle with rounded corners to match the popover
-      const radius = 4; // Same as border-radius in CSS
-      svgPath.setAttribute(
-        "d",
-        `M ${radius} 0 
-         H ${width - radius} 
-         Q ${width} 0, ${width} ${radius} 
-         V ${height - radius} 
-         Q ${width} ${height}, ${width - radius} ${height} 
-         H ${radius} 
-         Q 0 ${height}, 0 ${height - radius} 
-         V ${radius} 
-         Q 0 0, ${radius} 0 
-         Z`,
-      );
+      // Make SVG slightly larger to accommodate the arrow
+      const arrowSize = 8;
+      let viewBoxWidth = width;
+      let viewBoxHeight = height;
+      let translateX = 0;
+      let translateY = 0;
+
+      if (position === "bottom") {
+        viewBoxHeight += arrowSize;
+        translateY = arrowSize;
+      } else if (position === "top") {
+        viewBoxHeight += arrowSize;
+      }
+
+      svg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
+      svg.style.transform = `translate(${translateX}px, ${-translateY}px)`;
+
+      const radius = 4; // Border radius
+      let path;
+
+      if (position === "bottom") {
+        // Arrow pointing down
+        const arrowMiddle = width / 2;
+        const arrowWidth = 10;
+
+        path = `
+          M ${radius} ${arrowSize}
+          H ${arrowMiddle - arrowWidth / 2}
+          L ${arrowMiddle} ${viewBoxHeight}
+          L ${arrowMiddle + arrowWidth / 2} ${arrowSize}
+          H ${width - radius}
+          Q ${width} ${arrowSize}, ${width} ${arrowSize + radius}
+          V ${viewBoxHeight - radius - arrowSize}
+          Q ${width} ${viewBoxHeight - arrowSize}, ${width - radius} ${viewBoxHeight - arrowSize}
+          H ${radius}
+          Q 0 ${viewBoxHeight - arrowSize}, 0 ${viewBoxHeight - radius - arrowSize}
+          V ${arrowSize + radius}
+          Q 0 ${arrowSize}, ${radius} ${arrowSize}
+          Z`;
+      } else if (position === "top") {
+        // Arrow pointing up
+        const arrowMiddle = width / 2;
+        const arrowWidth = 10;
+
+        path = `
+          M ${radius} 0
+          H ${width - radius}
+          Q ${width} 0, ${width} ${radius}
+          V ${height - radius}
+          Q ${width} ${height}, ${width - radius} ${height}
+          H ${arrowMiddle + arrowWidth / 2}
+          L ${arrowMiddle} ${viewBoxHeight}
+          L ${arrowMiddle - arrowWidth / 2} ${height}
+          H ${radius}
+          Q 0 ${height}, 0 ${height - radius}
+          V ${radius}
+          Q 0 0, ${radius} 0
+          Z`;
+      }
+
+      svgPath.setAttribute("d", path);
     };
 
     requestAnimationFrame(() => {
@@ -146,15 +191,16 @@ const followPosition = (
 
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
+    const arrowSize = 8; // Same as in the SVG path creation
     if (position === "top") {
       element.style.position = "absolute";
-      element.style.bottom = `${window.innerHeight - elementRect.top + 10}px`;
+      element.style.bottom = `${window.innerHeight - elementRect.top + arrowSize}px`;
       element.style.left = `${elementRect.left + elementRect.width / 2}px`;
       element.style.transform = "translateX(-50%)";
     }
     if (position === "bottom") {
       element.style.position = "absolute";
-      element.style.top = `${elementRect.bottom + 10}px`;
+      element.style.top = `${elementRect.bottom + arrowSize}px`;
       element.style.left = `${elementRect.left + elementRect.width / 2}px`;
       element.style.transform = "translateX(-50%)";
     }
@@ -165,7 +211,7 @@ const followPosition = (
       // Si l'élément cible est visible
       if (entry.isIntersecting) {
         // Mettre à jour la position du tooltip
-        updatePosition();
+        requestAnimationFrame(updatePosition);
 
         // Vous pouvez aussi ajuster la visibilité en fonction du ratio
         const visibilityRatio = entry.intersectionRatio;
@@ -178,8 +224,13 @@ const followPosition = (
     }
   }, options);
 
+  updatePosition();
+  let rafId = null;
   const resizeObserver = new ResizeObserver(() => {
-    updatePosition();
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+    }
+    rafId = requestAnimationFrame(updatePosition);
   });
   resizeObserver.observe(elementToFollow);
 
@@ -194,7 +245,7 @@ export const showPopover = (
   innerHtml,
   { position = "bottom" } = {},
 ) => {
-  const jsenvPopover = new JsenvPopover(innerHtml);
+  const jsenvPopover = new JsenvPopover(innerHtml, { position });
   document.body.appendChild(jsenvPopover);
   const stopFollowingPosition = followPosition(jsenvPopover, elementToFollow, {
     position,
