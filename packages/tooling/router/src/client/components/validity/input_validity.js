@@ -35,7 +35,7 @@ export const createInputValidity = (
 ) => {
   const fromCache = wrapperWeakMap.get(input);
   if (fromCache) {
-    const { inputValidity } = fromCache;
+    const inputValidity = fromCache;
     return inputValidity.subscribe(key, { requestSubmitOnChange, onCancel });
   }
 

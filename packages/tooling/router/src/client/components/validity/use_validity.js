@@ -6,11 +6,11 @@ export const useValidity = (inputRef, key, { onCancel } = {}) => {
 
   const addCustomValidity = useCallback((message) => {
     const inputValidity = inputValidityRef.current;
-    inputValidity.addCustomValidity(key, message);
+    inputValidity.addCustomValidity(message);
   }, []);
   const removeCustomValidity = useCallback((message) => {
     const inputValidity = inputValidityRef.current;
-    inputValidity.removeCustomValidity(key, message);
+    inputValidity.removeCustomValidity(message);
   }, []);
 
   useLayoutEffect(() => {
