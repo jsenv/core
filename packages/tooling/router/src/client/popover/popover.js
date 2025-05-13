@@ -59,6 +59,10 @@ const html = /* html */ `<style>
     <div class="popover_content">Default message</div>
   </div>`;
 
+const strokeWidth = 10;
+const arrowHeight = 6;
+const arrowWidth = 10;
+
 class JsenvPopover extends HTMLElement {
   constructor(innerHTML, { arrowDirection }) {
     super();
@@ -91,10 +95,7 @@ class JsenvPopover extends HTMLElement {
       prevHeight = height;
 
       // Make SVG slightly larger to accommodate the arrow
-      const strokeWidth = 10;
-      const arrowSize = 5;
-      const arrowWidth = 8;
-      const effectiveArrowSize = arrowSize + strokeWidth;
+      const effectiveArrowSize = arrowWidth + strokeWidth;
 
       let viewBoxWidth = width;
       let viewBoxHeight = height;
@@ -107,9 +108,9 @@ class JsenvPopover extends HTMLElement {
         svg.style.top = "0px";
       } else if (arrowDirection === "up") {
         // For arrow pointing up
-        viewBoxHeight += arrowSize;
-        svg.style.height = `${height + effectiveArrowSize}px`;
-        svg.style.top = `-${effectiveArrowSize}px`;
+        viewBoxHeight += arrowHeight;
+        svg.style.height = `${height + arrowHeight}px`;
+        svg.style.top = `-${arrowHeight}px`; // Move SVG up by arrowSize pixels
       }
 
       svg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
@@ -122,18 +123,18 @@ class JsenvPopover extends HTMLElement {
         const arrowMiddle = width / 2;
 
         path = `
-          M ${radius} ${arrowSize}
+          M ${radius} ${arrowHeight}
           H ${arrowMiddle - arrowWidth / 2}
           L ${arrowMiddle} 0
-          L ${arrowMiddle + arrowWidth / 2} ${arrowSize}
+          L ${arrowMiddle + arrowWidth / 2} ${arrowHeight}
           H ${width - radius}
-          Q ${width} ${arrowSize}, ${width} ${arrowSize + radius}
+          Q ${width} ${arrowHeight}, ${width} ${arrowHeight + radius}
           V ${viewBoxHeight - radius}
           Q ${width} ${viewBoxHeight}, ${width - radius} ${viewBoxHeight}
           H ${radius}
           Q 0 ${viewBoxHeight}, 0 ${viewBoxHeight - radius}
-          V ${arrowSize + radius}
-          Q 0 ${arrowSize}, ${radius} ${arrowSize}
+          V ${arrowHeight + radius}
+          Q 0 ${arrowHeight}, ${radius} ${arrowHeight}
           Z`;
       } else if (arrowDirection === "down") {
         // Arrow pointing down
@@ -187,7 +188,7 @@ if (!customElements.get("jsenv-popover")) {
 const followPosition = (
   element,
   elementToFollow,
-  { position = "bottom" } = {},
+  { position = "bottom", topSpacing = 0 } = {},
 ) => {
   const options = {
     root: null, // viewport
@@ -198,21 +199,19 @@ const followPosition = (
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
 
-    const strokeWidth = 10;
-    const arrowSize = 5; // Same as in the SVG path creation (reduced size)
-    const offset = arrowSize + strokeWidth; // Add half the stroke width
-
-    if (position === "top") {
-      // Position popover above the element with arrow pointing down
+    // For bottom position (arrow points up to the input)
+    if (position === "bottom") {
       element.style.position = "absolute";
-      element.style.bottom = `${window.innerHeight - elementRect.top + offset}px`;
+      // Position the popover so the arrow tip exactly touches the bottom of input
+      // This is arrowSize pixels above where the main popover body starts
+      element.style.top = `${elementRect.bottom + topSpacing}px`;
       element.style.left = `${elementRect.left + elementRect.width / 2}px`;
       element.style.transform = "translateX(-50%)";
     }
-    if (position === "bottom") {
-      // Position popover below the element with arrow pointing up
+    // For top position (arrow points down to the input)
+    else if (position === "top") {
       element.style.position = "absolute";
-      element.style.top = `${elementRect.bottom + offset}px`;
+      element.style.bottom = `${window.innerHeight - elementRect.top}px`;
       element.style.left = `${elementRect.left + elementRect.width / 2}px`;
       element.style.transform = "translateX(-50%)";
     }
@@ -267,6 +266,7 @@ export const showPopover = (
   document.body.appendChild(jsenvPopover);
   const stopFollowingPosition = followPosition(jsenvPopover, elementToFollow, {
     position,
+    topSpacing: strokeWidth + arrowHeight / 2,
   });
 
   return () => {
