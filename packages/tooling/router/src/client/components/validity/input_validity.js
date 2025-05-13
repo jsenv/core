@@ -62,6 +62,7 @@ export const createInputValidity = (input, { onCancel } = {}) => {
         cleanupCallback();
       }
       cleanupCallbackSet.clear();
+      wrapperWeakMap.delete(input);
     },
   };
   wrapperWeakMap.set(input, { inputValidity, cancelCallbackSet });
@@ -125,6 +126,20 @@ export const createInputValidity = (input, { onCancel } = {}) => {
       input.removeAttribute("data-error");
     };
 
+    /**
+     * Flag to temporarily ignore input events right after setting a validation message
+     *
+     * This is necessary because:
+     * 1. When addCustomValidity is called during an input event, we want to preserve
+     *    the error message despite the input event that triggered it
+     * 2. When addCustomValidity is called outside an input event, we still want
+     *    subsequent user typing to clear the error message
+     *
+     * Using setImmediate ensures the flag is reset after the current event loop,
+     * allowing us to differentiate between:
+     * - The same input event that triggered validation
+     * - Subsequent input events from user typing (which should clear the error)
+     */
     let wasJustSet = false;
     /**
      * Sets a custom validation message associated with the specified key
@@ -138,10 +153,24 @@ export const createInputValidity = (input, { onCancel } = {}) => {
       validityMessageMap.set(key, message);
       setAndReportValidity(message);
       wasJustSet = true;
-      setTimeout(() => {
+      // Reset the flag after the current event loop completes
+      // This ensures we only ignore input events that are part of
+      // the same synchronous execution context
+      setImmediate(() => {
         wasJustSet = false;
-      }, 0);
+      });
     };
+    addSelfCleanedEventListenerOnInput("input", () => {
+      if (wasJustSet) {
+        // If a validation message was just set (in the same event loop),
+        // preserve it for now - this prevents a race condition where
+        // the same input event that triggered a validation would immediately clear it
+        return;
+      }
+      // For normal typing from the user (different event loop than when
+      // the error was set), clear the validation message
+      resetCustomValidity();
+    });
 
     /**
      * Removes a previously set custom validation message
@@ -155,14 +184,6 @@ export const createInputValidity = (input, { onCancel } = {}) => {
         resetCustomValidity();
       }
     };
-    addSelfCleanedEventListenerOnInput("input", () => {
-      if (wasJustSet) {
-        // if code does set a custom validity message during input
-        // we keep it, the next input will reset it
-        return;
-      }
-      resetCustomValidity();
-    });
   }
 
   /**
