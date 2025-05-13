@@ -25,10 +25,24 @@ import "./input_validity.css" with { type: "css" };
 
 const wrapperWeakMap = new WeakMap();
 
-export const createInputValidity = (input) => {
+export const createInputValidity = (input, { onCancel } = {}) => {
   const fromCache = wrapperWeakMap.get(input);
   if (fromCache) {
-    return fromCache;
+    const { inputValidity, cancelCallbackSet } = fromCache;
+    if (onCancel) {
+      cancelCallbackSet.add(onCancel);
+    }
+    return inputValidity;
+  }
+
+  const cancelCallbackSet = new Set();
+  const triggerOnCancel = () => {
+    for (const cancelCallback of cancelCallbackSet) {
+      cancelCallback();
+    }
+  };
+  if (onCancel) {
+    cancelCallbackSet.add(onCancel);
   }
 
   const cleanupCallbackSet = new Set();
@@ -40,7 +54,16 @@ export const createInputValidity = (input) => {
       cleanupCallbackSet.clear();
     },
   };
-  wrapperWeakMap.set(input, inputValidity);
+  wrapperWeakMap.set(input, { inputValidity, cancelCallbackSet });
+
+  const addSelfCleanedEventListenerOnInput = (eventName, eventCallback) => {
+    input.addEventListener(eventName, eventCallback);
+    const remove = () => {
+      input.removeEventListener(eventName, eventCallback);
+    };
+    cleanupCallbackSet.add(remove);
+    return remove;
+  };
 
   /**
    * The following html
@@ -71,29 +94,17 @@ export const createInputValidity = (input) => {
    * -> We put [data-active] when user starts typing and we remove it when input is blurred
    */
   debounce_invalid_by_interaction: {
-    const onfocus = () => {
-      input.addEventListener("input", oninput);
-    };
-    const onblur = () => {
-      input.removeAttribute("data-active", "");
-    };
-    const oninput = () => {
-      input.removeEventListener("input", oninput);
+    addSelfCleanedEventListenerOnInput("input", () => {
       input.setAttribute("data-active", "");
-    };
-
-    input.addEventListener("focus", onfocus);
-    input.addEventListener("blur", onblur);
-    cleanupCallbackSet.add(() => {
-      input.removeEventListener("focus", onfocus);
-      input.removeEventListener("blur", onblur);
-      input.removeEventListener("input", oninput);
+    });
+    addSelfCleanedEventListenerOnInput("blur", () => {
+      input.removeAttribute("data-active", "");
     });
   }
 
   /**
    * Many part of code might want to set a custom validity message
-   * When the error is gone, we want to the the cusotm validity message
+   * When the error is gone, we want to the the custom validity message
    * But there is no way for a given part of the app to know if all other errors still applies
    *
    * Here we are going to give ability to set/unset a custom validity message by key
@@ -102,12 +113,13 @@ export const createInputValidity = (input) => {
     const validityMessageMap = new Map();
 
     const setAndReportValidity = (message) => {
+      input.setAttribute("data-error", "");
       input.setCustomValidity(message);
       input.reportValidity();
     };
     const resetCustomValidity = () => {
       input.setCustomValidity("");
-      input.removeAttribute("data-error", "");
+      input.removeAttribute("data-error");
     };
 
     let wasJustSet = false;
@@ -126,40 +138,43 @@ export const createInputValidity = (input) => {
         resetCustomValidity();
       }
     };
-
-    const oninput = () => {
+    addSelfCleanedEventListenerOnInput("input", () => {
       if (wasJustSet) {
         // if code does set a custom validity message during input
         // we keep it, the next input will reset it
         return;
       }
       resetCustomValidity();
-    };
-    input.addEventListener("input", oninput);
+    });
+  }
+
+  cancel_on_escape: {
+    addSelfCleanedEventListenerOnInput("keydown", (event) => {
+      if (event.key === "Escape") {
+        triggerOnCancel();
+      }
+    });
   }
 
   required: {
-    if (!input.required) {
-      break required;
-    }
-
-    const oninput = () => {
+    addSelfCleanedEventListenerOnInput("input", () => {
       if (input.validity.valueMissing) {
         input.reportValidity();
       }
-    };
-    const onblur = () => {
+    });
+    addSelfCleanedEventListenerOnInput("blur", () => {
       if (input.validity.valueMissing) {
-        // dont keep the invalid invalid and empty, restore
-        // the value when user stops interacting
-        // input.value = value;
+        // blur + empty when required is considered as a cancel
+        triggerOnCancel();
       }
-    };
-    input.addEventListener("input", oninput);
-    input.addEventListener("blur", onblur);
-    cleanupCallbackSet.add(() => {
-      input.removeEventListener("input", oninput);
-      input.removeEventListener("blur", onblur);
+    });
+  }
+
+  enter_report_validity_outside_form: {
+    addSelfCleanedEventListenerOnInput("keydown", (event) => {
+      if (!input.form && event.key === "Enter") {
+        input.reportValidity();
+      }
     });
   }
 

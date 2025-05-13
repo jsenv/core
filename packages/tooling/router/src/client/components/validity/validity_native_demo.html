@@ -22,7 +22,11 @@
         <button id="with_form_remove">Remove custom error</button>
       </form>
     </div>
-    <script type="module" jsenv-type="module/jsx">
+    <script type="module">
+      // TODO: we need an input where we set a custom validity message during "input"
+      // and see how everything interacts, note that
+      // something like "The letter "a" is not allowed" if input contains an "a"
+
       import { createInputValidity } from "./input_validity.js";
 
       const withoutForm = document.querySelector("#without_form");
