@@ -13,7 +13,7 @@ import { existsSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const jsenvPluginFsRedirection = ({
-  spa = true,
+  spa,
   directoryContentMagicName,
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,

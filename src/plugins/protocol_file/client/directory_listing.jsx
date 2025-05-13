@@ -6,7 +6,7 @@ const fileIconUrl = import.meta.resolve("./assets/file.png");
 const homeIconUrl = import.meta.resolve("./assets/home.svg#root");
 
 let {
-  navItems,
+  breadcrumb,
   mainFilePath,
   directoryContentItems,
   enoentDetails,
@@ -49,38 +49,61 @@ const DirectoryListing = () => {
   return (
     <>
       {enoentDetails ? <ErrorMessage /> : null}
-      <Nav />
+      <Breadcrumb items={breadcrumb} />
       <DirectoryContent items={directoryItems} />
     </>
   );
 };
 
 const ErrorMessage = () => {
-  const { fileUrl, filePathExisting, filePathNotFound } = enoentDetails;
+  const {
+    filePathExisting,
+    filePathNotFound,
+    requestedPathExisting,
+    requestedPathNotFound,
+  } = enoentDetails;
 
   return (
-    <p className="error_message">
-      <span className="error_text">
-        No filesystem entry at{" "}
-        <code title={fileUrl}>
-          <span className="file_path_good">{filePathExisting}</span>
-          <span className="file_path_bad">{filePathNotFound}</span>
-        </code>
-        .
-      </span>
-      <br />
-      <span className="error_text" style="font-size: 70%;">
-        See also available routes in the{" "}
-        <a href="/.internal/route_inspector">route inspector</a>.
-      </span>
-    </p>
+    <div className="error_message">
+      <p className="error_text">
+        <strong>File not found:</strong>&nbsp;
+        <code>
+          <span className="file_path_good">{requestedPathExisting}</span>
+          <span className="file_path_bad">{requestedPathNotFound}</span>
+        </code>{" "}
+        does not exist on the server.
+        {filePathNotFound && filePathNotFound !== requestedPathNotFound ? (
+          <>
+            <br />
+            Looking for{" "}
+            <code>
+              <span className="file_path_good">{filePathExisting}</span>
+              <span className="file_path_bad">{filePathNotFound}</span>
+            </code>{" "}
+            also failed.
+          </>
+        ) : null}
+      </p>
+      <p
+        className="error_suggestion"
+        style="font-size: 0.8em; margin-top: 10px;"
+      >
+        <span className="icon">↩️</span> Go to parent directory:{" "}
+        <a href={`/${requestedPathExisting}`}>
+          {requestedPathExisting || "home directory"}
+        </a>
+        <br />
+        <span className="icon">🔍</span> Check available routes in{" "}
+        <a href="/.internal/route_inspector">route inspector</a>
+      </p>
+    </div>
   );
 };
 
-const Nav = () => {
+const Breadcrumb = ({ items }) => {
   return (
     <h1 className="nav">
-      {navItems.map((navItem) => {
+      {items.map((navItem) => {
         const {
           url,
           urlRelativeToServer,
@@ -91,7 +114,7 @@ const Nav = () => {
         const isDirectory = new URL(url).pathname.endsWith("/");
         return (
           <>
-            <NavItem
+            <BreadcrumbItem
               key={url}
               url={urlRelativeToServer}
               isCurrent={isCurrent}
@@ -99,7 +122,7 @@ const Nav = () => {
               iconLinkUrl={isServerRootDirectory ? `/${mainFilePath}` : ""}
             >
               {name}
-            </NavItem>
+            </BreadcrumbItem>
             {isDirectory ? (
               <span className="directory_separator">/</span>
             ) : null}
@@ -109,7 +132,13 @@ const Nav = () => {
     </h1>
   );
 };
-const NavItem = ({ url, iconImageUrl, iconLinkUrl, isCurrent, children }) => {
+const BreadcrumbItem = ({
+  url,
+  iconImageUrl,
+  iconLinkUrl,
+  isCurrent,
+  children,
+}) => {
   return (
     <span className="nav_item" data-current={isCurrent ? "" : undefined}>
       {iconLinkUrl ? (
