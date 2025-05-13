@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Popover demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div id="app">
+      <h1>Popover demo</h1>
+
+      <form action="javascript:void(0)">
+        <input
+          id="with_form"
+          type="text"
+          required
+          pattern="[a-z]{4,8}"
+          title="4 to 8 lowercase letters"
+          autocomplete="off"
+          value="b"
+        />
+      </form>
+    </div>
+    <script type="module">
+      import { showPopover } from "./popover.js";
+
+      showPopover(document.querySelector("input"), "Hello world");
+    </script>
+  </body>
+</html>
