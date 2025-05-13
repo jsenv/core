@@ -119,8 +119,12 @@ const _createInputValidity = (input) => {
    * This allows CSS to style invalid inputs only when appropriate,
    * preventing premature error displays while maintaining validation integrity.
    */
+  let validityTooltipDisplayed = false;
   let reportValidity = () => {
     input.reportValidity();
+    if (!input.validity.valid) {
+      validityTooltipDisplayed = true;
+    }
     input.setAttribute("data-validity-feedback", "");
   };
   addSelfCleanedEventListenerOnInput("blur", () => {
@@ -128,6 +132,9 @@ const _createInputValidity = (input) => {
   });
   addSelfCleanedEventListenerOnInput("invalid", () => {
     if (input.form) {
+      if (!input.validity.valid) {
+        validityTooltipDisplayed = true;
+      }
       input.setAttribute("data-validity-feedback", "");
     }
   });
@@ -165,6 +172,7 @@ const _createInputValidity = (input) => {
         input.removeAttribute(validationAttribute);
       }
     }
+    validityTooltipDisplayed = false;
     setTimeout(() => {
       for (const [attr, value] of savedAttributeMap) {
         input.setAttribute(attr, value);
@@ -249,15 +257,19 @@ const _createInputValidity = (input) => {
   let blurFromEscape = false;
   cancel_on_escape: {
     addSelfCleanedEventListenerOnInput("keydown", (event) => {
-      if (event.key === "Escape") {
+      if (event.key !== "Escape") {
+        return;
+      }
+      if (validityTooltipDisplayed) {
+        // shanninhan to hide the browser tooltip
         blurFromEscape = true;
         input.blur();
         blurFromEscape = false;
-        triggerOnCancel("escape_key");
-        if (input.isConnected) {
-          input.focus();
-        }
+        validityTooltipDisplayed = false;
+        input.focus();
+        return;
       }
+      triggerOnCancel("escape_key");
     });
   }
 
@@ -310,7 +322,7 @@ const _createInputValidity = (input) => {
     if (input.checkValidity()) {
       form.requestSubmit();
     } else {
-      input.reportValidity();
+      reportValidity();
     }
   });
 
