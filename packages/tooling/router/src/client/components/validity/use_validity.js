@@ -22,5 +22,5 @@ export const useValidity = (inputRef, { onCancel } = {}) => {
     };
   }, [onCancel]);
 
-  return { addCustomValidity, removeCustomValidity };
+  return [addCustomValidity, removeCustomValidity];
 };
