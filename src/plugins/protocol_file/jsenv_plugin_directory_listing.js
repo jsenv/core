@@ -86,7 +86,7 @@ export const jsenvPluginDirectoryListing = ({
             return null;
           }
         }
-        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
+        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(requestedUrl)}&enoent`;
       }
       const isDirectory = fsStat?.isDirectory();
       if (!isDirectory) {
@@ -125,15 +125,10 @@ export const jsenvPluginDirectoryListing = ({
         }
         const request = urlInfo.context.request;
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
-        const requestedUrl = new URL(
-          request.resource.slice(1),
-          rootDirectoryUrl,
-        ).href;
         const directoryListingInjections = generateDirectoryListingInjection(
           urlNotFound,
           {
             spa,
-            requestedUrl,
             autoreload,
             request,
             urlMocks,
@@ -233,7 +228,6 @@ const generateDirectoryListingInjection = (
     rootDirectoryUrl,
     mainFilePath,
     packageDirectory,
-    requestedUrl,
     request,
     urlMocks,
     directoryContentMagicName,
@@ -378,17 +372,6 @@ const generateDirectoryListingInjection = (
       filePathExisting: `/${filePathExisting}`,
       filePathNotFound,
     });
-
-    if (spa && requestedUrl !== urlNotFound) {
-      const requestedFirstExistingDirectoryUrl =
-        getFirstExistingDirectoryUrl(requestedUrl);
-      const [requestedPathExisting, requestedPathNotFound] =
-        buildEnoentPathInfo(requestedUrl, requestedFirstExistingDirectoryUrl);
-      Object.assign(enoentDetails, {
-        requestedPathExisting,
-        requestedPathNotFound,
-      });
-    }
   }
 
   return {

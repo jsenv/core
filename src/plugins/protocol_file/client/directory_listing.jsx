@@ -56,62 +56,26 @@ const DirectoryListing = () => {
 };
 
 const ErrorMessage = () => {
-  const {
-    filePathExisting,
-    filePathNotFound,
-    requestedPathExisting,
-    requestedPathNotFound,
-  } = enoentDetails;
+  const { filePathExisting, filePathNotFound } = enoentDetails;
 
   let errorText;
   let errorSuggestion;
-  if (requestedPathNotFound) {
-    errorText = (
-      <>
-        <strong>File not found:</strong>&nbsp;
-        <code>
-          <span className="file_path_good">{requestedPathExisting}</span>
-          <span className="file_path_bad">{requestedPathNotFound}</span>
-        </code>{" "}
-        does not exist on the server.
-        <br />
-        Looking for{" "}
-        <code>
-          <span className="file_path_good">{filePathExisting}</span>
-          <span className="file_path_bad">{filePathNotFound}</span>
-        </code>{" "}
-        also failed.
-      </>
-    );
-    errorSuggestion = (
-      <>
-        <span className="icon">↩️</span> Go to parent directory:{" "}
-        <a href={`/${requestedPathExisting || filePathExisting}`}>
-          {requestedPathExisting || filePathExisting || "home directory"}
-        </a>
-        <br />
-        <span className="icon">🔍</span> Check available routes in{" "}
-        <a href="/.internal/route_inspector">route inspector</a>
-      </>
-    );
-  } else {
-    errorText = (
-      <>
-        <strong>File not found:</strong>&nbsp;
-        <code>
-          <span className="file_path_good">{filePathExisting}</span>
-          <span className="file_path_bad">{filePathNotFound}</span>
-        </code>{" "}
-        does not exist on the server.
-      </>
-    );
-    errorSuggestion = (
-      <>
-        <span className="icon">🔍</span> Check available routes in{" "}
-        <a href="/.internal/route_inspector">route inspector</a>
-      </>
-    );
-  }
+  errorText = (
+    <>
+      <strong>File not found:</strong>&nbsp;
+      <code>
+        <span className="file_path_good">{filePathExisting}</span>
+        <span className="file_path_bad">{filePathNotFound}</span>
+      </code>{" "}
+      does not exist on the server.
+    </>
+  );
+  errorSuggestion = (
+    <>
+      <span className="icon">🔍</span> Check available routes in{" "}
+      <a href="/.internal/route_inspector">route inspector</a>
+    </>
+  );
 
   return (
     <div className="error_message">
