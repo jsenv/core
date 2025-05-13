@@ -18,18 +18,23 @@
       <form action="javascript:void(0)">
         <input
           style="border-width: 40px"
-          id="with_form"
           type="text"
-          required
-          pattern="[a-z]{4,8}"
           title="4 to 8 lowercase letters"
           autocomplete="off"
           value="b"
         />
+        <button>double width</button>
       </form>
+
+      <!-- <div style="background: blue; height: 400px"></div> -->
     </div>
     <script type="module">
       import { showPopover } from "./popover.js";
+
+      document.querySelector("button").onclick = () => {
+        document.querySelector("input").style.width =
+          `${document.querySelector("input").offsetWidth * 2}px`;
+      };
 
       showPopover(document.querySelector("input"), "Hello world");
     </script>

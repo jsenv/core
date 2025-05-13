@@ -21,9 +21,7 @@ donc idéalement le mettre dans le meme parent ou etre capable de suivre s'il bo
 
 const css = /*css*/ `
 .popover {
-  box-shadow: 3px 4px 4px rgba(0, 0, 0, 0.2);
-  position: relative;
-  border-radius: 4px;
+  
 }
 
 .popover_content {
@@ -46,6 +44,7 @@ const css = /*css*/ `
   fill: white;
   stroke: red;
   stroke-width: 10px;
+  filter: drop-shadow(3px 4px 4px rgba(0, 0, 0, 0.2));
 }
 `;
 
@@ -73,6 +72,11 @@ class JsenvPopover extends HTMLElement {
     const content = popoverElement.querySelector(".popover_content");
     content.innerHTML = innerHTML;
     this.arrowDirection = arrowDirection;
+
+    this.style.display = "block";
+    this.style.overflow = "visible";
+    // Make sure the element takes the full height of its content
+    this.style.height = "auto";
   }
 
   connectedCallback() {
@@ -264,6 +268,26 @@ export const showPopover = (
   }
   const jsenvPopover = new JsenvPopover(innerHtml, { arrowDirection });
   document.body.appendChild(jsenvPopover);
+
+  // Wait for the popover to be positioned and rendered
+  setTimeout(() => {
+    // Check if the popover is partially out of view
+    const popoverRect = jsenvPopover.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+
+    if (popoverRect.bottom > viewportHeight) {
+      // Calculate how much we need to scroll to show the popover
+      // without affecting its position relative to the element
+      const scrollAmount = popoverRect.bottom - viewportHeight + 20; // Add 20px padding
+
+      // Smoothly scroll just enough to show the popover
+      window.scrollBy({
+        top: scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  }, 50);
+
   const stopFollowingPosition = followPosition(jsenvPopover, elementToFollow, {
     position,
     topSpacing: strokeWidth + arrowHeight / 2,
