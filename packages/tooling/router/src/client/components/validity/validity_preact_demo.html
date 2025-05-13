@@ -27,7 +27,15 @@
       // eslint-disable-next-line no-unused-vars
       const InputRequired = () => {
         const inputRef = useRef(null);
-        const [addValidity, removeValidity] = useValidity(inputRef);
+        const [addLetterNotAllowed, removeLetterNotAllowed] = useValidity(
+          inputRef,
+          "no_c",
+          {
+            onCancel: (reason) => {
+              console.log(`cancel: ${reason}`);
+            },
+          },
+        );
 
         return (
           // eslint-disable-next-line no-script-url
@@ -39,9 +47,9 @@
               value="a"
               onInput={(e) => {
                 if (e.target.value.includes("c")) {
-                  addValidity("no_c", `Letter "c" is not allowed`);
+                  addLetterNotAllowed(`Letter "c" is not allowed`);
                 } else {
-                  removeValidity("no_c");
+                  removeLetterNotAllowed();
                 }
               }}
             />

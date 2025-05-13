@@ -4,20 +4,14 @@ import { createInputValidity } from "./input_validity.js";
 export const useValidity = (inputRef, key, { onCancel } = {}) => {
   const inputValidityRef = useRef(null);
 
-  const addCustomValidity = useCallback(
-    (message) => {
-      const inputValidity = inputValidityRef.current;
-      inputValidity.addCustomValidity(key, message);
-    },
-    [key],
-  );
-  const removeCustomValidity = useCallback(
-    (message) => {
-      const inputValidity = inputValidityRef.current;
-      inputValidity.removeCustomValidity(key, message);
-    },
-    [key],
-  );
+  const addCustomValidity = useCallback((message) => {
+    const inputValidity = inputValidityRef.current;
+    inputValidity.addCustomValidity(key, message);
+  }, []);
+  const removeCustomValidity = useCallback((message) => {
+    const inputValidity = inputValidityRef.current;
+    inputValidity.removeCustomValidity(key, message);
+  }, []);
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -39,12 +33,12 @@ export const useValidity = (inputRef, key, { onCancel } = {}) => {
       */
       return null;
     }
-    const inputValidity = createInputValidity(input, { onCancel });
+    const inputValidity = createInputValidity(input, key, { onCancel });
     inputValidityRef.current = inputValidity;
     return () => {
-      inputValidity.cleanup();
+      inputValidity.unsubscribe();
     };
-  }, [onCancel]);
+  }, [key, onCancel]);
 
   return [addCustomValidity, removeCustomValidity];
 };

@@ -30,45 +30,62 @@ const wrapperWeakMap = new WeakMap();
  */
 export const createInputValidity = (
   input,
+  key,
   { requestSubmitOnChange = true, onCancel } = {},
 ) => {
-  // Cache management - retrieves existing controller if one exists for this input
-  // or creates a new one to avoid duplicating event listeners
   const fromCache = wrapperWeakMap.get(input);
   if (fromCache) {
-    const { inputValidity, cancelCallbackSet } = fromCache;
-    if (onCancel) {
-      cancelCallbackSet.add(onCancel);
-    }
-    return inputValidity;
+    const { inputValidity } = fromCache;
+    return inputValidity.subscribe(key, { requestSubmitOnChange, onCancel });
   }
 
+  const inputValidity = _createInputValidity(input);
+  wrapperWeakMap.set(input, inputValidity);
+  return inputValidity.subscribe(key, { requestSubmitOnChange, onCancel });
+};
+
+const _createInputValidity = (input) => {
   const cancelCallbackSet = new Set();
   /**
    * Triggers all registered cancel callbacks
    * This is called when user presses Escape or when required fields are
    * abandoned without input
    */
-  const triggerOnCancel = () => {
+  const triggerOnCancel = (reason) => {
     for (const cancelCallback of cancelCallbackSet) {
-      cancelCallback();
+      cancelCallback(reason);
     }
   };
-  if (onCancel) {
-    cancelCallbackSet.add(onCancel);
-  }
 
   const cleanupCallbackSet = new Set();
+  let subscribeCount = 0;
   const inputValidity = {
-    cleanup: () => {
-      for (const cleanupCallback of cleanupCallbackSet) {
-        cleanupCallback();
+    subscribe: (key, { requestSubmitOnChange, onCancel }) => {
+      if (requestSubmitOnChange) {
+        inputValidity.requestSubmitOnChange = requestSubmitOnChange;
       }
-      cleanupCallbackSet.clear();
-      wrapperWeakMap.delete(input);
+      if (onCancel) {
+        cancelCallbackSet.add(onCancel);
+      }
+      return {
+        addCustomValidity: (message) =>
+          inputValidity.addCustomValidity(key, message),
+        removeCustomValidity: () => inputValidity.removeCustomValidity(key),
+        unsubscribe: () => {
+          subscribeCount--;
+          if (subscribeCount > 0) {
+            return;
+          }
+          for (const cleanupCallback of cleanupCallbackSet) {
+            cleanupCallback();
+          }
+          cleanupCallbackSet.clear();
+          wrapperWeakMap.delete(input);
+        },
+      };
     },
   };
-  wrapperWeakMap.set(input, { inputValidity, cancelCallbackSet });
+  wrapperWeakMap.set(input, inputValidity);
 
   /**
    * Attaches an event listener to the input element that will be automatically
@@ -229,11 +246,14 @@ export const createInputValidity = (
    * triggers the onCancel callback which typically reverts to previous value
    * or exits editing mode.
    */
+  let blurFromEscape = false;
   cancel_on_escape: {
     addSelfCleanedEventListenerOnInput("keydown", (event) => {
       if (event.key === "Escape") {
+        blurFromEscape = true;
         input.blur();
-        triggerOnCancel();
+        blurFromEscape = false;
+        triggerOnCancel("escape_key");
         if (input.isConnected) {
           input.focus();
         }
@@ -252,8 +272,8 @@ export const createInputValidity = (
    */
   cancel_on_blur_empty: {
     addSelfCleanedEventListenerOnInput("blur", () => {
-      if (input.value === "") {
-        triggerOnCancel();
+      if (input.value === "" && !blurFromEscape) {
+        triggerOnCancel("blur_empty");
       }
     });
   }
@@ -274,23 +294,25 @@ export const createInputValidity = (
     });
   }
 
-  if (requestSubmitOnChange) {
-    addSelfCleanedEventListenerOnInput("change", () => {
-      const form = input.form;
-      if (!form) {
-        return;
-      }
-      if (input.validity.valueMissing) {
-        // considered as cancellation
-        return;
-      }
-      if (input.checkValidity()) {
-        form.requestSubmit();
-      } else {
-        input.reportValidity();
-      }
-    });
-  }
+  inputValidity.requestSubmitOnChange = false;
+  addSelfCleanedEventListenerOnInput("change", () => {
+    if (!inputValidity.requestSubmitOnChange) {
+      return;
+    }
+    const form = input.form;
+    if (!form) {
+      return;
+    }
+    if (input.validity.valueMissing) {
+      // considered as cancellation
+      return;
+    }
+    if (input.checkValidity()) {
+      form.requestSubmit();
+    } else {
+      input.reportValidity();
+    }
+  });
 
   return inputValidity;
 };
