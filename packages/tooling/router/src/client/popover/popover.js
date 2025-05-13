@@ -21,15 +21,14 @@ donc idéalement le mettre dans le meme parent ou etre capable de suivre s'il bo
 
 const css = /*css*/ `
 .popover {
-  padding: 5px;
-  background-color: white;
   box-shadow: 3px 4px 4px rgba(0, 0, 0, 0.2);
   position: relative;
+  border-radius: 4px;
 }
 
 .popover_content {
   position: relative;
-  z-index: 1;
+  padding: 5px;
 }
 
 .popover_svg {
@@ -39,6 +38,8 @@ const css = /*css*/ `
   width: 100%;
   height: 100%;
   z-index: 0;
+  overflow: visible;
+  
 }
 
 .popover_border {
@@ -52,10 +53,10 @@ const html = /* html */ `<style>
     ${css}
   </style>
   <div class="popover">
-    <div class="popover_content">Default message</div>
     <svg class="popover_svg" preserveAspectRatio="none">
       <path class="popover_border" d=""></path>
     </svg>
+    <div class="popover_content">Default message</div>
   </div>`;
 
 class JsenvPopover extends HTMLElement {
@@ -90,17 +91,21 @@ class JsenvPopover extends HTMLElement {
       prevHeight = height;
 
       // Make SVG slightly larger to accommodate the arrow
-      const arrowSize = 8;
+      const arrowSize = 5;
+      const arrowWidth = 8;
       let viewBoxWidth = width;
       let viewBoxHeight = height;
       let translateX = 0;
       let translateY = 0;
 
+      // Adjust SVG viewbox and positioning based on arrow direction
       if (position === "bottom") {
+        // For arrow pointing down (toward the element below)
         viewBoxHeight += arrowSize;
-        translateY = arrowSize;
       } else if (position === "top") {
+        // For arrow pointing up (toward the element above)
         viewBoxHeight += arrowSize;
+        svg.style.transform = `translateY(-${arrowSize}px)`;
       }
 
       svg.setAttribute("viewBox", `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
@@ -109,29 +114,8 @@ class JsenvPopover extends HTMLElement {
       const radius = 4; // Border radius
       let path;
 
-      if (position === "bottom") {
-        // Arrow pointing down
+      if (position === "top") {
         const arrowMiddle = width / 2;
-        const arrowWidth = 10;
-
-        path = `
-          M ${radius} ${arrowSize}
-          H ${arrowMiddle - arrowWidth / 2}
-          L ${arrowMiddle} ${viewBoxHeight}
-          L ${arrowMiddle + arrowWidth / 2} ${arrowSize}
-          H ${width - radius}
-          Q ${width} ${arrowSize}, ${width} ${arrowSize + radius}
-          V ${viewBoxHeight - radius - arrowSize}
-          Q ${width} ${viewBoxHeight - arrowSize}, ${width - radius} ${viewBoxHeight - arrowSize}
-          H ${radius}
-          Q 0 ${viewBoxHeight - arrowSize}, 0 ${viewBoxHeight - radius - arrowSize}
-          V ${arrowSize + radius}
-          Q 0 ${arrowSize}, ${radius} ${arrowSize}
-          Z`;
-      } else if (position === "top") {
-        // Arrow pointing up
-        const arrowMiddle = width / 2;
-        const arrowWidth = 10;
 
         path = `
           M ${radius} 0
@@ -146,6 +130,24 @@ class JsenvPopover extends HTMLElement {
           Q 0 ${height}, 0 ${height - radius}
           V ${radius}
           Q 0 0, ${radius} 0
+          Z`;
+      } else if (position === "bottom") {
+        // Arrow pointing up
+        const arrowMiddle = width / 2;
+
+        path = `
+          M ${radius} ${arrowSize}
+          H ${arrowMiddle - arrowWidth / 2}
+          L ${arrowMiddle} 0
+          L ${arrowMiddle + arrowWidth / 2} ${arrowSize}
+          H ${width - radius}
+          Q ${width} ${arrowSize}, ${width} ${arrowSize + radius}
+          V ${viewBoxHeight - radius}
+          Q ${width} ${viewBoxHeight}, ${width - radius} ${viewBoxHeight}
+          H ${radius}
+          Q 0 ${viewBoxHeight}, 0 ${viewBoxHeight - radius}
+          V ${arrowSize + radius}
+          Q 0 ${arrowSize}, ${radius} ${arrowSize}
           Z`;
       }
 
@@ -191,14 +193,18 @@ const followPosition = (
 
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
-    const arrowSize = 8; // Same as in the SVG path creation
+
+    const arrowSize = 5; // Same as in the SVG path creation (reduced size)
+
     if (position === "top") {
+      // Position popover above the element with arrow pointing down
       element.style.position = "absolute";
       element.style.bottom = `${window.innerHeight - elementRect.top + arrowSize}px`;
       element.style.left = `${elementRect.left + elementRect.width / 2}px`;
       element.style.transform = "translateX(-50%)";
     }
     if (position === "bottom") {
+      // Position popover below the element with arrow pointing up
       element.style.position = "absolute";
       element.style.top = `${elementRect.bottom + arrowSize}px`;
       element.style.left = `${elementRect.left + elementRect.width / 2}px`;
