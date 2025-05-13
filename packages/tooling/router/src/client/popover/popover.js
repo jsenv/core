@@ -20,6 +20,13 @@ donc idéalement le mettre dans le meme parent ou etre capable de suivre s'il bo
 // https://druids.datadoghq.com/components/dialogs/Popover#example19
 
 const css = /*css*/ `
+:host {
+  display: block;
+  overflow: visible;
+  height: auto;
+  position: relative;
+}
+
 .popover {
   
 }
@@ -81,12 +88,6 @@ class JsenvPopover extends HTMLElement {
     } else if (arrowDirection === "down") {
       popoverElement.style.marginBottom = `${arrowHeight}px`;
     }
-
-    // Basic styles for the custom element
-    this.style.display = "block";
-    this.style.overflow = "visible";
-    this.style.height = "auto";
-    this.style.position = "relative";
   }
 
   connectedCallback() {
@@ -291,17 +292,13 @@ export const showPopover = (
 
   document.body.appendChild(jsenvPopover);
 
-  // Wait for the popover to be positioned and rendered
-
   // Check if the popover is partially out of view
   const popoverRect = jsenvPopover.getBoundingClientRect();
   const viewportHeight = window.innerHeight;
-
   if (popoverRect.bottom > viewportHeight) {
     // Calculate how much we need to scroll to show the popover
     // without affecting its position relative to the element
     const scrollAmount = popoverRect.bottom - viewportHeight + 20; // Add 20px padding
-
     // Smoothly scroll just enough to show the popover
     window.scrollBy({
       top: scrollAmount,
