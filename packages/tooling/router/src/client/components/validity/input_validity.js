@@ -81,7 +81,10 @@ export const createInputValidity = (input, { onCancel } = {}) => {
       input.removeEventListener(eventName, eventCallback);
     };
     cleanupCallbackSet.add(remove);
-    return remove;
+    return () => {
+      remove();
+      cleanupCallbackSet.delete(remove);
+    };
   };
 
   /**
@@ -94,14 +97,18 @@ export const createInputValidity = (input, { onCancel } = {}) => {
    * CSS can then use [data-active]:invalid to only show validation errors
    * after user interaction, while still maintaining form validation integrity.
    */
-  debounce_invalid_by_interaction: {
-    addSelfCleanedEventListenerOnInput("input", () => {
-      input.setAttribute("data-active", "");
-    });
-    addSelfCleanedEventListenerOnInput("blur", () => {
-      input.removeAttribute("data-active", "");
-    });
-  }
+  let reportValidity = () => {
+    input.reportValidity();
+    input.setAttribute("data-validity-feedback", "");
+  };
+  addSelfCleanedEventListenerOnInput("blur", () => {
+    input.removeAttribute("data-validity-feedback");
+  });
+  addSelfCleanedEventListenerOnInput("invalid", () => {
+    if (input.form) {
+      input.setAttribute("data-validity-feedback", "");
+    }
+  });
 
   /**
    * Key-based custom validation system
@@ -115,32 +122,6 @@ export const createInputValidity = (input, { onCancel } = {}) => {
    */
   keyed_custom_validity: {
     const validityMessageMap = new Map();
-
-    const setAndReportValidity = (message) => {
-      input.setAttribute("data-error", "");
-      input.setCustomValidity(message);
-      input.reportValidity();
-    };
-    const resetCustomValidity = () => {
-      input.setCustomValidity("");
-      input.removeAttribute("data-error");
-    };
-
-    /**
-     * Flag to temporarily ignore input events right after setting a validation message
-     *
-     * This is necessary because:
-     * 1. When addCustomValidity is called during an input event, we want to preserve
-     *    the error message despite the input event that triggered it
-     * 2. When addCustomValidity is called outside an input event, we still want
-     *    subsequent user typing to clear the error message
-     *
-     * Using queueMicrotask ensures the flag is reset after the current event loop,
-     * allowing us to differentiate between:
-     * - The same input event that triggered validation
-     * - Subsequent input events from user typing (which should clear the error)
-     */
-    let wasJustSet = false;
     /**
      * Sets a custom validation message associated with the specified key
      * The message will be displayed immediately and persist until explicitly removed
@@ -151,26 +132,12 @@ export const createInputValidity = (input, { onCancel } = {}) => {
      */
     inputValidity.addCustomValidity = (key, message) => {
       validityMessageMap.set(key, message);
-      setAndReportValidity(message);
-      wasJustSet = true;
-      // Reset the flag after the current event loop completes
-      // This ensures we only ignore input events that are part of
-      // the same synchronous execution context
-      queueMicrotask(() => {
-        wasJustSet = false;
-      });
-    };
-    addSelfCleanedEventListenerOnInput("input", () => {
-      if (wasJustSet) {
-        // If a validation message was just set (in the same event loop),
-        // preserve it for now - this prevents a race condition where
-        // the same input event that triggered a validation would immediately clear it
-        return;
+      console.log("custom", message);
+      input.setCustomValidity(message);
+      if (document.activeElement !== input) {
+        reportValidity();
       }
-      // For normal typing from the user (different event loop than when
-      // the error was set), clear the validation message
-      resetCustomValidity();
-    });
+    };
 
     /**
      * Removes a previously set custom validation message
@@ -181,7 +148,7 @@ export const createInputValidity = (input, { onCancel } = {}) => {
     inputValidity.removeCustomValidity = (key) => {
       validityMessageMap.delete(key);
       if (validityMessageMap.size === 0) {
-        resetCustomValidity();
+        input.setCustomValidity("");
       }
     };
   }
@@ -196,6 +163,7 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   cancel_on_escape: {
     addSelfCleanedEventListenerOnInput("keydown", (event) => {
       if (event.key === "Escape") {
+        input.blur();
         triggerOnCancel();
       }
     });
@@ -209,15 +177,9 @@ export const createInputValidity = (input, { onCancel } = {}) => {
    * 2. Treating blur events on empty required fields as cancellation
    *    (assuming user doesn't want to complete the action)
    */
-  required: {
-    addSelfCleanedEventListenerOnInput("input", () => {
-      if (input.validity.valueMissing) {
-        input.reportValidity();
-      }
-    });
+  cancel_on_blur_empty: {
     addSelfCleanedEventListenerOnInput("blur", () => {
-      if (input.validity.valueMissing) {
-        // blur + empty when required is considered as a cancel
+      if (input.value === "") {
         triggerOnCancel();
       }
     });
@@ -232,7 +194,7 @@ export const createInputValidity = (input, { onCancel } = {}) => {
   enter_report_validity_outside_form: {
     addSelfCleanedEventListenerOnInput("keydown", (event) => {
       if (!input.form && event.key === "Enter") {
-        input.reportValidity();
+        reportValidity();
       }
     });
   }

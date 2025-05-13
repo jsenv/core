@@ -15,17 +15,33 @@
         Enable error when contains letter "c"
       </label>
 
-      <h2>Input without form</h2>
-      <input id="without_form" type="text" required value="a" />
-      <button id="without_form_add">Add custom error</button>
-      <button id="without_form_remove">Remove custom error</button>
-
       <h2>Input with form</h2>
       <form action="javascript:void(0)">
-        <input id="with_form" type="text" required value="b" />
+        <input
+          id="with_form"
+          type="text"
+          required
+          pattern="[a-z]{4,8}"
+          title="4 to 8 lowercase letters"
+          autocomplete="off"
+          value="b"
+        />
         <button id="with_form_add">Add custom error</button>
         <button id="with_form_remove">Remove custom error</button>
       </form>
+
+      <h2>Input without form</h2>
+      <input
+        id="without_form"
+        type="text"
+        required
+        pattern="[a-z]{4,8}"
+        title="4 to 8 lowercase letters"
+        autocomplete="off"
+        value="a"
+      />
+      <button id="without_form_add">Add custom error</button>
+      <button id="without_form_remove">Remove custom error</button>
     </div>
     <script type="module">
       // TODO: we need an input where we set a custom validity message during "input"
@@ -55,6 +71,12 @@
       };
 
       const withForm = document.querySelector("#with_form");
+      withForm.onkeydown = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          withForm.form.requestSubmit();
+        }
+      };
       const withFormInputValidity = createInputValidity(withForm, {
         onCancel: () => {
           withoutForm.value = "b";
