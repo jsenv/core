@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Form validation native popover</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        background: yellow;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>Form validation popover</h1>
+
+      <div>
+        <p>This demo shows how native popover behaves on form validation</p>
+      </div>
+
+      <div style="display: flex; gap: 30px">
+        <div style="border: 1px solid black">
+          <h3>Basic</h3>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+            />
+          </form>
+        </div>
+
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <h3>Top of scrollable content</h3>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+            />
+          </form>
+          <div style="height: 300px; background: blue"></div>
+        </div>
+
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <h3>Bottom of scrollable content</h3>
+          <div style="height: 300px; background: blue"></div>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+            />
+          </form>
+        </div>
+      </div>
+
+      <!-- <div style="background: blue; height: 400px"></div> -->
+    </div>
+    <script type="module"></script>
+  </body>
+</html>
