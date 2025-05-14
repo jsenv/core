@@ -65,16 +65,15 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
 
   if (radius === 0) {
     // Path with sharp corners (no radius)
-    path = `
-      M0,${arrowHeight} 
-      H${constrainedArrowPos - arrowWidth / 2} 
+    // Use a single path with no gaps to ensure proper filling
+    path = `M0,${arrowHeight} 
+      L${constrainedArrowPos - arrowWidth / 2},${arrowHeight} 
       L${constrainedArrowPos},0 
       L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
-      H${width} 
-      V${height + arrowHeight} 
-      H0 
-      V${arrowHeight}
-    `;
+      L${width},${arrowHeight} 
+      L${width},${height + arrowHeight} 
+      L0,${height + arrowHeight} 
+      Z`;
   } else {
     // Path with rounded corners
     path = `
@@ -94,7 +93,13 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   }
 
   return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="${path}" fill="white" stroke="#333" stroke-width="${borderWidth}" />
+    <path
+      d="${path}"
+      fill="white"
+      stroke="#333"
+      stroke-width="${borderWidth}"
+      stroke-linecap="square"
+    />
   </svg>`;
 };
 
@@ -112,16 +117,15 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
 
   if (radius === 0) {
     // Path with sharp corners (no radius)
-    path = `
-      M0,0 
-      H${width} 
-      V${height} 
-      H${constrainedArrowPos + arrowWidth / 2} 
+    // Use a single path with no gaps and explicit line commands
+    path = `M0,0 
+      L${width},0 
+      L${width},${height} 
+      L${constrainedArrowPos + arrowWidth / 2},${height} 
       L${constrainedArrowPos},${height + arrowHeight} 
       L${constrainedArrowPos - arrowWidth / 2},${height} 
-      H0 
-      V0
-    `;
+      L0,${height} 
+      Z`;
   } else {
     // Path with rounded corners
     path = `
@@ -141,7 +145,13 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
   }
 
   return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="${path}" fill="white" stroke="#333" stroke-width="${borderWidth}" />
+    <path
+      d="${path}"
+      fill="white"
+      stroke="#333"
+      stroke-width="${borderWidth}"
+      stroke-linecap="square"
+    />
   </svg>`;
 };
 
