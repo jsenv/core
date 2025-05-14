@@ -332,7 +332,7 @@ const followPosition = (element, elementToFollow) => {
       );
     } else {
       element.setAttribute("data-position", "below");
-      element.style.top = `${elementRect.bottom}px`;
+      element.style.top = `${Math.ceil(elementRect.bottom)}px`;
       popoverContentWrapper.style.marginTop = `${arrowHeight}px`;
       popoverContentWrapper.style.marginBottom = undefined;
       popoverBorder.style.top = `-${borderWidth + arrowHeight}px`;
@@ -345,7 +345,7 @@ const followPosition = (element, elementToFollow) => {
     }
 
     // Position the popover
-    element.style.left = `${leftPos}px`;
+    element.style.left = `${Math.ceil(leftPos)}px`;
     element.style.transform = "translateX(-50%)";
   };
 
