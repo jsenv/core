@@ -65,6 +65,8 @@ const followPosition = (element, elementToFollow) => {
     cleanupCallbackSet.clear();
   };
 
+  const viewportPadding = 0;
+
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
     element.style.position = "fixed";
@@ -82,7 +84,7 @@ const followPosition = (element, elementToFollow) => {
       element.style.top = `${elementRect.bottom}px`;
     }
 
-    const edgePadding = 0 * zoomLevel;
+    const edgePadding = viewportPadding * zoomLevel;
 
     // Calculate the ideal horizontal position (centered)
     let leftPos = elementRect.left + elementRect.width / 2;
@@ -159,13 +161,15 @@ const followPosition = (element, elementToFollow) => {
     });
   }
   update_after_zoom_change: {
-    const handleZoomChange = () => {
-      schedulePositionUpdate();
-    };
-    window.addEventListener("resize", handleZoomChange);
-    cleanupCallbackSet.add(() => {
-      window.removeEventListener("resize", handleZoomChange);
-    });
+    if (viewportPadding) {
+      const handleZoomChange = () => {
+        schedulePositionUpdate();
+      };
+      window.addEventListener("resize", handleZoomChange);
+      cleanupCallbackSet.add(() => {
+        window.removeEventListener("resize", handleZoomChange);
+      });
+    }
   }
 
   return stop;
