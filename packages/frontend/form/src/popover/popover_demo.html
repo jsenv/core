@@ -89,6 +89,36 @@
         </div>
       </div>
 
+      <div>
+        <h3>Message smaller than input</h3>
+        <form action="javascript:void(0)">
+          <input
+            type="text"
+            pattern="^[a-z]{4,8}$"
+            title="4 to 8 lowercase letters"
+            autocomplete="off"
+            value="10"
+            oninput="this.reportValidity()"
+            style="width: 300px"
+          />
+        </form>
+      </div>
+
+      <div>
+        <h3>Message bugger than input</h3>
+        <form action="javascript:void(0)">
+          <input
+            type="text"
+            pattern="^[a-z]{4,8}$"
+            title="4 to 8 lowercase letters"
+            autocomplete="off"
+            value="10"
+            oninput="this.reportValidity()"
+            style="width: 20px"
+          />
+        </form>
+      </div>
+
       <div style="position: fixed; bottom: 10px">
         <h3>Bottom left of viewport</h3>
         <form action="javascript:void(0)">
@@ -99,6 +129,7 @@
             autocomplete="off"
             value="10"
             oninput="this.reportValidity()"
+            style="width: 300px"
           />
         </form>
       </div>

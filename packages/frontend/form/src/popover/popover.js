@@ -70,7 +70,16 @@ const followPosition = (element, elementToFollow) => {
     element.style.position = "fixed";
     // Position the popover so the arrow tip exactly touches the bottom of input
     // This is arrowSize pixels above where the main popover body starts
-    element.style.top = `${elementRect.bottom}px`;
+    const viewportHeight = window.innerHeight;
+    const isNearBottom = elementRect.bottom > viewportHeight - 100;
+
+    if (isNearBottom) {
+      // Position above the element instead of below
+      element.style.top = `${elementRect.top - element.offsetHeight}px`;
+    } else {
+      element.style.top = `${elementRect.bottom}px`;
+    }
+
     element.style.left = `${elementRect.left + elementRect.width / 2}px`;
     element.style.transform = "translateX(-50%)";
   };
