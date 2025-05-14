@@ -27,6 +27,8 @@ const css = /*css*/ `
   overflow: visible;
   height: auto;
   position: relative;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
 }
 
 .popover_content {
@@ -83,25 +85,24 @@ const followPosition = (element, elementToFollow) => {
     cancelAnimationFrame(rafId);
   });
 
-  update_after_move: {
+  update_after_visibility_change: {
     const options = {
       root: null, // viewport
       rootMargin: "0px",
-      threshold: [0, 0.25, 0.5, 0.75, 1], // Observer à différents niveaux de visibilité
+      threshold: [0, 1],
     };
     const intersectionObserver = new IntersectionObserver((entries) => {
       const [entry] = entries;
       if (entry.isIntersecting) {
-        const visibilityRatio = entry.intersectionRatio;
-        element.style.opacity = visibilityRatio;
+        element.style.opacity = 1;
         schedulePositionUpdate();
       } else {
-        element.style.opacity = "0";
+        element.style.opacity = 0;
       }
     }, options);
     intersectionObserver.observe(elementToFollow);
     cleanupCallbackSet.add(() => {
-      intersectionObserver.unobserve(elementToFollow);
+      intersectionObserver.disconnect();
     });
   }
   update_after_scroll: {

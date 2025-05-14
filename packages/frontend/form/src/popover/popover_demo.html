@@ -20,48 +20,72 @@
       <h1>Popover demo</h1>
 
       <div style="display: flex; gap: 30px">
-        <div style="border: 1px solid black">
+        <div>
           <h3>Basic</h3>
-          <form action="javascript:void(0)">
-            <input
-              type="text"
-              pattern="^[a-z]{4,8}$"
-              title="4 to 8 lowercase letters"
-              autocomplete="off"
-              value="10"
-              oninput="this.reportValidity()"
-            />
-          </form>
+          <div style="border: 1px solid black">
+            <form action="javascript:void(0)">
+              <input
+                type="text"
+                pattern="^[a-z]{4,8}$"
+                title="4 to 8 lowercase letters"
+                autocomplete="off"
+                value="10"
+                oninput="this.reportValidity()"
+              />
+            </form>
+          </div>
         </div>
 
-        <div style="border: 1px solid black; overflow: auto; height: 150px">
+        <div>
           <h3>Top of scrollable content</h3>
-          <form action="javascript:void(0)">
-            <input
-              type="text"
-              pattern="^[a-z]{4,8}$"
-              title="4 to 8 lowercase letters"
-              autocomplete="off"
-              value="10"
-              oninput="this.reportValidity()"
-            />
-          </form>
-          <div style="height: 300px; background: blue"></div>
+          <div style="border: 1px solid black; overflow: auto; height: 150px">
+            <form action="javascript:void(0)">
+              <input
+                type="text"
+                pattern="^[a-z]{4,8}$"
+                title="4 to 8 lowercase letters"
+                autocomplete="off"
+                value="10"
+                oninput="this.reportValidity()"
+              />
+            </form>
+            <div style="height: 300px; background: blue"></div>
+          </div>
         </div>
 
-        <div style="border: 1px solid black; overflow: auto; height: 150px">
+        <div>
           <h3>Bottom of scrollable content</h3>
-          <div style="height: 300px; background: blue"></div>
-          <form action="javascript:void(0)">
-            <input
-              type="text"
-              pattern="^[a-z]{4,8}$"
-              title="4 to 8 lowercase letters"
-              autocomplete="off"
-              value="10"
-              oninput="this.reportValidity()"
-            />
-          </form>
+          <div style="border: 1px solid black; overflow: auto; height: 150px">
+            <div style="height: 300px; background: blue"></div>
+            <form action="javascript:void(0)">
+              <input
+                type="text"
+                pattern="^[a-z]{4,8}$"
+                title="4 to 8 lowercase letters"
+                autocomplete="off"
+                value="10"
+                oninput="this.reportValidity()"
+              />
+            </form>
+          </div>
+        </div>
+
+        <div>
+          <h3>Middle of scrollable content</h3>
+          <div style="border: 1px solid black; overflow: auto; height: 150px">
+            <div style="height: 250px; background: blue"></div>
+            <form action="javascript:void(0)">
+              <input
+                type="text"
+                pattern="^[a-z]{4,8}$"
+                title="4 to 8 lowercase letters"
+                autocomplete="off"
+                value="10"
+                oninput="this.reportValidity()"
+              />
+            </form>
+            <div style="height: 250px; background: blue"></div>
+          </div>
         </div>
       </div>
 
