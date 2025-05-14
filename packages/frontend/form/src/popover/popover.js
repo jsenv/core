@@ -65,15 +65,11 @@ const followPosition = (element, elementToFollow) => {
     cleanupCallbackSet.clear();
   };
 
-  const viewportPadding = 0;
-
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
     element.style.position = "fixed";
 
-    const zoomLevel = window.devicePixelRatio || 1;
-
-    const viewportWidth = window.innerWidth;
+    const viewportWidth = document.documentElement.clientWidth;
     const viewportHeight = window.innerHeight;
     const isNearBottom = elementRect.bottom > viewportHeight - 100;
 
@@ -84,8 +80,6 @@ const followPosition = (element, elementToFollow) => {
       element.style.top = `${elementRect.bottom}px`;
     }
 
-    const edgePadding = viewportPadding * zoomLevel;
-
     // Calculate the ideal horizontal position (centered)
     let leftPos = elementRect.left + elementRect.width / 2;
     const popoverWidth = element.offsetWidth;
@@ -93,10 +87,10 @@ const followPosition = (element, elementToFollow) => {
     // Ensure popover doesn't go outside viewport on left or right
     if (leftPos - halfPopoverWidth < 0) {
       // Too far left, adjust to stay in viewport with some padding
-      leftPos = halfPopoverWidth + edgePadding;
+      leftPos = halfPopoverWidth;
     } else if (leftPos + halfPopoverWidth > viewportWidth) {
       // Too far right, adjust to stay in viewport with some padding
-      leftPos = viewportWidth - halfPopoverWidth - edgePadding;
+      leftPos = viewportWidth - halfPopoverWidth;
     }
     element.style.left = `${leftPos}px`;
     element.style.transform = "translateX(-50%)";
@@ -160,17 +154,6 @@ const followPosition = (element, elementToFollow) => {
       resizeObserver.unobserve(elementToFollow);
     });
   }
-  update_after_zoom_change: {
-    if (viewportPadding) {
-      const handleZoomChange = () => {
-        schedulePositionUpdate();
-      };
-      window.addEventListener("resize", handleZoomChange);
-      cleanupCallbackSet.add(() => {
-        window.removeEventListener("resize", handleZoomChange);
-      });
-    }
-  }
 
   return stop;
 };
@@ -179,19 +162,6 @@ export const showPopover = (elementToFollow, innerHtml) => {
   const jsenvPopover = createPopover(innerHtml);
   const stopFollowingPosition = followPosition(jsenvPopover, elementToFollow);
   document.body.appendChild(jsenvPopover);
-
-  const popoverRect = jsenvPopover.getBoundingClientRect();
-  const viewportHeight = window.innerHeight;
-  if (popoverRect.bottom > viewportHeight) {
-    // Calculate how much we need to scroll to show the popover
-    // without affecting its position relative to the element
-    const scrollAmount = popoverRect.bottom - viewportHeight + 20; // Add 20px padding
-    // Smoothly scroll just enough to show the popover
-    window.scrollBy({
-      top: scrollAmount,
-      behavior: "smooth",
-    });
-  }
 
   return () => {
     stopFollowingPosition();
