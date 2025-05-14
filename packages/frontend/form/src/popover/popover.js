@@ -42,7 +42,7 @@ const css = /*css*/ `
 .popover[data-position="below"] .popover_border-top {
   display: block;
 }
-.popover[data-position="below"] .popover_border-bottom {
+.popover[data-position="above"] .popover_border-bottom {
   display: block;
 }  
 .popover[data-position="below"] .popover_content_wrapper {
@@ -187,6 +187,9 @@ const followPosition = (element, elementToFollow) => {
     element.style.transform = "translateX(-50%)";
   };
 
+  // Initial position calculation
+  updatePosition();
+
   const contentWidth = popoverContent.offsetWidth;
   const contentHeight = popoverContent.offsetHeight;
   borderTop.innerHTML = generateSvgWithTopArrow(contentWidth, contentHeight);
@@ -194,9 +197,6 @@ const followPosition = (element, elementToFollow) => {
     contentWidth,
     contentHeight,
   );
-
-  // Initial position calculation
-  updatePosition();
 
   // Set up resize observer to update SVG when content size changes
   const resizeObserverContent = new ResizeObserver(() => {
