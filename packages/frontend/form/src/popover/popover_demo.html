@@ -48,6 +48,23 @@ lorsqu'on zoom le comportement semble étrange
         </div>
 
         <div>
+          <h3>Basic right</h3>
+          <div style="border: 1px solid black; width: 300px">
+            <form action="javascript:void(0)">
+              <input
+                type="text"
+                pattern="^[a-z]{4,8}$"
+                title="4 to 8 lowercase letters"
+                autocomplete="off"
+                value="10"
+                oninput="this.reportValidity()"
+              />
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- <div>
           <h3>Top of scrollable content</h3>
           <div style="border: 1px solid black; overflow: auto; height: 150px">
             <form action="javascript:void(0)">
@@ -97,10 +114,9 @@ lorsqu'on zoom le comportement semble étrange
             </form>
             <div style="height: 250px; background: blue"></div>
           </div>
-        </div>
-      </div>
+        </div> -->
 
-      <div>
+      <!-- <div>
         <h3>Message smaller than input</h3>
         <form action="javascript:void(0)">
           <input
@@ -143,9 +159,14 @@ lorsqu'on zoom le comportement semble étrange
             style="width: 300px"
           />
         </form>
-      </div>
-      <!-- <div style="background: blue; height: 400px"></div> -->
+      </div> -->
     </div>
+
+    <br />
+    <br />
+    <br />
+    <div style="background: red; width: 2000px; height: 1px"></div>
+    <div style="background: blue; height: 400px"></div>
     <script type="module">
       import { showPopover } from "./popover.js";
 

@@ -10,5 +10,6 @@ export {
   getScrollableParentSet,
   trapScrollInside,
 } from "./scroll.js";
+export { getPaddingAndBorderSizes } from "./size.js";
 export { getStyle, setAttributes, setStyles } from "./style_and_attributes.js";
 export { findFirstDescendant } from "./traversal.js";
