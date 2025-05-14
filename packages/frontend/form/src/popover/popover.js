@@ -56,8 +56,13 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
 
   // Adjust the SVG viewBox and path to account for the border width
   const halfBorder = borderWidth / 2;
+
+  // Calculate the actual content area height without the arrow
+  const contentHeight = height - arrowHeight;
+
+  // Use the content height for the SVG path calculation
   const adjustedWidth = width;
-  const adjustedHeight = height + arrowHeight;
+  const adjustedHeight = contentHeight + arrowHeight;
 
   let path;
 
@@ -69,8 +74,8 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       L${constrainedArrowPos},${halfBorder} 
       L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
       L${width - halfBorder},${arrowHeight} 
-      L${width - halfBorder},${height + arrowHeight - halfBorder} 
-      L${halfBorder},${height + arrowHeight - halfBorder} 
+      L${width - halfBorder},${contentHeight + arrowHeight - halfBorder} 
+      L${halfBorder},${contentHeight + arrowHeight - halfBorder} 
       Z`;
   } else {
     // Path with rounded corners
@@ -81,10 +86,10 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
       H${width - radius - halfBorder} 
       Q${width - halfBorder},${arrowHeight} ${width - halfBorder},${arrowHeight + radius} 
-      V${height + arrowHeight - radius - halfBorder} 
-      Q${width - halfBorder},${height + arrowHeight - halfBorder} ${width - radius - halfBorder},${height + arrowHeight - halfBorder} 
+      V${contentHeight + arrowHeight - radius - halfBorder} 
+      Q${width - halfBorder},${contentHeight + arrowHeight - halfBorder} ${width - radius - halfBorder},${contentHeight + arrowHeight - halfBorder} 
       H${radius + halfBorder} 
-      Q${halfBorder},${height + arrowHeight - halfBorder} ${halfBorder},${height + arrowHeight - radius - halfBorder} 
+      Q${halfBorder},${contentHeight + arrowHeight - halfBorder} ${halfBorder},${contentHeight + arrowHeight - radius - halfBorder} 
       V${arrowHeight + radius} 
       Q${halfBorder},${arrowHeight} ${radius + halfBorder},${arrowHeight}
     `;
@@ -119,8 +124,13 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
 
   // Adjust for border width
   const halfBorder = borderWidth / 2;
+
+  // Calculate the actual content area height without the arrow
+  const contentHeight = height - arrowHeight;
+
+  // Use the content height for the SVG path calculation
   const adjustedWidth = width;
-  const adjustedHeight = height + arrowHeight;
+  const adjustedHeight = contentHeight + arrowHeight;
 
   let path;
 
@@ -128,11 +138,11 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     // Path with sharp corners (no radius)
     path = `M${halfBorder},${halfBorder} 
       L${width - halfBorder},${halfBorder} 
-      L${width - halfBorder},${height - halfBorder} 
-      L${constrainedArrowPos + arrowWidth / 2},${height - halfBorder} 
-      L${constrainedArrowPos},${height + arrowHeight - halfBorder} 
-      L${constrainedArrowPos - arrowWidth / 2},${height - halfBorder} 
-      L${halfBorder},${height - halfBorder} 
+      L${width - halfBorder},${contentHeight - halfBorder} 
+      L${constrainedArrowPos + arrowWidth / 2},${contentHeight - halfBorder} 
+      L${constrainedArrowPos},${contentHeight + arrowHeight - halfBorder} 
+      L${constrainedArrowPos - arrowWidth / 2},${contentHeight - halfBorder} 
+      L${halfBorder},${contentHeight - halfBorder} 
       Z`;
   } else {
     // Path with rounded corners
@@ -140,13 +150,13 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       M${radius + halfBorder},${halfBorder} 
       H${width - radius - halfBorder} 
       Q${width - halfBorder},${halfBorder} ${width - halfBorder},${radius + halfBorder} 
-      V${height - radius - halfBorder} 
-      Q${width - halfBorder},${height - halfBorder} ${width - radius - halfBorder},${height - halfBorder} 
+      V${contentHeight - radius - halfBorder} 
+      Q${width - halfBorder},${contentHeight - halfBorder} ${width - radius - halfBorder},${contentHeight - halfBorder} 
       H${constrainedArrowPos + arrowWidth / 2} 
-      L${constrainedArrowPos},${height + arrowHeight - halfBorder} 
-      L${constrainedArrowPos - arrowWidth / 2},${height - halfBorder} 
+      L${constrainedArrowPos},${contentHeight + arrowHeight - halfBorder} 
+      L${constrainedArrowPos - arrowWidth / 2},${contentHeight - halfBorder} 
       H${radius + halfBorder} 
-      Q${halfBorder},${height - halfBorder} ${halfBorder},${height - radius - halfBorder} 
+      Q${halfBorder},${contentHeight - halfBorder} ${halfBorder},${contentHeight - radius - halfBorder} 
       V${radius + halfBorder} 
       Q${halfBorder},${halfBorder} ${radius + halfBorder},${halfBorder}
     `;
@@ -257,7 +267,6 @@ const followPosition = (element, elementToFollow) => {
     // Position based on whether it's above or below the element
     if (isNearBottom) {
       element.setAttribute("data-position", "above");
-      // Position above the element, accounting for the larger border and taller arrow
       element.style.top = `${elementRect.top - contentHeight - arrowHeight - 2 * borderWidth}px`;
       popoverBorder.innerHTML = generateSvgWithBottomArrow(
         popoverBorder.offsetWidth,
@@ -266,7 +275,6 @@ const followPosition = (element, elementToFollow) => {
       );
     } else {
       element.setAttribute("data-position", "below");
-      // Position below the element with taller arrow
       element.style.top = `${elementRect.bottom}px`;
       popoverBorder.innerHTML = generateSvgWithTopArrow(
         popoverBorder.offsetWidth,
