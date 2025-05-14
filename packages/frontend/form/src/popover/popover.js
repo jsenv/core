@@ -114,19 +114,19 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   // Inner path (content)
   const innerRadius = Math.max(0, radius - borderWidth);
   const innerPath = `
-      M${radius + borderWidth},${arrowHeight + borderWidth} 
-      H${constrainedArrowPos - arrowWidth / 4} 
-      L${constrainedArrowPos},${borderWidth + arrowHeight / 2} 
-      L${constrainedArrowPos + arrowWidth / 4},${arrowHeight + borderWidth} 
-      H${width - radius - borderWidth} 
-      Q${width - borderWidth},${arrowHeight + borderWidth} ${width - borderWidth},${arrowHeight + radius + borderWidth} 
-      V${adjustedHeight - radius - borderWidth} 
-      Q${width - borderWidth},${adjustedHeight - borderWidth} ${width - radius - borderWidth},${adjustedHeight - borderWidth} 
-      H${radius + borderWidth} 
-      Q${borderWidth},${adjustedHeight - borderWidth} ${borderWidth},${adjustedHeight - radius - borderWidth} 
-      V${arrowHeight + radius + borderWidth} 
-      Q${borderWidth},${arrowHeight + borderWidth} ${radius + borderWidth},${arrowHeight + borderWidth}
-    `;
+    M${innerRadius + borderWidth},${arrowHeight + borderWidth} 
+    H${constrainedArrowPos - arrowWidth / 4} 
+    L${constrainedArrowPos},${borderWidth + arrowHeight / 2} 
+    L${constrainedArrowPos + arrowWidth / 4},${arrowHeight + borderWidth} 
+    H${width - innerRadius - borderWidth} 
+    Q${width - borderWidth},${arrowHeight + borderWidth} ${width - borderWidth},${arrowHeight + innerRadius + borderWidth} 
+    V${adjustedHeight - innerRadius - borderWidth} 
+    Q${width - borderWidth},${adjustedHeight - borderWidth} ${width - innerRadius - borderWidth},${adjustedHeight - borderWidth} 
+    H${innerRadius + borderWidth} 
+    Q${borderWidth},${adjustedHeight - borderWidth} ${borderWidth},${adjustedHeight - innerRadius - borderWidth} 
+    V${arrowHeight + innerRadius + borderWidth} 
+    Q${borderWidth},${arrowHeight + borderWidth} ${innerRadius + borderWidth},${arrowHeight + borderWidth}
+  `;
 
   return `<svg
       width="${adjustedWidth}"
@@ -207,19 +207,19 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
   // Inner path (content)
   const innerRadius = Math.max(0, radius - borderWidth);
   const innerPath = `
-      M${radius + borderWidth},${borderWidth} 
-      H${width - radius - borderWidth} 
-      Q${width - borderWidth},${borderWidth} ${width - borderWidth},${radius + borderWidth} 
-      V${contentHeight - radius - borderWidth} 
-      Q${width - borderWidth},${contentHeight - borderWidth} ${width - radius - borderWidth},${contentHeight - borderWidth} 
-      H${constrainedArrowPos + arrowWidth / 4} 
-      L${constrainedArrowPos},${contentHeight + arrowHeight / 2 - borderWidth} 
-      L${constrainedArrowPos - arrowWidth / 4},${contentHeight - borderWidth} 
-      H${radius + borderWidth} 
-      Q${borderWidth},${contentHeight - borderWidth} ${borderWidth},${contentHeight - radius - borderWidth} 
-      V${radius + borderWidth} 
-      Q${borderWidth},${borderWidth} ${radius + borderWidth},${borderWidth}
-    `;
+    M${innerRadius + borderWidth},${borderWidth} 
+    H${width - innerRadius - borderWidth} 
+    Q${width - borderWidth},${borderWidth} ${width - borderWidth},${innerRadius + borderWidth} 
+    V${contentHeight - innerRadius - borderWidth} 
+    Q${width - borderWidth},${contentHeight - borderWidth} ${width - innerRadius - borderWidth},${contentHeight - borderWidth} 
+    H${constrainedArrowPos + arrowWidth / 4} 
+    L${constrainedArrowPos},${contentHeight + arrowHeight / 2 - borderWidth} 
+    L${constrainedArrowPos - arrowWidth / 4},${contentHeight - borderWidth} 
+    H${innerRadius + borderWidth} 
+    Q${borderWidth},${contentHeight - borderWidth} ${borderWidth},${contentHeight - innerRadius - borderWidth} 
+    V${innerRadius + borderWidth} 
+    Q${borderWidth},${borderWidth} ${innerRadius + borderWidth},${borderWidth}
+  `;
 
   return `<svg
       width="${adjustedWidth}"
