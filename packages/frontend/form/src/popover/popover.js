@@ -48,7 +48,7 @@ document.head.appendChild(styleElement);
 
 const arrowWidth = 16;
 const arrowHeight = 8;
-const radius = 3;
+const radius = 0;
 const borderWidth = 10;
 
 const generateSvgWithTopArrow = (width, height, arrowPosition) => {
@@ -60,8 +60,24 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
     Math.min(arrowPosition, maxArrowPos),
   );
 
-  return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="
+  // Create different path depending on whether radius is 0 or not
+  let path;
+
+  if (radius === 0) {
+    // Path with sharp corners (no radius)
+    path = `
+      M0,${arrowHeight} 
+      H${constrainedArrowPos - arrowWidth / 2} 
+      L${constrainedArrowPos},0 
+      L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
+      H${width} 
+      V${height + arrowHeight} 
+      H0 
+      V${arrowHeight}
+    `;
+  } else {
+    // Path with rounded corners
+    path = `
       M${radius},${arrowHeight} 
       H${constrainedArrowPos - arrowWidth / 2} 
       L${constrainedArrowPos},0 
@@ -74,8 +90,11 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       Q0,${height + arrowHeight} 0,${height + arrowHeight - radius} 
       V${arrowHeight + radius} 
       Q0,${arrowHeight} ${radius},${arrowHeight}
-    " 
-    fill="white" stroke="#333" stroke-width="${borderWidth}" />
+    `;
+  }
+
+  return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="${path}" fill="white" stroke="#333" stroke-width="${borderWidth}" />
   </svg>`;
 };
 
@@ -88,8 +107,24 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     Math.min(arrowPosition, maxArrowPos),
   );
 
-  return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="
+  // Create different path depending on whether radius is 0 or not
+  let path;
+
+  if (radius === 0) {
+    // Path with sharp corners (no radius)
+    path = `
+      M0,0 
+      H${width} 
+      V${height} 
+      H${constrainedArrowPos + arrowWidth / 2} 
+      L${constrainedArrowPos},${height + arrowHeight} 
+      L${constrainedArrowPos - arrowWidth / 2},${height} 
+      H0 
+      V0
+    `;
+  } else {
+    // Path with rounded corners
+    path = `
       M${radius},0 
       H${width - radius} 
       Q${width},0 ${width},${radius} 
@@ -102,8 +137,11 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       Q0,${height} 0,${height - radius} 
       V${radius} 
       Q0,0 ${radius},0
-    " 
-    fill="white" stroke="#333" stroke-width="${borderWidth}" />
+    `;
+  }
+
+  return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="${path}" fill="white" stroke="#333" stroke-width="${borderWidth}" />
   </svg>`;
 };
 
