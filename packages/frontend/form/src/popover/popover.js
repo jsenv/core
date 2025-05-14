@@ -24,9 +24,10 @@ const css = /*css*/ `
   position: relative;
 }
 .popover_content {
-  /* padding: 5px; */
+  padding: 5px; 
   position: relative;
   border-radius: 3px;
+  box-shadow: 4px 4px 4px 1px rgba(0, 0, 0, 0.2);
 }
 
 .popover_border svg {
