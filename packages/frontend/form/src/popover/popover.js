@@ -146,7 +146,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       Q0,0 ${radius},0
     `;
 
-  // Inner path with minimal arrow width reduction
+  // Fixed inner path with correct arrow direction and color
   const innerRadius = Math.max(0, radius - borderWidth);
   const innerPath = `
     M${innerRadius + borderWidth},${borderWidth} 
@@ -155,7 +155,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     V${contentHeight - innerRadius - borderWidth} 
     Q${width - borderWidth},${contentHeight - borderWidth} ${width - innerRadius - borderWidth},${contentHeight - borderWidth} 
     H${constrainedArrowPos + arrowWidth / 2 - innerArrowWidthReduction} 
-    L${constrainedArrowPos},${contentHeight + arrowHeight - borderWidth * 2} 
+    L${constrainedArrowPos},${adjustedHeight - borderWidth} 
     L${constrainedArrowPos - arrowWidth / 2 + innerArrowWidthReduction},${contentHeight - borderWidth} 
     H${innerRadius + borderWidth} 
     Q${borderWidth},${contentHeight - borderWidth} ${borderWidth},${contentHeight - innerRadius - borderWidth} 
