@@ -175,21 +175,51 @@ const followPosition = (element, elementToFollow) => {
     // Calculate the ideal horizontal position (centered)
     let leftPos = elementRect.left + elementRect.width / 2;
     const halfContentWidth = contentWidth / 2;
-    let arrowPos = contentWidth / 2; // Default to center of popover
+
+    // Default arrow position to the left side with some padding
+    // instead of centering it on the popover
+    const arrowLeftPadding = 24; // Distance from left edge
+    let arrowPos = arrowLeftPadding;
+
+    // Calculate target center relative to popover
+    const targetCenterRelativeToPopover = halfContentWidth; // Default - when popover is centered on target
 
     // Ensure popover doesn't go outside viewport on left or right
     if (leftPos - halfContentWidth < 0) {
       // Popover is constrained on the left edge
       const shiftAmount = halfContentWidth - leftPos; // How much we had to shift right
-      arrowPos = contentWidth / 2 - shiftAmount; // Move arrow left by the shift amount
       leftPos = halfContentWidth;
+
+      // Keep the arrow pointing at the target element
+      // If the target is now to the left of our default arrow position, shift the arrow
+      const targetCenter = elementRect.left + elementRect.width / 2;
+      const popoverLeft = leftPos - halfContentWidth;
+      const targetCenterRelativeToPopoverEdge = targetCenter - popoverLeft;
+
+      // Only move arrow from default position if necessary to point at target
+      arrowPos = Math.max(arrowLeftPadding, targetCenterRelativeToPopoverEdge);
     } else if (leftPos + halfContentWidth > viewportWidth) {
       // Popover is constrained on the right edge
       const shiftAmount = leftPos + halfContentWidth - viewportWidth; // How much we had to shift left
-      arrowPos = contentWidth / 2 + shiftAmount; // Move arrow right by the shift amount
       leftPos = viewportWidth - halfContentWidth;
-    }
 
+      // Keep the arrow pointing at the target element
+      const targetCenter = elementRect.left + elementRect.width / 2;
+      const popoverLeft = leftPos - halfContentWidth;
+      const targetCenterRelativeToPopoverEdge = targetCenter - popoverLeft;
+
+      // Only move arrow from default position if necessary to point at target
+      arrowPos = Math.max(arrowLeftPadding, targetCenterRelativeToPopoverEdge);
+    } else {
+      // Popover is not constrained by viewport edges
+      // Calculate where the arrow should point based on the target position
+      const targetCenter = elementRect.left + elementRect.width / 2;
+      const popoverLeft = leftPos - halfContentWidth;
+      const targetCenterRelativeToPopoverEdge = targetCenter - popoverLeft;
+
+      // Use default left position unless target is to the right of it
+      arrowPos = Math.max(arrowLeftPadding, targetCenterRelativeToPopoverEdge);
+    }
     const borderWidth = 1;
 
     // Position based on whether it's above or below the element
@@ -222,15 +252,6 @@ const followPosition = (element, elementToFollow) => {
 
   // Set up resize observer to update SVG when content size changes
   const resizeObserverContent = new ResizeObserver(() => {
-    const popoverContent = element.querySelector(".popover_content");
-    const contentWidth = popoverContent.offsetWidth;
-    const contentHeight = popoverContent.offsetHeight;
-
-    borderTop.innerHTML = generateSvgWithTopArrow(contentWidth, contentHeight);
-    borderBottom.innerHTML = generateSvgWithBottomArrow(
-      contentWidth,
-      contentHeight,
-    );
     updatePosition();
   });
   resizeObserverContent.observe(element.querySelector(".popover_content"));
