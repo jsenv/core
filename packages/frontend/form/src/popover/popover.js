@@ -41,7 +41,7 @@ styleElement.textContent = css;
 document.head.appendChild(styleElement);
 
 const arrowWidth = 16;
-const arrowHeight = 12; // Increased from 8 to 12 for a more pronounced arrow
+const arrowHeight = 8; // Increased from 8 to 12 for a more pronounced arrow
 const radius = 3;
 const borderWidth = 10;
 
@@ -54,64 +54,91 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
     Math.min(arrowPosition, maxArrowPos),
   );
 
-  // Adjust the SVG viewBox and path to account for the border width
-  const halfBorder = borderWidth / 2;
-
-  // The height passed to this function already includes the arrow height
-  // Subtract the arrow height to get just the content height
+  // Calculate content height
   const contentHeight = height - arrowHeight;
 
-  // Keep the SVG dimensions consistent with the actual content + arrow
+  // Create two paths: one for the border (outer) and one for the content (inner)
+  // Both will be filled instead of stroked
   const adjustedWidth = width;
   const adjustedHeight = contentHeight + arrowHeight;
 
-  let path;
-
   if (radius === 0) {
-    // Path with sharp corners (no radius)
-    // Fix the spacing by ensuring the arrow connects directly with content area
-    path = `M${halfBorder},${arrowHeight} 
+    // For sharp corners, create two paths: outer (border) and inner (white fill)
+    const outerPath = `M0,${arrowHeight} 
       L${constrainedArrowPos - arrowWidth / 2},${arrowHeight} 
-      L${constrainedArrowPos},${halfBorder} 
+      L${constrainedArrowPos},0 
       L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
-      L${width - halfBorder},${arrowHeight} 
-      L${width - halfBorder},${adjustedHeight - halfBorder} 
-      L${halfBorder},${adjustedHeight - halfBorder} 
+      L${width},${arrowHeight} 
+      L${width},${adjustedHeight} 
+      L0,${adjustedHeight} 
       Z`;
-  } else {
-    // Path with rounded corners
-    path = `
-      M${radius + halfBorder},${arrowHeight} 
-      H${constrainedArrowPos - arrowWidth / 2} 
-      L${constrainedArrowPos},${halfBorder} 
-      L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
-      H${width - radius - halfBorder} 
-      Q${width - halfBorder},${arrowHeight} ${width - halfBorder},${arrowHeight + radius} 
-      V${adjustedHeight - radius - halfBorder} 
-      Q${width - halfBorder},${adjustedHeight - halfBorder} ${width - radius - halfBorder},${adjustedHeight - halfBorder} 
-      H${radius + halfBorder} 
-      Q${halfBorder},${adjustedHeight - halfBorder} ${halfBorder},${adjustedHeight - radius - halfBorder} 
-      V${arrowHeight + radius} 
-      Q${halfBorder},${arrowHeight} ${radius + halfBorder},${arrowHeight}
-    `;
-  }
 
-  return `<svg
-    width="${adjustedWidth}"
-    height="${adjustedHeight}"
-    viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="${path}"
-      fill="white"
-      stroke="#333"
-      stroke-width="${borderWidth}"
-      stroke-linecap="${radius === 0 ? "square" : "round"}"
-    
-    />
-  </svg>`;
+    // Inner path (offset by borderWidth)
+    const innerPath = `M${borderWidth},${arrowHeight + borderWidth} 
+      L${constrainedArrowPos - arrowWidth / 2 + borderWidth / 2},${arrowHeight + borderWidth} 
+      L${constrainedArrowPos},${borderWidth + arrowHeight / 2} 
+      L${constrainedArrowPos + arrowWidth / 2 - borderWidth / 2},${arrowHeight + borderWidth} 
+      L${width - borderWidth},${arrowHeight + borderWidth} 
+      L${width - borderWidth},${adjustedHeight - borderWidth} 
+      L${borderWidth},${adjustedHeight - borderWidth} 
+      Z`;
+
+    return `<svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="${outerPath}" fill="#333" />
+      <path d="${innerPath}" fill="white" />
+    </svg>`;
+  } else {
+    // For rounded corners, create similar double-path structure
+    // Outer path (border)
+    const outerPath = `
+      M${radius},${arrowHeight} 
+      H${constrainedArrowPos - arrowWidth / 2} 
+      L${constrainedArrowPos},0 
+      L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
+      H${width - radius} 
+      Q${width},${arrowHeight} ${width},${arrowHeight + radius} 
+      V${adjustedHeight - radius} 
+      Q${width},${adjustedHeight} ${width - radius},${adjustedHeight} 
+      H${radius} 
+      Q0,${adjustedHeight} 0,${adjustedHeight - radius} 
+      V${arrowHeight + radius} 
+      Q0,${arrowHeight} ${radius},${arrowHeight}
+    `;
+
+    // Inner path (content)
+    const innerRadius = Math.max(0, radius - borderWidth);
+    const innerPath = `
+      M${radius + borderWidth},${arrowHeight + borderWidth} 
+      H${constrainedArrowPos - arrowWidth / 4} 
+      L${constrainedArrowPos},${borderWidth + arrowHeight / 2} 
+      L${constrainedArrowPos + arrowWidth / 4},${arrowHeight + borderWidth} 
+      H${width - radius - borderWidth} 
+      Q${width - borderWidth},${arrowHeight + borderWidth} ${width - borderWidth},${arrowHeight + radius + borderWidth} 
+      V${adjustedHeight - radius - borderWidth} 
+      Q${width - borderWidth},${adjustedHeight - borderWidth} ${width - radius - borderWidth},${adjustedHeight - borderWidth} 
+      H${radius + borderWidth} 
+      Q${borderWidth},${adjustedHeight - borderWidth} ${borderWidth},${adjustedHeight - radius - borderWidth} 
+      V${arrowHeight + radius + borderWidth} 
+      Q${borderWidth},${arrowHeight + borderWidth} ${radius + borderWidth},${arrowHeight + borderWidth}
+    `;
+
+    return `<svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="${outerPath}" fill="#333" />
+      <path d="${innerPath}" fill="white" />
+    </svg>`;
+  }
 };
 
 const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
@@ -123,61 +150,89 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     Math.min(arrowPosition, maxArrowPos),
   );
 
-  // Adjust for border width
-  const halfBorder = borderWidth / 2;
-
-  // Calculate the actual content area height without the arrow
+  // Calculate content height
   const contentHeight = height - arrowHeight;
 
-  // Use the content height for the SVG path calculation
+  // Create two paths: one for the border (outer) and one for the content (inner)
   const adjustedWidth = width;
   const adjustedHeight = contentHeight + arrowHeight;
 
-  let path;
-
   if (radius === 0) {
-    // Path with sharp corners (no radius)
-    path = `M${halfBorder},${halfBorder} 
-      L${width - halfBorder},${halfBorder} 
-      L${width - halfBorder},${contentHeight - halfBorder} 
-      L${constrainedArrowPos + arrowWidth / 2},${contentHeight - halfBorder} 
-      L${constrainedArrowPos},${contentHeight + arrowHeight - halfBorder} 
-      L${constrainedArrowPos - arrowWidth / 2},${contentHeight - halfBorder} 
-      L${halfBorder},${contentHeight - halfBorder} 
+    // For sharp corners, create two paths
+    const outerPath = `M0,0 
+      L${width},0 
+      L${width},${contentHeight} 
+      L${constrainedArrowPos + arrowWidth / 2},${contentHeight} 
+      L${constrainedArrowPos},${adjustedHeight} 
+      L${constrainedArrowPos - arrowWidth / 2},${contentHeight} 
+      L0,${contentHeight} 
       Z`;
-  } else {
-    // Path with rounded corners
-    path = `
-      M${radius + halfBorder},${halfBorder} 
-      H${width - radius - halfBorder} 
-      Q${width - halfBorder},${halfBorder} ${width - halfBorder},${radius + halfBorder} 
-      V${contentHeight - radius - halfBorder} 
-      Q${width - halfBorder},${contentHeight - halfBorder} ${width - radius - halfBorder},${contentHeight - halfBorder} 
-      H${constrainedArrowPos + arrowWidth / 2} 
-      L${constrainedArrowPos},${contentHeight + arrowHeight - halfBorder} 
-      L${constrainedArrowPos - arrowWidth / 2},${contentHeight - halfBorder} 
-      H${radius + halfBorder} 
-      Q${halfBorder},${contentHeight - halfBorder} ${halfBorder},${contentHeight - radius - halfBorder} 
-      V${radius + halfBorder} 
-      Q${halfBorder},${halfBorder} ${radius + halfBorder},${halfBorder}
-    `;
-  }
 
-  return `<svg
-    width="${adjustedWidth}"
-    height="${adjustedHeight}"
-    viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="${path}"
-      fill="white"
-      stroke="#333"
-      stroke-width="${borderWidth}"
-      stroke-linecap="${radius === 0 ? "square" : "round"}"
-    />
-  </svg>`;
+    // Inner path (offset by borderWidth)
+    const innerPath = `M${borderWidth},${borderWidth} 
+      L${width - borderWidth},${borderWidth} 
+      L${width - borderWidth},${contentHeight - borderWidth} 
+      L${constrainedArrowPos + arrowWidth / 2 - borderWidth / 2},${contentHeight - borderWidth} 
+      L${constrainedArrowPos},${contentHeight + arrowHeight / 2 - borderWidth / 2} 
+      L${constrainedArrowPos - arrowWidth / 2 + borderWidth / 2},${contentHeight - borderWidth} 
+      L${borderWidth},${contentHeight - borderWidth} 
+      Z`;
+
+    return `<svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="${outerPath}" fill="#333" />
+      <path d="${innerPath}" fill="white" />
+    </svg>`;
+  } else {
+    // For rounded corners, create similar double-path structure
+    const outerPath = `
+      M${radius},0 
+      H${width - radius} 
+      Q${width},0 ${width},${radius} 
+      V${contentHeight - radius} 
+      Q${width},${contentHeight} ${width - radius},${contentHeight} 
+      H${constrainedArrowPos + arrowWidth / 2} 
+      L${constrainedArrowPos},${adjustedHeight} 
+      L${constrainedArrowPos - arrowWidth / 2},${contentHeight} 
+      H${radius} 
+      Q0,${contentHeight} 0,${contentHeight - radius} 
+      V${radius} 
+      Q0,0 ${radius},0
+    `;
+
+    // Inner path (content)
+    const innerRadius = Math.max(0, radius - borderWidth);
+    const innerPath = `
+      M${radius + borderWidth},${borderWidth} 
+      H${width - radius - borderWidth} 
+      Q${width - borderWidth},${borderWidth} ${width - borderWidth},${radius + borderWidth} 
+      V${contentHeight - radius - borderWidth} 
+      Q${width - borderWidth},${contentHeight - borderWidth} ${width - radius - borderWidth},${contentHeight - borderWidth} 
+      H${constrainedArrowPos + arrowWidth / 4} 
+      L${constrainedArrowPos},${contentHeight + arrowHeight / 2 - borderWidth} 
+      L${constrainedArrowPos - arrowWidth / 4},${contentHeight - borderWidth} 
+      H${radius + borderWidth} 
+      Q${borderWidth},${contentHeight - borderWidth} ${borderWidth},${contentHeight - radius - borderWidth} 
+      V${radius + borderWidth} 
+      Q${borderWidth},${borderWidth} ${radius + borderWidth},${borderWidth}
+    `;
+
+    return `<svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="${outerPath}" fill="#333" />
+      <path d="${innerPath}" fill="white" />
+    </svg>`;
+  }
 };
 
 const html = /* html */ `
