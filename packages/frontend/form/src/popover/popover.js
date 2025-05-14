@@ -225,12 +225,13 @@ const followPosition = (element, elementToFollow) => {
     // Calculate ideal left position based on element size vs popover size
     let idealLeftPos;
 
-    // When popover is wider than or equal to element, left-align with the element
-    if (contentWidth >= elementRect.width) {
-      idealLeftPos = elementRect.left;
-    } else {
-      // When popover is narrower, center it under the element
+    // Positioning logic matching browser-native validation popovers:
+    if (contentWidth <= elementRect.width) {
+      // When popover is narrower than the element, center it under the element
       idealLeftPos = elementRect.left + (elementRect.width - contentWidth) / 2;
+    } else {
+      // When popover is wider, left-align with the element
+      idealLeftPos = elementRect.left;
     }
 
     // Only prevent popover from going off the right edge of the viewport
@@ -243,29 +244,33 @@ const followPosition = (element, elementToFollow) => {
     // Always keep the popover fully visible within the viewport
     idealLeftPos = Math.max(0, idealLeftPos);
 
-    // Calculate arrow position - prefer leftmost valid position that points to element
+    // Calculate arrow position - for browser-native style, arrow should point to left
+    // side of element when possible
     const minArrowPos = arrowWidth / 2 + radius + borderWidth;
     const maxArrowPos = contentWidth - minArrowPos;
 
-    // Try to point at element's left edge, if possible
+    // Calculate where element's left side would be relative to popover
+    const elementLeft = elementRect.left - idealLeftPos;
     let arrowPos;
-    const elementLeftEdge = elementRect.left - idealLeftPos;
 
-    // If the element's left edge is within the valid arrow range
-    if (elementLeftEdge >= minArrowPos && elementLeftEdge <= maxArrowPos) {
-      // Point at element's left edge
-      arrowPos = elementLeftEdge;
+    // Position arrow over the left edge of the element when possible
+    if (elementLeft >= minArrowPos && elementLeft <= maxArrowPos) {
+      // Perfect - we can position the arrow exactly over the left edge
+      arrowPos = elementLeft;
     }
-    // Otherwise try to point at element's center
-    else {
-      const elementCenter =
-        elementRect.left + elementRect.width / 2 - idealLeftPos;
-      if (elementCenter >= minArrowPos && elementCenter <= maxArrowPos) {
-        arrowPos = elementCenter;
-      }
-      // If both fail, default to leftmost valid position
-      else {
-        arrowPos = minArrowPos;
+    // If element's left edge is to the left of the min arrow position,
+    // use the leftmost valid arrow position
+    else if (elementLeft < minArrowPos) {
+      arrowPos = minArrowPos;
+    }
+    // If element's left edge is beyond the popover width, try to point at element's right edge
+    else if (elementLeft > maxArrowPos) {
+      const elementRight = elementRect.left + elementRect.width - idealLeftPos;
+      if (elementRight >= minArrowPos && elementRight <= maxArrowPos) {
+        arrowPos = elementRight;
+      } else {
+        // Last resort - use rightmost valid position
+        arrowPos = maxArrowPos;
       }
     }
 
