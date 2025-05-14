@@ -361,35 +361,6 @@ const followPosition = (element, elementToFollow) => {
     // Position the popover
     element.style.left = `${idealLeftPos}px`;
     element.style.top = `${topPos}px`;
-
-    // Scroll into view if needed (after setting position)
-    if (element.style.opacity === "0") {
-      // Only scroll when first displaying the popover
-      setTimeout(() => {
-        // Use requestAnimationFrame to ensure the popover is rendered
-        requestAnimationFrame(() => {
-          const popoverRect = element.getBoundingClientRect();
-
-          // Check if popover is partially out of view
-          const isPartiallyOutOfViewHorizontally =
-            popoverRect.left < 0 || popoverRect.right > viewportWidth;
-
-          const isPartiallyOutOfViewVertically =
-            popoverRect.top < 0 || popoverRect.bottom > viewportHeight;
-
-          if (
-            isPartiallyOutOfViewHorizontally ||
-            isPartiallyOutOfViewVertically
-          ) {
-            element.scrollIntoView({
-              block: "nearest",
-              inline: "nearest",
-              behavior: "smooth",
-            });
-          }
-        });
-      }, 50);
-    }
   };
 
   // Initial position calculation
@@ -471,6 +442,66 @@ export const showPopover = (elementToFollow, innerHtml) => {
   jsenvPopover.style.opacity = "0";
   document.body.appendChild(jsenvPopover);
   const stopFollowingPosition = followPosition(jsenvPopover, elementToFollow);
+
+  // After popover is positioned, check if we need to scroll
+  setTimeout(() => {
+    // Check if element is visible first
+    const elementRect = elementToFollow.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
+
+    // If element is not visible at all, no need to scroll
+    const isElementVisible =
+      elementRect.top < viewportHeight &&
+      elementRect.bottom > 0 &&
+      elementRect.left < viewportWidth &&
+      elementRect.right > 0;
+
+    if (isElementVisible) {
+      // Element is at least partially visible, check popover visibility
+      requestAnimationFrame(() => {
+        const popoverRect = jsenvPopover.getBoundingClientRect();
+
+        // Check if popover is partially out of view
+        const isPartiallyOutOfViewHorizontally =
+          popoverRect.left < 0 || popoverRect.right > viewportWidth;
+
+        const isPartiallyOutOfViewVertically =
+          popoverRect.top < 0 || popoverRect.bottom > viewportHeight;
+
+        if (
+          isPartiallyOutOfViewHorizontally ||
+          isPartiallyOutOfViewVertically
+        ) {
+          // Calculate how much of the popover is visible
+          const visibleWidth =
+            Math.min(popoverRect.right, viewportWidth) -
+            Math.max(popoverRect.left, 0);
+          const visibleHeight =
+            Math.min(popoverRect.bottom, viewportHeight) -
+            Math.max(popoverRect.top, 0);
+          const popoverArea = popoverRect.width * popoverRect.height;
+          const visibleArea = visibleWidth * visibleHeight;
+          const visibilityRatio = visibleArea / popoverArea;
+
+          // Only scroll if a significant portion is hidden (less than 70% visible)
+          if (visibilityRatio < 0.7) {
+            jsenvPopover.scrollIntoView({
+              block: "nearest",
+              inline: "nearest",
+              behavior: "smooth",
+            });
+          }
+        }
+
+        // Now that positioning and scrolling are complete, show the popover
+        jsenvPopover.style.opacity = "1";
+      });
+    } else {
+      // Element not visible, show popover without scrolling
+      jsenvPopover.style.opacity = "1";
+    }
+  }, 50); // Short delay to ensure positioning is complete
 
   return () => {
     stopFollowingPosition();
