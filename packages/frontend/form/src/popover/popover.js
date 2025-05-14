@@ -225,9 +225,6 @@ const followPosition = (element, elementToFollow) => {
     const viewportHeight = document.documentElement.clientHeight;
     const documentWidth = document.documentElement.scrollWidth;
 
-    // Calculate positions relative to viewport
-    const isElementNearRightEdge = elementRect.right > viewportWidth - 50;
-
     // First, remove any existing width constraints for measurement
     popoverContent.style.maxWidth = "none";
     popoverContent.style.whiteSpace = "nowrap"; // Temporarily prevent wrapping
@@ -239,12 +236,31 @@ const followPosition = (element, elementToFollow) => {
     let idealLeftPos;
     let useWordWrap = false;
 
+    // Detect proximity to document edges
+    const isElementNearRightEdge = elementRect.right > viewportWidth - 50;
+    const isElementNearLeftEdge = elementRect.left < 20;
+
     // Different positioning strategies based on element position
     if (isElementNearRightEdge) {
-      // Element is near right edge - place popover at left side of viewport
-      idealLeftPos = 10; // Small margin from left edge
-      popoverContent.style.maxWidth = `${elementRect.right - 30}px`; // Make it wrap nicely
+      // Element is near right edge - place popover at left side of document
+      idealLeftPos = 0; // Use the full available space from the left edge
+      popoverContent.style.maxWidth = `${elementRect.right - 20}px`; // Make it wrap nicely
       useWordWrap = true;
+    } else if (isElementNearLeftEdge) {
+      // Element is near left edge - also align with left edge if needed
+      if (naturalContentWidth > elementRect.width) {
+        idealLeftPos = 0; // Use the full available space
+      } else {
+        // For small popovers near left edge, still center under the element
+        idealLeftPos =
+          elementRect.left + (elementRect.width - naturalContentWidth) / 2;
+      }
+
+      // If content would go beyond right document edge, enable wrapping
+      if (naturalContentWidth > documentWidth - 20) {
+        popoverContent.style.maxWidth = `${documentWidth - 20}px`;
+        useWordWrap = true;
+      }
     } else {
       // Normal positioning logic
       if (naturalContentWidth <= elementRect.width) {
@@ -256,10 +272,10 @@ const followPosition = (element, elementToFollow) => {
         idealLeftPos = elementRect.left;
       }
 
-      // Check if popover would overflow right edge of viewport
-      if (idealLeftPos + naturalContentWidth > viewportWidth - 10) {
-        // If near right edge, limit width to fit viewport and enable word wrap
-        popoverContent.style.maxWidth = `${viewportWidth - idealLeftPos - 20}px`;
+      // Check if popover would overflow right edge of document
+      if (idealLeftPos + naturalContentWidth > documentWidth - 10) {
+        // If near right edge, limit width to fit document and enable word wrap
+        popoverContent.style.maxWidth = `${documentWidth - idealLeftPos - 20}px`;
         useWordWrap = true;
       } else {
         // Otherwise use natural content width
@@ -274,6 +290,7 @@ const followPosition = (element, elementToFollow) => {
     const finalContentWidth = popoverContent.offsetWidth;
 
     // Don't let popover go beyond document edges
+    // This ensures we use available space but don't create unnecessary scrollbars
     idealLeftPos = Math.max(
       0,
       Math.min(idealLeftPos, documentWidth - finalContentWidth),
@@ -283,7 +300,7 @@ const followPosition = (element, elementToFollow) => {
     const minArrowPos = arrowWidth / 2 + radius + borderWidth;
     const maxArrowPos = finalContentWidth - minArrowPos;
 
-    // Calculate where element's center should be relative to popover
+    // Calculate where element's center would be relative to popover
     const elementCenter =
       elementRect.left + elementRect.width / 2 - idealLeftPos;
 
@@ -294,14 +311,32 @@ const followPosition = (element, elementToFollow) => {
       // Ideal case - arrow points at element center
       arrowPos = elementCenter;
     } else if (elementCenter < minArrowPos) {
-      // Element is too far left - use leftmost valid position
-      arrowPos = minArrowPos;
+      // Element is too far left - try to shift popover left to point at element
+      // But only if we won't go outside document bounds
+      if (idealLeftPos - (minArrowPos - elementCenter) >= 0) {
+        idealLeftPos -= minArrowPos - elementCenter;
+        arrowPos = minArrowPos;
+      } else {
+        // Can't shift further, so use leftmost position and accept that
+        // intersection observer will soon hide the popover as element becomes invisible
+        idealLeftPos = 0;
+        arrowPos = minArrowPos;
+      }
     } else {
-      // Element is too far right - use rightmost valid position
-      arrowPos = maxArrowPos;
+      // Element is too far right - try to shift popover right to point at element
+      // But only if we won't go outside document bounds
+      const neededShift = elementCenter - maxArrowPos;
+      if (idealLeftPos + finalContentWidth + neededShift <= documentWidth) {
+        idealLeftPos += neededShift;
+        arrowPos = maxArrowPos;
+      } else {
+        // Can't shift further, use rightmost position
+        idealLeftPos = documentWidth - finalContentWidth;
+        arrowPos = maxArrowPos;
+      }
     }
 
-    // Ensure arrow is within valid bounds
+    // Final validation of arrow position after any popover shifts
     arrowPos = Math.max(minArrowPos, Math.min(arrowPos, maxArrowPos));
 
     const popoverBorderRect = popoverBorder.getBoundingClientRect();
