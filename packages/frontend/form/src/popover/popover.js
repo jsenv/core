@@ -12,7 +12,7 @@ const css = /*css*/ `
 
 .popover_border {
   position: absolute;
-  top: 0px;
+  top: -10px;
   left: -10px;
   right: -10px;
   bottom: -10px;
@@ -27,7 +27,6 @@ const css = /*css*/ `
   border-style: solid;
   border-color: transparent;
   position: relative;
-  padding-top: 10px; /* Arrow size  */
 }
 .popover_content {
   /* padding: 5px; */
@@ -47,7 +46,7 @@ styleElement.textContent = css;
 document.head.appendChild(styleElement);
 
 const arrowWidth = 16;
-const arrowHeight = 8;
+const arrowHeight = 12; // Increased from 8 to 12 for a more pronounced arrow
 const radius = 0;
 const borderWidth = 10;
 
@@ -61,7 +60,6 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   );
 
   // Adjust the SVG viewBox and path to account for the border width
-  // The stroke is centered on the path, so we need to inset the path by half the border width
   const halfBorder = borderWidth / 2;
   const adjustedWidth = width;
   const adjustedHeight = height + arrowHeight;
@@ -70,7 +68,7 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
 
   if (radius === 0) {
     // Path with sharp corners (no radius)
-    // Make sure the path is exactly the size of the content plus arrow
+    // Make the top arrow more pronounced by increasing its height
     path = `M${halfBorder},${arrowHeight} 
       L${constrainedArrowPos - arrowWidth / 2},${arrowHeight} 
       L${constrainedArrowPos},${halfBorder} 
@@ -97,7 +95,13 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
     `;
   }
 
-  return `<svg width="${adjustedWidth}" height="${adjustedHeight}" viewBox="0 0 ${adjustedWidth} ${adjustedHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
+  return `<svg
+    width="${adjustedWidth}"
+    height="${adjustedHeight}"
+    viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+>
     <path
       d="${path}"
       fill="white"
@@ -153,7 +157,13 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     `;
   }
 
-  return `<svg width="${adjustedWidth}" height="${adjustedHeight}" viewBox="0 0 ${adjustedWidth} ${adjustedHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
+  return `<svg
+    width="${adjustedWidth}"
+    height="${adjustedHeight}"
+    viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
     <path
       d="${path}"
       fill="white"
@@ -194,9 +204,6 @@ const followPosition = (element, elementToFollow) => {
 
   const border = element.querySelector(".popover_border");
   const popoverContent = element.querySelector(".popover_content");
-
-  // Arrow dimensions
-  const arrowHeight = 8;
 
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
@@ -244,7 +251,7 @@ const followPosition = (element, elementToFollow) => {
     // Position based on whether it's above or below the element
     if (isNearBottom) {
       element.setAttribute("data-position", "above");
-      // Position above the element, accounting for the larger border
+      // Position above the element, accounting for the larger border and taller arrow
       element.style.top = `${elementRect.top - contentHeight - arrowHeight - 2 * borderWidth}px`;
       border.innerHTML = generateSvgWithBottomArrow(
         border.offsetWidth,
@@ -253,7 +260,7 @@ const followPosition = (element, elementToFollow) => {
       );
     } else {
       element.setAttribute("data-position", "below");
-      // Position below the element, accounting for the larger border
+      // Position below the element with taller arrow
       element.style.top = `${elementRect.bottom}px`;
       border.innerHTML = generateSvgWithTopArrow(
         border.offsetWidth,
