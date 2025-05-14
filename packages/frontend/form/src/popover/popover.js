@@ -214,9 +214,6 @@ const followPosition = (element, elementToFollow) => {
   const popoverContent = element.querySelector(".popover_content");
 
   popoverContentWrapper.style.borderWidth = `${borderWidth}px`;
-  popoverContentWrapper.style.marginTop = `${arrowHeight}px`;
-
-  popoverBorder.style.top = `-${borderWidth + arrowHeight}px`;
   popoverBorder.style.bottom = `-${borderWidth}px`;
   popoverBorder.style.left = `-${borderWidth}px`;
   popoverBorder.style.right = `-${borderWidth}px`;
@@ -268,6 +265,10 @@ const followPosition = (element, elementToFollow) => {
     if (isNearBottom) {
       element.setAttribute("data-position", "above");
       element.style.top = `${elementRect.top - contentHeight - arrowHeight - 2 * borderWidth}px`;
+      popoverContentWrapper.style.marginTop = undefined;
+      popoverContentWrapper.style.marginBottom = `${arrowHeight}px`;
+      popoverBorder.style.top = `-${borderWidth}px`;
+      popoverBorder.style.bottom = `-${borderWidth + arrowHeight}px`;
       popoverBorder.innerHTML = generateSvgWithBottomArrow(
         popoverBorder.offsetWidth,
         popoverBorder.offsetHeight,
@@ -276,6 +277,10 @@ const followPosition = (element, elementToFollow) => {
     } else {
       element.setAttribute("data-position", "below");
       element.style.top = `${elementRect.bottom}px`;
+      popoverContentWrapper.style.marginTop = `${arrowHeight}px`;
+      popoverContentWrapper.style.marginBottom = undefined;
+      popoverBorder.style.top = `-${borderWidth + arrowHeight}px`;
+      popoverBorder.style.bottom = `-${borderWidth}px`;
       popoverBorder.innerHTML = generateSvgWithTopArrow(
         popoverBorder.offsetWidth,
         popoverBorder.offsetHeight,
