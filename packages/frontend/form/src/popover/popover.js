@@ -68,8 +68,10 @@ const followPosition = (element, elementToFollow) => {
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
     element.style.position = "fixed";
-    // Position the popover so the arrow tip exactly touches the bottom of input
-    // This is arrowSize pixels above where the main popover body starts
+
+    const zoomLevel = window.devicePixelRatio || 1;
+
+    const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const isNearBottom = elementRect.bottom > viewportHeight - 100;
 
@@ -80,7 +82,21 @@ const followPosition = (element, elementToFollow) => {
       element.style.top = `${elementRect.bottom}px`;
     }
 
-    element.style.left = `${elementRect.left + elementRect.width / 2}px`;
+    const edgePadding = 0 * zoomLevel;
+
+    // Calculate the ideal horizontal position (centered)
+    let leftPos = elementRect.left + elementRect.width / 2;
+    const popoverWidth = element.offsetWidth;
+    const halfPopoverWidth = popoverWidth / 2;
+    // Ensure popover doesn't go outside viewport on left or right
+    if (leftPos - halfPopoverWidth < 0) {
+      // Too far left, adjust to stay in viewport with some padding
+      leftPos = halfPopoverWidth + edgePadding;
+    } else if (leftPos + halfPopoverWidth > viewportWidth) {
+      // Too far right, adjust to stay in viewport with some padding
+      leftPos = viewportWidth - halfPopoverWidth - edgePadding;
+    }
+    element.style.left = `${leftPos}px`;
     element.style.transform = "translateX(-50%)";
   };
   updatePosition();
@@ -140,6 +156,15 @@ const followPosition = (element, elementToFollow) => {
     resizeObserver.observe(elementToFollow);
     cleanupCallbackSet.add(() => {
       resizeObserver.unobserve(elementToFollow);
+    });
+  }
+  update_after_zoom_change: {
+    const handleZoomChange = () => {
+      schedulePositionUpdate();
+    };
+    window.addEventListener("resize", handleZoomChange);
+    cleanupCallbackSet.add(() => {
+      window.removeEventListener("resize", handleZoomChange);
     });
   }
 
