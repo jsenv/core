@@ -57,10 +57,11 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   // Adjust the SVG viewBox and path to account for the border width
   const halfBorder = borderWidth / 2;
 
-  // Calculate the actual content area height without the arrow
+  // The height passed to this function already includes the arrow height
+  // Subtract the arrow height to get just the content height
   const contentHeight = height - arrowHeight;
 
-  // Use the content height for the SVG path calculation
+  // Keep the SVG dimensions consistent with the actual content + arrow
   const adjustedWidth = width;
   const adjustedHeight = contentHeight + arrowHeight;
 
@@ -68,14 +69,14 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
 
   if (radius === 0) {
     // Path with sharp corners (no radius)
-    // Make the top arrow more pronounced by increasing its height
+    // Fix the spacing by ensuring the arrow connects directly with content area
     path = `M${halfBorder},${arrowHeight} 
       L${constrainedArrowPos - arrowWidth / 2},${arrowHeight} 
       L${constrainedArrowPos},${halfBorder} 
       L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
       L${width - halfBorder},${arrowHeight} 
-      L${width - halfBorder},${contentHeight + arrowHeight - halfBorder} 
-      L${halfBorder},${contentHeight + arrowHeight - halfBorder} 
+      L${width - halfBorder},${adjustedHeight - halfBorder} 
+      L${halfBorder},${adjustedHeight - halfBorder} 
       Z`;
   } else {
     // Path with rounded corners
@@ -86,10 +87,10 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
       H${width - radius - halfBorder} 
       Q${width - halfBorder},${arrowHeight} ${width - halfBorder},${arrowHeight + radius} 
-      V${contentHeight + arrowHeight - radius - halfBorder} 
-      Q${width - halfBorder},${contentHeight + arrowHeight - halfBorder} ${width - radius - halfBorder},${contentHeight + arrowHeight - halfBorder} 
+      V${adjustedHeight - radius - halfBorder} 
+      Q${width - halfBorder},${adjustedHeight - halfBorder} ${width - radius - halfBorder},${adjustedHeight - halfBorder} 
       H${radius + halfBorder} 
-      Q${halfBorder},${contentHeight + arrowHeight - halfBorder} ${halfBorder},${contentHeight + arrowHeight - radius - halfBorder} 
+      Q${halfBorder},${adjustedHeight - halfBorder} ${halfBorder},${adjustedHeight - radius - halfBorder} 
       V${arrowHeight + radius} 
       Q${halfBorder},${arrowHeight} ${radius + halfBorder},${arrowHeight}
     `;
@@ -101,7 +102,7 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
     viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
->
+  >
     <path
       d="${path}"
       fill="white"
