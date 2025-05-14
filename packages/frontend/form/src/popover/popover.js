@@ -13,9 +13,7 @@ const css = /*css*/ `
 .popover_border {
   position: absolute;
   pointer-events: none;
-}
-.popover_border-top, .popover_border-bottom {
-  display: none;
+  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
 }
 
 .popover_content_wrapper {
@@ -23,17 +21,21 @@ const css = /*css*/ `
   border-color: transparent;
   position: relative;
 }
+
 .popover_content {
   padding: 5px; 
   position: relative;
   border-radius: 3px;
+  max-width: fit-content; /* Allow content to determine width */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: normal;
 }
 
 .popover_border svg {
   position: absolute;
   inset: 0;
   overflow: visible;
-  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
 }
 `;
 
@@ -217,17 +219,34 @@ const followPosition = (element, elementToFollow) => {
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
     const documentHeight = document.documentElement.clientHeight;
-    const documentWidth = document.documentElement.scrollWidth;
+    const documentWidth = document.documentElement.scrollWidth; // Full scrollable width
+
+    // First, reset any max-width to let content determine natural size
+    popoverContent.style.maxWidth = "none";
 
     const contentWidth = popoverContent.offsetWidth;
     const contentHeight = popoverContent.offsetHeight;
+
+    // Calculate available space to the right of the document
+    const availableWidth = documentWidth - elementRect.left;
+
+    // If content would overflow document width, limit it
+    if (contentWidth > availableWidth) {
+      // Set max-width to available width minus some margin
+      const margin = 10;
+      popoverContent.style.maxWidth = `${availableWidth - margin}px`;
+    }
+
+    // Recalculate after potential max-width adjustment
+    const finalContentWidth = popoverContent.offsetWidth;
 
     // Calculate ideal left position based on element size vs popover size
     let idealLeftPos;
 
     // First priority: When popover is narrower than the element, center it under the element
-    if (contentWidth <= elementRect.width) {
-      idealLeftPos = elementRect.left + (elementRect.width - contentWidth) / 2;
+    if (finalContentWidth <= elementRect.width) {
+      idealLeftPos =
+        elementRect.left + (elementRect.width - finalContentWidth) / 2;
     }
     // Second priority: If element is very close to the left edge of the page,
     // align the popover with the page edge
@@ -242,7 +261,7 @@ const followPosition = (element, elementToFollow) => {
 
     // Only prevent popover from going off the right edge of the document
     // (not viewport - allow it to be partially visible during scrolling)
-    const maxLeftPos = documentWidth - contentWidth;
+    const maxLeftPos = documentWidth - finalContentWidth;
     if (idealLeftPos > maxLeftPos) {
       idealLeftPos = maxLeftPos;
     }
@@ -253,7 +272,7 @@ const followPosition = (element, elementToFollow) => {
 
     // Calculate arrow position - for browser-native style
     const minArrowPos = arrowWidth / 2 + radius + borderWidth;
-    const maxArrowPos = contentWidth - minArrowPos;
+    const maxArrowPos = finalContentWidth - minArrowPos;
 
     // Calculate where element's left edge would be relative to popover
     const elementLeft = elementRect.left - idealLeftPos;
