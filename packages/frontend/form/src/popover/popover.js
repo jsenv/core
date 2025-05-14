@@ -17,6 +17,8 @@ donc idéalement le mettre dans le meme parent ou etre capable de suivre s'il bo
 
 */
 
+import { getScrollableParentSet } from "@jsenv/dom";
+
 // https://druids.datadoghq.com/components/dialogs/Popover#example19
 
 const css = /*css*/ `
@@ -53,10 +55,12 @@ const createPopover = (content) => {
 };
 
 const followPosition = (element, elementToFollow) => {
-  const options = {
-    root: null, // viewport
-    rootMargin: "0px",
-    threshold: [0, 0.25, 0.5, 0.75, 1], // Observer à différents niveaux de visibilité
+  const cleanupCallbackSet = new Set();
+  const stop = () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+    cleanupCallbackSet.clear();
   };
 
   const updatePosition = () => {
@@ -68,39 +72,68 @@ const followPosition = (element, elementToFollow) => {
     element.style.left = `${elementRect.left + elementRect.width / 2}px`;
     element.style.transform = "translateX(-50%)";
   };
-  const intersectionObserver = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-      // Si l'élément cible est visible
-      if (entry.isIntersecting) {
-        // Mettre à jour la position du tooltip
-        updatePosition();
-
-        // Vous pouvez aussi ajuster la visibilité en fonction du ratio
-        const visibilityRatio = entry.intersectionRatio;
-        element.style.opacity = visibilityRatio;
-        // Enregistrer les détails de position
-      } else {
-        // L'élément n'est pas visible, masquer le tooltip ou le déplacer
-        element.style.opacity = "0";
-      }
-    }
-  }, options);
   updatePosition();
-  intersectionObserver.observe(elementToFollow);
 
   let rafId = null;
-  const resizeObserver = new ResizeObserver(() => {
-    if (rafId) {
-      cancelAnimationFrame(rafId);
-    }
+  const schedulePositionUpdate = () => {
+    cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(updatePosition);
-  });
-  resizeObserver.observe(elementToFollow);
-
-  return () => {
-    intersectionObserver.disconnect();
-    resizeObserver.disconnect();
   };
+  cleanupCallbackSet.add(() => {
+    cancelAnimationFrame(rafId);
+  });
+
+  update_after_move: {
+    const options = {
+      root: null, // viewport
+      rootMargin: "0px",
+      threshold: [0, 0.25, 0.5, 0.75, 1], // Observer à différents niveaux de visibilité
+    };
+    const intersectionObserver = new IntersectionObserver((entries) => {
+      const [entry] = entries;
+      if (entry.isIntersecting) {
+        const visibilityRatio = entry.intersectionRatio;
+        element.style.opacity = visibilityRatio;
+        schedulePositionUpdate();
+      } else {
+        element.style.opacity = "0";
+      }
+    }, options);
+    intersectionObserver.observe(elementToFollow);
+    cleanupCallbackSet.add(() => {
+      intersectionObserver.unobserve(elementToFollow);
+    });
+  }
+  update_after_scroll: {
+    const handleScroll = () => {
+      schedulePositionUpdate();
+    };
+
+    const scrollableParentSet = getScrollableParentSet(elementToFollow);
+    for (const scrollableParent of scrollableParentSet) {
+      scrollableParent.addEventListener("scroll", handleScroll, {
+        passive: true,
+      });
+      cleanupCallbackSet.add(() => {
+        {
+          scrollableParent.removeEventListener("scroll", handleScroll, {
+            passive: true,
+          });
+        }
+      });
+    }
+  }
+  update_after_resize: {
+    const resizeObserver = new ResizeObserver(() => {
+      schedulePositionUpdate();
+    });
+    resizeObserver.observe(elementToFollow);
+    cleanupCallbackSet.add(() => {
+      resizeObserver.unobserve(elementToFollow);
+    });
+  }
+
+  return stop;
 };
 
 export const showPopover = (elementToFollow, innerHtml) => {

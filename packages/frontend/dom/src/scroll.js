@@ -91,6 +91,23 @@ export const getAncestorScrolls = (element) => {
   return ancestorScrolls;
 };
 
+export const getScrollableParentSet = (element) => {
+  const scrollableParentSet = new Set();
+  let elementOrScrollableParent = element;
+  while (true) {
+    const scrollableParent = getScrollableParent(elementOrScrollableParent);
+    if (!scrollableParent) {
+      break;
+    }
+    scrollableParentSet.add(scrollableParent);
+    if (scrollableParent === document) {
+      break;
+    }
+    elementOrScrollableParent = scrollableParent;
+  }
+  return scrollableParentSet;
+};
+
 export const getScrollableParent = (arg) => {
   if (typeof arg !== "object" || arg.nodeType !== 1) {
     throw new TypeError("getScrollableParent first argument must be DOM node");
