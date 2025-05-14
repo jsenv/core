@@ -319,7 +319,7 @@ const followPosition = (element, elementToFollow) => {
       // Position above the element - exact calculation
       // Take into account: content height + arrow height + border width
       // The halfBorder is already accounted for in the SVG path
-      element.style.top = `${elementRect.top - contentHeight - arrowHeight - borderWidth}px`;
+      element.style.top = `${elementRect.top - contentHeight - arrowHeight - borderWidth * 2}px`;
       popoverContentWrapper.style.marginTop = undefined;
       popoverContentWrapper.style.marginBottom = `${arrowHeight}px`;
       popoverBorder.style.top = `-${borderWidth}px`;
