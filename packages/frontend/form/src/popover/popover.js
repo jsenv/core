@@ -1,7 +1,7 @@
 import { getPaddingAndBorderSizes, getScrollableParentSet } from "@jsenv/dom";
 
 /**
- * A popover component that mimics native browser validation popovers.
+ * A validation message component that mimics native browser validation messages.
  * Features:
  * - Positions above or below target element based on available space
  * - Follows target element during scrolling and resizing
@@ -10,7 +10,7 @@ import { getPaddingAndBorderSizes, getScrollableParentSet } from "@jsenv/dom";
  */
 
 const css = /*css*/ `
-.popover {
+.validation-message {
   display: block;
   overflow: visible;
   height: auto;
@@ -20,25 +20,25 @@ const css = /*css*/ `
   pointer-events: none; 
 }
 
-.popover_border {
+.validation-message_border {
   position: absolute;
   pointer-events: none;
   filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
 }
 
-.popover_content_wrapper {
+.validation-message_content_wrapper {
   border-style: solid;
   border-color: transparent;
   position: relative;
 }
 
-.popover_content {
+.validation-message_content {
   padding: 8px; 
   position: relative;
   max-width: 47vw;
 }
 
-.popover_border svg {
+.validation-message_border svg {
   position: absolute;
   inset: 0;
   overflow: visible;
@@ -48,7 +48,7 @@ const styleElement = document.createElement("style");
 styleElement.textContent = css;
 document.head.appendChild(styleElement);
 
-// Configuration parameters for popover appearance
+// Configuration parameters for validation message appearance
 const ARROW_WIDTH = 16;
 const ARROW_HEIGHT = 8;
 const CORNER_RADIUS = 3;
@@ -56,9 +56,9 @@ const BORDER_WIDTH = 1;
 const ARROW_SPACING = 8;
 
 /**
- * Generates SVG path for popover with arrow on top
- * @param {number} width - Popover width
- * @param {number} height - Popover height
+ * Generates SVG path for validation message with arrow on top
+ * @param {number} width - Validation message width
+ * @param {number} height - Validation message height
  * @param {number} arrowPosition - Horizontal position of arrow
  * @returns {string} - SVG markup
  */
@@ -131,9 +131,9 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
 };
 
 /**
- * Generates SVG path for popover with arrow on bottom
- * @param {number} width - Popover width
- * @param {number} height - Popover height
+ * Generates SVG path for validation message with arrow on bottom
+ * @param {number} width - Validation message width
+ * @param {number} height - Validation message height
  * @param {number} arrowPosition - Horizontal position of arrow
  * @returns {string} - SVG markup
  */
@@ -205,37 +205,43 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     </svg>`;
 };
 
-// HTML template for the popover
-const popoverTemplate = /* html */ `
-  <div class="popover" role="tooltip">
-    <div class="popover_content_wrapper">
-      <div class="popover_border"></div>
-      <div class="popover_content">Default message</div>
+// HTML template for the validation message
+const validationMessageTemplate = /* html */ `
+  <div
+    class="validation-message"
+    role="alert"
+    aria-live="assertive"
+  >
+    <div class="validation-message_content_wrapper">
+      <div class="validation-message_border"></div>
+      <div class="validation-message_content">Default message</div>
     </div>
   </div>
 `;
 
 /**
- * Creates a new popover element with specified content
- * @param {string} content - HTML content for the popover
- * @returns {HTMLElement} - The popover element
+ * Creates a new validation message element with specified content
+ * @param {string} content - HTML content for the validation message
+ * @returns {HTMLElement} - The validation message element
  */
-const createPopover = (content) => {
+const createValidationMessage = (content) => {
   const div = document.createElement("div");
-  div.innerHTML = popoverTemplate;
-  const popover = div.querySelector(".popover");
-  const contentElement = popover.querySelector(".popover_content");
+  div.innerHTML = validationMessageTemplate;
+  const validationMessage = div.querySelector(".validation-message");
+  const contentElement = validationMessage.querySelector(
+    ".validation-message_content",
+  );
   contentElement.innerHTML = content;
-  return popover;
+  return validationMessage;
 };
 
 /**
- * Sets up position tracking between a popover and its target element
- * @param {HTMLElement} popover - The popover element
- * @param {HTMLElement} targetElement - The element the popover should follow
+ * Sets up position tracking between a validation message and its target element
+ * @param {HTMLElement} validationMessage - The validation message element
+ * @param {HTMLElement} targetElement - The element the validation message should follow
  * @returns {Function} - Cleanup function to stop position tracking
  */
-const followPosition = (popover, targetElement) => {
+const followPosition = (validationMessage, targetElement) => {
   const cleanupCallbackSet = new Set();
   const stop = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -244,29 +250,34 @@ const followPosition = (popover, targetElement) => {
     cleanupCallbackSet.clear();
   };
 
-  // Get references to popover parts
-  const popoverContentWrapper = popover.querySelector(
-    ".popover_content_wrapper",
+  // Get references to validation message parts
+  const validationMessageContentWrapper = validationMessage.querySelector(
+    ".validation-message_content_wrapper",
   );
-  const popoverBorder = popover.querySelector(".popover_border");
-  const popoverContent = popover.querySelector(".popover_content");
+  const validationMessageBorder = validationMessage.querySelector(
+    ".validation-message_border",
+  );
+  const validationMessageContent = validationMessage.querySelector(
+    ".validation-message_content",
+  );
 
   // Set initial border styles
-  popoverContentWrapper.style.borderWidth = `${BORDER_WIDTH}px`;
-  popoverBorder.style.bottom = `-${BORDER_WIDTH}px`;
-  popoverBorder.style.left = `-${BORDER_WIDTH}px`;
-  popoverBorder.style.right = `-${BORDER_WIDTH}px`;
+  validationMessageContentWrapper.style.borderWidth = `${BORDER_WIDTH}px`;
+  validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
+  validationMessageBorder.style.left = `-${BORDER_WIDTH}px`;
+  validationMessageBorder.style.right = `-${BORDER_WIDTH}px`;
 
   /**
-   * Update popover position relative to target element
+   * Update validation message position relative to target element
    * This is called on scroll, resize, and other events
    */
   const updatePosition = () => {
     // Get viewport and element dimensions
     const viewportWidth = document.documentElement.clientWidth;
     const viewportHeight = document.documentElement.clientHeight;
-    const contentHeight = popoverContent.offsetHeight;
-    const popoverRect = popoverBorder.getBoundingClientRect();
+    const contentHeight = validationMessageContent.offsetHeight;
+    const validationMessageRect =
+      validationMessageBorder.getBoundingClientRect();
     const targetElementRect = targetElement.getBoundingClientRect();
 
     // Get element padding and border to properly position arrow
@@ -274,10 +285,10 @@ const followPosition = (popover, targetElement) => {
       getPaddingAndBorderSizes(targetElement);
     const elementLeft = targetElementRect.left;
     const elementWidth = targetElementRect.width;
-    const popoverWidth = popoverRect.width;
+    const validationMessageWidth = validationMessageRect.width;
 
     // Determine horizontal position based on element size and position
-    let popoverLeftPos;
+    let validationMessageLeftPos;
 
     // Handle extra-wide elements (wider than viewport)
     if (elementWidth > viewportWidth) {
@@ -286,84 +297,94 @@ const followPosition = (popover, targetElement) => {
         // Element extends beyond left edge but right side is visible
         const viewportCenter = viewportWidth / 2;
         const diff = viewportWidth - elementRight;
-        popoverLeftPos = viewportCenter - diff / 2 - popoverWidth / 2;
+        validationMessageLeftPos =
+          viewportCenter - diff / 2 - validationMessageWidth / 2;
       } else {
         // Element extends beyond both edges
-        popoverLeftPos = viewportWidth / 2 - popoverWidth / 2;
+        validationMessageLeftPos =
+          viewportWidth / 2 - validationMessageWidth / 2;
       }
     } else {
       // Standard case: element within viewport width
-      // Center the popover relative to the element
-      popoverLeftPos = elementLeft + elementWidth / 2 - popoverWidth / 2;
+      // Center the validation message relative to the element
+      validationMessageLeftPos =
+        elementLeft + elementWidth / 2 - validationMessageWidth / 2;
 
-      // If popover is wider than element, adjust position based on document boundaries
-      if (popoverWidth > elementWidth) {
-        // If element is near left edge, align popover with document left
+      // If validation message is wider than element, adjust position based on document boundaries
+      if (validationMessageWidth > elementWidth) {
+        // If element is near left edge, align validation message with document left
         if (elementLeft < 20) {
-          popoverLeftPos = 0;
+          validationMessageLeftPos = 0;
         }
       }
     }
 
     // Constrain to document boundaries
-    if (popoverLeftPos < 0) {
-      popoverLeftPos = 0;
-    } else if (popoverLeftPos + popoverWidth > viewportWidth) {
-      popoverLeftPos = viewportWidth - popoverRect.width;
+    if (validationMessageLeftPos < 0) {
+      validationMessageLeftPos = 0;
+    } else if (
+      validationMessageLeftPos + validationMessageWidth >
+      viewportWidth
+    ) {
+      validationMessageLeftPos = viewportWidth - validationMessageRect.width;
     }
 
     // Calculate arrow position to point at target element
-    let arrowLeftPosOnPopover;
+    let arrowLeftPosOnValidationMessage;
     // Target the left edge of the element (after borders)
     const arrowTargetLeft =
       elementLeft + elementPaddingAndBorderSizes.borderSizes.left;
 
-    if (popoverLeftPos < arrowTargetLeft) {
-      // Popover is left of the target point, move arrow right
-      const diff = arrowTargetLeft - popoverLeftPos;
-      arrowLeftPosOnPopover = diff;
+    if (validationMessageLeftPos < arrowTargetLeft) {
+      // Validation message is left of the target point, move arrow right
+      const diff = arrowTargetLeft - validationMessageLeftPos;
+      arrowLeftPosOnValidationMessage = diff;
     } else {
-      // Popover contains or is right of the target point, keep arrow at left
-      arrowLeftPosOnPopover = 0;
+      // Validation message contains or is right of the target point, keep arrow at left
+      arrowLeftPosOnValidationMessage = 0;
     }
 
     // Calculate vertical space available
     const spaceBelow = viewportHeight - targetElementRect.bottom;
     const spaceAbove = targetElementRect.top;
-    const totalPopoverHeight = contentHeight + ARROW_HEIGHT + BORDER_WIDTH * 2;
+    const totalValidationMessageHeight =
+      contentHeight + ARROW_HEIGHT + BORDER_WIDTH * 2;
 
-    // Determine if popover fits above or below
-    const fitsBelow = spaceBelow >= totalPopoverHeight;
-    const fitsAbove = spaceAbove >= totalPopoverHeight;
+    // Determine if validation message fits above or below
+    const fitsBelow = spaceBelow >= totalValidationMessageHeight;
+    const fitsAbove = spaceAbove >= totalValidationMessageHeight;
     const showAbove = !fitsBelow && fitsAbove;
 
-    let popoverTopPos;
+    let validationMessageTopPos;
 
     if (showAbove) {
       // Position above target element
-      popover.setAttribute("data-position", "above");
-      popoverTopPos = Math.max(0, targetElementRect.top - totalPopoverHeight);
-      popoverContentWrapper.style.marginTop = undefined;
-      popoverContentWrapper.style.marginBottom = `${ARROW_HEIGHT}px`;
-      popoverBorder.style.top = `-${BORDER_WIDTH}px`;
-      popoverBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT}px`;
-      popoverBorder.innerHTML = generateSvgWithBottomArrow(
-        popoverRect.width,
-        popoverRect.height,
-        arrowLeftPosOnPopover,
+      validationMessage.setAttribute("data-position", "above");
+      validationMessageTopPos = Math.max(
+        0,
+        targetElementRect.top - totalValidationMessageHeight,
+      );
+      validationMessageContentWrapper.style.marginTop = undefined;
+      validationMessageContentWrapper.style.marginBottom = `${ARROW_HEIGHT}px`;
+      validationMessageBorder.style.top = `-${BORDER_WIDTH}px`;
+      validationMessageBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT}px`;
+      validationMessageBorder.innerHTML = generateSvgWithBottomArrow(
+        validationMessageRect.width,
+        validationMessageRect.height,
+        arrowLeftPosOnValidationMessage,
       );
     } else {
       // Position below target element
-      popover.setAttribute("data-position", "below");
-      popoverTopPos = Math.ceil(targetElementRect.bottom);
-      popoverContentWrapper.style.marginTop = `${ARROW_HEIGHT}px`;
-      popoverContentWrapper.style.marginBottom = undefined;
-      popoverBorder.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT}px`;
-      popoverBorder.style.bottom = `-${BORDER_WIDTH}px`;
-      popoverBorder.innerHTML = generateSvgWithTopArrow(
-        popoverRect.width,
-        popoverRect.height,
-        arrowLeftPosOnPopover,
+      validationMessage.setAttribute("data-position", "below");
+      validationMessageTopPos = Math.ceil(targetElementRect.bottom);
+      validationMessageContentWrapper.style.marginTop = `${ARROW_HEIGHT}px`;
+      validationMessageContentWrapper.style.marginBottom = undefined;
+      validationMessageBorder.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT}px`;
+      validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
+      validationMessageBorder.innerHTML = generateSvgWithTopArrow(
+        validationMessageRect.width,
+        validationMessageRect.height,
+        arrowLeftPosOnValidationMessage,
       );
 
       // Handle overflow at bottom with scrolling if needed
@@ -376,15 +397,15 @@ const followPosition = (popover, targetElement) => {
 
         // Only apply scrolling if we have reasonable space
         if (availableHeight > 50) {
-          popoverContent.style.maxHeight = `${availableHeight}px`;
-          popoverContent.style.overflowY = "auto";
+          validationMessageContent.style.maxHeight = `${availableHeight}px`;
+          validationMessageContent.style.overflowY = "auto";
         }
       }
     }
 
     // Apply calculated position
-    popover.style.left = `${popoverLeftPos}px`;
-    popover.style.top = `${popoverTopPos}px`;
+    validationMessage.style.left = `${validationMessageLeftPos}px`;
+    validationMessage.style.top = `${validationMessageTopPos}px`;
   };
 
   // Initial position calculation
@@ -404,13 +425,13 @@ const followPosition = (popover, targetElement) => {
     const resizeObserverContent = new ResizeObserver(() => {
       schedulePositionUpdate();
     });
-    resizeObserverContent.observe(popoverContent);
+    resizeObserverContent.observe(validationMessageContent);
     cleanupCallbackSet.add(() => {
       resizeObserverContent.disconnect();
     });
   }
 
-  // Show/hide popover based on target element visibility
+  // Show/hide validation message based on target element visibility
   update_on_target_visibility_change: {
     const options = {
       root: null,
@@ -420,10 +441,10 @@ const followPosition = (popover, targetElement) => {
     const intersectionObserver = new IntersectionObserver((entries) => {
       const [entry] = entries;
       if (entry.isIntersecting) {
-        popover.style.opacity = 1;
+        validationMessage.style.opacity = 1;
         schedulePositionUpdate();
       } else {
-        popover.style.opacity = 0;
+        validationMessage.style.opacity = 0;
       }
     }, options);
     intersectionObserver.observe(targetElement);
@@ -466,29 +487,33 @@ const followPosition = (popover, targetElement) => {
 };
 
 /**
- * Shows a popover attached to the specified element
- * @param {HTMLElement} targetElement - Element the popover should follow
- * @param {string} innerHtml - HTML content for the popover
+ * Shows a validation message attached to the specified element
+ * @param {HTMLElement} targetElement - Element the validation message should follow
+ * @param {string} innerHtml - HTML content for the validation message
  * @param {Object} options - Configuration options
  * @param {boolean} options.scrollIntoView - Whether to scroll the target element into view
- * @returns {Function} - Function to hide and remove the popover
+ * @returns {Function} - Function to hide and remove the validation message
  */
-export const showPopover = (
+export const showValidationMessage = (
   targetElement,
   innerHtml,
   { scrollIntoView } = {},
 ) => {
-  // Create and add popover to document
-  const jsenvPopover = createPopover(innerHtml);
-  jsenvPopover.style.opacity = "0";
+  // Create and add validation message to document
+  const jsenvValidationMessage = createValidationMessage(innerHtml);
+  jsenvValidationMessage.style.opacity = "0";
 
-  // Connect popover with target element for accessibility
-  const popoverId = `popover-${Date.now()}`;
-  jsenvPopover.id = popoverId;
-  targetElement.setAttribute("aria-describedby", popoverId);
+  // Connect validation message with target element for accessibility
+  const validationMessageId = `validation-message-${Date.now()}`;
+  jsenvValidationMessage.id = validationMessageId;
+  targetElement.setAttribute("aria-invalid", "true");
+  targetElement.setAttribute("aria-errormessage", validationMessageId);
 
-  document.body.appendChild(jsenvPopover);
-  const stopFollowingPosition = followPosition(jsenvPopover, targetElement);
+  document.body.appendChild(jsenvValidationMessage);
+  const stopFollowingPosition = followPosition(
+    jsenvValidationMessage,
+    targetElement,
+  );
 
   // Handle scrolling to target element if requested
   if (scrollIntoView) {
@@ -502,9 +527,10 @@ export const showPopover = (
   // Return cleanup function
   return () => {
     stopFollowingPosition();
-    if (document.body.contains(jsenvPopover)) {
-      targetElement.removeAttribute("aria-describedby");
-      document.body.removeChild(jsenvPopover);
+    if (document.body.contains(jsenvValidationMessage)) {
+      targetElement.removeAttribute("aria-invalid");
+      targetElement.removeAttribute("aria-errormessage");
+      document.body.removeChild(jsenvValidationMessage);
     }
   };
 };
