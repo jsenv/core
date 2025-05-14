@@ -113,7 +113,7 @@ export const getScrollableParent = (arg) => {
     throw new TypeError("getScrollableParent first argument must be DOM node");
   }
   const element = arg;
-  if (element === document.documentElement) {
+  if (element === document) {
     return null;
   }
   const position = getStyle(element, "position");
@@ -128,11 +128,11 @@ export const getScrollableParent = (arg) => {
 
 const getScrollingElement = (document) => {
   if ("scrollingElement" in document) {
-    return document.scrollingElement;
+    return document;
   }
 
   if (isCompliant(document)) {
-    return document.documentElement;
+    return document;
   }
 
   const body = document.body;
@@ -257,7 +257,9 @@ const horizontalOverflowIsVisible = (element) => {
 };
 
 const findScrollableParent = (element) => {
-  if (element === document.documentElement) return null;
+  if (element === document.documentElement) {
+    return null;
+  }
 
   const position = getStyle(element, "position");
   let parent = element.parentNode;
