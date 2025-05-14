@@ -289,14 +289,16 @@ const followPosition = (element, elementToFollow) => {
     let leftPos = elementRect.left + elementRect.width / 2;
     const halfContentWidth = contentWidth / 2;
 
-    // Define arrow constraints
-    const minArrowPos = arrowWidth / 2 + radius + 9; // Minimum safe arrow position from edge
+    // Tenir compte de la bordure pour les limites du viewport
 
     // Step 1: Calculate popover position (constrained by viewport if needed)
-    if (leftPos - halfContentWidth < 0) {
-      leftPos = halfContentWidth;
-    } else if (leftPos + halfContentWidth > viewportWidth) {
-      leftPos = viewportWidth - halfContentWidth;
+    // Ajuster les limites pour tenir compte des bordures
+    if (leftPos - halfContentWidth - borderWidth < 0) {
+      // Contrainte sur le bord gauche (avec bordure)
+      leftPos = halfContentWidth + borderWidth;
+    } else if (leftPos + halfContentWidth + borderWidth > viewportWidth) {
+      // Contrainte sur le bord droit (avec bordure)
+      leftPos = viewportWidth - halfContentWidth - borderWidth;
     }
 
     // Step 2: Calculate where the arrow should point
@@ -308,6 +310,7 @@ const followPosition = (element, elementToFollow) => {
     let arrowPos = targetLeftEdge - popoverLeft;
 
     // Step 3: Constrain arrow position within valid bounds
+    const minArrowPos = arrowWidth / 2 + radius + 8; // Minimum safe arrow position from edge
     const maxArrowPos = contentWidth - minArrowPos;
     arrowPos = Math.max(minArrowPos, Math.min(arrowPos, maxArrowPos));
 
@@ -316,9 +319,7 @@ const followPosition = (element, elementToFollow) => {
     // Position based on whether it's above or below the element
     if (isNearBottom) {
       element.setAttribute("data-position", "above");
-      // Position above the element - exact calculation
-      // Take into account: content height + arrow height + border width
-      // The halfBorder is already accounted for in the SVG path
+      // Tenir compte des bordures verticalement aussi
       element.style.top = `${elementRect.top - contentHeight - arrowHeight - borderWidth * 2}px`;
       popoverContentWrapper.style.marginTop = undefined;
       popoverContentWrapper.style.marginBottom = `${arrowHeight}px`;
@@ -331,8 +332,6 @@ const followPosition = (element, elementToFollow) => {
       );
     } else {
       element.setAttribute("data-position", "below");
-      // Position below the element - exact calculation
-      // The border offset is already accounted for in the SVG path
       element.style.top = `${elementRect.bottom}px`;
       popoverContentWrapper.style.marginTop = `${arrowHeight}px`;
       popoverContentWrapper.style.marginBottom = undefined;
