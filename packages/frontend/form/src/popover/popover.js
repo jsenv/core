@@ -43,7 +43,7 @@ document.head.appendChild(styleElement);
 const arrowWidth = 16;
 const arrowHeight = 8;
 const radius = 3;
-const borderWidth = 10;
+const borderWidth = 1;
 
 const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   // Ensure arrow position is within boundaries
@@ -244,7 +244,7 @@ const followPosition = (element, elementToFollow) => {
     let arrowPos = targetLeftEdge - popoverLeft;
 
     // Step 3: Constrain arrow position within valid bounds
-    const minArrowPos = arrowWidth / 2 + radius + 8 + borderWidth;
+    const minArrowPos = arrowWidth / 2 + radius + 7 + borderWidth / 2;
     const maxArrowPos = contentWidth - minArrowPos;
     arrowPos = Math.max(minArrowPos, Math.min(arrowPos, maxArrowPos));
 
