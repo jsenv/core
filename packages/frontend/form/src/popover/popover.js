@@ -5,7 +5,7 @@ const css = /*css*/ `
   display: block;
   overflow: visible;
   height: auto;
-  position: relative;
+  position: fixed;
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
 }
@@ -216,7 +216,6 @@ const followPosition = (element, elementToFollow) => {
 
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
-    element.style.position = "fixed";
 
     const viewportWidth = document.documentElement.clientWidth;
     const viewportHeight = document.documentElement.clientHeight;
@@ -283,7 +282,7 @@ const followPosition = (element, elementToFollow) => {
     } else {
       // Positionnement en-dessous (même si ça déborde, c'est mieux que rien)
       element.setAttribute("data-position", "below");
-      element.style.top = `${Math.ceil(elementRect.bottom)}px`;
+      element.style.top = `${elementRect.bottom}px`;
       popoverContentWrapper.style.marginTop = `${arrowHeight}px`;
       popoverContentWrapper.style.marginBottom = undefined;
       popoverBorder.style.top = `-${borderWidth + arrowHeight}px`;
@@ -312,21 +311,12 @@ const followPosition = (element, elementToFollow) => {
     }
 
     // Position the popover
-    element.style.left = `${Math.ceil(leftPos)}px`;
+    element.style.left = `${leftPos}px`;
     element.style.transform = "translateX(-50%)";
   };
 
   // Initial position calculation
   updatePosition();
-
-  // Set up resize observer to update SVG when content size changes
-  const resizeObserverContent = new ResizeObserver(() => {
-    updatePosition();
-  });
-  resizeObserverContent.observe(popoverContentWrapper);
-  cleanupCallbackSet.add(() => {
-    resizeObserverContent.disconnect();
-  });
 
   let rafId = null;
   const schedulePositionUpdate = () => {
@@ -337,7 +327,17 @@ const followPosition = (element, elementToFollow) => {
     cancelAnimationFrame(rafId);
   });
 
-  update_after_visibility_change: {
+  update_on_content_change: {
+    const resizeObserverContent = new ResizeObserver(() => {
+      schedulePositionUpdate();
+    });
+    resizeObserverContent.observe(popoverContent);
+    cleanupCallbackSet.add(() => {
+      resizeObserverContent.disconnect();
+    });
+  }
+
+  update_on_target_visibility_change: {
     const options = {
       root: null,
       rootMargin: "0px",
@@ -358,7 +358,7 @@ const followPosition = (element, elementToFollow) => {
     });
   }
 
-  update_after_scroll: {
+  update_on_scroll: {
     const handleScroll = () => {
       schedulePositionUpdate();
     };
@@ -376,7 +376,7 @@ const followPosition = (element, elementToFollow) => {
     }
   }
 
-  update_after_resize: {
+  update_on_target_size_change: {
     const resizeObserver = new ResizeObserver(() => {
       schedulePositionUpdate();
     });
