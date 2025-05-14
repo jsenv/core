@@ -57,45 +57,25 @@ const styleElement = document.createElement("style");
 styleElement.textContent = css;
 document.head.appendChild(styleElement);
 
-// Function to generate SVG with arrow at bottom
-const generateSvgWithBottomArrow = (width, height) => {
+const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   const arrowWidth = 16;
   const arrowHeight = 8;
-  const arrowPosition = width / 2;
   const radius = 3;
 
-  return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="
-      M${radius},0 
-      H${width - radius} 
-      Q${width},0 ${width},${radius} 
-      V${height - radius} 
-      Q${width},${height} ${width - radius},${height} 
-      H${arrowPosition + arrowWidth / 2} 
-      L${arrowPosition},${height + arrowHeight} 
-      L${arrowPosition - arrowWidth / 2},${height} 
-      H${radius} 
-      Q0,${height} 0,${height - radius} 
-      V${radius} 
-      Q0,0 ${radius},0
-    " 
-    fill="white" stroke="#333" stroke-width="1" />
-  </svg>`;
-};
-
-// Function to generate SVG with arrow at top
-const generateSvgWithTopArrow = (width, height) => {
-  const arrowWidth = 16;
-  const arrowHeight = 8;
-  const arrowPosition = width / 2;
-  const radius = 3;
+  // Ensure arrow position is within boundaries
+  const minArrowPos = arrowWidth / 2 + radius;
+  const maxArrowPos = width - arrowWidth / 2 - radius;
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
 
   return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="
       M${radius},${arrowHeight} 
-      H${arrowPosition - arrowWidth / 2} 
-      L${arrowPosition},0 
-      L${arrowPosition + arrowWidth / 2},${arrowHeight} 
+      H${constrainedArrowPos - arrowWidth / 2} 
+      L${constrainedArrowPos},0 
+      L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
       H${width - radius} 
       Q${width},${arrowHeight} ${width},${arrowHeight + radius} 
       V${height + arrowHeight - radius} 
@@ -104,6 +84,38 @@ const generateSvgWithTopArrow = (width, height) => {
       Q0,${height + arrowHeight} 0,${height + arrowHeight - radius} 
       V${arrowHeight + radius} 
       Q0,${arrowHeight} ${radius},${arrowHeight}
+    " 
+    fill="white" stroke="#333" stroke-width="1" />
+  </svg>`;
+};
+
+const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
+  const arrowWidth = 16;
+  const arrowHeight = 8;
+  const radius = 3;
+
+  // Ensure arrow position is within boundaries
+  const minArrowPos = arrowWidth / 2 + radius;
+  const maxArrowPos = width - arrowWidth / 2 - radius;
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
+
+  return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="
+      M${radius},0 
+      H${width - radius} 
+      Q${width},0 ${width},${radius} 
+      V${height - radius} 
+      Q${width},${height} ${width - radius},${height} 
+      H${constrainedArrowPos + arrowWidth / 2} 
+      L${constrainedArrowPos},${height + arrowHeight} 
+      L${constrainedArrowPos - arrowWidth / 2},${height} 
+      H${radius} 
+      Q0,${height} 0,${height - radius} 
+      V${radius} 
+      Q0,0 ${radius},0
     " 
     fill="white" stroke="#333" stroke-width="1" />
   </svg>`;
@@ -160,26 +172,44 @@ const followPosition = (element, elementToFollow) => {
       elementRect.bottom + contentHeight + arrowHeight + margin >
       viewportHeight;
 
+    // Calculate the ideal horizontal position (centered)
+    let leftPos = elementRect.left + elementRect.width / 2;
+    const halfContentWidth = contentWidth / 2;
+    let arrowPos = contentWidth / 2; // Default to center of popover
+
+    // Ensure popover doesn't go outside viewport on left or right
+    if (leftPos - halfContentWidth < 0) {
+      // Popover is constrained on the left edge
+      const shiftAmount = halfContentWidth - leftPos; // How much we had to shift right
+      arrowPos = contentWidth / 2 - shiftAmount; // Move arrow left by the shift amount
+      leftPos = halfContentWidth;
+    } else if (leftPos + halfContentWidth > viewportWidth) {
+      // Popover is constrained on the right edge
+      const shiftAmount = leftPos + halfContentWidth - viewportWidth; // How much we had to shift left
+      arrowPos = contentWidth / 2 + shiftAmount; // Move arrow right by the shift amount
+      leftPos = viewportWidth - halfContentWidth;
+    }
+
+    const borderWidth = 1;
+
     // Position based on whether it's above or below the element
     if (isNearBottom) {
       element.setAttribute("data-position", "above");
       // Position above the element
-      element.style.top = `${elementRect.top - contentHeight - arrowHeight}px`;
+      element.style.top = `${elementRect.top - contentHeight - arrowHeight - 2 * borderWidth}px`;
+      borderBottom.innerHTML = generateSvgWithBottomArrow(
+        contentWidth,
+        contentHeight,
+        arrowPos,
+      );
     } else {
       element.setAttribute("data-position", "below");
-      // Position below the element
-      element.style.top = `${elementRect.bottom}px`;
-    }
-
-    // Calculate the ideal horizontal position (centered)
-    let leftPos = elementRect.left + elementRect.width / 2;
-    const halfContentWidth = contentWidth / 2;
-
-    // Ensure popover doesn't go outside viewport on left or right
-    if (leftPos - halfContentWidth < 0) {
-      leftPos = halfContentWidth;
-    } else if (leftPos + halfContentWidth > viewportWidth) {
-      leftPos = viewportWidth - halfContentWidth;
+      element.style.top = `${elementRect.bottom + borderWidth}px`;
+      borderTop.innerHTML = generateSvgWithTopArrow(
+        contentWidth,
+        contentHeight,
+        arrowPos,
+      );
     }
 
     // Position the popover
@@ -189,14 +219,6 @@ const followPosition = (element, elementToFollow) => {
 
   // Initial position calculation
   updatePosition();
-
-  const contentWidth = popoverContent.offsetWidth;
-  const contentHeight = popoverContent.offsetHeight;
-  borderTop.innerHTML = generateSvgWithTopArrow(contentWidth, contentHeight);
-  borderBottom.innerHTML = generateSvgWithBottomArrow(
-    contentWidth,
-    contentHeight,
-  );
 
   // Set up resize observer to update SVG when content size changes
   const resizeObserverContent = new ResizeObserver(() => {
