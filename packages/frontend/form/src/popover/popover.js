@@ -12,10 +12,10 @@ const css = /*css*/ `
 
 .popover_border {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
   pointer-events: none;
 }
 .popover_border-top, .popover_border-bottom {
@@ -23,9 +23,11 @@ const css = /*css*/ `
 }
 
 .popover_content_wrapper {
-  border-width: 1px;
+  border-width: 10px; /* bordeer size */
   border-style: solid;
   border-color: transparent;
+  position: relative;
+  padding-top: 10px; /* Arrow size  */
 }
 .popover_content {
   padding: 5px;
@@ -38,30 +40,18 @@ const css = /*css*/ `
   inset: 0;
   overflow: visible;
 }
-
-.popover[data-position="below"] .popover_border-top {
-  display: block;
-}
-.popover[data-position="above"] .popover_border-bottom {
-  display: block;
-}  
-.popover[data-position="below"] .popover_content_wrapper {
-  padding-top: 6px;
-}
-.popover[data-position="above"] .popover_content_wrapper {
-  padding-bottom: 6px;
-}
 `;
 
 const styleElement = document.createElement("style");
 styleElement.textContent = css;
 document.head.appendChild(styleElement);
 
-const generateSvgWithTopArrow = (width, height, arrowPosition) => {
-  const arrowWidth = 16;
-  const arrowHeight = 8;
-  const radius = 3;
+const arrowWidth = 16;
+const arrowHeight = 8;
+const radius = 3;
+const borderWidth = 10;
 
+const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   // Ensure arrow position is within boundaries
   const minArrowPos = arrowWidth / 2 + radius;
   const maxArrowPos = width - arrowWidth / 2 - radius;
@@ -85,15 +75,11 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       V${arrowHeight + radius} 
       Q0,${arrowHeight} ${radius},${arrowHeight}
     " 
-    fill="white" stroke="#333" stroke-width="1" />
+    fill="white" stroke="#333" stroke-width="${borderWidth}" />
   </svg>`;
 };
 
 const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
-  const arrowWidth = 16;
-  const arrowHeight = 8;
-  const radius = 3;
-
   // Ensure arrow position is within boundaries
   const minArrowPos = arrowWidth / 2 + radius;
   const maxArrowPos = width - arrowWidth / 2 - radius;
@@ -117,17 +103,14 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       V${radius} 
       Q0,0 ${radius},0
     " 
-    fill="white" stroke="#333" stroke-width="1" />
+    fill="white" stroke="#333" stroke-width="${borderWidth}" />
   </svg>`;
 };
 
 const html = /* html */ `
   <div class="popover">
-    <div class="popover_border">
-      <div class="popover_border-top"></div>
-      <div class="popover_border-bottom"></div>
-    </div>
     <div class="popover_content_wrapper">
+      <div class="popover_border"></div>
       <div class="popover_content">Default message</div>
     </div>
   </div>
@@ -151,8 +134,7 @@ const followPosition = (element, elementToFollow) => {
     cleanupCallbackSet.clear();
   };
 
-  const borderTop = element.querySelector(".popover_border-top");
-  const borderBottom = element.querySelector(".popover_border-bottom");
+  const border = element.querySelector(".popover_border");
   const popoverContent = element.querySelector(".popover_content");
 
   // Arrow dimensions
@@ -177,8 +159,6 @@ const followPosition = (element, elementToFollow) => {
     const halfContentWidth = contentWidth / 2;
 
     // Define arrow constraints
-    const arrowWidth = 16;
-    const radius = 3;
     const minArrowPos = arrowWidth / 2 + radius + 9; // Minimum safe arrow position from edge
 
     // Step 1: Calculate popover position (constrained by viewport if needed)
@@ -203,22 +183,21 @@ const followPosition = (element, elementToFollow) => {
     const maxArrowPos = contentWidth - minArrowPos;
     arrowPos = Math.max(minArrowPos, Math.min(arrowPos, maxArrowPos));
 
-    const borderWidth = 1;
-
     // Position based on whether it's above or below the element
     if (isNearBottom) {
       element.setAttribute("data-position", "above");
-      // Position above the element
+      // Position above the element, accounting for the larger border
       element.style.top = `${elementRect.top - contentHeight - arrowHeight - 2 * borderWidth}px`;
-      borderBottom.innerHTML = generateSvgWithBottomArrow(
+      border.innerHTML = generateSvgWithBottomArrow(
         contentWidth,
         contentHeight,
         arrowPos,
       );
     } else {
       element.setAttribute("data-position", "below");
-      element.style.top = `${elementRect.bottom + borderWidth}px`;
-      borderTop.innerHTML = generateSvgWithTopArrow(
+      // Position below the element, accounting for the larger border
+      element.style.top = `${elementRect.bottom}px`;
+      border.innerHTML = generateSvgWithTopArrow(
         contentWidth,
         contentHeight,
         arrowPos,
