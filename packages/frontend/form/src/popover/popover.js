@@ -10,84 +10,101 @@ const css = /*css*/ `
   transition: opacity 0.2s ease-in-out;
 }
 
-.popover_content-wrapper {
-  position: relative;
-  padding-top: 8px;    /* Space for top arrow */
-  padding-bottom: 8px; /* Space for bottom arrow */
-}
-
-.popover_content {
-  position: relative;
-  padding: 5px;
-  border: 1px solid #333;
-  background: white;
-  border-radius: 3px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-}
-
-/* Top arrow container - shown when popover is below element */
-.popover_arrow-top-container {
+.popover_border {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 0;
-  overflow: visible;
-  z-index: 2;
+  height: 100%;
+  pointer-events: none;
 }
 
-.popover_arrow-top {
-  position: absolute;
-  top: 0px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-100%);
+.popover_content {
+  padding: 5px;
+  position: relative;
+  border-radius: 3px;
 }
 
-/* Bottom arrow container - shown when popover is above the element */
-.popover_arrow-bottom-container {
+.popover_border svg {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 0;
-  overflow: visible;
-  z-index: 2;
+  top: -1px;
+  left: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
 }
 
-.popover_arrow-bottom {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%) translateY(100%) rotate(180deg);
+.popover_border-top {
+  display: block;
+}
+
+.popover_border-bottom {
+  display: none;
 }
 `;
 
-const svgArrow = `<svg width="16" height="8" viewBox="0 0 16 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M8 0L16 8H0L8 0Z" fill="white"/>
-  <path d="M8 0L16 8H0L8 0Z" stroke="#333" stroke-width="1" fill="none"/>
-</svg>`;
+const styleElement = document.createElement("style");
+styleElement.textContent = css;
+document.head.appendChild(styleElement);
+
+// Function to generate SVG with arrow at bottom
+const generateSvgWithBottomArrow = (width, height) => {
+  const arrowWidth = 16;
+  const arrowHeight = 8;
+  const arrowPosition = width / 2;
+  const radius = 3;
+
+  return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="
+      M${radius},0 
+      H${width - radius} 
+      Q${width},0 ${width},${radius} 
+      V${height - radius} 
+      Q${width},${height} ${width - radius},${height} 
+      H${arrowPosition + arrowWidth / 2} 
+      L${arrowPosition},${height + arrowHeight} 
+      L${arrowPosition - arrowWidth / 2},${height} 
+      H${radius} 
+      Q0,${height} 0,${height - radius} 
+      V${radius} 
+      Q0,0 ${radius},0
+    " 
+    fill="white" stroke="#333" stroke-width="1" />
+  </svg>`;
+};
+
+// Function to generate SVG with arrow at top
+const generateSvgWithTopArrow = (width, height) => {
+  const arrowWidth = 16;
+  const arrowHeight = 8;
+  const arrowPosition = width / 2;
+  const radius = 3;
+
+  return `<svg width="${width}" height="${height + arrowHeight}" viewBox="0 0 ${width} ${height + arrowHeight}" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="
+      M${radius},${arrowHeight} 
+      H${arrowPosition - arrowWidth / 2} 
+      L${arrowPosition},0 
+      L${arrowPosition + arrowWidth / 2},${arrowHeight} 
+      H${width - radius} 
+      Q${width},${arrowHeight} ${width},${arrowHeight + radius} 
+      V${height + arrowHeight - radius} 
+      Q${width},${height + arrowHeight} ${width - radius},${height + arrowHeight} 
+      H${radius} 
+      Q0,${height + arrowHeight} 0,${height + arrowHeight - radius} 
+      V${arrowHeight + radius} 
+      Q0,${arrowHeight} ${radius},${arrowHeight}
+    " 
+    fill="white" stroke="#333" stroke-width="1" />
+  </svg>`;
+};
 
 const html = /* html */ `
   <div class="popover">
-    <style>
-      ${css}
-    </style>
-    <div class="popover_content-wrapper">
-      <!-- Top arrow container - shown when popover is below element -->
-      <div class="popover_arrow-top-container">
-        <div class="popover_arrow-top">${svgArrow}</div>
-      </div>
-
-      <!-- The actual popover content -->
-      <div class="popover_content">
-        <div class="popover_content-inner">Default message</div>
-      </div>
-
-      <!-- Bottom arrow container - shown when popover is above element -->
-      <div class="popover_arrow-bottom-container">
-        <div class="popover_arrow-bottom">${svgArrow}</div>
-      </div>
+    <div class="popover_border">
+      <div class="popover_border-top"></div>
+      <div class="popover_border-bottom"></div>
     </div>
+    <div class="popover_content">Default message</div>
   </div>
 `;
 
@@ -95,7 +112,7 @@ const createPopover = (content) => {
   const div = document.createElement("div");
   div.innerHTML = html;
   const popover = div.querySelector(".popover");
-  const contentElement = popover.querySelector(".popover_content-inner");
+  const contentElement = popover.querySelector(".popover_content");
   contentElement.innerHTML = content;
   return popover;
 };
@@ -109,14 +126,12 @@ const followPosition = (element, elementToFollow) => {
     cleanupCallbackSet.clear();
   };
 
-  const arrowTopContainer = element.querySelector(
-    ".popover_arrow-top-container",
-  );
-  const arrowBottomContainer = element.querySelector(
-    ".popover_arrow-bottom-container",
-  );
-  const arrowTop = element.querySelector(".popover_arrow-top");
-  const arrowBottom = element.querySelector(".popover_arrow-bottom");
+  const borderTop = element.querySelector(".popover_border-top");
+  const borderBottom = element.querySelector(".popover_border-bottom");
+  const popoverContent = element.querySelector(".popover_content");
+
+  // Arrow dimensions
+  const arrowHeight = 8;
 
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
@@ -124,57 +139,75 @@ const followPosition = (element, elementToFollow) => {
 
     const viewportWidth = document.documentElement.clientWidth;
     const viewportHeight = document.documentElement.clientHeight;
-    const popoverHeight = element.offsetHeight;
+
+    const contentWidth = popoverContent.offsetWidth;
+    const contentHeight = popoverContent.offsetHeight;
     const margin = 20; // Small margin for visual spacing
     const isNearBottom =
-      elementRect.bottom + popoverHeight + margin > viewportHeight;
+      elementRect.bottom + contentHeight + arrowHeight + margin >
+      viewportHeight;
 
-    // Show/hide appropriate arrow based on position
+    // Generate SVGs if they haven't been created yet
+    if (!borderTop.innerHTML) {
+      borderTop.innerHTML = generateSvgWithTopArrow(
+        contentWidth,
+        contentHeight,
+      );
+      borderBottom.innerHTML = generateSvgWithBottomArrow(
+        contentWidth,
+        contentHeight,
+      );
+    }
+
+    // Position based on whether it's above or below the element
     if (isNearBottom) {
-      // Position above the element instead of below
-      element.style.top = `${elementRect.top - element.offsetHeight}px`;
-      arrowTopContainer.style.display = "none";
-      arrowBottomContainer.style.display = "block";
+      // Position above the element
+      element.style.top = `${elementRect.top - contentHeight - arrowHeight}px`;
+      borderTop.style.display = "none";
+      borderBottom.style.display = "block";
     } else {
+      // Position below the element
       element.style.top = `${elementRect.bottom}px`;
-      arrowTopContainer.style.display = "block";
-      arrowBottomContainer.style.display = "none";
+      borderTop.style.display = "block";
+      borderBottom.style.display = "none";
     }
 
     // Calculate the ideal horizontal position (centered)
     let leftPos = elementRect.left + elementRect.width / 2;
-    const popoverWidth = element.offsetWidth;
-    const halfPopoverWidth = popoverWidth / 2;
+    const halfContentWidth = contentWidth / 2;
 
     // Ensure popover doesn't go outside viewport on left or right
-    if (leftPos - halfPopoverWidth < 0) {
-      leftPos = halfPopoverWidth;
-    } else if (leftPos + halfPopoverWidth > viewportWidth) {
-      leftPos = viewportWidth - halfPopoverWidth;
+    if (leftPos - halfContentWidth < 0) {
+      leftPos = halfContentWidth;
+    } else if (leftPos + halfContentWidth > viewportWidth) {
+      leftPos = viewportWidth - halfContentWidth;
     }
-
-    // Update arrow horizontal position to point at the element
-    const targetCenter = elementRect.left + elementRect.width / 2;
-    const popoverLeft = leftPos - halfPopoverWidth;
-    const arrowPos = targetCenter - popoverLeft;
-
-    // Constrain arrow position to stay within popover bounds
-    const arrowMin = 8; // Min distance from edge
-    const arrowMax = popoverWidth - 8;
-    const constrainedArrowPos = Math.max(
-      arrowMin,
-      Math.min(arrowPos, arrowMax),
-    );
-
-    arrowTop.style.left = `${constrainedArrowPos}px`;
-    arrowBottom.style.left = `${constrainedArrowPos}px`;
 
     // Position the popover
     element.style.left = `${leftPos}px`;
     element.style.transform = "translateX(-50%)";
   };
 
+  // Initial position calculation
   updatePosition();
+
+  // Set up resize observer to update SVG when content size changes
+  const resizeObserverContent = new ResizeObserver(() => {
+    const popoverContent = element.querySelector(".popover_content");
+    const contentWidth = popoverContent.offsetWidth;
+    const contentHeight = popoverContent.offsetHeight;
+
+    borderTop.innerHTML = generateSvgWithTopArrow(contentWidth, contentHeight);
+    borderBottom.innerHTML = generateSvgWithBottomArrow(
+      contentWidth,
+      contentHeight,
+    );
+    updatePosition();
+  });
+  resizeObserverContent.observe(element.querySelector(".popover_content"));
+  cleanupCallbackSet.add(() => {
+    resizeObserverContent.disconnect();
+  });
 
   let rafId = null;
   const schedulePositionUpdate = () => {
