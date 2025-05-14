@@ -65,39 +65,6 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   // For larger borders, we need a small adjustment to maintain visual balance
   const innerArrowWidthReduction = Math.min(borderWidth * 0.3, 1);
 
-  if (radius === 0) {
-    // For sharp corners, create two paths: outer (border) and inner (white fill)
-    const outerPath = `M0,${arrowHeight} 
-      L${constrainedArrowPos - arrowWidth / 2},${arrowHeight} 
-      L${constrainedArrowPos},0 
-      L${constrainedArrowPos + arrowWidth / 2},${arrowHeight} 
-      L${width},${arrowHeight} 
-      L${width},${adjustedHeight} 
-      L0,${adjustedHeight} 
-      Z`;
-
-    // Inner path - keep arrow width almost the same as outer arrow
-    const innerPath = `M${borderWidth},${arrowHeight + borderWidth} 
-      L${constrainedArrowPos - arrowWidth / 2 + innerArrowWidthReduction},${arrowHeight + borderWidth} 
-      L${constrainedArrowPos},${borderWidth} 
-      L${constrainedArrowPos + arrowWidth / 2 - innerArrowWidthReduction},${arrowHeight + borderWidth} 
-      L${width - borderWidth},${arrowHeight + borderWidth} 
-      L${width - borderWidth},${adjustedHeight - borderWidth} 
-      L${borderWidth},${adjustedHeight - borderWidth} 
-      Z`;
-
-    return `<svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="${outerPath}" fill="#333" />
-      <path d="${innerPath}" fill="white" />
-    </svg>`;
-  }
-
   // For rounded corners, create similar double-path structure
   // Outer path (border)
   const outerPath = `
@@ -162,39 +129,6 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
 
   // For small border widths, keep inner arrow nearly the same size as outer
   const innerArrowWidthReduction = Math.min(borderWidth * 0.3, 1);
-
-  if (radius === 0) {
-    // For sharp corners, create two paths
-    const outerPath = `M0,0 
-      L${width},0 
-      L${width},${contentHeight} 
-      L${constrainedArrowPos + arrowWidth / 2},${contentHeight} 
-      L${constrainedArrowPos},${adjustedHeight} 
-      L${constrainedArrowPos - arrowWidth / 2},${contentHeight} 
-      L0,${contentHeight} 
-      Z`;
-
-    // Inner path with minimal arrow width reduction
-    const innerPath = `M${borderWidth},${borderWidth} 
-      L${width - borderWidth},${borderWidth} 
-      L${width - borderWidth},${contentHeight - borderWidth} 
-      L${constrainedArrowPos + arrowWidth / 2 - innerArrowWidthReduction},${contentHeight - borderWidth} 
-      L${constrainedArrowPos},${contentHeight + arrowHeight - borderWidth * 2} 
-      L${constrainedArrowPos - arrowWidth / 2 + innerArrowWidthReduction},${contentHeight - borderWidth} 
-      L${borderWidth},${contentHeight - borderWidth} 
-      Z`;
-
-    return `<svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="${outerPath}" fill="#333" />
-      <path d="${innerPath}" fill="white" />
-    </svg>`;
-  }
 
   // For rounded corners, create similar double-path structure
   const outerPath = `
