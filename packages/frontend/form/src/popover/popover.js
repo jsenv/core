@@ -280,16 +280,11 @@ const followPosition = (element, elementToFollow) => {
 
     const contentWidth = popoverContent.offsetWidth;
     const contentHeight = popoverContent.offsetHeight;
-    const margin = 20; // Small margin for visual spacing
-    const isNearBottom =
-      elementRect.bottom + contentHeight + arrowHeight + margin >
-      viewportHeight;
+    const margin = 10; // Marge de sécurité réduite pour être plus précis
 
     // Calculate the ideal horizontal position (centered)
     let leftPos = elementRect.left + elementRect.width / 2;
     const halfContentWidth = contentWidth / 2;
-
-    // Tenir compte de la bordure pour les limites du viewport
 
     // Step 1: Calculate popover position (constrained by viewport if needed)
     // Ajuster les limites pour tenir compte des bordures
@@ -302,25 +297,37 @@ const followPosition = (element, elementToFollow) => {
     }
 
     // Step 2: Calculate where the arrow should point
-    // Use the left edge of the element (plus a small margin) instead of center
     const targetLeftEdge = elementRect.left + 10; // 10px from left edge of target
     const popoverLeft = leftPos - halfContentWidth;
-
-    // Calculate arrow position relative to popover to point at target's left edge
     let arrowPos = targetLeftEdge - popoverLeft;
 
     // Step 3: Constrain arrow position within valid bounds
-    const minArrowPos = arrowWidth / 2 + radius + 8; // Minimum safe arrow position from edge
+    const minArrowPos = arrowWidth / 2 + radius + 8;
     const maxArrowPos = contentWidth - minArrowPos;
     arrowPos = Math.max(minArrowPos, Math.min(arrowPos, maxArrowPos));
 
     const popoverBorderRect = popoverBorder.getBoundingClientRect();
 
-    // Position based on whether it's above or below the element
-    if (isNearBottom) {
+    // Calcul exact de l'espace disponible en dessous et au-dessus de l'élément
+    const spaceBelow = viewportHeight - elementRect.bottom - margin;
+    const spaceAbove = elementRect.top - margin;
+
+    // Hauteur totale nécessaire pour le popover, en prenant en compte les bordures et la flèche
+    const totalPopoverHeight = contentHeight + arrowHeight + borderWidth * 2;
+
+    // Vérification pixel-perfect : est-ce que le popover tient en-dessous ?
+    const fitsBelow = spaceBelow >= totalPopoverHeight;
+    // Si ça ne tient pas en-dessous, est-ce que ça tient au-dessus ?
+    const fitsAbove = spaceAbove >= totalPopoverHeight;
+
+    // Décision basée sur l'espace disponible
+    const showAbove = !fitsBelow && fitsAbove;
+    // Si ça ne tient ni en-dessous ni au-dessus, on privilégie en-dessous (comportement par défaut)
+
+    if (showAbove) {
+      // Positionnement au-dessus
       element.setAttribute("data-position", "above");
-      // Tenir compte des bordures verticalement aussi
-      element.style.top = `${elementRect.top - contentHeight - arrowHeight - borderWidth * 2}px`;
+      element.style.top = `${Math.max(margin, elementRect.top - totalPopoverHeight)}px`;
       popoverContentWrapper.style.marginTop = undefined;
       popoverContentWrapper.style.marginBottom = `${arrowHeight}px`;
       popoverBorder.style.top = `-${borderWidth}px`;
@@ -331,6 +338,7 @@ const followPosition = (element, elementToFollow) => {
         arrowPos,
       );
     } else {
+      // Positionnement en-dessous (même si ça déborde, c'est mieux que rien)
       element.setAttribute("data-position", "below");
       element.style.top = `${Math.ceil(elementRect.bottom)}px`;
       popoverContentWrapper.style.marginTop = `${arrowHeight}px`;
@@ -342,6 +350,22 @@ const followPosition = (element, elementToFollow) => {
         popoverBorderRect.height,
         arrowPos,
       );
+
+      // Si le popover va dépasser le bas de l'écran, essayons de le limiter
+      if (!fitsBelow && !fitsAbove) {
+        // Solution de secours: limiter la hauteur du popover à l'espace disponible
+        const availableHeight =
+          viewportHeight -
+          elementRect.bottom -
+          arrowHeight -
+          borderWidth * 2 -
+          margin;
+        if (availableHeight > 50) {
+          // Seulement si on a un minimum d'espace pour afficher quelque chose d'utile
+          popoverContent.style.maxHeight = `${availableHeight}px`;
+          popoverContent.style.overflowY = "auto";
+        }
+      }
     }
 
     // Position the popover
