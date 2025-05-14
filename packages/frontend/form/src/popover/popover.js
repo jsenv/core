@@ -93,10 +93,10 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       <path d="${outerPath}" fill="#333" />
       <path d="${innerPath}" fill="white" />
     </svg>`;
-  } else {
-    // For rounded corners, create similar double-path structure
-    // Outer path (border)
-    const outerPath = `
+  }
+  // For rounded corners, create similar double-path structure
+  // Outer path (border)
+  const outerPath = `
       M${radius},${arrowHeight} 
       H${constrainedArrowPos - arrowWidth / 2} 
       L${constrainedArrowPos},0 
@@ -111,9 +111,9 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       Q0,${arrowHeight} ${radius},${arrowHeight}
     `;
 
-    // Inner path (content)
-    const innerRadius = Math.max(0, radius - borderWidth);
-    const innerPath = `
+  // Inner path (content)
+  const innerRadius = Math.max(0, radius - borderWidth);
+  const innerPath = `
       M${radius + borderWidth},${arrowHeight + borderWidth} 
       H${constrainedArrowPos - arrowWidth / 4} 
       L${constrainedArrowPos},${borderWidth + arrowHeight / 2} 
@@ -128,7 +128,7 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       Q${borderWidth},${arrowHeight + borderWidth} ${radius + borderWidth},${arrowHeight + borderWidth}
     `;
 
-    return `<svg
+  return `<svg
       width="${adjustedWidth}"
       height="${adjustedHeight}"
       viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
@@ -138,7 +138,6 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       <path d="${outerPath}" fill="#333" />
       <path d="${innerPath}" fill="white" />
     </svg>`;
-  }
 };
 
 const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
@@ -188,9 +187,9 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       <path d="${outerPath}" fill="#333" />
       <path d="${innerPath}" fill="white" />
     </svg>`;
-  } else {
-    // For rounded corners, create similar double-path structure
-    const outerPath = `
+  }
+  // For rounded corners, create similar double-path structure
+  const outerPath = `
       M${radius},0 
       H${width - radius} 
       Q${width},0 ${width},${radius} 
@@ -205,9 +204,9 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       Q0,0 ${radius},0
     `;
 
-    // Inner path (content)
-    const innerRadius = Math.max(0, radius - borderWidth);
-    const innerPath = `
+  // Inner path (content)
+  const innerRadius = Math.max(0, radius - borderWidth);
+  const innerPath = `
       M${radius + borderWidth},${borderWidth} 
       H${width - radius - borderWidth} 
       Q${width - borderWidth},${borderWidth} ${width - borderWidth},${radius + borderWidth} 
@@ -222,7 +221,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       Q${borderWidth},${borderWidth} ${radius + borderWidth},${borderWidth}
     `;
 
-    return `<svg
+  return `<svg
       width="${adjustedWidth}"
       height="${adjustedHeight}"
       viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
@@ -232,7 +231,6 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       <path d="${outerPath}" fill="#333" />
       <path d="${innerPath}" fill="white" />
     </svg>`;
-  }
 };
 
 const html = /* html */ `
