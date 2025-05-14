@@ -217,54 +217,56 @@ const followPosition = (element, elementToFollow) => {
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
 
-    const viewportWidth = document.documentElement.clientWidth;
-    const viewportHeight = document.documentElement.clientHeight;
+    // Use visual viewport width to account for scrolling and zoom
+    const viewportWidth = window.visualViewport
+      ? window.visualViewport.width
+      : document.documentElement.clientWidth;
+    const viewportHeight = window.visualViewport
+      ? window.visualViewport.height
+      : document.documentElement.clientHeight;
 
     const contentWidth = popoverContent.offsetWidth;
     const contentHeight = popoverContent.offsetHeight;
-    const margin = 10; // Marge de sécurité réduite pour être plus précis
+    const margin = 10;
 
     // Calculate the ideal horizontal position (centered)
     let leftPos = elementRect.left + elementRect.width / 2;
     const halfContentWidth = contentWidth / 2;
 
-    // Step 1: Calculate popover position (constrained by viewport if needed)
-    // Ajuster les limites pour tenir compte des bordures
-    if (leftPos - halfContentWidth - borderWidth < 0) {
-      // Contrainte sur le bord gauche (avec bordure)
-      leftPos = halfContentWidth + borderWidth;
-    } else if (leftPos + halfContentWidth + borderWidth > viewportWidth) {
-      // Contrainte sur le bord droit (avec bordure)
-      leftPos = viewportWidth - halfContentWidth - borderWidth;
+    // Step 1: Calculate safe left position that prevents left overflow
+    // First ensure we don't overflow left side of viewport (critical)
+    const minLeftPos = halfContentWidth + borderWidth + margin;
+    if (leftPos < minLeftPos) {
+      leftPos = minLeftPos;
+    }
+
+    // Then try to avoid right overflow if possible, but it's less critical
+    const maxLeftPos = viewportWidth - halfContentWidth - borderWidth - margin;
+    if (leftPos > maxLeftPos) {
+      leftPos = Math.max(minLeftPos, maxLeftPos);
     }
 
     // Step 2: Calculate where the arrow should point
-    const targetLeftEdge = elementRect.left + 10; // 10px from left edge of target
+    // Position the arrow to point at the element's center if possible
+    const targetCenter = elementRect.left + elementRect.width / 2;
     const popoverLeft = leftPos - halfContentWidth;
-    let arrowPos = targetLeftEdge - popoverLeft;
+    let arrowPos = targetCenter - popoverLeft;
 
     // Step 3: Constrain arrow position within valid bounds
-    const minArrowPos = arrowWidth / 2 + radius + 7 + borderWidth / 2;
+    const minArrowPos = arrowWidth / 2 + radius + borderWidth;
     const maxArrowPos = contentWidth - minArrowPos;
     arrowPos = Math.max(minArrowPos, Math.min(arrowPos, maxArrowPos));
 
     const popoverBorderRect = popoverBorder.getBoundingClientRect();
 
-    // Calcul exact de l'espace disponible en dessous et au-dessus de l'élément
+    // Calculate vertical space
     const spaceBelow = viewportHeight - elementRect.bottom - margin;
     const spaceAbove = elementRect.top - margin;
-
-    // Hauteur totale nécessaire pour le popover, en prenant en compte les bordures et la flèche
     const totalPopoverHeight = contentHeight + arrowHeight + borderWidth * 2;
 
-    // Vérification pixel-perfect : est-ce que le popover tient en-dessous ?
     const fitsBelow = spaceBelow >= totalPopoverHeight;
-    // Si ça ne tient pas en-dessous, est-ce que ça tient au-dessus ?
     const fitsAbove = spaceAbove >= totalPopoverHeight;
-
-    // Décision basée sur l'espace disponible
     const showAbove = !fitsBelow && fitsAbove;
-    // Si ça ne tient ni en-dessous ni au-dessus, on privilégie en-dessous (comportement par défaut)
 
     if (showAbove) {
       // Positionnement au-dessus
@@ -280,7 +282,7 @@ const followPosition = (element, elementToFollow) => {
         arrowPos,
       );
     } else {
-      // Positionnement en-dessous (même si ça déborde, c'est mieux que rien)
+      // Positionnement en-dessous
       element.setAttribute("data-position", "below");
       element.style.top = `${elementRect.bottom}px`;
       popoverContentWrapper.style.marginTop = `${arrowHeight}px`;
@@ -293,9 +295,8 @@ const followPosition = (element, elementToFollow) => {
         arrowPos,
       );
 
-      // Si le popover va dépasser le bas de l'écran, essayons de le limiter
+      // Handle overflow at bottom
       if (!fitsBelow && !fitsAbove) {
-        // Solution de secours: limiter la hauteur du popover à l'espace disponible
         const availableHeight =
           viewportHeight -
           elementRect.bottom -
@@ -303,16 +304,16 @@ const followPosition = (element, elementToFollow) => {
           borderWidth * 2 -
           margin;
         if (availableHeight > 50) {
-          // Seulement si on a un minimum d'espace pour afficher quelque chose d'utile
           popoverContent.style.maxHeight = `${availableHeight}px`;
           popoverContent.style.overflowY = "auto";
         }
       }
     }
 
-    // Position the popover
-    element.style.left = `${leftPos}px`;
-    element.style.transform = "translateX(-50%)";
+    // Position the popover - use absolute coordinates instead of transform
+    // This gives us more precise control over positioning
+    element.style.left = `${leftPos - halfContentWidth}px`;
+    element.style.transform = "none"; // Don't use transform as it can cause positioning issues
   };
 
   // Initial position calculation
