@@ -1,25 +1,4 @@
-/**
- * I'll re-implement a custom validity api
- * because the native one is not configurable enough:
- *
- * - REALLY PAINFUL can't tell if the message is displayed or not, nor remove it with escape or something
- * - ok but complex: have to listen many evens in all directions to decide wether it's time to display the message or not
- * - ok but sitll not great: have to hack setCustomValidity to hold many validation messages
- * - ok but might be great to have some form of control on the design: can't customize the message
- */
-
-/*
-
-comme un input on peut rien mettre dedans il faut que:
-
-- le tooltip suive l'élément dans le dom
-donc idéalement le mettre dans le meme parent ou etre capable de suivre s'il bouge (what about scroll?)
-
-*/
-
 import { getScrollableParentSet } from "@jsenv/dom";
-
-// https://druids.datadoghq.com/components/dialogs/Popover#example19
 
 const css = /*css*/ `
 .popover {
@@ -34,24 +13,58 @@ const css = /*css*/ `
 .popover_content {
   position: relative;
   padding: 5px;
-  border: 10px solid black;
+  border: 1px solid #333;
   background: white;
+  border-radius: 3px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.popover_arrow-container {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.popover_arrow-top {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.popover_arrow-bottom {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
 }
 `;
+
+const svgArrow = `<svg width="16" height="8" viewBox="0 0 16 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8 0L16 8H0L8 0Z" fill="white"/>
+  <path d="M8 0L16 8H0L8 0Z" stroke="#333" stroke-width="1" fill="none"/>
+</svg>`;
 
 const html = /* html */ `
   <div class="popover">
     <style>
       ${css}
     </style>
-    <div class="popover_content">Default message</div>
+    <div class="popover_content">
+      <div class="popover_arrow-container">
+        <div class="popover_arrow-top">${svgArrow}</div>
+        <div class="popover_arrow-bottom">${svgArrow}</div>
+      </div>
+      <div class="popover_content-inner">Default message</div>
+    </div>
   </div>
 `;
+
 const createPopover = (content) => {
   const div = document.createElement("div");
   div.innerHTML = html;
   const popover = div.querySelector(".popover");
-  const contentElement = popover.querySelector(".popover_content");
+  const contentElement = popover.querySelector(".popover_content-inner");
   contentElement.innerHTML = content;
   return popover;
 };
@@ -65,19 +78,30 @@ const followPosition = (element, elementToFollow) => {
     cleanupCallbackSet.clear();
   };
 
+  const arrowTop = element.querySelector(".popover_arrow-top");
+  const arrowBottom = element.querySelector(".popover_arrow-bottom");
+
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
     element.style.position = "fixed";
 
     const viewportWidth = document.documentElement.clientWidth;
     const viewportHeight = document.documentElement.clientHeight;
-    const isNearBottom = elementRect.bottom > viewportHeight - 100;
+    const popoverHeight = element.offsetHeight;
+    const margin = 20; // Small margin for visual spacing
+    const isNearBottom =
+      elementRect.bottom + popoverHeight + margin > viewportHeight;
 
+    // Show/hide appropriate arrow based on position
     if (isNearBottom) {
       // Position above the element instead of below
       element.style.top = `${elementRect.top - element.offsetHeight}px`;
+      arrowTop.style.display = "none";
+      arrowBottom.style.display = "block";
     } else {
       element.style.top = `${elementRect.bottom}px`;
+      arrowTop.style.display = "block";
+      arrowBottom.style.display = "none";
     }
 
     // Calculate the ideal horizontal position (centered)
@@ -86,14 +110,36 @@ const followPosition = (element, elementToFollow) => {
     const halfPopoverWidth = popoverWidth / 2;
 
     // Ensure popover doesn't go outside viewport on left or right
+    // No padding applied to viewport boundaries
     if (leftPos - halfPopoverWidth < 0) {
       leftPos = halfPopoverWidth;
     } else if (leftPos + halfPopoverWidth > viewportWidth) {
       leftPos = viewportWidth - halfPopoverWidth;
     }
+
+    // Update arrow horizontal position to point at the element
+    const targetCenter = elementRect.left + elementRect.width / 2;
+    const popoverLeft = leftPos - halfPopoverWidth;
+    const arrowPos = targetCenter - popoverLeft;
+
+    // Constrain arrow position to stay within popover bounds
+    const arrowMin = 8; // Min distance from edge
+    const arrowMax = popoverWidth - 8;
+    const constrainedArrowPos = Math.max(
+      arrowMin,
+      Math.min(arrowPos, arrowMax),
+    );
+
+    arrowTop.style.left = `${constrainedArrowPos}px`;
+    arrowBottom.style.left = `${constrainedArrowPos}px`;
+    arrowTop.style.transform = "translateX(-50%)";
+    arrowBottom.style.transform = "translateX(-50%) rotate(180deg)";
+
+    // Position the popover
     element.style.left = `${leftPos}px`;
     element.style.transform = "translateX(-50%)";
   };
+
   updatePosition();
 
   let rafId = null;
@@ -107,7 +153,7 @@ const followPosition = (element, elementToFollow) => {
 
   update_after_visibility_change: {
     const options = {
-      root: null, // viewport
+      root: null,
       rootMargin: "0px",
       threshold: [0, 1],
     };
@@ -125,6 +171,7 @@ const followPosition = (element, elementToFollow) => {
       intersectionObserver.disconnect();
     });
   }
+
   update_after_scroll: {
     const handleScroll = () => {
       schedulePositionUpdate();
@@ -136,14 +183,13 @@ const followPosition = (element, elementToFollow) => {
         passive: true,
       });
       cleanupCallbackSet.add(() => {
-        {
-          scrollableParent.removeEventListener("scroll", handleScroll, {
-            passive: true,
-          });
-        }
+        scrollableParent.removeEventListener("scroll", handleScroll, {
+          passive: true,
+        });
       });
     }
   }
+
   update_after_resize: {
     const resizeObserver = new ResizeObserver(() => {
       schedulePositionUpdate();
@@ -159,11 +205,14 @@ const followPosition = (element, elementToFollow) => {
 
 export const showPopover = (elementToFollow, innerHtml) => {
   const jsenvPopover = createPopover(innerHtml);
-  const stopFollowingPosition = followPosition(jsenvPopover, elementToFollow);
+  jsenvPopover.style.opacity = "0";
   document.body.appendChild(jsenvPopover);
+  const stopFollowingPosition = followPosition(jsenvPopover, elementToFollow);
 
   return () => {
     stopFollowingPosition();
-    document.body.removeChild(jsenvPopover);
+    if (document.body.contains(jsenvPopover)) {
+      document.body.removeChild(jsenvPopover);
+    }
   };
 };
