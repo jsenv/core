@@ -218,27 +218,39 @@ const followPosition = (element, elementToFollow) => {
 
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
+
+    // Use document.documentElement.scrollWidth for full document width
+    // This includes areas currently not visible without scrolling
     const documentHeight = document.documentElement.clientHeight;
-    const documentWidth = document.documentElement.scrollWidth; // Full scrollable width
+    const documentWidth = document.documentElement.scrollWidth;
 
-    // First, reset any max-width to let content determine natural size
+    // First, remove any existing width constraints
     popoverContent.style.maxWidth = "none";
+    popoverContent.style.whiteSpace = "nowrap"; // Temporarily prevent wrapping
 
-    const contentWidth = popoverContent.offsetWidth;
+    // Get natural content width without wrapping
+    const naturalContentWidth = popoverContent.scrollWidth;
     const contentHeight = popoverContent.offsetHeight;
 
-    // Calculate available space to the right of the document
-    const availableWidth = documentWidth - elementRect.left;
+    // Calculate available space to the right edge of the document (not just viewport)
+    const availableDocumentWidth = documentWidth - elementRect.left;
 
-    // If content would overflow document width, limit it
-    if (contentWidth > availableWidth) {
-      // Set max-width to available width minus some margin
+    // If content would overflow document width (not viewport), limit it
+    if (naturalContentWidth > availableDocumentWidth) {
+      // Set max-width to available document width minus margin
       const margin = 10;
-      popoverContent.style.maxWidth = `${availableWidth - margin}px`;
+      popoverContent.style.maxWidth = `${availableDocumentWidth - margin}px`;
+      popoverContent.style.whiteSpace = "normal"; // Allow wrapping if needed
+    } else {
+      // Otherwise keep it at natural width without wrapping
+      popoverContent.style.maxWidth = `${naturalContentWidth}px`;
+      popoverContent.style.whiteSpace = "nowrap";
     }
 
-    // Recalculate after potential max-width adjustment
+    // Recalculate after adjustments
     const finalContentWidth = popoverContent.offsetWidth;
+
+    // Rest of positioning code remains the same...
 
     // Calculate ideal left position based on element size vs popover size
     let idealLeftPos;
