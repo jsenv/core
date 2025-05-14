@@ -293,10 +293,17 @@ const followPosition = (validationMessage, targetElement) => {
     // Handle extra-wide elements (wider than viewport)
     if (elementWidth > viewportWidth) {
       const elementRight = targetElementRect.right;
+      const elementLeft = targetElementRect.left;
       if (elementRight < viewportWidth) {
         // Element extends beyond left edge but right side is visible
         const viewportCenter = viewportWidth / 2;
         const diff = viewportWidth - elementRight;
+        validationMessageLeftPos =
+          viewportCenter - diff / 2 - validationMessageWidth / 2;
+      } else if (elementLeft > 0) {
+        // Element extends beyond right edge but left side is visible
+        const viewportCenter = viewportWidth / 2;
+        const diff = -elementLeft;
         validationMessageLeftPos =
           viewportCenter - diff / 2 - validationMessageWidth / 2;
       } else {
