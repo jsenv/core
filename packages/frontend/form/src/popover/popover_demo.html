@@ -49,7 +49,7 @@ lorsqu'on zoom le comportement semble étrange
 
         <div>
           <h3>Basic right</h3>
-          <div style="border: 1px solid black; width: 300px">
+          <div style="border: 1px solid black; width: 600px">
             <form action="javascript:void(0)">
               <input
                 type="text"
@@ -57,109 +57,97 @@ lorsqu'on zoom le comportement semble étrange
                 title="4 to 8 lowercase letters"
                 autocomplete="off"
                 value="10"
+                style="width: 500px"
                 oninput="this.reportValidity()"
               />
             </form>
-          </div>
-        </div>
-      </div>
 
-      <!-- <div>
-          <h3>Top of scrollable content</h3>
-          <div style="border: 1px solid black; overflow: auto; height: 150px">
-            <form action="javascript:void(0)">
-              <input
-                type="text"
-                pattern="^[a-z]{4,8}$"
-                title="4 to 8 lowercase letters"
-                autocomplete="off"
-                value="10"
-                oninput="this.reportValidity()"
-              />
-            </form>
-            <div style="height: 300px; background: blue"></div>
+            <button id="report">reportValidity()</button>
           </div>
         </div>
 
         <div>
-          <h3>Bottom of scrollable content</h3>
-          <div style="border: 1px solid black; overflow: auto; height: 150px">
-            <div style="height: 300px; background: blue"></div>
-            <form action="javascript:void(0)">
-              <input
-                type="text"
-                pattern="^[a-z]{4,8}$"
-                title="4 to 8 lowercase letters"
-                autocomplete="off"
-                value="10"
-                oninput="this.reportValidity()"
-              />
-            </form>
-          </div>
+          <h3>Message smaller than input</h3>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+              style="width: 300px"
+            />
+          </form>
         </div>
 
         <div>
-          <h3>Middle of scrollable content</h3>
-          <div style="border: 1px solid black; overflow: auto; height: 150px">
-            <div style="height: 250px; background: blue"></div>
-            <form action="javascript:void(0)">
-              <input
-                type="text"
-                pattern="^[a-z]{4,8}$"
-                title="4 to 8 lowercase letters"
-                autocomplete="off"
-                value="10"
-                oninput="this.reportValidity()"
-              />
-            </form>
-            <div style="height: 250px; background: blue"></div>
-          </div>
-        </div> -->
-
-      <!-- <div>
-        <h3>Message smaller than input</h3>
-        <form action="javascript:void(0)">
-          <input
-            type="text"
-            pattern="^[a-z]{4,8}$"
-            title="4 to 8 lowercase letters"
-            autocomplete="off"
-            value="10"
-            oninput="this.reportValidity()"
-            style="width: 300px"
-          />
-        </form>
+          <h3>Message bugger than input</h3>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+              style="width: 20px"
+            />
+          </form>
+        </div>
       </div>
 
       <div>
-        <h3>Message bugger than input</h3>
-        <form action="javascript:void(0)">
-          <input
-            type="text"
-            pattern="^[a-z]{4,8}$"
-            title="4 to 8 lowercase letters"
-            autocomplete="off"
-            value="10"
-            oninput="this.reportValidity()"
-            style="width: 20px"
-          />
-        </form>
+        <h3>Top of scrollable content</h3>
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+            />
+          </form>
+          <div style="height: 300px; background: blue"></div>
+        </div>
       </div>
 
-      <div style="position: fixed; bottom: 10px">
-        <h3>Bottom left of viewport</h3>
-        <form action="javascript:void(0)">
-          <input
-            type="text"
-            pattern="^[a-z]{4,8}$"
-            title="4 to 8 lowercase letters"
-            autocomplete="off"
-            value="10"
-            oninput="this.reportValidity()"
-            style="width: 300px"
-          />
-        </form>
-      </div> -->
+      <div>
+        <h3>Bottom of scrollable content</h3>
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <div style="height: 300px; background: blue"></div>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+            />
+          </form>
+        </div>
+      </div>
+
+      <div>
+        <h3>Middle of scrollable content</h3>
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <div style="height: 250px; background: blue"></div>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+            />
+          </form>
+          <div style="height: 250px; background: blue"></div>
+        </div>
+      </div>
     </div>
 
     <br />
@@ -172,8 +160,15 @@ lorsqu'on zoom le comportement semble étrange
 
       const inputs = document.querySelectorAll("input");
       for (const input of inputs) {
-        showPopover(input, "Veuillez respecter le format requis.");
+        input.addEventListener("focus", () => {
+          showPopover(input, "Veuillez respecter le format requis.");
+        });
       }
+
+      const reportButton = document.querySelector("#report");
+      document.querySelector("#report").onclick = () => {
+        reportButton.parentNode.querySelector("input").reportValidity();
+      };
     </script>
   </body>
 </html>

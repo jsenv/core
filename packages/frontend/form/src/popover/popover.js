@@ -229,34 +229,36 @@ const followPosition = (element, elementToFollow) => {
     const elementPaddingAndBorderSizes =
       getPaddingAndBorderSizes(elementToFollow);
     const elementLeft = elementToFollowRect.left;
+    const elementWidth = elementToFollowRect.width;
+    const popoverWidth = popoverRect.width;
 
     let popoverLeftPos;
-    let arrowLeftPosOnPopover;
-
-    if (popoverRect.width > elementToFollowRect.width) {
-      // popover bigger than element
-      popoverLeftPos = elementToFollowRect.left - 12;
-      arrowLeftPosOnPopover = 0;
+    if (elementWidth > viewportWidth) {
+      const elementRight = elementToFollowRect.right;
+      if (elementRight < viewportWidth) {
+        const viewportCenter = viewportWidth / 2;
+        const diff = viewportWidth - elementRight;
+        popoverLeftPos = viewportCenter - diff / 2 - popoverWidth / 2;
+      } else {
+        popoverLeftPos = viewportWidth / 2 - popoverWidth / 2;
+      }
     } else {
-      // popover smaller than element
-      popoverLeftPos =
-        elementToFollowRect.left +
-        elementToFollowRect.width / 2 -
-        popoverRect.width / 2;
-      arrowLeftPosOnPopover = 0;
+      popoverLeftPos = elementLeft + elementWidth / 2 - popoverWidth / 2;
     }
     if (popoverLeftPos < 0) {
       popoverLeftPos = 0;
-    } else if (popoverLeftPos + popoverRect.width > viewportWidth) {
+    } else if (popoverLeftPos + popoverWidth > viewportWidth) {
       popoverLeftPos = viewportWidth - popoverRect.width;
     }
-
+    let arrowLeftPosOnPopover;
     const arrowTargetLeft =
       elementLeft + elementPaddingAndBorderSizes.borderSizes.left;
-    const arrowLeft = popoverLeftPos + arrowLeftPosOnPopover;
+    const arrowLeft = popoverLeftPos;
     if (arrowLeft < arrowTargetLeft) {
       const diff = arrowTargetLeft - arrowLeft;
-      arrowLeftPosOnPopover += diff; // increase the arrow left pos on the popover
+      arrowLeftPosOnPopover = diff; // increase the arrow left pos on the popover
+    } else {
+      arrowLeftPosOnPopover = 0;
     }
 
     // Calculate vertical space
@@ -389,50 +391,23 @@ const followPosition = (element, elementToFollow) => {
   return stop;
 };
 
-export const showPopover = (elementToFollow, innerHtml) => {
+export const showPopover = (
+  elementToFollow,
+  innerHtml,
+  { scrollIntoView } = {},
+) => {
   const jsenvPopover = createPopover(innerHtml);
   jsenvPopover.style.opacity = "0";
   document.body.appendChild(jsenvPopover);
   const stopFollowingPosition = followPosition(jsenvPopover, elementToFollow);
 
-  // Use requestAnimationFrame to ensure the popover is positioned before checking visibility
-  requestAnimationFrame(() => {
-    // Check if element is visible first
-    const elementRect = elementToFollow.getBoundingClientRect();
-    const viewportWidth = document.documentElement.clientWidth;
-    const viewportHeight = document.documentElement.clientHeight;
-
-    // If element is not visible at all, no need to scroll
-    const isElementVisible =
-      elementRect.top < viewportHeight &&
-      elementRect.bottom > 0 &&
-      elementRect.left < viewportWidth &&
-      elementRect.right > 0;
-
-    if (isElementVisible) {
-      // Element is at least partially visible, check popover visibility
-      const popoverRect = jsenvPopover.getBoundingClientRect();
-
-      // Check if popover is even partially out of view (by 1px or more)
-      const isPartiallyOutOfViewHorizontally =
-        popoverRect.left < 0 || popoverRect.right > viewportWidth;
-
-      const isPartiallyOutOfViewVertically =
-        popoverRect.top < 0 || popoverRect.bottom > viewportHeight;
-
-      if (isPartiallyOutOfViewHorizontally || isPartiallyOutOfViewVertically) {
-        // Scroll to make the popover fully visible
-        jsenvPopover.scrollIntoView({
-          block: "nearest",
-          inline: "nearest",
-          behavior: "smooth",
-        });
-      }
-    }
-
-    // Show the popover regardless of scrolling
-    jsenvPopover.style.opacity = "1";
-  });
+  if (scrollIntoView) {
+    elementToFollow.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "nearest",
+    });
+  }
 
   return () => {
     stopFollowingPosition();
