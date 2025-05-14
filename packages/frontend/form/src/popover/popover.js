@@ -200,11 +200,16 @@ const followPosition = (element, elementToFollow) => {
   const popoverContentWrapper = element.querySelector(
     ".popover_content_wrapper",
   );
-  const border = element.querySelector(".popover_border");
+  const popoverBorder = element.querySelector(".popover_border");
   const popoverContent = element.querySelector(".popover_content");
 
   popoverContentWrapper.style.borderWidth = `${borderWidth}px`;
-  border.style.inset = `-${borderWidth}px`;
+  popoverContentWrapper.style.marginTop = `${arrowHeight}px`;
+
+  popoverBorder.style.top = `-${borderWidth + arrowHeight}px`;
+  popoverBorder.style.bottom = `-${borderWidth}px`;
+  popoverBorder.style.left = `-${borderWidth}px`;
+  popoverBorder.style.right = `-${borderWidth}px`;
 
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
@@ -254,18 +259,18 @@ const followPosition = (element, elementToFollow) => {
       element.setAttribute("data-position", "above");
       // Position above the element, accounting for the larger border and taller arrow
       element.style.top = `${elementRect.top - contentHeight - arrowHeight - 2 * borderWidth}px`;
-      border.innerHTML = generateSvgWithBottomArrow(
-        border.offsetWidth,
-        border.offsetHeight,
+      popoverBorder.innerHTML = generateSvgWithBottomArrow(
+        popoverBorder.offsetWidth,
+        popoverBorder.offsetHeight,
         arrowPos,
       );
     } else {
       element.setAttribute("data-position", "below");
       // Position below the element with taller arrow
       element.style.top = `${elementRect.bottom}px`;
-      border.innerHTML = generateSvgWithTopArrow(
-        border.offsetWidth,
-        border.offsetHeight,
+      popoverBorder.innerHTML = generateSvgWithTopArrow(
+        popoverBorder.offsetWidth,
+        popoverBorder.offsetHeight,
         arrowPos,
       );
     }
