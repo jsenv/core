@@ -70,7 +70,7 @@ const followPosition = (element, elementToFollow) => {
     element.style.position = "fixed";
 
     const viewportWidth = document.documentElement.clientWidth;
-    const viewportHeight = window.innerHeight;
+    const viewportHeight = document.documentElement.clientHeight;
     const isNearBottom = elementRect.bottom > viewportHeight - 100;
 
     if (isNearBottom) {
@@ -84,12 +84,11 @@ const followPosition = (element, elementToFollow) => {
     let leftPos = elementRect.left + elementRect.width / 2;
     const popoverWidth = element.offsetWidth;
     const halfPopoverWidth = popoverWidth / 2;
+
     // Ensure popover doesn't go outside viewport on left or right
     if (leftPos - halfPopoverWidth < 0) {
-      // Too far left, adjust to stay in viewport with some padding
       leftPos = halfPopoverWidth;
     } else if (leftPos + halfPopoverWidth > viewportWidth) {
-      // Too far right, adjust to stay in viewport with some padding
       leftPos = viewportWidth - halfPopoverWidth;
     }
     element.style.left = `${leftPos}px`;
