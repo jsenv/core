@@ -27,13 +27,13 @@ const css = /*css*/ `
   padding: 5px; 
   position: relative;
   border-radius: 3px;
-  box-shadow: 4px 4px 4px 1px rgba(0, 0, 0, 0.2);
 }
 
 .popover_border svg {
   position: absolute;
   inset: 0;
   overflow: visible;
+  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
 }
 `;
 
