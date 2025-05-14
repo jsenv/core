@@ -299,7 +299,7 @@ const followPosition = (element, elementToFollow) => {
     } else {
       // Position below element
       element.setAttribute("data-position", "below");
-      element.style.top = `${elementRect.bottom}px`;
+      element.style.top = `${Math.ceil(elementRect.bottom)}px`;
       popoverContentWrapper.style.marginTop = `${arrowHeight}px`;
       popoverContentWrapper.style.marginBottom = undefined;
       popoverBorder.style.top = `-${borderWidth + arrowHeight}px`;
