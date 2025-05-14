@@ -10,6 +10,12 @@ const css = /*css*/ `
   transition: opacity 0.2s ease-in-out;
 }
 
+.popover_content-wrapper {
+  position: relative;
+  padding-top: 8px;    /* Space for top arrow */
+  padding-bottom: 8px; /* Space for bottom arrow */
+}
+
 .popover_content {
   position: relative;
   padding: 5px;
@@ -19,24 +25,40 @@ const css = /*css*/ `
   box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
-.popover_arrow-container {
+/* Top arrow container - shown when popover is below element */
+.popover_arrow-top-container {
   position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
   overflow: visible;
-  pointer-events: none;
+  z-index: 2;
 }
 
 .popover_arrow-top {
   position: absolute;
-  top: -8px;
+  top: 0px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(-100%);
+}
+
+/* Bottom arrow container - shown when popover is above the element */
+.popover_arrow-bottom-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  overflow: visible;
+  z-index: 2;
 }
 
 .popover_arrow-bottom {
   position: absolute;
-  bottom: -8px;
+  bottom: 0;
   left: 50%;
-  transform: translateX(-50%) rotate(180deg);
+  transform: translateX(-50%) translateY(100%) rotate(180deg);
 }
 `;
 
@@ -50,12 +72,21 @@ const html = /* html */ `
     <style>
       ${css}
     </style>
-    <div class="popover_content">
-      <div class="popover_arrow-container">
+    <div class="popover_content-wrapper">
+      <!-- Top arrow container - shown when popover is below element -->
+      <div class="popover_arrow-top-container">
         <div class="popover_arrow-top">${svgArrow}</div>
+      </div>
+
+      <!-- The actual popover content -->
+      <div class="popover_content">
+        <div class="popover_content-inner">Default message</div>
+      </div>
+
+      <!-- Bottom arrow container - shown when popover is above element -->
+      <div class="popover_arrow-bottom-container">
         <div class="popover_arrow-bottom">${svgArrow}</div>
       </div>
-      <div class="popover_content-inner">Default message</div>
     </div>
   </div>
 `;
@@ -78,6 +109,12 @@ const followPosition = (element, elementToFollow) => {
     cleanupCallbackSet.clear();
   };
 
+  const arrowTopContainer = element.querySelector(
+    ".popover_arrow-top-container",
+  );
+  const arrowBottomContainer = element.querySelector(
+    ".popover_arrow-bottom-container",
+  );
   const arrowTop = element.querySelector(".popover_arrow-top");
   const arrowBottom = element.querySelector(".popover_arrow-bottom");
 
@@ -96,12 +133,12 @@ const followPosition = (element, elementToFollow) => {
     if (isNearBottom) {
       // Position above the element instead of below
       element.style.top = `${elementRect.top - element.offsetHeight}px`;
-      arrowTop.style.display = "none";
-      arrowBottom.style.display = "block";
+      arrowTopContainer.style.display = "none";
+      arrowBottomContainer.style.display = "block";
     } else {
       element.style.top = `${elementRect.bottom}px`;
-      arrowTop.style.display = "block";
-      arrowBottom.style.display = "none";
+      arrowTopContainer.style.display = "block";
+      arrowBottomContainer.style.display = "none";
     }
 
     // Calculate the ideal horizontal position (centered)
@@ -110,7 +147,6 @@ const followPosition = (element, elementToFollow) => {
     const halfPopoverWidth = popoverWidth / 2;
 
     // Ensure popover doesn't go outside viewport on left or right
-    // No padding applied to viewport boundaries
     if (leftPos - halfPopoverWidth < 0) {
       leftPos = halfPopoverWidth;
     } else if (leftPos + halfPopoverWidth > viewportWidth) {
@@ -132,8 +168,6 @@ const followPosition = (element, elementToFollow) => {
 
     arrowTop.style.left = `${constrainedArrowPos}px`;
     arrowBottom.style.left = `${constrainedArrowPos}px`;
-    arrowTop.style.transform = "translateX(-50%)";
-    arrowBottom.style.transform = "translateX(-50%) rotate(180deg)";
 
     // Position the popover
     element.style.left = `${leftPos}px`;
