@@ -177,49 +177,64 @@ const followPosition = (element, elementToFollow) => {
     const halfContentWidth = contentWidth / 2;
 
     // Default arrow position to the left side with some padding
-    // instead of centering it on the popover
-    const arrowLeftPadding = 24; // Distance from left edge
-    let arrowPos = arrowLeftPadding;
-
-    // Calculate target center relative to popover
-    const targetCenterRelativeToPopover = halfContentWidth; // Default - when popover is centered on target
+    const arrowLeftPadding = 9; // Distance from left edge
+    let arrowPos = 0; // Start with arrow at left position by default
 
     // Ensure popover doesn't go outside viewport on left or right
     if (leftPos - halfContentWidth < 0) {
       // Popover is constrained on the left edge
-      const shiftAmount = halfContentWidth - leftPos; // How much we had to shift right
       leftPos = halfContentWidth;
 
-      // Keep the arrow pointing at the target element
-      // If the target is now to the left of our default arrow position, shift the arrow
+      // Calculate target element's center position relative to popover
       const targetCenter = elementRect.left + elementRect.width / 2;
       const popoverLeft = leftPos - halfContentWidth;
-      const targetCenterRelativeToPopoverEdge = targetCenter - popoverLeft;
 
-      // Only move arrow from default position if necessary to point at target
-      arrowPos = Math.max(arrowLeftPadding, targetCenterRelativeToPopoverEdge);
+      // If target is to the right of our default arrow position, keep arrow at default left
+      // Only move arrow if target is to the left of our default arrow position
+      if (targetCenter < popoverLeft + arrowLeftPadding) {
+        // Target is to the left of the default arrow position
+        // Move arrow only as much as needed to point at target
+        arrowPos = targetCenter - popoverLeft;
+      }
+      // Otherwise keep default left arrow position
     } else if (leftPos + halfContentWidth > viewportWidth) {
       // Popover is constrained on the right edge
-      const shiftAmount = leftPos + halfContentWidth - viewportWidth; // How much we had to shift left
       leftPos = viewportWidth - halfContentWidth;
 
-      // Keep the arrow pointing at the target element
+      // Calculate target element's center position relative to popover
       const targetCenter = elementRect.left + elementRect.width / 2;
       const popoverLeft = leftPos - halfContentWidth;
-      const targetCenterRelativeToPopoverEdge = targetCenter - popoverLeft;
 
-      // Only move arrow from default position if necessary to point at target
-      arrowPos = Math.max(arrowLeftPadding, targetCenterRelativeToPopoverEdge);
+      // If target is to the right of our default arrow position, keep arrow at default left
+      // Only move arrow if target is to the left of our default arrow position
+      if (targetCenter < popoverLeft + arrowLeftPadding) {
+        // Target is to the left of the default arrow position
+        // Move arrow only as much as needed to point at target
+        arrowPos = targetCenter - popoverLeft;
+      }
+      // Otherwise keep default left arrow position
     } else {
       // Popover is not constrained by viewport edges
-      // Calculate where the arrow should point based on the target position
+      // Calculate target element's center position relative to popover
       const targetCenter = elementRect.left + elementRect.width / 2;
       const popoverLeft = leftPos - halfContentWidth;
-      const targetCenterRelativeToPopoverEdge = targetCenter - popoverLeft;
 
-      // Use default left position unless target is to the right of it
-      arrowPos = Math.max(arrowLeftPadding, targetCenterRelativeToPopoverEdge);
+      // If target is to the right of our default arrow position, keep arrow at default left
+      // Only move arrow if target is to the left of our default arrow position
+      if (targetCenter < popoverLeft + arrowLeftPadding) {
+        // Target is to the left of the default arrow position
+        // Move arrow only as much as needed to point at target
+        arrowPos = targetCenter - popoverLeft;
+      }
+      // Otherwise keep default left arrow position
     }
+
+    // Ensure arrow position is within valid bounds
+    const arrowWidth = 16;
+    const radius = 3;
+    const minArrowPos = arrowWidth / 2 + radius + arrowLeftPadding;
+    arrowPos = Math.max(minArrowPos, arrowPos);
+
     const borderWidth = 1;
 
     // Position based on whether it's above or below the element
