@@ -18,7 +18,15 @@ const css = /*css*/ `
   height: 100%;
   pointer-events: none;
 }
+.popover_border-top, .popover_border-bottom {
+  display: none;
+}
 
+.popover_content_wrapper {
+  border-width: 1px;
+  border-style: solid;
+  border-color: transparent;
+}
 .popover_content {
   padding: 5px;
   position: relative;
@@ -27,18 +35,21 @@ const css = /*css*/ `
 
 .popover_border svg {
   position: absolute;
-  top: -1px;
-  left: -1px;
-  width: calc(100% + 2px);
-  height: calc(100% + 2px);
+  inset: 0;
+  overflow: visible;
 }
 
-.popover_border-top {
+.popover[data-position="below"] .popover_border-top {
   display: block;
 }
-
-.popover_border-bottom {
-  display: none;
+.popover[data-position="below"] .popover_border-bottom {
+  display: block;
+}  
+.popover[data-position="below"] .popover_content_wrapper {
+  padding-top: 6px;
+}
+.popover[data-position="above"] .popover_content_wrapper {
+  padding-bottom: 6px;
 }
 `;
 
@@ -104,7 +115,9 @@ const html = /* html */ `
       <div class="popover_border-top"></div>
       <div class="popover_border-bottom"></div>
     </div>
-    <div class="popover_content">Default message</div>
+    <div class="popover_content_wrapper">
+      <div class="popover_content">Default message</div>
+    </div>
   </div>
 `;
 
@@ -147,29 +160,15 @@ const followPosition = (element, elementToFollow) => {
       elementRect.bottom + contentHeight + arrowHeight + margin >
       viewportHeight;
 
-    // Generate SVGs if they haven't been created yet
-    if (!borderTop.innerHTML) {
-      borderTop.innerHTML = generateSvgWithTopArrow(
-        contentWidth,
-        contentHeight,
-      );
-      borderBottom.innerHTML = generateSvgWithBottomArrow(
-        contentWidth,
-        contentHeight,
-      );
-    }
-
     // Position based on whether it's above or below the element
     if (isNearBottom) {
+      element.setAttribute("data-position", "above");
       // Position above the element
       element.style.top = `${elementRect.top - contentHeight - arrowHeight}px`;
-      borderTop.style.display = "none";
-      borderBottom.style.display = "block";
     } else {
+      element.setAttribute("data-position", "below");
       // Position below the element
       element.style.top = `${elementRect.bottom}px`;
-      borderTop.style.display = "block";
-      borderBottom.style.display = "none";
     }
 
     // Calculate the ideal horizontal position (centered)
@@ -187,6 +186,14 @@ const followPosition = (element, elementToFollow) => {
     element.style.left = `${leftPos}px`;
     element.style.transform = "translateX(-50%)";
   };
+
+  const contentWidth = popoverContent.offsetWidth;
+  const contentHeight = popoverContent.offsetHeight;
+  borderTop.innerHTML = generateSvgWithTopArrow(contentWidth, contentHeight);
+  borderBottom.innerHTML = generateSvgWithBottomArrow(
+    contentWidth,
+    contentHeight,
+  );
 
   // Initial position calculation
   updatePosition();
