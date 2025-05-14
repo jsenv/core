@@ -1,5 +1,5 @@
 {
-  "name": "dom",
+  "name": "@jsenv/dom",
   "private": true,
   "exports": {
     ".": "./src/dom.js"

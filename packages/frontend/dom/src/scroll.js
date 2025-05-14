@@ -91,7 +91,7 @@ export const getAncestorScrolls = (element) => {
   return ancestorScrolls;
 };
 
-const getScrollableParent = (arg) => {
+export const getScrollableParent = (arg) => {
   if (typeof arg !== "object" || arg.nodeType !== 1) {
     throw new TypeError("getScrollableParent first argument must be DOM node");
   }
