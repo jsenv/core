@@ -31,7 +31,7 @@ const css = /*css*/ `
   overflow-wrap: break-word;
   word-wrap: break-word;
   word-break: normal;
-  max-width: 50vw;
+  max-width: 47vw;
 }
 
 .popover_border svg {
@@ -47,13 +47,14 @@ document.head.appendChild(styleElement);
 
 const arrowWidth = 16;
 const arrowHeight = 8;
+const arrowSpacing = 8;
 const radius = 3;
 const borderWidth = 1;
 
 const generateSvgWithTopArrow = (width, height, arrowPosition) => {
-  const arrowSpacing = arrowWidth / 2 + radius + borderWidth + 7;
-  const minArrowPos = arrowSpacing;
-  const maxArrowPos = width - arrowSpacing;
+  const arrowLeft = arrowWidth / 2 + radius + borderWidth + arrowSpacing;
+  const minArrowPos = arrowLeft;
+  const maxArrowPos = width - arrowLeft;
   const constrainedArrowPos = Math.max(
     minArrowPos,
     Math.min(arrowPosition, maxArrowPos),
@@ -117,9 +118,9 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
 };
 
 const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
-  const arrowSpacing = arrowWidth / 2 + radius + borderWidth + 7;
-  const minArrowPos = arrowSpacing;
-  const maxArrowPos = width - arrowSpacing;
+  const arrowLeft = arrowWidth / 2 + radius + borderWidth + arrowSpacing;
+  const minArrowPos = arrowLeft;
+  const maxArrowPos = width - arrowLeft;
   const constrainedArrowPos = Math.max(
     minArrowPos,
     Math.min(arrowPosition, maxArrowPos),
@@ -234,7 +235,7 @@ const followPosition = (element, elementToFollow) => {
 
     if (popoverRect.width > elementToFollowRect.width) {
       // popover bigger than element
-      popoverLeftPos = elementToFollowRect.left - 20;
+      popoverLeftPos = elementToFollowRect.left - 12;
       arrowLeftPosOnPopover = 0;
     } else {
       // popover smaller than element
