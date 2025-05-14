@@ -12,10 +12,6 @@ const css = /*css*/ `
 
 .popover_border {
   position: absolute;
-  top: -10px;
-  left: -10px;
-  right: -10px;
-  bottom: -10px;
   pointer-events: none;
 }
 .popover_border-top, .popover_border-bottom {
@@ -23,7 +19,6 @@ const css = /*css*/ `
 }
 
 .popover_content_wrapper {
-  border-width: 10px; /* bordeer size */
   border-style: solid;
   border-color: transparent;
   position: relative;
@@ -202,8 +197,14 @@ const followPosition = (element, elementToFollow) => {
     cleanupCallbackSet.clear();
   };
 
+  const popoverContentWrapper = element.querySelector(
+    ".popover_content_wrapper",
+  );
   const border = element.querySelector(".popover_border");
   const popoverContent = element.querySelector(".popover_content");
+
+  popoverContentWrapper.style.borderWidth = `${borderWidth}px`;
+  border.style.inset = `-${borderWidth}px`;
 
   const updatePosition = () => {
     const elementRect = elementToFollow.getBoundingClientRect();
@@ -281,7 +282,7 @@ const followPosition = (element, elementToFollow) => {
   const resizeObserverContent = new ResizeObserver(() => {
     updatePosition();
   });
-  resizeObserverContent.observe(element.querySelector(".popover_content"));
+  resizeObserverContent.observe(popoverContentWrapper);
   cleanupCallbackSet.add(() => {
     resizeObserverContent.disconnect();
   });
