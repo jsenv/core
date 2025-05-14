@@ -42,7 +42,7 @@ document.head.appendChild(styleElement);
 
 const arrowWidth = 16;
 const arrowHeight = 12; // Increased from 8 to 12 for a more pronounced arrow
-const radius = 0;
+const radius = 3;
 const borderWidth = 10;
 
 const generateSvgWithTopArrow = (width, height, arrowPosition) => {
@@ -258,6 +258,8 @@ const followPosition = (element, elementToFollow) => {
     const maxArrowPos = contentWidth - minArrowPos;
     arrowPos = Math.max(minArrowPos, Math.min(arrowPos, maxArrowPos));
 
+    const popoverBorderRect = popoverBorder.getBoundingClientRect();
+
     // Position based on whether it's above or below the element
     if (isNearBottom) {
       element.setAttribute("data-position", "above");
@@ -270,8 +272,8 @@ const followPosition = (element, elementToFollow) => {
       popoverBorder.style.top = `-${borderWidth}px`;
       popoverBorder.style.bottom = `-${borderWidth + arrowHeight}px`;
       popoverBorder.innerHTML = generateSvgWithBottomArrow(
-        popoverBorder.offsetWidth,
-        popoverBorder.offsetHeight,
+        popoverBorderRect.width,
+        popoverBorderRect.height,
         arrowPos,
       );
     } else {
@@ -284,8 +286,8 @@ const followPosition = (element, elementToFollow) => {
       popoverBorder.style.top = `-${borderWidth + arrowHeight}px`;
       popoverBorder.style.bottom = `-${borderWidth}px`;
       popoverBorder.innerHTML = generateSvgWithTopArrow(
-        popoverBorder.offsetWidth,
-        popoverBorder.offsetHeight,
+        popoverBorderRect.width,
+        popoverBorderRect.height,
         arrowPos,
       );
     }
