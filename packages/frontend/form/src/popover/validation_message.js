@@ -10,7 +10,7 @@ import { getPaddingAndBorderSizes, getScrollableParentSet } from "@jsenv/dom";
  */
 
 const css = /*css*/ `
-.validation-message {
+.validation_message {
   display: block;
   overflow: visible;
   height: auto;
@@ -20,25 +20,25 @@ const css = /*css*/ `
   pointer-events: none; 
 }
 
-.validation-message_border {
+.validation_message_border {
   position: absolute;
   pointer-events: none;
   filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
 }
 
-.validation-message_content_wrapper {
+.validation_message_content_wrapper {
   border-style: solid;
   border-color: transparent;
   position: relative;
 }
 
-.validation-message_content {
+.validation_message_content {
   padding: 8px; 
   position: relative;
   max-width: 47vw;
 }
 
-.validation-message_border svg {
+.validation_message_border svg {
   position: absolute;
   inset: 0;
   overflow: visible;
@@ -208,13 +208,13 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
 // HTML template for the validation message
 const validationMessageTemplate = /* html */ `
   <div
-    class="validation-message"
+    class="validation_message"
     role="alert"
     aria-live="assertive"
   >
-    <div class="validation-message_content_wrapper">
-      <div class="validation-message_border"></div>
-      <div class="validation-message_content">Default message</div>
+    <div class="validation_message_content_wrapper">
+      <div class="validation_message_border"></div>
+      <div class="validation_message_content">Default message</div>
     </div>
   </div>
 `;
@@ -227,9 +227,9 @@ const validationMessageTemplate = /* html */ `
 const createValidationMessage = (content) => {
   const div = document.createElement("div");
   div.innerHTML = validationMessageTemplate;
-  const validationMessage = div.querySelector(".validation-message");
+  const validationMessage = div.querySelector(".validation_message");
   const contentElement = validationMessage.querySelector(
-    ".validation-message_content",
+    ".validation_message_content",
   );
   contentElement.innerHTML = content;
   return validationMessage;
@@ -252,13 +252,13 @@ const followPosition = (validationMessage, targetElement) => {
 
   // Get references to validation message parts
   const validationMessageContentWrapper = validationMessage.querySelector(
-    ".validation-message_content_wrapper",
+    ".validation_message_content_wrapper",
   );
   const validationMessageBorder = validationMessage.querySelector(
-    ".validation-message_border",
+    ".validation_message_border",
   );
   const validationMessageContent = validationMessage.querySelector(
-    ".validation-message_content",
+    ".validation_message_content",
   );
 
   // Set initial border styles
@@ -504,7 +504,7 @@ export const showValidationMessage = (
   jsenvValidationMessage.style.opacity = "0";
 
   // Connect validation message with target element for accessibility
-  const validationMessageId = `validation-message-${Date.now()}`;
+  const validationMessageId = `validation_message-${Date.now()}`;
   jsenvValidationMessage.id = validationMessageId;
   targetElement.setAttribute("aria-invalid", "true");
   targetElement.setAttribute("aria-errormessage", validationMessageId);
