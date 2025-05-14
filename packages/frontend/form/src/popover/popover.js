@@ -61,10 +61,9 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   const adjustedWidth = width;
   const adjustedHeight = contentHeight + arrowHeight;
 
-  // Calculate proportional inner arrow width - less narrow
-  // This calculation makes the inner arrow proportionally similar to the outer one
-  // For a 1px border, the inner arrow will be nearly the same width as the outer
-  const innerArrowWidthReduction = borderWidth * 0.6; // Reduced from full borderWidth
+  // For small border widths (like 1px), we want the inner arrow to be almost the same size
+  // For larger borders, we need a small adjustment to maintain visual balance
+  const innerArrowWidthReduction = Math.min(borderWidth * 0.3, 1);
 
   if (radius === 0) {
     // For sharp corners, create two paths: outer (border) and inner (white fill)
@@ -77,8 +76,7 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       L0,${adjustedHeight} 
       Z`;
 
-    // Inner path (offset by borderWidth)
-    // Use proportionally wider arrow for inner path
+    // Inner path - keep arrow width almost the same as outer arrow
     const innerPath = `M${borderWidth},${arrowHeight + borderWidth} 
       L${constrainedArrowPos - arrowWidth / 2 + innerArrowWidthReduction},${arrowHeight + borderWidth} 
       L${constrainedArrowPos},${borderWidth} 
@@ -117,9 +115,8 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       Q0,${arrowHeight} ${radius},${arrowHeight}
     `;
 
-  // Inner path (content)
+  // Inner path (content) - keep arrow width almost the same
   const innerRadius = Math.max(0, radius - borderWidth);
-  // Adjusted inner arrow width for better proportions
   const innerPath = `
     M${innerRadius + borderWidth},${arrowHeight + borderWidth} 
     H${constrainedArrowPos - arrowWidth / 2 + innerArrowWidthReduction} 
@@ -163,8 +160,8 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
   const adjustedWidth = width;
   const adjustedHeight = contentHeight + arrowHeight;
 
-  // Calculate proportional inner arrow width - less narrow
-  const innerArrowWidthReduction = borderWidth * 0.6; // Reduced from full borderWidth
+  // For small border widths, keep inner arrow nearly the same size as outer
+  const innerArrowWidthReduction = Math.min(borderWidth * 0.3, 1);
 
   if (radius === 0) {
     // For sharp corners, create two paths
@@ -177,7 +174,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       L0,${contentHeight} 
       Z`;
 
-    // Inner path with adjusted arrow width
+    // Inner path with minimal arrow width reduction
     const innerPath = `M${borderWidth},${borderWidth} 
       L${width - borderWidth},${borderWidth} 
       L${width - borderWidth},${contentHeight - borderWidth} 
@@ -215,7 +212,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       Q0,0 ${radius},0
     `;
 
-  // Inner path with adjusted arrow width
+  // Inner path with minimal arrow width reduction
   const innerRadius = Math.max(0, radius - borderWidth);
   const innerPath = `
     M${innerRadius + borderWidth},${borderWidth} 
@@ -313,7 +310,7 @@ const followPosition = (element, elementToFollow) => {
     let arrowPos = targetLeftEdge - popoverLeft;
 
     // Step 3: Constrain arrow position within valid bounds
-    const minArrowPos = arrowWidth / 2 + radius + 8;
+    const minArrowPos = arrowWidth / 2 + radius + 8 + borderWidth;
     const maxArrowPos = contentWidth - minArrowPos;
     arrowPos = Math.max(minArrowPos, Math.min(arrowPos, maxArrowPos));
 
