@@ -61,6 +61,11 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   const adjustedWidth = width;
   const adjustedHeight = contentHeight + arrowHeight;
 
+  // Calculate proportional inner arrow width - less narrow
+  // This calculation makes the inner arrow proportionally similar to the outer one
+  // For a 1px border, the inner arrow will be nearly the same width as the outer
+  const innerArrowWidthReduction = borderWidth * 0.6; // Reduced from full borderWidth
+
   if (radius === 0) {
     // For sharp corners, create two paths: outer (border) and inner (white fill)
     const outerPath = `M0,${arrowHeight} 
@@ -73,11 +78,11 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       Z`;
 
     // Inner path (offset by borderWidth)
-    // Ajuster les dimensions de la flèche interne pour maintenir une bordure uniforme
+    // Use proportionally wider arrow for inner path
     const innerPath = `M${borderWidth},${arrowHeight + borderWidth} 
-      L${constrainedArrowPos - arrowWidth / 2 + borderWidth},${arrowHeight + borderWidth} 
+      L${constrainedArrowPos - arrowWidth / 2 + innerArrowWidthReduction},${arrowHeight + borderWidth} 
       L${constrainedArrowPos},${borderWidth} 
-      L${constrainedArrowPos + arrowWidth / 2 - borderWidth},${arrowHeight + borderWidth} 
+      L${constrainedArrowPos + arrowWidth / 2 - innerArrowWidthReduction},${arrowHeight + borderWidth} 
       L${width - borderWidth},${arrowHeight + borderWidth} 
       L${width - borderWidth},${adjustedHeight - borderWidth} 
       L${borderWidth},${adjustedHeight - borderWidth} 
@@ -114,12 +119,12 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
 
   // Inner path (content)
   const innerRadius = Math.max(0, radius - borderWidth);
-  // Ajuster les proportions de la flèche interne pour maintenir une bordure uniforme
+  // Adjusted inner arrow width for better proportions
   const innerPath = `
     M${innerRadius + borderWidth},${arrowHeight + borderWidth} 
-    H${constrainedArrowPos - arrowWidth / 2 + borderWidth} 
+    H${constrainedArrowPos - arrowWidth / 2 + innerArrowWidthReduction} 
     L${constrainedArrowPos},${borderWidth} 
-    L${constrainedArrowPos + arrowWidth / 2 - borderWidth},${arrowHeight + borderWidth} 
+    L${constrainedArrowPos + arrowWidth / 2 - innerArrowWidthReduction},${arrowHeight + borderWidth} 
     H${width - innerRadius - borderWidth} 
     Q${width - borderWidth},${arrowHeight + borderWidth} ${width - borderWidth},${arrowHeight + innerRadius + borderWidth} 
     V${adjustedHeight - innerRadius - borderWidth} 
@@ -158,6 +163,9 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
   const adjustedWidth = width;
   const adjustedHeight = contentHeight + arrowHeight;
 
+  // Calculate proportional inner arrow width - less narrow
+  const innerArrowWidthReduction = borderWidth * 0.6; // Reduced from full borderWidth
+
   if (radius === 0) {
     // For sharp corners, create two paths
     const outerPath = `M0,0 
@@ -169,13 +177,13 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       L0,${contentHeight} 
       Z`;
 
-    // Inner path (offset by borderWidth) - ajuster la flèche pour une bordure uniforme
+    // Inner path with adjusted arrow width
     const innerPath = `M${borderWidth},${borderWidth} 
       L${width - borderWidth},${borderWidth} 
       L${width - borderWidth},${contentHeight - borderWidth} 
-      L${constrainedArrowPos + arrowWidth / 2 - borderWidth},${contentHeight - borderWidth} 
+      L${constrainedArrowPos + arrowWidth / 2 - innerArrowWidthReduction},${contentHeight - borderWidth} 
       L${constrainedArrowPos},${contentHeight + arrowHeight - borderWidth * 2} 
-      L${constrainedArrowPos - arrowWidth / 2 + borderWidth},${contentHeight - borderWidth} 
+      L${constrainedArrowPos - arrowWidth / 2 + innerArrowWidthReduction},${contentHeight - borderWidth} 
       L${borderWidth},${contentHeight - borderWidth} 
       Z`;
 
@@ -207,7 +215,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       Q0,0 ${radius},0
     `;
 
-  // Inner path (content) - ajuster la flèche pour une bordure uniforme
+  // Inner path with adjusted arrow width
   const innerRadius = Math.max(0, radius - borderWidth);
   const innerPath = `
     M${innerRadius + borderWidth},${borderWidth} 
@@ -215,9 +223,9 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     Q${width - borderWidth},${borderWidth} ${width - borderWidth},${innerRadius + borderWidth} 
     V${contentHeight - innerRadius - borderWidth} 
     Q${width - borderWidth},${contentHeight - borderWidth} ${width - innerRadius - borderWidth},${contentHeight - borderWidth} 
-    H${constrainedArrowPos + arrowWidth / 2 - borderWidth} 
+    H${constrainedArrowPos + arrowWidth / 2 - innerArrowWidthReduction} 
     L${constrainedArrowPos},${contentHeight + arrowHeight - borderWidth * 2} 
-    L${constrainedArrowPos - arrowWidth / 2 + borderWidth},${contentHeight - borderWidth} 
+    L${constrainedArrowPos - arrowWidth / 2 + innerArrowWidthReduction},${contentHeight - borderWidth} 
     H${innerRadius + borderWidth} 
     Q${borderWidth},${contentHeight - borderWidth} ${borderWidth},${contentHeight - innerRadius - borderWidth} 
     V${innerRadius + borderWidth} 
