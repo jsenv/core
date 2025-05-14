@@ -229,32 +229,47 @@ const followPosition = (element, elementToFollow) => {
     const contentHeight = popoverContent.offsetHeight;
     const margin = 10;
 
-    // Calculate the ideal horizontal position (centered)
-    let leftPos = elementRect.left + elementRect.width / 2;
-    const halfContentWidth = contentWidth / 2;
+    // Step 1: Determine ideal horizontal position based on relative sizes
+    let idealLeftPos;
 
-    // Step 1: Calculate safe left position that prevents left overflow
-    // First ensure we don't overflow left side of viewport (critical)
-    const minLeftPos = halfContentWidth + borderWidth + margin;
-    if (leftPos < minLeftPos) {
-      leftPos = minLeftPos;
+    // If popover is wider than the element to follow, align left sides
+    if (contentWidth > elementRect.width) {
+      // Try to align the left edge of popover with left edge of element
+      idealLeftPos = elementRect.left;
+    } else {
+      // If popover is narrower, center it under the element
+      idealLeftPos = elementRect.left + (elementRect.width - contentWidth) / 2;
     }
 
-    // Then try to avoid right overflow if possible, but it's less critical
-    const maxLeftPos = viewportWidth - halfContentWidth - borderWidth - margin;
-    if (leftPos > maxLeftPos) {
-      leftPos = Math.max(minLeftPos, maxLeftPos);
-    }
+    // Step 2: Ensure popover doesn't overflow viewport
+    const minLeftPos = margin;
+    const maxLeftPos = viewportWidth - contentWidth - margin;
 
-    // Step 2: Calculate where the arrow should point
-    // Position the arrow to point at the element's center if possible
+    // Constrain to viewport boundaries
+    idealLeftPos = Math.max(minLeftPos, Math.min(idealLeftPos, maxLeftPos));
+
+    // Step 3: Calculate where the arrow should point
+    // We want the arrow to point at the element's center if possible
     const targetCenter = elementRect.left + elementRect.width / 2;
-    const popoverLeft = leftPos - halfContentWidth;
-    let arrowPos = targetCenter - popoverLeft;
 
-    // Step 3: Constrain arrow position within valid bounds
+    // Calculate arrow position relative to popover
+    let arrowPos = targetCenter - idealLeftPos;
+
+    // Step 4: Try to position arrow as left as possible while still pointing to element
     const minArrowPos = arrowWidth / 2 + radius + borderWidth;
     const maxArrowPos = contentWidth - minArrowPos;
+
+    // If element is wide enough and arrow would be valid at the left position
+    const leftSideOfElementPos = elementRect.left - idealLeftPos + minArrowPos;
+    if (
+      leftSideOfElementPos >= minArrowPos &&
+      leftSideOfElementPos <= maxArrowPos
+    ) {
+      // Position arrow to point at left side of element (plus a little margin)
+      arrowPos = leftSideOfElementPos;
+    }
+
+    // Ensure arrow is within valid bounds
     arrowPos = Math.max(minArrowPos, Math.min(arrowPos, maxArrowPos));
 
     const popoverBorderRect = popoverBorder.getBoundingClientRect();
@@ -269,7 +284,7 @@ const followPosition = (element, elementToFollow) => {
     const showAbove = !fitsBelow && fitsAbove;
 
     if (showAbove) {
-      // Positionnement au-dessus
+      // Position above element
       element.setAttribute("data-position", "above");
       element.style.top = `${Math.max(margin, elementRect.top - totalPopoverHeight)}px`;
       popoverContentWrapper.style.marginTop = undefined;
@@ -282,7 +297,7 @@ const followPosition = (element, elementToFollow) => {
         arrowPos,
       );
     } else {
-      // Positionnement en-dessous
+      // Position below element
       element.setAttribute("data-position", "below");
       element.style.top = `${elementRect.bottom}px`;
       popoverContentWrapper.style.marginTop = `${arrowHeight}px`;
@@ -310,10 +325,8 @@ const followPosition = (element, elementToFollow) => {
       }
     }
 
-    // Position the popover - use absolute coordinates instead of transform
-    // This gives us more precise control over positioning
-    element.style.left = `${leftPos - halfContentWidth}px`;
-    element.style.transform = "none"; // Don't use transform as it can cause positioning issues
+    // Position the popover
+    element.style.left = `${idealLeftPos}px`;
   };
 
   // Initial position calculation
