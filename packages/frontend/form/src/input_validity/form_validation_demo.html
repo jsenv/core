@@ -127,7 +127,9 @@ lorsqu'on zoom le comportement semble étrange
       const addCustomButton = document.querySelector("#add_custom");
       document.querySelector("#add_custom").addEventListener("click", () => {
         const input = addCustomButton.parentNode.querySelector("input");
-        input.validationInterface.addCustomMessage("test", "Hey oh");
+        input.validationInterface.addCustomMessage("test", "Hey oh", {
+          level: "error",
+        });
       });
       const removeCustomButton = document.querySelector("#remove_custom");
       removeCustomButton.addEventListener("click", () => {

@@ -48,7 +48,16 @@ export const installInputValidation = (
     const closeOnCleanup = () => {
       validationMessage.close();
     };
-    validationMessage = openValidationMessage(input, lastFailedValidityInfo, {
+    let message;
+    let level;
+    if (typeof lastFailedValidityInfo === "string") {
+      message = lastFailedValidityInfo;
+    } else {
+      message = lastFailedValidityInfo.message;
+      level = lastFailedValidityInfo.level;
+    }
+    validationMessage = openValidationMessage(input, message, {
+      level,
       onClose: () => {
         cleanupCallbackSet.delete(closeOnCleanup);
         validationMessage = null;
@@ -72,10 +81,10 @@ export const installInputValidation = (
     lastFailedValidityInfo = null;
 
     for (const constraint of constraintSet) {
-      const contraintMessage = constraint.check(input);
-      if (contraintMessage) {
-        validityInfoMap.set(constraint, contraintMessage);
-        lastFailedValidityInfo = contraintMessage;
+      const constraintValidityInfo = constraint.check(input);
+      if (constraintValidityInfo) {
+        validityInfoMap.set(constraint, constraintValidityInfo);
+        lastFailedValidityInfo = constraintValidityInfo;
       }
     }
 
@@ -92,7 +101,12 @@ export const installInputValidation = (
       return true;
     }
     if (validationMessage) {
-      validationMessage.update(lastFailedValidityInfo);
+      if (typeof lastFailedValidityInfo === "string") {
+        validationMessage.update(lastFailedValidityInfo);
+      } else {
+        const { message, level } = lastFailedValidityInfo;
+        validationMessage.update(message, { level });
+      }
       return false;
     }
     openInputValidationMessage();
@@ -233,16 +247,14 @@ export const installInputValidation = (
     constraintSet.add({
       name: "custom_message",
       check: () => {
-        for (const [, message] of customMessageMap) {
-          if (message) {
-            return message;
-          }
+        for (const [, { message, level }] of customMessageMap) {
+          return { message, level };
         }
         return null;
       },
     });
-    const addCustomMessage = (key, message) => {
-      customMessageMap.set(key, message);
+    const addCustomMessage = (key, message, { level } = {}) => {
+      customMessageMap.set(key, { message, level });
       updateValidity({ openOnFailure: true });
       return () => {
         customMessageMap.delete(key);
