@@ -44,129 +44,73 @@ lorsqu'on zoom le comportement semble étrange
             </form>
           </div>
         </div>
-
-        <div>
-          <h3>Basic right</h3>
-          <div style="border: 1px solid black; width: 600px">
-            <form action="javascript:void(0)">
-              <input
-                type="text"
-                pattern="^[a-z]{4,8}$"
-                title="4 to 8 lowercase letters"
-                autocomplete="off"
-                value="10"
-                style="width: 500px"
-                oninput="this.reportValidity()"
-              />
-            </form>
-
-            <button id="report">reportValidity()</button>
-          </div>
-        </div>
-
-        <div>
-          <h3>Message smaller than input</h3>
-          <form action="javascript:void(0)">
-            <input
-              type="text"
-              pattern="^[a-z]{4,8}$"
-              title="4 to 8 lowercase letters"
-              autocomplete="off"
-              value="10"
-              oninput="this.reportValidity()"
-              style="width: 300px"
-            />
-          </form>
-        </div>
-
-        <div>
-          <h3>Message bugger than input</h3>
-          <form action="javascript:void(0)">
-            <input
-              type="text"
-              pattern="^[a-z]{4,8}$"
-              title="4 to 8 lowercase letters"
-              autocomplete="off"
-              value="10"
-              oninput="this.reportValidity()"
-              style="width: 20px"
-            />
-          </form>
-        </div>
-      </div>
-
-      <div>
-        <h3>Top of scrollable content</h3>
-        <div style="border: 1px solid black; overflow: auto; height: 150px">
-          <form action="javascript:void(0)">
-            <input
-              type="text"
-              pattern="^[a-z]{4,8}$"
-              title="4 to 8 lowercase letters"
-              autocomplete="off"
-              value="10"
-              oninput="this.reportValidity()"
-            />
-          </form>
-          <div style="height: 300px; background: blue"></div>
-        </div>
-      </div>
-
-      <div>
-        <h3>Bottom of scrollable content</h3>
-        <div style="border: 1px solid black; overflow: auto; height: 150px">
-          <div style="height: 300px; background: blue"></div>
-          <form action="javascript:void(0)">
-            <input
-              type="text"
-              pattern="^[a-z]{4,8}$"
-              title="4 to 8 lowercase letters"
-              autocomplete="off"
-              value="10"
-              oninput="this.reportValidity()"
-            />
-          </form>
-        </div>
-      </div>
-
-      <div>
-        <h3>Middle of scrollable content</h3>
-        <div style="border: 1px solid black; overflow: auto; height: 150px">
-          <div style="height: 250px; background: blue"></div>
-          <form action="javascript:void(0)">
-            <input
-              type="text"
-              pattern="^[a-z]{4,8}$"
-              title="4 to 8 lowercase letters"
-              autocomplete="off"
-              value="10"
-              oninput="this.reportValidity()"
-            />
-          </form>
-          <div style="height: 250px; background: blue"></div>
-        </div>
       </div>
     </div>
-
-    <br />
-    <br />
-    <br />
-    <div style="background: red; width: 2000px; height: 1px"></div>
-    <div style="background: blue; height: 400px"></div>
     <script type="module">
       import { showValidationMessage } from "./validation_message.js";
 
-      const inputs = document.querySelectorAll("input");
-      for (const input of inputs) {
-        input.addEventListener("focus", () => {
-          showValidationMessage(input, "Veuillez respecter le format requis.");
-        });
-      }
+      const replaceNativeValidation = (input) => {
+        const cleanupCallbackSet = new Set();
 
-      const reportButton = document.querySelector("#report");
-      document.querySelector("#report").onclick = () => {
-        reportButton.parentNode.querySelector("input").reportValidity();
+        report_validity: {
+          const reportValidity = input.reportValidity;
+
+          input.reportValidity = () => {
+            // do it
+          };
+          cleanupCallbackSet.add(() => {
+            input.reportValidity = reportValidity;
+          });
+        }
+
+        const constraintSet = new Set();
+        constraintSet.add({
+          name: "pattern",
+          check: (input) => {
+            const pattern = input.pattern;
+            if (!pattern) {
+              return null;
+            }
+            const regex = new RegExp(pattern);
+            if (!regex.test(input.value)) {
+              return `Veuillez respecter le format requis.`;
+            }
+            return null;
+          },
+        });
+
+        const validityInfoMap = new Map();
+        const updateValidity = () => {
+          validityInfoMap.clear();
+
+          for (const constraint of constraintSet) {
+            const contraintMessage = constraint.check(input);
+            if (contraintMessage) {
+              validityInfoMap.set(constraint, contraintMessage);
+            }
+          }
+        };
+
+        input.addEventListener("input", () => {
+          updateValidity();
+        });
+        input.addEventListener("keydown", (e) => {
+          if (e.key !== "Enter") {
+            return;
+          }
+          updateValidity();
+          if (validityInfoMap.size === 0) {
+            return;
+          }
+          const message = [...validityInfoMap.values()].join("\n");
+          e.preventDefault();
+          showValidationMessage(input, message);
+        });
       };
+
+      for (const input of document.querySelectorAll("input")) {
+        replaceNativeValidation(input);
+      }
     </script>
   </body>
 </html>

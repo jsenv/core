@@ -52,8 +52,10 @@ document.head.appendChild(styleElement);
 const ARROW_WIDTH = 16;
 const ARROW_HEIGHT = 8;
 const CORNER_RADIUS = 3;
-const BORDER_WIDTH = 1;
+const BORDER_WIDTH = 10;
 const ARROW_SPACING = 8;
+const BACKGROUND_COLOR = "white";
+const BORDER_COLOR = "red";
 
 /**
  * Generates SVG path for validation message with arrow on top
@@ -125,8 +127,8 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       role="presentation"
       aria-hidden="true"
     >
-      <path d="${outerPath}" fill="#333" />
-      <path d="${innerPath}" fill="white" />
+      <path d="${outerPath}" fill="${BORDER_COLOR}" />
+      <path d="${innerPath}" fill="${BACKGROUND_COLOR}" />
     </svg>`;
 };
 
@@ -200,8 +202,8 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       role="presentation"
       aria-hidden="true"
     >
-      <path d="${outerPath}" fill="#333" />
-      <path d="${innerPath}" fill="white" />
+      <path d="${outerPath}" fill="${BORDER_COLOR}" />
+      <path d="${innerPath}" fill="${BACKGROUND_COLOR}" />
     </svg>`;
 };
 
@@ -374,7 +376,7 @@ const followPosition = (validationMessage, targetElement) => {
       validationMessageContentWrapper.style.marginTop = undefined;
       validationMessageContentWrapper.style.marginBottom = `${ARROW_HEIGHT}px`;
       validationMessageBorder.style.top = `-${BORDER_WIDTH}px`;
-      validationMessageBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT}px`;
+      validationMessageBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
       validationMessageBorder.innerHTML = generateSvgWithBottomArrow(
         validationMessageRect.width,
         validationMessageRect.height,
@@ -386,7 +388,13 @@ const followPosition = (validationMessage, targetElement) => {
       validationMessageTopPos = Math.ceil(targetElementRect.bottom);
       validationMessageContentWrapper.style.marginTop = `${ARROW_HEIGHT}px`;
       validationMessageContentWrapper.style.marginBottom = undefined;
-      validationMessageBorder.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT}px`;
+      validationMessageBorder.style.top = `-${
+        BORDER_WIDTH +
+        ARROW_HEIGHT -
+        // arrow path will take BORDER_WIDTH + ARROW_HEIGHT but it will also take 1 more px no matter what to draw the path
+        // so we also remove 0.5 px to make arrow point exactly on the target
+        0.5
+      }px`;
       validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
       validationMessageBorder.innerHTML = generateSvgWithTopArrow(
         validationMessageRect.width,

@@ -121,7 +121,6 @@ export const jsenvPluginDirectoryListing = ({
         const enoent = urlInfo.searchParams.has("enoent");
         if (enoent) {
           urlInfo.status = 404;
-          urlInfo.headers["cache-control"] = "no-cache";
         }
         const request = urlInfo.context.request;
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
