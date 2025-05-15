@@ -1,3 +1,4 @@
+import { useInputValidationMessage } from "@jsenv/form";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 import { useActionStatus } from "../action/action_hooks.js";
@@ -5,7 +6,6 @@ import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { SPAForm } from "./spa_form.jsx";
 import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
-import { useValidity } from "./validity/use_validity.js";
 
 export const SPAInputText = forwardRef(
   (
@@ -17,13 +17,8 @@ export const SPAInputText = forwardRef(
       const input = innerRef.current;
       return input;
     });
-    // custom validity is great as long as you don't have many error hapenning in parallel
-    // in that case only the last once will be displayed
-    // ideally they would all be displayed
-    // but for this we would have to implement our own way to display errors
-    // for now we'll stick to the custom validity api
-    const [addFormErrorValidity, removeFormErrorValidity] =
-      useValidity(innerRef);
+    const [addFormErrorOnInput, removeFormErrorFromInput] =
+      useInputValidationMessage(innerRef, "form_error");
     const input = <InputText ref={innerRef} action={action} {...rest} />;
 
     return (
@@ -31,13 +26,13 @@ export const SPAInputText = forwardRef(
         action={action}
         method={method}
         onSubmitStart={() => {
-          removeFormErrorValidity();
+          removeFormErrorFromInput();
           if (onSubmitStart) {
             onSubmitStart();
           }
         }}
         onSubmitError={(e) => {
-          addFormErrorValidity(e);
+          addFormErrorOnInput(e);
           if (onSubmitError) {
             onSubmitError(e);
           }
@@ -82,14 +77,6 @@ const InputText = forwardRef(
       name,
     );
     useRequestSubmitOnChange(innerRef, { preventWhenValueMissing: true });
-    useValidity(innerRef, null, {
-      onCancel: (reason) => {
-        innerRef.current.value = value;
-        if (onCancel) {
-          onCancel(reason);
-        }
-      },
-    });
 
     // autoFocus does not work so we focus in a useLayoutEffect,
     // see https://github.com/preactjs/preact/issues/1255
@@ -118,6 +105,13 @@ const InputText = forwardRef(
             setOptimisticUIState(input.value);
             if (onInput) {
               onInput(e);
+            }
+          }}
+          // eslint-disable-next-line react/no-unknown-property
+          onCancel={(reason) => {
+            innerRef.current.value = value;
+            if (onCancel) {
+              onCancel(reason);
             }
           }}
         />

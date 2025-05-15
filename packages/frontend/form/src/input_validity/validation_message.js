@@ -9,6 +9,101 @@ import { getPaddingAndBorderSizes, getScrollableParentSet } from "@jsenv/dom";
  * - Arrow points at the target element
  */
 
+/**
+ * Shows a validation message attached to the specified element
+ * @param {HTMLElement} targetElement - Element the validation message should follow
+ * @param {string} innerHtml - HTML content for the validation message
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.scrollIntoView - Whether to scroll the target element into view
+ * @returns {Function} - Function to hide and remove the validation message
+ */
+export const openValidationMessage = (
+  targetElement,
+  innerHtml,
+  { level = "warning", onClose } = {},
+) => {
+  let opened = true;
+  const closeCallbackSet = new Set();
+  const close = () => {
+    if (!opened) {
+      return;
+    }
+    opened = false;
+    for (const closeCallback of closeCallbackSet) {
+      closeCallback();
+    }
+    closeCallbackSet.clear();
+  };
+
+  // Create and add validation message to document
+  const jsenvValidationMessage = createValidationMessage();
+  const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
+    ".validation_message_content",
+  );
+
+  const update = (newInnerHTML, { level = "warning" } = {}) => {
+    jsenvValidationMessage.setAttribute("data-level", level);
+    jsenvValidationMessageContent.innerHTML = newInnerHTML;
+  };
+  update(innerHtml, { level });
+
+  jsenvValidationMessage.style.opacity = "0";
+
+  // Connect validation message with target element for accessibility
+  const validationMessageId = `validation_message-${Date.now()}`;
+  jsenvValidationMessage.id = validationMessageId;
+  targetElement.setAttribute("aria-invalid", "true");
+  targetElement.setAttribute("aria-errormessage", validationMessageId);
+  closeCallbackSet.add(() => {
+    targetElement.removeAttribute("aria-invalid");
+    targetElement.removeAttribute("aria-errormessage");
+  });
+
+  document.body.appendChild(jsenvValidationMessage);
+  closeCallbackSet.add(() => {
+    if (document.body.contains(jsenvValidationMessage)) {
+      document.body.removeChild(jsenvValidationMessage);
+    }
+  });
+
+  const stopFollowingPosition = followPosition(
+    jsenvValidationMessage,
+    targetElement,
+  );
+  closeCallbackSet.add(() => {
+    stopFollowingPosition();
+  });
+
+  if (onClose) {
+    closeCallbackSet.add(onClose);
+  }
+  close_on_target_focus: {
+    const onfocus = () => {
+      close();
+    };
+    targetElement.addEventListener("focus", onfocus);
+    closeCallbackSet.add(() => {
+      targetElement.removeEventListener("focus", onfocus);
+    });
+  }
+  close_on_target_blur: {
+    const onblur = () => {
+      close();
+    };
+    targetElement.addEventListener("blur", onblur);
+    closeCallbackSet.add(() => {
+      targetElement.removeEventListener("blur", onblur);
+    });
+  }
+
+  // Return cleanup function
+  return {
+    jsenvValidationMessage,
+    update,
+    close,
+  };
+};
+
 const css = /*css*/ `
 .validation_message {
   display: block;
@@ -533,99 +628,4 @@ const followPosition = (validationMessage, targetElement) => {
   }
 
   return stop;
-};
-
-/**
- * Shows a validation message attached to the specified element
- * @param {HTMLElement} targetElement - Element the validation message should follow
- * @param {string} innerHtml - HTML content for the validation message
- * @param {Object} options - Configuration options
- * @param {boolean} options.scrollIntoView - Whether to scroll the target element into view
- * @returns {Function} - Function to hide and remove the validation message
- */
-export const openValidationMessage = (
-  targetElement,
-  innerHtml,
-  { level = "warning", onClose } = {},
-) => {
-  let opened = true;
-  const closeCallbackSet = new Set();
-  const close = () => {
-    if (!opened) {
-      return;
-    }
-    opened = false;
-    for (const closeCallback of closeCallbackSet) {
-      closeCallback();
-    }
-    closeCallbackSet.clear();
-  };
-
-  // Create and add validation message to document
-  const jsenvValidationMessage = createValidationMessage();
-  const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
-    ".validation_message_content",
-  );
-
-  const update = (newInnerHTML, { level = "warning" } = {}) => {
-    jsenvValidationMessage.setAttribute("data-level", level);
-    jsenvValidationMessageContent.innerHTML = newInnerHTML;
-  };
-  update(innerHtml, { level });
-
-  jsenvValidationMessage.style.opacity = "0";
-
-  // Connect validation message with target element for accessibility
-  const validationMessageId = `validation_message-${Date.now()}`;
-  jsenvValidationMessage.id = validationMessageId;
-  targetElement.setAttribute("aria-invalid", "true");
-  targetElement.setAttribute("aria-errormessage", validationMessageId);
-  closeCallbackSet.add(() => {
-    targetElement.removeAttribute("aria-invalid");
-    targetElement.removeAttribute("aria-errormessage");
-  });
-
-  document.body.appendChild(jsenvValidationMessage);
-  closeCallbackSet.add(() => {
-    if (document.body.contains(jsenvValidationMessage)) {
-      document.body.removeChild(jsenvValidationMessage);
-    }
-  });
-
-  const stopFollowingPosition = followPosition(
-    jsenvValidationMessage,
-    targetElement,
-  );
-  closeCallbackSet.add(() => {
-    stopFollowingPosition();
-  });
-
-  if (onClose) {
-    closeCallbackSet.add(onClose);
-  }
-  close_on_target_focus: {
-    const onfocus = () => {
-      close();
-    };
-    targetElement.addEventListener("focus", onfocus);
-    closeCallbackSet.add(() => {
-      targetElement.removeEventListener("focus", onfocus);
-    });
-  }
-  close_on_target_blur: {
-    const onblur = () => {
-      close();
-    };
-    targetElement.addEventListener("blur", onblur);
-    closeCallbackSet.add(() => {
-      targetElement.removeEventListener("blur", onblur);
-    });
-  }
-
-  // Return cleanup function
-  return {
-    jsenvValidationMessage,
-    update,
-    close,
-  };
 };
