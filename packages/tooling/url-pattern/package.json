@@ -9,5 +9,6 @@
   },
   "devDependencies": {
     "@jsenv/snapshot": "../snapshot"
-  }
+  },
+  "main": "./index.js"
 }

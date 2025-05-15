@@ -27,7 +27,8 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/utils": "2.3.1"
+    "@jsenv/utils": "2.3.1",
+    "@jsenv/url-pattern": "0.0.1"
   },
   "devDependencies": {
     "preact": "10.26.5",

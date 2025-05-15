@@ -46,7 +46,7 @@
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/abort": "../../tooling/abort",
-    "@jsenv/router": "../../tooling/router",
+    "@jsenv/router": "../../frontend/router",
     "@jsenv/fetch": "../../tooling/fetch",
     "@jsenv/urls": "../../tooling/urls",
     "@jsenv/url-pattern": "../../tooling/url-pattern",

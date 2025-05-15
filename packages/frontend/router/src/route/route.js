@@ -1,5 +1,5 @@
+import { createResourcePattern } from "@jsenv/url-pattern";
 import { batch, effect, signal } from "@preact/signals";
-import { createResourcePattern } from "../../shared/resource_pattern.js";
 import { applyAction } from "../action/action.js";
 import { routingWhile } from "../document_routing.js";
 import { normalizeUrl } from "../normalize_url.js";
