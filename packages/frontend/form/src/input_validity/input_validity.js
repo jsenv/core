@@ -17,9 +17,6 @@
  * - Supports keyboard navigation and dismissal
  * - Allows custom styling and positioning of validation messages
  *
- *
- * Maintenant un dernier truc: la possibilité de mettre quand on le souhaite un truc
- * genre une erreur backend par example
  */
 
 import { openValidationMessage } from "./validation_message.js";
@@ -28,7 +25,16 @@ export const installInputValidation = (
   input,
   { onCancel, customConstraints = [] } = {},
 ) => {
+  const validationInterface = {};
+
   const cleanupCallbackSet = new Set();
+  const uninstall = () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+    cleanupCallbackSet.clear();
+  };
+  validationInterface.uninstall = uninstall;
 
   let validationMessage;
   const openInputValidationMessage = () => {
@@ -216,12 +222,40 @@ export const installInputValidation = (
     });
   }
 
-  return () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-    cleanupCallbackSet.clear();
-  };
+  custom_message: {
+    const customMessageMap = new Map();
+    constraintSet.add({
+      name: "custom_message",
+      check: () => {
+        for (const [, message] of customMessageMap) {
+          if (message) {
+            return message;
+          }
+        }
+        return null;
+      },
+    });
+    const addCustomMessage = (key, message) => {
+      customMessageMap.set(key, message);
+      updateValidity({ openOnFailure: true });
+      return () => {
+        customMessageMap.delete(key);
+      };
+    };
+    const removeCustomMessage = (key) => {
+      customMessageMap.delete(key);
+      updateValidity();
+    };
+    cleanupCallbackSet.add(() => {
+      customMessageMap.clear();
+    });
+    Object.assign(validationInterface, {
+      addCustomMessage,
+      removeCustomMessage,
+    });
+  }
+
+  return validationInterface;
 };
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
