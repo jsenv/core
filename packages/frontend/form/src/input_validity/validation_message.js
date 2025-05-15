@@ -111,7 +111,7 @@ const validationMessageTemplate = /* html */ `
 const ARROW_WIDTH = 16;
 const ARROW_HEIGHT = 8;
 const CORNER_RADIUS = 3;
-const BORDER_WIDTH = 1;
+const BORDER_WIDTH = 0;
 const ARROW_SPACING = 8;
 const BACKGROUND_COLOR = "white";
 const BORDER_COLOR = "grey";
@@ -567,7 +567,7 @@ export const openValidationMessage = (
     ".validation_message_content",
   );
 
-  const update = (newInnerHTML, { level } = {}) => {
+  const update = (newInnerHTML, { level = "warning" } = {}) => {
     jsenvValidationMessage.setAttribute("data-level", level);
     jsenvValidationMessageContent.innerHTML = newInnerHTML;
   };

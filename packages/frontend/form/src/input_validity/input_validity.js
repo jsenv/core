@@ -35,9 +35,7 @@ export const installInputValidation = (
     cleanupCallbackSet.clear();
   };
   validationInterface.uninstall = uninstall;
-
   input.validationInterface = validationInterface;
-
   cleanupCallbackSet.add(() => {
     delete input.validationInterface;
   });
@@ -76,10 +74,9 @@ export const installInputValidation = (
 
   let lastFailedValidityInfo = null;
   const validityInfoMap = new Map();
-  const updateValidity = ({ openOnFailure } = {}) => {
+  const checkValidity = () => {
     validityInfoMap.clear();
     lastFailedValidityInfo = null;
-
     for (const constraint of constraintSet) {
       const constraintValidityInfo = constraint.check(input);
       if (constraintValidityInfo) {
@@ -87,18 +84,14 @@ export const installInputValidation = (
         lastFailedValidityInfo = constraintValidityInfo;
       }
     }
-
-    if (!openOnFailure) {
-      if (validationMessage) {
-        validationMessage.close();
-      }
-      return !lastFailedValidityInfo;
-    }
+    return !lastFailedValidityInfo;
+  };
+  const reportValidity = () => {
     if (!lastFailedValidityInfo) {
       if (validationMessage) {
         validationMessage.close();
       }
-      return true;
+      return;
     }
     if (validationMessage) {
       if (typeof lastFailedValidityInfo === "string") {
@@ -107,19 +100,153 @@ export const installInputValidation = (
         const { message, level } = lastFailedValidityInfo;
         validationMessage.update(message, { level });
       }
-      return false;
+      return;
     }
     openInputValidationMessage();
-    return false;
+    return;
   };
+
+  const customMessageMap = new Map();
+  custom_message: {
+    constraintSet.add({
+      name: "custom_message",
+      check: () => {
+        for (const [, { message, level }] of customMessageMap) {
+          return { message, level };
+        }
+        return null;
+      },
+    });
+    const addCustomMessage = (key, message, { level = "error" } = {}) => {
+      customMessageMap.set(key, { message, level });
+      checkValidity();
+      reportValidity();
+      return () => {
+        removeCustomMessage(key);
+      };
+    };
+    const removeCustomMessage = (key) => {
+      if (customMessageMap.has(key)) {
+        customMessageMap.delete(key);
+        checkValidity();
+        reportValidity();
+      }
+    };
+    cleanupCallbackSet.add(() => {
+      customMessageMap.clear();
+    });
+    Object.assign(validationInterface, {
+      addCustomMessage,
+      removeCustomMessage,
+    });
+  }
 
   update_on_input: {
     const oninput = () => {
-      updateValidity();
+      customMessageMap.clear();
+      if (validationMessage) {
+        validationMessage.close();
+      }
+      checkValidity();
     };
     input.addEventListener("input", oninput);
     cleanupCallbackSet.add(() => {
       input.removeEventListener("input", oninput);
+    });
+  }
+
+  report_on_enter_without_form: {
+    const onkeydown = (e) => {
+      if (!input.form && e.key === "Enter" && !checkValidity()) {
+        reportValidity();
+        // no need to prevent anything here, Enter on input without form does nothing
+      }
+    };
+    input.addEventListener("keydown", onkeydown);
+    cleanupCallbackSet.add(() => {
+      input.removeEventListener("keydown", onkeydown);
+    });
+  }
+
+  report_on_input_report_validity_call: {
+    const nativeReportValidity = input.reportValidity;
+    input.reportValidity = () => {
+      reportValidity();
+    };
+    cleanupCallbackSet.add(() => {
+      input.reportValidity = nativeReportValidity;
+    });
+  }
+
+  report_on_form_request_submit_call: {
+    const onRequestSubmit = (form, { prevent }) => {
+      if (form === input.form && lastFailedValidityInfo && !checkValidity()) {
+        reportValidity();
+        prevent();
+      }
+    };
+    requestSubmitCallbackSet.add(onRequestSubmit);
+    cleanupCallbackSet.add(() => {
+      requestSubmitCallbackSet.delete(onRequestSubmit);
+    });
+  }
+
+  report_on_form_request_submit_by_click: {
+    const willSubmitFormOnClick = (element) => {
+      return element.type === "submit" || element.type === "image";
+    };
+
+    const onClick = (e) => {
+      const target = e.target;
+      const form = target.form;
+      if (!form) {
+        // happens outside a form
+        return;
+      }
+      if (input.form !== form) {
+        // happens in an other form, or the input has no form
+        return;
+      }
+      if (
+        willSubmitFormOnClick(target) &&
+        lastFailedValidityInfo &&
+        !checkValidity()
+      ) {
+        reportValidity();
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("click", onClick, { capture: true });
+    cleanupCallbackSet.add(() => {
+      window.removeEventListener("click", onClick, { capture: true });
+    });
+
+    const onKeydown = (e) => {
+      if (e.key !== "Enter") {
+        return;
+      }
+      const target = e.target;
+      const form = target.form;
+      if (!form) {
+        // happens outside a form
+        return;
+      }
+      if (input.form !== form) {
+        // happens in an other form, or the input has no form
+        return;
+      }
+      if (willSubmitFormOnClick(target)) {
+        // we'll catch it in the click handler
+        return;
+      }
+      if (!checkValidity()) {
+        reportValidity();
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", onKeydown, { capture: true });
+    cleanupCallbackSet.add(() => {
+      window.removeEventListener("keydown", onClick, { capture: true });
     });
   }
 
@@ -151,126 +278,6 @@ export const installInputValidation = (
         input.removeEventListener("blur", onblur);
       });
     }
-  }
-
-  report_validity: {
-    const reportValidity = input.reportValidity;
-    input.reportValidity = () => {
-      updateValidity({ openOnFailure: true });
-    };
-    cleanupCallbackSet.add(() => {
-      input.reportValidity = reportValidity;
-    });
-  }
-
-  report_on_enter_without_form: {
-    const onkeydown = (e) => {
-      if (!input.form && e.key === "Enter") {
-        updateValidity({ openOnFailure: true });
-      }
-    };
-    input.addEventListener("keydown", onkeydown);
-    cleanupCallbackSet.add(() => {
-      input.removeEventListener("keydown", onkeydown);
-    });
-  }
-
-  report_on_form_submit_requested_by_api: {
-    const onRequestSubmit = (form, { prevent }) => {
-      if (form === input.form && !updateValidity({ openOnFailure: true })) {
-        prevent();
-      }
-    };
-    requestSubmitCallbackSet.add(onRequestSubmit);
-    cleanupCallbackSet.add(() => {
-      requestSubmitCallbackSet.delete(onRequestSubmit);
-    });
-  }
-
-  report_on_form_submit_requested_by_click: {
-    const willSubmitFormOnClick = (element) => {
-      return element.type === "submit" || element.type === "image";
-    };
-
-    const onClick = (e) => {
-      const target = e.target;
-      const form = target.form;
-      if (!form) {
-        // happens outside a form
-        return;
-      }
-      if (input.form !== form) {
-        // happens in an other form, or the input has no form
-        return;
-      }
-      if (willSubmitFormOnClick(target)) {
-        if (!updateValidity({ openOnFailure: true })) {
-          e.preventDefault();
-        }
-      }
-    };
-    window.addEventListener("click", onClick, { capture: true });
-    cleanupCallbackSet.add(() => {
-      window.removeEventListener("click", onClick, { capture: true });
-    });
-
-    const onKeydown = (e) => {
-      if (e.key !== "Enter") {
-        return;
-      }
-      const target = e.target;
-      const form = target.form;
-      if (!form) {
-        // happens outside a form
-        return;
-      }
-      if (input.form !== form) {
-        // happens in an other form, or the input has no form
-        return;
-      }
-      if (willSubmitFormOnClick(target)) {
-        // we'll catch it in the click handler
-        return;
-      }
-      if (!updateValidity({ openOnFailure: true })) {
-        e.preventDefault();
-      }
-    };
-    window.addEventListener("keydown", onKeydown, { capture: true });
-    cleanupCallbackSet.add(() => {
-      window.removeEventListener("keydown", onClick, { capture: true });
-    });
-  }
-
-  custom_message: {
-    const customMessageMap = new Map();
-    constraintSet.add({
-      name: "custom_message",
-      check: () => {
-        for (const [, { message, level }] of customMessageMap) {
-          return { message, level };
-        }
-        return null;
-      },
-    });
-    const addCustomMessage = (key, message, { level } = {}) => {
-      customMessageMap.set(key, { message, level });
-      updateValidity({ openOnFailure: true });
-      return () => {
-        customMessageMap.delete(key);
-      };
-    };
-    const removeCustomMessage = (key) => {
-      customMessageMap.delete(key);
-      updateValidity();
-    };
-    cleanupCallbackSet.add(() => {
-      customMessageMap.clear();
-    });
-    Object.assign(validationInterface, {
-      addCustomMessage,
-      removeCustomMessage,
-    });
   }
 
   return validationInterface;
