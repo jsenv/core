@@ -17,6 +17,14 @@
  * - Supports keyboard navigation and dismissal
  * - Allows custom styling and positioning of validation messages
  *
+ * Features:
+ * - Constraint-based validation system with built-in and custom constraints
+ * - Custom validation messages with different severity levels
+ * - Form submission prevention on validation failure
+ * - Validation on Enter key in forms or standalone inputs
+ * - Escape key to dismiss validation messages
+ * - Support for standard HTML validation attributes (required, pattern, type="email")
+ * - Validation messages that follow the input element and adapt to viewport
  */
 
 import { openValidationMessage } from "./validation_message.js";
