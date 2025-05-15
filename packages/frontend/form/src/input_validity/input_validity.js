@@ -16,6 +16,10 @@
  * - Provides complete control over validation message UX
  * - Supports keyboard navigation and dismissal
  * - Allows custom styling and positioning of validation messages
+ *
+ *
+ * Maintenant un dernier truc: la possibilité de mettre quand on le souhaite un truc
+ * genre une rreur backend par example
  */
 
 import { openValidationMessage } from "./validation_message.js";
