@@ -1,8 +1,13 @@
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useCallback, useLayoutEffect, useRef } from "preact/hooks";
 import { installInputCustomValidation } from "../input_custom_validation.js";
 
-export const useInputCustomValidation = (inputRef) => {
+export const useInputCustomValidation = (
+  inputRef,
+  initCallback,
+  initCallbackDeps,
+) => {
   const inputCustomValidationRef = useRef();
+  const initCallbackMemoized = useCallback(initCallback, initCallbackDeps);
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -24,14 +29,38 @@ export const useInputCustomValidation = (inputRef) => {
       */
       return null;
     }
-
-    if (input.validationInterface) {
-      inputCustomValidationRef.current = input.validationInterface;
-    } else {
-      inputCustomValidationRef.current = installInputCustomValidation(input);
+    const unsubscribe = subscribe(input);
+    const inputValidationInterface = input.validationInterface;
+    inputCustomValidationRef.current = inputValidationInterface;
+    if (initCallbackMemoized) {
+      initCallbackMemoized(inputValidationInterface);
     }
     return () => {
-      input.validationInterface.unsubscribe();
+      unsubscribe();
     };
-  }, []);
+  }, [initCallbackMemoized]);
+};
+
+const inputSubscribeCountWeakMap = new WeakMap();
+const subscribe = (input) => {
+  if (input.validationInterface) {
+    let subscribeCount = inputSubscribeCountWeakMap.get(input);
+    inputSubscribeCountWeakMap.set(input, subscribeCount + 1);
+  } else {
+    installInputCustomValidation(input);
+    inputSubscribeCountWeakMap.set(input, 1);
+  }
+  return () => {
+    unsubscribe(input);
+  };
+};
+
+const unsubscribe = (input) => {
+  const subscribeCount = inputSubscribeCountWeakMap.get(input);
+  if (subscribeCount === 1) {
+    input.validationInterface.uninstall();
+    inputSubscribeCountWeakMap.delete(input);
+  } else {
+    inputSubscribeCountWeakMap.set(input, subscribeCount - 1);
+  }
 };

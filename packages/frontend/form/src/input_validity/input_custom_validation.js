@@ -30,7 +30,13 @@
 import { openValidationMessage } from "./validation_message.js";
 
 export const installInputCustomValidation = (input) => {
-  const validationInterface = {};
+  const validationInterface = {
+    uninstall: undefined,
+    registerCancelCallback: undefined,
+    registerConstraint: undefined,
+    addCustomMessage: undefined,
+    removeCustomMessage: undefined,
+  };
 
   const cleanupCallbackSet = new Set();
   cleanup: {
@@ -54,6 +60,8 @@ export const installInputCustomValidation = (input) => {
   register_cancel_callback: {
     const cancelCallbackSet = new Set();
     triggerOnCancel = (reason) => {
+      const cancelEvent = new CustomEvent("cancel", { detail: reason });
+      input.dispatchEvent(cancelEvent);
       for (const cancelCallback of cancelCallbackSet) {
         cancelCallback(reason);
       }
