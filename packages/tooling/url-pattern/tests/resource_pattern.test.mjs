@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { createResourcePattern } from "../resource_pattern.js";
+import { createResourcePattern } from "@jsenv/url-pattern";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_basic", () => {

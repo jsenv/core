@@ -49,6 +49,7 @@
     "@jsenv/router": "../../tooling/router",
     "@jsenv/fetch": "../../tooling/fetch",
     "@jsenv/urls": "../../tooling/urls",
+    "@jsenv/url-pattern": "../../tooling/url-pattern",
     "@jsenv/humanize": "../../tooling/humanize",
     "@jsenv/core": "../../../",
     "@jsenv/plugin-commonjs": "../../related/plugin-commonjs",

@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { PATTERN } from "../pattern.js";
+import { PATTERN } from "@jsenv/url-pattern";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_named_only", () => {

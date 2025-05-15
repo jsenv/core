@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { routeMatchUrl } from "../route_match_url.js";
+import { routeMatchUrl } from "../src/route_match_url.js";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_basic", () => ({

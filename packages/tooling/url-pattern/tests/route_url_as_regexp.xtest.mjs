@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { createResourcePattern } from "../resource_pattern.js";
+import { createResourcePattern } from "../src/resource_pattern.js";
 
 const convertPatternIntoRegexp = (pattern) =>
   createResourcePattern(pattern).regexp;

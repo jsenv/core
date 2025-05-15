@@ -14,18 +14,15 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/tooling/router"
+    "directory": "packages/frontend/router"
   },
   "type": "module",
   "exports": {
-    ".": {
-      "node": "./src/server.js",
-      "browser": "./src/client.js"
-    },
-    "./client": "./src/client.js",
+    ".": "./index.js",
     "./*": "./*"
   },
   "files": [
+    "/index.js",
     "/src/"
   ],
   "sideEffects": false,

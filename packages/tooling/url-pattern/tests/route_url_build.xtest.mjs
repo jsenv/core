@@ -1,5 +1,5 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { createResourcePattern } from "../resource_pattern.js";
+import { createResourcePattern } from "../src/resource_pattern.js";
 
 const buildRouteUrl = (pattern, url, params) =>
   createResourcePattern(pattern).build(url, params);
