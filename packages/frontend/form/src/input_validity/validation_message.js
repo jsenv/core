@@ -42,6 +42,14 @@ export const openValidationMessage = (
   );
 
   const update = (newInnerHTML, { level = "warning" } = {}) => {
+    const borderColor = level === "warning" ? "grey" : "red";
+    const backgroundColor = "white";
+
+    jsenvValidationMessage.style.setProperty("--border-color", borderColor);
+    jsenvValidationMessage.style.setProperty(
+      "--background-color",
+      backgroundColor,
+    );
     jsenvValidationMessage.setAttribute("data-level", level);
     jsenvValidationMessageContent.innerHTML = newInnerHTML;
   };
@@ -159,7 +167,6 @@ const css = /*css*/ `
   background-color: #f44336;
 }
 
-
 .validation_message_content {
   align-self: center;
 }
@@ -168,6 +175,14 @@ const css = /*css*/ `
   position: absolute;
   inset: 0;
   overflow: visible;
+}
+
+.border_path {
+  fill: var(--border-color);
+}
+
+.background_path {  
+  fill: var(--background-color);
 }
 `;
 const styleElement = document.createElement("style");
@@ -206,10 +221,8 @@ const validationMessageTemplate = /* html */ `
 const ARROW_WIDTH = 16;
 const ARROW_HEIGHT = 8;
 const CORNER_RADIUS = 3;
-const BORDER_WIDTH = 0;
+const BORDER_WIDTH = 1;
 const ARROW_SPACING = 8;
-const BACKGROUND_COLOR = "white";
-const BORDER_COLOR = "grey";
 
 /**
  * Generates SVG path for validation message with arrow on top
@@ -281,8 +294,8 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       role="presentation"
       aria-hidden="true"
     >
-      <path d="${outerPath}" fill="${BORDER_COLOR}" />
-      <path d="${innerPath}" fill="${BACKGROUND_COLOR}" />
+      <path d="${outerPath}" class="border_path" />
+      <path d="${innerPath}" class="background_path" />
     </svg>`;
 };
 
@@ -356,8 +369,8 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       role="presentation"
       aria-hidden="true"
     >
-      <path d="${outerPath}" fill="${BORDER_COLOR}" />
-      <path d="${innerPath}" fill="${BACKGROUND_COLOR}" />
+      <path d="${outerPath}" class="border_path" />
+      <path d="${innerPath}" class="background_path" />
     </svg>`;
 };
 
