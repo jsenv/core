@@ -19,14 +19,14 @@
  *
  *
  * Maintenant un dernier truc: la possibilité de mettre quand on le souhaite un truc
- * genre une rreur backend par example
+ * genre une erreur backend par example
  */
 
 import { openValidationMessage } from "./validation_message.js";
 
 export const installInputValidation = (
   input,
-  { customConstraints = [] } = {},
+  { onCancel, customConstraints = [] } = {},
 ) => {
   const cleanupCallbackSet = new Set();
 
@@ -102,6 +102,8 @@ export const installInputValidation = (
       if (e.key === "Escape") {
         if (validationMessage) {
           validationMessage.close();
+        } else if (onCancel) {
+          onCancel("escape_key");
         }
       }
     };
@@ -109,6 +111,20 @@ export const installInputValidation = (
     cleanupCallbackSet.add(() => {
       input.removeEventListener("keydown", onkeydown);
     });
+  }
+
+  cancel_on_blur_empty: {
+    if (onCancel) {
+      const onblur = () => {
+        if (input.value === "") {
+          onCancel("blur_empty");
+        }
+      };
+      input.addEventListener("blur", onblur);
+      cleanupCallbackSet.add(() => {
+        input.removeEventListener("blur", onblur);
+      });
+    }
   }
 
   report_validity: {
