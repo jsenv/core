@@ -29,30 +29,9 @@ export const installInputValidation = (input) => {
   };
 
   const constraintSet = new Set();
-  constraintSet.add({
-    name: "required",
-    check: (input) => {
-      if (input.required && !input.value) {
-        return `Veuillez remplir ce champ.`;
-      }
-      return null;
-    },
-  });
-  constraintSet.add({
-    name: "pattern",
-    check: (input) => {
-      const pattern = input.pattern;
-      if (!pattern) {
-        return null;
-      }
-      const regex = new RegExp(pattern);
-      if (!regex.test(input.value)) {
-        // we should add input.title to the message
-        return `Veuillez respecter le format requis.`;
-      }
-      return null;
-    },
-  });
+  constraintSet.add(REQUIRED_CONSTRAINT);
+  constraintSet.add(PATTERN_CONSTRAINT);
+  constraintSet.add(TYPE_EMAIL_CONSTRAINT);
 
   let lastFailedValidityInfo = null;
   const validityInfoMap = new Map();
@@ -176,6 +155,51 @@ export const installInputValidation = (input) => {
     }
     cleanupCallbackSet.clear();
   };
+};
+
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
+
+const REQUIRED_CONSTRAINT = {
+  name: "required",
+  check: (input) => {
+    if (input.required && !input.value) {
+      return `Veuillez remplir ce champ.`;
+    }
+    return null;
+  },
+};
+const PATTERN_CONSTRAINT = {
+  name: "pattern",
+  check: (input) => {
+    const pattern = input.pattern;
+    if (!pattern) {
+      return null;
+    }
+    const regex = new RegExp(pattern);
+    if (!regex.test(input.value)) {
+      // we should add input.title to the message
+      return `Veuillez respecter le format requis.`;
+    }
+    return null;
+  },
+};
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
+const emailregex =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+const TYPE_EMAIL_CONSTRAINT = {
+  name: "type_email",
+  check: (input) => {
+    if (input.type === "email") {
+      const value = input.value;
+      if (!value.includes("@")) {
+        return `Veuillez includes "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
+      }
+      if (!emailregex.test(input.value)) {
+        return `Veuillez saisir une adresse e-mail valide.`;
+      }
+    }
+    return null;
+  },
 };
 
 const requestSubmitCallbackSet = new Set();
