@@ -1,10 +1,10 @@
+import { useInputValidationMessage } from "@jsenv/form";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../action/action_hooks.js";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { SPAForm } from "./spa_form.jsx";
-import { useValidity } from "./validity/use_validity.js";
 
 export const SPACheckbox = ({
   action,
@@ -15,8 +15,8 @@ export const SPACheckbox = ({
   ...rest
 }) => {
   const checkboxRef = useRef(null);
-  const [addFormErrorValidity, removeFormErrorValidity] =
-    useValidity(checkboxRef);
+  const [addFormErrorOnInput, removeFormErrorFromInput] =
+    useInputValidationMessage(checkboxRef, "form_error");
   const checkbox = <Checkbox ref={checkboxRef} action={action} {...rest} />;
 
   return (
@@ -24,13 +24,13 @@ export const SPACheckbox = ({
       action={action}
       method={method}
       onSubmitStart={() => {
-        removeFormErrorValidity();
+        removeFormErrorFromInput();
         if (onSubmitStart) {
           onSubmitStart();
         }
       }}
       onSubmitError={(e) => {
-        addFormErrorValidity(e);
+        addFormErrorOnInput(e);
         if (onSubmitError) {
           onSubmitError(e);
         }
@@ -60,11 +60,6 @@ const Checkbox = forwardRef(({ action, name, checked, ...rest }, ref) => {
     const input = innerRef.current;
     return input;
   });
-  useValidity(innerRef, null, {
-    onCancel: () => {
-      innerRef.current.checked = checked;
-    },
-  });
 
   return (
     <LoaderBackground pending={pending}>
@@ -77,6 +72,10 @@ const Checkbox = forwardRef(({ action, name, checked, ...rest }, ref) => {
         disabled={pending}
         onInput={(e) => {
           setOptimisticUIState(e.target.checked);
+        }}
+        // eslint-disable-next-line react/no-unknown-property
+        onCancel={() => {
+          innerRef.current.checked = checked;
         }}
       />
     </LoaderBackground>

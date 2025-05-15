@@ -31,7 +31,6 @@ export const useInputCustomValidationRef = (
     }
     const unsubscribe = subscribe(input);
     const inputValidationInterface = input.validationInterface;
-    console.log("set inputValidationInterface", inputValidationInterface);
     inputCustomValidationRef.current = inputValidationInterface;
     if (initCallbackMemoized) {
       initCallbackMemoized(inputValidationInterface);
