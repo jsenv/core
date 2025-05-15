@@ -306,7 +306,6 @@ const followPosition = (validationMessage, targetElement) => {
 
   // Set initial border styles
   validationMessageBodyWrapper.style.borderWidth = `${BORDER_WIDTH}px`;
-  validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
   validationMessageBorder.style.left = `-${BORDER_WIDTH}px`;
   validationMessageBorder.style.right = `-${BORDER_WIDTH}px`;
 
@@ -429,13 +428,7 @@ const followPosition = (validationMessage, targetElement) => {
       validationMessageTopPos = Math.ceil(targetElementRect.bottom);
       validationMessageBodyWrapper.style.marginTop = `${ARROW_HEIGHT}px`;
       validationMessageBodyWrapper.style.marginBottom = undefined;
-      validationMessageBorder.style.top = `-${
-        BORDER_WIDTH +
-        ARROW_HEIGHT -
-        // arrow path will take BORDER_WIDTH + ARROW_HEIGHT but it will also take 1 more px no matter what to draw the path
-        // so we also remove 0.5 px to make arrow point exactly on the target
-        0.5
-      }px`;
+      validationMessageBorder.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
       validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
       validationMessageBorder.innerHTML = generateSvgWithTopArrow(
         validationMessageRect.width,
