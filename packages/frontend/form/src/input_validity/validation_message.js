@@ -44,7 +44,26 @@ const css = /*css*/ `
 .validation_message_icon {
   display: flex;
   align-self: flex-start;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 2px;
 }
+
+.validation_message_exclamation_svg {
+  width: 16px;
+  height: 12px;
+  color: white;
+}
+
+.validation_message[data-level="warning"] .validation_message_icon { 
+  background-color: #ff9800;
+}
+.validation_message[data-level="error"] .validation_message_icon { 
+  background-color: #f44336;
+}
+
 
 .validation_message_content {
   align-self: center;
@@ -70,7 +89,18 @@ const validationMessageTemplate = /* html */ `
     <div class="validation_message_body_wrapper">
       <div class="validation_message_border"></div>
       <div class="validation_message_body">
-        <div class="validation_message_icon"></div>
+        <div class="validation_message_icon">
+          <svg
+            class="validation_message_exclamation_svg"
+            viewBox="0 0 125 300"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fill="currentColor"
+              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
+            />
+          </svg>
+        </div>
         <div class="validation_message_content">Default message</div>
       </div>
     </div>
@@ -84,7 +114,7 @@ const CORNER_RADIUS = 3;
 const BORDER_WIDTH = 1;
 const ARROW_SPACING = 8;
 const BACKGROUND_COLOR = "white";
-const BORDER_COLOR = "red";
+const BORDER_COLOR = "grey";
 
 /**
  * Generates SVG path for validation message with arrow on top
@@ -523,12 +553,11 @@ const followPosition = (validationMessage, targetElement) => {
 export const openValidationMessage = (
   targetElement,
   innerHtml,
-  { level, onClose } = {},
+  { level = "warning", onClose } = {},
 ) => {
   let opened = true;
   const closeCallbackSet = new Set();
   const close = () => {
-    return;
     if (!opened) {
       return;
     }
@@ -546,10 +575,7 @@ export const openValidationMessage = (
   );
 
   const update = (newInnerHTML, { level } = {}) => {
-    jsenvValidationMessage.querySelector(".validation_message_icon").innerHTML =
-      renderExclamationIconSvg({
-        backgroundColor: level === "error" ? "red" : "orange",
-      });
+    jsenvValidationMessage.setAttribute("data-level", level);
     jsenvValidationMessageContent.innerHTML = newInnerHTML;
   };
   update(innerHtml, { level });
@@ -609,21 +635,4 @@ export const openValidationMessage = (
     update,
     close,
   };
-};
-
-const renderExclamationIconSvg = ({ backgroundColor = "currentColor" }) => {
-  return /*html */ `<svg
-    viewBox="0 0 24 24"
-    width="24"
-    height="24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      fill-rule="evenodd"
-      clip-rule="evenodd"
-      d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12ZM12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1ZM12 6C12.5523 6 13 6.44772 13 7V13C13 13.5523 12.5523 14 12 14C11.4477 14 11 13.5523 11 13V7C11 6.44772 11.4477 6 12 6ZM13.25 16.75C13.25 17.4404 12.6904 18 12 18C11.3096 18 10.75 17.4404 10.75 16.75C10.75 16.0596 11.3096 15.5 12 15.5C12.6904 15.5 13.25 16.0596 13.25 16.75Z"
-      fill="${backgroundColor}"
-    />
-  </svg>`;
 };
