@@ -20,7 +20,10 @@
 
 import { openValidationMessage } from "./validation_message.js";
 
-export const installInputValidation = (input) => {
+export const installInputValidation = (
+  input,
+  { customConstraints = [] } = {},
+) => {
   const cleanupCallbackSet = new Set();
 
   let validationMessage;
@@ -42,6 +45,9 @@ export const installInputValidation = (input) => {
   constraintSet.add(REQUIRED_CONSTRAINT);
   constraintSet.add(PATTERN_CONSTRAINT);
   constraintSet.add(TYPE_EMAIL_CONSTRAINT);
+  for (const customConstraint of customConstraints) {
+    constraintSet.add(customConstraint);
+  }
 
   let lastFailedValidityInfo = null;
   const validityInfoMap = new Map();
@@ -239,7 +245,7 @@ const TYPE_EMAIL_CONSTRAINT = {
     if (input.type === "email") {
       const value = input.value;
       if (!value.includes("@")) {
-        return `Veuillez includes "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
+        return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
       }
       if (!emailregex.test(input.value)) {
         return `Veuillez saisir une adresse e-mail valide.`;

@@ -83,15 +83,42 @@ lorsqu'on zoom le comportement semble étrange
           </div>
         </div>
       </div>
+
+      <div>
+        <h3>No "a" constraint</h3>
+        <div style="border: 1px solid black">
+          <form action="javascript:void(0)">
+            <input
+              id="no_a_constraint"
+              type="text"
+              value="10"
+              oninput="this.reportValidity()"
+            />
+          </form>
+        </div>
+      </div>
     </div>
     <script type="module">
       import { installInputValidation } from "./input_validity.js";
 
+      const noAConstraint = {
+        check: (input) => {
+          const value = input.value;
+          if (value.includes("a")) {
+            return `Ce champ ne doit pas contenir la lettre "a".`;
+          }
+          return null;
+        },
+      };
       for (const input of document.querySelectorAll("input")) {
         if (input.hasAttribute("preserve")) {
           continue;
         }
-        installInputValidation(input);
+
+        installInputValidation(input, {
+          customConstraints:
+            input.id === "no_a_constraint" ? [noAConstraint] : [],
+        });
       }
     </script>
   </body>
