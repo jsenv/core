@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "@jsenv/dom": "0.0.1"
+    "@jsenv/dom": "0.0.1",
+    "preact": "10.26.6"
   }
 }

@@ -29,24 +29,42 @@
 
 import { openValidationMessage } from "./validation_message.js";
 
-export const installInputValidation = (
-  input,
-  { onCancel, customConstraints = [] } = {},
-) => {
+export const installInputCustomValidation = (input) => {
   const validationInterface = {};
 
   const cleanupCallbackSet = new Set();
-  const uninstall = () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-    cleanupCallbackSet.clear();
-  };
-  validationInterface.uninstall = uninstall;
-  input.validationInterface = validationInterface;
-  cleanupCallbackSet.add(() => {
-    delete input.validationInterface;
-  });
+  cleanup: {
+    const uninstall = () => {
+      for (const cleanupCallback of cleanupCallbackSet) {
+        cleanupCallback();
+      }
+      cleanupCallbackSet.clear();
+    };
+    validationInterface.uninstall = uninstall;
+  }
+
+  set_property_on_input: {
+    input.validationInterface = validationInterface;
+    cleanupCallbackSet.add(() => {
+      delete input.validationInterface;
+    });
+  }
+
+  let triggerOnCancel;
+  register_cancel_callback: {
+    const cancelCallbackSet = new Set();
+    triggerOnCancel = (reason) => {
+      for (const cancelCallback of cancelCallbackSet) {
+        cancelCallback(reason);
+      }
+    };
+    validationInterface.registerCancelCallback = (callback) => {
+      cancelCallbackSet.add(callback);
+      return () => {
+        cancelCallbackSet.delete(callback);
+      };
+    };
+  }
 
   let validationMessage;
   const openInputValidationMessage = () => {
@@ -76,8 +94,13 @@ export const installInputValidation = (
   constraintSet.add(REQUIRED_CONSTRAINT);
   constraintSet.add(PATTERN_CONSTRAINT);
   constraintSet.add(TYPE_EMAIL_CONSTRAINT);
-  for (const customConstraint of customConstraints) {
-    constraintSet.add(customConstraint);
+  register_constraint: {
+    validationInterface.registerConstraint = (constraint) => {
+      constraintSet.add(constraint);
+      return () => {
+        constraintSet.delete(constraint);
+      };
+    };
   }
 
   let lastFailedValidityInfo = null;
@@ -263,8 +286,8 @@ export const installInputValidation = (
       if (e.key === "Escape") {
         if (validationMessage) {
           validationMessage.close();
-        } else if (onCancel) {
-          onCancel("escape_key");
+        } else {
+          triggerOnCancel("escape_key");
         }
       }
     };
@@ -275,17 +298,15 @@ export const installInputValidation = (
   }
 
   cancel_on_blur_empty: {
-    if (onCancel) {
-      const onblur = () => {
-        if (input.value === "") {
-          onCancel("blur_empty");
-        }
-      };
-      input.addEventListener("blur", onblur);
-      cleanupCallbackSet.add(() => {
-        input.removeEventListener("blur", onblur);
-      });
-    }
+    const onblur = () => {
+      if (input.value === "") {
+        triggerOnCancel("blur_empty");
+      }
+    };
+    input.addEventListener("blur", onblur);
+    cleanupCallbackSet.add(() => {
+      input.removeEventListener("blur", onblur);
+    });
   }
 
   return validationInterface;
