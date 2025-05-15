@@ -1,11 +1,21 @@
 /**
- * I'll re-implement a custom validity api
- * because the native one is not configurable enough:
+ * Custom form validation implementation
  *
- * - REALLY PAINFUL can't tell if the message is displayed or not, nor remove it with escape or something
- * - ok but complex: have to listen many evens in all directions to decide wether it's time to display the message or not
- * - ok but sitll not great: have to hack setCustomValidity to hold many validation messages
- * - ok but might be great to have some form of control on the design: can't customize the message
+ * This implementation addresses several limitations of the browser's native validation API:
+ *
+ * Limitations of native validation:
+ * - Cannot programmatically detect if validation message is currently displayed
+ * - No ability to dismiss messages with keyboard (e.g., Escape key)
+ * - Requires complex event handling to manage validation message display
+ * - Limited support for storing/managing multiple validation messages
+ * - No customization of validation message appearance
+ *
+ * Design approach:
+ * - Works alongside native validation (which acts as a fallback)
+ * - Proactively detects validation issues before native validation triggers
+ * - Provides complete control over validation message UX
+ * - Supports keyboard navigation and dismissal
+ * - Allows custom styling and positioning of validation messages
  */
 
 import { openValidationMessage } from "./validation_message.js";
@@ -94,7 +104,9 @@ export const installInputValidation = (input) => {
   report_validity: {
     const reportValidity = input.reportValidity;
     input.reportValidity = () => {
-      updateValidity({ openOnFailure: true });
+      if (!updateValidity({ openOnFailure: true })) {
+        reportValidity.call(input);
+      }
     };
     cleanupCallbackSet.add(() => {
       input.reportValidity = reportValidity;
