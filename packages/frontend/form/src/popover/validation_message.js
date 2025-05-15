@@ -226,14 +226,10 @@ const validationMessageTemplate = /* html */ `
  * @param {string} content - HTML content for the validation message
  * @returns {HTMLElement} - The validation message element
  */
-const createValidationMessage = (content) => {
+const createValidationMessage = () => {
   const div = document.createElement("div");
   div.innerHTML = validationMessageTemplate;
   const validationMessage = div.querySelector(".validation_message");
-  const contentElement = validationMessage.querySelector(
-    ".validation_message_content",
-  );
-  contentElement.innerHTML = content;
   return validationMessage;
 };
 
@@ -509,13 +505,31 @@ const followPosition = (validationMessage, targetElement) => {
  * @param {boolean} options.scrollIntoView - Whether to scroll the target element into view
  * @returns {Function} - Function to hide and remove the validation message
  */
-export const showValidationMessage = (
+export const openValidationMessage = (
   targetElement,
   innerHtml,
-  { scrollIntoView } = {},
+  { onClose } = {},
 ) => {
+  let opened = true;
+  const closeCallbackSet = new Set();
+  const close = () => {
+    if (!opened) {
+      return;
+    }
+    opened = false;
+    for (const closeCallback of closeCallbackSet) {
+      closeCallback();
+    }
+    closeCallbackSet.clear();
+  };
+
   // Create and add validation message to document
-  const jsenvValidationMessage = createValidationMessage(innerHtml);
+  const jsenvValidationMessage = createValidationMessage();
+  const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
+    ".validation_message_content",
+  );
+  jsenvValidationMessageContent.innerHTML = innerHtml;
+
   jsenvValidationMessage.style.opacity = "0";
 
   // Connect validation message with target element for accessibility
@@ -523,29 +537,54 @@ export const showValidationMessage = (
   jsenvValidationMessage.id = validationMessageId;
   targetElement.setAttribute("aria-invalid", "true");
   targetElement.setAttribute("aria-errormessage", validationMessageId);
+  closeCallbackSet.add(() => {
+    targetElement.removeAttribute("aria-invalid");
+    targetElement.removeAttribute("aria-errormessage");
+  });
 
   document.body.appendChild(jsenvValidationMessage);
+  closeCallbackSet.add(() => {
+    if (document.body.contains(jsenvValidationMessage)) {
+      document.body.removeChild(jsenvValidationMessage);
+    }
+  });
+
   const stopFollowingPosition = followPosition(
     jsenvValidationMessage,
     targetElement,
   );
+  closeCallbackSet.add(() => {
+    stopFollowingPosition();
+  });
 
-  // Handle scrolling to target element if requested
-  if (scrollIntoView) {
-    targetElement.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "nearest",
+  if (onClose) {
+    closeCallbackSet.add(onClose);
+  }
+  close_on_target_focus: {
+    const onfocus = () => {
+      close();
+    };
+    targetElement.addEventListener("focus", onfocus);
+    closeCallbackSet.add(() => {
+      targetElement.removeEventListener("focus", onfocus);
+    });
+  }
+  close_on_target_blur: {
+    const onblur = () => {
+      close();
+    };
+    targetElement.addEventListener("blur", onblur);
+    closeCallbackSet.add(() => {
+      targetElement.removeEventListener("blur", onblur);
     });
   }
 
   // Return cleanup function
-  return () => {
-    stopFollowingPosition();
-    if (document.body.contains(jsenvValidationMessage)) {
-      targetElement.removeAttribute("aria-invalid");
-      targetElement.removeAttribute("aria-errormessage");
-      document.body.removeChild(jsenvValidationMessage);
-    }
+  return {
+    jsenvValidationMessage,
+    update: (newInnerHTML) => {
+      jsenvValidationMessageContent.innerHTML = newInnerHTML;
+    },
+    close,
   };
 };

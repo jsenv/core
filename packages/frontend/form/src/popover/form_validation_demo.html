@@ -37,7 +37,6 @@ lorsqu'on zoom le comportement semble étrange
                 type="text"
                 pattern="^[a-z]{4,8}$"
                 title="4 to 8 lowercase letters"
-                autocomplete="off"
                 value="10"
                 oninput="this.reportValidity()"
               />
@@ -47,69 +46,10 @@ lorsqu'on zoom le comportement semble étrange
       </div>
     </div>
     <script type="module">
-      import { showValidationMessage } from "./validation_message.js";
-
-      const replaceNativeValidation = (input) => {
-        const cleanupCallbackSet = new Set();
-
-        report_validity: {
-          const reportValidity = input.reportValidity;
-
-          input.reportValidity = () => {
-            // do it
-          };
-          cleanupCallbackSet.add(() => {
-            input.reportValidity = reportValidity;
-          });
-        }
-
-        const constraintSet = new Set();
-        constraintSet.add({
-          name: "pattern",
-          check: (input) => {
-            const pattern = input.pattern;
-            if (!pattern) {
-              return null;
-            }
-            const regex = new RegExp(pattern);
-            if (!regex.test(input.value)) {
-              return `Veuillez respecter le format requis.`;
-            }
-            return null;
-          },
-        });
-
-        const validityInfoMap = new Map();
-        const updateValidity = () => {
-          validityInfoMap.clear();
-
-          for (const constraint of constraintSet) {
-            const contraintMessage = constraint.check(input);
-            if (contraintMessage) {
-              validityInfoMap.set(constraint, contraintMessage);
-            }
-          }
-        };
-
-        input.addEventListener("input", () => {
-          updateValidity();
-        });
-        input.addEventListener("keydown", (e) => {
-          if (e.key !== "Enter") {
-            return;
-          }
-          updateValidity();
-          if (validityInfoMap.size === 0) {
-            return;
-          }
-          const message = [...validityInfoMap.values()].join("\n");
-          e.preventDefault();
-          showValidationMessage(input, message);
-        });
-      };
+      import { installInputValidation } from "./input_validity.js";
 
       for (const input of document.querySelectorAll("input")) {
-        replaceNativeValidation(input);
+        installInputValidation(input);
       }
     </script>
   </body>
