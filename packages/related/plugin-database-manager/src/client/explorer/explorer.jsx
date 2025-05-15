@@ -225,9 +225,14 @@ const RoleRenameInput = ({ role, stopRenaming }) => {
     }
     otherNameSet.add(roleCandidate.rolname);
   }
-  useInputConstraint(inputRef, (inputValue) => {
+  useInputConstraint(inputRef, (input) => {
+    const inputValue = input.value;
     const hasConflict = otherNameSet.has(inputValue);
-    // console.log({ hasConflict });
+    // console.log({
+    //   inputValue,
+    //   names: Array.from(otherNameSet.values()),
+    //   hasConflict,
+    // });
     if (hasConflict) {
       return `Role "${inputValue}" already exists. Please choose another name.`;
     }
