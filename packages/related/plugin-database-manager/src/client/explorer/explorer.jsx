@@ -3,13 +3,13 @@
  * - cmd + backspace would allow to delete a role (after a confirm)
  */
 
+import { useInputConstraint } from "@jsenv/form";
 import {
   SPAInputText,
   SPALink,
   useAction,
   useDetails,
   useRouteIsMatching,
-  useValidity,
 } from "@jsenv/router";
 import { effect } from "@preact/signals";
 import { forwardRef } from "preact/compat";
@@ -218,10 +218,6 @@ const RoleRenameInput = ({ role, stopRenaming }) => {
     columnName: "rolname",
   });
   const inputRef = useRef();
-  const [addNameConflict, removeNameConflict] = useValidity(
-    inputRef,
-    "name_conflict",
-  );
   const otherNameSet = new Set();
   for (const roleCandidate of roles) {
     if (roleCandidate === role) {
@@ -229,6 +225,14 @@ const RoleRenameInput = ({ role, stopRenaming }) => {
     }
     otherNameSet.add(roleCandidate.rolname);
   }
+  useInputConstraint(inputRef, (inputValue) => {
+    const hasConflict = otherNameSet.has(inputValue);
+    // console.log({ hasConflict });
+    if (hasConflict) {
+      return `Role "${inputValue}" already exists. Please choose another name.`;
+    }
+    return "";
+  });
 
   return (
     <RoleNameInput
@@ -236,26 +240,13 @@ const RoleRenameInput = ({ role, stopRenaming }) => {
       autoSelect
       value={rolname}
       action={renameAction}
-      onCancel={(reason) => {
-        console.log("cancel", reason);
+      onCancel={(e) => {
+        console.log("cancel", e.detail);
         stopRenaming();
       }}
       onSubmitEnd={() => {
         console.log("submit end");
         stopRenaming();
-      }}
-      onInput={(e) => {
-        const input = e.target;
-        const inputValue = input.value;
-        const hasConflict = otherNameSet.has(inputValue);
-        console.log({ hasConflict });
-        if (otherNameSet.has(inputValue)) {
-          addNameConflict(
-            `Role "${inputValue}" already exists. Please choose another name.`,
-          );
-        } else {
-          removeNameConflict();
-        }
       }}
     />
   );

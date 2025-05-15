@@ -317,6 +317,26 @@ export const installInputCustomValidation = (input) => {
     });
   }
 
+  cancel_on_blur_without_change: {
+    let gotChange;
+    const onchange = () => {
+      gotChange = true;
+    };
+    const onblur = () => {
+      if (gotChange) {
+        gotChange = false;
+      } else {
+        triggerOnCancel("blur_without_change");
+      }
+    };
+    input.addEventListener("change", onchange);
+    input.addEventListener("blur", onblur);
+    cleanupCallbackSet.add(() => {
+      input.removeEventListener("change", onchange);
+      input.removeEventListener("blur", onblur);
+    });
+  }
+
   return validationInterface;
 };
 
