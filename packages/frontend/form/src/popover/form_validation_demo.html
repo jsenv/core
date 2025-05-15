@@ -30,11 +30,52 @@ lorsqu'on zoom le comportement semble étrange
     <div id="app">
       <div style="display: flex; gap: 30px">
         <div>
-          <h3>Basic</h3>
-          <div style="border: 1px solid black; width: 300px">
+          <h3>Required</h3>
+          <div style="border: 1px solid black">
             <form action="javascript:void(0)">
               <input
                 type="text"
+                required
+                value=""
+                title="Coucou"
+                oninput="this.reportValidity()"
+              />
+              <button>button</button>
+              <button type="submit">button type submit</button>
+              <input preserve type="submit" value="submit" />
+
+              <a onclick="this.parentNode.requestSubmit()"
+                >form.requestSubmit()</a
+              >
+            </form>
+          </div>
+        </div>
+
+        <div>
+          <h3>Native required</h3>
+          <div style="border: 1px solid black">
+            <form action="javascript:void(0)">
+              <input
+                type="text"
+                preserve
+                required
+                value=""
+                oninput="this.reportValidity()"
+              />
+              <button>button</button>
+              <button type="submit">button type submit</button>
+              <input preserve type="submit" value="submit" />
+            </form>
+          </div>
+        </div>
+
+        <div>
+          <h3>Pattern</h3>
+          <div style="border: 1px solid black">
+            <form action="javascript:void(0)">
+              <input
+                type="text"
+                preserve
                 pattern="^[a-z]{4,8}$"
                 title="4 to 8 lowercase letters"
                 value="10"
@@ -49,6 +90,9 @@ lorsqu'on zoom le comportement semble étrange
       import { installInputValidation } from "./input_validity.js";
 
       for (const input of document.querySelectorAll("input")) {
+        if (input.hasAttribute("preserve")) {
+          continue;
+        }
         installInputValidation(input);
       }
     </script>

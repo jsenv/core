@@ -15,6 +15,7 @@ export const installInputValidation = (input) => {
 
   let validationMessage;
   const openInputValidationMessage = () => {
+    input.focus();
     const closeOnCleanup = () => {
       validationMessage.close();
     };
@@ -28,6 +29,15 @@ export const installInputValidation = (input) => {
   };
 
   const constraintSet = new Set();
+  constraintSet.add({
+    name: "required",
+    check: (input) => {
+      if (input.required && !input.value) {
+        return `Veuillez remplir ce champ.`;
+      }
+      return null;
+    },
+  });
   constraintSet.add({
     name: "pattern",
     check: (input) => {
@@ -74,7 +84,6 @@ export const installInputValidation = (input) => {
       validationMessage.update(lastFailedValidityInfo);
       return false;
     }
-    console.log("open", validationMessage);
     openInputValidationMessage();
     return false;
   };
@@ -86,20 +95,6 @@ export const installInputValidation = (input) => {
     input.addEventListener("input", oninput);
     cleanupCallbackSet.add(() => {
       input.removeEventListener("input", oninput);
-    });
-  }
-
-  report_on_enter: {
-    const onkeydown = (e) => {
-      if (e.key === "Enter") {
-        if (!updateValidity({ openOnFailure: true })) {
-          e.preventDefault();
-        }
-      }
-    };
-    input.addEventListener("keydown", onkeydown);
-    cleanupCallbackSet.add(() => {
-      input.removeEventListener("keydown", onkeydown);
     });
   }
 
@@ -120,11 +115,58 @@ export const installInputValidation = (input) => {
   report_validity: {
     const reportValidity = input.reportValidity;
     input.reportValidity = () => {
-      input.focus();
       updateValidity({ openOnFailure: true });
     };
     cleanupCallbackSet.add(() => {
       input.reportValidity = reportValidity;
+    });
+  }
+
+  report_on_enter_without_form: {
+    const onkeydown = (e) => {
+      if (!input.form && e.key === "Enter") {
+        updateValidity({ openOnFailure: true });
+      }
+    };
+    input.addEventListener("keydown", onkeydown);
+    cleanupCallbackSet.add(() => {
+      input.removeEventListener("keydown", onkeydown);
+    });
+  }
+
+  report_on_form_submit_requested_by_api: {
+    const onRequestSubmit = (form, { prevent }) => {
+      if (form === input.form && !updateValidity({ openOnFailure: true })) {
+        prevent();
+      }
+    };
+    requestSubmitCallbackSet.add(onRequestSubmit);
+    cleanupCallbackSet.add(() => {
+      requestSubmitCallbackSet.delete(onRequestSubmit);
+    });
+  }
+
+  report_on_form_submit_requested_by_click: {
+    const onClick = (e) => {
+      const target = e.target;
+      const form = target.form;
+      if (!form) {
+        return;
+      }
+      if (
+        target !== input &&
+        input.form === form &&
+        (target.type === "submit" || target.type === "image")
+      ) {
+        if (!updateValidity({ openOnFailure: true })) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener("click", onClick, { capture: true });
+    cleanupCallbackSet.add(() => {
+      window.removeEventListener("click", onClick, { capture: true });
     });
   }
 
@@ -134,4 +176,20 @@ export const installInputValidation = (input) => {
     }
     cleanupCallbackSet.clear();
   };
+};
+
+const requestSubmitCallbackSet = new Set();
+const requestSubmit = HTMLFormElement.prototype.requestSubmit;
+HTMLFormElement.prototype.requestSubmit = function (submitter) {
+  let prevented = false;
+  const prevent = () => {
+    prevented = true;
+  };
+  for (const requestSubmitCallback of requestSubmitCallbackSet) {
+    requestSubmitCallback(this, { submitter, prevent });
+  }
+  if (prevented) {
+    return;
+  }
+  requestSubmit.call(this, submitter);
 };
