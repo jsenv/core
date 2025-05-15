@@ -248,6 +248,11 @@ const RoleRenameInput = ({ role, stopRenaming }) => {
         console.log("submit end");
         stopRenaming();
       }}
+      onBlur={(e) => {
+        if (e.target.value === rolname) {
+          stopRenaming();
+        }
+      }}
     />
   );
 };
