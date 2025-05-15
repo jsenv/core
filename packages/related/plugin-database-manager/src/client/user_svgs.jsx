@@ -1,4 +1,5 @@
 // https://www.svgrepo.com/collection/zest-interface-icons/12
+// https://flowbite.com/icons/
 
 export const UserSvg = ({ color = "currentColor" }) => {
   return (

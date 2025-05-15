@@ -26,16 +26,28 @@ const css = /*css*/ `
   filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
 }
 
-.validation_message_content_wrapper {
+.validation_message_body_wrapper {
   border-style: solid;
   border-color: transparent;
   position: relative;
 }
 
-.validation_message_content {
+.validation_message_body {
   padding: 8px; 
   position: relative;
   max-width: 47vw;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.validation_message_icon {
+  display: flex;
+  align-self: flex-start;
+}
+
+.validation_message_content {
+  align-self: center;
 }
 
 .validation_message_border svg {
@@ -48,11 +60,28 @@ const styleElement = document.createElement("style");
 styleElement.textContent = css;
 document.head.appendChild(styleElement);
 
+// HTML template for the validation message
+const validationMessageTemplate = /* html */ `
+  <div
+    class="validation_message"
+    role="alert"
+    aria-live="assertive"
+  >
+    <div class="validation_message_body_wrapper">
+      <div class="validation_message_border"></div>
+      <div class="validation_message_body">
+        <div class="validation_message_icon"></div>
+        <div class="validation_message_content">Default message</div>
+      </div>
+    </div>
+  </div>
+`;
+
 // Configuration parameters for validation message appearance
 const ARROW_WIDTH = 16;
 const ARROW_HEIGHT = 8;
 const CORNER_RADIUS = 3;
-const BORDER_WIDTH = 10;
+const BORDER_WIDTH = 1;
 const ARROW_SPACING = 8;
 const BACKGROUND_COLOR = "white";
 const BORDER_COLOR = "red";
@@ -118,7 +147,7 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
     Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
   `;
 
-  return `<svg
+  return /*html */ `<svg
       width="${adjustedWidth}"
       height="${adjustedHeight}"
       viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
@@ -193,7 +222,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
   `;
 
-  return `<svg
+  return /*html */ `<svg
       width="${adjustedWidth}"
       height="${adjustedHeight}"
       viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
@@ -206,20 +235,6 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       <path d="${innerPath}" fill="${BACKGROUND_COLOR}" />
     </svg>`;
 };
-
-// HTML template for the validation message
-const validationMessageTemplate = /* html */ `
-  <div
-    class="validation_message"
-    role="alert"
-    aria-live="assertive"
-  >
-    <div class="validation_message_content_wrapper">
-      <div class="validation_message_border"></div>
-      <div class="validation_message_content">Default message</div>
-    </div>
-  </div>
-`;
 
 /**
  * Creates a new validation message element with specified content
@@ -249,8 +264,8 @@ const followPosition = (validationMessage, targetElement) => {
   };
 
   // Get references to validation message parts
-  const validationMessageContentWrapper = validationMessage.querySelector(
-    ".validation_message_content_wrapper",
+  const validationMessageBodyWrapper = validationMessage.querySelector(
+    ".validation_message_body_wrapper",
   );
   const validationMessageBorder = validationMessage.querySelector(
     ".validation_message_border",
@@ -260,7 +275,7 @@ const followPosition = (validationMessage, targetElement) => {
   );
 
   // Set initial border styles
-  validationMessageContentWrapper.style.borderWidth = `${BORDER_WIDTH}px`;
+  validationMessageBodyWrapper.style.borderWidth = `${BORDER_WIDTH}px`;
   validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
   validationMessageBorder.style.left = `-${BORDER_WIDTH}px`;
   validationMessageBorder.style.right = `-${BORDER_WIDTH}px`;
@@ -369,8 +384,8 @@ const followPosition = (validationMessage, targetElement) => {
         0,
         targetElementRect.top - totalValidationMessageHeight,
       );
-      validationMessageContentWrapper.style.marginTop = undefined;
-      validationMessageContentWrapper.style.marginBottom = `${ARROW_HEIGHT}px`;
+      validationMessageBodyWrapper.style.marginTop = undefined;
+      validationMessageBodyWrapper.style.marginBottom = `${ARROW_HEIGHT}px`;
       validationMessageBorder.style.top = `-${BORDER_WIDTH}px`;
       validationMessageBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
       validationMessageBorder.innerHTML = generateSvgWithBottomArrow(
@@ -382,8 +397,8 @@ const followPosition = (validationMessage, targetElement) => {
       // Position below target element
       validationMessage.setAttribute("data-position", "below");
       validationMessageTopPos = Math.ceil(targetElementRect.bottom);
-      validationMessageContentWrapper.style.marginTop = `${ARROW_HEIGHT}px`;
-      validationMessageContentWrapper.style.marginBottom = undefined;
+      validationMessageBodyWrapper.style.marginTop = `${ARROW_HEIGHT}px`;
+      validationMessageBodyWrapper.style.marginBottom = undefined;
       validationMessageBorder.style.top = `-${
         BORDER_WIDTH +
         ARROW_HEIGHT -
@@ -508,11 +523,12 @@ const followPosition = (validationMessage, targetElement) => {
 export const openValidationMessage = (
   targetElement,
   innerHtml,
-  { onClose } = {},
+  { level, onClose } = {},
 ) => {
   let opened = true;
   const closeCallbackSet = new Set();
   const close = () => {
+    return;
     if (!opened) {
       return;
     }
@@ -528,7 +544,15 @@ export const openValidationMessage = (
   const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
     ".validation_message_content",
   );
-  jsenvValidationMessageContent.innerHTML = innerHtml;
+
+  const update = (newInnerHTML, { level } = {}) => {
+    jsenvValidationMessage.querySelector(".validation_message_icon").innerHTML =
+      renderExclamationIconSvg({
+        backgroundColor: level === "error" ? "red" : "orange",
+      });
+    jsenvValidationMessageContent.innerHTML = newInnerHTML;
+  };
+  update(innerHtml, { level });
 
   jsenvValidationMessage.style.opacity = "0";
 
@@ -582,9 +606,24 @@ export const openValidationMessage = (
   // Return cleanup function
   return {
     jsenvValidationMessage,
-    update: (newInnerHTML) => {
-      jsenvValidationMessageContent.innerHTML = newInnerHTML;
-    },
+    update,
     close,
   };
+};
+
+const renderExclamationIconSvg = ({ backgroundColor = "currentColor" }) => {
+  return /*html */ `<svg
+    viewBox="0 0 24 24"
+    width="24"
+    height="24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      fill-rule="evenodd"
+      clip-rule="evenodd"
+      d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12ZM12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1ZM12 6C12.5523 6 13 6.44772 13 7V13C13 13.5523 12.5523 14 12 14C11.4477 14 11 13.5523 11 13V7C11 6.44772 11.4477 6 12 6ZM13.25 16.75C13.25 17.4404 12.6904 18 12 18C11.3096 18 10.75 17.4404 10.75 16.75C10.75 16.0596 11.3096 15.5 12 15.5C12.6904 15.5 13.25 16.0596 13.25 16.75Z"
+      fill="${backgroundColor}"
+    />
+  </svg>`;
 };

@@ -95,6 +95,9 @@ lorsqu'on zoom le comportement semble étrange
               oninput="this.reportValidity()"
             />
           </form>
+
+          <button id="add_custom">Add custom message</button>
+          <button id="remove_custom">Remove custom message</button>
         </div>
       </div>
     </div>
@@ -120,6 +123,17 @@ lorsqu'on zoom le comportement semble étrange
             input.id === "no_a_constraint" ? [noAConstraint] : [],
         });
       }
+
+      const addCustomButton = document.querySelector("#add_custom");
+      document.querySelector("#add_custom").addEventListener("click", () => {
+        const input = addCustomButton.parentNode.querySelector("input");
+        input.validationInterface.addCustomMessage("test", "Hey oh");
+      });
+      const removeCustomButton = document.querySelector("#remove_custom");
+      removeCustomButton.addEventListener("click", () => {
+        const input = removeCustomButton.parentNode.querySelector("input");
+        input.validationInterface.removeCustomMessage("test");
+      });
     </script>
   </body>
 </html>

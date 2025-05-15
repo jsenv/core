@@ -36,6 +36,12 @@ export const installInputValidation = (
   };
   validationInterface.uninstall = uninstall;
 
+  input.validationInterface = validationInterface;
+
+  cleanupCallbackSet.add(() => {
+    delete input.validationInterface;
+  });
+
   let validationMessage;
   const openInputValidationMessage = () => {
     input.focus();
