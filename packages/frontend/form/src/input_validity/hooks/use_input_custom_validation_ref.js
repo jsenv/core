@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useRef } from "preact/hooks";
 import { installInputCustomValidation } from "../input_custom_validation.js";
 
-export const useInputCustomValidation = (
+export const useInputCustomValidationRef = (
   inputRef,
   initCallback,
   initCallbackDeps,
@@ -31,6 +31,7 @@ export const useInputCustomValidation = (
     }
     const unsubscribe = subscribe(input);
     const inputValidationInterface = input.validationInterface;
+    console.log("set inputValidationInterface", inputValidationInterface);
     inputCustomValidationRef.current = inputValidationInterface;
     if (initCallbackMemoized) {
       initCallbackMemoized(inputValidationInterface);
@@ -39,6 +40,8 @@ export const useInputCustomValidation = (
       unsubscribe();
     };
   }, [initCallbackMemoized]);
+
+  return inputCustomValidationRef;
 };
 
 const inputSubscribeCountWeakMap = new WeakMap();

@@ -1,5 +1,5 @@
 import { useRef } from "preact/hooks";
-import { useInputCustomValidation } from "./use_input_custom_validation.js";
+import { useInputCustomValidationRef } from "./use_input_custom_validation_ref.js";
 
 export const useInputConstraint = (
   inputRef,
@@ -8,7 +8,7 @@ export const useInputConstraint = (
 ) => {
   const callbackRef = useRef();
   callbackRef.current = constraintCallback;
-  useInputCustomValidation(
+  useInputCustomValidationRef(
     inputRef,
     (inputCustomValidation) => {
       inputCustomValidation.registerConstraint({

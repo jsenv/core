@@ -1,21 +1,18 @@
 import { useCallback } from "preact/hooks";
-import { useInputCustomValidation } from "./use_input_custom_validation.js";
+import { useInputCustomValidationRef } from "./use_input_custom_validation_ref.js";
 
 export const useInputValidationMessage = (inputRef, key) => {
-  const inputCustomValidation = useInputCustomValidation(inputRef);
+  const inputCustomValidationRef = useInputCustomValidationRef(inputRef);
 
   const addCustomMessage = useCallback(
     (message, options) => {
-      inputCustomValidation.addCustomMessage(message, options);
+      inputCustomValidationRef.current.addCustomMessage(key, message, options);
     },
-    [key],
+    [inputCustomValidationRef, key],
   );
-  const removeCustomMessage = useCallback(
-    (message) => {
-      inputCustomValidation.removeCustomMessage(message);
-    },
-    [key],
-  );
+  const removeCustomMessage = useCallback(() => {
+    inputCustomValidationRef.current.removeCustomMessage(key);
+  }, [inputCustomValidationRef, key]);
 
   return [addCustomMessage, removeCustomMessage];
 };

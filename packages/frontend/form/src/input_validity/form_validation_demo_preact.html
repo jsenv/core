@@ -32,6 +32,7 @@ lorsqu'on zoom le comportement semble étrange
       import { render } from "preact";
       import { useRef } from "preact/hooks";
       import { useInputConstraint } from "./hooks/use_input_constraint.js";
+      import { useInputValidationMessage } from "./hooks/use_input_validation_message.js";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -45,15 +46,38 @@ lorsqu'on zoom le comportement semble étrange
           return null;
         });
 
+        const [addInputError, removeInputError] = useInputValidationMessage(
+          inputRef,
+          "error",
+        );
+
         return (
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Type something"
-            onCancel={() => {
-              console.log("cancel");
-            }}
-          />
+          <div>
+            <input
+              required
+              ref={inputRef}
+              type="text"
+              placeholder="Type something"
+              onCancel={() => {
+                console.log("cancel");
+              }}
+            />
+
+            <button
+              onClick={() => {
+                addInputError("hey");
+              }}
+            >
+              Set error
+            </button>
+            <button
+              onClick={() => {
+                removeInputError();
+              }}
+            >
+              Reset error
+            </button>
+          </div>
         );
       };
 
