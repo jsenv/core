@@ -46,7 +46,14 @@ lorsqu'on zoom le comportement semble étrange
         });
 
         return (
-          <input ref={inputRef} type="text" placeholder="Type something" />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Type something"
+            onCancel={() => {
+              console.log("cancel");
+            }}
+          />
         );
       };
 
