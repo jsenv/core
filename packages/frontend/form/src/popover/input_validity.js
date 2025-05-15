@@ -104,9 +104,7 @@ export const installInputValidation = (input) => {
   report_validity: {
     const reportValidity = input.reportValidity;
     input.reportValidity = () => {
-      if (!updateValidity({ openOnFailure: true })) {
-        reportValidity.call(input);
-      }
+      updateValidity({ openOnFailure: true });
     };
     cleanupCallbackSet.add(() => {
       input.reportValidity = reportValidity;
@@ -138,26 +136,57 @@ export const installInputValidation = (input) => {
   }
 
   report_on_form_submit_requested_by_click: {
+    const willSubmitFormOnClick = (element) => {
+      return element.type === "submit" || element.type === "image";
+    };
+
     const onClick = (e) => {
       const target = e.target;
       const form = target.form;
       if (!form) {
+        // happens outside a form
         return;
       }
-      if (
-        target !== input &&
-        input.form === form &&
-        (target.type === "submit" || target.type === "image")
-      ) {
+      if (input.form !== form) {
+        // happens in an other form, or the input has no form
+        return;
+      }
+      if (willSubmitFormOnClick(target)) {
         if (!updateValidity({ openOnFailure: true })) {
           e.preventDefault();
         }
       }
     };
-
     window.addEventListener("click", onClick, { capture: true });
     cleanupCallbackSet.add(() => {
       window.removeEventListener("click", onClick, { capture: true });
+    });
+
+    const onKeydown = (e) => {
+      if (e.key !== "Enter") {
+        return;
+      }
+      const target = e.target;
+      const form = target.form;
+      if (!form) {
+        // happens outside a form
+        return;
+      }
+      if (input.form !== form) {
+        // happens in an other form, or the input has no form
+        return;
+      }
+      if (willSubmitFormOnClick(target)) {
+        // we'll catch it in the click handler
+        return;
+      }
+      if (!updateValidity({ openOnFailure: true })) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", onKeydown, { capture: true });
+    cleanupCallbackSet.add(() => {
+      window.removeEventListener("keydown", onClick, { capture: true });
     });
   }
 
@@ -188,9 +217,15 @@ const PATTERN_CONSTRAINT = {
       return null;
     }
     const regex = new RegExp(pattern);
-    if (!regex.test(input.value)) {
-      // we should add input.title to the message
-      return `Veuillez respecter le format requis.`;
+
+    const value = input.value;
+    if (!regex.test(value)) {
+      const title = input.title;
+      let message = `Veuillez respecter le format requis.`;
+      if (title) {
+        message += `<br />${title}`;
+      }
+      return message;
     }
     return null;
   },
