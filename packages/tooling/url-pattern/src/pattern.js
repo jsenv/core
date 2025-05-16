@@ -6,6 +6,8 @@ const createPattern = (
     namedGroupDelimiter,
     prepareStringToGenerate = (stringToBuild) => stringToBuild,
     finalizeGeneratedString = (generatedString) => generatedString,
+    // encode = encodeURIComponent,
+    // decode = decodeURIComponent,
   } = {},
 ) => {
   if (pattern === "*") {

@@ -19,4 +19,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
       match,
     };
   });
+
+  test("2_spaces", () => {
+    const pattern = createResourcePattern("/before/:name");
+    const match = pattern.match("/before/foo bar");
+    return {
+      match,
+    };
+  });
 });
