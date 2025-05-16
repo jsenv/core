@@ -1,6 +1,5 @@
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import { SPAInputText, SPALink, useDetails } from "@jsenv/router";
-import { forwardRef } from "preact/compat";
 import { useCallback, useRef, useState } from "preact/hooks";
 
 export const ExplorerGroup = ({
@@ -234,10 +233,12 @@ const ItemRenameInput = ({
   useInputConstraint(inputRef, SINGLE_SPACE_CONSTRAINT);
 
   return (
-    <ItemNameInput
+    <SPAInputText
       ref={inputRef}
-      nameKey={nameKey}
+      name={nameKey}
+      autoFocus
       autoSelect
+      required
       value={itemName}
       action={renameAction}
       onCancel={() => {
@@ -254,20 +255,8 @@ const ItemRenameInput = ({
     />
   );
 };
-const ItemNameInput = forwardRef(({ nameKey, ...rest }, ref) => {
-  return (
-    <SPAInputText
-      ref={ref}
-      name={nameKey}
-      autoFocus
-      required
-      autoComplete="off" // just because sometime it catches the escape key
-      {...rest}
-    />
-  );
-});
 
-const NewItem = ({ useCreateItemAction, ...rest }) => {
+const NewItem = ({ nameKey, useCreateItemAction, ...rest }) => {
   const action = useCreateItemAction();
 
   return (
@@ -275,7 +264,13 @@ const NewItem = ({ useCreateItemAction, ...rest }) => {
       <span style="display: flex; width: 1em; height: 1em">
         <EnterNameIconSvg />
       </span>
-      <ItemNameInput action={action} {...rest} />
+      <SPAInputText
+        name={nameKey}
+        action={action}
+        autoFocus
+        required
+        {...rest}
+      />
     </span>
   );
 };
