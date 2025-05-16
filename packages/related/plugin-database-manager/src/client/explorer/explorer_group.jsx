@@ -76,6 +76,7 @@ export const ExplorerGroup = ({
           {isCreatingNew && (
             <li className="explorer_group_item">
               <NewItem
+                nameKey={nameKey}
                 useCreateItemAction={useCreateItemAction}
                 onCancel={() => {
                   // si on a rien rentré on le cré pas, sinon oui on le cré
@@ -104,7 +105,7 @@ const ArrowDown = () => {
   );
 };
 
-export const ExplorerGroupItem = ({
+const ExplorerGroupItem = ({
   idKey,
   nameKey,
   item,
@@ -235,6 +236,7 @@ const ItemRenameInput = ({
   return (
     <ItemNameInput
       ref={inputRef}
+      nameKey={nameKey}
       autoSelect
       value={itemName}
       action={renameAction}

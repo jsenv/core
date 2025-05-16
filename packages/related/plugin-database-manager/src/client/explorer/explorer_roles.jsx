@@ -25,9 +25,8 @@ export const ExplorerRoles = () => {
   return (
     <ExplorerGroup
       urlParam="roles"
-      nameKey="rolname"
       idKey="oid"
-      itemList={roles}
+      nameKey="rolname"
       labelChildren={
         <span style="display: flex; align-items: center; gap: 3px">
           ROLES
@@ -36,6 +35,7 @@ export const ExplorerRoles = () => {
       }
       createNewButtonChildren={<UserWithPlusSvg />}
       ItemComponent={RoleItem}
+      useItemList={useRoleList}
       useItemRouteUrl={(role) =>
         useRouteUrl(GET_ROLE_ROUTE, {
           rolname: role.rolname,
