@@ -1,14 +1,11 @@
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
-import { useRouteUrl } from "../route/route_hooks.js";
 import { SPAForm } from "./spa_form.jsx";
 
 export const SPALink = forwardRef(
   (
     {
       autoFocus,
-      route,
-      routeParams,
       deleteShortcutAction,
       deleteShortcutConfirmContent,
       children,
@@ -26,10 +23,9 @@ export const SPALink = forwardRef(
       }
     }, [autoFocus]);
 
-    const routeUrl = useRouteUrl(route, routeParams);
     if (!deleteShortcutAction) {
       return (
-        <a ref={innerRef} href={routeUrl} {...rest}>
+        <a ref={innerRef} {...rest}>
           {children}
         </a>
       );
@@ -38,7 +34,6 @@ export const SPALink = forwardRef(
     return (
       <LinkWithDeleteShortcut
         ref={innerRef}
-        href={routeUrl}
         deleteShortcutAction={deleteShortcutAction}
         deleteShortcutConfirmContent={deleteShortcutConfirmContent}
         {...rest}

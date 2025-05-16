@@ -5,6 +5,7 @@ import {
   SPALink,
   useAction,
   useRouteParam,
+  useRouteUrl,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
@@ -107,11 +108,10 @@ const RoleDatabases = () => {
       <ul>
         {databases.map((database) => {
           const datname = database.datname;
+          const databaseRouteUrl = useRouteUrl(GET_DATABASE_ROUTE, { datname });
           return (
             <li key={datname}>
-              <SPALink route={GET_DATABASE_ROUTE} routeParams={{ datname }}>
-                {datname}
-              </SPALink>
+              <SPALink href={databaseRouteUrl}>{datname}</SPALink>
             </li>
           );
         })}

@@ -5,6 +5,7 @@ import {
   SPALink,
   useAction,
   useRouteParam,
+  useRouteUrl,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
@@ -75,15 +76,14 @@ const DatabaseFields = ({ database }) => {
           datname: database.datname,
           columnName,
         });
+        const roleRouteUrl = useRouteUrl(GET_ROLE_ROUTE, {
+          rolname: ownerRole.rolname,
+        });
 
         if (columnName === "datdba") {
           // we will display this elswhere
           return (
-            <SPALink
-              key={columnName}
-              route={GET_ROLE_ROUTE}
-              routeParams={{ rolname: ownerRole.rolname }}
-            >
+            <SPALink key={columnName} href={roleRouteUrl}>
               {ownerRole.rolname}
             </SPALink>
           );
