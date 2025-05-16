@@ -13,8 +13,8 @@ import {
   useCurrentDatabase,
   useDatabaseList,
 } from "../database/database_signals.js";
+import { FontSizedSvg } from "../font_sized_svg.jsx";
 import { CurrentSvg } from "../icons/icons.jsx";
-import { SvgFontSize } from "../svg_font_size.jsx";
 import { ExplorerGroup } from "./explorer_group.jsx";
 
 export const ExplorerDatabases = () => {
@@ -69,13 +69,13 @@ const DatabaseItem = ({ item: database }) => {
 
   return (
     <>
-      <SvgFontSize>
+      <FontSizedSvg>
         <DatabaseSvg color="#333" />
-      </SvgFontSize>
+      </FontSizedSvg>
       {isCurrent ? (
-        <SvgFontSize>
+        <FontSizedSvg>
           <CurrentSvg />
-        </SvgFontSize>
+        </FontSizedSvg>
       ) : null}
     </>
   );
