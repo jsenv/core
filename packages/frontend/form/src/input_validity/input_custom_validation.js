@@ -27,6 +27,11 @@
  * - Validation messages that follow the input element and adapt to viewport
  */
 
+import {
+  PATTERN_CONSTRAINT,
+  REQUIRED_CONSTRAINT,
+  TYPE_EMAIL_CONSTRAINT,
+} from "./constraints/native_constraints.js";
 import { openValidationMessage } from "./validation_message.js";
 
 export const installInputCustomValidation = (input) => {
@@ -321,55 +326,6 @@ export const installInputCustomValidation = (input) => {
 };
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
-
-const REQUIRED_CONSTRAINT = {
-  name: "required",
-  check: (input) => {
-    if (input.required && !input.value) {
-      return `Veuillez remplir ce champ.`;
-    }
-    return null;
-  },
-};
-const PATTERN_CONSTRAINT = {
-  name: "pattern",
-  check: (input) => {
-    const pattern = input.pattern;
-    if (!pattern) {
-      return null;
-    }
-    const regex = new RegExp(pattern);
-
-    const value = input.value;
-    if (!regex.test(value)) {
-      const title = input.title;
-      let message = `Veuillez respecter le format requis.`;
-      if (title) {
-        message += `<br />${title}`;
-      }
-      return message;
-    }
-    return null;
-  },
-};
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
-const emailregex =
-  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-const TYPE_EMAIL_CONSTRAINT = {
-  name: "type_email",
-  check: (input) => {
-    if (input.type === "email") {
-      const value = input.value;
-      if (!value.includes("@")) {
-        return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
-      }
-      if (!emailregex.test(input.value)) {
-        return `Veuillez saisir une adresse e-mail valide.`;
-      }
-    }
-    return null;
-  },
-};
 
 const requestSubmitCallbackSet = new Set();
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;

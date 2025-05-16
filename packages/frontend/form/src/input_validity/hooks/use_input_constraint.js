@@ -3,20 +3,25 @@ import { useInputCustomValidationRef } from "./use_input_custom_validation_ref.j
 
 export const useInputConstraint = (
   inputRef,
-  constraintCallback,
-  constraintName = constraintCallback.name || "anonymous",
+  constraint,
+  constraintName = constraint.name || "anonymous",
 ) => {
-  const callbackRef = useRef();
-  callbackRef.current = constraintCallback;
+  const constraintRef = useRef();
+  constraintRef.current = constraint;
+
   useInputCustomValidationRef(
     inputRef,
     (inputCustomValidation) => {
-      inputCustomValidation.registerConstraint({
-        name: constraintName,
-        check: (...args) => {
-          return callbackRef.current(...args);
-        },
-      });
+      if (typeof constraint === "function") {
+        return inputCustomValidation.registerConstraint({
+          name: constraintName,
+          check: (...args) => {
+            const callback = constraintRef.current;
+            return callback(...args);
+          },
+        });
+      }
+      return inputCustomValidation.registerConstraint(constraint);
     },
     [],
   );

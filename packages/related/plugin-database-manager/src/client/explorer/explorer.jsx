@@ -3,7 +3,7 @@
  * - cmd + backspace would allow to delete a role (after a confirm)
  */
 
-import { useInputConstraint } from "@jsenv/form";
+import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import {
   SPAInputText,
   SPALink,
@@ -238,6 +238,7 @@ const RoleRenameInput = ({ role, stopRenaming }) => {
     }
     return "";
   });
+  useInputConstraint(inputRef, SINGLE_SPACE_CONSTRAINT);
 
   return (
     <RoleNameInput

@@ -32,11 +32,15 @@ export const useInputCustomValidationRef = (
     const unsubscribe = subscribe(input);
     const inputValidationInterface = input.validationInterface;
     inputCustomValidationRef.current = inputValidationInterface;
+    let cleanupInit;
     if (initCallbackMemoized) {
-      initCallbackMemoized(inputValidationInterface);
+      cleanupInit = initCallbackMemoized(inputValidationInterface);
     }
     return () => {
       unsubscribe();
+      if (typeof cleanupInit === "function") {
+        cleanupInit();
+      }
     };
   }, [initCallbackMemoized]);
 
