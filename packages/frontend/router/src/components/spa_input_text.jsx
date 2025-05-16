@@ -9,7 +9,15 @@ import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 
 export const SPAInputText = forwardRef(
   (
-    { action, onSubmitStart, onSubmitError, method = "PUT", label, ...rest },
+    {
+      action,
+      onSubmitStart,
+      onSubmitEnd,
+      onSubmitError,
+      method = "PUT",
+      label,
+      ...rest
+    },
     ref,
   ) => {
     const innerRef = useRef(null);
@@ -37,6 +45,7 @@ export const SPAInputText = forwardRef(
             onSubmitError(e);
           }
         }}
+        onSubmitEnd={onSubmitEnd}
       >
         {label ? (
           <label>
