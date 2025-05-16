@@ -78,7 +78,7 @@
   align-items: center;
   white-space: nowrap;
   display: flex;
-  gap: 0.2em;
+  gap: 0.3em;
   min-width: 0; /* https://css-tricks.com/flexbox-truncated-text/#aa-the-solution-is-min-width-0-on-the-flex-child */
   overflow: hidden;
 }

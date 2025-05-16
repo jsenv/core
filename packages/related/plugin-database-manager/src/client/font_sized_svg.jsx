@@ -20,9 +20,17 @@
  * - Useful for inline icons that should respect the parent's font-size
  */
 
-export const FontSizedSvg = ({ children }) => {
+export const FontSizedSvg = ({ width = "1em", height = "1em", children }) => {
   return (
-    <span style="display: flex; align-center: center; width: 1em; height: 1em; justify-self: center;">
+    <span
+      style={{
+        display: "flex",
+        alignItems: "center",
+        width,
+        height,
+        justifySelf: "center",
+      }}
+    >
       {children}
     </span>
   );
