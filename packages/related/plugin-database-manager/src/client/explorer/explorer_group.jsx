@@ -50,7 +50,7 @@ export const ExplorerGroup = ({
               startCreatingNew();
             }}
           >
-            <FontSizedSvg>{createNewButtonChildren}</FontSizedSvg>
+            {createNewButtonChildren}
           </button>
         </span>
       </summary>
@@ -262,9 +262,9 @@ const NewItem = ({ nameKey, useCreateItemAction, ...rest }) => {
 
   return (
     <span className="explorer_group_item_content">
-      <SvgFontSize>
+      <FontSizedSvg>
         <EnterNameIconSvg />
-      </SvgFontSize>
+      </FontSizedSvg>
       <SPAInputText
         name={nameKey}
         action={action}
