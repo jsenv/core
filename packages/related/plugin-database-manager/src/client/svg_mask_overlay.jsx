@@ -1,33 +1,30 @@
 /**
  * SVGComposition Component
  *
- * A utility component for composing multiple SVG elements with masking.
+ * Creates composite SVGs by combining independent SVG elements with masking.
  *
- * This component enables the overlay of multiple SVGs where each overlay
- * creates a "cutout" or "hole" in the base SVG underneath it. This allows
- * for complex composite icons with multiple elements that visually appear
- * to be a single cohesive graphic.
+ * This component solves the challenge of combining independently created SVGs into
+ * a single visual composition. Each SVG can have its own coordinate system, viewBox,
+ * and styling, allowing for maximum reusability of individual icons or graphics.
  *
- * Features:
- * - Supports any number of SVG elements (1 base + N overlays)
- * - Automatically handles different viewBox dimensions between SVGs
- * - Creates proper masks for each overlay element
- * - Recursively discovers viewBox attributes in nested components
- * - Maintains correct positioning and scaling for all elements
+ * When overlaying SVGs, each subsequent overlay "cuts out" its portion from the base SVG,
+ * creating a seamless integration where SVGs appear to interact with each other visually.
  *
- * Usage:
+ * Key benefits:
+ * - Maintains each SVG's independence - use them individually elsewhere
+ * - Handles different viewBox dimensions automatically
+ * - Works with any SVG components regardless of internal implementation
+ * - Supports unlimited overlay elements
+ * - Creates proper masking between elements for visual integration
+ *
+ * Usage example combining two independent icon components:
  * ```jsx
- * <SVGComposition viewBox="0 0 24 24">
- *   <svg viewBox="0 0 100 100">
- *    <rect x="0" y="0" width="100" height="100" fill="blue" />
+ * <SVGMaskOverlay viewBox="0 0 24 24">
+ *   <DatabaseSvg />
+ *   <svg x="12" y="12" width="16" height="16" overflow="visible">
+ *     <PlusSvg />
  *   </svg>
- *
- *   <svg x="12" y="12" width="16" height="16">
- *      <svg viewBox="0 0 24 24">
- *          <circle cx="12" cy="12" r="10" fill="transparent" />
- *      </svg>
- *   </svg>
- * </SVGComposition>
+ * </SVGMaskOverlay>
  * ```
  *
  * @param {Object} props - Component properties
@@ -38,7 +35,7 @@
 
 import { toChildArray } from "preact";
 
-export const SVGComposition = ({ viewBox, children }) => {
+export const SVGMaskOverlay = ({ viewBox, children }) => {
   if (!Array.isArray(children)) {
     return children;
   }
