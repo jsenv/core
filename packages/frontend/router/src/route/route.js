@@ -55,7 +55,7 @@ export const registerRoute = (resourcePattern, handler) => {
     node: null,
     buildUrl: (url, params) => {
       const routeResource = resourcePatternParsed.generate(params);
-      const routeUrlObject = new URL(routeResource, baseUrl);
+      const routeUrlObject = new URL(encodeURI(routeResource), baseUrl);
       const urlObject = new URL(url);
       const searchParams = urlObject.searchParams;
       for (const [key, value] of searchParams) {
@@ -66,7 +66,8 @@ export const registerRoute = (resourcePattern, handler) => {
         routeUrlObject.hash = hash;
       }
       const routeUrlNormalized = normalizeUrl(routeUrlObject);
-      return routeUrlNormalized;
+      const routeUrlEncoded = encodeURI(routeUrlNormalized);
+      return routeUrlEncoded;
     },
     urlSignal: signal(null),
     paramsSignal: signal({}),

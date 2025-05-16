@@ -22,9 +22,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("2_spaces", () => {
     const pattern = createResourcePattern("/before/:name");
-    const match = pattern.match("/before/foo bar");
+    const name = encodeURIComponent("foo bar");
+    const match = pattern.match(`/before/${name}`);
+    const generated = pattern.generate({ name: "foo bar" });
     return {
       match,
+      generated,
+      generatedEncoded: encodeURI(generated),
     };
   });
 });
