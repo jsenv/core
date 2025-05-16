@@ -2,6 +2,13 @@ import { signal } from "@preact/signals";
 import { roleStore } from "../role/role_store.js";
 import { databaseStore } from "./database_store.js";
 
+export const useDatabaseList = () => {
+  return databaseStore.arraySignal.value;
+};
+export const useDatabase = (datname) => {
+  return databaseStore.select("datname", datname);
+};
+
 const activeDatabaseIdSignal = signal(null);
 const activeDatabaseColumnsSignal = signal([]);
 const activeDatabaseOwnerRoleIdSignal = signal(null);
@@ -18,7 +25,6 @@ export const useActiveDatabaseOwnerRole = () => {
   const ownerRole = roleStore.select(ownerRoleId);
   return ownerRole;
 };
-
 export const setActiveDatabase = (database) => {
   if (database) {
     databaseStore.upsert(database);
@@ -36,5 +42,19 @@ export const setActiveDatabaseOwnerRole = (ownerRole) => {
     activeDatabaseOwnerRoleIdSignal.value = ownerRole.oid;
   } else {
     activeDatabaseOwnerRoleIdSignal.value = null;
+  }
+};
+
+const currentDatabaseIdSignal = signal(null);
+export const useCurrentDatabase = () => {
+  const currentDatabaseId = currentDatabaseIdSignal.value;
+  return databaseStore.select(currentDatabaseId);
+};
+export const setCurrentDatabase = (database) => {
+  if (database) {
+    databaseStore.upsert(database);
+    currentDatabaseIdSignal.value = database.oid;
+  } else {
+    currentDatabaseIdSignal.value = null;
   }
 };

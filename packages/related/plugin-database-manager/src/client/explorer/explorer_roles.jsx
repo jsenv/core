@@ -1,8 +1,3 @@
-/**
- * - ability to rename by enter
- * - cmd + backspace would allow to delete a role (after a confirm)
- */
-
 import { useAction, useRouteIsMatching, useRouteUrl } from "@jsenv/router";
 import { CurrentSvg } from "../icons/icons.jsx";
 import {

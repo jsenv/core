@@ -8,6 +8,7 @@ export const useRoleList = () => {
 export const useRole = (rolname) => {
   return roleStore.select("rolname", rolname);
 };
+
 const activeRoleIdSignal = signal(null);
 export const useActiveRole = () => {
   const activeRoleId = activeRoleIdSignal.value;
