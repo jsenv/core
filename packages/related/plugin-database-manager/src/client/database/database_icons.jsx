@@ -1,3 +1,5 @@
+import { cloneElement, toChildArray } from "preact";
+
 // https://www.svgrepo.com/svg/437830/database
 export const DatabaseSvg = () => {
   return (
@@ -18,39 +20,112 @@ export const DatabaseSvg = () => {
   );
 };
 
-export const Database2Svg = ({ color = "currentColor" }) => {
+const findViewBox = (element) => {
+  if (!element) return null;
+
+  // If it's a function component that returns an SVG
+  if (typeof element.type === "function") {
+    try {
+      // Try to render the component and check its output
+      const rendered = element.type(element.props);
+      return findViewBox(rendered);
+    } catch (e) {
+      // Silently fail if render fails
+      console.warn("Failed to render component to find viewBox", e);
+    }
+  }
+
+  // Check if the element itself has a viewBox
+  if (element.props && element.props.viewBox) {
+    return element.props.viewBox;
+  }
+
+  // Check children
+  if (element.props && element.props.children) {
+    const children = toChildArray(element.props.children);
+
+    // Try to find viewBox in any child
+    for (const child of children) {
+      const childViewBox = findViewBox(child);
+      if (childViewBox) {
+        return childViewBox;
+      }
+    }
+  }
+
+  return null;
+};
+
+const SVGComposition = ({ viewBox, children }) => {
+  if (!Array.isArray(children)) {
+    return children;
+  }
+  if (children.length === 1) {
+    return children[0];
+  }
+  if (!viewBox) {
+    console.error("SVGComposition requires an explicit viewBox");
+    return null;
+  }
+  const [baseSvg, overlaySvg] = children;
+  // Get viewBox from baseSvg
+  const baseViewBox = findViewBox(baseSvg);
+  if (!baseViewBox) {
+    console.error("Could not find viewBox in baseSvg");
+    return null;
+  }
+  // Get viewBox from overlaySvg
+  const overlayViewBox = findViewBox(overlaySvg);
+  if (!overlayViewBox) {
+    console.error("Could not find viewBox in overlaySvg");
+    return null;
+  }
+
+  const overlaySvgProps = overlaySvg.props;
+  const overlayPosition = {
+    x: parseFloat(overlaySvgProps.x || 0),
+    y: parseFloat(overlaySvgProps.y || 0),
+    width: parseFloat(overlaySvgProps.width || viewBox.split(" ")[2]),
+    height: parseFloat(overlaySvgProps.height || viewBox.split(" ")[3]),
+  };
+  const uniqueId = `mask-${Math.random().toString(36).slice(2, 9)}`;
+  const maskId = `overlay-mask-${uniqueId}`;
+  const secondId = `second-${uniqueId}`;
+
+  const [, , overlayWidth, overlayHeight] = overlayViewBox
+    .split(" ")
+    .map(parseFloat);
+
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width="100%"
-      height="100%"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <ellipse
-        cx="12"
-        cy="6"
-        rx="8"
-        ry="2"
-        stroke={color}
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M20 12C20 13.1046 16.4183 14 12 14C7.58172 14 4 13.1046 4 12"
-        stroke={color}
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      <path
-        d="M4 6V18C4 19.1046 7.58172 20 12 20C16.4183 20 20 19.1046 20 18V6"
-        stroke={color}
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
+    <svg viewBox={viewBox} width="100%" height="100%">
+      <defs>
+        {/* Define a black version of the second SVG */}
+        <svg id={secondId}>
+          <rect width="100%" height="100%" fill="black" />
+        </svg>
+
+        <mask id={maskId}>
+          {/* White background shows everything initially */}
+          <rect width="100%" height="100%" fill="white" />
+
+          {/* Position the black mask in the correct location */}
+          <svg
+            x={overlayPosition.x}
+            y={overlayPosition.y}
+            width={overlayPosition.width}
+            height={overlayPosition.height}
+            viewBox={`0 0 ${overlayWidth} ${overlayHeight}`}
+            overflow="visible"
+          >
+            <use href={`#${secondId}`} />
+          </svg>
+        </mask>
+      </defs>
+
+      {/* Render the base SVG with mask applied */}
+      <g mask={`url(#${maskId})`}>{baseSvg}</g>
+
+      {overlaySvg}
     </svg>
   );
 };
@@ -58,23 +133,13 @@ export const Database2Svg = ({ color = "currentColor" }) => {
 // https://www.svgrepo.com/svg/437987/plus-circle
 export const DatabaseWithPlusSvg = ({ color }) => {
   return (
-    <svg viewBox="0 0 24 24" width="100%" height="100%">
-      <defs>
-        {/* Create a mask for the area where the plus will be */}
-        <mask id="plus_mask">
-          <rect width="24" height="24" fill="white" />
-          <circle cx="18" cy="18" r="5" fill="black" />
-        </mask>
-      </defs>
-
-      <g mask="url(#plus_mask)">
-        <DatabaseSvg color={color} />
-      </g>
-
+    <SVGComposition viewBox="0 0 24 24" width="100%" height="100%">
+      <DatabaseSvg color={color} />
       <svg x="12" y="12" width="16" height="16" overflow="visible">
+        <circle cx="12" cy="12" r="10" fill="transparent" />
         <PlusSvg color={color} />
       </svg>
-    </svg>
+    </SVGComposition>
   );
 };
 

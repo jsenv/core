@@ -1,6 +1,6 @@
 /**
- * - ability to rename by enter
- * - cmd + backspace would allow to delete a role (after a confirm)
+ * each section should have its own scrollbar
+ * right now it does not work, the content is not scrollable and gets hidden
  */
 
 import { effect } from "@preact/signals";
