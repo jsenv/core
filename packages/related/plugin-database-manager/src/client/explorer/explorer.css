@@ -11,19 +11,25 @@
   user-select: none;
 }
 
+/* When multiple details are open, distribute space evenly */
+/* one day this is going to be decided by js with ability to resize manually */
+.explorer > details[open] {
+  flex: 1;
+}
+
 .explorer > details {
   display: flex;
   flex-direction: column;
   border-bottom: 1px solid #e0e0e0;
-}
-.explorer_group_content {
-  overflow: auto;
-  scrollbar-gutter: stable;
+  min-height: 0; /* Critical for scrolling in flexbox context */
+  overflow: hidden;
 }
 .explorer > details:last-of-type {
   border-bottom: none;
+  flex: 1; /* Take up remaining space */
 }
 .explorer > details > summary {
+  flex-shrink: 0;
   cursor: pointer;
   font-weight: 500;
   display: flex;
@@ -54,7 +60,6 @@
 .explorer > details:open .summary_action_icon {
   display: block;
 }
-
 .summary_label {
   display: flex;
   flex: 1;
@@ -63,13 +68,18 @@
   padding-right: 0.5em;
 }
 
-.explorer_group_list {
+.explorer_group_content {
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  min-height: 0;
+  max-height: none;
+}
+.explorer_group_list {
   margin-top: 0;
   margin-bottom: 0;
   padding-left: 24px;
-  /* width: fit-content; */
 }
 .explorer_group_item {
   display: flex;
