@@ -1,6 +1,7 @@
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import { SPAInputText, SPALink, useDetails } from "@jsenv/router";
 import { useCallback, useRef, useState } from "preact/hooks";
+import { SvgFontSize } from "../svg_font_size.jsx";
 
 export const ExplorerGroup = ({
   urlParam,
@@ -49,7 +50,7 @@ export const ExplorerGroup = ({
               startCreatingNew();
             }}
           >
-            {createNewButtonChildren}
+            <SvgFontSize>{createNewButtonChildren}</SvgFontSize>
           </button>
         </span>
       </summary>
@@ -261,9 +262,9 @@ const NewItem = ({ nameKey, useCreateItemAction, ...rest }) => {
 
   return (
     <span className="explorer_group_item_content">
-      <span style="display: flex; width: 1em; height: 1em">
+      <SvgFontSize>
         <EnterNameIconSvg />
-      </span>
+      </SvgFontSize>
       <SPAInputText
         name={nameKey}
         action={action}

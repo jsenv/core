@@ -13,6 +13,7 @@ import {
   PUT_ROLE_ACTION,
 } from "../role/role_routes.js";
 import { useCurrentRole, useRoleList } from "../role/role_signals.js";
+import { SvgFontSize } from "../svg_font_size.jsx";
 import { ExplorerGroup } from "./explorer_group.jsx";
 
 export const ExplorerRoles = () => {
@@ -66,7 +67,7 @@ const RoleItem = ({ item: role }) => {
 
   return (
     <>
-      <span style="width: 1em; height: 1em">
+      <SvgFontSize>
         {role.rolname.startsWith("pg_") ? (
           <UserWithCheckSvg color="#333" />
         ) : role.rolsuper ? (
@@ -74,11 +75,11 @@ const RoleItem = ({ item: role }) => {
         ) : (
           <UserSvg color="#333" />
         )}
-      </span>
+      </SvgFontSize>
       {isCurrent ? (
-        <span style="width: 1em; height: 1em">
+        <SvgFontSize>
           <CurrentSvg />
-        </span>
+        </SvgFontSize>
       ) : null}
     </>
   );

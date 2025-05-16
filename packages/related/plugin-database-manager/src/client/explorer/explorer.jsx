@@ -7,6 +7,7 @@ import { effect } from "@preact/signals";
 import { setCurrentRole } from "../role/role_signals.js";
 import { roleStore } from "../role/role_store.js";
 import "./explorer.css" with { type: "css" };
+import { ExplorerDatabases } from "./explorer_databases.jsx";
 import { ExplorerRoles } from "./explorer_roles.jsx";
 
 effect(async () => {
@@ -22,6 +23,7 @@ export const Explorer = () => {
       <div className="explorer_head">
         <h2>Explorer</h2>
       </div>
+      <ExplorerDatabases />
       <ExplorerRoles />
     </nav>
   );

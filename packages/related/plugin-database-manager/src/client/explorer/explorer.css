@@ -45,8 +45,6 @@
 }
 .explorer > details .summary_action_icon {
   display: none;
-  width: 1em;
-  height: 1em;
   padding: 0;
   border: 0;
 }
