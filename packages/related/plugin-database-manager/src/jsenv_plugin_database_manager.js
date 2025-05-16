@@ -30,9 +30,10 @@ export const jsenvPluginDatabaseManager = () => {
           const id = request.params.id;
           const object = await GET(id);
           if (!object) {
-            return Response.json(`${resource} "${id}" not found`, {
-              status: 404,
-            });
+            return Response.json(
+              { message: `${resource} "${id}" not found` },
+              { status: 404 },
+            );
           }
           return Response.json(object);
         },
@@ -391,13 +392,17 @@ export const jsenvPluginDatabaseManager = () => {
           }
           if (columnIndex === undefined) {
             return Response.json(
-              `Column ${columnName} not found in table ${tableName}`,
+              {
+                message: `Column ${columnName} not found in table ${tableName}`,
+              },
               { status: 404 },
             );
           }
           if (beforeColumnIndex === undefined) {
             return Response.json(
-              `Column ${beforeColumnName} not found in table ${tableName}`,
+              {
+                message: `Column ${beforeColumnName} not found in table ${tableName}`,
+              },
               { status: 404 },
             );
           }

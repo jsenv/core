@@ -7,6 +7,20 @@ import {
 } from "./role_signals.js";
 import { roleStore } from "./role_store.js";
 
+const errorFromResponse = async (response, message) => {
+  const serverErrorInfo = await response.json();
+  let serverMessage =
+    typeof serverErrorInfo === "string"
+      ? serverErrorInfo
+      : serverErrorInfo.message;
+  let errorMessage = message ? `${message}: ${serverMessage}` : serverMessage;
+  const error = new Error(errorMessage);
+  if (serverErrorInfo && typeof serverErrorInfo === "object") {
+    error.stack = serverErrorInfo.stack || serverErrorInfo.message;
+  }
+  throw error;
+};
+
 export const GET_ROLE_ROUTE = registerRoute(
   "/roles/:rolname",
   async ({ params, signal }) => {
@@ -15,10 +29,7 @@ export const GET_ROLE_ROUTE = registerRoute(
       signal,
     });
     if (!response.ok) {
-      const error = await response.json();
-      const getRoleError = new Error(`Failed to get role: ${error.message}`);
-      getRoleError.stack = error.stack || error.message;
-      throw getRoleError;
+      throw await errorFromResponse(response, "Failed to get role");
     }
     const { role, databases, columns } = await response.json();
     setActiveRole(role);
@@ -48,12 +59,7 @@ export const PUT_ROLE_ACTION = registerAction(
       },
     );
     if (!response.ok) {
-      const error = await response.json();
-      const updateRoleError = new Error(
-        `Failed to update role: ${error.message}`,
-      );
-      updateRoleError.stack = error.stack || error.message;
-      throw updateRoleError;
+      throw await errorFromResponse(response, "Failed to update role");
     }
     roleStore.upsert("rolname", rolname, { [columnName]: value });
   },
@@ -71,12 +77,7 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
     body: JSON.stringify({ rolname }),
   });
   if (!response.ok) {
-    const error = await response.json();
-    const createRoleError = new Error(
-      `Failed to create role: ${error.message}`,
-    );
-    createRoleError.stack = error.stack || error.message;
-    throw createRoleError;
+    throw await errorFromResponse(response, "Failed to create role");
   }
   const role = await response.json();
   roleStore.upsert(role);
@@ -93,12 +94,7 @@ export const DELETE_ROLE_ACTION = registerAction(
       },
     });
     if (!response.ok) {
-      const error = await response.json();
-      const deleteRoleError = new Error(
-        `Failed to delete role: ${error.message}`,
-      );
-      deleteRoleError.stack = error.stack || error.message;
-      throw deleteRoleError;
+      throw await errorFromResponse(response, `Failed to delete role`);
     }
     roleStore.drop("rolname", rolname);
   },
