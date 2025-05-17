@@ -22,6 +22,8 @@
         border-right: 1px solid #ccc;
         height: 100vh;
         width: 200px;
+        position: sticky;
+        top: 0; 
       }
 
       #explorer {
@@ -64,6 +66,7 @@
 
       .scrollable_section {
         overflow-y: auto;
+        overscroll-behavior: contain;
         height: 100%;
         flex: 1; /* Take up remaining height */
         min-height: 0; /* Prevent default height issues */
