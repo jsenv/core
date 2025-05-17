@@ -20,18 +20,17 @@
       aside {
         background: #f0f0f0;
         border-right: 1px solid #ccc;
-        display: flex; /* Add flexbox to aside */
-        flex-direction: column;
+        height: 100vh;
+        width: 200px;
       }
 
       #explorer {
         display: flex;
-        width: 200px;
-        height: 100vh;
-        max-height: 100vh;
         flex-direction: column;
         flex: 1; /* Make explorer take all available height */
         overflow: hidden;
+        height: 100%;
+        width: 100%;
       }
 
       .explorer_head {
@@ -84,10 +83,9 @@
           <div class="explorer_body">
             <div>A block</div>
             <div>A seconds block</div>
-            <details>
+            <details open>
               <summary>Details</summary>
               <div class="scrollable_section">
-               
                   <p>Database 1</p>
                   <p>Database 2</p>
                   <p>Database 3</p>
@@ -103,5 +101,7 @@
         <div style="background: blue; width: 600px; height: 400px"></div>
       </main>
     </div>
+
+    <script src="./details_content_scroll.js"></script>
   </body>
 </html>
