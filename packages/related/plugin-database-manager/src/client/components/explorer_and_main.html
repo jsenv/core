@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Database Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <style>
+      body {
+        margin: 0;
+      }
+
+      #app {
+        display: flex;
+        flex-direction: row;
+      }
+
+      aside {
+        background: #f0f0f0;
+        border-right: 1px solid #ccc;
+        display: flex; /* Add flexbox to aside */
+        flex-direction: column;
+      }
+
+      #explorer {
+        display: flex;
+        width: 200px;
+        height: 100vh;
+        max-height: 100vh;
+        flex-direction: column;
+        flex: 1; /* Make explorer take all available height */
+        overflow: hidden;
+      }
+
+      .explorer_head {
+        padding: 10px;
+        flex-shrink: 0; /* Don't allow shrinking */
+      }
+
+      .explorer_body {
+        display: flex;
+        flex-direction: column;
+        flex: 1; /* Take remaining space */
+        min-height: 0; /* Critical for scrolling */
+        overflow: hidden;
+      }
+
+      main {
+        padding: 10px;
+      }
+
+      .explorer_body > details {
+        display: flex;
+        flex-direction: column;
+        flex: 1; /* Take all remaining space */
+        min-height: 0; /* Critical for scrolling */
+        overflow: hidden;
+      }
+
+      .explorer_body > details > summary {
+        background: violet;
+      }
+
+      .scrollable_section {
+        overflow-y: auto;
+        height: 100%;
+        flex: 1; /* Take up remaining height */
+        min-height: 0; /* Prevent default height issues */
+      }
+
+      .scrollable_section > p {
+        height: 250px;
+        border: 1px solid red;
+      }
+    </style>
+
+    <div id="app">
+      <aside>
+        <div id="explorer">
+          <h2 class="explorer_head">Explorer</h2>
+
+          <div class="explorer_body">
+            <div>A block</div>
+            <div>A seconds block</div>
+            <details>
+              <summary>Details</summary>
+              <div class="scrollable_section">
+               
+                  <p>Database 1</p>
+                  <p>Database 2</p>
+                  <p>Database 3</p>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
+      </aside>
+      <main>
+        <h1 title="Explore and manager your database">Database Manager</h1>
+
+        <div style="background: blue; width: 600px; height: 400px"></div>
+      </main>
+    </div>
+  </body>
+</html>
