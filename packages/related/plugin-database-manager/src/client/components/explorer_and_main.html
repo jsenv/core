@@ -55,9 +55,12 @@
       .explorer_body > details {
         display: flex;
         flex-direction: column;
-        flex: 1; /* Take all remaining space */
         min-height: 0; /* Critical for scrolling */
         overflow: hidden;
+      }
+
+      .explorer_body>details[open] {
+          flex: 1; /* Take all remaining space */
       }
 
       .explorer_body > details > summary {
@@ -88,6 +91,16 @@
             <div>A seconds block</div>
             <details open>
               <summary>Details</summary>
+              <div class="scrollable_section">
+                  <p>Database 1</p>
+                  <p>Database 2</p>
+                  <p>Database 3</p>
+                </ul>
+              </div>
+            </details>
+
+            <details open>
+              <summary>An other</summary>
               <div class="scrollable_section">
                   <p>Database 1</p>
                   <p>Database 2</p>
