@@ -16,7 +16,7 @@ import {
   ensurePathnameTrailingSlash,
   injectQueryParamIntoSpecifierWithoutEncoding,
   renderUrlOrRelativeUrlFilename,
-  urlIsInsideOf,
+  urlIsOrIsInsideOf,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
@@ -676,7 +676,7 @@ export const createBuildSpecifierManager = ({
         // const urlInfoInsideThisDirectorySet = new Set();
         const versionsInfluencingThisDirectorySet = new Set();
         for (const [url, urlInfo] of finalKitchen.graph.urlInfoMap) {
-          if (!urlIsInsideOf(url, directoryUrl)) {
+          if (!urlIsOrIsInsideOf(url, directoryUrl)) {
             continue;
           }
           // ideally we should exclude eventual directories as the are redundant
@@ -1075,7 +1075,7 @@ export const createBuildSpecifierManager = ({
           }
           if (
             urlInfo.type === "asset" &&
-            urlIsInsideOf(urlInfo.url, buildDirectoryUrl)
+            urlIsOrIsInsideOf(urlInfo.url, buildDirectoryUrl)
           ) {
             return;
           }

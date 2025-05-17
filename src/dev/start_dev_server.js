@@ -15,7 +15,7 @@ import {
 } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
 import { URL_META } from "@jsenv/url-meta";
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, readFileSync } from "node:fs";
 import { defaultRuntimeCompat } from "../build/build_params.js";
 import { createEventEmitter } from "../helpers/event_emitter.js";
@@ -131,7 +131,7 @@ export const startDevServer = async ({
       if (
         process.env.CAPTURING_SIDE_EFFECTS ||
         (!import.meta.build &&
-          urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
+          urlIsOrIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
       ) {
         outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
       } else {
@@ -248,7 +248,7 @@ export const startDevServer = async ({
       read: readPackageAtOrNull,
     };
 
-    const devServerPluginStore = createPluginStore([
+    const devServerPluginStore = await createPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),
       ...plugins,
       ...getCorePlugins({
@@ -274,7 +274,7 @@ export const startDevServer = async ({
         ribbon,
       }),
     ]);
-    const getOrCreateKitchen = (request) => {
+    const getOrCreateKitchen = async (request) => {
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
         request.headers["user-agent"] || "",
       );
@@ -397,7 +397,7 @@ export const startDevServer = async ({
           );
         },
       );
-      const devServerPluginController = createPluginController(
+      const devServerPluginController = await createPluginController(
         devServerPluginStore,
         kitchen,
       );
@@ -413,8 +413,8 @@ export const startDevServer = async ({
 
     finalServices.push({
       name: "jsenv:dev_server_routes",
-      augmentRouteFetchSecondArg: (request) => {
-        const kitchen = getOrCreateKitchen(request);
+      augmentRouteFetchSecondArg: async (request) => {
+        const kitchen = await getOrCreateKitchen(request);
         return { kitchen };
       },
       routes: [
@@ -617,6 +617,7 @@ export const startDevServer = async ({
         },
       ],
     });
+    finalServices.push(...devServerPluginStore.allDevServerServices);
   }
   // jsenv error handler service
   {

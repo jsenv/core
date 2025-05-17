@@ -1,8 +1,10 @@
 import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
 import { lookupPackageDirectory } from "@jsenv/filesystem";
-import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
-import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
-import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
+import {
+  createHeadersPattern,
+  createResourcePattern,
+  PATTERN,
+} from "@jsenv/url-pattern";
 import { resourceToExtension, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { readFileSync } from "node:fs";

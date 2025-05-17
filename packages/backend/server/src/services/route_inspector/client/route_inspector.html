@@ -55,6 +55,10 @@
         color: dodgerblue;
       }
 
+      html {
+        scrollbar-gutter: stable both-edges;
+      }
+
       body {
         font-family:
           system-ui,
@@ -81,31 +85,34 @@
       aside {
         width: 250px;
         flex-shrink: 0;
-        border-radius: 6px;
-        overflow: hidden;
-        background: var(--background-color);
         transition:
           width 0.3s ease,
           margin-left 0.3s ease;
-        max-height: calc(100vh - 40px);
-        overflow-y: auto;
+        height: 100%;
         margin-right: 20px;
-        padding-top: 20px;
-        padding-left: 10px;
+        position: fixed;
       }
       main {
         flex-grow: 1;
         flex-basis: 0;
         min-width: 0;
         transition: margin-left 0.3s ease;
-        padding-top: 10px;
+        padding-top: 20px;
         padding-right: 20px;
+        margin-left: 280px;
       }
 
       .header_row {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 10px;
+      }
+      .header_title {
+        margin: 0;
+        line-height: 1;
+        display: flex;
+        gap: 10px;
+        align-items: center;
       }
       .note_button_open {
         background: none;
@@ -334,11 +341,58 @@
         }
       }
 
-      .route_list {
+      .route_container > * {
         margin-top: 20px;
         flex-grow: 1;
         min-width: 0; /* Prevent flexbox from expanding beyond available space */
       }
+      .route_group_details {
+        margin: 0 0 15px;
+      }
+      .summary_marker {
+        width: 24px;
+        height: 24px;
+      }
+      .route_group_details > summary {
+        cursor: pointer;
+        list-style: none;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 7px;
+      }
+      .route_group_details > summary::marker {
+        display: none;
+      }
+      .route_group_details[open] > summary .summary_marker {
+        transform: rotate(180deg);
+      }
+      .route_group_summary_container {
+        display: flex;
+        align-items: center;
+        padding: 5px;
+      }
+      .route_group_name {
+        display: flex;
+        border-radius: 3px;
+        font-family: sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        min-width: 80px;
+        padding: 6px 0;
+        text-align: center;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+        gap: 0.3em;
+      }
+      .route_group_description {
+        margin-left: 8px;
+        font-family: monospace;
+        font-size: 16px;
+        font-weight: 600;
+        word-break: break-word;
+        margin-top: 0;
+        margin-bottom: 0;
+        user-select: none;
+      }
+
       .route_details {
         margin-bottom: 8px;
         box-shadow: 0 0 3px rgba(0, 0, 0, 0.19);
@@ -354,6 +408,9 @@
       }
       .route_details > summary::marker {
         display: none;
+      }
+      .route_details:open > summary .summary_marker {
+        transform: rotate(180deg);
       }
       .route_summary_container {
         display: flex;
@@ -381,25 +438,32 @@
         margin-top: 0;
         margin-bottom: 0;
       }
-      .route_details[data-method="HEAD"] {
+      .route_details[data-method="HEAD"],
+      .route_group_details[data-method="HEAD"] {
         --method-color: var(--method-head-color);
       }
-      .route_details[data-method="OPTIONS"] {
+      .route_details[data-method="OPTIONS"],
+      .route_group_details[data-method="OPTIONS"] {
         --method-color: var(--method-options-color);
       }
-      .route_details[data-method="GET"] {
+      .route_details[data-method="GET"],
+      .route_group_details[data-method="GET"] {
         --method-color: var(--method-get-color);
       }
-      .route_details[data-method="POST"] {
+      .route_details[data-method="POST"],
+      .route_group_details[data-method="POST"] {
         --method-color: var(--method-post-color);
       }
-      .route_details[data-method="PUT"] {
+      .route_details[data-method="PUT"],
+      .route_group_details[data-method="PUT"] {
         --method-color: var(--method-put-color);
       }
-      .route_details[data-method="PATCH"] {
+      .route_details[data-method="PATCH"],
+      .route_group_details[data-method="PATCH"] {
         --method-color: var(--method-patch-color);
       }
-      .route_details[data-method="DELETE"] {
+      .route_details[data-method="DELETE"],
+      .route_group_details[data-method="DELETE"] {
         --method-color: var(--method-delete-color);
       }
 
@@ -428,10 +492,11 @@
 
       .filter_container {
         margin-bottom: 20px;
-        border-radius: 4px;
         overflow: hidden;
-        border: 1px solid var(--border-color);
+        overflow-y: auto;
+        border-right: 1px solid var(--border-color);
         background: var(--secondary-color);
+        height: 100%;
       }
       .filter_container::marker {
         display: none;
@@ -445,16 +510,23 @@
         justify-content: space-between;
         user-select: none;
       }
-      .filter:open .arrow_down {
+      .filter:open > summary .summary_marker {
         transform: rotate(180deg);
+      }
+      .summary_text {
+        overflow: hidden;
+        width: 100%;
+        display: block;
+        white-space: nowrap;
+        text-overflow: ellipsis;
       }
       .filter_list {
         background: var(--background-color);
-        border-top: 1px solid var(--border-color);
         overflow: hidden;
       }
       .filter_item {
         margin: 15px;
+        margin-left: 0;
       }
       .filter_badge {
         background-color: var(--primary-color);
@@ -506,7 +578,6 @@
         overflow: hidden;
       }
       .filter_text[data-method] {
-        border-left: 5px solid var(--method-color);
         padding-left: 4px;
       }
       .filter_text[data-method="all"] {
@@ -566,33 +637,41 @@
           transparent
         );
       }
+
+      .status_pill {
+        display: flex;
+        align-self: stretch;
+        width: 0.4em;
+      }
     </style>
     <div class="container">
       <aside></aside>
       <main>
         <div class="header_row">
-          <h1 style="margin: 0">Route inspector</h1>
-          <button
-            class="note_button_open"
-            aria-label="Show information"
-            title="About HTTP Methods"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              width="24"
-              height="24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+          <h1 class="header_title">
+            Route inspector
+            <button
+              class="note_button_open"
+              aria-label="Show information"
+              title="About HTTP Methods"
             >
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            </button>
+          </h1>
           <div style="flex: 1"></div>
           <div class="theme-toggle">
             <button id="theme-toggle-btn" aria-label="Toggle dark/light mode">
@@ -700,7 +779,7 @@
       import { render } from "preact";
       import { html } from "htm/preact";
       import { signal, computed } from "@preact/signals";
-      import { useState, useRef, useCallback } from "preact/hooks";
+      import { useRef, useCallback } from "preact/hooks";
 
       const routesLoadingSignal = signal(false);
       const routeLoadingErrorSignal = signal(null);
@@ -763,11 +842,18 @@
         if (routes.length === 0) {
           return null;
         }
-        return html` <${FiltersPanel} routes=${routes} /> `;
+        return html`
+          <div>
+            <${FiltersPanel} routes="${routes}" />
+          </div>`;
       };
 
       const App = () => {
-        return html` <${RouteList} /> `;
+        return html`
+          <div>
+            <${Toolbox} />
+            <${RouteResults} />
+          </div>`;
       };
       const ProgressBar = ({ width = "100%", height = 6, loading }) => {
         if (!loading) {
@@ -776,11 +862,11 @@
         return html`
           <div
             class="progress-bar"
-            style=${{
+            style="${{
               width: typeof Number(width) === "number" ? `${width}px` : width,
               height:
                 typeof Number(height) === "number" ? `${height}px` : height,
-            }}
+            }}"
           >
             <div class="progress-container progress-indeterminate">
               <div class="progress-bar-long"></div>
@@ -789,19 +875,20 @@
           </div>
         `;
       };
-      const RouteList = () => {
+      const RouteResults = () => {
         const routes = routesSignal.value;
         const loading = routesLoadingSignal.value;
         const routeLoadingError = routeLoadingErrorSignal.value;
+        const [groupBy] = useGroupByUrlStringParam();
 
         if (loading) {
-          return html`<${ProgressBar} width="150" loading=${true} />`;
+          return html`<${ProgressBar} width="150" loading="${true}" />`;
         }
 
         if (routeLoadingError) {
           return html`<p>
-            Error loading routes: ${routeLoadingError.message}
-          </p>`;
+              Error loading routes: ${routeLoadingError.message}
+            </p>`;
         }
 
         if (!routes || routes.length === 0) {
@@ -809,10 +896,74 @@
         }
 
         return html`<div class="route_container">
-          <div class="route_list">
+            ${groupBy
+              ? html`<${RouteGroups} groupBy="${groupBy}" routes="${routes}" />`
+              : html`<${RouteList} routes="${routes}" />`}
+          </div>`;
+      };
+
+      const RouteGroups = ({ groupBy, routes }) => {
+        const groups = {};
+        for (const route of routes) {
+          const groupKey =
+            groupBy === "by_method"
+              ? route.method
+              : route.meta.packageName || NO_PACKAGE_NAME;
+          if (!groups[groupKey]) {
+            groups[groupKey] = [];
+          }
+          groups[groupKey].push(route);
+        }
+
+        return html`
+          <ul style="margin-left: 0; padding: 0">
+            <li style="list-style: none; padding: 0;">
+              ${Object.entries(groups).map(([groupKey, groupRoutes]) => {
+                const groupText =
+                  groupBy === "by_method"
+                    ? html`<span
+                          style="margin-left: 0.5em; display: inline-flex; gap: 0.5em;"
+                        >
+                          <${MethodsStatusPill} methodNames="${[groupKey]}" />
+                          <span>${groupKey}</span>
+                        </span>`
+                    : html`<span>${groupKey}</span>`;
+
+                return html`
+                  <details
+                    class="route_group_details"
+                    data-method="${groupBy === "by_method"
+                      ? groupKey
+                      : undefined}"
+                  >
+                    <summary>
+                      <div class="route_group_summary_container">
+                        <span class="route_group_name">
+                          ${groupBy === "by_method" ? "method" : "package"}:
+                          ${groupText}
+                        </span>
+                        <span class="route_group_description">
+                          <span class="filter_count">
+                            ${groupRoutes.length}
+                          </span>
+                        </span>
+                        <span style="flex: 1"></span>
+                        <span class="summary_marker">
+                          <${ArrowDown} />
+                        </span>
+                      </div>
+                    </summary>
+                    <${RouteList} routes="${groupRoutes}" />
+                  </details>`;
+              })}
+            </li>
+          </ul>`;
+      };
+
+      const RouteList = ({ routes }) => {
+        return html`<div class="route_list">
             ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
-          </div>
-        </div>`;
+          </div>`;
       };
 
       const documentUrlSignal = signal(window.location.href);
@@ -891,6 +1042,13 @@
         };
       }
 
+      const useGroupByUrlStringParam = () => {
+        const availableGroupByValues = ["by_method", "by_package"];
+        return useUrlStringParam("groupBy", {
+          availableValues: availableGroupByValues,
+        });
+      };
+
       const useMethodUrlStringParam = () => {
         const availableMethodNames = availableMethodNamesSignal.value;
         return useUrlStringParam("method", {
@@ -905,6 +1063,66 @@
         });
       };
 
+      let Toolbox;
+      groups: {
+        Toolbox = () => {
+          return html``;
+        };
+      }
+
+      const StatusPill = ({ children, color }) => {
+        return html`
+            <span
+            class="status_pill"
+            style="${{
+              background: color,
+            }}"
+          >
+            ${children}
+          </span>`;
+      };
+      const buildLinearGradient = (colors) => {
+        const percentagePerColor = Math.floor(100 / (colors.length - 1));
+        const gradientSteps = [];
+        let progress = 0;
+        let index = 0;
+        for (const color of colors) {
+          if (index === colors.length - 1) {
+            progress = 100;
+          }
+          gradientSteps.push(`${color} ${progress}%`);
+          progress += percentagePerColor;
+          index++;
+        }
+        const gradient = `linear-gradient(to bottom, ${gradientSteps.join(", ")})`;
+        return gradient;
+      };
+      const MethodsStatusPill = ({ methodNames }) => {
+        if (methodNames.length === 1) {
+          return html`
+            <${StatusPill}
+              color="${getMethodColor(methodNames[0])}"
+            />
+          `;
+        }
+        const colors = methodNames.map((methodName) =>
+          getMethodColor(methodName),
+        );
+        const linearGradient = buildLinearGradient(colors);
+        return html`
+            <${StatusPill}
+            color="${linearGradient}"
+          />
+          `;
+      };
+      const getMethodColor = (methodName) => {
+        const bodyStyle = window.getComputedStyle(document.body);
+        const methodColor = bodyStyle.getPropertyValue(
+          `--method-${methodName.toLowerCase()}-color`,
+        );
+        return methodColor;
+      };
+
       let FiltersPanel;
       filters: {
         FiltersPanel = ({ routes }) => {
@@ -912,13 +1130,63 @@
             <div class="filter_container">
               <div class="filter_list">
                 <div class="filter_item">
-                  <${MethodFilter} routes=${routes} />
+                  <${GroupSelector} />
                 </div>
                 <div class="filter_item">
-                  <${PackageFilter} routes=${routes} />
+                  <${MethodFilter} routes="${routes}" />
+                </div>
+                <div class="filter_item">
+                  <${PackageFilter} routes="${routes}" />
                 </div>
               </div>
             </div>
+          `;
+        };
+
+        const GroupSelector = () => {
+          const [groupBy, setGroupBy] = useGroupByUrlStringParam();
+          const label = html`
+            <span>
+              Group: ${groupBy || "none"}
+            </span>`;
+          const options = [
+            {
+              value: "",
+              text: html`
+                <span class="filter_text">
+                  none
+                </span>
+              `,
+              selected: !groupBy,
+            },
+            {
+              value: "by_method",
+              text: html`
+                <span class="filter_text">
+                  by method
+                </span>
+              `,
+              selected: groupBy === "by_method",
+            },
+            {
+              value: "by_package",
+              text: html`
+                <span class="filter_text">
+                  by package
+                </span>
+              `,
+              selected: groupBy === "by_package",
+            },
+          ];
+
+          return html`
+            <${FilterSelector}
+              label="${label}"
+              options="${options}"
+              onChange="${(groupByToSelect) => {
+                setGroupBy(groupByToSelect);
+              }}"
+            />
           `;
         };
         const MethodFilter = ({ routes }) => {
@@ -926,43 +1194,17 @@
           const availableMethodRepartition = methodRepartitionSignal.value;
           const [selectedMethod, setSelectedMethod] = useMethodUrlStringParam();
 
-          // "all" border image is a combination of available method colors
-          const getMethodColor = (methodName) => {
-            const bodyStyle = window.getComputedStyle(document.body);
-            const methodColor = bodyStyle.getPropertyValue(
-              `--method-${methodName.toLowerCase()}-color`,
-            );
-            return methodColor;
-          };
-          const percentagePerColor = Math.floor(
-            100 / (availableMethodNames.length - 1),
-          );
-          const gradientSteps = [];
-          let progress = 0;
-          let index = 0;
-          for (const methodName of availableMethodNames) {
-            if (index === availableMethodNames.length - 1) {
-              progress = 100;
-            }
-            gradientSteps.push(`${getMethodColor(methodName)} ${progress}%`);
-            progress += percentagePerColor;
-            index++;
-          }
-          const gradient = `linear-gradient(to bottom, ${gradientSteps.join(", ")})`;
-
           const options = [
             {
               value: "",
               text: html`
-                <span
-                  class="filter_text"
-                  data-method="all"
-                  style=${{
-                    borderImageSource: gradient,
-                  }}
-                  >all</span
-                >
-                <span class="filter_count">${routes.length}</span>
+                <${MethodsStatusPill}
+                  methodNames="${availableMethodNames}"
+                />
+                <span class="filter_text" data-method="all">all</span>
+                <span class="filter_count">
+                  ${routes.length}
+                </span>
               `,
               selected: !selectedMethod,
             },
@@ -970,8 +1212,14 @@
               return {
                 value: availableMethodName,
                 text: html`
-                  <span class="filter_text" data-method="${availableMethodName}"
-                    >${availableMethodName}
+                  <${MethodsStatusPill}
+                    methodNames="${[availableMethodName]}"
+                  />
+                  <span
+                    class="filter_text"
+                    data-method="${availableMethodName}"
+                  >
+                    ${availableMethodName}
                   </span>
                   <span class="filter_count">
                     ${availableMethodRepartition[availableMethodName]}
@@ -982,13 +1230,24 @@
             }),
           ];
 
+          const label = html`<span
+              style="display: flex; align-items: center; gap: 5px"
+            >
+              <${MethodsStatusPill}
+                methodNames="${selectedMethod
+                  ? [selectedMethod]
+                  : availableMethodNames}"
+              />
+              <span>Methods: ${selectedMethod || "all"}</span>
+            </span>`;
+
           return html`
             <${FilterSelector}
-              label="Methods"
-              options=${options}
-              onChange=${(methodToSelect) => {
+              label="${label}"
+              options="${options}"
+              onChange="${(methodToSelect) => {
                 setSelectedMethod(methodToSelect);
-              }}
+              }}"
             />
           `;
         };
@@ -1020,13 +1279,20 @@
               };
             }),
           ];
+
+          const label = html`
+            <span>
+              Packages: ${selectedPackageName || "all"}
+            </span>
+          `;
+
           return html`
             <${FilterSelector}
-              label="Packages"
-              options=${options}
-              onChange=${(packageNameToSelect) => {
+              label="${label}"
+              options="${options}"
+              onChange="${(packageNameToSelect) => {
                 setSelectedPackageName(packageNameToSelect);
-              }}
+              }}"
             />
           `;
         };
@@ -1041,66 +1307,68 @@
 
           return html`<details open class="filter">
                 <summary class="filter_summary">
-                  ${label}
-                  <${ArrowDown} />
+                  <span class="summary_text">${label}</span>
+                  <span class="summary_marker">
+                    <${ArrowDown} />
+                  </span>
                 </summary>
                 <form ref=${formRef} class="filter_form">
                   ${options.map((option) => {
                     return html`<label>
-                      <input
-                        type="${multiple ? "checkbox" : "radio"}"
-                        name="${label}"
-                        checked=${option.selected}
-                        value=${option.value}
-                        onChange=${multiple
-                          ? () => {
-                              const formNode = formRef.current;
-                              // even if we create a checkbox list the HTML spec
-                              // return a radio node list and we have to gather the checked values
-                              const radioNodeList = formNode.elements[label];
-                              const selectedValues = [];
-                              for (const checkboxNode of Array.from(
-                                radioNodeList,
-                              )) {
-                                if (checkboxNode.checked) {
-                                  selectedValues.push(checkboxNode.value);
+                        <input
+                          type="${multiple ? "checkbox" : "radio"}"
+                          name="${label}"
+                          checked="${option.selected}"
+                          value="${option.value}"
+                          onChange="${multiple
+                            ? () => {
+                                const formNode = formRef.current;
+                                // even if we create a checkbox list the HTML spec
+                                // return a radio node list and we have to gather the checked values
+                                const radioNodeList = formNode.elements[label];
+                                const selectedValues = [];
+                                for (const checkboxNode of Array.from(
+                                  radioNodeList,
+                                )) {
+                                  if (checkboxNode.checked) {
+                                    selectedValues.push(checkboxNode.value);
+                                  }
                                 }
+                                onChange(selectedValues);
                               }
-                              onChange(selectedValues);
-                            }
-                          : () => {
-                              const formNode = formRef.current;
-                              const radioNodeList = formNode.elements[label];
-                              const selectedValue = radioNodeList.value;
-                              onChange(selectedValue);
-                            }}
-                      />
-                      ${option.text}
-                    </label>`;
+                            : () => {
+                                const formNode = formRef.current;
+                                const radioNodeList = formNode.elements[label];
+                                const selectedValue = radioNodeList.value;
+                                onChange(selectedValue);
+                              }}"
+                        />
+                        ${option.text}
+                      </label>`;
                   })}
                 </form>
                 ${
                   actions &&
                   html` <div class="filter_actions">
-                    <button
-                      type="button"
-                      class="filter_button"
-                      onClick=${() => {
-                        onChange(options.map((option) => option.value));
-                      }}
-                    >
-                      Select All
-                    </button>
-                    <button
-                      type="button"
-                      class="filter_button"
-                      onClick=${() => {
-                        onChange([]);
-                      }}
-                    >
-                      Clear All
-                    </button>
-                  </div>`
+                      <button
+                        type="button"
+                        class="filter_button"
+                        onClick="${() => {
+                          onChange(options.map((option) => option.value));
+                        }}"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        class="filter_button"
+                        onClick="${() => {
+                          onChange([]);
+                        }}"
+                      >
+                        Clear All
+                      </button>
+                    </div>`
                 }
               </div>`;
         };
@@ -1120,7 +1388,6 @@
         clientCodeExample,
         declarationSource,
       }) => {
-        const [opened, setOpened] = useState(false);
         const [selectedMethod] = useUrlStringParam("method");
         const [selectedPackageName] = usePackageUrlStringParam();
 
@@ -1132,37 +1399,38 @@
           return null;
         }
 
-        return html`<details
-          class="route_details"
-          onToggle=${(e) => {
-            setOpened(e.newState === "open");
-          }}
-          data-method=${method}
-        >
-          <summary>
-            <div class="route_summary_container">
+        return html`<details class="route_details" data-method="${method}">
+            <summary class="route_summary_container">
               <span class="route_method">${method}</span>
               <p class="route_resource">${resource}</p>
+              ${method === "GET"
+                ? html`<a
+                      style="display:inline-flex; margin-left: 5px;"
+                      href="${resource}"
+                      ><${OpenLink}
+                    /></a>`
+                : null}
               <span style="flex:1"></span>
-              <${RouteBadge} meta=${meta} />
-              ${opened ? html`<${ArrowUp} />` : html`<${ArrowDown} />`}
-            </div>
-          </summary>
-          <${RouteDetailsContent}
-            method=${method}
-            resource=${resource}
-            description=${description}
-            availableMediaTypes=${availableMediaTypes}
-            availableLanguages=${availableLanguages}
-            availableVersions=${availableVersions}
-            availableEncodings=${availableEncodings}
-            acceptedMediaTypes=${acceptedMediaTypes}
-            websocket=${websocket}
-            clientCodeExample=${clientCodeExample}
-            declarationSource=${declarationSource}
-            meta=${meta}
-          />
-        </details>`;
+              <${RouteBadge} meta="${meta}" />
+              <span class="summary_marker">
+                <${ArrowDown} />
+              </span>
+            </summary>
+            <${RouteDetailsContent}
+              method="${method}"
+              resource="${resource}"
+              description="${description}"
+              availableMediaTypes="${availableMediaTypes}"
+              availableLanguages="${availableLanguages}"
+              availableVersions="${availableVersions}"
+              availableEncodings="${availableEncodings}"
+              acceptedMediaTypes="${acceptedMediaTypes}"
+              websocket="${websocket}"
+              clientCodeExample="${clientCodeExample}"
+              declarationSource="${declarationSource}"
+              meta="${meta}"
+            />
+          </details>`;
       };
 
       const RouteBadge = ({ meta }) => {
@@ -1171,9 +1439,9 @@
         }
         let text = meta.packageName;
         let title = `This endpoint is declared by ${meta.packageName}`;
-        return html`<span title=${title} class="route_owner_name"
-          >${text}</span
-        >`;
+        return html`<span title="${title}" class="route_owner_name"
+            >${text}</span
+          >`;
       };
 
       const RouteDetailsContent = ({
@@ -1191,51 +1459,51 @@
         meta,
       }) => {
         return html`<div class="route_details_content">
-          <${RoutedeclarationSource}
-            meta=${meta}
-            declarationSource=${declarationSource}
-          />
-          <p style="margin-top: 0"><strong>Description:</strong></p>
-          <p class="route_description">
-            ${description || "No description available"}
-          </p>
-          ${availableMediaTypes.length > 0 &&
-          html`<${RouteContentNegotiationSection}
-            type="content-type"
-            title="Available media types"
-            availableValues=${availableMediaTypes}
-          />`}
-          ${availableLanguages.length > 0 &&
-          html`<${RouteContentNegotiationSection}
-            type="language"
-            title="Available languages"
-            availableValues=${availableLanguages}
-          />`}
-          ${availableVersions.length > 0 &&
-          html`<${RouteContentNegotiationSection}
-            type="version"
-            title="Available versions"
-            availableValues=${availableVersions}
-          />`}
-          ${availableEncodings.length > 0 &&
-          html`<${RouteContentNegotiationSection}
-            type="encoding"
-            title="Available encodings"
-            availableValues=${availableEncodings}
-          />`}
-          ${acceptedMediaTypes.length > 0 &&
-          html`<${RouteAcceptableContentSection}
-            acceptedMediaTypes=${acceptedMediaTypes}
-          />`}
-          <p style="margin-bottom:0; font-weight:bold">Example:</p>
-          <${RouteCodeExample}
-            method=${method}
-            resource=${resource}
-            availableMediaTypes=${availableMediaTypes}
-            websocket=${websocket}
-            clientCodeExample=${clientCodeExample}
-          />
-        </div>`;
+            <${RoutedeclarationSource}
+              meta="${meta}"
+              declarationSource="${declarationSource}"
+            />
+            <p style="margin-top: 0"><strong>Description:</strong></p>
+            <p class="route_description">
+              ${description || "No description available"}
+            </p>
+            ${availableMediaTypes.length > 0 &&
+            html`<${RouteContentNegotiationSection}
+                type="content-type"
+                title="Available media types"
+                availableValues="${availableMediaTypes}"
+              />`}
+            ${availableLanguages.length > 0 &&
+            html`<${RouteContentNegotiationSection}
+                type="language"
+                title="Available languages"
+                availableValues="${availableLanguages}"
+              />`}
+            ${availableVersions.length > 0 &&
+            html`<${RouteContentNegotiationSection}
+                type="version"
+                title="Available versions"
+                availableValues="${availableVersions}"
+              />`}
+            ${availableEncodings.length > 0 &&
+            html`<${RouteContentNegotiationSection}
+                type="encoding"
+                title="Available encodings"
+                availableValues="${availableEncodings}"
+              />`}
+            ${acceptedMediaTypes.length > 0 &&
+            html`<${RouteAcceptableContentSection}
+                acceptedMediaTypes="${acceptedMediaTypes}"
+              />`}
+            <p style="margin-bottom:0; font-weight:bold">Example:</p>
+            <${RouteCodeExample}
+              method="${method}"
+              resource="${resource}"
+              availableMediaTypes="${availableMediaTypes}"
+              websocket="${websocket}"
+              clientCodeExample="${clientCodeExample}"
+            />
+          </div>`;
       };
       const RoutedeclarationSource = ({ meta, declarationSource }) => {
         if (!declarationSource) {
@@ -1244,8 +1512,8 @@
         return html`<p style="margin-top: 0"><strong>Declaration:</strong></p>
           <p>
             <${RouteDeclarationText}
-              ownerLink=${meta.ownerLink}
-              declarationLink=${meta.declarationLink}
+              ownerLink="${meta.ownerLink}"
+              declarationLink="${meta.declarationLink}"
             />
           </p>`;
       };
@@ -1259,23 +1527,23 @@
         availableValues,
       }) => {
         return html`<div class="route_content_nego" data-nego-type="${type}">
-          <p class="route_content_nego_title">${title}:</p>
-          <ul>
-            ${availableValues.map(
-              (availableValue) => html`<li>${availableValue}</li>`,
-            )}
-          </ul>
-        </div>`;
+            <p class="route_content_nego_title">${title}:</p>
+            <ul>
+              ${availableValues.map(
+                (availableValue) => html`<li>${availableValue}</li>`,
+              )}
+            </ul>
+          </div>`;
       };
       const RouteAcceptableContentSection = ({ acceptedMediaTypes }) => {
         return html`<div class="route_accepted_content_type">
-          <p><strong>Accepted content types:</strong></p>
-          <ul>
-            ${acceptedMediaTypes.map(
-              (acceptedMediaType) => html`<li>${acceptedMediaType}</li>`,
-            )}
-          </ul>
-        </div>`;
+            <p><strong>Accepted content types:</strong></p>
+            <ul>
+              ${acceptedMediaTypes.map(
+                (acceptedMediaType) => html`<li>${acceptedMediaType}</li>`,
+              )}
+            </ul>
+          </div>`;
       };
 
       const RouteCodeExample = ({
@@ -1327,33 +1595,37 @@
         }
 
         return html`<code-block lang="js" data-escaped data-copy-button
-          >${jsSource}</code-block
-        >`;
+            >${jsSource}</code-block
+          >`;
       };
 
-      const ArrowDown = () => {
+      const ArrowDown = ({ width = 24, height = 24 }) => {
         return html`<svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 -960 960 960"
-          width="24"
-          height="24"
-          fill="currentColor"
-          class="arrow_down"
-        >
-          <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
-        </svg>`;
+            viewBox="0 -960 960 960"
+            width="${width}"
+            height="${height}"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
+          </svg>`;
       };
-      const ArrowUp = () => {
+      const OpenLink = () => {
         return html`<svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 -960 960 960"
-          width="24"
-          height="24"
-          fill="currentColor"
-          class="arrow_up"
-        >
-          <path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" />
-        </svg>`;
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 64 64"
+            stroke-width="3"
+            stroke="currentColor"
+            fill="none"
+            width="24"
+            height="24"
+          >
+            <path
+              d="M55.4,32V53.58a1.81,1.81,0,0,1-1.82,1.82H10.42A1.81,1.81,0,0,1,8.6,53.58V10.42A1.81,1.81,0,0,1,10.42,8.6H32"
+            />
+            <polyline points="40.32 8.6 55.4 8.6 55.4 24.18" />
+            <line x1="19.32" y1="45.72" x2="54.61" y2="8.91" />
+          </svg>`;
       };
 
       render(html`<${Sidebar} />`, document.querySelector("aside"));

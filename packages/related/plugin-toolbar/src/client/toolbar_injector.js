@@ -243,13 +243,19 @@ const createToolbarTriggerNode = () => {
 
     #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
       opacity: 1;
-    }`;
-  const html = /* html */ ` <div id="jsenv_toolbar_trigger" style="display:none">
-    <style>${css}</style>
-    <svg id="jsenv_toolbar_trigger_icon">
-      <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
-    </svg>
-  </div>`;
+    }
+  `;
+  const html = /* html */ ` <div
+      id="jsenv_toolbar_trigger"
+      style="display:none"
+    >
+      <style>
+        ${css}
+      </style>
+      <svg id="jsenv_toolbar_trigger_icon">
+        <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
+      </svg>
+    </div>`;
 
   class JsenvToolbarTriggerHtmlElement extends HTMLElement {
     constructor() {

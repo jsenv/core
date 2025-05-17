@@ -1,0 +1,11 @@
+{
+  "name": "@jsenv/dom",
+  "private": true,
+  "version": "0.0.1",
+  "exports": {
+    ".": "./src/dom.js"
+  },
+  "dependencies": {
+    "@preact/signals": "2.0.4"
+  }
+}

@@ -1,4 +1,4 @@
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
 export const jsenvPluginAutoreloadServer = ({
   clientFileChangeEventEmitter,
@@ -10,7 +10,7 @@ export const jsenvPluginAutoreloadServer = ({
     serverEvents: {
       reload: (serverEventInfo) => {
         const formatUrlForClient = (url) => {
-          if (urlIsInsideOf(url, serverEventInfo.rootDirectoryUrl)) {
+          if (urlIsOrIsInsideOf(url, serverEventInfo.rootDirectoryUrl)) {
             return urlToRelativeUrl(url, serverEventInfo.rootDirectoryUrl);
           }
           if (url.startsWith("file:")) {

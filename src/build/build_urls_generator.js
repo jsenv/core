@@ -1,7 +1,7 @@
 // import { ANSI } from "@jsenv/humanize";
 import {
   injectQueryParams,
-  urlIsInsideOf,
+  urlIsOrIsInsideOf,
   urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
@@ -36,7 +36,7 @@ export const createBuildUrlsGenerator = ({
     if (buildUrlFromMap) {
       return buildUrlFromMap;
     }
-    if (urlIsInsideOf(url, buildDirectoryUrl)) {
+    if (urlIsOrIsInsideOf(url, buildDirectoryUrl)) {
       if (ownerUrlInfo.searchParams.has("dynamic_import_id")) {
         const ownerDirectoryPath = determineDirectoryPath({
           sourceDirectoryUrl,

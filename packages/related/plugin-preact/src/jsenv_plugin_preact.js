@@ -53,12 +53,17 @@ export const jsenvPluginPreact = ({
     appliesDuring: "*",
     resolveReference: {
       js_import: (reference) => {
-        if (
-          reference.specifier === "react" ||
-          reference.specifier === "react-dom"
-        ) {
+        if (reference.specifier === "react") {
           reference.specifier = "preact/compat";
-          // return context.resolveReference(reference).url;
+          return null;
+        }
+        if (reference.specifier.startsWith("react/")) {
+          reference.specifier = `preact/compat/${reference.specifier.slice("react/".length)}`;
+          return null;
+        }
+        if (reference.specifier === "react-dom") {
+          reference.specifier = "preact/compat";
+          return null;
         }
         return null;
       },

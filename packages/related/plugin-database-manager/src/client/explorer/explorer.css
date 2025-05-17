@@ -1,0 +1,94 @@
+.explorer_head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.explorer_head h2 {
+  margin-left: 24px;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  font-size: 16px;
+  user-select: none;
+}
+
+/* When multiple details are open, distribute space evenly */
+/* one day this is going to be decided by js with ability to resize manually */
+.explorer > details[open] {
+  flex: 1;
+}
+
+.explorer > details {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #e0e0e0;
+  min-height: 0; /* Critical for scrolling in flexbox context */
+  overflow: hidden;
+}
+.explorer > details:last-of-type {
+  border-bottom: none;
+  flex: 1; /* Take up remaining space */
+}
+.explorer > details > summary {
+  flex-shrink: 0;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  user-select: none;
+  font-size: 14px;
+  border: 1px solid transparent;
+}
+.explorer > details > summary:focus {
+  border-color: lightblue;
+}
+.explorer > details:open .summary_marker {
+  transform: rotate(0deg);
+}
+
+.explorer > details .summary_marker {
+  transform: rotate(-90deg);
+}
+.explorer > details .summary_action_icon {
+  display: none;
+  padding: 0;
+  border: 0;
+}
+.explorer > details .summary_action_icon:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+.explorer > details:open .summary_action_icon {
+  display: block;
+}
+.summary_label {
+  display: flex;
+  flex: 1;
+  gap: 0.2em;
+  align-items: center;
+  padding-right: 0.5em;
+}
+
+.explorer_group_content {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  min-height: 0;
+  max-height: none;
+}
+.explorer_group_list {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-left: 24px;
+}
+.explorer_group_item {
+  display: flex;
+}
+.explorer_group_item_content {
+  align-items: center;
+  white-space: nowrap;
+  display: flex;
+  gap: 0.3em;
+  min-width: 0; /* https://css-tricks.com/flexbox-truncated-text/#aa-the-solution-is-min-width-0-on-the-flex-child */
+  overflow: hidden;
+}
