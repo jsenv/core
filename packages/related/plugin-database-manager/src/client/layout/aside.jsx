@@ -100,17 +100,18 @@ const startResizing = (element, { onChange, onEnd, x, minWidth = 50 }) => {
   document.body.style.cursor = "ew-resize";
   document.body.style.userSelect = "none";
 
-  return () => {
-    stop();
+  return {
+    sizeInfo,
+    stop,
   };
 };
 const useResize = () => {
   const [resizing, setIsResizing] = useState(false);
   const [resizeWidth, setResizeWidth] = useState(null);
 
-  const stopRef = useRef();
+  const resizeRef = useRef();
   const startResize = useCallback((element, options) => {
-    stopRef.current = startResizing(element, {
+    const resize = startResizing(element, {
       onChange: (sizeInfo) => {
         setResizeWidth(sizeInfo.width);
       },
@@ -120,15 +121,17 @@ const useResize = () => {
       },
       ...options,
     });
+    resizeRef.current = resize;
+    setResizeWidth(resize.sizeInfo.width);
     setIsResizing(true);
   }, []);
 
   useLayoutEffect(() => {
     return () => {
-      const stop = stopRef.current;
-      if (stop) {
-        stopRef.current = null;
-        stop();
+      const resize = resizeRef.current;
+      if (resize) {
+        resizeRef.current = null;
+        resize.stop();
       }
     };
   }, []);
