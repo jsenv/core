@@ -53,7 +53,7 @@ effect(() => {
   saveAsideWidth(asideWidth);
 });
 
-const startResizing = (element, { onChange, onEnd, x, minWidth = 200 }) => {
+const startResizing = (element, { onChange, onEnd, x, minWidth = 50 }) => {
   const widthAtStart = element.offsetWidth;
   const sizeInfo = {
     widthAtStart,
@@ -149,10 +149,11 @@ export const Aside = ({ children }) => {
     <aside
       style={{
         width: resizing ? resizeWidth : width,
+        // Disable transition during resize to make it feel responsive
+        transition: resizing ? "none" : undefined,
       }}
       // eslint-disable-next-line react/no-unknown-property
       onresizeEnd={(e) => {
-        console.log("set final width to", e.detail.width);
         setAsideWidth(e.detail.width);
       }}
     >
