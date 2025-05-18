@@ -27,6 +27,10 @@ const valueInLocalStorage = (key, { type } = {}) => {
     return JSON.parse(valueInLocalStorage);
   };
   const set = (value) => {
+    if (value === undefined) {
+      window.localStorage.removeItem(key);
+      return;
+    }
     window.localStorage.setItem("aside_width", JSON.stringify(value));
   };
 
@@ -58,6 +62,7 @@ export const Aside = ({ children }) => {
       }}
     >
       {children}
+      <div className="resize_handle"></div>
     </aside>
   );
 };

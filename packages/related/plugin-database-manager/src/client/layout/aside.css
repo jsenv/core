@@ -5,7 +5,22 @@ aside {
   position: sticky;
   top: 0;
   transition: width 0.3s ease-in-out;
+  position: relative;
+  border-right: 1px solid #e0e0e0;
 }
 aside[data-open] {
   width: 200px;
+}
+
+.resize_handle {
+  position: absolute;
+  right: -2px;
+  width: 4px;
+  top: 0;
+  bottom: 0;
+  cursor: ew-resize;
+}
+.resize_handle:hover {
+  background-color: blue;
+  opacity: 0.5;
 }
