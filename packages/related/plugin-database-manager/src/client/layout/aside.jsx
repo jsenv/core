@@ -1,4 +1,5 @@
 import { effect, signal } from "@preact/signals";
+import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 import "./aside.css" with { type: "css" };
 
 const valueInLocalStorage = (key, { type } = {}) => {
@@ -52,17 +53,97 @@ effect(() => {
   saveAsideWidth(asideWidth);
 });
 
+const startResizing = (element, { onChange, onEnd, x, minWidth = 200 }) => {
+  const width = element.offsetWidth;
+
+  const handleMouseMove = (e) => {
+    const moveX = e.clientX - x;
+    const moveWidthRequested = width + moveX;
+    const moveWidth =
+      moveWidthRequested < minWidth ? minWidth : moveWidthRequested;
+    onChange({ width: moveWidth });
+  };
+
+  const handleMouseUp = (e) => {
+    const upX = e.clientX - x;
+    const upWidthRequested = width + upX;
+    const upWidth = upWidthRequested < minWidth ? minWidth : upWidthRequested;
+    onChange({ width: upWidth });
+
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    onEnd({ width: upWidth });
+  };
+
+  // Add event listeners to document
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
+
+  // Set cursor for better UX during resize
+  document.body.style.cursor = "ew-resize";
+  document.body.style.userSelect = "none";
+
+  // Clean up
+  return () => {
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  };
+};
+const useResize = ({ onEnd }) => {
+  const [resizeInfo, setResizeInfo] = useState();
+
+  const stopRef = useRef();
+  const start = useCallback((element, options) => {
+    stopRef.current = startResizing(element, {
+      onChange: ({ width }) => {
+        setResizeInfo({ width });
+      },
+      onEnd: (info) => {
+        setResizeInfo(null);
+        onEnd(info);
+      },
+      ...options,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    const stop = stopRef.current;
+    if (stop) {
+      stopRef.current = null;
+      stop();
+    }
+  });
+
+  return [resizeInfo, start];
+};
+
 export const Aside = ({ children }) => {
   const width = useAsideWidth();
+
+  const [resize, startResize] = useResize({
+    onEnd: ({ width }) => {
+      setAsideWidth(width);
+    },
+  });
 
   return (
     <aside
       style={{
-        width,
+        width: resize ? resize.width : width,
       }}
     >
       {children}
-      <div className="resize_handle"></div>
+      <div
+        className="resize_handle"
+        data-
+        onMouseDown={(e) => {
+          startResize(e.target.parentNode, {
+            x: e.clientX,
+          });
+        }}
+      ></div>
     </aside>
   );
 };
