@@ -15,11 +15,13 @@ const App = () => {
         <Explorer />
       </Aside>
       <main>
-        {/* <h1 title="Explore and manager your database">Database Manager</h1> */}
-
-        <RoleRoutes />
-        <DatabaseRoutes />
-        <TableRoutes />
+        <div style="overflow-x: auto;">
+          <div style="padding: 20px;">
+            <RoleRoutes />
+            <DatabaseRoutes />
+            <TableRoutes />
+          </div>
+        </div>
       </main>
     </div>
   );
