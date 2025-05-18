@@ -105,19 +105,22 @@ const startResizing = (element, { onChange, onEnd, x, minWidth = 200 }) => {
   };
 };
 const useResize = () => {
-  const [resizeInfo, setResizeInfo] = useState(null);
+  const [resizing, setIsResizing] = useState(false);
+  const [resizeWidth, setResizeWidth] = useState(null);
 
   const stopRef = useRef();
-  const start = useCallback((element, options) => {
+  const startResize = useCallback((element, options) => {
     stopRef.current = startResizing(element, {
       onChange: (sizeInfo) => {
-        setResizeInfo({ ...sizeInfo });
+        setResizeWidth(sizeInfo.width);
       },
       onEnd: () => {
-        setResizeInfo(null);
+        setResizeWidth(null);
+        setIsResizing(false);
       },
       ...options,
     });
+    setIsResizing(true);
   }, []);
 
   useLayoutEffect(() => {
@@ -130,33 +133,36 @@ const useResize = () => {
     };
   }, []);
 
-  return [resizeInfo, start];
+  return {
+    resizing,
+    startResize,
+    resizeWidth,
+  };
 };
 
 export const Aside = ({ children }) => {
   const width = useAsideWidth();
 
-  const [resize, startResize] = useResize();
+  const { resizing, resizeWidth, startResize } = useResize();
 
   return (
     <aside
       style={{
-        width: resize ? resize.width : width,
+        width: resizing ? resizeWidth : width,
+      }}
+      // eslint-disable-next-line react/no-unknown-property
+      onresizeEnd={(e) => {
+        console.log("set final width to", e.detail.width);
+        setAsideWidth(e.detail.width);
       }}
     >
       {children}
       <div
         className="resize_handle"
-        data-
         onMouseDown={(e) => {
           startResize(e.target.parentNode, {
             x: e.clientX,
           });
-        }}
-        // eslint-disable-next-line react/no-unknown-property
-        onResizeEnd={(e) => {
-          debugger;
-          setAsideWidth(e.detail.width);
         }}
       ></div>
     </aside>
