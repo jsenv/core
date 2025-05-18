@@ -29,6 +29,10 @@ const ensureDetailsScrollableTakeFullHeight = (details) => {
     }
   };
 
+  details.addEventListener("toggle", () => {
+    updateHeight();
+  });
+
   updateHeight();
   const resizeObserver = new ResizeObserver(() => {
     updateHeight();

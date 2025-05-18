@@ -5,6 +5,9 @@
   height: 100%;
   width: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* Make explorer take all available height */
 }
 
 .explorer_head {
@@ -20,6 +23,13 @@
   user-select: none;
 }
 
+.explorer_body {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* Take remaining space */
+  min-height: 0; /* Critical for scrolling */
+  overflow: hidden;
+}
 .explorer_group {
   display: flex;
   flex-direction: column;
