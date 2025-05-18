@@ -29,7 +29,7 @@ export const ExplorerGroup = ({
   }, [setIsCreatingNew]);
 
   return (
-    <details {...detailsProps}>
+    <details className="explorer_group" {...detailsProps}>
       <summary>
         <span className="summary_marker" style="width: 24px; height: 24px">
           <ArrowDown />

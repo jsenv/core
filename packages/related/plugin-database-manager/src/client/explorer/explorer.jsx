@@ -23,8 +23,10 @@ export const Explorer = () => {
       <div className="explorer_head">
         <h2>Explorer</h2>
       </div>
-      <ExplorerDatabases />
-      <ExplorerRoles />
+      <div className="explorer_body">
+        <ExplorerDatabases />
+        <ExplorerRoles />
+      </div>
     </nav>
   );
 };

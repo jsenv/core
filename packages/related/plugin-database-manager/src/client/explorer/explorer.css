@@ -1,3 +1,12 @@
+.explorer {
+  margin-bottom: 20px;
+  border-right: 1px solid #e0e0e0;
+  background: #f5f5f5;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
 .explorer_head {
   display: flex;
   flex-direction: row;
@@ -11,24 +20,23 @@
   user-select: none;
 }
 
-/* When multiple details are open, distribute space evenly */
-/* one day this is going to be decided by js with ability to resize manually */
-.explorer > details[open] {
-  flex: 1;
-}
-
-.explorer > details {
+.explorer_group {
   display: flex;
   flex-direction: column;
   border-bottom: 1px solid #e0e0e0;
   min-height: 0; /* Critical for scrolling in flexbox context */
   overflow: hidden;
 }
-.explorer > details:last-of-type {
+.explorer_group:last-of-type {
   border-bottom: none;
   flex: 1; /* Take up remaining space */
 }
-.explorer > details > summary {
+/* When multiple details are open, distribute space evenly */
+/* one day this is going to be decided by js with ability to resize manually */
+.explorer_group[open] {
+  flex: 1;
+}
+.explorer_group > summary {
   flex-shrink: 0;
   cursor: pointer;
   font-weight: 500;
@@ -39,26 +47,25 @@
   font-size: 14px;
   border: 1px solid transparent;
 }
-.explorer > details > summary:focus {
+.explorer_group > summary:focus {
   border-color: lightblue;
 }
-.explorer > details:open .summary_marker {
-  transform: rotate(0deg);
-}
-
-.explorer > details .summary_marker {
+.explorer_group .summary_marker {
   transform: rotate(-90deg);
 }
-.explorer > details .summary_action_icon {
+.explorer_group[open] .summary_marker {
+  transform: rotate(0deg);
+}
+.summary_action_icon {
   display: none;
   padding: 0;
   border: 0;
 }
-.explorer > details .summary_action_icon:hover {
-  background: rgba(0, 0, 0, 0.1);
-}
-.explorer > details:open .summary_action_icon {
+.explorer_group[open] .summary_action_icon {
   display: block;
+}
+.summary_action_icon:hover {
+  background: rgba(0, 0, 0, 0.1);
 }
 .summary_label {
   display: flex;
@@ -69,12 +76,13 @@
 }
 
 .explorer_group_content {
-  display: flex;
-  flex-direction: column;
   overflow-y: auto;
   scrollbar-gutter: stable;
-  min-height: 0;
-  max-height: none;
+  overscroll-behavior: contain;
+  height: 100%;
+  flex: 1; /* Take up remaining height */
+  min-height: 0; /* Prevent default height issues */
+  scrollbar-width: thin;
 }
 .explorer_group_list {
   margin-top: 0;
