@@ -3,8 +3,9 @@
  * this way, if we reload the page in an other viewport the size adapts
  */
 
+import { useResizeStatus } from "@jsenv/dom";
 import { effect, signal } from "@preact/signals";
-import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useRef } from "preact/hooks";
 import "./aside.css" with { type: "css" };
 
 const valueInLocalStorage = (key, { type } = {}) => {
@@ -58,127 +59,27 @@ effect(() => {
   saveAsideWidth(asideWidth);
 });
 
-const startResizing = (element, { onChange, onEnd, x, minWidth = "auto" }) => {
-  if (minWidth === "auto") {
-    minWidth = window.getComputedStyle(element).minWidth;
-    minWidth = parseInt(minWidth, 10);
-  }
-
-  const widthAtStart = element.offsetWidth;
-  const sizeInfo = {
-    widthAtStart,
-    width: widthAtStart,
-  };
-
-  const updateRequestedWidth = (requestedWidth) => {
-    const nextWidth = requestedWidth < minWidth ? minWidth : requestedWidth;
-    if (nextWidth !== sizeInfo.width) {
-      sizeInfo.width = nextWidth;
-      onChange(sizeInfo);
-    }
-  };
-
-  const handleMouseMove = (e) => {
-    const mouseMoveX = e.clientX - x;
-    updateRequestedWidth(widthAtStart + mouseMoveX);
-  };
-
-  let started = true;
-  const stop = () => {
-    if (!started) {
-      return;
-    }
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-    started = false;
-  };
-
-  const handleMouseUp = (e) => {
-    const mouseUpX = e.clientX - x;
-    updateRequestedWidth(widthAtStart + mouseUpX);
-
-    stop();
-    onEnd(sizeInfo);
-    const resizeEndEvent = new CustomEvent("resizeEnd", { detail: sizeInfo });
-    element.dispatchEvent(resizeEndEvent);
-  };
-
-  document.addEventListener("mousemove", handleMouseMove);
-  document.addEventListener("mouseup", handleMouseUp);
-  document.body.style.cursor = "ew-resize";
-  document.body.style.userSelect = "none";
-
-  return {
-    sizeInfo,
-    stop,
-  };
-};
-const useResize = () => {
-  const [resizing, setIsResizing] = useState(false);
-  const [resizeWidth, setResizeWidth] = useState(null);
-
-  const resizeRef = useRef();
-  const startResize = useCallback((element, options) => {
-    const resize = startResizing(element, {
-      onChange: (sizeInfo) => {
-        setResizeWidth(sizeInfo.width);
-      },
-      onEnd: () => {
-        setResizeWidth(null);
-        setIsResizing(false);
-      },
-      ...options,
-    });
-    resizeRef.current = resize;
-    setResizeWidth(resize.sizeInfo.width);
-    setIsResizing(true);
-  }, []);
-
-  useLayoutEffect(() => {
-    return () => {
-      const resize = resizeRef.current;
-      if (resize) {
-        resizeRef.current = null;
-        resize.stop();
-      }
-    };
-  }, []);
-
-  return {
-    resizing,
-    startResize,
-    resizeWidth,
-  };
-};
-
 export const Aside = ({ children }) => {
+  const asideRef = useRef(null);
   const width = useAsideWidth();
-
-  const { resizing, resizeWidth, startResize } = useResize();
+  const { resizing, resizeWidth } = useResizeStatus(asideRef);
 
   return (
     <aside
+      ref={asideRef}
+      data-resize="horizontal"
       style={{
         width: resizing ? resizeWidth : width,
         // Disable transition during resize to make it feel responsive
         transition: resizing ? "none" : undefined,
       }}
       // eslint-disable-next-line react/no-unknown-property
-      onresizeEnd={(e) => {
+      onresizeend={(e) => {
         setAsideWidth(e.detail.width);
       }}
     >
       {children}
-      <div
-        className="resize_handle"
-        onMouseDown={(e) => {
-          startResize(e.target.parentNode, {
-            x: e.clientX,
-          });
-        }}
-      ></div>
+      <div data-resize-handle></div>
     </aside>
   );
 };

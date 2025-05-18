@@ -36,7 +36,8 @@
     "@jsenv/router": "0.0.9",
     "@jsenv/form": "0.0.1",
     "@tanstack/table-core": "8.21.3",
-    "@jsenv/sigi": "0.1.1"
+    "@jsenv/sigi": "0.1.1",
+    "@jsenv/dom": "0.0.1"
   },
   "devDependencies": {
     "preact": "10.26.5",

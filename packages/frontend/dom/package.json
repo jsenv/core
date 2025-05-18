@@ -6,6 +6,7 @@
     ".": "./src/dom.js"
   },
   "dependencies": {
-    "@preact/signals": "2.0.4"
+    "@preact/signals": "2.0.4",
+    "preact": "10.26.5"
   }
 }

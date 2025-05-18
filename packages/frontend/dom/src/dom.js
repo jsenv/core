@@ -1,3 +1,5 @@
+import "./resize/resize.js";
+
 export { elementIsVisible } from "./element_is_visible.js";
 export {
   addActiveElementEffect,
@@ -5,6 +7,7 @@ export {
 } from "./focus/active_element.js";
 export { elementIsFocusable } from "./focus/element_is_focusable.js";
 export { trapFocusInside } from "./focus/focus_trap.js";
+export { useResizeStatus } from "./resize/resize_hooks.js";
 export {
   getAncestorScrolls,
   getScrollableParentSet,
