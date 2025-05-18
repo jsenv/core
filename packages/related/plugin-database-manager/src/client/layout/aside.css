@@ -1,0 +1,11 @@
+aside {
+  width: 250px;
+  flex-shrink: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  transition: width 0.3s ease-in-out;
+}
+aside[data-open] {
+  width: 200px;
+}
