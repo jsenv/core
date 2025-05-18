@@ -62,7 +62,8 @@ const startResizing = (element, { onChange, onEnd, x, minWidth = 200 }) => {
 
   const updateRequestedWidth = (requestedWidth) => {
     const nextWidth = requestedWidth < minWidth ? minWidth : requestedWidth;
-    if (nextWidth === sizeInfo.width) {
+    if (nextWidth !== sizeInfo.width) {
+      sizeInfo.width = nextWidth;
       onChange(sizeInfo);
     }
   };
@@ -72,44 +73,45 @@ const startResizing = (element, { onChange, onEnd, x, minWidth = 200 }) => {
     updateRequestedWidth(widthAtStart + mouseMoveX);
   };
 
-  const handleMouseUp = (e) => {
-    const mouseUpX = e.clientX - x;
-    updateRequestedWidth(widthAtStart + mouseUpX);
-
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-    onEnd(sizeInfo);
-
-    const resizeEndEvent = new CustomEvent("resizeEnd", {
-      detail: sizeInfo,
-    });
-    element.dispatchEvent(resizeEndEvent);
-  };
-
-  // Add event listeners to document
-  document.addEventListener("mousemove", handleMouseMove);
-  document.addEventListener("mouseup", handleMouseUp);
-
-  // Set cursor for better UX during resize
-  document.body.style.cursor = "ew-resize";
-  document.body.style.userSelect = "none";
-
-  // Clean up
-  return () => {
+  let started = true;
+  const stop = () => {
+    if (!started) {
+      return;
+    }
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
+    started = false;
+  };
+
+  const handleMouseUp = (e) => {
+    const mouseUpX = e.clientX - x;
+    updateRequestedWidth(widthAtStart + mouseUpX);
+
+    stop();
+    onEnd(sizeInfo);
+    const resizeEndEvent = new CustomEvent("resizeEnd", { detail: sizeInfo });
+    element.dispatchEvent(resizeEndEvent);
+  };
+
+  document.addEventListener("mousemove", handleMouseMove);
+  document.addEventListener("mouseup", handleMouseUp);
+  document.body.style.cursor = "ew-resize";
+  document.body.style.userSelect = "none";
+
+  return () => {
+    stop();
   };
 };
 const useResize = () => {
-  const [resizeInfo, setResizeInfo] = useState();
+  const [resizeInfo, setResizeInfo] = useState(null);
 
   const stopRef = useRef();
   const start = useCallback((element, options) => {
     stopRef.current = startResizing(element, {
-      onChange: ({ width }) => {
-        setResizeInfo({ width });
+      onChange: (sizeInfo) => {
+        setResizeInfo({ ...sizeInfo });
       },
       onEnd: () => {
         setResizeInfo(null);
