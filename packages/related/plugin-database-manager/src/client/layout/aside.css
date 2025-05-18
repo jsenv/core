@@ -20,7 +20,8 @@ aside > [data-resize-handle] {
   bottom: 0;
   cursor: ew-resize;
 }
-aside > [data-resize-handle]:hover {
+aside > [data-resize-handle]:hover,
+aside[data-resizing] > [data-resize-handle] {
   background-color: blue;
   opacity: 0.5;
 }

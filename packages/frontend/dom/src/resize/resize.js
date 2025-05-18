@@ -15,8 +15,8 @@ const start = (element, xStart, yStart) => {
     return;
   }
 
-  const widthAtStart = element.offsetWidth;
-  const heightAtStart = element.offsetHeight;
+  const widthAtStart = elementToResize.offsetWidth;
+  const heightAtStart = elementToResize.offsetHeight;
   let x = 0;
   let y = 0;
   let xMove = 0;
@@ -34,8 +34,8 @@ const start = (element, xStart, yStart) => {
     heightChanged: false,
   };
 
-  let minWidth = parseInt(window.getComputedStyle(element).minWidth);
-  let minHeight = parseInt(window.getComputedStyle(element).minHeight);
+  let minWidth = parseInt(window.getComputedStyle(elementToResize).minWidth);
+  let minHeight = parseInt(window.getComputedStyle(elementToResize).minHeight);
 
   const dispatchResizeStartEvent = () => {
     const resizeStartEvent = new CustomEvent("resizestart", {
@@ -93,6 +93,7 @@ const start = (element, xStart, yStart) => {
     document.removeEventListener("mouseup", handleMouseUp);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
+    elementToResize.removeAttribute("data-resizing");
     dispatchResizeEndEvent();
   };
 
@@ -105,6 +106,7 @@ const start = (element, xStart, yStart) => {
         ? "ns-resize"
         : "nwse-resize";
   document.body.style.userSelect = "none";
+  elementToResize.setAttribute("data-resizing", "");
   dispatchResizeStartEvent();
 };
 
