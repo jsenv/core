@@ -58,7 +58,12 @@ effect(() => {
   saveAsideWidth(asideWidth);
 });
 
-const startResizing = (element, { onChange, onEnd, x, minWidth = 50 }) => {
+const startResizing = (element, { onChange, onEnd, x, minWidth = "auto" }) => {
+  if (minWidth === "auto") {
+    minWidth = window.getComputedStyle(element).minWidth;
+    minWidth = parseInt(minWidth, 10);
+  }
+
   const widthAtStart = element.offsetWidth;
   const sizeInfo = {
     widthAtStart,
@@ -160,11 +165,6 @@ export const Aside = ({ children }) => {
         // Disable transition during resize to make it feel responsive
         transition: resizing ? "none" : undefined,
       }}
-      // le max-width sera le width de la page - le min-width
-      // du contenu a droite de la side bar
-      // et ça il faudra le recup dans startResizing
-      // qui cherchera donc
-      data-resize-min-width="50px"
       // eslint-disable-next-line react/no-unknown-property
       onresizeEnd={(e) => {
         setAsideWidth(e.detail.width);
