@@ -15,6 +15,11 @@ const start = (element, xStart, yStart) => {
     return;
   }
 
+  const horizontalResizeEnabled =
+    direction === "horizontal" || direction === "both";
+  const verticalResizeEnabled =
+    direction === "vertical" || direction === "both";
+
   const widthAtStart = elementToResize.offsetWidth;
   const heightAtStart = elementToResize.offsetHeight;
   let x = 0;
@@ -34,8 +39,32 @@ const start = (element, xStart, yStart) => {
     heightChanged: false,
   };
 
-  let minWidth = parseInt(window.getComputedStyle(elementToResize).minWidth);
-  let minHeight = parseInt(window.getComputedStyle(elementToResize).minHeight);
+  const minWidth = getMinWidth(elementToResize);
+  const minHeight = getMinHeight(elementToResize);
+  let maxWidth = elementToResize.parentElement.offsetWidth;
+  let maxHeight = elementToResize.parentElement.offsetHeight;
+  let nextSibling = elementToResize.nextElementSibling;
+  while (nextSibling) {
+    if (horizontalResizeEnabled) {
+      const nextSiblingMinWidth = getMinWidth(nextSibling);
+      if (nextSiblingMinWidth) {
+        // this is true only for flexbox with direction row,
+        // otherwise next element is not important
+        // (we would have to check parentElement.nextSibling instead maybe)
+        maxWidth -= nextSiblingMinWidth;
+      }
+    }
+    if (verticalResizeEnabled) {
+      const nextSiblingMinHeight = getMinHeight(nextSibling);
+      if (nextSiblingMinHeight) {
+        // only for flexbox with direction column
+        // otherwise next element is not important for max height
+        // (we would have to check parentElement.nextSibling instead maybe)
+        maxHeight -= nextSiblingMinHeight;
+      }
+    }
+    nextSibling = nextSibling.nextElementSibling;
+  }
 
   const dispatchResizeStartEvent = () => {
     const resizeStartEvent = new CustomEvent("resizestart", {
@@ -55,17 +84,26 @@ const start = (element, xStart, yStart) => {
   };
 
   const requestResize = (requestedWidth, requestedHeight) => {
-    if (direction === "horizontal" || direction === "both") {
-      const nextWidth = requestedWidth < minWidth ? minWidth : requestedWidth;
+    if (horizontalResizeEnabled) {
+      let nextWidth = requestedWidth;
+      if (requestedWidth > maxWidth) {
+        nextWidth = maxWidth;
+      } else if (requestedWidth < minWidth) {
+        nextWidth = minWidth;
+      }
       const widthChanged = nextWidth !== resizeInfo.width;
       resizeInfo.widthChanged = widthChanged;
       if (widthChanged) {
         resizeInfo.width = nextWidth;
       }
     }
-    if (direction === "vertical" || direction === "both") {
-      const nextHeight =
-        requestedHeight < minHeight ? minHeight : requestedHeight;
+    if (verticalResizeEnabled) {
+      let nextHeight = requestedHeight;
+      if (requestedHeight > maxHeight) {
+        nextHeight = maxHeight;
+      } else if (requestedHeight < minHeight) {
+        nextHeight = minHeight;
+      }
       const heightChanged = nextHeight !== resizeInfo.height;
       resizeInfo.heightChanged = heightChanged;
       if (heightChanged) {
@@ -108,6 +146,16 @@ const start = (element, xStart, yStart) => {
   document.body.style.userSelect = "none";
   elementToResize.setAttribute("data-resizing", "");
   dispatchResizeStartEvent();
+};
+
+const getMinWidth = (element) => {
+  const minWidth = parseInt(window.getComputedStyle(element).minWidth);
+  return isNaN(minWidth) ? 0 : minWidth;
+};
+
+const getMinHeight = (element) => {
+  const minHeight = parseInt(window.getComputedStyle(element).minHeight);
+  return isNaN(minHeight) ? 0 : minHeight;
 };
 
 document.addEventListener("mousedown", (e) => {
