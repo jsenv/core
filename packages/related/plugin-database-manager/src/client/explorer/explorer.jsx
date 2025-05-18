@@ -6,6 +6,7 @@
 import { effect } from "@preact/signals";
 import { setCurrentRole } from "../role/role_signals.js";
 import { roleStore } from "../role/role_store.js";
+import "./details_content_scroll.js";
 import "./explorer.css" with { type: "css" };
 import { ExplorerDatabases } from "./explorer_databases.jsx";
 import { ExplorerRoles } from "./explorer_roles.jsx";

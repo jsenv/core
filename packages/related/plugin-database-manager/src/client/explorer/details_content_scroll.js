@@ -1,23 +1,30 @@
 const detailsWeakMap = new WeakMap();
-const ensureDetailsScrollableTakeFullHeight = (detail) => {
+const ensureDetailsScrollableTakeFullHeight = (details) => {
   const updateHeight = () => {
-    const detailsHeight = detail.offsetHeight;
-    let summary = detail.querySelector("summary");
-    let previousChildHeight = 0;
+    let summary = details.querySelector("summary");
 
-    for (const child of detail.children) {
-      const childHeight = child.offsetHeight;
-      if (child === summary) {
-        previousChildHeight += childHeight;
-        continue;
+    const summaryNextSiblingSet = new Set();
+    {
+      let child = summary;
+      let nextElementSibling;
+      while ((nextElementSibling = child.nextElementSibling)) {
+        nextElementSibling.style.height = "auto";
+        summaryNextSiblingSet.add(nextElementSibling);
+        child = nextElementSibling;
       }
-      const computedStyle = window.getComputedStyle(child);
+    }
+
+    const detailsHeight = details.offsetHeight;
+    let summaryHeight = summary.offsetHeight;
+    let heightBefore = summaryHeight;
+    for (const nextElementSibling of summaryNextSiblingSet) {
+      const computedStyle = window.getComputedStyle(nextElementSibling);
       if (
         computedStyle.overflowY === "auto" ||
         computedStyle.overflowY === "scroll"
       ) {
-        const contentHeight = detailsHeight - previousChildHeight;
-        child.style.height = `${contentHeight}px`;
+        const contentHeight = detailsHeight - heightBefore;
+        nextElementSibling.style.height = `${contentHeight}px`;
       }
     }
   };
@@ -26,9 +33,9 @@ const ensureDetailsScrollableTakeFullHeight = (detail) => {
   const resizeObserver = new ResizeObserver(() => {
     updateHeight();
   });
-  resizeObserver.observe(detail);
+  resizeObserver.observe(details);
 
-  detailsWeakMap.set(detail, () => {
+  detailsWeakMap.set(details, () => {
     resizeObserver.disconnect();
   });
 };
