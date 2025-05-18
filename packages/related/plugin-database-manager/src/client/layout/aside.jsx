@@ -54,25 +54,36 @@ effect(() => {
 });
 
 const startResizing = (element, { onChange, onEnd, x, minWidth = 200 }) => {
-  const width = element.offsetWidth;
+  const widthAtStart = element.offsetWidth;
+  const sizeInfo = {
+    widthAtStart,
+    width: widthAtStart,
+  };
+
+  const updateRequestedWidth = (requestedWidth) => {
+    const nextWidth = requestedWidth < minWidth ? minWidth : requestedWidth;
+    if (nextWidth === sizeInfo.width) {
+      onChange(sizeInfo);
+    }
+  };
 
   const handleMouseMove = (e) => {
-    const moveX = e.clientX - x;
-    const moveWidthRequested = width + moveX;
-    const moveWidth =
-      moveWidthRequested < minWidth ? minWidth : moveWidthRequested;
-    onChange({ width: moveWidth });
+    const mouseMoveX = e.clientX - x;
+    updateRequestedWidth(widthAtStart + mouseMoveX);
   };
 
   const handleMouseUp = (e) => {
-    const upX = e.clientX - x;
-    const upWidthRequested = width + upX;
-    const upWidth = upWidthRequested < minWidth ? minWidth : upWidthRequested;
-    onChange({ width: upWidth });
+    const mouseUpX = e.clientX - x;
+    updateRequestedWidth(widthAtStart + mouseUpX);
 
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
-    onEnd({ width: upWidth });
+    onEnd(sizeInfo);
+
+    const resizeEndEvent = new CustomEvent("resizeEnd", {
+      detail: sizeInfo,
+    });
+    element.dispatchEvent(resizeEndEvent);
   };
 
   // Add event listeners to document
@@ -91,7 +102,7 @@ const startResizing = (element, { onChange, onEnd, x, minWidth = 200 }) => {
     document.body.style.userSelect = "";
   };
 };
-const useResize = ({ onEnd }) => {
+const useResize = () => {
   const [resizeInfo, setResizeInfo] = useState();
 
   const stopRef = useRef();
@@ -100,21 +111,22 @@ const useResize = ({ onEnd }) => {
       onChange: ({ width }) => {
         setResizeInfo({ width });
       },
-      onEnd: (info) => {
+      onEnd: () => {
         setResizeInfo(null);
-        onEnd(info);
       },
       ...options,
     });
   }, []);
 
   useLayoutEffect(() => {
-    const stop = stopRef.current;
-    if (stop) {
-      stopRef.current = null;
-      stop();
-    }
-  });
+    return () => {
+      const stop = stopRef.current;
+      if (stop) {
+        stopRef.current = null;
+        stop();
+      }
+    };
+  }, []);
 
   return [resizeInfo, start];
 };
@@ -122,11 +134,7 @@ const useResize = ({ onEnd }) => {
 export const Aside = ({ children }) => {
   const width = useAsideWidth();
 
-  const [resize, startResize] = useResize({
-    onEnd: ({ width }) => {
-      setAsideWidth(width);
-    },
-  });
+  const [resize, startResize] = useResize();
 
   return (
     <aside
@@ -142,6 +150,11 @@ export const Aside = ({ children }) => {
           startResize(e.target.parentNode, {
             x: e.clientX,
           });
+        }}
+        // eslint-disable-next-line react/no-unknown-property
+        onResizeEnd={(e) => {
+          debugger;
+          setAsideWidth(e.detail.width);
         }}
       ></div>
     </aside>
