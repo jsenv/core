@@ -15,7 +15,11 @@ const App = () => {
         <Explorer />
       </Aside>
       <main>
-        <div style="overflow-x: auto;">
+        {/* min-height ensure scrollbars always appear at the bottom
+        and overflow ensure scrollbare are displayed on the content
+        which is the part that is overflowing (the aside cannot overflow because
+        it has a fixed width + overflow hidden) */}
+        <div style="overflow-x: auto; min-height: 100vh;">
           <div style="padding: 20px;">
             <RoleRoutes />
             <DatabaseRoutes />
