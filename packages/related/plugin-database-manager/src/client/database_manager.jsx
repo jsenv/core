@@ -10,7 +10,7 @@ import { TableRoutes } from "./table/table_page.jsx";
 
 const App = () => {
   return (
-    <div>
+    <div id="app">
       <Aside>
         <Explorer />
       </Aside>
@@ -25,7 +25,7 @@ const App = () => {
   );
 };
 
-render(<App />, document.querySelector("#app"));
+render(<App />, document.querySelector("#root"));
 
 if (import.meta.hot) {
   // jsenv router does not support hot reload (yet)
