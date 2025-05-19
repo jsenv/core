@@ -45,84 +45,89 @@ export const ExplorerGroup = forwardRef(
     }, [setIsCreatingNew]);
 
     return (
-      <details
-        ref={innerRef}
-        id={id}
-        className="explorer_group"
-        data-resize="vertical"
-        style={{
-          height: resizing ? resizeHeight : undefined,
-        }}
-        {...detailsProps}
-      >
-        <summary>
-          {id === "roles_explorer" && (
-            <div data-resize-handle={id}>
-              <div></div>
-            </div>
-          )}
-          <div className="summary_body">
-            <span className="summary_marker" style="width: 24px; height: 24px">
-              <ArrowDown />
-            </span>
-            <span className="summary_label">
-              {labelChildren}
-              <span style="display: flex; flex: 1"></span>
-              <button
-                className="summary_action_icon"
-                style="width: 22px; height: 22px; cursor: pointer;"
-                onMouseDown={(e) => {
-                  // ensure when input is focused it stays focused
-                  // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
-                  e.preventDefault();
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  startCreatingNew();
-                }}
+      <>
+        <details
+          ref={innerRef}
+          id={id}
+          className="explorer_group"
+          data-resize="vertical"
+          style={{
+            height: resizing ? resizeHeight : undefined,
+          }}
+          {...detailsProps}
+        >
+          <summary>
+            <div className="summary_body">
+              <span
+                className="summary_marker"
+                style="width: 24px; height: 24px"
               >
-                {createNewButtonChildren}
-              </button>
-            </span>
-          </div>
-        </summary>
-        <div className="explorer_group_content">
-          <ul className="explorer_group_list">
-            {children.map((item) => {
-              return (
-                <li className="explorer_group_item" key={item[idKey]}>
-                  <ExplorerGroupItem
-                    idKey={idKey}
+                <ArrowDown />
+              </span>
+              <span className="summary_label">
+                {labelChildren}
+                <span style="display: flex; flex: 1"></span>
+                <button
+                  className="summary_action_icon"
+                  style="width: 22px; height: 22px; cursor: pointer;"
+                  onMouseDown={(e) => {
+                    // ensure when input is focused it stays focused
+                    // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
+                    e.preventDefault();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    startCreatingNew();
+                  }}
+                >
+                  {createNewButtonChildren}
+                </button>
+              </span>
+            </div>
+          </summary>
+          <div className="explorer_group_content">
+            <ul className="explorer_group_list">
+              {children.map((item) => {
+                return (
+                  <li className="explorer_group_item" key={item[idKey]}>
+                    <ExplorerGroupItem
+                      idKey={idKey}
+                      nameKey={nameKey}
+                      item={item}
+                      ItemComponent={ItemComponent}
+                      useItemList={useItemList}
+                      useItemRouteUrl={useItemRouteUrl}
+                      useItemRouteIsActive={useItemRouteIsActive}
+                      useRenameItemAction={useRenameItemAction}
+                      useDeleteItemAction={useDeleteItemAction}
+                    />
+                  </li>
+                );
+              })}
+              {isCreatingNew && (
+                <li className="explorer_group_item">
+                  <NewItem
                     nameKey={nameKey}
-                    item={item}
-                    ItemComponent={ItemComponent}
-                    useItemList={useItemList}
-                    useItemRouteUrl={useItemRouteUrl}
-                    useItemRouteIsActive={useItemRouteIsActive}
-                    useRenameItemAction={useRenameItemAction}
-                    useDeleteItemAction={useDeleteItemAction}
+                    useCreateItemAction={useCreateItemAction}
+                    onCancel={() => {
+                      // si on a rien rentré on le cré pas, sinon oui on le cré
+                      stopCreatingNew();
+                    }}
+                    onSubmitEnd={() => {
+                      stopCreatingNew();
+                    }}
                   />
                 </li>
-              );
-            })}
-            {isCreatingNew && (
-              <li className="explorer_group_item">
-                <NewItem
-                  nameKey={nameKey}
-                  useCreateItemAction={useCreateItemAction}
-                  onCancel={() => {
-                    // si on a rien rentré on le cré pas, sinon oui on le cré
-                    stopCreatingNew();
-                  }}
-                  onSubmitEnd={() => {
-                    stopCreatingNew();
-                  }}
-                />
-              </li>
-            )}
-          </ul>
-        </div>
-      </details>
+              )}
+            </ul>
+          </div>
+        </details>
+        {id === "databases_explorer" && (
+          <div data-resize-handle={id}>
+            <div></div>
+          </div>
+        )}
+      </>
     );
   },
 );

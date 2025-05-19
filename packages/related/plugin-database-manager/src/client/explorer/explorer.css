@@ -34,6 +34,8 @@
   flex-direction: column;
   min-height: fit-content;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 .explorer_group:last-of-type {
   flex: 1; /* Take up remaining space */
@@ -54,7 +56,7 @@
   border: 1px solid transparent;
 }
 .explorer_group > summary:focus {
-  border-color: lightblue;
+  border-color: blue;
 }
 
 .summary_body {
@@ -89,29 +91,33 @@
   padding-right: 0.5em;
 }
 
-.explorer_group > summary > [data-resize-handle] {
+.explorer_group + [data-resize-handle] {
   width: 100%;
   height: 5px;
   margin-top: -2px;
   margin-bottom: -2px;
   position: relative;
+
+  z-index: 2;
   cursor: ns-resize;
   display: flex;
   justify-content: center;
   align-items: center;
 }
-.explorer_group > summary > [data-resize-handle] > * {
+.explorer_group + [data-resize-handle] > * {
+  position: relative;
+  z-index: 0;
   background-color: #e0e0e0;
   height: 1px;
   width: 100%;
 }
-.explorer_group > summary > [data-resize-handle]:hover,
-.explorer_group[data-resizing] > summary > [data-resize-handle] {
+.explorer_group + [data-resize-handle]:hover,
+.explorer_group[data-resizing] + [data-resize-handle] {
   background-color: blue;
   opacity: 0.5;
 }
-.explorer_group > summary > [data-resize-handle]:hover > *,
-.explorer_group[data-resizing] > summary > [data-resize-handle] > * {
+.explorer_group + [data-resize-handle]:hover > *,
+.explorer_group[data-resizing] + [data-resize-handle] > * {
   background-color: transparent;
 }
 

@@ -1,17 +1,26 @@
 /**
- *
+ * - make it work on details
+ * - when details is active, somehow the resize-handle becomes harder to click
  *
  */
 
 const start = (event) => {
-  const element = event.target;
-  if (!element.hasAttribute("data-resize-handle")) {
+  if (event.button !== 0) {
+    return;
+  }
+  const target = event.target;
+  if (!target.closest) {
+    return;
+  }
+  const elementWithDataResizeHandle = target.closest("[data-resize-handle]");
+  if (!elementWithDataResizeHandle) {
     return;
   }
   let elementToResize;
-  const dataResizeHandle = element.getAttribute("data-resize-handle");
+  const dataResizeHandle =
+    elementWithDataResizeHandle.getAttribute("data-resize-handle");
   if (!dataResizeHandle || dataResizeHandle === "true") {
-    elementToResize = element.closest("[data-resize]");
+    elementToResize = elementWithDataResizeHandle.closest("[data-resize]");
   } else {
     elementToResize = document.querySelector(`#${dataResizeHandle}`);
   }
