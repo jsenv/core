@@ -95,50 +95,39 @@ const start = (event) => {
 
   const mutationSet = new Set();
   for (const child of elementToResize.parentElement.children) {
-    const computedStyle = getComputedStyle(child);
-
-    // Save the original flex properties
-    const originalStyles = {
-      flex: computedStyle.flex,
-      flexGrow: computedStyle.flexGrow,
-      flexShrink: computedStyle.flexShrink,
-      flexBasis: computedStyle.flexBasis,
-      height: computedStyle.height,
-      width: computedStyle.width,
-    };
-
+    // we must first store the sizes because when we'll set the styles
+    // if will impact their sizes
     const currentSize = {
       width: child.offsetWidth,
       height: child.offsetHeight,
     };
-
     mutationSet.add(() => {
-      // Force explicit dimensions and disable flex-grow
-      if (horizontalResizeEnabled) {
-        child.style.width = `${currentSize.width}px`;
-      }
-      if (verticalResizeEnabled) {
-        child.style.height = `${currentSize.height}px`;
-      }
-
-      child.style.flex = "0 0 auto"; // Shorthand for flex-grow:0, flex-shrink:0, flex-basis:auto
-      child.style.flexGrow = "0";
-      child.style.flexShrink = "0";
-      child.style.flexBasis = "auto";
-
-      // Add cleanup function to restore original flex properties
-      endCallbackSet.add(() => {
-        // Restore all original flex properties
-        child.style.flex = originalStyles.flex;
-        child.style.flexGrow = originalStyles.flexGrow;
-        child.style.flexShrink = originalStyles.flexShrink;
-        child.style.flexBasis = originalStyles.flexBasis;
-        if (horizontalResizeEnabled) {
-          child.style.width = originalStyles.width;
+      const setStyles = (namedValues) => {
+        const inlineValueMap = new Map();
+        for (const key of Object.keys(namedValues)) {
+          const inlineValue = child.style[key];
+          inlineValueMap.set(key, inlineValue);
+          endCallbackSet.add(() => {
+            if (inlineValue === "") {
+              child.style.removeProperty(key);
+            } else {
+              child.style[key] = inlineValue;
+            }
+          });
         }
-        if (verticalResizeEnabled) {
-          child.style.height = originalStyles.height;
+        for (const key of Object.keys(namedValues)) {
+          const value = namedValues[key];
+          child.style[key] = value;
         }
+      };
+
+      setStyles({
+        ...(horizontalResizeEnabled ? { width: `${currentSize.width}px` } : {}),
+        ...(verticalResizeEnabled ? { height: `${currentSize.height}px` } : {}),
+        flex: "0 0 auto",
+        flexGrow: "0",
+        flexShrink: "0",
+        flexBasis: "auto",
       });
     });
   }
@@ -148,7 +137,6 @@ const start = (event) => {
 
   const widthAtStart = elementToResize.offsetWidth;
   const heightAtStart = elementToResize.offsetHeight;
-  console.log(elementToResize.style.height);
   const xAtStart = event.clientX;
   const yAtStart = event.clientY;
   const resizeInfo = {
