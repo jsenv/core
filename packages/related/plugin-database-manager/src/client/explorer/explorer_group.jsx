@@ -1,7 +1,13 @@
+import { useResizeStatus } from "@jsenv/dom";
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import { SPAInputText, SPALink, useDetails } from "@jsenv/router";
 import { forwardRef } from "preact/compat";
-import { useCallback, useRef, useState } from "preact/hooks";
+import {
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { FontSizedSvg } from "../font_sized_svg.jsx";
 
 export const ExplorerGroup = forwardRef(
@@ -24,7 +30,11 @@ export const ExplorerGroup = forwardRef(
     },
     ref,
   ) => {
+    const innerRef = useRef();
+    useImperativeHandle(ref, () => innerRef.current);
     const detailsProps = useDetails(urlParam);
+
+    const { resizing, resizeHeight } = useResizeStatus(innerRef);
 
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const startCreatingNew = useCallback(() => {
@@ -36,10 +46,13 @@ export const ExplorerGroup = forwardRef(
 
     return (
       <details
-        ref={ref}
+        ref={innerRef}
         id={id}
         className="explorer_group"
         data-resize="vertical"
+        style={{
+          height: resizing ? resizeHeight : undefined,
+        }}
         {...detailsProps}
       >
         <summary>
