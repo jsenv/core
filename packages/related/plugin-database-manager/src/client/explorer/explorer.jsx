@@ -26,8 +26,8 @@ export const Explorer = () => {
       </div>
       <div className="explorer_body">
         <ChildrenWithResizeHandle>
-          <ExplorerDatabases />
-          <ExplorerRoles />
+          <ExplorerDatabases id="databases_explorer" />
+          <ExplorerRoles id="roles_explorer" />
         </ChildrenWithResizeHandle>
       </div>
     </nav>
@@ -46,7 +46,7 @@ const ChildrenWithResizeHandle = ({ children }) => {
     i++;
     if (i > 0 && i < children.length) {
       elements.push(
-        <div data-resize-handle>
+        <div data-resize-handle={child.props.id}>
           <div></div>
         </div>,
       );

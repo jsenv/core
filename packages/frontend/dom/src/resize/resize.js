@@ -2,7 +2,14 @@ const start = (element, xStart, yStart) => {
   if (!element.hasAttribute("data-resize-handle")) {
     return;
   }
-  const elementToResize = element.closest("[data-resize]");
+  let elementToResize;
+  const dataResizeHandle = element.getAttribute("data-resize-handle");
+  if (!dataResizeHandle || dataResizeHandle === "true") {
+    elementToResize = element.closest("[data-resize]");
+  } else {
+    elementToResize = document.querySelector(`#"${dataResizeHandle}"`);
+  }
+
   if (!elementToResize) {
     console.warn("No element to resize found");
     return;
