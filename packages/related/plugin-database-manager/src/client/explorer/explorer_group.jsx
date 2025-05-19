@@ -14,6 +14,7 @@ export const ExplorerGroup = forwardRef(
   (
     {
       id,
+      resizable,
       urlParam,
       idKey,
       nameKey,
@@ -122,7 +123,7 @@ export const ExplorerGroup = forwardRef(
             </ul>
           </div>
         </details>
-        {id === "databases_explorer" && (
+        {resizable && (
           <div data-resize-handle={id}>
             <div></div>
           </div>

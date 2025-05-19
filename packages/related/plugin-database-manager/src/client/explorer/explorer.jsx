@@ -4,6 +4,7 @@
  */
 
 import { effect } from "@preact/signals";
+import { useState } from "preact/hooks";
 import { setCurrentRole } from "../role/role_signals.js";
 import { roleStore } from "../role/role_store.js";
 import "./details_content_scroll.js";
@@ -30,10 +31,22 @@ export const Explorer = () => {
 };
 
 const ExplorerBody = () => {
+  const [detailsOpenCount, setDetailsOpenCount] = useState(0);
+  const resizable = detailsOpenCount > 1;
+
   return (
-    <div className="explorer_body">
-      <ExplorerDatabases id="databases_explorer" />
-      <ExplorerRoles id="roles_explorer" />
+    <div
+      className="explorer_body"
+      onToggle={(toggleEvent) => {
+        if (toggleEvent.newState === "open") {
+          setDetailsOpenCount((count) => count + 1);
+        } else {
+          setDetailsOpenCount((count) => count - 1);
+        }
+      }}
+    >
+      <ExplorerDatabases id="databases_explorer" resizable={resizable} />
+      <ExplorerRoles id="roles_explorer" resizable={resizable} />
     </div>
   );
 };
