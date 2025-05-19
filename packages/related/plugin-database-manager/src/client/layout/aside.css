@@ -15,7 +15,7 @@ aside[data-open] {
 aside > [data-resize-handle] {
   position: absolute;
   right: -2px;
-  width: 4px;
+  width: 5px;
   top: 0;
   bottom: 0;
   cursor: ew-resize;

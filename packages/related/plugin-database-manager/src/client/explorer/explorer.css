@@ -32,12 +32,10 @@
 .explorer_group {
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid #e0e0e0;
   min-height: fit-content;
   overflow: hidden;
 }
 .explorer_group:last-of-type {
-  border-bottom: none;
   flex: 1; /* Take up remaining space */
 }
 /* When multiple details are open, distribute space evenly */
@@ -82,6 +80,32 @@
   gap: 0.2em;
   align-items: center;
   padding-right: 0.5em;
+}
+
+.explorer_body > [data-resize-handle] {
+  width: 100%;
+  height: 5px;
+  margin-top: -1px;
+  margin-bottom: -1px;
+  position: relative;
+  cursor: ns-resize;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.explorer_body > [data-resize-handle] > * {
+  background-color: #e0e0e0;
+  height: 1px;
+  width: 100%;
+}
+.explorer_body > [data-resize-handle]:hover,
+.explorer_body[data-resizing] > [data-resize-handle] {
+  background-color: blue;
+  opacity: 0.5;
+}
+.explorer_body > [data-resize-handle]:hover > *,
+.explorer_body[data-resizing] > [data-resize-handle] > * {
+  background-color: transparent;
 }
 
 .explorer_group_content {

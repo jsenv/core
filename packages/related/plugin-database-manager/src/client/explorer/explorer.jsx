@@ -25,9 +25,33 @@ export const Explorer = () => {
         <h2>Explorer</h2>
       </div>
       <div className="explorer_body">
-        <ExplorerDatabases />
-        <ExplorerRoles />
+        <ChildrenWithResizeHandle>
+          <ExplorerDatabases />
+          <ExplorerRoles />
+        </ChildrenWithResizeHandle>
       </div>
     </nav>
   );
+};
+
+const ChildrenWithResizeHandle = ({ children }) => {
+  if (!Array.isArray(children)) {
+    return children;
+  }
+  const elements = [];
+  let i = 0;
+  while (i < children.length) {
+    const child = children[i];
+    elements.push(child);
+    i++;
+    if (i > 0 && i < children.length) {
+      elements.push(
+        <div data-resize-handle>
+          <div></div>
+        </div>,
+      );
+    }
+  }
+
+  return elements;
 };
