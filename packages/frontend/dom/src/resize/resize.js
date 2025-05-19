@@ -7,7 +7,7 @@ const start = (element, xStart, yStart) => {
   if (!dataResizeHandle || dataResizeHandle === "true") {
     elementToResize = element.closest("[data-resize]");
   } else {
-    elementToResize = document.querySelector(`#"${dataResizeHandle}"`);
+    elementToResize = document.querySelector(`#${dataResizeHandle}`);
   }
 
   if (!elementToResize) {
@@ -154,6 +154,18 @@ const start = (element, xStart, yStart) => {
     yMove = y - yStart;
     requestResize(widthAtStart + xMove, heightAtStart + yMove);
   };
+
+  const backdrop = document.createElement("div");
+  backdrop.style.position = "fixed";
+  backdrop.style.inset = "0";
+  backdrop.style.cursor =
+    direction === "horizontal"
+      ? "ew-resize"
+      : direction === "vertical"
+        ? "ns-resize"
+        : "nwse-resize";
+  backdrop.style.userSelect = "none";
+
   const handleMouseUp = (e) => {
     x = e.clientX;
     y = e.clientY;
@@ -162,21 +174,14 @@ const start = (element, xStart, yStart) => {
     requestResize(widthAtStart + xMove, heightAtStart + yMove);
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
+    document.body.removeChild(backdrop);
     elementToResize.removeAttribute("data-resizing");
     dispatchResizeEndEvent();
   };
 
+  document.body.appendChild(backdrop);
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
-  document.body.style.cursor =
-    direction === "horizontal"
-      ? "ew-resize"
-      : direction === "vertical"
-        ? "ns-resize"
-        : "nwse-resize";
-  document.body.style.userSelect = "none";
   elementToResize.setAttribute("data-resizing", "");
   dispatchResizeStartEvent();
 };

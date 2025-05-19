@@ -35,7 +35,13 @@ export const ExplorerGroup = forwardRef(
     }, [setIsCreatingNew]);
 
     return (
-      <details ref={ref} id={id} className="explorer_group" {...detailsProps}>
+      <details
+        ref={ref}
+        id={id}
+        className="explorer_group"
+        data-resize="vertical"
+        {...detailsProps}
+      >
         <summary>
           {id === "roles_explorer" && (
             <div data-resize-handle={id}>
