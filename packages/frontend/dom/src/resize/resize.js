@@ -31,14 +31,17 @@ const start = (element, xStart, yStart) => {
       parentElementComputedStyle.display === "flex" &&
       parentElementComputedStyle.flexDirection === "row"
     ) {
-      let i = 0;
-      while (i < parentElement.children.length) {
-        const child = parentElement.children[i];
-        if (child !== elementToResize && child !== element) {
-          const siblingMinWidth = getMinWidth(child);
-          maxWidth -= siblingMinWidth;
-        }
-        i++;
+      let previousSibling = elementToResize.previousElementSibling;
+      while (previousSibling) {
+        const previousSiblinWidth = previousSibling.offsetWidth;
+        maxWidth -= previousSiblinWidth;
+        previousSibling = previousSibling.previousElementSibling;
+      }
+      let nextSibling = elementToResize.nextElementSibling;
+      while (nextSibling) {
+        const nextSiblingMinWidth = getMinWidth(nextSibling);
+        maxWidth -= nextSiblingMinWidth;
+        nextSibling = nextSibling.nextElementSibling;
       }
     }
   }
@@ -51,14 +54,17 @@ const start = (element, xStart, yStart) => {
       parentElementComputedStyle.display === "flex" &&
       parentElementComputedStyle.flexDirection === "column"
     ) {
-      let i = 0;
-      while (i < parentElement.children.length) {
-        const child = parentElement.children[i];
-        if (child !== elementToResize && child !== element) {
-          const siblingMinHeight = getMinHeight(child);
-          maxHeight -= siblingMinHeight;
-        }
-        i++;
+      let previousSibling = elementToResize.previousElementSibling;
+      while (previousSibling) {
+        const previousSiblingHeight = previousSibling.offsetHeight;
+        maxHeight -= previousSiblingHeight;
+        previousSibling = previousSibling.previousElementSibling;
+      }
+      let nextSibling = elementToResize.nextElementSibling;
+      while (nextSibling) {
+        const nextSiblingMinHeight = getMinHeight(nextSibling);
+        maxHeight -= nextSiblingMinHeight;
+        nextSibling = nextSibling.nextElementSibling;
       }
     }
   }
