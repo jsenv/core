@@ -24,34 +24,16 @@ export const Explorer = () => {
       <div className="explorer_head">
         <h2>Explorer</h2>
       </div>
-      <div className="explorer_body">
-        <ChildrenWithResizeHandle>
-          <ExplorerDatabases id="databases_explorer" />
-          <ExplorerRoles id="roles_explorer" />
-        </ChildrenWithResizeHandle>
-      </div>
+      <ExplorerBody />
     </nav>
   );
 };
 
-const ChildrenWithResizeHandle = ({ children }) => {
-  if (!Array.isArray(children)) {
-    return children;
-  }
-  const elements = [];
-  let i = 0;
-  while (i < children.length) {
-    const child = children[i];
-    elements.push(child);
-    i++;
-    if (i > 0 && i < children.length) {
-      elements.push(
-        <div data-resize-handle={child.props.id}>
-          <div></div>
-        </div>,
-      );
-    }
-  }
-
-  return elements;
+const ExplorerBody = () => {
+  return (
+    <div className="explorer_body">
+      <ExplorerDatabases id="databases_explorer" />
+      <ExplorerRoles id="roles_explorer" />
+    </div>
+  );
 };

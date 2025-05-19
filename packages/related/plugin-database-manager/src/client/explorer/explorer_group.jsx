@@ -1,99 +1,112 @@
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import { SPAInputText, SPALink, useDetails } from "@jsenv/router";
+import { forwardRef } from "preact/compat";
 import { useCallback, useRef, useState } from "preact/hooks";
 import { FontSizedSvg } from "../font_sized_svg.jsx";
 
-export const ExplorerGroup = ({
-  id,
-  urlParam,
-  idKey,
-  nameKey,
-  children,
-  labelChildren,
-  ItemComponent,
-  createNewButtonChildren,
-  useItemList,
-  useItemRouteUrl,
-  useItemRouteIsActive,
-  useRenameItemAction,
-  useCreateItemAction,
-  useDeleteItemAction,
-}) => {
-  const detailsProps = useDetails(urlParam);
+export const ExplorerGroup = forwardRef(
+  (
+    {
+      id,
+      urlParam,
+      idKey,
+      nameKey,
+      children,
+      labelChildren,
+      ItemComponent,
+      createNewButtonChildren,
+      useItemList,
+      useItemRouteUrl,
+      useItemRouteIsActive,
+      useRenameItemAction,
+      useCreateItemAction,
+      useDeleteItemAction,
+    },
+    ref,
+  ) => {
+    const detailsProps = useDetails(urlParam);
 
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const startCreatingNew = useCallback(() => {
-    setIsCreatingNew(true);
-  }, [setIsCreatingNew]);
-  const stopCreatingNew = useCallback(() => {
-    setIsCreatingNew(false);
-  }, [setIsCreatingNew]);
+    const [isCreatingNew, setIsCreatingNew] = useState(false);
+    const startCreatingNew = useCallback(() => {
+      setIsCreatingNew(true);
+    }, [setIsCreatingNew]);
+    const stopCreatingNew = useCallback(() => {
+      setIsCreatingNew(false);
+    }, [setIsCreatingNew]);
 
-  return (
-    <details id={id} className="explorer_group" {...detailsProps}>
-      <summary>
-        <span className="summary_marker" style="width: 24px; height: 24px">
-          <ArrowDown />
-        </span>
-        <span className="summary_label">
-          {labelChildren}
-          <span style="display: flex; flex: 1"></span>
-          <button
-            className="summary_action_icon"
-            style="width: 22px; height: 22px; cursor: pointer;"
-            onMouseDown={(e) => {
-              // ensure when input is focused it stays focused
-              // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
-              e.preventDefault();
-            }}
-            onClick={(e) => {
-              e.preventDefault();
-              startCreatingNew();
-            }}
-          >
-            {createNewButtonChildren}
-          </button>
-        </span>
-      </summary>
-      <div className="explorer_group_content">
-        <ul className="explorer_group_list">
-          {children.map((item) => {
-            return (
-              <li className="explorer_group_item" key={item[idKey]}>
-                <ExplorerGroupItem
-                  idKey={idKey}
+    return (
+      <details ref={ref} id={id} className="explorer_group" {...detailsProps}>
+        <summary>
+          {id === "roles_explorer" && (
+            <div data-resize-handle={id}>
+              <div></div>
+            </div>
+          )}
+          <div className="summary_body">
+            <span className="summary_marker" style="width: 24px; height: 24px">
+              <ArrowDown />
+            </span>
+            <span className="summary_label">
+              {labelChildren}
+              <span style="display: flex; flex: 1"></span>
+              <button
+                className="summary_action_icon"
+                style="width: 22px; height: 22px; cursor: pointer;"
+                onMouseDown={(e) => {
+                  // ensure when input is focused it stays focused
+                  // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
+                  e.preventDefault();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  startCreatingNew();
+                }}
+              >
+                {createNewButtonChildren}
+              </button>
+            </span>
+          </div>
+        </summary>
+        <div className="explorer_group_content">
+          <ul className="explorer_group_list">
+            {children.map((item) => {
+              return (
+                <li className="explorer_group_item" key={item[idKey]}>
+                  <ExplorerGroupItem
+                    idKey={idKey}
+                    nameKey={nameKey}
+                    item={item}
+                    ItemComponent={ItemComponent}
+                    useItemList={useItemList}
+                    useItemRouteUrl={useItemRouteUrl}
+                    useItemRouteIsActive={useItemRouteIsActive}
+                    useRenameItemAction={useRenameItemAction}
+                    useDeleteItemAction={useDeleteItemAction}
+                  />
+                </li>
+              );
+            })}
+            {isCreatingNew && (
+              <li className="explorer_group_item">
+                <NewItem
                   nameKey={nameKey}
-                  item={item}
-                  ItemComponent={ItemComponent}
-                  useItemList={useItemList}
-                  useItemRouteUrl={useItemRouteUrl}
-                  useItemRouteIsActive={useItemRouteIsActive}
-                  useRenameItemAction={useRenameItemAction}
-                  useDeleteItemAction={useDeleteItemAction}
+                  useCreateItemAction={useCreateItemAction}
+                  onCancel={() => {
+                    // si on a rien rentré on le cré pas, sinon oui on le cré
+                    stopCreatingNew();
+                  }}
+                  onSubmitEnd={() => {
+                    stopCreatingNew();
+                  }}
                 />
               </li>
-            );
-          })}
-          {isCreatingNew && (
-            <li className="explorer_group_item">
-              <NewItem
-                nameKey={nameKey}
-                useCreateItemAction={useCreateItemAction}
-                onCancel={() => {
-                  // si on a rien rentré on le cré pas, sinon oui on le cré
-                  stopCreatingNew();
-                }}
-                onSubmitEnd={() => {
-                  stopCreatingNew();
-                }}
-              />
-            </li>
-          )}
-        </ul>
-      </div>
-    </details>
-  );
-};
+            )}
+          </ul>
+        </div>
+      </details>
+    );
+  },
+);
 const ArrowDown = () => {
   return (
     <svg
