@@ -20,6 +20,49 @@ const start = (element, xStart, yStart) => {
   const verticalResizeEnabled =
     direction === "vertical" || direction === "both";
 
+  const minWidth = getMinWidth(elementToResize);
+  const minHeight = getMinHeight(elementToResize);
+  let maxWidth;
+  if (horizontalResizeEnabled) {
+    maxWidth = elementToResize.parentElement.offsetWidth;
+    const parentElement = elementToResize.parentElement;
+    const parentElementComputedStyle = window.getComputedStyle(parentElement);
+    if (
+      parentElementComputedStyle.display === "flex" &&
+      parentElementComputedStyle.flexDirection === "row"
+    ) {
+      let i = 0;
+      while (i < parentElement.children.length) {
+        const child = parentElement.children[i];
+        if (child !== elementToResize && child !== element) {
+          const siblingMinWidth = getMinWidth(child);
+          maxWidth -= siblingMinWidth;
+        }
+        i++;
+      }
+    }
+  }
+  let maxHeight;
+  if (verticalResizeEnabled) {
+    maxHeight = elementToResize.parentElement.offsetHeight;
+    const parentElement = elementToResize.parentElement;
+    const parentElementComputedStyle = window.getComputedStyle(parentElement);
+    if (
+      parentElementComputedStyle.display === "flex" &&
+      parentElementComputedStyle.flexDirection === "column"
+    ) {
+      let i = 0;
+      while (i < parentElement.children.length) {
+        const child = parentElement.children[i];
+        if (child !== elementToResize && child !== element) {
+          const siblingMinHeight = getMinHeight(child);
+          maxHeight -= siblingMinHeight;
+        }
+        i++;
+      }
+    }
+  }
+
   const widthAtStart = elementToResize.offsetWidth;
   const heightAtStart = elementToResize.offsetHeight;
   let x = 0;
@@ -27,6 +70,10 @@ const start = (element, xStart, yStart) => {
   let xMove = 0;
   let yMove = 0;
   const resizeInfo = {
+    minWidth,
+    minHeight,
+    maxWidth,
+    maxHeight,
     xAtStart: 0,
     yAtStart: 0,
     x: 0,
@@ -38,33 +85,6 @@ const start = (element, xStart, yStart) => {
     widthChanged: false,
     heightChanged: false,
   };
-
-  const minWidth = getMinWidth(elementToResize);
-  const minHeight = getMinHeight(elementToResize);
-  let maxWidth = elementToResize.parentElement.offsetWidth;
-  let maxHeight = elementToResize.parentElement.offsetHeight;
-  let nextSibling = elementToResize.nextElementSibling;
-  while (nextSibling) {
-    if (horizontalResizeEnabled) {
-      const nextSiblingMinWidth = getMinWidth(nextSibling);
-      if (nextSiblingMinWidth) {
-        // this is true only for flexbox with direction row,
-        // otherwise next element is not important
-        // (we would have to check parentElement.nextSibling instead maybe)
-        maxWidth -= nextSiblingMinWidth;
-      }
-    }
-    if (verticalResizeEnabled) {
-      const nextSiblingMinHeight = getMinHeight(nextSibling);
-      if (nextSiblingMinHeight) {
-        // only for flexbox with direction column
-        // otherwise next element is not important for max height
-        // (we would have to check parentElement.nextSibling instead maybe)
-        maxHeight -= nextSiblingMinHeight;
-      }
-    }
-    nextSibling = nextSibling.nextElementSibling;
-  }
 
   const dispatchResizeStartEvent = () => {
     const resizeStartEvent = new CustomEvent("resizestart", {
