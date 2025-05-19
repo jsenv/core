@@ -1,4 +1,5 @@
-const start = (element, xStart, yStart) => {
+const start = (event) => {
+  const element = event.target;
   if (!element.hasAttribute("data-resize-handle")) {
     return;
   }
@@ -9,18 +10,17 @@ const start = (element, xStart, yStart) => {
   } else {
     elementToResize = document.querySelector(`#${dataResizeHandle}`);
   }
-
   if (!elementToResize) {
     console.warn("No element to resize found");
     return;
   }
-
   // inspired by https://developer.mozilla.org/en-US/docs/Web/CSS/resize
   // "horizontal", "vertical", "both"
   const direction = elementToResize.getAttribute("data-resize");
   if (direction === "none") {
     return;
   }
+  event.preventDefault();
 
   const horizontalResizeEnabled =
     direction === "horizontal" || direction === "both";
@@ -78,19 +78,19 @@ const start = (element, xStart, yStart) => {
 
   const widthAtStart = elementToResize.offsetWidth;
   const heightAtStart = elementToResize.offsetHeight;
-  let x = 0;
-  let y = 0;
-  let xMove = 0;
-  let yMove = 0;
+  const xAtStart = event.clientX;
+  const yAtStart = event.clientY;
   const resizeInfo = {
     minWidth,
     minHeight,
     maxWidth,
     maxHeight,
-    xAtStart: 0,
-    yAtStart: 0,
-    x: 0,
-    y: 0,
+    xAtStart,
+    yAtStart,
+    x: xAtStart,
+    y: yAtStart,
+    xMove: 0,
+    yMove: 0,
     widthAtStart,
     heightAtStart,
     width: widthAtStart,
@@ -148,11 +148,14 @@ const start = (element, xStart, yStart) => {
     }
   };
   const handleMouseMove = (e) => {
-    x = e.clientX;
-    y = e.clientY;
-    xMove = x - xStart;
-    yMove = y - yStart;
-    requestResize(widthAtStart + xMove, heightAtStart + yMove);
+    resizeInfo.x = e.clientX;
+    resizeInfo.y = e.clientY;
+    resizeInfo.xMove = resizeInfo.x - xAtStart;
+    resizeInfo.yMove = resizeInfo.y - yAtStart;
+    requestResize(
+      widthAtStart + resizeInfo.xMove,
+      heightAtStart + resizeInfo.yMove,
+    );
   };
 
   const backdrop = document.createElement("div");
@@ -167,11 +170,15 @@ const start = (element, xStart, yStart) => {
   backdrop.style.userSelect = "none";
 
   const handleMouseUp = (e) => {
-    x = e.clientX;
-    y = e.clientY;
-    xMove = x - xStart;
-    yMove = y - yStart;
-    requestResize(widthAtStart + xMove, heightAtStart + yMove);
+    e.preventDefault();
+    resizeInfo.x = e.clientX;
+    resizeInfo.y = e.clientY;
+    resizeInfo.xMove = resizeInfo.x - xAtStart;
+    resizeInfo.yMove = resizeInfo.y - yAtStart;
+    requestResize(
+      widthAtStart + resizeInfo.xMove,
+      heightAtStart + resizeInfo.yMove,
+    );
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
     document.body.removeChild(backdrop);
@@ -197,5 +204,5 @@ const getMinHeight = (element) => {
 };
 
 document.addEventListener("mousedown", (e) => {
-  start(e.target, e.clientX, e.clientY);
+  start(e);
 });
