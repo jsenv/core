@@ -1,4 +1,7 @@
-// TODO: try to prevent details to be opened when mouse is released on them
+/**
+ *
+ *
+ */
 
 const start = (event) => {
   const element = event.target;
@@ -156,10 +159,9 @@ const start = (event) => {
     resizeInfo.y = e.clientY;
     resizeInfo.xMove = resizeInfo.x - xAtStart;
     resizeInfo.yMove = resizeInfo.y - yAtStart;
-    requestResize(
-      widthAtStart + resizeInfo.xMove,
-      heightAtStart + resizeInfo.yMove,
-    );
+    const newWidth = widthAtStart + resizeInfo.xMove;
+    const newHeight = heightAtStart + resizeInfo.yMove;
+    requestResize(newWidth, newHeight);
   };
 
   const backdrop = document.createElement("div");
