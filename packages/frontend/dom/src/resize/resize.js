@@ -1,6 +1,7 @@
 /**
- * - make it work on details
- * - when details is active, somehow the resize-handle becomes harder to click
+ *
+ * il faudrait virer le flex: 1 des next siblings (et lui meme)
+ * pendant le resize
  *
  */
 
@@ -35,6 +36,8 @@ const start = (event) => {
     return;
   }
   event.preventDefault();
+
+  const endCallbackSet = new Set();
 
   const horizontalResizeEnabled =
     direction === "horizontal" || direction === "both";
@@ -90,6 +93,57 @@ const start = (event) => {
     }
   }
 
+  const mutationSet = new Set();
+  for (const child of elementToResize.parentElement.children) {
+    const computedStyle = getComputedStyle(child);
+
+    // Save the original flex properties
+    const originalStyles = {
+      flexGrow: computedStyle.flexGrow,
+      flexShrink: computedStyle.flexShrink,
+      flexBasis: computedStyle.flexBasis,
+      height: computedStyle.height,
+      width: computedStyle.width,
+    };
+
+    const currentSize = {
+      width: child.offsetWidth,
+      height: child.offsetHeight,
+    };
+
+    mutationSet.add(() => {
+      // Force explicit dimensions and disable flex-grow
+      if (horizontalResizeEnabled) {
+        child.style.width = `${currentSize.width}px`;
+      }
+      if (verticalResizeEnabled) {
+        child.style.height = `${currentSize.height}px`;
+      }
+
+      // Disable all flex growth during resize
+      child.style.flexGrow = "0";
+      child.style.flexShrink = "0";
+
+      // Add cleanup function to restore original flex properties
+      endCallbackSet.add(() => {
+        // Restore all original flex properties
+        child.style.flexGrow = originalStyles.flexGrow;
+        child.style.flexShrink = originalStyles.flexShrink;
+        child.style.flexBasis = originalStyles.flexBasis;
+
+        if (horizontalResizeEnabled) {
+          child.style.width = originalStyles.width;
+        }
+        if (verticalResizeEnabled) {
+          child.style.height = originalStyles.height;
+        }
+      });
+    });
+  }
+  for (const mutation of mutationSet) {
+    mutation();
+  }
+
   const widthAtStart = elementToResize.offsetWidth;
   const heightAtStart = elementToResize.offsetHeight;
   const xAtStart = event.clientX;
@@ -129,8 +183,6 @@ const start = (event) => {
     });
     elementToResize.dispatchEvent(resizeEndEvent);
   };
-
-  const endCallbackSet = new Set();
 
   const requestResize = (requestedWidth, requestedHeight) => {
     if (horizontalResizeEnabled) {
