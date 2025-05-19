@@ -116,6 +116,8 @@ const start = (event) => {
     elementToResize.dispatchEvent(resizeEndEvent);
   };
 
+  const endCallbackSet = new Set();
+
   const requestResize = (requestedWidth, requestedHeight) => {
     if (horizontalResizeEnabled) {
       let nextWidth = requestedWidth;
@@ -179,10 +181,9 @@ const start = (event) => {
       widthAtStart + resizeInfo.xMove,
       heightAtStart + resizeInfo.yMove,
     );
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-    document.body.removeChild(backdrop);
-    elementToResize.removeAttribute("data-resizing");
+    for (const endCallback of endCallbackSet) {
+      endCallback();
+    }
     dispatchResizeEndEvent();
   };
 
@@ -190,6 +191,13 @@ const start = (event) => {
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
   elementToResize.setAttribute("data-resizing", "");
+  endCallbackSet.add(() => {
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    document.body.removeChild(backdrop);
+    elementToResize.removeAttribute("data-resizing");
+  });
+
   dispatchResizeStartEvent();
 };
 
@@ -203,6 +211,18 @@ const getMinHeight = (element) => {
   return isNaN(minHeight) ? 0 : minHeight;
 };
 
-document.addEventListener("mousedown", (e) => {
-  start(e);
-});
+// document.addEventListener("click", (e) => {
+//   if (e.target.closest("summary")) {
+//     e.preventDefault();
+//   }
+// });
+
+document.addEventListener(
+  "mousedown",
+  (e) => {
+    start(e);
+  },
+  {
+    capture: true,
+  },
+);
