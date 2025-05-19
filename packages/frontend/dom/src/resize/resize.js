@@ -1,3 +1,5 @@
+// TODO: try to prevent details to be opened when mouse is released on them
+
 const start = (event) => {
   const element = event.target;
   if (!element.hasAttribute("data-resize-handle")) {
