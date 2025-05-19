@@ -14,8 +14,8 @@ const ensureDetailsScrollableTakeFullHeight = (details) => {
       }
     }
 
-    const detailsHeight = details.offsetHeight;
-    let summaryHeight = summary.offsetHeight;
+    const detailsHeight = details.getBoundingClientRect().height;
+    let summaryHeight = summary.getBoundingClientRect().height;
     let heightBefore = summaryHeight;
     for (const nextElementSibling of summaryNextSiblingSet) {
       const computedStyle = window.getComputedStyle(nextElementSibling);
@@ -35,7 +35,9 @@ const ensureDetailsScrollableTakeFullHeight = (details) => {
 
   updateHeight();
   const resizeObserver = new ResizeObserver(() => {
-    updateHeight();
+    requestAnimationFrame(() => {
+      updateHeight();
+    });
   });
   resizeObserver.observe(details);
 
