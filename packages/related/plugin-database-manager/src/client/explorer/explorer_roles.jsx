@@ -16,11 +16,12 @@ import {
 import { useCurrentRole, useRoleList } from "../role/role_signals.js";
 import { ExplorerGroup } from "./explorer_group.jsx";
 
-export const ExplorerRoles = () => {
+export const ExplorerRoles = ({ id }) => {
   const roles = useRoleList();
 
   return (
     <ExplorerGroup
+      id={id}
       urlParam="roles"
       idKey="oid"
       nameKey="rolname"

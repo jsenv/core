@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "preact/hooks";
 import { FontSizedSvg } from "../font_sized_svg.jsx";
 
 export const ExplorerGroup = ({
+  id,
   urlParam,
   idKey,
   nameKey,
@@ -29,7 +30,7 @@ export const ExplorerGroup = ({
   }, [setIsCreatingNew]);
 
   return (
-    <details className="explorer_group" {...detailsProps}>
+    <details id={id} className="explorer_group" {...detailsProps}>
       <summary>
         <span className="summary_marker" style="width: 24px; height: 24px">
           <ArrowDown />
