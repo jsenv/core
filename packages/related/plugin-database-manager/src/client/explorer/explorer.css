@@ -32,10 +32,13 @@
 .explorer_group {
   display: flex;
   flex-direction: column;
-  min-height: fit-content;
+  min-height: 0;
   overflow: hidden;
   position: relative;
   z-index: 1;
+}
+.explorer_group[open] {
+  min-height: 20%;
 }
 .explorer_group:last-of-type {
   flex: 1; /* Take up remaining space */
@@ -94,6 +97,7 @@
 .explorer_group + [data-resize-handle] {
   width: 100%;
   height: 5px;
+  min-height: 5px;
   margin-top: -2px;
   margin-bottom: -2px;
   position: relative;
