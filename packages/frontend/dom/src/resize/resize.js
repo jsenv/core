@@ -215,13 +215,21 @@ const start = (event) => {
 };
 
 const getMinWidth = (element) => {
-  const minWidth = parseInt(window.getComputedStyle(element).minWidth);
-  return isNaN(minWidth) ? 0 : minWidth;
+  const minWidth = window.getComputedStyle(element).minWidth;
+  if (minWidth && minWidth.endsWith("%")) {
+    const availableWidth = element.parentElement.offsetWidth;
+    return (parseInt(minWidth) / 100) * availableWidth;
+  }
+  return isNaN(minWidth) ? 0 : parseInt(minWidth);
 };
 
 const getMinHeight = (element) => {
-  const minHeight = parseInt(window.getComputedStyle(element).minHeight);
-  return isNaN(minHeight) ? 0 : minHeight;
+  const minHeight = window.getComputedStyle(element).minHeight;
+  if (minHeight && minHeight.endsWith("%")) {
+    const availableHeight = element.parentElement.offsetHeight;
+    return (parseInt(minHeight) / 100) * availableHeight;
+  }
+  return isNaN(minHeight) ? 0 : parseInt(minHeight);
 };
 
 // document.addEventListener("click", (e) => {
