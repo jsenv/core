@@ -17,13 +17,12 @@ import { FontSizedSvg } from "../font_sized_svg.jsx";
 import { CurrentSvg } from "../icons/icons.jsx";
 import { ExplorerGroup } from "./explorer_group.jsx";
 
-export const ExplorerDatabases = ({ id, resizable }) => {
+export const ExplorerDatabases = (props) => {
   const databases = useDatabaseList();
 
   return (
     <ExplorerGroup
-      id={id}
-      resizable={resizable}
+      {...props}
       urlParam="databases"
       idKey="oid"
       nameKey="datname"

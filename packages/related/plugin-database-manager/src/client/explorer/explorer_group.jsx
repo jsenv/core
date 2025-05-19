@@ -28,12 +28,14 @@ export const ExplorerGroup = forwardRef(
       useRenameItemAction,
       useCreateItemAction,
       useDeleteItemAction,
+      onOpen,
+      onClose,
     },
     ref,
   ) => {
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
-    const detailsProps = useDetails(urlParam);
+    const { open, onToggle } = useDetails(urlParam);
 
     const { resizing, resizeHeight } = useResizeStatus(innerRef);
 
@@ -55,7 +57,17 @@ export const ExplorerGroup = forwardRef(
           style={{
             height: resizing ? resizeHeight : undefined,
           }}
-          {...detailsProps}
+          onToggle={(toggleEvent) => {
+            onToggle(toggleEvent);
+            if (toggleEvent.newState === "open") {
+              if (onOpen) {
+                onOpen();
+              }
+            } else if (onClose) {
+              onClose();
+            }
+          }}
+          open={open}
         >
           <summary>
             <div className="summary_body">

@@ -4,7 +4,7 @@
  */
 
 import { effect } from "@preact/signals";
-import { useState } from "preact/hooks";
+import { useCallback, useState } from "preact/hooks";
 import { setCurrentRole } from "../role/role_signals.js";
 import { roleStore } from "../role/role_store.js";
 import "./details_content_scroll.js";
@@ -33,6 +33,12 @@ export const Explorer = () => {
 const ExplorerBody = () => {
   const [detailsOpenCount, setDetailsOpenCount] = useState(0);
   const resizable = detailsOpenCount > 1;
+  const onOpen = useCallback(() => {
+    setDetailsOpenCount((count) => count + 1);
+  }, []);
+  const onClose = useCallback(() => {
+    setDetailsOpenCount((count) => count - 1);
+  }, []);
 
   return (
     <div
@@ -45,8 +51,18 @@ const ExplorerBody = () => {
         }
       }}
     >
-      <ExplorerDatabases id="databases_explorer" resizable={resizable} />
-      <ExplorerRoles id="roles_explorer" resizable={resizable} />
+      <ExplorerDatabases
+        id="databases_explorer"
+        resizable={resizable}
+        onOpen={onOpen}
+        onClose={onClose}
+      />
+      <ExplorerRoles
+        id="roles_explorer"
+        resizable={resizable}
+        onOpen={onOpen}
+        onClose={onClose}
+      />
     </div>
   );
 };
