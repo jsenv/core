@@ -130,8 +130,8 @@
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
   height: 100%;
-  flex: 1; /* Take up remaining height */
-  min-height: 0; /* Prevent default height issues */
+  /* flex: 1;  */
+  min-height: 0;
   scrollbar-width: thin;
 }
 .explorer_group_list {

@@ -99,6 +99,7 @@ const start = (event) => {
 
     // Save the original flex properties
     const originalStyles = {
+      flex: computedStyle.flex,
       flexGrow: computedStyle.flexGrow,
       flexShrink: computedStyle.flexShrink,
       flexBasis: computedStyle.flexBasis,
@@ -120,17 +121,18 @@ const start = (event) => {
         child.style.height = `${currentSize.height}px`;
       }
 
-      // Disable all flex growth during resize
+      child.style.flex = "0 0 auto"; // Shorthand for flex-grow:0, flex-shrink:0, flex-basis:auto
       child.style.flexGrow = "0";
       child.style.flexShrink = "0";
+      child.style.flexBasis = "auto";
 
       // Add cleanup function to restore original flex properties
       endCallbackSet.add(() => {
         // Restore all original flex properties
+        child.style.flex = originalStyles.flex;
         child.style.flexGrow = originalStyles.flexGrow;
         child.style.flexShrink = originalStyles.flexShrink;
         child.style.flexBasis = originalStyles.flexBasis;
-
         if (horizontalResizeEnabled) {
           child.style.width = originalStyles.width;
         }
@@ -146,6 +148,7 @@ const start = (event) => {
 
   const widthAtStart = elementToResize.offsetWidth;
   const heightAtStart = elementToResize.offsetHeight;
+  console.log(elementToResize.style.height);
   const xAtStart = event.clientX;
   const yAtStart = event.clientY;
   const resizeInfo = {
