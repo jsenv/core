@@ -66,43 +66,45 @@ const start = (event) => {
     // if will impact their sizes
     const width = getWidth(child);
     const height = getHeight(child);
-    mutationSet.add(() => {
-      const setStyles = (namedValues) => {
-        const inlineValueMap = new Map();
-        for (const key of Object.keys(namedValues)) {
-          const inlineValue = child.style[key];
-          inlineValueMap.set(key, inlineValue);
-          endCallbackSet.add(() => {
-            if (inlineValue === "") {
-              child.style.removeProperty(key);
-            } else {
-              child.style[key] = inlineValue;
-            }
+    if (child === elementToResize) {
+      mutationSet.add(() => {
+        const setStyles = (namedValues) => {
+          const inlineValueMap = new Map();
+          for (const key of Object.keys(namedValues)) {
+            const inlineValue = child.style[key];
+            inlineValueMap.set(key, inlineValue);
+            endCallbackSet.add(() => {
+              if (inlineValue === "") {
+                child.style.removeProperty(key);
+              } else {
+                child.style[key] = inlineValue;
+              }
+            });
+          }
+          for (const key of Object.keys(namedValues)) {
+            const value = namedValues[key];
+            child.style[key] = value;
+          }
+        };
+        const computedStyle = window.getComputedStyle(child);
+        const flex = computedStyle.flex;
+        const flexGrow = computedStyle.flexGrow;
+
+        if (
+          (flex && flex !== "0 1 auto" && flex !== "0 0 auto") ||
+          (flexGrow && flexGrow !== "0")
+        ) {
+          setStyles({
+            ...(horizontalResizeEnabled ? { width: `${width}px` } : {}),
+            ...(verticalResizeEnabled ? { height: `${height}px` } : {}),
+            flex: "0 0 auto",
+            flexGrow: "0",
+            flexShrink: "0",
+            flexBasis: "auto",
           });
         }
-        for (const key of Object.keys(namedValues)) {
-          const value = namedValues[key];
-          child.style[key] = value;
-        }
-      };
-      const computedStyle = window.getComputedStyle(child);
-      const flex = computedStyle.flex;
-      const flexGrow = computedStyle.flexGrow;
-
-      if (
-        (flex && flex !== "0 1 auto" && flex !== "0 0 auto") ||
-        (flexGrow && flexGrow !== "0")
-      ) {
-        setStyles({
-          ...(horizontalResizeEnabled ? { width: `${width}px` } : {}),
-          ...(verticalResizeEnabled ? { height: `${height}px` } : {}),
-          flex: "0 0 auto",
-          flexGrow: "0",
-          flexShrink: "0",
-          flexBasis: "auto",
-        });
-      }
-    });
+      });
+    }
   }
   for (const mutation of mutationSet) {
     mutation();

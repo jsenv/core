@@ -95,10 +95,6 @@ export const ExplorerGroup = forwardRef(
       flex,
     };
 
-    if (controller.id === "databases") {
-      console.log("render", style, { heightSetting, resizable, maxHeight });
-    }
-
     return (
       <>
         <details
