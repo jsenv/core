@@ -3,11 +3,11 @@
  * right now it does not work, the content is not scrollable and gets hidden
  */
 
+import "@jsenv/dom/details_content_scroll";
 import { effect } from "@preact/signals";
 import { useCallback, useState } from "preact/hooks";
 import { setCurrentRole } from "../role/role_signals.js";
 import { roleStore } from "../role/role_store.js";
-import "./details_content_scroll.js";
 import "./explorer.css" with { type: "css" };
 import { ExplorerDatabases } from "./explorer_databases.jsx";
 import { ExplorerRoles } from "./explorer_roles.jsx";

@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.0.1",
   "exports": {
-    ".": "./src/dom.js"
+    ".": "./src/dom.js",
+    "./details_content_scroll": "./src/size/details_content_scroll.js"
   },
   "dependencies": {
     "@preact/signals": "2.0.4",
