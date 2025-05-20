@@ -3,7 +3,7 @@ import { getAvailableSize, getMarginSizes } from "./size.js";
 
 export const getMaxWidth = (
   element,
-  availableWidth = getAvailableSize(element.parentElement)[0],
+  availableWidth = getAvailableSize(element)[0],
 ) => {
   let maxWidth = availableWidth;
 
@@ -44,7 +44,7 @@ export const getMaxWidth = (
 
 export const getMaxHeight = (
   element,
-  availableHeight = getAvailableSize(element.parentElement)[1],
+  availableHeight = getAvailableSize(element)[1],
 ) => {
   let maxHeight = availableHeight;
   const marginSizes = getMarginSizes(element);

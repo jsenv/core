@@ -136,9 +136,7 @@ const BoxComponent = (
       }
       // const { borderSizes } = getPaddingAndBorderSizes(element);
       const elementDimensions = element.getBoundingClientRect();
-      const [availableWidth, availableHeight] = getAvailableSize(
-        element.parentNode,
-      );
+      const [availableWidth, availableHeight] = getAvailableSize(element);
 
       const styleForXPosition = {
         alignSelf: "",

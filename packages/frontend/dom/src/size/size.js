@@ -4,10 +4,15 @@ export const measureSize = (element) => {
   return [width, height];
 };
 
-export const getAvailableSize = (element) => {
-  const paddingSizes = getPaddingSizes(element);
-  const borderSizes = getBorderSizes(element);
-  let [availableWidth, availableHeight] = measureSize(element);
+export const getAvailableSize = (
+  element,
+  [parentWidth, parentHeight] = measureSize(element.parentElement),
+) => {
+  const parentElement = element.parentElement;
+  const paddingSizes = getPaddingSizes(parentElement);
+  const borderSizes = getBorderSizes(parentElement);
+  let availableWidth = parentWidth;
+  let availableHeight = parentHeight;
   availableWidth -=
     paddingSizes.left +
     paddingSizes.right +

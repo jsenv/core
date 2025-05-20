@@ -12,8 +12,9 @@ export {
   getScrollableParentSet,
   trapScrollInside,
 } from "./scroll.js";
+export { useAvailableSize } from "./size/hooks/use_available_size.js";
+export { useResizeStatus } from "./size/hooks/use_resize_status.js";
 export { getMinHeight, getMinWidth } from "./size/min_size.js";
-export { useResizeStatus } from "./size/resize_hooks.js";
 export {
   getAvailableSize,
   getBorderSizes,

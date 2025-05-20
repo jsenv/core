@@ -231,9 +231,7 @@ const initTextFiller = (
   svgElement.style.height = "100vh";
   svgElement.parentNode.style.maxWidth = "100%";
   svgElement.parentNode.style.maxHeight = "100%";
-  const [availableWidth, availableHeight] = getAvailableSize(
-    svgElement.parentNode,
-  );
+  const [availableWidth, availableHeight] = getAvailableSize(svgElement);
   svgElement.style.opacity = "";
   svgElement.style.width = "auto";
   svgElement.style.height = "auto";
