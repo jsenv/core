@@ -303,7 +303,8 @@ const getMinWidth = (element, availableWidth) => {
     }
     return (parseInt(minWidth) / 100) * availableWidth;
   }
-  return isNaN(minWidth) ? 0 : parseInt(minWidth);
+  const minWidthAsNumber = parseInt(minWidth);
+  return isNaN(minWidthAsNumber) ? 0 : minWidthAsNumber;
 };
 
 const getMinHeight = (element, availableHeight) => {
@@ -314,7 +315,8 @@ const getMinHeight = (element, availableHeight) => {
     }
     return (parseInt(minHeight) / 100) * availableHeight;
   }
-  return isNaN(minHeight) ? 0 : parseInt(minHeight);
+  const minHeightAsNumber = parseInt(minHeight);
+  return isNaN(minHeightAsNumber) ? 0 : minHeightAsNumber;
 };
 
 const getMarginSizes = (element) => {
