@@ -43,16 +43,13 @@ const start = (event) => {
     direction === "horizontal" || direction === "both";
   const verticalResizeEnabled =
     direction === "vertical" || direction === "both";
-
   const [availableWidth, availableHeight] = measureSize(
     elementToResize.parentElement,
   );
-
   const minWidth = getMinWidth(elementToResize, availableWidth);
   const minHeight = getMinHeight(elementToResize, availableHeight);
-  let maxWidth;
+  let maxWidth = availableWidth;
   if (horizontalResizeEnabled) {
-    maxWidth = elementToResize.parentElement.offsetWidth;
     const parentElement = elementToResize.parentElement;
     const parentElementComputedStyle = window.getComputedStyle(parentElement);
     if (
@@ -73,9 +70,8 @@ const start = (event) => {
       }
     }
   }
-  let maxHeight;
+  let maxHeight = availableHeight;
   if (verticalResizeEnabled) {
-    maxHeight = elementToResize.parentElement.offsetHeight;
     const parentElement = elementToResize.parentElement;
     const parentElementComputedStyle = window.getComputedStyle(parentElement);
     if (
@@ -140,6 +136,8 @@ const start = (event) => {
   const xAtStart = event.clientX;
   const yAtStart = event.clientY;
   const resizeInfo = {
+    availableWidth,
+    availableHeight,
     minWidth,
     minHeight,
     maxWidth,
@@ -154,6 +152,14 @@ const start = (event) => {
     heightAtStart,
     width: widthAtStart,
     height: heightAtStart,
+    get widthAsPercentage() {
+      const ratio = resizeInfo.width / availableWidth;
+      return `${ratio * 100}%`;
+    },
+    get heightAsPercentage() {
+      const ratio = resizeInfo.height / availableHeight;
+      return `${ratio * 100}%`;
+    },
     widthChanged: false,
     heightChanged: false,
   };

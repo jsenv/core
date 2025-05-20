@@ -37,7 +37,9 @@ export const ExplorerGroup = forwardRef(
     useImperativeHandle(ref, () => innerRef.current);
     const { open, onToggle } = useDetails(urlParam);
 
-    const { resizing, resizeHeight } = useResizeStatus(innerRef);
+    const { resizing, resizeHeight } = useResizeStatus(innerRef, {
+      as: "percentage",
+    });
 
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const startCreatingNew = useCallback(() => {

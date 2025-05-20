@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
-export const useResizeStatus = (elementRef) => {
+export const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   const [resizing, setIsResizing] = useState(false);
   const [resizeWidth, setResizeWidth] = useState(null);
   const [resizeHeight, setResizeHeight] = useState(null);
@@ -10,14 +10,22 @@ export const useResizeStatus = (elementRef) => {
 
     const onresizestart = (e) => {
       const sizeInfo = e.detail;
-      setResizeWidth(sizeInfo.width);
-      setResizeHeight(sizeInfo.height);
+      setResizeWidth(
+        as === "number" ? sizeInfo.width : sizeInfo.widthAsPercentage,
+      );
+      setResizeHeight(
+        as === "number" ? sizeInfo.height : sizeInfo.heightAsPercentage,
+      );
       setIsResizing(true);
     };
     const onresize = (e) => {
       const sizeInfo = e.detail;
-      setResizeWidth(sizeInfo.width);
-      setResizeHeight(sizeInfo.height);
+      setResizeWidth(
+        as === "number" ? sizeInfo.width : sizeInfo.widthAsPercentage,
+      );
+      setResizeHeight(
+        as === "number" ? sizeInfo.height : sizeInfo.heightAsPercentage,
+      );
     };
     const onresizeend = () => {
       setResizeWidth(null);
@@ -33,7 +41,7 @@ export const useResizeStatus = (elementRef) => {
       element.removeEventListener("resize", onresize);
       element.removeEventListener("resizeend", onresizeend);
     };
-  }, []);
+  }, [as]);
 
   return {
     resizing,
