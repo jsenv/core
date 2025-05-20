@@ -5,6 +5,10 @@
  *
  */
 
+import { getMaxHeight, getMaxWidth } from "./max_size.js";
+import { getMinHeight, getMinWidth } from "./min_size.js";
+import { measureSize } from "./size.js";
+
 const start = (event) => {
   if (event.button !== 0) {
     return;
@@ -48,76 +52,12 @@ const start = (event) => {
   );
   const minWidth = getMinWidth(elementToResize, availableWidth);
   const minHeight = getMinHeight(elementToResize, availableHeight);
-  let maxWidth = availableWidth;
-  if (horizontalResizeEnabled) {
-    const marginSizes = getMarginSizes(elementToResize);
-    maxWidth -= marginSizes.left;
-    maxWidth -= marginSizes.right;
-
-    const parentElement = elementToResize.parentElement;
-    const parentElementComputedStyle = window.getComputedStyle(parentElement);
-    if (
-      parentElementComputedStyle.display === "flex" &&
-      parentElementComputedStyle.flexDirection === "row"
-    ) {
-      let previousSibling = elementToResize.previousElementSibling;
-      while (previousSibling) {
-        const previousSiblingWidth =
-          previousSibling.getBoundingClientRect().width;
-        maxWidth -= previousSiblingWidth;
-        const previousSiblingMarginSizes = getMarginSizes(previousSibling);
-        maxWidth -= previousSiblingMarginSizes.left;
-        maxWidth -= previousSiblingMarginSizes.right;
-
-        previousSibling = previousSibling.previousElementSibling;
-      }
-      let nextSibling = elementToResize.nextElementSibling;
-      while (nextSibling) {
-        const nextSiblingMinWidth = getMinWidth(nextSibling, availableWidth);
-        maxWidth -= nextSiblingMinWidth;
-        const nextSiblingMarginSizes = getMarginSizes(nextSibling);
-        maxWidth -= nextSiblingMarginSizes.left;
-        maxWidth -= nextSiblingMarginSizes.right;
-
-        nextSibling = nextSibling.nextElementSibling;
-      }
-    }
-  }
-  let maxHeight = availableHeight;
-  if (verticalResizeEnabled) {
-    const marginSizes = getMarginSizes(elementToResize);
-    maxHeight -= marginSizes.top;
-    maxHeight -= marginSizes.bottom;
-
-    const parentElement = elementToResize.parentElement;
-    const parentElementComputedStyle = window.getComputedStyle(parentElement);
-    if (
-      parentElementComputedStyle.display === "flex" &&
-      parentElementComputedStyle.flexDirection === "column"
-    ) {
-      let previousSibling = elementToResize.previousElementSibling;
-      while (previousSibling) {
-        const previousSiblingHeight =
-          previousSibling.getBoundingClientRect().height;
-        maxHeight -= previousSiblingHeight;
-        const previousSiblingMarginSizes = getMarginSizes(previousSibling);
-        maxHeight -= previousSiblingMarginSizes.top;
-        maxHeight -= previousSiblingMarginSizes.bottom;
-
-        previousSibling = previousSibling.previousElementSibling;
-      }
-      let nextSibling = elementToResize.nextElementSibling;
-      while (nextSibling) {
-        const nextSiblingMinHeight = getMinHeight(nextSibling, availableHeight);
-        maxHeight -= nextSiblingMinHeight;
-        const nextSiblingMarginSizes = getMarginSizes(nextSibling);
-        maxHeight -= nextSiblingMarginSizes.top;
-        maxHeight -= nextSiblingMarginSizes.bottom;
-
-        nextSibling = nextSibling.nextElementSibling;
-      }
-    }
-  }
+  const maxWidth = horizontalResizeEnabled
+    ? getMaxWidth(elementToResize, availableWidth)
+    : availableWidth;
+  const maxHeight = verticalResizeEnabled
+    ? getMaxHeight(elementToResize, availableHeight)
+    : availableHeight;
 
   const mutationSet = new Set();
   for (const child of elementToResize.parentElement.children) {
@@ -302,53 +242,6 @@ const start = (event) => {
 
   dispatchResizeStartEvent();
 };
-
-const measureSize = (element) => {
-  const rect = element.getBoundingClientRect();
-  const { width, height } = rect;
-  return [width, height];
-};
-
-const getMinWidth = (element, availableWidth) => {
-  const minWidth = window.getComputedStyle(element).minWidth;
-  if (minWidth && minWidth.endsWith("%")) {
-    if (availableWidth === undefined) {
-      availableWidth = measureSize(element.parentElement)[0];
-    }
-    return (parseInt(minWidth) / 100) * availableWidth;
-  }
-  const minWidthAsNumber = parseInt(minWidth);
-  return isNaN(minWidthAsNumber) ? 0 : minWidthAsNumber;
-};
-
-const getMinHeight = (element, availableHeight) => {
-  const minHeight = window.getComputedStyle(element).minHeight;
-  if (minHeight && minHeight.endsWith("%")) {
-    if (availableHeight === undefined) {
-      availableHeight = measureSize(element.parentElement)[1];
-    }
-    return (parseInt(minHeight) / 100) * availableHeight;
-  }
-  const minHeightAsNumber = parseInt(minHeight);
-  return isNaN(minHeightAsNumber) ? 0 : minHeightAsNumber;
-};
-
-const getMarginSizes = (element) => {
-  const { marginLeft, marginRight, marginTop, marginBottom } =
-    window.getComputedStyle(element, null);
-  return {
-    left: parseFloat(marginLeft),
-    right: parseFloat(marginRight),
-    top: parseFloat(marginTop),
-    bottom: parseFloat(marginBottom),
-  };
-};
-
-// document.addEventListener("click", (e) => {
-//   if (e.target.closest("summary")) {
-//     e.preventDefault();
-//   }
-// });
 
 document.addEventListener(
   "mousedown",

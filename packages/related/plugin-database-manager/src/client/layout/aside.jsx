@@ -33,7 +33,7 @@ export const Aside = ({ children }) => {
     as: "number",
   });
 
-  // one thing we could eventually want here:
+  // TODO:
   // when available size changes (resize observer on the parent)
   // we might want to decrease the width of the <aside> to ensure it does not create scrollbars
   // in other words we would respect the maxWidth that we compute in resize.js
