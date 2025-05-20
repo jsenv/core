@@ -1,5 +1,4 @@
-export const getHeight = () => {
-  const element = document.documentElement;
+export const getHeight = (element) => {
   const { height } = element.getBoundingClientRect();
   return height;
 };

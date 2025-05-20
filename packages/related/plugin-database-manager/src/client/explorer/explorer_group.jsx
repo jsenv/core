@@ -67,7 +67,7 @@ export const ExplorerGroup = forwardRef(
     const { open, onToggle } = useDetails(urlParam);
 
     const { resizing, resizeHeight } = useResizeStatus(innerRef, {
-      as: "percentage",
+      as: "number",
     });
 
     const [isCreatingNew, setIsCreatingNew] = useState(false);

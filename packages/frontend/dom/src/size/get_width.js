@@ -1,5 +1,4 @@
 export const getWidth = (element) => {
-  const rect = element.getBoundingClientRect();
-  const { width } = rect;
+  const { width } = element.getBoundingClientRect();
   return width;
 };

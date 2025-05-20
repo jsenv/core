@@ -1,8 +1,5 @@
 /**
  *
- * il faudrait virer le flex: 1 des next siblings (et lui meme)
- * pendant le resize
- *
  */
 
 import { getAvailableHeight } from "./get_available_height.js";
@@ -58,10 +55,10 @@ const start = (event) => {
   const minHeight = getMinHeight(elementToResize, availableHeight);
   const maxWidth = horizontalResizeEnabled
     ? getMaxWidth(elementToResize, availableWidth)
-    : availableWidth;
+    : null;
   const maxHeight = verticalResizeEnabled
     ? getMaxHeight(elementToResize, availableHeight)
-    : availableHeight;
+    : null;
 
   const mutationSet = new Set();
   for (const child of elementToResize.parentElement.children) {
@@ -134,7 +131,6 @@ const start = (event) => {
     height: heightAtStart,
     get widthAsPercentage() {
       const ratio = resizeInfo.width / availableWidth;
-      // 2 decimals precision
       const roundedRatio = Math.round(ratio * 100) / 100;
       const percentage = roundedRatio * 100;
       return `${percentage}%`;
