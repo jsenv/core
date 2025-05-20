@@ -4,7 +4,6 @@ aside {
   height: 100vh;
   position: sticky;
   top: 0;
-  transition: width 0.3s ease-in-out;
   border-right: 1px solid #e0e0e0;
   min-width: 100px;
   z-index: 0; /* to ensure the content inside the <aside> cannot go above the [data-resize-handle] */

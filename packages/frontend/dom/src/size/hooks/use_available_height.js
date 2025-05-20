@@ -9,8 +9,8 @@ export const useAvailableHeight = (elementRef) => {
     const parentElement = element.parentElement;
     const resizeObserver = new ResizeObserver((entries) => {
       const [entry] = entries;
-      const { width, height } = entry.contentRect;
-      const availableH = getAvailableHeight(element, [width, height]);
+      const parentHeight = entry.contentRect.height;
+      const availableH = getAvailableHeight(element, parentHeight);
       availableHeightSetter(availableH);
     });
     resizeObserver.observe(parentElement);

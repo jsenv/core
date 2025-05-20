@@ -2,7 +2,7 @@
 
  */
 
-import { useAvailableWidth, useResizeStatus } from "@jsenv/dom";
+import { useAvailableWidth, useMaxWidth, useResizeStatus } from "@jsenv/dom";
 import { valueInLocalStorage } from "@jsenv/router";
 import { effect, signal } from "@preact/signals";
 import { useRef } from "preact/hooks";
@@ -33,20 +33,19 @@ export const Aside = ({ children }) => {
     as: "number",
   });
   const availableWidth = useAvailableWidth(asideRef);
-
-  // TODO:
-  // when available size changes (resize observer on the parent)
-  // we might want to decrease the width of the <aside> to ensure it does not create scrollbars
-  // in other words we would respect the maxWidth that we compute in resize.js
-  // even when we are not resizing
+  const maxWidth = useMaxWidth(asideRef, availableWidth);
 
   return (
     <aside
       ref={asideRef}
       data-resize="horizontal"
       style={{
-        width: resizing ? resizeWidth : widthSetting,
-        // Disable transition during resize to make it feel responsive
+        width: resizing
+          ? resizeWidth
+          : widthSetting > maxWidth
+            ? maxWidth
+            : widthSetting,
+        // Disable transition during resize to make it responsive
         transition: resizing ? "none" : undefined,
       }}
       // eslint-disable-next-line react/no-unknown-property

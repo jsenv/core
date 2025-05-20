@@ -9,8 +9,8 @@ export const useAvailableWidth = (elementRef) => {
     const parentElement = element.parentElement;
     const resizeObserver = new ResizeObserver((entries) => {
       const [entry] = entries;
-      const { width } = entry.contentRect;
-      const availableW = getAvailableWidth(element, width);
+      const parentWidth = entry.contentRect.width;
+      const availableW = getAvailableWidth(element, parentWidth);
       availableWidthSetter(availableW);
     });
     resizeObserver.observe(parentElement);
