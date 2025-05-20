@@ -14,18 +14,17 @@ const [restoreAsideWidth, storeAsideWidth] = valueInLocalStorage(
     type: "positive_number",
   },
 );
-
 const asideWidthSignal = signal(restoreAsideWidth());
+effect(() => {
+  const asideWidth = asideWidthSignal.value;
+  storeAsideWidth(asideWidth);
+});
 export const useAsideWidth = () => {
   return asideWidthSignal.value;
 };
 export const setAsideWidth = (width) => {
   asideWidthSignal.value = width;
 };
-effect(() => {
-  const asideWidth = asideWidthSignal.value;
-  storeAsideWidth(asideWidth);
-});
 
 export const Aside = ({ children }) => {
   const asideRef = useRef(null);
@@ -34,7 +33,11 @@ export const Aside = ({ children }) => {
     as: "number",
   });
 
-  console.log(resizeWidth, widthSetting);
+  // one thing we could eventually want here:
+  // when available size changes (resize observer on the parent)
+  // we might want to decrease the width of the <aside> to ensure it does not create scrollbars
+  // in other words we would respect the maxWidth that we compute in resize.js
+  // even when we are not resizing
 
   return (
     <aside

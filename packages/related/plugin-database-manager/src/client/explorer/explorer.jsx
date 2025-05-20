@@ -52,17 +52,11 @@ const ExplorerBody = () => {
       }}
     >
       <ExplorerDatabases
-        id="databases_explorer"
+        onOpen={onOpen}
+        onClose={onClose}
         resizable={resizable}
-        onOpen={onOpen}
-        onClose={onClose}
       />
-      <ExplorerRoles
-        id="roles_explorer"
-        resizable={false}
-        onOpen={onOpen}
-        onClose={onClose}
-      />
+      <ExplorerRoles onOpen={onOpen} onClose={onClose} resizable={false} />
     </div>
   );
 };

@@ -153,4 +153,20 @@ const typeConverters = {
       return "";
     },
   },
+  object: {
+    decode: (value) => {
+      const valueParsed = JSON.parse(value);
+      return valueParsed;
+    },
+    encode: (value) => {
+      const valueStringified = JSON.stringify(value);
+      return valueStringified;
+    },
+    checkValidity: (value) => {
+      if (value === null || typeof value !== "object") {
+        return `must be an object`;
+      }
+      return "";
+    },
+  },
 };

@@ -15,7 +15,13 @@ import {
 } from "../database/database_signals.js";
 import { FontSizedSvg } from "../font_sized_svg.jsx";
 import { CurrentSvg } from "../icons/icons.jsx";
-import { ExplorerGroup } from "./explorer_group.jsx";
+import {
+  createExplorerGroupController,
+  ExplorerGroup,
+} from "./explorer_group.jsx";
+
+const databaseExplorerGroupController =
+  createExplorerGroupController("databases");
 
 export const ExplorerDatabases = (props) => {
   const databases = useDatabaseList();
@@ -23,6 +29,7 @@ export const ExplorerDatabases = (props) => {
   return (
     <ExplorerGroup
       {...props}
+      controller={databaseExplorerGroupController}
       urlParam="databases"
       idKey="oid"
       nameKey="datname"

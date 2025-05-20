@@ -14,7 +14,12 @@ import {
   PUT_ROLE_ACTION,
 } from "../role/role_routes.js";
 import { useCurrentRole, useRoleList } from "../role/role_signals.js";
-import { ExplorerGroup } from "./explorer_group.jsx";
+import {
+  createExplorerGroupController,
+  ExplorerGroup,
+} from "./explorer_group.jsx";
+
+const rolesExplorerGroupController = createExplorerGroupController("roles");
 
 export const ExplorerRoles = (props) => {
   const roles = useRoleList();
@@ -22,6 +27,7 @@ export const ExplorerRoles = (props) => {
   return (
     <ExplorerGroup
       {...props}
+      controller={rolesExplorerGroupController}
       urlParam="roles"
       idKey="oid"
       nameKey="rolname"

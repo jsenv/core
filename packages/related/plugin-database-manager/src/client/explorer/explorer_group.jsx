@@ -1,6 +1,12 @@
 import { useResizeStatus } from "@jsenv/dom";
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
-import { SPAInputText, SPALink, useDetails } from "@jsenv/router";
+import {
+  SPAInputText,
+  SPALink,
+  useDetails,
+  valueInLocalStorage,
+} from "@jsenv/router";
+import { effect, signal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import {
   useCallback,
@@ -10,10 +16,33 @@ import {
 } from "preact/hooks";
 import { FontSizedSvg } from "../font_sized_svg.jsx";
 
+export const createExplorerGroupController = (id) => {
+  const [restoreHeight, storeHeight] = valueInLocalStorage(
+    `explorer_group_${id}_height`,
+    {
+      type: "positive_number",
+    },
+  );
+  const heightSignal = signal(restoreHeight());
+  effect(() => {
+    const height = heightSignal.value;
+    storeHeight(height);
+  });
+
+  const useHeight = () => {
+    return heightSignal.value;
+  };
+  const setHeight = (width) => {
+    heightSignal.value = width;
+  };
+
+  return { id, heightSignal, useHeight, setHeight };
+};
+
 export const ExplorerGroup = forwardRef(
   (
     {
-      id,
+      controller,
       resizable,
       urlParam,
       idKey,
@@ -53,7 +82,7 @@ export const ExplorerGroup = forwardRef(
       <>
         <details
           ref={innerRef}
-          id={id}
+          id={controller.id}
           className="explorer_group"
           data-resize="vertical"
           style={{
@@ -138,7 +167,7 @@ export const ExplorerGroup = forwardRef(
           </div>
         </details>
         {resizable && (
-          <div data-resize-handle={id}>
+          <div data-resize-handle={controller.id}>
             <div></div>
           </div>
         )}
