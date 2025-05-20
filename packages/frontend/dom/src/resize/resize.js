@@ -186,11 +186,16 @@ const start = (event) => {
     height: heightAtStart,
     get widthAsPercentage() {
       const ratio = resizeInfo.width / availableWidth;
-      return `${ratio * 100}%`;
+      // 2 decimals precision
+      const roundedRatio = Math.round(ratio * 100) / 100;
+      const percentage = roundedRatio * 100;
+      return `${percentage}%`;
     },
     get heightAsPercentage() {
       const ratio = resizeInfo.height / availableHeight;
-      return `${ratio * 100}%`;
+      const roundedRatio = Math.round(ratio * 100) / 100;
+      const percentage = roundedRatio * 100;
+      return `${percentage * 100}%`;
     },
     widthChanged: false,
     heightChanged: false,

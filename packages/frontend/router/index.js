@@ -35,3 +35,4 @@ export {
   useRouterReadyState,
 } from "./src/router_ready_state.js";
 export { useUrlBooleanParam, withUrlStringParam } from "./src/url.js";
+export { valueInLocalStorage } from "./src/value_in_local_storage.js";
