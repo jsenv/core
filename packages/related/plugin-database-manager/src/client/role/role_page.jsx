@@ -38,7 +38,6 @@ const RolePage = () => {
       <RoleFields role={role} />
       <RoleDatabases />
       <SPADeleteButton action={deleteRoleAction}>Delete</SPADeleteButton>
-
       <a
         href="https://www.postgresql.org/docs/14/sql-alterrole.html"
         target="_blank"

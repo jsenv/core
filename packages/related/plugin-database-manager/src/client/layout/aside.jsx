@@ -6,7 +6,6 @@ import { useAvailableWidth, useMaxWidth, useResizeStatus } from "@jsenv/dom";
 import { valueInLocalStorage } from "@jsenv/router";
 import { effect, signal } from "@preact/signals";
 import { useRef } from "preact/hooks";
-import "./aside.css" with { type: "css" };
 
 const [restoreAsideWidth, storeAsideWidth] = valueInLocalStorage(
   "aside_width",

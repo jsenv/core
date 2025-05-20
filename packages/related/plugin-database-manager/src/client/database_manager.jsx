@@ -2,6 +2,7 @@
 import "./router.js"; // must be the first import (so that setBaseUrl is called for any other import)
 import { render } from "preact";
 import { DatabaseRoutes } from "./database/database_page.jsx";
+import "./layout/layout.css" with { type: "css" };
 import "./database_manager.css" with { type: "css" };
 import { Aside } from "./layout/aside.jsx";
 import { Explorer } from "./explorer/explorer.jsx";
@@ -15,12 +16,8 @@ const App = () => {
         <Explorer />
       </Aside>
       <main>
-        {/* min-height ensure scrollbars always appear at the bottom
-        and overflow ensure scrollbare are displayed on the content
-        which is the part that is overflowing (the aside cannot overflow because
-        it has a fixed width + overflow hidden) */}
-        <div style="overflow-x: auto; min-height: 100vh;">
-          <div style="padding: 20px;">
+        <div className="main_body">
+          <div className="main_body_wrapper">
             <RoleRoutes />
             <DatabaseRoutes />
             <TableRoutes />

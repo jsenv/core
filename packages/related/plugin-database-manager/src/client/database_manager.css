@@ -23,17 +23,3 @@ body {
 *[data-hidden] {
   display: none !important;
 }
-
-#app {
-  display: flex;
-  flex-direction: row;
-}
-
-main {
-  padding-bottom: 0;
-  min-width: 200px;
-  box-sizing: border-box;
-}
-main h1 {
-  margin-top: 0;
-}

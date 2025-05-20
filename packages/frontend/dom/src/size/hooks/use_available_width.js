@@ -7,15 +7,19 @@ export const useAvailableWidth = (elementRef) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
     const parentElement = element.parentElement;
+    let raf;
     const resizeObserver = new ResizeObserver((entries) => {
       const [entry] = entries;
       const parentWidth = entry.contentRect.width;
       const availableW = getAvailableWidth(element, parentWidth);
-      availableWidthSetter(availableW);
+      raf = requestAnimationFrame(() => {
+        availableWidthSetter(availableW);
+      });
     });
     resizeObserver.observe(parentElement);
     return () => {
       resizeObserver.disconnect();
+      cancelAnimationFrame(raf);
     };
   }, []);
 

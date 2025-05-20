@@ -7,15 +7,19 @@ export const useAvailableHeight = (elementRef) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
     const parentElement = element.parentElement;
+    let raf;
     const resizeObserver = new ResizeObserver((entries) => {
       const [entry] = entries;
       const parentHeight = entry.contentRect.height;
       const availableH = getAvailableHeight(element, parentHeight);
-      availableHeightSetter(availableH);
+      raf = requestAnimationFrame(() => {
+        availableHeightSetter(availableH);
+      });
     });
     resizeObserver.observe(parentElement);
     return () => {
       resizeObserver.disconnect();
+      cancelAnimationFrame(raf);
     };
   }, []);
 
