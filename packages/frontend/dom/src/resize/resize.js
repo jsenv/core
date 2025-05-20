@@ -147,7 +147,10 @@ const start = (event) => {
       const flex = computedStyle.flex;
       const flexGrow = computedStyle.flexGrow;
 
-      if ((flex && flex !== "0 1 auto") || (flexGrow && flexGrow !== "0")) {
+      if (
+        (flex && flex !== "0 1 auto" && flex !== "0 0 auto") ||
+        (flexGrow && flexGrow !== "0")
+      ) {
         setStyles({
           ...(horizontalResizeEnabled ? { width: `${width}px` } : {}),
           ...(verticalResizeEnabled ? { height: `${height}px` } : {}),
