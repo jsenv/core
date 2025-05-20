@@ -69,6 +69,22 @@ export const registerRoute = (resourcePattern, handler) => {
       const routeUrlEncoded = encodeURI(routeUrlNormalized);
       return routeUrlEncoded;
     },
+    compareUrl: (urlToCompare) => {
+      const currentUrl = route.urlSignal.peek();
+      if (!currentUrl) {
+        return false;
+      }
+      // TODO:
+      // 1. si une url fini par ?* alors on gardera les search params
+      // 2. si une url fait ceci: ?foo=*&bar=* alors on considere que l'url a changé
+      // que si le param foo ou bar a changé mais pas si un autre param a changé
+      const urlToCompareWithoutSearch = urlWithoutSearch(urlToCompare);
+      const currentUrlWithoutSearch = urlWithoutSearch(currentUrl);
+      if (urlToCompareWithoutSearch === currentUrlWithoutSearch) {
+        return true;
+      }
+      return false;
+    },
     urlSignal: signal(null),
     paramsSignal: signal({}),
     isMatchingSignal: signal(false),
@@ -165,14 +181,13 @@ export const applyRouting = async ({
       ...matchResult.stars,
     };
     const routeUrl = routeCandidate.buildUrl(targetUrl, params);
-    const currentRouteUrl = routeCandidate.urlSignal.peek();
     const enterParams = {
       signal: stopSignal,
       url: routeUrl,
       resource: targetResource,
       params,
     };
-    if (routeUrl === currentRouteUrl) {
+    if (routeCandidate.compareUrl(targetUrl)) {
       const hasError = routeCandidate.errorSignal.peek();
       const isAborted = routeCandidate.loadingStateSignal.peek() === ABORTED;
       if (isReload) {
@@ -327,4 +342,11 @@ const leaveRoute = (route, reason) => {
     route.errorSignal.value = null;
   });
   matchingRouteSet.delete(route);
+};
+
+const urlWithoutSearch = (url) => {
+  const urlObject = new URL(url);
+  urlObject.search = "";
+  const withoutSearch = urlObject.href;
+  return withoutSearch;
 };
