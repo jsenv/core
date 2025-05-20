@@ -1,5 +1,5 @@
+import { getAvailableSize } from "@jsenv/dom";
 import { FOCUSED_OUTLINE_COLOR } from "oto/src/globals/colors.js";
-import { getAvailableSize } from "oto/src/utils/get_available_size.js";
 import { forwardRef } from "preact/compat";
 import {
   useImperativeHandle,

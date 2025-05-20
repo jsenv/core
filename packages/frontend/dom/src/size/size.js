@@ -4,6 +4,29 @@ export const measureSize = (element) => {
   return [width, height];
 };
 
+export const getAvailableSize = (element) => {
+  const paddingSizes = getPaddingSizes(element);
+  const borderSizes = getBorderSizes(element);
+  let [availableWidth, availableHeight] = measureSize(element);
+  availableWidth -=
+    paddingSizes.left +
+    paddingSizes.right +
+    borderSizes.left +
+    borderSizes.right;
+  availableHeight -=
+    paddingSizes.top +
+    paddingSizes.bottom +
+    borderSizes.top +
+    borderSizes.bottom;
+  if (availableWidth < 0) {
+    availableWidth = 0;
+  }
+  if (availableHeight < 0) {
+    availableHeight = 0;
+  }
+  return [availableWidth, availableHeight];
+};
+
 export const getMarginSizes = (element) => {
   const { marginLeft, marginRight, marginTop, marginBottom } =
     window.getComputedStyle(element, null);

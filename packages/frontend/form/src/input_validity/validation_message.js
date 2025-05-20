@@ -1,4 +1,4 @@
-import { getPaddingAndBorderSizes, getScrollableParentSet } from "@jsenv/dom";
+import { getBorderSizes, getScrollableParentSet } from "@jsenv/dom";
 
 /**
  * A validation message component that mimics native browser validation messages.
@@ -431,8 +431,7 @@ const followPosition = (validationMessage, targetElement) => {
     const targetElementRect = targetElement.getBoundingClientRect();
 
     // Get element padding and border to properly position arrow
-    const elementPaddingAndBorderSizes =
-      getPaddingAndBorderSizes(targetElement);
+    const elementBorderSizes = getBorderSizes(targetElement);
     const elementLeft = targetElementRect.left;
     const elementWidth = targetElementRect.width;
     const validationMessageWidth = validationMessageRect.width;
@@ -489,8 +488,7 @@ const followPosition = (validationMessage, targetElement) => {
     // Calculate arrow position to point at target element
     let arrowLeftPosOnValidationMessage;
     // Target the left edge of the element (after borders)
-    const arrowTargetLeft =
-      elementLeft + elementPaddingAndBorderSizes.borderSizes.left;
+    const arrowTargetLeft = elementLeft + elementBorderSizes.left;
 
     if (validationMessageLeftPos < arrowTargetLeft) {
       // Validation message is left of the target point, move arrow right

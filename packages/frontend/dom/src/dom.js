@@ -15,6 +15,7 @@ export {
 export { getMinHeight, getMinWidth } from "./size/min_size.js";
 export { useResizeStatus } from "./size/resize_hooks.js";
 export {
+  getAvailableSize,
   getBorderSizes,
   getMarginSizes,
   getPaddingSizes,

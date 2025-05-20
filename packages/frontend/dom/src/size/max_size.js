@@ -1,9 +1,9 @@
 import { getMinHeight, getMinWidth } from "./min_size.js";
-import { getMarginSizes, measureSize } from "./size.js";
+import { getAvailableSize, getMarginSizes } from "./size.js";
 
 export const getMaxWidth = (
   element,
-  availableWidth = measureSize(element.parentElement)[0],
+  availableWidth = getAvailableSize(element.parentElement)[0],
 ) => {
   let maxWidth = availableWidth;
 
@@ -44,7 +44,7 @@ export const getMaxWidth = (
 
 export const getMaxHeight = (
   element,
-  availableHeight = measureSize(element.parentElement)[1],
+  availableHeight = getAvailableSize(element.parentElement)[1],
 ) => {
   let maxHeight = availableHeight;
   const marginSizes = getMarginSizes(element);

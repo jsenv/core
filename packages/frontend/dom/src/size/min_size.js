@@ -1,10 +1,10 @@
-import { measureSize } from "./size.js";
+import { getAvailableSize } from "./size.js";
 
 export const getMinWidth = (element, availableWidth) => {
   const minWidth = window.getComputedStyle(element).minWidth;
   if (minWidth && minWidth.endsWith("%")) {
     if (availableWidth === undefined) {
-      availableWidth = measureSize(element.parentElement)[0];
+      availableWidth = getAvailableSize(element.parentElement)[0];
     }
     return (parseInt(minWidth) / 100) * availableWidth;
   }
@@ -16,7 +16,7 @@ export const getMinHeight = (element, availableHeight) => {
   const minHeight = window.getComputedStyle(element).minHeight;
   if (minHeight && minHeight.endsWith("%")) {
     if (availableHeight === undefined) {
-      availableHeight = measureSize(element.parentElement)[1];
+      availableHeight = getAvailableSize(element.parentElement)[1];
     }
     return (parseInt(minHeight) / 100) * availableHeight;
   }
