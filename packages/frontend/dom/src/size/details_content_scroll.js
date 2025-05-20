@@ -1,3 +1,5 @@
+import { getHeight } from "./get_height.js";
+
 const detailsWeakMap = new WeakMap();
 const ensureDetailsScrollableTakeFullHeight = (details) => {
   const updateHeight = () => {
@@ -14,8 +16,8 @@ const ensureDetailsScrollableTakeFullHeight = (details) => {
       }
     }
 
-    const detailsHeight = details.getBoundingClientRect().height;
-    let summaryHeight = summary.getBoundingClientRect().height;
+    const detailsHeight = getHeight(details);
+    let summaryHeight = getHeight(summary);
     let heightBefore = summaryHeight;
     for (const nextElementSibling of summaryNextSiblingSet) {
       const computedStyle = window.getComputedStyle(nextElementSibling);
