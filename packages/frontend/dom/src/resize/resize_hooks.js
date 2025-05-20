@@ -49,3 +49,16 @@ export const useResizeStatus = (elementRef, { as = "number" } = {}) => {
     resizeHeight,
   };
 };
+
+// to use when width is set as percentage
+export const useInitialWidth = (width, elementRef) => {
+  const [initialWidth, setInitialWidth] = useState(null);
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    const availableWidth = element.parentElement.offsetWidth;
+    setInitialWidth(
+      width.endsWith("%") ? (parseFloat(width) / 100) * availableWidth : width,
+    );
+  }, [width]);
+  return initialWidth;
+};

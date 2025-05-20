@@ -1,6 +1,5 @@
 /*
- * TODO: the width saved in local storage should be proportional to the viewport
- * this way, if we reload the page in an other viewport the size adapts
+
  */
 
 import { useResizeStatus } from "@jsenv/dom";
@@ -12,7 +11,7 @@ import "./aside.css" with { type: "css" };
 const [restoreAsideWidth, storeAsideWidth] = valueInLocalStorage(
   "aside_width",
   {
-    type: "percentage",
+    type: "positive_number",
   },
 );
 
@@ -30,23 +29,25 @@ effect(() => {
 
 export const Aside = ({ children }) => {
   const asideRef = useRef(null);
-  const width = useAsideWidth();
+  const widthSetting = useAsideWidth();
   const { resizing, resizeWidth } = useResizeStatus(asideRef, {
-    as: "percentage",
+    as: "number",
   });
+
+  console.log(resizeWidth, widthSetting);
 
   return (
     <aside
       ref={asideRef}
       data-resize="horizontal"
       style={{
-        width: resizing ? resizeWidth : width,
+        width: resizing ? resizeWidth : widthSetting,
         // Disable transition during resize to make it feel responsive
         transition: resizing ? "none" : undefined,
       }}
       // eslint-disable-next-line react/no-unknown-property
       onresizeend={(e) => {
-        setAsideWidth(e.detail.widthAsPercentage);
+        setAsideWidth(e.detail.width);
       }}
     >
       {children}
