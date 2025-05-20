@@ -143,14 +143,20 @@ const start = (event) => {
           child.style[key] = value;
         }
       };
-      setStyles({
-        ...(horizontalResizeEnabled ? { width: `${width}px` } : {}),
-        ...(verticalResizeEnabled ? { height: `${height}px` } : {}),
-        flex: "0 0 auto",
-        flexGrow: "0",
-        flexShrink: "0",
-        flexBasis: "auto",
-      });
+      const computedStyle = window.getComputedStyle(child);
+      const flex = computedStyle.flex;
+      const flexGrow = computedStyle.flexGrow;
+
+      if ((flex && flex !== "0 1 auto") || (flexGrow && flexGrow !== "0")) {
+        setStyles({
+          ...(horizontalResizeEnabled ? { width: `${width}px` } : {}),
+          ...(verticalResizeEnabled ? { height: `${height}px` } : {}),
+          flex: "0 0 auto",
+          flexGrow: "0",
+          flexShrink: "0",
+          flexBasis: "auto",
+        });
+      }
     });
   }
   for (const mutation of mutationSet) {
