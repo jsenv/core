@@ -12,7 +12,7 @@ import "./aside.css" with { type: "css" };
 const [restoreAsideWidth, storeAsideWidth] = valueInLocalStorage(
   "aside_width",
   {
-    type: "number",
+    type: "percentage",
   },
 );
 

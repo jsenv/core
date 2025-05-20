@@ -195,7 +195,7 @@ const start = (event) => {
       const ratio = resizeInfo.height / availableHeight;
       const roundedRatio = Math.round(ratio * 100) / 100;
       const percentage = roundedRatio * 100;
-      return `${percentage * 100}%`;
+      return `${percentage}%`;
     },
     widthChanged: false,
     heightChanged: false,
