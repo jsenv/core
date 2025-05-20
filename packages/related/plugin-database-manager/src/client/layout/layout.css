@@ -1,12 +1,19 @@
 /**
- * We can safely put overflow-x hidden on the body because
- * 1. <aside> has its own x scrollbar + min-width
- * 2. <main> has its own x scrollbar
+ * Layout Structure Overview:
  * 
- * We want to keep y overflow and in that case which always happen on <main> because
- * 1. <aside> takes 100vh and has its own y scrollbar
- * 2. <main> has not y scrollbar
- *
+ * This layout uses a two-column structure:
+ * - <aside>: Fixed-width sidebar that can be resized
+ * - <main>: Main content area that fills remaining space
+ * 
+ * Overflow Handling:
+ * - body: Hidden horizontal overflow prevents double scrollbars at page level
+ * - <aside>: Has fixed width, own scrollbars, and resizable right edge
+ * - <main>: Has horizontal scrolling for content wider than available space
+ * 
+ * Scroll Behavior:
+ * - <aside>: Fixed height (100vh) with its own vertical scrollbar if needed
+ * - <main>: Vertical scrolling happens at the document level
+ * - scrollbar-gutter: stable ensures layout doesn't shift when scrollbars appear
  */
 
 body {
@@ -20,27 +27,24 @@ body {
 }
 
 aside {
-  width: 250px;
-  flex-shrink: 0;
-  height: 100vh;
+  width: 250px; /* Default width that can be overridden by resize */
+  flex-shrink: 0; /* Prevents sidebar from shrinking when window is narrow */
+  height: 100vh; /* Full viewport height */
   position: sticky;
-  top: 0;
+  top: 0; /* Keeps sidebar visible when scrolling */
   border-right: 1px solid #e0e0e0;
-  min-width: 100px;
+  min-width: 100px; /* Prevents sidebar from becoming too narrow */
   z-index: 0; /* to ensure the content inside the <aside> cannot go above the [data-resize-handle] */
-}
-aside[data-open] {
-  width: 200px;
 }
 
 aside > [data-resize-handle] {
   position: absolute;
-  z-index: 1;
+  z-index: 1; /* Ensures resize handle appears above sidebar content */
   width: 5px;
-  right: -2.5px;
+  right: -2.5px; /* Centers the handle on the border */
   top: 0;
   bottom: 0;
-  cursor: ew-resize;
+  cursor: ew-resize; /* Indicates horizontal resize capability */
 }
 aside > [data-resize-handle]:hover,
 aside[data-resizing] > [data-resize-handle] {
@@ -50,23 +54,16 @@ aside[data-resizing] > [data-resize-handle] {
 
 main {
   padding-bottom: 0;
-  min-width: 200px;
+  min-width: 200px; /* Prevents content area from becoming too narrow */
   box-sizing: border-box;
+  min-height: 100vh; /* Ensures content area is at least viewport height */
+  overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */
+  scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shifts */
 }
 .main_body {
-  /* min-height ensure the scrollbar for <main> x overflow always appear at the bottom of the document
-        and overflow-x on <main> to prevent x-scrollbar to affect <aside> layout and sizes
-        
-        which is the part that is overflowing (the aside cannot overflow because
-        it has a fixed width + overflow hidden) */
-  min-height: 100vh;
-  overflow-x: auto;
-  scrollbar-gutter: stable;
+  padding: 20px; /* Consistent padding around main content */
 }
 
-.main_body_wrapper {
-  padding: 20px;
-}
 main h1 {
   margin-top: 0;
 }
