@@ -185,11 +185,7 @@ export const ExplorerGroup = forwardRef(
             </ul>
           </div>
         </details>
-        {resizable && (
-          <div data-resize-handle={controller.id}>
-            <div></div>
-          </div>
-        )}
+        {resizable && <div data-resize-handle={controller.id}></div>}
       </>
     );
   },

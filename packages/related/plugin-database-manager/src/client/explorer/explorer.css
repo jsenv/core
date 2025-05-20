@@ -54,6 +54,10 @@
   user-select: none;
   font-size: 14px;
   border: 1px solid transparent;
+  border-top-color: #e0e0e0;
+}
+.explorer_group:first-of-type > summary {
+  border-top-color: transparent;
 }
 .explorer_group > summary:focus {
   border-color: blue;
@@ -95,8 +99,8 @@
   width: 100%;
   height: 5px;
   min-height: 5px;
-  margin-top: -2px;
-  margin-bottom: -2px;
+  margin-top: -2.5px;
+  margin-bottom: -2.5px;
   position: relative;
 
   z-index: 2;
@@ -104,13 +108,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-}
-.explorer_group + [data-resize-handle] > * {
-  position: relative;
-  z-index: 0;
-  background-color: #e0e0e0;
-  height: 1px;
-  width: 100%;
 }
 .explorer_group + [data-resize-handle]:hover,
 .explorer_group[data-resizing] + [data-resize-handle] {
