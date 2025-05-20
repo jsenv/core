@@ -4,6 +4,7 @@
  */
 
 import "@jsenv/dom/details_content_scroll";
+import "@jsenv/dom/resize";
 import { effect } from "@preact/signals";
 import { useCallback, useState } from "preact/hooks";
 import { setCurrentRole } from "../role/role_signals.js";

@@ -4,7 +4,8 @@
   "version": "0.0.1",
   "exports": {
     ".": "./src/dom.js",
-    "./details_content_scroll": "./src/size/details_content_scroll.js"
+    "./details_content_scroll": "./src/size/details_content_scroll.js",
+    "./resize": "./src/size/resize.js"
   },
   "dependencies": {
     "@preact/signals": "2.0.4",

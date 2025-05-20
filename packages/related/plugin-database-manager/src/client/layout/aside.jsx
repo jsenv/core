@@ -3,6 +3,7 @@
  */
 
 import { useAvailableWidth, useMaxWidth, useResizeStatus } from "@jsenv/dom";
+import "@jsenv/dom/resize";
 import { valueInLocalStorage } from "@jsenv/router";
 import { effect, signal } from "@preact/signals";
 import { useRef } from "preact/hooks";

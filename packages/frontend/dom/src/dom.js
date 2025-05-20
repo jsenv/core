@@ -1,5 +1,3 @@
-import "./size/resize.js";
-
 export { elementIsVisible } from "./element_is_visible.js";
 export {
   addActiveElementEffect,
