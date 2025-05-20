@@ -1,4 +1,4 @@
-import { useResizeStatus } from "@jsenv/dom";
+import { useAvailableHeight, useMaxHeight, useResizeStatus } from "@jsenv/dom";
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import {
   SPAInputText,
@@ -66,6 +66,10 @@ export const ExplorerGroup = forwardRef(
     useImperativeHandle(ref, () => innerRef.current);
     const { open, onToggle } = useDetails(urlParam);
 
+    const { heightSignal } = controller;
+    const height = heightSignal.value;
+    const availableWidth = useAvailableHeight(innerRef);
+    const maxHeight = useMaxHeight(innerRef, availableWidth);
     const { resizing, resizeHeight } = useResizeStatus(innerRef, {
       as: "number",
     });
@@ -86,7 +90,15 @@ export const ExplorerGroup = forwardRef(
           className="explorer_group"
           data-resize="vertical"
           style={{
-            height: resizing ? resizeHeight : undefined,
+            height: resizing
+              ? resizeHeight
+              : height > maxHeight
+                ? maxHeight
+                : height,
+          }}
+          // eslint-disable-next-line react/no-unknown-property
+          onresizeend={(e) => {
+            heightSignal.value = e.detail.height;
           }}
           onToggle={(toggleEvent) => {
             onToggle(toggleEvent);

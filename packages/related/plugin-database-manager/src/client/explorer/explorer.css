@@ -40,9 +40,6 @@
 .explorer_group[open] {
   min-height: 20%;
 }
-.explorer_group:last-of-type {
-  flex: 1; /* Take up remaining space */
-}
 /* When multiple details are open, distribute space evenly */
 /* one day this is going to be decided by js with ability to resize manually */
 .explorer_group[open] {
