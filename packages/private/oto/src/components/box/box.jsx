@@ -1,4 +1,4 @@
-import { getAvailableSize } from "@jsenv/dom";
+import { getAvailableHeight, getAvailableWidth } from "@jsenv/dom";
 import { FOCUSED_OUTLINE_COLOR } from "oto/src/globals/colors.js";
 import { forwardRef } from "preact/compat";
 import {
@@ -136,7 +136,8 @@ const BoxComponent = (
       }
       // const { borderSizes } = getPaddingAndBorderSizes(element);
       const elementDimensions = element.getBoundingClientRect();
-      const [availableWidth, availableHeight] = getAvailableSize(element);
+      const availableWidth = getAvailableWidth(element);
+      const availableHeight = getAvailableHeight(element);
 
       const styleForXPosition = {
         alignSelf: "",

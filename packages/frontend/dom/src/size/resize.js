@@ -5,9 +5,14 @@
  *
  */
 
-import { getMaxHeight, getMaxWidth } from "./max_size.js";
-import { getMinHeight, getMinWidth } from "./min_size.js";
-import { measureSize } from "./size.js";
+import { getAvailableHeight } from "./get_available_height.js";
+import { getAvailableWidth } from "./get_available_width.js";
+import { getHeight } from "./get_height.js";
+import { getMaxHeight } from "./get_max_height.js";
+import { getMaxWidth } from "./get_max_width.js";
+import { getMinHeight } from "./get_min_height.js";
+import { getMinWidth } from "./get_min_width.js";
+import { getWidth } from "./get_width.js";
 
 const start = (event) => {
   if (event.button !== 0) {
@@ -47,9 +52,8 @@ const start = (event) => {
     direction === "horizontal" || direction === "both";
   const verticalResizeEnabled =
     direction === "vertical" || direction === "both";
-  const [availableWidth, availableHeight] = measureSize(
-    elementToResize.parentElement,
-  );
+  const availableWidth = getAvailableWidth(elementToResize.parentElement);
+  const availableHeight = getAvailableHeight(elementToResize.parentElement);
   const minWidth = getMinWidth(elementToResize, availableWidth);
   const minHeight = getMinHeight(elementToResize, availableHeight);
   const maxWidth = horizontalResizeEnabled
@@ -63,7 +67,8 @@ const start = (event) => {
   for (const child of elementToResize.parentElement.children) {
     // we must first store the sizes because when we'll set the styles
     // if will impact their sizes
-    const [width, height] = measureSize(child);
+    const width = getWidth(child);
+    const height = getHeight(child);
     mutationSet.add(() => {
       const setStyles = (namedValues) => {
         const inlineValueMap = new Map();

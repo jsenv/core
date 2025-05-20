@@ -2,7 +2,7 @@
 
  */
 
-import { useAvailableSize, useResizeStatus } from "@jsenv/dom";
+import { useAvailableWidth, useResizeStatus } from "@jsenv/dom";
 import { valueInLocalStorage } from "@jsenv/router";
 import { effect, signal } from "@preact/signals";
 import { useRef } from "preact/hooks";
@@ -32,7 +32,7 @@ export const Aside = ({ children }) => {
   const { resizing, resizeWidth } = useResizeStatus(asideRef, {
     as: "number",
   });
-  const [availableWidth] = useAvailableSize(asideRef);
+  const availableWidth = useAvailableWidth(asideRef);
 
   // TODO:
   // when available size changes (resize observer on the parent)
