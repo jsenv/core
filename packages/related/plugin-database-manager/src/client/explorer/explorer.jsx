@@ -59,7 +59,7 @@ const ExplorerBody = () => {
       />
       <ExplorerRoles
         id="roles_explorer"
-        resizable={resizable}
+        resizable={false}
         onOpen={onOpen}
         onClose={onClose}
       />

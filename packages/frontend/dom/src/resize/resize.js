@@ -44,8 +44,12 @@ const start = (event) => {
   const verticalResizeEnabled =
     direction === "vertical" || direction === "both";
 
-  const minWidth = getMinWidth(elementToResize);
-  const minHeight = getMinHeight(elementToResize);
+  const [availableWidth, availableHeight] = measureSize(
+    elementToResize.parentElement,
+  );
+
+  const minWidth = getMinWidth(elementToResize, availableWidth);
+  const minHeight = getMinHeight(elementToResize, availableHeight);
   let maxWidth;
   if (horizontalResizeEnabled) {
     maxWidth = elementToResize.parentElement.offsetWidth;
@@ -63,7 +67,7 @@ const start = (event) => {
       }
       let nextSibling = elementToResize.nextElementSibling;
       while (nextSibling) {
-        const nextSiblingMinWidth = getMinWidth(nextSibling);
+        const nextSiblingMinWidth = getMinWidth(nextSibling, availableWidth);
         maxWidth -= nextSiblingMinWidth;
         nextSibling = nextSibling.nextElementSibling;
       }
@@ -86,7 +90,7 @@ const start = (event) => {
       }
       let nextSibling = elementToResize.nextElementSibling;
       while (nextSibling) {
-        const nextSiblingMinHeight = getMinHeight(nextSibling);
+        const nextSiblingMinHeight = getMinHeight(nextSibling, availableHeight);
         maxHeight -= nextSiblingMinHeight;
         nextSibling = nextSibling.nextElementSibling;
       }
@@ -97,10 +101,7 @@ const start = (event) => {
   for (const child of elementToResize.parentElement.children) {
     // we must first store the sizes because when we'll set the styles
     // if will impact their sizes
-    const currentSize = {
-      width: child.offsetWidth,
-      height: child.offsetHeight,
-    };
+    const [width, height] = measureSize(child);
     mutationSet.add(() => {
       const setStyles = (namedValues) => {
         const inlineValueMap = new Map();
@@ -120,10 +121,9 @@ const start = (event) => {
           child.style[key] = value;
         }
       };
-
       setStyles({
-        ...(horizontalResizeEnabled ? { width: `${currentSize.width}px` } : {}),
-        ...(verticalResizeEnabled ? { height: `${currentSize.height}px` } : {}),
+        ...(horizontalResizeEnabled ? { width: `${width}px` } : {}),
+        ...(verticalResizeEnabled ? { height: `${height}px` } : {}),
         flex: "0 0 auto",
         flexGrow: "0",
         flexShrink: "0",
@@ -257,19 +257,29 @@ const start = (event) => {
   dispatchResizeStartEvent();
 };
 
-const getMinWidth = (element) => {
+const measureSize = (element) => {
+  const rect = element.getBoundingClientRect();
+  const { width, height } = rect;
+  return [width, height];
+};
+
+const getMinWidth = (element, availableWidth) => {
   const minWidth = window.getComputedStyle(element).minWidth;
   if (minWidth && minWidth.endsWith("%")) {
-    const availableWidth = element.parentElement.offsetWidth;
+    if (availableWidth === undefined) {
+      availableWidth = measureSize(element.parentElement)[0];
+    }
     return (parseInt(minWidth) / 100) * availableWidth;
   }
   return isNaN(minWidth) ? 0 : parseInt(minWidth);
 };
 
-const getMinHeight = (element) => {
+const getMinHeight = (element, availableHeight) => {
   const minHeight = window.getComputedStyle(element).minHeight;
   if (minHeight && minHeight.endsWith("%")) {
-    const availableHeight = element.parentElement.offsetHeight;
+    if (availableHeight === undefined) {
+      availableHeight = measureSize(element.parentElement)[1];
+    }
     return (parseInt(minHeight) / 100) * availableHeight;
   }
   return isNaN(minHeight) ? 0 : parseInt(minHeight);
