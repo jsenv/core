@@ -23,20 +23,20 @@ export const createExplorerGroupController = (id) => {
       type: "positive_number",
     },
   );
-  const heightSignal = signal(restoreHeight());
+  const heightSettingSignal = signal(restoreHeight());
   effect(() => {
-    const height = heightSignal.value;
+    const height = heightSettingSignal.value;
     storeHeight(height);
   });
 
-  const useHeight = () => {
-    return heightSignal.value;
+  const useHeightSetting = () => {
+    return heightSettingSignal.value;
   };
-  const setHeight = (width) => {
-    heightSignal.value = width;
+  const setHeightSetting = (width) => {
+    heightSettingSignal.value = width;
   };
 
-  return { id, heightSignal, useHeight, setHeight };
+  return { id, useHeightSetting, setHeightSetting };
 };
 
 export const ExplorerGroup = forwardRef(
@@ -66,8 +66,8 @@ export const ExplorerGroup = forwardRef(
     useImperativeHandle(ref, () => innerRef.current);
     const { open, onToggle } = useDetails(urlParam);
 
-    const { heightSignal } = controller;
-    const height = heightSignal.value;
+    const { useHeightSetting, setHeightSetting } = controller;
+    const heightSetting = useHeightSetting();
     const availableWidth = useAvailableHeight(innerRef);
     const maxHeight = useMaxHeight(innerRef, availableWidth);
     const { resizing, resizeHeight } = useResizeStatus(innerRef, {
@@ -82,6 +82,23 @@ export const ExplorerGroup = forwardRef(
       setIsCreatingNew(false);
     }, [setIsCreatingNew]);
 
+    const height = resizing
+      ? resizeHeight
+      : resizable
+        ? heightSetting > maxHeight
+          ? maxHeight
+          : heightSetting
+        : undefined;
+    const flex = resizable && heightSetting ? "none" : undefined;
+    const style = {
+      height,
+      flex,
+    };
+
+    if (controller.id === "databases") {
+      console.log("render", style, { heightSetting, resizable, maxHeight });
+    }
+
     return (
       <>
         <details
@@ -89,16 +106,10 @@ export const ExplorerGroup = forwardRef(
           id={controller.id}
           className="explorer_group"
           data-resize="vertical"
-          style={{
-            height: resizing
-              ? resizeHeight
-              : height > maxHeight
-                ? maxHeight
-                : height,
-          }}
+          style={style}
           // eslint-disable-next-line react/no-unknown-property
           onresizeend={(e) => {
-            heightSignal.value = e.detail.height;
+            setHeightSetting(e.detail.height);
           }}
           onToggle={(toggleEvent) => {
             onToggle(toggleEvent);
