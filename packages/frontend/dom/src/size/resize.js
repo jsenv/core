@@ -235,6 +235,9 @@ const start = (event) => {
         }
       }
       if (previousSiblingsShrink === 0) {
+        if (nextSiblingSet.size === 0) {
+          return;
+        }
         applySelfShrink(-resizeInfo.xMove, nextSiblingSet);
         return;
       }
@@ -272,6 +275,9 @@ const start = (event) => {
         }
       }
       if (nextSiblingsShrink === 0) {
+        if (previousSiblingSet.size === 0) {
+          return;
+        }
         applySelfShrink(resizeInfo.xMove, previousSiblingSet);
         return;
       }
