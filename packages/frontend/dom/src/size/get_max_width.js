@@ -1,3 +1,4 @@
+import { canTakeSize } from "./can_take_size.js";
 import { getAvailableWidth } from "./get_available_width.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinWidth } from "./get_min_width.js";
@@ -21,7 +22,7 @@ export const getMaxWidth = (
   ) {
     let previousSibling = element.previousElementSibling;
     while (previousSibling) {
-      if (canTakeSpace(previousSibling)) {
+      if (canTakeSize(previousSibling)) {
         const previousSiblingWidth = getWidth(previousSibling);
         maxWidth -= previousSiblingWidth;
         const previousSiblingMarginSizes = getMarginSizes(previousSibling);
@@ -32,7 +33,7 @@ export const getMaxWidth = (
     }
     let nextSibling = element.nextElementSibling;
     while (nextSibling) {
-      if (canTakeSpace(nextSibling)) {
+      if (canTakeSize(nextSibling)) {
         const nextSiblingMinWidth = getMinWidth(nextSibling, availableWidth);
         maxWidth -= nextSiblingMinWidth;
         const nextSiblingMarginSizes = getMarginSizes(nextSibling);
@@ -43,16 +44,4 @@ export const getMaxWidth = (
     }
   }
   return maxWidth;
-};
-
-const canTakeSpace = (element) => {
-  const computedStyle = window.getComputedStyle(element);
-
-  if (computedStyle.display === "none") {
-    return false;
-  }
-  if (computedStyle.position === "absolute") {
-    return false;
-  }
-  return true;
 };

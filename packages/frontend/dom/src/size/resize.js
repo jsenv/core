@@ -4,9 +4,11 @@
 
 import { addAttributeEffect } from "../add_attribute_effect.js";
 import { setStyles } from "../style_and_attributes.js";
+import { canTakeSize } from "./can_take_size.js";
 import { getAvailableHeight } from "./get_available_height.js";
 import { getAvailableWidth } from "./get_available_width.js";
 import { getHeight } from "./get_height.js";
+import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMaxHeight } from "./get_max_height.js";
 import { getMaxWidth } from "./get_max_width.js";
 import { getMinHeight } from "./get_min_height.js";
@@ -19,6 +21,86 @@ const style = /*css*/ `
      flex-grow: 0 !important; /* flex-grow !== 0 would prevent element to shrink as much as it could */
    }`;
 document.head.appendChild(document.createElement("style")).textContent = style;
+
+const setWidth = (element, width) => {
+  element.style.width = `${width}px`;
+};
+
+const getResizeContext = (elementToResize) => {
+  const previousSiblingInfoSet = new Set();
+  const nextSiblingInfoSet = new Set();
+  const resizeContext = {
+    minWidth: undefined,
+    minHeight: undefined,
+    maxWidth: undefined,
+    maxHeight: undefined,
+    widthAtStart: undefined,
+    heightAtStart: undefined,
+    previousSiblingInfoSet,
+    nextSiblingInfoSet,
+  };
+
+  const parentElement = elementToResize.parentElement;
+  {
+    const availableWidth = getAvailableWidth(parentElement);
+    const availableHeight = getAvailableHeight(parentElement);
+    resizeContext.availableWidth = availableWidth;
+    resizeContext.availableHeight = availableHeight;
+    resizeContext.widthAtStart = getWidth(elementToResize);
+    resizeContext.heightAtStart = getHeight(elementToResize);
+    resizeContext.minWidth = getMinWidth(elementToResize, availableWidth);
+    resizeContext.minHeight = getMinHeight(elementToResize, availableHeight);
+    resizeContext.maxHeight = null;
+  }
+
+  siblings: {
+    const availableWidth = resizeContext.availableWidth;
+    const parentElementComputedStyle = window.getComputedStyle(parentElement);
+    if (
+      parentElementComputedStyle.display === "flex" &&
+      parentElementComputedStyle.flexDirection === "row"
+    ) {
+      prev_siblings: {
+        let previousSibling = elementToResize.previousElementSibling;
+        while (previousSibling) {
+          if (canTakeSize(previousSibling)) {
+            const width = getWidth(previousSibling);
+            const marginSizes = getMarginSizes(previousSibling);
+            const horizontalSpacing = marginSizes.left + marginSizes.right;
+            const minWidth = getMinWidth(previousSibling, availableWidth);
+            previousSiblingInfoSet.add({
+              element: previousSibling,
+              horizontalSpacing,
+              width,
+              minWidth,
+            });
+          }
+          previousSibling = previousSibling.previousElementSibling;
+        }
+      }
+      next_siblings: {
+        let nextSibling = elementToResize.nextElementSibling;
+        while (nextSibling) {
+          if (canTakeSize(nextSibling)) {
+            const width = getWidth(nextSibling);
+            const marginSizes = getMarginSizes(nextSibling);
+            const horizontalSpacing = marginSizes.left + marginSizes.right;
+            const minWidth = getMinWidth(nextSibling, availableWidth);
+            nextSiblingInfoSet.add({
+              element: nextSibling,
+              horizontalSpacing,
+              width,
+              minWidth,
+            });
+          }
+          nextSibling = nextSibling.nextElementSibling;
+        }
+      }
+    }
+  }
+
+  return resizeContext;
+};
 
 const start = (event) => {
   if (event.button !== 0) {
@@ -47,59 +129,46 @@ const start = (event) => {
   // inspired by https://developer.mozilla.org/en-US/docs/Web/CSS/resize
   // "horizontal", "vertical", "both"
   const direction = elementToResize.getAttribute("data-resize");
-  if (direction === "none") {
+  const horizontalResizeEnabled =
+    direction === "horizontal" || direction === "both";
+  const verticalResizeEnabled =
+    direction === "vertical" || direction === "both";
+  if (!horizontalResizeEnabled && !verticalResizeEnabled) {
     return;
   }
   event.preventDefault();
 
   const endCallbackSet = new Set();
-
-  const horizontalResizeEnabled =
-    direction === "horizontal" || direction === "both";
-  const verticalResizeEnabled =
-    direction === "vertical" || direction === "both";
-  const availableWidth = getAvailableWidth(elementToResize.parentElement);
-  const availableHeight = getAvailableHeight(elementToResize.parentElement);
-  const minWidth = getMinWidth(elementToResize, availableWidth);
-  const minHeight = getMinHeight(elementToResize, availableHeight);
-  const maxWidth = horizontalResizeEnabled
-    ? getMaxWidth(elementToResize, availableWidth)
-    : null;
-  const maxHeight = verticalResizeEnabled
-    ? getMaxHeight(elementToResize, availableHeight)
-    : null;
-
-  const widthAtStart = elementToResize.offsetWidth;
-  const heightAtStart = elementToResize.offsetHeight;
   const xAtStart = event.clientX;
   const yAtStart = event.clientY;
+  const resizeContext = getResizeContext(elementToResize);
   const resizeInfo = {
-    availableWidth,
-    availableHeight,
-    minWidth,
-    minHeight,
-    maxWidth,
-    maxHeight,
+    availableWidth: resizeContext.availableWidth,
+    availableHeight: resizeContext.availableHeight,
+    minWidth: resizeContext.minWidth,
+    minHeight: resizeContext.minHeight,
+    maxWidth: resizeContext.maxWidth,
+    maxHeight: resizeContext.maxHeight,
     xAtStart,
     yAtStart,
     x: xAtStart,
     y: yAtStart,
     xMove: 0,
     yMove: 0,
-    widthAtStart,
-    heightAtStart,
+    widthAtStart: resizeContext.widthAtStart,
+    heightAtStart: resizeContext.heightAtStart,
     previousWidth: undefined,
     previousHeight: undefined,
-    width: widthAtStart,
-    height: heightAtStart,
+    width: resizeContext.widthAtStart,
+    height: resizeContext.heightAtStart,
     get widthAsPercentage() {
-      const ratio = resizeInfo.width / availableWidth;
+      const ratio = resizeInfo.width / resizeContext.availableWidth;
       const roundedRatio = Math.round(ratio * 100) / 100;
       const percentage = roundedRatio * 100;
       return `${percentage}%`;
     },
     get heightAsPercentage() {
-      const ratio = resizeInfo.height / availableHeight;
+      const ratio = resizeInfo.height / resizeContext.availableHeight;
       const roundedRatio = Math.round(ratio * 100) / 100;
       const percentage = roundedRatio * 100;
       return `${percentage}%`;
@@ -125,95 +194,139 @@ const start = (event) => {
     elementToResize.dispatchEvent(resizeEndEvent);
   };
 
-  const requestResize = (requestedWidth, requestedHeight) => {
-    if (horizontalResizeEnabled) {
-      let nextWidth = requestedWidth;
-      if (requestedWidth > maxWidth) {
-        nextWidth = maxWidth;
-      } else if (requestedWidth < minWidth) {
-        nextWidth = minWidth;
-      }
-      const widthChanged = nextWidth !== resizeInfo.width;
-      resizeInfo.widthChanged = widthChanged;
-      if (widthChanged) {
-        resizeInfo.previousWidth = resizeInfo.height;
-        resizeInfo.width = nextWidth;
-      }
+  const updateSizeAfterMove = () => {
+    if (resizeInfo.xMove === 0) {
+      return;
     }
-    if (verticalResizeEnabled) {
-      let nextHeight = requestedHeight;
-      if (requestedHeight > maxHeight) {
-        nextHeight = maxHeight;
-      } else if (requestedHeight < minHeight) {
-        nextHeight = minHeight;
-      }
-      const heightChanged = nextHeight !== resizeInfo.height;
-      resizeInfo.heightChanged = heightChanged;
-      if (heightChanged) {
-        resizeInfo.previousHeight = resizeInfo.height;
-        resizeInfo.height = nextHeight;
-      }
-    }
-    if (resizeInfo.widthChanged || resizeInfo.heightChanged) {
-      if (horizontalResizeEnabled) {
-        const widthBeforeResize = getWidth(elementToResize);
-        elementToResize.style.width = `${resizeInfo.width}px`;
-        const widthAfterResize = getWidth(elementToResize);
-        let widthDiff = widthAfterResize - widthBeforeResize;
-
-        if (widthDiff > 0) {
-          let nextSibling = elementToResize.nextElementSibling;
-          while (widthDiff > 0 && nextSibling) {
-            const nextSiblingWidthBeforeAdapt = getWidth(nextSibling);
-            const nextSiblingWidthAdapted =
-              nextSiblingWidthBeforeAdapt - widthDiff;
-            nextSibling.style.width = `${nextSiblingWidthAdapted}px`;
-            const nextSiblingWidthAfterAdapt = getWidth(nextSibling);
-            const actualDiff =
-              nextSiblingWidthBeforeAdapt - nextSiblingWidthAfterAdapt;
-            if (actualDiff) {
-              const resizeEvent = new CustomEvent("resize", {
-                detail: { width: nextSiblingWidthAfterAdapt },
-              });
-              nextSibling.dispatchEvent(resizeEvent);
-              widthDiff -= actualDiff;
-            }
-            nextSibling = nextSibling.nextElementSibling;
-          }
+    if (resizeInfo.xMove < 0) {
+      const sizeToGain = Math.abs(resizeInfo.xMove);
+      let sizeStolenFromPreviousSiblings = 0;
+      for (const previousSiblingInfo of resizeContext.previousSiblingInfoSet) {
+        const widthUsable =
+          previousSiblingInfo.width - previousSiblingInfo.minWidth;
+        if (widthUsable <= 0) {
+          // we can't shrink this one
+          continue;
         }
-        // else if (widthDiff < 0) {
-        //   let prevSibling = elementToResize.previousElementSibling;
-        //   while (widthDiff > 0 && prevSibling) {
-        //     const siblingWidthBeforeAdapt = getWidth(prevSibling);
-        //     const siblingWidthAdapted = siblingWidthBeforeAdapt + widthDiff;
-        //     prevSibling.style.width = `${siblingWidthAdapted}px`;
-        //     const siblingWidthAfterAdapt = getWidth(prevSibling);
-        //     const actualDiff = siblingWidthBeforeAdapt - siblingWidthAfterAdapt;
-        //     if (actualDiff) {
-        //       const resizeEvent = new CustomEvent("resize", {
-        //         detail: { width: siblingWidthAfterAdapt },
-        //       });
-        //       prevSibling.dispatchEvent(resizeEvent);
-        //       widthDiff -= actualDiff;
-        //     }
-        //     prevSibling = prevSibling.previousElementSibling;
-        //   }
-        // }
+        // we can shrink max by "widthUsable"
+        const widthToSteal = Math.min(widthUsable, sizeToGain);
+        const widthAfterSteal = previousSiblingInfo.width - widthToSteal;
+        setWidth(previousSiblingInfo.element, widthAfterSteal);
+        sizeStolenFromPreviousSiblings += widthToSteal;
+        if (sizeStolenFromPreviousSiblings === sizeToGain) {
+          break;
+        }
       }
-      if (verticalResizeEnabled) {
-        elementToResize.style.height = `${resizeInfo.height}px`;
+      if (sizeStolenFromPreviousSiblings === 0) {
+        return;
       }
-      dispatchResizeEvent();
+      setWidth(
+        elementToResize,
+        resizeInfo.widthAtStart + sizeStolenFromPreviousSiblings,
+      );
+      return;
     }
+    if (resizeInfo.xMove > 0) {
+      const sizeToGain = resizeInfo.xMove;
+      let sizeStolenFromNextSiblings = 0;
+      for (const nextSiblingInfo of resizeContext.nextSiblingInfoSet) {
+        const widthUsable = nextSiblingInfo.width - nextSiblingInfo.minWidth;
+        if (widthUsable <= 0) {
+          // we can't shrink this one
+          continue;
+        }
+        // we can shrink max by "widthUsable"
+        const widthToSteal = Math.min(widthUsable, sizeToGain);
+        const widthAfterSteal = nextSiblingInfo.width - widthToSteal;
+        setWidth(nextSiblingInfo.element, widthAfterSteal);
+        sizeStolenFromNextSiblings += widthToSteal;
+        if (sizeStolenFromNextSiblings === sizeToGain) {
+          break;
+        }
+      }
+      if (sizeStolenFromNextSiblings === 0) {
+        return;
+      }
+      setWidth(
+        elementToResize,
+        resizeInfo.widthAtStart + sizeStolenFromNextSiblings,
+      );
+      return;
+    }
+
+    // const newWidth = resizeContext.widthAtStart + resizeInfo.xMove;
+    // let nextWidth = requestedWidth;
+    // if (requestedWidth > resizeContext.maxWidth) {
+    //   // here we must try to decrease next sibling width
+    //   // to try to allow this one to grow
+    //   nextWidth = resizeContext.maxWidth;
+    // } else if (requestedWidth < resizeContext.minWidth) {
+    //   // here we must try to decrease previous sibling width
+    //   // to allow next sibling to grow
+    //   nextWidth = resizeContext.minWidth;
+    // }
+    // const widthChanged = nextWidth !== resizeInfo.width;
+    // resizeInfo.widthChanged = widthChanged;
+    // if (widthChanged) {
+    //   resizeInfo.previousWidth = resizeInfo.height;
+    //   resizeInfo.width = nextWidth;
+    // }
+
+    // const newHeight = resizeContext.heightAtStart + resizeInfo.yMove;
+    // if (verticalResizeEnabled) {
+    //   let nextHeight = requestedHeight;
+    //   if (requestedHeight > resizeContext.maxHeight) {
+    //     nextHeight = resizeContext.maxHeight;
+    //   } else if (requestedHeight < resizeContext.minHeight) {
+    //     nextHeight = resizeContext.minHeight;
+    //   }
+    //   const heightChanged = nextHeight !== resizeInfo.height;
+    //   resizeInfo.heightChanged = heightChanged;
+    //   if (heightChanged) {
+    //     resizeInfo.previousHeight = resizeInfo.height;
+    //     resizeInfo.height = nextHeight;
+    //   }
+    // }
+    // if (resizeInfo.widthChanged || resizeInfo.heightChanged) {
+    //   if (horizontalResizeEnabled) {
+    //     const widthBeforeResize = getWidth(elementToResize);
+    //     elementToResize.style.width = `${resizeInfo.width}px`;
+    //     const widthAfterResize = getWidth(elementToResize);
+    //     let widthDiff = widthAfterResize - widthBeforeResize;
+
+    //     if (widthDiff > 0) {
+    //       let nextSibling = elementToResize.nextElementSibling;
+    //       while (widthDiff > 0 && nextSibling) {
+    //         const nextSiblingWidthBeforeAdapt = getWidth(nextSibling);
+    //         const nextSiblingWidthAdapted =
+    //           nextSiblingWidthBeforeAdapt - widthDiff;
+    //         nextSibling.style.width = `${nextSiblingWidthAdapted}px`;
+    //         const nextSiblingWidthAfterAdapt = getWidth(nextSibling);
+    //         const actualDiff =
+    //           nextSiblingWidthBeforeAdapt - nextSiblingWidthAfterAdapt;
+    //         if (actualDiff) {
+    //           const resizeEvent = new CustomEvent("resize", {
+    //             detail: { width: nextSiblingWidthAfterAdapt },
+    //           });
+    //           nextSibling.dispatchEvent(resizeEvent);
+    //           widthDiff -= actualDiff;
+    //         }
+    //         nextSibling = nextSibling.nextElementSibling;
+    //       }
+    //     }
+    //   }
+    //   if (verticalResizeEnabled) {
+    //     elementToResize.style.height = `${resizeInfo.height}px`;
+    //   }
+    //   dispatchResizeEvent();
+    // }
   };
   const handleMouseMove = (e) => {
     resizeInfo.x = e.clientX;
     resizeInfo.y = e.clientY;
     resizeInfo.xMove = resizeInfo.x - xAtStart;
     resizeInfo.yMove = resizeInfo.y - yAtStart;
-    const newWidth = widthAtStart + resizeInfo.xMove;
-    const newHeight = heightAtStart + resizeInfo.yMove;
-    requestResize(newWidth, newHeight);
+    updateSizeAfterMove();
   };
 
   const backdrop = document.createElement("div");
@@ -233,10 +346,7 @@ const start = (event) => {
     resizeInfo.y = e.clientY;
     resizeInfo.xMove = resizeInfo.x - xAtStart;
     resizeInfo.yMove = resizeInfo.y - yAtStart;
-    requestResize(
-      widthAtStart + resizeInfo.xMove,
-      heightAtStart + resizeInfo.yMove,
-    );
+    updateSizeAfterMove();
     for (const endCallback of endCallbackSet) {
       endCallback();
     }
@@ -254,7 +364,7 @@ const start = (event) => {
     elementToResize.removeAttribute("data-resizing");
   });
   if (horizontalResizeEnabled) {
-    elementToResize.style.width = `${resizeInfo.width}px`;
+    setWidth(elementToResize, resizeInfo.width);
   }
   if (verticalResizeEnabled) {
     elementToResize.style.height = `${resizeInfo.height}px`;
