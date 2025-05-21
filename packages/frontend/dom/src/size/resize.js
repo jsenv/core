@@ -275,21 +275,23 @@ const start = (event) => {
     };
 
     if (resizeInfo.xMove < 0) {
+      const move = -resizeInfo.xMove;
       if (previousSiblingSet.size === 0) {
-        applySelfShrink(-resizeInfo.xMove, nextSiblingSet);
+        applySelfShrink(move, nextSiblingSet);
         return;
       }
       const spaceStolenFromPreviousSiblings = stealSpaceFromSiblings(
         previousSiblingSet,
-        -resizeInfo.xMove,
+        move,
       );
       if (spaceStolenFromPreviousSiblings === 0) {
         if (nextSiblingSet.size === 0) {
           return;
         }
-        applySelfShrink(-resizeInfo.xMove, nextSiblingSet);
+        applySelfShrink(move, nextSiblingSet);
         return;
       }
+
       const elementWidth = widthMap.get(elementToResize);
       const elementNewSize = elementWidth + spaceStolenFromPreviousSiblings;
       setWidth(elementToResize, elementNewSize);
