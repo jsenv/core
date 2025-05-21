@@ -40,11 +40,8 @@ export const Aside = ({ children }) => {
       ref={asideRef}
       data-resize="horizontal"
       style={{
-        width: resizing
-          ? resizeWidth
-          : widthSetting > maxWidth
-            ? maxWidth
-            : widthSetting,
+        width: resizing ? resizeWidth : widthSetting,
+        maxWidth,
         // Disable transition during resize to make it responsive
         transition: resizing ? "none" : undefined,
       }}
