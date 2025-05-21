@@ -4,12 +4,10 @@
 
 import { getAvailableHeight } from "./get_available_height.js";
 import { getAvailableWidth } from "./get_available_width.js";
-import { getHeight } from "./get_height.js";
 import { getMaxHeight } from "./get_max_height.js";
 import { getMaxWidth } from "./get_max_width.js";
 import { getMinHeight } from "./get_min_height.js";
 import { getMinWidth } from "./get_min_width.js";
-import { getWidth } from "./get_width.js";
 
 const start = (event) => {
   if (event.button !== 0) {
@@ -59,56 +57,6 @@ const start = (event) => {
   const maxHeight = verticalResizeEnabled
     ? getMaxHeight(elementToResize, availableHeight)
     : null;
-
-  const mutationSet = new Set();
-  for (const child of elementToResize.parentElement.children) {
-    // we must first store the sizes because when we'll set the styles
-    // if will impact their sizes
-    const width = getWidth(child);
-    const height = getHeight(child);
-    if (child === elementToResize) {
-      mutationSet.add(() => {
-        const setStyles = (namedValues) => {
-          const inlineValueMap = new Map();
-          for (const key of Object.keys(namedValues)) {
-            const inlineValue = child.style[key];
-            inlineValueMap.set(key, inlineValue);
-            endCallbackSet.add(() => {
-              if (inlineValue === "") {
-                child.style.removeProperty(key);
-              } else {
-                child.style[key] = inlineValue;
-              }
-            });
-          }
-          for (const key of Object.keys(namedValues)) {
-            const value = namedValues[key];
-            child.style[key] = value;
-          }
-        };
-        const computedStyle = window.getComputedStyle(child);
-        const flex = computedStyle.flex;
-        const flexGrow = computedStyle.flexGrow;
-
-        if (
-          (flex && flex !== "0 1 auto" && flex !== "0 0 auto") ||
-          (flexGrow && flexGrow !== "0")
-        ) {
-          setStyles({
-            ...(horizontalResizeEnabled ? { width: `${width}px` } : {}),
-            ...(verticalResizeEnabled ? { height: `${height}px` } : {}),
-            flex: "0 0 auto",
-            flexGrow: "0",
-            flexShrink: "0",
-            flexBasis: "auto",
-          });
-        }
-      });
-    }
-  }
-  for (const mutation of mutationSet) {
-    mutation();
-  }
 
   const widthAtStart = elementToResize.offsetWidth;
   const heightAtStart = elementToResize.offsetHeight;
