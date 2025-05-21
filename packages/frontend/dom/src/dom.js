@@ -11,6 +11,8 @@ export {
   trapScrollInside,
 } from "./scroll.js";
 
+export { addAttributeEffect } from "./add_attribute_effect.js";
+
 // size
 export { getAvailableHeight } from "./size/get_available_height.js";
 export { getAvailableWidth } from "./size/get_available_width.js";

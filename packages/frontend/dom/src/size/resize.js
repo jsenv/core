@@ -2,6 +2,7 @@
  *
  */
 
+import { addAttributeEffect } from "../add_attribute_effect.js";
 import { getAvailableHeight } from "./get_available_height.js";
 import { getAvailableWidth } from "./get_available_width.js";
 import { getMaxHeight } from "./get_max_height.js";
@@ -220,3 +221,34 @@ document.addEventListener(
     capture: true,
   },
 );
+
+addAttributeEffect("data-resize", (element) => {
+  const parentElement = element.parentElement;
+  const direction = element.getAttribute("data-resize");
+  const horizontalResizeEnabled =
+    direction === "horizontal" || direction === "both";
+  const verticalResizeEnabled =
+    direction === "vertical" || direction === "both";
+  if (!horizontalResizeEnabled && !verticalResizeEnabled) {
+    return null;
+  }
+  const resizeObserver = new ResizeObserver((entries) => {
+    const [entry] = entries;
+    if (horizontalResizeEnabled) {
+      const parentWidth = entry.contentRect.width;
+      const availableWidth = getAvailableWidth(element, parentWidth);
+      const maxWidth = getMaxWidth(element, availableWidth);
+      element.style.maxWidth = `${maxWidth}px`;
+    }
+    if (verticalResizeEnabled) {
+      const parentHeight = entry.contentRect.height;
+      const availableHeight = getAvailableHeight(element, parentHeight);
+      const maxHeight = getMaxHeight(element, availableHeight);
+      element.style.maxHeight = `${maxHeight}px`;
+    }
+  });
+  resizeObserver.observe(parentElement);
+  return () => {
+    resizeObserver.disconnect(parentElement);
+  };
+});
