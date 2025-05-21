@@ -192,6 +192,12 @@ const start = (event) => {
       }
     }
     if (resizeInfo.widthChanged || resizeInfo.heightChanged) {
+      if (horizontalResizeEnabled) {
+        elementToResize.style.width = `${resizeInfo.width}px`;
+      }
+      if (verticalResizeEnabled) {
+        elementToResize.style.height = `${resizeInfo.height}px`;
+      }
       dispatchResizeEvent();
     }
   };

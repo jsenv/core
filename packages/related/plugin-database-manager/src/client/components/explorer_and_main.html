@@ -85,10 +85,25 @@
         height: 250px;
         border: 1px solid red;
       }
+
+      aside > [data-resize-handle] {
+        position: absolute;
+        z-index: 1; /* Ensures resize handle appears above sidebar content */
+        width: 5px;
+        right: -2.5px; /* Centers the handle on the border */
+        top: 0;
+        bottom: 0;
+        cursor: ew-resize; /* Indicates horizontal resize capability */
+      }
+      aside > [data-resize-handle]:hover,
+      aside[data-resizing] > [data-resize-handle] {
+        background-color: blue;
+        opacity: 0.5;
+      }
     </style>
 
     <div id="app">
-      <aside data-open>
+      <aside data-open data-resize="horizontal">
         <div id="explorer">
           <h2 class="explorer_head">Explorer</h2>
 
@@ -116,6 +131,7 @@
             </details>
           </div>
         </div>
+        <div data-resize-handle></div>
       </aside>
       <main>
         <h1 title="Explore and manager your database">Database Manager</h1>
@@ -136,6 +152,9 @@
       };
     </script>
 
-    <script src="../explorer/details_content_scroll.js"></script>
+    <script type="module">
+      import "@jsenv/dom/resize";
+      import "@jsenv/dom/details_content_scroll";
+    </script>
   </body>
 </html>
