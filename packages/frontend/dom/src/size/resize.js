@@ -159,8 +159,9 @@ const start = (event) => {
         const widthBeforeResize = getWidth(elementToResize);
         elementToResize.style.width = `${resizeInfo.width}px`;
         const widthAfterResize = getWidth(elementToResize);
-        if (widthAfterResize !== widthBeforeResize) {
-          let widthDiff = widthAfterResize - widthBeforeResize;
+        let widthDiff = widthAfterResize - widthBeforeResize;
+
+        if (widthDiff > 0) {
           let nextSibling = elementToResize.nextElementSibling;
           while (widthDiff > 0 && nextSibling) {
             const nextSiblingWidthBeforeAdapt = getWidth(nextSibling);
@@ -180,6 +181,24 @@ const start = (event) => {
             nextSibling = nextSibling.nextElementSibling;
           }
         }
+        // else if (widthDiff < 0) {
+        //   let prevSibling = elementToResize.previousElementSibling;
+        //   while (widthDiff > 0 && prevSibling) {
+        //     const siblingWidthBeforeAdapt = getWidth(prevSibling);
+        //     const siblingWidthAdapted = siblingWidthBeforeAdapt + widthDiff;
+        //     prevSibling.style.width = `${siblingWidthAdapted}px`;
+        //     const siblingWidthAfterAdapt = getWidth(prevSibling);
+        //     const actualDiff = siblingWidthBeforeAdapt - siblingWidthAfterAdapt;
+        //     if (actualDiff) {
+        //       const resizeEvent = new CustomEvent("resize", {
+        //         detail: { width: siblingWidthAfterAdapt },
+        //       });
+        //       prevSibling.dispatchEvent(resizeEvent);
+        //       widthDiff -= actualDiff;
+        //     }
+        //     prevSibling = prevSibling.previousElementSibling;
+        //   }
+        // }
       }
       if (verticalResizeEnabled) {
         elementToResize.style.height = `${resizeInfo.height}px`;
