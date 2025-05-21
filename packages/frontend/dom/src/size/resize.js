@@ -64,9 +64,39 @@ const start = (event) => {
   const minWidthMap = new Map();
   const widthMap = new Map();
   const maxWidthMap = new Map();
+
+  const currentWidthMap = new Map();
   const setWidth = (element, width) => {
     element.style.width = `${width}px`;
-    // widthMap.set(element, width);
+    currentWidthMap.set(element, width);
+  };
+  const saveWidth = (element) => {
+    const width = getWidth(element);
+    widthMap.set(element, width);
+    currentWidthMap.set(element, width);
+    return width;
+  };
+
+  const parentElement = elementToResize.parentElement;
+  const availableWidth = getAvailableWidth(parentElement);
+  const availableHeight = getAvailableHeight(parentElement);
+
+  const getWidthRemainingForThisElement = (element) => {
+    let widthRemaining = availableWidth;
+    for (const previousSibling of previousSiblingSet) {
+      if (previousSibling !== element) {
+        widthRemaining -= currentWidthMap.get(previousSibling);
+      }
+    }
+    if (elementToResize !== element) {
+      widthRemaining -= currentWidthMap.get(elementToResize);
+    }
+    for (const nextSibling of nextSiblingSet) {
+      if (nextSibling !== element) {
+        widthRemaining -= currentWidthMap.get(nextSibling);
+      }
+    }
+    return widthRemaining;
   };
 
   const minHeightMap = new Map();
@@ -102,15 +132,10 @@ const start = (event) => {
     yMove: 0,
   };
 
-  const parentElement = elementToResize.parentElement;
   {
-    const availableWidth = getAvailableWidth(parentElement);
-    const availableHeight = getAvailableHeight(parentElement);
-
     const minWidth = getMinWidth(elementToResize, availableWidth);
     minWidthMap.set(elementToResize, minWidth);
-    const width = getWidth(elementToResize, availableWidth);
-    widthMap.set(elementToResize, width);
+    saveWidth(elementToResize);
     const maxWidth = ""; // TODO
     maxWidthMap.set(elementToResize, maxWidth);
 
@@ -131,7 +156,7 @@ const start = (event) => {
         while (previousSibling) {
           if (canTakeSize(previousSibling)) {
             minWidthMap.set(previousSibling, getMinWidth(previousSibling));
-            widthMap.set(previousSibling, getWidth(previousSibling));
+            saveWidth(previousSibling);
             previousSiblingSet.add(previousSibling);
             // const marginSizes = getMarginSizes(previousSibling);
             // const horizontalSpacing = marginSizes.left + marginSizes.right;
@@ -145,7 +170,7 @@ const start = (event) => {
         while (nextSibling) {
           if (canTakeSize(nextSibling)) {
             minWidthMap.set(nextSibling, getMinWidth(nextSibling));
-            widthMap.set(nextSibling, getWidth(nextSibling));
+            saveWidth(nextSibling);
             nextSiblingSet.add(nextSibling);
             // const marginSizes = getMarginSizes(nextSibling);
             // const horizontalSpacing = marginSizes.left + marginSizes.right;
@@ -175,15 +200,29 @@ const start = (event) => {
   };
 
   const giveSpaceToSiblings = (siblingSet, spaceToGive) => {
+    if (spaceToGive === 0) {
+      return 0;
+    }
     let spaceGiven = 0;
     let growRemaining = spaceToGive;
     for (const sibling of siblingSet) {
       const growRequested = growRemaining;
+      const widthRemainingForThisElement =
+        getWidthRemainingForThisElement(sibling);
       const width = widthMap.get(sibling);
       const widthAfterGrowRequested = width + growRequested;
-      setWidth(sibling, widthAfterGrowRequested);
-      growRemaining -= growRequested;
-      spaceGiven += growRequested;
+      let widthAfterGrow;
+      let grow;
+      if (widthAfterGrowRequested >= widthRemainingForThisElement) {
+        widthAfterGrow = widthRemainingForThisElement;
+        grow = width - widthRemainingForThisElement;
+      } else {
+        widthAfterGrow = widthAfterGrowRequested;
+        grow = growRequested;
+      }
+      setWidth(sibling, widthAfterGrow);
+      growRemaining -= grow;
+      spaceGiven += grow;
       if (growRemaining <= 0) {
         break;
       }
@@ -191,6 +230,9 @@ const start = (event) => {
     return spaceGiven;
   };
   const stealSpaceFromSiblings = (siblingSet, spaceToSteal) => {
+    if (spaceToSteal === 0) {
+      return 0;
+    }
     let spaceStolen = 0;
     let shrinkRemaining = spaceToSteal;
     for (const sibling of siblingSet) {
@@ -224,17 +266,13 @@ const start = (event) => {
       const minWidth = minWidthMap.get(elementToResize);
       const width = widthMap.get(elementToResize);
       const widthAfterShrinkRequested = width - shrinkRequested;
-      let widthAfterShrink;
-      let shrink;
       if (widthAfterShrinkRequested <= minWidth) {
-        widthAfterShrink = minWidth;
-        shrink = width - minWidth;
-      } else {
-        widthAfterShrink = widthAfterShrinkRequested;
-        shrink = shrinkRequested;
+        setWidth(elementToResize, minWidth);
+        giveSpaceToSiblings(siblingSet, availableWidth);
+        return;
       }
-      setWidth(elementToResize, widthAfterShrink);
-      giveSpaceToSiblings(siblingSet, shrink);
+      setWidth(elementToResize, widthAfterShrinkRequested);
+      giveSpaceToSiblings(siblingSet, shrinkRequested);
     };
 
     if (resizeInfo.xMove < 0) {
