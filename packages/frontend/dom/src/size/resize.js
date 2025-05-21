@@ -208,7 +208,12 @@ const start = (event) => {
     document.body.removeChild(backdrop);
     elementToResize.removeAttribute("data-resizing");
   });
-
+  if (horizontalResizeEnabled) {
+    elementToResize.style.width = `${resizeInfo.width}px`;
+  }
+  if (verticalResizeEnabled) {
+    elementToResize.style.height = `${resizeInfo.height}px`;
+  }
   dispatchResizeStartEvent();
 };
 

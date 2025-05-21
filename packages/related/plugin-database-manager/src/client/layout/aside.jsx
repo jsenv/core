@@ -2,7 +2,7 @@
 
  */
 
-import { useAvailableWidth, useMaxWidth, useResizeStatus } from "@jsenv/dom";
+import { useResizeStatus } from "@jsenv/dom";
 import "@jsenv/dom/resize";
 import { valueInLocalStorage } from "@jsenv/router";
 import { effect, signal } from "@preact/signals";
@@ -32,8 +32,6 @@ export const Aside = ({ children }) => {
   const { resizing, resizeWidth } = useResizeStatus(asideRef, {
     as: "number",
   });
-  const availableWidth = useAvailableWidth(asideRef);
-  const maxWidth = useMaxWidth(asideRef, availableWidth);
 
   return (
     <aside
@@ -41,7 +39,6 @@ export const Aside = ({ children }) => {
       data-resize="horizontal"
       style={{
         width: resizing ? resizeWidth : widthSetting,
-        maxWidth,
         // Disable transition during resize to make it responsive
         transition: resizing ? "none" : undefined,
       }}
