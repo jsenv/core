@@ -129,6 +129,8 @@ const start = (event) => {
     yMove: 0,
     widthAtStart,
     heightAtStart,
+    previousWidth: undefined,
+    previousHeight: undefined,
     width: widthAtStart,
     height: heightAtStart,
     get widthAsPercentage() {
@@ -175,6 +177,7 @@ const start = (event) => {
       const widthChanged = nextWidth !== resizeInfo.width;
       resizeInfo.widthChanged = widthChanged;
       if (widthChanged) {
+        resizeInfo.previousWidth = resizeInfo.height;
         resizeInfo.width = nextWidth;
       }
     }
@@ -188,6 +191,7 @@ const start = (event) => {
       const heightChanged = nextHeight !== resizeInfo.height;
       resizeInfo.heightChanged = heightChanged;
       if (heightChanged) {
+        resizeInfo.previousHeight = resizeInfo.height;
         resizeInfo.height = nextHeight;
       }
     }

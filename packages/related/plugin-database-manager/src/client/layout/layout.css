@@ -61,6 +61,7 @@ main {
   scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shifts */
 }
 .main_body {
+  width: fit-content; /* Ensure padding applies when content overflows */
   padding: 20px; /* Consistent padding around main content */
 }
 
