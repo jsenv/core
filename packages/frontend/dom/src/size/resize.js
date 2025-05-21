@@ -11,9 +11,9 @@ import { getMinWidth } from "./get_min_width.js";
 
 const style = /*css*/ `
    *[data-resize] {
-        flex-shrink: 0 !important;
-        flex-grow: 0 !important;
-      }`;
+     flex-shrink: 0 !important; /* flex-shrink !== 0 would prevent element to grow as much as it could  */
+     flex-grow: 0 !important; /* flex-grow !== 0 would prevent element to shrink as much as it could */
+   }`;
 document.head.appendChild(document.createElement("style")).textContent = style;
 
 const start = (event) => {
