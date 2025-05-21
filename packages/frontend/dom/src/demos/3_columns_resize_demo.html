@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+  <head>
+    <title>3 columns resize x demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <style>
+      body {
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      #app {
+        display: flex;
+        flex-direction: row;
+      }
+    </style>
+
+    <div id="app">
+      <div class="main_body">
+        <h1 title="Explore and manager your database">Database Manager</h1>
+
+        <div style="background: blue; width: 600px; height: 800px"></div>
+      </div>
+    </div>
+
+    <script type="module">
+      import "@jsenv/dom/resize";
+    </script>
+  </body>
+</html>

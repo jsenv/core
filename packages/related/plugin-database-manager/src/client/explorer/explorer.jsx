@@ -46,6 +46,9 @@ const ExplorerBody = () => {
     setDetailsOpenCount((count) => count - 1);
   }, []);
 
+  // first thing: I need to repartir la hauteur aux groupes ouvert
+  // si plus d'un groupe est ouvert alors on peut les resize
+
   return (
     <div
       className="explorer_body"
