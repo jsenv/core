@@ -9,6 +9,13 @@ import { getMaxWidth } from "./get_max_width.js";
 import { getMinHeight } from "./get_min_height.js";
 import { getMinWidth } from "./get_min_width.js";
 
+const style = /*css*/ `
+   *[data-resize] {
+        flex-shrink: 0 !important;
+        flex-grow: 0 !important;
+      }`;
+document.head.appendChild(document.createElement("style")).textContent = style;
+
 const start = (event) => {
   if (event.button !== 0) {
     return;
