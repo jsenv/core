@@ -3,15 +3,18 @@
  */
 
 import { addAttributeEffect } from "../add_attribute_effect.js";
+import { setStyles } from "../style_and_attributes.js";
 import { getAvailableHeight } from "./get_available_height.js";
 import { getAvailableWidth } from "./get_available_width.js";
+import { getHeight } from "./get_height.js";
 import { getMaxHeight } from "./get_max_height.js";
 import { getMaxWidth } from "./get_max_width.js";
 import { getMinHeight } from "./get_min_height.js";
 import { getMinWidth } from "./get_min_width.js";
+import { getWidth } from "./get_width.js";
 
 const style = /*css*/ `
-   *[data-resize] {
+   *[data-force-resize] {
      flex-shrink: 0 !important; /* flex-shrink !== 0 would prevent element to grow as much as it could  */
      flex-grow: 0 !important; /* flex-grow !== 0 would prevent element to shrink as much as it could */
    }`;
@@ -228,7 +231,6 @@ document.addEventListener(
 );
 
 addAttributeEffect("data-resize", (element) => {
-  const parentElement = element.parentElement;
   const direction = element.getAttribute("data-resize");
   const horizontalResizeEnabled =
     direction === "horizontal" || direction === "both";
@@ -237,23 +239,64 @@ addAttributeEffect("data-resize", (element) => {
   if (!horizontalResizeEnabled && !verticalResizeEnabled) {
     return null;
   }
-  const resizeObserver = new ResizeObserver((entries) => {
-    const [entry] = entries;
+
+  const cleanupCallbackSet = new Set();
+
+  max_width_max_height: {
+    const updateMaxSizes = (parentWidth, parentHeight) => {
+      if (horizontalResizeEnabled) {
+        const availableWidth = getAvailableWidth(element, parentWidth);
+        const maxWidth = getMaxWidth(element, availableWidth);
+        element.style.maxWidth = `${maxWidth}px`;
+      }
+      if (verticalResizeEnabled) {
+        const availableHeight = getAvailableHeight(element, parentHeight);
+        const maxHeight = getMaxHeight(element, availableHeight);
+        element.style.maxHeight = `${maxHeight}px`;
+      }
+    };
+
+    const parentElement = element.parentElement;
+    // updateMaxSizes(getWidth(parentElement), getHeight(parentElement));
+    const resizeObserver = new ResizeObserver((entries) => {
+      const [entry] = entries;
+      updateMaxSizes(entry.contentRect.width, entry.contentRect.height);
+    });
+    resizeObserver.observe(parentElement);
+    cleanupCallbackSet.add(() => {
+      resizeObserver.unobserve(parentElement);
+    });
+  }
+
+  // disable flex stuff to ensure element can be resized
+  force_resizable: {
     if (horizontalResizeEnabled) {
-      const parentWidth = entry.contentRect.width;
-      const availableWidth = getAvailableWidth(element, parentWidth);
-      const maxWidth = getMaxWidth(element, availableWidth);
-      element.style.maxWidth = `${maxWidth}px`;
+      const width = getWidth(element);
+      const restoreInlineWidth = setStyles(element, {
+        width: `${width}px`,
+      });
+      cleanupCallbackSet.add(() => {
+        restoreInlineWidth();
+      });
     }
     if (verticalResizeEnabled) {
-      const parentHeight = entry.contentRect.height;
-      const availableHeight = getAvailableHeight(element, parentHeight);
-      const maxHeight = getMaxHeight(element, availableHeight);
-      element.style.maxHeight = `${maxHeight}px`;
+      const restoreInlineHeight = setStyles(element, {
+        height: `${getHeight(element)}px`,
+      });
+      cleanupCallbackSet.add(() => {
+        restoreInlineHeight();
+      });
     }
-  });
-  resizeObserver.observe(parentElement);
+    element.setAttribute("data-force-resize", "");
+    cleanupCallbackSet.add(() => {
+      element.removeAttribute("data-force-resize");
+    });
+  }
+
   return () => {
-    resizeObserver.disconnect(parentElement);
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+    cleanupCallbackSet.clear();
   };
 });

@@ -1,7 +1,6 @@
 import { getAvailableWidth } from "./get_available_width.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinWidth } from "./get_min_width.js";
-import { getWidth } from "./get_width.js";
 
 export const getMaxWidth = (
   element,
@@ -22,8 +21,8 @@ export const getMaxWidth = (
     let previousSibling = element.previousElementSibling;
     while (previousSibling) {
       if (canTakeSpace(previousSibling)) {
-        const previousSiblingWidth = getWidth(previousSibling);
-        maxWidth -= previousSiblingWidth;
+        const previousSiblingMinWidth = getMinWidth(previousSibling);
+        maxWidth -= previousSiblingMinWidth;
         const previousSiblingMarginSizes = getMarginSizes(previousSibling);
         maxWidth -= previousSiblingMarginSizes.left;
         maxWidth -= previousSiblingMarginSizes.right;

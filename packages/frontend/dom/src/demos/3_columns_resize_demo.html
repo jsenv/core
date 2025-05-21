@@ -20,18 +20,47 @@
         display: flex;
         flex-direction: row;
       }
+
+      [data-resize-handle] {
+        flex-grow: 1;
+        min-width: 100px;
+      }
     </style>
 
     <div id="app">
-      <div class="main_body">
-        <h1 title="Explore and manager your database">Database Manager</h1>
-
-        <div style="background: blue; width: 600px; height: 800px"></div>
-      </div>
+      <div
+        id="a"
+        data-resize="horizontal"
+        data-resize-handle
+        style="background: blue; height: 100px"
+      ></div>
+      <div
+        id="b"
+        data-resize="horizontal"
+        data-resize-handle
+        style="background: red; height: 200px"
+      ></div>
+      <div
+        id="c"
+        data-resize="horizontal"
+        data-resize-handle
+        style="background: green; height: 100px"
+      ></div>
     </div>
 
     <script type="module">
       import "@jsenv/dom/resize";
+
+      //   const resizeCollection = document.querySelectorAll("[data-resize]");
+      //   for (const resize of resizeCollection) {
+      //     const widthInLocalStorage = localStorage.getItem(`${resize.id}_width`);
+      //     if (widthInLocalStorage) {
+      //       resize.style.width = `${widthInLocalStorage}px`;
+      //     }
+      //     resize.addEventListener("resizeend", (event) => {
+      //       localStorage.setItem(`${resize.id}_width`, event.detail.width);
+      //     });
+      //   }
     </script>
   </body>
 </html>
