@@ -245,7 +245,7 @@ const start = (event) => {
     }
     if (resizeInfo.xMove > 0) {
       if (nextSiblingSet.size === 0) {
-        applySelfShrink(resizeInfo.xMove, nextSiblingSet);
+        applySelfShrink(resizeInfo.xMove, previousSiblingSet);
         return;
       }
       const nextSiblingShrinkRequested = resizeInfo.xMove;
@@ -272,7 +272,7 @@ const start = (event) => {
         }
       }
       if (nextSiblingsShrink === 0) {
-        applySelfShrink(resizeInfo.xMove, nextSiblingSet);
+        applySelfShrink(resizeInfo.xMove, previousSiblingSet);
         return;
       }
       const elementWidth = widthMap.get(elementToResize);
