@@ -1,4 +1,4 @@
-import { useAvailableHeight, useMaxHeight, useResizeStatus } from "@jsenv/dom";
+import { useResizeStatus } from "@jsenv/dom";
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import {
   SPAInputText,
@@ -68,8 +68,6 @@ export const ExplorerGroup = forwardRef(
 
     const { useHeightSetting, setHeightSetting } = controller;
     const heightSetting = useHeightSetting();
-    const availableWidth = useAvailableHeight(innerRef);
-    const maxHeight = useMaxHeight(innerRef, availableWidth);
     const { resizing, resizeHeight } = useResizeStatus(innerRef, {
       as: "number",
     });
@@ -82,19 +80,6 @@ export const ExplorerGroup = forwardRef(
       setIsCreatingNew(false);
     }, [setIsCreatingNew]);
 
-    const height = resizing
-      ? resizeHeight
-      : resizable
-        ? heightSetting > maxHeight
-          ? maxHeight
-          : heightSetting
-        : undefined;
-    const flex = resizable && heightSetting ? "none" : undefined;
-    const style = {
-      height,
-      flex,
-    };
-
     return (
       <>
         <details
@@ -102,7 +87,9 @@ export const ExplorerGroup = forwardRef(
           id={controller.id}
           className="explorer_group"
           data-resize="vertical"
-          style={style}
+          style={{
+            height: resizing ? resizeHeight : heightSetting,
+          }}
           // eslint-disable-next-line react/no-unknown-property
           onresizeend={(e) => {
             setHeightSetting(e.detail.height);
