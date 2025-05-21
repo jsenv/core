@@ -78,10 +78,10 @@ const start = (event) => {
   };
 
   const parentElement = elementToResize.parentElement;
-  const availableWidth = getAvailableWidth(parentElement);
-  const availableHeight = getAvailableHeight(parentElement);
+  const availableWidth = getAvailableWidth(elementToResize);
+  const availableHeight = getAvailableHeight(elementToResize);
 
-  const getWidthRemainingForThisElement = (element) => {
+  const getWidthRemainingFor = (element) => {
     let widthRemaining = availableWidth;
     for (const previousSibling of previousSiblingSet) {
       if (previousSibling !== element) {
@@ -207,15 +207,14 @@ const start = (event) => {
     let growRemaining = spaceToGive;
     for (const sibling of siblingSet) {
       const growRequested = growRemaining;
-      const widthRemainingForThisElement =
-        getWidthRemainingForThisElement(sibling);
+      const widthRemaining = getWidthRemainingFor(sibling);
       const width = widthMap.get(sibling);
       const widthAfterGrowRequested = width + growRequested;
       let widthAfterGrow;
       let grow;
-      if (widthAfterGrowRequested >= widthRemainingForThisElement) {
-        widthAfterGrow = widthRemainingForThisElement;
-        grow = width - widthRemainingForThisElement;
+      if (widthAfterGrowRequested >= widthRemaining) {
+        widthAfterGrow = widthRemaining;
+        grow = width - widthRemaining;
       } else {
         widthAfterGrow = widthAfterGrowRequested;
         grow = growRequested;
