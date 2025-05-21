@@ -20,68 +20,6 @@ export const jsenvPluginDatabaseManager = () => {
   let databaseManagerRootDirectoryUrl;
   let sql;
 
-  const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
-    const routes = [];
-    if (GET) {
-      const getRoute = {
-        endpoint: `GET /.internal/database/api/${resource}/:id`,
-        declarationSource: import.meta.url,
-        fetch: async (request) => {
-          const id = request.params.id;
-          const object = await GET(id);
-          if (!object) {
-            return Response.json(
-              { message: `${resource} "${id}" not found` },
-              { status: 404 },
-            );
-          }
-          return Response.json(object);
-        },
-      };
-      routes.push(getRoute);
-    }
-    if (POST) {
-      const postRoute = {
-        endpoint: `POST /.internal/database/api/${resource}`,
-        declarationSource: import.meta.url,
-        acceptedMediaTypes: ["application/json"],
-        fetch: async (request) => {
-          const properties = await request.json();
-          const object = await POST(properties);
-          return Response.json(object, { status: 201 });
-        },
-      };
-      routes.push(postRoute);
-    }
-    if (PUT) {
-      const putRoute = {
-        endpoint: `PUT /.internal/database/api/${resource}/:id/:property`,
-        declarationSource: import.meta.url,
-        fetch: async (request) => {
-          const id = request.params.id;
-          const property = request.params.property;
-          const value = await request.json();
-          await PUT(id, property, value);
-          return Response.json({ [property]: value });
-        },
-      };
-      routes.push(putRoute);
-    }
-    if (DELETE) {
-      const deleteRoute = {
-        endpoint: `DELETE /.internal/database/api/${resource}/:id`,
-        declarationSource: import.meta.url,
-        fetch: async (request) => {
-          const id = request.params.id;
-          await DELETE(id);
-          return new Response(null, { status: 204 });
-        },
-      };
-      routes.push(deleteRoute);
-    }
-    return routes;
-  };
-
   return {
     name: "jsenv:database_manager",
     init: async ({ rootDirectoryUrl }) => {
@@ -127,7 +65,7 @@ export const jsenvPluginDatabaseManager = () => {
               current_user
           `;
           const currentRoleName = currentRoleResult[0].current_user;
-          const currentRoleResults = await sql`
+          const [currentRole] = await sql`
             SELECT
               *
             FROM
@@ -141,9 +79,32 @@ export const jsenvPluginDatabaseManager = () => {
             FROM
               pg_roles
           `;
+
+          const [currentDatabaseResult] = await sql`
+            SELECT
+              current_database()
+          `;
+          const currentDatname = currentDatabaseResult.current_database;
+          const [currentDatabase] = await sql`
+            SELECT
+              *
+            FROM
+              pg_database
+            WHERE
+              datname = ${currentDatname}
+          `;
+          const databases = await sql`
+            SELECT
+              *
+            FROM
+              pg_database
+          `;
+
           return Response.json({
-            currentRole: currentRoleResults[0],
+            currentRole,
+            currentDatabase,
             roles,
+            databases,
           });
         },
       },
@@ -551,6 +512,68 @@ export const jsenvPluginDatabaseManager = () => {
       },
     ],
   };
+};
+
+const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
+  const routes = [];
+  if (GET) {
+    const getRoute = {
+      endpoint: `GET /.internal/database/api/${resource}/:id`,
+      declarationSource: import.meta.url,
+      fetch: async (request) => {
+        const id = request.params.id;
+        const object = await GET(id);
+        if (!object) {
+          return Response.json(
+            { message: `${resource} "${id}" not found` },
+            { status: 404 },
+          );
+        }
+        return Response.json(object);
+      },
+    };
+    routes.push(getRoute);
+  }
+  if (POST) {
+    const postRoute = {
+      endpoint: `POST /.internal/database/api/${resource}`,
+      declarationSource: import.meta.url,
+      acceptedMediaTypes: ["application/json"],
+      fetch: async (request) => {
+        const properties = await request.json();
+        const object = await POST(properties);
+        return Response.json(object, { status: 201 });
+      },
+    };
+    routes.push(postRoute);
+  }
+  if (PUT) {
+    const putRoute = {
+      endpoint: `PUT /.internal/database/api/${resource}/:id/:property`,
+      declarationSource: import.meta.url,
+      fetch: async (request) => {
+        const id = request.params.id;
+        const property = request.params.property;
+        const value = await request.json();
+        await PUT(id, property, value);
+        return Response.json({ [property]: value });
+      },
+    };
+    routes.push(putRoute);
+  }
+  if (DELETE) {
+    const deleteRoute = {
+      endpoint: `DELETE /.internal/database/api/${resource}/:id`,
+      declarationSource: import.meta.url,
+      fetch: async (request) => {
+        const id = request.params.id;
+        await DELETE(id);
+        return new Response(null, { status: 204 });
+      },
+    };
+    routes.push(deleteRoute);
+  }
+  return routes;
 };
 
 const getTableColumns = async (sql, tableName) => {
