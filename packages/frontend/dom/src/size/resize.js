@@ -156,7 +156,30 @@ const start = (event) => {
     }
     if (resizeInfo.widthChanged || resizeInfo.heightChanged) {
       if (horizontalResizeEnabled) {
+        const widthBeforeResize = getWidth(elementToResize);
         elementToResize.style.width = `${resizeInfo.width}px`;
+        const widthAfterResize = getWidth(elementToResize);
+        if (widthAfterResize !== widthBeforeResize) {
+          let widthDiff = widthAfterResize - widthBeforeResize;
+          let nextSibling = elementToResize.nextElementSibling;
+          while (widthDiff > 0 && nextSibling) {
+            const nextSiblingWidthBeforeAdapt = getWidth(nextSibling);
+            const nextSiblingWidthAdapted =
+              nextSiblingWidthBeforeAdapt - widthDiff;
+            nextSibling.style.width = `${nextSiblingWidthAdapted}px`;
+            const nextSiblingWidthAfterAdapt = getWidth(nextSibling);
+            const actualDiff =
+              nextSiblingWidthBeforeAdapt - nextSiblingWidthAfterAdapt;
+            if (actualDiff) {
+              const resizeEvent = new CustomEvent("resize", {
+                detail: { width: nextSiblingWidthAfterAdapt },
+              });
+              nextSibling.dispatchEvent(resizeEvent);
+              widthDiff -= actualDiff;
+            }
+            nextSibling = nextSibling.nextElementSibling;
+          }
+        }
       }
       if (verticalResizeEnabled) {
         elementToResize.style.height = `${resizeInfo.height}px`;
