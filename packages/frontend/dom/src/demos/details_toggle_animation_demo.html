@@ -112,22 +112,26 @@
         let detailsHeight;
         let summaryHeight;
         const updateHeights = () => {
-          detailsHeight = details.getBoundingClientRect().height;
+          if (details.open) {
+            detailsHeight = details.getBoundingClientRect().height;
+          }
           summaryHeight = summary.getBoundingClientRect().height;
         };
         updateHeights();
 
         details.style.overflow = "hidden";
         content.style.opacity = details.open ? 1 : 0;
-        details.setAttribute("data-details-content-full-height", "");
+        // details.setAttribute("data-details-content-full-height", "");
 
         const detailsResizeObserver = new ResizeObserver(() => {
           if (!currentAnimation) {
+            console.log("update height after details resize");
             updateHeights();
           }
         });
         detailsResizeObserver.observe(details);
         const summaryResizeObserver = new ResizeObserver(() => {
+          console.log("update height after sumary resize");
           updateHeights();
         });
         summaryResizeObserver.observe(summary);
@@ -150,6 +154,13 @@
                 easing: "ease-out",
               },
             );
+            currentAnimation.oncancel = () => {
+              currentAnimation = null;
+            };
+            currentAnimation.onfinish = () => {
+              details.style.height = `${detailsHeight}px`;
+              currentAnimation = null;
+            };
           } else {
             content.style.opacity = 0;
             currentAnimation = details.animate(
@@ -162,15 +173,14 @@
                 easing: "ease-in",
               },
             );
+            currentAnimation.oncancel = () => {
+              currentAnimation = null;
+            };
+            currentAnimation.onfinish = () => {
+              details.style.height = `auto`;
+              currentAnimation = null;
+            };
           }
-
-          currentAnimation.onfinish = () => {
-            currentAnimation = null;
-          };
-
-          currentAnimation.oncancel = () => {
-            currentAnimation = null;
-          };
         };
       };
       for (const details of document.querySelectorAll("details")) {
