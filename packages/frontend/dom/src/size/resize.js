@@ -207,7 +207,33 @@ const start = (event) => {
     }
 
     if (verticalResizeEnabled) {
-      // TODO
+      if (
+        parentElementComputedStyle.display === "flex" &&
+        parentElementComputedStyle.flexDirection === "column"
+      ) {
+        prev_siblings: {
+          let previousSibling = elementToResize.previousElementSibling;
+          while (previousSibling) {
+            if (canTakeSize(previousSibling)) {
+              minHeightMap.set(previousSibling, getMinHeight(previousSibling));
+              saveHeight(previousSibling);
+              verticalPreviousSiblingSet.add(previousSibling);
+            }
+            previousSibling = previousSibling.previousElementSibling;
+          }
+        }
+        next_siblings: {
+          let nextSibling = elementToResize.nextElementSibling;
+          while (nextSibling) {
+            if (canTakeSize(nextSibling)) {
+              minHeightMap.set(nextSibling, getMinHeight(nextSibling));
+              saveHeight(nextSibling);
+              verticalNextSiblingSet.add(nextSibling);
+            }
+            nextSibling = nextSibling.nextElementSibling;
+          }
+        }
+      }
     }
   }
 
