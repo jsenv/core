@@ -291,6 +291,7 @@ const start = (event) => {
     positionDelta,
     previousSiblingSet,
     nextSiblingSet,
+    sizeMap,
     minSizeMap,
   }) => {
     if (positionDelta === 0) {
@@ -301,7 +302,7 @@ const start = (event) => {
     const sizeTransformMap = new Map();
     const requestShrink = (element, shrinkRequested) => {
       const minSize = minSizeMap.get(element);
-      const size = widthMap.get(element);
+      const size = sizeMap.get(element);
       const sizeAfterShrink = size - shrinkRequested;
 
       if (sizeAfterShrink <= minSize) {
@@ -421,6 +422,7 @@ const start = (event) => {
       previousSiblingSet,
       nextSiblingSet,
       minSizeMap,
+      sizeMap,
     });
     if (!sizeTransformMap) {
       return null;
