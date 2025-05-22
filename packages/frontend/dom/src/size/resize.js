@@ -616,19 +616,24 @@ addAttributeEffect("data-resize", (element) => {
       { getAvailableSpace, getSize, setSize },
     ) => {
       const availableSpace = getAvailableSpace(element);
-      const childrenMap = new Map();
+      const childMap = new Map();
 
       let totalSpace = 0;
+      const childTakingFreeSpaceSet = new Set();
       for (const child of element.parentElement.children) {
+        if (child.hasAttribute("data-resize")) {
+          childTakingFreeSpaceSet.add(child);
+        }
         if (canTakeSize(child)) {
           const size = getSize(child);
-          childrenMap.set(child, size);
+          childMap.set(child, size);
           totalSpace += size;
         }
       }
       const remainingSpace = availableSpace - totalSpace;
       if (remainingSpace > 0) {
-        for (const [child, size] of childrenMap) {
+        for (const child of childTakingFreeSpaceSet) {
+          const size = childMap.get(child);
           const ratio = size / totalSpace;
           const additionalSpace = remainingSpace * ratio;
           const newSize = size + additionalSpace;
