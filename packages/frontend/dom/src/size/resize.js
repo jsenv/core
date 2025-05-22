@@ -37,8 +37,8 @@
  */
 
 import { addAttributeEffect } from "../add_attribute_effect.js";
-import { setStyles } from "../style_and_attributes.js";
 import { canTakeSize } from "./can_take_size.js";
+import { getAvailableHeight } from "./get_available_height.js";
 import { getAvailableWidth } from "./get_available_width.js";
 import { getHeight } from "./get_height.js";
 import { getMinHeight } from "./get_min_height.js";
@@ -92,7 +92,7 @@ const start = (event) => {
   const endCallbackSet = new Set();
   const parentElement = elementToResize.parentElement;
   const availableWidth = getAvailableWidth(elementToResize);
-  const availableHeight = getAvailableWidth(elementToResize);
+  const availableHeight = getAvailableHeight(elementToResize);
   const xAtStart = event.clientX;
   const yAtStart = event.clientY;
   const resizeInfo = {
@@ -103,6 +103,8 @@ const start = (event) => {
     xMove: 0,
     yMove: 0,
 
+    availableWidth,
+    availableHeight,
     widthAtStart: undefined,
     heightAtStart: undefined,
     width: undefined,
@@ -122,8 +124,8 @@ const start = (event) => {
     currentWidthMap.set(element, width);
     if (element === elementToResize) {
       resizeInfo.width = width;
-      dispatchResizeEvent();
     }
+    dispatchResizeEvent(element);
   };
   const saveWidth = (element) => {
     const width = getWidth(element);
@@ -139,8 +141,8 @@ const start = (event) => {
     element.style.width = `${percentage}%`;
     if (element === elementToResize) {
       resizeInfo.width = width;
-      dispatchResizeEvent();
     }
+    dispatchResizeEvent(element);
   };
 
   const verticalPreviousSiblingSet = new Set();
@@ -156,8 +158,8 @@ const start = (event) => {
     currentHeightMap.set(element, height);
     if (element === elementToResize) {
       resizeInfo.height = height;
-      dispatchResizeEvent();
     }
+    dispatchResizeEvent(element);
   };
   const saveHeight = (element) => {
     const height = getHeight(element);
@@ -173,8 +175,8 @@ const start = (event) => {
     element.style.height = `${percentage}%`;
     if (element === elementToResize) {
       resizeInfo.height = height;
-      dispatchResizeEvent();
     }
+    dispatchResizeEvent(element);
   };
 
   size_and_min_size: {
@@ -270,21 +272,50 @@ const start = (event) => {
     }
   }
 
-  const dispatchResizeStartEvent = () => {
+  const dispatchResizeStartEvent = (element) => {
+    const resizeStartEventDetail = {
+      availableWidth,
+      availableHeight,
+      widthAtStart: widthMap.get(element),
+      heightAtStart: heightMap.get(element),
+      width: currentWidthMap.get(element),
+      height: currentHeightMap.get(element),
+    };
+
     const resizeStartEvent = new CustomEvent("resizestart", {
-      detail: resizeInfo,
+      detail: resizeStartEventDetail,
     });
-    elementToResize.dispatchEvent(resizeStartEvent);
+    element.dispatchEvent(resizeStartEvent);
   };
-  const dispatchResizeEvent = () => {
-    const resizeEvent = new CustomEvent("resize", { detail: resizeInfo });
-    elementToResize.dispatchEvent(resizeEvent);
+  const dispatchResizeEvent = (element) => {
+    const resizeEventDetail = {
+      availableWidth,
+      availableHeight,
+      widthAtStart: widthMap.get(element),
+      heightAtStart: heightMap.get(element),
+      width: currentWidthMap.get(element),
+      height: currentHeightMap.get(element),
+    };
+
+    const resizeEvent = new CustomEvent("resize", {
+      detail: resizeEventDetail,
+    });
+    element.dispatchEvent(resizeEvent);
   };
-  const dispatchResizeEndEvent = () => {
+  const dispatchResizeEndEvent = (element) => {
+    const resizeEndEventDetail = {
+      availableWidth,
+      availableHeight,
+      widthAtStart: widthMap.get(element),
+      heightAtStart: heightMap.get(element),
+      width: currentWidthMap.get(element),
+      height: currentHeightMap.get(element),
+    };
+
     const resizeEndEvent = new CustomEvent("resizeend", {
-      detail: resizeInfo,
+      detail: resizeEndEventDetail,
     });
-    elementToResize.dispatchEvent(resizeEndEvent);
+    element.dispatchEvent(resizeEndEvent);
   };
 
   const computeSizeTransformMap = ({
@@ -496,7 +527,7 @@ const start = (event) => {
     for (const endCallback of endCallbackSet) {
       endCallback();
     }
-    dispatchResizeEndEvent();
+    dispatchResizeEndEvent(elementToResize);
   };
 
   const backdrop = document.createElement("div");
@@ -519,7 +550,7 @@ const start = (event) => {
     document.body.removeChild(backdrop);
     elementToResize.removeAttribute("data-resizing");
   });
-  dispatchResizeStartEvent();
+  dispatchResizeStartEvent(elementToResize);
 };
 
 document.addEventListener(
@@ -544,27 +575,55 @@ addAttributeEffect("data-resize", (element) => {
 
   // disable flex stuff to ensure element can be resized
   force_resizable: {
-    if (horizontalResizeEnabled) {
-      const width = getWidth(element);
-      const restoreInlineWidth = setStyles(element, {
-        width: `${width}px`,
-      });
-      cleanupCallbackSet.add(() => {
-        restoreInlineWidth();
-      });
-    }
-    if (verticalResizeEnabled) {
-      const restoreInlineHeight = setStyles(element, {
-        height: `${getHeight(element)}px`,
-      });
-      cleanupCallbackSet.add(() => {
-        restoreInlineHeight();
-      });
-    }
     element.setAttribute("data-force-resize", "");
     cleanupCallbackSet.add(() => {
       element.removeAttribute("data-force-resize");
     });
+
+    const distributeSpace = (
+      element,
+      { getAvailableSpace, getSize, setSize },
+    ) => {
+      const availableSpace = getAvailableSpace(element);
+      const childrenMap = new Map();
+
+      let totalSpace = 0;
+      for (const child of element.parentElement.children) {
+        if (canTakeSize(child)) {
+          const size = getSize(child);
+          childrenMap.set(child, size);
+          totalSpace += size;
+        }
+      }
+      const remainingSpace = availableSpace - totalSpace;
+      if (remainingSpace > 0) {
+        for (const [child, size] of childrenMap) {
+          const ratio = size / totalSpace;
+          const additionalSpace = remainingSpace * ratio;
+          const newSize = size + additionalSpace;
+          setSize(child, newSize);
+        }
+      }
+    };
+
+    if (horizontalResizeEnabled) {
+      distributeSpace(element, {
+        getAvailableSpace: getAvailableWidth,
+        getSize: getWidth,
+        setSize: (element, width) => {
+          element.style.width = `${width}px`;
+        },
+      });
+    }
+    if (verticalResizeEnabled) {
+      distributeSpace(element, {
+        getAvailableSpace: getAvailableHeight,
+        getSize: getHeight,
+        setSize: (element, height) => {
+          element.style.height = `${height}px`;
+        },
+      });
+    }
   }
 
   return () => {
