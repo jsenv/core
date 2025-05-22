@@ -47,8 +47,8 @@ import { getWidth } from "./get_width.js";
 
 const style = /*css*/ `
    *[data-force-resize] {
-     flex-shrink: 1 !important; /* flex-shrink !== 0 would prevent element to grow as much as it could  */
-     flex-grow: 0 !important; /* flex-grow !== 0 would prevent element to shrink as much as it could */
+     flex-shrink: 1 !important; /* flex-shrink === 0 would prevent element to shrink as much as it could */
+     flex-grow: 0 !important; /* flex-grow === 1 (or more) would prevent element to shrink as much as it could */
      flex-basis: auto !important; /* flex-basis !== auto would prevent element to grow as much as it could */ 
    }`;
 document.head.appendChild(document.createElement("style")).textContent = style;
@@ -102,6 +102,11 @@ const start = (event) => {
     y: yAtStart,
     xMove: 0,
     yMove: 0,
+
+    widthAtStart: undefined,
+    heightAtStart: undefined,
+    width: undefined,
+    height: undefined,
   };
 
   const horizontalPreviousSiblingSet = new Set();
@@ -116,6 +121,7 @@ const start = (event) => {
     element.style.width = `${width}px`;
     currentWidthMap.set(element, width);
     if (element === elementToResize) {
+      resizeInfo.width = width;
       dispatchResizeEvent();
     }
   };
@@ -125,11 +131,16 @@ const start = (event) => {
     currentWidthMap.set(element, width);
     return width;
   };
-  const widthAsPercentage = (width) => {
+  const setWidthAsPercentage = (element, width) => {
+    currentWidthMap.set(element, width);
     const ratio = width / availableWidth;
     // const roundedRatio = Math.round(ratio * 10000) / 10000;
     const percentage = ratio * 100;
-    return `${percentage}%`;
+    element.style.width = `${percentage}%`;
+    if (element === elementToResize) {
+      resizeInfo.width = width;
+      dispatchResizeEvent();
+    }
   };
 
   const verticalPreviousSiblingSet = new Set();
@@ -144,6 +155,7 @@ const start = (event) => {
     element.style.height = `${height}px`;
     currentHeightMap.set(element, height);
     if (element === elementToResize) {
+      resizeInfo.height = height;
       dispatchResizeEvent();
     }
   };
@@ -153,22 +165,31 @@ const start = (event) => {
     currentHeightMap.set(element, height);
     return height;
   };
-  const heightAsPercentage = (height) => {
+  const setHeightAsPercentage = (element, height) => {
+    currentHeightMap.set(element, height);
     const ratio = height / availableHeight;
     // const roundedRatio = Math.round(ratio * 10000) / 10000;
     const percentage = ratio * 100;
-    return `${percentage}%`;
+    element.style.height = `${percentage}%`;
+    if (element === elementToResize) {
+      resizeInfo.height = height;
+      dispatchResizeEvent();
+    }
   };
 
   size_and_min_size: {
     if (horizontalResizeEnabled) {
-      saveWidth(elementToResize);
+      const width = saveWidth(elementToResize);
+      resizeInfo.widthAtStart = width;
+      resizeInfo.width = width;
       const minWidth = getMinWidth(elementToResize, availableWidth);
       minWidthMap.set(elementToResize, minWidth);
     }
 
     if (verticalResizeEnabled) {
-      saveHeight(elementToResize);
+      const height = saveHeight(elementToResize);
+      resizeInfo.heightAtStart = height;
+      resizeInfo.height = height;
       const minHeight = getMinHeight(elementToResize, availableHeight);
       minHeightMap.set(elementToResize, minHeight);
     }
@@ -185,7 +206,10 @@ const start = (event) => {
           let previousSibling = elementToResize.previousElementSibling;
           while (previousSibling) {
             if (canTakeSize(previousSibling)) {
-              minWidthMap.set(previousSibling, getMinWidth(previousSibling));
+              minWidthMap.set(
+                previousSibling,
+                getMinWidth(previousSibling, availableWidth),
+              );
               saveWidth(previousSibling);
               horizontalPreviousSiblingSet.add(previousSibling);
             }
@@ -196,7 +220,10 @@ const start = (event) => {
           let nextSibling = elementToResize.nextElementSibling;
           while (nextSibling) {
             if (canTakeSize(nextSibling)) {
-              minWidthMap.set(nextSibling, getMinWidth(nextSibling));
+              minWidthMap.set(
+                nextSibling,
+                getMinWidth(nextSibling, availableWidth),
+              );
               saveWidth(nextSibling);
               horizontalNextSiblingSet.add(nextSibling);
             }
@@ -215,7 +242,10 @@ const start = (event) => {
           let previousSibling = elementToResize.previousElementSibling;
           while (previousSibling) {
             if (canTakeSize(previousSibling)) {
-              minHeightMap.set(previousSibling, getMinHeight(previousSibling));
+              minHeightMap.set(
+                previousSibling,
+                getMinHeight(previousSibling, availableHeight),
+              );
               saveHeight(previousSibling);
               verticalPreviousSiblingSet.add(previousSibling);
             }
@@ -226,7 +256,10 @@ const start = (event) => {
           let nextSibling = elementToResize.nextElementSibling;
           while (nextSibling) {
             if (canTakeSize(nextSibling)) {
-              minHeightMap.set(nextSibling, getMinHeight(nextSibling));
+              minHeightMap.set(
+                nextSibling,
+                getMinHeight(nextSibling, availableHeight),
+              );
               saveHeight(nextSibling);
               verticalNextSiblingSet.add(nextSibling);
             }
@@ -328,7 +361,6 @@ const start = (event) => {
       return spaceGiven;
     };
 
-    // move right
     if (positionDelta > 0) {
       let remainingMoveToApply = positionDelta;
       if (nextSiblingSet.size === 0) {
@@ -352,7 +384,6 @@ const start = (event) => {
       }
       return sizeTransformMap;
     }
-    // move left
     let remainingMoveToApply = -positionDelta;
     if (previousSiblingSet.size === 0) {
       const shrink = requestShrink(elementToResize, remainingMoveToApply);
@@ -381,7 +412,7 @@ const start = (event) => {
     nextSiblingSet,
     minSizeMap,
     sizeMap,
-    sizeAsPercentage,
+    setSizeAsPercentage,
     setSize,
     isEnd,
   } = {}) => {
@@ -403,8 +434,7 @@ const start = (event) => {
       const delta = sizeTransformMap.get(element);
       const newSize = delta ? size + delta : size;
       if (isEnd && !elementToResize.hasAttribute("data-resize-absolute")) {
-        const percentage = sizeAsPercentage(newSize);
-        setSize(element, percentage);
+        setSizeAsPercentage(element, newSize);
       } else {
         setSize(element, newSize);
       }
@@ -421,7 +451,7 @@ const start = (event) => {
       nextSiblingSet: horizontalNextSiblingSet,
       minSizeMap: minWidthMap,
       sizeMap: widthMap,
-      sizeAsPercentage: widthAsPercentage,
+      setSizeAsPercentage: setWidthAsPercentage,
       setSize: setWidth,
       isEnd,
     });
@@ -432,7 +462,7 @@ const start = (event) => {
       nextSiblingSet: verticalNextSiblingSet,
       minSizeMap: minHeightMap,
       sizeMap: heightMap,
-      sizeAsPercentage: heightAsPercentage,
+      setSizeAsPercentage: setHeightAsPercentage,
       setSize: setHeight,
       isEnd,
     });
