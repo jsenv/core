@@ -215,6 +215,8 @@ const start = (event) => {
       return null;
     }
 
+    let widthRemaining = 0;
+
     const sizeTransformMap = new Map();
     const requestShrink = (element, shrinkRequested) => {
       const minWidth = minWidthMap.get(element);
@@ -224,22 +226,25 @@ const start = (event) => {
       if (widthAfterShrink <= minWidth) {
         const actualShrink = width - minWidth;
         sizeTransformMap.set(element, -actualShrink);
+        widthRemaining += actualShrink;
         return actualShrink;
       }
       sizeTransformMap.set(element, -shrinkRequested);
+      widthRemaining += shrinkRequested;
       return shrinkRequested;
     };
     const requestGrow = (element, growRequested) => {
-      const widthRemaining = getWidthRemainingFor(element);
-      const width = widthMap.get(element);
-      const widthAfterGrow = width + growRequested;
-
-      if (widthAfterGrow >= widthRemaining) {
-        const actualGrow = widthRemaining - width;
-        sizeTransformMap.set(element, actualGrow);
+      if (widthRemaining === 0) {
+        return 0;
+      }
+      if (growRequested > widthRemaining) {
+        const actualGrow = widthRemaining;
+        sizeTransformMap.set(element, widthRemaining);
+        widthRemaining = 0;
         return actualGrow;
       }
       sizeTransformMap.set(element, growRequested);
+      widthRemaining -= growRequested;
       return growRequested;
     };
     const stealSpaceFromSiblings = (siblingSet, spaceToSteal) => {
@@ -247,10 +252,11 @@ const start = (event) => {
       let remainingSpaceToSteal = spaceToSteal;
       for (const sibling of siblingSet) {
         const shrink = requestShrink(sibling, remainingSpaceToSteal);
-        if (shrink) {
-          spaceStolen += shrink;
-          remainingSpaceToSteal -= shrink;
+        if (!shrink) {
+          continue;
         }
+        spaceStolen += shrink;
+        remainingSpaceToSteal -= shrink;
         if (remainingSpaceToSteal <= 0) {
           break;
         }
@@ -262,10 +268,11 @@ const start = (event) => {
       let remainingSpaceToGive = spaceToGive;
       for (const sibling of siblingSet) {
         const grow = requestGrow(sibling, remainingSpaceToGive);
-        if (grow) {
-          spaceGiven += grow;
-          remainingSpaceToGive -= grow;
+        if (!grow) {
+          continue;
         }
+        spaceGiven += grow;
+        remainingSpaceToGive -= grow;
         if (remainingSpaceToGive <= 0) {
           break;
         }
@@ -290,6 +297,11 @@ const start = (event) => {
       if (spaceStolen) {
         remainingMoveToApply -= spaceStolen;
         sizeTransformMap.set(elementToResize, spaceStolen);
+      } else {
+        const shrink = requestShrink(elementToResize, remainingMoveToApply);
+        if (shrink) {
+          giveSpaceToSiblings(previousSiblingSet, shrink);
+        }
       }
       return sizeTransformMap;
     }
@@ -302,13 +314,17 @@ const start = (event) => {
       }
       return sizeTransformMap;
     }
-    const spaceGiven = giveSpaceToSiblings(
+    const spaceStolen = stealSpaceFromSiblings(
       previousSiblingSet,
       remainingMoveToApply,
     );
-    if (spaceGiven) {
-      remainingMoveToApply -= spaceGiven;
-      sizeTransformMap.set(elementToResize, -spaceGiven);
+    if (spaceStolen) {
+      sizeTransformMap.set(elementToResize, spaceStolen);
+    } else {
+      const shrink = requestShrink(elementToResize, remainingMoveToApply);
+      if (shrink) {
+        giveSpaceToSiblings(nextSiblingSet, shrink);
+      }
     }
     return sizeTransformMap;
   };
@@ -316,8 +332,9 @@ const start = (event) => {
   const syncSizesWithPosition = () => {
     const sizeTransformMap = computeSizeTransformMap();
     if (!sizeTransformMap) {
-      return;
+      return null;
     }
+
     for (const element of [
       ...previousSiblingSet,
       elementToResize,
@@ -332,30 +349,14 @@ const start = (event) => {
         setWidth(element, width);
       }
     }
+    return sizeTransformMap;
   };
   const handleMouseMove = (e) => {
     resizeInfo.x = e.clientX;
     resizeInfo.y = e.clientY;
-
-    // let widthUsedBefore = 0;
-    // for (const child of parentElement.children) {
-    //   widthUsedBefore += currentWidthMap.get(child);
-    // }
-    // if (widthUsedBefore !== availableWidth) {
-    //   debugger;
-    // }
-
     resizeInfo.xMove = resizeInfo.x - xAtStart;
     resizeInfo.yMove = resizeInfo.y - yAtStart;
     syncSizesWithPosition();
-
-    // let widthUsed = 0;
-    // for (const child of parentElement.children) {
-    //   widthUsed += currentWidthMap.get(child);
-    // }
-    // if (widthUsed !== availableWidth) {
-    //   debugger;
-    // }
   };
 
   const backdrop = document.createElement("div");
