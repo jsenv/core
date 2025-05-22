@@ -109,20 +109,21 @@ const start = (event) => {
   const availableWidth = getAvailableWidth(elementToResize);
 
   const getWidthRemainingFor = (element) => {
-    let widthRemaining = availableWidth;
+    let usedWidth = 0;
     for (const previousSibling of previousSiblingSet) {
       if (previousSibling !== element) {
-        widthRemaining -= currentWidthMap.get(previousSibling);
+        usedWidth += currentWidthMap.get(previousSibling);
       }
     }
     if (elementToResize !== element) {
-      widthRemaining -= currentWidthMap.get(elementToResize);
+      usedWidth += currentWidthMap.get(elementToResize);
     }
     for (const nextSibling of nextSiblingSet) {
       if (nextSibling !== element) {
-        widthRemaining -= currentWidthMap.get(nextSibling);
+        usedWidth += currentWidthMap.get(nextSibling);
       }
     }
+    const widthRemaining = availableWidth - usedWidth;
     return widthRemaining;
   };
 
@@ -173,9 +174,6 @@ const start = (event) => {
             minWidthMap.set(previousSibling, getMinWidth(previousSibling));
             saveWidth(previousSibling);
             previousSiblingSet.add(previousSibling);
-            // const marginSizes = getMarginSizes(previousSibling);
-            // const horizontalSpacing = marginSizes.left + marginSizes.right;
-            // const minWidth = getMinWidth(previousSibling, availableWidth);
           }
           previousSibling = previousSibling.previousElementSibling;
         }
@@ -187,9 +185,6 @@ const start = (event) => {
             minWidthMap.set(nextSibling, getMinWidth(nextSibling));
             saveWidth(nextSibling);
             nextSiblingSet.add(nextSibling);
-            // const marginSizes = getMarginSizes(nextSibling);
-            // const horizontalSpacing = marginSizes.left + marginSizes.right;
-            // const minWidth = getMinWidth(nextSibling, availableWidth);
           }
           nextSibling = nextSibling.nextElementSibling;
         }
@@ -214,27 +209,32 @@ const start = (event) => {
     elementToResize.dispatchEvent(resizeEndEvent);
   };
 
-  const requestShrink = (element, amount) => {
+  const requestShrink = (element, shrinkRequested) => {
     const minWidth = minWidthMap.get(element);
     const width = widthMap.get(element);
-    const widthAfterShrinkRequested = width - amount;
-    if (widthAfterShrinkRequested <= minWidth) {
+    const widthAfterShrink = width - shrinkRequested;
+
+    if (widthAfterShrink <= minWidth) {
+      const actualShrink = width - minWidth;
       setWidth(element, minWidth);
-      return width - minWidth;
+      return actualShrink;
     }
-    setWidth(element, widthAfterShrinkRequested);
-    return amount;
+
+    setWidth(element, widthAfterShrink);
+    return shrinkRequested;
   };
-  const requestGrow = (element, amount) => {
+  const requestGrow = (element, growRequested) => {
     const widthRemaining = getWidthRemainingFor(element);
     const width = widthMap.get(element);
-    const widthAfterGrowRequested = width + amount;
-    if (widthAfterGrowRequested >= widthRemaining) {
+    const widthAfterGrow = width + growRequested;
+
+    if (widthAfterGrow >= widthRemaining) {
+      const actualGrow = widthRemaining - width;
       setWidth(element, widthRemaining);
-      return widthRemaining - width;
+      return actualGrow;
     }
-    setWidth(element, widthAfterGrowRequested);
-    return amount;
+    setWidth(element, widthAfterGrow);
+    return growRequested;
   };
   const giveSpaceToSiblings = (siblingSet, spaceToGive) => {
     if (spaceToGive === 0) {
