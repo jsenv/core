@@ -487,6 +487,9 @@ const start = (event) => {
       elementToResize,
       ...nextSiblingSet,
     ]) {
+      if (!resizableElementSet.has(element)) {
+        continue;
+      }
       const size = sizeMap.get(element);
       const delta = sizeTransformMap.get(element);
       const newSize = delta ? size + delta : size;

@@ -1,3 +1,7 @@
+/*
+ * TODO: when a single group is opened, if should take full height
+ */
+
 import { useResizeStatus } from "@jsenv/dom";
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import {
