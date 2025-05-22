@@ -109,18 +109,18 @@
 
         let currentAnimation = null;
 
-        details.style.overflow = "hidden";
-        content.style.opacity = details.open ? 1 : 0;
-        details.setAttribute("data-details-content-full-height", "");
-
         let detailsHeight;
         let summaryHeight;
         const updateHeights = () => {
           detailsHeight = details.getBoundingClientRect().height;
           summaryHeight = summary.getBoundingClientRect().height;
         };
-
         updateHeights();
+
+        details.style.overflow = "hidden";
+        content.style.opacity = details.open ? 1 : 0;
+        details.setAttribute("data-details-content-full-height", "");
+
         const detailsResizeObserver = new ResizeObserver(() => {
           if (!currentAnimation) {
             updateHeights();
@@ -138,7 +138,6 @@
           }
 
           if (toggleEvent.newState === "open") {
-            debugger;
             updateHeights();
             content.style.opacity = 1;
             currentAnimation = details.animate(
@@ -147,9 +146,8 @@
                 { height: `${detailsHeight}px` },
               ],
               {
-                duration: 300,
+                duration: 1000,
                 easing: "ease-out",
-                fill: "forwards",
               },
             );
           } else {
@@ -160,18 +158,13 @@
                 { height: `${summaryHeight}px` },
               ],
               {
-                duration: 300,
+                duration: 1000,
                 easing: "ease-in",
-                fill: "forwards",
               },
             );
           }
 
           currentAnimation.onfinish = () => {
-            // Reset height to auto after animation completes
-            if (!details.open) {
-              details.style.height = "auto";
-            }
             currentAnimation = null;
           };
 
