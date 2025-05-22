@@ -38,6 +38,10 @@
         user-select: none;
         background: lightblue;
       }
+
+      * {
+        box-sizing: border-box;
+      }
     </style>
 
     <div id="app">
@@ -49,6 +53,7 @@
             consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
             labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
             exercitation
+            <button id="add">Add content</button>
           </div>
         </details>
         <details>
@@ -73,8 +78,29 @@
     </div>
 
     <script type="module">
+      const addButton = document.querySelector("#add");
+      addButton.onclick = () => {
+        const p = document.createElement("p");
+        p.textContent =
+          "This is some new content added to the details element.";
+        addButton.parentNode.appendChild(p);
+      };
+
       const animateDetails = (details) => {
         const summary = details.querySelector("summary");
+        const content = details.querySelector("summary + *");
+
+        const contentResizeObserver = new ResizeObserver(() => {
+          if (details.open) {
+            detailsHeight =
+              summaryHeight + content.getBoundingClientRect().height;
+
+            requestAnimationFrame(() => {
+              details.style.height = `${detailsHeight}px`;
+            });
+          }
+        });
+        contentResizeObserver.observe(content);
 
         let detailsHeight;
         let summaryHeight;
@@ -87,8 +113,10 @@
         updateHeights();
 
         details.style.overflow = "hidden";
-        if (!details.open) {
+        if (details.open) {
           details.style.height = `${summaryHeight}px`;
+        } else {
+          details.style.height = `${detailsHeight}px`;
         }
 
         let currentAnimation = null;
@@ -105,7 +133,6 @@
 
         const finalizeAnimation = (isOpen) => {
           if (isOpen) {
-            // For open state, set to auto to allow content changes
             details.style.height = `${detailsHeight}px`;
           } else {
             // For closed state, set explicit summary height
