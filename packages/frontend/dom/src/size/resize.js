@@ -28,22 +28,13 @@
  *   <div>Adjacent content that will adapt</div>
  * </div>
  *
- *
- * - todo:
- *
- * a la fin du resize on veut surement mettre une max-width en pourcentage
- * pour que lorsque le conteneur change de taille l'élement se redimensionne auto
- *
  */
 
 import { addAttributeEffect } from "../add_attribute_effect.js";
 import { setStyles } from "../style_and_attributes.js";
 import { canTakeSize } from "./can_take_size.js";
-import { getAvailableHeight } from "./get_available_height.js";
 import { getAvailableWidth } from "./get_available_width.js";
 import { getHeight } from "./get_height.js";
-import { getMaxHeight } from "./get_max_height.js";
-import { getMaxWidth } from "./get_max_width.js";
 import { getMinWidth } from "./get_min_width.js";
 import { getWidth } from "./get_width.js";
 
@@ -112,6 +103,13 @@ const start = (event) => {
     return width;
   };
 
+  const widthAsPercentage = (width) => {
+    const ratio = width / availableWidth;
+    // const roundedRatio = Math.round(ratio * 10000) / 10000;
+    const percentage = ratio * 100;
+    return `${percentage}%`;
+  };
+
   const parentElement = elementToResize.parentElement;
   const availableWidth = getAvailableWidth(elementToResize);
 
@@ -120,19 +118,6 @@ const start = (event) => {
   const xAtStart = event.clientX;
   const yAtStart = event.clientY;
   const resizeInfo = {
-    get widthAsPercentage() {
-      const ratio = resizeInfo.width / resizeInfo.availableWidth;
-      const roundedRatio = Math.round(ratio * 100) / 100;
-      const percentage = roundedRatio * 100;
-      return `${percentage}%`;
-    },
-    get heightAsPercentage() {
-      const ratio = resizeInfo.height / resizeInfo.availableHeight;
-      const roundedRatio = Math.round(ratio * 100) / 100;
-      const percentage = roundedRatio * 100;
-      return `${percentage}%`;
-    },
-
     xAtStart,
     yAtStart,
     x: xAtStart,
@@ -202,7 +187,6 @@ const start = (event) => {
     }
 
     let widthRemaining = 0;
-
     const sizeTransformMap = new Map();
     const requestShrink = (element, shrinkRequested) => {
       const minWidth = minWidthMap.get(element);
@@ -276,18 +260,17 @@ const start = (event) => {
         }
         return sizeTransformMap;
       }
-      const spaceStolen = stealSpaceFromSiblings(
+      const spaceStolenNext = stealSpaceFromSiblings(
         nextSiblingSet,
         remainingMoveToApply,
       );
-      if (spaceStolen) {
-        remainingMoveToApply -= spaceStolen;
-        sizeTransformMap.set(elementToResize, spaceStolen);
-      } else {
-        const shrink = requestShrink(elementToResize, remainingMoveToApply);
-        if (shrink) {
-          giveSpaceToSiblings(previousSiblingSet, shrink);
-        }
+      if (spaceStolenNext) {
+        sizeTransformMap.set(elementToResize, spaceStolenNext);
+        return sizeTransformMap;
+      }
+      const shrink = requestShrink(elementToResize, remainingMoveToApply);
+      if (shrink) {
+        giveSpaceToSiblings(previousSiblingSet, shrink);
       }
       return sizeTransformMap;
     }
@@ -315,7 +298,7 @@ const start = (event) => {
     return sizeTransformMap;
   };
 
-  const syncSizesWithPosition = () => {
+  const syncSizesWithPosition = ({ isEnd } = {}) => {
     const sizeTransformMap = computeSizeTransformMap();
     if (!sizeTransformMap) {
       return null;
@@ -330,8 +313,17 @@ const start = (event) => {
       const delta = sizeTransformMap.get(element);
       if (delta) {
         const newWidth = width + delta;
-        setWidth(element, newWidth);
+        if (isEnd && !elementToResize.hasAttribute("data-resize-absolute")) {
+          const percentage = widthAsPercentage(newWidth);
+          element.style.width = percentage;
+        } else {
+          setWidth(element, newWidth);
+        }
       } else {
+        if (isEnd && !elementToResize.hasAttribute("data-resize-absolute")) {
+          const percentage = widthAsPercentage(width);
+          element.style.width = percentage;
+        }
         setWidth(element, width);
       }
     }
@@ -362,7 +354,7 @@ const start = (event) => {
     resizeInfo.y = e.clientY;
     resizeInfo.xMove = resizeInfo.x - xAtStart;
     resizeInfo.yMove = resizeInfo.y - yAtStart;
-    syncSizesWithPosition();
+    syncSizesWithPosition({ isEnd: true });
     for (const endCallback of endCallbackSet) {
       endCallback();
     }
@@ -403,32 +395,6 @@ addAttributeEffect("data-resize", (element) => {
   }
 
   const cleanupCallbackSet = new Set();
-
-  max_width_max_height: {
-    const updateMaxSizes = (parentWidth, parentHeight) => {
-      if (horizontalResizeEnabled) {
-        const availableWidth = getAvailableWidth(element, parentWidth);
-        const maxWidth = getMaxWidth(element, availableWidth);
-        element.style.maxWidth = `${maxWidth}px`;
-      }
-      if (verticalResizeEnabled) {
-        const availableHeight = getAvailableHeight(element, parentHeight);
-        const maxHeight = getMaxHeight(element, availableHeight);
-        element.style.maxHeight = `${maxHeight}px`;
-      }
-    };
-
-    const parentElement = element.parentElement;
-    // updateMaxSizes(getWidth(parentElement), getHeight(parentElement));
-    const resizeObserver = new ResizeObserver((entries) => {
-      const [entry] = entries;
-      // updateMaxSizes(entry.contentRect.width, entry.contentRect.height);
-    });
-    resizeObserver.observe(parentElement);
-    cleanupCallbackSet.add(() => {
-      resizeObserver.unobserve(parentElement);
-    });
-  }
 
   // disable flex stuff to ensure element can be resized
   force_resizable: {
