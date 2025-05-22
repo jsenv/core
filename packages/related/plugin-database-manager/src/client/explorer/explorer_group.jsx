@@ -91,6 +91,10 @@ export const ExplorerGroup = forwardRef(
             height: resizing ? resizeHeight : heightSetting,
           }}
           // eslint-disable-next-line react/no-unknown-property
+          onresize={(e) => {
+            setHeightSetting(e.detail.height);
+          }}
+          // eslint-disable-next-line react/no-unknown-property
           onresizeend={(e) => {
             setHeightSetting(e.detail.height);
           }}

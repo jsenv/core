@@ -46,7 +46,7 @@ import { getMinWidth } from "./get_min_width.js";
 import { getWidth } from "./get_width.js";
 
 const style = /*css*/ `
-   *[data-force-resize] {
+   *[data-resize] {
      flex-shrink: 1 !important; /* flex-shrink === 0 would prevent element to shrink as much as it could */
      flex-grow: 0 !important; /* flex-grow === 1 (or more) would prevent element to shrink as much as it could */
      flex-basis: auto !important; /* flex-basis !== auto would prevent element to grow as much as it could */ 
@@ -79,12 +79,8 @@ const start = (event) => {
   }
   // inspired by https://developer.mozilla.org/en-US/docs/Web/CSS/resize
   // "horizontal", "vertical", "both"
-  const direction = elementToResize.getAttribute("data-resize");
-  const horizontalResizeEnabled =
-    direction === "horizontal" || direction === "both";
-  const verticalResizeEnabled =
-    direction === "vertical" || direction === "both";
-  if (!horizontalResizeEnabled && !verticalResizeEnabled) {
+  const resizeDirection = getResizeDirection(elementToResize);
+  if (!resizeDirection.x && !resizeDirection.y) {
     return;
   }
   event.preventDefault();
@@ -179,8 +175,11 @@ const start = (event) => {
     dispatchResizeEvent(element);
   };
 
+  const horizontallyResizableElementSet = new Set();
+  const verticallyResizableElementSet = new Set();
+
   size_and_min_size: {
-    if (horizontalResizeEnabled) {
+    if (resizeDirection.x) {
       const width = saveWidth(elementToResize);
       resizeInfo.widthAtStart = width;
       resizeInfo.width = width;
@@ -188,7 +187,7 @@ const start = (event) => {
       minWidthMap.set(elementToResize, minWidth);
     }
 
-    if (verticalResizeEnabled) {
+    if (resizeDirection.y) {
       const height = saveHeight(elementToResize);
       resizeInfo.heightAtStart = height;
       resizeInfo.height = height;
@@ -199,7 +198,8 @@ const start = (event) => {
   siblings: {
     const parentElementComputedStyle = window.getComputedStyle(parentElement);
 
-    if (horizontalResizeEnabled) {
+    if (resizeDirection.x) {
+      horizontallyResizableElementSet.add(elementToResize);
       if (
         parentElementComputedStyle.display === "flex" &&
         parentElementComputedStyle.flexDirection === "row"
@@ -235,7 +235,8 @@ const start = (event) => {
       }
     }
 
-    if (verticalResizeEnabled) {
+    if (resizeDirection.y) {
+      verticallyResizableElementSet.add(elementToResize);
       if (
         parentElementComputedStyle.display === "flex" &&
         parentElementComputedStyle.flexDirection === "column"
@@ -501,12 +502,12 @@ const start = (event) => {
     });
 
   const handleMouseMove = (e) => {
-    if (horizontalResizeEnabled) {
+    if (resizeDirection.x) {
       resizeInfo.x = e.clientX;
       resizeInfo.xMove = resizeInfo.x - xAtStart;
       syncHorizontalSizesWithPositionDelta(resizeInfo.xMove);
     }
-    if (verticalResizeEnabled) {
+    if (resizeDirection.y) {
       resizeInfo.y = e.clientY;
       resizeInfo.yMove = resizeInfo.y - yAtStart;
       syncVerticalSizesWithPositionDelta(resizeInfo.yMove);
@@ -514,12 +515,12 @@ const start = (event) => {
   };
   const handleMouseUp = (e) => {
     e.preventDefault();
-    if (horizontalResizeEnabled) {
+    if (resizeDirection.x) {
       resizeInfo.x = e.clientX;
       resizeInfo.xMove = resizeInfo.x - xAtStart;
       syncHorizontalSizesWithPositionDelta(resizeInfo.xMove, { isEnd: true });
     }
-    if (verticalResizeEnabled) {
+    if (resizeDirection.y) {
       resizeInfo.y = e.clientY;
       resizeInfo.yMove = resizeInfo.y - yAtStart;
       syncVerticalSizesWithPositionDelta(resizeInfo.yMove, { isEnd: true });
@@ -534,11 +535,11 @@ const start = (event) => {
   backdrop.style.position = "fixed";
   backdrop.style.inset = "0";
   backdrop.style.cursor =
-    direction === "horizontal"
-      ? "ew-resize"
-      : direction === "vertical"
-        ? "ns-resize"
-        : "nwse-resize";
+    resizeDirection.x && resizeDirection.y
+      ? "nwse-resize"
+      : resizeDirection.x
+        ? "ew-resize"
+        : "ns-resize";
   backdrop.style.userSelect = "none";
   document.body.appendChild(backdrop);
   document.addEventListener("mousemove", handleMouseMove);
@@ -551,6 +552,13 @@ const start = (event) => {
     elementToResize.removeAttribute("data-resizing");
   });
   dispatchResizeStartEvent(elementToResize);
+};
+
+const getResizeDirection = (element) => {
+  const direction = element.getAttribute("data-resize");
+  const x = direction === "horizontal" || direction === "both";
+  const y = direction === "vertical" || direction === "both";
+  return { x, y };
 };
 
 document.addEventListener(
@@ -575,11 +583,6 @@ addAttributeEffect("data-resize", (element) => {
 
   // disable flex stuff to ensure element can be resized
   force_resizable: {
-    element.setAttribute("data-force-resize", "");
-    cleanupCallbackSet.add(() => {
-      element.removeAttribute("data-force-resize");
-    });
-
     const distributeSpace = (
       element,
       { getAvailableSpace, getSize, setSize },
