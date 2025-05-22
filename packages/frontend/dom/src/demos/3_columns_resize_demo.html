@@ -51,6 +51,11 @@
       ></div>
     </div>
 
+    <label>
+      width:
+      <input type="number" id="container_width" />
+    </label>
+
     <script type="module">
       import "@jsenv/dom/resize";
 
@@ -64,6 +69,15 @@
           localStorage.setItem(`${resize.id}_width`, event.detail.width);
         });
       }
+
+      const input = document.querySelector("input");
+      input.oninput = () => {
+        const width = input.value;
+        document.querySelector("#app").style.width = `${width}px`;
+      };
+      input.value = document
+        .querySelector("#app")
+        .getBoundingClientRect().width;
     </script>
   </body>
 </html>

@@ -27,6 +27,13 @@
  *   </div>
  *   <div>Adjacent content that will adapt</div>
  * </div>
+ *
+ *
+ * - todo:
+ *
+ * a la fin du resize on veut surement mettre une max-width en pourcentage
+ * pour que lorsque le conteneur change de taille l'élement se redimensionne auto
+ *
  */
 
 import { addAttributeEffect } from "../add_attribute_effect.js";
@@ -42,8 +49,9 @@ import { getWidth } from "./get_width.js";
 
 const style = /*css*/ `
    *[data-force-resize] {
-     flex-shrink: 0 !important; /* flex-shrink !== 0 would prevent element to grow as much as it could  */
+     flex-shrink: 1 !important; /* flex-shrink !== 0 would prevent element to grow as much as it could  */
      flex-grow: 0 !important; /* flex-grow !== 0 would prevent element to shrink as much as it could */
+     flex-basis: auto !important; /* flex-basis !== auto would prevent element to grow as much as it could */ 
    }`;
 document.head.appendChild(document.createElement("style")).textContent = style;
 
@@ -87,7 +95,6 @@ const start = (event) => {
 
   const minWidthMap = new Map();
   const widthMap = new Map();
-  const maxWidthMap = new Map();
 
   const currentWidthMap = new Map();
   const setWidth = (element, width) => {
@@ -107,25 +114,6 @@ const start = (event) => {
 
   const parentElement = elementToResize.parentElement;
   const availableWidth = getAvailableWidth(elementToResize);
-
-  const getWidthRemainingFor = (element) => {
-    let usedWidth = 0;
-    for (const previousSibling of previousSiblingSet) {
-      if (previousSibling !== element) {
-        usedWidth += currentWidthMap.get(previousSibling);
-      }
-    }
-    if (elementToResize !== element) {
-      usedWidth += currentWidthMap.get(elementToResize);
-    }
-    for (const nextSibling of nextSiblingSet) {
-      if (nextSibling !== element) {
-        usedWidth += currentWidthMap.get(nextSibling);
-      }
-    }
-    const widthRemaining = availableWidth - usedWidth;
-    return widthRemaining;
-  };
 
   const previousSiblingSet = new Set();
   const nextSiblingSet = new Set();
@@ -157,8 +145,6 @@ const start = (event) => {
     const minWidth = getMinWidth(elementToResize, availableWidth);
     minWidthMap.set(elementToResize, minWidth);
     saveWidth(elementToResize);
-    const maxWidth = ""; // TODO
-    maxWidthMap.set(elementToResize, maxWidth);
   }
 
   siblings: {
@@ -284,9 +270,9 @@ const start = (event) => {
     if (moveDelta > 0) {
       let remainingMoveToApply = moveDelta;
       if (nextSiblingSet.size === 0) {
-        const grow = requestGrow(elementToResize, remainingMoveToApply);
-        if (grow) {
-          stealSpaceFromSiblings(previousSiblingSet, grow);
+        const shrink = requestShrink(elementToResize, remainingMoveToApply);
+        if (shrink) {
+          giveSpaceToSiblings(previousSiblingSet, shrink);
         }
         return sizeTransformMap;
       }
@@ -314,17 +300,17 @@ const start = (event) => {
       }
       return sizeTransformMap;
     }
-    const spaceStolen = stealSpaceFromSiblings(
+    const spaceStolenPrev = stealSpaceFromSiblings(
       previousSiblingSet,
       remainingMoveToApply,
     );
-    if (spaceStolen) {
-      sizeTransformMap.set(elementToResize, spaceStolen);
-    } else {
-      const shrink = requestShrink(elementToResize, remainingMoveToApply);
-      if (shrink) {
-        giveSpaceToSiblings(nextSiblingSet, shrink);
-      }
+    if (spaceStolenPrev) {
+      sizeTransformMap.set(elementToResize, spaceStolenPrev);
+      return sizeTransformMap;
+    }
+    const shrink = requestShrink(elementToResize, remainingMoveToApply);
+    if (shrink) {
+      giveSpaceToSiblings(nextSiblingSet, shrink);
     }
     return sizeTransformMap;
   };
@@ -393,12 +379,6 @@ const start = (event) => {
     document.body.removeChild(backdrop);
     elementToResize.removeAttribute("data-resizing");
   });
-  if (horizontalResizeEnabled) {
-    setWidth(elementToResize, widthMap.get(elementToResize));
-  }
-  if (verticalResizeEnabled) {
-    elementToResize.style.height = `${resizeInfo.height}px`;
-  }
   dispatchResizeStartEvent();
 };
 
@@ -429,14 +409,12 @@ addAttributeEffect("data-resize", (element) => {
       if (horizontalResizeEnabled) {
         const availableWidth = getAvailableWidth(element, parentWidth);
         const maxWidth = getMaxWidth(element, availableWidth);
-        console.log({ maxWidth });
-        // element.style.maxWidth = `${maxWidth}px`;
+        element.style.maxWidth = `${maxWidth}px`;
       }
       if (verticalResizeEnabled) {
         const availableHeight = getAvailableHeight(element, parentHeight);
         const maxHeight = getMaxHeight(element, availableHeight);
-        console.log({ maxHeight });
-        // element.style.maxHeight = `${maxHeight}px`;
+        element.style.maxHeight = `${maxHeight}px`;
       }
     };
 
@@ -444,7 +422,7 @@ addAttributeEffect("data-resize", (element) => {
     // updateMaxSizes(getWidth(parentElement), getHeight(parentElement));
     const resizeObserver = new ResizeObserver((entries) => {
       const [entry] = entries;
-      updateMaxSizes(entry.contentRect.width, entry.contentRect.height);
+      // updateMaxSizes(entry.contentRect.width, entry.contentRect.height);
     });
     resizeObserver.observe(parentElement);
     cleanupCallbackSet.add(() => {
