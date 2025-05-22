@@ -91,6 +91,7 @@ export const ExplorerGroup = forwardRef(
           id={controller.id}
           className="explorer_group"
           data-resize={resizable ? "vertical" : undefined}
+          data-details-content-full-height
           style={{
             height: resizable
               ? resizing

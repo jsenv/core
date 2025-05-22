@@ -3,7 +3,7 @@
  * right now it does not work, the content is not scrollable and gets hidden
  */
 
-import "@jsenv/dom/details_content_scroll";
+import "@jsenv/dom/details_content_full_height";
 import "@jsenv/dom/resize";
 import { effect } from "@preact/signals";
 import { useCallback, useState } from "preact/hooks";
