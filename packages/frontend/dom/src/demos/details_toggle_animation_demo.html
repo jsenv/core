@@ -107,13 +107,14 @@
         const summary = details.querySelector("summary");
         const content = details.querySelector("summary + *");
 
+        let currentAnimation = null;
+
         details.style.overflow = "hidden";
-        content.style.opacity = 0;
+        content.style.opacity = details.open ? 1 : 0;
         details.setAttribute("data-details-content-full-height", "");
 
         let detailsHeight;
         let summaryHeight;
-
         const updateHeights = () => {
           detailsHeight = details.getBoundingClientRect().height;
           summaryHeight = summary.getBoundingClientRect().height;
@@ -121,7 +122,9 @@
 
         updateHeights();
         const detailsResizeObserver = new ResizeObserver(() => {
-          updateHeights();
+          if (!currentAnimation) {
+            updateHeights();
+          }
         });
         detailsResizeObserver.observe(details);
         const summaryResizeObserver = new ResizeObserver(() => {
@@ -130,35 +133,56 @@
         summaryResizeObserver.observe(summary);
 
         details.ontoggle = (toggleEvent) => {
+          if (currentAnimation) {
+            currentAnimation.cancel();
+          }
+
           if (toggleEvent.newState === "open") {
+            debugger;
             updateHeights();
             content.style.opacity = 1;
-            const openAnimation = details.animate(
+            currentAnimation = details.animate(
               [
                 { height: `${summaryHeight}px` },
                 { height: `${detailsHeight}px` },
               ],
               {
-                duration: 2000,
-                iterations: 1,
+                duration: 300,
+                easing: "ease-out",
+                fill: "forwards",
               },
             );
           } else {
             content.style.opacity = 0;
-            const closeAnimation = details.animate(
+            currentAnimation = details.animate(
               [
                 { height: `${detailsHeight}px` },
                 { height: `${summaryHeight}px` },
               ],
               {
-                duration: 2000,
-                iterations: 1,
+                duration: 300,
+                easing: "ease-in",
+                fill: "forwards",
               },
             );
           }
+
+          currentAnimation.onfinish = () => {
+            // Reset height to auto after animation completes
+            if (!details.open) {
+              details.style.height = "auto";
+            }
+            currentAnimation = null;
+          };
+
+          currentAnimation.oncancel = () => {
+            currentAnimation = null;
+          };
         };
       };
-      animateDetails(document.querySelector("details"));
+      for (const details of document.querySelectorAll("details")) {
+        animateDetails(details);
+      }
     </script>
   </body>
 </html>
