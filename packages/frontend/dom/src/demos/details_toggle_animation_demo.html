@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Aside and main demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      #app {
+        display: flex;
+        flex-direction: row;
+      }
+
+      main {
+        min-width: 200px;
+        padding-bottom: 0;
+        min-width: 200px; /* Prevents content area from becoming too narrow */
+        box-sizing: border-box;
+        min-height: 100vh; /* Ensures content area is at least viewport height */
+        overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */
+        scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shifts */
+
+        width: 100px;
+      }
+
+      details {
+        width: 100%;
+        overflow: hidden;
+      }
+
+      details > summary + * {
+        height: 0;
+      }
+
+      details[open] > summary + * {
+        height: 100%;
+        transition: height 3s ease-in-out;
+      }
+    </style>
+
+    <div id="app">
+      <main>
+        <details>
+          <summary>First summary</summary>
+          <div style="padding: 20px; width: 100%">
+            This is the main content area. Lorem ipsum dolor sit amet,
+            consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+            exercitation
+
+            <br />
+            <br />
+
+            This is the main content area. Lorem ipsum dolor sit amet,
+            consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+            exercitation
+          </div>
+        </details>
+        <details>
+          <summary>Second summary</summary>
+          <div style="padding: 20px; width: fit-content">
+            This is the main content area. Lorem ipsum dolor sit amet,
+            consectetur
+
+            <br />
+            <br />
+            <br />
+
+            This is the main content area. Lorem ipsum dolor sit amet,
+            consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+            exercitation
+
+            <br />
+            <br />
+            <br />
+
+            This is the main content area. Lorem ipsum dolor sit amet,
+            consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+            exercitation
+
+            <br />
+            <br />
+            <br />
+
+            This is the main content area. Lorem ipsum dolor sit amet,
+            consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+            exercitation
+          </div>
+        </details>
+      </main>
+    </div>
+
+    <script type="module">
+      import "../size/details_content_full_height.js";
+
+      const animateDetails = (details) => {
+        const summary = details.querySelector("summary");
+        const content = details.querySelector("summary + *");
+
+        details.style.overflow = "hidden";
+        content.style.opacity = 0;
+        details.setAttribute("data-details-content-full-height", "");
+
+        let detailsHeight;
+        let summaryHeight;
+
+        const updateHeights = () => {
+          detailsHeight = details.getBoundingClientRect().height;
+          summaryHeight = summary.getBoundingClientRect().height;
+        };
+
+        updateHeights();
+        const detailsResizeObserver = new ResizeObserver(() => {
+          updateHeights();
+        });
+        detailsResizeObserver.observe(details);
+        const summaryResizeObserver = new ResizeObserver(() => {
+          updateHeights();
+        });
+        summaryResizeObserver.observe(summary);
+
+        details.ontoggle = (toggleEvent) => {
+          if (toggleEvent.newState === "open") {
+            updateHeights();
+            content.style.opacity = 1;
+            const openAnimation = details.animate(
+              [
+                { height: `${summaryHeight}px` },
+                { height: `${detailsHeight}px` },
+              ],
+              {
+                duration: 2000,
+                iterations: 1,
+              },
+            );
+          } else {
+            content.style.opacity = 0;
+            const closeAnimation = details.animate(
+              [
+                { height: `${detailsHeight}px` },
+                { height: `${summaryHeight}px` },
+              ],
+              {
+                duration: 2000,
+                iterations: 1,
+              },
+            );
+          }
+        };
+      };
+      animateDetails(document.querySelector("details"));
+    </script>
+  </body>
+</html>
