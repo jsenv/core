@@ -48,10 +48,11 @@
             consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
             labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
             exercitation
-
-            <br />
-            <br />
-
+          </div>
+        </details>
+        <details>
+          <summary>Second summary</summary>
+          <div style="padding: 20px; width: fit-content">
             This is the main content area. Lorem ipsum dolor sit amet,
             consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
             labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
@@ -59,33 +60,8 @@
           </div>
         </details>
         <details>
-          <summary>Second summary</summary>
+          <summary>Third summary</summary>
           <div style="padding: 20px; width: fit-content">
-            This is the main content area. Lorem ipsum dolor sit amet,
-            consectetur
-
-            <br />
-            <br />
-            <br />
-
-            This is the main content area. Lorem ipsum dolor sit amet,
-            consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
-            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation
-
-            <br />
-            <br />
-            <br />
-
-            This is the main content area. Lorem ipsum dolor sit amet,
-            consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
-            labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-            exercitation
-
-            <br />
-            <br />
-            <br />
-
             This is the main content area. Lorem ipsum dolor sit amet,
             consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
             labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
@@ -146,10 +122,14 @@
         details.ontoggle = (toggleEvent) => {
           const isOpening = toggleEvent.newState === "open";
 
-          // Cancel any existing animation
+          // If an animation is already running, just reverse it
           if (currentAnimation) {
-            currentAnimation.cancel();
-            currentAnimation = null;
+            currentAnimation.reverse();
+
+            // Update the onfinish handler to match the new direction
+            currentAnimation.onfinish = () => finalizeAnimation(isOpening);
+
+            return;
           }
 
           if (isOpening) {
@@ -158,7 +138,6 @@
             details.style.height = `${summaryHeight}px`;
 
             // Force reflow
-            // eslint-disable-next-line no-unused-expressions
             details.offsetHeight;
 
             // Show content
@@ -170,7 +149,7 @@
                 { height: `${detailsHeight}px` },
               ],
               {
-                duration: 1000,
+                duration: 300, // Shorter duration for better responsiveness
                 easing: "ease-out",
               },
             );
@@ -182,7 +161,6 @@
             details.style.height = `${detailsHeight}px`;
 
             // Force reflow
-            // eslint-disable-next-line no-unused-expressions
             details.offsetHeight;
 
             // Fade content during animation
@@ -207,6 +185,7 @@
           }
         };
       };
+
       for (const details of document.querySelectorAll("details")) {
         animateDetails(details);
       }
