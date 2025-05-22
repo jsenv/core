@@ -160,17 +160,17 @@ const start = (event) => {
     return `${percentage}%`;
   };
 
-  min_size: {
+  size_and_min_size: {
     if (horizontalResizeEnabled) {
+      saveWidth(elementToResize);
       const minWidth = getMinWidth(elementToResize, availableWidth);
       minWidthMap.set(elementToResize, minWidth);
-      saveWidth(elementToResize);
     }
 
     if (verticalResizeEnabled) {
+      saveHeight(elementToResize);
       const minHeight = getMinHeight(elementToResize, availableHeight);
       minHeightMap.set(elementToResize, minHeight);
-      saveHeight(elementToResize);
     }
   }
   siblings: {
@@ -255,12 +255,12 @@ const start = (event) => {
   };
 
   const computeSizeTransformMap = ({
+    positionDelta,
     previousSiblingSet,
     nextSiblingSet,
     minSizeMap,
   }) => {
-    const moveDelta = resizeInfo.xMove;
-    if (moveDelta === 0) {
+    if (positionDelta === 0) {
       return null;
     }
 
@@ -329,8 +329,8 @@ const start = (event) => {
     };
 
     // move right
-    if (moveDelta > 0) {
-      let remainingMoveToApply = moveDelta;
+    if (positionDelta > 0) {
+      let remainingMoveToApply = positionDelta;
       if (nextSiblingSet.size === 0) {
         const shrink = requestShrink(elementToResize, remainingMoveToApply);
         if (shrink) {
@@ -353,7 +353,7 @@ const start = (event) => {
       return sizeTransformMap;
     }
     // move left
-    let remainingMoveToApply = -moveDelta;
+    let remainingMoveToApply = -positionDelta;
     if (previousSiblingSet.size === 0) {
       const shrink = requestShrink(elementToResize, remainingMoveToApply);
       if (shrink) {
@@ -375,7 +375,8 @@ const start = (event) => {
     }
     return sizeTransformMap;
   };
-  const syncSizesWithPosition = ({
+  const syncSizesWithPositionDelta = ({
+    positionDelta,
     previousSiblingSet,
     nextSiblingSet,
     minSizeMap,
@@ -385,6 +386,7 @@ const start = (event) => {
     isEnd,
   } = {}) => {
     const sizeTransformMap = computeSizeTransformMap({
+      positionDelta,
       previousSiblingSet,
       nextSiblingSet,
       minSizeMap,
@@ -402,15 +404,19 @@ const start = (event) => {
       const newSize = delta ? size + delta : size;
       if (isEnd && !elementToResize.hasAttribute("data-resize-absolute")) {
         const percentage = sizeAsPercentage(newSize);
-        element.style.width = percentage;
+        setSize(element, percentage);
       } else {
         setSize(element, newSize);
       }
     }
     return sizeTransformMap;
   };
-  const syncHorizontalSizesWithPosition = ({ isEnd } = {}) =>
-    syncSizesWithPosition({
+  const syncHorizontalSizesWithPositionDelta = (
+    positionDelta,
+    { isEnd } = {},
+  ) =>
+    syncSizesWithPositionDelta({
+      positionDelta,
       previousSiblingSet: horizontalPreviousSiblingSet,
       nextSiblingSet: horizontalNextSiblingSet,
       minSizeMap: minWidthMap,
@@ -419,8 +425,9 @@ const start = (event) => {
       setSize: setWidth,
       isEnd,
     });
-  const syncVerticalSizesWithPosition = ({ isEnd } = {}) =>
-    syncSizesWithPosition({
+  const syncVerticalSizesWithPositionDelta = (positionDelta, { isEnd } = {}) =>
+    syncSizesWithPositionDelta({
+      positionDelta,
       previousSiblingSet: verticalPreviousSiblingSet,
       nextSiblingSet: verticalNextSiblingSet,
       minSizeMap: minHeightMap,
@@ -434,12 +441,12 @@ const start = (event) => {
     if (horizontalResizeEnabled) {
       resizeInfo.x = e.clientX;
       resizeInfo.xMove = resizeInfo.x - xAtStart;
-      syncHorizontalSizesWithPosition();
+      syncHorizontalSizesWithPositionDelta(resizeInfo.xMove);
     }
     if (verticalResizeEnabled) {
       resizeInfo.y = e.clientY;
       resizeInfo.yMove = resizeInfo.y - yAtStart;
-      syncVerticalSizesWithPosition();
+      syncVerticalSizesWithPositionDelta(resizeInfo.yMove);
     }
   };
   const handleMouseUp = (e) => {
@@ -447,12 +454,12 @@ const start = (event) => {
     if (horizontalResizeEnabled) {
       resizeInfo.x = e.clientX;
       resizeInfo.xMove = resizeInfo.x - xAtStart;
-      syncHorizontalSizesWithPosition({ isEnd: true });
+      syncHorizontalSizesWithPositionDelta(resizeInfo.xMove, { isEnd: true });
     }
     if (verticalResizeEnabled) {
       resizeInfo.y = e.clientY;
       resizeInfo.yMove = resizeInfo.y - yAtStart;
-      syncVerticalSizesWithPosition({ isEnd: true });
+      syncVerticalSizesWithPositionDelta(resizeInfo.yMove, { isEnd: true });
     }
     for (const endCallback of endCallbackSet) {
       endCallback();
