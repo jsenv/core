@@ -12,7 +12,6 @@ import { getAvailableWidth } from "./get_available_width.js";
 import { getHeight } from "./get_height.js";
 import { getMaxHeight } from "./get_max_height.js";
 import { getMaxWidth } from "./get_max_width.js";
-import { getMinHeight } from "./get_min_height.js";
 import { getMinWidth } from "./get_min_width.js";
 import { getWidth } from "./get_width.js";
 
@@ -67,8 +66,12 @@ const start = (event) => {
 
   const currentWidthMap = new Map();
   const setWidth = (element, width) => {
+    if (currentWidthMap.get(element) === width) {
+      return;
+    }
     element.style.width = `${width}px`;
     currentWidthMap.set(element, width);
+    dispatchResizeEvent(element);
   };
   const saveWidth = (element) => {
     const width = getWidth(element);
@@ -79,7 +82,6 @@ const start = (event) => {
 
   const parentElement = elementToResize.parentElement;
   const availableWidth = getAvailableWidth(elementToResize);
-  const availableHeight = getAvailableHeight(elementToResize);
 
   const getWidthRemainingFor = (element) => {
     let widthRemaining = availableWidth;
@@ -97,13 +99,6 @@ const start = (event) => {
       }
     }
     return widthRemaining;
-  };
-
-  const minHeightMap = new Map();
-  const heightMap = new Map();
-  const setHeight = (element, height) => {
-    element.style.height = `${height}px`;
-    heightMap.set(element, height);
   };
 
   const previousSiblingSet = new Set();
@@ -138,11 +133,6 @@ const start = (event) => {
     saveWidth(elementToResize);
     const maxWidth = ""; // TODO
     maxWidthMap.set(elementToResize, maxWidth);
-
-    const minHeight = getMinHeight(elementToResize, availableHeight);
-    minHeightMap.set(elementToResize, minHeight);
-    const height = getHeight(elementToResize);
-    heightMap.set(elementToResize, height);
   }
 
   siblings: {
@@ -199,6 +189,28 @@ const start = (event) => {
     elementToResize.dispatchEvent(resizeEndEvent);
   };
 
+  const requestShrink = (element, amount) => {
+    const minWidth = minWidthMap.get(element);
+    const width = widthMap.get(element);
+    const widthAfterShrinkRequested = width - amount;
+    if (widthAfterShrinkRequested <= minWidth) {
+      setWidth(element, minWidth);
+      return width - minWidth;
+    }
+    setWidth(element, widthAfterShrinkRequested);
+    return amount;
+  };
+  const requestGrow = (element, amount) => {
+    const widthRemaining = getWidthRemainingFor(element);
+    const width = widthMap.get(element);
+    const widthAfterGrowRequested = width + amount;
+    if (widthAfterGrowRequested >= widthRemaining) {
+      setWidth(element, widthRemaining);
+      return widthRemaining - width;
+    }
+    setWidth(element, widthAfterGrowRequested);
+    return amount;
+  };
   const giveSpaceToSiblings = (siblingSet, spaceToGive) => {
     if (spaceToGive === 0) {
       return 0;
@@ -206,20 +218,7 @@ const start = (event) => {
     let spaceGiven = 0;
     let growRemaining = spaceToGive;
     for (const sibling of siblingSet) {
-      const growRequested = growRemaining;
-      const widthRemaining = getWidthRemainingFor(sibling);
-      const width = widthMap.get(sibling);
-      const widthAfterGrowRequested = width + growRequested;
-      let widthAfterGrow;
-      let grow;
-      if (widthAfterGrowRequested >= widthRemaining) {
-        widthAfterGrow = widthRemaining;
-        grow = width - widthRemaining;
-      } else {
-        widthAfterGrow = widthAfterGrowRequested;
-        grow = growRequested;
-      }
-      setWidth(sibling, widthAfterGrow);
+      const grow = requestGrow(sibling, growRemaining);
       growRemaining -= grow;
       spaceGiven += grow;
       if (growRemaining <= 0) {
@@ -235,19 +234,7 @@ const start = (event) => {
     let spaceStolen = 0;
     let shrinkRemaining = spaceToSteal;
     for (const sibling of siblingSet) {
-      const minWidth = minWidthMap.get(sibling);
-      const width = widthMap.get(sibling);
-      const widthAfterShrinkRequested = width - shrinkRemaining;
-      let widthAfterShrink;
-      let shrink;
-      if (widthAfterShrinkRequested <= minWidth) {
-        widthAfterShrink = minWidth;
-        shrink = width - minWidth;
-      } else {
-        widthAfterShrink = widthAfterShrinkRequested;
-        shrink = shrinkRemaining;
-      }
-      setWidth(sibling, widthAfterShrink);
+      const shrink = requestShrink(sibling, shrinkRemaining);
       spaceStolen += shrink;
       shrinkRemaining -= shrink;
       if (shrinkRemaining <= 0) {
@@ -261,61 +248,49 @@ const start = (event) => {
     if (resizeInfo.xMove === 0) {
       return;
     }
-    const applySelfShrink = (shrinkRequested, siblingSet) => {
-      const minWidth = minWidthMap.get(elementToResize);
-      const width = widthMap.get(elementToResize);
-      const widthAfterShrinkRequested = width - shrinkRequested;
-      if (widthAfterShrinkRequested <= minWidth) {
-        setWidth(elementToResize, minWidth);
-        giveSpaceToSiblings(siblingSet, availableWidth);
-        return;
-      }
-      setWidth(elementToResize, widthAfterShrinkRequested);
-      giveSpaceToSiblings(siblingSet, shrinkRequested);
-    };
 
     if (resizeInfo.xMove < 0) {
-      const move = -resizeInfo.xMove;
-      if (previousSiblingSet.size === 0) {
-        applySelfShrink(move, nextSiblingSet);
-        return;
-      }
-      const spaceStolenFromPreviousSiblings = stealSpaceFromSiblings(
-        previousSiblingSet,
-        move,
-      );
-      if (spaceStolenFromPreviousSiblings === 0) {
-        if (nextSiblingSet.size === 0) {
+      if (previousSiblingSet.size) {
+        const spaceStolenFromPreviousSiblings = stealSpaceFromSiblings(
+          previousSiblingSet,
+          -resizeInfo.xMove,
+        );
+        if (spaceStolenFromPreviousSiblings) {
+          requestGrow(elementToResize, spaceStolenFromPreviousSiblings);
           return;
         }
-        applySelfShrink(move, nextSiblingSet);
+        const shrink = requestShrink(elementToResize, -resizeInfo.xMove);
+        if (shrink) {
+          giveSpaceToSiblings(nextSiblingSet, shrink);
+        }
         return;
       }
-
-      const elementWidth = widthMap.get(elementToResize);
-      const elementNewSize = elementWidth + spaceStolenFromPreviousSiblings;
-      setWidth(elementToResize, elementNewSize);
+      const shrink = requestShrink(elementToResize, -resizeInfo.xMove);
+      if (shrink) {
+        giveSpaceToSiblings(nextSiblingSet, shrink);
+      }
       return;
     }
     if (resizeInfo.xMove > 0) {
-      if (nextSiblingSet.size === 0) {
-        applySelfShrink(resizeInfo.xMove, previousSiblingSet);
-        return;
-      }
-      const spaceStolenFromNextSiblings = stealSpaceFromSiblings(
-        nextSiblingSet,
-        resizeInfo.xMove,
-      );
-      if (spaceStolenFromNextSiblings === 0) {
-        if (previousSiblingSet.size === 0) {
+      if (nextSiblingSet.size) {
+        const spaceStolenFromNextSiblings = stealSpaceFromSiblings(
+          nextSiblingSet,
+          resizeInfo.xMove,
+        );
+        if (spaceStolenFromNextSiblings) {
+          requestGrow(elementToResize, spaceStolenFromNextSiblings);
           return;
         }
-        applySelfShrink(resizeInfo.xMove, previousSiblingSet);
+        const grow = requestGrow(elementToResize, resizeInfo.xMove);
+        if (grow) {
+          stealSpaceFromSiblings(previousSiblingSet, grow);
+        }
         return;
       }
-      const elementWidth = widthMap.get(elementToResize);
-      const elementNewSize = elementWidth + spaceStolenFromNextSiblings;
-      setWidth(elementToResize, elementNewSize);
+      const shrink = requestShrink(elementToResize, resizeInfo.xMove);
+      if (shrink) {
+        giveSpaceToSiblings(previousSiblingSet, shrink);
+      }
       return;
     }
   };
