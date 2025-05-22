@@ -36,6 +36,7 @@
 
       details > summary {
         user-select: none;
+        background: lightblue;
       }
     </style>
 
@@ -74,7 +75,6 @@
     <script type="module">
       const animateDetails = (details) => {
         const summary = details.querySelector("summary");
-        const content = details.querySelector("summary + *");
 
         let detailsHeight;
         let summaryHeight;
@@ -87,7 +87,6 @@
         updateHeights();
 
         details.style.overflow = "hidden";
-        content.style.opacity = details.open ? 1 : 0;
         if (!details.open) {
           details.style.height = `${summaryHeight}px`;
         }
@@ -107,7 +106,7 @@
         const finalizeAnimation = (isOpen) => {
           if (isOpen) {
             // For open state, set to auto to allow content changes
-            details.style.height = "auto";
+            details.style.height = `${detailsHeight}px`;
           } else {
             // For closed state, set explicit summary height
             details.style.height = `${summaryHeight}px`;
@@ -125,10 +124,8 @@
           // If an animation is already running, just reverse it
           if (currentAnimation) {
             currentAnimation.reverse();
-
             // Update the onfinish handler to match the new direction
             currentAnimation.onfinish = () => finalizeAnimation(isOpening);
-
             return;
           }
 
@@ -136,13 +133,6 @@
             details.style.height = "auto";
             updateHeights();
             details.style.height = `${summaryHeight}px`;
-
-            // Force reflow
-            details.offsetHeight;
-
-            // Show content
-            content.style.opacity = 1;
-
             currentAnimation = details.animate(
               [
                 { height: `${summaryHeight}px` },
@@ -159,14 +149,6 @@
             };
           } else {
             details.style.height = `${detailsHeight}px`;
-
-            // Force reflow
-            details.offsetHeight;
-
-            // Fade content during animation
-            content.style.opacity = 0;
-
-            // Start animation
             currentAnimation = details.animate(
               [
                 { height: `${detailsHeight}px` },
@@ -177,7 +159,6 @@
                 easing: "ease-in",
               },
             );
-
             currentAnimation.onfinish = () => finalizeAnimation(false);
             currentAnimation.oncancel = () => {
               currentAnimation = null;
