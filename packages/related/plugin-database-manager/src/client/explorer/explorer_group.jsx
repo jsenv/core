@@ -90,9 +90,13 @@ export const ExplorerGroup = forwardRef(
           ref={innerRef}
           id={controller.id}
           className="explorer_group"
-          data-resize="vertical"
+          data-resize={resizable ? "vertical" : undefined}
           style={{
-            height: resizing ? resizeHeight : heightSetting,
+            height: resizable
+              ? resizing
+                ? resizeHeight
+                : heightSetting
+              : undefined,
           }}
           // eslint-disable-next-line react/no-unknown-property
           onresize={(e) => {

@@ -32,7 +32,6 @@ export const Aside = ({ children }) => {
   const { resizing, resizeWidth } = useResizeStatus(asideRef, {
     as: "number",
   });
-  console.log({ widthSetting });
 
   return (
     <aside
