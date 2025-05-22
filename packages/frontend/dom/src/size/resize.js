@@ -1,7 +1,32 @@
 /**
- * TOFIX:
+ * Resize.js - Element Resize Manager
  *
- * when resizing A, C can move stangely
+ * This module provides a complete solution for making HTML elements resizable
+ * with proper space distribution among siblings. It works for both horizontal and
+ * vertical resizing while maintaining the integrity of the overall layout.
+ *
+ * Key features:
+ * - Enables resizing via data-resize="horizontal|vertical|both" attribute
+ * - Intelligently distributes space among sibling elements
+ * - Respects min-width/min-height constraints of all elements
+ * - Dispatches custom events (resizestart, resize, resizeend)
+ * - Preserves layout integrity by ensuring all available space is used
+ * - Supports flex layouts by temporarily disabling flex behavior during resize
+ * - Provides percentage-based size calculations for responsive designs
+ *
+ * Usage:
+ * 1. Add data-resize="horizontal" to any element you want to make resizable
+ * 2. Add a resize handle with data-resize-handle attribute
+ * 3. The module automatically handles mouse events and resizing logic
+ *
+ * Example:
+ * <div style="display: flex">
+ *   <div data-resize="horizontal" style="width: 200px">
+ *     Resizable content
+ *     <div data-resize-handle></div>
+ *   </div>
+ *   <div>Adjacent content that will adapt</div>
+ * </div>
  */
 
 import { addAttributeEffect } from "../add_attribute_effect.js";
