@@ -203,6 +203,16 @@ const start = (event) => {
     if (elementResizeDirection.y) {
       verticallyResizableElementSet.add(element);
     }
+    return elementResizeDirection.x || elementResizeDirection.y;
+  };
+  const detectResizableSibling = (sibling, resizableElementSet) => {
+    if (detectResizableDirections(sibling)) {
+      return;
+    }
+    const computedStyle = window.getComputedStyle(sibling);
+    if (computedStyle.flexGrow === "1") {
+      resizableElementSet.add(sibling);
+    }
   };
   detectResizableDirections(elementToResize);
 
@@ -225,7 +235,10 @@ const start = (event) => {
               saveWidth(previousSibling);
               horizontalPreviousSiblingSet.add(previousSibling);
             }
-            detectResizableDirections(previousSibling);
+            detectResizableSibling(
+              previousSibling,
+              horizontallyResizableElementSet,
+            );
             previousSibling = previousSibling.previousElementSibling;
           }
         }
@@ -240,7 +253,10 @@ const start = (event) => {
               saveWidth(nextSibling);
               horizontalNextSiblingSet.add(nextSibling);
             }
-            detectResizableDirections(nextSibling);
+            detectResizableSibling(
+              nextSibling,
+              horizontallyResizableElementSet,
+            );
             nextSibling = nextSibling.nextElementSibling;
           }
         }
@@ -264,7 +280,10 @@ const start = (event) => {
               saveHeight(previousSibling);
               verticalPreviousSiblingSet.add(previousSibling);
             }
-            detectResizableDirections(previousSibling);
+            detectResizableSibling(
+              previousSibling,
+              verticallyResizableElementSet,
+            );
             previousSibling = previousSibling.previousElementSibling;
           }
         }
@@ -279,7 +298,7 @@ const start = (event) => {
               saveHeight(nextSibling);
               verticalNextSiblingSet.add(nextSibling);
             }
-            detectResizableDirections(nextSibling);
+            detectResizableSibling(nextSibling, verticallyResizableElementSet);
             nextSibling = nextSibling.nextElementSibling;
           }
         }
