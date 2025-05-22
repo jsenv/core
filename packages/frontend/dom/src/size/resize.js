@@ -1,23 +1,25 @@
 /**
  * Resize.js - Element Resize Manager
  *
- * This module provides a complete solution for making HTML elements resizable
- * with proper space distribution among siblings. It works for both horizontal and
- * vertical resizing while maintaining the integrity of the overall layout.
+ * This module provides a comprehensive solution for making HTML elements resizable
+ * with intelligent space distribution among siblings. It handles both horizontal and
+ * vertical resizing while maintaining layout integrity.
  *
  * Key features:
- * - Enables resizing via data-resize="horizontal|vertical|both" attribute
- * - Intelligently distributes space among sibling elements
- * - Respects min-width/min-height constraints of all elements
- * - Dispatches custom events (resizestart, resize, resizeend)
- * - Preserves layout integrity by ensuring all available space is used
- * - Supports flex layouts by temporarily disabling flex behavior during resize
- * - Provides percentage-based size calculations for responsive designs
+ * - Makes elements resizable via data-resize="horizontal|vertical|both" attribute
+ * - Intelligently distributes space among sibling elements during resize
+ * - Respects min-width/min-height constraints of all affected elements
+ * - Dispatches custom events (resizestart, resize, resizeend) with position info
+ * - Preserves layout integrity by ensuring all available space is properly allocated
+ * - Supports flex layouts by temporarily adjusting flex behavior during resize
+ * - Provides percentage-based sizing for responsive layouts (without data-resize-absolute)
+ * - Absolute pixel sizing when data-resize-absolute is specified
+ * - Handles both grow and shrink operations with space redistribution
  *
  * Usage:
- * 1. Add data-resize="horizontal" to any element you want to make resizable
+ * 1. Add data-resize="horizontal" (or "vertical"/"both") to elements you want resizable
  * 2. Add a resize handle with data-resize-handle attribute
- * 3. The module automatically handles mouse events and resizing logic
+ * 3. Optionally add data-resize-absolute to maintain pixel-based sizing
  *
  * Example:
  * <div style="display: flex">
@@ -25,9 +27,13 @@
  *     Resizable content
  *     <div data-resize-handle></div>
  *   </div>
- *   <div>Adjacent content that will adapt</div>
+ *   <div>Adjacent content that adapts automatically</div>
  * </div>
  *
+ * Advanced usage:
+ * - Target specific elements with data-resize-handle="elementId"
+ * - Listen for resize events: element.addEventListener("resize", (e) => {...})
+ * - Access resize information from event.detail (xMove, yMove, etc.)
  */
 
 import { addAttributeEffect } from "../add_attribute_effect.js";
@@ -35,6 +41,7 @@ import { setStyles } from "../style_and_attributes.js";
 import { canTakeSize } from "./can_take_size.js";
 import { getAvailableWidth } from "./get_available_width.js";
 import { getHeight } from "./get_height.js";
+import { getMinHeight } from "./get_min_height.js";
 import { getMinWidth } from "./get_min_width.js";
 import { getWidth } from "./get_width.js";
 
@@ -83,38 +90,9 @@ const start = (event) => {
   event.preventDefault();
 
   const endCallbackSet = new Set();
-
-  const minWidthMap = new Map();
-  const widthMap = new Map();
-
-  const currentWidthMap = new Map();
-  const setWidth = (element, width) => {
-    if (currentWidthMap.get(element) === width) {
-      return;
-    }
-    element.style.width = `${width}px`;
-    currentWidthMap.set(element, width);
-    dispatchResizeEvent(element);
-  };
-  const saveWidth = (element) => {
-    const width = getWidth(element);
-    widthMap.set(element, width);
-    currentWidthMap.set(element, width);
-    return width;
-  };
-
-  const widthAsPercentage = (width) => {
-    const ratio = width / availableWidth;
-    // const roundedRatio = Math.round(ratio * 10000) / 10000;
-    const percentage = ratio * 100;
-    return `${percentage}%`;
-  };
-
   const parentElement = elementToResize.parentElement;
   const availableWidth = getAvailableWidth(elementToResize);
-
-  const previousSiblingSet = new Set();
-  const nextSiblingSet = new Set();
+  const availableHeight = getAvailableWidth(elementToResize);
   const xAtStart = event.clientX;
   const yAtStart = event.clientY;
   const resizeInfo = {
@@ -126,40 +104,110 @@ const start = (event) => {
     yMove: 0,
   };
 
-  {
-    const minWidth = getMinWidth(elementToResize, availableWidth);
-    minWidthMap.set(elementToResize, minWidth);
-    saveWidth(elementToResize);
-  }
+  const horizontalPreviousSiblingSet = new Set();
+  const horizontalNextSiblingSet = new Set();
+  const minWidthMap = new Map();
+  const widthMap = new Map();
+  const currentWidthMap = new Map();
+  const setWidth = (element, width) => {
+    if (currentWidthMap.get(element) === width) {
+      return;
+    }
+    element.style.width = `${width}px`;
+    currentWidthMap.set(element, width);
+    if (element === elementToResize) {
+      dispatchResizeEvent();
+    }
+  };
+  const saveWidth = (element) => {
+    const width = getWidth(element);
+    widthMap.set(element, width);
+    currentWidthMap.set(element, width);
+    return width;
+  };
+  const widthAsPercentage = (width) => {
+    const ratio = width / availableWidth;
+    // const roundedRatio = Math.round(ratio * 10000) / 10000;
+    const percentage = ratio * 100;
+    return `${percentage}%`;
+  };
 
+  const verticalPreviousSiblingSet = new Set();
+  const verticalNextSiblingSet = new Set();
+  const minHeightMap = new Map();
+  const heightMap = new Map();
+  const currentHeightMap = new Map();
+  const setHeight = (element, height) => {
+    if (currentHeightMap.get(element) === height) {
+      return;
+    }
+    element.style.height = `${height}px`;
+    currentHeightMap.set(element, height);
+    if (element === elementToResize) {
+      dispatchResizeEvent();
+    }
+  };
+  const saveHeight = (element) => {
+    const height = getHeight(element);
+    heightMap.set(element, height);
+    currentHeightMap.set(element, height);
+    return height;
+  };
+  const heightAsPercentage = (height) => {
+    const ratio = height / availableHeight;
+    // const roundedRatio = Math.round(ratio * 10000) / 10000;
+    const percentage = ratio * 100;
+    return `${percentage}%`;
+  };
+
+  min_size: {
+    if (horizontalResizeEnabled) {
+      const minWidth = getMinWidth(elementToResize, availableWidth);
+      minWidthMap.set(elementToResize, minWidth);
+      saveWidth(elementToResize);
+    }
+
+    if (verticalResizeEnabled) {
+      const minHeight = getMinHeight(elementToResize, availableHeight);
+      minHeightMap.set(elementToResize, minHeight);
+      saveHeight(elementToResize);
+    }
+  }
   siblings: {
     const parentElementComputedStyle = window.getComputedStyle(parentElement);
-    if (
-      parentElementComputedStyle.display === "flex" &&
-      parentElementComputedStyle.flexDirection === "row"
-    ) {
-      prev_siblings: {
-        let previousSibling = elementToResize.previousElementSibling;
-        while (previousSibling) {
-          if (canTakeSize(previousSibling)) {
-            minWidthMap.set(previousSibling, getMinWidth(previousSibling));
-            saveWidth(previousSibling);
-            previousSiblingSet.add(previousSibling);
+
+    if (horizontalResizeEnabled) {
+      if (
+        parentElementComputedStyle.display === "flex" &&
+        parentElementComputedStyle.flexDirection === "row"
+      ) {
+        prev_siblings: {
+          let previousSibling = elementToResize.previousElementSibling;
+          while (previousSibling) {
+            if (canTakeSize(previousSibling)) {
+              minWidthMap.set(previousSibling, getMinWidth(previousSibling));
+              saveWidth(previousSibling);
+              horizontalPreviousSiblingSet.add(previousSibling);
+            }
+            previousSibling = previousSibling.previousElementSibling;
           }
-          previousSibling = previousSibling.previousElementSibling;
+        }
+        next_siblings: {
+          let nextSibling = elementToResize.nextElementSibling;
+          while (nextSibling) {
+            if (canTakeSize(nextSibling)) {
+              minWidthMap.set(nextSibling, getMinWidth(nextSibling));
+              saveWidth(nextSibling);
+              horizontalNextSiblingSet.add(nextSibling);
+            }
+            nextSibling = nextSibling.nextElementSibling;
+          }
         }
       }
-      next_siblings: {
-        let nextSibling = elementToResize.nextElementSibling;
-        while (nextSibling) {
-          if (canTakeSize(nextSibling)) {
-            minWidthMap.set(nextSibling, getMinWidth(nextSibling));
-            saveWidth(nextSibling);
-            nextSiblingSet.add(nextSibling);
-          }
-          nextSibling = nextSibling.nextElementSibling;
-        }
-      }
+    }
+
+    if (verticalResizeEnabled) {
+      // TODO
     }
   }
 
@@ -180,41 +228,45 @@ const start = (event) => {
     elementToResize.dispatchEvent(resizeEndEvent);
   };
 
-  const computeSizeTransformMap = () => {
+  const computeSizeTransformMap = ({
+    previousSiblingSet,
+    nextSiblingSet,
+    minSizeMap,
+  }) => {
     const moveDelta = resizeInfo.xMove;
     if (moveDelta === 0) {
       return null;
     }
 
-    let widthRemaining = 0;
+    let spaceRemaining = 0;
     const sizeTransformMap = new Map();
     const requestShrink = (element, shrinkRequested) => {
-      const minWidth = minWidthMap.get(element);
-      const width = widthMap.get(element);
-      const widthAfterShrink = width - shrinkRequested;
+      const minSize = minSizeMap.get(element);
+      const size = widthMap.get(element);
+      const sizeAfterShrink = size - shrinkRequested;
 
-      if (widthAfterShrink <= minWidth) {
-        const actualShrink = width - minWidth;
+      if (sizeAfterShrink <= minSize) {
+        const actualShrink = size - minSize;
         sizeTransformMap.set(element, -actualShrink);
-        widthRemaining += actualShrink;
+        spaceRemaining += actualShrink;
         return actualShrink;
       }
       sizeTransformMap.set(element, -shrinkRequested);
-      widthRemaining += shrinkRequested;
+      spaceRemaining += shrinkRequested;
       return shrinkRequested;
     };
     const requestGrow = (element, growRequested) => {
-      if (widthRemaining === 0) {
+      if (spaceRemaining === 0) {
         return 0;
       }
-      if (growRequested > widthRemaining) {
-        const actualGrow = widthRemaining;
-        sizeTransformMap.set(element, widthRemaining);
-        widthRemaining = 0;
+      if (growRequested > spaceRemaining) {
+        const actualGrow = spaceRemaining;
+        sizeTransformMap.set(element, spaceRemaining);
+        spaceRemaining = 0;
         return actualGrow;
       }
       sizeTransformMap.set(element, growRequested);
-      widthRemaining -= growRequested;
+      spaceRemaining -= growRequested;
       return growRequested;
     };
     const stealSpaceFromSiblings = (siblingSet, spaceToSteal) => {
@@ -297,44 +349,89 @@ const start = (event) => {
     }
     return sizeTransformMap;
   };
-
-  const syncSizesWithPosition = ({ isEnd } = {}) => {
-    const sizeTransformMap = computeSizeTransformMap();
+  const syncSizesWithPosition = ({
+    previousSiblingSet,
+    nextSiblingSet,
+    minSizeMap,
+    sizeMap,
+    sizeAsPercentage,
+    setSize,
+    isEnd,
+  } = {}) => {
+    const sizeTransformMap = computeSizeTransformMap({
+      previousSiblingSet,
+      nextSiblingSet,
+      minSizeMap,
+    });
     if (!sizeTransformMap) {
       return null;
     }
-
     for (const element of [
       ...previousSiblingSet,
       elementToResize,
       ...nextSiblingSet,
     ]) {
-      const width = widthMap.get(element);
+      const size = sizeMap.get(element);
       const delta = sizeTransformMap.get(element);
-      if (delta) {
-        const newWidth = width + delta;
-        if (isEnd && !elementToResize.hasAttribute("data-resize-absolute")) {
-          const percentage = widthAsPercentage(newWidth);
-          element.style.width = percentage;
-        } else {
-          setWidth(element, newWidth);
-        }
+      const newSize = delta ? size + delta : size;
+      if (isEnd && !elementToResize.hasAttribute("data-resize-absolute")) {
+        const percentage = sizeAsPercentage(newSize);
+        element.style.width = percentage;
       } else {
-        if (isEnd && !elementToResize.hasAttribute("data-resize-absolute")) {
-          const percentage = widthAsPercentage(width);
-          element.style.width = percentage;
-        }
-        setWidth(element, width);
+        setSize(element, newSize);
       }
     }
     return sizeTransformMap;
   };
+  const syncHorizontalSizesWithPosition = ({ isEnd } = {}) =>
+    syncSizesWithPosition({
+      previousSiblingSet: horizontalPreviousSiblingSet,
+      nextSiblingSet: horizontalNextSiblingSet,
+      minSizeMap: minWidthMap,
+      sizeMap: widthMap,
+      sizeAsPercentage: widthAsPercentage,
+      setSize: setWidth,
+      isEnd,
+    });
+  const syncVerticalSizesWithPosition = ({ isEnd } = {}) =>
+    syncSizesWithPosition({
+      previousSiblingSet: verticalPreviousSiblingSet,
+      nextSiblingSet: verticalNextSiblingSet,
+      minSizeMap: minHeightMap,
+      sizeMap: heightMap,
+      sizeAsPercentage: heightAsPercentage,
+      setSize: setHeight,
+      isEnd,
+    });
+
   const handleMouseMove = (e) => {
-    resizeInfo.x = e.clientX;
-    resizeInfo.y = e.clientY;
-    resizeInfo.xMove = resizeInfo.x - xAtStart;
-    resizeInfo.yMove = resizeInfo.y - yAtStart;
-    syncSizesWithPosition();
+    if (horizontalResizeEnabled) {
+      resizeInfo.x = e.clientX;
+      resizeInfo.xMove = resizeInfo.x - xAtStart;
+      syncHorizontalSizesWithPosition();
+    }
+    if (verticalResizeEnabled) {
+      resizeInfo.y = e.clientY;
+      resizeInfo.yMove = resizeInfo.y - yAtStart;
+      syncVerticalSizesWithPosition();
+    }
+  };
+  const handleMouseUp = (e) => {
+    e.preventDefault();
+    if (horizontalResizeEnabled) {
+      resizeInfo.x = e.clientX;
+      resizeInfo.xMove = resizeInfo.x - xAtStart;
+      syncHorizontalSizesWithPosition({ isEnd: true });
+    }
+    if (verticalResizeEnabled) {
+      resizeInfo.y = e.clientY;
+      resizeInfo.yMove = resizeInfo.y - yAtStart;
+      syncVerticalSizesWithPosition({ isEnd: true });
+    }
+    for (const endCallback of endCallbackSet) {
+      endCallback();
+    }
+    dispatchResizeEndEvent();
   };
 
   const backdrop = document.createElement("div");
@@ -347,20 +444,6 @@ const start = (event) => {
         ? "ns-resize"
         : "nwse-resize";
   backdrop.style.userSelect = "none";
-
-  const handleMouseUp = (e) => {
-    e.preventDefault();
-    resizeInfo.x = e.clientX;
-    resizeInfo.y = e.clientY;
-    resizeInfo.xMove = resizeInfo.x - xAtStart;
-    resizeInfo.yMove = resizeInfo.y - yAtStart;
-    syncSizesWithPosition({ isEnd: true });
-    for (const endCallback of endCallbackSet) {
-      endCallback();
-    }
-    dispatchResizeEndEvent();
-  };
-
   document.body.appendChild(backdrop);
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("mouseup", handleMouseUp);
@@ -379,9 +462,7 @@ document.addEventListener(
   (e) => {
     start(e);
   },
-  {
-    capture: true,
-  },
+  { capture: true },
 );
 
 addAttributeEffect("data-resize", (element) => {
