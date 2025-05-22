@@ -175,9 +175,6 @@ const start = (event) => {
     dispatchResizeEvent(element);
   };
 
-  const horizontallyResizableElementSet = new Set();
-  const verticallyResizableElementSet = new Set();
-
   size_and_min_size: {
     if (resizeDirection.x) {
       const width = saveWidth(elementToResize);
@@ -195,9 +192,22 @@ const start = (event) => {
       minHeightMap.set(elementToResize, minHeight);
     }
   }
+
+  const horizontallyResizableElementSet = new Set();
+  const verticallyResizableElementSet = new Set();
+  const detectResizableDirections = (element) => {
+    const elementResizeDirection = getResizeDirection(element);
+    if (elementResizeDirection.x) {
+      horizontallyResizableElementSet.add(element);
+    }
+    if (elementResizeDirection.y) {
+      verticallyResizableElementSet.add(element);
+    }
+  };
+  detectResizableDirections(elementToResize);
+
   siblings: {
     const parentElementComputedStyle = window.getComputedStyle(parentElement);
-
     if (resizeDirection.x) {
       horizontallyResizableElementSet.add(elementToResize);
       if (
@@ -215,6 +225,7 @@ const start = (event) => {
               saveWidth(previousSibling);
               horizontalPreviousSiblingSet.add(previousSibling);
             }
+            detectResizableDirections(previousSibling);
             previousSibling = previousSibling.previousElementSibling;
           }
         }
@@ -229,6 +240,7 @@ const start = (event) => {
               saveWidth(nextSibling);
               horizontalNextSiblingSet.add(nextSibling);
             }
+            detectResizableDirections(nextSibling);
             nextSibling = nextSibling.nextElementSibling;
           }
         }
@@ -252,6 +264,7 @@ const start = (event) => {
               saveHeight(previousSibling);
               verticalPreviousSiblingSet.add(previousSibling);
             }
+            detectResizableDirections(previousSibling);
             previousSibling = previousSibling.previousElementSibling;
           }
         }
@@ -266,6 +279,7 @@ const start = (event) => {
               saveHeight(nextSibling);
               verticalNextSiblingSet.add(nextSibling);
             }
+            detectResizableDirections(nextSibling);
             nextSibling = nextSibling.nextElementSibling;
           }
         }
@@ -321,6 +335,7 @@ const start = (event) => {
 
   const computeSizeTransformMap = ({
     positionDelta,
+    resizableElementSet,
     previousSiblingSet,
     nextSiblingSet,
     sizeMap,
@@ -333,6 +348,9 @@ const start = (event) => {
     let spaceRemaining = 0;
     const sizeTransformMap = new Map();
     const requestShrink = (element, shrinkRequested) => {
+      if (!resizableElementSet.has(element)) {
+        return 0;
+      }
       const minSize = minSizeMap.get(element);
       const size = sizeMap.get(element);
       const sizeAfterShrink = size - shrinkRequested;
@@ -348,6 +366,9 @@ const start = (event) => {
       return shrinkRequested;
     };
     const requestGrow = (element, growRequested) => {
+      if (!resizableElementSet.has(element)) {
+        return 0;
+      }
       if (spaceRemaining === 0) {
         return 0;
       }
@@ -441,6 +462,7 @@ const start = (event) => {
   };
   const syncSizesWithPositionDelta = ({
     positionDelta,
+    resizableElementSet,
     previousSiblingSet,
     nextSiblingSet,
     minSizeMap,
@@ -451,6 +473,7 @@ const start = (event) => {
   } = {}) => {
     const sizeTransformMap = computeSizeTransformMap({
       positionDelta,
+      resizableElementSet,
       previousSiblingSet,
       nextSiblingSet,
       minSizeMap,
@@ -481,6 +504,7 @@ const start = (event) => {
   ) =>
     syncSizesWithPositionDelta({
       positionDelta,
+      resizableElementSet: horizontallyResizableElementSet,
       previousSiblingSet: horizontalPreviousSiblingSet,
       nextSiblingSet: horizontalNextSiblingSet,
       minSizeMap: minWidthMap,
@@ -492,6 +516,7 @@ const start = (event) => {
   const syncVerticalSizesWithPositionDelta = (positionDelta, { isEnd } = {}) =>
     syncSizesWithPositionDelta({
       positionDelta,
+      resizableElementSet: verticallyResizableElementSet,
       previousSiblingSet: verticalPreviousSiblingSet,
       nextSiblingSet: verticalNextSiblingSet,
       minSizeMap: minHeightMap,
