@@ -34,13 +34,8 @@
         overflow: hidden;
       }
 
-      details > summary + * {
-        height: 0;
-      }
-
-      details[open] > summary + * {
-        height: 100%;
-        transition: height 3s ease-in-out;
+      details > summary {
+        user-select: none;
       }
     </style>
 
@@ -107,8 +102,6 @@
         const summary = details.querySelector("summary");
         const content = details.querySelector("summary + *");
 
-        let currentAnimation = null;
-
         let detailsHeight;
         let summaryHeight;
         const updateHeights = () => {
@@ -123,6 +116,7 @@
         content.style.opacity = details.open ? 1 : 0;
         // details.setAttribute("data-details-content-full-height", "");
 
+        let currentAnimation = null;
         const detailsResizeObserver = new ResizeObserver(() => {
           if (!currentAnimation) {
             console.log("update height after details resize");
@@ -137,30 +131,35 @@
         summaryResizeObserver.observe(summary);
 
         details.ontoggle = (toggleEvent) => {
-          if (currentAnimation) {
-            currentAnimation.cancel();
-          }
-
           if (toggleEvent.newState === "open") {
             updateHeights();
             content.style.opacity = 1;
-            currentAnimation = details.animate(
-              [
-                { height: `${summaryHeight}px` },
-                { height: `${detailsHeight}px` },
-              ],
-              {
-                duration: 1000,
-                easing: "ease-out",
-              },
-            );
-            currentAnimation.oncancel = () => {
-              currentAnimation = null;
-            };
-            currentAnimation.onfinish = () => {
-              details.style.height = `${detailsHeight}px`;
-              currentAnimation = null;
-            };
+
+            if (currentAnimation) {
+              currentAnimation.reverse();
+            } else {
+              currentAnimation = details.animate(
+                [
+                  { height: `${summaryHeight}px` },
+                  { height: `${detailsHeight}px` },
+                ],
+                {
+                  duration: 1000,
+                  easing: "ease-out",
+                },
+              );
+              currentAnimation.oncancel = () => {
+                currentAnimation = null;
+              };
+              currentAnimation.onfinish = () => {
+                details.style.height = details.open
+                  ? `${detailsHeight}px`
+                  : "auto";
+                currentAnimation = null;
+              };
+            }
+          } else if (currentAnimation) {
+            currentAnimation.reverse();
           } else {
             content.style.opacity = 0;
             currentAnimation = details.animate(
@@ -177,7 +176,9 @@
               currentAnimation = null;
             };
             currentAnimation.onfinish = () => {
-              details.style.height = `auto`;
+              details.style.height = details.open
+                ? `${detailsHeight}px`
+                : "auto";
               currentAnimation = null;
             };
           }
