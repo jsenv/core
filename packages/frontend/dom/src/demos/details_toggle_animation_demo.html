@@ -96,8 +96,6 @@
     </div>
 
     <script type="module">
-      import "../size/details_content_full_height.js";
-
       const animateDetails = (details) => {
         const summary = details.querySelector("summary");
         const content = details.querySelector("summary + *");
@@ -105,80 +103,105 @@
         let detailsHeight;
         let summaryHeight;
         const updateHeights = () => {
+          summaryHeight = summary.getBoundingClientRect().height;
           if (details.open) {
             detailsHeight = details.getBoundingClientRect().height;
           }
-          summaryHeight = summary.getBoundingClientRect().height;
         };
         updateHeights();
 
         details.style.overflow = "hidden";
         content.style.opacity = details.open ? 1 : 0;
-        // details.setAttribute("data-details-content-full-height", "");
+        if (!details.open) {
+          details.style.height = `${summaryHeight}px`;
+        }
 
         let currentAnimation = null;
         const detailsResizeObserver = new ResizeObserver(() => {
           if (!currentAnimation) {
-            console.log("update height after details resize");
             updateHeights();
           }
         });
         detailsResizeObserver.observe(details);
         const summaryResizeObserver = new ResizeObserver(() => {
-          console.log("update height after sumary resize");
           updateHeights();
         });
         summaryResizeObserver.observe(summary);
 
+        const finalizeAnimation = (isOpen) => {
+          if (isOpen) {
+            // For open state, set to auto to allow content changes
+            details.style.height = "auto";
+          } else {
+            // For closed state, set explicit summary height
+            details.style.height = `${summaryHeight}px`;
+          }
+          if (currentAnimation) {
+            currentAnimation.finish();
+            currentAnimation.cancel(); // This removes the animation's effect
+            currentAnimation = null;
+          }
+        };
+
         details.ontoggle = (toggleEvent) => {
-          if (toggleEvent.newState === "open") {
+          const isOpening = toggleEvent.newState === "open";
+
+          // Cancel any existing animation
+          if (currentAnimation) {
+            currentAnimation.cancel();
+            currentAnimation = null;
+          }
+
+          if (isOpening) {
+            details.style.height = "auto";
             updateHeights();
+            details.style.height = `${summaryHeight}px`;
+
+            // Force reflow
+            // eslint-disable-next-line no-unused-expressions
+            details.offsetHeight;
+
+            // Show content
             content.style.opacity = 1;
 
-            if (currentAnimation) {
-              currentAnimation.reverse();
-            } else {
-              currentAnimation = details.animate(
-                [
-                  { height: `${summaryHeight}px` },
-                  { height: `${detailsHeight}px` },
-                ],
-                {
-                  duration: 1000,
-                  easing: "ease-out",
-                },
-              );
-              currentAnimation.oncancel = () => {
-                currentAnimation = null;
-              };
-              currentAnimation.onfinish = () => {
-                details.style.height = details.open
-                  ? `${detailsHeight}px`
-                  : "auto";
-                currentAnimation = null;
-              };
-            }
-          } else if (currentAnimation) {
-            currentAnimation.reverse();
+            currentAnimation = details.animate(
+              [
+                { height: `${summaryHeight}px` },
+                { height: `${detailsHeight}px` },
+              ],
+              {
+                duration: 1000,
+                easing: "ease-out",
+              },
+            );
+            currentAnimation.onfinish = () => finalizeAnimation(true);
+            currentAnimation.oncancel = () => {
+              currentAnimation = null;
+            };
           } else {
+            details.style.height = `${detailsHeight}px`;
+
+            // Force reflow
+            // eslint-disable-next-line no-unused-expressions
+            details.offsetHeight;
+
+            // Fade content during animation
             content.style.opacity = 0;
+
+            // Start animation
             currentAnimation = details.animate(
               [
                 { height: `${detailsHeight}px` },
                 { height: `${summaryHeight}px` },
               ],
               {
-                duration: 1000,
+                duration: 300,
                 easing: "ease-in",
               },
             );
+
+            currentAnimation.onfinish = () => finalizeAnimation(false);
             currentAnimation.oncancel = () => {
-              currentAnimation = null;
-            };
-            currentAnimation.onfinish = () => {
-              details.style.height = details.open
-                ? `${detailsHeight}px`
-                : "auto";
               currentAnimation = null;
             };
           }
