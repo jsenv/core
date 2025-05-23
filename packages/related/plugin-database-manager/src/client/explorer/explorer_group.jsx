@@ -99,15 +99,10 @@ export const ExplorerGroup = forwardRef(
           id={controller.id}
           className="explorer_group"
           data-resize={resizable ? "vertical" : undefined}
-          data-height={resizing ? resizeHeight : heightSetting}
+          data-height={
+            resizable ? (resizing ? resizeHeight : heightSetting) : undefined
+          }
           data-details-content-full-height
-          style={{
-            height: resizable
-              ? resizing
-                ? resizeHeight
-                : heightSetting
-              : undefined,
-          }}
           // eslint-disable-next-line react/no-unknown-property
           onresize={(e) => {
             setHeightSetting(e.detail.height);

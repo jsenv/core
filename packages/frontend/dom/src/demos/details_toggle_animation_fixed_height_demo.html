@@ -56,7 +56,7 @@
           data-details-content-full-height
         >
           <summary>First summary</summary>
-          <div style="padding: 20px; width: 100%; overflow-y: auto">
+          <div style="padding: 20px; overflow-y: auto">
             This is the main content area. Lorem ipsum dolor sit amet,
             consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
             labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
@@ -70,7 +70,7 @@
           data-details-content-full-height
         >
           <summary>Second summary</summary>
-          <div style="padding: 20px; width: fit-content; overflow-y: auto">
+          <div style="padding: 20px; overflow-y: auto">
             This is the main content area. Lorem ipsum dolor sit amet,
             consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
             labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
@@ -83,7 +83,7 @@
           data-details-content-full-height
         >
           <summary>Third summary</summary>
-          <div style="padding: 20px; width: fit-content; overflow-y: auto">
+          <div style="padding: 20px; overflow-y: auto">
             This is the main content area. Lorem ipsum dolor sit amet,
             consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
             labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
@@ -96,6 +96,37 @@
     <script type="module">
       import "../size/details_content_full_height.js";
       import "../details_toggle_animation.js";
+
+      const detailsCollection = document.querySelectorAll("details");
+      let openCount = 0;
+      const onOpenCountChange = () => {
+        for (const details of detailsCollection) {
+          if (openCount < 2) {
+            details.removeAttribute("data-height", "");
+          } else {
+            details.setAttribute("data-height", "200");
+          }
+        }
+      };
+
+      const onOpen = () => {
+        openCount++;
+        onOpenCountChange();
+      };
+      const onClose = () => {
+        openCount--;
+        onOpenCountChange();
+      };
+
+      for (const details of detailsCollection) {
+        details.addEventListener("toggle", () => {
+          if (details.open) {
+            onOpen();
+          } else {
+            onClose();
+          }
+        });
+      }
 
       const addButton = document.querySelector("#add");
       addButton.onclick = () => {

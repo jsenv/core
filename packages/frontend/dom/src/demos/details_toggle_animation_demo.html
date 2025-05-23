@@ -91,6 +91,14 @@
           "This is some new content added to the details element.";
         addButton.parentNode.appendChild(p);
       };
+
+      const firstDetails = document.querySelector("details");
+      firstDetails.ontoggle = () => {
+        setTimeout(() => {
+          console.log("set details height to 100");
+          firstDetails.style.height = "100px";
+        }, 200);
+      };
     </script>
   </body>
 </html>

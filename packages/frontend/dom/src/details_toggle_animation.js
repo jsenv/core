@@ -240,6 +240,9 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
   }
 
   return () => {
+    if (debug) {
+      console.log(`cleanup details: ${details.id}`);
+    }
     for (const cleanupCallback of cleanupCallbackSet) {
       cleanupCallback();
     }
