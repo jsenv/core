@@ -92,9 +92,7 @@ export const ExplorerGroup = forwardRef(
           id={controller.id}
           className="explorer_group"
           data-resize={resizable ? "vertical" : undefined}
-          data-height={
-            resizable ? (resizing ? resizeHeight : heightSetting) : undefined
-          }
+          data-height={resizing ? resizeHeight : heightSetting}
           data-details-content-full-height
           data-details-toggle-animation
           style={{
@@ -106,10 +104,6 @@ export const ExplorerGroup = forwardRef(
           }}
           // eslint-disable-next-line react/no-unknown-property
           onresize={(e) => {
-            setHeightSetting(e.detail.height);
-          }}
-          // eslint-disable-next-line react/no-unknown-property
-          onresizeend={(e) => {
             setHeightSetting(e.detail.height);
           }}
           onToggle={(toggleEvent) => {
