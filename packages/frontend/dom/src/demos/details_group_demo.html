@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+  <head>
+    <title>3 rows accordion demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <style>
+      body {
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: 300px;
+        border: 1px solid black;
+        box-sizing: content-box;
+        width: 300px;
+        margin-left: 200px;
+        margin-top: 50px;
+      }
+
+      .section {
+        min-height: 50px;
+      }
+    </style>
+
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useLayoutEffect } from "preact/hooks";
+      import { initDetailsGroup } from "../size/details_group.js";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const ref = useRef();
+
+        useLayoutEffect(() => {
+          return initDetailsGroup(ref.current);
+        }, []);
+
+        return (
+          <div ref={ref}>
+            <Details id="a" color="blue" />
+            <Details id="b" color="green" />
+            <Details id="c" color="red" />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const Details = ({ id, color }) => {
+        return (
+          <details className="section" id={id} style={`background: ${color};`}>
+            <summary>Summary</summary>
+            <div style="padding: 20px; width: fit-content; background: lightgray">
+              This is the main content area. Lorem ipsum dolor sit amet,
+              consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+              labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+              nostrud exercitation
+            </div>
+          </details>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
