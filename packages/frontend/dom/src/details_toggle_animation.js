@@ -4,7 +4,7 @@ const DURATION = 300;
 const OPEN_EASING = "ease-out";
 const CLOSE_EASING = "ease-in";
 
-export const animateDetails = (details) => {
+export const animateDetails = (details, { duration = DURATION } = {}) => {
   const cleanupCallbackSet = new Set();
   const summary = details.querySelector("summary");
   const content = details.querySelector("summary + *");
@@ -58,15 +58,14 @@ export const animateDetails = (details) => {
     }
     const currentHeight = getAnimatedHeight();
     const targetHeight = details.open ? detailsHeight : summaryHeight;
-    const duration = resetDuration
-      ? DURATION
-      : getRemainingDuration(currentAnimation);
     currentAnimation.cancel();
     currentAnimation = null;
     const newAnimation = details.animate(
       [{ height: `${currentHeight}px` }, { height: `${targetHeight}px` }],
       {
-        duration,
+        duration: resetDuration
+          ? duration
+          : getRemainingDuration(currentAnimation),
         easing: details.open ? OPEN_EASING : CLOSE_EASING,
       },
     );
@@ -148,7 +147,7 @@ export const animateDetails = (details) => {
         const openAnimation = details.animate(
           [{ height: `${summaryHeight}px` }, { height: `${detailsHeight}px` }],
           {
-            duration: DURATION,
+            duration,
             easing: OPEN_EASING,
           },
         );
@@ -169,7 +168,7 @@ export const animateDetails = (details) => {
       const closeAnimation = details.animate(
         [{ height: `${detailsHeight}px` }, { height: `${summaryHeight}px` }],
         {
-          duration: DURATION,
+          duration,
           easing: CLOSE_EASING,
         },
       );
@@ -214,5 +213,8 @@ const getRemainingDuration = (animation) => {
 };
 
 addAttributeEffect("data-details-toggle-animation", (details) => {
-  animateDetails(details);
+  const duration = details.getAttribute("data-toggle-animation-duration");
+  animateDetails(details, {
+    duration: duration ? parseFloat(duration) : undefined,
+  });
 });
