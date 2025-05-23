@@ -97,6 +97,12 @@ export const animateDetails = (details) => {
 
       // If an animation is already running, just reverse it
       if (currentAnimation) {
+        const animDuration = currentAnimation.effect.getTiming().duration;
+        const currentTime = currentAnimation.currentTime;
+        const progress = currentTime / animDuration;
+        const now = document.timeline.currentTime;
+        const adjustedStartTime = now - (1 - progress) * animDuration;
+        currentAnimation.startTime = adjustedStartTime;
         currentAnimation.reverse();
         return;
       }
