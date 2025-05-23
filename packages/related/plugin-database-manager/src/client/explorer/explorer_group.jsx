@@ -1,8 +1,9 @@
-/*
- * TODO: when a single group is opened, if should take full height
+/**
+ *
  */
 
 import { useResizeStatus } from "@jsenv/dom";
+import "@jsenv/dom/details_toggle_animation";
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import {
   SPAInputText,
@@ -91,7 +92,11 @@ export const ExplorerGroup = forwardRef(
           id={controller.id}
           className="explorer_group"
           data-resize={resizable ? "vertical" : undefined}
+          data-height={
+            resizable ? (resizing ? resizeHeight : heightSetting) : undefined
+          }
           data-details-content-full-height
+          data-details-toggle-animation
           style={{
             height: resizable
               ? resizing

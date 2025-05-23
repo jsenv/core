@@ -211,6 +211,6 @@ const getRemainingDuration = (animation) => {
   return remainingDuration;
 };
 
-addAttributeEffect("data-details-toggle-animate", (details) => {
+addAttributeEffect("data-details-toggle-animation", (details) => {
   animateDetails(details);
 });
