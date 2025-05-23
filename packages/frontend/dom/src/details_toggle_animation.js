@@ -8,18 +8,35 @@ export const animateDetails = (details) => {
 
   let detailsHeight;
   let summaryHeight;
+  let contentHeight;
   const updateHeights = () => {
     summaryHeight = summary.getBoundingClientRect().height;
+    contentHeight = content.getBoundingClientRect().height;
     if (details.open) {
       detailsHeight = usesDataHeight
         ? parseFloat(details.getAttribute("data-height"))
-        : details.getBoundingClientRect().height;
+        : summaryHeight + contentHeight;
+    } else {
+      detailsHeight = summaryHeight;
     }
   };
   updateHeights();
 
   let currentAnimation = null;
-  // Update animation to reflect new heights
+  const handleSizeChange = () => {
+    const oldDetailsHeight = detailsHeight;
+    updateHeights();
+    if (detailsHeight === oldDetailsHeight) {
+      return;
+    }
+    if (currentAnimation) {
+      updateAnimationTarget();
+      return;
+    }
+    details.style.height = details.open
+      ? `${detailsHeight}px`
+      : `${summaryHeight}px`;
+  };
   const updateAnimationTarget = () => {
     if (!currentAnimation) return;
 
@@ -87,34 +104,8 @@ export const animateDetails = (details) => {
   data_height_change_effects: {
     const mutationObserver = new MutationObserver(() => {
       usesDataHeight = details.hasAttribute("data-height");
-
-      // If we are using data-height, update the height immediately
-      if (usesDataHeight && details.open) {
-        detailsHeight = parseFloat(details.getAttribute("data-height"));
-
-        // If animation is running, update the animation target
-        if (currentAnimation && details.open) {
-          updateAnimationTarget();
-        }
-        // Otherwise, just update the height directly
-        else if (!currentAnimation) {
-          details.style.height = `${detailsHeight}px`;
-        }
-      } else if (!usesDataHeight && details.open) {
-        // If data-height was removed, recalculate based on content
-        updateHeights();
-
-        // If animation is running, update the animation target
-        if (currentAnimation && details.open) {
-          updateAnimationTarget();
-        }
-        // Otherwise, just update the height directly
-        else if (!currentAnimation) {
-          details.style.height = `${detailsHeight}px`;
-        }
-      }
+      handleSizeChange();
     });
-
     mutationObserver.observe(details, {
       attributes: true,
       attributeFilter: ["data-height"],
@@ -125,27 +116,7 @@ export const animateDetails = (details) => {
   }
   content_size_change_effects: {
     const contentResizeObserver = new ResizeObserver(() => {
-      if (details.open && !usesDataHeight) {
-        // Calculate new height based on content
-        const newDetailsHeight =
-          summaryHeight + content.getBoundingClientRect().height;
-
-        // Only update if height actually changed
-        if (newDetailsHeight !== detailsHeight) {
-          detailsHeight = newDetailsHeight;
-
-          // If animation is running, update the animation target
-          if (currentAnimation && details.open) {
-            updateAnimationTarget();
-          }
-          // Otherwise, just update the height directly
-          else if (!currentAnimation) {
-            requestAnimationFrame(() => {
-              details.style.height = `${detailsHeight}px`;
-            });
-          }
-        }
-      }
+      handleSizeChange();
     });
     contentResizeObserver.observe(content);
     cleanupCallbackSet.add(() => {
@@ -154,29 +125,7 @@ export const animateDetails = (details) => {
   }
   summary_size_change_effects: {
     const summaryResizeObserver = new ResizeObserver(() => {
-      // Get old heights for comparison
-      const oldSummaryHeight = summaryHeight;
-      const oldDetailsHeight = detailsHeight;
-
-      // Update heights with new measurements
-      updateHeights();
-
-      // Check if heights actually changed
-      const summaryHeightChanged = oldSummaryHeight !== summaryHeight;
-      const detailsHeightChanged = oldDetailsHeight !== detailsHeight;
-
-      if (summaryHeightChanged || detailsHeightChanged) {
-        // If animation is running, update the animation target
-        if (currentAnimation) {
-          updateAnimationTarget();
-        }
-        // Otherwise, update heights directly
-        else if (details.open) {
-          details.style.height = `${detailsHeight}px`;
-        } else {
-          details.style.height = `${summaryHeight}px`;
-        }
-      }
+      handleSizeChange();
     });
     summaryResizeObserver.observe(summary);
     cleanupCallbackSet.add(() => {
@@ -185,17 +134,6 @@ export const animateDetails = (details) => {
   }
 
   animate_on_toggle: {
-    // Add listener to detect content changes during animation
-    const contentResizeObserverDuringAnimation = new ResizeObserver(() => {
-      if (currentAnimation && details.open && !usesDataHeight) {
-        updateAnimationTarget();
-      }
-    });
-    contentResizeObserverDuringAnimation.observe(content);
-    cleanupCallbackSet.add(() => {
-      contentResizeObserverDuringAnimation.disconnect();
-    });
-
     const onToggle = (toggleEvent) => {
       usesDataHeight = details.hasAttribute("data-height");
       const isOpening = toggleEvent.newState === "open";
