@@ -1,7 +1,12 @@
 import { addAttributeEffect } from "./add_attribute_effect";
 
+const DURATION = 2500;
+// const OPEN_EASING = "ease-out";
+// const CLOSE_EASING = "ease-in";
+const OPEN_EASING = "linear";
+const CLOSE_EASING = "linear";
+
 export const animateDetails = (details) => {
-  const duration = 1500;
   const cleanupCallbackSet = new Set();
   const summary = details.querySelector("summary");
   const content = details.querySelector("summary + *");
@@ -40,45 +45,19 @@ export const animateDetails = (details) => {
   };
 
   const getAnimatedHeight = () => {
-    try {
-      // Get the height from the animation's current value
-      const currentEffect = currentAnimation.effect;
-      if (
-        currentEffect &&
-        typeof currentEffect.getComputedTiming === "function"
-      ) {
-        const computedTiming = currentEffect.getComputedTiming();
-        const progress = computedTiming.progress || 0;
-
-        // Get keyframes to interpolate between them
-        const keyframes = currentEffect.getKeyframes();
-        if (keyframes && keyframes.length >= 2) {
-          const fromHeight = parseFloat(keyframes[0].height);
-          const toHeight = parseFloat(keyframes[1].height);
-          // Interpolate based on progress
-          const animatedHeight =
-            fromHeight + (toHeight - fromHeight) * progress;
-          return animatedHeight;
-        }
-      }
-    } catch (e) {
-      // Fallback if the Animation API methods fail
-      console.warn("Could not get animation progress, using fallback", e);
-    }
     return parseFloat(getComputedStyle(details).height);
   };
 
   const updateAnimationTarget = () => {
-    if (!currentAnimation) return;
-
-    console.log("update target");
-
-    // Get fresh height measurements
-    updateHeights();
+    if (!currentAnimation) {
+      return;
+    }
 
     // Create a new animation that starts from current position
     const currentHeight = getAnimatedHeight();
     const targetHeight = details.open ? detailsHeight : summaryHeight;
+
+    console.log(`update animation ${currentHeight} -> ${targetHeight}`);
 
     // Calculate remaining duration based on progress
     const animDuration = currentAnimation.effect.getTiming().duration;
@@ -96,7 +75,7 @@ export const animateDetails = (details) => {
       [{ height: `${currentHeight}px` }, { height: `${targetHeight}px` }],
       {
         duration: remainingDuration,
-        easing: details.open ? "ease-out" : "ease-in",
+        easing: details.open ? OPEN_EASING : CLOSE_EASING,
       },
     );
 
@@ -111,9 +90,7 @@ export const animateDetails = (details) => {
     } else {
       details.style.height = `${summaryHeight}px`;
     }
-    if (currentAnimation) {
-      currentAnimation = null;
-    }
+    currentAnimation = null;
   };
 
   overflow: {
@@ -167,56 +144,40 @@ export const animateDetails = (details) => {
   }
 
   animate_on_toggle: {
-    const getAnimation = () => {
+    const onToggle = () => {
       if (currentAnimation) {
-        const animatedHeight = getAnimatedHeight();
-        const targetHeight = details.open ? detailsHeight : summaryHeight;
-
-        currentAnimation.cancel();
-        details.style.height = `${animatedHeight}px`;
-        details.offsetHeight;
-
-        // Create new animation from current position to new target
-        const reverseAnimation = details.animate(
-          [{ height: `${animatedHeight}px` }, { height: `${targetHeight}px` }],
-          {
-            duration,
-            easing: details.open ? "ease-out" : "ease-in",
-          },
-        );
-        return reverseAnimation;
+        updateAnimationTarget();
+        return;
       }
-
       if (details.open) {
         details.style.height = `${summaryHeight}px`;
         details.offsetHeight;
         const openAnimation = details.animate(
           [{ height: `${summaryHeight}px` }, { height: `${detailsHeight}px` }],
           {
-            duration,
-            easing: "ease-out",
+            duration: DURATION,
+            easing: OPEN_EASING,
           },
         );
-        return openAnimation;
+        currentAnimation = openAnimation;
+        currentAnimation.onfinish = finalizeAnimation;
+        currentAnimation.oncancel = () => {
+          currentAnimation = null;
+        };
+        return;
       }
-
       details.style.height = `${detailsHeight}px`;
       details.offsetHeight;
       const closeAnimation = details.animate(
         [{ height: `${detailsHeight}px` }, { height: `${summaryHeight}px` }],
         {
-          duration,
-          easing: "ease-in",
+          duration: DURATION,
+          easing: CLOSE_EASING,
         },
       );
-      return closeAnimation;
-    };
-
-    const onToggle = () => {
-      const newAnimation = getAnimation();
-      currentAnimation = newAnimation;
-      newAnimation.onfinish = finalizeAnimation;
-      newAnimation.oncancel = () => {
+      currentAnimation = closeAnimation;
+      currentAnimation.onfinish = finalizeAnimation;
+      currentAnimation.oncancel = () => {
         currentAnimation = null;
       };
     };
