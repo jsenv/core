@@ -1,10 +1,8 @@
 import { addAttributeEffect } from "./add_attribute_effect";
 
-const DURATION = 5000;
-// const OPEN_EASING = "ease-out";
-// const CLOSE_EASING = "ease-in";
-const OPEN_EASING = "linear";
-const CLOSE_EASING = "linear";
+const DURATION = 1000;
+const OPEN_EASING = "ease-out";
+const CLOSE_EASING = "ease-in";
 
 export const animateDetails = (details) => {
   const cleanupCallbackSet = new Set();
@@ -39,9 +37,15 @@ export const animateDetails = (details) => {
       updateAnimationTarget();
       return;
     }
-    details.style.height = details.open
-      ? `${detailsHeight}px`
-      : `${summaryHeight}px`;
+    requestAnimationFrame(() => {
+      // when opening details browser notify first of the resize then of the toggle
+      // if we set size right away we would shortly display the details in full height
+      // while we should let toggle kicks in to gradually increas height
+      if (!currentAnimation) {
+        details.style.height = `${detailsHeight}px`;
+        return;
+      }
+    });
   };
 
   const getAnimatedHeight = () => {
@@ -90,11 +94,7 @@ export const animateDetails = (details) => {
     };
   };
   const finalizeAnimation = () => {
-    if (details.open) {
-      details.style.height = `${detailsHeight}px`;
-    } else {
-      details.style.height = `${summaryHeight}px`;
-    }
+    details.style.height = `${detailsHeight}px`;
     currentAnimation = null;
   };
 
@@ -146,14 +146,13 @@ export const animateDetails = (details) => {
 
   animate_on_toggle: {
     const onToggle = () => {
+      updateHeights();
       if (currentAnimation) {
         updateAnimationTarget({ resetDuration: true });
         return;
       }
+
       if (details.open) {
-        console.log("perform open animation");
-        // details.style.height = `${summaryHeight}px`;
-        // details.offsetHeight;
         const openAnimation = details.animate(
           [{ height: `${summaryHeight}px` }, { height: `${detailsHeight}px` }],
           {
@@ -175,9 +174,6 @@ export const animateDetails = (details) => {
         };
         return;
       }
-      console.log("perform close animation");
-      // details.style.height = `${detailsHeight}px`;
-      // details.offsetHeight;
       const closeAnimation = details.animate(
         [{ height: `${detailsHeight}px` }, { height: `${summaryHeight}px` }],
         {
@@ -218,8 +214,8 @@ export const animateDetails = (details) => {
 };
 
 const getRemainingDuration = (animation) => {
-  const animDuration = currentAnimation.effect.getTiming().duration;
-  const currentTime = currentAnimation.currentTime || 0;
+  const animDuration = animation.effect.getTiming().duration;
+  const currentTime = animation.currentTime || 0;
   const progress = Math.min(currentTime / animDuration, 1);
   const remainingDuration = animDuration * (1 - progress);
   return remainingDuration;
