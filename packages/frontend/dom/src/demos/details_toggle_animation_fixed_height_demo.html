@@ -50,7 +50,11 @@
 
     <div id="app">
       <main>
-        <details data-height="200" data-details-content-full-height>
+        <details
+          data-height="200"
+          data-details-toggle-animate
+          data-details-content-full-height
+        >
           <summary>First summary</summary>
           <div style="padding: 20px; width: 100%; overflow-y: auto">
             This is the main content area. Lorem ipsum dolor sit amet,
@@ -60,7 +64,11 @@
             <button id="add">Add content</button>
           </div>
         </details>
-        <details data-height="200" data-details-content-full-height>
+        <details
+          data-height="200"
+          data-details-toggle-animate
+          data-details-content-full-height
+        >
           <summary>Second summary</summary>
           <div style="padding: 20px; width: fit-content; overflow-y: auto">
             This is the main content area. Lorem ipsum dolor sit amet,
@@ -69,7 +77,11 @@
             exercitation
           </div>
         </details>
-        <details data-height="200" data-details-content-full-height>
+        <details
+          data-height="200"
+          data-details-toggle-animate
+          data-details-content-full-height
+        >
           <summary>Third summary</summary>
           <div style="padding: 20px; width: fit-content; overflow-y: auto">
             This is the main content area. Lorem ipsum dolor sit amet,
@@ -83,7 +95,7 @@
 
     <script type="module">
       import "../size/details_content_full_height.js";
-      import { animateDetails } from "../details_toggle_animation.js";
+      import "../details_toggle_animation.js";
 
       const addButton = document.querySelector("#add");
       addButton.onclick = () => {
@@ -92,10 +104,6 @@
           "This is some new content added to the details element.";
         addButton.parentNode.appendChild(p);
       };
-
-      for (const details of document.querySelectorAll("details")) {
-        animateDetails(details);
-      }
     </script>
   </body>
 </html>

@@ -1,6 +1,6 @@
 import { addAttributeEffect } from "./add_attribute_effect";
 
-const DURATION = 1000;
+const DURATION = 300;
 const OPEN_EASING = "ease-out";
 const CLOSE_EASING = "ease-in";
 
@@ -54,7 +54,6 @@ export const animateDetails = (details) => {
 
   const updateAnimationTarget = ({ resetDuration } = {}) => {
     if (!currentAnimation) {
-      console.log("No current animation");
       return;
     }
     const currentHeight = getAnimatedHeight();
@@ -62,17 +61,8 @@ export const animateDetails = (details) => {
     const duration = resetDuration
       ? DURATION
       : getRemainingDuration(currentAnimation);
-
-    console.log(
-      `update animation ${currentHeight} -> ${targetHeight} in ${duration} ms`,
-    );
-
-    // Cancel current animation
     currentAnimation.cancel();
     currentAnimation = null;
-    // details.style.height = `${currentHeight}px`;
-    // details.offsetHeight;
-    // Create new animation from current position to updated target
     const newAnimation = details.animate(
       [{ height: `${currentHeight}px` }, { height: `${targetHeight}px` }],
       {
