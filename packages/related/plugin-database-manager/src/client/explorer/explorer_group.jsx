@@ -16,6 +16,7 @@ import { forwardRef } from "preact/compat";
 import {
   useCallback,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from "preact/hooks";
@@ -71,6 +72,12 @@ export const ExplorerGroup = forwardRef(
     useImperativeHandle(ref, () => innerRef.current);
     const { open, onToggle } = useDetails(urlParam);
 
+    useLayoutEffect(() => {
+      setTimeout(() => {
+        innerRef.current.setAttribute("data-details-toggle-animation", "");
+      });
+    }, []);
+
     const { useHeightSetting, setHeightSetting } = controller;
     const heightSetting = useHeightSetting();
     const { resizing, resizeHeight } = useResizeStatus(innerRef, {
@@ -94,7 +101,6 @@ export const ExplorerGroup = forwardRef(
           data-resize={resizable ? "vertical" : undefined}
           data-height={resizing ? resizeHeight : heightSetting}
           data-details-content-full-height
-          data-details-toggle-animation
           style={{
             height: resizable
               ? resizing

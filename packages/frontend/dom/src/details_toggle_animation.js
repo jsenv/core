@@ -1,7 +1,7 @@
 import { addAttributeEffect } from "./add_attribute_effect";
 
 let debug = true;
-const DURATION = 300;
+const DURATION = 1000;
 const OPEN_EASING = "ease-out";
 const CLOSE_EASING = "ease-in";
 
@@ -31,7 +31,9 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
     const height = details.open ? detailsHeightOpened : detailsHeightClosed;
 
     if (debug) {
-      console.log(`set height to ${height}, reason: ${reason}`);
+      console.log(
+        `set height to ${height} on ${details.id}, reason: ${reason}`,
+      );
     }
     details.style.height = `${height}px`;
   };
@@ -50,6 +52,9 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
       return;
     }
     if (currentAnimation) {
+      if (debug) {
+        console.log(`update current animation, reason: ${reason}`);
+      }
       updateAnimationTarget();
       return;
     }
@@ -160,11 +165,21 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
     const onToggle = () => {
       updateHeights();
       if (currentAnimation) {
+        if (debug) {
+          console.log(
+            "update current animation, reason: toggle_during_animation",
+          );
+        }
         updateAnimationTarget({ resetDuration: true });
         return;
       }
 
       if (details.open) {
+        if (debug) {
+          console.log(
+            `animate details: ${details.id} toggle open ${detailsHeightClosed} -> ${detailsHeightOpened}`,
+          );
+        }
         const openAnimation = details.animate(
           [
             { height: `${detailsHeightClosed}px` },
@@ -188,6 +203,11 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
           }
         };
         return;
+      }
+      if (debug) {
+        console.log(
+          `details: ${details.id} toggle close animation ${detailsHeightOpened} -> ${detailsHeightClosed}`,
+        );
       }
       const closeAnimation = details.animate(
         [
