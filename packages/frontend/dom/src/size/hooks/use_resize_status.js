@@ -28,8 +28,6 @@ export const useResizeStatus = (elementRef, { as = "number" } = {}) => {
       );
     };
     const onresizeend = () => {
-      setResizeWidth(null);
-      setResizeHeight(null);
       setIsResizing(false);
     };
 

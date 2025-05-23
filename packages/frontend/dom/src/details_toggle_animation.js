@@ -1,7 +1,7 @@
 import { addAttributeEffect } from "./add_attribute_effect";
 
 let debug = true;
-const DURATION = 5000;
+const DURATION = 300;
 const OPEN_EASING = "ease-out";
 const CLOSE_EASING = "ease-in";
 
