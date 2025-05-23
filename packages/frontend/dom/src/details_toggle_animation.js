@@ -1,6 +1,6 @@
 import { addAttributeEffect } from "./add_attribute_effect";
 
-const DURATION = 2500;
+const DURATION = 5000;
 // const OPEN_EASING = "ease-out";
 // const CLOSE_EASING = "ease-in";
 const OPEN_EASING = "linear";
@@ -48,37 +48,35 @@ export const animateDetails = (details) => {
     return parseFloat(getComputedStyle(details).height);
   };
 
-  const updateAnimationTarget = () => {
+  const updateAnimationTarget = ({ resetDuration } = {}) => {
     if (!currentAnimation) {
+      console.log("No current animation");
       return;
     }
-
-    // Create a new animation that starts from current position
     const currentHeight = getAnimatedHeight();
     const targetHeight = details.open ? detailsHeight : summaryHeight;
+    const duration = resetDuration
+      ? DURATION
+      : getRemainingDuration(currentAnimation);
 
-    console.log(`update animation ${currentHeight} -> ${targetHeight}`);
-
-    // Calculate remaining duration based on progress
-    const animDuration = currentAnimation.effect.getTiming().duration;
-    const currentTime = currentAnimation.currentTime || 0;
-    const progress = Math.min(currentTime / animDuration, 1);
-    const remainingDuration = animDuration * (1 - progress);
+    console.log(
+      `update animation ${currentHeight} -> ${targetHeight} in ${duration} ms`,
+    );
 
     // Cancel current animation
     currentAnimation.cancel();
-    details.style.height = `${currentHeight}px`;
-    details.offsetHeight;
-
+    currentAnimation = null;
+    // details.style.height = `${currentHeight}px`;
+    // details.offsetHeight;
     // Create new animation from current position to updated target
-    currentAnimation = details.animate(
+    const newAnimation = details.animate(
       [{ height: `${currentHeight}px` }, { height: `${targetHeight}px` }],
       {
-        duration: remainingDuration,
+        duration,
         easing: details.open ? OPEN_EASING : CLOSE_EASING,
       },
     );
-
+    currentAnimation = newAnimation;
     currentAnimation.onfinish = finalizeAnimation;
     currentAnimation.oncancel = () => {
       currentAnimation = null;
@@ -100,11 +98,7 @@ export const animateDetails = (details) => {
     });
   }
   initial_height: {
-    if (details.open) {
-      details.style.height = `${detailsHeight}px`;
-    } else {
-      details.style.height = `${summaryHeight}px`;
-    }
+    details.style.height = `${detailsHeight}px`;
     cleanupCallbackSet.add(() => {
       details.style.height = "";
     });
@@ -146,12 +140,13 @@ export const animateDetails = (details) => {
   animate_on_toggle: {
     const onToggle = () => {
       if (currentAnimation) {
-        updateAnimationTarget();
+        updateAnimationTarget({ resetDuration: true });
         return;
       }
       if (details.open) {
-        details.style.height = `${summaryHeight}px`;
-        details.offsetHeight;
+        console.log("perform open animation");
+        // details.style.height = `${summaryHeight}px`;
+        // details.offsetHeight;
         const openAnimation = details.animate(
           [{ height: `${summaryHeight}px` }, { height: `${detailsHeight}px` }],
           {
@@ -166,8 +161,9 @@ export const animateDetails = (details) => {
         };
         return;
       }
-      details.style.height = `${detailsHeight}px`;
-      details.offsetHeight;
+      console.log("perform close animation");
+      // details.style.height = `${detailsHeight}px`;
+      // details.offsetHeight;
       const closeAnimation = details.animate(
         [{ height: `${detailsHeight}px` }, { height: `${summaryHeight}px` }],
         {
@@ -198,6 +194,14 @@ export const animateDetails = (details) => {
       currentAnimation = null;
     }
   };
+};
+
+const getRemainingDuration = (animation) => {
+  const animDuration = currentAnimation.effect.getTiming().duration;
+  const currentTime = currentAnimation.currentTime || 0;
+  const progress = Math.min(currentTime / animDuration, 1);
+  const remainingDuration = animDuration * (1 - progress);
+  return remainingDuration;
 };
 
 addAttributeEffect("data-details-toggle-animate", (details) => {
