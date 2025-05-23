@@ -22,7 +22,7 @@
         padding-bottom: 0;
         min-width: 200px; /* Prevents content area from becoming too narrow */
         box-sizing: border-box;
-        min-height: 100vh; /* Ensures content area is at least viewport height */
+        min-height: 80vh; /* Ensures content area is at least viewport height */
         overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */
         scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shifts */
 
@@ -78,120 +78,14 @@
     </div>
 
     <script type="module">
+      import { animateDetails } from "../details_toggle_animation.js";
+
       const addButton = document.querySelector("#add");
       addButton.onclick = () => {
         const p = document.createElement("p");
         p.textContent =
           "This is some new content added to the details element.";
         addButton.parentNode.appendChild(p);
-      };
-
-      const animateDetails = (details) => {
-        const summary = details.querySelector("summary");
-        const content = details.querySelector("summary + *");
-
-        const contentResizeObserver = new ResizeObserver(() => {
-          if (details.open) {
-            detailsHeight =
-              summaryHeight + content.getBoundingClientRect().height;
-
-            requestAnimationFrame(() => {
-              details.style.height = `${detailsHeight}px`;
-            });
-          }
-        });
-        contentResizeObserver.observe(content);
-
-        let detailsHeight;
-        let summaryHeight;
-        const updateHeights = () => {
-          summaryHeight = summary.getBoundingClientRect().height;
-          if (details.open) {
-            detailsHeight = details.getBoundingClientRect().height;
-          }
-        };
-        updateHeights();
-
-        details.style.overflow = "hidden";
-        if (details.open) {
-          details.style.height = `${detailsHeight}px`;
-        } else {
-          details.style.height = `${summaryHeight}px`;
-        }
-
-        let currentAnimation = null;
-        const detailsResizeObserver = new ResizeObserver(() => {
-          if (!currentAnimation) {
-            updateHeights();
-          }
-        });
-        detailsResizeObserver.observe(details);
-        const summaryResizeObserver = new ResizeObserver(() => {
-          updateHeights();
-        });
-        summaryResizeObserver.observe(summary);
-
-        const finalizeAnimation = (isOpen) => {
-          if (isOpen) {
-            details.style.height = `${detailsHeight}px`;
-          } else {
-            // For closed state, set explicit summary height
-            details.style.height = `${summaryHeight}px`;
-          }
-          if (currentAnimation) {
-            currentAnimation.finish();
-            currentAnimation.cancel(); // This removes the animation's effect
-            currentAnimation = null;
-          }
-        };
-
-        details.ontoggle = (toggleEvent) => {
-          const isOpening = toggleEvent.newState === "open";
-
-          // If an animation is already running, just reverse it
-          if (currentAnimation) {
-            currentAnimation.reverse();
-            // Update the onfinish handler to match the new direction
-            currentAnimation.onfinish = () => finalizeAnimation(isOpening);
-            return;
-          }
-
-          if (isOpening) {
-            details.style.height = "auto";
-            updateHeights();
-            details.style.height = `${summaryHeight}px`;
-            currentAnimation = details.animate(
-              [
-                { height: `${summaryHeight}px` },
-                { height: `${detailsHeight}px` },
-              ],
-              {
-                duration: 300, // Shorter duration for better responsiveness
-                easing: "ease-out",
-              },
-            );
-            currentAnimation.onfinish = () => finalizeAnimation(true);
-            currentAnimation.oncancel = () => {
-              currentAnimation = null;
-            };
-          } else {
-            details.style.height = `${detailsHeight}px`;
-            currentAnimation = details.animate(
-              [
-                { height: `${detailsHeight}px` },
-                { height: `${summaryHeight}px` },
-              ],
-              {
-                duration: 300,
-                easing: "ease-in",
-              },
-            );
-            currentAnimation.onfinish = () => finalizeAnimation(false);
-            currentAnimation.oncancel = () => {
-              currentAnimation = null;
-            };
-          }
-        };
       };
 
       for (const details of document.querySelectorAll("details")) {
