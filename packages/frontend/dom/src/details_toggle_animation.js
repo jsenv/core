@@ -1,6 +1,7 @@
 import { addAttributeEffect } from "./add_attribute_effect";
 
 export const animateDetails = (details) => {
+  const duration = 3000;
   const cleanupCallbackSet = new Set();
   const summary = details.querySelector("summary");
   const content = details.querySelector("summary + *");
@@ -160,7 +161,7 @@ export const animateDetails = (details) => {
         currentAnimation = details.animate(
           [{ height: `${summaryHeight}px` }, { height: `${detailsHeight}px` }],
           {
-            duration: 300,
+            duration,
             easing: "ease-out",
           },
         );
@@ -173,7 +174,7 @@ export const animateDetails = (details) => {
         currentAnimation = details.animate(
           [{ height: `${detailsHeight}px` }, { height: `${summaryHeight}px` }],
           {
-            duration: 300,
+            duration,
             easing: "ease-in",
           },
         );
