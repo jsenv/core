@@ -22,7 +22,18 @@ export const animateDetails = (details) => {
   update_height_on_data_height_change: {
     const mutationObserver = new MutationObserver(() => {
       usesDataHeight = details.hasAttribute("data-height");
-      updateHeights();
+      // If we are using data-height, update the height immediately
+      if (usesDataHeight && details.open) {
+        detailsHeight = parseFloat(details.getAttribute("data-height"));
+        // Only update if not animating to avoid interruptions
+        if (!currentAnimation) {
+          details.style.height = `${detailsHeight}px`;
+        }
+      } else if (!usesDataHeight && details.open) {
+        // If data-height was removed, recalculate based on content
+        updateHeights();
+        details.style.height = `${detailsHeight}px`;
+      }
     });
     mutationObserver.observe(details, {
       attributes: true,
@@ -95,6 +106,7 @@ export const animateDetails = (details) => {
       }
     };
     const onToggle = (toggleEvent) => {
+      usesDataHeight = details.hasAttribute("data-height");
       const isOpening = toggleEvent.newState === "open";
 
       // If an animation is already running, just reverse it
