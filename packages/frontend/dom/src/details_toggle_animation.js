@@ -19,15 +19,10 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
   let contentHeight;
   const updateHeights = () => {
     open = details.open;
-    usesDataHeight = details.hasAttribute("data-height");
     summaryHeight = summary.getBoundingClientRect().height;
     contentHeight = content.getBoundingClientRect().height;
     detailsHeightClosed = summaryHeight;
-    if (usesDataHeight) {
-      detailsHeightOpened = parseFloat(details.getAttribute("data-height"));
-    } else {
-      detailsHeightOpened = summaryHeight + contentHeight;
-    }
+    detailsHeightOpened = summaryHeight + contentHeight;
   };
   updateHeights();
 
@@ -69,25 +64,6 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
     return parseFloat(getComputedStyle(details).height);
   };
 
-  const dispatchToggleAnimationStartCustomEvent = () => {
-    const event = new CustomEvent("toggleanimationstart", {
-      detail: {
-        open: details.open,
-        height: getAnimatedHeight(),
-      },
-    });
-    details.dispatchEvent(event);
-  };
-  const dispatchToggleAnimationEndCustomEvent = () => {
-    const event = new CustomEvent("toggleanimationend", {
-      detail: {
-        open: details.open,
-        height: getAnimatedHeight(),
-      },
-    });
-    details.dispatchEvent(event);
-  };
-
   const updateAnimationTarget = ({ resetDuration } = {}) => {
     if (!currentAnimation) {
       return;
@@ -122,7 +98,6 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
   const finalizeAnimation = () => {
     setDetailsHeight("animation_finished");
     currentAnimation = null;
-    dispatchToggleAnimationEndCustomEvent();
   };
 
   overflow: {
@@ -140,18 +115,6 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
     }
     cleanupCallbackSet.add(() => {
       details.style.height = "";
-    });
-  }
-  data_height_change_effects: {
-    const mutationObserver = new MutationObserver(() => {
-      handleSizeChange("data_height_attribute_change");
-    });
-    mutationObserver.observe(details, {
-      attributes: true,
-      attributeFilter: ["data-height"],
-    });
-    cleanupCallbackSet.add(() => {
-      mutationObserver.disconnect();
     });
   }
   content_size_change_effects: {
@@ -214,7 +177,6 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
             easing: OPEN_EASING,
           },
         );
-        dispatchToggleAnimationStartCustomEvent();
         currentAnimation = openAnimation;
         currentAnimation.onfinish = () => {
           finalizeAnimation();
@@ -244,7 +206,6 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
           easing: CLOSE_EASING,
         },
       );
-      dispatchToggleAnimationStartCustomEvent();
       currentAnimation = closeAnimation;
       currentAnimation.onfinish = () => {
         finalizeAnimation();
