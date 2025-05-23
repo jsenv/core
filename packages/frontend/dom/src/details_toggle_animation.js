@@ -116,6 +116,9 @@ export const animateDetails = (details) => {
   }
   content_size_change_effects: {
     const contentResizeObserver = new ResizeObserver(() => {
+      if (usesDataHeight) {
+        return;
+      }
       handleSizeChange();
     });
     contentResizeObserver.observe(content);
