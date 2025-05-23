@@ -1,9 +1,11 @@
 import { addAttributeEffect } from "./add_attribute_effect";
 
 let debug = true;
-const DURATION = 1000;
-const OPEN_EASING = "ease-out";
-const CLOSE_EASING = "ease-in";
+const DURATION = 500;
+// const OPEN_EASING = "ease-out";
+// const CLOSE_EASING = "ease-in";
+const OPEN_EASING = "linear";
+const CLOSE_EASING = "linear";
 
 export const animateDetails = (details, { duration = DURATION } = {}) => {
   const cleanupCallbackSet = new Set();
@@ -21,9 +23,11 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
     summaryHeight = summary.getBoundingClientRect().height;
     contentHeight = content.getBoundingClientRect().height;
     detailsHeightClosed = summaryHeight;
-    detailsHeightOpened = usesDataHeight
-      ? parseFloat(details.getAttribute("data-height"))
-      : summaryHeight + contentHeight;
+    if (usesDataHeight) {
+      detailsHeightOpened = parseFloat(details.getAttribute("data-height"));
+    } else {
+      detailsHeightOpened = summaryHeight + contentHeight;
+    }
   };
   updateHeights();
 
@@ -65,6 +69,25 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
     return parseFloat(getComputedStyle(details).height);
   };
 
+  const dispatchToggleAnimationStartCustomEvent = () => {
+    const event = new CustomEvent("toggleanimationstart", {
+      detail: {
+        open: details.open,
+        height: getAnimatedHeight(),
+      },
+    });
+    details.dispatchEvent(event);
+  };
+  const dispatchToggleAnimationEndCustomEvent = () => {
+    const event = new CustomEvent("toggleanimationend", {
+      detail: {
+        open: details.open,
+        height: getAnimatedHeight(),
+      },
+    });
+    details.dispatchEvent(event);
+  };
+
   const updateAnimationTarget = ({ resetDuration } = {}) => {
     if (!currentAnimation) {
       return;
@@ -99,6 +122,7 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
   const finalizeAnimation = () => {
     setDetailsHeight("animation_finished");
     currentAnimation = null;
+    dispatchToggleAnimationEndCustomEvent();
   };
 
   overflow: {
@@ -190,6 +214,7 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
             easing: OPEN_EASING,
           },
         );
+        dispatchToggleAnimationStartCustomEvent();
         currentAnimation = openAnimation;
         currentAnimation.onfinish = () => {
           finalizeAnimation();
@@ -219,6 +244,7 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
           easing: CLOSE_EASING,
         },
       );
+      dispatchToggleAnimationStartCustomEvent();
       currentAnimation = closeAnimation;
       currentAnimation.onfinish = () => {
         finalizeAnimation();
