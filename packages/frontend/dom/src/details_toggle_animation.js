@@ -5,12 +5,12 @@ export const animateDetails = (details) => {
   const cleanupCallbackSet = new Set();
   const summary = details.querySelector("summary");
   const content = details.querySelector("summary + *");
-  let usesDataHeight = details.hasAttribute("data-height");
-
+  let usesDataHeight;
   let detailsHeight;
   let summaryHeight;
   let contentHeight;
   const updateHeights = () => {
+    usesDataHeight = details.hasAttribute("data-height");
     summaryHeight = summary.getBoundingClientRect().height;
     contentHeight = content.getBoundingClientRect().height;
     if (details.open) {
@@ -104,7 +104,6 @@ export const animateDetails = (details) => {
   }
   data_height_change_effects: {
     const mutationObserver = new MutationObserver(() => {
-      usesDataHeight = details.hasAttribute("data-height");
       handleSizeChange();
     });
     mutationObserver.observe(details, {
@@ -139,18 +138,63 @@ export const animateDetails = (details) => {
 
   animate_on_toggle: {
     const onToggle = (toggleEvent) => {
-      usesDataHeight = details.hasAttribute("data-height");
       const isOpening = toggleEvent.newState === "open";
 
       // If an animation is already running, just reverse it
       if (currentAnimation) {
-        const animDuration = currentAnimation.effect.getTiming().duration;
-        const currentTime = currentAnimation.currentTime;
-        const progress = currentTime / animDuration;
-        const now = document.timeline.currentTime;
-        const adjustedStartTime = now - (1 - progress) * animDuration;
-        currentAnimation.startTime = adjustedStartTime;
-        currentAnimation.reverse();
+        // Get the current animated height using the Animation API
+        let currentHeight;
+
+        try {
+          // Get the height from the animation's current value
+          const currentEffect = currentAnimation.effect;
+          if (
+            currentEffect &&
+            typeof currentEffect.getComputedTiming === "function"
+          ) {
+            const computedTiming = currentEffect.getComputedTiming();
+            const progress = computedTiming.progress || 0;
+
+            // Get keyframes to interpolate between them
+            const keyframes = currentAnimation.effect.getKeyframes();
+            if (keyframes && keyframes.length >= 2) {
+              const fromHeight = parseFloat(keyframes[0].height);
+              const toHeight = parseFloat(keyframes[1].height);
+              // Interpolate based on progress
+              currentHeight = fromHeight + (toHeight - fromHeight) * progress;
+            }
+          }
+        } catch (e) {
+          // Fallback if the Animation API methods fail
+          console.warn("Could not get animation progress, using fallback", e);
+        }
+
+        // If we couldn't get it from the animation, fall back to computed style
+        if (!currentHeight || isNaN(currentHeight)) {
+          currentHeight = parseFloat(getComputedStyle(details).height);
+        }
+
+        // Determine target height based on new state
+        const targetHeight = isOpening ? detailsHeight : summaryHeight;
+
+        // Cancel existing animation
+        currentAnimation.cancel();
+        currentAnimation = null;
+        details.style.height = `${currentHeight}px`;
+
+        // Create new animation from current position to new target
+        currentAnimation = details.animate(
+          [{ height: `${currentHeight}px` }, { height: `${targetHeight}px` }],
+          {
+            duration,
+            easing: isOpening ? "ease-out" : "ease-in",
+          },
+        );
+
+        currentAnimation.onfinish = finalizeAnimation;
+        currentAnimation.oncancel = () => {
+          currentAnimation = null;
+        };
         return;
       }
 
