@@ -1,6 +1,7 @@
 import { addAttributeEffect } from "./add_attribute_effect";
 
-const DURATION = 300;
+let debug = true;
+const DURATION = 5000;
 const OPEN_EASING = "ease-out";
 const CLOSE_EASING = "ease-in";
 
@@ -8,44 +9,51 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
   const cleanupCallbackSet = new Set();
   const summary = details.querySelector("summary");
   const content = details.querySelector("summary + *");
+  let open = false;
   let usesDataHeight;
-  let detailsHeight;
+  let detailsHeightOpened;
+  let detailsHeightClosed;
   let summaryHeight;
   let contentHeight;
   const updateHeights = () => {
+    open = details.open;
     usesDataHeight = details.hasAttribute("data-height");
     summaryHeight = summary.getBoundingClientRect().height;
     contentHeight = content.getBoundingClientRect().height;
-    if (details.open) {
-      detailsHeight = usesDataHeight
-        ? parseFloat(details.getAttribute("data-height"))
-        : summaryHeight + contentHeight;
-    } else {
-      detailsHeight = summaryHeight;
-    }
+    detailsHeightClosed = summaryHeight;
+    detailsHeightOpened = usesDataHeight
+      ? parseFloat(details.getAttribute("data-height"))
+      : summaryHeight + contentHeight;
   };
   updateHeights();
 
+  const setDetailsHeight = (reason) => {
+    const height = details.open ? detailsHeightOpened : detailsHeightClosed;
+
+    if (debug) {
+      console.log(`set height to ${height}, reason: ${reason}`);
+    }
+    details.style.height = `${height}px`;
+  };
+
   let currentAnimation = null;
-  const handleSizeChange = () => {
-    const oldDetailsHeight = detailsHeight;
+  const handleSizeChange = (reason) => {
+    let previousOpen = open;
+    let previousDetailsHeightOpened = detailsHeightOpened;
+    let previousDetailsHeightClosed = detailsHeightClosed;
     updateHeights();
-    if (detailsHeight === oldDetailsHeight) {
+    if (
+      previousOpen === open &&
+      previousDetailsHeightOpened === detailsHeightOpened &&
+      previousDetailsHeightClosed === detailsHeightClosed
+    ) {
       return;
     }
     if (currentAnimation) {
       updateAnimationTarget();
       return;
     }
-    requestAnimationFrame(() => {
-      // when opening details browser notify first of the resize then of the toggle
-      // if we set size right away we would shortly display the details in full height
-      // while we should let toggle kicks in to gradually increas height
-      if (!currentAnimation) {
-        details.style.height = `${detailsHeight}px`;
-        return;
-      }
-    });
+    setDetailsHeight(reason);
   };
 
   const getAnimatedHeight = () => {
@@ -57,9 +65,10 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
       return;
     }
     const currentHeight = getAnimatedHeight();
-    const targetHeight = details.open ? detailsHeight : summaryHeight;
+    const targetHeight = details.open
+      ? detailsHeightOpened
+      : detailsHeightClosed;
     currentAnimation.cancel();
-    currentAnimation = null;
     const newAnimation = details.animate(
       [{ height: `${currentHeight}px` }, { height: `${targetHeight}px` }],
       {
@@ -83,7 +92,7 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
     };
   };
   const finalizeAnimation = () => {
-    details.style.height = `${detailsHeight}px`;
+    setDetailsHeight("animation_finished");
     currentAnimation = null;
   };
 
@@ -94,8 +103,11 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
     });
   }
   initial_height: {
+    // setting height here is important to avoid the content to be fully displayed
+    // when details will open. This ensure that when detail is closed
+    // it takes exactly summary height
     if (!details.hasAttribute("data-resize")) {
-      details.style.height = `${detailsHeight}px`;
+      setDetailsHeight("initial_height");
     }
     cleanupCallbackSet.add(() => {
       details.style.height = "";
@@ -103,7 +115,7 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
   }
   data_height_change_effects: {
     const mutationObserver = new MutationObserver(() => {
-      handleSizeChange("data_height_attribute");
+      handleSizeChange("data_height_attribute_change");
     });
     mutationObserver.observe(details, {
       attributes: true,
@@ -118,7 +130,16 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
       if (usesDataHeight) {
         return;
       }
-      handleSizeChange("content_size");
+      const newContentHeight = content.getBoundingClientRect().height;
+      if (newContentHeight === contentHeight) {
+        // when opening details browser notify the content size has changed
+        // but it did not actually change
+        // if we don't prevent this the details height will jump to full height because it is opened
+        // and open animation did not start yet
+        // making the details content flash to full height before animation from 0 to actual height
+        return;
+      }
+      handleSizeChange("content_size_change");
     });
     contentResizeObserver.observe(content);
     cleanupCallbackSet.add(() => {
@@ -127,7 +148,7 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
   }
   summary_size_change_effects: {
     const summaryResizeObserver = new ResizeObserver(() => {
-      handleSizeChange("summary_size");
+      handleSizeChange("summary_size_change");
     });
     summaryResizeObserver.observe(summary);
     cleanupCallbackSet.add(() => {
@@ -145,7 +166,10 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
 
       if (details.open) {
         const openAnimation = details.animate(
-          [{ height: `${summaryHeight}px` }, { height: `${detailsHeight}px` }],
+          [
+            { height: `${detailsHeightClosed}px` },
+            { height: `${detailsHeightOpened}px` },
+          ],
           {
             duration,
             easing: OPEN_EASING,
@@ -166,7 +190,10 @@ export const animateDetails = (details, { duration = DURATION } = {}) => {
         return;
       }
       const closeAnimation = details.animate(
-        [{ height: `${detailsHeight}px` }, { height: `${summaryHeight}px` }],
+        [
+          { height: `${detailsHeightOpened}px` },
+          { height: `${detailsHeightClosed}px` },
+        ],
         {
           duration,
           easing: CLOSE_EASING,
