@@ -38,6 +38,36 @@ export const animateDetails = (details) => {
       ? `${detailsHeight}px`
       : `${summaryHeight}px`;
   };
+
+  const getAnimatedHeight = () => {
+    try {
+      // Get the height from the animation's current value
+      const currentEffect = currentAnimation.effect;
+      if (
+        currentEffect &&
+        typeof currentEffect.getComputedTiming === "function"
+      ) {
+        const computedTiming = currentEffect.getComputedTiming();
+        const progress = computedTiming.progress || 0;
+
+        // Get keyframes to interpolate between them
+        const keyframes = currentEffect.getKeyframes();
+        if (keyframes && keyframes.length >= 2) {
+          const fromHeight = parseFloat(keyframes[0].height);
+          const toHeight = parseFloat(keyframes[1].height);
+          // Interpolate based on progress
+          const animatedHeight =
+            fromHeight + (toHeight - fromHeight) * progress;
+          return animatedHeight;
+        }
+      }
+    } catch (e) {
+      // Fallback if the Animation API methods fail
+      console.warn("Could not get animation progress, using fallback", e);
+    }
+    return parseFloat(getComputedStyle(details).height);
+  };
+
   const updateAnimationTarget = () => {
     if (!currentAnimation) return;
 
@@ -47,7 +77,7 @@ export const animateDetails = (details) => {
     updateHeights();
 
     // Create a new animation that starts from current position
-    const currentHeight = getAnimatedHeight(details, currentAnimation);
+    const currentHeight = getAnimatedHeight();
     const targetHeight = details.open ? detailsHeight : summaryHeight;
 
     // Calculate remaining duration based on progress
@@ -58,6 +88,8 @@ export const animateDetails = (details) => {
 
     // Cancel current animation
     currentAnimation.cancel();
+    details.style.height = `${currentHeight}px`;
+    details.offsetHeight;
 
     // Create new animation from current position to updated target
     currentAnimation = details.animate(
@@ -137,12 +169,12 @@ export const animateDetails = (details) => {
   animate_on_toggle: {
     const getAnimation = () => {
       if (currentAnimation) {
-        const animatedHeight = getAnimatedHeight(details, currentAnimation);
+        const animatedHeight = getAnimatedHeight();
         const targetHeight = details.open ? detailsHeight : summaryHeight;
 
-        console.log("animate from", animatedHeight, "to", targetHeight);
-        details.style.height = `${animatedHeight}px`;
         currentAnimation.cancel();
+        details.style.height = `${animatedHeight}px`;
+        details.offsetHeight;
 
         // Create new animation from current position to new target
         const reverseAnimation = details.animate(
@@ -157,6 +189,7 @@ export const animateDetails = (details) => {
 
       if (details.open) {
         details.style.height = `${summaryHeight}px`;
+        details.offsetHeight;
         const openAnimation = details.animate(
           [{ height: `${summaryHeight}px` }, { height: `${detailsHeight}px` }],
           {
@@ -168,6 +201,7 @@ export const animateDetails = (details) => {
       }
 
       details.style.height = `${detailsHeight}px`;
+      details.offsetHeight;
       const closeAnimation = details.animate(
         [{ height: `${detailsHeight}px` }, { height: `${summaryHeight}px` }],
         {
@@ -203,34 +237,6 @@ export const animateDetails = (details) => {
       currentAnimation = null;
     }
   };
-};
-
-const getAnimatedHeight = (element, animation) => {
-  try {
-    // Get the height from the animation's current value
-    const currentEffect = animation.effect;
-    if (
-      currentEffect &&
-      typeof currentEffect.getComputedTiming === "function"
-    ) {
-      const computedTiming = currentEffect.getComputedTiming();
-      const progress = computedTiming.progress || 0;
-
-      // Get keyframes to interpolate between them
-      const keyframes = animation.effect.getKeyframes();
-      if (keyframes && keyframes.length >= 2) {
-        const fromHeight = parseFloat(keyframes[0].height);
-        const toHeight = parseFloat(keyframes[1].height);
-        // Interpolate based on progress
-        const animatedHeight = fromHeight + (toHeight - fromHeight) * progress;
-        return animatedHeight;
-      }
-    }
-  } catch (e) {
-    // Fallback if the Animation API methods fail
-    console.warn("Could not get animation progress, using fallback", e);
-  }
-  return parseFloat(getComputedStyle(element).height);
 };
 
 addAttributeEffect("data-details-toggle-animate", (details) => {
