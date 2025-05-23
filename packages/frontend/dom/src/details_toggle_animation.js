@@ -68,7 +68,23 @@ export const animateDetails = (details) => {
     }
   };
 
-  update_height_on_data_height_change: {
+  overflow: {
+    details.style.overflow = "hidden";
+    cleanupCallbackSet.add(() => {
+      details.style.overflow = "";
+    });
+  }
+  initial_height: {
+    if (details.open) {
+      details.style.height = `${detailsHeight}px`;
+    } else {
+      details.style.height = `${summaryHeight}px`;
+    }
+    cleanupCallbackSet.add(() => {
+      details.style.height = "";
+    });
+  }
+  data_height_change_effects: {
     const mutationObserver = new MutationObserver(() => {
       usesDataHeight = details.hasAttribute("data-height");
 
@@ -107,30 +123,28 @@ export const animateDetails = (details) => {
       mutationObserver.disconnect();
     });
   }
-
-  overflow: {
-    details.style.overflow = "hidden";
-    cleanupCallbackSet.add(() => {
-      details.style.overflow = "";
-    });
-  }
-  initial_height: {
-    if (details.open) {
-      details.style.height = `${detailsHeight}px`;
-    } else {
-      details.style.height = `${summaryHeight}px`;
-    }
-    cleanupCallbackSet.add(() => {
-      details.style.height = "";
-    });
-  }
   content_size_change_effects: {
     const contentResizeObserver = new ResizeObserver(() => {
       if (details.open && !usesDataHeight) {
-        detailsHeight = summaryHeight + content.getBoundingClientRect().height;
-        requestAnimationFrame(() => {
-          details.style.height = `${detailsHeight}px`;
-        });
+        // Calculate new height based on content
+        const newDetailsHeight =
+          summaryHeight + content.getBoundingClientRect().height;
+
+        // Only update if height actually changed
+        if (newDetailsHeight !== detailsHeight) {
+          detailsHeight = newDetailsHeight;
+
+          // If animation is running, update the animation target
+          if (currentAnimation && details.open) {
+            updateAnimationTarget();
+          }
+          // Otherwise, just update the height directly
+          else if (!currentAnimation) {
+            requestAnimationFrame(() => {
+              details.style.height = `${detailsHeight}px`;
+            });
+          }
+        }
       }
     });
     contentResizeObserver.observe(content);
@@ -138,20 +152,31 @@ export const animateDetails = (details) => {
       contentResizeObserver.disconnect();
     });
   }
-  details_size_change_effects: {
-    const detailsResizeObserver = new ResizeObserver(() => {
-      if (!currentAnimation) {
-        updateHeights();
-      }
-    });
-    detailsResizeObserver.observe(details);
-    cleanupCallbackSet.add(() => {
-      detailsResizeObserver.disconnect();
-    });
-  }
   summary_size_change_effects: {
     const summaryResizeObserver = new ResizeObserver(() => {
+      // Get old heights for comparison
+      const oldSummaryHeight = summaryHeight;
+      const oldDetailsHeight = detailsHeight;
+
+      // Update heights with new measurements
       updateHeights();
+
+      // Check if heights actually changed
+      const summaryHeightChanged = oldSummaryHeight !== summaryHeight;
+      const detailsHeightChanged = oldDetailsHeight !== detailsHeight;
+
+      if (summaryHeightChanged || detailsHeightChanged) {
+        // If animation is running, update the animation target
+        if (currentAnimation) {
+          updateAnimationTarget();
+        }
+        // Otherwise, update heights directly
+        else if (details.open) {
+          details.style.height = `${detailsHeight}px`;
+        } else {
+          details.style.height = `${summaryHeight}px`;
+        }
+      }
     });
     summaryResizeObserver.observe(summary);
     cleanupCallbackSet.add(() => {
