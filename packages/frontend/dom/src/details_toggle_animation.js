@@ -95,16 +95,83 @@ export const animateDetails = (details) => {
   animate_on_toggle: {
     const finalizeAnimation = () => {
       if (details.open) {
+        // Before setting final height, update to get latest measurements
+        updateHeights();
         details.style.height = `${detailsHeight}px`;
       } else {
         details.style.height = `${summaryHeight}px`;
       }
       if (currentAnimation) {
         currentAnimation.finish();
-        currentAnimation.cancel(); // This removes the animation's effect
+        currentAnimation.cancel();
         currentAnimation = null;
       }
     };
+
+    // Update animation to reflect new heights
+    const updateAnimationTarget = () => {
+      if (!currentAnimation) return;
+
+      // Get fresh height measurements
+      updateHeights();
+
+      // Create a new animation that starts from current position
+      const currentHeight = parseFloat(getComputedStyle(details).height);
+      const targetHeight = details.open ? detailsHeight : summaryHeight;
+
+      // Calculate remaining duration based on progress
+      const animDuration = currentAnimation.effect.getTiming().duration;
+      const currentTime = currentAnimation.currentTime || 0;
+      const progress = Math.min(currentTime / animDuration, 1);
+      const remainingDuration = animDuration * (1 - progress);
+
+      // Cancel current animation
+      currentAnimation.cancel();
+
+      // Create new animation from current position to updated target
+      currentAnimation = details.animate(
+        [{ height: `${currentHeight}px` }, { height: `${targetHeight}px` }],
+        {
+          duration: remainingDuration,
+          easing: details.open ? "ease-out" : "ease-in",
+        },
+      );
+
+      currentAnimation.onfinish = finalizeAnimation;
+      currentAnimation.oncancel = () => {
+        currentAnimation = null;
+      };
+    };
+
+    // Add listeners to detect content/data-height changes during animation
+    const contentResizeObserverDuringAnimation = new ResizeObserver(() => {
+      if (currentAnimation && details.open && !usesDataHeight) {
+        updateAnimationTarget();
+      }
+    });
+    contentResizeObserverDuringAnimation.observe(content);
+    cleanupCallbackSet.add(() => {
+      contentResizeObserverDuringAnimation.disconnect();
+    });
+
+    // Enhanced mutation observer for data-height changes during animation
+    const dataHeightMutationObserver = new MutationObserver(() => {
+      if (
+        currentAnimation &&
+        details.open &&
+        details.hasAttribute("data-height")
+      ) {
+        updateAnimationTarget();
+      }
+    });
+    dataHeightMutationObserver.observe(details, {
+      attributes: true,
+      attributeFilter: ["data-height"],
+    });
+    cleanupCallbackSet.add(() => {
+      dataHeightMutationObserver.disconnect();
+    });
+
     const onToggle = (toggleEvent) => {
       usesDataHeight = details.hasAttribute("data-height");
       const isOpening = toggleEvent.newState === "open";
@@ -128,7 +195,7 @@ export const animateDetails = (details) => {
         currentAnimation = details.animate(
           [{ height: `${summaryHeight}px` }, { height: `${detailsHeight}px` }],
           {
-            duration: 300, // Shorter duration for better responsiveness
+            duration: 300,
             easing: "ease-out",
           },
         );
@@ -151,6 +218,7 @@ export const animateDetails = (details) => {
         };
       }
     };
+
     details.addEventListener("toggle", onToggle);
     cleanupCallbackSet.add(() => {
       details.removeEventListener("toggle", onToggle);
