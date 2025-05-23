@@ -1,8 +1,10 @@
+import { addAttributeEffect } from "./add_attribute_effect";
+
 export const animateDetails = (details) => {
   const cleanupCallbackSet = new Set();
   const summary = details.querySelector("summary");
   const content = details.querySelector("summary + *");
-  const usesVerticalOverflow = getComputedStyle(content).overflowY === "auto";
+  let usesDataHeight = details.hasAttribute("data-height");
 
   let currentAnimation = null;
   let detailsHeight;
@@ -10,10 +12,23 @@ export const animateDetails = (details) => {
   const updateHeights = () => {
     summaryHeight = summary.getBoundingClientRect().height;
     if (details.open) {
-      detailsHeight = details.getBoundingClientRect().height;
+      detailsHeight = usesDataHeight
+        ? parseFloat(details.getAttribute("data-height"))
+        : details.getBoundingClientRect().height;
     }
   };
   updateHeights();
+
+  update_height_on_data_height_change: {
+    const mutationObserver = new MutationObserver(() => {
+      usesDataHeight = details.hasAttribute("data-height");
+      updateHeights();
+    });
+    mutationObserver.observe(details, {
+      attributes: true,
+      attributeFilter: ["data-height"],
+    });
+  }
 
   overflow: {
     details.style.overflow = "hidden";
@@ -32,21 +47,8 @@ export const animateDetails = (details) => {
     });
   }
   update_height_on_content_size_change: {
-    if (usesVerticalOverflow) {
-      // no need because content is scrollable
-      // so the details height can be set to the content height
-      // well actually we could still setup the observer
-      // so that details take the content height even if it's scrollable
-      // it's only when content height wants to take the details height
-      // that this becomes useless
-      // for now we'll do this because this is what we want
-      // and without this we would create a cycle of resize between
-      // content that wants to take details height and details that wants to take content height
-      // (when data-details-content-full-height is used)
-      break update_height_on_content_size_change;
-    }
     const contentResizeObserver = new ResizeObserver(() => {
-      if (details.open) {
+      if (details.open && !usesDataHeight) {
         detailsHeight = summaryHeight + content.getBoundingClientRect().height;
         requestAnimationFrame(() => {
           details.style.height = `${detailsHeight}px`;
@@ -154,3 +156,7 @@ export const animateDetails = (details) => {
     }
   };
 };
+
+addAttributeEffect("data-details-toggle-animate", (details) => {
+  animateDetails(details);
+});
