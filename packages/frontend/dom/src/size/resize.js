@@ -437,6 +437,11 @@ const start = (event) => {
     if (positionDelta > 0) {
       let remainingMoveToApply = positionDelta;
       if (nextSiblingSet.size === 0) {
+        if (previousSiblingSet.size === 0) {
+          spaceRemaining = availableHeight;
+          requestGrow(elementToResize, remainingMoveToApply);
+          return sizeTransformMap;
+        }
         const shrink = requestShrink(elementToResize, remainingMoveToApply);
         if (shrink) {
           giveSpaceToSiblings(previousSiblingSet, shrink);

@@ -95,14 +95,16 @@ export const animateDetails = (details) => {
     });
   }
   initial_height: {
-    details.style.height = `${detailsHeight}px`;
+    if (!details.hasAttribute("data-resize")) {
+      details.style.height = `${detailsHeight}px`;
+    }
     cleanupCallbackSet.add(() => {
       details.style.height = "";
     });
   }
   data_height_change_effects: {
     const mutationObserver = new MutationObserver(() => {
-      handleSizeChange();
+      handleSizeChange("data_height_attribute");
     });
     mutationObserver.observe(details, {
       attributes: true,
@@ -117,7 +119,7 @@ export const animateDetails = (details) => {
       if (usesDataHeight) {
         return;
       }
-      handleSizeChange();
+      handleSizeChange("content_size");
     });
     contentResizeObserver.observe(content);
     cleanupCallbackSet.add(() => {
@@ -126,7 +128,7 @@ export const animateDetails = (details) => {
   }
   summary_size_change_effects: {
     const summaryResizeObserver = new ResizeObserver(() => {
-      handleSizeChange();
+      handleSizeChange("summary_size");
     });
     summaryResizeObserver.observe(summary);
     cleanupCallbackSet.add(() => {
