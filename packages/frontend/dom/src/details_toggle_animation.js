@@ -77,9 +77,16 @@ export const animateDetails = (details) => {
       },
     );
     currentAnimation = newAnimation;
-    currentAnimation.onfinish = finalizeAnimation;
+    currentAnimation.onfinish = () => {
+      finalizeAnimation();
+      if (currentAnimation === newAnimation) {
+        currentAnimation = null;
+      }
+    };
     currentAnimation.oncancel = () => {
-      currentAnimation = null;
+      if (currentAnimation === newAnimation) {
+        currentAnimation = null;
+      }
     };
   };
   const finalizeAnimation = () => {
@@ -155,9 +162,16 @@ export const animateDetails = (details) => {
           },
         );
         currentAnimation = openAnimation;
-        currentAnimation.onfinish = finalizeAnimation;
+        currentAnimation.onfinish = () => {
+          finalizeAnimation();
+          if (currentAnimation === openAnimation) {
+            currentAnimation = null;
+          }
+        };
         currentAnimation.oncancel = () => {
-          currentAnimation = null;
+          if (currentAnimation === openAnimation) {
+            currentAnimation = null;
+          }
         };
         return;
       }
@@ -172,9 +186,16 @@ export const animateDetails = (details) => {
         },
       );
       currentAnimation = closeAnimation;
-      currentAnimation.onfinish = finalizeAnimation;
+      currentAnimation.onfinish = () => {
+        finalizeAnimation();
+        if (currentAnimation === closeAnimation) {
+          currentAnimation = null;
+        }
+      };
       currentAnimation.oncancel = () => {
-        currentAnimation = null;
+        if (currentAnimation === closeAnimation) {
+          currentAnimation = null;
+        }
       };
     };
 
