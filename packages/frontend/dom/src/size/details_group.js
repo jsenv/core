@@ -10,9 +10,13 @@
  */
 
 import { getHeight } from "./get_height.js";
+import { getInnerHeight } from "./get_inner_height.js";
 import { getMinHeight } from "./get_min_height.js";
 
-export const initDetailsGroup = (element, { debug = true } = {}) => {
+export const initDetailsGroup = (
+  element,
+  { onSizeChange, debug = true } = {},
+) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -40,9 +44,9 @@ export const initDetailsGroup = (element, { debug = true } = {}) => {
     minSizeMap.clear();
     requestedSizeMap.clear();
     newSizeMap.clear();
-    availableSpace = getHeight(element);
+    availableSpace = getInnerHeight(element);
     if (debug) {
-      console.log(`availableSpace: ${availableSpace}px`);
+      console.debug(`availableSpace: ${availableSpace}px`);
     }
     spaceRemaining = availableSpace;
   };
@@ -59,6 +63,9 @@ export const initDetailsGroup = (element, { debug = true } = {}) => {
       const summaryHeight = getHeight(summary);
       const content = details.querySelector("summary + *");
       content.style.height = `${newSize - summaryHeight}px`;
+      if (onSizeChange) {
+        onSizeChange(details, newSize);
+      }
     }
   };
 
@@ -94,29 +101,31 @@ export const initDetailsGroup = (element, { debug = true } = {}) => {
   //   }
   //   return spaceGiven;
   // };
-  const applyRequestedSize = (details, sizeRequested) => {
+  const applyRequestedSize = (details, sizeRequested, { isReapply } = {}) => {
+    const debugAction = isReapply ? "will" : "want to";
+
     const size = sizeMap.get(details);
-    if (size === sizeRequested) {
+    if (sizeRequested === size) {
       newSizeMap.set(details, size);
       spaceRemaining -= size;
       if (debug) {
-        console.log(
-          `details ${details.id} size will stay at ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
+        console.debug(
+          `details ${details.id} size ${debugAction} stay at ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
         );
       }
       return size;
     }
-    const minSize = minSizeMap.get(details);
     const sizeDiff = sizeRequested - size;
     if (sizeDiff < 0) {
       // shrink
+      const minSize = minSizeMap.get(details);
       if (sizeRequested <= minSize) {
         const newSize = minSize;
         newSizeMap.set(details, newSize);
         spaceRemaining -= newSize;
         if (debug) {
-          console.log(
-            `details ${details.id} size will shrink to ${newSize}px (minSize), remaining space: ${spaceRemaining}px`,
+          console.debug(
+            `details ${details.id} size ${debugAction} shrink to ${newSize}px (minSize), remaining space: ${spaceRemaining}px`,
           );
         }
         return newSize;
@@ -124,8 +133,8 @@ export const initDetailsGroup = (element, { debug = true } = {}) => {
       newSizeMap.set(details, sizeRequested);
       spaceRemaining -= sizeRequested;
       if (debug) {
-        console.log(
-          `details ${details.id} size will shrink to ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
+        console.debug(
+          `details ${details.id} size ${debugAction} shrink to ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
         );
       }
       return sizeRequested;
@@ -135,8 +144,8 @@ export const initDetailsGroup = (element, { debug = true } = {}) => {
       newSizeMap.set(details, size);
       spaceRemaining -= size;
       if (debug) {
-        console.log(
-          `details ${details.id} size will stay at ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
+        console.debug(
+          `details ${details.id} size ${debugAction} stay at ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
         );
       }
       return size;
@@ -147,15 +156,15 @@ export const initDetailsGroup = (element, { debug = true } = {}) => {
     newSizeMap.set(details, sizeRequested);
     spaceRemaining -= sizeRequested;
     if (debug) {
-      console.log(
-        `details ${details.id} size will grow to ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
+      console.debug(
+        `details ${details.id} size ${debugAction} grow to ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
       );
     }
     return sizeRequested;
   };
   const reapplyRequestedSize = (details, sizeRequested) => {
     spaceRemaining += newSizeMap.get(details);
-    return applyRequestedSize(details, sizeRequested);
+    return applyRequestedSize(details, sizeRequested, { isReapply: true });
   };
 
   const distributeAvailableSpace = () => {
@@ -165,20 +174,26 @@ export const initDetailsGroup = (element, { debug = true } = {}) => {
       const minHeight = getMinHeight(details, availableSpace);
       minSizeMap.set(details, minHeight);
 
+      let requestedHeight;
       if (details.hasAttribute("data-requested-height")) {
         const requestedHeightAttribute = details.getAttribute(
           "data-requested-height",
         );
-        const requestedHeight = parseFloat(requestedHeightAttribute, 10);
-        requestedSizeMap.set(details, requestedHeight);
+        requestedHeight = parseFloat(requestedHeightAttribute, 10);
       } else {
         const summary = details.querySelector("summary");
         const detailsContent = details.querySelector("summary + *");
         const summaryHeight = getHeight(summary);
         const detailsContentHeight = getHeight(detailsContent);
         const detailsHeight = summaryHeight + detailsContentHeight;
-        console.log(`details ${details.id} height: ${detailsHeight}`);
-        requestedSizeMap.set(details, detailsHeight);
+        requestedHeight = detailsHeight;
+      }
+
+      requestedSizeMap.set(details, requestedHeight);
+      if (debug) {
+        console.debug(
+          `details ${details.id} size: ${height}px, minSize: ${minHeight}px, requested size: ${requestedHeight}px`,
+        );
       }
     }
 
@@ -220,7 +235,15 @@ export const initDetailsGroup = (element, { debug = true } = {}) => {
     }
   }
 
-  return () => {
-    cleanup();
+  const detailsGroup = {
+    cleanup,
+    requestResize: (details, newSize) => {
+      prepareSpaceDistribution();
+      details.setAttribute("data-requested-height", newSize);
+      distributeAvailableSpace();
+      applyNewSizes();
+    },
   };
+
+  return detailsGroup;
 };

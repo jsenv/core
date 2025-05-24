@@ -17,14 +17,22 @@
       }
 
       #app {
+        margin: 10px;
+      }
+
+      .details_group {
+        display: flex;
+        flex-direction: column;
+
+        border: 1px solid black;
+
         display: flex;
         flex-direction: column;
         height: 300px;
-        border: 1px solid black;
         box-sizing: content-box;
         width: 300px;
-        margin-left: 200px;
-        margin-top: 50px;
+        margin-left: 100px;
+        margin-top: 20px;
       }
 
       .section {
@@ -36,41 +44,69 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef, useLayoutEffect } from "preact/hooks";
+      import { useRef, useLayoutEffect, useState } from "preact/hooks";
       import { initDetailsGroup } from "../size/details_group.js";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const ref = useRef();
 
+        const detailsGroupRef = useRef();
+        const [aHeight, aHeightSetter] = useState(0);
+
         useLayoutEffect(() => {
-          return initDetailsGroup(ref.current);
+          const detailsGroup = initDetailsGroup(ref.current, {
+            onSizeChange: (details, height) => {
+              if (details.id === "a") {
+                aHeightSetter(height);
+              }
+            },
+          });
+          detailsGroupRef.current = detailsGroup;
+          return detailsGroup.cleanup;
         }, []);
 
         return (
-          <div
-            ref={ref}
-            style="display: flex; flex-direction: column; height: 100%"
-          >
-            <Details id="a" color="blue" open>
-              This is the main content area. Lorem ipsum dolor sit amet,
-              consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
-              labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-              nostrud exercitation
-            </Details>
-            <Details id="b" color="green">
-              This is the main content area. Lorem ipsum dolor sit amet,
-              consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
-              labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-              nostrud exercitation. This is the main content area. Lorem ipsum
-              dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-              incididunt ut labore et dolore magna aliqua. Ut enim ad minim
-              veniam, quis nostrud exercitation
-            </Details>
-            <Details id="c" color="red">
-              Coucou
-            </Details>
-          </div>
+          <>
+            <fieldset>
+              <legend>Details group controls</legend>
+              <label>
+                Height of the first details{" "}
+                <input
+                  type="number"
+                  value={aHeight}
+                  onInput={(e) => {
+                    detailsGroupRef.current.requestResize(
+                      document.querySelector("#a"),
+                      e.target.valueAsNumber,
+                    );
+                  }}
+                />
+              </label>
+            </fieldset>
+
+            <br />
+            <div ref={ref} className="details_group">
+              <Details id="a" color="blue" open>
+                This is the main content area. Lorem ipsum dolor sit amet,
+                consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+                labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+                nostrud exercitation
+              </Details>
+              <Details id="b" color="green">
+                This is the main content area. Lorem ipsum dolor sit amet,
+                consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+                labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+                nostrud exercitation. This is the main content area. Lorem ipsum
+                dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
+                tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+                minim veniam, quis nostrud exercitation
+              </Details>
+              <Details id="c" color="red">
+                Coucou
+              </Details>
+            </div>
+          </>
         );
       };
 
