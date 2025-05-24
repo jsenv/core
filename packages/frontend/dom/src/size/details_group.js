@@ -176,7 +176,7 @@ export const initDetailsGroup = (
     return applyRequestedSize(details, sizeRequested, { isReapply: true });
   };
 
-  const distributeAvailableSpace = () => {
+  const distributeAvailableSpace = ({ startWith } = {}) => {
     for (const details of detailsSet) {
       const height = getHeight(details);
       sizeMap.set(details, height);
@@ -206,8 +206,16 @@ export const initDetailsGroup = (
       }
     }
 
+    if (startWith) {
+      applyRequestedSize(startWith, requestedSizeMap.get(startWith));
+      // now give remaining space to others
+    }
+
     let lastDetailsOpened;
     for (const details of detailsSet) {
+      if (details === startWith) {
+        continue;
+      }
       if (details.open) {
         lastDetailsOpened = details;
         const requestedSize = requestedSizeMap.get(details);

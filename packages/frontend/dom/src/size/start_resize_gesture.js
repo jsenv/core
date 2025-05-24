@@ -73,7 +73,7 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
         gestureInfo.yChanged = true;
       }
       if (gestureInfo.xChanged || gestureInfo.yChanged) {
-        onMove(gestureInfo);
+        onMove?.(gestureInfo);
       }
     };
     const handleMouseUp = (e) => {
@@ -89,12 +89,12 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
         gestureInfo.yChanged = true;
       }
       if (gestureInfo.xChanged || gestureInfo.yChanged) {
-        onMove(gestureInfo);
+        onMove?.(gestureInfo);
       }
       for (const endCallback of endCallbackSet) {
         endCallback();
       }
-      onEnd(gestureInfo);
+      onEnd?.(gestureInfo);
     };
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
@@ -109,7 +109,7 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
       elementToResize.removeAttribute("data-resizing");
     });
   }
-  onStart(gestureInfo);
+  onStart?.(gestureInfo);
   return null;
 };
 

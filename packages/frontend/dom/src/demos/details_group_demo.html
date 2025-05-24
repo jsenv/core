@@ -20,6 +20,10 @@
         margin: 10px;
       }
 
+      details {
+        overflow: hidden;
+      }
+
       .details_group {
         display: flex;
         flex-direction: column;
@@ -131,19 +135,20 @@
       // eslint-disable-next-line no-unused-vars
       const Details = ({ id, color, children, open }) => {
         return (
-          <details
-            className="section"
-            id={id}
-            style={`background: ${color};`}
-            open={open}
-            data-resize="vertical"
-            data-resize-handle
-          >
-            <summary>Summary</summary>
-            <div style="padding: 20px; width: fit-content; background: lightgray; overflow-y: auto">
-              {children}
-            </div>
-          </details>
+          <>
+            <details
+              className="section"
+              id={id}
+              style={`background: ${color};`}
+              open={open}
+              data-resize="vertical"
+            >
+              <summary>Summary</summary>
+              <div style="padding: 20px; width: fit-content; background: lightgray; overflow-y: auto">
+                {children}
+              </div>
+            </details>
+          </>
         );
       };
 
