@@ -51,13 +51,14 @@ export const initDetailsGroup = (element, { debug = true } = {}) => {
     for (const details of detailsSet) {
       const newSize = newSizeMap.get(details);
       const size = sizeMap.get(details);
-      if (newSize !== size) {
-        details.style.height = `${newSize}px`;
-        const summary = details.querySelector("summary");
-        const summaryHeight = getHeight(summary);
-        const content = details.querySelector("summary + *");
-        content.style.height = `${newSize - summaryHeight}px`;
+      if (newSize === size) {
+        continue;
       }
+      details.style.height = `${newSize}px`;
+      const summary = details.querySelector("summary");
+      const summaryHeight = getHeight(summary);
+      const content = details.querySelector("summary + *");
+      content.style.height = `${newSize - summaryHeight}px`;
     }
   };
 
@@ -198,16 +199,18 @@ export const initDetailsGroup = (element, { debug = true } = {}) => {
         newSizeMap.get(lastDetailsOpened) + spaceRemaining,
       );
     }
-    applyNewSizes();
   };
   prepareSpaceDistribution();
   distributeAvailableSpace();
+  sizeMap.clear(); // force to set new size at start
+  applyNewSizes();
 
   update_on_toggle: {
     for (const details of detailsSet) {
       const ontoggle = () => {
         prepareSpaceDistribution();
         distributeAvailableSpace();
+        applyNewSizes();
       };
 
       details.addEventListener("toggle", ontoggle);
