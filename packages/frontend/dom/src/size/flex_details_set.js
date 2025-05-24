@@ -1,12 +1,5 @@
 /**
  *
- * For an accordion we do this:
- *
- * - children try to take available space (we enforce this at start)
- * - each child can declare a desired height that we will try to respect
- * - when opening an accordion, if there is next opened section we steal space from it
- * otherwise from previous, otherwise we just open it in full height
- * - (at some point this will happen with an animation)
  */
 
 import { getHeight } from "./get_height.js";
@@ -14,7 +7,7 @@ import { getInnerHeight } from "./get_inner_height.js";
 import { getMinHeight } from "./get_min_height.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
-export const initDetailsGroup = (
+export const initFlexDetailsSet = (
   element,
   { onSizeChange, debug = true } = {},
 ) => {

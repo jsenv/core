@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>3 rows accordion demo</title>
+    <title>Flex details set demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
@@ -49,7 +49,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useRef, useLayoutEffect, useState } from "preact/hooks";
-      import { initDetailsGroup } from "../size/details_group.js";
+      import { initFlexDetailsSet } from "../size/flex_details_set.js";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -60,7 +60,7 @@
         const [bHeight, bHeightSetter] = useState(0);
 
         useLayoutEffect(() => {
-          const detailsGroup = initDetailsGroup(ref.current, {
+          const flexDetailsSet = initFlexDetailsSet(ref.current, {
             onSizeChange: (details, height) => {
               if (details.id === "a") {
                 aHeightSetter(height);
@@ -70,14 +70,14 @@
               }
             },
           });
-          detailsGroupRef.current = detailsGroup;
-          return detailsGroup.cleanup;
+          detailsGroupRef.current = flexDetailsSet;
+          return flexDetailsSet.cleanup;
         }, []);
 
         return (
           <>
             <fieldset>
-              <legend>Details group controls</legend>
+              <legend>Flex details set controls</legend>
               <label>
                 Height of the first details{" "}
                 <input
