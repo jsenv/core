@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Details toggle animation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      #app {
+        display: flex;
+        flex-direction: row;
+        height: 300px;
+      }
+
+      main {
+        min-width: 200px;
+        padding-bottom: 0;
+        min-width: 200px; /* Prevents content area from becoming too narrow */
+        box-sizing: border-box;
+        width: 100px;
+      }
+
+      details {
+        width: 100%;
+      }
+
+      details > summary {
+        user-select: none;
+        background: lightblue;
+      }
+
+      details > summary + * {
+        background: lightgreen;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+    </style>
+
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import "@jsenv/dom/resize";
+      import { useResizeStatus } from "@jsenv/dom";
+      import { useRef } from "preact/hooks";
+      import "../details_toggle_animation.js";
+      import "../size/details_content_full_height.js";
+      import { render } from "preact";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <main>
+            <Details summary={"First summary"} />
+          </main>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const Details = ({ summary }) => {
+        const ref = useRef();
+        const { resizeHeight } = useResizeStatus(ref, {
+          as: "number",
+        });
+
+        const id = `details-${summary.replace(/\s+/g, "-").toLowerCase()}`;
+        const isOpen = ref.current ? ref.current.open : false;
+
+        return (
+          <>
+            <details
+              id={id}
+              ref={ref}
+              data-height={isOpen ? resizeHeight || "100" : undefined}
+              data-details-toggle-animation
+              data-toggle-animation-duration="300"
+              data-details-content-full-height
+              data-resize="vertical"
+            >
+              <summary>{summary}</summary>
+              <div style="padding: 20px; width: 100%; overflow-y: auto;">
+                This is the main content area. Lorem ipsum dolor sit amet,
+                consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+                labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+                nostrud exercitation
+                <button id="add">Add content</button>
+              </div>
+            </details>
+            <div
+              data-resize-handle={id}
+              style="height: 20px; width: 100%; background: lightcoral; cursor: ns-resize;"
+            ></div>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

@@ -1,6 +1,6 @@
+import { getAvailableHeight, getAvailableWidth } from "@jsenv/dom";
 import { useResizeObserver } from "hooks/use_resize_observer.js";
 import { useStructuredMemo } from "hooks/use_structured_memo.js";
-import { getAvailableSize } from "oto/src/utils/get_available_size.js";
 import { resolveSize } from "oto/src/utils/size_resolver.js";
 import { render, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
@@ -231,9 +231,8 @@ const initTextFiller = (
   svgElement.style.height = "100vh";
   svgElement.parentNode.style.maxWidth = "100%";
   svgElement.parentNode.style.maxHeight = "100%";
-  const [availableWidth, availableHeight] = getAvailableSize(
-    svgElement.parentNode,
-  );
+  const availableWidth = getAvailableWidth(svgElement);
+  const availableHeight = getAvailableHeight(svgElement);
   svgElement.style.opacity = "";
   svgElement.style.width = "auto";
   svgElement.style.height = "auto";

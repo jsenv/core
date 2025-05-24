@@ -2,7 +2,7 @@
  * https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration
  */
 
-import { sigi } from "@jsenv/sigi";
+import { sigiAdvanced } from "@jsenv/sigi";
 
 import {
   canUseServiceWorkers,
@@ -23,7 +23,7 @@ export const createServiceWorkerFacade = ({
 } = {}) => {
   let fromInspectPromise = null;
 
-  const { state, subscribe, mutate } = sigi({
+  const { state, subscribe, mutate } = sigiAdvanced({
     error: null,
     readyState: "", // registering, installing, installed, activating, activated
     meta: {},

@@ -14,6 +14,12 @@
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "npm.packageManager": "npm"
+  "npm.packageManager": "npm",
   // "debug.javascript.autoAttachFilter": "always"
+  "files.associations": {
+    "*.env.development": "env",
+    "*.env.dev": "env",
+    "*.env.production": "env",
+    "*.env.prod": "env"
+  }
 }

@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Preact error boundary async</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { h, render } from "preact";
+      import { useState, useErrorBoundary, useCallback } from "preact/hooks";
+
+      const App = () => {
+        const [error] = useErrorBoundary();
+        if (error) {
+          return <p>Something went wrong</p>;
+        }
+        return <BrokenComponent />;
+      };
+
+      const BrokenComponent = () => {
+        const reportError = useAsyncError();
+        setTimeout(() => {
+          reportError(new Error("here"));
+        }, 1000);
+        return <span>"Hello"</span>;
+      };
+
+      const useAsyncError = () => {
+        const [_, setError] = useState();
+        return useCallback(
+          (e) => {
+            setError(() => {
+              throw e;
+            });
+          },
+          [setError],
+        );
+      };
+
+      render(<App />, document.body);
+    </script>
+  </body>
+</html>

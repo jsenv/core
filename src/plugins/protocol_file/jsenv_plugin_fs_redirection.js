@@ -4,7 +4,7 @@ import {
   getExtensionsToTry,
 } from "@jsenv/node-esm-resolution";
 import {
-  urlIsInsideOf,
+  urlIsOrIsInsideOf,
   urlToExtension,
   urlToFilename,
   urlToPathname,
@@ -13,7 +13,7 @@ import { existsSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const jsenvPluginFsRedirection = ({
-  spa = true,
+  spa,
   directoryContentMagicName,
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
@@ -172,17 +172,12 @@ const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
     if (existsSync(indexHtmlFileUrl)) {
       return indexHtmlFileUrl.href;
     }
-    const htmlFileUrlCandidate = new URL(
-      `${urlToFilename(directoryUrl)}.html`,
-      directoryUrl,
-    );
+    const filename = urlToFilename(directoryUrl);
+    const htmlFileUrlCandidate = new URL(`${filename}.html`, directoryUrl);
     if (existsSync(htmlFileUrlCandidate)) {
       return htmlFileUrlCandidate.href;
     }
-    if (
-      !urlIsInsideOf(directoryUrl, serverRootDirectoryUrl) ||
-      directoryUrl.href === serverRootDirectoryUrl
-    ) {
+    if (!urlIsOrIsInsideOf(directoryUrl, serverRootDirectoryUrl)) {
       return null;
     }
     directoryUrl = new URL("../", directoryUrl);

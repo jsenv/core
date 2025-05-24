@@ -47,5 +47,5 @@ export {
 export { isFileSystemPath } from "./shared/is_filesystem_path.js";
 export { resolveUrl } from "./shared/resolve_url.js";
 export { resolveDirectoryUrl } from "./shared/resolve_directory_url.js";
-export { urlIsInsideOf } from "./shared/url_is_inside_of.js";
+export { urlIsOrIsInsideOf } from "./shared/url_is_or_is_inside_of.js";
 export { yieldAncestorUrls } from "./shared/yield_ancestor_urls.js";

@@ -27,7 +27,7 @@ import {
   startMonitoringMemoryUsage,
 } from "@jsenv/os-metrics";
 import { URL_META } from "@jsenv/url-meta";
-import { urlIsInsideOf } from "@jsenv/urls";
+import { urlIsOrIsInsideOf } from "@jsenv/urls";
 import { existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
@@ -683,7 +683,7 @@ To fix this warning:
       for (const { relativeUrl, meta } of fileResultArray) {
         if (onlyWithinUrl) {
           const fileUrl = new URL(relativeUrl, rootDirectoryUrl).href;
-          if (!urlIsInsideOf(fileUrl, onlyWithinUrl)) {
+          if (!urlIsOrIsInsideOf(fileUrl, onlyWithinUrl)) {
             continue;
           }
         }

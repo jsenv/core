@@ -12,26 +12,27 @@ export const removeForceHideElement = (element) => {
 };
 
 export const setStyles = (element, styles) => {
-  const elementStyle = element.style;
-  const restoreStyles = Object.keys(styles).map((styleName) => {
-    let restore;
-    if (styleName in elementStyle) {
-      const currentStyle = elementStyle[styleName];
-      restore = () => {
-        elementStyle[styleName] = currentStyle;
-      };
-    } else {
-      restore = () => {
-        delete elementStyle[styleName];
-      };
-    }
+  const restoreCallbackSet = new Set();
 
-    elementStyle[styleName] = styles[styleName];
-
-    return restore;
-  });
+  for (const key of Object.keys(styles)) {
+    const inlineValue = element.style[key];
+    restoreCallbackSet.add(() => {
+      if (inlineValue === "") {
+        element.style.removeProperty(key);
+      } else {
+        element.style[key] = inlineValue;
+      }
+    });
+  }
+  for (const key of Object.keys(styles)) {
+    const value = styles[key];
+    element.style[key] = value;
+  }
   return () => {
-    restoreStyles.forEach((restore) => restore());
+    for (const restoreCallback of restoreCallbackSet) {
+      restoreCallback();
+    }
+    restoreCallbackSet.clear();
   };
 };
 

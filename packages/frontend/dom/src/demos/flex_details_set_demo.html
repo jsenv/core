@@ -1,0 +1,169 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Flex details set demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <style>
+      body {
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      #app {
+        margin: 10px;
+      }
+
+      details {
+        overflow: hidden;
+      }
+
+      summary {
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+      }
+
+      .details_group {
+        display: flex;
+        flex-direction: column;
+
+        border: 1px solid black;
+
+        display: flex;
+        flex-direction: column;
+        height: 300px;
+        box-sizing: content-box;
+        width: 300px;
+        margin-left: 100px;
+        margin-top: 20px;
+      }
+
+      .section[open] {
+        min-height: 50px;
+      }
+    </style>
+
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useLayoutEffect, useState } from "preact/hooks";
+      import { initFlexDetailsSet } from "../size/flex_details_set.js";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const ref = useRef();
+
+        const detailsGroupRef = useRef();
+        const [aHeight, aHeightSetter] = useState(0);
+        const [bHeight, bHeightSetter] = useState(0);
+
+        useLayoutEffect(() => {
+          const flexDetailsSet = initFlexDetailsSet(ref.current, {
+            onSizeChange: (details, height) => {
+              if (details.id === "a") {
+                aHeightSetter(height);
+              }
+              if (details.id === "b") {
+                bHeightSetter(height);
+              }
+            },
+          });
+          detailsGroupRef.current = flexDetailsSet;
+          return flexDetailsSet.cleanup;
+        }, []);
+
+        return (
+          <>
+            <fieldset>
+              <legend>Flex details set controls</legend>
+              <label>
+                Height of the first details{" "}
+                <input
+                  type="number"
+                  value={aHeight}
+                  onInput={(e) => {
+                    detailsGroupRef.current.requestResize(
+                      document.querySelector("#a"),
+                      e.target.valueAsNumber,
+                    );
+                  }}
+                />
+              </label>
+              <br />
+              <label>
+                Height of the second details{" "}
+                <input
+                  type="number"
+                  value={bHeight}
+                  onInput={(e) => {
+                    detailsGroupRef.current.requestResize(
+                      document.querySelector("#b"),
+                      e.target.valueAsNumber,
+                    );
+                  }}
+                />
+              </label>
+            </fieldset>
+
+            <br />
+            <div ref={ref} className="details_group">
+              <Details id="a" color="blue" open>
+                This is the main content area. Lorem ipsum dolor sit amet,
+                consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+                labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+                nostrud exercitation
+              </Details>
+              <Details id="b" color="green" open>
+                This is the main content area. Lorem ipsum dolor sit amet,
+                consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+                labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+                nostrud exercitation. This is the main content area. Lorem ipsum
+                dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
+                tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+                minim veniam, quis nostrud exercitation
+              </Details>
+              <Details id="c" color="red">
+                Coucou
+              </Details>
+            </div>
+          </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const Details = ({ id, color, children, open }) => {
+        return (
+          <>
+            <details
+              className="section"
+              id={id}
+              style={`background: ${color};`}
+              open={open}
+              data-resize="vertical"
+            >
+              <summary>Summary</summary>
+              <div style="padding: 20px; width: fit-content; background: lightgray; overflow-y: auto">
+                {children}
+              </div>
+            </details>
+            <div
+              id={`${id}-resize-handle`}
+              data-resize-handle={id}
+              style="height: 20px; margin-top: -5px; background: orange; flex-shrink: 0;"
+            ></div>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

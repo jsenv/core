@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+  <head>
+    <title>3 rows resize x demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <style>
+      body {
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      #app {
+        display: flex;
+        flex-direction: column;
+        height: 600px;
+        border: 1px solid black;
+        box-sizing: content-box;
+        width: 300px;
+        margin-left: 200px;
+        margin-top: 50px;
+      }
+
+      [data-resize-handle] {
+        flex-grow: 1;
+        min-height: 50px;
+      }
+    </style>
+
+    <div id="app">
+      <div
+        id="a"
+        data-resize="vertical"
+        data-resize-handle
+        data-resize-absolute
+        style="background: blue; width: 100px"
+      ></div>
+      <div
+        id="b"
+        data-resize="vertical"
+        data-resize-handle
+        data-resize-absolute
+        style="background: red; width: 200px"
+      ></div>
+      <div
+        id="c"
+        data-resize="vertical"
+        data-resize-handle
+        data-resize-absolute
+        style="background: green; width: 100px"
+      ></div>
+    </div>
+
+    <label>
+      height:
+      <input type="number" id="container_size" />
+    </label>
+
+    <script type="module">
+      import "@jsenv/dom/resize";
+
+      const resizeCollection = document.querySelectorAll("[data-resize]");
+      for (const resize of resizeCollection) {
+        const sizeInLocalStorage = localStorage.getItem(`${resize.id}_height`);
+        if (sizeInLocalStorage) {
+          resize.style.height = `${sizeInLocalStorage}px`;
+        }
+        resize.addEventListener("resize", (event) => {
+          localStorage.setItem(`${resize.id}_height`, event.detail.height);
+        });
+      }
+
+      const input = document.querySelector("input");
+      input.oninput = () => {
+        const size = input.value;
+        document.querySelector("#app").style.height = `${size}px`;
+      };
+      input.value = document
+        .querySelector("#app")
+        .getBoundingClientRect().height;
+    </script>
+  </body>
+</html>
