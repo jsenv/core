@@ -12,6 +12,7 @@
 import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMinHeight } from "./get_min_height.js";
+import { startResizeGesture } from "./start_resize_gesture.js";
 
 export const initDetailsGroup = (
   element,
@@ -24,6 +25,14 @@ export const initDetailsGroup = (
     }
     cleanupCallbackSet.clear();
   };
+
+  const onmousedown = (event) => {
+    startResizeGesture(event, {});
+  };
+  element.addEventListener("mousedown", onmousedown);
+  cleanupCallbackSet.add(() => {
+    element.removeEventListener("mousedown", onmousedown);
+  });
 
   const detailsSet = new Set();
   for (const child of element.children) {
@@ -240,7 +249,9 @@ export const initDetailsGroup = (
     requestResize: (details, newSize) => {
       prepareSpaceDistribution();
       details.setAttribute("data-requested-height", newSize);
-      distributeAvailableSpace();
+      distributeAvailableSpace({
+        startWith: details,
+      });
       applyNewSizes();
     },
   };
