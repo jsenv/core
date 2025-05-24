@@ -24,6 +24,12 @@
         overflow: hidden;
       }
 
+      summary {
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+      }
+
       .details_group {
         display: flex;
         flex-direction: column;
@@ -148,6 +154,10 @@
                 {children}
               </div>
             </details>
+            <div
+              data-resize-handle={id}
+              style="height: 20px; margin-top: -5px; margin-bottom: -5px; background: orange;"
+            ></div>
           </>
         );
       };

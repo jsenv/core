@@ -4,6 +4,7 @@
 
 import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
+import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinHeight } from "./get_min_height.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
@@ -170,7 +171,10 @@ export const initFlexDetailsSet = (
     for (const child of element.children) {
       const element = child;
       const height = getHeight(element); // we should deduce margins
-      sizeMap.set(element, height);
+      const marginSizes = getMarginSizes(element);
+      const spaceTakenByVerticalMargins = marginSizes.top + marginSizes.bottom;
+      const size = height + spaceTakenByVerticalMargins;
+      sizeMap.set(element, size);
 
       if (isDetailsElement(child)) {
         const details = child;
