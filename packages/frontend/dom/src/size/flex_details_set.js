@@ -170,53 +170,54 @@ export const initFlexDetailsSet = (
     let lastDetailsOpened;
     for (const child of element.children) {
       const element = child;
-      const height = getHeight(element); // we should deduce margins
+      const height = getHeight(element);
       const marginSizes = getMarginSizes(element);
       const spaceTakenByVerticalMargins = marginSizes.top + marginSizes.bottom;
       const size = height + spaceTakenByVerticalMargins;
       sizeMap.set(element, size);
 
-      if (isDetailsElement(child)) {
-        const details = child;
-        let requestedHeight;
-        let requestedHeightSource;
-        if (details.open) {
-          lastDetailsOpened = details;
-          const minHeight = getMinHeight(details, availableSpace);
-          minSizeMap.set(details, minHeight);
-          if (details.hasAttribute("data-requested-height")) {
-            const requestedHeightAttribute = details.getAttribute(
-              "data-requested-height",
-            );
-            requestedHeight = parseFloat(requestedHeightAttribute, 10);
-            requestedHeightSource = "data-requested-height attribute";
-          } else {
-            const summary = details.querySelector("summary");
-            const detailsContent = details.querySelector("summary + *");
-            const summaryHeight = getHeight(summary);
-            detailsContent.style.height = "auto";
-            const detailsContentHeight = getHeight(detailsContent);
-            const detailsHeight = summaryHeight + detailsContentHeight;
-            requestedHeight = detailsHeight;
-            requestedHeightSource = "summary and content height";
-          }
-        } else {
-          const summary = details.querySelector("summary");
-          const summaryHeight = getHeight(summary);
-          minSizeMap.set(details, summaryHeight);
-          requestedHeight = summaryHeight;
-          requestedHeightSource = "summary height";
-        }
-        requestedSizeMap.set(details, requestedHeight);
-        if (debug) {
-          console.debug(
-            `details ${details.id} size: ${height}px, minSize: ${minSizeMap.get(details)}px, requested size: ${requestedHeight}px (${requestedHeightSource})`,
-          );
-        }
-
+      if (!isDetailsElement(child)) {
+        minSizeMap.set(element, size);
+        requestedSizeMap.set(element, size);
         continue;
       }
-      requestedSizeMap.set(element, height);
+
+      const details = child;
+      let requestedHeight;
+      let requestedHeightSource;
+      if (details.open) {
+        lastDetailsOpened = details;
+        const minHeight = getMinHeight(details, availableSpace);
+        minSizeMap.set(details, minHeight);
+        if (details.hasAttribute("data-requested-height")) {
+          const requestedHeightAttribute = details.getAttribute(
+            "data-requested-height",
+          );
+          requestedHeight = parseFloat(requestedHeightAttribute, 10);
+          requestedHeightSource = "data-requested-height attribute";
+        } else {
+          const summary = details.querySelector("summary");
+          const detailsContent = details.querySelector("summary + *");
+          const summaryHeight = getHeight(summary);
+          detailsContent.style.height = "auto";
+          const detailsContentHeight = getHeight(detailsContent);
+          const detailsHeight = summaryHeight + detailsContentHeight;
+          requestedHeight = detailsHeight;
+          requestedHeightSource = "summary and content height";
+        }
+      } else {
+        const summary = details.querySelector("summary");
+        const summaryHeight = getHeight(summary);
+        minSizeMap.set(details, summaryHeight);
+        requestedHeight = summaryHeight;
+        requestedHeightSource = "summary height";
+      }
+      requestedSizeMap.set(details, requestedHeight);
+      if (debug) {
+        console.debug(
+          `details ${details.id} size: ${height}px, minSize: ${minSizeMap.get(details)}px, requested size: ${requestedHeight}px (${requestedHeightSource})`,
+        );
+      }
     }
 
     if (startWith) {
