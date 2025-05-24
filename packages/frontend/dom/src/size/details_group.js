@@ -180,40 +180,53 @@ export const initDetailsGroup = (
     for (const details of detailsSet) {
       const height = getHeight(details);
       sizeMap.set(details, height);
-      const minHeight = getMinHeight(details, availableSpace);
-      minSizeMap.set(details, minHeight);
+
+      if (details.open) {
+        const minHeight = getMinHeight(details, availableSpace);
+        minSizeMap.set(details, minHeight);
+      } else {
+        const summary = details.querySelector("summary");
+        const summaryHeight = getHeight(summary);
+        minSizeMap.set(details, summaryHeight);
+      }
 
       let requestedHeight;
+      let requestedHeightSource;
       if (details.hasAttribute("data-requested-height")) {
         const requestedHeightAttribute = details.getAttribute(
           "data-requested-height",
         );
         requestedHeight = parseFloat(requestedHeightAttribute, 10);
+        requestedHeightSource = "data-requested-height attribute";
       } else {
         const summary = details.querySelector("summary");
         const detailsContent = details.querySelector("summary + *");
         const summaryHeight = getHeight(summary);
+        detailsContent.style.height = "auto";
         const detailsContentHeight = getHeight(detailsContent);
         const detailsHeight = summaryHeight + detailsContentHeight;
         requestedHeight = detailsHeight;
+        requestedHeightSource = "summary and content height";
       }
 
       requestedSizeMap.set(details, requestedHeight);
       if (debug) {
         console.debug(
-          `details ${details.id} size: ${height}px, minSize: ${minHeight}px, requested size: ${requestedHeight}px`,
+          `details ${details.id} size: ${height}px, minSize: ${minSizeMap.get(details)}px, requested size: ${requestedHeight}px (${requestedHeightSource})`,
         );
       }
     }
 
     if (startWith) {
       applyRequestedSize(startWith, requestedSizeMap.get(startWith));
-      // now give remaining space to others
     }
 
     let lastDetailsOpened;
     for (const details of detailsSet) {
       if (details === startWith) {
+        if (startWith.open) {
+          lastDetailsOpened = startWith;
+        }
         continue;
       }
       if (details.open) {
@@ -241,7 +254,7 @@ export const initDetailsGroup = (
     for (const details of detailsSet) {
       const ontoggle = () => {
         prepareSpaceDistribution();
-        distributeAvailableSpace();
+        distributeAvailableSpace({ startWith: details.open ? details : null });
         applyNewSizes();
       };
 
@@ -257,9 +270,7 @@ export const initDetailsGroup = (
     requestResize: (details, newSize) => {
       prepareSpaceDistribution();
       details.setAttribute("data-requested-height", newSize);
-      distributeAvailableSpace({
-        startWith: details,
-      });
+
       applyNewSizes();
     },
   };
