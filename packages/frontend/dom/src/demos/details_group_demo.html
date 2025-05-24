@@ -48,24 +48,39 @@
         }, []);
 
         return (
-          <div ref={ref}>
-            <Details id="a" color="blue" />
-            <Details id="b" color="green" />
-            <Details id="c" color="red" />
+          <div
+            ref={ref}
+            style="display: flex; flex-direction: column; height: 100%"
+          >
+            <Details id="a" color="blue">
+              This is the main content area. Lorem ipsum dolor sit amet,
+              consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+              labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+              nostrud exercitation
+            </Details>
+            <Details id="b" color="green">
+              This is the main content area. Lorem ipsum dolor sit amet,
+              consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+              labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+              nostrud exercitation. This is the main content area. Lorem ipsum
+              dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+              incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+              veniam, quis nostrud exercitation
+            </Details>
+            <Details id="c" color="red">
+              Coucou
+            </Details>
           </div>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
-      const Details = ({ id, color }) => {
+      const Details = ({ id, color, children }) => {
         return (
           <details className="section" id={id} style={`background: ${color};`}>
             <summary>Summary</summary>
             <div style="padding: 20px; width: fit-content; background: lightgray">
-              This is the main content area. Lorem ipsum dolor sit amet,
-              consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
-              labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-              nostrud exercitation
+              {children}
             </div>
           </details>
         );

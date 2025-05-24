@@ -13,145 +13,179 @@ import { getHeight } from "./get_height.js";
 import { getMinHeight } from "./get_min_height.js";
 
 export const initDetailsGroup = (element) => {
+  const cleanupCallbackSet = new Set();
+  const cleanup = () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+    cleanupCallbackSet.clear();
+  };
+
   const detailsSet = new Set();
   for (const child of element.children) {
     if (child.tagName === "DETAILS") {
       detailsSet.add(child);
+      child.style.height = `${getHeight(child)}px`;
     }
   }
 
   const minSizeMap = new Map();
   const sizeMap = new Map();
-  const sizeTransformMap = new Map();
   const requestedSizeMap = new Map();
+  const newSizeMap = new Map();
   let availableSpace;
   let spaceRemaining;
-
-  const requestShrink = (element, shrinkRequested) => {
-    const minSize = minSizeMap.get(element);
-    const size = sizeMap.get(element);
-    const sizeAfterShrink = size - shrinkRequested;
-
-    if (sizeAfterShrink <= minSize) {
-      const actualShrink = size - minSize;
-      sizeTransformMap.set(element, -actualShrink);
-      spaceRemaining += actualShrink;
-      return actualShrink;
-    }
-    sizeTransformMap.set(element, -shrinkRequested);
-    spaceRemaining += shrinkRequested;
-    return shrinkRequested;
-  };
-  const requestGrow = (element, growRequested) => {
-    if (spaceRemaining === 0) {
-      return 0;
-    }
-    if (growRequested > spaceRemaining) {
-      const actualGrow = spaceRemaining;
-      sizeTransformMap.set(element, spaceRemaining);
-      spaceRemaining = 0;
-      return actualGrow;
-    }
-    sizeTransformMap.set(element, growRequested);
-    spaceRemaining -= growRequested;
-    return growRequested;
-  };
-  const stealSpaceFromSiblings = (siblingSet, spaceToSteal) => {
-    let spaceStolen = 0;
-    let remainingSpaceToSteal = spaceToSteal;
-    for (const sibling of siblingSet) {
-      const shrink = requestShrink(sibling, remainingSpaceToSteal);
-      if (!shrink) {
-        continue;
-      }
-      spaceStolen += shrink;
-      remainingSpaceToSteal -= shrink;
-      if (remainingSpaceToSteal <= 0) {
-        break;
-      }
-    }
-    return spaceStolen;
-  };
-  const giveSpaceToSiblings = (siblingSet, spaceToGive) => {
-    let spaceGiven = 0;
-    let remainingSpaceToGive = spaceToGive;
-    for (const sibling of siblingSet) {
-      const grow = requestGrow(sibling, remainingSpaceToGive);
-      if (!grow) {
-        continue;
-      }
-      spaceGiven += grow;
-      remainingSpaceToGive -= grow;
-      if (remainingSpaceToGive <= 0) {
-        break;
-      }
-    }
-    return spaceGiven;
-  };
-  const applyRequestedSize = (section, sizeRequested) => {
-    const size = sizeMap.get(section);
-    if (size === sizeRequested) {
-      return;
-    }
-    if (size < sizeRequested) {
-      requestGrow(section, sizeRequested - size);
-      return;
-    }
-    if (size > sizeRequested) {
-      requestShrink(section, size - sizeRequested);
-    }
-  };
-
-  // the first thing we do is to distribute available space
-  // (we force element to fit the available space)
-  // but there is an opened/closed concept
-  // closed section are not visible so they should not be given space
-
-  const distributeAvailableSpace = () => {
-    sizeTransformMap.clear();
+  const prepareDistribution = () => {
     sizeMap.clear();
     minSizeMap.clear();
     requestedSizeMap.clear();
+    newSizeMap.clear();
     availableSpace = getHeight(element);
     spaceRemaining = availableSpace;
+  };
 
+  // const stealSpaceFromSiblings = (siblingSet, spaceToSteal) => {
+  //   let spaceStolen = 0;
+  //   let remainingSpaceToSteal = spaceToSteal;
+  //   for (const sibling of siblingSet) {
+  //     const shrink = requestShrink(sibling, remainingSpaceToSteal);
+  //     if (!shrink) {
+  //       continue;
+  //     }
+  //     spaceStolen += shrink;
+  //     remainingSpaceToSteal -= shrink;
+  //     if (remainingSpaceToSteal <= 0) {
+  //       break;
+  //     }
+  //   }
+  //   return spaceStolen;
+  // };
+  // const giveSpaceToSiblings = (siblingSet, spaceToGive) => {
+  //   let spaceGiven = 0;
+  //   let remainingSpaceToGive = spaceToGive;
+  //   for (const sibling of siblingSet) {
+  //     const grow = requestGrow(sibling, remainingSpaceToGive);
+  //     if (!grow) {
+  //       continue;
+  //     }
+  //     spaceGiven += grow;
+  //     remainingSpaceToGive -= grow;
+  //     if (remainingSpaceToGive <= 0) {
+  //       break;
+  //     }
+  //   }
+  //   return spaceGiven;
+  // };
+  const applyRequestedSize = (details, sizeRequested) => {
+    const size = sizeMap.get(details);
+    if (size === sizeRequested) {
+      newSizeMap.set(details, size);
+      return size;
+    }
+    const minSize = minSizeMap.get(details);
+    const sizeDiff = sizeRequested - size;
+    if (sizeDiff < 0) {
+      // shrink
+      if (sizeRequested <= minSize) {
+        const newSize = minSize;
+        newSizeMap.set(details, newSize);
+        spaceRemaining -= newSize;
+        return newSize;
+      }
+      newSizeMap.set(details, sizeRequested);
+      spaceRemaining -= sizeRequested;
+      return sizeRequested;
+    }
+    // grow
+    if (spaceRemaining === size) {
+      newSizeMap.set(details, size);
+      spaceRemaining -= size;
+      return size;
+    }
+    if (sizeRequested > spaceRemaining) {
+      return applyRequestedSize(details, spaceRemaining);
+    }
+    newSizeMap.set(details, sizeRequested);
+    spaceRemaining -= sizeRequested;
+    return sizeRequested;
+  };
+
+  const distributeAvailableSpace = () => {
     for (const details of detailsSet) {
-      const requestedHeight = details.getAttribute("data-requested-height");
       const height = getHeight(details);
+      sizeMap.set(details, height);
       const minHeight = getMinHeight(details, availableSpace);
       minSizeMap.set(details, minHeight);
-      sizeMap.set(details, height);
-      requestedSizeMap.set(details, requestedHeight);
+
+      if (details.hasAttribute("data-requested-height")) {
+        const requestedHeightAttribute = details.getAttribute(
+          "data-requested-height",
+        );
+        const requestedHeight = parseFloat(requestedHeightAttribute, 10);
+        requestedSizeMap.set(details, requestedHeight);
+      } else {
+        const summary = details.querySelector("summary");
+        const detailsContent = details.querySelector("summary + *");
+        const summaryHeight = getHeight(summary);
+        const detailsContentHeight = getHeight(detailsContent);
+        const detailsHeight = summaryHeight + detailsContentHeight;
+        console.log(`details ${details.id} height: ${detailsHeight}`);
+        requestedSizeMap.set(details, detailsHeight);
+      }
     }
 
-    let lastDetails;
+    let lastDetailsOpened;
     for (const details of detailsSet) {
-      lastDetails = details;
-      const requestedSize = requestedSizeMap.get(details);
-      if (requestedSize !== undefined) {
+      if (details.open) {
+        lastDetailsOpened = details;
+        const requestedSize = requestedSizeMap.get(details);
         applyRequestedSize(details, requestedSize);
         continue;
       }
       const minSize = minSizeMap.get(details);
       applyRequestedSize(details, minSize);
-      lastDetails = details;
     }
     if (spaceRemaining) {
-      requestGrow(lastDetails, spaceRemaining);
+      applyRequestedSize(
+        lastDetailsOpened,
+        newSizeMap.get(lastDetailsOpened) + spaceRemaining,
+      );
     }
-    applySizeTransformMap(detailsSet, sizeMap, sizeTransformMap);
+    applySizeTransformMap(detailsSet, sizeMap, newSizeMap);
   };
+  prepareDistribution();
   distributeAvailableSpace();
+
+  update_on_toggle: {
+    for (const details of detailsSet) {
+      const ontoggle = () => {
+        if (details.open) {
+          prepareDistribution();
+          distributeAvailableSpace();
+        } else {
+          prepareDistribution();
+          distributeAvailableSpace();
+        }
+      };
+
+      details.addEventListener("toggle", ontoggle);
+      cleanupCallbackSet.add(() => {
+        details.removeEventListener("toggle", ontoggle);
+      });
+    }
+  }
+
+  return () => {
+    cleanup();
+  };
 };
 
-const applySizeTransformMap = (elementSet, sizeMap, sizeTransformMap) => {
+const applySizeTransformMap = (elementSet, sizeMap, newSizeMap) => {
   for (const element of elementSet) {
-    const delta = sizeTransformMap.get(element);
-    if (!delta) {
-      continue;
-    }
+    const newSize = newSizeMap.get(element);
     const size = sizeMap.get(element);
-    const newSize = size + delta;
-    element.style.height = `${newSize}px`;
+    if (newSize !== size) {
+      element.style.height = `${newSize}px`;
+    }
   }
 };
