@@ -12,7 +12,7 @@
 import { getHeight } from "./get_height.js";
 import { getMinHeight } from "./get_min_height.js";
 
-export const initDetailsGroup = (element) => {
+export const initDetailsGroup = (element, { debug = true } = {}) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -35,13 +35,30 @@ export const initDetailsGroup = (element) => {
   const newSizeMap = new Map();
   let availableSpace;
   let spaceRemaining;
-  const prepareDistribution = () => {
+  const prepareSpaceDistribution = () => {
     sizeMap.clear();
     minSizeMap.clear();
     requestedSizeMap.clear();
     newSizeMap.clear();
     availableSpace = getHeight(element);
+    if (debug) {
+      console.log(`availableSpace: ${availableSpace}px`);
+    }
     spaceRemaining = availableSpace;
+  };
+
+  const applyNewSizes = () => {
+    for (const details of detailsSet) {
+      const newSize = newSizeMap.get(details);
+      const size = sizeMap.get(details);
+      if (newSize !== size) {
+        details.style.height = `${newSize}px`;
+        const summary = details.querySelector("summary");
+        const summaryHeight = getHeight(summary);
+        const content = details.querySelector("summary + *");
+        content.style.height = `${newSize - summaryHeight}px`;
+      }
+    }
   };
 
   // const stealSpaceFromSiblings = (siblingSet, spaceToSteal) => {
@@ -80,6 +97,12 @@ export const initDetailsGroup = (element) => {
     const size = sizeMap.get(details);
     if (size === sizeRequested) {
       newSizeMap.set(details, size);
+      spaceRemaining -= size;
+      if (debug) {
+        console.log(
+          `details ${details.id} size will stay at ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
+        );
+      }
       return size;
     }
     const minSize = minSizeMap.get(details);
@@ -90,16 +113,31 @@ export const initDetailsGroup = (element) => {
         const newSize = minSize;
         newSizeMap.set(details, newSize);
         spaceRemaining -= newSize;
+        if (debug) {
+          console.log(
+            `details ${details.id} size will shrink to ${newSize}px (minSize), remaining space: ${spaceRemaining}px`,
+          );
+        }
         return newSize;
       }
       newSizeMap.set(details, sizeRequested);
       spaceRemaining -= sizeRequested;
+      if (debug) {
+        console.log(
+          `details ${details.id} size will shrink to ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
+        );
+      }
       return sizeRequested;
     }
     // grow
     if (spaceRemaining === size) {
       newSizeMap.set(details, size);
       spaceRemaining -= size;
+      if (debug) {
+        console.log(
+          `details ${details.id} size will stay at ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
+        );
+      }
       return size;
     }
     if (sizeRequested > spaceRemaining) {
@@ -107,7 +145,16 @@ export const initDetailsGroup = (element) => {
     }
     newSizeMap.set(details, sizeRequested);
     spaceRemaining -= sizeRequested;
+    if (debug) {
+      console.log(
+        `details ${details.id} size will grow to ${sizeRequested}px, remaining space: ${spaceRemaining}px`,
+      );
+    }
     return sizeRequested;
+  };
+  const reapplyRequestedSize = (details, sizeRequested) => {
+    spaceRemaining += newSizeMap.get(details);
+    return applyRequestedSize(details, sizeRequested);
   };
 
   const distributeAvailableSpace = () => {
@@ -145,27 +192,22 @@ export const initDetailsGroup = (element) => {
       const minSize = minSizeMap.get(details);
       applyRequestedSize(details, minSize);
     }
-    if (spaceRemaining) {
-      applyRequestedSize(
+    if (spaceRemaining && lastDetailsOpened) {
+      reapplyRequestedSize(
         lastDetailsOpened,
         newSizeMap.get(lastDetailsOpened) + spaceRemaining,
       );
     }
-    applySizeTransformMap(detailsSet, sizeMap, newSizeMap);
+    applyNewSizes();
   };
-  prepareDistribution();
+  prepareSpaceDistribution();
   distributeAvailableSpace();
 
   update_on_toggle: {
     for (const details of detailsSet) {
       const ontoggle = () => {
-        if (details.open) {
-          prepareDistribution();
-          distributeAvailableSpace();
-        } else {
-          prepareDistribution();
-          distributeAvailableSpace();
-        }
+        prepareSpaceDistribution();
+        distributeAvailableSpace();
       };
 
       details.addEventListener("toggle", ontoggle);
@@ -178,14 +220,4 @@ export const initDetailsGroup = (element) => {
   return () => {
     cleanup();
   };
-};
-
-const applySizeTransformMap = (elementSet, sizeMap, newSizeMap) => {
-  for (const element of elementSet) {
-    const newSize = newSizeMap.get(element);
-    const size = sizeMap.get(element);
-    if (newSize !== size) {
-      element.style.height = `${newSize}px`;
-    }
-  }
 };

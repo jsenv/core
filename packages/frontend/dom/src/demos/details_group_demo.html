@@ -52,7 +52,7 @@
             ref={ref}
             style="display: flex; flex-direction: column; height: 100%"
           >
-            <Details id="a" color="blue">
+            <Details id="a" color="blue" open>
               This is the main content area. Lorem ipsum dolor sit amet,
               consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
               labore et dolore magna aliqua. Ut enim ad minim veniam, quis
@@ -75,11 +75,16 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const Details = ({ id, color, children }) => {
+      const Details = ({ id, color, children, open }) => {
         return (
-          <details className="section" id={id} style={`background: ${color};`}>
+          <details
+            className="section"
+            id={id}
+            style={`background: ${color};`}
+            open={open}
+          >
             <summary>Summary</summary>
-            <div style="padding: 20px; width: fit-content; background: lightgray">
+            <div style="padding: 20px; width: fit-content; background: lightgray; overflow-y: auto">
               {children}
             </div>
           </details>
