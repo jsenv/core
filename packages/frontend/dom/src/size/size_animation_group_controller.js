@@ -1,4 +1,7 @@
+import { cubicBezier } from "@jsenv/animation";
 import { setStyles } from "../style_and_attributes.js";
+
+const easing = cubicBezier(0.33, 0.1, 0.5, 1.0);
 
 export const createSizeAnimationGroupController = ({ duration, onChange }) => {
   const startHeightMap = new Map();
@@ -77,8 +80,7 @@ export const createSizeAnimationGroupController = ({ duration, onChange }) => {
         const progress = Math.min(elapsed / duration, 1);
 
         if (progress < 1) {
-          // Cubic ease-out
-          const easedProgress = 1 - Math.pow(1 - progress, 3);
+          const easedProgress = easing(progress);
           const changeEntryArray = [];
           for (const element of elementSet) {
             const startHeight = startHeightMap.get(element);

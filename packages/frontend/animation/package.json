@@ -1,0 +1,9 @@
+{
+  "name": "@jsenv/animation",
+  "private": true,
+  "version": "0.0.1",
+  "exports": {
+    ".": "./src/animation.js"
+  },
+  "dependencies": {}
+}

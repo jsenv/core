@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@preact/signals": "2.0.4",
-    "preact": "10.26.5"
+    "preact": "10.26.5",
+    "@jsenv/animation": "0.0.1"
   }
 }
