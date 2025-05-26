@@ -76,8 +76,10 @@ export const initFlexDetailsSet = (
           const summary = details.querySelector("summary");
           const detailsContent = details.querySelector("summary + *");
           const summaryHeight = getHeight(summary);
+          const height = detailsContent.style.height;
           detailsContent.style.height = "auto";
           const detailsContentHeight = getHeight(detailsContent);
+          detailsContent.style.height = height;
           const detailsHeight = summaryHeight + detailsContentHeight;
           requestedHeight = detailsHeight;
           requestedHeightSource = "summary and content height";
@@ -208,12 +210,14 @@ export const initFlexDetailsSet = (
         continue;
       }
       child.style.height = `${newSize}px`;
-      if (isDetailsElement(child) && child.open) {
+      if (isDetailsElement(child)) {
         const details = child;
-        const summary = details.querySelector("summary");
-        const summaryHeight = getHeight(summary);
-        const content = details.querySelector("summary + *");
-        content.style.height = `${newSize - summaryHeight}px`;
+        if (details.open) {
+          const summary = details.querySelector("summary");
+          const summaryHeight = getHeight(summary);
+          const content = details.querySelector("summary + *");
+          content.style.height = `${newSize - summaryHeight}px`;
+        }
         if (onSizeChange) {
           onSizeChange(child, newSize);
         }
@@ -288,6 +292,10 @@ export const initFlexDetailsSet = (
       const sizeActual = newSizeMap.get(details);
       let spaceMissing = sizeRequested - sizeActual;
       if (!spaceMissing) {
+        distributeRemainingSpace({
+          childToGrow: lastDetailsOpened,
+          childToShrinkFrom: lastChild,
+        });
         return;
       }
       // if there is remaining space first use it (it's not supported to happen)
@@ -298,10 +306,10 @@ export const initFlexDetailsSet = (
       //   reapplyRequestedSize(details, sizeRequested);
       //   spaceMissing-= spaceRemaining
       // }
-      let spaceToSteal = spaceMissing;
+      let spaceToSteal = spaceMissing - spaceRemaining;
       if (debug) {
         console.debug(
-          `details ${details.id} open, size requested: ${sizeRequested}px, size actual: ${sizeActual}px, space to steal: ${spaceToSteal}px`,
+          `details ${details.id} justed opened, would like to take ${sizeRequested}px. It would have to steal ${spaceToSteal}px`,
         );
       }
       const spaceStolen = stealSpaceFromPreviousSiblings(details, spaceToSteal);
