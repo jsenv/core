@@ -38,9 +38,6 @@
       .flex_details {
         overflow: hidden;
       }
-      .flex_details[open] {
-        min-height: 100px;
-      }
       .flex_details summary {
         user-select: none;
         cursor: pointer;
@@ -187,6 +184,7 @@
               style={`background: ${color};`}
               open={open}
               data-resize={resizable ? "vertical" : undefined}
+              data-min-height="100"
             >
               <summary>Summary</summary>
               <div className="flex_details_content">{children}</div>

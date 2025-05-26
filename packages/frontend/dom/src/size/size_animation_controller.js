@@ -17,7 +17,6 @@ export const createHeightAnimationController = (element, options) =>
     ...options,
   });
 
-// durant l'animation je dois remove min-height sinon c'est moche
 const GROW_EASING = "ease-out";
 const SHRINK_EASING = "ease-in";
 const createSizeAnimationController = (
@@ -68,12 +67,15 @@ const createSizeAnimationController = (
 
     if (currentAnimation) {
       currentAnimation.cancel();
-      const newAnimation = element.animate(getKeyFrames(target), {
-        duration: preserveRemainingDuration
-          ? getRemainingDuration(currentAnimation)
-          : duration,
-        easing: target > current ? GROW_EASING : SHRINK_EASING,
-      });
+      const newAnimation = element.animate(
+        [...getKeyFrames(current), ...getKeyFrames(target)],
+        {
+          duration: preserveRemainingDuration
+            ? getRemainingDuration(currentAnimation)
+            : duration,
+          easing: target > current ? GROW_EASING : SHRINK_EASING,
+        },
+      );
       currentAnimation = newAnimation;
       currentAnimation.onfinish = () => {
         if (currentAnimation === newAnimation) {

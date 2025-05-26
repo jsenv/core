@@ -10,9 +10,12 @@ import { getMinHeight } from "./get_min_height.js";
 import { createHeightAnimationController } from "./size_animation_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
+const HEIGHT_ANIMATION_DURATION = 1000;
+const DEBUG = false;
+
 export const initFlexDetailsSet = (
   element,
-  { onSizeChange, debug = true } = {},
+  { onSizeChange, debug = DEBUG } = {},
 ) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
@@ -68,8 +71,16 @@ export const initFlexDetailsSet = (
       let requestedHeightSource;
       if (details.open) {
         lastDetailsOpened = details;
-        const minHeight = getMinHeight(details, availableSpace);
-        minSizeMap.set(details, minHeight);
+        {
+          const dataMinHeight = details.getAttribute("data-min-height");
+          if (dataMinHeight) {
+            const minHeight = parseFloat(dataMinHeight, 10);
+            minSizeMap.set(details, minHeight);
+          } else {
+            const minHeight = getMinHeight(details, availableSpace);
+            minSizeMap.set(details, minHeight);
+          }
+        }
 
         const detailsContent = details.querySelector("summary + *");
         const restoreInlineHeight = setStyles(detailsContent, {
@@ -260,7 +271,7 @@ export const initFlexDetailsSet = (
       return;
     }
     const animationController = createHeightAnimationController(element, {
-      duration: 3000,
+      duration: HEIGHT_ANIMATION_DURATION,
     });
     heightAnimationMap.set(element, animationController);
     animationController.set(value, { onFinish, sideEffect });
