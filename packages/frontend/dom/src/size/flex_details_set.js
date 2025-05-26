@@ -139,7 +139,7 @@ export const initFlexDetailsSet = (
       }
     }
     allocatedSizeMap.set(child, sizeAllocated);
-    return sizeRequested;
+    return sizeAllocated;
   };
   let lastChild;
   const distributeAvailableSpace = () => {
@@ -179,6 +179,11 @@ export const initFlexDetailsSet = (
   const reapplyRequestedSize = (child, newRequestedSize, source) => {
     const allocatedSize = allocatedSizeMap.get(child);
     spaceRemaining += allocatedSize;
+    if (debug) {
+      console.debug(
+        `reapplying requested size for ${child.id} (${source}), new requested size: ${newRequestedSize}px, current allocated size: ${allocatedSize}px, space remaining: ${spaceRemaining}px`,
+      );
+    }
     return applyRequestedSize(child, newRequestedSize, source);
   };
   const applyAllocatedSizes = () => {
@@ -265,7 +270,7 @@ export const initFlexDetailsSet = (
     const giveSpaceToDetailsWhoHasJustOpened = (details) => {
       const sizeRequested = requestedSizeMap.get(details);
       const sizeAllocated = allocatedSizeMap.get(details);
-      let spaceMissing = sizeRequested - sizeAllocated;
+      const spaceMissing = sizeRequested - sizeAllocated;
       if (!spaceMissing) {
         distributeRemainingSpace({
           childToGrow: details,
@@ -273,10 +278,10 @@ export const initFlexDetailsSet = (
         });
         return;
       }
-      let spaceToSteal = spaceMissing;
+      const spaceToSteal = spaceMissing - spaceRemaining;
       if (debug) {
         console.debug(
-          `${details.id} justed opened, would like to take ${sizeRequested}px. It would have to steal ${spaceToSteal}px`,
+          `${details.id} justed opened, would like to take ${sizeRequested}px. It would have to steal ${spaceToSteal}px, space remaining: ${spaceRemaining}px`,
         );
       }
       const spaceStolen = stealSpaceFromPreviousSiblings(
