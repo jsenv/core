@@ -72,12 +72,14 @@
 
         useLayoutEffect(() => {
           const flexDetailsSet = initFlexDetailsSet(ref.current, {
-            onSizeChange: (details, height) => {
-              if (details.id === "a") {
-                aHeightSetter(height);
-              }
-              if (details.id === "b") {
-                bHeightSetter(height);
+            onSizeChange: (sizeChangeEntries) => {
+              for (const { element, value } of sizeChangeEntries) {
+                if (element.id === "a") {
+                  aHeightSetter(value);
+                }
+                if (element.id === "b") {
+                  bHeightSetter(value);
+                }
               }
             },
           });

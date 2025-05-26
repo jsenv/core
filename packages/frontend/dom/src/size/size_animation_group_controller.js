@@ -23,16 +23,16 @@ export const createSizeAnimationGroupController = ({ duration, onChange }) => {
     cancelCallbackSet.clear();
   };
 
-  const update = (element, value) => {
-    const sideEffect = sideEffectMap.get(element);
+  const update = (element, value, isFinished) => {
     element.style.height = `${value}px`;
+    const sideEffect = sideEffectMap.get(element);
     if (sideEffect) {
-      sideEffect(value);
+      sideEffect(value, isFinished);
     }
   };
 
   return {
-    animateTo: (animations) => {
+    animateAll: (animations) => {
       let somethingChanged = false;
       for (const { element, target, sideEffect } of animations) {
         const isNew = !elementSet.has(element);
@@ -99,7 +99,7 @@ export const createSizeAnimationGroupController = ({ duration, onChange }) => {
         const changeEntryArray = [];
         for (const element of elementSet) {
           const finalHeight = targetHeightMap.get(element);
-          update(element, finalHeight);
+          update(element, finalHeight, true);
           changeEntryArray.push({ element, value: finalHeight });
         }
         if (changeEntryArray.length && onChange) {

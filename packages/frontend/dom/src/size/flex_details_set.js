@@ -10,7 +10,7 @@ import { getMinHeight } from "./get_min_height.js";
 import { createSizeAnimationGroupController } from "./size_animation_group_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
-const HEIGHT_ANIMATION_DURATION = 300;
+const HEIGHT_ANIMATION_DURATION = 1000;
 const DEBUG = false;
 
 export const initFlexDetailsSet = (
@@ -82,11 +82,11 @@ export const initFlexDetailsSet = (
         }
 
         const detailsContent = details.querySelector("summary + *");
-        const restoreInlineHeight = setStyles(detailsContent, {
+        const restoreHeightStyle = setStyles(detailsContent, {
           height: "auto",
         });
         const detailsContentHeight = getHeight(detailsContent);
-        restoreInlineHeight();
+        restoreHeightStyle();
         detailsContentHeightMap.set(details);
 
         if (details.hasAttribute("data-requested-height")) {
@@ -115,6 +115,60 @@ export const initFlexDetailsSet = (
           `details ${details.id} size: ${height}px, minSize: ${minSizeMap.get(details)}px, requested size: ${requestedHeight}px (${requestedHeightSource})`,
         );
       }
+    }
+  };
+
+  const heightAnimationGroupController = createSizeAnimationGroupController({
+    duration: HEIGHT_ANIMATION_DURATION,
+    onChange: onSizeChange,
+  });
+  const applyAllocatedSizes = ({ animate } = {}) => {
+    if (animate) {
+      const animations = [];
+      for (const child of element.children) {
+        const allocatedSize = allocatedSizeMap.get(child);
+        const size = sizeMap.get(child);
+        if (allocatedSize === size) {
+          continue;
+        }
+        if (isDetailsElement(element) && element.open) {
+          const syncDetailsContentHeight =
+            prepareSyncDetailsContentHeight(element);
+          animations.push({
+            element: child,
+            target: allocatedSize,
+            sideEffect: (height, isFinished) => {
+              syncDetailsContentHeight(height, { isAnimation: !isFinished });
+            },
+          });
+        } else {
+          animations.push({
+            element: child,
+            target: allocatedSize,
+          });
+        }
+      }
+      heightAnimationGroupController.animateAll(animations);
+      return;
+    }
+    heightAnimationGroupController.cancel();
+
+    const sizeChangeEntries = [];
+    for (const child of element.children) {
+      const allocatedSize = allocatedSizeMap.get(child);
+      const size = sizeMap.get(child);
+      if (allocatedSize === size) {
+        continue;
+      }
+      child.style.height = `${allocatedSize}px`;
+      if (isDetailsElement(child) && child.open) {
+        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
+        syncDetailsContentHeight(allocatedSize);
+      }
+      sizeChangeEntries.push({ element: child, value: allocatedSize });
+    }
+    if (sizeChangeEntries.length && onSizeChange) {
+      onSizeChange(sizeChangeEntries);
     }
   };
 
@@ -226,61 +280,11 @@ export const initFlexDetailsSet = (
     }
     return spaceStolenTotal;
   };
-  let heightAnimationGroupController = createSizeAnimationGroupController({
-    duration: HEIGHT_ANIMATION_DURATION,
-  });
-  const applyAllocatedSizes = ({ animate } = {}) => {
-    if (animate) {
-      const animations = [];
-      for (const child of element.children) {
-        const allocatedSize = allocatedSizeMap.get(child);
-        const size = sizeMap.get(child);
-        if (allocatedSize === size) {
-          continue;
-        }
-        let sideEffect;
-        if (isDetailsElement(element) && element.open) {
-          const syncDetailsContentHeight =
-            prepareSyncDetailsContentHeight(element);
-          sideEffect = syncDetailsContentHeight;
-        }
-        animations.push({
-          element: child,
-          target: allocatedSize,
-          sideEffect: (height, isLast) => {
-            if (sideEffect) {
-              sideEffect(height, { isAnimation: !isLast });
-            }
-          },
-        });
-      }
-      heightAnimationGroupController.transitionTo(animations);
-      return;
-    }
-    if (heightAnimationGroupController) {
-      heightAnimationGroupController.cancel();
-    }
-
-    for (const child of element.children) {
-      const allocatedSize = allocatedSizeMap.get(child);
-      const size = sizeMap.get(child);
-      if (allocatedSize === size) {
-        continue;
-      }
-      child.style.height = `${allocatedSize}px`;
-      if (isDetailsElement(child) && child.open) {
-        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
-        syncDetailsContentHeight(allocatedSize);
-      }
-      onSizeChange?.(child, allocatedSize);
-    }
-  };
 
   const prepareSyncDetailsContentHeight = (details) => {
     const summary = details.querySelector("summary");
     const summaryHeight = getHeight(summary);
     const content = details.querySelector("summary + *");
-
     details.style.setProperty("--summary-height", `${summaryHeight}px`);
     content.style.height = "var(--content-height)";
 
