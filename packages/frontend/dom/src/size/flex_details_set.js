@@ -246,19 +246,21 @@ export const initFlexDetailsSet = (
       onHeightChange?.(value);
       return;
     }
-    const onFinish = () => {
-      onHeightChange?.(value, { isAnimation: false });
+    const onFinish = () => {};
+    const sideEffect = (value) => {
+      onHeightChange?.(value, { isAnimation: true });
     };
+
     const currentAnimationController = heightAnimationMap.get(element);
     if (currentAnimationController) {
-      currentAnimationController.set(value, { onFinish });
+      currentAnimationController.set(value, { onFinish, sideEffect });
       return;
     }
     const animationController = createElementSizeAnimationController(element, {
-      duration: 300,
+      duration: 3000,
     });
     heightAnimationMap.set(element, animationController);
-    animationController.set(value, { onFinish });
+    animationController.set(value, { onFinish, sideEffect });
   };
 
   const prepareSyncDetailsContentHeight = (details) => {
@@ -406,9 +408,46 @@ const isDetailsElement = (element) => {
 
 const GROW_EASING = "ease-out";
 const SHRINK_EASING = "ease-in";
-const createElementSizeAnimationController = (element, { duration }) => {
+const createElementSizeAnimationController = (
+  element,
+  { duration = 300 } = {},
+) => {
   let currentAnimation = null;
-  const set = (target, { onFinish, preserveRemainingDuration } = {}) => {
+  const cleanupCurrentAnimation = () => {
+    if (currentAnimation) {
+      currentAnimation.cancel();
+      currentAnimation = null;
+    }
+  };
+
+  let raf;
+  const cleanupSideEffect = () => {
+    if (raf) {
+      cancelAnimationFrame(raf);
+      raf = null;
+    }
+  };
+  const udpateSideEffect = (sideEffect) => {
+    cleanupSideEffect();
+    if (!sideEffect) {
+      return;
+    }
+    const next = () => {
+      raf = requestAnimationFrame(() => {
+        const height = getComputedStyle(element).height;
+        sideEffect(height);
+        next();
+      });
+    };
+    next();
+  };
+
+  const set = (
+    target,
+    { onFinish, sideEffect, preserveRemainingDuration } = {},
+  ) => {
+    udpateSideEffect(sideEffect);
+
     const current = getHeight(element);
     if (current === target) {
       return;
@@ -460,10 +499,8 @@ const createElementSizeAnimationController = (element, { duration }) => {
   return {
     set,
     cancel: () => {
-      if (currentAnimation) {
-        currentAnimation.cancel();
-        currentAnimation = null;
-      }
+      cleanupSideEffect();
+      cleanupCurrentAnimation();
     },
   };
 };
