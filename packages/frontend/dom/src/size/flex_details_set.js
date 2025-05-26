@@ -406,6 +406,7 @@ const isDetailsElement = (element) => {
   return element && element.tagName === "DETAILS";
 };
 
+// durant l'animation je dois remove min-height sinon c'est moche
 const GROW_EASING = "ease-out";
 const SHRINK_EASING = "ease-in";
 const createElementSizeAnimationController = (
@@ -434,7 +435,7 @@ const createElementSizeAnimationController = (
     }
     const next = () => {
       raf = requestAnimationFrame(() => {
-        const height = getComputedStyle(element).height;
+        const height = parseFloat(getComputedStyle(element).height);
         sideEffect(height);
         next();
       });
@@ -447,7 +448,6 @@ const createElementSizeAnimationController = (
     { onFinish, sideEffect, preserveRemainingDuration } = {},
   ) => {
     udpateSideEffect(sideEffect);
-
     const current = getHeight(element);
     if (current === target) {
       return;
@@ -465,11 +465,13 @@ const createElementSizeAnimationController = (
         if (currentAnimation === newAnimation) {
           element.style.height = `${target}px`;
           currentAnimation = null;
+          cleanupSideEffect();
           onFinish?.();
         }
       };
       currentAnimation.oncancel = () => {
         if (currentAnimation === newAnimation) {
+          cleanupSideEffect();
           currentAnimation = null;
         }
       };
@@ -486,11 +488,13 @@ const createElementSizeAnimationController = (
       if (currentAnimation === animation) {
         element.style.height = `${target}px`;
         currentAnimation = null;
+        cleanupSideEffect();
         onFinish?.();
       }
     };
     currentAnimation.oncancel = () => {
       if (currentAnimation === animation) {
+        cleanupSideEffect();
         currentAnimation = null;
       }
     };
