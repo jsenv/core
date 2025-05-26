@@ -149,7 +149,7 @@
                 elit. Sed do eiusmod tempor incididunt ut labore et dolore magna
                 aliqua. Ut enim ad minim veniam, quis nostrud exercitation
               </Details>
-              <Details id="b" color="green" open>
+              <Details id="b" color="green">
                 This is the main content area. Lorem ipsum dolor sit amet,
                 consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
                 labore et dolore magna aliqua. Ut enim ad minim veniam, quis
@@ -170,7 +170,7 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const Details = ({ id, color, children, open }) => {
+      const Details = ({ id, color, children, open, resizable }) => {
         return (
           <>
             <details
@@ -178,18 +178,20 @@
               id={id}
               style={`background: ${color};`}
               open={open}
-              data-resize="vertical"
+              data-resize={resizable ? "vertical" : undefined}
             >
               <summary>Summary</summary>
               <div style="padding: 20px; width: fit-content; background: lightgray; overflow-y: auto">
                 {children}
               </div>
             </details>
-            <div
-              id={`${id}-resize-handle`}
-              data-resize-handle={id}
-              style="height: 20px; margin-top: -5px; background: orange; flex-shrink: 0;"
-            ></div>
+            {resizable && (
+              <div
+                id={`${id}-resize-handle`}
+                data-resize-handle={id}
+                style="height: 20px; margin-top: -5px; background: orange; flex-shrink: 0;"
+              ></div>
+            )}
           </>
         );
       };

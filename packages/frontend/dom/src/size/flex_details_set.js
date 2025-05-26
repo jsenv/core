@@ -191,7 +191,7 @@ export const initFlexDetailsSet = (
         continue;
       }
       child.style.height = `${newSize}px`;
-      if (isDetailsElement(child)) {
+      if (isDetailsElement(child) && child.open) {
         const details = child;
         const summary = details.querySelector("summary");
         const summaryHeight = getHeight(summary);
@@ -248,6 +248,15 @@ export const initFlexDetailsSet = (
   sizeMap.clear(); // force to set new size at start
   applyNewSizes();
 
+  const flexDetailsSet = {
+    cleanup,
+    requestResize: (details, newSize) => {
+      prepareSpaceDistribution();
+      details.setAttribute("data-requested-height", newSize);
+      applyNewSizes();
+    },
+  };
+
   update_on_toggle: {
     for (const child of element.children) {
       if (!isDetailsElement(child)) {
@@ -261,12 +270,19 @@ export const initFlexDetailsSet = (
           const sizeRequested = requestedSizeMap.get(details);
           const sizeActual = newSizeMap.get(details);
           const spaceToSteal = sizeRequested - sizeActual;
-          const spaceStolen = stealSpaceFromPreviousSiblings(
-            details,
-            spaceToSteal,
-          );
-          if (spaceStolen) {
-            reapplyRequestedSize(details, sizeRequested);
+          if (spaceToSteal) {
+            if (debug) {
+              console.debug(
+                `details ${details.id} open, size requested: ${sizeRequested}px, size actual: ${sizeActual}px, space to steal: ${spaceToSteal}px`,
+              );
+            }
+            const spaceStolen = stealSpaceFromPreviousSiblings(
+              details,
+              spaceToSteal,
+            );
+            if (spaceStolen) {
+              reapplyRequestedSize(details, sizeRequested);
+            }
           }
         }
         applyNewSizes();
@@ -278,15 +294,6 @@ export const initFlexDetailsSet = (
       });
     }
   }
-
-  const flexDetailsSet = {
-    cleanup,
-    requestResize: (details, newSize) => {
-      prepareSpaceDistribution();
-      details.setAttribute("data-requested-height", newSize);
-      applyNewSizes();
-    },
-  };
 
   return flexDetailsSet;
 };
