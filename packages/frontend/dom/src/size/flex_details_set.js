@@ -242,21 +242,21 @@ export const initFlexDetailsSet = (
       }
       return;
     }
+    const onFinish = () => {
+      if (isDetailsElement(element) && element.open) {
+        syncDetailsContentHeight(element, value);
+      }
+    };
     const currentAnimationController = heightAnimationMap.get(element);
     if (currentAnimationController) {
-      currentAnimationController.set(value);
+      currentAnimationController.set(value, { onFinish });
       return;
     }
     const animationController = createElementSizeAnimationController(element, {
       duration: 300,
-      onFinish: () => {
-        if (isDetailsElement(element) && element.open) {
-          syncDetailsContentHeight(element, value);
-        }
-      },
     });
     heightAnimationMap.set(element, animationController);
-    animationController.set(value);
+    animationController.set(value, { onFinish });
   };
 
   const syncDetailsContentHeight = (details, height) => {
@@ -369,7 +369,7 @@ export const initFlexDetailsSet = (
         } else if (lastDetailsOpened) {
           giveSpaceToDetailsMostRecentlyOpened(lastDetailsOpened);
         }
-        applyAllocatedSizes({ animate: false });
+        applyAllocatedSizes({ animate: true });
       };
 
       details.addEventListener("toggle", ontoggle);
@@ -390,7 +390,7 @@ const GROW_EASING = "ease-out";
 const SHRINK_EASING = "ease-in";
 const createElementSizeAnimationController = (element, { duration }) => {
   let currentAnimation = null;
-  const set = (target, { preserveRemainingDuration } = {}) => {
+  const set = (target, { onFinish, preserveRemainingDuration } = {}) => {
     const current = getHeight(element);
     if (current === target) {
       return;
@@ -408,6 +408,7 @@ const createElementSizeAnimationController = (element, { duration }) => {
         if (currentAnimation === newAnimation) {
           element.style.height = `${target}px`;
           currentAnimation = null;
+          onFinish?.();
         }
       };
       currentAnimation.oncancel = () => {
@@ -428,6 +429,7 @@ const createElementSizeAnimationController = (element, { duration }) => {
       if (currentAnimation === animation) {
         element.style.height = `${target}px`;
         currentAnimation = null;
+        onFinish?.();
       }
     };
     currentAnimation.oncancel = () => {
