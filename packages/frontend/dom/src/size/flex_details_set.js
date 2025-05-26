@@ -204,7 +204,7 @@ export const initFlexDetailsSet = (
     }
   };
   const stealSpaceFromPreviousSiblings = (child, spaceToSteal, source) => {
-    let spaceStolen = 0;
+    let spaceStolenTotal = 0;
     let remainingSpaceToSteal = spaceToSteal;
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
@@ -214,17 +214,17 @@ export const initFlexDetailsSet = (
         allocatedSizeCurrent - remainingSpaceToSteal,
         source,
       );
-      const shrink = allocatedSizeCurrent - allocatedSize;
-      if (shrink) {
-        spaceStolen += shrink;
-        remainingSpaceToSteal -= shrink;
+      const spaceStolen = allocatedSizeCurrent - allocatedSize;
+      if (spaceStolen) {
+        spaceStolenTotal += spaceStolen;
+        remainingSpaceToSteal -= spaceStolen;
         if (remainingSpaceToSteal <= 0) {
           break;
         }
       }
       previousSibling = previousSibling.previousElementSibling;
     }
-    return spaceStolen;
+    return spaceStolenTotal;
   };
   // const giveSpaceToSiblings = (siblingSet, spaceToGive) => {
   //   let spaceGiven = 0;
@@ -268,15 +268,15 @@ export const initFlexDetailsSet = (
       let spaceMissing = sizeRequested - sizeAllocated;
       if (!spaceMissing) {
         distributeRemainingSpace({
-          childToGrow: lastDetailsOpened,
+          childToGrow: details,
           childToShrinkFrom: lastChild,
         });
         return;
       }
-      let spaceToSteal = spaceMissing - spaceRemaining;
+      let spaceToSteal = spaceMissing;
       if (debug) {
         console.debug(
-          `details ${details.id} justed opened, would like to take ${sizeRequested}px. It would have to steal ${spaceToSteal}px`,
+          `${details.id} justed opened, would like to take ${sizeRequested}px. It would have to steal ${spaceToSteal}px`,
         );
       }
       const spaceStolen = stealSpaceFromPreviousSiblings(
@@ -311,11 +311,26 @@ export const initFlexDetailsSet = (
         continue;
       }
       const details = child;
+      // eslint-disable-next-line no-loop-func
       const ontoggle = () => {
         prepareSpaceDistribution();
         distributeAvailableSpace();
         if (details.open) {
           giveSpaceToDetailsWhoHasJustOpened(details);
+        } else {
+          let nextDetailsOpened;
+          let nextSibling = details.nextElementSibling;
+          while (nextSibling) {
+            if (isDetailsElement(nextSibling) && nextSibling.open) {
+              nextDetailsOpened = nextSibling;
+              break;
+            }
+            nextSibling = nextSibling.nextElementSibling;
+          }
+          distributeRemainingSpace({
+            childToGrow: nextDetailsOpened || lastDetailsOpened,
+            childToShrinkFrom: lastChild,
+          });
         }
         applyAllocatedSizes();
       };
