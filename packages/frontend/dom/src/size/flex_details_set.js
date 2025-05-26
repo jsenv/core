@@ -168,34 +168,31 @@ export const initFlexDetailsSet = (
     }
     return sizeRequested;
   };
+  let lastChild;
   const distributeAvailableSpace = () => {
-    let lastChild;
+    lastChild = null;
     for (const child of element.children) {
       lastChild = child;
       applyRequestedSize(child, requestedSizeMap.get(child));
     }
-
-    if (spaceRemaining === 0) {
+  };
+  const distributeRemainingSpace = ({ childToGrow, childToShrinkFrom }) => {
+    if (!spaceRemaining) {
       return;
     }
     if (spaceRemaining < 0) {
       const spaceToSleal = -spaceRemaining;
       if (debug) {
         console.debug(
-          `space remaining is negative: ${spaceRemaining}px, stealing ${spaceToSleal} from previous siblings`,
+          `space remaining is negative: ${spaceRemaining}px, stealing ${spaceToSleal} from child before ${childToShrinkFrom.id}`,
         );
       }
-      stealSpaceFromPreviousSiblings(lastChild, spaceToSleal);
-    }
-  };
-  const distributeRemainingSpace = () => {
-    if (!spaceRemaining) {
+      stealSpaceFromPreviousSiblings(childToShrinkFrom, spaceToSleal);
       return;
     }
-    // give remaining space to the last opened details element
-    if (lastDetailsOpened) {
-      const currentSize = newSizeMap.get(lastDetailsOpened);
-      reapplyRequestedSize(lastDetailsOpened, currentSize + spaceRemaining);
+    if (childToGrow) {
+      const currentSize = newSizeMap.get(childToGrow);
+      reapplyRequestedSize(childToGrow, currentSize + spaceRemaining);
     }
   };
   const reapplyRequestedSize = (child, newRequestedSize) => {
@@ -269,7 +266,10 @@ export const initFlexDetailsSet = (
 
   prepareSpaceDistribution();
   distributeAvailableSpace();
-  distributeRemainingSpace();
+  distributeRemainingSpace({
+    childToGrow: lastDetailsOpened,
+    childToShrinkFrom: lastChild,
+  });
   sizeMap.clear(); // force to set new size at start
   applyNewSizes();
 
@@ -288,7 +288,7 @@ export const initFlexDetailsSet = (
       const sizeActual = newSizeMap.get(details);
       let spaceMissing = sizeRequested - sizeActual;
       if (!spaceMissing) {
-        return 0;
+        return;
       }
       // if there is remaining space first use it (it's not supported to happen)
       // this is the last opened details
@@ -319,7 +319,7 @@ export const initFlexDetailsSet = (
         prepareSpaceDistribution();
         distributeAvailableSpace();
         if (details.open) {
-          // giveSpaceToDetailsWhoHasJustOpened(details);
+          giveSpaceToDetailsWhoHasJustOpened(details);
         }
         applyNewSizes();
       };
