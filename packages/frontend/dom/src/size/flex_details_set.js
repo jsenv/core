@@ -150,7 +150,7 @@ export const initFlexDetailsSet = (
     }
     if (sizeRequested > spaceRemaining) {
       const newSize = spaceRemaining;
-      newSizeMap.set(child, spaceRemaining);
+      newSizeMap.set(child, newSize);
       if (debug) {
         console.debug(
           `details ${child.id} size ${debugAction} grow to ${sizeRequested}px (remaining space), remaining space: 0px`,
@@ -169,8 +169,23 @@ export const initFlexDetailsSet = (
     return sizeRequested;
   };
   const distributeAvailableSpace = () => {
+    let lastChild;
     for (const child of element.children) {
+      lastChild = child;
       applyRequestedSize(child, requestedSizeMap.get(child));
+    }
+
+    if (spaceRemaining === 0) {
+      return;
+    }
+    if (spaceRemaining < 0) {
+      const spaceToSleal = -spaceRemaining;
+      if (debug) {
+        console.debug(
+          `space remaining is negative: ${spaceRemaining}px, stealing ${spaceToSleal} from previous siblings`,
+        );
+      }
+      stealSpaceFromPreviousSiblings(lastChild, spaceToSleal);
     }
   };
   const distributeRemainingSpace = () => {
@@ -186,7 +201,7 @@ export const initFlexDetailsSet = (
   const reapplyRequestedSize = (child, newRequestedSize) => {
     const currentSize = newSizeMap.get(child);
     spaceRemaining += currentSize;
-    applyRequestedSize(child, newRequestedSize, { isReapply: true });
+    return applyRequestedSize(child, newRequestedSize, { isReapply: true });
   };
   const applyNewSizes = () => {
     for (const child of element.children) {
@@ -213,12 +228,17 @@ export const initFlexDetailsSet = (
     let remainingSpaceToSteal = spaceToSteal;
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
-      const size = sizeMap.get(previousSibling);
-      const newSize = reapplyRequestedSize(
+      const newSize = newSizeMap.get(previousSibling);
+      const newSizeActual = reapplyRequestedSize(
         previousSibling,
-        size - remainingSpaceToSteal,
+        newSize - remainingSpaceToSteal,
       );
-      const shrink = size - newSize;
+      const shrink = newSize - newSizeActual;
+      if (debug) {
+        console.debug(
+          `try to steal ${remainingSpaceToSteal}px from ${previousSibling.id}: ${newSize}px -> ${newSizeActual}px (shrink: ${shrink}px)`,
+        );
+      }
       if (shrink) {
         spaceStolen += shrink;
         remainingSpaceToSteal -= shrink;
@@ -263,6 +283,33 @@ export const initFlexDetailsSet = (
   };
 
   update_on_toggle: {
+    const giveSpaceToDetailsWhoHasJustOpened = (details) => {
+      const sizeRequested = requestedSizeMap.get(details);
+      const sizeActual = newSizeMap.get(details);
+      let spaceMissing = sizeRequested - sizeActual;
+      if (!spaceMissing) {
+        return 0;
+      }
+      // if there is remaining space first use it (it's not supported to happen)
+      // this is the last opened details
+      // oh wait there is no such logic
+      // well never mind ignore for now
+      // if (spaceRemaining > 0) {
+      //   reapplyRequestedSize(details, sizeRequested);
+      //   spaceMissing-= spaceRemaining
+      // }
+      let spaceToSteal = spaceMissing;
+      if (debug) {
+        console.debug(
+          `details ${details.id} open, size requested: ${sizeRequested}px, size actual: ${sizeActual}px, space to steal: ${spaceToSteal}px`,
+        );
+      }
+      const spaceStolen = stealSpaceFromPreviousSiblings(details, spaceToSteal);
+      if (spaceStolen) {
+        reapplyRequestedSize(details, sizeRequested);
+      }
+    };
+
     for (const child of element.children) {
       if (!isDetailsElement(child)) {
         continue;
@@ -272,23 +319,7 @@ export const initFlexDetailsSet = (
         prepareSpaceDistribution();
         distributeAvailableSpace();
         if (details.open) {
-          const sizeRequested = requestedSizeMap.get(details);
-          const sizeActual = newSizeMap.get(details);
-          const spaceToSteal = sizeRequested - sizeActual;
-          if (spaceToSteal) {
-            if (debug) {
-              console.debug(
-                `details ${details.id} open, size requested: ${sizeRequested}px, size actual: ${sizeActual}px, space to steal: ${spaceToSteal}px`,
-              );
-            }
-            const spaceStolen = stealSpaceFromPreviousSiblings(
-              details,
-              spaceToSteal,
-            );
-            if (spaceStolen) {
-              reapplyRequestedSize(details, sizeRequested);
-            }
-          }
+          // giveSpaceToDetailsWhoHasJustOpened(details);
         }
         applyNewSizes();
       };
