@@ -99,8 +99,7 @@ export const initFlexDetailsSet = (
   };
   let lastDetailsOpened;
 
-  const applyRequestedSize = (child, { isReapply } = {}) => {
-    const sizeRequested = requestedSizeMap.get(child);
+  const applyRequestedSize = (child, sizeRequested, { isReapply } = {}) => {
     const debugAction = isReapply ? "will" : "want to";
 
     const size = sizeMap.get(child);
@@ -150,8 +149,15 @@ export const initFlexDetailsSet = (
       return size;
     }
     if (sizeRequested > spaceRemaining) {
-      requestedSizeMap.set(child, spaceRemaining);
-      return applyRequestedSize(child);
+      const newSize = spaceRemaining;
+      newSizeMap.set(child, spaceRemaining);
+      if (debug) {
+        console.debug(
+          `details ${child.id} size ${debugAction} grow to ${sizeRequested}px (remaining space), remaining space: 0px`,
+        );
+      }
+      spaceRemaining = 0;
+      return newSize;
     }
     newSizeMap.set(child, sizeRequested);
     spaceRemaining -= sizeRequested;
@@ -164,7 +170,7 @@ export const initFlexDetailsSet = (
   };
   const distributeAvailableSpace = () => {
     for (const child of element.children) {
-      applyRequestedSize(child);
+      applyRequestedSize(child, requestedSizeMap.get(child));
     }
   };
   const distributeRemainingSpace = () => {
@@ -179,9 +185,8 @@ export const initFlexDetailsSet = (
   };
   const reapplyRequestedSize = (child, newRequestedSize) => {
     const currentSize = newSizeMap.get(child);
-    requestedSizeMap.set(child, newRequestedSize);
     spaceRemaining += currentSize;
-    applyRequestedSize(child, { isReapply: true });
+    applyRequestedSize(child, newRequestedSize, { isReapply: true });
   };
   const applyNewSizes = () => {
     for (const child of element.children) {
