@@ -237,14 +237,8 @@ export const initFlexDetailsSet = (
         heightAnimationMap.delete(element);
       }
       element.style.height = `${value}px`;
-      if (isDetailsElement(element)) {
-        const details = element;
-        if (details.open) {
-          syncDetailsContentHeight(details, value);
-        }
-        if (onSizeChange) {
-          onSizeChange(element, value);
-        }
+      if (isDetailsElement(element) && element.open) {
+        syncDetailsContentHeight(element, value);
       }
       return;
     }
@@ -255,6 +249,11 @@ export const initFlexDetailsSet = (
     }
     const animationController = createElementSizeAnimationController(element, {
       duration: 300,
+      onFinish: () => {
+        if (isDetailsElement(element) && element.open) {
+          syncDetailsContentHeight(element, value);
+        }
+      },
     });
     heightAnimationMap.set(element, animationController);
     animationController.set(value);
@@ -282,7 +281,7 @@ export const initFlexDetailsSet = (
       contentComputedStyle.scrollbarGutter !== "stable"
     ) {
       const restoreOverflow = setStyles(content, {
-        overflowY: "hidden",
+        "overflow-y": "hidden",
       });
       content.style.overflowY = "hidden";
       // eslint-disable-next-line no-unused-expressions
@@ -298,7 +297,7 @@ export const initFlexDetailsSet = (
     childToShrinkFrom: lastChild,
   });
   sizeMap.clear(); // force to set new size at start
-  applyAllocatedSizes({ animate: true });
+  applyAllocatedSizes();
 
   const flexDetailsSet = {
     cleanup,
@@ -370,7 +369,7 @@ export const initFlexDetailsSet = (
         } else if (lastDetailsOpened) {
           giveSpaceToDetailsMostRecentlyOpened(lastDetailsOpened);
         }
-        applyAllocatedSizes();
+        applyAllocatedSizes({ animate: false });
       };
 
       details.addEventListener("toggle", ontoggle);
@@ -438,7 +437,15 @@ const createElementSizeAnimationController = (element, { duration }) => {
     };
   };
 
-  return { set };
+  return {
+    set,
+    cancel: () => {
+      if (currentAnimation) {
+        currentAnimation.cancel();
+        currentAnimation = null;
+      }
+    },
+  };
 };
 
 const getRemainingDuration = (animation) => {
