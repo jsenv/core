@@ -2,6 +2,7 @@
  *
  */
 
+import { setStyles } from "../style_and_attributes.js";
 import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
@@ -32,6 +33,7 @@ export const initFlexDetailsSet = (
   const sizeMap = new Map();
   const requestedSizeMap = new Map();
   const allocatedSizeMap = new Map();
+  const detailsContentHeightMap = new Map();
   let availableSpace;
   let spaceRemaining;
   let lastDetailsOpened = null;
@@ -66,6 +68,15 @@ export const initFlexDetailsSet = (
         lastDetailsOpened = details;
         const minHeight = getMinHeight(details, availableSpace);
         minSizeMap.set(details, minHeight);
+
+        const detailsContent = details.querySelector("summary + *");
+        const restoreInlineHeight = setStyles(detailsContent, {
+          height: "auto",
+        });
+        const detailsContentHeight = getHeight(detailsContent);
+        restoreInlineHeight();
+        detailsContentHeightMap.set(details);
+
         if (details.hasAttribute("data-requested-height")) {
           const requestedHeightAttribute = details.getAttribute(
             "data-requested-height",
@@ -74,12 +85,7 @@ export const initFlexDetailsSet = (
           requestedHeightSource = "data-requested-height attribute";
         } else {
           const summary = details.querySelector("summary");
-          const detailsContent = details.querySelector("summary + *");
           const summaryHeight = getHeight(summary);
-          const height = detailsContent.style.height;
-          detailsContent.style.height = "auto";
-          const detailsContentHeight = getHeight(detailsContent);
-          detailsContent.style.height = height;
           const detailsHeight = summaryHeight + detailsContentHeight;
           requestedHeight = detailsHeight;
           requestedHeightSource = "summary and content height";
@@ -199,7 +205,31 @@ export const initFlexDetailsSet = (
           const summary = details.querySelector("summary");
           const summaryHeight = getHeight(summary);
           const content = details.querySelector("summary + *");
-          content.style.height = `${allocatedSize - summaryHeight}px`;
+          const contentHeight = allocatedSize - summaryHeight;
+          content.style.height = `${contentHeight}px`;
+          const contentComputedStyle = getComputedStyle(content);
+          // Fix scrollbar induced overflow:
+          //
+          // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
+          // 2. we set height exactly to the natural height required to prevent overflow
+          //
+          // actual: browser keeps scrollbar displayed
+          // expected: scrollbar is hidden
+          //
+          // Solution: Temporarily prevent scrollbar to display
+          // force layout recalculation, then restore
+          if (
+            contentComputedStyle.overflowY === "auto" &&
+            contentComputedStyle.scrollbarGutter !== "stable"
+          ) {
+            const restoreOverflow = setStyles(content, {
+              overflowY: "hidden",
+            });
+            content.style.overflowY = "hidden";
+            // eslint-disable-next-line no-unused-expressions
+            content.offsetHeight;
+            restoreOverflow();
+          }
         }
         if (onSizeChange) {
           onSizeChange(child, allocatedSize);
@@ -250,13 +280,13 @@ export const initFlexDetailsSet = (
   };
 
   update_on_toggle: {
-    const giveSpaceToDetailsWhoHasJustOpened = (details) => {
+    const giveSpaceToDetailsMostRecentlyOpened = (details) => {
       const sizeRequested = requestedSizeMap.get(details);
       const sizeAllocated = allocatedSizeMap.get(details);
       const spaceMissing = sizeRequested - sizeAllocated;
       if (!spaceMissing) {
         distributeRemainingSpace({
-          childToGrow: details,
+          childToGrow: details.open ? details : null,
           childToShrinkFrom: lastChild,
         });
         return;
@@ -306,21 +336,9 @@ export const initFlexDetailsSet = (
           `${details.id} ${details.open ? "opened" : "closed"}`,
         );
         if (details.open) {
-          giveSpaceToDetailsWhoHasJustOpened(details);
-        } else {
-          let nextDetailsOpened;
-          let nextSibling = details.nextElementSibling;
-          while (nextSibling) {
-            if (isDetailsElement(nextSibling) && nextSibling.open) {
-              nextDetailsOpened = nextSibling;
-              break;
-            }
-            nextSibling = nextSibling.nextElementSibling;
-          }
-          distributeRemainingSpace({
-            childToGrow: nextDetailsOpened || lastDetailsOpened,
-            childToShrinkFrom: lastChild,
-          });
+          giveSpaceToDetailsMostRecentlyOpened(details);
+        } else if (lastDetailsOpened) {
+          giveSpaceToDetailsMostRecentlyOpened(lastDetailsOpened);
         }
         applyAllocatedSizes();
       };
