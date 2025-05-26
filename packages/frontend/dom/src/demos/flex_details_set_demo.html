@@ -38,7 +38,7 @@
 
         display: flex;
         flex-direction: column;
-        height: 300px;
+        height: 600px;
         box-sizing: content-box;
         width: 300px;
         margin-left: 100px;
@@ -111,6 +111,28 @@
                   }}
                 />
               </label>
+              <br /> <br />
+              <button
+                onClick={() => {
+                  document.querySelector("#a").toggleAttribute("open");
+                }}
+              >
+                Toggle first details
+              </button>{" "}
+              <button
+                onClick={() => {
+                  document.querySelector("#b").toggleAttribute("open");
+                }}
+              >
+                Toggle second details
+              </button>{" "}
+              <button
+                onClick={() => {
+                  document.querySelector("#c").toggleAttribute("open");
+                }}
+              >
+                Toggle third details
+              </button>
             </fieldset>
 
             <br />
@@ -119,7 +141,13 @@
                 This is the main content area. Lorem ipsum dolor sit amet,
                 consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
                 labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-                nostrud exercitation
+                nostrud exercitation. This is the main content area. Lorem ipsum
+                dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
+                tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+                minim veniam, quis nostrud exercitation. This is the main
+                content area. Lorem ipsum dolor sit amet, consectetur adipiscing
+                elit. Sed do eiusmod tempor incididunt ut labore et dolore magna
+                aliqua. Ut enim ad minim veniam, quis nostrud exercitation
               </Details>
               <Details id="b" color="green" open>
                 This is the main content area. Lorem ipsum dolor sit amet,
@@ -131,7 +159,10 @@
                 minim veniam, quis nostrud exercitation
               </Details>
               <Details id="c" color="red">
-                Coucou
+                This is the main content area. Lorem ipsum dolor sit amet,
+                consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+                labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+                nostrud exercitation. This is the main content area.
               </Details>
             </div>
           </>
