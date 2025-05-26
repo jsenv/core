@@ -10,7 +10,7 @@ import { getMinHeight } from "./get_min_height.js";
 import { createSizeAnimationGroupController } from "./size_animation_group_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
-const HEIGHT_ANIMATION_DURATION = 1000;
+const HEIGHT_ANIMATION_DURATION = 300;
 const DEBUG = false;
 
 export const initFlexDetailsSet = (
@@ -131,9 +131,9 @@ export const initFlexDetailsSet = (
         if (allocatedSize === size) {
           continue;
         }
-        if (isDetailsElement(element) && element.open) {
+        if (isDetailsElement(child) && child.open) {
           const syncDetailsContentHeight =
-            prepareSyncDetailsContentHeight(element);
+            prepareSyncDetailsContentHeight(child);
           animations.push({
             element: child,
             target: allocatedSize,
