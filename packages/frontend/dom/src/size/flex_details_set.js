@@ -10,7 +10,7 @@ import { getMinHeight } from "./get_min_height.js";
 import { createSizeAnimationGroupController } from "./size_animation_group_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
-const HEIGHT_ANIMATION_DURATION = 3000;
+const HEIGHT_ANIMATION_DURATION = 300;
 const DEBUG = false;
 
 export const initFlexDetailsSet = (

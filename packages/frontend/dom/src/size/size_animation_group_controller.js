@@ -1,7 +1,7 @@
 import { cubicBezier } from "@jsenv/animation";
 import { setStyles } from "../style_and_attributes.js";
 
-const easing = cubicBezier(0.33, 0.1, 0.5, 1.0);
+const easing = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 
 export const createSizeAnimationGroupController = ({ duration, onChange }) => {
   const startHeightMap = new Map();
