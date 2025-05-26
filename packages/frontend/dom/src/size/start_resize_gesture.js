@@ -34,6 +34,7 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
   const xAtStart = event.clientX;
   const yAtStart = event.clientY;
   const gestureInfo = {
+    element: elementToResize,
     xAtStart,
     yAtStart,
     x: xAtStart,

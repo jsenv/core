@@ -25,14 +25,6 @@ export const initFlexDetailsSet = (
     cleanupCallbackSet.clear();
   };
 
-  const onmousedown = (event) => {
-    startResizeGesture(event, {});
-  };
-  element.addEventListener("mousedown", onmousedown);
-  cleanupCallbackSet.add(() => {
-    element.removeEventListener("mousedown", onmousedown);
-  });
-
   const minSizeMap = new Map();
   const sizeMap = new Map();
   const requestedSizeMap = new Map();
@@ -332,58 +324,53 @@ export const initFlexDetailsSet = (
 
   const flexDetailsSet = {
     cleanup,
-    // requestResize: (details, newSize) => {
-    //   prepareSpaceDistribution();
-    //   details.setAttribute("data-requested-height", newSize);
-    //   applyNewSizes();
-    // },
+  };
+
+  const giveSpaceToDetails = (details) => {
+    const sizeRequested = requestedSizeMap.get(details);
+    const sizeAllocated = allocatedSizeMap.get(details);
+    const spaceMissing = sizeRequested - sizeAllocated;
+    if (!spaceMissing) {
+      distributeRemainingSpace({
+        childToGrow: details.open ? details : null,
+        childToShrinkFrom: lastChild,
+      });
+      return;
+    }
+    const spaceToSteal = spaceMissing - spaceRemaining;
+    if (debug) {
+      console.debug(
+        `${details.id} justed opened, would like to take ${sizeRequested}px. It would have to steal ${spaceToSteal}px, space remaining: ${spaceRemaining}px`,
+      );
+    }
+    const spaceStolen = stealSpaceFromPreviousSiblings(
+      details,
+      spaceToSteal,
+      "details just opened",
+    );
+    if (spaceStolen) {
+      if (debug) {
+        if (spaceStolen === spaceToSteal) {
+          console.debug(
+            `${spaceStolen}px stolen from previous siblings in favor of ${details.id}`,
+          );
+        } else {
+          console.debug(
+            `${spaceStolen}px stolen (out of ${spaceToSteal}px) from previous siblings in favor of ${details.id}`,
+          );
+        }
+      }
+      reapplyRequestedSize(
+        details,
+        sizeRequested,
+        "opened details stealing space",
+      );
+    } else if (debug) {
+      console.debug(`no space to steal from previous siblings`);
+    }
   };
 
   update_on_toggle: {
-    const giveSpaceToDetailsMostRecentlyOpened = (details) => {
-      const sizeRequested = requestedSizeMap.get(details);
-      const sizeAllocated = allocatedSizeMap.get(details);
-      const spaceMissing = sizeRequested - sizeAllocated;
-      if (!spaceMissing) {
-        distributeRemainingSpace({
-          childToGrow: details.open ? details : null,
-          childToShrinkFrom: lastChild,
-        });
-        return;
-      }
-      const spaceToSteal = spaceMissing - spaceRemaining;
-      if (debug) {
-        console.debug(
-          `${details.id} justed opened, would like to take ${sizeRequested}px. It would have to steal ${spaceToSteal}px, space remaining: ${spaceRemaining}px`,
-        );
-      }
-      const spaceStolen = stealSpaceFromPreviousSiblings(
-        details,
-        spaceToSteal,
-        "details just opened",
-      );
-      if (spaceStolen) {
-        if (debug) {
-          if (spaceStolen === spaceToSteal) {
-            console.debug(
-              `${spaceStolen}px stolen from previous siblings in favor of ${details.id}`,
-            );
-          } else {
-            console.debug(
-              `${spaceStolen}px stolen (out of ${spaceToSteal}px) from previous siblings in favor of ${details.id}`,
-            );
-          }
-        }
-        reapplyRequestedSize(
-          details,
-          sizeRequested,
-          "opened details stealing space",
-        );
-      } else if (debug) {
-        console.debug(`no space to steal from previous siblings`);
-      }
-    };
-
     for (const child of element.children) {
       if (!isDetailsElement(child)) {
         continue;
@@ -396,9 +383,9 @@ export const initFlexDetailsSet = (
           `${details.id} ${details.open ? "opened" : "closed"}`,
         );
         if (details.open) {
-          giveSpaceToDetailsMostRecentlyOpened(details);
+          giveSpaceToDetails(details);
         } else if (lastDetailsOpened) {
-          giveSpaceToDetailsMostRecentlyOpened(lastDetailsOpened);
+          giveSpaceToDetails(lastDetailsOpened);
         }
         applyAllocatedSizes({ animate: true });
       };
@@ -414,6 +401,36 @@ export const initFlexDetailsSet = (
         details.removeEventListener("toggle", ontoggle);
       });
     }
+  }
+
+  resize_with_mouse: {
+    const requestResize = (details, newSize) => {
+      prepareSpaceDistribution();
+      details.setAttribute("data-requested-height", newSize);
+      distributeAvailableSpace(`${details.id} requested size: ${newSize}px`);
+      giveSpaceToDetails(details);
+      applyAllocatedSizes();
+    };
+    const onmousedown = (event) => {
+      let heightAtStart = 0;
+      startResizeGesture(event, {
+        onStart: (gesture) => {
+          heightAtStart = getHeight(gesture.element);
+        },
+        onMove: (gesture) => {
+          const elementToResize = gesture.element;
+          const yMove = gesture.yMove;
+          requestResize(elementToResize, heightAtStart + yMove);
+        },
+        onEnd: () => {
+          // bah a priori rien de plus
+        },
+      });
+    };
+    element.addEventListener("mousedown", onmousedown);
+    cleanupCallbackSet.add(() => {
+      element.removeEventListener("mousedown", onmousedown);
+    });
   }
 
   return flexDetailsSet;
