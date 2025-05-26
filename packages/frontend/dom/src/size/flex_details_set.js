@@ -246,7 +246,9 @@ export const initFlexDetailsSet = (
       onHeightChange?.(value);
       return;
     }
-    const onFinish = () => {};
+    const onFinish = (value) => {
+      onHeightChange?.(value, { isAnimation: false });
+    };
     const sideEffect = (value) => {
       onHeightChange?.(value, { isAnimation: true });
     };
@@ -466,7 +468,7 @@ const createElementSizeAnimationController = (
           element.style.height = `${target}px`;
           currentAnimation = null;
           cleanupSideEffect();
-          onFinish?.();
+          onFinish?.(target);
         }
       };
       currentAnimation.oncancel = () => {
@@ -489,7 +491,7 @@ const createElementSizeAnimationController = (
         element.style.height = `${target}px`;
         currentAnimation = null;
         cleanupSideEffect();
-        onFinish?.();
+        onFinish?.(target);
       }
     };
     currentAnimation.oncancel = () => {
