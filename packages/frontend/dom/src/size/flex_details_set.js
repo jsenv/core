@@ -34,6 +34,7 @@ export const initFlexDetailsSet = (
   const allocatedSizeMap = new Map();
   let availableSpace;
   let spaceRemaining;
+  let lastDetailsOpened = null;
   const prepareSpaceDistribution = () => {
     sizeMap.clear();
     minSizeMap.clear();
@@ -44,7 +45,6 @@ export const initFlexDetailsSet = (
     }
     spaceRemaining = availableSpace;
 
-    lastDetailsOpened = null;
     for (const child of element.children) {
       const element = child;
       const height = getHeight(element);
@@ -99,7 +99,6 @@ export const initFlexDetailsSet = (
       }
     }
   };
-  let lastDetailsOpened;
 
   const applyRequestedSize = (child, sizeRequested, requestSource) => {
     let sizeAllocated;
@@ -142,11 +141,11 @@ export const initFlexDetailsSet = (
     return sizeAllocated;
   };
   let lastChild;
-  const distributeAvailableSpace = () => {
+  const distributeAvailableSpace = (source) => {
     lastChild = null;
     for (const child of element.children) {
       lastChild = child;
-      applyRequestedSize(child, requestedSizeMap.get(child), "requested size");
+      applyRequestedSize(child, requestedSizeMap.get(child), source);
     }
   };
   const distributeRemainingSpace = ({ childToGrow, childToShrinkFrom }) => {
@@ -231,25 +230,9 @@ export const initFlexDetailsSet = (
     }
     return spaceStolenTotal;
   };
-  // const giveSpaceToSiblings = (siblingSet, spaceToGive) => {
-  //   let spaceGiven = 0;
-  //   let remainingSpaceToGive = spaceToGive;
-  //   for (const sibling of siblingSet) {
-  //     const grow = requestGrow(sibling, remainingSpaceToGive);
-  //     if (!grow) {
-  //       continue;
-  //     }
-  //     spaceGiven += grow;
-  //     remainingSpaceToGive -= grow;
-  //     if (remainingSpaceToGive <= 0) {
-  //       break;
-  //     }
-  //   }
-  //   return spaceGiven;
-  // };
 
   prepareSpaceDistribution();
-  distributeAvailableSpace();
+  distributeAvailableSpace("initial space distribution");
   distributeRemainingSpace({
     childToGrow: lastDetailsOpened,
     childToShrinkFrom: lastChild,
@@ -319,7 +302,9 @@ export const initFlexDetailsSet = (
       // eslint-disable-next-line no-loop-func
       const ontoggle = () => {
         prepareSpaceDistribution();
-        distributeAvailableSpace();
+        distributeAvailableSpace(
+          `${details.id} ${details.open ? "opened" : "closed"}`,
+        );
         if (details.open) {
           giveSpaceToDetailsWhoHasJustOpened(details);
         } else {
