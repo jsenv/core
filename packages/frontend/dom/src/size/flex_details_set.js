@@ -34,6 +34,7 @@ export const initFlexDetailsSet = (
   const requestedSizeMap = new Map();
   const allocatedSizeMap = new Map();
   const detailsContentHeightMap = new Map();
+  const heightAnimationMap = new Map();
   let availableSpace;
   let spaceRemaining;
   let lastDetailsOpened = null;
@@ -191,52 +192,6 @@ export const initFlexDetailsSet = (
     }
     return applyRequestedSize(child, newRequestedSize, source);
   };
-  const applyAllocatedSizes = () => {
-    for (const child of element.children) {
-      const allocatedSize = allocatedSizeMap.get(child);
-      const size = sizeMap.get(child);
-      if (allocatedSize === size) {
-        continue;
-      }
-      child.style.height = `${allocatedSize}px`;
-      if (isDetailsElement(child)) {
-        const details = child;
-        if (details.open) {
-          const summary = details.querySelector("summary");
-          const summaryHeight = getHeight(summary);
-          const content = details.querySelector("summary + *");
-          const contentHeight = allocatedSize - summaryHeight;
-          content.style.height = `${contentHeight}px`;
-          const contentComputedStyle = getComputedStyle(content);
-          // Fix scrollbar induced overflow:
-          //
-          // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
-          // 2. we set height exactly to the natural height required to prevent overflow
-          //
-          // actual: browser keeps scrollbar displayed
-          // expected: scrollbar is hidden
-          //
-          // Solution: Temporarily prevent scrollbar to display
-          // force layout recalculation, then restore
-          if (
-            contentComputedStyle.overflowY === "auto" &&
-            contentComputedStyle.scrollbarGutter !== "stable"
-          ) {
-            const restoreOverflow = setStyles(content, {
-              overflowY: "hidden",
-            });
-            content.style.overflowY = "hidden";
-            // eslint-disable-next-line no-unused-expressions
-            content.offsetHeight;
-            restoreOverflow();
-          }
-        }
-        if (onSizeChange) {
-          onSizeChange(child, allocatedSize);
-        }
-      }
-    }
-  };
   const stealSpaceFromPreviousSiblings = (child, spaceToSteal, source) => {
     let spaceStolenTotal = 0;
     let remainingSpaceToSteal = spaceToSteal;
@@ -260,6 +215,81 @@ export const initFlexDetailsSet = (
     }
     return spaceStolenTotal;
   };
+  const applyAllocatedSizes = ({ animate } = {}) => {
+    for (const child of element.children) {
+      const allocatedSize = allocatedSizeMap.get(child);
+      const size = sizeMap.get(child);
+      if (allocatedSize === size) {
+        continue;
+      }
+      applyNewSize(child, allocatedSize, { animate });
+      if (onSizeChange) {
+        onSizeChange(child, allocatedSize);
+      }
+    }
+  };
+
+  const applyNewSize = (element, value, { animate }) => {
+    if (!animate) {
+      const animation = heightAnimationMap.get(element);
+      if (animation) {
+        animation.cancel();
+        heightAnimationMap.delete(element);
+      }
+      element.style.height = `${value}px`;
+      if (isDetailsElement(element)) {
+        const details = element;
+        if (details.open) {
+          syncDetailsContentHeight(details, value);
+        }
+        if (onSizeChange) {
+          onSizeChange(element, value);
+        }
+      }
+      return;
+    }
+    const currentAnimationController = heightAnimationMap.get(element);
+    if (currentAnimationController) {
+      currentAnimationController.set(value);
+      return;
+    }
+    const animationController = createElementSizeAnimationController(element, {
+      duration: 300,
+    });
+    heightAnimationMap.set(element, animationController);
+    animationController.set(value);
+  };
+
+  const syncDetailsContentHeight = (details, height) => {
+    const summary = details.querySelector("summary");
+    const summaryHeight = getHeight(summary);
+    const content = details.querySelector("summary + *");
+    const contentHeight = height - summaryHeight;
+    content.style.height = `${contentHeight}px`;
+    const contentComputedStyle = getComputedStyle(content);
+    // Fix scrollbar induced overflow:
+    //
+    // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
+    // 2. we set height exactly to the natural height required to prevent overflow
+    //
+    // actual: browser keeps scrollbar displayed
+    // expected: scrollbar is hidden
+    //
+    // Solution: Temporarily prevent scrollbar to display
+    // force layout recalculation, then restore
+    if (
+      contentComputedStyle.overflowY === "auto" &&
+      contentComputedStyle.scrollbarGutter !== "stable"
+    ) {
+      const restoreOverflow = setStyles(content, {
+        overflowY: "hidden",
+      });
+      content.style.overflowY = "hidden";
+      // eslint-disable-next-line no-unused-expressions
+      content.offsetHeight;
+      restoreOverflow();
+    }
+  };
 
   prepareSpaceDistribution();
   distributeAvailableSpace("initial space distribution");
@@ -268,7 +298,7 @@ export const initFlexDetailsSet = (
     childToShrinkFrom: lastChild,
   });
   sizeMap.clear(); // force to set new size at start
-  applyAllocatedSizes();
+  applyAllocatedSizes({ animate: true });
 
   const flexDetailsSet = {
     cleanup,
@@ -355,4 +385,66 @@ export const initFlexDetailsSet = (
 
 const isDetailsElement = (element) => {
   return element && element.tagName === "DETAILS";
+};
+
+const GROW_EASING = "ease-out";
+const SHRINK_EASING = "ease-in";
+const createElementSizeAnimationController = (element, { duration }) => {
+  let currentAnimation = null;
+  const set = (target, { preserveRemainingDuration } = {}) => {
+    const current = getHeight(element);
+    if (current === target) {
+      return;
+    }
+    if (currentAnimation) {
+      currentAnimation.cancel();
+      const newAnimation = element.animate([{ height: `${target}px` }], {
+        duration: preserveRemainingDuration
+          ? getRemainingDuration(currentAnimation)
+          : duration,
+        easing: target > current ? GROW_EASING : SHRINK_EASING,
+      });
+      currentAnimation = newAnimation;
+      currentAnimation.onfinish = () => {
+        if (currentAnimation === newAnimation) {
+          element.style.height = `${target}px`;
+          currentAnimation = null;
+        }
+      };
+      currentAnimation.oncancel = () => {
+        if (currentAnimation === newAnimation) {
+          currentAnimation = null;
+        }
+      };
+      return;
+    }
+
+    const animation = element.animate([{ height: `${target}px` }], {
+      duration,
+      easing: target > current ? GROW_EASING : SHRINK_EASING,
+    });
+
+    currentAnimation = animation;
+    currentAnimation.onfinish = () => {
+      if (currentAnimation === animation) {
+        element.style.height = `${target}px`;
+        currentAnimation = null;
+      }
+    };
+    currentAnimation.oncancel = () => {
+      if (currentAnimation === animation) {
+        currentAnimation = null;
+      }
+    };
+  };
+
+  return { set };
+};
+
+const getRemainingDuration = (animation) => {
+  const animDuration = animation.effect.getTiming().duration;
+  const currentTime = animation.currentTime || 0;
+  const progress = Math.min(currentTime / animDuration, 1);
+  const remainingDuration = animDuration * (1 - progress);
+  return remainingDuration;
 };
