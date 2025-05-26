@@ -230,6 +230,12 @@ export const initFlexDetailsSet = (
   };
 
   const applyNewSize = (element, value, { animate }) => {
+    let onHeightChange;
+    if (isDetailsElement(element) && element.open) {
+      const syncDetailsContentHeight = prepareSyncDetailsContentHeight(element);
+      onHeightChange = syncDetailsContentHeight;
+    }
+
     if (!animate) {
       const animation = heightAnimationMap.get(element);
       if (animation) {
@@ -237,15 +243,11 @@ export const initFlexDetailsSet = (
         heightAnimationMap.delete(element);
       }
       element.style.height = `${value}px`;
-      if (isDetailsElement(element) && element.open) {
-        syncDetailsContentHeight(element, value);
-      }
+      onHeightChange?.(value);
       return;
     }
     const onFinish = () => {
-      if (isDetailsElement(element) && element.open) {
-        syncDetailsContentHeight(element, value);
-      }
+      onHeightChange?.(value, { isAnimation: false });
     };
     const currentAnimationController = heightAnimationMap.get(element);
     if (currentAnimationController) {
@@ -259,35 +261,45 @@ export const initFlexDetailsSet = (
     animationController.set(value, { onFinish });
   };
 
-  const syncDetailsContentHeight = (details, height) => {
+  const prepareSyncDetailsContentHeight = (details) => {
     const summary = details.querySelector("summary");
     const summaryHeight = getHeight(summary);
     const content = details.querySelector("summary + *");
-    const contentHeight = height - summaryHeight;
-    content.style.height = `${contentHeight}px`;
-    const contentComputedStyle = getComputedStyle(content);
-    // Fix scrollbar induced overflow:
-    //
-    // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
-    // 2. we set height exactly to the natural height required to prevent overflow
-    //
-    // actual: browser keeps scrollbar displayed
-    // expected: scrollbar is hidden
-    //
-    // Solution: Temporarily prevent scrollbar to display
-    // force layout recalculation, then restore
-    if (
-      contentComputedStyle.overflowY === "auto" &&
-      contentComputedStyle.scrollbarGutter !== "stable"
-    ) {
-      const restoreOverflow = setStyles(content, {
-        "overflow-y": "hidden",
-      });
-      content.style.overflowY = "hidden";
-      // eslint-disable-next-line no-unused-expressions
-      content.offsetHeight;
-      restoreOverflow();
-    }
+
+    details.style.setProperty("--summary-height", `${summaryHeight}px`);
+    content.style.height = "var(--content-height)";
+
+    return (detailsHeight, { isAnimation } = {}) => {
+      const contentHeight = detailsHeight - summaryHeight;
+      details.style.setProperty("--details-height", `${detailsHeight}px`);
+      details.style.setProperty("--content-height", `${contentHeight}px`);
+
+      if (!isAnimation) {
+        const contentComputedStyle = getComputedStyle(content);
+        // Fix scrollbar induced overflow:
+        //
+        // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
+        // 2. we set height exactly to the natural height required to prevent overflow
+        //
+        // actual: browser keeps scrollbar displayed
+        // expected: scrollbar is hidden
+        //
+        // Solution: Temporarily prevent scrollbar to display
+        // force layout recalculation, then restore
+        if (
+          contentComputedStyle.overflowY === "auto" &&
+          contentComputedStyle.scrollbarGutter !== "stable"
+        ) {
+          const restoreOverflow = setStyles(content, {
+            "overflow-y": "hidden",
+          });
+          content.style.overflowY = "hidden";
+          // eslint-disable-next-line no-unused-expressions
+          content.offsetHeight;
+          restoreOverflow();
+        }
+      }
+    };
   };
 
   prepareSpaceDistribution();
@@ -372,7 +384,13 @@ export const initFlexDetailsSet = (
         applyAllocatedSizes({ animate: true });
       };
 
-      details.addEventListener("toggle", ontoggle);
+      if (details.open) {
+        setTimeout(() => {
+          details.addEventListener("toggle", ontoggle);
+        });
+      } else {
+        details.addEventListener("toggle", ontoggle);
+      }
       cleanupCallbackSet.add(() => {
         details.removeEventListener("toggle", ontoggle);
       });
