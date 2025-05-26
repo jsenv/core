@@ -7,6 +7,7 @@ import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinHeight } from "./get_min_height.js";
+import { createHeightAnimationController } from "./size_animation_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
 export const initFlexDetailsSet = (
@@ -258,7 +259,7 @@ export const initFlexDetailsSet = (
       currentAnimationController.set(value, { onFinish, sideEffect });
       return;
     }
-    const animationController = createElementSizeAnimationController(element, {
+    const animationController = createHeightAnimationController(element, {
       duration: 3000,
     });
     heightAnimationMap.set(element, animationController);
@@ -406,115 +407,4 @@ export const initFlexDetailsSet = (
 
 const isDetailsElement = (element) => {
   return element && element.tagName === "DETAILS";
-};
-
-// durant l'animation je dois remove min-height sinon c'est moche
-const GROW_EASING = "ease-out";
-const SHRINK_EASING = "ease-in";
-const createElementSizeAnimationController = (
-  element,
-  { duration = 300 } = {},
-) => {
-  let currentAnimation = null;
-  const cleanupCurrentAnimation = () => {
-    if (currentAnimation) {
-      currentAnimation.cancel();
-      currentAnimation = null;
-    }
-  };
-
-  let raf;
-  const cleanupSideEffect = () => {
-    if (raf) {
-      cancelAnimationFrame(raf);
-      raf = null;
-    }
-  };
-  const udpateSideEffect = (sideEffect) => {
-    cleanupSideEffect();
-    if (!sideEffect) {
-      return;
-    }
-    const next = () => {
-      raf = requestAnimationFrame(() => {
-        const height = parseFloat(getComputedStyle(element).height);
-        sideEffect(height);
-        next();
-      });
-    };
-    next();
-  };
-
-  const set = (
-    target,
-    { onFinish, sideEffect, preserveRemainingDuration } = {},
-  ) => {
-    udpateSideEffect(sideEffect);
-    const current = getHeight(element);
-    if (current === target) {
-      return;
-    }
-    if (currentAnimation) {
-      currentAnimation.cancel();
-      const newAnimation = element.animate([{ height: `${target}px` }], {
-        duration: preserveRemainingDuration
-          ? getRemainingDuration(currentAnimation)
-          : duration,
-        easing: target > current ? GROW_EASING : SHRINK_EASING,
-      });
-      currentAnimation = newAnimation;
-      currentAnimation.onfinish = () => {
-        if (currentAnimation === newAnimation) {
-          element.style.height = `${target}px`;
-          currentAnimation = null;
-          cleanupSideEffect();
-          onFinish?.(target);
-        }
-      };
-      currentAnimation.oncancel = () => {
-        if (currentAnimation === newAnimation) {
-          cleanupSideEffect();
-          currentAnimation = null;
-        }
-      };
-      return;
-    }
-
-    const animation = element.animate([{ height: `${target}px` }], {
-      duration,
-      easing: target > current ? GROW_EASING : SHRINK_EASING,
-    });
-
-    currentAnimation = animation;
-    currentAnimation.onfinish = () => {
-      if (currentAnimation === animation) {
-        element.style.height = `${target}px`;
-        currentAnimation = null;
-        cleanupSideEffect();
-        onFinish?.(target);
-      }
-    };
-    currentAnimation.oncancel = () => {
-      if (currentAnimation === animation) {
-        cleanupSideEffect();
-        currentAnimation = null;
-      }
-    };
-  };
-
-  return {
-    set,
-    cancel: () => {
-      cleanupSideEffect();
-      cleanupCurrentAnimation();
-    },
-  };
-};
-
-const getRemainingDuration = (animation) => {
-  const animDuration = animation.effect.getTiming().duration;
-  const currentTime = animation.currentTime || 0;
-  const progress = Math.min(currentTime / animDuration, 1);
-  const remainingDuration = animDuration * (1 - progress);
-  return remainingDuration;
 };
