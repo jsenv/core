@@ -20,17 +20,7 @@
         margin: 10px;
       }
 
-      details {
-        overflow: hidden;
-      }
-
-      summary {
-        min-height: 50px;
-        display: flex;
-        align-items: center;
-      }
-
-      .details_group {
+      .flex_details_set {
         display: flex;
         flex-direction: column;
 
@@ -45,8 +35,22 @@
         margin-top: 20px;
       }
 
-      .section[open] {
+      .flex_details {
+        overflow: hidden;
+      }
+      .flex_details[open] {
         min-height: 50px;
+      }
+      .flex_details summary {
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+      }
+      .flex_details_content {
+        padding: 20px;
+        width: fit-content;
+        background: lightgray;
+        overflow-y: auto;
       }
     </style>
 
@@ -136,8 +140,8 @@
             </fieldset>
 
             <br />
-            <div ref={ref} className="details_group">
-              <Details id="a" color="blue" open>
+            <div ref={ref} className="flex_details_set">
+              <FlexDetails id="a" color="blue" open>
                 This is the main content area. Lorem ipsum dolor sit amet,
                 consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
                 labore et dolore magna aliqua. Ut enim ad minim veniam, quis
@@ -148,8 +152,8 @@
                 content area. Lorem ipsum dolor sit amet, consectetur adipiscing
                 elit. Sed do eiusmod tempor incididunt ut labore et dolore magna
                 aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-              </Details>
-              <Details id="b" color="green">
+              </FlexDetails>
+              <FlexDetails id="b" color="green">
                 This is the main content area. Lorem ipsum dolor sit amet,
                 consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
                 labore et dolore magna aliqua. Ut enim ad minim veniam, quis
@@ -157,33 +161,31 @@
                 dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
                 tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
                 minim veniam, quis nostrud exercitation
-              </Details>
-              <Details id="c" color="red">
+              </FlexDetails>
+              <FlexDetails id="c" color="red">
                 This is the main content area. Lorem ipsum dolor sit amet,
                 consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
                 labore et dolore magna aliqua. Ut enim ad minim veniam, quis
                 nostrud exercitation. This is the main content area.
-              </Details>
+              </FlexDetails>
             </div>
           </>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
-      const Details = ({ id, color, children, open, resizable }) => {
+      const FlexDetails = ({ id, color, children, open, resizable }) => {
         return (
           <>
             <details
-              className="section"
+              className="flex_details"
               id={id}
               style={`background: ${color};`}
               open={open}
               data-resize={resizable ? "vertical" : undefined}
             >
               <summary>Summary</summary>
-              <div style="padding: 20px; width: fit-content; background: lightgray; overflow-y: auto">
-                {children}
-              </div>
+              <div className="flex_details_content">{children}</div>
             </details>
             {resizable && (
               <div
