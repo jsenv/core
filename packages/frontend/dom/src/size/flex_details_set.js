@@ -7,7 +7,7 @@ import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinHeight } from "./get_min_height.js";
-import { createHeightAnimationController } from "./size_animation_controller.js";
+import { createSizeAnimationGroupController } from "./size_animation_group_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;
@@ -38,7 +38,6 @@ export const initFlexDetailsSet = (
   const requestedSizeMap = new Map();
   const allocatedSizeMap = new Map();
   const detailsContentHeightMap = new Map();
-  const heightAnimationMap = new Map();
   let availableSpace;
   let spaceRemaining;
   let lastDetailsOpened = null;
@@ -227,64 +226,54 @@ export const initFlexDetailsSet = (
     }
     return spaceStolenTotal;
   };
+  let heightAnimationGroupController = createSizeAnimationGroupController({
+    duration: HEIGHT_ANIMATION_DURATION,
+  });
   const applyAllocatedSizes = ({ animate } = {}) => {
+    if (animate) {
+      const animations = [];
+      for (const child of element.children) {
+        const allocatedSize = allocatedSizeMap.get(child);
+        const size = sizeMap.get(child);
+        if (allocatedSize === size) {
+          continue;
+        }
+        let sideEffect;
+        if (isDetailsElement(element) && element.open) {
+          const syncDetailsContentHeight =
+            prepareSyncDetailsContentHeight(element);
+          sideEffect = syncDetailsContentHeight;
+        }
+        animations.push({
+          element: child,
+          target: allocatedSize,
+          sideEffect: (height, isLast) => {
+            if (sideEffect) {
+              sideEffect(height, { isAnimation: !isLast });
+            }
+          },
+        });
+      }
+      heightAnimationGroupController.transitionTo(animations);
+      return;
+    }
+    if (heightAnimationGroupController) {
+      heightAnimationGroupController.cancel();
+    }
+
     for (const child of element.children) {
       const allocatedSize = allocatedSizeMap.get(child);
       const size = sizeMap.get(child);
       if (allocatedSize === size) {
         continue;
       }
-      applyNewSize(child, allocatedSize, { animate });
-      if (onSizeChange) {
-        onSizeChange(child, allocatedSize);
+      child.style.height = `${allocatedSize}px`;
+      if (isDetailsElement(child) && child.open) {
+        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
+        syncDetailsContentHeight(allocatedSize);
       }
+      onSizeChange?.(child, allocatedSize);
     }
-  };
-
-  const applyNewSize = (element, value, { animate }) => {
-    let onHeightChange;
-    if (isDetailsElement(element) && element.open) {
-      const syncDetailsContentHeight = prepareSyncDetailsContentHeight(element);
-      onHeightChange = syncDetailsContentHeight;
-    }
-
-    if (!animate) {
-      const animation = heightAnimationMap.get(element);
-      if (animation) {
-        animation.cancel();
-        heightAnimationMap.delete(element);
-      }
-      element.style.height = `${value}px`;
-      onHeightChange?.(value);
-      return;
-    }
-    const onFinish = (value) => {
-      onHeightChange?.(value, { isAnimation: false });
-    };
-    const sideEffect = (value) => {
-      onHeightChange?.(value, { isAnimation: true });
-    };
-
-    const currentAnimationController = heightAnimationMap.get(element);
-    if (currentAnimationController) {
-      currentAnimationController.animateTo(value, {
-        // non linear easing would cause each height to change at a different pace
-        easing: "linear",
-        onFinish,
-        sideEffect,
-      });
-      return;
-    }
-    const animationController = createHeightAnimationController(element, {
-      duration: HEIGHT_ANIMATION_DURATION,
-    });
-    heightAnimationMap.set(element, animationController);
-    animationController.animateTo(value, {
-      // non linear easing would cause each height to change at a different pace
-      easing: "linear",
-      onFinish,
-      sideEffect,
-    });
   };
 
   const prepareSyncDetailsContentHeight = (details) => {
