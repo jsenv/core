@@ -1,3 +1,5 @@
+import { setStyles } from "../style_and_attributes.js";
+
 export const createHeightAnimationController = (element, options) =>
   createSizeAnimationController(element, {
     getStyle: () => parseFloat(getComputedStyle(element).height),
@@ -7,6 +9,11 @@ export const createHeightAnimationController = (element, options) =>
     getKeyFrames: (target) => {
       return [{ height: `${target}px` }];
     },
+    setup: () => {
+      return setStyles(element, {
+        "min-height": 0,
+      });
+    },
     ...options,
   });
 
@@ -15,7 +22,7 @@ const GROW_EASING = "ease-out";
 const SHRINK_EASING = "ease-in";
 const createSizeAnimationController = (
   element,
-  { getStyle, setStyle, getKeyFrames, duration = 300 } = {},
+  { getStyle, setStyle, getKeyFrames, setup, duration = 300 } = {},
 ) => {
   let currentAnimation = null;
   const cleanupCurrentAnimation = () => {
@@ -24,6 +31,8 @@ const createSizeAnimationController = (
       currentAnimation = null;
     }
   };
+
+  let teardown = null;
 
   let raf;
   const cleanupSideEffect = () => {
@@ -71,6 +80,11 @@ const createSizeAnimationController = (
           setStyle(target);
           currentAnimation = null;
           cleanupSideEffect();
+          element.removeAttribute("data-animated");
+          if (teardown) {
+            teardown();
+            teardown = null;
+          }
           onFinish?.(target);
         }
       };
@@ -87,13 +101,24 @@ const createSizeAnimationController = (
       duration,
       easing: target > current ? GROW_EASING : SHRINK_EASING,
     });
-
+    if (setup) {
+      const setupReturnValue = setup();
+      if (typeof setupReturnValue === "function") {
+        teardown = setupReturnValue;
+      }
+    }
+    element.setAttribute("data-animated", "");
     currentAnimation = animation;
     currentAnimation.onfinish = () => {
       if (currentAnimation === animation) {
         setStyle(target);
         currentAnimation = null;
         cleanupSideEffect();
+        element.removeAttribute("data-animated");
+        if (teardown) {
+          teardown();
+          teardown = null;
+        }
         onFinish?.(target);
       }
     };
@@ -108,6 +133,10 @@ const createSizeAnimationController = (
   return {
     set,
     cancel: () => {
+      if (teardown) {
+        teardown();
+        teardown = null;
+      }
       cleanupSideEffect();
       cleanupCurrentAnimation();
     },
