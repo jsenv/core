@@ -10,7 +10,7 @@ import { getMinHeight } from "./get_min_height.js";
 import { createHeightAnimationController } from "./size_animation_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
-const HEIGHT_ANIMATION_DURATION = 1000;
+const HEIGHT_ANIMATION_DURATION = 300;
 const DEBUG = false;
 
 export const initFlexDetailsSet = (
@@ -267,14 +267,24 @@ export const initFlexDetailsSet = (
 
     const currentAnimationController = heightAnimationMap.get(element);
     if (currentAnimationController) {
-      currentAnimationController.set(value, { onFinish, sideEffect });
+      currentAnimationController.animateTo(value, {
+        // non linear easing would cause each height to change at a different pace
+        easing: "linear",
+        onFinish,
+        sideEffect,
+      });
       return;
     }
     const animationController = createHeightAnimationController(element, {
       duration: HEIGHT_ANIMATION_DURATION,
     });
     heightAnimationMap.set(element, animationController);
-    animationController.set(value, { onFinish, sideEffect });
+    animationController.animateTo(value, {
+      // non linear easing would cause each height to change at a different pace
+      easing: "linear",
+      onFinish,
+      sideEffect,
+    });
   };
 
   const prepareSyncDetailsContentHeight = (details) => {

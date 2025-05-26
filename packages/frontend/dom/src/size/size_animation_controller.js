@@ -55,9 +55,9 @@ const createSizeAnimationController = (
     next();
   };
 
-  const set = (
+  const animateTo = (
     target,
-    { onFinish, sideEffect, preserveRemainingDuration } = {},
+    { onFinish, sideEffect, preserveRemainingDuration, easing } = {},
   ) => {
     udpateSideEffect(sideEffect);
     const current = getStyle();
@@ -73,7 +73,7 @@ const createSizeAnimationController = (
           duration: preserveRemainingDuration
             ? getRemainingDuration(currentAnimation)
             : duration,
-          easing: target > current ? GROW_EASING : SHRINK_EASING,
+          easing: easing || target > current ? GROW_EASING : SHRINK_EASING,
         },
       );
       currentAnimation = newAnimation;
@@ -101,7 +101,7 @@ const createSizeAnimationController = (
 
     const animation = element.animate(getKeyFrames(target), {
       duration,
-      easing: target > current ? GROW_EASING : SHRINK_EASING,
+      easing: easing || target > current ? GROW_EASING : SHRINK_EASING,
     });
     if (setup) {
       const setupReturnValue = setup();
@@ -133,7 +133,7 @@ const createSizeAnimationController = (
   };
 
   return {
-    set,
+    animateTo,
     cancel: () => {
       if (teardown) {
         teardown();
