@@ -91,34 +91,59 @@
           <>
             <fieldset>
               <legend>Flex details set controls</legend>
-              <label>
-                Height of the first details{" "}
-                <input
-                  type="number"
-                  value={aHeight}
-                  onInput={(e) => {
-                    detailsGroupRef.current.requestResize(
-                      document.querySelector("#a"),
-                      e.target.valueAsNumber,
-                    );
-                  }}
-                />
-              </label>
+              <div>
+                First details height{" "}
+                <label>
+                  <strong>requested:</strong>
+                  <input
+                    type="number"
+                    value={aHeight}
+                    style="width: 100px;"
+                    onInput={(e) => {
+                      detailsGroupRef.current.requestResize(
+                        document.querySelector("#a"),
+                        e.target.valueAsNumber,
+                      );
+                    }}
+                  />
+                </label>{" "}
+                <label>
+                  <strong>actual:</strong>
+                  <input
+                    type="number"
+                    style="width: 100px;"
+                    value={aHeight}
+                    readOnly
+                  />
+                </label>
+              </div>
+              <div>
+                Second details height{" "}
+                <label>
+                  <strong>requested:</strong>
+                  <input
+                    type="number"
+                    value={bHeight}
+                    style="width: 100px;"
+                    onInput={(e) => {
+                      detailsGroupRef.current.requestResize(
+                        document.querySelector("#b"),
+                        e.target.valueAsNumber,
+                      );
+                    }}
+                  />
+                </label>{" "}
+                <label>
+                  <strong>actual:</strong>
+                  <input
+                    type="number"
+                    style="width: 100px;"
+                    value={bHeight}
+                    readOnly
+                  />
+                </label>
+              </div>
               <br />
-              <label>
-                Height of the second details{" "}
-                <input
-                  type="number"
-                  value={bHeight}
-                  onInput={(e) => {
-                    detailsGroupRef.current.requestResize(
-                      document.querySelector("#b"),
-                      e.target.valueAsNumber,
-                    );
-                  }}
-                />
-              </label>
-              <br /> <br />
               <button
                 onClick={() => {
                   document.querySelector("#a").toggleAttribute("open");
@@ -164,7 +189,7 @@
                 elit. Sed do eiusmod tempor incididunt ut labore et dolore magna
                 aliqua. Ut enim ad minim veniam, quis nostrud exercitation
               </FlexDetails>
-              <FlexDetails id="b" color="green" open>
+              <FlexDetails id="b" color="green" open resizable>
                 This is the main content area. Lorem ipsum dolor sit amet,
                 consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
                 labore et dolore magna aliqua. Ut enim ad minim veniam, quis
