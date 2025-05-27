@@ -64,10 +64,9 @@ export const initFlexDetailsSet = (
 
       if (!isDetailsElement(child)) {
         const size = getHeight(child);
-        const space = size + marginSize;
-        spaceMap.set(child, space);
-        requestedSpaceMap.set(child, space);
-        minSpaceMap.set(child, space);
+        spaceMap.set(child, size + marginSize);
+        requestedSpaceMap.set(child, size + marginSize);
+        minSpaceMap.set(child, size + marginSize);
         continue;
       }
       const details = child;
@@ -177,12 +176,12 @@ export const initFlexDetailsSet = (
     }
   };
 
-  const applyRequestedSpace = (child, requestedSpace, requestSource) => {
+  const allocateSpace = (child, spaceToAllocate, requestSource) => {
     let allocatedSpace;
     let allocatedSpaceSource;
     allocate: {
       const minSpace = minSpaceMap.get(child);
-      if (requestedSpace > remainingSpace) {
+      if (spaceToAllocate > remainingSpace) {
         if (remainingSpace < minSpace) {
           allocatedSpace = minSpace;
           allocatedSpaceSource = "min space";
@@ -192,44 +191,45 @@ export const initFlexDetailsSet = (
         allocatedSpaceSource = "remaining space";
         break allocate;
       }
-      if (requestedSpace < minSpace) {
+      if (spaceToAllocate < minSpace) {
         allocatedSpace = minSpace;
         allocatedSpaceSource = "min space";
         break allocate;
       }
-      allocatedSpace = requestedSpace;
+      allocatedSpace = spaceToAllocate;
       allocatedSpaceSource = requestSource;
       break allocate;
     }
 
+    const requestedSpace = requestedSpaceMap.get(child);
     if (allocatedSpace < requestedSpace) {
       if (!canShrinkSet.has(child)) {
-        allocatedSpace = spaceMap.get(child);
+        allocatedSpace = requestedSpace;
         allocatedSpaceSource = `${requestSource} + cannot shrink`;
       }
     } else if (allocatedSpace > requestedSpace) {
       if (!canGrowSet.has(child)) {
-        allocatedSpace = spaceMap.get(child);
+        allocatedSpace = requestedSpace;
         allocatedSpaceSource = `${requestSource} + cannot grow`;
       }
     }
 
     remainingSpace -= allocatedSpace;
     if (debug) {
-      if (allocatedSpace === requestedSpace) {
+      if (allocatedSpace === spaceToAllocate) {
         console.debug(
           `${allocatedSpace}px allocated to ${child.id} (${allocatedSpaceSource}), remaining space: ${remainingSpace}px`,
         );
       } else {
         console.debug(
-          `${allocatedSpace}px allocated to ${child.id} (${allocatedSpaceSource}, ${requestedSpace}px requested), remaining space: ${remainingSpace}px`,
+          `${allocatedSpace}px allocated to ${child.id} out of ${spaceToAllocate}px (${allocatedSpaceSource}), remaining space: ${remainingSpace}px`,
         );
       }
     }
     allocatedSpaceMap.set(child, allocatedSpace);
     return allocatedSpace;
   };
-  const reapplyRequestedSpace = (child, newRequestedSpace, source) => {
+  const reallocateSpace = (child, newRequestedSpace, source) => {
     const allocatedSpace = allocatedSpaceMap.get(child);
     remainingSpace += allocatedSpace;
     if (debug) {
@@ -237,7 +237,7 @@ export const initFlexDetailsSet = (
         `reapplying requested space for ${child.id} (${source}), new requested space: ${newRequestedSpace}px, current allocated space: ${allocatedSpace}px, remaining space: ${remainingSpace}px`,
       );
     }
-    return applyRequestedSpace(child, newRequestedSpace, source);
+    return allocateSpace(child, newRequestedSpace, source);
   };
 
   let lastChild;
@@ -245,7 +245,7 @@ export const initFlexDetailsSet = (
     lastChild = null;
     for (const child of container.children) {
       lastChild = child;
-      applyRequestedSpace(child, requestedSpaceMap.get(child), source);
+      allocateSpace(child, requestedSpaceMap.get(child), source);
     }
   };
   const distributeRemainingSpace = ({ childToGrow, childToShrinkFrom }) => {
@@ -268,7 +268,7 @@ export const initFlexDetailsSet = (
     }
     if (childToGrow) {
       const allocatedSpace = allocatedSpaceMap.get(childToGrow);
-      reapplyRequestedSpace(
+      reallocateSpace(
         childToGrow,
         allocatedSpace + remainingSpace,
         `remaining space is positive: ${remainingSpace}px`,
@@ -282,7 +282,7 @@ export const initFlexDetailsSet = (
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
       const allocatedSpaceCurrent = allocatedSpaceMap.get(previousSibling);
-      const allocatedSpace = reapplyRequestedSpace(
+      const allocatedSpace = reallocateSpace(
         previousSibling,
         allocatedSpaceCurrent - remainingSpaceToAllocate,
         source,
@@ -386,7 +386,7 @@ export const initFlexDetailsSet = (
           );
         }
       }
-      reapplyRequestedSpace(details, requestedSpace, reason);
+      reallocateSpace(details, requestedSpace, reason);
     } else {
       if (debug) {
         console.debug(
@@ -446,6 +446,13 @@ export const initFlexDetailsSet = (
     details.setAttribute("data-requested-height", newSize);
     prepareSpaceDistribution();
     const source = `${details.id} resize requested to ${newSize}px`;
+    // ici pendant le resize il se passe un truc chelou
+    // le details next sibling s'autorise a grandir
+    // alors qu'on voudrait pas autoriser cela je crois
+    // ca fait bizarre en tous cas
+    // lorsqu'on resize b, seul a peut recupérer l'espace
+    // et pas c
+    // on pourrait faire un truc simple: pendant le resize on lock la taille des suivants
     distributeAvailableSpace(source);
     giveSpaceToDetails(details, source);
     applyAllocatedSpaces();
@@ -458,6 +465,8 @@ export const initFlexDetailsSet = (
       startResizeGesture(event, {
         onStart: (gesture) => {
           heightAtStart = getHeight(gesture.element);
+          requestResize(gesture.element, heightAtStart);
+          // TODO: lock the size of next siblings
         },
         onMove: (gesture) => {
           const elementToResize = gesture.element;
@@ -466,6 +475,7 @@ export const initFlexDetailsSet = (
         },
         onEnd: () => {
           // bah a priori rien de plus
+          // (ptet garder le data-requested-height) sur les siblings aussi non?
         },
       });
     };
