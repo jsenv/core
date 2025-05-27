@@ -219,7 +219,7 @@
                 elit. Sed do eiusmod tempor incididunt ut labore et dolore magna
                 aliqua. Ut enim ad minim veniam, quis nostrud exercitation
               </FlexDetails>
-              <FlexDetails id="b" color="green" open>
+              <FlexDetails id="b" color="green" open resizable>
                 This is the main content area. Lorem ipsum dolor sit amet,
                 consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
                 labore et dolore magna aliqua. Ut enim ad minim veniam, quis
@@ -243,6 +243,13 @@
       const FlexDetails = ({ id, color, children, open, resizable }) => {
         return (
           <>
+            {resizable && (
+              <div
+                id={`${id}-resize-handle`}
+                data-resize-handle={id}
+                style="height: 20px; margin-top: -5px; background: orange; flex-shrink: 0;"
+              ></div>
+            )}
             <details
               className="flex_details"
               id={id}
@@ -254,13 +261,6 @@
               <summary>Summary</summary>
               <div className="flex_details_content">{children}</div>
             </details>
-            {resizable && (
-              <div
-                id={`${id}-resize-handle`}
-                data-resize-handle={id}
-                style="height: 20px; margin-top: -5px; background: orange; flex-shrink: 0;"
-              ></div>
-            )}
           </>
         );
       };

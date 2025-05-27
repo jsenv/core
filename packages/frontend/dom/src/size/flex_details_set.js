@@ -359,7 +359,7 @@ export const initFlexDetailsSet = (
     const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
     if (spaceToAllocate === 0) {
       distributeRemainingSpace({
-        childToGrow: details.open ? details : null,
+        childToGrow: lastDetailsOpened,
         childToShrinkFrom: lastChild,
       });
       return;
@@ -394,7 +394,7 @@ export const initFlexDetailsSet = (
         );
       }
       distributeRemainingSpace({
-        childToGrow: lastDetailsOpened,
+        childToGrow: firstDetailsOpened,
         childToShrinkFrom: lastChild,
       });
       // if (Array.from(allocatedSpaceMap.values())[1] === 286) {
@@ -462,7 +462,7 @@ export const initFlexDetailsSet = (
         onMove: (gesture) => {
           const elementToResize = gesture.element;
           const yMove = gesture.yMove;
-          requestResize(elementToResize, heightAtStart + yMove);
+          requestResize(elementToResize, heightAtStart - yMove);
         },
         onEnd: () => {
           // bah a priori rien de plus
