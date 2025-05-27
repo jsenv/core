@@ -377,6 +377,10 @@ export const initFlexDetailsSet = (
       }
       reapplyRequestedSpace(details, requestedSpace, reason);
     } else if (debug) {
+      distributeRemainingSpace({
+        childToGrow: lastDetailsOpened,
+        childToShrinkFrom: lastChild,
+      });
       console.debug(`no space to steal from previous siblings`);
     }
   };
