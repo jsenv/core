@@ -4,8 +4,8 @@ import { setStyles } from "../style_and_attributes.js";
 const easing = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 
 export const createSizeAnimationGroupController = ({ duration, onChange }) => {
-  const startHeightMap = new Map();
-  const targetHeightMap = new Map();
+  const startSizeMap = new Map();
+  const targetSizeMap = new Map();
   const sideEffectMap = new Map();
   const elementSet = new Set();
   let animationFrame;
@@ -39,35 +39,30 @@ export const createSizeAnimationGroupController = ({ duration, onChange }) => {
       let somethingChanged = false;
       for (const { element, target, sideEffect } of animations) {
         const isNew = !elementSet.has(element);
+        const startSize = parseFloat(getComputedStyle(element).height);
         if (isNew) {
-          const startHeight = parseFloat(getComputedStyle(element).height);
-          if (startHeight === target) {
+          if (startSize === target) {
             continue;
           }
           somethingChanged = true;
           elementSet.add(element);
-          startHeightMap.set(element, startHeight);
-          targetHeightMap.set(element, target);
+          startSizeMap.set(element, startSize);
+          targetSizeMap.set(element, target);
           sideEffectMap.set(element, sideEffect);
           const restoreWillChangeStyle = setStyles(element, {
             "will-change": "height",
           });
           finishCallbackSet.add(restoreWillChangeStyle);
-          const restoreHeightStyle = setStyles(element, {
-            height: `${startHeight}px`,
+          const restoreSizeStyle = setStyles(element, {
+            height: `${startSize}px`,
           });
-
-          cancelCallbackSet.add(restoreHeightStyle);
+          cancelCallbackSet.add(restoreSizeStyle);
         } else {
-          const currentHeight = parseFloat(getComputedStyle(element).height);
-          if (
-            currentHeight !== target ||
-            targetHeightMap.get(element) !== target
-          ) {
+          if (startSize !== target || targetSizeMap.get(element) !== target) {
             somethingChanged = true;
           }
-          startHeightMap.set(element, currentHeight);
-          targetHeightMap.set(element, target);
+          startSizeMap.set(element, startSize);
+          targetSizeMap.set(element, target);
           sideEffectMap.set(element, sideEffect);
         }
       }
@@ -83,12 +78,12 @@ export const createSizeAnimationGroupController = ({ duration, onChange }) => {
           const easedProgress = easing(progress);
           const changeEntryArray = [];
           for (const element of elementSet) {
-            const startHeight = startHeightMap.get(element);
-            const targetHeight = targetHeightMap.get(element);
-            const currentHeight =
-              startHeight + (targetHeight - startHeight) * easedProgress;
-            update(element, currentHeight);
-            changeEntryArray.push({ element, value: startHeight });
+            const startSize = startSizeMap.get(element);
+            const targetSize = targetSizeMap.get(element);
+            const animatedSize =
+              startSize + (targetSize - startSize) * easedProgress;
+            update(element, animatedSize);
+            changeEntryArray.push({ element, value: startSize });
           }
           if (changeEntryArray.length && onChange) {
             onChange(changeEntryArray);
@@ -100,16 +95,16 @@ export const createSizeAnimationGroupController = ({ duration, onChange }) => {
         // Animation complete
         const changeEntryArray = [];
         for (const element of elementSet) {
-          const finalHeight = targetHeightMap.get(element);
-          update(element, finalHeight, true);
-          changeEntryArray.push({ element, value: finalHeight });
+          const finalSize = targetSizeMap.get(element);
+          update(element, finalSize, true);
+          changeEntryArray.push({ element, value: finalSize });
         }
         if (changeEntryArray.length && onChange) {
           onChange(changeEntryArray);
         }
         callFinishCallbacks();
-        startHeightMap.clear();
-        targetHeightMap.clear();
+        startSizeMap.clear();
+        targetSizeMap.clear();
         sideEffectMap.clear();
         elementSet.clear();
         animationFrame = null;
