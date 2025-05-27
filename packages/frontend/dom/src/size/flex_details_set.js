@@ -32,10 +32,9 @@ export const initFlexDetailsSet = (
 
   const spaceMap = new Map();
   const marginSizeMap = new Map();
-  const minSpaceMap = new Map();
   const requestedSpaceMap = new Map();
+  const minSpaceMap = new Map();
   const allocatedSpaceMap = new Map();
-  const detailsContentHeightMap = new Map();
   const canGrowSet = new Set();
   const canShrinkSet = new Set();
   let availableSpace;
@@ -43,11 +42,11 @@ export const initFlexDetailsSet = (
   let lastDetailsOpened = null;
   let firstDetailsOpened = null;
   const prepareSpaceDistribution = () => {
+    spaceMap.clear();
     marginSizeMap.clear();
-    minSpaceMap.clear();
     requestedSpaceMap.clear();
+    minSpaceMap.clear();
     allocatedSpaceMap.clear();
-    detailsContentHeightMap.clear();
     canGrowSet.clear();
     canShrinkSet.clear();
     availableSpace = getInnerHeight(container);
@@ -66,31 +65,27 @@ export const initFlexDetailsSet = (
       if (!isDetailsElement(child)) {
         const size = getHeight(child);
         const space = size + marginSize;
-        minSpaceMap.set(child, space);
         spaceMap.set(child, space);
         requestedSpaceMap.set(child, space);
+        minSpaceMap.set(child, space);
         continue;
       }
       const details = child;
       canGrowSet.add(details);
       canShrinkSet.add(details);
       let size;
-      let sizeSource;
+      let requestedSize;
+      let requestedSizeSource;
+      let minSize;
+
+      const summary = details.querySelector("summary");
+      const summaryHeight = getHeight(summary);
+
       if (details.open) {
         if (!firstDetailsOpened) {
           firstDetailsOpened = details;
         }
         lastDetailsOpened = details;
-        {
-          const dataMinHeight = details.getAttribute("data-min-height");
-          if (dataMinHeight) {
-            const minHeight = parseFloat(dataMinHeight, 10);
-            minSpaceMap.set(details, minHeight + marginSize);
-          } else {
-            const minHeight = getMinHeight(details, availableSpace);
-            minSpaceMap.set(details, minHeight + marginSize);
-          }
-        }
 
         const detailsContent = details.querySelector("summary + *");
         const restoreSizeStyle = setStyles(detailsContent, {
@@ -98,34 +93,38 @@ export const initFlexDetailsSet = (
         });
         const detailsContentHeight = getHeight(detailsContent);
         restoreSizeStyle();
-        detailsContentHeightMap.set(details);
+        const detailsHeight = summaryHeight + detailsContentHeight;
+        size = detailsHeight;
 
         if (details.hasAttribute("data-requested-height")) {
           const requestedHeightAttribute = details.getAttribute(
             "data-requested-height",
           );
-          size = parseFloat(requestedHeightAttribute, 10);
-          sizeSource = "data-requested-height attribute";
+          requestedSize = parseFloat(requestedHeightAttribute, 10);
+          requestedSizeSource = "data-requested-height attribute";
         } else {
-          const summary = details.querySelector("summary");
-          const summaryHeight = getHeight(summary);
-          const detailsHeight = summaryHeight + detailsContentHeight;
-          size = detailsHeight;
-          sizeSource = "summary and content height";
+          requestedSize = detailsHeight;
+          requestedSizeSource = "summary and content height";
+        }
+
+        const dataMinHeight = details.getAttribute("data-min-height");
+        if (dataMinHeight) {
+          minSize = parseFloat(dataMinHeight, 10);
+        } else {
+          minSize = getMinHeight(details, availableSpace);
         }
       } else {
-        const summary = details.querySelector("summary");
-        const summaryHeight = getHeight(summary);
-        minSpaceMap.set(details, summaryHeight + marginSize);
         size = summaryHeight;
-        sizeSource = "summary height";
+        requestedSize = summaryHeight;
+        requestedSizeSource = "summary height";
+        minSize = summaryHeight;
       }
-      const space = size + marginSize;
-      spaceMap.set(details, space);
-      requestedSpaceMap.set(details, space);
+      spaceMap.set(details, size + marginSize);
+      requestedSpaceMap.set(details, requestedSize + marginSize);
+      minSpaceMap.set(details, minSize + marginSize);
       if (debug) {
         console.debug(
-          `details ${details.id} space: ${spaceMap.get(details)}px, min space: ${minSpaceMap.get(details)}px, requested space: ${space}px (${sizeSource})`,
+          `details ${details.id} space: ${spaceMap.get(details)}px, min space: ${minSpaceMap.get(details)}px, requested space: ${requestedSpaceMap.get(details)}px (${requestedSizeSource})`,
         );
       }
     }
@@ -373,40 +372,43 @@ export const initFlexDetailsSet = (
       });
       return;
     }
-    const action =
-      allocatedSpace < requestedSpace ? ["steal", "stolen"] : ["give", "given"];
-    const spaceToDistribute = requestedSpace - allocatedSpace - remainingSpace;
+    const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
     if (debug) {
       console.debug(
-        `${details.id} would like to take ${requestedSpace}px (${reason}). It would have to ${action[0]} ${spaceToDistribute}px, remaining space: ${remainingSpace}px`,
+        `${details.id} would like to take ${requestedSpace}px (${reason}). Trying to allocate ${spaceToAllocate}px to previous siblings, remaining space: ${remainingSpace}px`,
       );
     }
     const previousSiblingAllocatedSpace = allocateSpaceToPreviousSiblings(
       details,
-      spaceToDistribute,
+      spaceToAllocate,
       reason,
     );
     if (previousSiblingAllocatedSpace) {
       if (debug) {
-        if (previousSiblingAllocatedSpace === spaceToDistribute) {
+        if (previousSiblingAllocatedSpace === spaceToAllocate) {
           console.debug(
-            `${previousSiblingAllocatedSpace}px ${action[1]} from previous siblings in favor of ${details.id}`,
+            `${previousSiblingAllocatedSpace}px allocated to previous siblings`,
           );
         } else {
           console.debug(
-            `${previousSiblingAllocatedSpace}px ${action[1]} (out of ${spaceToDistribute}px) from previous siblings in favor of ${details.id}`,
+            `${previousSiblingAllocatedSpace}px allocated (out of ${spaceToAllocate}px) to previous siblings`,
           );
         }
       }
       reapplyRequestedSpace(details, requestedSpace, reason);
     } else {
       if (debug) {
-        console.debug(`no space to ${action[0]} from previous siblings`);
+        console.debug(
+          `no space could be re-allocated to previous siblings, remaining space: ${remainingSpace}px`,
+        );
       }
       distributeRemainingSpace({
         childToGrow: lastDetailsOpened,
         childToShrinkFrom: lastChild,
       });
+      // if (Array.from(allocatedSpaceMap.values())[1] === 286) {
+      //   debugger;
+      // }
     }
   };
 
