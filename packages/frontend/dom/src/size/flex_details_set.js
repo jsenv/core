@@ -212,12 +212,12 @@ export const initFlexDetailsSet = (
 
     if (allocatedSpace < requestedSpace) {
       if (!canShrinkSet.has(child)) {
-        allocatedSpace = requestedSpace;
+        allocatedSpace = spaceMap.get(child);
         allocatedSpaceSource = `${requestSource} + cannot shrink`;
       }
     } else if (allocatedSpace > requestedSpace) {
       if (!canGrowSet.has(child)) {
-        allocatedSpace = requestedSpace;
+        allocatedSpace = spaceMap.get(child);
         allocatedSpaceSource = `${requestSource} + cannot grow`;
       }
     }
@@ -396,12 +396,14 @@ export const initFlexDetailsSet = (
         }
       }
       reapplyRequestedSpace(details, requestedSpace, reason);
-    } else if (debug) {
+    } else {
+      if (debug) {
+        console.debug(`no space to steal from previous siblings`);
+      }
       distributeRemainingSpace({
         childToGrow: lastDetailsOpened,
         childToShrinkFrom: lastChild,
       });
-      console.debug(`no space to steal from previous siblings`);
     }
   };
 
