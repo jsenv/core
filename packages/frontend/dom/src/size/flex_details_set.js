@@ -139,11 +139,6 @@ export const initFlexDetailsSet = (
       const animations = [];
       for (const child of container.children) {
         const allocatedSpace = allocatedSpaceMap.get(child);
-        // we must turn allocated space into allocaed size
-        const space = spaceMap.get(child);
-        if (allocatedSpace === space) {
-          continue;
-        }
         if (isDetailsElement(child) && child.open) {
           const syncDetailsContentHeight =
             prepareSyncDetailsContentHeight(child);
@@ -169,10 +164,6 @@ export const initFlexDetailsSet = (
     const sizeChangeEntries = [];
     for (const child of container.children) {
       const allocatedSpace = allocatedSpaceMap.get(child);
-      const space = spaceMap.get(child);
-      if (allocatedSpace === space) {
-        continue;
-      }
       const allocatedSize = spaceToSize(child, allocatedSpace);
       child.style.height = `${allocatedSize}px`;
       if (isDetailsElement(child) && child.open) {
