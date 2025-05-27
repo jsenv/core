@@ -443,6 +443,12 @@ export const initFlexDetailsSet = (
   }
 
   const requestResize = (details, newSize) => {
+    if (isNaN(newSize) || !isFinite(newSize)) {
+      console.warn(
+        `requestResize called with invalid size: ${newSize} for details ${details.id}`,
+      );
+      return;
+    }
     details.setAttribute("data-requested-height", newSize);
     prepareSpaceDistribution();
     const source = `${details.id} resize requested to ${newSize}px`;
