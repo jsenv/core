@@ -86,12 +86,12 @@ export const initFlexDetailsSet = (
         restoreHeightStyle();
         detailsContentHeightMap.set(details);
 
-        if (details.hasAttribute("data-requested-space")) {
-          const requestedSpaceAttribute = details.getAttribute(
-            "data-requested-space",
+        if (details.hasAttribute("data-requested-height")) {
+          const requestedHeightAttribute = details.getAttribute(
+            "data-requested-height",
           );
-          requestedSpace = parseFloat(requestedSpaceAttribute, 10);
-          requestedSpaceSource = "data-requested-space attribute";
+          requestedSpace = parseFloat(requestedHeightAttribute, 10);
+          requestedSpaceSource = "data-requested-height attribute";
         } else {
           const summary = details.querySelector("summary");
           const summaryHeight = getHeight(summary);
@@ -335,7 +335,7 @@ export const initFlexDetailsSet = (
     cleanup,
   };
 
-  const giveSpaceToDetails = (details) => {
+  const giveSpaceToDetails = (details, reason) => {
     const requestedSpace = requestedSpaceMap.get(details);
     const allocatedSpace = allocatedSpaceMap.get(details);
     const missingSpace = requestedSpace - allocatedSpace;
@@ -349,13 +349,13 @@ export const initFlexDetailsSet = (
     const spaceToSteal = missingSpace - remainingSpace;
     if (debug) {
       console.debug(
-        `${details.id} justed opened, would like to take ${requestedSpace}px. It would have to steal ${spaceToSteal}px, remaining space: ${remainingSpace}px`,
+        `${details.id} would like to take ${requestedSpace}px (${reason}). It would have to steal ${spaceToSteal}px, remaining space: ${remainingSpace}px`,
       );
     }
     const spaceStolen = stealSpaceFromPreviousSiblings(
       details,
       spaceToSteal,
-      "details just opened",
+      reason,
     );
     if (spaceStolen) {
       if (debug) {
@@ -369,11 +369,7 @@ export const initFlexDetailsSet = (
           );
         }
       }
-      reapplyRequestedSpace(
-        details,
-        requestedSpace,
-        "opened details stealing space",
-      );
+      reapplyRequestedSpace(details, requestedSpace, reason);
     } else if (debug) {
       console.debug(`no space to steal from previous siblings`);
     }
@@ -392,9 +388,9 @@ export const initFlexDetailsSet = (
           `${details.id} ${details.open ? "opened" : "closed"}`,
         );
         if (details.open) {
-          giveSpaceToDetails(details);
+          giveSpaceToDetails(details, "just opened");
         } else if (lastDetailsOpened) {
-          giveSpaceToDetails(lastDetailsOpened);
+          giveSpaceToDetails(lastDetailsOpened, "last opened");
         }
         applyAllocatedSpaces({ animate: true });
       };
@@ -412,14 +408,17 @@ export const initFlexDetailsSet = (
     }
   }
 
+  const requestResize = (details, newSize) => {
+    details.setAttribute("data-requested-height", newSize);
+    prepareSpaceDistribution();
+    const source = `${details.id} resize requested to ${newSize}px`;
+    distributeAvailableSpace(source);
+    giveSpaceToDetails(details, source);
+    applyAllocatedSpaces();
+  };
+  flexDetailsSet.requestResize = requestResize;
+
   resize_with_mouse: {
-    const requestResize = (details, newSize) => {
-      prepareSpaceDistribution();
-      details.setAttribute("data-requested-height", newSize);
-      distributeAvailableSpace(`${details.id} requested size: ${newSize}px`);
-      giveSpaceToDetails(details);
-      applyAllocatedSpaces();
-    };
     const onmousedown = (event) => {
       let heightAtStart = 0;
       startResizeGesture(event, {
