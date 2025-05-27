@@ -39,6 +39,7 @@ export const initFlexDetailsSet = (
   let availableSpace;
   let remainingSpace;
   let lastDetailsOpened = null;
+  let firstDetailsOpened = null;
   const prepareSpaceDistribution = () => {
     marginSizeMap.clear();
     minSpaceMap.clear();
@@ -49,6 +50,8 @@ export const initFlexDetailsSet = (
       console.debug(`availableSpace: ${availableSpace}px`);
     }
     remainingSpace = availableSpace;
+    firstDetailsOpened = null;
+    lastDetailsOpened = null;
 
     for (const child of container.children) {
       const size = getHeight(child);
@@ -66,6 +69,9 @@ export const initFlexDetailsSet = (
       let requestedSpace;
       let requestedSpaceSource;
       if (details.open) {
+        if (!firstDetailsOpened) {
+          firstDetailsOpened = details;
+        }
         lastDetailsOpened = details;
         {
           const dataMinHeight = details.getAttribute("data-min-height");
@@ -389,8 +395,8 @@ export const initFlexDetailsSet = (
         );
         if (details.open) {
           giveSpaceToDetails(details, "just opened");
-        } else if (lastDetailsOpened) {
-          giveSpaceToDetails(lastDetailsOpened, "last opened");
+        } else if (firstDetailsOpened) {
+          giveSpaceToDetails(firstDetailsOpened, "first opened");
         }
         applyAllocatedSpaces({ animate: true });
       };
