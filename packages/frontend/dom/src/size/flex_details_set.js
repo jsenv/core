@@ -356,95 +356,97 @@ export const initFlexDetailsSet = (
     cleanup,
   };
 
-  const allocateSpaceToDetails = (details, reason) => {
-    const requestedSpace = requestedSpaceMap.get(details);
-    const allocatedSpace = allocatedSpaceMap.get(details);
-    const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
-    if (spaceToAllocate === 0) {
-      distributeRemainingSpace({
-        childToGrow: lastDetailsOpened,
-        childToShrinkFrom: lastChild,
-      });
-      return;
-    }
-    if (debug) {
-      console.debug(
-        `${details.id} would like to take ${requestedSpace}px (${reason}). Trying to allocate ${spaceToAllocate}px to previous siblings, remaining space: ${remainingSpace}px`,
+  const allocateSibling = (child, spaceToAllocate, reason) => {
+    let nextSibling = child.nextElementSibling;
+    while (nextSibling) {
+      if (!isDetailsElement(nextSibling)) {
+        nextSibling = nextSibling.nextElementSibling;
+        continue;
+      }
+      const allocatedSpaceCurrent = allocatedSpaceMap.get(nextSibling);
+      const allocatedSpace = reallocateSpace(
+        nextSibling,
+        allocatedSpaceCurrent - spaceToAllocate,
+        reason,
       );
+      const allocatedSpaceDiff = allocatedSpaceCurrent - allocatedSpace;
+      if (!allocatedSpaceDiff) {
+        nextSibling = nextSibling.nextElementSibling;
+        continue;
+      }
+      return { child: nextSibling, allocatedSpace: allocatedSpaceDiff };
     }
 
-    let sibling;
-    let siblingAllocatedSpace;
-    allocate_from_sibling: {
-      let nextSibling = details.nextElementSibling;
-      while (nextSibling) {
-        if (!isDetailsElement(nextSibling)) {
-          nextSibling = nextSibling.nextElementSibling;
-          continue;
-        }
-        const allocatedSpaceCurrent = allocatedSpaceMap.get(nextSibling);
-        const allocatedSpace = reallocateSpace(
-          nextSibling,
-          allocatedSpaceCurrent - spaceToAllocate,
-          reason,
-        );
-        const allocatedSpaceDiff = allocatedSpaceCurrent - allocatedSpace;
-        if (!allocatedSpaceDiff) {
-          nextSibling = nextSibling.nextElementSibling;
-          continue;
-        }
-        sibling = nextSibling;
-        siblingAllocatedSpace = allocatedSpaceDiff;
-        break allocate_from_sibling;
+    let previousSibling = child.previousElementSibling;
+    while (previousSibling) {
+      if (!isDetailsElement(previousSibling)) {
+        previousSibling = previousSibling.previousElementSibling;
+        continue;
       }
-
-      let previousSibling = details.previousElementSibling;
-      while (previousSibling) {
-        if (!isDetailsElement(previousSibling)) {
-          previousSibling = previousSibling.previousElementSibling;
-          continue;
-        }
-        const allocatedSpaceCurrent = allocatedSpaceMap.get(previousSibling);
-        const allocatedSpace = reallocateSpace(
-          previousSibling,
-          allocatedSpaceCurrent - spaceToAllocate,
-          reason,
-        );
-        const allocatedSpaceDiff = allocatedSpaceCurrent - allocatedSpace;
-        if (!allocatedSpaceDiff) {
-          previousSibling = previousSibling.previousElementSibling;
-          continue;
-        }
-        sibling = previousSibling;
-        siblingAllocatedSpace = allocatedSpaceDiff;
-        break allocate_from_sibling;
+      const allocatedSpaceCurrent = allocatedSpaceMap.get(previousSibling);
+      const allocatedSpace = reallocateSpace(
+        previousSibling,
+        allocatedSpaceCurrent - spaceToAllocate,
+        reason,
+      );
+      const allocatedSpaceDiff = allocatedSpaceCurrent - allocatedSpace;
+      if (!allocatedSpaceDiff) {
+        previousSibling = previousSibling.previousElementSibling;
+        continue;
       }
+      return { child: previousSibling, allocatedSpace: allocatedSpaceDiff };
     }
-    if (sibling) {
-      if (debug) {
-        if (siblingAllocatedSpace === spaceToAllocate) {
-          console.debug(`${siblingAllocatedSpace}px allocated to sibling`);
-        } else {
-          console.debug(
-            `${siblingAllocatedSpace}px allocated (out of ${spaceToAllocate}px) to sibling`,
-          );
-        }
-      }
-      reallocateSpace(details, requestedSpace, reason);
-    } else {
-      if (debug) {
-        console.debug(
-          `no space could be re-allocated to sibling, remaining space: ${remainingSpace}px`,
-        );
-      }
-      distributeRemainingSpace({
-        childToGrow: firstDetailsOpened,
-        childToShrinkFrom: lastChild,
-      });
-    }
+    return null;
   };
 
   update_on_toggle: {
+    const allocateSpaceAfterToggle = (details, source) => {
+      const requestedSpace = requestedSpaceMap.get(details);
+      const allocatedSpace = allocatedSpaceMap.get(details);
+      const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
+      if (spaceToAllocate === 0) {
+        distributeRemainingSpace({
+          childToGrow: lastDetailsOpened,
+          childToShrinkFrom: lastChild,
+        });
+        return;
+      }
+      if (debug) {
+        console.debug(
+          `${details.id} would like to take ${requestedSpace}px (${source}). Trying to allocate ${spaceToAllocate}px to previous siblings, remaining space: ${remainingSpace}px`,
+        );
+      }
+
+      const siblingAllocationResult = allocateSibling(
+        details,
+        spaceToAllocate,
+        source,
+      );
+      if (siblingAllocationResult) {
+        const { allocatedSpace } = siblingAllocationResult;
+        if (debug) {
+          if (allocatedSpace === spaceToAllocate) {
+            console.debug(`${allocatedSpace}px allocated to sibling`);
+          } else {
+            console.debug(
+              `${allocatedSpace}px allocated (out of ${spaceToAllocate}px) to sibling`,
+            );
+          }
+        }
+        reallocateSpace(details, requestedSpace, source);
+      } else {
+        if (debug) {
+          console.debug(
+            `no space could be re-allocated to sibling, remaining space: ${remainingSpace}px`,
+          );
+        }
+        distributeRemainingSpace({
+          childToGrow: firstDetailsOpened,
+          childToShrinkFrom: lastChild,
+        });
+      }
+    };
+
     for (const child of container.children) {
       if (!isDetailsElement(child)) {
         continue;
@@ -457,9 +459,9 @@ export const initFlexDetailsSet = (
           `${details.id} ${details.open ? "opened" : "closed"}`,
         );
         if (details.open) {
-          allocateSpaceToDetails(details, "just opened");
+          allocateSpaceAfterToggle(details, "just opened");
         } else if (firstDetailsOpened) {
-          allocateSpaceToDetails(firstDetailsOpened, "first opened");
+          allocateSpaceAfterToggle(firstDetailsOpened, "first opened");
         }
         applyAllocatedSpaces({ animate: true });
       };
@@ -477,28 +479,68 @@ export const initFlexDetailsSet = (
     }
   }
 
-  const requestResize = (details, newSize) => {
-    if (isNaN(newSize) || !isFinite(newSize)) {
-      console.warn(
-        `requestResize called with invalid size: ${newSize} for details ${details.id}`,
+  request_resize: {
+    const requestResize = (child, newSize) => {
+      if (isNaN(newSize) || !isFinite(newSize)) {
+        console.warn(
+          `requestResize called with invalid size: ${newSize} for details ${child.id}`,
+        );
+        return;
+      }
+      child.setAttribute("data-requested-height", newSize);
+      prepareSpaceDistribution();
+      const source = `${child.id} resize requested to ${newSize}px`;
+      distributeAvailableSpace(source);
+
+      const requestedSpace = requestedSpaceMap.get(child);
+      const allocatedSpace = allocatedSpaceMap.get(child);
+      const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
+      if (spaceToAllocate === 0) {
+        distributeRemainingSpace({
+          childToGrow: lastDetailsOpened,
+          childToShrinkFrom: lastChild,
+        });
+        return;
+      }
+      if (debug) {
+        console.debug(
+          `${child.id} would like to take ${requestedSpace}px (${source}). Trying to allocate ${spaceToAllocate}px to previous siblings, remaining space: ${remainingSpace}px`,
+        );
+      }
+
+      const siblingAllocationResult = allocateSibling(
+        child,
+        spaceToAllocate,
+        source,
       );
-      return;
-    }
-    details.setAttribute("data-requested-height", newSize);
-    prepareSpaceDistribution();
-    const source = `${details.id} resize requested to ${newSize}px`;
-    // ici pendant le resize il se passe un truc chelou
-    // le details next sibling s'autorise a grandir
-    // alors qu'on voudrait pas autoriser cela je crois
-    // ca fait bizarre en tous cas
-    // lorsqu'on resize b, seul a peut recupérer l'espace
-    // et pas c
-    // on pourrait faire un truc simple: pendant le resize on lock la taille des suivants
-    distributeAvailableSpace(source);
-    allocateSpaceToDetails(details, source);
-    applyAllocatedSpaces();
-  };
-  flexDetailsSet.requestResize = requestResize;
+
+      if (siblingAllocationResult) {
+        const { allocatedSpace } = siblingAllocationResult;
+        if (debug) {
+          if (allocatedSpace === spaceToAllocate) {
+            console.debug(`${allocatedSpace}px allocated to sibling`);
+          } else {
+            console.debug(
+              `${allocatedSpace}px allocated (out of ${spaceToAllocate}px) to sibling`,
+            );
+          }
+        }
+        reallocateSpace(child, requestedSpace, source);
+      } else {
+        if (debug) {
+          console.debug(
+            `no space could be re-allocated to sibling, remaining space: ${remainingSpace}px`,
+          );
+        }
+        distributeRemainingSpace({
+          childToGrow: firstDetailsOpened,
+          childToShrinkFrom: lastChild,
+        });
+      }
+      applyAllocatedSpaces();
+    };
+    flexDetailsSet.requestResize = requestResize;
+  }
 
   resize_with_mouse: {
     const onmousedown = (event) => {
@@ -506,13 +548,13 @@ export const initFlexDetailsSet = (
       startResizeGesture(event, {
         onStart: (gesture) => {
           heightAtStart = getHeight(gesture.element);
-          requestResize(gesture.element, heightAtStart);
+          flexDetailsSet.requestResize(gesture.element, heightAtStart);
           // TODO: lock the size of next siblings
         },
         onMove: (gesture) => {
           const elementToResize = gesture.element;
           const yMove = gesture.yMove;
-          requestResize(elementToResize, heightAtStart - yMove);
+          flexDetailsSet.requestResize(elementToResize, heightAtStart - yMove);
         },
         onEnd: () => {
           // bah a priori rien de plus
