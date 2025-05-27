@@ -266,10 +266,10 @@ export const initFlexDetailsSet = (
       const spaceToSleal = -remainingSpace;
       if (debug) {
         console.debug(
-          `remaining space is negative: ${remainingSpace}px, stealing ${spaceToSleal} from child before ${childToShrinkFrom.id}`,
+          `remaining space is negative: ${remainingSpace}px, stealing ${spaceToSleal}px from child before ${childToShrinkFrom.id}`,
         );
       }
-      stealSpaceFromPreviousSiblings(
+      allocateSpaceToPreviousSiblings(
         childToShrinkFrom,
         spaceToSleal,
         `remaining space is negative: ${remainingSpace}px`,
@@ -286,28 +286,28 @@ export const initFlexDetailsSet = (
     }
   };
 
-  const stealSpaceFromPreviousSiblings = (child, spaceToSteal, source) => {
-    let spaceStolenTotal = 0;
-    let remainingSpaceToSteal = spaceToSteal;
+  const allocateSpaceToPreviousSiblings = (child, spaceToAllocate, source) => {
+    let spaceAllocatedTotal = 0;
+    let remainingSpaceToAllocate = spaceToAllocate;
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
       const allocatedSpaceCurrent = allocatedSpaceMap.get(previousSibling);
       const allocatedSpace = reapplyRequestedSpace(
         previousSibling,
-        allocatedSpaceCurrent - remainingSpaceToSteal,
+        allocatedSpaceCurrent - remainingSpaceToAllocate,
         source,
       );
-      const spaceStolen = allocatedSpaceCurrent - allocatedSpace;
-      if (spaceStolen) {
-        spaceStolenTotal += spaceStolen;
-        remainingSpaceToSteal -= spaceStolen;
-        if (remainingSpaceToSteal <= 0) {
+      const allocatedSpaceDiff = allocatedSpaceCurrent - allocatedSpace;
+      if (allocatedSpaceDiff) {
+        spaceAllocatedTotal += allocatedSpaceDiff;
+        remainingSpaceToAllocate -= allocatedSpaceDiff;
+        if (remainingSpaceToAllocate <= 0) {
           break;
         }
       }
       previousSibling = previousSibling.previousElementSibling;
     }
-    return spaceStolenTotal;
+    return spaceAllocatedTotal;
   };
 
   const prepareSyncDetailsContentHeight = (details) => {
@@ -366,41 +366,42 @@ export const initFlexDetailsSet = (
   const giveSpaceToDetails = (details, reason) => {
     const requestedSpace = requestedSpaceMap.get(details);
     const allocatedSpace = allocatedSpaceMap.get(details);
-    const missingSpace = requestedSpace - allocatedSpace;
-    if (!missingSpace) {
+    if (allocatedSpace === requestedSpace) {
       distributeRemainingSpace({
         childToGrow: details.open ? details : null,
         childToShrinkFrom: lastChild,
       });
       return;
     }
-    const spaceToSteal = missingSpace - remainingSpace;
+    const action =
+      allocatedSpace < requestedSpace ? ["steal", "stolen"] : ["give", "given"];
+    const spaceToDistribute = requestedSpace - allocatedSpace - remainingSpace;
     if (debug) {
       console.debug(
-        `${details.id} would like to take ${requestedSpace}px (${reason}). It would have to steal ${spaceToSteal}px, remaining space: ${remainingSpace}px`,
+        `${details.id} would like to take ${requestedSpace}px (${reason}). It would have to ${action[0]} ${spaceToDistribute}px, remaining space: ${remainingSpace}px`,
       );
     }
-    const spaceStolen = stealSpaceFromPreviousSiblings(
+    const previousSiblingAllocatedSpace = allocateSpaceToPreviousSiblings(
       details,
-      spaceToSteal,
+      spaceToDistribute,
       reason,
     );
-    if (spaceStolen) {
+    if (previousSiblingAllocatedSpace) {
       if (debug) {
-        if (spaceStolen === spaceToSteal) {
+        if (previousSiblingAllocatedSpace === spaceToDistribute) {
           console.debug(
-            `${spaceStolen}px stolen from previous siblings in favor of ${details.id}`,
+            `${previousSiblingAllocatedSpace}px ${action[1]} from previous siblings in favor of ${details.id}`,
           );
         } else {
           console.debug(
-            `${spaceStolen}px stolen (out of ${spaceToSteal}px) from previous siblings in favor of ${details.id}`,
+            `${previousSiblingAllocatedSpace}px ${action[1]} (out of ${spaceToDistribute}px) from previous siblings in favor of ${details.id}`,
           );
         }
       }
       reapplyRequestedSpace(details, requestedSpace, reason);
     } else {
       if (debug) {
-        console.debug(`no space to steal from previous siblings`);
+        console.debug(`no space to ${action[0]} from previous siblings`);
       }
       distributeRemainingSpace({
         childToGrow: lastDetailsOpened,
