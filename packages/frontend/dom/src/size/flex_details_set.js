@@ -59,23 +59,23 @@ export const initFlexDetailsSet = (
     lastDetailsOpened = null;
 
     for (const child of container.children) {
-      const size = getHeight(child);
       const marginSizes = getMarginSizes(child);
       const marginSize = marginSizes.top + marginSizes.bottom;
       marginSizeMap.set(child, marginSize);
 
       if (!isDetailsElement(child)) {
-        minSpaceMap.set(child, size + marginSize);
-        requestedSpaceMap.set(child, size + marginSize);
+        const size = getHeight(child);
+        const space = size + marginSize;
+        minSpaceMap.set(child, space);
+        spaceMap.set(child, space);
+        requestedSpaceMap.set(child, space);
         continue;
       }
-
-      canGrowSet.add(child);
-      canShrinkSet.add(child);
-
       const details = child;
-      let requestedSpace;
-      let requestedSpaceSource;
+      canGrowSet.add(details);
+      canShrinkSet.add(details);
+      let size;
+      let sizeSource;
       if (details.open) {
         if (!firstDetailsOpened) {
           firstDetailsOpened = details;
@@ -93,37 +93,39 @@ export const initFlexDetailsSet = (
         }
 
         const detailsContent = details.querySelector("summary + *");
-        const restoreHeightStyle = setStyles(detailsContent, {
+        const restoreSizeStyle = setStyles(detailsContent, {
           height: "auto",
         });
         const detailsContentHeight = getHeight(detailsContent);
-        restoreHeightStyle();
+        restoreSizeStyle();
         detailsContentHeightMap.set(details);
 
         if (details.hasAttribute("data-requested-height")) {
           const requestedHeightAttribute = details.getAttribute(
             "data-requested-height",
           );
-          requestedSpace = parseFloat(requestedHeightAttribute, 10);
-          requestedSpaceSource = "data-requested-height attribute";
+          size = parseFloat(requestedHeightAttribute, 10);
+          sizeSource = "data-requested-height attribute";
         } else {
           const summary = details.querySelector("summary");
           const summaryHeight = getHeight(summary);
           const detailsHeight = summaryHeight + detailsContentHeight;
-          requestedSpace = detailsHeight;
-          requestedSpaceSource = "summary and content height";
+          size = detailsHeight;
+          sizeSource = "summary and content height";
         }
       } else {
         const summary = details.querySelector("summary");
         const summaryHeight = getHeight(summary);
-        minSpaceMap.set(details, summaryHeight);
-        requestedSpace = summaryHeight;
-        requestedSpaceSource = "summary height";
+        minSpaceMap.set(details, summaryHeight + marginSize);
+        size = summaryHeight;
+        sizeSource = "summary height";
       }
-      requestedSpaceMap.set(details, requestedSpace);
+      const space = size + marginSize;
+      spaceMap.set(details, space);
+      requestedSpaceMap.set(details, space);
       if (debug) {
         console.debug(
-          `details ${details.id} size: ${size}px, min size: ${minSpaceMap.get(details)}px, requested space: ${requestedSpace}px (${requestedSpaceSource})`,
+          `details ${details.id} space: ${spaceMap.get(details)}px, min space: ${minSpaceMap.get(details)}px, requested space: ${space}px (${sizeSource})`,
         );
       }
     }
