@@ -25,50 +25,56 @@ export const initFlexDetailsSet = (
     cleanupCallbackSet.clear();
   };
 
-  const minSizeMap = new Map();
-  const sizeMap = new Map();
-  const requestedSizeMap = new Map();
-  const allocatedSizeMap = new Map();
+  const spaceToSize = (element, space) => {
+    const marginSize = marginSizeMap.get(element);
+    return space - marginSize;
+  };
+
+  const spaceMap = new Map();
+  const marginSizeMap = new Map();
+  const minSpaceMap = new Map();
+  const requestedSpaceMap = new Map();
+  const allocatedSpaceMap = new Map();
   const detailsContentHeightMap = new Map();
   let availableSpace;
-  let spaceRemaining;
+  let remainingSpace;
   let lastDetailsOpened = null;
   const prepareSpaceDistribution = () => {
-    sizeMap.clear();
-    minSizeMap.clear();
-    allocatedSizeMap.clear();
+    marginSizeMap.clear();
+    minSpaceMap.clear();
+    requestedSpaceMap.clear();
+    allocatedSpaceMap.clear();
     availableSpace = getInnerHeight(container);
     if (debug) {
       console.debug(`availableSpace: ${availableSpace}px`);
     }
-    spaceRemaining = availableSpace;
+    remainingSpace = availableSpace;
 
     for (const child of container.children) {
-      const height = getHeight(child);
+      const size = getHeight(child);
       const marginSizes = getMarginSizes(child);
-      const spaceTakenByVerticalMargins = marginSizes.top + marginSizes.bottom;
-      const size = height + spaceTakenByVerticalMargins;
-      sizeMap.set(child, size);
+      const marginSize = marginSizes.top + marginSizes.bottom;
+      marginSizeMap.set(child, marginSize);
 
       if (!isDetailsElement(child)) {
-        minSizeMap.set(child, size);
-        requestedSizeMap.set(child, size);
+        minSpaceMap.set(child, size + marginSize);
+        requestedSpaceMap.set(child, size + marginSize);
         continue;
       }
 
       const details = child;
-      let requestedHeight;
-      let requestedHeightSource;
+      let requestedSpace;
+      let requestedSpaceSource;
       if (details.open) {
         lastDetailsOpened = details;
         {
           const dataMinHeight = details.getAttribute("data-min-height");
           if (dataMinHeight) {
             const minHeight = parseFloat(dataMinHeight, 10);
-            minSizeMap.set(details, minHeight);
+            minSpaceMap.set(details, minHeight + marginSize);
           } else {
             const minHeight = getMinHeight(details, availableSpace);
-            minSizeMap.set(details, minHeight);
+            minSpaceMap.set(details, minHeight + marginSize);
           }
         }
 
@@ -80,30 +86,30 @@ export const initFlexDetailsSet = (
         restoreHeightStyle();
         detailsContentHeightMap.set(details);
 
-        if (details.hasAttribute("data-requested-height")) {
-          const requestedHeightAttribute = details.getAttribute(
-            "data-requested-height",
+        if (details.hasAttribute("data-requested-space")) {
+          const requestedSpaceAttribute = details.getAttribute(
+            "data-requested-space",
           );
-          requestedHeight = parseFloat(requestedHeightAttribute, 10);
-          requestedHeightSource = "data-requested-height attribute";
+          requestedSpace = parseFloat(requestedSpaceAttribute, 10);
+          requestedSpaceSource = "data-requested-space attribute";
         } else {
           const summary = details.querySelector("summary");
           const summaryHeight = getHeight(summary);
           const detailsHeight = summaryHeight + detailsContentHeight;
-          requestedHeight = detailsHeight;
-          requestedHeightSource = "summary and content height";
+          requestedSpace = detailsHeight;
+          requestedSpaceSource = "summary and content height";
         }
       } else {
         const summary = details.querySelector("summary");
         const summaryHeight = getHeight(summary);
-        minSizeMap.set(details, summaryHeight);
-        requestedHeight = summaryHeight;
-        requestedHeightSource = "summary height";
+        minSpaceMap.set(details, summaryHeight);
+        requestedSpace = summaryHeight;
+        requestedSpaceSource = "summary height";
       }
-      requestedSizeMap.set(details, requestedHeight);
+      requestedSpaceMap.set(details, requestedSpace);
       if (debug) {
         console.debug(
-          `details ${details.id} size: ${height}px, minSize: ${minSizeMap.get(details)}px, requested size: ${requestedHeight}px (${requestedHeightSource})`,
+          `details ${details.id} size: ${size}px, min size: ${minSpaceMap.get(details)}px, requested space: ${requestedSpace}px (${requestedSpaceSource})`,
         );
       }
     }
@@ -113,13 +119,14 @@ export const initFlexDetailsSet = (
     duration: HEIGHT_ANIMATION_DURATION,
     onChange: onSizeChange,
   });
-  const applyAllocatedSizes = ({ animate } = {}) => {
+  const applyAllocatedSpaces = ({ animate } = {}) => {
     if (animate) {
       const animations = [];
       for (const child of container.children) {
-        const allocatedSize = allocatedSizeMap.get(child);
-        const size = sizeMap.get(child);
-        if (allocatedSize === size) {
+        const allocatedSpace = allocatedSpaceMap.get(child);
+        // we must turn allocated space into allocaed size
+        const space = spaceMap.get(child);
+        if (allocatedSpace === space) {
           continue;
         }
         if (isDetailsElement(child) && child.open) {
@@ -127,7 +134,7 @@ export const initFlexDetailsSet = (
             prepareSyncDetailsContentHeight(child);
           animations.push({
             element: child,
-            target: allocatedSize,
+            target: spaceToSize(child, allocatedSpace),
             sideEffect: (height, isFinished) => {
               syncDetailsContentHeight(height, { isAnimation: !isFinished });
             },
@@ -135,7 +142,7 @@ export const initFlexDetailsSet = (
         } else {
           animations.push({
             element: child,
-            target: allocatedSize,
+            target: spaceToSize(child, allocatedSpace),
           });
         }
       }
@@ -146,11 +153,12 @@ export const initFlexDetailsSet = (
 
     const sizeChangeEntries = [];
     for (const child of container.children) {
-      const allocatedSize = allocatedSizeMap.get(child);
-      const size = sizeMap.get(child);
-      if (allocatedSize === size) {
+      const allocatedSpace = allocatedSpaceMap.get(child);
+      const space = spaceMap.get(child);
+      if (allocatedSpace === space) {
         continue;
       }
+      const allocatedSize = spaceToSize(child, allocatedSpace);
       child.style.height = `${allocatedSize}px`;
       if (isDetailsElement(child) && child.open) {
         const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
@@ -163,63 +171,74 @@ export const initFlexDetailsSet = (
     }
   };
 
-  const applyRequestedSize = (child, sizeRequested, requestSource) => {
-    let sizeAllocated;
-    let sizeAllocatedSource;
+  const applyRequestedSpace = (child, requestedSpace, requestSource) => {
+    let allocatedSpace;
+    let allocatedSpaceSource;
     allocate: {
-      const minSize = minSizeMap.get(child);
-      if (sizeRequested > spaceRemaining) {
-        if (spaceRemaining < minSize) {
-          sizeAllocated = minSize;
-          sizeAllocatedSource = "min size";
+      const minSpace = minSpaceMap.get(child);
+      if (requestedSpace > remainingSpace) {
+        if (remainingSpace < minSpace) {
+          allocatedSpace = minSpace;
+          allocatedSpaceSource = "min size";
           break allocate;
         }
-        sizeAllocated = spaceRemaining;
-        sizeAllocatedSource = "remaining space";
+        allocatedSpace = remainingSpace;
+        allocatedSpaceSource = "remaining space";
         break allocate;
       }
-      if (sizeRequested < minSize) {
-        sizeAllocated = minSize;
-        sizeAllocatedSource = "min size";
+      if (requestedSpace < minSpace) {
+        allocatedSpace = minSpace;
+        allocatedSpaceSource = "min size";
         break allocate;
       }
-      sizeAllocated = sizeRequested;
-      sizeAllocatedSource = requestSource;
+      allocatedSpace = requestedSpace;
+      allocatedSpaceSource = requestSource;
       break allocate;
     }
 
-    spaceRemaining -= sizeAllocated;
+    remainingSpace -= allocatedSpace;
     if (debug) {
-      if (sizeAllocated === sizeRequested) {
+      if (allocatedSpace === requestedSpace) {
         console.debug(
-          `${sizeAllocated}px allocated to ${child.id} (${sizeAllocatedSource}), space remaining: ${spaceRemaining}px`,
+          `${allocatedSpace}px allocated to ${child.id} (${allocatedSpaceSource}), remaining space: ${remainingSpace}px`,
         );
       } else {
         console.debug(
-          `${sizeAllocated}px allocated to ${child.id} (${sizeAllocatedSource}, ${sizeRequested}px requested), space remaining: ${spaceRemaining}px`,
+          `${allocatedSpace}px allocated to ${child.id} (${allocatedSpaceSource}, ${requestedSpace}px requested), remaining space: ${remainingSpace}px`,
         );
       }
     }
-    allocatedSizeMap.set(child, sizeAllocated);
-    return sizeAllocated;
+    allocatedSpaceMap.set(child, allocatedSpace);
+    return allocatedSpace;
   };
+  const reapplyRequestedSpace = (child, newRequestedSpace, source) => {
+    const allocatedSpace = allocatedSpaceMap.get(child);
+    remainingSpace += allocatedSpace;
+    if (debug) {
+      console.debug(
+        `reapplying requested space for ${child.id} (${source}), new requested space: ${newRequestedSpace}px, current allocated space: ${allocatedSpace}px, remaining space: ${remainingSpace}px`,
+      );
+    }
+    return applyRequestedSpace(child, newRequestedSpace, source);
+  };
+
   let lastChild;
   const distributeAvailableSpace = (source) => {
     lastChild = null;
     for (const child of container.children) {
       lastChild = child;
-      applyRequestedSize(child, requestedSizeMap.get(child), source);
+      applyRequestedSpace(child, requestedSpaceMap.get(child), source);
     }
   };
   const distributeRemainingSpace = ({ childToGrow, childToShrinkFrom }) => {
-    if (!spaceRemaining) {
+    if (!remainingSpace) {
       return;
     }
-    if (spaceRemaining < 0) {
-      const spaceToSleal = -spaceRemaining;
+    if (remainingSpace < 0) {
+      const spaceToSleal = -remainingSpace;
       if (debug) {
         console.debug(
-          `space remaining is negative: ${spaceRemaining}px, stealing ${spaceToSleal} from child before ${childToShrinkFrom.id}`,
+          `remaining space is negative: ${remainingSpace}px, stealing ${spaceToSleal} from child before ${childToShrinkFrom.id}`,
         );
       }
       stealSpaceFromPreviousSiblings(
@@ -230,36 +249,27 @@ export const initFlexDetailsSet = (
       return;
     }
     if (childToGrow) {
-      const allocatedSize = allocatedSizeMap.get(childToGrow);
-      reapplyRequestedSize(
+      const allocatedSpace = allocatedSpaceMap.get(childToGrow);
+      reapplyRequestedSpace(
         childToGrow,
-        allocatedSize + spaceRemaining,
+        allocatedSpace + remainingSpace,
         "positive space remaining",
       );
     }
   };
-  const reapplyRequestedSize = (child, newRequestedSize, source) => {
-    const allocatedSize = allocatedSizeMap.get(child);
-    spaceRemaining += allocatedSize;
-    if (debug) {
-      console.debug(
-        `reapplying requested size for ${child.id} (${source}), new requested size: ${newRequestedSize}px, current allocated size: ${allocatedSize}px, space remaining: ${spaceRemaining}px`,
-      );
-    }
-    return applyRequestedSize(child, newRequestedSize, source);
-  };
+
   const stealSpaceFromPreviousSiblings = (child, spaceToSteal, source) => {
     let spaceStolenTotal = 0;
     let remainingSpaceToSteal = spaceToSteal;
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
-      const allocatedSizeCurrent = allocatedSizeMap.get(previousSibling);
-      const allocatedSize = reapplyRequestedSize(
+      const allocatedSpaceCurrent = allocatedSpaceMap.get(previousSibling);
+      const allocatedSpace = reapplyRequestedSpace(
         previousSibling,
-        allocatedSizeCurrent - remainingSpaceToSteal,
+        allocatedSpaceCurrent - remainingSpaceToSteal,
         source,
       );
-      const spaceStolen = allocatedSizeCurrent - allocatedSize;
+      const spaceStolen = allocatedSpaceCurrent - allocatedSpace;
       if (spaceStolen) {
         spaceStolenTotal += spaceStolen;
         remainingSpaceToSteal -= spaceStolen;
@@ -318,28 +328,28 @@ export const initFlexDetailsSet = (
     childToGrow: lastDetailsOpened,
     childToShrinkFrom: lastChild,
   });
-  sizeMap.clear(); // force to set new size at start
-  applyAllocatedSizes();
+  spaceMap.clear(); // force to set size at start
+  applyAllocatedSpaces();
 
   const flexDetailsSet = {
     cleanup,
   };
 
   const giveSpaceToDetails = (details) => {
-    const sizeRequested = requestedSizeMap.get(details);
-    const sizeAllocated = allocatedSizeMap.get(details);
-    const spaceMissing = sizeRequested - sizeAllocated;
-    if (!spaceMissing) {
+    const requestedSpace = requestedSpaceMap.get(details);
+    const allocatedSpace = allocatedSpaceMap.get(details);
+    const missingSpace = requestedSpace - allocatedSpace;
+    if (!missingSpace) {
       distributeRemainingSpace({
         childToGrow: details.open ? details : null,
         childToShrinkFrom: lastChild,
       });
       return;
     }
-    const spaceToSteal = spaceMissing - spaceRemaining;
+    const spaceToSteal = missingSpace - remainingSpace;
     if (debug) {
       console.debug(
-        `${details.id} justed opened, would like to take ${sizeRequested}px. It would have to steal ${spaceToSteal}px, space remaining: ${spaceRemaining}px`,
+        `${details.id} justed opened, would like to take ${requestedSpace}px. It would have to steal ${spaceToSteal}px, remaining space: ${remainingSpace}px`,
       );
     }
     const spaceStolen = stealSpaceFromPreviousSiblings(
@@ -359,9 +369,9 @@ export const initFlexDetailsSet = (
           );
         }
       }
-      reapplyRequestedSize(
+      reapplyRequestedSpace(
         details,
-        sizeRequested,
+        requestedSpace,
         "opened details stealing space",
       );
     } else if (debug) {
@@ -386,7 +396,7 @@ export const initFlexDetailsSet = (
         } else if (lastDetailsOpened) {
           giveSpaceToDetails(lastDetailsOpened);
         }
-        applyAllocatedSizes({ animate: true });
+        applyAllocatedSpaces({ animate: true });
       };
 
       if (details.open) {
@@ -408,7 +418,7 @@ export const initFlexDetailsSet = (
       details.setAttribute("data-requested-height", newSize);
       distributeAvailableSpace(`${details.id} requested size: ${newSize}px`);
       giveSpaceToDetails(details);
-      applyAllocatedSizes();
+      applyAllocatedSpaces();
     };
     const onmousedown = (event) => {
       let heightAtStart = 0;
