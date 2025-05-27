@@ -36,6 +36,8 @@ export const initFlexDetailsSet = (
   const requestedSpaceMap = new Map();
   const allocatedSpaceMap = new Map();
   const detailsContentHeightMap = new Map();
+  const canGrowSet = new Set();
+  const canShrinkSet = new Set();
   let availableSpace;
   let remainingSpace;
   let lastDetailsOpened = null;
@@ -45,6 +47,9 @@ export const initFlexDetailsSet = (
     minSpaceMap.clear();
     requestedSpaceMap.clear();
     allocatedSpaceMap.clear();
+    detailsContentHeightMap.clear();
+    canGrowSet.clear();
+    canShrinkSet.clear();
     availableSpace = getInnerHeight(container);
     if (debug) {
       console.debug(`availableSpace: ${availableSpace}px`);
@@ -64,6 +69,9 @@ export const initFlexDetailsSet = (
         requestedSpaceMap.set(child, size + marginSize);
         continue;
       }
+
+      canGrowSet.add(child);
+      canShrinkSet.add(child);
 
       const details = child;
       let requestedSpace;
@@ -200,6 +208,18 @@ export const initFlexDetailsSet = (
       allocatedSpace = requestedSpace;
       allocatedSpaceSource = requestSource;
       break allocate;
+    }
+
+    if (allocatedSpace < requestedSpace) {
+      if (!canShrinkSet.has(child)) {
+        allocatedSpace = requestedSpace;
+        allocatedSpaceSource = `${requestSource} + cannot shrink`;
+      }
+    } else if (allocatedSpace > requestedSpace) {
+      if (!canGrowSet.has(child)) {
+        allocatedSpace = requestedSpace;
+        allocatedSpaceSource = `${requestSource} + cannot grow`;
+      }
     }
 
     remainingSpace -= allocatedSpace;
