@@ -70,17 +70,17 @@ export const initFlexDetailsSet = (
         continue;
       }
       const details = child;
-      canGrowSet.add(details);
-      canShrinkSet.add(details);
       let size;
       let requestedSize;
       let requestedSizeSource;
       let minSize;
-
       const summary = details.querySelector("summary");
       const summaryHeight = getHeight(summary);
 
       if (details.open) {
+        canGrowSet.add(details);
+        canShrinkSet.add(details);
+
         if (!firstDetailsOpened) {
           firstDetailsOpened = details;
         }
