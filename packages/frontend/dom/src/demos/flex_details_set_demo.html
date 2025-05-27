@@ -69,6 +69,7 @@
         const detailsGroupRef = useRef();
         const [aHeight, aHeightSetter] = useState(0);
         const [bHeight, bHeightSetter] = useState(0);
+        const [cHeight, cHeightSetter] = useState(0);
 
         useLayoutEffect(() => {
           const flexDetailsSet = initFlexDetailsSet(ref.current, {
@@ -79,6 +80,9 @@
                 }
                 if (element.id === "b") {
                   bHeightSetter(value);
+                }
+                if (element.id === "c") {
+                  cHeightSetter(value);
                 }
               }
             },
@@ -98,6 +102,7 @@
                   <input
                     type="number"
                     style="width: 100px;"
+                    step="20"
                     onInput={(e) => {
                       detailsGroupRef.current.requestResize(
                         document.querySelector("#a"),
@@ -123,6 +128,7 @@
                   <input
                     type="number"
                     style="width: 100px;"
+                    step="20"
                     onInput={(e) => {
                       detailsGroupRef.current.requestResize(
                         document.querySelector("#b"),
@@ -137,6 +143,32 @@
                     type="number"
                     style="width: 100px;"
                     value={bHeight}
+                    readOnly
+                  />
+                </label>
+              </div>
+              <div>
+                Third details height{" "}
+                <label>
+                  <strong>requested:</strong>
+                  <input
+                    type="number"
+                    style="width: 100px;"
+                    step="20"
+                    onInput={(e) => {
+                      detailsGroupRef.current.requestResize(
+                        document.querySelector("#c"),
+                        e.target.valueAsNumber,
+                      );
+                    }}
+                  />
+                </label>{" "}
+                <label>
+                  <strong>actual:</strong>
+                  <input
+                    type="number"
+                    style="width: 100px;"
+                    value={cHeight}
                     readOnly
                   />
                 </label>

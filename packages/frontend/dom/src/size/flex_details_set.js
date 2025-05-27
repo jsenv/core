@@ -356,14 +356,14 @@ export const initFlexDetailsSet = (
   const giveSpaceToDetails = (details, reason) => {
     const requestedSpace = requestedSpaceMap.get(details);
     const allocatedSpace = allocatedSpaceMap.get(details);
-    if (allocatedSpace === requestedSpace) {
+    const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
+    if (spaceToAllocate === 0) {
       distributeRemainingSpace({
         childToGrow: details.open ? details : null,
         childToShrinkFrom: lastChild,
       });
       return;
     }
-    const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
     if (debug) {
       console.debug(
         `${details.id} would like to take ${requestedSpace}px (${reason}). Trying to allocate ${spaceToAllocate}px to previous siblings, remaining space: ${remainingSpace}px`,
