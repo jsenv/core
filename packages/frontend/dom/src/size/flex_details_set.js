@@ -179,7 +179,7 @@ export const initFlexDetailsSet = (
       if (requestedSpace > remainingSpace) {
         if (remainingSpace < minSpace) {
           allocatedSpace = minSpace;
-          allocatedSpaceSource = "min size";
+          allocatedSpaceSource = "min space";
           break allocate;
         }
         allocatedSpace = remainingSpace;
@@ -188,7 +188,7 @@ export const initFlexDetailsSet = (
       }
       if (requestedSpace < minSpace) {
         allocatedSpace = minSpace;
-        allocatedSpaceSource = "min size";
+        allocatedSpaceSource = "min space";
         break allocate;
       }
       allocatedSpace = requestedSpace;
@@ -244,7 +244,7 @@ export const initFlexDetailsSet = (
       stealSpaceFromPreviousSiblings(
         childToShrinkFrom,
         spaceToSleal,
-        "negative space remaining",
+        `remaining space is negative: ${remainingSpace}px`,
       );
       return;
     }
@@ -253,7 +253,7 @@ export const initFlexDetailsSet = (
       reapplyRequestedSpace(
         childToGrow,
         allocatedSpace + remainingSpace,
-        "positive space remaining",
+        `remaining space is positive: ${remainingSpace}px`,
       );
     }
   };
