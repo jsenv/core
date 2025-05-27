@@ -11,10 +11,10 @@ import { createSizeAnimationGroupController } from "./size_animation_group_contr
 import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;
-const DEBUG = false;
+const DEBUG = true;
 
 export const initFlexDetailsSet = (
-  element,
+  container,
   { onSizeChange, debug = DEBUG } = {},
 ) => {
   const cleanupCallbackSet = new Set();
@@ -37,23 +37,22 @@ export const initFlexDetailsSet = (
     sizeMap.clear();
     minSizeMap.clear();
     allocatedSizeMap.clear();
-    availableSpace = getInnerHeight(element);
+    availableSpace = getInnerHeight(container);
     if (debug) {
       console.debug(`availableSpace: ${availableSpace}px`);
     }
     spaceRemaining = availableSpace;
 
-    for (const child of element.children) {
-      const element = child;
-      const height = getHeight(element);
-      const marginSizes = getMarginSizes(element);
+    for (const child of container.children) {
+      const height = getHeight(child);
+      const marginSizes = getMarginSizes(child);
       const spaceTakenByVerticalMargins = marginSizes.top + marginSizes.bottom;
       const size = height + spaceTakenByVerticalMargins;
-      sizeMap.set(element, size);
+      sizeMap.set(child, size);
 
       if (!isDetailsElement(child)) {
-        minSizeMap.set(element, size);
-        requestedSizeMap.set(element, size);
+        minSizeMap.set(child, size);
+        requestedSizeMap.set(child, size);
         continue;
       }
 
@@ -117,7 +116,7 @@ export const initFlexDetailsSet = (
   const applyAllocatedSizes = ({ animate } = {}) => {
     if (animate) {
       const animations = [];
-      for (const child of element.children) {
+      for (const child of container.children) {
         const allocatedSize = allocatedSizeMap.get(child);
         const size = sizeMap.get(child);
         if (allocatedSize === size) {
@@ -146,7 +145,7 @@ export const initFlexDetailsSet = (
     heightAnimationGroupController.cancel();
 
     const sizeChangeEntries = [];
-    for (const child of element.children) {
+    for (const child of container.children) {
       const allocatedSize = allocatedSizeMap.get(child);
       const size = sizeMap.get(child);
       if (allocatedSize === size) {
@@ -207,7 +206,7 @@ export const initFlexDetailsSet = (
   let lastChild;
   const distributeAvailableSpace = (source) => {
     lastChild = null;
-    for (const child of element.children) {
+    for (const child of container.children) {
       lastChild = child;
       applyRequestedSize(child, requestedSizeMap.get(child), source);
     }
@@ -371,7 +370,7 @@ export const initFlexDetailsSet = (
   };
 
   update_on_toggle: {
-    for (const child of element.children) {
+    for (const child of container.children) {
       if (!isDetailsElement(child)) {
         continue;
       }
@@ -427,9 +426,9 @@ export const initFlexDetailsSet = (
         },
       });
     };
-    element.addEventListener("mousedown", onmousedown);
+    container.addEventListener("mousedown", onmousedown);
     cleanupCallbackSet.add(() => {
-      element.removeEventListener("mousedown", onmousedown);
+      container.removeEventListener("mousedown", onmousedown);
     });
   }
 
