@@ -280,7 +280,7 @@ export const initFlexDetailsSet = (
   };
 
   const allocateSpaceToPreviousSiblings = (child, spaceToAllocate, source) => {
-    let spaceAllocatedTotal = 0;
+    let allocatedSpaceSum = 0;
     let remainingSpaceToAllocate = spaceToAllocate;
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
@@ -292,7 +292,7 @@ export const initFlexDetailsSet = (
       );
       const allocatedSpaceDiff = allocatedSpaceCurrent - allocatedSpace;
       if (allocatedSpaceDiff) {
-        spaceAllocatedTotal += allocatedSpaceDiff;
+        allocatedSpaceSum += allocatedSpaceDiff;
         remainingSpaceToAllocate -= allocatedSpaceDiff;
         if (remainingSpaceToAllocate <= 0) {
           break;
@@ -300,7 +300,7 @@ export const initFlexDetailsSet = (
       }
       previousSibling = previousSibling.previousElementSibling;
     }
-    return spaceAllocatedTotal;
+    return allocatedSpaceSum ? { allocatedSpaceSum } : null;
   };
 
   const prepareSyncDetailsContentHeight = (details) => {
@@ -376,7 +376,11 @@ export const initFlexDetailsSet = (
       }
       return { child: nextSibling, allocatedSpace: allocatedSpaceDiff };
     }
-
+    if (debug) {
+      console.debug(
+        "coult not allocate to next sibling, trying previous siblings",
+      );
+    }
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
       if (!isDetailsElement(previousSibling)) {
@@ -480,21 +484,17 @@ export const initFlexDetailsSet = (
   }
 
   request_resize: {
-    const requestResize = (child, newSize) => {
-      if (isNaN(newSize) || !isFinite(newSize)) {
-        console.warn(
-          `requestResize called with invalid size: ${newSize} for details ${child.id}`,
-        );
-        return;
-      }
-      child.setAttribute("data-requested-height", newSize);
-      prepareSpaceDistribution();
-      const source = `${child.id} resize requested to ${newSize}px`;
-      distributeAvailableSpace(source);
-
+    const allocateSpaceAfterResize = (child, source) => {
       const requestedSpace = requestedSpaceMap.get(child);
       const allocatedSpace = allocatedSpaceMap.get(child);
-      const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
+      const minSpace = minSpaceMap.get(child);
+      let spaceToAllocate;
+      if (requestedSpace < minSpace) {
+        spaceToAllocate = minSpace - allocatedSpace - remainingSpace;
+      } else {
+        spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
+      }
+
       if (spaceToAllocate === 0) {
         distributeRemainingSpace({
           childToGrow: lastDetailsOpened,
@@ -504,24 +504,24 @@ export const initFlexDetailsSet = (
       }
       if (debug) {
         console.debug(
-          `${child.id} would like to take ${requestedSpace}px (${source}). Trying to allocate ${spaceToAllocate}px to previous siblings, remaining space: ${remainingSpace}px`,
+          `${child.id} would like to take ${requestedSpace}px (${source}). Trying to allocate ${spaceToAllocate}px to sibling, remaining space: ${remainingSpace}px`,
         );
       }
 
-      const siblingAllocationResult = allocateSibling(
+      const previousSiblingsAllocationResult = allocateSpaceToPreviousSiblings(
         child,
         spaceToAllocate,
         source,
       );
 
-      if (siblingAllocationResult) {
-        const { allocatedSpace } = siblingAllocationResult;
+      if (previousSiblingsAllocationResult) {
+        const { allocatedSpaceSum } = previousSiblingsAllocationResult;
         if (debug) {
-          if (allocatedSpace === spaceToAllocate) {
-            console.debug(`${allocatedSpace}px allocated to sibling`);
+          if (allocatedSpaceSum === spaceToAllocate) {
+            console.debug(`${allocatedSpaceSum}px allocated to sibling`);
           } else {
             console.debug(
-              `${allocatedSpace}px allocated (out of ${spaceToAllocate}px) to sibling`,
+              `${allocatedSpaceSum}px allocated (out of ${spaceToAllocate}px) to sibling`,
             );
           }
         }
@@ -537,6 +537,20 @@ export const initFlexDetailsSet = (
           childToShrinkFrom: lastChild,
         });
       }
+    };
+
+    const requestResize = (child, newSize) => {
+      if (isNaN(newSize) || !isFinite(newSize)) {
+        console.warn(
+          `requestResize called with invalid size: ${newSize} for details ${child.id}`,
+        );
+        return;
+      }
+      child.setAttribute("data-requested-height", newSize);
+      prepareSpaceDistribution();
+      const source = `${child.id} resize requested to ${newSize}px`;
+      distributeAvailableSpace(source);
+      allocateSpaceAfterResize(child, source);
       applyAllocatedSpaces();
     };
     flexDetailsSet.requestResize = requestResize;
