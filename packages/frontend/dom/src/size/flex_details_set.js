@@ -80,6 +80,8 @@ export const initFlexDetailsSet = (
       const summary = details.querySelector("summary");
       const summaryHeight = getHeight(summary);
 
+      size = getHeight(details);
+
       if (details.open) {
         openedDetailsArray.push(details);
         canGrowSet.add(details);
@@ -91,7 +93,6 @@ export const initFlexDetailsSet = (
         const detailsContentHeight = getHeight(detailsContent);
         restoreSizeStyle();
         const detailsHeight = summaryHeight + detailsContentHeight;
-        size = detailsHeight;
 
         if (details.hasAttribute("data-requested-height")) {
           const requestedHeightAttribute = details.getAttribute(
@@ -111,7 +112,6 @@ export const initFlexDetailsSet = (
           minSize = getMinHeight(details, availableSpace);
         }
       } else {
-        size = summaryHeight;
         requestedSize = summaryHeight;
         requestedSizeSource = "summary height";
         minSize = summaryHeight;
@@ -139,7 +139,7 @@ export const initFlexDetailsSet = (
       const space = spaceMap.get(child);
       const size = spaceToSize(child, space);
       if (size === allocatedSize) {
-        // continue;
+        continue;
       }
       if (isDetailsElement(child) && child.open) {
         const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
