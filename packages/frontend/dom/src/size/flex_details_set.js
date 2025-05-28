@@ -356,6 +356,15 @@ export const initFlexDetailsSet = (
     return null;
   };
 
+  const saveCurrentSizeAsRequestedSizes = () => {
+    for (const child of container.children) {
+      if (canGrowSet.has(child) || canShrinkSet.has(child)) {
+        const allocatedSpace = allocatedSpaceMap.get(child);
+        child.setAttribute("data-requested-height", allocatedSpace);
+      }
+    }
+  };
+
   initial_size: {
     prepareSpaceDistribution();
     distributeAvailableSpace("initial space distribution");
@@ -365,11 +374,7 @@ export const initFlexDetailsSet = (
     });
     spaceMap.clear(); // force to set size at start
     applyAllocatedSpaces();
-
-    for (const child of container.children) {
-      const allocatedSpace = allocatedSpaceMap.get(child);
-      child.setAttribute("data-requested-height", allocatedSpace);
-    }
+    saveCurrentSizeAsRequestedSizes();
   }
 
   update_on_toggle: {
@@ -520,15 +525,13 @@ export const initFlexDetailsSet = (
     };
 
     const onmousedown = (event) => {
+      let resizedElement;
       let heightAtStart = 0;
-      // on veut prendre un snapshot de tous le monde au départ
-      // puis on s'autorise a resize
-
       startResizeGesture(event, {
         onStart: (gesture) => {
-          heightAtStart = getHeight(gesture.element);
+          resizedElement = gesture.element;
+          heightAtStart = getHeight(resizedElement);
           requestResize(gesture.element, heightAtStart);
-          // TODO: lock the size of next siblings
         },
         onMove: (gesture) => {
           const elementToResize = gesture.element;
@@ -536,8 +539,7 @@ export const initFlexDetailsSet = (
           requestResize(elementToResize, heightAtStart - yMove);
         },
         onEnd: () => {
-          // bah a priori rien de plus
-          // (ptet garder le data-requested-height) sur les siblings aussi non?
+          saveCurrentSizeAsRequestedSizes();
         },
       });
     };
