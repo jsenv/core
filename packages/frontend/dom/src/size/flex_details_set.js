@@ -523,7 +523,7 @@ export const initFlexDetailsSet = (
             // alors ici on veut grow pour tenter de restaurer la diff
             // entre requestedMap et spaceMap
             // s'il n'y en a pas alors on aura pas appliquer ce move
-            const nextSiblingsGrow = updateNextSiblingsAllocatedSpace(
+            const spaceGivenToNextSiblings = updateNextSiblingsAllocatedSpace(
               resizedElement,
               remainingMoveToApply,
               reason,
@@ -533,30 +533,30 @@ export const initFlexDetailsSet = (
                 return requestedSpace - space;
               },
             );
-            if (nextSiblingsGrow) {
-              spaceDiff += nextSiblingsGrow;
-              remainingMoveToApply -= nextSiblingsGrow;
+            if (spaceGivenToNextSiblings) {
+              spaceDiff -= spaceGivenToNextSiblings;
+              remainingMoveToApply -= spaceGivenToNextSiblings;
+              if (debug) {
+                console.debug(
+                  `${spaceGivenToNextSiblings}px given to previous siblings`,
+                );
+              }
             }
           }
           previous_siblings_shrink: {
-            const previousSiblingsSpaceDiff =
-              updatePreviousSiblingsAllocatedSpace(
+            const spaceStolenFromPreviousSiblings =
+              -updatePreviousSiblingsAllocatedSpace(
                 resizedElement,
                 -remainingMoveToApply,
                 reason,
               );
-            const spaceStolen = -previousSiblingsSpaceDiff;
-            if (!spaceStolen) {
+            if (spaceStolenFromPreviousSiblings) {
+              spaceDiff += spaceStolenFromPreviousSiblings;
+              remainingMoveToApply -= spaceStolenFromPreviousSiblings;
               if (debug) {
                 console.debug(
-                  `no space could be stolen from previous siblings`,
+                  `${spaceStolenFromPreviousSiblings}px stolen from previous siblings`,
                 );
-              }
-            } else {
-              spaceDiff += spaceStolen;
-              remainingMoveToApply -= spaceStolen;
-              if (debug) {
-                console.debug(`${spaceStolen}px stolen from previous siblings`);
               }
             }
           }
