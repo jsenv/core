@@ -454,7 +454,12 @@ export const initFlexDetailsSet = (
   }
 
   resize_with_mouse: {
-    const allocateSpaceAfterResize = (child, source) => {
+    const distributeSpaceAfterResize = (child, newSize) => {
+      child.setAttribute("data-requested-height", newSize);
+      prepareSpaceDistribution();
+      const reason = `${child.id} resize requested to ${newSize}px`;
+      distributeAvailableSpace(reason);
+
       const requestedSpace = requestedSpaceMap.get(child);
       const allocatedSpace = allocatedSpaceMap.get(child);
       const minSpace = minSpaceMap.get(child);
@@ -474,14 +479,14 @@ export const initFlexDetailsSet = (
       }
       if (debug) {
         console.debug(
-          `${child.id} would like to take ${requestedSpace}px (${source}). Trying to allocate ${spaceToAllocate}px to sibling, remaining space: ${remainingSpace}px`,
+          `${child.id} would like to take ${requestedSpace}px (${reason}). Trying to allocate ${spaceToAllocate}px to sibling, remaining space: ${remainingSpace}px`,
         );
       }
 
       const previousSiblingsAllocationResult = allocateSpaceToPreviousSiblings(
         child,
         spaceToAllocate,
-        source,
+        reason,
       );
 
       if (previousSiblingsAllocationResult) {
@@ -495,7 +500,7 @@ export const initFlexDetailsSet = (
             );
           }
         }
-        reallocateSpace(child, requestedSpace, source);
+        reallocateSpace(child, requestedSpace, reason);
       } else {
         if (debug) {
           console.debug(
@@ -516,11 +521,7 @@ export const initFlexDetailsSet = (
         );
         return;
       }
-      child.setAttribute("data-requested-height", newSize);
-      prepareSpaceDistribution();
-      const source = `${child.id} resize requested to ${newSize}px`;
-      distributeAvailableSpace(source);
-      allocateSpaceAfterResize(child, source);
+      distributeSpaceAfterResize(child, newSize);
       applyAllocatedSpaces();
     };
 
@@ -531,12 +532,11 @@ export const initFlexDetailsSet = (
         onStart: (gesture) => {
           resizedElement = gesture.element;
           heightAtStart = getHeight(resizedElement);
-          requestResize(gesture.element, heightAtStart);
+          requestResize(resizedElement, heightAtStart);
         },
         onMove: (gesture) => {
-          const elementToResize = gesture.element;
           const yMove = gesture.yMove;
-          requestResize(elementToResize, heightAtStart - yMove);
+          requestResize(resizedElement, heightAtStart - yMove);
         },
         onEnd: () => {
           saveCurrentSizeAsRequestedSizes();
