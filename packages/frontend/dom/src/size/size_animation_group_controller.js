@@ -100,7 +100,7 @@ export const createSizeAnimationGroupController = ({ duration }) => {
           changeEntryArray.push({ element, value: finalSize });
         }
         if (changeEntryArray.length && onChange) {
-          onChange(changeEntryArray);
+          onChange(changeEntryArray, true);
         }
         callFinishCallbacks();
         startSizeMap.clear();

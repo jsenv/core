@@ -196,9 +196,12 @@ export const initFlexDetailsSet = (
       });
     }
     heightAnimationGroupController.animateAll(animations, {
-      onChange: (changeEntries) => {
+      onChange: (changeEntries, isLast) => {
         if (onSizeChange) {
-          onSizeChange(changeEntries, resizeDetails);
+          onSizeChange(
+            changeEntries,
+            isLast ? { ...resizeDetails, animated: false } : resizeDetails,
+          );
         }
       },
     });
