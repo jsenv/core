@@ -326,7 +326,7 @@ export const initFlexDetailsSet = (
       if (spaceDiff) {
         spaceDiffSum += spaceDiff;
         remainingDiffToApply -= spaceDiff;
-        if (remainingDiffToApply <= 0) {
+        if (!remainingDiffToApply) {
           break;
         }
       }
@@ -358,7 +358,7 @@ export const initFlexDetailsSet = (
       if (spaceDiff) {
         spaceDiffSum += spaceDiff;
         remainingDiffToApply -= spaceDiff;
-        if (remainingDiffToApply <= 0) {
+        if (!remainingDiffToApply) {
           break;
         }
       }
@@ -453,13 +453,12 @@ export const initFlexDetailsSet = (
           `${details.id} would like to take ${requestedSpace}px (${reason}). Trying to steal ${spaceToSteal}px from sibling, remaining space: ${remainingSpace}px`,
         );
       }
-      const siblingSpaceDiff = updateSiblingAllocatedSpace(
+      const spaceStolenFromSibling = -updateSiblingAllocatedSpace(
         details,
         -spaceToSteal,
         reason,
       );
-      if (siblingSpaceDiff) {
-        const spaceStolenFromSibling = -siblingSpaceDiff;
+      if (spaceStolenFromSibling) {
         if (debug) {
           console.debug(
             `${spaceStolenFromSibling}px space stolen from sibling`,
