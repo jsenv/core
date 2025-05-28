@@ -506,6 +506,7 @@ export const initFlexDetailsSet = (
       let resizedElement;
       // let startSpaceMap;
       let startAllocatedSpaceMap;
+      let currentAllocatedSpaceMap;
 
       const start = (element) => {
         updateSpaceDistribution("resize start");
@@ -610,17 +611,25 @@ export const initFlexDetailsSet = (
         const moveDiff = -yMove;
         applyMoveDiffToSizes(moveDiff, reason);
         applyAllocatedSpaces();
+        currentAllocatedSpaceMap = new Map(allocatedSpaceMap);
         allocatedSpaceMap = new Map(startAllocatedSpaceMap);
         if (debug) {
           console.groupEnd();
         }
       };
 
-      return { start, move };
+      const end = () => {
+        if (currentAllocatedSpaceMap) {
+          allocatedSpaceMap = currentAllocatedSpaceMap;
+          saveCurrentSizeAsRequestedSizes();
+        }
+      };
+
+      return { start, move, end };
     };
 
     const onmousedown = (event) => {
-      const { start, move } = prepareResize();
+      const { start, move, end } = prepareResize();
 
       startResizeGesture(event, {
         onStart: (gesture) => {
@@ -631,7 +640,7 @@ export const initFlexDetailsSet = (
           move(yMove);
         },
         onEnd: () => {
-          saveCurrentSizeAsRequestedSizes();
+          end();
         },
       });
     };
