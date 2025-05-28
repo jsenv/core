@@ -1,4 +1,6 @@
 /**
+ *
+ *
  */
 
 import { forceStyles } from "../style_and_attributes.js";
@@ -657,6 +659,39 @@ export const initFlexDetailsSet = (
     container.addEventListener("mousedown", onmousedown);
     cleanupCallbackSet.add(() => {
       container.removeEventListener("mousedown", onmousedown);
+    });
+  }
+
+  update_on_container_resize: {
+    /**
+     * In the following HTML browser will set `<div>` height as if it was "auto"
+     *
+     * ```html
+     * <details style="height: 100px;">
+     *   <summary>...</summary>
+     *   <div style="height: 100%"></div>
+     * </details>
+     * ```
+     *
+     * So we always maintain a precise px height for the details content to ensure
+     * it takes 100% of the details height (minus the summay)
+     *
+     * To achieve this we need to update these px heights when the container size changes
+     */
+    const resizeObserver = new ResizeObserver(() => {
+      availableSpace = getInnerHeight(container);
+      for (const child of container.children) {
+        if (!isDetailsElement(child)) {
+          continue;
+        }
+        const height = getHeight(child);
+        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
+        syncDetailsContentHeight(height);
+      }
+    });
+    resizeObserver.observe(container);
+    cleanupCallbackSet.add(() => {
+      resizeObserver.disconnect();
     });
   }
 
