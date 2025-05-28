@@ -323,6 +323,27 @@ export const initFlexDetailsSet = (
     }
     return spaceDiffSum;
   };
+  const updateNextSiblingsAllocatedSpace = (child, diff, reason) => {
+    let spaceDiffSum = 0;
+    let remainingDiffToApply = diff;
+    let nextSibling = child.nextElementSibling;
+    while (nextSibling) {
+      const spaceDiff = updateAllocatedSpace(
+        nextSibling,
+        remainingDiffToApply,
+        reason,
+      );
+      if (spaceDiff) {
+        spaceDiffSum += spaceDiff;
+        remainingDiffToApply -= spaceDiff;
+        if (remainingDiffToApply <= 0) {
+          break;
+        }
+      }
+      nextSibling = nextSibling.nextElementSibling;
+    }
+    return spaceDiffSum;
+  };
   const updateSiblingAllocatedSpace = (child, diff, reason) => {
     let nextSibling = child.nextElementSibling;
     while (nextSibling) {
@@ -476,17 +497,19 @@ export const initFlexDetailsSet = (
           if (debug) {
             console.debug(reason);
           }
-          const spaceStolen = updatePreviousSiblingsAllocatedSpace(
-            resizedElement,
-            -growRequested,
-            reason,
-          );
-          if (!spaceStolen) {
+          const previousSiblingsSpaceDiff =
+            updatePreviousSiblingsAllocatedSpace(
+              resizedElement,
+              -growRequested,
+              reason,
+            );
+          if (!previousSiblingsSpaceDiff) {
             if (debug) {
               console.debug(`no space could be stolen from previous siblings`);
             }
             return 0;
           }
+          const spaceStolen = -previousSiblingsSpaceDiff;
           if (debug) {
             console.debug(`${spaceStolen}px stolen from previous siblings`);
           }
@@ -498,24 +521,36 @@ export const initFlexDetailsSet = (
           console.debug(reason);
         }
         let remainingShrinkRequested = shrinkRequested;
-        let spaceToAllocate = 0;
-        const shrinkedSpace = updateAllocatedSpace(
-          resizedElement,
-          size - shrinkRequested,
-          reason,
-        );
-        remainingShrinkRequested -= shrinkedSpace;
-        spaceToAllocate += shrinkedSpace;
-        if (remainingShrinkRequested > 0) {
-          // we cannot shrink more, or there is more space to shrink
-          return 0;
+        let spaceDiff = 0;
+        self_shrink: {
+          const selfSpaceDiff = updateAllocatedSpace(
+            resizedElement,
+            -shrinkRequested,
+            reason,
+          );
+          const selfShrink = -selfSpaceDiff;
+          remainingShrinkRequested -= selfShrink;
+          spaceDiff += selfShrink;
         }
-        updatePreviousSiblingsAllocatedSpace(
+        next_siblings_shrink: {
+          if (remainingShrinkRequested > 0) {
+            const nextSiblingsSpaceDiff = updateNextSiblingsAllocatedSpace(
+              resizedElement,
+              -remainingShrinkRequested,
+              reason,
+            );
+            const nextSiblingsShrink = -nextSiblingsSpaceDiff;
+            if (nextSiblingsShrink) {
+              remainingShrinkRequested -= nextSiblingsShrink;
+              spaceDiff += nextSiblingsShrink;
+            }
+          }
+        }
+        return updatePreviousSiblingsAllocatedSpace(
           resizedElement,
-          spaceToAllocate,
+          spaceDiff,
           reason,
         );
-        return spaceToAllocate;
       };
 
       const move = (yMove) => {
