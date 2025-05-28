@@ -72,6 +72,8 @@
         const [bHeight, bHeightSetter] = useState(0);
         const [cHeight, cHeightSetter] = useState(0);
 
+        // to test: put sizes in local storage to see if that works
+
         useLayoutEffect(() => {
           const flexDetailsSet = initFlexDetailsSet(ref.current, {
             onSizeChange: (sizeChangeEntries) => {

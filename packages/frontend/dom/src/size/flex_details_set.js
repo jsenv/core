@@ -1,5 +1,4 @@
 /**
- *
  */
 
 import { forceStyles } from "../style_and_attributes.js";
@@ -408,6 +407,18 @@ export const initFlexDetailsSet = (
       if (canGrowSet.has(child) || canShrinkSet.has(child)) {
         const allocatedSpace = allocatedSpaceMap.get(child);
         child.setAttribute("data-requested-height", allocatedSpace);
+        const allocatedSize = spaceToSize(allocatedSpace, child);
+        const allocatedSizePercentage = sizeAsPercentageNumber(
+          allocatedSize,
+          availableSpace,
+        );
+        child.style.height = `${allocatedSizePercentage}%`;
+
+        if (isDetailsElement(child)) {
+          const syncDetailsContentHeight =
+            prepareSyncDetailsContentHeight(child);
+          syncDetailsContentHeight(allocatedSize);
+        }
       }
     }
   };
@@ -652,17 +663,37 @@ export const initFlexDetailsSet = (
   return flexDetailsSet;
 };
 
-const prepareSyncDetailsContentHeight = (details) => {
+const prepareSyncDetailsContentHeight = (
+  details,
+  availableSpace,
+  { responsive } = {},
+) => {
   const summary = details.querySelector("summary");
   const summaryHeight = getHeight(summary);
   const content = details.querySelector("summary + *");
-  details.style.setProperty("--summary-height", `${summaryHeight}px`);
   content.style.height = "var(--content-height)";
+
+  const getHeightCssValue = (height) => {
+    return responsive
+      ? `${sizeAsPercentageNumber(height, availableSpace)}%`
+      : `${height}px`;
+  };
+
+  details.style.setProperty(
+    "--summary-height",
+    getHeightCssValue(summaryHeight),
+  );
 
   return (detailsHeight, { isAnimation } = {}) => {
     const contentHeight = detailsHeight - summaryHeight;
-    details.style.setProperty("--details-height", `${detailsHeight}px`);
-    details.style.setProperty("--content-height", `${contentHeight}px`);
+    details.style.setProperty(
+      "--details-height",
+      getHeightCssValue(detailsHeight),
+    );
+    details.style.setProperty(
+      "--content-height",
+      getHeightCssValue(contentHeight),
+    );
 
     if (!isAnimation) {
       const contentComputedStyle = getComputedStyle(content);
@@ -689,6 +720,12 @@ const prepareSyncDetailsContentHeight = (details) => {
       }
     }
   };
+};
+
+const sizeAsPercentageNumber = (size, availableSpace) => {
+  const ratio = size / availableSpace;
+  const percentage = ratio * 100;
+  return percentage;
 };
 
 const isDetailsElement = (element) => {
