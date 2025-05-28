@@ -302,11 +302,22 @@ export const initFlexDetailsSet = (
     }
   };
 
-  const updatePreviousSiblingsAllocatedSpace = (child, diff, source) => {
+  const updatePreviousSiblingsAllocatedSpace = (
+    child,
+    diffToApply,
+    source,
+    mapRemainingDiffToApply,
+  ) => {
     let spaceDiffSum = 0;
-    let remainingDiffToApply = diff;
+    let remainingDiffToApply = diffToApply;
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
+      if (mapRemainingDiffToApply) {
+        remainingDiffToApply = mapRemainingDiffToApply(
+          previousSibling,
+          remainingDiffToApply,
+        );
+      }
       const spaceDiff = updateAllocatedSpace(
         previousSibling,
         remainingDiffToApply,
@@ -323,11 +334,22 @@ export const initFlexDetailsSet = (
     }
     return spaceDiffSum;
   };
-  const updateNextSiblingsAllocatedSpace = (child, diff, reason) => {
+  const updateNextSiblingsAllocatedSpace = (
+    child,
+    diffToApply,
+    reason,
+    mapRemainingDiffToApply,
+  ) => {
     let spaceDiffSum = 0;
-    let remainingDiffToApply = diff;
+    let remainingDiffToApply = diffToApply;
     let nextSibling = child.nextElementSibling;
     while (nextSibling) {
+      if (mapRemainingDiffToApply) {
+        remainingDiffToApply = mapRemainingDiffToApply(
+          nextSibling,
+          remainingDiffToApply,
+        );
+      }
       const spaceDiff = updateAllocatedSpace(
         nextSibling,
         remainingDiffToApply,
@@ -478,21 +500,19 @@ export const initFlexDetailsSet = (
   resize_with_mouse: {
     const prepareResize = () => {
       let resizedElement;
-      let startSpaceMap;
-      // let startAllocatedSpaceMap;
+      // let startSpaceMap;
+      let startAllocatedSpaceMap;
 
       const start = (element) => {
         updateSpaceDistribution("resize start");
         resizedElement = element;
-        startSpaceMap = new Map(spaceMap);
-        // startAllocatedSpaceMap = new Map(allocatedSpaceMap);
+        // startSpaceMap = new Map(spaceMap);
+        startAllocatedSpaceMap = new Map(allocatedSpaceMap);
       };
 
-      const applyMoveDiffToSizes = (moveDiff) => {
+      const applyMoveDiffToSizes = (moveDiff, reason) => {
         let spaceDiff = 0;
         let remainingMoveToApply;
-        const reason = `applying ${moveDiff}px move on ${resizedElement.id} to sizes`;
-
         if (moveDiff > 0) {
           remainingMoveToApply = moveDiff;
           next_siblings_grow: {
@@ -503,6 +523,11 @@ export const initFlexDetailsSet = (
               resizedElement,
               remainingMoveToApply,
               reason,
+              (nextSibling) => {
+                const requestedSpace = requestedSpaceMap.get(nextSibling);
+                const space = spaceMap.get(nextSibling);
+                return requestedSpace - space;
+              },
             );
             if (nextSiblingsGrow) {
               spaceDiff += nextSiblingsGrow;
@@ -534,7 +559,6 @@ export const initFlexDetailsSet = (
           self_grow: {
             updateAllocatedSpace(resizedElement, spaceDiff, reason);
           }
-          return;
         }
 
         remainingMoveToApply = -moveDiff;
@@ -574,9 +598,17 @@ export const initFlexDetailsSet = (
         //   );
         //   return;
         // }
-        if (applyMoveDiffToSizes(-yMove)) {
-          applyAllocatedSpaces();
-          // allocatedSpaceMap = startAllocatedSpaceMap;
+        const reason = `applying ${yMove}px move on ${resizedElement.id} to sizes`;
+        if (debug) {
+          console.group(reason);
+        }
+
+        const moveDiff = -yMove;
+        applyMoveDiffToSizes(moveDiff, reason);
+        applyAllocatedSpaces();
+        // allocatedSpaceMap = startAllocatedSpaceMap;
+        if (debug) {
+          console.groupEnd();
         }
       };
 

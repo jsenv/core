@@ -44,6 +44,7 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
     xChanged: false,
     yChanged: false,
   };
+  let previousGestureInfo = null;
 
   append_backdrop: {
     const backdrop = document.createElement("div");
@@ -62,36 +63,33 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
     });
   }
   mouse_events: {
-    const handleMouseMove = (e) => {
+    const updateMousePosition = (e) => {
       if (resizeDirection.x) {
         gestureInfo.x = e.clientX;
         gestureInfo.xMove = gestureInfo.x - xAtStart;
-        gestureInfo.xChanged = true;
+        gestureInfo.xChanged = previousGestureInfo
+          ? gestureInfo.xMove !== previousGestureInfo.xMove
+          : true;
       }
       if (resizeDirection.y) {
         gestureInfo.y = e.clientY;
         gestureInfo.yMove = gestureInfo.y - yAtStart;
-        gestureInfo.yChanged = true;
+        gestureInfo.yChanged = previousGestureInfo
+          ? gestureInfo.yMove !== previousGestureInfo.yMove
+          : true;
       }
       if (gestureInfo.xChanged || gestureInfo.yChanged) {
+        previousGestureInfo = { ...gestureInfo };
         onMove?.(gestureInfo);
       }
     };
+
+    const handleMouseMove = (e) => {
+      updateMousePosition(e);
+    };
     const handleMouseUp = (e) => {
       e.preventDefault();
-      if (resizeDirection.x) {
-        gestureInfo.x = e.clientX;
-        gestureInfo.xMove = gestureInfo.x - xAtStart;
-        gestureInfo.xChanged = true;
-      }
-      if (resizeDirection.y) {
-        gestureInfo.y = e.clientY;
-        gestureInfo.yMove = gestureInfo.y - yAtStart;
-        gestureInfo.yChanged = true;
-      }
-      if (gestureInfo.xChanged || gestureInfo.yChanged) {
-        onMove?.(gestureInfo);
-      }
+      updateMousePosition(e);
       for (const endCallback of endCallbackSet) {
         endCallback();
       }
