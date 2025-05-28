@@ -132,46 +132,58 @@ export const initFlexDetailsSet = (
     onChange: onSizeChange,
   });
   const applyAllocatedSpaces = ({ animate } = {}) => {
-    if (animate) {
-      const animations = [];
-      for (const child of container.children) {
-        const allocatedSpace = allocatedSpaceMap.get(child);
-        if (isDetailsElement(child) && child.open) {
-          const syncDetailsContentHeight =
-            prepareSyncDetailsContentHeight(child);
-          animations.push({
-            element: child,
-            target: spaceToSize(child, allocatedSpace),
-            sideEffect: (height, isFinished) => {
-              syncDetailsContentHeight(height, { isAnimation: !isFinished });
-            },
-          });
-        } else {
-          animations.push({
-            element: child,
-            target: spaceToSize(child, allocatedSpace),
-          });
-        }
-      }
-      heightAnimationGroupController.animateAll(animations);
-      return;
-    }
-    heightAnimationGroupController.cancel();
-
-    const sizeChangeEntries = [];
+    const changeSet = new Set();
     for (const child of container.children) {
       const allocatedSpace = allocatedSpaceMap.get(child);
       const allocatedSize = spaceToSize(child, allocatedSpace);
-      child.style.height = `${allocatedSize}px`;
+      const space = spaceMap.get(child);
+      const size = spaceToSize(child, space);
+      if (size === allocatedSize) {
+        // continue;
+      }
       if (isDetailsElement(child) && child.open) {
         const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
-        syncDetailsContentHeight(allocatedSize);
+        changeSet.add({
+          element: child,
+          target: allocatedSize,
+          sideEffect: (height, isFinished) => {
+            syncDetailsContentHeight(height, { isAnimation: !isFinished });
+          },
+        });
+      } else {
+        changeSet.add({
+          element: child,
+          target: allocatedSize,
+        });
       }
-      sizeChangeEntries.push({ element: child, value: allocatedSize });
     }
-    if (sizeChangeEntries.length && onSizeChange) {
-      onSizeChange(sizeChangeEntries);
+
+    if (changeSet.size === 0) {
+      return;
     }
+
+    if (!animate) {
+      const sizeChangeEntries = [];
+      for (const { element, target, sideEffect } of changeSet) {
+        element.style.height = `${target}px`;
+        if (sideEffect) {
+          sideEffect(target);
+        }
+        sizeChangeEntries.push({ element, value: target });
+      }
+      onSizeChange?.(sizeChangeEntries);
+      return;
+    }
+
+    const animations = [];
+    for (const { element, target, sideEffect } of changeSet) {
+      animations.push({
+        element,
+        target,
+        sideEffect,
+      });
+    }
+    heightAnimationGroupController.animateAll(animations);
   };
 
   const allocateSpace = (child, spaceToAllocate, requestSource) => {
@@ -297,45 +309,6 @@ export const initFlexDetailsSet = (
     return allocatedSpaceSum ? { allocatedSpaceSum } : null;
   };
 
-  const prepareSyncDetailsContentHeight = (details) => {
-    const summary = details.querySelector("summary");
-    const summaryHeight = getHeight(summary);
-    const content = details.querySelector("summary + *");
-    details.style.setProperty("--summary-height", `${summaryHeight}px`);
-    content.style.height = "var(--content-height)";
-
-    return (detailsHeight, { isAnimation } = {}) => {
-      const contentHeight = detailsHeight - summaryHeight;
-      details.style.setProperty("--details-height", `${detailsHeight}px`);
-      details.style.setProperty("--content-height", `${contentHeight}px`);
-
-      if (!isAnimation) {
-        const contentComputedStyle = getComputedStyle(content);
-        // Fix scrollbar induced overflow:
-        //
-        // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
-        // 2. we set height exactly to the natural height required to prevent overflow
-        //
-        // actual: browser keeps scrollbar displayed
-        // expected: scrollbar is hidden
-        //
-        // Solution: Temporarily prevent scrollbar to display
-        // force layout recalculation, then restore
-        if (
-          contentComputedStyle.overflowY === "auto" &&
-          contentComputedStyle.scrollbarGutter !== "stable"
-        ) {
-          const restoreOverflow = forceStyles(content, {
-            "overflow-y": "hidden",
-          });
-          // eslint-disable-next-line no-unused-expressions
-          content.offsetHeight;
-          restoreOverflow();
-        }
-      }
-    };
-  };
-
   const allocateSibling = (child, spaceToAllocate, reason) => {
     let nextSibling = child.nextElementSibling;
     while (nextSibling) {
@@ -392,6 +365,11 @@ export const initFlexDetailsSet = (
     });
     spaceMap.clear(); // force to set size at start
     applyAllocatedSpaces();
+
+    for (const child of container.children) {
+      const allocatedSpace = allocatedSpaceMap.get(child);
+      child.setAttribute("data-requested-height", allocatedSpace);
+    }
   }
 
   update_on_toggle: {
@@ -573,6 +551,45 @@ export const initFlexDetailsSet = (
   }
 
   return flexDetailsSet;
+};
+
+const prepareSyncDetailsContentHeight = (details) => {
+  const summary = details.querySelector("summary");
+  const summaryHeight = getHeight(summary);
+  const content = details.querySelector("summary + *");
+  details.style.setProperty("--summary-height", `${summaryHeight}px`);
+  content.style.height = "var(--content-height)";
+
+  return (detailsHeight, { isAnimation } = {}) => {
+    const contentHeight = detailsHeight - summaryHeight;
+    details.style.setProperty("--details-height", `${detailsHeight}px`);
+    details.style.setProperty("--content-height", `${contentHeight}px`);
+
+    if (!isAnimation) {
+      const contentComputedStyle = getComputedStyle(content);
+      // Fix scrollbar induced overflow:
+      //
+      // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
+      // 2. we set height exactly to the natural height required to prevent overflow
+      //
+      // actual: browser keeps scrollbar displayed
+      // expected: scrollbar is hidden
+      //
+      // Solution: Temporarily prevent scrollbar to display
+      // force layout recalculation, then restore
+      if (
+        contentComputedStyle.overflowY === "auto" &&
+        contentComputedStyle.scrollbarGutter !== "stable"
+      ) {
+        const restoreOverflow = forceStyles(content, {
+          "overflow-y": "hidden",
+        });
+        // eslint-disable-next-line no-unused-expressions
+        content.offsetHeight;
+        restoreOverflow();
+      }
+    }
+  };
 };
 
 const isDetailsElement = (element) => {
