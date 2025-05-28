@@ -32,7 +32,7 @@ export const initFlexDetailsSet = (
   const marginSizeMap = new Map();
   const requestedSpaceMap = new Map();
   const minSpaceMap = new Map();
-  const allocatedSpaceMap = new Map();
+  let allocatedSpaceMap = new Map();
   const canGrowSet = new Set();
   const canShrinkSet = new Set();
   let availableSpace;
@@ -424,24 +424,26 @@ export const initFlexDetailsSet = (
       }
       if (debug) {
         console.debug(
-          `${details.id} would like to take ${requestedSpace}px (${reason}). Trying to steal ${spaceToSteal}px to previous siblings, remaining space: ${remainingSpace}px`,
+          `${details.id} would like to take ${requestedSpace}px (${reason}). Trying to steal ${spaceToSteal}px from sibling, remaining space: ${remainingSpace}px`,
         );
       }
-
-      const spaceFromSibling = updateSiblingAllocatedSpace(
+      const siblingSpaceDiff = updateSiblingAllocatedSpace(
         details,
         -spaceToSteal,
         reason,
       );
-      if (spaceFromSibling) {
+      if (siblingSpaceDiff) {
+        const spaceStolenFromSibling = -siblingSpaceDiff;
         if (debug) {
-          console.debug(`${spaceFromSibling}px space stolen from sibling`);
+          console.debug(
+            `${spaceStolenFromSibling}px space stolen from sibling`,
+          );
         }
         updateAllocatedSpace(details, requestedSpace, reason);
       } else {
         if (debug) {
           console.debug(
-            `no space could be stolen to sibling, remaining space: ${remainingSpace}px`,
+            `no space could be stolen from sibling, remaining space: ${remainingSpace}px`,
           );
         }
         distributeRemainingSpace({
@@ -475,18 +477,16 @@ export const initFlexDetailsSet = (
 
   resize_with_mouse: {
     const prepareResize = () => {
-      let startSpaceMap;
-      // let startRequestedSpaceMap;
-      // let startMinSpaceMap;
-      let resizedElement;
       let requestedSize;
+      let resizedElement;
+      let startSpaceMap;
+      let startAllocatedSpaceMap;
 
       const start = (element) => {
         updateSpaceDistribution("resize start");
         resizedElement = element;
         startSpaceMap = new Map(spaceMap);
-        // startRequestedSpaceMap = new Map(requestedSpaceMap);
-        // startMinSpaceMap = new Map(minSpaceMap);
+        startAllocatedSpaceMap = new Map(allocatedSpaceMap);
       };
 
       const distributeSpaceToResize = (size) => {
@@ -575,6 +575,7 @@ export const initFlexDetailsSet = (
         // }
         if (distributeSpaceToResize(size, requestedSize)) {
           applyAllocatedSpaces();
+          allocatedSpaceMap = startAllocatedSpaceMap;
         }
       };
 
