@@ -477,105 +477,106 @@ export const initFlexDetailsSet = (
 
   resize_with_mouse: {
     const prepareResize = () => {
-      let requestedSize;
       let resizedElement;
       let startSpaceMap;
-      let startAllocatedSpaceMap;
+      // let startAllocatedSpaceMap;
 
       const start = (element) => {
         updateSpaceDistribution("resize start");
         resizedElement = element;
         startSpaceMap = new Map(spaceMap);
-        startAllocatedSpaceMap = new Map(allocatedSpaceMap);
+        // startAllocatedSpaceMap = new Map(allocatedSpaceMap);
       };
 
-      const distributeSpaceToResize = (size) => {
-        const wantToGrow = requestedSize > size;
-        if (wantToGrow) {
-          const growRequested = requestedSize - size;
-          const reason = `${resizedElement.id} want to grow by ${growRequested}px`;
-          if (debug) {
-            console.debug(reason);
-          }
-          const previousSiblingsSpaceDiff =
-            updatePreviousSiblingsAllocatedSpace(
-              resizedElement,
-              -growRequested,
-              reason,
-            );
-          if (!previousSiblingsSpaceDiff) {
-            if (debug) {
-              console.debug(`no space could be stolen from previous siblings`);
-            }
-            return 0;
-          }
-          const spaceStolen = -previousSiblingsSpaceDiff;
-          if (debug) {
-            console.debug(`${spaceStolen}px stolen from previous siblings`);
-          }
-          return updateAllocatedSpace(resizedElement, spaceStolen, reason);
-        }
-        const shrinkRequested = size - requestedSize;
-        const reason = `${resizedElement.id} want to shrink by ${shrinkRequested}px`;
-        if (debug) {
-          console.debug(reason);
-        }
-        let remainingShrinkRequested = shrinkRequested;
+      const applyMoveDiffToSizes = (moveDiff) => {
         let spaceDiff = 0;
-        self_shrink: {
-          const selfSpaceDiff = updateAllocatedSpace(
-            resizedElement,
-            -shrinkRequested,
-            reason,
-          );
-          const selfShrink = -selfSpaceDiff;
-          remainingShrinkRequested -= selfShrink;
-          spaceDiff += selfShrink;
-        }
-        next_siblings_shrink: {
-          if (remainingShrinkRequested > 0) {
-            const nextSiblingsSpaceDiff = updateNextSiblingsAllocatedSpace(
+        let remainingMoveToApply;
+        const reason = `applying ${moveDiff}px move on ${resizedElement.id} to sizes`;
+
+        if (moveDiff > 0) {
+          remainingMoveToApply = moveDiff;
+          next_siblings_grow: {
+            // alors ici on veut grow pour tenter de restaurer la diff
+            // entre requestedMap et spaceMap
+            // s'il n'y en a pas alors on aura pas appliquer ce move
+            const nextSiblingsGrow = updateNextSiblingsAllocatedSpace(
               resizedElement,
-              -remainingShrinkRequested,
+              remainingMoveToApply,
               reason,
             );
-            const nextSiblingsShrink = -nextSiblingsSpaceDiff;
-            if (nextSiblingsShrink) {
-              remainingShrinkRequested -= nextSiblingsShrink;
-              spaceDiff += nextSiblingsShrink;
+            if (nextSiblingsGrow) {
+              spaceDiff += nextSiblingsGrow;
+              remainingMoveToApply -= nextSiblingsGrow;
             }
           }
-        }
-        return updatePreviousSiblingsAllocatedSpace(
-          resizedElement,
-          spaceDiff,
-          reason,
-        );
-      };
-
-      const move = (yMove) => {
-        const startSpace = startSpaceMap.get(resizedElement);
-        const startSize = spaceToSize(startSpace, resizedElement);
-        requestedSize = startSize - yMove;
-        const space = spaceMap.get(resizedElement);
-        const size = spaceToSize(space, resizedElement);
-        if (size === requestedSize) {
-          if (debug) {
-            console.debug(
-              `${resizedElement.id} already has requested size ${requestedSize}px, no need to resize`,
-            );
+          previous_siblings_shrink: {
+            const previousSiblingsSpaceDiff =
+              updatePreviousSiblingsAllocatedSpace(
+                resizedElement,
+                -remainingMoveToApply,
+                reason,
+              );
+            const spaceStolen = -previousSiblingsSpaceDiff;
+            if (!spaceStolen) {
+              if (debug) {
+                console.debug(
+                  `no space could be stolen from previous siblings`,
+                );
+              }
+            } else {
+              spaceDiff += spaceStolen;
+              remainingMoveToApply -= spaceStolen;
+              if (debug) {
+                console.debug(`${spaceStolen}px stolen from previous siblings`);
+              }
+            }
+          }
+          self_grow: {
+            updateAllocatedSpace(resizedElement, spaceDiff, reason);
           }
           return;
         }
+
+        remainingMoveToApply = -moveDiff;
+        self_shrink: {
+          const selfShrink = -updateAllocatedSpace(
+            resizedElement,
+            -remainingMoveToApply,
+            reason,
+          );
+          remainingMoveToApply -= selfShrink;
+          spaceDiff += selfShrink;
+        }
+        next_siblings_shrink: {
+          const nextSiblingsShrink = -updateNextSiblingsAllocatedSpace(
+            resizedElement,
+            -remainingMoveToApply,
+            reason,
+          );
+          if (nextSiblingsShrink) {
+            remainingMoveToApply -= nextSiblingsShrink;
+            spaceDiff += nextSiblingsShrink;
+          }
+        }
+        previous_sibling_grow: {
+          updatePreviousSiblingsAllocatedSpace(
+            resizedElement,
+            spaceDiff,
+            reason,
+          );
+        }
+      };
+
+      const move = (yMove) => {
         // if (isNaN(moveRequestedSize) || !isFinite(moveRequestedSize)) {
         //   console.warn(
         //     `requestResize called with invalid size: ${moveRequestedSize}`,
         //   );
         //   return;
         // }
-        if (distributeSpaceToResize(size, requestedSize)) {
+        if (applyMoveDiffToSizes(-yMove)) {
           applyAllocatedSpaces();
-          allocatedSpaceMap = startAllocatedSpaceMap;
+          // allocatedSpaceMap = startAllocatedSpaceMap;
         }
       };
 
