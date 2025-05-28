@@ -254,7 +254,7 @@ export const initFlexDetailsSet = (
     const space = spaceMap.get(child);
     return allocatedSpace - space;
   };
-  const updateAllocatedSpace = (child, diff, source) => {
+  const applyDiffOnAllocatedSpace = (child, diff, source) => {
     if (diff === 0) {
       return 0;
     }
@@ -263,7 +263,7 @@ export const initFlexDetailsSet = (
     const spaceToAllocate = allocatedSpace + diff;
     if (debug) {
       console.debug(
-        `re-allocating space for ${child.id} (${source}), new space to allocate: ${spaceToAllocate}px, current allocated space: ${allocatedSpace}px, remaining space: ${remainingSpace}px`,
+        `applying diff on allocated space for ${child.id} (${source}), diff: ${diff}px, current allocated space: ${allocatedSpace}px, new space to allocate: ${spaceToAllocate}px, remaining space: ${remainingSpace}px`,
       );
     }
     allocateSpace(child, spaceToAllocate, source);
@@ -294,7 +294,7 @@ export const initFlexDetailsSet = (
       return;
     }
     if (childToGrow) {
-      updateAllocatedSpace(
+      applyDiffOnAllocatedSpace(
         childToGrow,
         remainingSpace,
         `remaining space is positive: ${remainingSpace}px`,
@@ -318,7 +318,7 @@ export const initFlexDetailsSet = (
           remainingDiffToApply,
         );
       }
-      const spaceDiff = updateAllocatedSpace(
+      const spaceDiff = applyDiffOnAllocatedSpace(
         previousSibling,
         remainingDiffToApply,
         source,
@@ -350,7 +350,7 @@ export const initFlexDetailsSet = (
           remainingDiffToApply,
         );
       }
-      const spaceDiff = updateAllocatedSpace(
+      const spaceDiff = applyDiffOnAllocatedSpace(
         nextSibling,
         remainingDiffToApply,
         reason,
@@ -373,7 +373,7 @@ export const initFlexDetailsSet = (
         nextSibling = nextSibling.nextElementSibling;
         continue;
       }
-      const spaceDiff = updateAllocatedSpace(nextSibling, diff, reason);
+      const spaceDiff = applyDiffOnAllocatedSpace(nextSibling, diff, reason);
       if (spaceDiff) {
         return spaceDiff;
       }
@@ -390,7 +390,11 @@ export const initFlexDetailsSet = (
         previousSibling = previousSibling.previousElementSibling;
         continue;
       }
-      const spaceDiff = updateAllocatedSpace(previousSibling, diff, reason);
+      const spaceDiff = applyDiffOnAllocatedSpace(
+        previousSibling,
+        diff,
+        reason,
+      );
       if (spaceDiff) {
         return spaceDiff;
       }
@@ -461,7 +465,7 @@ export const initFlexDetailsSet = (
             `${spaceStolenFromSibling}px space stolen from sibling`,
           );
         }
-        updateAllocatedSpace(details, requestedSpace, reason);
+        applyDiffOnAllocatedSpace(details, requestedSpace, reason);
       } else {
         if (debug) {
           console.debug(
@@ -557,13 +561,13 @@ export const initFlexDetailsSet = (
             }
           }
           self_grow: {
-            updateAllocatedSpace(resizedElement, spaceDiff, reason);
+            applyDiffOnAllocatedSpace(resizedElement, spaceDiff, reason);
           }
         }
 
         remainingMoveToApply = -moveDiff;
         self_shrink: {
-          const selfShrink = -updateAllocatedSpace(
+          const selfShrink = -applyDiffOnAllocatedSpace(
             resizedElement,
             -remainingMoveToApply,
             reason,
@@ -598,7 +602,7 @@ export const initFlexDetailsSet = (
         //   );
         //   return;
         // }
-        const reason = `applying ${yMove}px move on ${resizedElement.id} to sizes`;
+        const reason = `applying ${yMove}px move on ${resizedElement.id}`;
         if (debug) {
           console.group(reason);
         }
@@ -606,7 +610,7 @@ export const initFlexDetailsSet = (
         const moveDiff = -yMove;
         applyMoveDiffToSizes(moveDiff, reason);
         applyAllocatedSpaces();
-        // allocatedSpaceMap = startAllocatedSpaceMap;
+        allocatedSpaceMap = new Map(startAllocatedSpaceMap);
         if (debug) {
           console.groupEnd();
         }
