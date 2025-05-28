@@ -141,9 +141,8 @@ export const initFlexDetailsSet = (
 
   const heightAnimationGroupController = createSizeAnimationGroupController({
     duration: HEIGHT_ANIMATION_DURATION,
-    onChange: onSizeChange,
   });
-  const applyAllocatedSpaces = ({ animate } = {}) => {
+  const applyAllocatedSpaces = (resizeDetails) => {
     const changeSet = new Set();
     for (const child of container.children) {
       const allocatedSpace = allocatedSpaceMap.get(child);
@@ -174,7 +173,7 @@ export const initFlexDetailsSet = (
       return;
     }
 
-    if (!animate) {
+    if (!resizeDetails.animated) {
       const sizeChangeEntries = [];
       for (const { element, target, sideEffect } of changeSet) {
         element.style.height = `${target}px`;
@@ -184,7 +183,7 @@ export const initFlexDetailsSet = (
         }
         sizeChangeEntries.push({ element, value: target });
       }
-      onSizeChange?.(sizeChangeEntries);
+      onSizeChange?.(sizeChangeEntries, resizeDetails);
       return;
     }
 
@@ -196,7 +195,13 @@ export const initFlexDetailsSet = (
         sideEffect,
       });
     }
-    heightAnimationGroupController.animateAll(animations);
+    heightAnimationGroupController.animateAll(animations, {
+      onChange: (changeEntries) => {
+        if (onSizeChange) {
+          onSizeChange(changeEntries, resizeDetails);
+        }
+      },
+    });
   };
 
   const allocateSpace = (child, spaceToAllocate, requestSource) => {
@@ -415,22 +420,24 @@ export const initFlexDetailsSet = (
     }
   };
 
-  const updateSpaceDistribution = (reason) => {
+  const updateSpaceDistribution = (resizeDetails) => {
     prepareSpaceDistribution();
-    distributeAvailableSpace(reason);
+    distributeAvailableSpace(resizeDetails.reason);
     distributeRemainingSpace({
       childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
       childToShrinkFrom: lastChild,
     });
-    if (reason === "initial space distribution") {
+    if (resizeDetails.reason === "initial_space_distribution") {
       spaceMap.clear(); // force to set size at start
     }
-    applyAllocatedSpaces();
+    applyAllocatedSpaces(resizeDetails);
     saveCurrentSizeAsRequestedSizes();
   };
 
   initial_size: {
-    updateSpaceDistribution("initial space distribution");
+    updateSpaceDistribution({
+      reason: "initial_space_distribution",
+    });
   }
 
   update_on_toggle: {
@@ -488,7 +495,10 @@ export const initFlexDetailsSet = (
       const details = child;
       const ontoggle = () => {
         distributeSpaceAfterToggle(details);
-        applyAllocatedSpaces({ animate: true });
+        applyAllocatedSpaces({
+          reason: details.open ? "details_opened" : "details_closed",
+          animated: true,
+        });
       };
       if (details.open) {
         setTimeout(() => {
@@ -511,7 +521,9 @@ export const initFlexDetailsSet = (
       let currentAllocatedSpaceMap;
 
       const start = (element) => {
-        updateSpaceDistribution("resize start");
+        updateSpaceDistribution({
+          reason: "mouse_resize_start",
+        });
         resizedElement = element;
         // startSpaceMap = new Map(spaceMap);
         startAllocatedSpaceMap = new Map(allocatedSpaceMap);
@@ -612,7 +624,9 @@ export const initFlexDetailsSet = (
 
         const moveDiff = -yMove;
         applyMoveDiffToSizes(moveDiff, reason);
-        applyAllocatedSpaces();
+        applyAllocatedSpaces({
+          reason: "mouse_resize",
+        });
         currentAllocatedSpaceMap = new Map(allocatedSpaceMap);
         allocatedSpaceMap = new Map(startAllocatedSpaceMap);
         if (debug) {
@@ -669,7 +683,9 @@ export const initFlexDetailsSet = (
      * To achieve this we need to update these px heights when the container size changes
      */
     const resizeObserver = new ResizeObserver(() => {
-      updateSpaceDistribution("container resize");
+      updateSpaceDistribution({
+        reason: "container_resize",
+      });
     });
     resizeObserver.observe(container);
     cleanupCallbackSet.add(() => {

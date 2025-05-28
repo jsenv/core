@@ -3,7 +3,7 @@ import { setStyles } from "../style_and_attributes.js";
 
 const easing = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 
-export const createSizeAnimationGroupController = ({ duration, onChange }) => {
+export const createSizeAnimationGroupController = ({ duration }) => {
   const startSizeMap = new Map();
   const targetSizeMap = new Map();
   const sideEffectMap = new Map();
@@ -35,7 +35,7 @@ export const createSizeAnimationGroupController = ({ duration, onChange }) => {
   };
 
   return {
-    animateAll: (animations) => {
+    animateAll: (animations, { onChange }) => {
       let somethingChanged = false;
       for (const { element, target, sideEffect } of animations) {
         const isNew = !elementSet.has(element);
@@ -83,7 +83,7 @@ export const createSizeAnimationGroupController = ({ duration, onChange }) => {
             const animatedSize =
               startSize + (targetSize - startSize) * easedProgress;
             update(element, animatedSize);
-            changeEntryArray.push({ element, value: startSize });
+            changeEntryArray.push({ element, value: animatedSize });
           }
           if (changeEntryArray.length && onChange) {
             onChange(changeEntryArray);
