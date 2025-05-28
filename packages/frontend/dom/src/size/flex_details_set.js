@@ -250,17 +250,25 @@ export const initFlexDetailsSet = (
       }
     }
     allocatedSpaceMap.set(child, allocatedSpace);
-    return allocatedSpace;
+
+    const space = spaceMap.get(child);
+    return allocatedSpace - space;
   };
-  const reallocateSpace = (child, newRequestedSpace, source) => {
+  const updateAllocatedSpace = (child, diff, source) => {
+    if (diff === 0) {
+      return 0;
+    }
     const allocatedSpace = allocatedSpaceMap.get(child);
     remainingSpace += allocatedSpace;
+    const spaceToAllocate = allocatedSpace + diff;
     if (debug) {
       console.debug(
-        `reapplying requested space for ${child.id} (${source}), new requested space: ${newRequestedSpace}px, current allocated space: ${allocatedSpace}px, remaining space: ${remainingSpace}px`,
+        `re-allocating space for ${child.id} (${source}), new space to allocate: ${spaceToAllocate}px, current allocated space: ${allocatedSpace}px, remaining space: ${remainingSpace}px`,
       );
     }
-    return allocateSpace(child, newRequestedSpace, source);
+    allocateSpace(child, spaceToAllocate, source);
+    const reallocatedSpace = allocatedSpaceMap.get(child);
+    return reallocatedSpace - allocatedSpace;
   };
   const distributeAvailableSpace = (source) => {
     for (const child of container.children) {
@@ -278,7 +286,7 @@ export const initFlexDetailsSet = (
           `remaining space is negative: ${remainingSpace}px, stealing ${spaceToSleal}px from child before ${childToShrinkFrom.id}`,
         );
       }
-      allocateSpaceToPreviousSiblings(
+      updatePreviousSiblingsAllocatedSpace(
         childToShrinkFrom,
         -spaceToSleal,
         `remaining space is negative: ${remainingSpace}px`,
@@ -286,62 +294,51 @@ export const initFlexDetailsSet = (
       return;
     }
     if (childToGrow) {
-      const allocatedSpace = allocatedSpaceMap.get(childToGrow);
-      reallocateSpace(
+      updateAllocatedSpace(
         childToGrow,
-        allocatedSpace + remainingSpace,
+        remainingSpace,
         `remaining space is positive: ${remainingSpace}px`,
       );
     }
   };
 
-  const allocateSpaceToPreviousSiblings = (child, spaceToAllocate, source) => {
-    let allocatedSpaceSum = 0;
-    let remainingSpaceToAllocate = spaceToAllocate;
+  const updatePreviousSiblingsAllocatedSpace = (child, diff, source) => {
+    let spaceDiffSum = 0;
+    let remainingDiffToApply = diff;
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
-      const allocatedSpaceCurrent = allocatedSpaceMap.get(previousSibling);
-      const allocatedSpace = reallocateSpace(
+      const spaceDiff = updateAllocatedSpace(
         previousSibling,
-        allocatedSpaceCurrent + remainingSpaceToAllocate,
+        remainingDiffToApply,
         source,
       );
-      const allocatedSpaceDiff = allocatedSpaceCurrent - allocatedSpace;
-      if (allocatedSpaceDiff) {
-        allocatedSpaceSum += allocatedSpaceDiff;
-        remainingSpaceToAllocate -= allocatedSpaceDiff;
-        if (remainingSpaceToAllocate <= 0) {
+      if (spaceDiff) {
+        spaceDiffSum += spaceDiff;
+        remainingDiffToApply -= spaceDiff;
+        if (remainingDiffToApply <= 0) {
           break;
         }
       }
       previousSibling = previousSibling.previousElementSibling;
     }
-    return allocatedSpaceSum ? { allocatedSpaceSum } : null;
+    return spaceDiffSum;
   };
-
-  const allocateSibling = (child, spaceToAllocate, reason) => {
+  const updateSiblingAllocatedSpace = (child, diff, reason) => {
     let nextSibling = child.nextElementSibling;
     while (nextSibling) {
       if (!isDetailsElement(nextSibling)) {
         nextSibling = nextSibling.nextElementSibling;
         continue;
       }
-      const allocatedSpaceCurrent = allocatedSpaceMap.get(nextSibling);
-      const allocatedSpace = reallocateSpace(
-        nextSibling,
-        allocatedSpaceCurrent - spaceToAllocate,
-        reason,
-      );
-      const allocatedSpaceDiff = allocatedSpaceCurrent - allocatedSpace;
-      if (!allocatedSpaceDiff) {
-        nextSibling = nextSibling.nextElementSibling;
-        continue;
+      const spaceDiff = updateAllocatedSpace(nextSibling, diff, reason);
+      if (spaceDiff) {
+        return spaceDiff;
       }
-      return { child: nextSibling, allocatedSpace: allocatedSpaceDiff };
+      nextSibling = nextSibling.nextElementSibling;
     }
     if (debug) {
       console.debug(
-        "coult not allocate to next sibling, trying previous siblings",
+        "coult not update next sibling allocated space, try on previous siblings",
       );
     }
     let previousSibling = child.previousElementSibling;
@@ -350,20 +347,13 @@ export const initFlexDetailsSet = (
         previousSibling = previousSibling.previousElementSibling;
         continue;
       }
-      const allocatedSpaceCurrent = allocatedSpaceMap.get(previousSibling);
-      const allocatedSpace = reallocateSpace(
-        previousSibling,
-        allocatedSpaceCurrent - spaceToAllocate,
-        reason,
-      );
-      const allocatedSpaceDiff = allocatedSpaceCurrent - allocatedSpace;
-      if (!allocatedSpaceDiff) {
-        previousSibling = previousSibling.previousElementSibling;
-        continue;
+      const spaceDiff = updateAllocatedSpace(previousSibling, diff, reason);
+      if (spaceDiff) {
+        return spaceDiff;
       }
-      return { child: previousSibling, allocatedSpace: allocatedSpaceDiff };
+      previousSibling = previousSibling.previousElementSibling;
     }
-    return null;
+    return 0;
   };
 
   const saveCurrentSizeAsRequestedSizes = () => {
@@ -403,8 +393,8 @@ export const initFlexDetailsSet = (
 
       const requestedSpace = requestedSpaceMap.get(details);
       const allocatedSpace = allocatedSpaceMap.get(details);
-      const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
-      if (spaceToAllocate === 0) {
+      const spaceToSteal = requestedSpace - allocatedSpace - remainingSpace;
+      if (spaceToSteal === 0) {
         distributeRemainingSpace({
           childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
           childToShrinkFrom: lastChild,
@@ -413,31 +403,24 @@ export const initFlexDetailsSet = (
       }
       if (debug) {
         console.debug(
-          `${details.id} would like to take ${requestedSpace}px (${reason}). Trying to allocate ${spaceToAllocate}px to previous siblings, remaining space: ${remainingSpace}px`,
+          `${details.id} would like to take ${requestedSpace}px (${reason}). Trying to steal ${spaceToSteal}px to previous siblings, remaining space: ${remainingSpace}px`,
         );
       }
 
-      const siblingAllocationResult = allocateSibling(
+      const spaceFromSibling = updateSiblingAllocatedSpace(
         details,
-        spaceToAllocate,
+        -spaceToSteal,
         reason,
       );
-      if (siblingAllocationResult) {
-        const { allocatedSpace } = siblingAllocationResult;
+      if (spaceFromSibling) {
         if (debug) {
-          if (allocatedSpace === spaceToAllocate) {
-            console.debug(`${allocatedSpace}px allocated to sibling`);
-          } else {
-            console.debug(
-              `${allocatedSpace}px allocated (out of ${spaceToAllocate}px) to sibling`,
-            );
-          }
+          console.debug(`${spaceFromSibling}px space stolen from sibling`);
         }
-        reallocateSpace(details, requestedSpace, reason);
+        updateAllocatedSpace(details, requestedSpace, reason);
       } else {
         if (debug) {
           console.debug(
-            `no space could be re-allocated to sibling, remaining space: ${remainingSpace}px`,
+            `no space could be stolen to sibling, remaining space: ${remainingSpace}px`,
           );
         }
         distributeRemainingSpace({
@@ -471,9 +454,9 @@ export const initFlexDetailsSet = (
 
   resize_with_mouse: {
     const prepareResize = () => {
-      let startRequestedSpaceMap;
       let startSpaceMap;
-      let startMinSpaceMap;
+      // let startRequestedSpaceMap;
+      // let startMinSpaceMap;
       let resizedElement;
       let requestedSize;
 
@@ -481,48 +464,58 @@ export const initFlexDetailsSet = (
         updateSpaceDistribution("resize start");
         resizedElement = element;
         startSpaceMap = new Map(spaceMap);
-        startRequestedSpaceMap = new Map(requestedSpaceMap);
-        startMinSpaceMap = new Map(minSpaceMap);
+        // startRequestedSpaceMap = new Map(requestedSpaceMap);
+        // startMinSpaceMap = new Map(minSpaceMap);
       };
 
       const distributeSpaceToResize = (size) => {
         const wantToGrow = requestedSize > size;
         if (wantToGrow) {
-          const growBy = requestedSize - size;
-          const reason = `${resizedElement.id} want to grow by ${growBy}px`;
+          const growRequested = requestedSize - size;
+          const reason = `${resizedElement.id} want to grow by ${growRequested}px`;
           if (debug) {
             console.debug(reason);
           }
-          const stealResult = allocateSpaceToPreviousSiblings(
+          const spaceStolen = updatePreviousSiblingsAllocatedSpace(
             resizedElement,
-            -growBy,
+            -growRequested,
             reason,
           );
-          if (!stealResult) {
+          if (!spaceStolen) {
             if (debug) {
               console.debug(`no space could be stolen from previous siblings`);
             }
             return 0;
           }
-          const { allocatedSpaceSum } = stealResult;
           if (debug) {
-            console.debug(
-              `${allocatedSpaceSum}px stolen from previous siblings`,
-            );
+            console.debug(`${spaceStolen}px stolen from previous siblings`);
           }
-          return reallocateSpace(
-            resizedElement,
-            size + allocatedSpaceSum,
-            reason,
-          );
+          return updateAllocatedSpace(resizedElement, spaceStolen, reason);
         }
-        const shrinkBy = size - requestedSize;
-        const reason = `${resizedElement.id} want to shrink by ${shrinkBy}px`;
+        const shrinkRequested = size - requestedSize;
+        const reason = `${resizedElement.id} want to shrink by ${shrinkRequested}px`;
         if (debug) {
           console.debug(reason);
         }
-        // TODO
-        return 0;
+        let remainingShrinkRequested = shrinkRequested;
+        let spaceToAllocate = 0;
+        const shrinkedSpace = updateAllocatedSpace(
+          resizedElement,
+          size - shrinkRequested,
+          reason,
+        );
+        remainingShrinkRequested -= shrinkedSpace;
+        spaceToAllocate += shrinkedSpace;
+        if (remainingShrinkRequested > 0) {
+          // we cannot shrink more, or there is more space to shrink
+          return 0;
+        }
+        updatePreviousSiblingsAllocatedSpace(
+          resizedElement,
+          spaceToAllocate,
+          reason,
+        );
+        return spaceToAllocate;
       };
 
       const move = (yMove) => {
