@@ -36,23 +36,19 @@ export const setStyle = (element, name, value) => {
     element.style.removeProperty(name);
   };
 };
-
-export const setStyles = (element, styleDescription) => {
-  const cleanupCallbackSet = new Set();
-  for (const name of Object.keys(styleDescription)) {
-    const value = styleDescription[name];
-    const removeStyle = setStyle(element, name, value);
-    cleanupCallbackSet.add(removeStyle);
+export const forceStyle = (element, name, value) => {
+  const inlineStyleValue = element.style[name];
+  if (inlineStyleValue === value) {
+    return () => {};
   }
-  return () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-    cleanupCallbackSet.clear();
-  };
+  const computedStyleValue = getStyle(element, name);
+  if (computedStyleValue === value) {
+    return () => {};
+  }
+  const restoreStyle = setStyle(element, name, value);
+  return restoreStyle;
 };
-
-const setAttribute = (element, name, value) => {
+export const setAttribute = (element, name, value) => {
   if (element.hasAttribute(name)) {
     const prevValue = element.getAttribute(name);
     element.setAttribute(name, value);
@@ -65,17 +61,24 @@ const setAttribute = (element, name, value) => {
     element.removeAttribute(name);
   };
 };
-export const setAttributes = (element, attributeDescription) => {
-  const cleanupCallbackSet = new Set();
-  for (const name of Object.keys(attributeDescription)) {
-    const value = attributeDescription[name];
-    const unsetAttribute = setAttribute(element, name, value);
-    cleanupCallbackSet.add(unsetAttribute);
-  }
-  return () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
+
+const createSetMany = (setter) => {
+  return (element, description) => {
+    const cleanupCallbackSet = new Set();
+    for (const name of Object.keys(description)) {
+      const value = description[name];
+      const restoreStyle = setter(element, name, value);
+      cleanupCallbackSet.add(restoreStyle);
     }
-    cleanupCallbackSet.clear();
+    return () => {
+      for (const cleanupCallback of cleanupCallbackSet) {
+        cleanupCallback();
+      }
+      cleanupCallbackSet.clear();
+    };
   };
 };
+
+export const setStyles = createSetMany(setStyle);
+export const forceStyles = createSetMany(forceStyle);
+export const setAttributes = createSetMany(setAttribute);

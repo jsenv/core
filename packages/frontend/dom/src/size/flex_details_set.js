@@ -2,7 +2,7 @@
  *
  */
 
-import { setStyles } from "../style_and_attributes.js";
+import { forceStyles } from "../style_and_attributes.js";
 import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
@@ -24,10 +24,8 @@ export const initFlexDetailsSet = (
     }
     cleanupCallbackSet.clear();
   };
-
-  const spaceToSize = (element, space) => {
-    const marginSize = marginSizeMap.get(element);
-    return space - marginSize;
+  const flexDetailsSet = {
+    cleanup,
   };
 
   const spaceMap = new Map();
@@ -39,8 +37,12 @@ export const initFlexDetailsSet = (
   const canShrinkSet = new Set();
   let availableSpace;
   let remainingSpace;
-  let lastDetailsOpened = null;
-  let firstDetailsOpened = null;
+  let lastChild;
+  const openedDetailsArray = [];
+  const spaceToSize = (element, space) => {
+    const marginSize = marginSizeMap.get(element);
+    return space - marginSize;
+  };
   const prepareSpaceDistribution = () => {
     spaceMap.clear();
     marginSizeMap.clear();
@@ -50,14 +52,15 @@ export const initFlexDetailsSet = (
     canGrowSet.clear();
     canShrinkSet.clear();
     availableSpace = getInnerHeight(container);
+    remainingSpace = availableSpace;
+    openedDetailsArray.length = 0;
+    lastChild = null;
     if (debug) {
       console.debug(`availableSpace: ${availableSpace}px`);
     }
-    remainingSpace = availableSpace;
-    firstDetailsOpened = null;
-    lastDetailsOpened = null;
 
     for (const child of container.children) {
+      lastChild = child;
       const marginSizes = getMarginSizes(child);
       const marginSize = marginSizes.top + marginSizes.bottom;
       marginSizeMap.set(child, marginSize);
@@ -78,16 +81,11 @@ export const initFlexDetailsSet = (
       const summaryHeight = getHeight(summary);
 
       if (details.open) {
+        openedDetailsArray.push(details);
         canGrowSet.add(details);
         canShrinkSet.add(details);
-
-        if (!firstDetailsOpened) {
-          firstDetailsOpened = details;
-        }
-        lastDetailsOpened = details;
-
         const detailsContent = details.querySelector("summary + *");
-        const restoreSizeStyle = setStyles(detailsContent, {
+        const restoreSizeStyle = forceStyles(detailsContent, {
           height: "auto",
         });
         const detailsContentHeight = getHeight(detailsContent);
@@ -242,12 +240,8 @@ export const initFlexDetailsSet = (
     }
     return allocateSpace(child, newRequestedSpace, source);
   };
-
-  let lastChild;
   const distributeAvailableSpace = (source) => {
-    lastChild = null;
     for (const child of container.children) {
-      lastChild = child;
       allocateSpace(child, requestedSpaceMap.get(child), source);
     }
   };
@@ -331,29 +325,15 @@ export const initFlexDetailsSet = (
           contentComputedStyle.overflowY === "auto" &&
           contentComputedStyle.scrollbarGutter !== "stable"
         ) {
-          const restoreOverflow = setStyles(content, {
+          const restoreOverflow = forceStyles(content, {
             "overflow-y": "hidden",
           });
-          content.style.overflowY = "hidden";
           // eslint-disable-next-line no-unused-expressions
           content.offsetHeight;
           restoreOverflow();
         }
       }
     };
-  };
-
-  prepareSpaceDistribution();
-  distributeAvailableSpace("initial space distribution");
-  distributeRemainingSpace({
-    childToGrow: lastDetailsOpened,
-    childToShrinkFrom: lastChild,
-  });
-  spaceMap.clear(); // force to set size at start
-  applyAllocatedSpaces();
-
-  const flexDetailsSet = {
-    cleanup,
   };
 
   const allocateSibling = (child, spaceToAllocate, reason) => {
@@ -403,6 +383,17 @@ export const initFlexDetailsSet = (
     return null;
   };
 
+  initial_size: {
+    prepareSpaceDistribution();
+    distributeAvailableSpace("initial space distribution");
+    distributeRemainingSpace({
+      childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
+      childToShrinkFrom: lastChild,
+    });
+    spaceMap.clear(); // force to set size at start
+    applyAllocatedSpaces();
+  }
+
   update_on_toggle: {
     const allocateSpaceAfterToggle = (details, source) => {
       const requestedSpace = requestedSpaceMap.get(details);
@@ -410,7 +401,7 @@ export const initFlexDetailsSet = (
       const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
       if (spaceToAllocate === 0) {
         distributeRemainingSpace({
-          childToGrow: lastDetailsOpened,
+          childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
           childToShrinkFrom: lastChild,
         });
         return;
@@ -445,7 +436,7 @@ export const initFlexDetailsSet = (
           );
         }
         distributeRemainingSpace({
-          childToGrow: firstDetailsOpened,
+          childToGrow: openedDetailsArray[0],
           childToShrinkFrom: lastChild,
         });
       }
@@ -456,16 +447,15 @@ export const initFlexDetailsSet = (
         continue;
       }
       const details = child;
-      // eslint-disable-next-line no-loop-func
       const ontoggle = () => {
         prepareSpaceDistribution();
         distributeAvailableSpace(
           `${details.id} ${details.open ? "opened" : "closed"}`,
         );
         if (details.open) {
-          allocateSpaceAfterToggle(details, "just opened");
-        } else if (firstDetailsOpened) {
-          allocateSpaceAfterToggle(firstDetailsOpened, "first opened");
+          allocateSpaceAfterToggle(details, `${details.id} just opened`);
+        } else {
+          allocateSpaceAfterToggle(details, `${details.id} just closed`);
         }
         applyAllocatedSpaces({ animate: true });
       };
@@ -483,7 +473,7 @@ export const initFlexDetailsSet = (
     }
   }
 
-  request_resize: {
+  resize_with_mouse: {
     const allocateSpaceAfterResize = (child, source) => {
       const requestedSpace = requestedSpaceMap.get(child);
       const allocatedSpace = allocatedSpaceMap.get(child);
@@ -497,7 +487,7 @@ export const initFlexDetailsSet = (
 
       if (spaceToAllocate === 0) {
         distributeRemainingSpace({
-          childToGrow: lastDetailsOpened,
+          childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
           childToShrinkFrom: lastChild,
         });
         return;
@@ -533,7 +523,7 @@ export const initFlexDetailsSet = (
           );
         }
         distributeRemainingSpace({
-          childToGrow: firstDetailsOpened,
+          childToGrow: openedDetailsArray[0],
           childToShrinkFrom: lastChild,
         });
       }
@@ -553,22 +543,22 @@ export const initFlexDetailsSet = (
       allocateSpaceAfterResize(child, source);
       applyAllocatedSpaces();
     };
-    flexDetailsSet.requestResize = requestResize;
-  }
 
-  resize_with_mouse: {
     const onmousedown = (event) => {
       let heightAtStart = 0;
+      // on veut prendre un snapshot de tous le monde au départ
+      // puis on s'autorise a resize
+
       startResizeGesture(event, {
         onStart: (gesture) => {
           heightAtStart = getHeight(gesture.element);
-          flexDetailsSet.requestResize(gesture.element, heightAtStart);
+          requestResize(gesture.element, heightAtStart);
           // TODO: lock the size of next siblings
         },
         onMove: (gesture) => {
           const elementToResize = gesture.element;
           const yMove = gesture.yMove;
-          flexDetailsSet.requestResize(elementToResize, heightAtStart - yMove);
+          requestResize(elementToResize, heightAtStart - yMove);
         },
         onEnd: () => {
           // bah a priori rien de plus
