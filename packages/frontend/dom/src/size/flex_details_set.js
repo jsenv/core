@@ -373,7 +373,13 @@ export const initFlexDetailsSet = (
   }
 
   update_on_toggle: {
-    const allocateSpaceAfterToggle = (details, source) => {
+    const distributeSpaceAfterToggle = (details) => {
+      const reason = details.open
+        ? `${details.id} just opened`
+        : `${details.id} just closed`;
+      prepareSpaceDistribution();
+      distributeAvailableSpace(reason);
+
       const requestedSpace = requestedSpaceMap.get(details);
       const allocatedSpace = allocatedSpaceMap.get(details);
       const spaceToAllocate = requestedSpace - allocatedSpace - remainingSpace;
@@ -386,14 +392,14 @@ export const initFlexDetailsSet = (
       }
       if (debug) {
         console.debug(
-          `${details.id} would like to take ${requestedSpace}px (${source}). Trying to allocate ${spaceToAllocate}px to previous siblings, remaining space: ${remainingSpace}px`,
+          `${details.id} would like to take ${requestedSpace}px (${reason}). Trying to allocate ${spaceToAllocate}px to previous siblings, remaining space: ${remainingSpace}px`,
         );
       }
 
       const siblingAllocationResult = allocateSibling(
         details,
         spaceToAllocate,
-        source,
+        reason,
       );
       if (siblingAllocationResult) {
         const { allocatedSpace } = siblingAllocationResult;
@@ -406,7 +412,7 @@ export const initFlexDetailsSet = (
             );
           }
         }
-        reallocateSpace(details, requestedSpace, source);
+        reallocateSpace(details, requestedSpace, reason);
       } else {
         if (debug) {
           console.debug(
@@ -426,18 +432,9 @@ export const initFlexDetailsSet = (
       }
       const details = child;
       const ontoggle = () => {
-        prepareSpaceDistribution();
-        distributeAvailableSpace(
-          `${details.id} ${details.open ? "opened" : "closed"}`,
-        );
-        if (details.open) {
-          allocateSpaceAfterToggle(details, `${details.id} just opened`);
-        } else {
-          allocateSpaceAfterToggle(details, `${details.id} just closed`);
-        }
+        distributeSpaceAfterToggle(details);
         applyAllocatedSpaces({ animate: true });
       };
-
       if (details.open) {
         setTimeout(() => {
           details.addEventListener("toggle", ontoggle);
