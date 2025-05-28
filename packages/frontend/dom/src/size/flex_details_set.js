@@ -18,6 +18,10 @@ export const initFlexDetailsSet = (
   container,
   { onSizeChange, debug = DEBUG } = {},
 ) => {
+  const flexDetailsSet = {
+    cleanup: null,
+  };
+
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -25,9 +29,7 @@ export const initFlexDetailsSet = (
     }
     cleanupCallbackSet.clear();
   };
-  const flexDetailsSet = {
-    cleanup,
-  };
+  flexDetailsSet.cleanup = cleanup;
 
   const spaceMap = new Map();
   const marginSizeMap = new Map();
@@ -409,18 +411,6 @@ export const initFlexDetailsSet = (
       if (canGrowSet.has(child) || canShrinkSet.has(child)) {
         const allocatedSpace = allocatedSpaceMap.get(child);
         child.setAttribute("data-requested-height", allocatedSpace);
-        const allocatedSize = spaceToSize(allocatedSpace, child);
-        const allocatedSizePercentage = sizeAsPercentageNumber(
-          allocatedSize,
-          availableSpace,
-        );
-        child.style.height = `${allocatedSizePercentage}%`;
-
-        if (isDetailsElement(child)) {
-          const syncDetailsContentHeight =
-            prepareSyncDetailsContentHeight(child);
-          syncDetailsContentHeight(allocatedSize);
-        }
       }
     }
   };
@@ -679,15 +669,7 @@ export const initFlexDetailsSet = (
      * To achieve this we need to update these px heights when the container size changes
      */
     const resizeObserver = new ResizeObserver(() => {
-      availableSpace = getInnerHeight(container);
-      for (const child of container.children) {
-        if (!isDetailsElement(child)) {
-          continue;
-        }
-        const height = getHeight(child);
-        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
-        syncDetailsContentHeight(height);
-      }
+      updateSpaceDistribution("container resize");
     });
     resizeObserver.observe(container);
     cleanupCallbackSet.add(() => {
@@ -698,20 +680,14 @@ export const initFlexDetailsSet = (
   return flexDetailsSet;
 };
 
-const prepareSyncDetailsContentHeight = (
-  details,
-  availableSpace,
-  { responsive } = {},
-) => {
+const prepareSyncDetailsContentHeight = (details) => {
   const summary = details.querySelector("summary");
   const summaryHeight = getHeight(summary);
   const content = details.querySelector("summary + *");
   content.style.height = "var(--content-height)";
 
   const getHeightCssValue = (height) => {
-    return responsive
-      ? `${sizeAsPercentageNumber(height, availableSpace)}%`
-      : `${height}px`;
+    return `${height}px`;
   };
 
   details.style.setProperty(
@@ -755,12 +731,6 @@ const prepareSyncDetailsContentHeight = (
       }
     }
   };
-};
-
-const sizeAsPercentageNumber = (size, availableSpace) => {
-  const ratio = size / availableSpace;
-  const percentage = ratio * 100;
-  return percentage;
 };
 
 const isDetailsElement = (element) => {
