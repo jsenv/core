@@ -24,7 +24,6 @@
  */
 
 import { applyBabelPlugins } from "@jsenv/ast";
-import { babelPluginMetadataImportMetaCss } from "./babel_plugin_metadata_import_meta_css.js";
 
 export const jsenvPluginImportMetaCss = () => {
   const importMetaCssClientFileUrl = import.meta.resolve(
@@ -40,15 +39,14 @@ export const jsenvPluginImportMetaCss = () => {
           return null;
         }
         const { metadata } = await applyBabelPlugins({
-          babelPlugins: [babelPluginMetadataImportMetaCss],
+          babelPlugins: [babelPluginMetadataUsesImportMetaCss],
           input: urlInfo.content,
           inputIsJsModule: true,
           inputUrl: urlInfo.originalUrl,
           outputUrl: urlInfo.generatedUrl,
         });
-        const { importMetaCssPaths } = metadata;
-        urlInfo.data.importMetaCssPaths = importMetaCssPaths;
-        if (importMetaCssPaths.length === 0) {
+        const { usesImportMetaCss } = metadata;
+        if (!usesImportMetaCss) {
           return null;
         }
         return injectImportMetaCss(urlInfo, importMetaCssClientFileUrl);
@@ -77,5 +75,36 @@ if (import.meta.hot) {
 `;
   return {
     content: `${prelude.replace(/\n/g, "")}${content}`,
+  };
+};
+
+const babelPluginMetadataUsesImportMetaCss = () => {
+  return {
+    name: "metadata-uses-import-meta-css",
+    visitor: {
+      Program(programPath, state) {
+        let usesImportMetaCss = false;
+        programPath.traverse({
+          MemberExpression(path) {
+            const { node } = path;
+            const { object } = node;
+            if (object.type !== "MetaProperty") {
+              return;
+            }
+            const { property: objectProperty } = object;
+            if (objectProperty.name !== "meta") {
+              return;
+            }
+            const { property } = node;
+            const { name } = property;
+            if (name === "css") {
+              usesImportMetaCss = true;
+              path.stop();
+            }
+          },
+        });
+        state.file.metadata.usesImportMetaCss = usesImportMetaCss;
+      },
+    },
   };
 };
