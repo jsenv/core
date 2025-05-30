@@ -984,13 +984,17 @@ window.__supervisor__ = (() => {
             const { trace = {} } = cause;
             const preferCause =
               cause.code === "MODULE_NOT_FOUND" ||
-              cause.code === "PROTOCOL_NOT_SUPPORTED";
+              cause.code === "PROTOCOL_NOT_SUPPORTED" ||
+              cause.code === "PARSE_ERROR";
             const dataToRender = preferCause ? cause : exception;
             root.querySelector(".text").innerHTML = stringifyStack({
               codeFrame: trace.codeFrame
                 ? generateClickableText(trace.codeFrame)
                 : "",
-              name: dataToRender.name,
+              name:
+                cause.parseErrorSourceType === "css"
+                  ? "CSSSyntaxError"
+                  : dataToRender.name,
               message: preferCause
                 ? generateClickableText(cause.reason)
                 : dataToRender.message

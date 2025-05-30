@@ -75,6 +75,7 @@ export const applyBabelPlugins = async ({
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       throw createParseError(error.message, {
+        parseErrorSourceType: "js",
         reasonCode: error.reasonCode,
         content: input,
         url: inputUrl,

@@ -28,6 +28,7 @@ export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
     if (e && e.name === "SyntaxError") {
       const { line, column } = getLineInfo(js, e.raisedAt);
       throw createParseError(e.message, {
+        parseErrorSourceType: "js",
         reasonCode: e.message,
         content: js,
         url,

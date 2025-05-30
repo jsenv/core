@@ -34,6 +34,7 @@ export const applyPostCss = async ({
   } catch (error) {
     if (error.name === "CssSyntaxError") {
       throw createParseError(error.message, {
+        parseErrorSourceType: "css",
         reasonCode: error.reason,
         url,
         line: error.line,
