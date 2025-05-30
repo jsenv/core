@@ -17,16 +17,8 @@ Unexpected token (4:15)
 base/client/main.html:9:27
 --- plugin name ---
 "jsenv:js_reference_analysis"
-    at createParseError (@jsenv/core/packages/internal/ast/src/parse_error.js:2:22)
-    at parseJsWithAcorn (@jsenv/core/packages/internal/ast/src/js/parse_js_with_acorn.js:30:13)
-    at getContentAst (@jsenv/core/src/kitchen/url_graph/url_content.js:88:12)
-    at @jsenv/core/src/kitchen/url_graph/url_content.js:13:14
-    at Object.get [as originalContentAst] (@jsenv/core/src/kitchen/url_graph/url_content.js:78:21)
-    at @jsenv/core/src/kitchen/url_graph/url_content.js:44:24
-    at Object.get [as contentAst] (@jsenv/core/src/kitchen/url_graph/url_content.js:78:21)
-    at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:173:18)
-    at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:24:18)
-    at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:210:31)
+    at async @jsenv/core/src/kitchen/kitchen.js:632:11
+    at async @jsenv/core/src/kitchen/kitchen.js:627:9
 ```
 
 ---
