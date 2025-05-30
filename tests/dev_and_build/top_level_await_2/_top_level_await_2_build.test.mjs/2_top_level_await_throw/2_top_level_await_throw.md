@@ -20,7 +20,7 @@ TypeError: base/client/a.js: Cannot export after a top-level await when using to
 > 4 | export const answer = 42;
     | ^^^^^^^^^^^^^^^^^^^^^^^^^
     at File.buildCodeFrameError (@jsenv/core/node_modules/@babel/core/lib/transformation/file/file.js:193:12)
-    at NodePath.buildCodeFrameError (@jsenv/core/node_modules/@babel/traverse/lib/path/index.js:117:21)
+    at NodePath.buildCodeFrameError (@jsenv/core/node_modules/@babel/traverse/lib/path/index.js:118:21)
     at PluginPass.exit (@jsenv/core/node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js:3597:36)
     at newFn (@jsenv/core/node_modules/@babel/traverse/lib/visitors.js:172:14)
     at NodePath._call (@jsenv/core/node_modules/@babel/traverse/lib/path/context.js:49:20)
@@ -29,12 +29,12 @@ TypeError: base/client/a.js: Cannot export after a top-level await when using to
     at TraversalContext.visitQueue (@jsenv/core/node_modules/@babel/traverse/lib/context.js:90:16)
     at TraversalContext.visitMultiple (@jsenv/core/node_modules/@babel/traverse/lib/context.js:62:17)
     at TraversalContext.visit (@jsenv/core/node_modules/@babel/traverse/lib/context.js:111:19)
-    at traverseNode (@jsenv/core/node_modules/@babel/traverse/lib/traverse-node.js:22:17)
+    at traverseNode (@jsenv/core/node_modules/@babel/traverse/lib/traverse-node.js:131:17)
     at NodePath.visit (@jsenv/core/node_modules/@babel/traverse/lib/path/context.js:94:52)
     at TraversalContext.visitQueue (@jsenv/core/node_modules/@babel/traverse/lib/context.js:90:16)
     at TraversalContext.visitSingle (@jsenv/core/node_modules/@babel/traverse/lib/context.js:66:19)
     at TraversalContext.visit (@jsenv/core/node_modules/@babel/traverse/lib/context.js:113:19)
-    at traverseNode (@jsenv/core/node_modules/@babel/traverse/lib/traverse-node.js:22:17)
+    at traverseNode (@jsenv/core/node_modules/@babel/traverse/lib/traverse-node.js:131:17)
     at traverse (@jsenv/core/node_modules/@babel/traverse/lib/index.js:53:34)
     at transformFile (@jsenv/core/node_modules/@babel/core/lib/transformation/index.js:80:31)
     at transformFile.next (<anonymous>)

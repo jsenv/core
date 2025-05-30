@@ -23,7 +23,7 @@ base/client/main.js:1:7
   at onExternalReference (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:130:44)
   at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:183:7)
   at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:24:18)
-  at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:193:31)
+  at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:210:31)
 ```
 
 ---
