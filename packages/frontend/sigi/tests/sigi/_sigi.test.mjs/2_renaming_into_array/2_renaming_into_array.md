@@ -1,7 +1,7 @@
 # [2_renaming_into_array](../../sigi.test.mjs#L33)
 
 ```js
-const state = sigi([{ name: "a" }, { name: "b" }]);
+const state = signal([{ name: "a" }, { name: "b" }]);
 const currentItemSignal = signal({ name: "a" });
 const values = [];
 effect(() => {
@@ -20,9 +20,10 @@ return values;
 ```
 
 ```console
-DOMException: #<Object> could not be cloned.
-  at b.<anonymous> (base/sigi.test.mjs:41:29)
+TypeError: state is not iterable
+  at b.<anonymous> (base/sigi.test.mjs:39:26)
   at base/sigi.test.mjs:37:5
+  at async base/sigi.test.mjs:5:1
 ```
 
 ---
