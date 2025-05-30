@@ -65,7 +65,15 @@ const injectImportMetaCss = (urlInfo, importMetaCssClientFileUrl) => {
     specifier: importMetaCssClientFileUrl,
   });
   let content = urlInfo.content;
-  let prelude = `import ${importMetaCssClientFileReference.generatedSpecifier};
+  let prelude = `import { installImportMetaCss } from ${importMetaCssClientFileReference.generatedSpecifier};
+
+const remove = installImportMetaCss(import.meta);
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    remove();
+  });
+}
+
 `;
   return {
     content: `${prelude.replace(/\n/g, "")}${content}`,
