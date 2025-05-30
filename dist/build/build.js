@@ -4,7 +4,7 @@ import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginTranspilation, jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { memoryUsage } from "node:process";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, urlIsInsideOf, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, injectQueryParams, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, createLookupPackageDirectory, readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, urlIsOrIsInsideOf, ensureWindowsDriveLetter, setUrlFilename, moveUrl, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, urlToFilename, DATA_URL, errorToHTML, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, renderDetails, humanizeDuration, humanizeFileSize, renderTable, renderBigSection, distributePercentages, humanizeMemory, comparePathnames, UNICODE, escapeRegexpSpecialChars, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, injectQueryParams, assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents, startMonitoringCpuUsage, startMonitoringMemoryUsage, createLookupPackageDirectory, readPackageAtOrNull, inferRuntimeCompatFromClosestPackage, browserDefaultRuntimeCompat, nodeDefaultRuntimeCompat, clearDirectorySync, createTaskLog, ensureEmptyDirectory, updateJsonFileSync, createDynamicLog } from "./jsenv_core_packages.js";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
 import { performance } from "node:perf_hooks";
@@ -531,7 +531,7 @@ const determineFileUrlForOutDirectory = (urlInfo) => {
   if (!url.startsWith("file:")) {
     return url;
   }
-  if (!urlIsInsideOf(url, rootDirectoryUrl)) {
+  if (!urlIsOrIsInsideOf(url, rootDirectoryUrl)) {
     const fsRootUrl = ensureWindowsDriveLetter("file:///", url);
     url = `${rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`;
   }
@@ -4135,10 +4135,19 @@ const replacePlaceholders = (html, replacers) => {
   });
 };
 
-const createPluginStore = (plugins) => {
+const createPluginStore = async (plugins) => {
   const allDevServerRoutes = [];
+  const allDevServerServices = [];
   const pluginArray = [];
-  const addPlugin = (plugin) => {
+
+  const pluginPromises = [];
+  const addPlugin = async (plugin) => {
+    if (plugin && typeof plugin.then === "function") {
+      pluginPromises.push(plugin);
+      const value = await plugin;
+      addPlugin(value);
+      return;
+    }
     if (Array.isArray(plugin)) {
       for (const subplugin of plugin) {
         addPlugin(subplugin);
@@ -4157,21 +4166,28 @@ const createPluginStore = (plugins) => {
         allDevServerRoutes.push(devServerRoute);
       }
     }
+    if (plugin.devServerServices) {
+      const devServerServices = plugin.devServerServices;
+      for (const devServerService of devServerServices) {
+        allDevServerServices.push(devServerService);
+      }
+    }
     pluginArray.push(plugin);
   };
   addPlugin(jsenvPluginHtmlSyntaxErrorFallback());
   for (const plugin of plugins) {
     addPlugin(plugin);
   }
+  await Promise.all(pluginPromises);
 
   return {
     pluginArray,
-
     allDevServerRoutes,
+    allDevServerServices,
   };
 };
 
-const createPluginController = (
+const createPluginController = async (
   pluginStore,
   kitchen,
   { initialPuginsMeta = {} } = {},
@@ -4194,7 +4210,7 @@ const createPluginController = (
       pluginCandidate.destroy?.();
       continue;
     }
-    const initPluginResult = initPlugin(pluginCandidate, kitchen);
+    const initPluginResult = await initPlugin(pluginCandidate, kitchen);
     if (!initPluginResult) {
       pluginCandidate.destroy?.();
       continue;
@@ -4246,6 +4262,7 @@ const createPluginController = (
         key === "serverEvents" ||
         key === "mustStayFirst" ||
         key === "devServerRoutes" ||
+        key === "devServerServices" ||
         key === "effect"
       ) {
         continue;
@@ -4419,6 +4436,7 @@ const createPluginController = (
 const HOOK_NAMES = [
   "init",
   "devServerRoutes", // is called only during dev/tests
+  "devServerServices", // is called only during dev/tests
   "resolveReference",
   "redirectReference",
   "transformReferenceSearchParams",
@@ -4473,12 +4491,12 @@ const testAppliesDuring = (plugin, kitchen) => {
     `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
   );
 };
-const initPlugin = (plugin, kitchen) => {
+const initPlugin = async (plugin, kitchen) => {
   const { init } = plugin;
   if (!init) {
     return true;
   }
-  const initReturnValue = init(kitchen.context, { plugin });
+  const initReturnValue = await init(kitchen.context, { plugin });
   if (initReturnValue === false) {
     return false;
   }
@@ -6338,10 +6356,7 @@ const jsenvPluginVersionSearchParam = () => {
 
 const FILE_AND_SERVER_URLS_CONVERTER = {
   asServerUrl: (fileUrl, serverRootDirectoryUrl) => {
-    if (fileUrl === serverRootDirectoryUrl) {
-      return "/";
-    }
-    if (urlIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
+    if (urlIsOrIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
       const urlRelativeToServer = urlToRelativeUrl(
         fileUrl,
         serverRootDirectoryUrl,
@@ -6397,6 +6412,7 @@ const htmlFileUrlForDirectory = import.meta.resolve(
 );
 
 const jsenvPluginDirectoryListing = ({
+  spa,
   urlMocks = false,
   autoreload = true,
   directoryContentMagicName,
@@ -6438,7 +6454,7 @@ const jsenvPluginDirectoryListing = ({
             return null;
           }
         }
-        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
+        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(requestedUrl)}&enoent`;
       }
       const isDirectory = fsStat?.isDirectory();
       if (!isDirectory) {
@@ -6464,21 +6480,22 @@ const jsenvPluginDirectoryListing = ({
         if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
           return null;
         }
-        const requestedUrl = urlInfo.searchParams.get("url");
-        if (!requestedUrl) {
+        const urlNotFound = urlInfo.searchParams.get("url");
+        if (!urlNotFound) {
           return null;
         }
+
         urlInfo.headers["cache-control"] = "no-cache";
         const enoent = urlInfo.searchParams.has("enoent");
         if (enoent) {
           urlInfo.status = 404;
-          urlInfo.headers["cache-control"] = "no-cache";
         }
         const request = urlInfo.context.request;
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
         const directoryListingInjections = generateDirectoryListingInjection(
-          requestedUrl,
+          urlNotFound,
           {
+            spa,
             autoreload,
             request,
             urlMocks,
@@ -6571,8 +6588,9 @@ const jsenvPluginDirectoryListing = ({
 };
 
 const generateDirectoryListingInjection = (
-  requestedUrl,
+  urlNotFound,
   {
+    spa,
     rootDirectoryUrl,
     mainFilePath,
     packageDirectory,
@@ -6585,7 +6603,7 @@ const generateDirectoryListingInjection = (
 ) => {
   let serverRootDirectoryUrl = rootDirectoryUrl;
   const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
-    requestedUrl,
+    urlNotFound,
     serverRootDirectoryUrl,
   );
   const directoryContentItems = getDirectoryContentItems({
@@ -6636,8 +6654,8 @@ const generateDirectoryListingInjection = (
   const { host } = new URL(request.url);
   const websocketUrl = `${websocketScheme}://${host}/.internal/directory_content.websocket?directory=${encodeURIComponent(directoryUrlRelativeToServer)}`;
 
-  const navItems = [];
-  {
+  const generateBreadcrumb = () => {
+    const breadcrumb = [];
     const lastItemUrl = firstExistingDirectoryUrl;
     const lastItemRelativeUrl = urlToRelativeUrl(lastItemUrl, rootDirectoryUrl);
     const rootDirectoryUrlName = urlToFilename(rootDirectoryUrl);
@@ -6647,7 +6665,6 @@ const generateDirectoryListingInjection = (
     } else {
       parts = [rootDirectoryUrlName];
     }
-
     let i = 0;
     while (i < parts.length) {
       const part = parts[i];
@@ -6668,7 +6685,7 @@ const generateDirectoryListingInjection = (
         navItemUrl,
         serverRootDirectoryUrl,
       );
-      let urlRelativeToDocument = urlToRelativeUrl(navItemUrl, requestedUrl);
+      let urlRelativeToDocument = urlToRelativeUrl(navItemUrl, urlNotFound);
       const isServerRootDirectory = navItemUrl === serverRootDirectoryUrl;
       if (isServerRootDirectory) {
         urlRelativeToServer = `/${directoryContentMagicName}`;
@@ -6676,7 +6693,7 @@ const generateDirectoryListingInjection = (
       }
       const name = part;
       const isCurrent = navItemUrl === String(firstExistingDirectoryUrl);
-      navItems.push({
+      breadcrumb.push({
         url: navItemUrl,
         urlRelativeToServer,
         urlRelativeToDocument,
@@ -6686,34 +6703,47 @@ const generateDirectoryListingInjection = (
       });
       i++;
     }
-  }
+    return breadcrumb;
+  };
+  const breadcrumb = generateBreadcrumb();
 
   let enoentDetails = null;
   if (enoent) {
+    const buildEnoentPathInfo = (urlBase, closestExistingUrl) => {
+      let filePathExisting;
+      let filePathNotFound;
+      const existingIndex = String(closestExistingUrl).length;
+      filePathExisting = urlToRelativeUrl(
+        closestExistingUrl,
+        serverRootDirectoryUrl,
+      );
+      filePathNotFound = urlBase.slice(existingIndex);
+      return [filePathExisting, filePathNotFound];
+    };
     const fileRelativeUrl = urlToRelativeUrl(
-      requestedUrl,
+      urlNotFound,
       serverRootDirectoryUrl,
     );
-    let filePathExisting;
-    let filePathNotFound;
-    const existingIndex = String(firstExistingDirectoryUrl).length;
-    filePathExisting = urlToRelativeUrl(
-      firstExistingDirectoryUrl,
-      serverRootDirectoryUrl,
-    );
-    filePathNotFound = requestedUrl.slice(existingIndex);
     enoentDetails = {
-      fileUrl: requestedUrl,
+      fileUrl: urlNotFound,
       fileRelativeUrl,
+    };
+
+    const [filePathExisting, filePathNotFound] = buildEnoentPathInfo(
+      urlNotFound,
+      firstExistingDirectoryUrl,
+    );
+    Object.assign(enoentDetails, {
       filePathExisting: `/${filePathExisting}`,
       filePathNotFound,
-    };
+    });
   }
 
   return {
     __DIRECTORY_LISTING__: {
+      spa,
       enoentDetails,
-      navItems,
+      breadcrumb,
       urlMocks,
       directoryContentMagicName,
       directoryUrl: firstExistingDirectoryUrl,
@@ -6726,11 +6756,11 @@ const generateDirectoryListingInjection = (
     },
   };
 };
-const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
-  let directoryUrlCandidate = new URL("./", requestedUrl);
+const getFirstExistingDirectoryUrl = (urlBase, serverRootDirectoryUrl) => {
+  let directoryUrlCandidate = new URL("./", urlBase);
   while (!existsSync(directoryUrlCandidate)) {
     directoryUrlCandidate = new URL("../", directoryUrlCandidate);
-    if (!urlIsInsideOf(directoryUrlCandidate, serverRootDirectoryUrl)) {
+    if (!urlIsOrIsInsideOf(directoryUrlCandidate, serverRootDirectoryUrl)) {
       directoryUrlCandidate = new URL(serverRootDirectoryUrl);
       break;
     }
@@ -6779,7 +6809,7 @@ const getDirectoryContentItems = ({
 };
 
 const jsenvPluginFsRedirection = ({
-  spa = true,
+  spa,
   directoryContentMagicName,
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
@@ -6938,17 +6968,12 @@ const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
     if (existsSync(indexHtmlFileUrl)) {
       return indexHtmlFileUrl.href;
     }
-    const htmlFileUrlCandidate = new URL(
-      `${urlToFilename(directoryUrl)}.html`,
-      directoryUrl,
-    );
+    const filename = urlToFilename(directoryUrl);
+    const htmlFileUrlCandidate = new URL(`${filename}.html`, directoryUrl);
     if (existsSync(htmlFileUrlCandidate)) {
       return htmlFileUrlCandidate.href;
     }
-    if (
-      !urlIsInsideOf(directoryUrl, serverRootDirectoryUrl) ||
-      directoryUrl.href === serverRootDirectoryUrl
-    ) {
+    if (!urlIsOrIsInsideOf(directoryUrl, serverRootDirectoryUrl)) {
       return null;
     }
     directoryUrl = new URL("../", directoryUrl);
@@ -6958,7 +6983,7 @@ const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
 const directoryContentMagicName = "...";
 
 const jsenvPluginProtocolFile = ({
-  spa,
+  spa = true,
   magicExtensions,
   magicDirectoryIndex,
   preserveSymlinks,
@@ -7026,6 +7051,7 @@ const jsenvPluginProtocolFile = ({
     ...(directoryListing
       ? [
           jsenvPluginDirectoryListing({
+            spa,
             ...directoryListing,
             directoryContentMagicName,
             rootDirectoryUrl,
@@ -8020,7 +8046,7 @@ const jsenvPluginAutoreloadServer = ({
     serverEvents: {
       reload: (serverEventInfo) => {
         const formatUrlForClient = (url) => {
-          if (urlIsInsideOf(url, serverEventInfo.rootDirectoryUrl)) {
+          if (urlIsOrIsInsideOf(url, serverEventInfo.rootDirectoryUrl)) {
             return urlToRelativeUrl(url, serverEventInfo.rootDirectoryUrl);
           }
           if (url.startsWith("file:")) {
@@ -8595,6 +8621,7 @@ const jsenvPluginChromeDevtoolsJson = () => {
     devServerRoutes: [
       {
         endpoint: "GET /.well-known/appspecific/com.chrome.devtools.json",
+        declarationSource: import.meta.url,
         fetch: (request, { kitchen }) => {
           const { rootDirectoryUrl } = kitchen.context;
           return Response.json({
@@ -9983,7 +10010,7 @@ const createBuildSpecifierManager = ({
         // const urlInfoInsideThisDirectorySet = new Set();
         const versionsInfluencingThisDirectorySet = new Set();
         for (const [url, urlInfo] of finalKitchen.graph.urlInfoMap) {
-          if (!urlIsInsideOf(url, directoryUrl)) {
+          if (!urlIsOrIsInsideOf(url, directoryUrl)) {
             continue;
           }
           // ideally we should exclude eventual directories as the are redundant
@@ -10382,7 +10409,7 @@ const createBuildSpecifierManager = ({
           }
           if (
             urlInfo.type === "asset" &&
-            urlIsInsideOf(urlInfo.url, buildDirectoryUrl)
+            urlIsOrIsInsideOf(urlInfo.url, buildDirectoryUrl)
           ) {
             return;
           }
@@ -10697,7 +10724,7 @@ const createBuildUrlsGenerator = ({
     if (buildUrlFromMap) {
       return buildUrlFromMap;
     }
-    if (urlIsInsideOf(url, buildDirectoryUrl)) {
+    if (urlIsOrIsInsideOf(url, buildDirectoryUrl)) {
       if (ownerUrlInfo.searchParams.has("dynamic_import_id")) {
         const ownerDirectoryPath = determineDirectoryPath({
           sourceDirectoryUrl,
@@ -11112,7 +11139,7 @@ const build = async ({
               );
             }
           }
-          if (!urlIsInsideOf(sourceUrl, sourceDirectoryUrl)) {
+          if (!urlIsOrIsInsideOf(sourceUrl, sourceDirectoryUrl)) {
             throw new Error(
               `The key "${key}" in "entryPoints" is invalid: it must be inside the source directory at ${sourceDirectoryUrl}.`,
             );
@@ -11163,7 +11190,7 @@ const build = async ({
                 `The buildRelativeUrl "${buildRelativeUrl}"${forEntryPointOrEmpty} is invalid: it must be a relative url.`,
               );
             }
-            if (!urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
+            if (!urlIsOrIsInsideOf(buildUrl, buildDirectoryUrl)) {
               throw new Error(
                 `The buildRelativeUrl "${buildRelativeUrl}"${forEntryPointOrEmpty} is invalid: it must be inside the build directory at ${buildDirectoryUrl}.`,
               );
@@ -11663,7 +11690,7 @@ const build = async ({
           let hasSomeOutdatedSideEffectUrl = false;
           for (const packageSideEffectUrl of packageSideEffectUrlSet) {
             if (
-              urlIsInsideOf(packageSideEffectUrl, buildDirectoryUrl) &&
+              urlIsOrIsInsideOf(packageSideEffectUrl, buildDirectoryUrl) &&
               !buildSideEffectUrlSet.has(packageSideEffectUrl)
             ) {
               hasSomeOutdatedSideEffectUrl = true;
@@ -11963,7 +11990,7 @@ const prepareEntryPointBuild = async (
   });
 
   let _getOtherEntryBuildInfo;
-  const rawPluginStore = createPluginStore([
+  const rawPluginStore = await createPluginStore([
     ...(mappings ? [jsenvPluginMappings(mappings)] : []),
     {
       name: "jsenv:other_entry_point_build_during_craft",
@@ -12008,7 +12035,7 @@ const prepareEntryPointBuild = async (
       packageSideEffects,
     }),
   ]);
-  const rawPluginController = createPluginController(
+  const rawPluginController = await createPluginController(
     rawPluginStore,
     rawKitchen,
   );
@@ -12079,7 +12106,7 @@ const prepareEntryPointBuild = async (
           rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
           rawKitchen.context.isSupportedOnCurrentClients("importmap"),
       });
-      const finalPluginStore = createPluginStore([
+      const finalPluginStore = await createPluginStore([
         jsenvPluginReferenceAnalysis({
           ...referenceAnalysis,
           fetchInlineUrls: false,
@@ -12112,7 +12139,7 @@ const prepareEntryPointBuild = async (
         },
         buildSpecifierManager.jsenvPluginMoveToBuildDirectory,
       ]);
-      const finalPluginController = createPluginController(
+      const finalPluginController = await createPluginController(
         finalPluginStore,
         finalKitchen,
         {

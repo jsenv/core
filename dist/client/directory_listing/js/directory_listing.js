@@ -4,7 +4,7 @@ const directoryIconUrl = new URL("../other/dir.png", import.meta.url).href;
 const fileIconUrl = new URL("../other/file.png", import.meta.url).href;
 const homeIconUrl = new URL("../other/home.svg#root", import.meta.url).href;
 let {
-  navItems,
+  breadcrumb,
   mainFilePath,
   directoryContentItems,
   enoentDetails,
@@ -36,45 +36,60 @@ const DirectoryListing = () => {
     return directoryContentItems;
   });
   return u(k, {
-    children: [enoentDetails ? u(ErrorMessage, {}) : null, u(Nav, {}), u(DirectoryContent, {
+    children: [enoentDetails ? u(ErrorMessage, {}) : null, u(Breadcrumb, {
+      items: breadcrumb
+    }), u(DirectoryContent, {
       items: directoryItems
     })]
   });
 };
 const ErrorMessage = () => {
   const {
-    fileUrl,
     filePathExisting,
     filePathNotFound
   } = enoentDetails;
-  return u("p", {
-    className: "error_message",
+  let errorText;
+  let errorSuggestion;
+  errorText = u(k, {
+    children: [u("strong", {
+      children: "File not found:"
+    }), "\xA0", u("code", {
+      children: [u("span", {
+        className: "file_path_good",
+        children: filePathExisting
+      }), u("span", {
+        className: "file_path_bad",
+        children: filePathNotFound
+      })]
+    }), " ", "does not exist on the server."]
+  });
+  errorSuggestion = u(k, {
     children: [u("span", {
+      className: "icon",
+      children: "\uD83D\uDD0D"
+    }), " Check available routes in", " ", u("a", {
+      href: "/.internal/route_inspector",
+      children: "route inspector"
+    })]
+  });
+  return u("div", {
+    className: "error_message",
+    children: [u("p", {
       className: "error_text",
-      children: ["No filesystem entry at", " ", u("code", {
-        title: fileUrl,
-        children: [u("span", {
-          className: "file_path_good",
-          children: filePathExisting
-        }), u("span", {
-          className: "file_path_bad",
-          children: filePathNotFound
-        })]
-      }), "."]
-    }), u("br", {}), u("span", {
-      className: "error_text",
-      style: "font-size: 70%;",
-      children: ["See also available routes in the", " ", u("a", {
-        href: "/.internal/route_inspector",
-        children: "route inspector"
-      }), "."]
+      children: errorText
+    }), u("p", {
+      className: "error_suggestion",
+      style: "font-size: 0.8em; margin-top: 10px;",
+      children: errorSuggestion
     })]
   });
 };
-const Nav = () => {
+const Breadcrumb = ({
+  items
+}) => {
   return u("h1", {
     className: "nav",
-    children: navItems.map(navItem => {
+    children: items.map(navItem => {
       const {
         url,
         urlRelativeToServer,
@@ -84,7 +99,7 @@ const Nav = () => {
       } = navItem;
       const isDirectory = new URL(url).pathname.endsWith("/");
       return u(k, {
-        children: [u(NavItem, {
+        children: [u(BreadcrumbItem, {
           url: urlRelativeToServer,
           isCurrent: isCurrent,
           iconImageUrl: isServerRootDirectory ? homeIconUrl : "",
@@ -98,7 +113,7 @@ const Nav = () => {
     })
   });
 };
-const NavItem = ({
+const BreadcrumbItem = ({
   url,
   iconImageUrl,
   iconLinkUrl,

@@ -1,6 +1,6 @@
 import { WebSocketResponse, pickContentType, ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
-import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, urlToFilename, ensurePathnameTrailingSlash, compareFileUrls, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, formatError, readPackageAtOrNull } from "./jsenv_core_packages.js";
+import { lookupPackageDirectory, registerDirectoryLifecycle, urlToRelativeUrl, moveUrl, urlIsOrIsInsideOf, ensureWindowsDriveLetter, createDetailedMessage, stringifyUrlSite, generateContentFrame, validateResponseIntegrity, setUrlFilename, getCallerPosition, urlToBasename, urlToExtension, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, urlToFileSystemPath, writeFileSync, createLogger, URL_META, applyNodeEsmResolution, RUNTIME_COMPAT, normalizeUrl, ANSI, CONTENT_TYPE, errorToHTML, DATA_URL, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, defaultLookupPackageScope, defaultReadPackageJson, readCustomConditionsFromProcessArgs, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, isSpecifierForNodeBuiltin, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, createTaskLog, formatError, readPackageAtOrNull } from "./jsenv_core_packages.js";
 import { readFileSync, existsSync, readdirSync, lstatSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { generateSourcemapFileUrl, createMagicSource, composeTwoSourcemaps, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
@@ -165,7 +165,7 @@ const watchSourceFiles = (
 
 const WEB_URL_CONVERTER = {
   asWebUrl: (fileUrl, webServer) => {
-    if (urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+    if (urlIsOrIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       return moveUrl({
         url: fileUrl,
         from: webServer.rootDirectoryUrl,
@@ -590,7 +590,7 @@ const determineFileUrlForOutDirectory = (urlInfo) => {
   if (!url.startsWith("file:")) {
     return url;
   }
-  if (!urlIsInsideOf(url, rootDirectoryUrl)) {
+  if (!urlIsOrIsInsideOf(url, rootDirectoryUrl)) {
     const fsRootUrl = ensureWindowsDriveLetter("file:///", url);
     url = `${rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`;
   }
@@ -3840,10 +3840,19 @@ const replacePlaceholders = (html, replacers) => {
   });
 };
 
-const createPluginStore = (plugins) => {
+const createPluginStore = async (plugins) => {
   const allDevServerRoutes = [];
+  const allDevServerServices = [];
   const pluginArray = [];
-  const addPlugin = (plugin) => {
+
+  const pluginPromises = [];
+  const addPlugin = async (plugin) => {
+    if (plugin && typeof plugin.then === "function") {
+      pluginPromises.push(plugin);
+      const value = await plugin;
+      addPlugin(value);
+      return;
+    }
     if (Array.isArray(plugin)) {
       for (const subplugin of plugin) {
         addPlugin(subplugin);
@@ -3862,21 +3871,28 @@ const createPluginStore = (plugins) => {
         allDevServerRoutes.push(devServerRoute);
       }
     }
+    if (plugin.devServerServices) {
+      const devServerServices = plugin.devServerServices;
+      for (const devServerService of devServerServices) {
+        allDevServerServices.push(devServerService);
+      }
+    }
     pluginArray.push(plugin);
   };
   addPlugin(jsenvPluginHtmlSyntaxErrorFallback());
   for (const plugin of plugins) {
     addPlugin(plugin);
   }
+  await Promise.all(pluginPromises);
 
   return {
     pluginArray,
-
     allDevServerRoutes,
+    allDevServerServices,
   };
 };
 
-const createPluginController = (
+const createPluginController = async (
   pluginStore,
   kitchen,
   { initialPuginsMeta = {} } = {},
@@ -3899,7 +3915,7 @@ const createPluginController = (
       pluginCandidate.destroy?.();
       continue;
     }
-    const initPluginResult = initPlugin(pluginCandidate, kitchen);
+    const initPluginResult = await initPlugin(pluginCandidate, kitchen);
     if (!initPluginResult) {
       pluginCandidate.destroy?.();
       continue;
@@ -3951,6 +3967,7 @@ const createPluginController = (
         key === "serverEvents" ||
         key === "mustStayFirst" ||
         key === "devServerRoutes" ||
+        key === "devServerServices" ||
         key === "effect"
       ) {
         continue;
@@ -4124,6 +4141,7 @@ const createPluginController = (
 const HOOK_NAMES = [
   "init",
   "devServerRoutes", // is called only during dev/tests
+  "devServerServices", // is called only during dev/tests
   "resolveReference",
   "redirectReference",
   "transformReferenceSearchParams",
@@ -4178,12 +4196,12 @@ const testAppliesDuring = (plugin, kitchen) => {
     `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
   );
 };
-const initPlugin = (plugin, kitchen) => {
+const initPlugin = async (plugin, kitchen) => {
   const { init } = plugin;
   if (!init) {
     return true;
   }
-  const initReturnValue = init(kitchen.context, { plugin });
+  const initReturnValue = await init(kitchen.context, { plugin });
   if (initReturnValue === false) {
     return false;
   }
@@ -6043,10 +6061,7 @@ const jsenvPluginVersionSearchParam = () => {
 
 const FILE_AND_SERVER_URLS_CONVERTER = {
   asServerUrl: (fileUrl, serverRootDirectoryUrl) => {
-    if (fileUrl === serverRootDirectoryUrl) {
-      return "/";
-    }
-    if (urlIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
+    if (urlIsOrIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
       const urlRelativeToServer = urlToRelativeUrl(
         fileUrl,
         serverRootDirectoryUrl,
@@ -6102,6 +6117,7 @@ const htmlFileUrlForDirectory = import.meta.resolve(
 );
 
 const jsenvPluginDirectoryListing = ({
+  spa,
   urlMocks = false,
   autoreload = true,
   directoryContentMagicName,
@@ -6143,7 +6159,7 @@ const jsenvPluginDirectoryListing = ({
             return null;
           }
         }
-        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
+        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(requestedUrl)}&enoent`;
       }
       const isDirectory = fsStat?.isDirectory();
       if (!isDirectory) {
@@ -6169,21 +6185,22 @@ const jsenvPluginDirectoryListing = ({
         if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
           return null;
         }
-        const requestedUrl = urlInfo.searchParams.get("url");
-        if (!requestedUrl) {
+        const urlNotFound = urlInfo.searchParams.get("url");
+        if (!urlNotFound) {
           return null;
         }
+
         urlInfo.headers["cache-control"] = "no-cache";
         const enoent = urlInfo.searchParams.has("enoent");
         if (enoent) {
           urlInfo.status = 404;
-          urlInfo.headers["cache-control"] = "no-cache";
         }
         const request = urlInfo.context.request;
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
         const directoryListingInjections = generateDirectoryListingInjection(
-          requestedUrl,
+          urlNotFound,
           {
+            spa,
             autoreload,
             request,
             urlMocks,
@@ -6276,8 +6293,9 @@ const jsenvPluginDirectoryListing = ({
 };
 
 const generateDirectoryListingInjection = (
-  requestedUrl,
+  urlNotFound,
   {
+    spa,
     rootDirectoryUrl,
     mainFilePath,
     packageDirectory,
@@ -6290,7 +6308,7 @@ const generateDirectoryListingInjection = (
 ) => {
   let serverRootDirectoryUrl = rootDirectoryUrl;
   const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
-    requestedUrl,
+    urlNotFound,
     serverRootDirectoryUrl,
   );
   const directoryContentItems = getDirectoryContentItems({
@@ -6341,8 +6359,8 @@ const generateDirectoryListingInjection = (
   const { host } = new URL(request.url);
   const websocketUrl = `${websocketScheme}://${host}/.internal/directory_content.websocket?directory=${encodeURIComponent(directoryUrlRelativeToServer)}`;
 
-  const navItems = [];
-  {
+  const generateBreadcrumb = () => {
+    const breadcrumb = [];
     const lastItemUrl = firstExistingDirectoryUrl;
     const lastItemRelativeUrl = urlToRelativeUrl(lastItemUrl, rootDirectoryUrl);
     const rootDirectoryUrlName = urlToFilename(rootDirectoryUrl);
@@ -6352,7 +6370,6 @@ const generateDirectoryListingInjection = (
     } else {
       parts = [rootDirectoryUrlName];
     }
-
     let i = 0;
     while (i < parts.length) {
       const part = parts[i];
@@ -6373,7 +6390,7 @@ const generateDirectoryListingInjection = (
         navItemUrl,
         serverRootDirectoryUrl,
       );
-      let urlRelativeToDocument = urlToRelativeUrl(navItemUrl, requestedUrl);
+      let urlRelativeToDocument = urlToRelativeUrl(navItemUrl, urlNotFound);
       const isServerRootDirectory = navItemUrl === serverRootDirectoryUrl;
       if (isServerRootDirectory) {
         urlRelativeToServer = `/${directoryContentMagicName}`;
@@ -6381,7 +6398,7 @@ const generateDirectoryListingInjection = (
       }
       const name = part;
       const isCurrent = navItemUrl === String(firstExistingDirectoryUrl);
-      navItems.push({
+      breadcrumb.push({
         url: navItemUrl,
         urlRelativeToServer,
         urlRelativeToDocument,
@@ -6391,34 +6408,47 @@ const generateDirectoryListingInjection = (
       });
       i++;
     }
-  }
+    return breadcrumb;
+  };
+  const breadcrumb = generateBreadcrumb();
 
   let enoentDetails = null;
   if (enoent) {
+    const buildEnoentPathInfo = (urlBase, closestExistingUrl) => {
+      let filePathExisting;
+      let filePathNotFound;
+      const existingIndex = String(closestExistingUrl).length;
+      filePathExisting = urlToRelativeUrl(
+        closestExistingUrl,
+        serverRootDirectoryUrl,
+      );
+      filePathNotFound = urlBase.slice(existingIndex);
+      return [filePathExisting, filePathNotFound];
+    };
     const fileRelativeUrl = urlToRelativeUrl(
-      requestedUrl,
+      urlNotFound,
       serverRootDirectoryUrl,
     );
-    let filePathExisting;
-    let filePathNotFound;
-    const existingIndex = String(firstExistingDirectoryUrl).length;
-    filePathExisting = urlToRelativeUrl(
-      firstExistingDirectoryUrl,
-      serverRootDirectoryUrl,
-    );
-    filePathNotFound = requestedUrl.slice(existingIndex);
     enoentDetails = {
-      fileUrl: requestedUrl,
+      fileUrl: urlNotFound,
       fileRelativeUrl,
+    };
+
+    const [filePathExisting, filePathNotFound] = buildEnoentPathInfo(
+      urlNotFound,
+      firstExistingDirectoryUrl,
+    );
+    Object.assign(enoentDetails, {
       filePathExisting: `/${filePathExisting}`,
       filePathNotFound,
-    };
+    });
   }
 
   return {
     __DIRECTORY_LISTING__: {
+      spa,
       enoentDetails,
-      navItems,
+      breadcrumb,
       urlMocks,
       directoryContentMagicName,
       directoryUrl: firstExistingDirectoryUrl,
@@ -6431,11 +6461,11 @@ const generateDirectoryListingInjection = (
     },
   };
 };
-const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
-  let directoryUrlCandidate = new URL("./", requestedUrl);
+const getFirstExistingDirectoryUrl = (urlBase, serverRootDirectoryUrl) => {
+  let directoryUrlCandidate = new URL("./", urlBase);
   while (!existsSync(directoryUrlCandidate)) {
     directoryUrlCandidate = new URL("../", directoryUrlCandidate);
-    if (!urlIsInsideOf(directoryUrlCandidate, serverRootDirectoryUrl)) {
+    if (!urlIsOrIsInsideOf(directoryUrlCandidate, serverRootDirectoryUrl)) {
       directoryUrlCandidate = new URL(serverRootDirectoryUrl);
       break;
     }
@@ -6484,7 +6514,7 @@ const getDirectoryContentItems = ({
 };
 
 const jsenvPluginFsRedirection = ({
-  spa = true,
+  spa,
   directoryContentMagicName,
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
@@ -6643,17 +6673,12 @@ const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
     if (existsSync(indexHtmlFileUrl)) {
       return indexHtmlFileUrl.href;
     }
-    const htmlFileUrlCandidate = new URL(
-      `${urlToFilename(directoryUrl)}.html`,
-      directoryUrl,
-    );
+    const filename = urlToFilename(directoryUrl);
+    const htmlFileUrlCandidate = new URL(`${filename}.html`, directoryUrl);
     if (existsSync(htmlFileUrlCandidate)) {
       return htmlFileUrlCandidate.href;
     }
-    if (
-      !urlIsInsideOf(directoryUrl, serverRootDirectoryUrl) ||
-      directoryUrl.href === serverRootDirectoryUrl
-    ) {
+    if (!urlIsOrIsInsideOf(directoryUrl, serverRootDirectoryUrl)) {
       return null;
     }
     directoryUrl = new URL("../", directoryUrl);
@@ -6663,7 +6688,7 @@ const getClosestHtmlRootFile = (requestedUrl, serverRootDirectoryUrl) => {
 const directoryContentMagicName = "...";
 
 const jsenvPluginProtocolFile = ({
-  spa,
+  spa = true,
   magicExtensions,
   magicDirectoryIndex,
   preserveSymlinks,
@@ -6731,6 +6756,7 @@ const jsenvPluginProtocolFile = ({
     ...(directoryListing
       ? [
           jsenvPluginDirectoryListing({
+            spa,
             ...directoryListing,
             directoryContentMagicName,
             rootDirectoryUrl,
@@ -8060,7 +8086,7 @@ const jsenvPluginAutoreloadServer = ({
     serverEvents: {
       reload: (serverEventInfo) => {
         const formatUrlForClient = (url) => {
-          if (urlIsInsideOf(url, serverEventInfo.rootDirectoryUrl)) {
+          if (urlIsOrIsInsideOf(url, serverEventInfo.rootDirectoryUrl)) {
             return urlToRelativeUrl(url, serverEventInfo.rootDirectoryUrl);
           }
           if (url.startsWith("file:")) {
@@ -8635,6 +8661,7 @@ const jsenvPluginChromeDevtoolsJson = () => {
     devServerRoutes: [
       {
         endpoint: "GET /.well-known/appspecific/com.chrome.devtools.json",
+        declarationSource: import.meta.url,
         fetch: (request, { kitchen }) => {
           const { rootDirectoryUrl } = kitchen.context;
           return Response.json({
@@ -9307,7 +9334,7 @@ const startDevServer = async ({
       read: readPackageAtOrNull,
     };
 
-    const devServerPluginStore = createPluginStore([
+    const devServerPluginStore = await createPluginStore([
       jsenvPluginServerEvents({ clientAutoreload }),
       ...plugins,
       ...getCorePlugins({
@@ -9333,7 +9360,7 @@ const startDevServer = async ({
         ribbon,
       }),
     ]);
-    const getOrCreateKitchen = (request) => {
+    const getOrCreateKitchen = async (request) => {
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
         request.headers["user-agent"] || "",
       );
@@ -9455,7 +9482,7 @@ const startDevServer = async ({
           );
         },
       );
-      const devServerPluginController = createPluginController(
+      const devServerPluginController = await createPluginController(
         devServerPluginStore,
         kitchen,
       );
@@ -9471,8 +9498,8 @@ const startDevServer = async ({
 
     finalServices.push({
       name: "jsenv:dev_server_routes",
-      augmentRouteFetchSecondArg: (request) => {
-        const kitchen = getOrCreateKitchen(request);
+      augmentRouteFetchSecondArg: async (request) => {
+        const kitchen = await getOrCreateKitchen(request);
         return { kitchen };
       },
       routes: [
@@ -9675,6 +9702,7 @@ const startDevServer = async ({
         },
       ],
     });
+    finalServices.push(...devServerPluginStore.allDevServerServices);
   }
   // jsenv error handler service
   {
