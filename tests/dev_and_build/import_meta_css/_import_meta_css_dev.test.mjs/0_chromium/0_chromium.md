@@ -11,7 +11,7 @@ see [./.jsenv/chrome@136.00/](./.jsenv/chrome@136.00/)
 # 2/2 resolve
 
 ```js
-rgba(0, 0, 0, 0)
+rgb(255, 0, 0)
 ```
 
 ---
