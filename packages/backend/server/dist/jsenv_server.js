@@ -3877,6 +3877,8 @@ const createPattern = (
     namedGroupDelimiter,
     prepareStringToGenerate = (stringToBuild) => stringToBuild,
     finalizeGeneratedString = (generatedString) => generatedString,
+    // encode = encodeURIComponent,
+    // decode = decodeURIComponent,
   } = {},
 ) => {
   if (pattern === "*") {
@@ -4148,7 +4150,7 @@ const createResourcePattern = (pattern) => {
   return {
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
-      let result = pathnamePattern.match(pathname);
+      let result = pathnamePattern.match(decodeURIComponent(pathname));
       if (!result) {
         return null;
       }
@@ -5523,6 +5525,18 @@ const createServiceController = (services) => {
       }
     }
   };
+  const callAsyncHooks = async (hookName, info, context, callback) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    for (const hook of hookSet) {
+      const returnValue = await callAsyncHook(hook, info, context);
+      if (returnValue && callback) {
+        await callback(returnValue, hook.plugin);
+      }
+    }
+  };
   const callHooksUntil = (
     hookName,
     info,
@@ -5573,6 +5587,7 @@ const createServiceController = (services) => {
 
     callHooks,
     callHooksUntil,
+    callAsyncHooks,
     callAsyncHooksUntil,
 
     getCurrentService: () => currentService,
@@ -6273,7 +6288,15 @@ const jsenvServiceOpenFile = () => {
               body: "Missing file in url",
             };
           }
-          const fileUrl = new URL(file);
+          let fileUrl;
+          try {
+            fileUrl = new URL(file);
+          } catch {
+            return {
+              status: 400,
+              body: `"${file}" is not a file url`,
+            };
+          }
           const filePath = urlToFileSystemPath(fileUrl);
           const require = createRequire(import.meta.url);
           const launch = require("launch-editor");
@@ -6965,7 +6988,7 @@ const startServer = async ({
             );
           },
         };
-        serviceController.callHooks(
+        await serviceController.callAsyncHooks(
           "augmentRouteFetchSecondArg",
           request,
           fetchSecondArg,

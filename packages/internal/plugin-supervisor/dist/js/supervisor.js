@@ -1209,6 +1209,12 @@ window.__supervisor__ = (() => {
         lineno,
         colno
       } = errorEvent;
+      if (error && error.__handled__) {
+        if (logs) {
+          console.log("ignore error event because __handled__ is set");
+        }
+        return;
+      }
       const exception = supervisor.createException(error || message, {
         // when error is reported within a worker error is null
         // but there is a message property on errorEvent

@@ -34,7 +34,7 @@
     "/src/"
   ],
   "sideEffects": [
-    "./dist/jsenv_server_node_modules.js"
+    "./dist/jsenv_server.js"
   ],
   "scripts": {
     "build": "node --experimental-import-meta-resolve ./scripts/build.mjs",

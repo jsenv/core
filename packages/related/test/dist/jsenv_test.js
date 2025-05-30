@@ -1844,7 +1844,7 @@ const resolveUrl = (specifier, baseUrl) => {
   return String(new URL(specifier, baseUrl));
 };
 
-const urlIsInsideOf = (url, otherUrl) => {
+const urlIsOrIsInsideOf = (url, otherUrl) => {
   const urlObject = new URL(url);
   const otherUrlObject = new URL(otherUrl);
 
@@ -1855,7 +1855,7 @@ const urlIsInsideOf = (url, otherUrl) => {
   const urlPathname = urlObject.pathname;
   const otherUrlPathname = otherUrlObject.pathname;
   if (urlPathname === otherUrlPathname) {
-    return false;
+    return true;
   }
 
   const isInside = urlPathname.startsWith(otherUrlPathname);
@@ -5549,7 +5549,7 @@ const asException = (error, { rootDirectoryUrl }) => {
       exception.stack = replaceUrls$1(
         error.stack,
         ({ match, url, line = 1, column = 1 }) => {
-          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+          if (urlIsOrIsInsideOf(url, rootDirectoryUrl)) {
             const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
             match = stringifyUrlSite({ url: relativeUrl, line, column });
           }
@@ -5561,7 +5561,7 @@ const asException = (error, { rootDirectoryUrl }) => {
       exception.stack = replaceUrls$1(
         error.stack,
         ({ match, url, line = 1, column = 1 }) => {
-          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+          if (urlIsOrIsInsideOf(url, rootDirectoryUrl)) {
             const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
             match = stringifyUrlSite({ url: relativeUrl, line, column });
           }
@@ -8021,7 +8021,7 @@ To fix this warning:
       for (const { relativeUrl, meta } of fileResultArray) {
         if (onlyWithinUrl) {
           const fileUrl = new URL(relativeUrl, rootDirectoryUrl).href;
-          if (!urlIsInsideOf(fileUrl, onlyWithinUrl)) {
+          if (!urlIsOrIsInsideOf(fileUrl, onlyWithinUrl)) {
             continue;
           }
         }
@@ -8545,7 +8545,7 @@ const memoize = (compute) => {
 
 const WEB_URL_CONVERTER = {
   asWebUrl: (fileUrl, webServer) => {
-    if (urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+    if (urlIsOrIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       return moveUrl({
         url: fileUrl,
         from: webServer.rootDirectoryUrl,
@@ -8763,7 +8763,7 @@ const createRuntimeUsingPlaywright = ({
     coverageFileUrl,
   }) => {
     const fileUrl = new URL(fileRelativeUrl, rootDirectoryUrl).href;
-    if (!urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+    if (!urlIsOrIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       throw new Error(`Cannot execute file that is outside web server root directory
 --- file --- 
 ${fileUrl}
