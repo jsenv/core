@@ -39,6 +39,7 @@ TODO: create a UI the allow the following:
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import {
+        // eslint-disable-next-line import-x/named
         registerRoutes,
         useRouteUrl,
         // eslint-disable-next-line no-unused-vars
@@ -48,7 +49,7 @@ TODO: create a UI the allow the following:
         useSPAFormStatus,
         useRouteIsLoading,
         // eslint-disable-next-line no-unused-vars
-        DeleteLink,
+        SPADeleteButton,
       } from "@jsenv/router";
 
       const [GET_ALL, GET_ONE, EDIT_ONE, DELETE_ONE, ROOT] = registerRoutes({
@@ -154,12 +155,12 @@ TODO: create a UI the allow the following:
                       {name}
                       <a href={seeJsonFileUrl}>View</a>
                       <a href={editJsonFileUrl}>Edit</a>
-                      <DeleteLink
+                      <SPADeleteButton
                         disabled={deleteRouteIsLoading}
                         href={deleteJsonFileUrl}
                       >
                         Delete
-                      </DeleteLink>
+                      </SPADeleteButton>
                     </div>
                   </li>
                 );

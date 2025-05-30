@@ -12,9 +12,13 @@
       import { render } from "preact";
       // eslint-disable-next-line no-unused-vars
       import { Suspense } from "preact/compat";
-      import { registerRoutes, useRouteUrl } from "@jsenv/router";
+      import {
+        // eslint-disable-next-line import-x/named
+        registerRoutes,
+        useRouteUrl,
+      } from "@jsenv/router";
       // eslint-disable-next-line no-unused-vars
-      import { Route } from "../route.jsx";
+      import { Route } from "../route/route.jsx";
 
       const { loading_one_second } = registerRoutes(
         {

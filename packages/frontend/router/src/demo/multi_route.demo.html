@@ -11,6 +11,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import {
+        // eslint-disable-next-line import-x/named
         registerRoutes,
         useRouteUrl,
         useRouteIsMatching,
@@ -21,7 +22,7 @@
       } from "@jsenv/router";
       // eslint-disable-next-line no-unused-vars
       import { NavControls } from "./nav_controls.jsx";
-      import { setBaseUrl } from "../route.js";
+      import { setBaseUrl } from "../route/route.js";
 
       setBaseUrl(window.location.href);
       const [main, pageA, pageB] = registerRoutes({

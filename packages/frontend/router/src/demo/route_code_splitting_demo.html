@@ -11,12 +11,13 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import {
+        // eslint-disable-next-line import-x/named
         registerRoutes,
         useRouteUrl,
         // eslint-disable-next-line no-unused-vars
         Route,
       } from "@jsenv/router";
-      import { setBaseUrl } from "../route.js";
+      import { setBaseUrl } from "../route/route.js";
 
       setBaseUrl(window.location.href);
       const [a, b, c] = registerRoutes({
