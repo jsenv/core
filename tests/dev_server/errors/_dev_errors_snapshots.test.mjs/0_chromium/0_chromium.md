@@ -1,4 +1,4 @@
-# [0_chromium](../../dev_errors_snapshots.test.mjs#L99)
+# [0_chromium](../../dev_errors_snapshots.test.mjs#L100)
 
 ```js
 run({
@@ -7,7 +7,7 @@ run({
 })
 ```
 
-# 1/2 write 46 files into "./output/"
+# 1/2 write 48 files into "./output/"
 
 see [./output/](./output/)
 

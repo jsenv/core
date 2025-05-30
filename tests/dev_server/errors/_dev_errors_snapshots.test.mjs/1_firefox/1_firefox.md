@@ -1,4 +1,4 @@
-# [1_firefox](../../dev_errors_snapshots.test.mjs#L105)
+# [1_firefox](../../dev_errors_snapshots.test.mjs#L106)
 
 ```js
 run({
@@ -7,7 +7,7 @@ run({
 })
 ```
 
-# 1/2 write 46 files into "./output/"
+# 1/2 write 48 files into "./output/"
 
 see [./output/](./output/)
 
