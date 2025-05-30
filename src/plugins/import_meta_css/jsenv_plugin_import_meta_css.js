@@ -27,6 +27,10 @@ import { applyBabelPlugins } from "@jsenv/ast";
 import { babelPluginMetadataImportMetaCss } from "./babel_plugin_metadata_import_meta_css.js";
 
 export const jsenvPluginImportMetaCss = () => {
+  const importMetaCssClientFileUrl = import.meta.resolve(
+    "./client/import_meta_css.js",
+  );
+
   return {
     name: "jsenv:import_meta_css",
     appliesDuring: "*",
@@ -47,18 +51,18 @@ export const jsenvPluginImportMetaCss = () => {
         if (importMetaCssPaths.length === 0) {
           return null;
         }
-        return injectImportMetaCss(urlInfo, { isDev: urlInfo.context.dev });
+        return injectImportMetaCss(urlInfo, importMetaCssClientFileUrl);
       },
     },
   };
 };
 
-const injectImportMetaCss = (urlInfo, importMetaHotClientFileUrl) => {
+const injectImportMetaCss = (urlInfo, importMetaCssClientFileUrl) => {
   const importMetaCssClientFileReference = urlInfo.dependencies.inject({
     parentUrl: urlInfo.url,
     type: "js_import",
     expectedType: "js_module",
-    specifier: importMetaHotClientFileUrl,
+    specifier: importMetaCssClientFileUrl,
   });
   let content = urlInfo.content;
   let prelude = `import ${importMetaCssClientFileReference.generatedSpecifier};

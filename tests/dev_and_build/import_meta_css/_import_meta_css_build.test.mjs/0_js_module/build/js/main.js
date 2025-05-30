@@ -1,4 +1,4 @@
-import.meta.css = /*css*/ `body {
+import.meta.css =         `body {
   background-color: red;
 }`;
 
