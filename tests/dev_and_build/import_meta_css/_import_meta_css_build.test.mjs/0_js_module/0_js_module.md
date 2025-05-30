@@ -6,14 +6,14 @@ run({
 })
 ```
 
-# 1/2 write 2 files into "./build/"
+# 1/2 write 3 files into "../../../"
 
-see [./build/](./build/)
+see [./@jsenv/core/](./@jsenv/core/)
 
 # 2/2 resolve
 
 ```js
-rgba(0, 0, 0, 0)
+rgb(255, 0, 0)
 ```
 
 ---

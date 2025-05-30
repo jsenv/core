@@ -53,7 +53,8 @@
     "./dist/client/new_stylesheet/new_stylesheet.js",
     "./dist/client/inline_content/inline_content.js",
     "./dist/client/directory_listing/jsenv_core_node_modules.js",
-    "./src/plugins/import_meta_css/client/import_meta_css.js"
+    "./src/plugins/import_meta_css/client/import_meta_css.js",
+    "./tests/dev_and_build/import_meta_css/build/js/main.js"
   ],
   "scripts": {
     "eslint": "npx eslint .",
