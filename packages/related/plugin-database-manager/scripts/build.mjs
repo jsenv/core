@@ -1,4 +1,5 @@
 import { build } from "@jsenv/core";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 await build({
   sourceDirectoryUrl: import.meta.resolve("../src/"),
@@ -14,6 +15,7 @@ await build({
       },
       minification: false,
       versioning: false,
+      plugins: [jsenvPluginPreact()],
     },
   },
 });

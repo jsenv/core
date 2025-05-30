@@ -42,6 +42,7 @@
   "devDependencies": {
     "preact": "10.26.5",
     "@preact/signals": "2.0.4",
+    "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/core": "../../../"
   }
 }
