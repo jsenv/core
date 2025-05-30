@@ -9,7 +9,7 @@ import { jsenvPluginFsRedirection } from "./jsenv_plugin_fs_redirection.js";
 const directoryContentMagicName = "...";
 
 export const jsenvPluginProtocolFile = ({
-  spa,
+  spa = true,
   magicExtensions,
   magicDirectoryIndex,
   preserveSymlinks,
@@ -77,6 +77,7 @@ export const jsenvPluginProtocolFile = ({
     ...(directoryListing
       ? [
           jsenvPluginDirectoryListing({
+            spa,
             ...directoryListing,
             directoryContentMagicName,
             rootDirectoryUrl,

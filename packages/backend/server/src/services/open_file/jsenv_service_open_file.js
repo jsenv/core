@@ -17,7 +17,15 @@ export const jsenvServiceOpenFile = () => {
               body: "Missing file in url",
             };
           }
-          const fileUrl = new URL(file);
+          let fileUrl;
+          try {
+            fileUrl = new URL(file);
+          } catch {
+            return {
+              status: 400,
+              body: `"${file}" is not a file url`,
+            };
+          }
           const filePath = urlToFileSystemPath(fileUrl);
           const require = createRequire(import.meta.url);
           const launch = require("launch-editor");

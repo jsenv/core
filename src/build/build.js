@@ -52,7 +52,7 @@ import {
   nodeDefaultRuntimeCompat,
 } from "@jsenv/runtime-compat";
 import {
-  urlIsInsideOf,
+  urlIsOrIsInsideOf,
   urlToBasename,
   urlToExtension,
   urlToFilename,
@@ -208,7 +208,7 @@ export const build = async ({
               );
             }
           }
-          if (!urlIsInsideOf(sourceUrl, sourceDirectoryUrl)) {
+          if (!urlIsOrIsInsideOf(sourceUrl, sourceDirectoryUrl)) {
             throw new Error(
               `The key "${key}" in "entryPoints" is invalid: it must be inside the source directory at ${sourceDirectoryUrl}.`,
             );
@@ -259,7 +259,7 @@ export const build = async ({
                 `The buildRelativeUrl "${buildRelativeUrl}"${forEntryPointOrEmpty} is invalid: it must be a relative url.`,
               );
             }
-            if (!urlIsInsideOf(buildUrl, buildDirectoryUrl)) {
+            if (!urlIsOrIsInsideOf(buildUrl, buildDirectoryUrl)) {
               throw new Error(
                 `The buildRelativeUrl "${buildRelativeUrl}"${forEntryPointOrEmpty} is invalid: it must be inside the build directory at ${buildDirectoryUrl}.`,
               );
@@ -552,7 +552,7 @@ export const build = async ({
     if (
       process.env.CAPTURING_SIDE_EFFECTS ||
       (!import.meta.build &&
-        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
+        urlIsOrIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
     ) {
       outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl).href;
     } else if (packageDirectory.url) {
@@ -761,7 +761,7 @@ export const build = async ({
           let hasSomeOutdatedSideEffectUrl = false;
           for (const packageSideEffectUrl of packageSideEffectUrlSet) {
             if (
-              urlIsInsideOf(packageSideEffectUrl, buildDirectoryUrl) &&
+              urlIsOrIsInsideOf(packageSideEffectUrl, buildDirectoryUrl) &&
               !buildSideEffectUrlSet.has(packageSideEffectUrl)
             ) {
               hasSomeOutdatedSideEffectUrl = true;
@@ -1061,7 +1061,7 @@ const prepareEntryPointBuild = async (
   });
 
   let _getOtherEntryBuildInfo;
-  const rawPluginStore = createPluginStore([
+  const rawPluginStore = await createPluginStore([
     ...(mappings ? [jsenvPluginMappings(mappings)] : []),
     {
       name: "jsenv:other_entry_point_build_during_craft",
@@ -1106,7 +1106,7 @@ const prepareEntryPointBuild = async (
       packageSideEffects,
     }),
   ]);
-  const rawPluginController = createPluginController(
+  const rawPluginController = await createPluginController(
     rawPluginStore,
     rawKitchen,
   );
@@ -1177,7 +1177,7 @@ const prepareEntryPointBuild = async (
           rawKitchen.graph.getUrlInfo(entryReference.url).type === "html" &&
           rawKitchen.context.isSupportedOnCurrentClients("importmap"),
       });
-      const finalPluginStore = createPluginStore([
+      const finalPluginStore = await createPluginStore([
         jsenvPluginReferenceAnalysis({
           ...referenceAnalysis,
           fetchInlineUrls: false,
@@ -1210,7 +1210,7 @@ const prepareEntryPointBuild = async (
         },
         buildSpecifierManager.jsenvPluginMoveToBuildDirectory,
       ]);
-      const finalPluginController = createPluginController(
+      const finalPluginController = await createPluginController(
         finalPluginStore,
         finalKitchen,
         {

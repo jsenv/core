@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/cli",
-  "version": "0.3.49",
+  "version": "0.3.50",
   "description": "Command Line Interface for jsenv",
   "license": "MIT",
   "repository": {
@@ -28,7 +28,7 @@
   ],
   "dependencies": {
     "@jsenv/humanize": "1.6.0",
-    "@jsenv/urls": "2.8.0",
+    "@jsenv/urls": "2.9.0",
     "prompts": "2.4.2"
   }
 }

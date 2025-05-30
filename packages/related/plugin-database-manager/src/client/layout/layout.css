@@ -1,0 +1,71 @@
+/**
+ * Layout Structure Overview:
+ * 
+ * This layout uses a two-column structure:
+ * - <aside>: Fixed-width sidebar that can be resized
+ * - <main>: Main content area that fills remaining space
+ * 
+ * Overflow Handling:
+ * - body: Hidden horizontal overflow prevents double scrollbars at page level
+ * - <aside>: Has fixed width, own scrollbars, and resizable right edge
+ * - <main>: Has horizontal scrolling for content wider than available space
+ * 
+ * Scroll Behavior:
+ * - <aside>: Fixed height (100vh) with its own vertical scrollbar if needed
+ * - <main>: Vertical scrolling happens at the document level
+ * - scrollbar-gutter: stable ensures layout doesn't shift when scrollbars appear
+ */
+
+body {
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+#app {
+  display: flex;
+  flex-direction: row;
+}
+
+aside {
+  width: 250px; /* Default width that can be overridden by resize */
+  flex-shrink: 0; /* Prevents sidebar from shrinking when window is narrow */
+  height: 100vh; /* Full viewport height */
+  position: sticky;
+  top: 0; /* Keeps sidebar visible when scrolling */
+  border-right: 1px solid #e0e0e0;
+  min-width: 100px; /* Prevents sidebar from becoming too narrow */
+  z-index: 0; /* to ensure the content inside the <aside> cannot go above the [data-resize-handle] */
+}
+
+aside > [data-resize-handle] {
+  position: absolute;
+  z-index: 1; /* Ensures resize handle appears above sidebar content */
+  width: 5px;
+  right: -2.5px; /* Centers the handle on the border */
+  top: 0;
+  bottom: 0;
+  cursor: ew-resize; /* Indicates horizontal resize capability */
+}
+aside > [data-resize-handle]:hover,
+aside[data-resizing] > [data-resize-handle] {
+  background-color: blue;
+  opacity: 0.5;
+}
+
+main {
+  padding-bottom: 0;
+  min-width: 200px; /* Prevents content area from becoming too narrow */
+  box-sizing: border-box;
+  min-height: 100vh; /* Ensures content area is at least viewport height */
+  overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */
+  scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shifts */
+  flex: 1;
+}
+.main_body {
+  width: fit-content; /* Ensure padding applies when content overflows */
+  padding: 20px; /* Consistent padding around main content */
+}
+
+main h1 {
+  margin-top: 0;
+}

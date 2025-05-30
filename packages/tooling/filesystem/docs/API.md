@@ -353,15 +353,15 @@ Technically, `http://example.com` is already absolute and does not need a _baseU
 
 This is a feature that helps to catch bugs.
 
-# urlIsInsideOf
+# urlIsOrIsInsideOf
 
-_urlIsInsideOf_ is a function returning a boolean indicating if an url is inside an other url.
+_urlIsOrIsInsideOf_ is a function returning a boolean indicating if an url is inside an other url.
 
 ```js
-import { urlIsInsideOf } from "@jsenv/filesystem";
+import { urlIsOrIsInsideOf } from "@jsenv/filesystem";
 
-urlIsInsideOf("file:///directory/file.js", "file:///directory/"); // true
-urlIsInsideOf("file:///file.js", "file:///directory/"); // false
+urlIsOrIsInsideOf("file:///directory/file.js", "file:///directory/"); // true
+urlIsOrIsInsideOf("file:///file.js", "file:///directory/"); // false
 ```
 
 # urlToBasename

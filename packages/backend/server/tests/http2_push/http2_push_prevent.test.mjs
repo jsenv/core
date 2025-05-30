@@ -26,11 +26,12 @@ const run = async () => {
     routes: [
       {
         endpoint: "GET *",
-        fetch: (request, helpers) => {
+        fetch: async (request, helpers) => {
           if (request.pathname === "/main.html") {
             helpers.pushResponse({ path: "/preventme" });
             helpers.pushResponse({ path: "/style.css" });
           }
+          await new Promise((resolve) => setTimeout(resolve, 200));
           return createFileSystemFetch(import.meta.resolve("./"), {
             canReadDirectory: true,
           })(request, helpers);

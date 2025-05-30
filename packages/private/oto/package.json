@@ -28,12 +28,13 @@
     "preact": "10.26.5",
     "hooks": "./packages/hooks",
     "@jsenv/router": "./packages/router",
+    "@jsenv/dom": "./packages/dom",
     "dom": "./packages/dom",
     "matrix": "./packages/matrix"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-import-attributes": "7.26.0",
-    "@babel/plugin-transform-react-jsx": "7.25.9",
+    "@babel/plugin-syntax-import-attributes": "7.27.1",
+    "@babel/plugin-transform-react-jsx": "7.27.1",
     "@jsenv/assert": "../../tooling/assert",
     "@jsenv/core": "../../../",
     "@jsenv/custom-elements-redefine": "../../frontend/custom-elements-redefine",
@@ -41,8 +42,8 @@
     "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@jsenv/test": "../../related/test",
     "@playwright/browser-chromium": "1.52.0",
-    "eslint": "9.25.1",
-    "open": "10.1.1",
+    "eslint": "9.26.0",
+    "open": "10.1.2",
     "prettier": "3.5.3",
     "prettier-plugin-organize-imports": "4.1.0"
   }

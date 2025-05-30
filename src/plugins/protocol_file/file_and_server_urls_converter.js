@@ -1,11 +1,8 @@
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
 export const FILE_AND_SERVER_URLS_CONVERTER = {
   asServerUrl: (fileUrl, serverRootDirectoryUrl) => {
-    if (fileUrl === serverRootDirectoryUrl) {
-      return "/";
-    }
-    if (urlIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
+    if (urlIsOrIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
       const urlRelativeToServer = urlToRelativeUrl(
         fileUrl,
         serverRootDirectoryUrl,

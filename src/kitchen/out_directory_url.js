@@ -1,6 +1,6 @@
 import { ensureWindowsDriveLetter } from "@jsenv/filesystem";
 import { generateSourcemapFileUrl } from "@jsenv/sourcemap";
-import { moveUrl, setUrlFilename, urlIsInsideOf } from "@jsenv/urls";
+import { moveUrl, setUrlFilename, urlIsOrIsInsideOf } from "@jsenv/urls";
 
 export const determineFileUrlForOutDirectory = (urlInfo) => {
   let { url, filenameHint } = urlInfo;
@@ -11,7 +11,7 @@ export const determineFileUrlForOutDirectory = (urlInfo) => {
   if (!url.startsWith("file:")) {
     return url;
   }
-  if (!urlIsInsideOf(url, rootDirectoryUrl)) {
+  if (!urlIsOrIsInsideOf(url, rootDirectoryUrl)) {
     const fsRootUrl = ensureWindowsDriveLetter("file:///", url);
     url = `${rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`;
   }

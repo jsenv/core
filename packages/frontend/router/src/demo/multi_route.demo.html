@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multiroute demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        // eslint-disable-next-line import-x/named
+        registerRoutes,
+        useRouteUrl,
+        useRouteIsMatching,
+        useRouteLoadingState,
+        useRouteData,
+        // eslint-disable-next-line no-unused-vars
+        Route,
+      } from "@jsenv/router";
+      // eslint-disable-next-line no-unused-vars
+      import { NavControls } from "./nav_controls.jsx";
+      import { setBaseUrl } from "../route/route.js";
+
+      setBaseUrl(window.location.href);
+      const [main, pageA, pageB] = registerRoutes({
+        "GET /main": async ({ signal }) => {
+          await new Promise((resolve) => {
+            const timeout = setTimeout(resolve, 1000);
+            signal.addEventListener("abort", () => {
+              clearTimeout(timeout);
+            });
+          });
+          return "Main content";
+        },
+        "GET /main/a": async ({ signal }) => {
+          await new Promise((resolve) => {
+            const timeout = setTimeout(resolve, 1000);
+            signal.addEventListener("abort", () => {
+              clearTimeout(timeout);
+            });
+          });
+          return "Page A content";
+        },
+        "GET /main/b": async ({ signal }) => {
+          await new Promise((resolve) => {
+            const timeout = setTimeout(resolve, 1000);
+            signal.addEventListener("abort", () => {
+              clearTimeout(timeout);
+            });
+          });
+          return "Page B content";
+        },
+        "*": () => {
+          // console.log("load fallback");
+        },
+      });
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const mainRouteLoadingState = useRouteLoadingState(main);
+        const mainRouteData = useRouteData(main);
+        const mainUrl = useRouteUrl(main);
+        const pageAUrl = useRouteUrl(pageA);
+        const pageBUrl = useRouteUrl(pageB);
+        const pageAIsMatching = useRouteIsMatching(pageA);
+        const pageBIsMatching = useRouteIsMatching(pageB);
+
+        return (
+          <div>
+            <NavControls />
+
+            <h2>Main section</h2>
+            <a href={mainUrl}>Go to main</a>
+            <div>
+              status: {mainRouteLoadingState}
+              <br />
+              data: {mainRouteData}
+            </div>
+
+            <h2>Sub sections</h2>
+            <nav style="display: flex; gap: 0px">
+              <div style="display: flex; flex-direction: column; width: 200px">
+                <a
+                  href={pageAUrl}
+                  style={{
+                    padding: "10px",
+                    border: "1px solid black",
+                    backgroundColor: pageAIsMatching ? "lightblue" : "white",
+                  }}
+                >
+                  A
+                </a>
+                <Route route={pageA} always={RouteDisplay} />
+              </div>
+              <div style="display: flex; flex-direction: column; width: 200px">
+                <a
+                  href={pageBUrl}
+                  style={{
+                    padding: "10px",
+                    border: "1px solid black",
+                    backgroundColor: pageBIsMatching ? "lightblue" : "white",
+                  }}
+                >
+                  B
+                </a>
+                <Route route={pageB} always={RouteDisplay} />
+              </div>
+            </nav>
+          </div>
+        );
+      };
+
+      const RouteDisplay = ({ route }) => {
+        const readyState = useRouteLoadingState(route);
+        const data = useRouteData(route);
+        return (
+          <div>
+            page state: {readyState}
+            <br />
+            page content: {data}
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

@@ -743,6 +743,14 @@ function requirePermessageDeflate () {
 	  this[kError].code = 'WS_ERR_UNSUPPORTED_MESSAGE_LENGTH';
 	  this[kError][kStatusCode] = 1009;
 	  this.removeListener('data', inflateOnData);
+
+	  //
+	  // The choice to employ `zlib.reset()` over `zlib.close()` is dictated by the
+	  // fact that in Node.js versions prior to 13.10.0, the callback for
+	  // `zlib.flush()` is not called if `zlib.close()` is used. Utilizing
+	  // `zlib.reset()` ensures that either the callback is invoked or an error is
+	  // emitted.
+	  //
 	  this.reset();
 	}
 
@@ -758,6 +766,12 @@ function requirePermessageDeflate () {
 	  // closed when an error is emitted.
 	  //
 	  this[kPerMessageDeflate]._inflate = null;
+
+	  if (this[kError]) {
+	    this[kCallback](this[kError]);
+	    return;
+	  }
+
 	  err[kStatusCode] = 1007;
 	  this[kCallback](err);
 	}
@@ -3475,7 +3489,7 @@ function requireWebsocket () {
 	  if (parsedUrl.protocol !== 'ws:' && !isSecure && !isIpcUrl) {
 	    invalidUrlMessage =
 	      'The URL\'s protocol must be one of "ws:", "wss:", ' +
-	      '"http:", "https", or "ws+unix:"';
+	      '"http:", "https:", or "ws+unix:"';
 	  } else if (isIpcUrl && !parsedUrl.pathname) {
 	    invalidUrlMessage = "The URL's pathname is empty";
 	  } else if (parsedUrl.hash) {

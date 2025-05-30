@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+  <head>
+    <title>3 columns resize x demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <style>
+      body {
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      #app {
+        display: flex;
+        flex-direction: row;
+        width: 600px;
+        border: 1px solid black;
+        box-sizing: content-box;
+      }
+
+      [data-resize-handle] {
+        flex-grow: 1;
+        min-width: 50px;
+      }
+    </style>
+
+    <div id="app">
+      <div
+        id="a"
+        data-resize="horizontal"
+        data-resize-handle
+        style="background: blue; height: 100px"
+      ></div>
+      <div
+        id="b"
+        data-resize="horizontal"
+        data-resize-handle
+        style="background: red; height: 200px"
+      ></div>
+      <div
+        id="c"
+        data-resize="horizontal"
+        data-resize-handle
+        style="background: green; height: 100px"
+      ></div>
+    </div>
+
+    <label>
+      width:
+      <input type="number" id="container_width" />
+    </label>
+
+    <script type="module">
+      import "@jsenv/dom/resize";
+
+      const resizeCollection = document.querySelectorAll("[data-resize]");
+      for (const resize of resizeCollection) {
+        const sizeInLocalStorage = localStorage.getItem(`${resize.id}_width`);
+        if (sizeInLocalStorage) {
+          resize.style.width = `${sizeInLocalStorage}px`;
+        }
+        resize.addEventListener("resize", (event) => {
+          console.log("resize event", event.target.id, resize.id);
+          localStorage.setItem(`${resize.id}_width`, event.detail.width);
+        });
+      }
+
+      const input = document.querySelector("input");
+      input.oninput = () => {
+        const width = input.value;
+        document.querySelector("#app").style.width = `${width}px`;
+      };
+      input.value = document
+        .querySelector("#app")
+        .getBoundingClientRect().width;
+    </script>
+  </body>
+</html>

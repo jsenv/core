@@ -5,7 +5,7 @@ import {
   setAttributes,
   trapFocusInside,
   trapScrollInside,
-} from "dom";
+} from "@jsenv/dom";
 import { Box } from "oto/src/components/box/box.jsx";
 import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";

@@ -2,7 +2,7 @@ import { Abort } from "@jsenv/abort";
 import {
   ensurePathnameTrailingSlash,
   resolveUrl,
-  urlIsInsideOf,
+  urlIsOrIsInsideOf,
   urlToFileSystemPath,
   urlToRelativeUrl,
 } from "@jsenv/urls";
@@ -114,7 +114,7 @@ export const copyEntry = async ({
     let symbolicLinkCopyTarget;
     if (symbolicLinkTargetUrl === fromUrl) {
       symbolicLinkCopyTarget = linkIsRelative ? symbolicLinkTarget : toUrl;
-    } else if (urlIsInsideOf(symbolicLinkTargetUrl, fromUrl)) {
+    } else if (urlIsOrIsInsideOf(symbolicLinkTargetUrl, fromUrl)) {
       // symbolic link targets something inside the directory we want to copy
       // reflects it inside the copied directory structure
       const linkCopyTargetRelative = urlToRelativeUrl(

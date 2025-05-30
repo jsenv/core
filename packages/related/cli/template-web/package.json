@@ -14,15 +14,15 @@
     "prettier": "prettier --write ."
   },
   "devDependencies": {
-    "@babel/plugin-syntax-import-attributes": "7.26.0",
+    "@babel/plugin-syntax-import-attributes": "7.27.1",
     "@jsenv/assert": "4.5.3",
-    "@jsenv/core": "40.7.0",
-    "@jsenv/eslint-config-relax": "1.6.4",
-    "@jsenv/plugin-bundling": "2.9.7",
+    "@jsenv/core": "40.7.1",
+    "@jsenv/eslint-config-relax": "1.6.6",
+    "@jsenv/plugin-bundling": "2.9.8",
     "@jsenv/plugin-minification": "1.7.0",
-    "@jsenv/test": "3.7.6",
-    "eslint": "9.25.1",
-    "open": "10.1.1",
+    "@jsenv/test": "3.7.7",
+    "eslint": "9.26.0",
+    "open": "10.1.2",
     "@playwright/browser-chromium": "1.52.0",
     "prettier": "3.5.3",
     "playwright": "1.52.0"

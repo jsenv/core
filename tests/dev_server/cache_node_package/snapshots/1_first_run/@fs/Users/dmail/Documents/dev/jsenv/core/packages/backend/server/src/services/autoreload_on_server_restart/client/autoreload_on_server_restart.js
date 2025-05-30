@@ -1,33 +1,34 @@
 const css = /* css */ `
-dialog {
-  opacity: 0;
-  transition: all <X>s allow-discrete;
-}
-dialog::backdrop {
-   background-image: linear-gradient(
-    45deg,
-    magenta,
-    rebeccapurple,
-    dodgerblue,
-    green
-  );
-  opacity: 0;
-  transition: all <X>s allow-discrete;
-}
-dialog:open {
-  opacity: 1;
-}
-dialog:open::backdrop {
-  opacity: 0.75;
-}`;
+  dialog {
+    opacity: 0;
+    transition: all <X>s allow-discrete;
+  }
+  dialog::backdrop {
+    background-image: linear-gradient(
+      45deg,
+      magenta,
+      rebeccapurple,
+      dodgerblue,
+      green
+    );
+    opacity: 0;
+    transition: all <X>s allow-discrete;
+  }
+  dialog:open {
+    opacity: 1;
+  }
+  dialog:open::backdrop {
+    opacity: 0.75;
+  }
+`;
 
 const html = /* html */ `<style>
     ${css}
-</style>
-<dialog>
+  </style>
+  <dialog>
     <p>Connection with server is lost</p>
     <button autofocus name="reconnect">Retry</button>
-</dialog>`;
+  </dialog>`;
 
 class JsenvAutoreloadOnServerRestart extends HTMLElement {
   constructor({ url } = {}) {

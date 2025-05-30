@@ -290,6 +290,10 @@ const createRequestLogger = (nodeRequest, write) => {
         write(type, value);
       };
       const writeLogs = (loggerToWrite, depth) => {
+        const logArray = loggerToWrite.logArray;
+        if (logArray.length === 0) {
+          return;
+        }
         let someLogIsError = false;
         let someLogIsWarn = false;
         for (const log of loggerToWrite.logArray) {
@@ -300,12 +304,9 @@ const createRequestLogger = (nodeRequest, write) => {
             someLogIsWarn = true;
           }
         }
-        const firstLog = loggerToWrite.logArray.shift();
-        const lastLog = loggerToWrite.logArray.pop();
-        const middleLogs = loggerToWrite.logArray;
-        if (!firstLog) {
-          debugger;
-        }
+        const firstLog = logArray.shift();
+        const lastLog = logArray.pop();
+        const middleLogs = logArray;
         writeLog(firstLog, {
           someLogIsError,
           someLogIsWarn,

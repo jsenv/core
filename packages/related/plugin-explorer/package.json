@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-explorer",
-  "version": "1.0.71",
+  "version": "1.0.72",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,7 +31,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.15.3"
+    "@jsenv/filesystem": "4.15.4"
   },
   "devDependencies": {
     "@jsenv/core": "../../../"

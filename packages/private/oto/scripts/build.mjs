@@ -3,19 +3,20 @@
  * Read more in https://github.com/jsenv/core
  */
 
-import { build } from "@jsenv/core";
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+// TO BE FIXED
+// import { build } from "@jsenv/core";
+// import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
-await build({
-  sourceDirectoryUrl: import.meta.resolve("../src/"),
-  buildDirectoryUrl: import.meta.resolve("../dist/"),
-  entryPoints: {
-    "./index.html": {
-      runtimeCompat: {
-        chrome: "100",
-      },
-      minification: false,
-      plugins: [jsenvPluginPreact()],
-    },
-  },
-});
+// await build({
+//   sourceDirectoryUrl: import.meta.resolve("../src/"),
+//   buildDirectoryUrl: import.meta.resolve("../dist/"),
+//   entryPoints: {
+//     "./index.html": {
+//       runtimeCompat: {
+//         chrome: "100",
+//       },
+//       minification: false,
+//       plugins: [jsenvPluginPreact()],
+//     },
+//   },
+// });

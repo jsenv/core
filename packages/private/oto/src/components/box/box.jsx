@@ -1,5 +1,5 @@
+import { getAvailableHeight, getAvailableWidth } from "@jsenv/dom";
 import { FOCUSED_OUTLINE_COLOR } from "oto/src/globals/colors.js";
-import { getAvailableSize } from "oto/src/utils/get_available_size.js";
 import { forwardRef } from "preact/compat";
 import {
   useImperativeHandle,
@@ -136,9 +136,8 @@ const BoxComponent = (
       }
       // const { borderSizes } = getPaddingAndBorderSizes(element);
       const elementDimensions = element.getBoundingClientRect();
-      const [availableWidth, availableHeight] = getAvailableSize(
-        element.parentNode,
-      );
+      const availableWidth = getAvailableWidth(element);
+      const availableHeight = getAvailableHeight(element);
 
       const styleForXPosition = {
         alignSelf: "",

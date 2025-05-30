@@ -32,6 +32,7 @@
  * are properly re-rendering children
  */
 
+import { getBorderSizes, getPaddingSizes } from "@jsenv/dom";
 import { toChildArray } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
@@ -105,8 +106,8 @@ const updateDimenionAndPosition = ({
   const offsetParent = element.offsetParent;
   let availableWidth = offsetParent.clientWidth;
   let availableHeight = offsetParent.clientHeight;
-  const { paddingSizes } = getPaddingAndBorderSizes(offsetParent);
-  const { borderSizes } = getPaddingAndBorderSizes(element);
+  const paddingSizes = getPaddingSizes(offsetParent);
+  const borderSizes = getBorderSizes(element);
   availableWidth -= paddingSizes.left + paddingSizes.right;
   availableHeight -= paddingSizes.top + paddingSizes.bottom;
 
@@ -175,31 +176,4 @@ const updateDimenionAndPosition = ({
   element.style.top = `${yComputed}px`;
   element.style.width = `${widthComputed}px`;
   element.style.height = `${heightComputed}px`;
-};
-
-const getPaddingAndBorderSizes = (element) => {
-  const {
-    paddingLeft,
-    paddingRight,
-    paddingTop,
-    paddingBottom,
-    borderLeftWidth,
-    borderRightWidth,
-    borderTopWidth,
-    borderBottomWidth,
-  } = window.getComputedStyle(element, null);
-  return {
-    paddingSizes: {
-      left: parseFloat(paddingLeft),
-      right: parseFloat(paddingRight),
-      top: parseFloat(paddingTop),
-      bottom: parseFloat(paddingBottom),
-    },
-    borderSizes: {
-      left: parseFloat(borderLeftWidth),
-      right: parseFloat(borderRightWidth),
-      top: parseFloat(borderTopWidth),
-      bottom: parseFloat(borderBottomWidth),
-    },
-  };
 };

@@ -1,10 +1,19 @@
 import { performance } from "node:perf_hooks";
 import { jsenvPluginHtmlSyntaxErrorFallback } from "./html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 
-export const createPluginStore = (plugins) => {
+export const createPluginStore = async (plugins) => {
   const allDevServerRoutes = [];
+  const allDevServerServices = [];
   const pluginArray = [];
-  const addPlugin = (plugin) => {
+
+  const pluginPromises = [];
+  const addPlugin = async (plugin) => {
+    if (plugin && typeof plugin.then === "function") {
+      pluginPromises.push(plugin);
+      const value = await plugin;
+      addPlugin(value);
+      return;
+    }
     if (Array.isArray(plugin)) {
       for (const subplugin of plugin) {
         addPlugin(subplugin);
@@ -23,21 +32,28 @@ export const createPluginStore = (plugins) => {
         allDevServerRoutes.push(devServerRoute);
       }
     }
+    if (plugin.devServerServices) {
+      const devServerServices = plugin.devServerServices;
+      for (const devServerService of devServerServices) {
+        allDevServerServices.push(devServerService);
+      }
+    }
     pluginArray.push(plugin);
   };
   addPlugin(jsenvPluginHtmlSyntaxErrorFallback());
   for (const plugin of plugins) {
     addPlugin(plugin);
   }
+  await Promise.all(pluginPromises);
 
   return {
     pluginArray,
-
     allDevServerRoutes,
+    allDevServerServices,
   };
 };
 
-export const createPluginController = (
+export const createPluginController = async (
   pluginStore,
   kitchen,
   { initialPuginsMeta = {} } = {},
@@ -60,7 +76,7 @@ export const createPluginController = (
       pluginCandidate.destroy?.();
       continue;
     }
-    const initPluginResult = initPlugin(pluginCandidate, kitchen);
+    const initPluginResult = await initPlugin(pluginCandidate, kitchen);
     if (!initPluginResult) {
       pluginCandidate.destroy?.();
       continue;
@@ -112,6 +128,7 @@ export const createPluginController = (
         key === "serverEvents" ||
         key === "mustStayFirst" ||
         key === "devServerRoutes" ||
+        key === "devServerServices" ||
         key === "effect"
       ) {
         continue;
@@ -285,6 +302,7 @@ export const createPluginController = (
 const HOOK_NAMES = [
   "init",
   "devServerRoutes", // is called only during dev/tests
+  "devServerServices", // is called only during dev/tests
   "resolveReference",
   "redirectReference",
   "transformReferenceSearchParams",
@@ -339,12 +357,12 @@ const testAppliesDuring = (plugin, kitchen) => {
     `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
   );
 };
-const initPlugin = (plugin, kitchen) => {
+const initPlugin = async (plugin, kitchen) => {
   const { init } = plugin;
   if (!init) {
     return true;
   }
-  const initReturnValue = init(kitchen.context, { plugin });
+  const initReturnValue = await init(kitchen.context, { plugin });
   if (initReturnValue === false) {
     return false;
   }

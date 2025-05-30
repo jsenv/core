@@ -89,6 +89,18 @@ export const createServiceController = (services) => {
       }
     }
   };
+  const callAsyncHooks = async (hookName, info, context, callback) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    for (const hook of hookSet) {
+      const returnValue = await callAsyncHook(hook, info, context);
+      if (returnValue && callback) {
+        await callback(returnValue, hook.plugin);
+      }
+    }
+  };
   const callHooksUntil = (
     hookName,
     info,
@@ -139,6 +151,7 @@ export const createServiceController = (services) => {
 
     callHooks,
     callHooksUntil,
+    callAsyncHooks,
     callAsyncHooksUntil,
 
     getCurrentService: () => currentService,

@@ -1,9 +1,9 @@
 import { ensureWindowsDriveLetter } from "@jsenv/filesystem";
-import { moveUrl, urlIsInsideOf } from "@jsenv/urls";
+import { moveUrl, urlIsOrIsInsideOf } from "@jsenv/urls";
 
 export const WEB_URL_CONVERTER = {
   asWebUrl: (fileUrl, webServer) => {
-    if (urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+    if (urlIsOrIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
       return moveUrl({
         url: fileUrl,
         from: webServer.rootDirectoryUrl,

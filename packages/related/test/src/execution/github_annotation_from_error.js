@@ -1,4 +1,4 @@
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 
 export const githubAnnotationFromError = (
   error,
@@ -40,7 +40,7 @@ const asException = (error, { rootDirectoryUrl }) => {
       exception.stack = replaceUrls(
         error.stack,
         ({ match, url, line = 1, column = 1 }) => {
-          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+          if (urlIsOrIsInsideOf(url, rootDirectoryUrl)) {
             const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
             match = stringifyUrlSite({ url: relativeUrl, line, column });
           }
@@ -52,7 +52,7 @@ const asException = (error, { rootDirectoryUrl }) => {
       exception.stack = replaceUrls(
         error.stack,
         ({ match, url, line = 1, column = 1 }) => {
-          if (urlIsInsideOf(url, rootDirectoryUrl)) {
+          if (urlIsOrIsInsideOf(url, rootDirectoryUrl)) {
             const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
             match = stringifyUrlSite({ url: relativeUrl, line, column });
           }

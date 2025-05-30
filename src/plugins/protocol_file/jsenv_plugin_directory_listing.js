@@ -31,7 +31,7 @@ import { pickContentType, WebSocketResponse } from "@jsenv/server";
 import {
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
-  urlIsInsideOf,
+  urlIsOrIsInsideOf,
   urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
@@ -44,6 +44,7 @@ const htmlFileUrlForDirectory = import.meta.resolve(
 );
 
 export const jsenvPluginDirectoryListing = ({
+  spa,
   urlMocks = false,
   autoreload = true,
   directoryContentMagicName,
@@ -85,7 +86,7 @@ export const jsenvPluginDirectoryListing = ({
             return null;
           }
         }
-        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
+        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(requestedUrl)}&enoent`;
       }
       const isDirectory = fsStat?.isDirectory();
       if (!isDirectory) {
@@ -111,21 +112,22 @@ export const jsenvPluginDirectoryListing = ({
         if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
           return null;
         }
-        const requestedUrl = urlInfo.searchParams.get("url");
-        if (!requestedUrl) {
+        const urlNotFound = urlInfo.searchParams.get("url");
+        if (!urlNotFound) {
           return null;
         }
+
         urlInfo.headers["cache-control"] = "no-cache";
         const enoent = urlInfo.searchParams.has("enoent");
         if (enoent) {
           urlInfo.status = 404;
-          urlInfo.headers["cache-control"] = "no-cache";
         }
         const request = urlInfo.context.request;
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
         const directoryListingInjections = generateDirectoryListingInjection(
-          requestedUrl,
+          urlNotFound,
           {
+            spa,
             autoreload,
             request,
             urlMocks,
@@ -219,8 +221,9 @@ export const jsenvPluginDirectoryListing = ({
 };
 
 const generateDirectoryListingInjection = (
-  requestedUrl,
+  urlNotFound,
   {
+    spa,
     rootDirectoryUrl,
     mainFilePath,
     packageDirectory,
@@ -233,13 +236,13 @@ const generateDirectoryListingInjection = (
 ) => {
   let serverRootDirectoryUrl = rootDirectoryUrl;
   const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
-    requestedUrl,
+    urlNotFound,
     serverRootDirectoryUrl,
   );
   const directoryContentItems = getDirectoryContentItems({
     serverRootDirectoryUrl,
     mainFilePath,
-    requestedUrl,
+    requestedUrl: urlNotFound,
     firstExistingDirectoryUrl,
   });
   package_workspaces: {
@@ -285,8 +288,8 @@ const generateDirectoryListingInjection = (
   const { host } = new URL(request.url);
   const websocketUrl = `${websocketScheme}://${host}/.internal/directory_content.websocket?directory=${encodeURIComponent(directoryUrlRelativeToServer)}`;
 
-  const navItems = [];
-  nav_items: {
+  const generateBreadcrumb = () => {
+    const breadcrumb = [];
     const lastItemUrl = firstExistingDirectoryUrl;
     const lastItemRelativeUrl = urlToRelativeUrl(lastItemUrl, rootDirectoryUrl);
     const rootDirectoryUrlName = urlToFilename(rootDirectoryUrl);
@@ -296,7 +299,6 @@ const generateDirectoryListingInjection = (
     } else {
       parts = [rootDirectoryUrlName];
     }
-
     let i = 0;
     while (i < parts.length) {
       const part = parts[i];
@@ -317,7 +319,7 @@ const generateDirectoryListingInjection = (
         navItemUrl,
         serverRootDirectoryUrl,
       );
-      let urlRelativeToDocument = urlToRelativeUrl(navItemUrl, requestedUrl);
+      let urlRelativeToDocument = urlToRelativeUrl(navItemUrl, urlNotFound);
       const isServerRootDirectory = navItemUrl === serverRootDirectoryUrl;
       if (isServerRootDirectory) {
         urlRelativeToServer = `/${directoryContentMagicName}`;
@@ -325,7 +327,7 @@ const generateDirectoryListingInjection = (
       }
       const name = part;
       const isCurrent = navItemUrl === String(firstExistingDirectoryUrl);
-      navItems.push({
+      breadcrumb.push({
         url: navItemUrl,
         urlRelativeToServer,
         urlRelativeToDocument,
@@ -335,34 +337,47 @@ const generateDirectoryListingInjection = (
       });
       i++;
     }
-  }
+    return breadcrumb;
+  };
+  const breadcrumb = generateBreadcrumb(urlNotFound);
 
   let enoentDetails = null;
   if (enoent) {
+    const buildEnoentPathInfo = (urlBase, closestExistingUrl) => {
+      let filePathExisting;
+      let filePathNotFound;
+      const existingIndex = String(closestExistingUrl).length;
+      filePathExisting = urlToRelativeUrl(
+        closestExistingUrl,
+        serverRootDirectoryUrl,
+      );
+      filePathNotFound = urlBase.slice(existingIndex);
+      return [filePathExisting, filePathNotFound];
+    };
     const fileRelativeUrl = urlToRelativeUrl(
-      requestedUrl,
+      urlNotFound,
       serverRootDirectoryUrl,
     );
-    let filePathExisting;
-    let filePathNotFound;
-    const existingIndex = String(firstExistingDirectoryUrl).length;
-    filePathExisting = urlToRelativeUrl(
-      firstExistingDirectoryUrl,
-      serverRootDirectoryUrl,
-    );
-    filePathNotFound = requestedUrl.slice(existingIndex);
     enoentDetails = {
-      fileUrl: requestedUrl,
+      fileUrl: urlNotFound,
       fileRelativeUrl,
+    };
+
+    const [filePathExisting, filePathNotFound] = buildEnoentPathInfo(
+      urlNotFound,
+      firstExistingDirectoryUrl,
+    );
+    Object.assign(enoentDetails, {
       filePathExisting: `/${filePathExisting}`,
       filePathNotFound,
-    };
+    });
   }
 
   return {
     __DIRECTORY_LISTING__: {
+      spa,
       enoentDetails,
-      navItems,
+      breadcrumb,
       urlMocks,
       directoryContentMagicName,
       directoryUrl: firstExistingDirectoryUrl,
@@ -375,11 +390,11 @@ const generateDirectoryListingInjection = (
     },
   };
 };
-const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
-  let directoryUrlCandidate = new URL("./", requestedUrl);
+const getFirstExistingDirectoryUrl = (urlBase, serverRootDirectoryUrl) => {
+  let directoryUrlCandidate = new URL("./", urlBase);
   while (!existsSync(directoryUrlCandidate)) {
     directoryUrlCandidate = new URL("../", directoryUrlCandidate);
-    if (!urlIsInsideOf(directoryUrlCandidate, serverRootDirectoryUrl)) {
+    if (!urlIsOrIsInsideOf(directoryUrlCandidate, serverRootDirectoryUrl)) {
       directoryUrlCandidate = new URL(serverRootDirectoryUrl);
       break;
     }

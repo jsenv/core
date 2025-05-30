@@ -1,4 +1,15 @@
 trailingComma: "all"
 quoteProps: "consistent"
-plugins: ["prettier-plugin-organize-imports"]
+plugins:
+  [
+    "prettier-plugin-sql",
+    "prettier-plugin-embed",
+    "prettier-plugin-organize-imports",
+  ]
 organizeImportsSkipDestructiveCodeActions: true
+# https://github.com/un-ts/prettier/tree/master/packages/sql#parser-options
+language: "postgresql"
+database: "postgresql"
+keywordCase: "upper"
+# https://github.com/Sec-ant/prettier-plugin-embed?tab=readme-ov-file#sql
+embeddedSqlParser: "postgresql"
