@@ -15,8 +15,8 @@ base/client/main.html:9:10
 no entry on filesystem
 --- plugin name ---
 "jsenv:file_url_fetching"
-  at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:79:24)
-  at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:120:14)
+  at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:80:24)
+  at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:122:14)
   at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:560:13)
   at async @jsenv/core/src/kitchen/kitchen.js:629:11
   at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:29:7)
