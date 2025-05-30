@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "postgres": "3.4.5",
-    "@jsenv/urls": "2.8.0",
+    "@jsenv/urls": "2.9.0",
     "@jsenv/database": "0.0.1",
     "@jsenv/router": "0.0.9",
     "@jsenv/form": "0.0.1",

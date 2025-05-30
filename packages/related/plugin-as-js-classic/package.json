@@ -22,7 +22,7 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/urls": "2.8.0",
+    "@jsenv/urls": "2.9.0",
     "@jsenv/js-module-fallback": "1.4.18",
     "@jsenv/plugin-bundling": "2.9.8"
   },

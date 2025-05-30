@@ -365,7 +365,7 @@ ${error.message}`,
       name: "TRANSFORM_URL_CONTENT_ERROR",
       code: "PARSE_ERROR",
       reason: error.message,
-      stack: error.stack,
+      stack: transformError.stack,
       trace,
       asResponse: error.asResponse,
     });

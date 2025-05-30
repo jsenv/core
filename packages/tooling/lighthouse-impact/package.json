@@ -31,8 +31,8 @@
   "dependencies": {
     "@jsenv/abort": "4.3.1",
     "@jsenv/dynamic-import-worker": "1.2.1",
-    "@jsenv/filesystem": "4.15.3",
-    "@jsenv/github-pull-request-impact": "1.8.30",
+    "@jsenv/filesystem": "4.15.4",
+    "@jsenv/github-pull-request-impact": "1.8.31",
     "@jsenv/humanize": "1.6.0",
     "lighthouse": "12.6.0"
   },

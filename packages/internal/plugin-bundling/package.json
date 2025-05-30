@@ -27,9 +27,9 @@
   "dependencies": {
     "@jsenv/humanize": "1.6.0",
     "@jsenv/url-meta": "8.5.7",
-    "@jsenv/urls": "2.8.0",
-    "@jsenv/sourcemap": "1.3.8",
-    "@jsenv/node-esm-resolution": "1.2.4",
+    "@jsenv/urls": "2.9.0",
+    "@jsenv/sourcemap": "1.3.9",
+    "@jsenv/node-esm-resolution": "1.2.5",
     "lightningcss": "1.29.3",
     "rollup": "4.40.1"
   },
