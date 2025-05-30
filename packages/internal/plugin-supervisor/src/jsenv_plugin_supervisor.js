@@ -187,6 +187,8 @@ export const jsenvPluginSupervisor = ({
                   name: errorCausingRuntimeError.name,
                   message: errorCausingRuntimeError.message,
                   reason: errorCausingRuntimeError.reason,
+                  parseErrorSourceType:
+                    errorCausingRuntimeError.parseErrorSourceType,
                   stack: errorBaseUrl
                     ? `stack mocked for snapshot`
                     : errorCausingRuntimeError.stack,

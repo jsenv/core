@@ -73,6 +73,7 @@ export const createFetchUrlContentError = ({
   const createFailedToFetchUrlContentError = ({
     code = error.code || "FETCH_URL_CONTENT_ERROR",
     reason,
+    parseErrorSourceType,
     ...details
   }) => {
     const reference = urlInfo.firstReference;
@@ -93,6 +94,7 @@ ${reason}`,
       name: "FETCH_URL_CONTENT_ERROR",
       code,
       reason,
+      parseErrorSourceType,
       url: urlInfo.url,
       trace: code === "PARSE_ERROR" ? error.trace : reference.trace,
       asResponse: error.asResponse,
@@ -127,6 +129,7 @@ ${reason}`,
     return createFailedToFetchUrlContentError({
       "code": "PARSE_ERROR",
       "reason": error.reasonCode,
+      "parseErrorSourceType": error.parseErrorSourceType,
       ...(error.cause ? { "parse error message": error.cause.message } : {}),
       "parse error trace": error.trace?.message,
     });
@@ -176,6 +179,8 @@ ${error.message}`,
       name: "TRANSFORM_URL_CONTENT_ERROR",
       code: "PARSE_ERROR",
       reason: error.message,
+      reasonCode: error.reasonCode,
+      parseErrorSourceType: error.parseErrorSourceType,
       stack: transformError.stack,
       trace,
       asResponse: error.asResponse,

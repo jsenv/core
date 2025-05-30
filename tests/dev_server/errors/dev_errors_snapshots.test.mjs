@@ -62,6 +62,7 @@ const run = async ({ browserLauncher, browserName }) => {
   for (const story of [
     "js_classic_inline_throw",
     "js_classic_throw",
+    "js_importing_css_with_syntax_error",
     "js_importing_node",
     "js_module_export_not_found",
     "js_module_import_bare_specifier",
