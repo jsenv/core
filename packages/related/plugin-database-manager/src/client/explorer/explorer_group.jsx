@@ -106,6 +106,7 @@ export const ExplorerGroup = forwardRef(
               onClose();
             }
           }}
+          data-min-height="150"
           data-requested-height={heightSetting}
         >
           <summary>

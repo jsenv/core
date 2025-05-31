@@ -80,12 +80,8 @@ const ExplorerBody = () => {
         }
       }}
     >
-      <ExplorerDatabases
-        onOpen={onOpen}
-        onClose={onClose}
-        resizable={resizable}
-      />
-      <ExplorerRoles onOpen={onOpen} onClose={onClose} resizable={false} />
+      <ExplorerDatabases onOpen={onOpen} onClose={onClose} />
+      <ExplorerRoles onOpen={onOpen} onClose={onClose} resizable={resizable} />
     </div>
   );
 };
