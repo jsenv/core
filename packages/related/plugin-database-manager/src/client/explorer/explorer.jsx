@@ -54,14 +54,12 @@ const ExplorerBody = () => {
 
   useLayoutEffect(() => {
     const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
-      onMouseResizeEnd: (sizeEntries) => {
-        for (const { element, value } of sizeEntries) {
-          if (element.id === databaseExplorerGroupController.id) {
-            databaseExplorerGroupController.setHeightSetting(value);
-          }
-          if (element.id === rolesExplorerGroupController.id) {
-            rolesExplorerGroupController.setHeightSetting(value);
-          }
+      onRequestedSizeChange: (element, requestedHeight) => {
+        if (element.id === databaseExplorerGroupController.id) {
+          databaseExplorerGroupController.setHeightSetting(requestedHeight);
+        }
+        if (element.id === rolesExplorerGroupController.id) {
+          rolesExplorerGroupController.setHeightSetting(requestedHeight);
         }
       },
     });

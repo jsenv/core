@@ -17,7 +17,7 @@ const DEBUG = false;
 
 export const initFlexDetailsSet = (
   container,
-  { onSizeChange, onMouseResizeEnd, debug = DEBUG } = {},
+  { onSizeChange, onMouseResizeEnd, onRequestedSizeChange, debug = DEBUG } = {},
 ) => {
   const flexDetailsSet = {
     cleanup: null,
@@ -650,14 +650,13 @@ export const initFlexDetailsSet = (
         if (currentAllocatedSpaceMap) {
           allocatedSpaceMap = currentAllocatedSpaceMap;
           saveCurrentSizeAsRequestedSizes({ replaceExistingAttributes: true });
-          if (onMouseResizeEnd) {
-            const sizeEntries = [];
+          if (onRequestedSizeChange) {
             for (const [child, allocatedSpace] of allocatedSpaceMap) {
               const size = spaceToSize(allocatedSpace, child);
-              sizeEntries.push({ element: child, value: size });
+              onRequestedSizeChange(child, size);
             }
-            onMouseResizeEnd?.(sizeEntries);
           }
+          onMouseResizeEnd?.();
         }
       };
 
