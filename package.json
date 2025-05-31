@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "40.7.2",
+  "version": "40.8.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -52,8 +52,7 @@
     "./src/kitchen/client/inline_content.js",
     "./dist/client/new_stylesheet/new_stylesheet.js",
     "./dist/client/inline_content/inline_content.js",
-    "./dist/client/directory_listing/jsenv_core_node_modules.js",
-    "./src/plugins/import_meta_css/client/import_meta_css.js"
+    "./dist/client/directory_listing/jsenv_core_node_modules.js"
   ],
   "scripts": {
     "eslint": "npx eslint .",
