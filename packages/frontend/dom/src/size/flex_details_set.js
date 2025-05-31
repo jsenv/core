@@ -8,6 +8,7 @@ import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinHeight } from "./get_min_height.js";
+import { resolveCSSSize } from "./resolve_css_size.js";
 import { createSizeAnimationGroupController } from "./size_animation_group_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
@@ -105,7 +106,7 @@ export const initFlexDetailsSet = (
           const requestedHeightAttribute = details.getAttribute(
             "data-requested-height",
           );
-          requestedSize = parseFloat(requestedHeightAttribute, 10);
+          requestedSize = resolveCSSSize(requestedHeightAttribute);
           if (isNaN(requestedSize) || !isFinite(requestedSize)) {
             console.warn(
               `details ${details.id} has invalid data-requested-height attribute: ${requestedHeightAttribute}`,
@@ -414,9 +415,17 @@ export const initFlexDetailsSet = (
     return 0;
   };
 
-  const saveCurrentSizeAsRequestedSizes = () => {
+  const saveCurrentSizeAsRequestedSizes = ({
+    replaceExistingAttributes,
+  } = {}) => {
     for (const child of container.children) {
       if (canGrowSet.has(child) || canShrinkSet.has(child)) {
+        if (
+          child.hasAttribute("data-requested-height") &&
+          !replaceExistingAttributes
+        ) {
+          continue;
+        }
         const allocatedSpace = allocatedSpaceMap.get(child);
         child.setAttribute("data-requested-height", allocatedSpace);
       }
@@ -640,7 +649,7 @@ export const initFlexDetailsSet = (
       const end = () => {
         if (currentAllocatedSpaceMap) {
           allocatedSpaceMap = currentAllocatedSpaceMap;
-          saveCurrentSizeAsRequestedSizes();
+          saveCurrentSizeAsRequestedSizes({ replaceExistingAttributes: true });
         }
       };
 

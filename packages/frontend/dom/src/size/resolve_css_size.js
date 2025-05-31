@@ -1,6 +1,6 @@
 export const resolveCSSSize = (
   size,
-  { availableSize, fontSize, autoIsRelativeToFont },
+  { availableSize, fontSize, autoIsRelativeToFont } = {},
 ) => {
   if (typeof size === "string") {
     if (size === "auto") {
