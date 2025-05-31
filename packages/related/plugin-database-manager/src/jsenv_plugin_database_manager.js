@@ -48,7 +48,8 @@ export const jsenvPluginDatabaseManager = ({
           contentInjections: {
             __DB_MANAGER_CONFIG__: {
               pathname,
-              apiUrl: new URL(`${pathname}api`, urlInfo.url).href,
+              apiUrl: new URL(`${pathname}api`, urlInfo.context.request.origin)
+                .href,
             },
           },
         };
@@ -80,7 +81,7 @@ export const jsenvPluginDatabaseManager = ({
         },
       },
       {
-        endpoint: `GET ${pathname}/api/nav`,
+        endpoint: `GET ${pathname}api/nav`,
         description:
           "Get info about the database that can be used to build a navbar",
         declarationSource: import.meta.url,
