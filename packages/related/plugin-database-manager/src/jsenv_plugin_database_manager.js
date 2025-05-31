@@ -17,7 +17,9 @@ const databaseManagerHtmlFileUrl = import.meta.resolve(
   "./client/database_manager.html",
 );
 
-export const jsenvPluginDatabaseManager = () => {
+export const jsenvPluginDatabaseManager = ({
+  pathname = "/.internal/database/",
+} = {}) => {
   let databaseManagerRootDirectoryUrl;
   let sql;
 
@@ -25,9 +27,13 @@ export const jsenvPluginDatabaseManager = () => {
     name: "jsenv:database_manager",
     init: async ({ rootDirectoryUrl }) => {
       const defaultUsername = execSync("whoami").toString().trim();
-      sql = connectAs({ username: defaultUsername, password: "" });
+      sql = connectAs({
+        username: defaultUsername,
+        password: "",
+        database: "postgres",
+      });
       databaseManagerRootDirectoryUrl = new URL(
-        "./.internal/database/",
+        pathname.slice(1),
         rootDirectoryUrl,
       ).href;
     },
@@ -47,7 +53,7 @@ export const jsenvPluginDatabaseManager = () => {
 
     devServerRoutes: [
       {
-        endpoint: "GET /.internal/database",
+        endpoint: `GET ${pathname}`,
         description: "Manage database using a Web interface",
         declarationSource: import.meta.url,
         fetch: () => {
@@ -56,7 +62,7 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
-        endpoint: "GET /.internal/database/api/nav",
+        endpoint: `GET ${pathname}/api/nav`,
         description:
           "Get info about the database that can be used to build a navbar",
         declarationSource: import.meta.url,
@@ -109,7 +115,7 @@ export const jsenvPluginDatabaseManager = () => {
           });
         },
       },
-      ...createRESTRoutes("roles", {
+      ...createRESTRoutes(`${pathname}api/roles`, {
         GET: async (rolname) => {
           const results = await sql`
             SELECT
@@ -192,7 +198,7 @@ export const jsenvPluginDatabaseManager = () => {
           await sql`DROP ROLE ${sql(rolname)}`;
         },
       }),
-      ...createRESTRoutes("databases", {
+      ...createRESTRoutes(`${pathname}api/databases`, {
         GET: async (datname) => {
           const results = await sql`
             SELECT
@@ -240,7 +246,7 @@ export const jsenvPluginDatabaseManager = () => {
         },
       }),
       {
-        endpoint: "GET /.internal/database/api/tables",
+        endpoint: `GET ${pathname}/api/tables`,
         declarationSource: import.meta.url,
         fetch: async (request) => {
           const publicFilter = request.searchParams.has("public"); // TODO: a dynamic filter param
@@ -260,7 +266,7 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
-        endpoint: "PUT /.internal/database/api/tables/:tableName/columns/name",
+        endpoint: `PUT ${pathname}/api/tables/:tableName/columns/name`,
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
@@ -274,8 +280,7 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
-        endpoint:
-          "PUT /.internal/database/api/tables/:tableName/columns/rowsecurity",
+        endpoint: `PUT ${pathname}/api/tables/:tableName/columns/rowsecurity`,
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
@@ -294,8 +299,7 @@ export const jsenvPluginDatabaseManager = () => {
         },
       },
       {
-        endpoint:
-          "PUT /.internal/database/api/tables/:tableName/columns/:columnName/rows/:rowId",
+        endpoint: `PUT ${pathname}/api/tables/:tableName/columns/:columnName/rows/:rowId`,
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async () => {
@@ -306,8 +310,7 @@ export const jsenvPluginDatabaseManager = () => {
       },
       // https://wiki.postgresql.org/wiki/Alter_column_position#Add_columns_and_move_data
       {
-        endpoint:
-          "PUT /.internal/database/api/tables/:name/columns/:columnName/move_before",
+        endpoint: `PUT ${pathname}/api/tables/:name/columns/:columnName/move_before`,
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
@@ -519,7 +522,7 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
   const routes = [];
   if (GET) {
     const getRoute = {
-      endpoint: `GET /.internal/database/api/${resource}/:id`,
+      endpoint: `GET ${resource}/:id`,
       declarationSource: import.meta.url,
       fetch: async (request) => {
         const id = request.params.id;
@@ -537,7 +540,7 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
   }
   if (POST) {
     const postRoute = {
-      endpoint: `POST /.internal/database/api/${resource}`,
+      endpoint: `POST ${resource}`,
       declarationSource: import.meta.url,
       acceptedMediaTypes: ["application/json"],
       fetch: async (request) => {
@@ -550,7 +553,7 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
   }
   if (PUT) {
     const putRoute = {
-      endpoint: `PUT /.internal/database/api/${resource}/:id/:property`,
+      endpoint: `PUT ${resource}/:id/:property`,
       declarationSource: import.meta.url,
       fetch: async (request) => {
         const id = request.params.id;
@@ -564,7 +567,7 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
   }
   if (DELETE) {
     const deleteRoute = {
-      endpoint: `DELETE /.internal/database/api/${resource}/:id`,
+      endpoint: `DELETE ${resource}/:id`,
       declarationSource: import.meta.url,
       fetch: async (request) => {
         const id = request.params.id;
