@@ -52,10 +52,6 @@ const ExplorerBody = () => {
   }, []);
   const flexDetailsSetRef = useRef();
 
-  const databaseDetailsHeight =
-    databaseExplorerGroupController.useHeightSetting();
-  const rolesDetailsHeight = rolesExplorerGroupController.useHeightSetting();
-
   useLayoutEffect(() => {
     const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
       onSizeChange: (sizeChangeEntries) => {
@@ -88,14 +84,8 @@ const ExplorerBody = () => {
         onOpen={onOpen}
         onClose={onClose}
         resizable={resizable}
-        height={databaseDetailsHeight}
       />
-      <ExplorerRoles
-        onOpen={onOpen}
-        onClose={onClose}
-        height={rolesDetailsHeight}
-        resizable={false}
-      />
+      <ExplorerRoles onOpen={onOpen} onClose={onClose} resizable={false} />
     </div>
   );
 };

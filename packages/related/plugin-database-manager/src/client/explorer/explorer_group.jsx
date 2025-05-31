@@ -2,7 +2,6 @@
  *
  */
 
-import "@jsenv/dom/details_toggle_animation";
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import {
   SPAInputText,
@@ -86,6 +85,8 @@ export const ExplorerGroup = forwardRef(
       setIsCreatingNew(false);
     }, [setIsCreatingNew]);
 
+    const heightSetting = controller.useHeightSetting();
+
     return (
       <>
         {resizable && <div data-resize-handle={controller.id}></div>}
@@ -94,6 +95,7 @@ export const ExplorerGroup = forwardRef(
           ref={innerRef}
           id={controller.id}
           className="explorer_group"
+          open={open}
           onToggle={(toggleEvent) => {
             onToggle(toggleEvent);
             if (toggleEvent.newState === "open") {
@@ -104,7 +106,7 @@ export const ExplorerGroup = forwardRef(
               onClose();
             }
           }}
-          open={open}
+          data-requested-height={heightSetting}
         >
           <summary>
             <div className="summary_body">
