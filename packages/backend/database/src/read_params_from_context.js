@@ -1,12 +1,23 @@
 import { config } from "dotenv";
 import { execSync } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const readParamsFromContext = () => {
+export const readParamsFromContext = ({
+  directoryUrl = pathToFileURL(process.cwd()),
+} = {}) => {
+  directoryUrl = String(directoryUrl);
+  if (!directoryUrl.endsWith("/")) {
+    directoryUrl += "/";
+  }
+  const envFile =
+    process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod"
+      ? ".env.prod"
+      : ".env.dev";
+  const envFileUrl = new URL(envFile, directoryUrl);
+  const envFilePath = fileURLToPath(envFileUrl);
+
   config({
-    path:
-      process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod"
-        ? ".env.prod"
-        : ".env.dev",
+    path: envFilePath,
   });
 
   if (!process.env.DB_NAME) {

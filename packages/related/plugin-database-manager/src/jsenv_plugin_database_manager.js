@@ -3,12 +3,13 @@
  * - nom des tables au singulier
  */
 
-import { connectAs, readParamsFromContext } from "@jsenv/database";
+import { connectAs } from "@jsenv/database";
 import {
   ensurePathnameTrailingSlash,
   urlIsOrIsInsideOf,
   urlToExtension,
 } from "@jsenv/urls";
+import { execSync } from "node:child_process";
 import { alterDatabaseQuery } from "./sql/alter_database_query.js";
 import { alterRoleQuery } from "./sql/alter_role_query.js";
 
@@ -23,8 +24,8 @@ export const jsenvPluginDatabaseManager = () => {
   return {
     name: "jsenv:database_manager",
     init: async ({ rootDirectoryUrl }) => {
-      const { defaultUsername, database } = readParamsFromContext();
-      sql = connectAs({ username: defaultUsername, password: "", database });
+      const defaultUsername = execSync("whoami").toString().trim();
+      sql = connectAs({ username: defaultUsername, password: "" });
       databaseManagerRootDirectoryUrl = new URL(
         "./.internal/database/",
         rootDirectoryUrl,
