@@ -26,6 +26,7 @@ export { getMinHeight } from "./size/get_min_height.js";
 export { getMinWidth } from "./size/get_min_width.js";
 export { getPaddingSizes } from "./size/get_padding_sizes.js";
 export { getWidth } from "./size/get_width.js";
+export { resolveCSSSize } from "./size/resolve_css_size.js";
 // size hooks
 export { useAvailableHeight } from "./size/hooks/use_available_height.js";
 export { useAvailableWidth } from "./size/hooks/use_available_width.js";

@@ -1,5 +1,6 @@
+import { resolveCSSSize } from "@jsenv/dom";
 import { useResizeObserver } from "hooks/use_resize_observer.js";
-import { resolveDimensions, resolveSize } from "oto/src/utils/size_resolver.js";
+import { resolveDimensions } from "oto/src/utils/size_resolver.js";
 import { useLayoutEffect, useState } from "preact/hooks";
 
 export const useMultiBorder = (ref, borders) => {
@@ -23,15 +24,15 @@ export const useMultiBorder = (ref, borders) => {
     const resolvedBorder = {
       ...border,
       strokeSize,
-      size: resolveSize(size, {
+      size: resolveCSSSize(size, {
         availableSize: availableWidth,
         fontSize,
       }),
-      radius: resolveSize(radius, {
+      radius: resolveCSSSize(radius, {
         availableSize: availableWidth,
         fontSize,
       }),
-      spacing: resolveSize(spacing, {
+      spacing: resolveCSSSize(spacing, {
         availableSize: availableWidth,
         fontSize,
       }),

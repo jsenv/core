@@ -1,24 +1,4 @@
-export const resolveSize = (
-  size,
-  { availableSize, fontSize, autoIsRelativeToFont },
-) => {
-  if (typeof size === "string") {
-    if (size === "auto") {
-      return autoIsRelativeToFont ? fontSize : availableSize;
-    }
-    if (size.endsWith("%")) {
-      return availableSize * (parseFloat(size) / 100);
-    }
-    if (size.endsWith("px")) {
-      return parseFloat(size);
-    }
-    if (size.endsWith("em")) {
-      return parseFloat(size) * fontSize;
-    }
-    return parseFloat(size);
-  }
-  return size;
-};
+import { resolveCSSSize } from "@jsenv/dom";
 
 export const resolveDimensions = ({
   width,
@@ -32,19 +12,19 @@ export const resolveDimensions = ({
   maxHeight,
 }) => {
   const ratio = availableWidth / availableHeight;
-  const minWidthResolved = resolveSize(minWidth, {
+  const minWidthResolved = resolveCSSSize(minWidth, {
     availableSize: availableWidth,
     fontSize,
   });
-  const maxWidthResolved = resolveSize(maxWidth, {
+  const maxWidthResolved = resolveCSSSize(maxWidth, {
     availableSize: availableWidth,
     fontSize,
   });
-  const minHeightResolved = resolveSize(minHeight, {
+  const minHeightResolved = resolveCSSSize(minHeight, {
     availableSize: availableHeight,
     fontSize,
   });
-  const maxHeightResolved = resolveSize(maxHeight, {
+  const maxHeightResolved = resolveCSSSize(maxHeight, {
     availableSize: availableHeight,
     fontSize,
   });
@@ -52,7 +32,7 @@ export const resolveDimensions = ({
   if (width === "auto") {
     widthResolved = height * ratio;
   } else {
-    widthResolved = resolveSize(width, {
+    widthResolved = resolveCSSSize(width, {
       availableSize: availableWidth,
       fontSize,
     });
@@ -67,7 +47,7 @@ export const resolveDimensions = ({
   if (height === "auto") {
     heightResolved = widthResolved / ratio;
   } else {
-    heightResolved = resolveSize(height, {
+    heightResolved = resolveCSSSize(height, {
       availableSize: availableHeight,
       fontSize,
     });

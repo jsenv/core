@@ -46,6 +46,10 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
   };
   let previousGestureInfo = null;
 
+  elementWithDataResizeHandle.setAttribute("data-active", "");
+  endCallbackSet.add(() => {
+    elementWithDataResizeHandle.removeAttribute("data-active");
+  });
   append_backdrop: {
     const backdrop = document.createElement("div");
     backdrop.style.position = "fixed";
