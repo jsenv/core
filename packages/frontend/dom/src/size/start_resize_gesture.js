@@ -1,4 +1,9 @@
 export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
+  if (event.defaultPrevented) {
+    // an other resize gesture has call preventDefault()
+    // or something wants to prevent mousedown effects
+    return null;
+  }
   if (event.button !== 0) {
     return null;
   }
