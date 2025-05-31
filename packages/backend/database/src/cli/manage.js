@@ -7,6 +7,7 @@ import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 await startDevServer({
   serverLogLevel: "warn",
   sourceDirectoryUrl: import.meta.resolve("./"),
+  sourceMainFilePath: "/",
   hostname: "127.0.0.1",
   // https: { certificate, privateKey },
   http2: false,
@@ -16,7 +17,9 @@ await startDevServer({
     jsenvPluginPreact({
       refreshInstrumentation: true,
     }),
-    jsenvPluginDatabaseManager(),
+    jsenvPluginDatabaseManager({
+      pathname: "/",
+    }),
     jsenvPluginCommonJs({
       include: { "/**/node_modules/react-table/": true },
     }),

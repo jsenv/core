@@ -16,7 +16,7 @@ import { ExplorerDatabases } from "./explorer_databases.jsx";
 import { ExplorerRoles } from "./explorer_roles.jsx";
 
 effect(async () => {
-  const response = await fetch(`/.internal/database/api/nav`);
+  const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/nav`);
   const { currentRole, roles, currentDatabase, databases } =
     await response.json();
   setCurrentRole(currentRole);

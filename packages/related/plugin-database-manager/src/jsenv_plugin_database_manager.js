@@ -48,6 +48,7 @@ export const jsenvPluginDatabaseManager = ({
           contentInjections: {
             __DB_MANAGER_CONFIG__: {
               pathname,
+              apiUrl: new URL(`${pathname}api`, urlInfo.url).href,
             },
           },
         };

@@ -25,9 +25,12 @@ export const GET_ROLE_ROUTE = registerRoute(
   "/roles/:rolname",
   async ({ params, signal }) => {
     const rolname = params.rolname;
-    const response = await fetch(`/.internal/database/api/roles/${rolname}`, {
-      signal,
-    });
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}`,
+      {
+        signal,
+      },
+    );
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to get role");
     }
@@ -47,7 +50,7 @@ export const PUT_ROLE_ACTION = registerAction(
       value = parseInt(value, 10);
     }
     const response = await fetch(
-      `/.internal/database/api/roles/${rolname}/${columnName}`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/${columnName}`,
       {
         signal,
         method: "PUT",
@@ -67,7 +70,7 @@ export const PUT_ROLE_ACTION = registerAction(
 
 export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
   const rolname = formData.get("rolname");
-  const response = await fetch(`/.internal/database/api/roles`, {
+  const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`, {
     signal,
     method: "POST",
     headers: {
@@ -85,14 +88,17 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
 
 export const DELETE_ROLE_ACTION = registerAction(
   async ({ rolname, signal }) => {
-    const response = await fetch(`/.internal/database/api/roles/${rolname}`, {
-      signal,
-      method: "DELETE",
-      headers: {
-        "accept": "application/json",
-        "content-type": "application/json",
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}`,
+      {
+        signal,
+        method: "DELETE",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
       },
-    });
+    );
     if (!response.ok) {
       throw await errorFromResponse(response, `Failed to delete role`);
     }

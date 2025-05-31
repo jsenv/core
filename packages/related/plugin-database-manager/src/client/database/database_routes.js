@@ -13,7 +13,7 @@ export const GET_DATABASE_ROUTE = registerRoute(
   async ({ params, signal }) => {
     const datname = params.datname;
     const response = await fetch(
-      `/.internal/database/api/databases/${datname}`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}`,
       {
         signal,
       },
@@ -34,15 +34,18 @@ connectStoreAndRoute(databaseStore, GET_DATABASE_ROUTE, "datname");
 export const POST_DATABASE_ACTION = registerAction(
   async ({ signal, formData }) => {
     const datname = formData.get("datname");
-    const response = await fetch(`/.internal/database/api/databases`, {
-      signal,
-      method: "POST",
-      headers: {
-        "accept": "application/json",
-        "content-type": "application/json",
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases`,
+      {
+        signal,
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ datname }),
       },
-      body: JSON.stringify({ datname }),
-    });
+    );
     if (!response.ok) {
       const error = await response.json();
       const postError = new Error(
@@ -59,7 +62,7 @@ export const PUT_DATABASE_ACTION = registerAction(
   async ({ datname, columnName, formData, signal }) => {
     let value = formData.get(columnName);
     const response = await fetch(
-      `/.internal/database/api/databases/${datname}/${value}`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}/${value}`,
       {
         signal,
         method: "PUT",
@@ -82,7 +85,7 @@ export const PUT_DATABASE_ACTION = registerAction(
 export const DELETE_DATABASE_ACTION = registerAction(
   async ({ datname, signal }) => {
     const response = await fetch(
-      `/.internal/database/api/databases/${datname}`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}`,
       {
         signal,
         method: "DELETE",
