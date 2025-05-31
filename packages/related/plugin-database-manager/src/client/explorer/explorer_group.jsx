@@ -2,7 +2,6 @@
  *
  */
 
-import { useResizeStatus } from "@jsenv/dom";
 import "@jsenv/dom/details_toggle_animation";
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import {
@@ -49,7 +48,6 @@ export const ExplorerGroup = forwardRef(
   (
     {
       controller,
-      resizable,
       urlParam,
       idKey,
       nameKey,
@@ -65,6 +63,8 @@ export const ExplorerGroup = forwardRef(
       useDeleteItemAction,
       onOpen,
       onClose,
+      resizable,
+      ...rest
     },
     ref,
   ) => {
@@ -78,12 +78,6 @@ export const ExplorerGroup = forwardRef(
       });
     }, []);
 
-    const { useHeightSetting, setHeightSetting } = controller;
-    const heightSetting = useHeightSetting();
-    const { resizing, resizeHeight } = useResizeStatus(innerRef, {
-      as: "number",
-    });
-
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const startCreatingNew = useCallback(() => {
       setIsCreatingNew(true);
@@ -94,19 +88,12 @@ export const ExplorerGroup = forwardRef(
 
     return (
       <>
+        {resizable && <div data-resize-handle={controller.id}></div>}
         <details
+          {...rest}
           ref={innerRef}
           id={controller.id}
           className="explorer_group"
-          data-resize={resizable ? "vertical" : undefined}
-          data-height={
-            resizable ? (resizing ? resizeHeight : heightSetting) : undefined
-          }
-          data-details-content-full-height
-          // eslint-disable-next-line react/no-unknown-property
-          onresize={(e) => {
-            setHeightSetting(e.detail.height);
-          }}
           onToggle={(toggleEvent) => {
             onToggle(toggleEvent);
             if (toggleEvent.newState === "open") {
@@ -185,7 +172,6 @@ export const ExplorerGroup = forwardRef(
             </ul>
           </div>
         </details>
-        {resizable && <div data-resize-handle={controller.id}></div>}
       </>
     );
   },

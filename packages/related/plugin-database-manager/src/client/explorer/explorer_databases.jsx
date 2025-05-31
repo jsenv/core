@@ -20,7 +20,7 @@ import {
   ExplorerGroup,
 } from "./explorer_group.jsx";
 
-const databaseExplorerGroupController =
+export const databaseExplorerGroupController =
   createExplorerGroupController("databases");
 
 export const ExplorerDatabases = (props) => {

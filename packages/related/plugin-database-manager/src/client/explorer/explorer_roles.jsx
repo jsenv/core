@@ -19,7 +19,8 @@ import {
   ExplorerGroup,
 } from "./explorer_group.jsx";
 
-const rolesExplorerGroupController = createExplorerGroupController("roles");
+export const rolesExplorerGroupController =
+  createExplorerGroupController("roles");
 
 export const ExplorerRoles = (props) => {
   const roles = useRoleList();

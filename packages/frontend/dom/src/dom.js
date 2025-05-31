@@ -14,6 +14,7 @@ export {
 export { addAttributeEffect } from "./add_attribute_effect.js";
 
 // size
+export { initFlexDetailsSet } from "./size/flex_details_set.js";
 export { getAvailableHeight } from "./size/get_available_height.js";
 export { getAvailableWidth } from "./size/get_available_width.js";
 export { getBorderSizes } from "./size/get_border_sizes.js";

@@ -3,17 +3,22 @@
  * right now it does not work, the content is not scrollable and gets hidden
  */
 
-import "@jsenv/dom/details_content_full_height";
-import "@jsenv/dom/resize";
+import { initFlexDetailsSet } from "@jsenv/dom";
 import { effect } from "@preact/signals";
-import { useCallback, useState } from "preact/hooks";
+import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { setCurrentDatabase } from "../database/database_signals.js";
 import { databaseStore } from "../database/database_store.js";
 import { setCurrentRole } from "../role/role_signals.js";
 import { roleStore } from "../role/role_store.js";
 import "./explorer.css" with { type: "css" };
-import { ExplorerDatabases } from "./explorer_databases.jsx";
-import { ExplorerRoles } from "./explorer_roles.jsx";
+import {
+  ExplorerDatabases,
+  databaseExplorerGroupController,
+} from "./explorer_databases.jsx";
+import {
+  ExplorerRoles,
+  rolesExplorerGroupController,
+} from "./explorer_roles.jsx";
 
 effect(async () => {
   const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/nav`);
@@ -45,12 +50,31 @@ const ExplorerBody = () => {
   const onClose = useCallback(() => {
     setDetailsOpenCount((count) => count - 1);
   }, []);
+  const flexDetailsSetRef = useRef();
 
-  // first thing: I need to repartir la hauteur aux groupes ouvert
-  // si plus d'un groupe est ouvert alors on peut les resize
+  const databaseDetailsHeight =
+    databaseExplorerGroupController.useHeightSetting();
+  const rolesDetailsHeight = rolesExplorerGroupController.useHeightSetting();
+
+  useLayoutEffect(() => {
+    const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
+      onSizeChange: (sizeChangeEntries) => {
+        for (const { element, value } of sizeChangeEntries) {
+          if (element.id === databaseExplorerGroupController.id) {
+            databaseExplorerGroupController.setHeightSetting(value);
+          }
+          if (element.id === rolesExplorerGroupController.id) {
+            rolesExplorerGroupController.setHeightSetting(value);
+          }
+        }
+      },
+    });
+    return flexDetailsSet.cleanup;
+  }, []);
 
   return (
     <div
+      ref={flexDetailsSetRef}
       className="explorer_body"
       onToggle={(toggleEvent) => {
         if (toggleEvent.newState === "open") {
@@ -64,8 +88,14 @@ const ExplorerBody = () => {
         onOpen={onOpen}
         onClose={onClose}
         resizable={resizable}
+        height={databaseDetailsHeight}
       />
-      <ExplorerRoles onOpen={onOpen} onClose={onClose} resizable={false} />
+      <ExplorerRoles
+        onOpen={onOpen}
+        onClose={onClose}
+        height={rolesDetailsHeight}
+        resizable={false}
+      />
     </div>
   );
 };
