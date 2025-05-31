@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "40.7.2",
+  "version": "40.8.0",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -34,7 +34,7 @@
     "/src/"
   ],
   "volta": {
-    "node": "23.11.0",
+    "node": "24.1.0",
     "npm": "11.3.0"
   },
   "packageManager": "npm@11.3.0",

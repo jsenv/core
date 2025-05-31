@@ -9,13 +9,13 @@ export const babelPluginMetadataImportMetaHot = () => {
       Program(programPath, state) {
         Object.assign(
           state.file.metadata,
-          collectImportMetaProperties(programPath),
+          collectImportMetaHotProperties(programPath),
         );
       },
     },
   };
 };
-const collectImportMetaProperties = (programPath) => {
+const collectImportMetaHotProperties = (programPath) => {
   const importMetaHotPaths = [];
   let hotDecline = false;
   let hotAcceptSelf = false;

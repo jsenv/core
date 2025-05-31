@@ -16,6 +16,7 @@ import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_comm
 import { jsenvPluginImportMetaScenarios } from "./import_meta_scenarios/jsenv_plugin_import_meta_scenarios.js";
 import { jsenvPluginGlobalScenarios } from "./global_scenarios/jsenv_plugin_global_scenarios.js";
 import { jsenvPluginNodeRuntime } from "./node_runtime/jsenv_plugin_node_runtime.js";
+import { jsenvPluginImportMetaCss } from "./import_meta_css/jsenv_plugin_import_meta_css.js";
 // autoreload
 import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js";
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js";
@@ -126,6 +127,7 @@ export const getCorePlugins = ({
       ? [jsenvPluginAutoreloadOnServerRestart()]
       : []),
 
+    jsenvPluginImportMetaCss(),
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
     ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []),
