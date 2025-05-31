@@ -94,6 +94,8 @@
           return flexDetailsSet.cleanup;
         }, []);
 
+        const [detailsCount, detailsCountSetter] = useState(3);
+
         return (
           <>
             <fieldset>
@@ -206,6 +208,20 @@
               >
                 Clear console
               </button>
+              <label>
+                Two details
+                <input
+                  type="checkbox"
+                  checked={detailsCount === 2}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      detailsCountSetter(2);
+                    } else {
+                      detailsCountSetter(3);
+                    }
+                  }}
+                />
+              </label>
             </fieldset>
 
             <br />
@@ -223,12 +239,14 @@
                 labore et dolore magna aliqua. Ut enim ad minim veniam, quis
                 nostrud exercitation.
               </FlexDetails>
-              <FlexDetails id="c" color="red" open resizable>
-                This is the main content area. Lorem ipsum dolor sit amet,
-                consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
-                labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-                nostrud exercitation. This is the main content area.
-              </FlexDetails>
+              {detailsCount === 3 && (
+                <FlexDetails id="c" color="red" open resizable>
+                  This is the main content area. Lorem ipsum dolor sit amet,
+                  consectetur adipiscing elit. Sed do eiusmod tempor incididunt
+                  ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                  quis nostrud exercitation. This is the main content area.
+                </FlexDetails>
+              )}
             </div>
           </>
         );

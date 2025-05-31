@@ -90,7 +90,6 @@
 .explorer_body > [data-resize-handle] {
   width: 100%;
   height: 5px;
-  min-height: 5px;
   margin-top: -2.5px;
   margin-bottom: -2.5px;
   position: relative;
