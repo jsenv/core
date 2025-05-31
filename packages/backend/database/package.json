@@ -41,5 +41,10 @@
     "@jsenv/urls": "2.9.0",
     "dotenv": "16.5.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@jsenv/core": "../../../",
+    "@jsenv/plugin-database-manager": "../../related/plugin-database-manager",
+    "@jsenv/plugin-preact": "../../related/plugin-preact",
+    "@jsenv/plugin-commonjs": "../../related/plugin-commonjs"
+  }
 }

@@ -53,6 +53,9 @@ Command:
   setup: async () => {
     await import("./cli/setup.js");
   },
+  manage: async () => {
+    await import("./cli/manage.js");
+  },
 };
 
 const { values, positionals } = parseArgs({ options, allowPositionals: true });
