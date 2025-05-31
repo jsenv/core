@@ -259,10 +259,19 @@ export const jsenvPluginSupervisor = ({
                   contentType: "text/javascript",
                   content: textContent,
                 });
-              for (const key of Object.keys(htmlUrlInfo.contentInjections)) {
-                const value = htmlUrlInfo.contentInjections[key];
-                if (htmlUrlInfo.context.isPlaceholderInjection(value)) {
-                  inlineScriptReference.urlInfo.contentInjections[key] = value;
+              const htmlContentInjections = htmlUrlInfo.contentInjections;
+              const { isPlaceholderInjection, INJECTIONS } =
+                htmlUrlInfo.context;
+              for (const key of Object.keys(htmlContentInjections)) {
+                const injection = htmlUrlInfo.contentInjections[key];
+                if (isPlaceholderInjection(injection)) {
+                  inlineScriptReference.urlInfo.contentInjections[key] =
+                    injection;
+                  // ideally we should mark injection as optional only if it's
+                  // hapenning for inline content
+                  // but for now we'll just mark all html injections as optional
+                  // when there is an inline script
+                  htmlContentInjections[key] = INJECTIONS.optional(injection);
                 }
               }
               return inlineScriptReference.generatedSpecifier;
