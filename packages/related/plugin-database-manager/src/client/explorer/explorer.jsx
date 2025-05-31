@@ -54,8 +54,8 @@ const ExplorerBody = () => {
 
   useLayoutEffect(() => {
     const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
-      onSizeChange: (sizeChangeEntries) => {
-        for (const { element, value } of sizeChangeEntries) {
+      onMouseResizeEnd: (sizeEntries) => {
+        for (const { element, value } of sizeEntries) {
           if (element.id === databaseExplorerGroupController.id) {
             databaseExplorerGroupController.setHeightSetting(value);
           }

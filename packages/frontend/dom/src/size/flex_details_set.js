@@ -17,7 +17,7 @@ const DEBUG = false;
 
 export const initFlexDetailsSet = (
   container,
-  { onSizeChange, debug = DEBUG } = {},
+  { onSizeChange, onMouseResizeEnd, debug = DEBUG } = {},
 ) => {
   const flexDetailsSet = {
     cleanup: null,
@@ -622,7 +622,7 @@ export const initFlexDetailsSet = (
         }
       };
 
-      const move = (yMove) => {
+      const move = (yMove, gesture) => {
         // if (isNaN(moveRequestedSize) || !isFinite(moveRequestedSize)) {
         //   console.warn(
         //     `requestResize called with invalid size: ${moveRequestedSize}`,
@@ -637,7 +637,7 @@ export const initFlexDetailsSet = (
         const moveDiff = -yMove;
         applyMoveDiffToSizes(moveDiff, reason);
         applyAllocatedSpaces({
-          reason: "mouse_resize",
+          reason: gesture.isMouseUp ? "mouse_resize_end" : "mouse_resize",
         });
         currentAllocatedSpaceMap = new Map(allocatedSpaceMap);
         allocatedSpaceMap = new Map(startAllocatedSpaceMap);
@@ -665,9 +665,17 @@ export const initFlexDetailsSet = (
         },
         onMove: (gesture) => {
           const yMove = gesture.yMove;
-          move(yMove);
+          move(yMove, gesture);
         },
         onEnd: () => {
+          if (onMouseResizeEnd) {
+            const sizeEntries = [];
+            for (const [child, allocatedSpace] of allocatedSpaceMap) {
+              const size = spaceToSize(allocatedSpace, child);
+              sizeEntries.push({ element: child, value: size });
+            }
+            onMouseResizeEnd?.(sizeEntries);
+          }
           end();
         },
       });

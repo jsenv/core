@@ -48,6 +48,7 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
     yMove: 0,
     xChanged: false,
     yChanged: false,
+    isMouseUp: false,
   };
   let previousGestureInfo = null;
 
@@ -98,6 +99,7 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
     };
     const handleMouseUp = (e) => {
       e.preventDefault();
+      gestureInfo.isMouseUp = true;
       updateMousePosition(e);
       for (const endCallback of endCallbackSet) {
         endCallback();
