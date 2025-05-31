@@ -650,6 +650,14 @@ export const initFlexDetailsSet = (
         if (currentAllocatedSpaceMap) {
           allocatedSpaceMap = currentAllocatedSpaceMap;
           saveCurrentSizeAsRequestedSizes({ replaceExistingAttributes: true });
+          if (onMouseResizeEnd) {
+            const sizeEntries = [];
+            for (const [child, allocatedSpace] of allocatedSpaceMap) {
+              const size = spaceToSize(allocatedSpace, child);
+              sizeEntries.push({ element: child, value: size });
+            }
+            onMouseResizeEnd?.(sizeEntries);
+          }
         }
       };
 
@@ -668,14 +676,6 @@ export const initFlexDetailsSet = (
           move(yMove, gesture);
         },
         onEnd: () => {
-          if (onMouseResizeEnd) {
-            const sizeEntries = [];
-            for (const [child, allocatedSpace] of allocatedSpaceMap) {
-              const size = spaceToSize(allocatedSpace, child);
-              sizeEntries.push({ element: child, value: size });
-            }
-            onMouseResizeEnd?.(sizeEntries);
-          }
           end();
         },
       });
