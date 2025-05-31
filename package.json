@@ -78,9 +78,9 @@
     "https:setup": "npx @jsenv/https-local setup",
     "prepublishOnly": "npm run build",
     "database:install": "npx @jsenv/database install",
+    "database:setup": "npm run database:setup --workspaces --if-present --conditions=developement",
     "database:start": "npx @jsenv/database start",
     "database:stop": "npx @jsenv/database stop",
-    "database:setup": "npx @jsenv/database setup",
     "oto:start": "npm run start -w oto"
   },
   "dependencies": {

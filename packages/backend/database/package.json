@@ -30,7 +30,9 @@
     "/src/"
   ],
   "sideEffects": false,
-  "scripts": {},
+  "scripts": {
+    "database:setup": "npx @jsenv/database setup"
+  },
   "dependencies": {
     "postgres": "3.4.5",
     "@jsenv/humanize": "1.6.0",
