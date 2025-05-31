@@ -5,6 +5,7 @@
 
 import { connectAs } from "@jsenv/database";
 import {
+  asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
   urlIsOrIsInsideOf,
   urlToExtension,
@@ -37,6 +38,22 @@ export const jsenvPluginDatabaseManager = ({
         rootDirectoryUrl,
       ).href;
     },
+    transformUrlContent: {
+      html: (urlInfo) => {
+        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+        if (urlWithoutSearch !== String(databaseManagerHtmlFileUrl)) {
+          return null;
+        }
+        return {
+          contentInjections: {
+            __DB_MANAGER_CONFIG__: {
+              pathname,
+            },
+          },
+        };
+      },
+    },
+
     redirectReference: (reference) => {
       if (!reference.url.startsWith("file:")) {
         return null;
