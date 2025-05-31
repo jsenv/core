@@ -30,6 +30,7 @@ aside {
   width: 250px; /* Default width that can be overridden by resize */
   flex-shrink: 0; /* Prevents sidebar from shrinking when window is narrow */
   height: 100vh; /* Full viewport height */
+  min-height: 300px;
   position: sticky;
   top: 0; /* Keeps sidebar visible when scrolling */
   border-right: 1px solid #e0e0e0;
