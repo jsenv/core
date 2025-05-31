@@ -71,6 +71,7 @@
   display: none;
   padding: 0;
   border: 0;
+  background-color: transparent;
 }
 .explorer_group[open] .summary_action_icon {
   display: block;
