@@ -1,7 +1,7 @@
-import { useAction, useRouteIsMatching, useRouteUrl } from "@jsenv/router";
+import { useAction, useRouteIsMatching } from "@jsenv/router";
 import { useCallback } from "preact/hooks";
 import { UserWithPlusSvg } from "../role/role_icons.jsx";
-import { RoleItem } from "../role/role_item.jsx";
+import { RoleLink } from "../role/role_link.jsx";
 import {
   DELETE_ROLE_ACTION,
   GET_ROLE_ROUTE,
@@ -35,17 +35,12 @@ export const ExplorerRoles = (props) => {
       }
       createNewButtonChildren={<UserWithPlusSvg />}
       renderItem={useCallback(
-        (item) => (
-          <RoleItem role={item} />
+        (item, props) => (
+          <RoleLink role={item} {...props} />
         ),
         [],
       )}
       useItemList={useRoleList}
-      useItemRouteUrl={(role) =>
-        useRouteUrl(GET_ROLE_ROUTE, {
-          rolname: role.rolname,
-        })
-      }
       useItemRouteIsActive={(role) =>
         useRouteIsMatching(GET_ROLE_ROUTE, {
           rolname: role.rolname,

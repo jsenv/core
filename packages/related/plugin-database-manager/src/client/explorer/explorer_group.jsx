@@ -3,12 +3,7 @@
  */
 
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
-import {
-  SPAInputText,
-  SPALink,
-  useDetails,
-  valueInLocalStorage,
-} from "@jsenv/router";
+import { SPAInputText, useDetails, valueInLocalStorage } from "@jsenv/router";
 import { effect, signal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import {
@@ -55,7 +50,6 @@ export const ExplorerGroup = forwardRef(
       renderItem,
       createNewButtonChildren,
       useItemList,
-      useItemRouteUrl,
       useItemRouteIsActive,
       useRenameItemAction,
       useCreateItemAction,
@@ -150,7 +144,6 @@ export const ExplorerGroup = forwardRef(
                       item={item}
                       renderItem={renderItem}
                       useItemList={useItemList}
-                      useItemRouteUrl={useItemRouteUrl}
                       useItemRouteIsActive={useItemRouteIsActive}
                       useRenameItemAction={useRenameItemAction}
                       useDeleteItemAction={useDeleteItemAction}
@@ -193,21 +186,17 @@ const ArrowDown = () => {
 };
 
 const ExplorerGroupItem = ({
-  idKey,
   nameKey,
   item,
   renderItem,
   useItemList,
-  useItemRouteUrl,
   useItemRouteIsActive,
   useRenameItemAction,
   useDeleteItemAction,
 }) => {
   const itemName = item[nameKey];
   const deleteAction = useDeleteItemAction(item);
-  const routeUrl = useItemRouteUrl(item);
 
-  const linkRef = useRef();
   const [isRenaming, setIsRenaming] = useState(false);
   const startRenaming = useCallback(() => {
     setIsRenaming(true);
@@ -220,36 +209,29 @@ const ExplorerGroupItem = ({
   const autoFocus = prevIsRenamingRef.current && !isRenaming;
   prevIsRenamingRef.current = isRenaming;
 
-  return (
-    <SPALink
-      key={item[idKey]}
-      ref={linkRef}
-      href={routeUrl}
-      autoFocus={autoFocus}
-      className="explorer_group_item_content"
-      deleteShortcutAction={deleteAction}
-      deleteShortcutConfirmContent={`Are you sure you want to delete "${itemName}"?`}
-      onKeydown={(e) => {
-        if (e.key === "Enter" && !isRenaming) {
-          e.preventDefault();
-          e.stopPropagation();
-          startRenaming();
-        }
-      }}
-    >
-      {renderItem(item)}
+  return renderItem(item, {
+    autoFocus,
+    deleteShortcutAction: deleteAction,
+    deleteShortcutConfirmContent: `Are you sure you want to delete "${itemName}"?`,
+    onKeydown: (e) => {
+      if (e.key === "Enter" && !isRenaming) {
+        e.preventDefault();
+        e.stopPropagation();
+        startRenaming();
+      }
+    },
+    children: (
       <ItemNameOrRenameInput
         nameKey={nameKey}
         item={item}
         useItemList={useItemList}
-        useItemRouteUrl={useItemRouteUrl}
         useItemRouteIsActive={useItemRouteIsActive}
         useRenameItemAction={useRenameItemAction}
         isRenaming={isRenaming}
         stopRenaming={stopRenaming}
       />
-    </SPALink>
-  );
+    ),
+  });
 };
 
 const ItemNameOrRenameInput = ({

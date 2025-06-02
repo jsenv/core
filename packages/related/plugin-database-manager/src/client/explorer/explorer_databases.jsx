@@ -1,7 +1,7 @@
-import { useAction, useRouteIsMatching, useRouteUrl } from "@jsenv/router";
+import { useAction, useRouteIsMatching } from "@jsenv/router";
 import { useCallback } from "preact/hooks";
 import { DatabaseWithPlusSvg } from "../database/database_icons.jsx";
-import { DatabaseItem } from "../database/database_item.jsx";
+import { DatabaseLink } from "../database/database_link.jsx";
 import {
   DELETE_DATABASE_ACTION,
   GET_DATABASE_ROUTE,
@@ -35,17 +35,12 @@ export const ExplorerDatabases = (props) => {
       }
       createNewButtonChildren={<DatabaseWithPlusSvg />}
       renderItem={useCallback(
-        (item) => (
-          <DatabaseItem database={item} />
+        (item, props) => (
+          <DatabaseLink key={item.oid} database={item} {...props} />
         ),
         [],
       )}
       useItemList={useDatabaseList}
-      useItemRouteUrl={(database) =>
-        useRouteUrl(GET_DATABASE_ROUTE, {
-          datname: database.datname,
-        })
-      }
       useItemRouteIsActive={(database) =>
         useRouteIsMatching(GET_DATABASE_ROUTE, {
           datname: database.datname,

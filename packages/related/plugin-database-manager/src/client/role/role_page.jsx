@@ -2,15 +2,13 @@ import {
   ErrorBoundaryContext,
   Route,
   SPADeleteButton,
-  SPALink,
   useAction,
   useRouteParam,
-  useRouteUrl,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
 import { PageLabel } from "../components/page_label.jsx";
-import { GET_DATABASE_ROUTE } from "../database/database_routes.js";
+import { DatabaseLink } from "../database/database_link.jsx";
 import { pickRoleIcon } from "./role_icons.jsx";
 import {
   DELETE_ROLE_ACTION,
@@ -113,11 +111,9 @@ const RoleDatabases = ({ role }) => {
       <h2>Databases owned by {role.rolname}</h2>
       <ul>
         {databases.map((database) => {
-          const datname = database.datname;
-          const databaseRouteUrl = useRouteUrl(GET_DATABASE_ROUTE, { datname });
           return (
-            <li key={datname}>
-              <SPALink href={databaseRouteUrl}>{datname}</SPALink>
+            <li key={database.oid}>
+              <DatabaseLink database={database} />
             </li>
           );
         })}
