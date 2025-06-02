@@ -1,12 +1,7 @@
 import { useAction, useRouteIsMatching, useRouteUrl } from "@jsenv/router";
-import { FontSizedSvg } from "../font_sized_svg.jsx";
+import { FontSizedSvg } from "../components/font_sized_svg.jsx";
 import { CurrentSvg } from "../icons/icons.jsx";
-import {
-  UserSvg,
-  UserWithCheckSvg,
-  UserWithHatSvg,
-  UserWithPlusSvg,
-} from "../role/role_icons.jsx";
+import { pickRoleIcon, UserWithPlusSvg } from "../role/role_icons.jsx";
 import {
   DELETE_ROLE_ACTION,
   GET_ROLE_ROUTE,
@@ -72,17 +67,12 @@ export const ExplorerRoles = (props) => {
 const RoleItem = ({ item: role }) => {
   const currentRole = useCurrentRole();
   const isCurrent = currentRole && role.rolname === currentRole.rolname;
+  const RoleIcon = pickRoleIcon(role);
 
   return (
     <>
       <FontSizedSvg>
-        {role.rolname.startsWith("pg_") ? (
-          <UserWithCheckSvg color="#333" />
-        ) : role.rolsuper ? (
-          <UserWithHatSvg color="#333" />
-        ) : (
-          <UserSvg color="#333" />
-        )}
+        <RoleIcon color="#333" />
       </FontSizedSvg>
       {isCurrent ? (
         <FontSizedSvg>

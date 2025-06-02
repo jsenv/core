@@ -29,6 +29,7 @@ export const FontSizedSvg = ({ width = "1em", height = "1em", children }) => {
         width,
         height,
         justifySelf: "center",
+        lineHeight: "1em",
       }}
     >
       {children}

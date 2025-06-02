@@ -18,7 +18,7 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { FontSizedSvg } from "../font_sized_svg.jsx";
+import { FontSizedSvg } from "../components/font_sized_svg.jsx";
 
 export const createExplorerGroupController = (id) => {
   const [restoreHeight, storeHeight] = valueInLocalStorage(

@@ -4,6 +4,16 @@
 import { PlusSvg } from "../icons/icons.jsx";
 import { SVGMaskOverlay } from "../svg_mask_overlay.jsx";
 
+export const pickRoleIcon = (role) => {
+  if (role.rolname.startsWith("pg_")) {
+    return UserWithCheckSvg;
+  }
+  if (role.rolsuper) {
+    return UserWithHatSvg;
+  }
+  return UserSvg;
+};
+
 export const UserSvg = ({ color = "currentColor" }) => {
   return (
     <svg

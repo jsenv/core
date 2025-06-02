@@ -9,7 +9,9 @@ import {
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
+import { PageLabel } from "../components/page_label.jsx";
 import { GET_DATABASE_ROUTE } from "../database/database_routes.js";
+import { pickRoleIcon } from "./role_icons.jsx";
 import {
   DELETE_ROLE_ACTION,
   GET_ROLE_ROUTE,
@@ -30,11 +32,16 @@ const RolePage = () => {
   const rolname = useRouteParam(GET_ROLE_ROUTE, "rolname");
   const deleteRoleAction = useAction(DELETE_ROLE_ACTION, { rolname });
   const role = useActiveRole();
+  const RoleIcon = pickRoleIcon(role);
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
       {error && <ErrorDetails error={error} />}
-      <h1>{rolname}</h1>
+
+      <PageLabel icon={<RoleIcon />} label={"Role:"}>
+        {rolname}
+      </PageLabel>
+
       <RoleFields role={role} />
       <RoleDatabases />
       <SPADeleteButton action={deleteRoleAction}>Delete</SPADeleteButton>

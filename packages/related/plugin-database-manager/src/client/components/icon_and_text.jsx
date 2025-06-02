@@ -1,3 +1,5 @@
+import { FontSizedSvg } from "./font_sized_svg.jsx";
+
 export const IconAndText = ({ icon, children, ...rest }) => {
   return (
     <span
@@ -9,9 +11,7 @@ export const IconAndText = ({ icon, children, ...rest }) => {
         ...rest.style,
       }}
     >
-      <span className="icon" style="width: 1em; height: 1em; line-height: 1em;">
-        {icon}
-      </span>
+      <FontSizedSvg className="icon">{icon}</FontSizedSvg>
       <span className="text">{children}</span>
     </span>
   );

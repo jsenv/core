@@ -1,4 +1,5 @@
 import { useAction, useRouteIsMatching, useRouteUrl } from "@jsenv/router";
+import { FontSizedSvg } from "../components/font_sized_svg.jsx";
 import {
   DatabaseSvg,
   DatabaseWithPlusSvg,
@@ -13,7 +14,6 @@ import {
   useCurrentDatabase,
   useDatabaseList,
 } from "../database/database_signals.js";
-import { FontSizedSvg } from "../font_sized_svg.jsx";
 import { CurrentSvg } from "../icons/icons.jsx";
 import {
   createExplorerGroupController,
