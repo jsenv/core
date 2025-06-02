@@ -1,6 +1,6 @@
 import {
-  registerInlineRoute,
   registerRoute,
+  registerStateRoute,
   Route,
   useRouteData,
   useRouteIsMatching,
@@ -9,23 +9,23 @@ import {
 } from "@jsenv/router";
 import { render } from "preact";
 
-const useInlineRouteNav = (inlineRoute) => {
-  const openInlineRoute = () => {
-    inlineRoute.replaceState({ menu_opened: true });
+const useMenuRouteNav = (route) => {
+  const open = () => {
+    route.setState({ menu_opened: true });
   };
 
-  const closeInlineRoute = () => {
-    inlineRoute.replaceState({ menu_opened: false });
+  const close = () => {
+    route.setState({ menu_opened: false });
   };
 
-  return [openInlineRoute, closeInlineRoute];
+  return [open, close];
 };
 
 const ROOT_ROUTE = registerRoute("/", () => "root content");
 const A_ROUTE = registerRoute("/a", () => "a content");
 const B_ROUTE = registerRoute("/b", () => "b content");
 
-const MENU_INLINE_ROUTE = registerInlineRoute(
+const MENU_ROUTE = registerStateRoute(
   { menu_opened: true },
   () => "menu content",
 );
@@ -50,8 +50,8 @@ const App = () => {
     },
   ];
 
-  const menuIsOpened = useRouteIsMatching(MENU_INLINE_ROUTE);
-  const [openMenu, closeMenu] = useInlineRouteNav(MENU_INLINE_ROUTE);
+  const menuIsOpened = useRouteIsMatching(MENU_ROUTE);
+  const [openMenu, closeMenu] = useMenuRouteNav(MENU_ROUTE);
   console.log({ menuIsOpened, openMenu, closeMenu });
 
   return (
@@ -91,11 +91,7 @@ const App = () => {
           open={menuIsOpened}
         >
           <summary>Menu</summary>
-          <Route
-            route={MENU_INLINE_ROUTE}
-            loading={Loading}
-            loaded={RouteDisplay}
-          />
+          <Route route={MENU_ROUTE} loading={Loading} loaded={RouteDisplay} />
         </details>
       </aside>
       <main style="padding: 10px; border: 1px solid black; margin-top: 10px">

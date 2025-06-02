@@ -17,8 +17,8 @@ export {
   useResetErrorBoundary,
 } from "./src/hooks/use_reset_error_boundary.js";
 export {
-  registerInlineRoute,
   registerRoute,
+  registerStateRoute,
   setBaseUrl,
 } from "./src/route/route.js";
 export { Route } from "./src/route/route.jsx";

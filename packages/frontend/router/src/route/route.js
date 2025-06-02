@@ -195,8 +195,8 @@ export const registerRoute = (resourcePattern, handler) => {
 };
 
 // https://github.com/WICG/navigation-api?tab=readme-ov-file#setting-the-current-entrys-state-without-navigating
-export const registerInlineRoute = (statePattern, handler) => {
-  const inlineRoute = {
+export const registerStateRoute = (statePattern, handler) => {
+  const stateRoute = {
     statePattern,
     isMatchingSignal: undefined,
     match: undefined,
@@ -238,8 +238,8 @@ export const registerInlineRoute = (statePattern, handler) => {
       return matchResult;
     };
 
-    inlineRoute.isMatchingSignal = isMatchingSignal;
-    inlineRoute.match = match;
+    stateRoute.isMatchingSignal = isMatchingSignal;
+    stateRoute.match = match;
   }
 
   state: {
@@ -247,11 +247,19 @@ export const registerInlineRoute = (statePattern, handler) => {
     const stateSignal = signal(state);
     effect(() => {
       state = stateSignal.value;
-      inlineRoute.state = state;
+      stateRoute.state = state;
     });
-    inlineRoute.stateSignal = stateSignal;
+    stateRoute.stateSignal = stateSignal;
 
-    inlineRoute.replaceState = (newState) => {
+    stateRoute.setState = (newState) => {
+      const currentState = stateSignal.peek();
+      const updatedState = { ...currentState, ...newState };
+      goTo(window.location.href, {
+        state: updatedState,
+      });
+    };
+
+    stateRoute.replaceState = (newState) => {
       const currentState = stateSignal.peek();
       const updatedState = { ...currentState, ...newState };
       goTo(window.location.href, {
@@ -260,7 +268,7 @@ export const registerInlineRoute = (statePattern, handler) => {
       });
     };
 
-    inlineRoute.go = ({ replace = true } = {}) => {
+    stateRoute.go = ({ replace = true } = {}) => {
       goTo(window.location.href, {
         state: statePattern,
         replace,
@@ -270,7 +278,7 @@ export const registerInlineRoute = (statePattern, handler) => {
 
   loading: {
     const loadingStateSignal = signal(IDLE);
-    inlineRoute.loadingStateSignal = loadingStateSignal;
+    stateRoute.loadingStateSignal = loadingStateSignal;
 
     let error;
     const errorSignal = signal(null);
@@ -279,30 +287,30 @@ export const registerInlineRoute = (statePattern, handler) => {
     };
     effect(() => {
       error = errorSignal.value;
-      inlineRoute.error = error;
+      stateRoute.error = error;
     });
-    inlineRoute.errorSignal = errorSignal;
-    inlineRoute.reportError = reportError;
+    stateRoute.errorSignal = errorSignal;
+    stateRoute.reportError = reportError;
 
     let data;
     const dataSignal = signal(undefined);
     effect(() => {
       data = dataSignal.value;
-      inlineRoute.data = data;
+      stateRoute.data = data;
     });
-    inlineRoute.dataSignal = dataSignal;
+    stateRoute.dataSignal = dataSignal;
 
-    inlineRoute.reload = () => {
+    stateRoute.reload = () => {
       reload();
     };
   }
 
-  inlineRoute.toString = () => {
+  stateRoute.toString = () => {
     return JSON.stringify(statePattern);
   };
 
-  routeSet.add(inlineRoute);
-  return inlineRoute;
+  routeSet.add(stateRoute);
+  return stateRoute;
 };
 
 const routeSet = new Set();

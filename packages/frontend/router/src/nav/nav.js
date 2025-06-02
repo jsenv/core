@@ -55,6 +55,7 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
     }
     const url = event.destination.url;
     const state = event.destination.getState();
+    console.log("dest state", state);
     const { signal } = event;
     if (debug) {
       console.log("receive navigate event");
