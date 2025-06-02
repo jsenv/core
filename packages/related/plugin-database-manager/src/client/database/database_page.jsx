@@ -9,7 +9,9 @@ import {
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
+import { PageLabel } from "../components/page_label.jsx";
 import { GET_ROLE_ROUTE } from "../role/role_routes.js";
+import { DatabaseSvg } from "./database_icons.jsx";
 import {
   DELETE_DATABASE_ACTION,
   GET_DATABASE_ROUTE,
@@ -34,7 +36,9 @@ const DatabasePage = () => {
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
       {error && <ErrorDetails error={error} />}
-      <h1>{datname}</h1>
+      <PageLabel icon={<DatabaseSvg />} label={"Database:"}>
+        {datname}
+      </PageLabel>
       <DatabaseFields database={database} />
       <SPADeleteButton action={deleteAction}>Delete</SPADeleteButton>
 
