@@ -52,7 +52,6 @@ const App = () => {
 
   const menuIsOpened = useRouteIsMatching(MENU_ROUTE);
   const [openMenu, closeMenu] = useMenuRouteNav(MENU_ROUTE);
-  console.log({ menuIsOpened, openMenu, closeMenu });
 
   return (
     <div>

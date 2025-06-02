@@ -5,9 +5,10 @@
  */
 
 import { updateCanGoBack, updateCanGoForward } from "../back_and_forward.js";
+import { compareTwoJsValues } from "../compare_two_js_values.js";
 import { documentIsLoadingSignal } from "../document_loading.js";
 import { documentIsRoutingSignal } from "../document_routing.js";
-import { documentUrlSignal, updateDocumentUrl } from "../document_url.js";
+import { updateDocumentUrl } from "../document_url.js";
 
 let debug = false;
 
@@ -55,10 +56,9 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
     }
     const url = event.destination.url;
     const state = event.destination.getState();
-    console.log("dest state", state);
     const { signal } = event;
     if (debug) {
-      console.log("receive navigate event");
+      console.log("receive navigate event", { url, state });
     }
     const formAction = event.info?.formAction;
     const formData = event.formData || event.info?.formData;
@@ -168,7 +168,6 @@ const detectBrowserStopButtonClick = (navigateEventSignal, callback) => {
 };
 
 export const goTo = (url, { state, replace, routesLoaded } = {}) => {
-  const currentUrl = documentUrlSignal.peek();
   if (replace) {
     navigation.navigate(url, {
       state,
@@ -177,17 +176,17 @@ export const goTo = (url, { state, replace, routesLoaded } = {}) => {
     });
     return;
   }
-  if (url === currentUrl) {
+  if (matchNavigationEntry(navigation.currentEntry, { url, state })) {
     return;
   }
   const entries = navigation.entries();
   const prevEntry = entries[navigation.currentEntry.index - 1];
-  if (prevEntry && prevEntry.url === url) {
+  if (prevEntry && matchNavigationEntry(prevEntry, { url, state })) {
     goBack();
     return;
   }
   const nextEntry = entries[navigation.currentEntry.index + 1];
-  if (nextEntry && nextEntry.url === url) {
+  if (nextEntry && matchNavigationEntry(nextEntry, { url, state })) {
     goForward();
     return;
   }
@@ -213,4 +212,18 @@ export const goBack = () => {
 };
 export const goForward = () => {
   navigation.forward();
+};
+
+const matchNavigationEntry = (entry, { url, state }) => {
+  const entryUrl = entry.url;
+  if (entryUrl !== url) {
+    return false;
+  }
+  if (state) {
+    const entryState = entry.getState();
+    if (!compareTwoJsValues(entryState, state)) {
+      return false;
+    }
+  }
+  return true;
 };
