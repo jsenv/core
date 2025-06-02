@@ -54,11 +54,18 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
       // (used by jsenv hot reload)
       return;
     }
-    const url = event.destination.url;
-    const state = event.destination.getState();
+    const isReload = event.navigationType === "reload";
+    const isReplace = event.navigationType === "replace";
+    const currentUrl = navigation.currentEntry.url;
+    const destinationUrl = event.destination.url;
+    const currentState = navigation.currentEntry.getState();
+    const destinationState = event.destination.getState();
     const { signal } = event;
     if (debug) {
-      console.log("receive navigate event", { url, state });
+      console.log("receive navigate event", {
+        destinationUrl,
+        destinationState,
+      });
     }
     const formAction = event.info?.formAction;
     const formData = event.formData || event.info?.formData;
@@ -87,13 +94,16 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
         } else {
           handle = async () => {
             await applyRouting({
-              sourceUrl: url,
-              targetUrl: formUrl || url,
-              targetState: state,
+              sourceUrl: currentUrl,
+              targetUrl: formUrl || destinationUrl,
+              sourceState: currentState,
+              targetState: destinationState
+                ? { ...currentState, ...destinationState }
+                : currentState,
               abortSignal,
               stopSignal,
-              isReload: event.navigationType === "reload",
-              isReplace: event.navigationType === "replace",
+              isReload,
+              isReplace,
               info: event.info,
             });
             if (formUrl) {

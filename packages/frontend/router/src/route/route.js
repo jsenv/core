@@ -259,19 +259,9 @@ export const registerStateRoute = (statePattern, handler) => {
       });
     };
 
-    stateRoute.replaceState = (newState) => {
-      const currentState = stateSignal.peek();
-      const updatedState = { ...currentState, ...newState };
-      goTo(window.location.href, {
-        state: updatedState,
-        replace: true,
-      });
-    };
-
-    stateRoute.go = ({ replace = true } = {}) => {
+    stateRoute.go = () => {
       goTo(window.location.href, {
         state: statePattern,
-        replace,
       });
     };
   }
