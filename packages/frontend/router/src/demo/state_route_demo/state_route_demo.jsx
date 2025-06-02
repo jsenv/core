@@ -9,24 +9,22 @@ import {
 } from "@jsenv/router";
 import { render } from "preact";
 
-const useMenuRouteNav = (route) => {
-  const open = () => {
-    route.setState({ menu_opened: true });
-  };
-
-  const close = () => {
-    route.setState({ menu_opened: false });
-  };
-
-  return [open, close];
-};
-
 const ROOT_ROUTE = registerRoute("/", () => "root content");
 const A_ROUTE = registerRoute("/a", () => "a content");
 const B_ROUTE = registerRoute("/b", () => "b content");
 
 const MENU_ROUTE = registerStateRoute(
-  { menu_opened: true },
+  {
+    match: (state) => {
+      return state.menu_opened === true;
+    },
+    enter: (state) => {
+      state.menu_opened = true;
+    },
+    leave: (state) => {
+      state.menu_opened = false;
+    },
+  },
   () => "menu content",
 );
 
@@ -51,7 +49,6 @@ const App = () => {
   ];
 
   const menuIsOpened = useRouteIsMatching(MENU_ROUTE);
-  const [openMenu, closeMenu] = useMenuRouteNav(MENU_ROUTE);
 
   return (
     <div>
@@ -82,9 +79,9 @@ const App = () => {
         <details
           onToggle={(e) => {
             if (e.target.open) {
-              openMenu();
+              MENU_ROUTE.enter();
             } else {
-              closeMenu();
+              MENU_ROUTE.leave();
             }
           }}
           open={menuIsOpened}
@@ -95,8 +92,8 @@ const App = () => {
       </aside>
       <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
         <div>
-          <button onClick={openMenu}>Open menu</button>
-          <button onClick={closeMenu}>Close menu</button>
+          <button onClick={MENU_ROUTE.enter}>Open menu</button>
+          <button onClick={MENU_ROUTE.leave}>Close menu</button>
         </div>
 
         <Route route={ROOT_ROUTE} loading={Loading} loaded={RouteDisplay} />

@@ -6,7 +6,7 @@ import { normalizeUrl } from "../normalize_url.js";
 import { goTo, installNavigation, reload } from "../router.js";
 import { ABORTED, FAILED, IDLE, LOADED, LOADING } from "./route_status.js";
 
-let debug = false;
+let debug = true;
 
 let baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
@@ -195,16 +195,13 @@ export const registerRoute = (resourcePattern, handler) => {
 };
 
 // https://github.com/WICG/navigation-api?tab=readme-ov-file#setting-the-current-entrys-state-without-navigating
-export const registerStateRoute = (statePattern, handler) => {
+export const registerStateRoute = ({ match, enter, leave }, handler) => {
   const stateRoute = {
-    statePattern,
     isMatchingSignal: undefined,
     match: undefined,
 
     state: undefined,
     stateSignal: undefined,
-    replaceState: undefined,
-    go: undefined,
 
     loadData: handler,
     loadUI: undefined,
@@ -216,6 +213,8 @@ export const registerStateRoute = (statePattern, handler) => {
     reportError: undefined,
     data: undefined,
     dataSignal: undefined,
+    enter: undefined,
+    leave: undefined,
     reload: undefined,
 
     toString: undefined,
@@ -223,23 +222,10 @@ export const registerStateRoute = (statePattern, handler) => {
 
   matching: {
     const isMatchingSignal = signal(false);
-    const match = ({ state }) => {
-      if (!state) {
-        return false;
-      }
-      const matchResult = { named: {}, stars: [] };
-      for (const key of Object.keys(statePattern)) {
-        const valuePattern = statePattern[key];
-        const value = state[key];
-        if (valuePattern !== value) {
-          return false;
-        }
-      }
-      return matchResult;
-    };
-
     stateRoute.isMatchingSignal = isMatchingSignal;
-    stateRoute.match = match;
+    stateRoute.match = ({ state }) => {
+      return match(state);
+    };
   }
 
   state: {
@@ -250,20 +236,6 @@ export const registerStateRoute = (statePattern, handler) => {
       stateRoute.state = state;
     });
     stateRoute.stateSignal = stateSignal;
-
-    stateRoute.setState = (newState) => {
-      const currentState = stateSignal.peek();
-      const updatedState = { ...currentState, ...newState };
-      goTo(window.location.href, {
-        state: updatedState,
-      });
-    };
-
-    stateRoute.go = () => {
-      goTo(window.location.href, {
-        state: statePattern,
-      });
-    };
   }
 
   loading: {
@@ -293,10 +265,35 @@ export const registerStateRoute = (statePattern, handler) => {
     stateRoute.reload = () => {
       reload();
     };
+
+    stateRoute.enter = () => {
+      const isMatching = stateRoute.isMatchingSignal.peek();
+      if (isMatching) {
+        return;
+      }
+      const currentState = stateRoute.stateSignal.peek();
+      const stateCopy = { ...currentState };
+      enter(stateCopy);
+      goTo(window.location.href, {
+        state: stateCopy,
+      });
+    };
+    stateRoute.leave = () => {
+      const isMatching = stateRoute.isMatchingSignal.peek();
+      if (!isMatching) {
+        return;
+      }
+      const currentState = stateRoute.stateSignal.peek();
+      const stateCopy = { ...currentState };
+      leave(stateCopy);
+      goTo(window.location.href, {
+        state: stateCopy,
+      });
+    };
   }
 
   stateRoute.toString = () => {
-    return JSON.stringify(statePattern);
+    return handler.name;
   };
 
   routeSet.add(stateRoute);
