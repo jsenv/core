@@ -2,15 +2,13 @@ import {
   ErrorBoundaryContext,
   Route,
   SPADeleteButton,
-  SPALink,
   useAction,
   useRouteParam,
-  useRouteUrl,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
 import { PageLabel } from "../components/page_label.jsx";
-import { GET_ROLE_ROUTE } from "../role/role_routes.js";
+import { RoleLink } from "../role/role_link.jsx";
 import { DatabaseSvg } from "./database_icons.jsx";
 import {
   DELETE_DATABASE_ACTION,
@@ -80,16 +78,14 @@ const DatabaseFields = ({ database }) => {
           datname: database.datname,
           columnName,
         });
-        const roleRouteUrl = useRouteUrl(GET_ROLE_ROUTE, {
-          rolname: ownerRole.rolname,
-        });
 
         if (columnName === "datdba") {
           // we will display this elswhere
           return (
-            <SPALink key={columnName} href={roleRouteUrl}>
-              {ownerRole.rolname}
-            </SPALink>
+            <li key={columnName}>
+              Owner:
+              <RoleLink role={ownerRole}>{ownerRole.rolname}</RoleLink>
+            </li>
           );
         }
         return (

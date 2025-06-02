@@ -8,7 +8,7 @@ import.meta.css = /* css */ `
     align-items: center;
     gap: 0.3em;
     min-width: 0;
-    display: flex;
+    display: inline-flex;
     overflow: hidden;
   }
 `;
@@ -16,7 +16,7 @@ import.meta.css = /* css */ `
 export const LinkWithIcon = ({ icon, isCurrent, children, ...rest }) => {
   return (
     <SPALink className="link_with_icon" {...rest}>
-      {icon}
+      <FontSizedSvg>{icon}</FontSizedSvg>
       {isCurrent && (
         <FontSizedSvg>
           <CurrentSvg />

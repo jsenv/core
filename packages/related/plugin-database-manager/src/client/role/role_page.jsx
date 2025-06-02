@@ -113,7 +113,9 @@ const RoleDatabases = ({ role }) => {
         {databases.map((database) => {
           return (
             <li key={database.oid}>
-              <DatabaseLink database={database} />
+              <DatabaseLink database={database}>
+                {database.datname}
+              </DatabaseLink>
             </li>
           );
         })}
