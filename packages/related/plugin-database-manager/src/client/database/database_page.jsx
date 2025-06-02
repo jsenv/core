@@ -7,6 +7,7 @@ import {
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
+import { PageHead } from "../components/page_head.jsx";
 import { PageLabel } from "../components/page_label.jsx";
 import { RoleLink } from "../role/role_link.jsx";
 import { DatabaseSvg } from "./database_icons.jsx";
@@ -28,17 +29,29 @@ export const DatabaseRoutes = () => {
 const DatabasePage = () => {
   const [error, resetError] = useErrorBoundary();
   const datname = useRouteParam(GET_DATABASE_ROUTE, "datname");
-  const deleteAction = useAction(DELETE_DATABASE_ACTION, { datname });
+  const deleteDatabaseAction = useAction(DELETE_DATABASE_ACTION, { datname });
   const database = useActiveDatabase();
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
       {error && <ErrorDetails error={error} />}
-      <PageLabel icon={<DatabaseSvg />} label={"Database:"}>
-        {datname}
-      </PageLabel>
+      <PageHead
+        actions={[
+          {
+            component: (
+              <SPADeleteButton action={deleteDatabaseAction}>
+                Delete
+              </SPADeleteButton>
+            ),
+          },
+        ]}
+      >
+        <PageLabel icon={<DatabaseSvg />} label={"Database:"}>
+          {datname}
+        </PageLabel>
+      </PageHead>
+
       <DatabaseFields database={database} />
-      <SPADeleteButton action={deleteAction}>Delete</SPADeleteButton>
 
       <a
         href="https://www.postgresql.org/docs/14/sql-alterdatabase.html"
