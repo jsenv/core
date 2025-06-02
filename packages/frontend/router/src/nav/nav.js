@@ -92,16 +92,16 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
             });
           };
         } else {
-          if (currentState && !destinationState) {
-            /**
-             * TODO: Ideally we should scope the state transfer to a subset of routes so that the state
-             * is not preserved on routes that do not need it.
-             * However for now the data in the states are cheap and likely to be reused
-             * so it's fine to transfer that state to the new route
-             */
-            navigation.updateCurrentEntry(currentState);
-          }
           handle = async () => {
+            if (currentState && !destinationState) {
+              /**
+               * TODO: Ideally we should scope the state transfer to a subset of routes so that the state
+               * is not preserved on routes that do not need it.
+               * However for now the data in the states are cheap and likely to be reused
+               * so it's fine to transfer that state to the new route
+               */
+              navigation.updateCurrentEntry({ state: currentState });
+            }
             await applyRouting({
               sourceUrl: currentUrl,
               targetUrl: formUrl || destinationUrl,
