@@ -406,7 +406,10 @@ route left: ${routeLeftSet.size === 0 ? "none" : Array.from(routeLeftSet).join("
     return;
   }
   for (const activeRoute of matchingRouteSet) {
-    if (routeToEnterMap.has(activeRoute)) {
+    if (
+      routeToEnterMap.has(activeRoute) ||
+      routeToKeepActiveSet.has(activeRoute)
+    ) {
       continue;
     }
     routeToLeaveSet.add(activeRoute);
