@@ -195,7 +195,11 @@ export const registerRoute = (resourcePattern, handler) => {
 };
 
 // https://github.com/WICG/navigation-api?tab=readme-ov-file#setting-the-current-entrys-state-without-navigating
-export const registerStateRoute = ({ match, enter, leave }, handler) => {
+export const registerStateRoute = (
+  { match, enter, leave },
+  handler,
+  name = handler.name,
+) => {
   const stateRoute = {
     isMatchingSignal: undefined,
     match: undefined,
@@ -224,7 +228,14 @@ export const registerStateRoute = ({ match, enter, leave }, handler) => {
     const isMatchingSignal = signal(false);
     stateRoute.isMatchingSignal = isMatchingSignal;
     stateRoute.match = ({ state }) => {
-      return match(state);
+      if (!state) {
+        return false;
+      }
+      const matchResult = match(state);
+      if (matchResult === true) {
+        return {};
+      }
+      return matchResult;
     };
   }
 
@@ -293,7 +304,7 @@ export const registerStateRoute = ({ match, enter, leave }, handler) => {
   }
 
   stateRoute.toString = () => {
-    return handler.name;
+    return name;
   };
 
   routeSet.add(stateRoute);
@@ -315,7 +326,7 @@ export const applyRouting = async ({
   const targetResource = resourceFromUrl(targetUrl);
   if (debug) {
     console.log(
-      `start routing ${targetResource} against ${routeSet.size} routes`,
+      `start routing ${targetResource} (state: ${JSON.stringify(targetState)}) against ${routeSet.size} routes`,
     );
   }
 
@@ -503,12 +514,11 @@ const leaveRoute = (route, reason) => {
   const routeAbortEnter = routeAbortEnterMap.get(route);
   if (routeAbortEnter) {
     if (debug) {
-      console.log(`"${route}": aborting route enter`);
+      console.log(`"${route}": aborting route enter (reason: ${reason})`);
     }
     routeAbortEnter(reason);
-  }
-  if (debug) {
-    console.log(`"${route}": leaving route`);
+  } else if (debug) {
+    console.log(`"${route}": leaving route (reason: ${reason})`);
   }
   batch(() => {
     if (route.urlSignal) {

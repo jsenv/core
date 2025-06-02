@@ -92,7 +92,7 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
             });
           };
         } else {
-          if (!destinationState) {
+          if (currentState && !destinationState) {
             /**
              * TODO: Ideally we should scope the state transfer to a subset of routes so that the state
              * is not preserved on routes that do not need it.

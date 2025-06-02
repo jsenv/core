@@ -26,6 +26,7 @@ const MENU_ROUTE = registerStateRoute(
     },
   },
   () => "menu content",
+  "menu",
 );
 
 const App = () => {
