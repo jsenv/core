@@ -85,7 +85,7 @@
   flex: 1;
   gap: 0.2em;
   align-items: center;
-  padding-right: 0.5em;
+  padding-right: 10px;
 }
 
 .explorer_body > [data-resize-handle] {

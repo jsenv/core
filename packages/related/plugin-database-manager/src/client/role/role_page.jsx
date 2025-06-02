@@ -7,6 +7,7 @@ import {
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
+import { PageHead } from "../components/page_head.jsx";
 import { PageLabel } from "../components/page_label.jsx";
 import { DatabaseLink } from "../database/database_link.jsx";
 import { pickRoleIcon } from "./role_icons.jsx";
@@ -35,14 +36,23 @@ const RolePage = () => {
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
       {error && <ErrorDetails error={error} />}
-
-      <PageLabel icon={<RoleIcon />} label={"Role:"}>
-        {rolname}
-      </PageLabel>
-
+      <PageHead
+        actions={[
+          {
+            component: (
+              <SPADeleteButton action={deleteRoleAction}>
+                Delete
+              </SPADeleteButton>
+            ),
+          },
+        ]}
+      >
+        <PageLabel icon={<RoleIcon />} label={"Role:"}>
+          {rolname}
+        </PageLabel>
+      </PageHead>
       <RoleFields role={role} />
       <RoleDatabases role={role} />
-      <SPADeleteButton action={deleteRoleAction}>Delete</SPADeleteButton>
       <a
         href="https://www.postgresql.org/docs/14/sql-alterrole.html"
         target="_blank"

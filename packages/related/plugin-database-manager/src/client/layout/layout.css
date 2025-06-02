@@ -59,15 +59,10 @@ main {
   box-sizing: border-box;
   min-height: 100vh; /* Ensures content area is at least viewport height */
   overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */
-  scrollbar-gutter: stable; /* Reserves space for scrollbar to prevent layout shifts */
+  /* scrollbar-gutter: stable; */ /* Reserves space for scrollbar to prevent layout shifts */
   flex: 1;
 }
 .main_body {
-  width: fit-content; /* Ensure padding applies when content overflows */
+  min-width: 100%; /* Ensure padding applies when content overflows */
   padding: 20px; /* Consistent padding around main content */
-}
-
-main h1 {
-  margin-top: 0;
-  line-height: 1em;
 }
