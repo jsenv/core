@@ -518,7 +518,7 @@ export const jsenvPluginDatabaseManager = ({
           if (e.code === "2BP01" || e.code === "42710") {
             return Response.json(errorData, {
               status: 409,
-              statusText: message,
+              statusText: message.replace(/\n/g, ""),
             });
           }
           if (e.code === "42704") {
