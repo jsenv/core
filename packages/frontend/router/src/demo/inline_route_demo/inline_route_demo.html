@@ -13,6 +13,7 @@
       import {
         registerRoute,
         registerInlineRoute,
+        useRouteIsMatching,
         useRouteUrl,
         // eslint-disable-next-line no-unused-vars
         Route,
@@ -50,7 +51,7 @@
           },
         ];
 
-        const menuIsOpened = useRouteIsActive(MENU_INLINE_ROUTE);
+        const menuIsOpened = useRouteIsMatching(MENU_INLINE_ROUTE);
 
         return (
           <div>

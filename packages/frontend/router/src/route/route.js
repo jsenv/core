@@ -191,36 +191,89 @@ export const registerRoute = (resourcePattern, handler) => {
 
 export const registerInlineRoute = (statePattern, handler) => {
   const inlineRoute = {
-    isMatchingSignal: signal(false),
-    loadingStateSignal: signal(IDLE),
-    errorSignal: signal(null),
-    dataSignal: signal(undefined),
-    error: null,
-    data: undefined,
+    resourcePattern: undefined,
+    isMatchingSignal: undefined,
+    match: undefined,
+
+    url: undefined,
+    urlSignal: undefined,
+    buildUrl: undefined,
+    compareUrl: undefined,
+
+    params: undefined,
+    paramsSignal: undefined,
+    replaceParams: undefined,
 
     loadData: handler,
-    loadUI: null,
-    renderUI: null,
-    node: null,
+    loadUI: undefined,
+    renderUI: undefined,
+    node: undefined,
+    loadingStateSignal: undefined,
+    error: undefined,
+    errorSignal: undefined,
+    reportError: undefined,
+    data: undefined,
+    dataSignal: undefined,
+    reload: undefined,
 
-    match: ({ state }) => {
-      return false;
-    },
-
-    reportError: (e) => {
-      errorSignal.value = e;
-    },
-
-    toString: () => {
-      return JSON.stringify(statePattern);
-    },
+    toString: undefined,
   };
-  effect(() => {
-    inlineRoute.data = dataSignal.value;
-  });
-  effect(() => {
-    inlineRoute.error = errorSignal.value;
-  });
+
+  matching: {
+    const isMatchingSignal = signal(false);
+    const match = ({ state }) => {
+      const matchResult = { named: {}, stars: [] };
+      for (const key of Object.keys(statePattern)) {
+        const value = statePattern[key];
+        if (value !== state[key]) {
+          return false;
+        }
+      }
+      return matchResult;
+    };
+
+    inlineRoute.isMatchingSignal = isMatchingSignal;
+    inlineRoute.match = match;
+  }
+
+  url: {
+    const urlSignal = signal(undefined);
+    inlineRoute.urlSignal = urlSignal;
+  }
+
+  loading: {
+    const loadingStateSignal = signal(IDLE);
+    inlineRoute.loadingStateSignal = loadingStateSignal;
+
+    let error;
+    const errorSignal = signal(null);
+    const reportError = (e) => {
+      errorSignal.value = e;
+    };
+    effect(() => {
+      error = errorSignal.value;
+      inlineRoute.error = error;
+    });
+    inlineRoute.errorSignal = errorSignal;
+    inlineRoute.reportError = reportError;
+
+    let data;
+    const dataSignal = signal(undefined);
+    effect(() => {
+      data = dataSignal.value;
+      inlineRoute.data = data;
+    });
+    inlineRoute.dataSignal = dataSignal;
+
+    inlineRoute.reload = () => {
+      reload();
+    };
+  }
+
+  inlineRoute.toString = () => {
+    return JSON.stringify(statePattern);
+  };
+
   routeSet.add(inlineRoute);
   return inlineRoute;
 };
