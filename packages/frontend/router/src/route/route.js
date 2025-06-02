@@ -45,15 +45,61 @@ export const onRouterUILoaded = () => {
 
 const routeAbortEnterMap = new Map();
 export const registerRoute = (resourcePattern, handler) => {
+  const route = {
+    resourcePattern: undefined,
+    isMatchingSignal: undefined,
+    match: undefined,
+
+    url: undefined,
+    urlSignal: undefined,
+    buildUrl: undefined,
+    compareUrl: undefined,
+
+    params: undefined,
+    paramsSignal: undefined,
+    replaceParams: undefined,
+
+    loadData: handler,
+    loadUI: undefined,
+    renderUI: undefined,
+    node: undefined,
+    loadingStateSignal: undefined,
+    error: undefined,
+    errorSignal: undefined,
+    reportError: undefined,
+    data: undefined,
+    dataSignal: undefined,
+    reload: undefined,
+
+    toString: undefined,
+  };
+  routeSet.add(route);
+
   resourcePattern = resourceFromUrl(resourcePattern);
   const resourcePatternParsed = createResourcePattern(resourcePattern);
-  const route = {
-    resourcePattern,
-    loadData: handler,
-    loadUI: null,
-    renderUI: null,
-    node: null,
-    buildUrl: (url, params) => {
+  matching: {
+    const isMatchingSignal = signal(false);
+    const match = ({ resource }) => {
+      const matchResult = resourcePatternParsed.match(resource);
+      if (!matchResult) {
+        return false;
+      }
+      return matchResult;
+    };
+
+    route.resourcePattern = resourcePattern;
+    route.isMatchingSignal = isMatchingSignal;
+    route.match = match;
+  }
+
+  url: {
+    let url;
+    const urlSignal = signal(url);
+    effect(() => {
+      url = route.urlSignal.value;
+      route.url = url;
+    });
+    const buildUrl = (url, params) => {
       const routeResource = resourcePatternParsed.generate(params);
       const routeUrlObject = new URL(encodeURI(routeResource), baseUrl);
       const urlObject = new URL(url);
@@ -68,9 +114,9 @@ export const registerRoute = (resourcePattern, handler) => {
       const routeUrlNormalized = normalizeUrl(routeUrlObject);
       const routeUrlEncoded = encodeURI(routeUrlNormalized);
       return routeUrlEncoded;
-    },
-    compareUrl: (urlToCompare) => {
-      const currentUrl = route.urlSignal.peek();
+    };
+    const compareUrl = (urlToCompare) => {
+      const currentUrl = urlSignal.peek();
       if (!currentUrl) {
         return false;
       }
@@ -84,54 +130,99 @@ export const registerRoute = (resourcePattern, handler) => {
         return true;
       }
       return false;
-    },
-    urlSignal: signal(null),
-    paramsSignal: signal({}),
+    };
+    route.urlSignal = urlSignal;
+    route.buildUrl = buildUrl;
+    route.compareUrl = compareUrl;
+
+    let params = {};
+    const paramsSignal = signal(params);
+    effect(() => {
+      params = paramsSignal.value;
+      route.params = params;
+    });
+    const replaceParams = (params) => {
+      paramsSignal.value = params;
+      const routeUrl = buildUrl(window.location.href, params);
+      urlSignal.value = routeUrl;
+      goTo(routeUrl, { replace: true, routesLoaded: [route] });
+    };
+    route.paramsSignal = paramsSignal;
+    route.replaceParams = replaceParams;
+  }
+
+  loading: {
+    const loadingStateSignal = signal(IDLE);
+    route.loadingStateSignal = loadingStateSignal;
+
+    let error;
+    const errorSignal = signal(null);
+    const reportError = (e) => {
+      errorSignal.value = e;
+    };
+    effect(() => {
+      error = errorSignal.value;
+      route.error = error;
+    });
+    route.errorSignal = errorSignal;
+    route.reportError = reportError;
+
+    let data;
+    const dataSignal = signal(undefined);
+    effect(() => {
+      data = dataSignal.value;
+      route.data = data;
+    });
+    route.dataSignal = dataSignal;
+
+    route.reload = () => {
+      reload();
+    };
+  }
+
+  const toString = () => {
+    const isMatching = route.isMatchingSignal.peek();
+    return isMatching ? route.url : resourcePattern;
+  };
+  route.toString = toString;
+
+  return route;
+};
+
+export const registerInlineRoute = (statePattern, handler) => {
+  const inlineRoute = {
     isMatchingSignal: signal(false),
     loadingStateSignal: signal(IDLE),
     errorSignal: signal(null),
     dataSignal: signal(undefined),
     error: null,
     data: undefined,
-    params: {},
-    match: (resource) => {
-      const matchResult = resourcePatternParsed.match(resource);
-      if (!matchResult) {
-        return false;
-      }
-      return matchResult;
+
+    loadData: handler,
+    loadUI: null,
+    renderUI: null,
+    node: null,
+
+    match: ({ state }) => {
+      return false;
     },
+
     reportError: (e) => {
-      route.errorSignal.value = e;
+      errorSignal.value = e;
     },
-    replaceParams: (params) => {
-      route.paramsSignal.value = params;
-      const routeUrl = route.buildUrl(window.location.href, params);
-      route.urlSignal.value = routeUrl;
-      goTo(routeUrl, { replace: true, routesLoaded: [route] });
-    },
-    reload: () => {
-      reload();
-    },
+
     toString: () => {
-      const isMatching = route.isMatchingSignal.peek();
-      return isMatching ? route.url : route.resourcePattern;
+      return JSON.stringify(statePattern);
     },
   };
   effect(() => {
-    route.url = route.urlSignal.value;
+    inlineRoute.data = dataSignal.value;
   });
   effect(() => {
-    route.params = route.paramsSignal.value;
+    inlineRoute.error = errorSignal.value;
   });
-  effect(() => {
-    route.data = route.dataSignal.value;
-  });
-  effect(() => {
-    route.error = route.errorSignal.value;
-  });
-  routeSet.add(route);
-  return route;
+  routeSet.add(inlineRoute);
+  return inlineRoute;
 };
 
 const routeSet = new Set();
@@ -155,6 +246,7 @@ export const applyRouting = async ({
 
   const targetUrlObject = new URL(targetResource, baseUrl);
   const matchParams = {
+    resource: targetResource,
     state,
     searchParams: targetUrlObject.searchParams,
     pathname: targetUrlObject.pathname,
@@ -172,7 +264,7 @@ export const applyRouting = async ({
       routeToKeepActiveSet.add(routeCandidate);
       continue;
     }
-    const matchResult = routeCandidate.match(targetResource, matchParams);
+    const matchResult = routeCandidate.match(matchParams);
     if (!matchResult) {
       continue;
     }
