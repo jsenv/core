@@ -413,7 +413,7 @@ route left: ${routeLeftSet.size === 0 ? "none" : Array.from(routeLeftSet).join("
     await Promise.all(promises);
   });
 };
-const enterRoute = async (route, { signal, url, params }) => {
+const enterRoute = async (route, { signal, url, params, state }) => {
   // here we must pass a signal that gets aborted when
   // 1. any route is stopped (browser stop button)
   // 2. route is left
@@ -443,6 +443,9 @@ const enterRoute = async (route, { signal, url, params }) => {
     }
     if (route.paramsSignal) {
       route.paramsSignal.value = params;
+    }
+    if (route.stateSignal) {
+      route.stateSignal.value = state;
     }
     route.isMatchingSignal.value = true;
     route.loadingStateSignal.value = LOADING;
@@ -514,6 +517,9 @@ const leaveRoute = (route, reason) => {
     }
     if (route.paramsSignal) {
       route.paramsSignal.value = {};
+    }
+    if (route.stateSignal) {
+      route.stateSignal.value = {};
     }
     route.isMatchingSignal.value = false;
     route.loadingStateSignal.value = IDLE;
