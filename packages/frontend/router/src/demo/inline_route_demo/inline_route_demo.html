@@ -21,6 +21,18 @@
         useRouteData,
       } from "@jsenv/router";
 
+      const useInlineRouteNav = (inlineRoute) => {
+        const openInlineRoute = () => {
+          inlineRoute.replaceState({ menu_opened: true });
+        };
+
+        const closeInlineRoute = () => {
+          inlineRoute.replaceState({ menu_opened: false });
+        };
+
+        return [openInlineRoute, closeInlineRoute];
+      };
+
       const ROOT_ROUTE = registerRoute("/", () => "root content");
       const A_ROUTE = registerRoute("/a", () => "a content");
       const B_ROUTE = registerRoute("/b", () => "b content");
@@ -52,6 +64,7 @@
         ];
 
         const menuIsOpened = useRouteIsMatching(MENU_INLINE_ROUTE);
+        const [openMenu, closeMenu] = useInlineRouteNav(MENU_INLINE_ROUTE);
 
         return (
           <div>
@@ -79,9 +92,9 @@
               <details
                 onToggle={(e) => {
                   if (e.target.open) {
-                    // we want to activate the route
-                    // how do we do this, in theory I'm supposed to navigate to the route
+                    openMenu();
                   } else {
+                    closeMenu();
                   }
                 }}
                 open={menuIsOpened}
@@ -95,6 +108,11 @@
               </details>
             </aside>
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
+              <div>
+                <button onClick={openMenu}>Open menu</button>
+                <button onClick={closeMenu}>Close menu</button>
+              </div>
+
               <Route
                 route={ROOT_ROUTE}
                 loading={Loading}

@@ -2,11 +2,23 @@ import { documentUrlSignal } from "../document_url.js";
 import { ABORTED, IDLE, LOADED, LOADING } from "./route_status.js";
 
 export const useRouteUrl = (route, params) => {
+  if (import.meta.dev && !route.buildUrl) {
+    console.warn(
+      `Route "${route.name}" does not have a buildUrl method. Cannot use useRouteUrl hook.`,
+    );
+    return undefined;
+  }
   const documentUrl = documentUrlSignal.value;
   return route.buildUrl(documentUrl, params);
 };
 
 export const useRouteParam = (route, paramName) => {
+  if (import.meta.dev && !route.paramsSignal) {
+    console.warn(
+      `Route "${route.name}" does not have a paramsSignal. Cannot use useRouteParam hook.`,
+    );
+    return undefined;
+  }
   return route.paramsSignal.value[paramName];
 };
 
@@ -36,16 +48,28 @@ export const useRouteLoadingState = (route) => {
 
 export const useRouteIsMatching = (route, paramsToMatch) => {
   const isMatching = route.isMatchingSignal.value;
-  const params = route.paramsSignal.value;
+  const state = route.stateSignal ? route.stateSignal.value : null;
+  const params = route.paramsSignal ? route.paramsSignal.value : null;
   if (!isMatching) {
     return false;
   }
   if (paramsToMatch) {
-    for (const key of Object.keys(paramsToMatch)) {
-      const valueToMatch = paramsToMatch[key];
-      const routeParamValue = params[key];
-      if (routeParamValue !== valueToMatch) {
-        return false;
+    if (params) {
+      for (const key of Object.keys(paramsToMatch)) {
+        const valueToMatch = paramsToMatch[key];
+        const routeParamValue = params[key];
+        if (routeParamValue !== valueToMatch) {
+          return false;
+        }
+      }
+    }
+    if (state) {
+      for (const key of Object.keys(paramsToMatch)) {
+        const valueToMatch = paramsToMatch[key];
+        const stateValue = state[key];
+        if (stateValue !== valueToMatch) {
+          return false;
+        }
       }
     }
   }

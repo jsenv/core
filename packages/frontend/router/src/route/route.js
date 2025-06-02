@@ -194,17 +194,12 @@ export const registerRoute = (resourcePattern, handler) => {
   return route;
 };
 
+// https://github.com/WICG/navigation-api?tab=readme-ov-file#setting-the-current-entrys-state-without-navigating
 export const registerInlineRoute = (statePattern, handler) => {
   const inlineRoute = {
     statePattern,
     isMatchingSignal: undefined,
     match: undefined,
-
-    url: undefined,
-    urlSignal: undefined,
-    params: undefined,
-    paramsSignal: undefined,
-    replaceParams: undefined,
 
     state: undefined,
     stateSignal: undefined,
@@ -231,7 +226,6 @@ export const registerInlineRoute = (statePattern, handler) => {
       if (!state) {
         return false;
       }
-      debugger;
       const matchResult = { named: {}, stars: [] };
       for (const key of Object.keys(statePattern)) {
         const valuePattern = statePattern[key];
@@ -247,17 +241,20 @@ export const registerInlineRoute = (statePattern, handler) => {
     inlineRoute.match = match;
   }
 
-  url: {
-    const urlSignal = signal(undefined);
-    inlineRoute.urlSignal = urlSignal;
-
-    const paramsSignal = signal({});
-    inlineRoute.paramsSignal = paramsSignal;
-  }
-
   state: {
-    const stateSignal = signal({});
+    let state = {};
+    const stateSignal = signal(state);
+    effect(() => {
+      state = stateSignal.value;
+      inlineRoute.state = state;
+    });
     inlineRoute.stateSignal = stateSignal;
+
+    inlineRoute.replaceState = (newState) => {
+      const currentState = stateSignal.peek();
+      const updatedState = { ...currentState, ...newState };
+      navigation.reload({ state: updatedState });
+    };
 
     inlineRoute.go = ({ replace = true } = {}) => {
       goTo(window.location.href, {
@@ -309,7 +306,7 @@ const matchingRouteSet = new Set();
 export const applyRouting = async ({
   // sourceUrl,
   targetUrl,
-  state,
+  targetState,
   stopSignal,
   isReload,
   // isReplace,
@@ -326,7 +323,7 @@ export const applyRouting = async ({
   const targetUrlObject = new URL(targetResource, baseUrl);
   const matchParams = {
     resource: targetResource,
-    state,
+    state: targetState,
     searchParams: targetUrlObject.searchParams,
     pathname: targetUrlObject.pathname,
     hash: targetUrlObject.hash,
@@ -351,14 +348,16 @@ export const applyRouting = async ({
       ...matchResult.named,
       ...matchResult.stars,
     };
-    const routeUrl = routeCandidate.buildUrl(targetUrl, params);
     const enterParams = {
       signal: stopSignal,
-      url: routeUrl,
+      url: routeCandidate.buildUrl
+        ? routeCandidate.buildUrl(targetUrl, params)
+        : undefined,
       resource: targetResource,
+      state: targetState,
       params,
     };
-    if (routeCandidate.compareUrl(targetUrl)) {
+    if (routeCandidate.compareUrl && routeCandidate.compareUrl(targetUrl)) {
       const hasError = routeCandidate.errorSignal.peek();
       const isAborted = routeCandidate.loadingStateSignal.peek() === ABORTED;
       if (isReload) {
@@ -439,8 +438,12 @@ const enterRoute = async (route, { signal, url, params }) => {
   }
   matchingRouteSet.add(route);
   batch(() => {
-    route.urlSignal.value = url;
-    route.paramsSignal.value = params;
+    if (route.urlSignal) {
+      route.urlSignal.value = url;
+    }
+    if (route.paramsSignal) {
+      route.paramsSignal.value = params;
+    }
     route.isMatchingSignal.value = true;
     route.loadingStateSignal.value = LOADING;
     route.errorSignal.value = null;
@@ -506,8 +509,12 @@ const leaveRoute = (route, reason) => {
     console.log(`"${route}": leaving route`);
   }
   batch(() => {
-    route.urlSignal.value = null;
-    route.paramsSignal.value = {};
+    if (route.urlSignal) {
+      route.urlSignal.value = null;
+    }
+    if (route.paramsSignal) {
+      route.paramsSignal.value = {};
+    }
     route.isMatchingSignal.value = false;
     route.loadingStateSignal.value = IDLE;
     route.errorSignal.value = null;

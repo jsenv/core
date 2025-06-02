@@ -54,7 +54,7 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
       return;
     }
     const url = event.destination.url;
-    const state = event.state;
+    const state = event.destination.getState();
     const { signal } = event;
     if (debug) {
       console.log("receive navigate event");
@@ -169,10 +169,6 @@ const detectBrowserStopButtonClick = (navigateEventSignal, callback) => {
 export const goTo = (url, { state, replace, routesLoaded } = {}) => {
   const currentUrl = documentUrlSignal.peek();
   if (replace) {
-    if (url === currentUrl) {
-      navigation.reload({ state, info: { routesLoaded } });
-      return;
-    }
     navigation.navigate(url, {
       state,
       history: "replace",
