@@ -1,14 +1,14 @@
 import { useAction, useRouteIsMatching, useRouteUrl } from "@jsenv/router";
-import { FontSizedSvg } from "../components/font_sized_svg.jsx";
-import { CurrentSvg } from "../icons/icons.jsx";
-import { pickRoleIcon, UserWithPlusSvg } from "../role/role_icons.jsx";
+import { useCallback } from "preact/hooks";
+import { UserWithPlusSvg } from "../role/role_icons.jsx";
+import { RoleItem } from "../role/role_item.jsx";
 import {
   DELETE_ROLE_ACTION,
   GET_ROLE_ROUTE,
   POST_ROLE_ACTION,
   PUT_ROLE_ACTION,
 } from "../role/role_routes.js";
-import { useCurrentRole, useRoleList } from "../role/role_signals.js";
+import { useRoleList } from "../role/role_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
@@ -34,7 +34,12 @@ export const ExplorerRoles = (props) => {
         </span>
       }
       createNewButtonChildren={<UserWithPlusSvg />}
-      ItemComponent={RoleItem}
+      renderItem={useCallback(
+        (item) => (
+          <RoleItem role={item} />
+        ),
+        [],
+      )}
       useItemList={useRoleList}
       useItemRouteUrl={(role) =>
         useRouteUrl(GET_ROLE_ROUTE, {
@@ -61,24 +66,5 @@ export const ExplorerRoles = (props) => {
     >
       {roles}
     </ExplorerGroup>
-  );
-};
-
-const RoleItem = ({ item: role }) => {
-  const currentRole = useCurrentRole();
-  const isCurrent = currentRole && role.rolname === currentRole.rolname;
-  const RoleIcon = pickRoleIcon(role);
-
-  return (
-    <>
-      <FontSizedSvg>
-        <RoleIcon color="#333" />
-      </FontSizedSvg>
-      {isCurrent ? (
-        <FontSizedSvg>
-          <CurrentSvg />
-        </FontSizedSvg>
-      ) : null}
-    </>
   );
 };

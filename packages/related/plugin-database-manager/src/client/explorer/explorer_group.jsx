@@ -52,7 +52,7 @@ export const ExplorerGroup = forwardRef(
       nameKey,
       children,
       labelChildren,
-      ItemComponent,
+      renderItem,
       createNewButtonChildren,
       useItemList,
       useItemRouteUrl,
@@ -148,7 +148,7 @@ export const ExplorerGroup = forwardRef(
                       idKey={idKey}
                       nameKey={nameKey}
                       item={item}
-                      ItemComponent={ItemComponent}
+                      renderItem={renderItem}
                       useItemList={useItemList}
                       useItemRouteUrl={useItemRouteUrl}
                       useItemRouteIsActive={useItemRouteIsActive}
@@ -196,7 +196,7 @@ const ExplorerGroupItem = ({
   idKey,
   nameKey,
   item,
-  ItemComponent,
+  renderItem,
   useItemList,
   useItemRouteUrl,
   useItemRouteIsActive,
@@ -237,7 +237,7 @@ const ExplorerGroupItem = ({
         }
       }}
     >
-      <ItemComponent item={item} />
+      {renderItem(item)}
       <ItemNameOrRenameInput
         nameKey={nameKey}
         item={item}

@@ -1,20 +1,14 @@
 import { useAction, useRouteIsMatching, useRouteUrl } from "@jsenv/router";
-import { FontSizedSvg } from "../components/font_sized_svg.jsx";
-import {
-  DatabaseSvg,
-  DatabaseWithPlusSvg,
-} from "../database/database_icons.jsx";
+import { useCallback } from "preact/hooks";
+import { DatabaseWithPlusSvg } from "../database/database_icons.jsx";
+import { DatabaseItem } from "../database/database_item.jsx";
 import {
   DELETE_DATABASE_ACTION,
   GET_DATABASE_ROUTE,
   POST_DATABASE_ACTION,
   PUT_DATABASE_ACTION,
 } from "../database/database_routes.js";
-import {
-  useCurrentDatabase,
-  useDatabaseList,
-} from "../database/database_signals.js";
-import { CurrentSvg } from "../icons/icons.jsx";
+import { useDatabaseList } from "../database/database_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
@@ -40,7 +34,12 @@ export const ExplorerDatabases = (props) => {
         </span>
       }
       createNewButtonChildren={<DatabaseWithPlusSvg />}
-      ItemComponent={DatabaseItem}
+      renderItem={useCallback(
+        (item) => (
+          <DatabaseItem database={item} />
+        ),
+        [],
+      )}
       useItemList={useDatabaseList}
       useItemRouteUrl={(database) =>
         useRouteUrl(GET_DATABASE_ROUTE, {
@@ -67,24 +66,5 @@ export const ExplorerDatabases = (props) => {
     >
       {databases}
     </ExplorerGroup>
-  );
-};
-
-const DatabaseItem = ({ item: database }) => {
-  const currentDatabase = useCurrentDatabase();
-  const isCurrent =
-    currentDatabase && database.datname === currentDatabase.datname;
-
-  return (
-    <>
-      <FontSizedSvg>
-        <DatabaseSvg color="#333" />
-      </FontSizedSvg>
-      {isCurrent ? (
-        <FontSizedSvg>
-          <CurrentSvg />
-        </FontSizedSvg>
-      ) : null}
-    </>
   );
 };

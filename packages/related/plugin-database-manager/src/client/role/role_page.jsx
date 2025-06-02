@@ -43,7 +43,7 @@ const RolePage = () => {
       </PageLabel>
 
       <RoleFields role={role} />
-      <RoleDatabases />
+      <RoleDatabases role={role} />
       <SPADeleteButton action={deleteRoleAction}>Delete</SPADeleteButton>
       <a
         href="https://www.postgresql.org/docs/14/sql-alterrole.html"
@@ -105,12 +105,12 @@ const RoleFields = ({ role }) => {
   );
 };
 
-const RoleDatabases = () => {
+const RoleDatabases = ({ role }) => {
   const databases = useActiveRoleDatabases();
 
   return (
     <div>
-      <h2>Databases</h2>
+      <h2>Databases owned by {role.rolname}</h2>
       <ul>
         {databases.map((database) => {
           const datname = database.datname;

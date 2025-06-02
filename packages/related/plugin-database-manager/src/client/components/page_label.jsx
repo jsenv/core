@@ -7,6 +7,7 @@ export const PageLabel = ({ icon, label, children }) => {
         icon={icon}
         style={{
           color: "lightgrey",
+          userSelect: "none",
         }}
       >
         {label}
