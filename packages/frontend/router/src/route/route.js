@@ -96,7 +96,7 @@ export const registerRoute = (resourcePattern, handler) => {
     let url;
     const urlSignal = signal(url);
     effect(() => {
-      url = route.urlSignal.value;
+      url = urlSignal.value;
       route.url = url;
     });
     const buildUrl = (url, params) => {
@@ -191,7 +191,7 @@ export const registerRoute = (resourcePattern, handler) => {
 
 export const registerInlineRoute = (statePattern, handler) => {
   const inlineRoute = {
-    resourcePattern: undefined,
+    statePattern,
     isMatchingSignal: undefined,
     match: undefined,
 
@@ -222,10 +222,15 @@ export const registerInlineRoute = (statePattern, handler) => {
   matching: {
     const isMatchingSignal = signal(false);
     const match = ({ state }) => {
+      if (!state) {
+        return false;
+      }
+      debugger;
       const matchResult = { named: {}, stars: [] };
       for (const key of Object.keys(statePattern)) {
-        const value = statePattern[key];
-        if (value !== state[key]) {
+        const valuePattern = statePattern[key];
+        const value = state[key];
+        if (valuePattern !== value) {
           return false;
         }
       }
@@ -239,6 +244,9 @@ export const registerInlineRoute = (statePattern, handler) => {
   url: {
     const urlSignal = signal(undefined);
     inlineRoute.urlSignal = urlSignal;
+
+    const paramsSignal = signal({});
+    inlineRoute.paramsSignal = paramsSignal;
   }
 
   loading: {
