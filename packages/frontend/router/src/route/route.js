@@ -1,6 +1,7 @@
 import { createResourcePattern } from "@jsenv/url-pattern";
 import { batch, effect, signal } from "@preact/signals";
 import { applyAction } from "../action/action.js";
+import { compareTwoJsValues } from "../compare_two_js_values.js";
 import { routingWhile } from "../document_routing.js";
 import { normalizeUrl } from "../normalize_url.js";
 import { goTo, installNavigation, reload } from "../router.js";
@@ -53,7 +54,7 @@ export const registerRoute = (resourcePattern, handler) => {
     url: undefined,
     urlSignal: undefined,
     buildUrl: undefined,
-    compareUrl: undefined,
+    compareTarget: undefined,
     go: undefined,
 
     params: undefined,
@@ -116,7 +117,7 @@ export const registerRoute = (resourcePattern, handler) => {
       const routeUrlEncoded = encodeURI(routeUrlNormalized);
       return routeUrlEncoded;
     };
-    const compareUrl = (urlToCompare) => {
+    const compareTarget = ({ targetUrl }) => {
       const currentUrl = urlSignal.peek();
       if (!currentUrl) {
         return false;
@@ -125,7 +126,7 @@ export const registerRoute = (resourcePattern, handler) => {
       // 1. si une url fini par ?* alors on gardera les search params
       // 2. si une url fait ceci: ?foo=*&bar=* alors on considere que l'url a changé
       // que si le param foo ou bar a changé mais pas si un autre param a changé
-      const urlToCompareWithoutSearch = urlWithoutSearch(urlToCompare);
+      const urlToCompareWithoutSearch = urlWithoutSearch(targetUrl);
       const currentUrlWithoutSearch = urlWithoutSearch(currentUrl);
       if (urlToCompareWithoutSearch === currentUrlWithoutSearch) {
         return true;
@@ -134,7 +135,7 @@ export const registerRoute = (resourcePattern, handler) => {
     };
     route.urlSignal = urlSignal;
     route.buildUrl = buildUrl;
-    route.compareUrl = compareUrl;
+    route.compareTarget = compareTarget;
 
     let params = {};
     const paramsSignal = signal(params);
@@ -206,6 +207,7 @@ export const registerStateRoute = (
 
     state: undefined,
     stateSignal: undefined,
+    compareTarget: undefined,
 
     loadData: handler,
     loadUI: undefined,
@@ -247,6 +249,11 @@ export const registerStateRoute = (
       stateRoute.state = state;
     });
     stateRoute.stateSignal = stateSignal;
+
+    stateRoute.compareTarget = ({ targetState }) => {
+      const currentState = stateSignal.peek();
+      return compareTwoJsValues(currentState, targetState);
+    };
   }
 
   loading: {
@@ -367,7 +374,7 @@ export const applyRouting = async ({
       state: targetState,
       params,
     };
-    if (routeCandidate.compareUrl && routeCandidate.compareUrl(targetUrl)) {
+    if (routeCandidate.compareTarget({ targetUrl, targetState })) {
       const hasError = routeCandidate.errorSignal.peek();
       const isAborted = routeCandidate.loadingStateSignal.peek() === ABORTED;
       if (isReload) {
