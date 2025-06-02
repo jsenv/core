@@ -54,6 +54,7 @@ export const registerRoute = (resourcePattern, handler) => {
     urlSignal: undefined,
     buildUrl: undefined,
     compareUrl: undefined,
+    go: undefined,
 
     params: undefined,
     paramsSignal: undefined,
@@ -149,6 +150,10 @@ export const registerRoute = (resourcePattern, handler) => {
     };
     route.paramsSignal = paramsSignal;
     route.replaceParams = replaceParams;
+
+    route.go = ({ replace } = {}) => {
+      goTo(route.url, { replace });
+    };
   }
 
   loading: {
@@ -197,12 +202,13 @@ export const registerInlineRoute = (statePattern, handler) => {
 
     url: undefined,
     urlSignal: undefined,
-    buildUrl: undefined,
-    compareUrl: undefined,
-
     params: undefined,
     paramsSignal: undefined,
     replaceParams: undefined,
+
+    state: undefined,
+    stateSignal: undefined,
+    go: undefined,
 
     loadData: handler,
     loadUI: undefined,
@@ -247,6 +253,18 @@ export const registerInlineRoute = (statePattern, handler) => {
 
     const paramsSignal = signal({});
     inlineRoute.paramsSignal = paramsSignal;
+  }
+
+  state: {
+    const stateSignal = signal({});
+    inlineRoute.stateSignal = stateSignal;
+
+    inlineRoute.go = ({ replace = true } = {}) => {
+      goTo(window.location.href, {
+        state: statePattern,
+        replace,
+      });
+    };
   }
 
   loading: {
