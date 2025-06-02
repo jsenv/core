@@ -88,7 +88,7 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
             await applyRouting({
               sourceUrl: url,
               targetUrl: formUrl || url,
-              state,
+              targetState: state,
               abortSignal,
               stopSignal,
               isReload: event.navigationType === "reload",

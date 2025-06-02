@@ -203,6 +203,7 @@ export const registerInlineRoute = (statePattern, handler) => {
 
     state: undefined,
     stateSignal: undefined,
+    replaceState: undefined,
     go: undefined,
 
     loadData: handler,
@@ -253,7 +254,10 @@ export const registerInlineRoute = (statePattern, handler) => {
     inlineRoute.replaceState = (newState) => {
       const currentState = stateSignal.peek();
       const updatedState = { ...currentState, ...newState };
-      navigation.reload({ state: updatedState });
+      goTo(window.location.href, {
+        state: updatedState,
+        replace: true,
+      });
     };
 
     inlineRoute.go = ({ replace = true } = {}) => {
