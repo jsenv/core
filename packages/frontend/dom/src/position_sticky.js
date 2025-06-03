@@ -9,10 +9,10 @@ import.meta.css = /* css */ `
   [data-position-sticky-placeholder] {
     opacity: 0 !important;
     position: static !important;
+    width: auto !important;
+    height: auto !important;
   }
 `;
-
-let debug = true;
 
 export const initPositionSticky = (element) => {
   const computedStyle = getComputedStyle(element);
@@ -70,17 +70,55 @@ export const initPositionSticky = (element) => {
     placeholder = newPlaceholder;
     width = getWidth(placeholder);
     height = getHeight(placeholder);
-    applySizeEffects();
+    updatePosition();
   };
-  const applySizeEffects = () => {
+  const updatePosition = () => {
     setStyles(placeholder, {
       width: `${width}px`,
       height: `${height}px`,
     });
+
+    const placeholderRect = placeholder.getBoundingClientRect();
+    const parentRect = parentElement.getBoundingClientRect();
+
+    // Calculate left position in viewport coordinates (fixed positioning)
+    const leftPosition = placeholderRect.left;
+    element.style.left = `${Math.round(leftPosition)}px`;
+
+    // Determine if element should be sticky or at its natural position
+    let topPosition;
+    let isStuck = false;
+
+    // Check if we need to stick the element
+    if (placeholderRect.top <= top) {
+      // Element should be stuck at "top" position in the viewport
+      topPosition = top;
+      isStuck = true;
+
+      // But make sure it doesn't go beyond parent's bottom boundary
+      const parentBottom = parentRect.bottom;
+      const elementBottom = top + height;
+
+      if (elementBottom > parentBottom) {
+        // Adjust to stay within parent
+        topPosition = parentBottom - height;
+      }
+    } else {
+      // Element should be at its natural position in the flow
+      topPosition = placeholderRect.top;
+    }
+
+    // Apply the position with integer values to prevent subpixel rendering issues
+    element.style.top = `${topPosition}px`;
     element.style.width = `${width}px`;
     element.style.height = `${height}px`;
+
+    if (isStuck) {
+      element.setAttribute("data-sticky", "");
+    } else {
+      element.removeAttribute("data-sticky");
+    }
   };
-  applySizeEffects();
 
   parent_is_relative: {
     // Ensure that the node will be positioned relatively to the parent node
@@ -91,57 +129,16 @@ export const initPositionSticky = (element) => {
       restoreParentPositionStyle();
     });
   }
-  element_is_absolute: {
-    // ensure element position is absolute
+  element_is_fixed: {
     const restorePositionStyle = forceStyles(element, {
-      "position": "absolute",
+      "position": "fixed",
       "z-index": 1,
-      "left": 0,
-      "top": 0,
+      "will-change": "transform", // Hint for hardware acceleration
     });
     cleanupCallbackSet.add(() => {
       restorePositionStyle();
     });
   }
-
-  const updatePosition = () => {
-    // Calculate the visible top position where the element should stick
-    // This is relative to the parent's position
-    let topPosition = top;
-
-    const placeholderRect = placeholder.getBoundingClientRect();
-    const parentRect = parentElement.getBoundingClientRect();
-
-    for (const scrollableParent of scrollableParentSet) {
-      const isDocument = scrollableParent === document;
-      const scrollableParentRect = isDocument
-        ? { top: 0, height: window.innerHeight }
-        : scrollableParent.getBoundingClientRect();
-
-      // When placeholder would scroll above the desired top position
-      const placeholderDistanceFromTop =
-        placeholderRect.top - scrollableParentRect.top;
-      if (placeholderDistanceFromTop < top) {
-        // Calculate how far the element needs to move to maintain the desired top position
-        topPosition = top - placeholderDistanceFromTop;
-        // Ensure element stays within parent boundaries (doesn't go below bottom)
-        const parentBottomPosition = parentRect.height - height;
-        topPosition = Math.min(topPosition, parentBottomPosition);
-        // Never let it go negative (above parent's top)
-        topPosition = Math.max(0, topPosition);
-        break; // Use the first scrollable parent that triggers sticky behavior
-      }
-    }
-
-    element.style.top = `${Math.round(topPosition)}px`;
-
-    if (debug) {
-      console.debug({
-        topPosition,
-        height,
-      });
-    }
-  };
 
   updatePosition();
 
@@ -150,7 +147,6 @@ export const initPositionSticky = (element) => {
       updatePosition();
     };
 
-    const scrollableParentSet = getScrollableParentSet(element);
     for (const scrollableParent of scrollableParentSet) {
       scrollableParent.addEventListener("scroll", handleScroll, {
         passive: true,
@@ -161,6 +157,30 @@ export const initPositionSticky = (element) => {
         });
       });
     }
+  }
+
+  update_on_parent_size_change: {
+    const resizeObserver = new ResizeObserver(() => {
+      updateSize();
+    });
+    resizeObserver.observe(parentElement);
+    cleanupCallbackSet.add(() => {
+      resizeObserver.disconnect();
+    });
+  }
+
+  update_on_dom_mutation: {
+    const mutationObserver = new MutationObserver(() => {
+      updateSize();
+    });
+    mutationObserver.observe(element, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    cleanupCallbackSet.add(() => {
+      mutationObserver.disconnect();
+    });
   }
 
   return () => {
