@@ -1,4 +1,25 @@
-// workround https://github.com/w3c/csswg-drafts/issues/865
+/**
+ * Position Sticky Polyfill
+ *
+ * This module provides a workaround for position:sticky limitations when used with
+ * overflow:auto/hidden parent elements (see https://github.com/w3c/csswg-drafts/issues/865).
+ *
+ * How it works:
+ * 1. Creates a placeholder clone of the sticky element to maintain document flow
+ * 2. Positions the real element using fixed positioning relative to viewport
+ * 3. Adjusts position on scroll to emulate position:sticky behavior
+ * 4. Handles parent boundary detection to keep element within its container
+ * 5. Updates dimensions on resize and DOM changes
+ *
+ * Usage:
+ * ```
+ * const cleanup = initPositionSticky(element);
+ * // Later when no longer needed
+ * cleanup();
+ * ```
+ *
+ * The element should have a CSS "top" value specified (e.g., top: 10px).
+ */
 
 import { getScrollableParentSet } from "./scroll.js";
 import { getHeight } from "./size/get_height.js";
@@ -19,10 +40,10 @@ export const initPositionSticky = (element) => {
   const topCssValue = computedStyle.top;
   const top = parseFloat(topCssValue);
   if (isNaN(top)) {
-    return () => {};
+    return () => {}; // Early return if no valid top value
   }
 
-  // if there is no ancestor with overflow: auto we can skip the sticky positioning workaround
+  // Skip polyfill if native position:sticky would work (no overflow:auto/hidden parents)
   const scrollableParentSet = getScrollableParentSet(element);
   check_overflow_on_parents: {
     let hasOverflowHiddenOrAuto = false;
@@ -40,7 +61,7 @@ export const initPositionSticky = (element) => {
       }
     }
     if (!hasOverflowHiddenOrAuto) {
-      return () => {};
+      return () => {}; // Native sticky will work fine
     }
   }
 
@@ -64,6 +85,7 @@ export const initPositionSticky = (element) => {
 
   let width = getWidth(element);
   let height = getHeight(element);
+
   const updateSize = () => {
     const newPlaceholder = createPlaceholderClone();
     parentElement.replaceChild(newPlaceholder, placeholder);
@@ -72,7 +94,9 @@ export const initPositionSticky = (element) => {
     height = getHeight(placeholder);
     updatePosition();
   };
+
   const updatePosition = () => {
+    // Ensure placeholder dimensions match element
     setStyles(placeholder, {
       width: `${width}px`,
       height: `${height}px`,
@@ -108,11 +132,11 @@ export const initPositionSticky = (element) => {
       topPosition = placeholderRect.top;
     }
 
-    // Apply the position with integer values to prevent subpixel rendering issues
     element.style.top = `${topPosition}px`;
     element.style.width = `${width}px`;
     element.style.height = `${height}px`;
 
+    // Set attribute for potential styling
     if (isStuck) {
       element.setAttribute("data-sticky", "");
     } else {
@@ -125,19 +149,16 @@ export const initPositionSticky = (element) => {
     const restoreParentPositionStyle = forceStyles(parentElement, {
       position: "relative",
     });
-    cleanupCallbackSet.add(() => {
-      restoreParentPositionStyle();
-    });
+    cleanupCallbackSet.add(restoreParentPositionStyle);
   }
+
   element_is_fixed: {
     const restorePositionStyle = forceStyles(element, {
       "position": "fixed",
       "z-index": 1,
       "will-change": "transform", // Hint for hardware acceleration
     });
-    cleanupCallbackSet.add(() => {
-      restorePositionStyle();
-    });
+    cleanupCallbackSet.add(restorePositionStyle);
   }
 
   updatePosition();
@@ -183,7 +204,5 @@ export const initPositionSticky = (element) => {
     });
   }
 
-  return () => {
-    cleanup();
-  };
+  return cleanup;
 };
