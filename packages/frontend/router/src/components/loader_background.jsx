@@ -1,8 +1,14 @@
 import { createPortal } from "preact/compat";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useDebounceTrue } from "../hooks/use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
-export const LoaderBackground = ({ pending, containerRef, children }) => {
+export const LoaderBackground = ({
+  pending,
+  containerRef,
+  color,
+  children,
+}) => {
   if (containerRef) {
     const container = containerRef.current;
     if (!container) {
@@ -14,7 +20,11 @@ export const LoaderBackground = ({ pending, containerRef, children }) => {
       paddingTop = container.querySelector("summary").offsetHeight;
     }
     return createPortal(
-      <LoaderBackgroundWithPortal pending={pending} paddingTop={paddingTop}>
+      <LoaderBackgroundWithPortal
+        pending={pending}
+        paddingTop={paddingTop}
+        color={color}
+      >
         {children}
       </LoaderBackgroundWithPortal>,
       container,
@@ -22,7 +32,7 @@ export const LoaderBackground = ({ pending, containerRef, children }) => {
   }
 
   return (
-    <LoaderBackgroundWithWrapper pending={pending}>
+    <LoaderBackgroundWithWrapper pending={pending} color={color}>
       {children}
     </LoaderBackgroundWithWrapper>
   );
@@ -53,14 +63,29 @@ const LoaderBackgroundWithPortal = ({ pending, paddingTop, children }) => {
   );
 };
 
-const LoaderBackgroundWithWrapper = ({ pending, children }) => {
+const LoaderBackgroundWithWrapper = ({ pending, color, children }) => {
   const shouldShowSpinner = useDebounceTrue(pending, 300);
+  const containerRef = useRef(null);
+  const [detectedColor, setDetectedColor] = useState();
+
+  useLayoutEffect(() => {
+    if (color) {
+      return;
+    }
+    const container = containerRef.current;
+    const lastElementChild = container.lastElementChild;
+    if (lastElementChild) {
+      const computedStyle = window.getComputedStyle(lastElementChild);
+      const computedStyleColor = computedStyle.color;
+      setDetectedColor(computedStyleColor);
+    }
+  }, [color, ...(Array.isArray(children) ? children : [children])]);
 
   return (
-    <div style="display:inline-flex; position: relative;">
+    <div ref={containerRef} style="display:inline-flex; position: relative;">
       {shouldShowSpinner && (
         <div style="position: absolute; inset: 0">
-          <RectangleLoading />
+          <RectangleLoading color={color || detectedColor} />
         </div>
       )}
       {children}
