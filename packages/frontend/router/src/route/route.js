@@ -12,6 +12,11 @@ let debug = true;
 let baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
   : window.location.origin;
+
+if (debug) {
+  console.debug(`Router baseUrl initial value set to "${baseUrl}"`);
+}
+
 export const setBaseUrl = (v) => {
   const urlObject = new URL(v);
   urlObject.search = "";
@@ -68,7 +73,9 @@ export const registerRoute = (firstArg, secondArg) => {
 };
 
 const createRouteFromResourcePattern = (resourcePattern, { load }) => {
-  const resourcePatternParsed = createResourcePattern(resourcePattern);
+  const resourcePatternParsed = createResourcePattern(
+    resourceFromUrl(resourcePattern),
+  );
 
   const isMatchingSignal = signal(false);
   const loadingStateSignal = signal(IDLE);
