@@ -2,7 +2,7 @@ import { createResourcePattern } from "@jsenv/url-pattern";
 import { batch, effect, signal } from "@preact/signals";
 import { applyAction } from "../action/action.js";
 import { compareTwoJsValues } from "../compare_two_js_values.js";
-import { documentUrlSignal, routingWhile } from "../document_routing.js";
+import { routingWhile } from "../document_routing.js";
 import { normalizeUrl } from "../normalize_url.js";
 import { goTo, installNavigation, reload } from "../router.js";
 import { ABORTED, FAILED, IDLE, LOADED, LOADING } from "./route_status.js";
@@ -146,8 +146,10 @@ const createRouteFromResourcePattern = (resourcePattern, { load }) => {
     });
   };
   const shouldReload = ({ targetUrl }) => {
-    const currentUrl = documentUrlSignal.peek();
-    const currentUrlWithoutSearch = urlWithoutSearch(currentUrl);
+    if (url === targetUrl) {
+      return true;
+    }
+    const currentUrlWithoutSearch = urlWithoutSearch(url);
     const targetUrlWithoutSearch = urlWithoutSearch(targetUrl);
     if (targetUrlWithoutSearch.startsWith(currentUrlWithoutSearch)) {
       // this is a sub url of the current url
@@ -156,8 +158,10 @@ const createRouteFromResourcePattern = (resourcePattern, { load }) => {
       // we suppose the other url/search params compbination will be handled by a sub route
       return false;
     }
-
-    // not a sub route (likely the same resource)
+    if (targetUrlWithoutSearch !== currentUrlWithoutSearch) {
+      return true;
+    }
+    // same url, check for search params
     // so we should reload the route if search params are different
     const currentUrlSearchParams = new URL(url).searchParams;
     const targetUrlSearchParams = new URL(targetUrl).searchParams;
