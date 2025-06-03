@@ -116,7 +116,7 @@
   min-height: 0;
   scrollbar-width: thin;
 }
-.explorer_group[data-animated] .explorer_group_content {
+.explorer_group[data-size-animated] .explorer_group_content {
   overflow-y: hidden;
 }
 

@@ -37,19 +37,8 @@ export const createSizeAnimationGroupController = ({ duration }) => {
   const animationGroupController = {
     pending: false,
     animateAll: (animations, { onChange }) => {
-      // TODO: the finish and cancel callbacks keeps growing
-      // when called in the middle of an animation
-
       let somethingChanged = false;
       for (const { element, target, sideEffect } of animations) {
-        element.setAttribute("data-animated", "");
-        finishCallbackSet.add(() => {
-          element.removeAttribute("data-animated");
-        });
-        cancelCallbackSet.add(() => {
-          element.removeAttribute("data-animated");
-        });
-
         const isNew = !elementSet.has(element);
         const startSize = parseFloat(getComputedStyle(element).height);
         if (isNew) {
@@ -70,6 +59,14 @@ export const createSizeAnimationGroupController = ({ duration }) => {
             height: `${startSize}px`,
           });
           cancelCallbackSet.add(restoreSizeStyle);
+
+          element.setAttribute("data-size-animated", "");
+          finishCallbackSet.add(() => {
+            element.removeAttribute("data-size-animated");
+          });
+          cancelCallbackSet.add(() => {
+            element.removeAttribute("data-size-animated");
+          });
         } else {
           if (startSize !== target || targetSizeMap.get(element) !== target) {
             somethingChanged = true;
