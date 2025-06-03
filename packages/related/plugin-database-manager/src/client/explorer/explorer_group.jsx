@@ -3,12 +3,7 @@
  */
 
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
-import {
-  SPADetails,
-  SPAInputText,
-  useDetailsControlledByDocumentState,
-  valueInLocalStorage,
-} from "@jsenv/router";
+import { SPADetails, SPAInputText, valueInLocalStorage } from "@jsenv/router";
 import { effect, signal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import {
@@ -68,8 +63,6 @@ export const ExplorerGroup = forwardRef(
   ) => {
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
-    const { open, onToggle } =
-      useDetailsControlledByDocumentState(detailsRoute);
 
     useLayoutEffect(() => {
       setTimeout(() => {
@@ -96,9 +89,7 @@ export const ExplorerGroup = forwardRef(
           ref={innerRef}
           id={controller.id}
           className="explorer_group"
-          open={open}
           onToggle={(toggleEvent) => {
-            onToggle(toggleEvent);
             if (toggleEvent.newState === "open") {
               if (onOpen) {
                 onOpen();
