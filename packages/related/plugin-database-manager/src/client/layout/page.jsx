@@ -6,6 +6,11 @@ import.meta.css = /* css */ `
     gap: 10px;
     justify-content: space-between;
     align-items: center;
+
+    padding: 20px;
+    background: white;
+    position: sticky;
+    top: 0;
   }
 
   .page_head h1 {
@@ -17,12 +22,15 @@ import.meta.css = /* css */ `
   }
 
   .page_body {
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 20px;
   }
 `;
 
 export const PageHead = ({ children, actions = [] }) => {
   return (
-    <header className="page_head">
+    <header className="page_head" data-position-sticky-fix>
       {children}
       <div className="actions">
         {actions.map((action) => {

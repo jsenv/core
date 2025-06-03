@@ -61,8 +61,8 @@ main {
   overflow-x: auto; /* Horizontal scrollbar appears when content is wider than available space */
   /* scrollbar-gutter: stable; */ /* Reserves space for scrollbar to prevent layout shifts */
   flex: 1;
+  position: relative;
 }
 .main_body {
   min-width: 100%; /* Ensure padding applies when content overflows */
-  padding: 20px; /* Consistent padding around main content */
 }
