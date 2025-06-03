@@ -13,6 +13,9 @@ export const EXPLORER_DATABASES_ROUTE = registerRoute({
     state.explorer_databases_opened = false;
   },
   load: async () => {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100000); // Simulate a delay for loading
+    });
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/explorer/databases`,
     );

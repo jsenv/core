@@ -3,6 +3,7 @@ export { useAction, useActionStatus } from "./src/action/action_hooks.js";
 export { useCanGoBack, useCanGoForward } from "./src/back_and_forward.js";
 export { SPACheckbox } from "./src/components/spa_checkbox.jsx";
 export { SPADeleteButton } from "./src/components/spa_delete_button.jsx";
+export { SPADetails } from "./src/components/spa_details.jsx";
 export { SPAButton, SPAForm } from "./src/components/spa_form.jsx";
 export { SPAInputDateAndTime } from "./src/components/spa_input_date_and_time.jsx";
 export { SPAInputInteger } from "./src/components/spa_input_integer.jsx";

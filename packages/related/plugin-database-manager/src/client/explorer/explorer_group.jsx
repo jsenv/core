@@ -4,6 +4,7 @@
 
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
 import {
+  SPADetails,
   SPAInputText,
   useDetailsControlledByDocumentState,
   valueInLocalStorage,
@@ -89,8 +90,9 @@ export const ExplorerGroup = forwardRef(
     return (
       <>
         {resizable && <div data-resize-handle={controller.id}></div>}
-        <details
+        <SPADetails
           {...rest}
+          route={detailsRoute}
           ref={innerRef}
           id={controller.id}
           className="explorer_group"
@@ -173,7 +175,7 @@ export const ExplorerGroup = forwardRef(
               )}
             </ul>
           </div>
-        </details>
+        </SPADetails>
       </>
     );
   },
