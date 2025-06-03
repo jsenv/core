@@ -108,7 +108,6 @@ const createRouteFromResourcePattern = (resourcePattern, props) => {
     const newValues = { ...params, ...values };
     paramsSignal.value = newValues;
     const routeUrl = buildUrl(window.location.href, newValues);
-    urlSignal.value = routeUrl;
     goTo(routeUrl, { replace: true, routesLoaded: [route] });
   };
 
@@ -119,7 +118,7 @@ const createRouteFromResourcePattern = (resourcePattern, props) => {
     }
     return matchResult;
   };
-  const enterEffect = () => {
+  const enterEffect = ({ url, params }) => {
     batch(() => {
       isMatchingSignal.value = true;
       errorSignal.value = null;
@@ -139,17 +138,40 @@ const createRouteFromResourcePattern = (resourcePattern, props) => {
   };
   const shouldReload = ({ targetUrl }) => {
     const currentUrl = documentUrlSignal.peek();
-    // TODO:
-    // 1. si une url fini par ?* alors on considere que n'importe quel search param
-    // qui a changé suffit a reload l'url
-    // 2. si une url spécifie explicitement des search params
-    // comme ?foo=*&bar=* alors on pourrais considérer que l'url a changé
-    // que si un des search params a changé
     const currentUrlWithoutSearch = urlWithoutSearch(currentUrl);
     const targetUrlWithoutSearch = urlWithoutSearch(targetUrl);
-    if (targetUrlWithoutSearch === currentUrlWithoutSearch) {
-      return true;
+    if (targetUrlWithoutSearch.startsWith(currentUrlWithoutSearch)) {
+      // this is a sub url of the current url
+      // so we should not reload the route
+      // even if search params are different
+      // we suppose the other url/search params compbination will be handled by a sub route
+      return false;
     }
+
+    // not a sub route (likely the same resource)
+    // so we should reload the route if search params are different
+    const currentUrlSearchParams = new URL(url).searchParams;
+    const targetUrlSearchParams = new URL(targetUrl).searchParams;
+
+    const allParamNames = new Set([
+      ...Array.from(currentUrlSearchParams.keys()),
+      ...Array.from(targetUrlSearchParams.keys()),
+    ]);
+    for (const paramName of allParamNames) {
+      const currentValues = currentUrlSearchParams.getAll(paramName);
+      const targetValues = targetUrlSearchParams.getAll(paramName);
+      // Different number of values for this parameter
+      if (currentValues.length !== targetValues.length) {
+        return true; // Reload needed
+      }
+      // Compare each value in order (for params with multiple values)
+      for (let i = 0; i < currentValues.length; i++) {
+        if (currentValues[i] !== targetValues[i]) {
+          return true; // Reload needed
+        }
+      }
+    }
+    // Search params are identical (or both empty)
     return false;
   };
   const go = ({ replace } = {}) => {
@@ -451,20 +473,24 @@ export const applyRouting = async ({
     if (!matchResult) {
       continue;
     }
-    const params = {
+    const targetParams = {
       ...matchResult.named,
       ...matchResult.stars,
     };
     const enterParams = {
       signal: stopSignal,
-      url: routeCandidate.buildUrl
-        ? routeCandidate.buildUrl(targetUrl, params)
-        : undefined,
+      url: targetUrl,
       resource: targetResource,
       state: targetState,
-      params,
+      params: targetParams,
     };
-    if (routeCandidate.compareTarget({ targetUrl, targetState })) {
+    const startsMatching = !matchingRouteSet.has(routeCandidate);
+    if (
+      startsMatching ||
+      routeCandidate.shouldReload({ targetUrl, targetState, targetParams })
+    ) {
+      routeToEnterMap.set(routeCandidate, enterParams);
+    } else {
       const hasError = routeCandidate.errorSignal.peek();
       const isAborted = routeCandidate.loadingStateSignal.peek() === ABORTED;
       if (isReload) {
@@ -476,8 +502,6 @@ export const applyRouting = async ({
       } else {
         routeToKeepActiveSet.add(routeCandidate);
       }
-    } else {
-      routeToEnterMap.set(routeCandidate, enterParams);
     }
   }
   if (routeToEnterMap.size === 0 && matchingRouteSet.size === 0) {
