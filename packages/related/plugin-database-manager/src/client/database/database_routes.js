@@ -24,7 +24,9 @@ export const GET_DATABASE_ROUTE = registerRoute(
       getError.stack = error.stack || error.message;
       throw getError;
     }
-    const { database, ownerRole, columns } = await response.json();
+    const { data, meta } = await response.json();
+    const database = data;
+    const { ownerRole, columns } = meta;
     setActiveDatabase(database);
     setActiveDatabaseColumns(columns);
     setActiveDatabaseOwnerRole(ownerRole);
