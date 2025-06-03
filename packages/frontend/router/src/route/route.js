@@ -457,7 +457,7 @@ export const applyRouting = async ({
   const targetResource = resourceFromUrl(targetUrl);
   if (debug) {
     console.log(
-      `start routing ${targetResource} (state: ${JSON.stringify(targetState)}) against ${routeSet.size} routes`,
+      `start routing ${targetResource}${targetState === undefined ? "" : ` (state: ${JSON.stringify(targetState)})`} against ${routeSet.size} routes`,
     );
   }
 

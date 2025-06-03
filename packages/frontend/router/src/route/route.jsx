@@ -153,6 +153,21 @@ const RouteWithMatchingSync = ({
 };
 // TODO: un 4eme cas avec matchingAsync
 
+const routeWeakMap = new WeakMap();
+const useRouteUIRenderedPromise = (route) => {
+  const routeUIRenderedPromise = routeWeakMap.get(route);
+  if (routeUIRenderedPromise) {
+    return routeUIRenderedPromise;
+  }
+  let resolve;
+  const promise = new Promise((res) => {
+    resolve = res;
+  });
+  promise.resolve = resolve;
+  routeWeakMap.set(route, promise);
+  return promise;
+};
+
 const RouteHandler = ({
   route,
   routesPreventingThisOne,
@@ -178,24 +193,14 @@ const RouteHandler = ({
   const routeIsLoaded = useRouteIsLoaded(route);
 
   const routeIsMatchingPreviousRef = useRef(false);
-  const routeBecomesMatching =
-    !routeIsMatchingPreviousRef.current && routeIsMatching;
   routeIsMatchingPreviousRef.current = routeIsMatching;
   const routeIsLoadedPreviousRef = useRef(false);
   const routeBecomesLoaded = !routeIsLoadedPreviousRef.current && routeIsLoaded;
   routeIsLoadedPreviousRef.current = routeIsLoaded;
-  const routeUIRenderedPromiseRef = useRef();
-
-  if (routeBecomesMatching) {
-    let resolve;
-    const promise = new Promise((res) => {
-      resolve = res;
-    });
-    routeUIRenderedPromiseRef.current = { promise, resolve };
-  }
+  const routeUIRenderedPromise = useRouteUIRenderedPromise(route);
 
   route.renderUI = () => {
-    return routeUIRenderedPromiseRef.current.promise;
+    return routeUIRenderedPromise;
   };
 
   if (!routeIsMatching) {
@@ -210,12 +215,17 @@ const RouteHandler = ({
   if (routeIsLoaded) {
     if (routeBecomesLoaded) {
       const RouteLoadedOriginal = RouteLoaded;
-      // there is no better way to find the child node than wrapping in a <div>, erf
+      // there is NO other way to find the child node than wrapping it a <div>, erf
+      // (and we'll need that for transition and stuff)
       RouteLoaded = function RouteLoadedWrapper(props) {
         const ref = useRef();
         useLayoutEffect(() => {
           const routeNode = ref.current.firstChild;
-          routeUIRenderedPromiseRef.current.resolve(routeNode);
+          routeUIRenderedPromise.resolve(routeNode);
+          return () => {
+            // cleanup
+            routeWeakMap.delete(route);
+          };
         }, []);
         return (
           <div ref={ref} style="display:inline">
