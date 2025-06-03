@@ -67,7 +67,7 @@ export const registerRoute = (firstArg, secondArg) => {
   return routeUpdatingDocumentState;
 };
 
-const createRouteFromResourcePattern = (resourcePattern, props) => {
+const createRouteFromResourcePattern = (resourcePattern, { load }) => {
   const resourcePatternParsed = createResourcePattern(resourcePattern);
 
   const isMatchingSignal = signal(false);
@@ -79,7 +79,6 @@ const createRouteFromResourcePattern = (resourcePattern, props) => {
   };
   let data;
   const dataSignal = signal(undefined);
-  const load = props.load;
   const loadData = load ? ({ signal }) => load({ signal, params }) : undefined;
 
   const initialUrl = undefined;
@@ -195,12 +194,16 @@ const createRouteFromResourcePattern = (resourcePattern, props) => {
     data,
     dataSignal,
     loadData,
+    loadUI: undefined,
+    renderUI: undefined,
+    node: undefined,
 
     url,
     urlSignal,
     params,
     paramsSignal,
     replaceParams,
+    buildUrl,
 
     match,
     enterEffect,
@@ -209,7 +212,11 @@ const createRouteFromResourcePattern = (resourcePattern, props) => {
     toString,
     reload,
     go,
+    get name() {
+      return toString();
+    },
   };
+  Object.preventExtensions(route);
 
   effect(() => {
     error = errorSignal.value;
@@ -294,6 +301,9 @@ const createRouteFromState = ({ match, enter, leave, load, name }) => {
     data,
     dataSignal,
     loadData,
+    loadUI: undefined,
+    renderUI: undefined,
+    node: undefined,
 
     state,
     stateSignal,
@@ -323,7 +333,9 @@ const createRouteFromState = ({ match, enter, leave, load, name }) => {
       goTo(window.location.href, { state: stateCopy });
       stateSignal.value = initialState;
     },
+    name,
   };
+  Object.preventExtensions(route);
 
   effect(() => {
     error = errorSignal.value;
