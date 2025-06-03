@@ -132,3 +132,7 @@
   min-width: 0; /* https://css-tricks.com/flexbox-truncated-text/#aa-the-solution-is-min-width-0-on-the-flex-child */
   overflow: hidden;
 }
+
+.explorer_foot {
+  height: 10px;
+}

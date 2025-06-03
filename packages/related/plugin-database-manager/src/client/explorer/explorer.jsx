@@ -22,6 +22,7 @@ export const Explorer = () => {
         <h2>Explorer</h2>
       </div>
       <ExplorerBody />
+      <div className="explorer_foot"></div>
     </nav>
   );
 };
