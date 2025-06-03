@@ -3,7 +3,11 @@
  */
 
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
-import { SPAInputText, useDetails, valueInLocalStorage } from "@jsenv/router";
+import {
+  SPAInputText,
+  useDetailsControlledByDocumentState,
+  valueInLocalStorage,
+} from "@jsenv/router";
 import { effect, signal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import {
@@ -42,7 +46,7 @@ export const ExplorerGroup = forwardRef(
   (
     {
       controller,
-      urlParam,
+      detailsRoute,
       idKey,
       nameKey,
       children,
@@ -63,7 +67,8 @@ export const ExplorerGroup = forwardRef(
   ) => {
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
-    const { open, onToggle } = useDetails(urlParam);
+    const { open, onToggle } =
+      useDetailsControlledByDocumentState(detailsRoute);
 
     useLayoutEffect(() => {
       setTimeout(() => {

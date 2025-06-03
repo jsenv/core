@@ -1,7 +1,10 @@
 import { useEffect, useRef } from "preact/hooks";
 import { useUrlBooleanParam } from "../url.js";
 
-export const useDetails = (urlParam, { replace = true } = {}) => {
+export const useDetailsControlledByUrlSearchParam = (
+  urlParam,
+  { replace = true } = {},
+) => {
   const [opened, openDetails, closeDetails] = useUrlBooleanParam(urlParam, {
     replace,
   });

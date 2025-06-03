@@ -81,31 +81,10 @@ export const jsenvPluginDatabaseManager = ({
         },
       },
       {
-        endpoint: `GET ${pathname}api/nav`,
-        description:
-          "Get info about the database that can be used to build a navbar",
+        endpoint: `GET ${pathname}api/explorer/databases`,
+        description: "Get info about databases, meant to build a navbar.",
         declarationSource: import.meta.url,
         fetch: async () => {
-          const currentRoleResult = await sql`
-            SELECT
-              current_user
-          `;
-          const currentRoleName = currentRoleResult[0].current_user;
-          const [currentRole] = await sql`
-            SELECT
-              *
-            FROM
-              pg_roles
-            WHERE
-              rolname = ${currentRoleName}
-          `;
-          const roles = await sql`
-            SELECT
-              *
-            FROM
-              pg_roles
-          `;
-
           const [currentDatabaseResult] = await sql`
             SELECT
               current_database()
@@ -127,10 +106,38 @@ export const jsenvPluginDatabaseManager = ({
           `;
 
           return Response.json({
-            currentRole,
             currentDatabase,
-            roles,
             databases,
+          });
+        },
+      },
+      {
+        endpoint: `GET ${pathname}api/explorer/roles`,
+        description: "Get info about roles, meant to build a navbar.",
+        declarationSource: import.meta.url,
+        fetch: async () => {
+          const currentRoleResult = await sql`
+            SELECT
+              current_user
+          `;
+          const currentRoleName = currentRoleResult[0].current_user;
+          const [currentRole] = await sql`
+            SELECT
+              *
+            FROM
+              pg_roles
+            WHERE
+              rolname = ${currentRoleName}
+          `;
+          const roles = await sql`
+            SELECT
+              *
+            FROM
+              pg_roles
+          `;
+          return Response.json({
+            currentRole,
+            roles,
           });
         },
       },

@@ -11,7 +11,8 @@ export { SPALink } from "./src/components/spa_link.jsx";
 export { useSPAFormStatus } from "./src/components/use_spa_form_status.js";
 export { useValidity } from "./src/components/validity/use_validity.js";
 export { useDocumentUrl } from "./src/document_routing.js";
-export { useDetails } from "./src/hooks/use_details.js";
+export { useDetailsControlledByDocumentState } from "./src/hooks/use_details_controlled_by_document_state.js";
+export { useDetailsControlledByUrlSearchParam } from "./src/hooks/use_details_controlled_by_url_search_param.js";
 export {
   ErrorBoundaryContext,
   useResetErrorBoundary,

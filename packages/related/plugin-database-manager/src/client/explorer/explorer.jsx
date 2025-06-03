@@ -4,12 +4,7 @@
  */
 
 import { initFlexDetailsSet } from "@jsenv/dom";
-import { effect } from "@preact/signals";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { setCurrentDatabase } from "../database/database_signals.js";
-import { databaseStore } from "../database/database_store.js";
-import { setCurrentRole } from "../role/role_signals.js";
-import { roleStore } from "../role/role_store.js";
 import "./explorer.css" with { type: "css" };
 import {
   ExplorerDatabases,
@@ -19,16 +14,6 @@ import {
   ExplorerRoles,
   rolesExplorerGroupController,
 } from "./explorer_roles.jsx";
-
-effect(async () => {
-  const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/nav`);
-  const { currentRole, roles, currentDatabase, databases } =
-    await response.json();
-  setCurrentRole(currentRole);
-  setCurrentDatabase(currentDatabase);
-  databaseStore.upsert(databases);
-  roleStore.upsert(roles);
-});
 
 export const Explorer = () => {
   return (

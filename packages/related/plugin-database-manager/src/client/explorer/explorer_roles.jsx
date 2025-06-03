@@ -13,6 +13,7 @@ import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "./explorer_group.jsx";
+import { EXPLORER_ROLES_ROUTE } from "./explorer_routes.js";
 
 export const rolesExplorerGroupController =
   createExplorerGroupController("roles");
@@ -24,7 +25,7 @@ export const ExplorerRoles = (props) => {
     <ExplorerGroup
       {...props}
       controller={rolesExplorerGroupController}
-      urlParam="roles"
+      detailsRoute={EXPLORER_ROLES_ROUTE}
       idKey="oid"
       nameKey="rolname"
       labelChildren={

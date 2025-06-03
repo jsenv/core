@@ -13,6 +13,7 @@ import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "./explorer_group.jsx";
+import { EXPLORER_DATABASES_ROUTE } from "./explorer_routes.js";
 
 export const databaseExplorerGroupController =
   createExplorerGroupController("databases");
@@ -24,7 +25,7 @@ export const ExplorerDatabases = (props) => {
     <ExplorerGroup
       {...props}
       controller={databaseExplorerGroupController}
-      urlParam="databases"
+      detailsRoute={EXPLORER_DATABASES_ROUTE}
       idKey="oid"
       nameKey="datname"
       labelChildren={
