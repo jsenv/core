@@ -147,7 +147,7 @@ const createRouteFromResourcePattern = (resourcePattern, { load }) => {
   };
   const shouldReload = ({ targetUrl }) => {
     if (url === targetUrl) {
-      return true;
+      return false;
     }
     const currentUrlWithoutSearch = urlWithoutSearch(url);
     const targetUrlWithoutSearch = urlWithoutSearch(targetUrl);
