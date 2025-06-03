@@ -1,3 +1,5 @@
+import { initPositionSticky } from "@jsenv/dom";
+import { useLayoutEffect, useRef } from "preact/hooks";
 import { IconAndText } from "../components/icon_and_text.jsx";
 
 import.meta.css = /* css */ `
@@ -29,8 +31,14 @@ import.meta.css = /* css */ `
 `;
 
 export const PageHead = ({ children, actions = [] }) => {
+  const headerRef = useRef(null);
+
+  useLayoutEffect(() => {
+    initPositionSticky(headerRef.current);
+  }, []);
+
   return (
-    <header className="page_head" data-position-sticky-fix>
+    <header ref={headerRef} className="page_head" data-position-sticky-fix>
       {children}
       <div className="actions">
         {actions.map((action) => {

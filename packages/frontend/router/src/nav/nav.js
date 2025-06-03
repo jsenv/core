@@ -101,7 +101,9 @@ export const installNavigation = ({ applyRouting, applyAction }) => {
             const targetState = destinationState
               ? { ...currentState, ...destinationState }
               : currentState;
-            navigation.updateCurrentEntry({ state: targetState });
+            if (targetState) {
+              navigation.updateCurrentEntry({ state: targetState });
+            }
             await applyRouting({
               sourceUrl: currentUrl,
               targetUrl: formUrl || destinationUrl,
