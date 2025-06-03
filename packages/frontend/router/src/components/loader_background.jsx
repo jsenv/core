@@ -12,17 +12,12 @@ export const LoaderBackground = ({
   if (containerRef) {
     const container = containerRef.current;
     if (!container) {
-      return null;
-    }
-    container.style.position = "relative";
-    let paddingTop = 0;
-    if (container.nodeName === "DETAILS") {
-      paddingTop = container.querySelector("summary").offsetHeight;
+      return children;
     }
     return createPortal(
       <LoaderBackgroundWithPortal
+        container={container}
         pending={pending}
-        paddingTop={paddingTop}
         color={color}
       >
         {children}
@@ -38,11 +33,22 @@ export const LoaderBackground = ({
   );
 };
 
-const LoaderBackgroundWithPortal = ({ pending, paddingTop, children }) => {
+const LoaderBackgroundWithPortal = ({
+  container,
+  pending,
+  color,
+  children,
+}) => {
   const shouldShowSpinner = useDebounceTrue(pending, 300);
 
   if (!shouldShowSpinner) {
     return children;
+  }
+
+  container.style.position = "relative";
+  let paddingTop = 0;
+  if (container.nodeName === "DETAILS") {
+    paddingTop = container.querySelector("summary").offsetHeight;
   }
 
   return (
@@ -56,7 +62,7 @@ const LoaderBackgroundWithPortal = ({ pending, paddingTop, children }) => {
           right: 0,
         }}
       >
-        {shouldShowSpinner && <RectangleLoading />}
+        {shouldShowSpinner && <RectangleLoading color={color} />}
       </div>
       {children}
     </>
