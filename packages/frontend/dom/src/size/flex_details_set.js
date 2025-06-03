@@ -448,7 +448,10 @@ export const initFlexDetailsSet = (
       childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
       childToShrinkFrom: lastChild,
     });
-    if (resizeDetails.reason === "initial_space_distribution") {
+    if (
+      resizeDetails.reason === "initial_space_distribution" ||
+      resizeDetails.reason === "content_change"
+    ) {
       spaceMap.clear(); // force to set size at start
     }
     applyAllocatedSpaces(resizeDetails);
@@ -721,6 +724,37 @@ export const initFlexDetailsSet = (
     });
   }
 
+  update_on_content_change: {
+    // Track when the DOM structure changes inside the container
+    // This detects when:
+    // - Details elements are added/removed
+    // - The content inside details elements changes
+    const mutationObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          updateSpaceDistribution({
+            reason: "content_change",
+          });
+          return;
+        }
+        if (mutation.type === "characterData") {
+          updateSpaceDistribution({
+            reason: "content_change",
+          });
+          return;
+        }
+      }
+    });
+    mutationObserver.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    cleanupCallbackSet.add(() => {
+      mutationObserver.disconnect();
+    });
+  }
+
   return flexDetailsSet;
 };
 
@@ -738,6 +772,7 @@ const prepareSyncDetailsContentHeight = (details) => {
 
   const content = summary.nextElementSibling;
   if (!content) {
+    console.log("no content");
     return (detailsHeight) => {
       details.style.setProperty(
         "--details-height",
@@ -749,6 +784,7 @@ const prepareSyncDetailsContentHeight = (details) => {
       );
     };
   }
+  console.log(content);
   content.style.height = "var(--content-height)";
   return (detailsHeight, { isAnimation } = {}) => {
     const contentHeight = detailsHeight - summaryHeight;
