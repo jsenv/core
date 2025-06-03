@@ -34,7 +34,9 @@ export const GET_ROLE_ROUTE = registerRoute(
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to get role");
     }
-    const { role, databases, columns } = await response.json();
+    const { data, meta } = await response.json();
+    const role = data;
+    const { databases, columns } = meta;
     setActiveRole(role);
     setActiveRoleDatabases(databases);
     setActiveRoleColumns(columns);

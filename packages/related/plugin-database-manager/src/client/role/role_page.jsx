@@ -7,9 +7,8 @@ import {
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
-import { PageHead } from "../components/page_head.jsx";
-import { PageLabel } from "../components/page_label.jsx";
 import { DatabaseLink } from "../database/database_link.jsx";
+import { PageBody, PageHead } from "../layout/page.jsx";
 import { pickRoleIcon } from "./role_icons.jsx";
 import {
   DELETE_ROLE_ACTION,
@@ -47,18 +46,20 @@ const RolePage = () => {
           },
         ]}
       >
-        <PageLabel icon={<RoleIcon />} label={"Role:"}>
+        <PageHead.Label icon={<RoleIcon />} label={"Role:"}>
           {rolname}
-        </PageLabel>
+        </PageHead.Label>
       </PageHead>
-      <RoleFields role={role} />
-      <RoleDatabases role={role} />
-      <a
-        href="https://www.postgresql.org/docs/14/sql-alterrole.html"
-        target="_blank"
-      >
-        ALTER ROLE documentation
-      </a>
+      <PageBody>
+        <RoleFields role={role} />
+        <RoleDatabases role={role} />
+        <a
+          href="https://www.postgresql.org/docs/14/sql-alterrole.html"
+          target="_blank"
+        >
+          ALTER ROLE documentation
+        </a>
+      </PageBody>
     </ErrorBoundaryContext.Provider>
   );
 };

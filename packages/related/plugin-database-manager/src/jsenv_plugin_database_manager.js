@@ -205,11 +205,13 @@ export const jsenvPluginDatabaseManager = ({
               pg_roles.rolname = ${rolname}
           `;
           return {
-            role,
-            databases,
-            objects,
-            // privileges,
-            columns,
+            data: role,
+            meta: {
+              databases,
+              objects,
+              // privileges,
+              columns,
+            },
           };
         },
         PUT: async (rolname, colname, value) => {
@@ -229,14 +231,22 @@ export const jsenvPluginDatabaseManager = ({
             WHERE
               rolname = ${rolname}
           `;
-          return role;
+          return {
+            data: role,
+            meta: {
+              count: await countRows(sql, "pg_roles"),
+            },
+          };
         },
         // when dropping roles, consider this: https://neon.tech/postgresql/postgresql-administration/postgresql-drop-role
         DELETE: async (rolname) => {
           await sql`DROP ROLE ${sql(rolname)}`;
-        },
-        meta: {
-          count: () => countRows(sql, "pg_roles"),
+          return {
+            data: null,
+            meta: {
+              count: await countRows(sql, "pg_roles"),
+            },
+          };
         },
       }),
       ...createRESTRoutes(`${pathname}api/databases`, {
@@ -265,7 +275,13 @@ export const jsenvPluginDatabaseManager = ({
           delete database.datdba;
           delete database.owner_rolname;
 
-          return { database, ownerRole, columns };
+          return {
+            data: database,
+            meta: {
+              ownerRole,
+              columns,
+            },
+          };
         },
         PUT: async (datname, colname, value) => {
           await alterDatabaseQuery(sql, datname, colname, value);
@@ -280,13 +296,21 @@ export const jsenvPluginDatabaseManager = ({
             WHERE
               datname = ${datname}
           `;
-          return database;
+          return {
+            data: database,
+            meta: {
+              count: await countRows(sql, "pg_database"),
+            },
+          };
         },
         DELETE: async (datname) => {
           await sql`DROP DATABASE ${sql(datname)}`;
-        },
-        meta: {
-          count: () => countRows(sql, "pg_roles"),
+          return {
+            data: null,
+            meta: {
+              count: await countRows(sql, "pg_database"),
+            },
+          };
         },
       }),
       {
@@ -306,7 +330,12 @@ export const jsenvPluginDatabaseManager = ({
               : sql``}
           `;
           const columns = await getTableColumns(sql, "pg_tables");
-          return Response.json({ data, meta: { columns } });
+          return Response.json({
+            data,
+            meta: {
+              columns,
+            },
+          });
         },
       },
       {
@@ -562,25 +591,7 @@ export const jsenvPluginDatabaseManager = ({
   };
 };
 
-const createRESTRoutes = (resource, { GET, POST, PUT, DELETE, meta }) => {
-  const withMeta = async (data, ...args) => {
-    const metaValues = {};
-    const promises = [];
-    for (const key of Object.keys(meta)) {
-      const valuePromise = meta[key](...args);
-      metaValues[key] = null;
-      (async () => {
-        const metaValue = await valuePromise;
-        metaValues[key] = metaValue;
-      })();
-    }
-    await Promise.all(promises);
-    return Response.json({
-      data,
-      meta: metaValues,
-    });
-  };
-
+const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
   const routes = [];
   if (GET) {
     const getRoute = {
@@ -588,14 +599,14 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE, meta }) => {
       declarationSource: import.meta.url,
       fetch: async (request) => {
         const id = request.params.id;
-        const object = await GET(id);
-        if (!object) {
+        const body = await GET(id);
+        if (!body) {
           return Response.json(
             { message: `${resource} "${id}" not found` },
             { status: 404 },
           );
         }
-        return meta ? withMeta(object, meta, id) : Response.json(object);
+        return Response.json(body);
       },
     };
     routes.push(getRoute);
@@ -607,10 +618,8 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE, meta }) => {
       acceptedMediaTypes: ["application/json"],
       fetch: async (request) => {
         const properties = await request.json();
-        const object = await POST(properties);
-        return meta
-          ? withMeta(object, meta, properties)
-          : Response.json(object, { status: 201 });
+        const body = await POST(properties);
+        return Response.json(body, { status: 201 });
       },
     };
     routes.push(postRoute);
@@ -635,8 +644,10 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE, meta }) => {
       declarationSource: import.meta.url,
       fetch: async (request) => {
         const id = request.params.id;
-        await DELETE(id);
-        return meta ? withMeta(null, id) : new Response(null, { status: 204 });
+        const body = await DELETE(id);
+        return body === null || body === undefined
+          ? new Response(null, { status: 204 })
+          : Response.json(body);
       },
     };
     routes.push(deleteRoute);

@@ -772,7 +772,6 @@ const prepareSyncDetailsContentHeight = (details) => {
 
   const content = summary.nextElementSibling;
   if (!content) {
-    console.log("no content");
     return (detailsHeight) => {
       details.style.setProperty(
         "--details-height",
@@ -784,7 +783,6 @@ const prepareSyncDetailsContentHeight = (details) => {
       );
     };
   }
-  console.log(content);
   content.style.height = "var(--content-height)";
   return (detailsHeight, { isAnimation } = {}) => {
     const contentHeight = detailsHeight - summaryHeight;

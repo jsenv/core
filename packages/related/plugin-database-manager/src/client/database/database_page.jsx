@@ -7,8 +7,7 @@ import {
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
-import { PageHead } from "../components/page_head.jsx";
-import { PageLabel } from "../components/page_label.jsx";
+import { PageBody, PageHead } from "../layout/page.jsx";
 import { RoleLink } from "../role/role_link.jsx";
 import { DatabaseSvg } from "./database_icons.jsx";
 import {
@@ -46,19 +45,19 @@ const DatabasePage = () => {
           },
         ]}
       >
-        <PageLabel icon={<DatabaseSvg />} label={"Database:"}>
+        <PageHead.Label icon={<DatabaseSvg />} label={"Database:"}>
           {datname}
-        </PageLabel>
+        </PageHead.Label>
       </PageHead>
-
-      <DatabaseFields database={database} />
-
-      <a
-        href="https://www.postgresql.org/docs/14/sql-alterdatabase.html"
-        target="_blank"
-      >
-        ALTER DATABASE documentation
-      </a>
+      <PageBody>
+        <DatabaseFields database={database} />
+        <a
+          href="https://www.postgresql.org/docs/14/sql-alterdatabase.html"
+          target="_blank"
+        >
+          ALTER DATABASE documentation
+        </a>
+      </PageBody>
     </ErrorBoundaryContext.Provider>
   );
 };
