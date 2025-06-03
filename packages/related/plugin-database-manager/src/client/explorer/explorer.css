@@ -116,6 +116,10 @@
   min-height: 0;
   scrollbar-width: thin;
 }
+.explorer_group[data-animated] .explorer_group_content {
+  overflow-y: hidden;
+}
+
 .explorer_group_list {
   margin-top: 0;
   margin-bottom: 0;

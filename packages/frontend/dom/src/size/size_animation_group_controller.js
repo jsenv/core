@@ -26,19 +26,30 @@ export const createSizeAnimationGroupController = ({ duration }) => {
     cancelCallbackSet.clear();
   };
 
-  const update = (element, value, isFinished) => {
+  const update = (element, value, { timing }) => {
     element.style.height = `${value}px`;
     const sideEffect = sideEffectMap.get(element);
     if (sideEffect) {
-      sideEffect(value, isFinished);
+      sideEffect(value, { timing });
     }
   };
 
   const animationGroupController = {
     pending: false,
     animateAll: (animations, { onChange }) => {
+      // TODO: the finish and cancel callbacks keeps growing
+      // when called in the middle of an animation
+
       let somethingChanged = false;
       for (const { element, target, sideEffect } of animations) {
+        element.setAttribute("data-animated", "");
+        finishCallbackSet.add(() => {
+          element.removeAttribute("data-animated");
+        });
+        cancelCallbackSet.add(() => {
+          element.removeAttribute("data-animated");
+        });
+
         const isNew = !elementSet.has(element);
         const startSize = parseFloat(getComputedStyle(element).height);
         if (isNew) {
@@ -54,6 +65,7 @@ export const createSizeAnimationGroupController = ({ duration }) => {
             "will-change": "height",
           });
           finishCallbackSet.add(restoreWillChangeStyle);
+
           const restoreSizeStyle = setStyles(element, {
             height: `${startSize}px`,
           });
@@ -73,6 +85,7 @@ export const createSizeAnimationGroupController = ({ duration }) => {
 
       animationGroupController.pending = true;
 
+      let timing = "start";
       const draw = () => {
         const elapsed = document.timeline.currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
@@ -85,9 +98,10 @@ export const createSizeAnimationGroupController = ({ duration }) => {
             const targetSize = targetSizeMap.get(element);
             const animatedSize =
               startSize + (targetSize - startSize) * easedProgress;
-            update(element, animatedSize);
+            update(element, animatedSize, { timing });
             changeEntryArray.push({ element, value: animatedSize });
           }
+          timing = "progress";
           if (changeEntryArray.length && onChange) {
             onChange(changeEntryArray);
           }
@@ -96,10 +110,11 @@ export const createSizeAnimationGroupController = ({ duration }) => {
         }
 
         // Animation complete
+        timing = "end";
         const changeEntryArray = [];
         for (const element of elementSet) {
           const finalSize = targetSizeMap.get(element);
-          update(element, finalSize, true);
+          update(element, finalSize, { timing });
           changeEntryArray.push({ element, value: finalSize });
         }
         if (changeEntryArray.length && onChange) {

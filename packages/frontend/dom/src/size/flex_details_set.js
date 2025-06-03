@@ -163,12 +163,19 @@ export const initFlexDetailsSet = (
         continue;
       }
       if (isDetailsElement(child) && child.open) {
-        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
+        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(
+          child,
+          { animated: true },
+        );
         changeSet.add({
           element: child,
           target: allocatedSize,
-          sideEffect: (height, isFinished) => {
-            syncDetailsContentHeight(height, { isAnimation: !isFinished });
+          sideEffect: (height, { timing } = {}) => {
+            syncDetailsContentHeight(height, {
+              isAnimation: true,
+              isAnimationStart: timing === "start",
+              isAnimationEnd: timing === "end",
+            });
           },
         });
       } else {
@@ -734,12 +741,14 @@ export const initFlexDetailsSet = (
         if (mutation.type === "childList") {
           updateSpaceDistribution({
             reason: "content_change",
+            animated: true,
           });
           return;
         }
         if (mutation.type === "characterData") {
           updateSpaceDistribution({
             reason: "content_change",
+            animated: true,
           });
           return;
         }
@@ -784,7 +793,13 @@ const prepareSyncDetailsContentHeight = (details) => {
     };
   }
   content.style.height = "var(--content-height)";
-  return (detailsHeight, { isAnimation } = {}) => {
+
+  const contentComputedStyle = getComputedStyle(content);
+  const scrollbarMightTakeHorizontalSpace =
+    contentComputedStyle.overflowY === "auto" &&
+    contentComputedStyle.scrollbarGutter !== "stable";
+
+  return (detailsHeight, { isAnimation, isAnimationEnd } = {}) => {
     const contentHeight = detailsHeight - summaryHeight;
     details.style.setProperty(
       "--details-height",
@@ -795,22 +810,18 @@ const prepareSyncDetailsContentHeight = (details) => {
       getHeightCssValue(contentHeight),
     );
 
-    if (!isAnimation) {
-      const contentComputedStyle = getComputedStyle(content);
-      // Fix scrollbar induced overflow:
-      //
-      // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
-      // 2. we set height exactly to the natural height required to prevent overflow
-      //
-      // actual: browser keeps scrollbar displayed
-      // expected: scrollbar is hidden
-      //
-      // Solution: Temporarily prevent scrollbar to display
-      // force layout recalculation, then restore
-      if (
-        contentComputedStyle.overflowY === "auto" &&
-        contentComputedStyle.scrollbarGutter !== "stable"
-      ) {
+    if (!isAnimation || isAnimationEnd) {
+      if (scrollbarMightTakeHorizontalSpace) {
+        // Fix scrollbar induced overflow:
+        //
+        // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
+        // 2. we set height exactly to the natural height required to prevent overflow
+        //
+        // actual: browser keeps scrollbar displayed
+        // expected: scrollbar is hidden
+        //
+        // Solution: Temporarily prevent scrollbar to display
+        // force layout recalculation, then restore
         const restoreOverflow = forceStyles(content, {
           "overflow-y": "hidden",
         });
