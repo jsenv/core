@@ -22,9 +22,10 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
+import { applyAction } from "../action/action.js";
 import { ABORTED } from "../action/action_status.js";
 import { useResetErrorBoundary } from "../hooks/use_reset_error_boundary.js";
-import { canUseNavigation } from "../router.js";
+import { canUseNavigation, navigationInstalled } from "../router.js";
 import { FormContext } from "./use_spa_form_status.js";
 
 const submit = HTMLFormElement.prototype.submit;
@@ -201,6 +202,15 @@ SPAForm.Button = SPAButton;
 
 const applyRoutingOnFormSubmission = canUseNavigation
   ? async ({ method, formData, action }) => {
+      if (!navigationInstalled) {
+        // for demos where there is no routes
+        await applyAction(action, {
+          signal: new AbortController().signal,
+          formData,
+        });
+        return;
+      }
+
       try {
         await navigation.navigate(window.location.href, {
           history: "replace",
