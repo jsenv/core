@@ -12,6 +12,7 @@ let debug = true;
 let baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
   : window.location.origin;
+let baseDirectoryUrl = new URL("./", baseUrl).href;
 
 if (debug) {
   console.debug(`Router baseUrl initial value set to "${baseUrl}"`);
@@ -21,6 +22,7 @@ export const setBaseUrl = (v) => {
   const urlObject = new URL(v);
   urlObject.search = "";
   baseUrl = urlObject.href;
+  baseDirectoryUrl = new URL("./", baseUrl).href;
 };
 const resourceFromUrl = (url) => {
   url = String(url);
@@ -84,8 +86,9 @@ const createRouteFromResourcePattern = (resourcePattern, { load }) => {
   const reportError = (e) => {
     errorSignal.value = e;
   };
-  let data;
-  const dataSignal = signal(undefined);
+  const initialData = undefined;
+  let data = initialData;
+  const dataSignal = signal(initialData);
   const loadData = load ? ({ signal }) => load({ signal, params }) : undefined;
 
   const initialUrl = undefined;
@@ -187,7 +190,8 @@ const createRouteFromResourcePattern = (resourcePattern, { load }) => {
   const toString = () => {
     const isMatching = isMatchingSignal.peek();
     if (isMatching) {
-      return url;
+      const urlRelativeToBaseUrl = url.slice(baseDirectoryUrl.length);
+      return urlRelativeToBaseUrl;
     }
     return resourcePattern;
   };
@@ -253,8 +257,9 @@ const createRouteFromState = ({ match, enter, leave, load, name }) => {
   const reportError = (e) => {
     errorSignal.value = e;
   };
-  let data;
-  const dataSignal = signal(undefined);
+  const initialData = undefined;
+  let data = initialData;
+  const dataSignal = signal(initialData);
   const loadData = load ? ({ signal }) => load({ signal, state }) : undefined;
 
   const initialState = {};
@@ -407,9 +412,9 @@ const applyRouteLeaveEffect = (route, reason) => {
 const loadRoute = async (route, { signal }) => {
   try {
     const promisesToWait = [];
-    if (route.load) {
+    if (route.loadData) {
       const routeLoadPromise = (async () => {
-        const data = await route.load({ signal });
+        const data = await route.loadData({ signal });
         route.dataSignal.value = data;
       })();
       promisesToWait.push(routeLoadPromise);
