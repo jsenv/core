@@ -10,7 +10,7 @@ export { SPAInputText } from "./src/components/spa_input_text.jsx";
 export { SPALink } from "./src/components/spa_link.jsx";
 export { useSPAFormStatus } from "./src/components/use_spa_form_status.js";
 export { useValidity } from "./src/components/validity/use_validity.js";
-export { useDocumentUrl } from "./src/document_url.js";
+export { useDocumentUrl } from "./src/document_routing.js";
 export { useDetails } from "./src/hooks/use_details.js";
 export {
   ErrorBoundaryContext,

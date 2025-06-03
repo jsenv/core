@@ -1,6 +1,6 @@
 import { computed } from "@preact/signals";
 import { useCallback } from "preact/hooks";
-import { documentUrlSignal } from "./document_url.js";
+import { documentUrlSignal } from "./document_routing.js";
 import { normalizeUrl } from "./normalize_url.js";
 import { goTo } from "./router.js";
 

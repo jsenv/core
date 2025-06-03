@@ -7,14 +7,19 @@
 import { updateCanGoBack, updateCanGoForward } from "../back_and_forward.js";
 import { compareTwoJsValues } from "../compare_two_js_values.js";
 import { documentIsLoadingSignal } from "../document_loading.js";
-import { documentIsRoutingSignal } from "../document_routing.js";
-import { updateDocumentUrl } from "../document_url.js";
+import {
+  documentIsRoutingSignal,
+  updateDocumentState,
+  updateDocumentUrl,
+} from "../document_routing.js";
 
 let debug = false;
 
 updateDocumentUrl(navigation.currentEntry.url);
+updateDocumentState(navigation.currentEntry.getState());
 navigation.addEventListener("currententrychange", () => {
   updateDocumentUrl(navigation.currentEntry.url);
+  updateDocumentState(navigation.currentEntry.getState());
 });
 
 updateCanGoBack(navigation.canGoBack);
