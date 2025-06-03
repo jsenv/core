@@ -228,7 +228,7 @@ const RouteHandler = ({
           };
         }, []);
         return (
-          <div ref={ref} style="display:inline">
+          <div ref={ref} style="display:block">
             <RouteLoadedOriginal {...props} />
           </div>
         );

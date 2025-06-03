@@ -34,7 +34,8 @@ export const createSizeAnimationGroupController = ({ duration }) => {
     }
   };
 
-  return {
+  const animationGroupController = {
+    pending: false,
     animateAll: (animations, { onChange }) => {
       let somethingChanged = false;
       for (const { element, target, sideEffect } of animations) {
@@ -69,6 +70,8 @@ export const createSizeAnimationGroupController = ({ duration }) => {
       if (somethingChanged) {
         startTime = document.timeline.currentTime;
       }
+
+      animationGroupController.pending = true;
 
       const draw = () => {
         const elapsed = document.timeline.currentTime - startTime;
@@ -108,15 +111,18 @@ export const createSizeAnimationGroupController = ({ duration }) => {
         sideEffectMap.clear();
         elementSet.clear();
         animationFrame = null;
+        animationGroupController.pending = false;
       };
 
       animationFrame = requestAnimationFrame(draw);
     },
     cancel: () => {
+      animationGroupController.pending = false;
       cancelAnimationFrame(animationFrame);
       animationFrame = null;
       callFinishCallbacks();
       callCancelCallbacks();
     },
   };
+  return animationGroupController;
 };
