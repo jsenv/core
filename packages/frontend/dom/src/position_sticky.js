@@ -12,6 +12,8 @@ import.meta.css = /* css */ `
   }
 `;
 
+let debug = true;
+
 export const initPositionSticky = (element) => {
   const computedStyle = getComputedStyle(element);
   const topCssValue = computedStyle.top;
@@ -107,31 +109,38 @@ export const initPositionSticky = (element) => {
     // This is relative to the parent's position
     let topPosition = top;
 
-    const scrollableParent = Array.from(scrollableParentSet)[0];
-    if (scrollableParent === document.documentElement) {
-      const scrollTop =
-        document.documentElement.scrollTop || document.body.scrollTop;
-      if (scrollTop > height) {
-        topPosition = scrollTop - height;
-      }
-    } else if (
-      scrollableParent === parentElement ||
-      scrollableParent.contains(parentElement)
-    ) {
-      const scrollTop = scrollableParent.scrollTop;
-      if (scrollTop > height) {
-        topPosition = scrollTop - height;
+    const placeholderRect = placeholder.getBoundingClientRect();
+    const parentRect = parentElement.getBoundingClientRect();
+
+    for (const scrollableParent of scrollableParentSet) {
+      const isDocument = scrollableParent === document;
+      const scrollableParentRect = isDocument
+        ? { top: 0, height: window.innerHeight }
+        : scrollableParent.getBoundingClientRect();
+
+      // When placeholder would scroll above the desired top position
+      const placeholderDistanceFromTop =
+        placeholderRect.top - scrollableParentRect.top;
+      if (placeholderDistanceFromTop < top) {
+        // Calculate how far the element needs to move to maintain the desired top position
+        topPosition = top - placeholderDistanceFromTop;
+        // Ensure element stays within parent boundaries (doesn't go below bottom)
+        const parentBottomPosition = parentRect.height - height;
+        topPosition = Math.min(topPosition, parentBottomPosition);
+        // Never let it go negative (above parent's top)
+        topPosition = Math.max(0, topPosition);
+        break; // Use the first scrollable parent that triggers sticky behavior
       }
     }
 
-    const scrollableParentHeight = getHeight(scrollableParent);
+    element.style.top = `${Math.round(topPosition)}px`;
 
-    // Prevent element from going beyond parent's bottom
-    const parentBottom = scrollableParentHeight;
-    if (topPosition + height > parentBottom) {
-      topPosition = parentBottom - height;
+    if (debug) {
+      console.debug({
+        topPosition,
+        height,
+      });
     }
-    element.style.top = `${topPosition}px`;
   };
 
   updatePosition();
