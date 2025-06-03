@@ -1,6 +1,5 @@
 import {
   registerRoute,
-  registerStateRoute,
   Route,
   useRouteData,
   useRouteIsMatching,
@@ -13,21 +12,19 @@ const ROOT_ROUTE = registerRoute("/", () => "root content");
 const A_ROUTE = registerRoute("/a", () => "a content");
 const B_ROUTE = registerRoute("/b", () => "b content");
 
-const MENU_ROUTE = registerStateRoute(
-  {
-    match: (state) => {
-      return state.menu_opened === true;
-    },
-    enter: (state) => {
-      state.menu_opened = true;
-    },
-    leave: (state) => {
-      state.menu_opened = false;
-    },
+const MENU_ROUTE = registerRoute({
+  match: (state) => {
+    return state.menu_opened === true;
   },
-  () => "menu content",
-  "menu",
-);
+  enter: (state) => {
+    state.menu_opened = true;
+  },
+  leave: (state) => {
+    state.menu_opened = false;
+  },
+  load: () => "menu content",
+  name: "menu",
+});
 
 const App = () => {
   const rootUrl = useRouteUrl(ROOT_ROUTE);

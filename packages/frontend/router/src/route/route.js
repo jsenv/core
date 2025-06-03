@@ -2,7 +2,7 @@ import { createResourcePattern } from "@jsenv/url-pattern";
 import { batch, effect, signal } from "@preact/signals";
 import { applyAction } from "../action/action.js";
 import { compareTwoJsValues } from "../compare_two_js_values.js";
-import { routingWhile } from "../document_routing.js";
+import { documentUrlSignal, routingWhile } from "../document_routing.js";
 import { normalizeUrl } from "../normalize_url.js";
 import { goTo, installNavigation, reload } from "../router.js";
 import { ABORTED, FAILED, IDLE, LOADED, LOADING } from "./route_status.js";
@@ -45,281 +45,371 @@ export const onRouterUILoaded = () => {
 };
 
 const routeAbortEnterMap = new Map();
-export const registerRoute = (resourcePattern, handler) => {
-  const route = {
-    resourcePattern: undefined,
-    isMatchingSignal: undefined,
-    match: undefined,
+const routeSet = new Set();
+const matchingRouteSet = new Set();
 
-    url: undefined,
-    urlSignal: undefined,
-    buildUrl: undefined,
-    compareTarget: undefined,
-    go: undefined,
+export const registerRoute = (firstArg, secondArg) => {
+  if (typeof firstArg === "string") {
+    if (typeof secondArg === "function") {
+      secondArg = {
+        load: secondArg,
+      };
+    }
+    const routeUpdatingDocumentUrl = createRouteFromResourcePattern(
+      firstArg,
+      secondArg,
+    );
+    routeSet.add(routeUpdatingDocumentUrl);
+    return routeUpdatingDocumentUrl;
+  }
+  const routeUpdatingDocumentState = createRouteFromState(firstArg);
+  routeSet.add(routeUpdatingDocumentState);
+  return routeUpdatingDocumentState;
+};
 
-    params: undefined,
-    paramsSignal: undefined,
-    replaceParams: undefined,
-
-    loadData: handler,
-    loadUI: undefined,
-    renderUI: undefined,
-    node: undefined,
-    loadingStateSignal: undefined,
-    error: undefined,
-    errorSignal: undefined,
-    reportError: undefined,
-    data: undefined,
-    dataSignal: undefined,
-    reload: undefined,
-
-    toString: undefined,
-  };
-  routeSet.add(route);
-
-  resourcePattern = resourceFromUrl(resourcePattern);
+const createRouteFromResourcePattern = (resourcePattern, props) => {
   const resourcePatternParsed = createResourcePattern(resourcePattern);
-  matching: {
-    const isMatchingSignal = signal(false);
-    const match = ({ resource }) => {
-      const matchResult = resourcePatternParsed.match(resource);
-      if (!matchResult) {
-        return false;
-      }
-      return matchResult;
-    };
 
-    route.resourcePattern = resourcePattern;
-    route.isMatchingSignal = isMatchingSignal;
-    route.match = match;
-  }
+  const isMatchingSignal = signal(false);
+  const loadingStateSignal = signal(IDLE);
+  let error;
+  const errorSignal = signal(null);
+  const reportError = (e) => {
+    errorSignal.value = e;
+  };
+  let data;
+  const dataSignal = signal(undefined);
+  const load = props.load;
+  const loadData = load ? ({ signal }) => load({ signal, params }) : undefined;
 
-  url: {
-    let url;
-    const urlSignal = signal(url);
-    effect(() => {
-      url = urlSignal.value;
-      route.url = url;
-    });
-    const buildUrl = (url, params) => {
-      const routeResource = resourcePatternParsed.generate(params);
-      const routeUrlObject = new URL(encodeURI(routeResource), baseUrl);
-      const urlObject = new URL(url);
-      const searchParams = urlObject.searchParams;
-      for (const [key, value] of searchParams) {
-        routeUrlObject.searchParams.append(key, value);
-      }
-      const hash = urlObject.hash;
-      if (!routeUrlObject.hash) {
-        routeUrlObject.hash = hash;
-      }
-      const routeUrlNormalized = normalizeUrl(routeUrlObject);
-      const routeUrlEncoded = encodeURI(routeUrlNormalized);
-      return routeUrlEncoded;
-    };
-    const compareTarget = ({ targetUrl }) => {
-      const currentUrl = urlSignal.peek();
-      if (!currentUrl) {
-        return false;
-      }
-      // TODO:
-      // 1. si une url fini par ?* alors on gardera les search params
-      // 2. si une url fait ceci: ?foo=*&bar=* alors on considere que l'url a changé
-      // que si le param foo ou bar a changé mais pas si un autre param a changé
-      const urlToCompareWithoutSearch = urlWithoutSearch(targetUrl);
-      const currentUrlWithoutSearch = urlWithoutSearch(currentUrl);
-      if (urlToCompareWithoutSearch === currentUrlWithoutSearch) {
-        return true;
-      }
+  const initialUrl = undefined;
+  let url = initialUrl;
+  const urlSignal = signal(url);
+  const buildUrl = (url, values) => {
+    const routeResource = resourcePatternParsed.generate(values);
+    const routeUrlObject = new URL(encodeURI(routeResource), baseUrl);
+    const urlObject = new URL(url);
+    const searchParams = urlObject.searchParams;
+    for (const [key, value] of searchParams) {
+      routeUrlObject.searchParams.append(key, value);
+    }
+    const hash = urlObject.hash;
+    if (!routeUrlObject.hash) {
+      routeUrlObject.hash = hash;
+    }
+    const routeUrlNormalized = normalizeUrl(routeUrlObject);
+    const routeUrlEncoded = encodeURI(routeUrlNormalized);
+    return routeUrlEncoded;
+  };
+  const initialParams = {};
+  let params = initialParams;
+  const paramsSignal = signal(params);
+  const replaceParams = (values) => {
+    const newValues = { ...params, ...values };
+    paramsSignal.value = newValues;
+    const routeUrl = buildUrl(window.location.href, newValues);
+    urlSignal.value = routeUrl;
+    goTo(routeUrl, { replace: true, routesLoaded: [route] });
+  };
+
+  const match = ({ resource }) => {
+    const matchResult = resourcePatternParsed.match(resource);
+    if (!matchResult) {
       return false;
-    };
-    route.urlSignal = urlSignal;
-    route.buildUrl = buildUrl;
-    route.compareTarget = compareTarget;
-
-    let params = {};
-    const paramsSignal = signal(params);
-    effect(() => {
-      params = paramsSignal.value;
-      route.params = params;
-    });
-    const replaceParams = (params) => {
+    }
+    return matchResult;
+  };
+  const enterEffect = () => {
+    batch(() => {
+      isMatchingSignal.value = true;
+      errorSignal.value = null;
+      loadingStateSignal.value = LOADING;
+      urlSignal.value = url;
       paramsSignal.value = params;
-      const routeUrl = buildUrl(window.location.href, params);
-      urlSignal.value = routeUrl;
-      goTo(routeUrl, { replace: true, routesLoaded: [route] });
-    };
-    route.paramsSignal = paramsSignal;
-    route.replaceParams = replaceParams;
-
-    route.go = ({ replace } = {}) => {
-      goTo(route.url, { replace });
-    };
-  }
-
-  loading: {
-    const loadingStateSignal = signal(IDLE);
-    route.loadingStateSignal = loadingStateSignal;
-
-    let error;
-    const errorSignal = signal(null);
-    const reportError = (e) => {
-      errorSignal.value = e;
-    };
-    effect(() => {
-      error = errorSignal.value;
-      route.error = error;
     });
-    route.errorSignal = errorSignal;
-    route.reportError = reportError;
-
-    let data;
-    const dataSignal = signal(undefined);
-    effect(() => {
-      data = dataSignal.value;
-      route.data = data;
+  };
+  const leaveEffect = () => {
+    batch(() => {
+      isMatchingSignal.value = false;
+      errorSignal.value = null;
+      loadingStateSignal.value = IDLE;
+      urlSignal.value = initialUrl;
+      paramsSignal.value = initialParams;
     });
-    route.dataSignal = dataSignal;
-
-    route.reload = () => {
-      reload();
-    };
-  }
+  };
+  const shouldReload = ({ targetUrl }) => {
+    const currentUrl = documentUrlSignal.peek();
+    // TODO:
+    // 1. si une url fini par ?* alors on considere que n'importe quel search param
+    // qui a changé suffit a reload l'url
+    // 2. si une url spécifie explicitement des search params
+    // comme ?foo=*&bar=* alors on pourrais considérer que l'url a changé
+    // que si un des search params a changé
+    const currentUrlWithoutSearch = urlWithoutSearch(currentUrl);
+    const targetUrlWithoutSearch = urlWithoutSearch(targetUrl);
+    if (targetUrlWithoutSearch === currentUrlWithoutSearch) {
+      return true;
+    }
+    return false;
+  };
+  const go = ({ replace } = {}) => {
+    goTo(url, { replace });
+  };
 
   const toString = () => {
-    const isMatching = route.isMatchingSignal.peek();
-    return isMatching ? route.url : resourcePattern;
+    const isMatching = isMatchingSignal.peek();
+    if (isMatching) {
+      return url;
+    }
+    return resourcePattern;
   };
-  route.toString = toString;
+
+  const route = {
+    isMatchingSignal,
+    loadingStateSignal,
+    error,
+    errorSignal,
+    reportError,
+    data,
+    dataSignal,
+    loadData,
+
+    url,
+    urlSignal,
+    params,
+    paramsSignal,
+    replaceParams,
+
+    match,
+    enterEffect,
+    leaveEffect,
+    shouldReload,
+    toString,
+    reload,
+    go,
+  };
+
+  effect(() => {
+    error = errorSignal.value;
+    route.error = error;
+  });
+  effect(() => {
+    data = dataSignal.value;
+    route.data = data;
+  });
+  effect(() => {
+    url = urlSignal.value;
+    route.url = url;
+  });
+  effect(() => {
+    params = paramsSignal.value;
+    route.params = params;
+  });
+
+  return route;
+};
+// https://github.com/WICG/navigation-api?tab=readme-ov-file#setting-the-current-entrys-state-without-navigating
+const createRouteFromState = ({ match, enter, leave, load, name }) => {
+  const isMatchingSignal = signal(false);
+  const loadingStateSignal = signal(IDLE);
+  let error;
+  const errorSignal = signal(null);
+  const reportError = (e) => {
+    errorSignal.value = e;
+  };
+  let data;
+  const dataSignal = signal(undefined);
+  const loadData = load ? ({ signal }) => load({ signal, state }) : undefined;
+
+  const initialState = {};
+  let state = initialState;
+  const stateSignal = signal(state);
+
+  const routeMatchMethod = ({ state }) => {
+    if (!state) {
+      return false;
+    }
+    const matchResult = match(state);
+    if (matchResult === true) {
+      return {};
+    }
+    return matchResult;
+  };
+  const enterEffect = ({ state }) => {
+    batch(() => {
+      isMatchingSignal.value = true;
+      errorSignal.value = null;
+      loadingStateSignal.value = LOADING;
+      stateSignal.value = state;
+    });
+  };
+  const leaveEffect = () => {
+    batch(() => {
+      isMatchingSignal.value = false;
+      errorSignal.value = null;
+      loadingStateSignal.value = IDLE;
+      stateSignal.value = initialState;
+    });
+  };
+  const shouldReload = ({ targetState }) => {
+    // ici, comme pour les url avec search params
+    // on pourrait considérer que n'importe quel changement de state
+    // reload la route
+    // pour le moment si on retrouve les memes params dans le state alors on touche a rien
+    if (compareTwoJsValues(state, targetState)) {
+      return false;
+    }
+    return true;
+  };
+  const toString = () => name;
+
+  const route = {
+    isMatchingSignal,
+    loadingStateSignal,
+    error,
+    errorSignal,
+    reportError,
+    data,
+    dataSignal,
+    loadData,
+
+    state,
+    stateSignal,
+
+    match: routeMatchMethod,
+    enterEffect,
+    leaveEffect,
+    shouldReload,
+    reload,
+    toString,
+    enter: () => {
+      const isMatching = isMatchingSignal.peek();
+      if (isMatching) {
+        return;
+      }
+      const stateCopy = { ...state };
+      enter(stateCopy);
+      goTo(window.location.href, { state: stateCopy });
+    },
+    leave: () => {
+      const isMatching = isMatchingSignal.peek();
+      if (!isMatching) {
+        return;
+      }
+      const stateCopy = { ...state };
+      leave(stateCopy);
+      goTo(window.location.href, { state: stateCopy });
+      stateSignal.value = initialState;
+    },
+  };
+
+  effect(() => {
+    error = errorSignal.value;
+    route.error = error;
+  });
+  effect(() => {
+    data = dataSignal.value;
+    route.data = data;
+  });
+  effect(() => {
+    state = stateSignal.value;
+    route.state = state;
+  });
 
   return route;
 };
 
-// https://github.com/WICG/navigation-api?tab=readme-ov-file#setting-the-current-entrys-state-without-navigating
-export const registerStateRoute = (
-  { match, enter, leave },
-  handler,
-  name = handler.name,
-) => {
-  const stateRoute = {
-    isMatchingSignal: undefined,
-    match: undefined,
-
-    state: undefined,
-    stateSignal: undefined,
-    compareTarget: undefined,
-
-    loadData: handler,
-    loadUI: undefined,
-    renderUI: undefined,
-    node: undefined,
-    loadingStateSignal: undefined,
-    error: undefined,
-    errorSignal: undefined,
-    reportError: undefined,
-    data: undefined,
-    dataSignal: undefined,
-    enter: undefined,
-    leave: undefined,
-    reload: undefined,
-
-    toString: undefined,
+const applyRouteEnterEffect = async (route, { signal, url, params, state }) => {
+  // here we must pass a signal that gets aborted when
+  // 1. any route is stopped (browser stop button)
+  // 2. route is left
+  // if we reach the end we can safely clear the current load signals
+  const enterAbortController = new AbortController();
+  const enterAbortSignal = enterAbortController.signal;
+  const abort = (reason) => {
+    if (debug) {
+      console.log(`abort entering "${route}"`);
+    }
+    route.loadingStateSignal.value = ABORTED;
+    enterAbortController.abort(reason);
+    routeAbortEnterMap.delete(route);
   };
+  signal.addEventListener("abort", () => {
+    abort(signal.reason);
+  });
+  routeAbortEnterMap.set(route, abort);
 
-  matching: {
-    const isMatchingSignal = signal(false);
-    stateRoute.isMatchingSignal = isMatchingSignal;
-    stateRoute.match = ({ state }) => {
-      if (!state) {
-        return false;
-      }
-      const matchResult = match(state);
-      if (matchResult === true) {
-        return {};
-      }
-      return matchResult;
-    };
+  if (debug) {
+    console.log(`"${route}": entering route`);
   }
+  route.enterEffect({ url, params, state });
+  matchingRouteSet.add(route);
 
-  state: {
-    let state = {};
-    const stateSignal = signal(state);
-    effect(() => {
-      state = stateSignal.value;
-      stateRoute.state = state;
-    });
-    stateRoute.stateSignal = stateSignal;
-
-    stateRoute.compareTarget = ({ targetState }) => {
-      const currentState = stateSignal.peek();
-      return compareTwoJsValues(currentState, targetState);
-    };
+  await loadRoute(route, {
+    signal: enterAbortSignal,
+  });
+};
+const applyRouteLeaveEffect = (route, reason) => {
+  const routeAbortEnter = routeAbortEnterMap.get(route);
+  if (routeAbortEnter) {
+    if (debug) {
+      console.log(`"${route}": aborting route enter (reason: ${reason})`);
+    }
+    routeAbortEnter(reason);
+  } else if (debug) {
+    console.log(`"${route}": leaving route (reason: ${reason})`);
   }
-
-  loading: {
-    const loadingStateSignal = signal(IDLE);
-    stateRoute.loadingStateSignal = loadingStateSignal;
-
-    let error;
-    const errorSignal = signal(null);
-    const reportError = (e) => {
-      errorSignal.value = e;
-    };
-    effect(() => {
-      error = errorSignal.value;
-      stateRoute.error = error;
-    });
-    stateRoute.errorSignal = errorSignal;
-    stateRoute.reportError = reportError;
-
-    let data;
-    const dataSignal = signal(undefined);
-    effect(() => {
-      data = dataSignal.value;
-      stateRoute.data = data;
-    });
-    stateRoute.dataSignal = dataSignal;
-
-    stateRoute.reload = () => {
-      reload();
-    };
-
-    stateRoute.enter = () => {
-      const isMatching = stateRoute.isMatchingSignal.peek();
-      if (isMatching) {
-        return;
-      }
-      const currentState = stateRoute.stateSignal.peek();
-      const stateCopy = { ...currentState };
-      enter(stateCopy);
-      goTo(window.location.href, {
-        state: stateCopy,
-      });
-    };
-    stateRoute.leave = () => {
-      const isMatching = stateRoute.isMatchingSignal.peek();
-      if (!isMatching) {
-        return;
-      }
-      const currentState = stateRoute.stateSignal.peek();
-      const stateCopy = { ...currentState };
-      leave(stateCopy);
-      goTo(window.location.href, {
-        state: stateCopy,
-      });
-    };
-  }
-
-  stateRoute.toString = () => {
-    return name;
-  };
-
-  routeSet.add(stateRoute);
-  return stateRoute;
+  route.leaveEffect(reason);
+  matchingRouteSet.delete(route);
 };
 
-const routeSet = new Set();
-const matchingRouteSet = new Set();
+const loadRoute = async (route, { signal }) => {
+  try {
+    const promisesToWait = [];
+    if (route.load) {
+      const routeLoadPromise = (async () => {
+        const data = await route.load({ signal });
+        route.dataSignal.value = data;
+      })();
+      promisesToWait.push(routeLoadPromise);
+    }
+    if (route.loadUI) {
+      const loadUIPromise = (async () => {
+        await route.loadUI({ signal });
+      })();
+      promisesToWait.push(loadUIPromise);
+    }
+    if (promisesToWait.length) {
+      await Promise.all(promisesToWait);
+      if (signal.aborted) {
+        return;
+      }
+    }
+    route.loadingStateSignal.value = LOADED;
+    if (route.renderUI) {
+      route.node = await route.renderUI();
+      if (signal.aborted) {
+        return;
+      }
+    }
+    if (debug) {
+      console.log(`"${route}": route load end`);
+    }
+    routeAbortEnterMap.delete(route);
+  } catch (e) {
+    routeAbortEnterMap.delete(route);
+    if (signal.aborted && e === signal.reason) {
+      route.loadingStateSignal.value = ABORTED;
+      return;
+    }
+    batch(() => {
+      route.reportError(e);
+      route.loadingStateSignal.value = FAILED;
+    });
+    throw e;
+  }
+};
+
 export const applyRouting = async ({
   // sourceUrl,
   targetUrl,
@@ -403,7 +493,7 @@ export const applyRouting = async ({
         continue;
       }
       routeLeftSet.add(routeToLeave);
-      leaveRoute(routeToLeave, `Navigating to ${targetResource}`);
+      applyRouteLeaveEffect(routeToLeave, `Navigating to ${targetResource}`);
     }
     if (debug) {
       console.log(`does not match new routes.
@@ -422,129 +512,19 @@ route left: ${routeLeftSet.size === 0 ? "none" : Array.from(routeLeftSet).join("
     routeToLeaveSet.add(activeRoute);
   }
   for (const routeToLeave of routeToLeaveSet) {
-    leaveRoute(routeToLeave, `Navigating to ${targetResource}`);
+    applyRouteLeaveEffect(routeToLeave, `Navigating to ${targetResource}`);
   }
   await routingWhile(async () => {
     const promises = [];
     for (const [routeToEnter, enterParams] of routeToEnterMap) {
-      const routeEnterPromise = enterRoute(routeToEnter, enterParams);
+      const routeEnterPromise = applyRouteEnterEffect(
+        routeToEnter,
+        enterParams,
+      );
       promises.push(routeEnterPromise);
     }
     await Promise.all(promises);
   });
-};
-const enterRoute = async (route, { signal, url, params, state }) => {
-  // here we must pass a signal that gets aborted when
-  // 1. any route is stopped (browser stop button)
-  // 2. route is left
-  // if we reach the end we can safely clear the current load signals
-  const enterAbortController = new AbortController();
-  const enterAbortSignal = enterAbortController.signal;
-  const abort = (reason) => {
-    if (debug) {
-      console.log(`abort entering "${route}"`);
-    }
-    route.loadingStateSignal.value = ABORTED;
-    enterAbortController.abort(reason);
-    routeAbortEnterMap.delete(route);
-  };
-  signal.addEventListener("abort", () => {
-    abort(signal.reason);
-  });
-  routeAbortEnterMap.set(route, abort);
-
-  if (debug) {
-    console.log(`"${route}": entering route`);
-  }
-  matchingRouteSet.add(route);
-  batch(() => {
-    if (route.urlSignal) {
-      route.urlSignal.value = url;
-    }
-    if (route.paramsSignal) {
-      route.paramsSignal.value = params;
-    }
-    if (route.stateSignal) {
-      route.stateSignal.value = state;
-    }
-    route.isMatchingSignal.value = true;
-    route.loadingStateSignal.value = LOADING;
-    route.errorSignal.value = null;
-  });
-
-  try {
-    const promisesToWait = [];
-    if (route.loadData) {
-      const loadDataPromise = (async () => {
-        const data = await route.loadData({
-          signal: enterAbortSignal,
-          params,
-        });
-        route.dataSignal.value = data;
-      })();
-      promisesToWait.push(loadDataPromise);
-    }
-    if (route.loadUI) {
-      const loadUIPromise = (async () => {
-        await route.loadUI({ signal: enterAbortSignal });
-      })();
-      promisesToWait.push(loadUIPromise);
-    }
-    if (promisesToWait.length) {
-      await Promise.all(promisesToWait);
-      if (enterAbortSignal.aborted) {
-        return;
-      }
-    }
-    route.loadingStateSignal.value = LOADED;
-    if (route.renderUI) {
-      route.node = await route.renderUI();
-      if (enterAbortSignal.aborted) {
-        return;
-      }
-    }
-    if (debug) {
-      console.log(`"${route}": route enter end`);
-    }
-    routeAbortEnterMap.delete(route);
-  } catch (e) {
-    routeAbortEnterMap.delete(route);
-    if (enterAbortSignal.aborted && e === enterAbortSignal.reason) {
-      route.loadingStateSignal.value = ABORTED;
-      return;
-    }
-    batch(() => {
-      route.reportError(e);
-      route.loadingStateSignal.value = FAILED;
-    });
-    throw e;
-  }
-};
-const leaveRoute = (route, reason) => {
-  const routeAbortEnter = routeAbortEnterMap.get(route);
-  if (routeAbortEnter) {
-    if (debug) {
-      console.log(`"${route}": aborting route enter (reason: ${reason})`);
-    }
-    routeAbortEnter(reason);
-  } else if (debug) {
-    console.log(`"${route}": leaving route (reason: ${reason})`);
-  }
-  batch(() => {
-    if (route.urlSignal) {
-      route.urlSignal.value = null;
-    }
-    if (route.paramsSignal) {
-      route.paramsSignal.value = {};
-    }
-    if (route.stateSignal) {
-      route.stateSignal.value = {};
-    }
-    route.isMatchingSignal.value = false;
-    route.loadingStateSignal.value = IDLE;
-    route.errorSignal.value = null;
-  });
-  matchingRouteSet.delete(route);
 };
 
 const urlWithoutSearch = (url) => {
