@@ -17,7 +17,7 @@
 
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
-export const RectangleLoading = ({ color = "#383a36", radius = 0 }) => {
+export const RectangleLoading = ({ color = "currentColor", radius = 0 }) => {
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 

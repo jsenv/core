@@ -9,8 +9,12 @@ export const LoaderBackground = ({ pending, containerRef, children }) => {
       return null;
     }
     container.style.position = "relative";
+    let paddingTop = 0;
+    if (container.nodeName === "DETAILS") {
+      paddingTop = container.querySelector("summary").offsetHeight;
+    }
     return createPortal(
-      <LoaderBackgroundWithPortal pending={pending}>
+      <LoaderBackgroundWithPortal pending={pending} paddingTop={paddingTop}>
         {children}
       </LoaderBackgroundWithPortal>,
       container,
@@ -24,7 +28,7 @@ export const LoaderBackground = ({ pending, containerRef, children }) => {
   );
 };
 
-const LoaderBackgroundWithPortal = ({ pending, children }) => {
+const LoaderBackgroundWithPortal = ({ pending, paddingTop, children }) => {
   const shouldShowSpinner = useDebounceTrue(pending, 300);
 
   if (!shouldShowSpinner) {
@@ -33,7 +37,15 @@ const LoaderBackgroundWithPortal = ({ pending, children }) => {
 
   return (
     <>
-      <div style="position: absolute; inset: 0">
+      <div
+        style={{
+          position: "absolute",
+          top: `${paddingTop}px`,
+          bottom: 0,
+          left: 0,
+          right: 0,
+        }}
+      >
         {shouldShowSpinner && <RectangleLoading />}
       </div>
       {children}

@@ -5,6 +5,7 @@ import { useActionStatus } from "../action/action_hooks.js";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { LoaderBackground } from "./loader_background.jsx";
 import { SPAForm } from "./spa_form.jsx";
+import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 
 export const SPACheckbox = ({
   action,
@@ -60,6 +61,7 @@ const Checkbox = forwardRef(({ action, name, checked, ...rest }, ref) => {
     const input = innerRef.current;
     return input;
   });
+  useRequestSubmitOnChange(innerRef, { preventWhenValueMissing: true });
 
   return (
     <LoaderBackground pending={pending}>
