@@ -1,6 +1,7 @@
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef } from "preact/hooks";
 import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
+import { Details } from "./details.jsx";
 
 export const SPADetails = forwardRef(
   ({ route, children, onToggle, open, ...props }, ref) => {
@@ -33,8 +34,9 @@ export const SPADetails = forwardRef(
     const [summary, content] = children;
 
     return (
-      <details
+      <Details
         {...props}
+        pending={pending}
         onToggle={(toggleEvent) => {
           if (mountedRef.current) {
             if (toggleEvent.newState === "open") {
@@ -51,14 +53,12 @@ export const SPADetails = forwardRef(
         open={routeIsMatching || open}
       >
         {summary}
-        {pending
-          ? "loading..."
-          : aborted
-            ? "load was aborted"
-            : error
-              ? `error: ${error.message}`
-              : content}
-      </details>
+        {aborted
+          ? "load was aborted"
+          : error
+            ? `error: ${error.message}`
+            : content}
+      </Details>
     );
   },
 );
