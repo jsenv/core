@@ -1,8 +1,26 @@
+/**
+ * RectangleLoading Component
+ *
+ * A responsive loading indicator that dynamically adjusts to fit its container.
+ * Displays an animated outline with a traveling dot that follows the container's shape.
+ *
+ * Features:
+ * - Adapts to any container dimensions using ResizeObserver
+ * - Scales stroke width, margins and corner radius proportionally
+ * - Animates using native SVG animations for smooth performance
+ * - High-quality SVG rendering with proper path calculations
+ *
+ * @param {Object} props - Component props
+ * @param {string} [props.color="#383a36"] - Color of the loading indicator
+ * @param {number} [props.radius=0] - Corner radius of the rectangle (px)
+ */
+
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 export const RectangleLoading = ({ color = "#383a36", radius = 0 }) => {
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
   useLayoutEffect(() => {
     const container = containerRef.current;
     let animationFrameId = null;
@@ -60,26 +78,23 @@ const RectangleLoadingSvg = ({ width, height, color, radius }) => {
   const strokeWidth = Math.max(1, Math.min(width, height) * 0.01);
   const margin = Math.max(2, Math.min(width, height) * 0.03);
 
-  // Calculate viewBox dimensions based on actual container dimensions
-
   // Calculate the drawable area
   const drawableWidth = width - margin * 2;
   const drawableHeight = height - margin * 2;
 
-  // Calculate corner radius - use the provided radius as a percentage
+  // Calculate corner radius - use the provided radius or a size-based default
   const actualRadius = Math.min(
-    radius,
-    Math.min(drawableWidth, drawableHeight) / 4,
+    radius || Math.min(drawableWidth, drawableHeight) * 0.05,
+    Math.min(drawableWidth, drawableHeight) * 0.25, // Cap at 1/4 of the smaller dimension
   );
 
   // Calculate the perimeter of the rectangle for dash animation
   const pathLength =
-    2 * (drawableWidth + drawableHeight) + 2 * Math.PI * actualRadius;
+    2 * (drawableWidth + drawableHeight) +
+    (actualRadius > 0 ? 2 * Math.PI * actualRadius : 0);
 
-  // Create the path for the animation
-  const createRectPath = () => {
-    // Starting at top-left corner + radius
-    return `
+  // Starting at top-left corner + radius
+  const rectPath = `
       M ${margin + actualRadius},${margin}
       L ${margin + drawableWidth - actualRadius},${margin}
       A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth},${margin + actualRadius}
@@ -90,7 +105,6 @@ const RectangleLoadingSvg = ({ width, height, color, radius }) => {
       L ${margin},${margin + actualRadius}
       A ${actualRadius},${actualRadius} 0 0 1 ${margin + actualRadius},${margin}
     `;
-  };
 
   return (
     <svg
@@ -100,6 +114,7 @@ const RectangleLoadingSvg = ({ width, height, color, radius }) => {
       preserveAspectRatio="none"
       style="overflow: visible"
       xmlns="http://www.w3.org/2000/svg"
+      shape-rendering="geometricPrecision"
     >
       {/* Base rectangle outline */}
       <rect
@@ -115,7 +130,7 @@ const RectangleLoadingSvg = ({ width, height, color, radius }) => {
 
       {/* Progress segment that grows and moves */}
       <path
-        d={createRectPath()}
+        d={rectPath}
         fill="none"
         stroke={color}
         strokeWidth={strokeWidth * 2}
@@ -130,13 +145,14 @@ const RectangleLoadingSvg = ({ width, height, color, radius }) => {
           to="0"
           dur="1.8s"
           repeatCount="indefinite"
+          begin="0s"
         />
       </path>
 
       {/* Leading dot that follows the path */}
       <circle r={strokeWidth * 1.75} opacity="0.8" fill={color}>
         <animateMotion
-          path={createRectPath()}
+          path={rectPath}
           dur="1.8s"
           repeatCount="indefinite"
           rotate="auto"
