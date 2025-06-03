@@ -7,7 +7,7 @@
     <title>Details loading demo</title>
   </head>
   <body>
-    <div id="root" style="position: relative"></div>
+    <div id="root" style="position: relative; width: 200px"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
@@ -36,7 +36,7 @@
               stop loading
             </button>
 
-            <Details pending={pending}>
+            <Details pending={pending} open>
               <summary>
                 <span>Details</span>
               </summary>
