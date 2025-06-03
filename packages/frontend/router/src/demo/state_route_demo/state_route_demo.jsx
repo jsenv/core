@@ -110,9 +110,9 @@ const RouteDisplay = ({ route }) => {
   const data = useRouteData(route);
   return (
     <div>
-      page state: {readyState}
-      <br />
-      page data: {data}
+      page name: {route.toString()}
+      <br />- state: {readyState}
+      <br />- data: {data}
     </div>
   );
 };
