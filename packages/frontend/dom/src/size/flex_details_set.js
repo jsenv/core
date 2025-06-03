@@ -94,13 +94,22 @@ export const initFlexDetailsSet = (
         openedDetailsArray.push(details);
         canGrowSet.add(details);
         canShrinkSet.add(details);
-        const detailsContent = details.querySelector("summary + *");
-        const restoreSizeStyle = forceStyles(detailsContent, {
-          height: "auto",
-        });
-        const detailsContentHeight = getHeight(detailsContent);
-        restoreSizeStyle();
-        const detailsHeight = summaryHeight + detailsContentHeight;
+        const detailsContent = summary.nextElementSibling;
+        let detailsHeight;
+        if (detailsContent) {
+          const restoreSizeStyle = forceStyles(detailsContent, {
+            height: "auto",
+          });
+          const detailsContentHeight = getHeight(detailsContent);
+          restoreSizeStyle();
+          detailsHeight = summaryHeight + detailsContentHeight;
+        } else {
+          // empty details content like
+          // <details><summary>...</summary></details>
+          // or textual content like
+          // <details><summary>...</summary>textual content</details>
+          detailsHeight = size;
+        }
 
         if (details.hasAttribute("data-requested-height")) {
           const requestedHeightAttribute = details.getAttribute(
@@ -716,20 +725,31 @@ export const initFlexDetailsSet = (
 };
 
 const prepareSyncDetailsContentHeight = (details) => {
-  const summary = details.querySelector("summary");
-  const summaryHeight = getHeight(summary);
-  const content = details.querySelector("summary + *");
-  content.style.height = "var(--content-height)";
-
   const getHeightCssValue = (height) => {
     return `${height}px`;
   };
 
+  const summary = details.querySelector("summary");
+  const summaryHeight = getHeight(summary);
   details.style.setProperty(
     "--summary-height",
     getHeightCssValue(summaryHeight),
   );
 
+  const content = summary.nextElementSibling;
+  if (!content) {
+    return (detailsHeight) => {
+      details.style.setProperty(
+        "--details-height",
+        getHeightCssValue(detailsHeight),
+      );
+      details.style.setProperty(
+        "--content-height",
+        getHeightCssValue(detailsHeight - summaryHeight),
+      );
+    };
+  }
+  content.style.height = "var(--content-height)";
   return (detailsHeight, { isAnimation } = {}) => {
     const contentHeight = detailsHeight - summaryHeight;
     details.style.setProperty(
