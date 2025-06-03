@@ -85,21 +85,11 @@ export const jsenvPluginDatabaseManager = ({
         description: "Get info about the database manager explorer.",
         declarationSource: import.meta.url,
         fetch: async () => {
-          const [roleCountResult] = await sql`
-            SELECT
-              COUNT(*)
-            FROM
-              pg_roles
-          `;
-          const [databaseCountResult] = await sql`
-            SELECT
-              COUNT(*)
-            FROM
-              pg_database
-          `;
+          const roleCount = await countRows(sql, "pg_roles");
+          const databaseCount = await countRows(sql, "pg_database");
           return Response.json({
-            roleCount: parseInt(roleCountResult.count),
-            databaseCount: parseInt(databaseCountResult.count),
+            roleCount,
+            databaseCount,
           });
         },
       },
@@ -127,7 +117,6 @@ export const jsenvPluginDatabaseManager = ({
             FROM
               pg_database
           `;
-
           return Response.json({
             currentDatabase,
             databases,
@@ -246,6 +235,9 @@ export const jsenvPluginDatabaseManager = ({
         DELETE: async (rolname) => {
           await sql`DROP ROLE ${sql(rolname)}`;
         },
+        meta: {
+          count: () => countRows(sql, "pg_roles"),
+        },
       }),
       ...createRESTRoutes(`${pathname}api/databases`, {
         GET: async (datname) => {
@@ -293,13 +285,15 @@ export const jsenvPluginDatabaseManager = ({
         DELETE: async (datname) => {
           await sql`DROP DATABASE ${sql(datname)}`;
         },
+        meta: {
+          count: () => countRows(sql, "pg_roles"),
+        },
       }),
       {
         endpoint: `GET ${pathname}/api/tables`,
         declarationSource: import.meta.url,
         fetch: async (request) => {
           const publicFilter = request.searchParams.has("public"); // TODO: a dynamic filter param
-          const columns = await getTableColumns(sql, "pg_tables");
           const data = await sql`
             SELECT
               *
@@ -311,7 +305,8 @@ export const jsenvPluginDatabaseManager = ({
                 `
               : sql``}
           `;
-          return Response.json({ columns, data });
+          const columns = await getTableColumns(sql, "pg_tables");
+          return Response.json({ data, meta: { columns } });
         },
       },
       {
@@ -567,7 +562,25 @@ export const jsenvPluginDatabaseManager = ({
   };
 };
 
-const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
+const createRESTRoutes = (resource, { GET, POST, PUT, DELETE, meta }) => {
+  const withMeta = async (data, ...args) => {
+    const metaValues = {};
+    const promises = [];
+    for (const key of Object.keys(meta)) {
+      const valuePromise = meta[key](...args);
+      metaValues[key] = null;
+      (async () => {
+        const metaValue = await valuePromise;
+        metaValues[key] = metaValue;
+      })();
+    }
+    await Promise.all(promises);
+    return Response.json({
+      data,
+      meta: metaValues,
+    });
+  };
+
   const routes = [];
   if (GET) {
     const getRoute = {
@@ -582,7 +595,7 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
             { status: 404 },
           );
         }
-        return Response.json(object);
+        return meta ? withMeta(object, meta, id) : Response.json(object);
       },
     };
     routes.push(getRoute);
@@ -595,7 +608,9 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
       fetch: async (request) => {
         const properties = await request.json();
         const object = await POST(properties);
-        return Response.json(object, { status: 201 });
+        return meta
+          ? withMeta(object, meta, properties)
+          : Response.json(object, { status: 201 });
       },
     };
     routes.push(postRoute);
@@ -621,12 +636,22 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
       fetch: async (request) => {
         const id = request.params.id;
         await DELETE(id);
-        return new Response(null, { status: 204 });
+        return meta ? withMeta(null, id) : new Response(null, { status: 204 });
       },
     };
     routes.push(deleteRoute);
   }
   return routes;
+};
+
+const countRows = async (sql, tableName) => {
+  const [countResult] = await sql`
+    SELECT
+      COUNT(*)
+    FROM
+      ${sql(tableName)}
+  `;
+  return parseInt(countResult.count);
 };
 
 const getTableColumns = async (sql, tableName) => {
