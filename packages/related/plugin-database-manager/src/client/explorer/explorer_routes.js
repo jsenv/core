@@ -1,8 +1,19 @@
 import { registerRoute } from "@jsenv/router";
-import { setCurrentDatabase } from "../database/database_signals.js";
+import { effect } from "@preact/signals";
+import {
+  setCurrentDatabase,
+  setDatabaseCount,
+} from "../database/database_signals.js";
 import { databaseStore } from "../database/database_store.js";
-import { setCurrentRole } from "../role/role_signals.js";
+import { setCurrentRole, setRoleCount } from "../role/role_signals.js";
 import { roleStore } from "../role/role_store.js";
+
+effect(async () => {
+  const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/explorer`);
+  const { databaseCount, roleCount } = await response.json();
+  setDatabaseCount(databaseCount);
+  setRoleCount(roleCount);
+});
 
 export const EXPLORER_DATABASES_ROUTE = registerRoute({
   match: (state) => state.explorer_databases_opened === true,
@@ -13,9 +24,6 @@ export const EXPLORER_DATABASES_ROUTE = registerRoute({
     state.explorer_databases_opened = false;
   },
   load: async () => {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 100000); // Simulate a delay for loading
-    });
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/explorer/databases`,
     );

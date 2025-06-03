@@ -8,7 +8,7 @@ import {
   POST_ROLE_ACTION,
   PUT_ROLE_ACTION,
 } from "../role/role_routes.js";
-import { useRoleList } from "../role/role_signals.js";
+import { useRoleCount, useRoleList } from "../role/role_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
@@ -20,6 +20,7 @@ export const rolesExplorerGroupController =
 
 export const ExplorerRoles = (props) => {
   const roles = useRoleList();
+  const roleCount = useRoleCount();
 
   return (
     <ExplorerGroup
@@ -31,7 +32,7 @@ export const ExplorerRoles = (props) => {
       labelChildren={
         <span style="display: flex; align-items: center; gap: 3px">
           ROLES
-          <span style="color: rgba(28, 43, 52, 0.4)">({roles.length})</span>
+          <span style="color: rgba(28, 43, 52, 0.4)">({roleCount})</span>
         </span>
       }
       createNewButtonChildren={<UserWithPlusSvg />}

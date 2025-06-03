@@ -2,6 +2,14 @@ import { signal } from "@preact/signals";
 import { roleStore } from "../role/role_store.js";
 import { databaseStore } from "./database_store.js";
 
+const databaseCountSignal = signal(null);
+export const useDatabaseCount = () => {
+  return databaseCountSignal.value;
+};
+export const setDatabaseCount = (value) => {
+  databaseCountSignal.value = value;
+};
+
 export const useDatabaseList = () => {
   return databaseStore.arraySignal.value;
 };

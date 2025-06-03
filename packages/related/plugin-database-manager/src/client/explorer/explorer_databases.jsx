@@ -8,7 +8,10 @@ import {
   POST_DATABASE_ACTION,
   PUT_DATABASE_ACTION,
 } from "../database/database_routes.js";
-import { useDatabaseList } from "../database/database_signals.js";
+import {
+  useDatabaseCount,
+  useDatabaseList,
+} from "../database/database_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
@@ -20,6 +23,7 @@ export const databaseExplorerGroupController =
 
 export const ExplorerDatabases = (props) => {
   const databases = useDatabaseList();
+  const databaseCount = useDatabaseCount();
 
   return (
     <ExplorerGroup
@@ -31,7 +35,7 @@ export const ExplorerDatabases = (props) => {
       labelChildren={
         <span style="display: flex; align-items: center; gap: 3px">
           DATABASES
-          <span style="color: rgba(28, 43, 52, 0.4)">({databases.length})</span>
+          <span style="color: rgba(28, 43, 52, 0.4)">({databaseCount})</span>
         </span>
       }
       createNewButtonChildren={<DatabaseWithPlusSvg />}

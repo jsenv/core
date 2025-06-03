@@ -81,6 +81,29 @@ export const jsenvPluginDatabaseManager = ({
         },
       },
       {
+        endpoint: `GET ${pathname}api/explorer`,
+        description: "Get info about the database manager explorer.",
+        declarationSource: import.meta.url,
+        fetch: async () => {
+          const [roleCountResult] = await sql`
+            SELECT
+              COUNT(*)
+            FROM
+              pg_roles
+          `;
+          const [databaseCountResult] = await sql`
+            SELECT
+              COUNT(*)
+            FROM
+              pg_database
+          `;
+          return Response.json({
+            roleCount: parseInt(roleCountResult.count),
+            databaseCount: parseInt(databaseCountResult.count),
+          });
+        },
+      },
+      {
         endpoint: `GET ${pathname}api/explorer/databases`,
         description: "Get info about databases, meant to build a navbar.",
         declarationSource: import.meta.url,
