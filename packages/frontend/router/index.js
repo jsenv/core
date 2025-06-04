@@ -1,8 +1,8 @@
 export { registerAction } from "./src/action/action.js";
 export { useActionStatus } from "./src/action/action_hooks.js";
 export { useCanGoBack, useCanGoForward } from "./src/back_and_forward.js";
+export { SPADetails } from "./src/components/details/spa_details.jsx";
 export { SPADeleteButton } from "./src/components/spa_delete_button.jsx";
-export { SPADetails } from "./src/components/spa_details.jsx";
 export { SPAButton, SPAForm } from "./src/components/spa_form.jsx";
 export { SPAInputCheckbox } from "./src/components/spa_input_checkbox.jsx";
 export { SPAInputDateAndTime } from "./src/components/spa_input_date_and_time.jsx";
