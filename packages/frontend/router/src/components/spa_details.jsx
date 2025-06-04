@@ -49,12 +49,12 @@ import.meta.css = /* css */ `
     padding-right: 10px;
   }
 
-  .arrow {
+  .summary_marker_svg .arrow {
     animation-duration: 0.3s;
     animation-fill-mode: forwards;
     animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-  .arrow[data-animation-target="down"] {
+  .summary_marker_svg .arrow[data-animation-target="down"] {
     animation-name: morph-to-down;
   }
   @keyframes morph-to-down {
@@ -65,7 +65,7 @@ import.meta.css = /* css */ `
       d: path("${downArrowPath}");
     }
   }
-  .arrow[data-animation-target="right"] {
+  .summary_marker_svg .arrow[data-animation-target="right"] {
     animation-name: morph-to-right;
   }
   @keyframes morph-to-right {
@@ -77,7 +77,7 @@ import.meta.css = /* css */ `
     }
   }
 
-  .foreground_circle {
+  .summary_marker_svg .foreground_circle {
     stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
     stroke-dashoffset: 0;
     animation: progress-around-circle 1.5s linear infinite;
@@ -91,9 +91,14 @@ import.meta.css = /* css */ `
     }
   }
 
+  /* fading and scaling */
   .summary_marker_svg .arrow {
     transition: opacity 0.3s ease-in-out;
     opacity: 1;
+  }
+  .summary_marker_svg .arrow_container {
+    transition: transform 0.3s cubic-bezier(0.34, 0.56, 0.64, 1);
+    transform: scale(1);
   }
   .summary_marker_svg .background_circle,
   .summary_marker_svg .foreground_circle {
@@ -102,6 +107,9 @@ import.meta.css = /* css */ `
   }
   .summary_marker_svg[data-loading] .arrow {
     opacity: 0;
+  }
+  .summary_marker_svg[data-loading] .arrow_container {
+    transform: scale(0.3);
   }
   .summary_marker_svg[data-loading] .background_circle {
     opacity: 0.2;
@@ -211,12 +219,14 @@ const MorphingArrow = ({ isOpen, isPending }) => {
         strokeLinecap="round"
         strokeDasharray="503 1507"
       />
-      <path
-        className="arrow"
-        fill="currentColor"
-        data-animation-target={isOpen ? "down" : "right"}
-        d={isOpen ? downArrowPath : rightArrowPath}
-      />
+      <g className="arrow_container" transform-origin="center center">
+        <path
+          className="arrow"
+          fill="currentColor"
+          data-animation-target={isOpen ? "down" : "right"}
+          d={isOpen ? downArrowPath : rightArrowPath}
+        />
+      </g>
     </svg>
   );
 };
