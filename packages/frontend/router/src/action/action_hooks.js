@@ -1,10 +1,10 @@
 import { useEffect } from "preact/hooks";
-import { bindParamsToAction } from "./action.js";
+import { registerAction } from "./action.js";
 import { ABORTED, EXECUTING } from "./action_status.js";
 
-export const useAction = (action, params) => {
-  if (params) {
-    action = bindParamsToAction(action, params);
+export const useActionStatus = (action) => {
+  if (typeof action === "function") {
+    action = registerAction(action);
   }
 
   useEffect(() => {
@@ -14,10 +14,6 @@ export const useAction = (action, params) => {
     };
   }, []);
 
-  return action;
-};
-
-export const useActionStatus = (action) => {
   // je peux pas faire ça:
   // puisque la route est partagé par les actions
   // il faut bel et bien que je mette cet action quelque part

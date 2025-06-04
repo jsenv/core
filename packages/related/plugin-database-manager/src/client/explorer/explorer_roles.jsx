@@ -49,14 +49,14 @@ export const ExplorerRoles = (props) => {
         })
       }
       useRenameItemAction={(role) =>
-        useAction(PUT_ROLE_ACTION, {
+        PUT_ROLE_ACTION.bindParams({
           rolname: role.rolname,
           columnName: "rolname",
         })
       }
-      useCreateItemAction={() => useAction(POST_ROLE_ACTION)}
+      useCreateItemAction={() => POST_ROLE_ACTION}
       useDeleteItemAction={(role) =>
-        useAction(DELETE_ROLE_ACTION, {
+        DELETE_ROLE_ACTION.bindParams({
           rolname: role.rolname,
         })
       }

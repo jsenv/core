@@ -52,14 +52,14 @@ export const ExplorerDatabases = (props) => {
         })
       }
       useRenameItemAction={(database) =>
-        useAction(PUT_DATABASE_ACTION, {
+        PUT_DATABASE_ACTION.bindParams({
           datname: database.datname,
           columnName: "datname",
         })
       }
-      useCreateItemAction={() => useAction(POST_DATABASE_ACTION)}
+      useCreateItemAction={() => POST_DATABASE_ACTION}
       useDeleteItemAction={(database) =>
-        useAction(DELETE_DATABASE_ACTION, {
+        DELETE_DATABASE_ACTION.bindParams({
           datname: database.datname,
         })
       }

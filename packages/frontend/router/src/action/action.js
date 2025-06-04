@@ -12,6 +12,7 @@ export const registerAction = (fn, name = fn.name || "anonymous") => {
     return existingAction;
   }
   const action = createAction(fn, name);
+  action.bindParams = (params) => bindParamsToAction(action, params);
   actionWeakMap.set(fn, action);
   return action;
 };
@@ -46,6 +47,7 @@ const createAction = (fn, name = fn.name || "anonymous") => {
   };
 
   const action = {
+    isAction: true,
     fn,
     name,
     executionStateSignal,
@@ -69,11 +71,25 @@ const createAction = (fn, name = fn.name || "anonymous") => {
   return action;
 };
 const boundActionWeakSetWeakMap = new WeakMap();
-export const bindParamsToAction = (action, params) => {
-  let boundActionWeakSet = boundActionWeakSetWeakMap.get(action);
+export const bindParamsToAction = (fnOrAction, params) => {
+  let fn;
+  let name;
+  if (typeof fnOrAction === "function") {
+    fn = fnOrAction;
+    name = fn.name || "anonymous";
+  } else if (fnOrAction.isAction) {
+    fn = fnOrAction.fn;
+    name = fnOrAction.name;
+  } else {
+    throw new Error(
+      `bindParamsToAction expects an action or a function, got ${typeof fnOrAction}`,
+    );
+  }
+
+  let boundActionWeakSet = boundActionWeakSetWeakMap.get(fn);
   if (!boundActionWeakSet) {
     boundActionWeakSet = new WeakSet();
-    boundActionWeakSetWeakMap.set(action, boundActionWeakSet);
+    boundActionWeakSetWeakMap.set(fn, boundActionWeakSet);
   }
 
   for (const boundActionCandidate of boundActionWeakSet) {
@@ -82,12 +98,12 @@ export const bindParamsToAction = (action, params) => {
     }
   }
 
-  const boundAction = createAction((navParams) => {
-    return action.fn({ ...navParams, ...params });
-  });
+  const boundAction = createAction((navParams) =>
+    fn({ ...navParams, ...params }),
+  );
   boundAction.params = params;
   boundAction.toString = () =>
-    `<BoundAction> ${action.name}(${JSON.stringify(params)})`;
+    `<BoundAction> ${name}(${JSON.stringify(params)})`;
   boundActionWeakSet.add(boundAction);
   return boundAction;
 };

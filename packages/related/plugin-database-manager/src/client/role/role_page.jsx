@@ -28,7 +28,7 @@ export const RoleRoutes = () => {
 const RolePage = () => {
   const [error, resetError] = useErrorBoundary();
   const rolname = useRouteParam(GET_ROLE_ROUTE, "rolname");
-  const deleteRoleAction = useAction(DELETE_ROLE_ACTION, { rolname });
+  const deleteRoleAction = DELETE_ROLE_ACTION.bindParams({ rolname });
   const role = useActiveRole();
   const RoleIcon = pickRoleIcon(role);
 
@@ -94,7 +94,7 @@ const RoleFields = ({ role }) => {
     <ul>
       {fields.map(({ column, value }) => {
         const columnName = column.column_name;
-        const action = useAction(PUT_ROLE_ACTION, {
+        const action = PUT_ROLE_ACTION.bindParams({
           rolname: role.rolname,
           columnName,
         });

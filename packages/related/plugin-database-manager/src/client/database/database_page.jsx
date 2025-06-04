@@ -28,7 +28,7 @@ export const DatabaseRoutes = () => {
 const DatabasePage = () => {
   const [error, resetError] = useErrorBoundary();
   const datname = useRouteParam(GET_DATABASE_ROUTE, "datname");
-  const deleteDatabaseAction = useAction(DELETE_DATABASE_ACTION, { datname });
+  const deleteDatabaseAction = DELETE_DATABASE_ACTION.bindParams({ datname });
   const database = useActiveDatabase();
 
   return (
@@ -86,7 +86,7 @@ const DatabaseFields = ({ database }) => {
       {columns.map((column) => {
         const columnName = column.column_name;
         const value = database ? database[columnName] : "";
-        const action = useAction(PUT_DATABASE_ACTION, {
+        const action = PUT_DATABASE_ACTION.bindParams({
           datname: database.datname,
           columnName,
         });
