@@ -112,20 +112,18 @@ import.meta.css = /* css */ `
   }
 
   .loading-circle {
-    stroke-dasharray: 2010; /* Circumference = 2πr = 2π×160 ≈ 1005 */
-    stroke-dashoffset: 2010;
-    animation: dash 1.5s ease-in-out infinite;
+    stroke-dasharray: 2010;
+    stroke-dashoffset: 503; /* 25% of circumference */
+    animation: smooth-circle-progress 1.5s ease-in-out infinite;
   }
 
-  @keyframes dash {
-    0% {
-      stroke-dashoffset: 2010;
+  @keyframes smooth-circle-progress {
+    0%,
+    100% {
+      stroke-dashoffset: 503; /* 25% filled */
     }
     50% {
-      stroke-dashoffset: 0;
-    }
-    100% {
-      stroke-dashoffset: -2010;
+      stroke-dashoffset: 1507; /* 75% filled */
     }
   }
 `;
@@ -210,12 +208,15 @@ const MorphingArrow = ({ isOpen, isPending }) => {
         stroke="currentColor"
         xmlns="http://www.w3.org/2000/svg"
       >
+        {/* Background circle (faded) */}
+        <circle cx="480" cy="-480" r="320" strokeWidth="60" opacity="0.2" />
+        {/* Foreground progress circle */}
         <circle
           className="loading-circle"
           cx="480"
           cy="-480"
-          r="320" // Radius matches half the width of arrow (320px/2)
-          strokeWidth="60" // Similar stroke weight to arrow path thickness
+          r="320"
+          strokeWidth="60"
           strokeLinecap="round"
         />
       </svg>
