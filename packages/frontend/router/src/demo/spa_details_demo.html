@@ -34,6 +34,7 @@
           });
           return "Hello";
         },
+        name: "loadingFor1sRoute",
       });
 
       const errorAfter500Route = registerRoute({
@@ -51,6 +52,7 @@
           });
           throw new Error("Error after 500ms");
         },
+        name: "errorAfter500Route",
       });
 
       // eslint-disable-next-line no-unused-vars
