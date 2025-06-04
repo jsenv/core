@@ -11,8 +11,9 @@ import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
 
 const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
+// Updated loading circle path with a clear indicator for rotation
 const loadingCirclePath =
-  "M480-480m-120 0a120 120 0 1 0 240 0a120 120 0 1 0 -240 0z M480-600c-20 0-20 30 0 30s20-30 0-30z";
+  "M480-480m-100 0a100 100 0 1 0 200 0a100 100 0 1 0 -200 0z M480-580c0 0-20-5-20 30s50 30 50 0s-30-30-30 0z";
 
 import.meta.css = /* css */ `
   .spa_details {
@@ -110,9 +111,23 @@ import.meta.css = /* css */ `
     animation-name: morph-to-loading;
   }
 
-  .loading-spinner {
-    animation: rotate-loading 1.5s linear infinite;
-    transform-origin: center;
+  /* Replace the rotate-loading animation with dash array animation */
+  .loading-circle {
+    stroke-dasharray: 450;
+    stroke-dashoffset: 450;
+    animation: dash 1.5s ease-in-out infinite;
+  }
+
+  @keyframes dash {
+    0% {
+      stroke-dashoffset: 450;
+    }
+    50% {
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dashoffset: -450;
+    }
   }
 `;
 
@@ -188,26 +203,37 @@ export const SPADetails = forwardRef(
 const MorphingArrow = ({ isOpen, isPending }) => {
   const showLoading = useDebounceTrue(isPending, 300);
 
+  if (isOpen && showLoading) {
+    // Show loading indicator with dash array animation
+    return (
+      <svg
+        viewBox="0 -960 960 960"
+        fill="none"
+        stroke="currentColor"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          className="loading-circle"
+          cx="480"
+          cy="-480"
+          r="140"
+          strokeWidth="40"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
   return (
     <svg
       viewBox="0 -960 960 960"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <g className={showLoading ? "loading-spinner" : ""}>
-        <path
-          data-animation-target={
-            isOpen ? (showLoading ? "loading" : "down") : "right"
-          }
-          d={
-            isOpen
-              ? showLoading
-                ? loadingCirclePath
-                : downArrowPath
-              : rightArrowPath
-          }
-        />
-      </g>
+      <path
+        data-animation-target={isOpen ? "down" : "right"}
+        d={isOpen ? downArrowPath : rightArrowPath}
+      />
     </svg>
   );
 };
