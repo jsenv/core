@@ -490,17 +490,44 @@ const followPosition = (validationMessage, targetElement) => {
 
     // Calculate arrow position to point at target element
     let arrowLeftPosOnValidationMessage;
-    // Target the left edge of the element (after borders)
-    const arrowTargetLeft = elementLeft + elementBorderSizes.left;
+    // Determine arrow target position based on attribute
+    const arrowPositionAttribute = targetElement.getAttribute(
+      "data-validation-message-arrow-x",
+    );
+    let arrowTargetLeft;
 
+    if (arrowPositionAttribute === "center") {
+      // Target the center of the element
+      arrowTargetLeft = elementLeft + elementWidth / 2;
+    } else {
+      // Default behavior: target the left edge of the element (after borders)
+      arrowTargetLeft = elementLeft + elementBorderSizes.left;
+    }
+
+    // Calculate arrow position within the validation message
     if (validationMessageLeftPos < arrowTargetLeft) {
       // Validation message is left of the target point, move arrow right
       const diff = arrowTargetLeft - validationMessageLeftPos;
       arrowLeftPosOnValidationMessage = diff;
+    } else if (
+      validationMessageLeftPos + validationMessageWidth <
+      arrowTargetLeft
+    ) {
+      // Edge case: target point is beyond right edge of validation message
+      arrowLeftPosOnValidationMessage = validationMessageWidth - ARROW_WIDTH;
     } else {
-      // Validation message contains or is right of the target point, keep arrow at left
-      arrowLeftPosOnValidationMessage = 0;
+      // Target point is within validation message width
+      arrowLeftPosOnValidationMessage =
+        arrowTargetLeft - validationMessageLeftPos;
     }
+
+    // Ensure arrow stays within validation message bounds with some padding
+    const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
+    const maxArrowPos = validationMessageWidth - minArrowPos;
+    arrowLeftPosOnValidationMessage = Math.max(
+      minArrowPos,
+      Math.min(arrowLeftPosOnValidationMessage, maxArrowPos),
+    );
 
     // Calculate vertical space available
     const spaceBelow = viewportHeight - targetElementRect.bottom;

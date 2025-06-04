@@ -80,6 +80,7 @@ const Checkbox = forwardRef(
           onCancel={() => {
             innerRef.current.checked = checked;
           }}
+          data-validation-message-arrow-x="center"
         />
       </LoaderBackground>
     );
