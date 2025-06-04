@@ -12,7 +12,7 @@ import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
 const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
 const loadingCirclePath =
-  "M480-480m-240 0a240 240 0 1 0 480 0a240 240 0 1 0 -480 0z M480-720c-40 0-40 60 0 60s40-60 0-60z";
+  "M480-480m-120 0a120 120 0 1 0 240 0a120 120 0 1 0 -240 0z M480-600c-20 0-20 30 0 30s20-30 0-30z";
 
 import.meta.css = /* css */ `
   .spa_details {
@@ -74,9 +74,7 @@ import.meta.css = /* css */ `
       d: path("${downArrowPath}");
     }
     to {
-      d: path(
-        "M480-480m-240 0a240 240 0 1 0 480 0a240 240 0 1 0 -480 0z M480-720c-40 0-40 60 0 60s40-60 0-60z"
-      );
+      d: path("${loadingCirclePath}");
     }
   }
 
