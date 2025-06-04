@@ -78,6 +78,8 @@ import.meta.css = /* css */ `
   }
 
   .foreground_circle {
+    stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
+    stroke-dashoffset: 0;
     animation: progress-around-circle 1.5s linear infinite;
   }
   @keyframes progress-around-circle {
@@ -101,7 +103,9 @@ import.meta.css = /* css */ `
   .summary_marker_svg[data-loading] .arrow {
     opacity: 0;
   }
-  .summary_marker_svg[data-loading] .background_circle,
+  .summary_marker_svg[data-loading] .background_circle {
+    opacity: 0.2;
+  }
   .summary_marker_svg[data-loading] .foreground_circle {
     opacity: 1;
   }
@@ -184,7 +188,7 @@ const MorphingArrow = ({ isOpen, isPending }) => {
       className="summary_marker_svg"
       viewBox="0 -960 960 960"
       xmlns="http://www.w3.org/2000/svg"
-      data-loading={showLoading}
+      data-loading={isOpen ? showLoading || undefined : undefined}
     >
       <circle
         className="background_circle"
@@ -205,6 +209,7 @@ const MorphingArrow = ({ isOpen, isPending }) => {
         fill="none"
         strokeWidth="60"
         strokeLinecap="round"
+        strokeDasharray="503 1507"
       />
       <path
         className="arrow"
