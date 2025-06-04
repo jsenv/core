@@ -124,6 +124,7 @@ import.meta.css = /*css*/ `
   overflow: visible;
   height: auto;
   position: fixed;
+  z-index: 1;
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
   pointer-events: none; 

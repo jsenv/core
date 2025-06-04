@@ -1,3 +1,4 @@
+import { openValidationMessage } from "@jsenv/form";
 import { createContext } from "preact";
 import { forwardRef } from "preact/compat";
 import {
@@ -50,7 +51,7 @@ const useDetailsStatus = () => {
 
 export const SPADetails = forwardRef(
   ({ route, children, onToggle, open = false, ...props }, ref) => {
-    const { pending } = useRouteStatus(route);
+    const { pending, error } = useRouteStatus(route);
 
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
@@ -76,9 +77,6 @@ export const SPADetails = forwardRef(
       mountedRef.current = true;
     }, []);
 
-    // for aborted we do nothing
-    // for error we display a validation message, we'll see that later
-
     return (
       <details
         {...props}
@@ -102,6 +100,7 @@ export const SPADetails = forwardRef(
           value={{
             open: routeIsMatching || open,
             pending,
+            error,
           }}
         >
           {children}
@@ -113,10 +112,30 @@ export const SPADetails = forwardRef(
 
 // Update the SPADetailsSummary component to pass pending state
 const SPADetailsSummary = ({ children, ...rest }) => {
-  const { open, pending } = useDetailsStatus();
+  const ref = useRef();
+  const { open, pending, error } = useDetailsStatus();
+
+  useEffect(() => {
+    if (!error) {
+      return null;
+    }
+    const validationMessage = openValidationMessage(
+      ref.current,
+      error.message,
+      { level: "error" },
+    );
+    return () => {
+      validationMessage.close();
+    };
+  }, [error]);
 
   return (
-    <summary {...rest}>
+    <summary
+      ref={ref}
+      {...rest}
+      data-validation-message-stay-on-focus
+      data-validation-message-stay-on-blur
+    >
       <div className="summary_body">
         <SummaryMarker open={open} pending={pending} />
         <div className="summary_label">

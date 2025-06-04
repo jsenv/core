@@ -19,15 +19,6 @@
         Route,
       } from "@jsenv/router";
 
-      /*
-      TODO: 
-      
-      - an error
-      - an error after 1s
-      - loading forever
-    
-       */
-
       const firstDetailsRoute = registerRoute({
         match: (state) => state.first_details_open === true,
         enter: (state) => {
@@ -45,11 +36,28 @@
         },
       });
 
+      const errorAfter500Route = registerRoute({
+        match: (state) => state.error_after_500_open === true,
+        enter: (state) => {
+          state.error_after_500_open = true;
+        },
+        leave: (state) => {
+          state.error_after_500_open = false;
+        },
+        canDisplayOldData: true,
+        load: async () => {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 500);
+          });
+          throw new Error("Error after 500ms");
+        },
+      });
+
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <div style="display: flex; flex-direction: row; gap: 30px">
-            <div>
+            <div style="width: 200px;">
               <p>
                 <strong>Loading for 1s</strong>
               </p>
@@ -57,6 +65,18 @@
                 <SPADetails.Summary>Text</SPADetails.Summary>
                 <Route
                   route={firstDetailsRoute}
+                  loaded={({ route }) => <span>{route.data}</span>}
+                ></Route>
+              </SPADetails>
+            </div>
+            <div style="width: 200px;">
+              <p>
+                <strong>Error after 0.5s</strong>
+              </p>
+              <SPADetails route={errorAfter500Route}>
+                <SPADetails.Summary>Text</SPADetails.Summary>
+                <Route
+                  route={errorAfter500Route}
                   loaded={({ route }) => <span>{route.data}</span>}
                 ></Route>
               </SPADetails>
