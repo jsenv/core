@@ -115,9 +115,7 @@ import.meta.css = /* css */ `
     stroke-dasharray: 2010;
     stroke-dashoffset: 2010;
     transform-origin: center;
-    animation:
-      smooth-circle-rotation 2s linear infinite,
-      smooth-circle-progress 2s linear infinite;
+    animation: smooth-circle-progress 1.5s linear infinite;
   }
 
   @keyframes smooth-circle-progress {
@@ -126,15 +124,6 @@ import.meta.css = /* css */ `
     }
     100% {
       stroke-dashoffset: 0;
-    }
-  }
-
-  @keyframes smooth-circle-rotation {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
     }
   }
 `;
