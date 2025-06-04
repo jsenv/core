@@ -113,20 +113,20 @@ import.meta.css = /* css */ `
 
   /* Replace the rotate-loading animation with dash array animation */
   .loading-circle {
-    stroke-dasharray: 450;
-    stroke-dashoffset: 450;
+    stroke-dasharray: 1256; /* Updated to match larger circle (2πr) */
+    stroke-dashoffset: 1256; /* Circumference of circle with r=200 */
     animation: dash 1.5s ease-in-out infinite;
   }
 
   @keyframes dash {
     0% {
-      stroke-dashoffset: 450;
+      stroke-dashoffset: 1256;
     }
     50% {
       stroke-dashoffset: 0;
     }
     100% {
-      stroke-dashoffset: -450;
+      stroke-dashoffset: -1256;
     }
   }
 `;
@@ -204,7 +204,7 @@ const MorphingArrow = ({ isOpen, isPending }) => {
   const showLoading = useDebounceTrue(isPending, 300);
 
   if (isOpen && showLoading) {
-    // Show loading indicator with dash array animation
+    // Show loading indicator with dash array animation - increased size
     return (
       <svg
         viewBox="0 -960 960 960"
@@ -216,8 +216,8 @@ const MorphingArrow = ({ isOpen, isPending }) => {
           className="loading-circle"
           cx="480"
           cy="-480"
-          r="140"
-          strokeWidth="40"
+          r="200" // Increased radius from 140 to 200
+          strokeWidth="60" // Increased stroke width from 40 to 60
           strokeLinecap="round"
         />
       </svg>
