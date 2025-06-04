@@ -511,21 +511,27 @@ export const applyRouting = async ({
   let routeToKeepActiveSet;
   let routeCandidateSet;
   if (routesToEnter) {
-    routeToKeepActiveSet = matchingRouteSet;
     routeCandidateSet = new Set(routesToEnter);
-  } else if (routesToLeave) {
     routeToKeepActiveSet = matchingRouteSet;
-    routeCandidateSet = new Set(routesToLeave);
+  } else if (routesToLeave) {
+    routeCandidateSet = new Set();
+    routeToKeepActiveSet = matchingRouteSet;
+    for (const routeToLeave of routesToLeave) {
+      routeToKeepActiveSet.delete(routeToLeave);
+      routeCandidateSet.add(routeToLeave);
+    }
   } else {
-    routeToKeepActiveSet = new Set();
     routeCandidateSet = routeSet;
+    routeToKeepActiveSet = new Set();
   }
 
   if (debug) {
     console.group(`applyRouting on ${routeCandidateSet.size} routes`);
     console.debug(
-      `- target url: ${targetResource}
-- target state: ${targetState ? JSON.stringify(targetState) : "undefined"}`,
+      `situation at start:
+- target url: ${targetResource}
+- target state: ${targetState ? JSON.stringify(targetState) : "undefined"}
+- matching routes: ${matchingRouteSet.size === 0 ? "none" : Array.from(matchingRouteSet).join(", ")}`,
     );
   }
 
@@ -569,17 +575,6 @@ export const applyRouting = async ({
       }
     }
   }
-  if (
-    routeToEnterMap.size === 0 &&
-    matchingRouteSet.size === 0 &&
-    routeEnterPromiseMap.size === 0
-  ) {
-    if (debug) {
-      console.debug("no effect on routes, early return");
-      console.groupEnd();
-    }
-    return;
-  }
   for (const activeRoute of matchingRouteSet) {
     if (
       routeToEnterMap.has(activeRoute) ||
@@ -589,8 +584,22 @@ export const applyRouting = async ({
     }
     routeToLeaveSet.add(activeRoute);
   }
+  if (
+    routeToEnterMap.size === 0 &&
+    matchingRouteSet.size === 0 &&
+    routeToKeepActiveSet.size === 0 &&
+    routeToLeaveSet.size === 0
+  ) {
+    if (debug) {
+      console.debug("no effect on routes, early return");
+      console.groupEnd();
+    }
+    return;
+  }
+
   if (debug) {
-    console.debug(`- route still active: ${routeToKeepActiveSet.size === 0 ? "none" : Array.from(routeToKeepActiveSet).join(", ")}
+    console.debug(`situation before updating routes:
+- route still active: ${routeToKeepActiveSet.size === 0 ? "none" : Array.from(routeToKeepActiveSet).join(", ")}
 - route to leave: ${routeToLeaveSet.size === 0 ? "none" : Array.from(routeToLeaveSet).join(", ")}
 - route to enter: ${routeToEnterMap.size === 0 ? "none" : Array.from(routeToEnterMap.keys()).join(", ")}`);
   }
