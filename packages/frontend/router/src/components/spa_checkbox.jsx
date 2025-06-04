@@ -50,36 +50,38 @@ export const SPACheckbox = ({
   );
 };
 
-const Checkbox = forwardRef(({ pending, name, checked, ...rest }, ref) => {
-  const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
-    checked,
-    name,
-    { revertOnFailure: true },
-  );
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => {
-    const input = innerRef.current;
-    return input;
-  });
-  useRequestSubmitOnChange(innerRef, { preventWhenValueMissing: true });
+const Checkbox = forwardRef(
+  ({ pending, name, checked = false, ...rest }, ref) => {
+    const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
+      checked,
+      name,
+      { revertOnFailure: true },
+    );
+    const innerRef = useRef(null);
+    useImperativeHandle(ref, () => {
+      const input = innerRef.current;
+      return input;
+    });
+    useRequestSubmitOnChange(innerRef, { preventWhenValueMissing: true });
 
-  return (
-    <LoaderBackground pending={pending}>
-      <input
-        {...rest}
-        ref={innerRef}
-        type="checkbox"
-        name={name}
-        checked={optimisticUIState}
-        disabled={pending}
-        onInput={(e) => {
-          setOptimisticUIState(e.target.checked);
-        }}
-        // eslint-disable-next-line react/no-unknown-property
-        onCancel={() => {
-          innerRef.current.checked = checked;
-        }}
-      />
-    </LoaderBackground>
-  );
-});
+    return (
+      <LoaderBackground pending={pending}>
+        <input
+          {...rest}
+          ref={innerRef}
+          type="checkbox"
+          name={name}
+          checked={optimisticUIState}
+          disabled={pending}
+          onInput={(e) => {
+            setOptimisticUIState(e.target.checked);
+          }}
+          // eslint-disable-next-line react/no-unknown-property
+          onCancel={() => {
+            innerRef.current.checked = checked;
+          }}
+        />
+      </LoaderBackground>
+    );
+  },
+);
