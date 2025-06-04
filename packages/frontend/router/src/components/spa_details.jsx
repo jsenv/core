@@ -111,22 +111,21 @@ import.meta.css = /* css */ `
     animation-name: morph-to-loading;
   }
 
-  /* Replace the rotate-loading animation with dash array animation */
   .loading-circle {
-    stroke-dasharray: 1256; /* Updated to match larger circle (2πr) */
-    stroke-dashoffset: 1256; /* Circumference of circle with r=200 */
+    stroke-dasharray: 2010; /* Circumference = 2πr = 2π×160 ≈ 1005 */
+    stroke-dashoffset: 2010;
     animation: dash 1.5s ease-in-out infinite;
   }
 
   @keyframes dash {
     0% {
-      stroke-dashoffset: 1256;
+      stroke-dashoffset: 2010;
     }
     50% {
       stroke-dashoffset: 0;
     }
     100% {
-      stroke-dashoffset: -1256;
+      stroke-dashoffset: -2010;
     }
   }
 `;
@@ -204,7 +203,6 @@ const MorphingArrow = ({ isOpen, isPending }) => {
   const showLoading = useDebounceTrue(isPending, 300);
 
   if (isOpen && showLoading) {
-    // Show loading indicator with dash array animation - increased size
     return (
       <svg
         viewBox="0 -960 960 960"
@@ -216,8 +214,8 @@ const MorphingArrow = ({ isOpen, isPending }) => {
           className="loading-circle"
           cx="480"
           cy="-480"
-          r="200" // Increased radius from 140 to 200
-          strokeWidth="60" // Increased stroke width from 40 to 60
+          r="320" // Radius matches half the width of arrow (320px/2)
+          strokeWidth="60" // Similar stroke weight to arrow path thickness
           strokeLinecap="round"
         />
       </svg>
