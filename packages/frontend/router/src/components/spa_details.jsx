@@ -57,7 +57,7 @@ const useDetailsStatus = () => {
 };
 
 export const SPADetails = forwardRef(
-  ({ route, children, onToggle, open, ...props }, ref) => {
+  ({ route, children, onToggle, open = false, ...props }, ref) => {
     const { pending } = useRouteStatus(route);
 
     const innerRef = useRef();
@@ -108,7 +108,7 @@ export const SPADetails = forwardRef(
       >
         <DetailsContext.Provider
           value={{
-            open: true,
+            open: routeIsMatching || open,
             pending,
           }}
         >
@@ -121,18 +121,19 @@ export const SPADetails = forwardRef(
 
 const SPADetailsSummary = ({ children, ...rest }) => {
   const { open, pending } = useDetailsStatus();
-  console.log({ open, pending });
 
   return (
     <summary {...rest}>
       <div className="summary_body">
         <span className="summary_marker">
-          <ArrowDown />
+          <ArrowPointingRight />
         </span>
         <div className="summary_label">
           {children}
-          {open ? "open" : "close"}
-          {pending ? " and pending" : ""}
+          <span>
+            [{open ? "open" : "close"}
+            {pending ? " and pending" : ""}]
+          </span>
         </div>
       </div>
     </summary>
@@ -140,7 +141,7 @@ const SPADetailsSummary = ({ children, ...rest }) => {
 };
 SPADetails.Summary = SPADetailsSummary;
 
-const ArrowDown = () => {
+const ArrowPointingRight = () => {
   return (
     <svg
       viewBox="0 -960 960 960"
