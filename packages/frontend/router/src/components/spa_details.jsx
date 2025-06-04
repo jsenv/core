@@ -108,7 +108,7 @@ export const SPADetails = forwardRef(
       >
         <DetailsContext.Provider
           value={{
-            open: routeIsMatching || open,
+            open: true,
             pending,
           }}
         >
@@ -121,6 +121,7 @@ export const SPADetails = forwardRef(
 
 const SPADetailsSummary = ({ children, ...rest }) => {
   const { open, pending } = useDetailsStatus();
+  console.log({ open, pending });
 
   return (
     <summary {...rest}>
@@ -130,7 +131,8 @@ const SPADetailsSummary = ({ children, ...rest }) => {
         </span>
         <div className="summary_label">
           {children}
-          open: {Boolean(open)}, pending: {Boolean(pending)}
+          {open ? "open" : "close"}
+          {pending ? " and pending" : ""}
         </div>
       </div>
     </summary>

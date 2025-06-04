@@ -47,7 +47,7 @@
                 <SPADetails.Summary>Text</SPADetails.Summary>
                 <Route
                   route={firstDetailsRoute}
-                  loaded={({ data }) => <span>{data}</span>}
+                  loaded={({ route }) => <span>{route.data}</span>}
                 ></Route>
               </SPADetails>
             </div>
