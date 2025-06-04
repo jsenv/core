@@ -74,7 +74,10 @@ export const registerRoute = (firstArg, secondArg) => {
   return routeUpdatingDocumentState;
 };
 
-const createRouteFromResourcePattern = (resourcePattern, { load }) => {
+const createRouteFromResourcePattern = (
+  resourcePattern,
+  { load, canDisplayOldData },
+) => {
   const resourcePatternParsed = createResourcePattern(
     resourceFromUrl(resourcePattern),
   );
@@ -212,6 +215,7 @@ const createRouteFromResourcePattern = (resourcePattern, { load }) => {
     loadUI: undefined,
     renderUI: undefined,
     node: undefined,
+    canDisplayOldData,
 
     url,
     urlSignal,

@@ -19,6 +19,17 @@
         Route,
       } from "@jsenv/router";
 
+      /*
+      TODO: 
+      
+      - an error
+      - an error after 1s
+      - loading forever
+      - we open, it loads, we close, we open again
+        -> we should see the old content while the new is loading?
+        Yep, so we need to consider this
+       */
+
       const firstDetailsRoute = registerRoute({
         match: (state) => state.first_details_open === true,
         enter: (state) => {
@@ -27,6 +38,7 @@
         leave: (state) => {
           state.first_details_open = false;
         },
+        canDisplayOldData: true,
         load: async () => {
           await new Promise((resolve) => {
             setTimeout(resolve, 1000);
@@ -41,7 +53,7 @@
           <div style="display: flex; flex-direction: row; gap: 30px">
             <div>
               <p>
-                <strong>Loading</strong>
+                <strong>Loading for 1s</strong>
               </p>
               <SPADetails route={firstDetailsRoute}>
                 <SPADetails.Summary>Text</SPADetails.Summary>
