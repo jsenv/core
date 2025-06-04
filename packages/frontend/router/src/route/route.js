@@ -495,13 +495,6 @@ export const applyRouting = async ({
 }) => {
   // const sourceResource = resourceFromUrl(sourceUrl);
   const targetResource = resourceFromUrl(targetUrl);
-  if (debug) {
-    console.group("applyRouting");
-    console.debug(
-      `start routing ${targetResource}${targetState === undefined ? "" : ` (state: ${JSON.stringify(targetState)})`} against ${routeSet.size} routes`,
-    );
-  }
-
   const targetUrlObject = new URL(targetResource, baseUrl);
   const matchParams = {
     resource: targetResource,
@@ -510,13 +503,33 @@ export const applyRouting = async ({
     pathname: targetUrlObject.pathname,
     hash: targetUrlObject.hash,
   };
+  const routesToEnter = info?.routesToEnter;
+  const routesToLeave = info?.routesToLeave;
+  const routesLoaded = info?.routesLoaded;
   const routeToLeaveSet = new Set();
   const routeToEnterMap = new Map();
-  const routeToKeepActiveSet = new Set();
-  // const routesToEnter = info?.routesToEnter;
-  // const routesToLeave = info?.routesToLeave;
-  const routesLoaded = info?.routesLoaded;
-  for (const routeCandidate of routeSet) {
+  let routeToKeepActiveSet;
+  let routeCandidateSet;
+  if (routesToEnter) {
+    routeToKeepActiveSet = matchingRouteSet;
+    routeCandidateSet = new Set(routesToEnter);
+  } else if (routesToLeave) {
+    routeToKeepActiveSet = matchingRouteSet;
+    routeCandidateSet = new Set(routesToLeave);
+  } else {
+    routeToKeepActiveSet = new Set();
+    routeCandidateSet = routeSet;
+  }
+
+  if (debug) {
+    console.group(`applyRouting on ${routeCandidateSet.size} routes`);
+    console.debug(
+      `- target url: ${targetResource}
+- target state: ${targetState ? JSON.stringify(targetState) : "undefined"}`,
+    );
+  }
+
+  for (const routeCandidate of routeCandidateSet) {
     if (routesLoaded && routesLoaded.includes(routeCandidate)) {
       routeToKeepActiveSet.add(routeCandidate);
       continue;

@@ -222,8 +222,10 @@ export const goTo = async (
     goForward();
     return;
   }
-  await navigation.navigate(url, { state, routesToEnter, routesToLeave })
-    .finished;
+  await navigation.navigate(url, {
+    state,
+    info: { routesToEnter, routesToLeave },
+  }).finished;
 };
 export const stopLoad = () => {
   const documentIsLoading = documentIsLoadingSignal.value;
