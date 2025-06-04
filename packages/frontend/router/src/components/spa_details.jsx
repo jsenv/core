@@ -5,7 +5,6 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
-  useState,
 } from "preact/hooks";
 import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
 
@@ -48,26 +47,31 @@ import.meta.css = /* css */ `
 
   @keyframes morph-to-down {
     from {
-      d: path("M660-480 420-720l56-56 240 240-240 240-56-56 240-240Z");
+      d: path("M530-480l-230 230-60-60 170-170-170-170 60-60 230 230z");
     }
     to {
-      d: path("M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z");
+      d: path("M480-345l-240-240 60-60 180 180 180-180 60 60-240 240z");
     }
   }
 
   @keyframes morph-to-right {
     from {
-      d: path("M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z");
+      d: path("M480-345l-240-240 60-60 180 180 180-180 60 60-240 240z");
     }
     to {
-      d: path("M660-480 420-720l56-56 240 240-240 240-56-56 240-240Z");
+      d: path("M530-480l-230 230-60-60 170-170-170-170 60-60 230 230z");
     }
   }
 
   path[data-animation-target] {
-    animation-duration: 0.25s;
+    animation-duration: 0.3s;
     animation-fill-mode: forwards;
-    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    animation-timing-function: cubic-bezier(
+      0.34,
+      1.56,
+      0.64,
+      1
+    ); /* Bouncy effect */
   }
 
   path[data-animation-target="down"] {
@@ -150,8 +154,9 @@ export const SPADetails = forwardRef(
 
 const MorphingArrow = ({ isOpen }) => {
   const rightArrowPath =
-    "M660-480 420-720l56-56 240 240-240 240-56-56 240-240Z";
-  const downArrowPath = "M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z";
+    "M530-480l-230 230-60-60 170-170-170-170 60-60 230 230z";
+  const downArrowPath =
+    "M480-345l-240-240 60-60 180 180 180-180 60 60-240 240z";
 
   return (
     <svg
