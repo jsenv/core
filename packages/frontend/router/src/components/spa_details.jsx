@@ -112,18 +112,17 @@ import.meta.css = /* css */ `
   }
 
   .loading-circle {
-    stroke-dasharray: 2010;
-    stroke-dashoffset: 2010;
-    transform-origin: center;
-    animation: smooth-circle-progress 1.5s linear infinite;
+    stroke-dasharray: 503 1507; /* ~25% of circumference filled */
+    stroke-dashoffset: 0;
+    animation: progress-around-circle 1.5s linear infinite;
   }
 
-  @keyframes smooth-circle-progress {
+  @keyframes progress-around-circle {
     0% {
-      stroke-dashoffset: 2010;
+      stroke-dashoffset: 0;
     }
     100% {
-      stroke-dashoffset: 0;
+      stroke-dashoffset: -2010; /* Full circumference, negative for clockwise */
     }
   }
 `;
@@ -210,7 +209,7 @@ const MorphingArrow = ({ isOpen, isPending }) => {
       >
         {/* Background circle (faded) */}
         <circle cx="480" cy="-480" r="320" strokeWidth="60" opacity="0.2" />
-        {/* Foreground progress circle */}
+        {/* Foreground progress arc */}
         <circle
           className="loading-circle"
           cx="480"
