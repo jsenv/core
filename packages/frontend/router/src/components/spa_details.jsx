@@ -5,6 +5,7 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
 } from "preact/hooks";
 import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
 
@@ -43,6 +44,38 @@ import.meta.css = /* css */ `
     gap: 0.2em;
     align-items: center;
     padding-right: 10px;
+  }
+
+  @keyframes morph-to-down {
+    from {
+      d: path("M660-480 420-720l56-56 240 240-240 240-56-56 240-240Z");
+    }
+    to {
+      d: path("M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z");
+    }
+  }
+
+  @keyframes morph-to-right {
+    from {
+      d: path("M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z");
+    }
+    to {
+      d: path("M660-480 420-720l56-56 240 240-240 240-56-56 240-240Z");
+    }
+  }
+
+  .arrow-path {
+    animation-duration: 0.25s;
+    animation-fill-mode: forwards;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  path[data-animation-target="down"] {
+    animation-name: morph-to-down;
+  }
+
+  path[data-animation-target="right"] {
+    animation-name: morph-to-right;
   }
 `;
 
@@ -116,9 +149,8 @@ export const SPADetails = forwardRef(
 );
 
 const MorphingArrow = ({ isOpen }) => {
-  // These paths have matching point structures for smooth morphing
-  // They're designed to have the same number and order of path commands
-  const rightArrowPath = "M660-480 420-720l56-56 240 240-240 240-56-56 240-240Z";
+  const rightArrowPath =
+    "M660-480 420-720l56-56 240 240-240 240-56-56 240-240Z";
   const downArrowPath = "M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z";
 
   return (
@@ -127,18 +159,10 @@ const MorphingArrow = ({ isOpen }) => {
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d={isOpen ? downArrowPath : rightArrowPath}>
-        <animate
-          attributeName="d"
-          from={isOpen ? rightArrowPath : downArrowPath}
-          to={isOpen ? downArrowPath : rightArrowPath}
-          dur="0.25s"
-          begin="0s"
-          fill="freeze"
-          calcMode="spline"
-          keySplines="0.4 0 0.2 1"
-        />
-      </path>
+      <path
+        data-animation-target={isOpen ? "down" : "right"}
+        d={isOpen ? downArrowPath : rightArrowPath}
+      />
     </svg>
   );
 };
