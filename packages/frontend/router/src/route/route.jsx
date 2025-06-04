@@ -176,10 +176,7 @@ const RouteHandler = ({
   if (routeError) {
     return <RouteError route={route} />;
   }
-  if (shouldDisplayOldData) {
-    return <RouteErrorBoundary route={route} Child={RouteLoaded} />;
-  }
-  if (routeIsLoading) {
+  if (routeIsLoading && !shouldDisplayOldData) {
     return <RouteErrorBoundary route={route} Child={RouteLoading} />;
   }
   if (routeIsLoaded) {
@@ -204,6 +201,9 @@ const RouteHandler = ({
         );
       };
     }
+    return <RouteErrorBoundary route={route} Child={RouteLoaded} />;
+  }
+  if (shouldDisplayOldData) {
     return <RouteErrorBoundary route={route} Child={RouteLoaded} />;
   }
   return <RouteErrorBoundary route={route} Child={RouteMatching} />;

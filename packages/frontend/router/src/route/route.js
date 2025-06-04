@@ -257,7 +257,14 @@ const createRouteFromResourcePattern = (
   return route;
 };
 // https://github.com/WICG/navigation-api?tab=readme-ov-file#setting-the-current-entrys-state-without-navigating
-const createRouteFromState = ({ match, enter, leave, load, name }) => {
+const createRouteFromState = ({
+  match,
+  enter,
+  leave,
+  load,
+  name,
+  canDisplayOldData,
+}) => {
   const isMatchingSignal = signal(false);
   const loadingStateSignal = signal(IDLE);
   let error;
@@ -324,6 +331,7 @@ const createRouteFromState = ({ match, enter, leave, load, name }) => {
     loadUI: undefined,
     renderUI: undefined,
     node: undefined,
+    canDisplayOldData,
 
     state,
     stateSignal,
