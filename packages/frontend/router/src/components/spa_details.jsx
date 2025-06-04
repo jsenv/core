@@ -64,7 +64,7 @@ import.meta.css = /* css */ `
     }
   }
 
-  .arrow-path {
+  path[data-animation-target] {
     animation-duration: 0.25s;
     animation-fill-mode: forwards;
     animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
