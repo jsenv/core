@@ -11,9 +11,20 @@ import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
 
 const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-// Updated loading circle path with a clear indicator for rotation
+/*
+ This path should correspond to
+
+  <circle
+  data-animation-target="loading"
+          cx="480"
+          cy="-480"
+          r="320"
+          strokeWidth="60"
+          strokeLinecap="round"
+        />
+*/
 const loadingCirclePath =
-  "M480-480m-100 0a100 100 0 1 0 200 0a100 100 0 1 0 -200 0z M480-580c0 0-20-5-20 30s50 30 50 0s-30-30-30 0z";
+  "M480-480 m-320 0 a320 320 0 1 0 640 0 a320 320 0 1 0 -640 0 Z";
 
 import.meta.css = /* css */ `
   .spa_details {
@@ -79,15 +90,6 @@ import.meta.css = /* css */ `
     }
   }
 
-  @keyframes rotate-loading {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   path[data-animation-target] {
     animation-duration: 0.3s;
     animation-fill-mode: forwards;
@@ -111,7 +113,7 @@ import.meta.css = /* css */ `
     animation-name: morph-to-loading;
   }
 
-  .loading-circle {
+  path[data-animation-target="loading"] {
     stroke-dasharray: 503 1507; /* ~25% of circumference filled */
     stroke-dashoffset: 0;
     animation: progress-around-circle 1.5s linear infinite;
@@ -199,38 +201,28 @@ export const SPADetails = forwardRef(
 const MorphingArrow = ({ isOpen, isPending }) => {
   const showLoading = useDebounceTrue(isPending, 300);
 
-  if (isOpen && showLoading) {
-    return (
-      <svg
-        viewBox="0 -960 960 960"
-        fill="none"
-        stroke="currentColor"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Background circle (faded) */}
-        <circle cx="480" cy="-480" r="320" strokeWidth="60" opacity="0.2" />
-        {/* Foreground progress arc */}
-        <circle
-          className="loading-circle"
-          cx="480"
-          cy="-480"
-          r="320"
-          strokeWidth="60"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-
   return (
     <svg
       viewBox="0 -960 960 960"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
     >
+      {/* background circle (faded) */}
+      {showLoading && (
+        <circle cx="480" cy="-480" r="320" strokeWidth="60" opacity="0.2" />
+      )}
+      {/* path being either arrow down, arrow right, or foreground circle */}
       <path
-        data-animation-target={isOpen ? "down" : "right"}
-        d={isOpen ? downArrowPath : rightArrowPath}
+        data-animation-target={
+          isOpen ? (showLoading ? "loading" : "down") : "right"
+        }
+        d={
+          isOpen
+            ? showLoading
+              ? loadingCirclePath
+              : downArrowPath
+            : rightArrowPath
+        }
       />
     </svg>
   );
