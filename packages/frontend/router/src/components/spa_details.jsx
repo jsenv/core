@@ -87,7 +87,7 @@ import.meta.css = /* css */ `
       stroke-dashoffset: 0;
     }
     100% {
-      stroke-dashoffset: 2010;
+      stroke-dashoffset: -2010;
     }
   }
 
@@ -96,9 +96,9 @@ import.meta.css = /* css */ `
     transition: opacity 0.3s ease-in-out;
     opacity: 1;
   }
-  .summary_marker_svg .arrow_container {
-    transition: transform 0.3s cubic-bezier(0.34, 0.56, 0.64, 1);
-    transform: scale(1);
+  .summary_marker_svg .loading_container {
+    transition: transform 0.3s linear;
+    transform: scale(0.3);
   }
   .summary_marker_svg .background_circle,
   .summary_marker_svg .foreground_circle {
@@ -108,8 +108,8 @@ import.meta.css = /* css */ `
   .summary_marker_svg[data-loading] .arrow {
     opacity: 0;
   }
-  .summary_marker_svg[data-loading] .arrow_container {
-    transform: scale(0.3);
+  .summary_marker_svg[data-loading] .loading_container {
+    transform: scale(1);
   }
   .summary_marker_svg[data-loading] .background_circle {
     opacity: 0.2;
@@ -198,28 +198,30 @@ const MorphingArrow = ({ isOpen, isPending }) => {
       xmlns="http://www.w3.org/2000/svg"
       data-loading={isOpen ? showLoading || undefined : undefined}
     >
-      <circle
-        className="background_circle"
-        cx="480"
-        cy="-480"
-        r="320"
-        stroke="currentColor"
-        fill="none"
-        strokeWidth="60"
-        opacity="0.2"
-      />
-      <circle
-        className="foreground_circle"
-        cx="480"
-        cy="-480"
-        r="320"
-        stroke="currentColor"
-        fill="none"
-        strokeWidth="60"
-        strokeLinecap="round"
-        strokeDasharray="503 1507"
-      />
-      <g className="arrow_container" transform-origin="center center">
+      <g className="loading_container" transform-origin="480px -480px">
+        <circle
+          className="background_circle"
+          cx="480"
+          cy="-480"
+          r="320"
+          stroke="currentColor"
+          fill="none"
+          strokeWidth="60"
+          opacity="0.2"
+        />
+        <circle
+          className="foreground_circle"
+          cx="480"
+          cy="-480"
+          r="320"
+          stroke="currentColor"
+          fill="none"
+          strokeWidth="60"
+          strokeLinecap="round"
+          strokeDasharray="503 1507"
+        />
+      </g>
+      <g className="arrow_container" transform-origin="480px -480px">
         <path
           className="arrow"
           fill="currentColor"
