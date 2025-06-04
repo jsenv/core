@@ -512,10 +512,10 @@ export const applyRouting = async ({
   let routeCandidateSet;
   if (routesToEnter) {
     routeCandidateSet = new Set(routesToEnter);
-    routeToKeepActiveSet = matchingRouteSet;
+    routeToKeepActiveSet = new Set(matchingRouteSet);
   } else if (routesToLeave) {
     routeCandidateSet = new Set();
-    routeToKeepActiveSet = matchingRouteSet;
+    routeToKeepActiveSet = new Set(matchingRouteSet);
     for (const routeToLeave of routesToLeave) {
       routeToKeepActiveSet.delete(routeToLeave);
       routeCandidateSet.add(routeToLeave);
