@@ -33,12 +33,8 @@ import.meta.css = /* css */ `
     width: 100%;
   }
   .summary_marker {
-    transform: rotate(-90deg);
     width: 24px;
     height: 24px;
-  }
-  .spa_details[open] .summary_marker {
-    transform: rotate(0deg);
   }
 
   .summary_label {
@@ -119,6 +115,35 @@ export const SPADetails = forwardRef(
   },
 );
 
+const MorphingArrow = ({ isOpen }) => {
+  // These paths have matching point structures for smooth morphing
+  // They're designed to have the same number and order of path commands
+  const rightArrowPath = "M660-480 420-720l56-56 240 240-240 240-56-56 240-240Z";
+  const downArrowPath = "M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z";
+
+  return (
+    <svg
+      viewBox="0 -960 960 960"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d={isOpen ? downArrowPath : rightArrowPath}>
+        <animate
+          attributeName="d"
+          from={isOpen ? rightArrowPath : downArrowPath}
+          to={isOpen ? downArrowPath : rightArrowPath}
+          dur="0.25s"
+          begin="0s"
+          fill="freeze"
+          calcMode="spline"
+          keySplines="0.4 0 0.2 1"
+        />
+      </path>
+    </svg>
+  );
+};
+
+// Update the SPADetailsSummary component to use the new MorphingArrow
 const SPADetailsSummary = ({ children, ...rest }) => {
   const { open, pending } = useDetailsStatus();
 
@@ -126,7 +151,7 @@ const SPADetailsSummary = ({ children, ...rest }) => {
     <summary {...rest}>
       <div className="summary_body">
         <span className="summary_marker">
-          <ArrowPointingRight />
+          <MorphingArrow isOpen={open} />
         </span>
         <div className="summary_label">
           {children}
@@ -140,15 +165,3 @@ const SPADetailsSummary = ({ children, ...rest }) => {
   );
 };
 SPADetails.Summary = SPADetailsSummary;
-
-const ArrowPointingRight = () => {
-  return (
-    <svg
-      viewBox="0 -960 960 960"
-      fill="currentColor"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
-    </svg>
-  );
-};
