@@ -72,7 +72,9 @@ const createAction = (fn, name = fn.name || "anonymous") => {
   };
   return action;
 };
-const boundActionWeakSetWeakMap = new WeakMap();
+// Use a Map to store bound actions with their parameters
+const boundActionWeakMap = new WeakMap();
+
 export const bindParamsToAction = (fnOrAction, params) => {
   let fn;
   let name;
@@ -88,25 +90,42 @@ export const bindParamsToAction = (fnOrAction, params) => {
     );
   }
 
-  let boundActionWeakSet = boundActionWeakSetWeakMap.get(fn);
-  if (!boundActionWeakSet) {
-    boundActionWeakSet = new WeakSet();
-    boundActionWeakSetWeakMap.set(fn, boundActionWeakSet);
+  // Get or create the array for this function
+  let boundActions = boundActionWeakMap.get(fn);
+  if (!boundActions) {
+    // Use an array of weak references instead of WeakSet
+    boundActions = [];
+    boundActionWeakMap.set(fn, boundActions);
   }
 
-  for (const boundActionCandidate of boundActionWeakSet) {
-    if (compareTwoJsValues(boundActionCandidate.params, params)) {
+  // Clean up any garbage collected references first
+  const liveActions = boundActions.filter((ref) => ref.deref() !== undefined);
+  boundActions.length = 0;
+  boundActions.push(...liveActions);
+
+  // Check if we already have a matching bound action
+  for (const actionRef of boundActions) {
+    const boundActionCandidate = actionRef.deref();
+    if (
+      boundActionCandidate &&
+      compareTwoJsValues(boundActionCandidate.params, params)
+    ) {
       return boundActionCandidate;
     }
   }
 
+  // Create a new bound action
   const boundAction = createAction((navParams) =>
     fn({ ...navParams, ...params }),
   );
+
   boundAction.params = params;
   boundAction.toString = () =>
     `<BoundAction> ${name}(${JSON.stringify(params)})`;
-  boundActionWeakSet.add(boundAction);
+
+  // Store weak reference to allow garbage collection
+  boundActions.push(new WeakRef(boundAction));
+
   return boundAction;
 };
 

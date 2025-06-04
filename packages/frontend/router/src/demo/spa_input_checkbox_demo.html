@@ -12,7 +12,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       // eslint-disable-next-line no-unused-vars
-      import { SPAInputCheckbox } from "@jsenv/router";
+      import { registerAction, SPAInputCheckbox } from "@jsenv/router";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -47,9 +47,32 @@
                 // data-validation-message-stay-on-blur
               ></SPAInputCheckbox>
             </div>
+            <div>
+              <p>
+                <strong>2 checkboxes for the same action</strong>
+              </p>
+              <SPAInputCheckbox
+                action={updateUserCheckboxAction}
+                label="Test"
+                style="color: blue"
+              ></SPAInputCheckbox>
+              <SPAInputCheckbox
+                action={updateUserCheckboxAction}
+                label="Test"
+                style="color: blue"
+              ></SPAInputCheckbox>
+            </div>
           </div>
         );
       };
+
+      const updateUserCheckboxAction = registerAction(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 2000);
+        });
+      }).bindParams({
+        name: "dam",
+      });
 
       render(<App />, document.querySelector("#root"));
     </script>
