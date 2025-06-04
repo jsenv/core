@@ -8,8 +8,8 @@ import {
 } from "preact/hooks";
 import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
 
-const rightArrowPath = "M580-480l-200 200-60-60 140-140-140-140 60-60 200 200z";
-const downArrowPath = "M480-380l-200-200 60-60 140 140 140-140 60 60-200 200z";
+const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
+const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
 
 import.meta.css = /* css */ `
   .spa_details {
@@ -36,8 +36,8 @@ import.meta.css = /* css */ `
     width: 100%;
   }
   .summary_marker {
-    width: 20px;
-    height: 20px;
+    width: 1em;
+    height: 1em;
   }
 
   .summary_label {
@@ -162,13 +162,10 @@ const MorphingArrow = ({ isOpen }) => {
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <g transform="translate(480, -480)" style="transform-origin: center">
-        <path
-          data-animation-target={isOpen ? "down" : "right"}
-          d={isOpen ? downArrowPath : rightArrowPath}
-          transform="translate(-480, 480)"
-        />
-      </g>
+      <path
+        data-animation-target={isOpen ? "down" : "right"}
+        d={isOpen ? downArrowPath : rightArrowPath}
+      />
     </svg>
   );
 };
