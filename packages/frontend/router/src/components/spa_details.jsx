@@ -8,6 +8,9 @@ import {
 } from "preact/hooks";
 import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
 
+const rightArrowPath = "M580-480l-200 200-60-60 140-140-140-140 60-60 200 200z";
+const downArrowPath = "M480-380l-200-200 60-60 140 140 140-140 60 60-200 200z";
+
 import.meta.css = /* css */ `
   .spa_details {
     display: flex;
@@ -33,8 +36,8 @@ import.meta.css = /* css */ `
     width: 100%;
   }
   .summary_marker {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
   }
 
   .summary_label {
@@ -47,19 +50,19 @@ import.meta.css = /* css */ `
 
   @keyframes morph-to-down {
     from {
-      d: path("M580-480l-200 200-60-60 140-140-140-140 60-60 200 200z");
+      d: path("${rightArrowPath}");
     }
     to {
-      d: path("M480-380l-200-200 60-60 140 140 140-140 60 60-200 200z");
+      d: path("${downArrowPath}");
     }
   }
 
   @keyframes morph-to-right {
     from {
-      d: path("M480-380l-200-200 60-60 140 140 140-140 60 60-200 200z");
+      d: path("${downArrowPath}");
     }
     to {
-      d: path("M580-480l-200 200-60-60 140-140-140-140 60-60 200 200z");
+      d: path("${rightArrowPath}");
     }
   }
 
@@ -153,11 +156,6 @@ export const SPADetails = forwardRef(
 );
 
 const MorphingArrow = ({ isOpen }) => {
-  const rightArrowPath =
-    "M580-480l-200 200-60-60 140-140-140-140 60-60 200 200z";
-  const downArrowPath =
-    "M480-380l-200-200 60-60 140 140 140-140 60 60-200 200z";
-
   return (
     <svg
       viewBox="0 -960 960 960"
