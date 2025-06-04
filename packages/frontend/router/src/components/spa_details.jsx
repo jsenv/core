@@ -1,11 +1,64 @@
+import { createContext } from "preact";
 import { forwardRef } from "preact/compat";
-import { useEffect, useImperativeHandle, useRef } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from "preact/hooks";
 import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
-import { Details } from "./details.jsx";
+
+import.meta.css = /* css */ `
+  .spa_details {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+  }
+
+  .spa_details > summary {
+    flex-shrink: 0;
+    cursor: pointer;
+    font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+  .summary_body {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+  }
+  .summary_marker {
+    transform: rotate(-90deg);
+    width: 24px;
+    height: 24px;
+  }
+  .spa_details[open] .summary_marker {
+    transform: rotate(0deg);
+  }
+
+  .summary_label {
+    display: flex;
+    flex: 1;
+    gap: 0.2em;
+    align-items: center;
+    padding-right: 10px;
+  }
+`;
+
+const DetailsContext = createContext();
+const useDetailsStatus = () => {
+  const detailsStatus = useContext(DetailsContext);
+  return detailsStatus;
+};
 
 export const SPADetails = forwardRef(
   ({ route, children, onToggle, open, ...props }, ref) => {
-    const { pending, aborted, error } = useRouteStatus(route);
+    const { pending } = useRouteStatus(route);
 
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
@@ -31,12 +84,13 @@ export const SPADetails = forwardRef(
       mountedRef.current = true;
     }, []);
 
-    const [summary, content] = children;
+    // for aborted we do nothing
+    // for error we display a validation message, we'll see that later
 
     return (
-      <Details
+      <details
         {...props}
-        pending={pending}
+        className="spa_details"
         onToggle={(toggleEvent) => {
           if (mountedRef.current) {
             if (toggleEvent.newState === "open") {
@@ -52,13 +106,46 @@ export const SPADetails = forwardRef(
         ref={innerRef}
         open={routeIsMatching || open}
       >
-        {summary}
-        {aborted
-          ? "load was aborted"
-          : error
-            ? `error: ${error.message}`
-            : content}
-      </Details>
+        <DetailsContext.Provider
+          value={{
+            open: routeIsMatching || open,
+            pending,
+          }}
+        >
+          {children}
+        </DetailsContext.Provider>
+      </details>
     );
   },
 );
+
+const SPADetailsSummary = ({ children, ...rest }) => {
+  const { open, pending } = useDetailsStatus();
+
+  return (
+    <summary {...rest}>
+      <div className="summary_body">
+        <span className="summary_marker">
+          <ArrowDown />
+        </span>
+        <div className="summary_label">
+          {children}
+          open: {Boolean(open)}, pending: {Boolean(pending)}
+        </div>
+      </div>
+    </summary>
+  );
+};
+SPADetails.Summary = SPADetailsSummary;
+
+const ArrowDown = () => {
+  return (
+    <svg
+      viewBox="0 -960 960 960"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
+    </svg>
+  );
+};
