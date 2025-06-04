@@ -11,20 +11,6 @@ import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
 
 const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-/*
- This path should correspond to
-
-  <circle
-  data-animation-target="loading"
-          cx="480"
-          cy="-480"
-          r="320"
-          strokeWidth="60"
-          strokeLinecap="round"
-        />
-*/
-const loadingCirclePath =
-  "M480-480 m-320 0 a320 320 0 1 0 640 0 a320 320 0 1 0 -640 0 Z";
 
 import.meta.css = /* css */ `
   .spa_details {
@@ -63,6 +49,14 @@ import.meta.css = /* css */ `
     padding-right: 10px;
   }
 
+  .arrow {
+    animation-duration: 0.3s;
+    animation-fill-mode: forwards;
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .arrow[data-animation-target="down"] {
+    animation-name: morph-to-down;
+  }
   @keyframes morph-to-down {
     from {
       d: path("${rightArrowPath}");
@@ -71,7 +65,9 @@ import.meta.css = /* css */ `
       d: path("${downArrowPath}");
     }
   }
-
+  .arrow[data-animation-target="right"] {
+    animation-name: morph-to-right;
+  }
   @keyframes morph-to-right {
     from {
       d: path("${downArrowPath}");
@@ -81,54 +77,9 @@ import.meta.css = /* css */ `
     }
   }
 
-  @keyframes morph-to-loading {
-    from {
-      d: path("${downArrowPath}");
-      fill: currentColor;
-      stroke: none;
-    }
-    to {
-      d: path("${loadingCirclePath}");
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 60;
-    }
+  .foreground_circle {
+    animation: progress-around-circle 1.5s linear infinite;
   }
-
-  path[data-animation-target] {
-    animation-duration: 0.3s;
-    animation-fill-mode: forwards;
-    animation-timing-function: cubic-bezier(
-      0.34,
-      1.56,
-      0.64,
-      1
-    ); /* Bouncy effect */
-  }
-
-  path[data-animation-target="down"] {
-    animation-name: morph-to-down;
-  }
-
-  path[data-animation-target="right"] {
-    animation-name: morph-to-right;
-  }
-
-  path[data-animation-target="loading"] {
-    animation-name: morph-to-loading;
-  }
-
-  path[data-animation-target="loading"] {
-    fill: none !important;
-    stroke: currentColor !important;
-    stroke-width: 60;
-    stroke-dasharray: 503 1507; /* ~25% of circumference filled */
-    stroke-dashoffset: 0;
-    animation:
-      morph-to-loading 30s forwards linear,
-      progress-around-circle 1.5s linear 30s infinite;
-  }
-
   @keyframes progress-around-circle {
     0% {
       stroke-dashoffset: 0;
@@ -136,6 +87,23 @@ import.meta.css = /* css */ `
     100% {
       stroke-dashoffset: 2010;
     }
+  }
+
+  .summary_marker_svg .arrow {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 1;
+  }
+  .summary_marker_svg .background_circle,
+  .summary_marker_svg .foreground_circle {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 0;
+  }
+  .summary_marker_svg[data-loading] .arrow {
+    opacity: 0;
+  }
+  .summary_marker_svg[data-loading] .background_circle,
+  .summary_marker_svg[data-loading] .foreground_circle {
+    opacity: 1;
   }
 `;
 
@@ -212,32 +180,37 @@ const MorphingArrow = ({ isOpen, isPending }) => {
   const showLoading = useDebounceTrue(isPending, 300);
 
   return (
-    <svg viewBox="0 -960 960 960" xmlns="http://www.w3.org/2000/svg">
-      {/* background circle (faded) */}
-      {showLoading && (
-        <circle
-          cx="480"
-          cy="-480"
-          r="320"
-          stroke="currentColor"
-          fill="none"
-          strokeWidth="60"
-          opacity="0.2"
-        />
-      )}
-      {/* path being either arrow down, arrow right, or foreground circle */}
+    <svg
+      className="summary_marker_svg"
+      viewBox="0 -960 960 960"
+      xmlns="http://www.w3.org/2000/svg"
+      data-loading={showLoading}
+    >
+      <circle
+        className="background_circle"
+        cx="480"
+        cy="-480"
+        r="320"
+        stroke="currentColor"
+        fill="none"
+        strokeWidth="60"
+        opacity="0.2"
+      />
+      <circle
+        className="foreground_circle"
+        cx="480"
+        cy="-480"
+        r="320"
+        stroke="currentColor"
+        fill="none"
+        strokeWidth="60"
+        strokeLinecap="round"
+      />
       <path
+        className="arrow"
         fill="currentColor"
-        data-animation-target={
-          isOpen ? (showLoading ? "loading" : "down") : "right"
-        }
-        d={
-          isOpen
-            ? showLoading
-              ? loadingCirclePath
-              : downArrowPath
-            : rightArrowPath
-        }
+        data-animation-target={isOpen ? "down" : "right"}
+        d={isOpen ? downArrowPath : rightArrowPath}
       />
     </svg>
   );
