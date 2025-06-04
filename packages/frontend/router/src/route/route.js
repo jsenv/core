@@ -7,7 +7,7 @@ import { normalizeUrl } from "../normalize_url.js";
 import { goTo, installNavigation, reload } from "../router.js";
 import { ABORTED, FAILED, IDLE, LOADED, LOADING } from "./route_status.js";
 
-let debug = false;
+let debug = true;
 
 let baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
@@ -401,9 +401,10 @@ const applyRouteEnterEffect = async (route, { signal, url, params, state }) => {
     enterAbortController.abort(reason);
     routeAbortEnterMap.delete(route);
   };
-  signal.addEventListener("abort", () => {
+  const onabort = () => {
     abort(signal.reason);
-  });
+  };
+  signal.addEventListener("abort", onabort);
   routeAbortEnterMap.set(route, abort);
 
   if (debug) {
@@ -414,6 +415,9 @@ const applyRouteEnterEffect = async (route, { signal, url, params, state }) => {
 
   await loadRoute(route, {
     signal: enterAbortSignal,
+    onError: () => {
+      signal.removeEventListener("abort", onabort);
+    },
   });
 };
 const applyRouteLeaveEffect = (route, reason) => {
@@ -428,9 +432,10 @@ const applyRouteLeaveEffect = (route, reason) => {
   }
   route.leaveEffect(reason);
   matchingRouteSet.delete(route);
+  routeEnterPromiseMap.delete(route);
 };
 
-const loadRoute = async (route, { signal }) => {
+const loadRoute = async (route, { signal, onError }) => {
   try {
     const promisesToWait = [];
     if (route.loadData) {
@@ -465,6 +470,7 @@ const loadRoute = async (route, { signal }) => {
     routeAbortEnterMap.delete(route);
     routeEnterPromiseMap.delete(route);
   } catch (e) {
+    onError(e);
     routeAbortEnterMap.delete(route);
     routeEnterPromiseMap.delete(route);
     if (signal.aborted && e === signal.reason) {
@@ -490,7 +496,8 @@ export const applyRouting = async ({
   // const sourceResource = resourceFromUrl(sourceUrl);
   const targetResource = resourceFromUrl(targetUrl);
   if (debug) {
-    console.log(
+    console.group("applyRouting");
+    console.debug(
       `start routing ${targetResource}${targetState === undefined ? "" : ` (state: ${JSON.stringify(targetState)})`} against ${routeSet.size} routes`,
     );
   }
@@ -549,25 +556,14 @@ export const applyRouting = async ({
       }
     }
   }
-  if (routeToEnterMap.size === 0 && matchingRouteSet.size === 0) {
+  if (
+    routeToEnterMap.size === 0 &&
+    matchingRouteSet.size === 0 &&
+    routeEnterPromiseMap.size === 0
+  ) {
     if (debug) {
-      console.log("no effect on routes, early return");
-    }
-    return;
-  }
-  if (routeToEnterMap.size === 0) {
-    const routeLeftSet = new Set();
-    for (const routeToLeave of matchingRouteSet) {
-      if (routeToKeepActiveSet.has(routeToLeave)) {
-        continue;
-      }
-      routeLeftSet.add(routeToLeave);
-      applyRouteLeaveEffect(routeToLeave, `Navigating to ${targetResource}`);
-    }
-    if (debug) {
-      console.log(`does not match new routes.
-route still active: ${routeToKeepActiveSet.size === 0 ? "none" : Array.from(routeToKeepActiveSet).join(", ")}
-route left: ${routeLeftSet.size === 0 ? "none" : Array.from(routeLeftSet).join(", ")}`);
+      console.debug("no effect on routes, early return");
+      console.groupEnd();
     }
     return;
   }
@@ -580,21 +576,19 @@ route left: ${routeLeftSet.size === 0 ? "none" : Array.from(routeLeftSet).join("
     }
     routeToLeaveSet.add(activeRoute);
   }
+  if (debug) {
+    console.debug(`- route still active: ${routeToKeepActiveSet.size === 0 ? "none" : Array.from(routeToKeepActiveSet).join(", ")}
+- route to leave: ${routeToLeaveSet.size === 0 ? "none" : Array.from(routeToLeaveSet).join(", ")}
+- route to enter: ${routeToEnterMap.size === 0 ? "none" : Array.from(routeToEnterMap.keys()).join(", ")}`);
+  }
   for (const routeToLeave of routeToLeaveSet) {
     applyRouteLeaveEffect(routeToLeave, `Navigating to ${targetResource}`);
   }
   await routingWhile(async () => {
     const promises = [];
-    // any currently entering route must be awaited too
-    const existingRouteToAwait = [];
-    for (const [route, routeEnterPromise] of routeEnterPromiseMap) {
-      existingRouteToAwait.push(route);
+    for (const routeToKeepActive of routeToKeepActiveSet) {
+      const routeEnterPromise = routeEnterPromiseMap.get(routeToKeepActive);
       promises.push(routeEnterPromise);
-    }
-    if (debug) {
-      console.debug(
-        `add ${existingRouteToAwait.length} to await ${existingRouteToAwait.join(", ")}`,
-      );
     }
     for (const [routeToEnter, enterParams] of routeToEnterMap) {
       const routeEnterPromise = applyRouteEnterEffect(
@@ -606,6 +600,9 @@ route left: ${routeLeftSet.size === 0 ? "none" : Array.from(routeLeftSet).join("
     }
     await Promise.all(promises);
   });
+  if (debug) {
+    console.groupEnd();
+  }
 };
 
 const urlWithoutSearch = (url) => {
