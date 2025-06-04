@@ -52,6 +52,7 @@ export const onRouterUILoaded = () => {
 };
 
 const routeAbortEnterMap = new Map();
+const routeEnterPromiseMap = new Map();
 const routeSet = new Set();
 const matchingRouteSet = new Set();
 
@@ -347,14 +348,10 @@ const createRouteFromState = ({
       }
       const stateCopy = { ...state };
       enter(stateCopy);
-      // ça c'est pas fou en vrai
-      // parce que ça retrigger tout les states
-      // donc potentiellement les routes en erreurs vont se reload
-      // hors ici on sait d'avance que y'a que cette route a gérer
-      // on sait meme déja qu'elle match (en théorie si elle est bien écrite)
-      // donc il faudrait une sorte d'argument
-      // pour que le routing skip les autres routes et s'occupe que de celle-ci
-      await goTo(window.location.href, { state: stateCopy });
+      await goTo(window.location.href, {
+        state: stateCopy,
+        routesToEnter: [route],
+      });
     },
     leave: async () => {
       const isMatching = isMatchingSignal.peek();
@@ -364,7 +361,10 @@ const createRouteFromState = ({
       const stateCopy = { ...state };
       leave(stateCopy);
       stateSignal.value = initialState;
-      await goTo(window.location.href, { state: stateCopy });
+      await goTo(window.location.href, {
+        state: stateCopy,
+        routesToLeave: [route],
+      });
     },
     name,
   };
@@ -463,8 +463,10 @@ const loadRoute = async (route, { signal }) => {
       console.log(`"${route}": route load end`);
     }
     routeAbortEnterMap.delete(route);
+    routeEnterPromiseMap.delete(route);
   } catch (e) {
     routeAbortEnterMap.delete(route);
+    routeEnterPromiseMap.delete(route);
     if (signal.aborted && e === signal.reason) {
       route.loadingStateSignal.value = ABORTED;
       return;
@@ -473,7 +475,6 @@ const loadRoute = async (route, { signal }) => {
       route.reportError(e);
       route.loadingStateSignal.value = FAILED;
     });
-    throw e;
   }
 };
 
@@ -505,12 +506,11 @@ export const applyRouting = async ({
   const routeToLeaveSet = new Set();
   const routeToEnterMap = new Map();
   const routeToKeepActiveSet = new Set();
+  // const routesToEnter = info?.routesToEnter;
+  // const routesToLeave = info?.routesToLeave;
+  const routesLoaded = info?.routesLoaded;
   for (const routeCandidate of routeSet) {
-    if (
-      info &&
-      info.routesLoaded &&
-      info.routesLoaded.includes(routeCandidate)
-    ) {
+    if (routesLoaded && routesLoaded.includes(routeCandidate)) {
       routeToKeepActiveSet.add(routeCandidate);
       continue;
     }
@@ -585,11 +585,23 @@ route left: ${routeLeftSet.size === 0 ? "none" : Array.from(routeLeftSet).join("
   }
   await routingWhile(async () => {
     const promises = [];
+    // any currently entering route must be awaited too
+    const existingRouteToAwait = [];
+    for (const [route, routeEnterPromise] of routeEnterPromiseMap) {
+      existingRouteToAwait.push(route);
+      promises.push(routeEnterPromise);
+    }
+    if (debug) {
+      console.debug(
+        `add ${existingRouteToAwait.length} to await ${existingRouteToAwait.join(", ")}`,
+      );
+    }
     for (const [routeToEnter, enterParams] of routeToEnterMap) {
       const routeEnterPromise = applyRouteEnterEffect(
         routeToEnter,
         enterParams,
       );
+      routeEnterPromiseMap.set(routeToEnter, routeEnterPromise);
       promises.push(routeEnterPromise);
     }
     await Promise.all(promises);
