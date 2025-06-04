@@ -6,10 +6,13 @@ import {
   useImperativeHandle,
   useRef,
 } from "preact/hooks";
+import { useDebounceTrue } from "../hooks/use_debounce_true.js";
 import { useRouteIsMatching, useRouteStatus } from "../route/route_hooks.js";
 
 const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
+const loadingCirclePath =
+  "M480-480m-240 0a240 240 0 1 0 480 0a240 240 0 1 0 -480 0z M480-720c-40 0-40 60 0 60s40-60 0-60z";
 
 import.meta.css = /* css */ `
   .spa_details {
@@ -66,6 +69,26 @@ import.meta.css = /* css */ `
     }
   }
 
+  @keyframes morph-to-loading {
+    from {
+      d: path("${downArrowPath}");
+    }
+    to {
+      d: path(
+        "M480-480m-240 0a240 240 0 1 0 480 0a240 240 0 1 0 -480 0z M480-720c-40 0-40 60 0 60s40-60 0-60z"
+      );
+    }
+  }
+
+  @keyframes rotate-loading {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   path[data-animation-target] {
     animation-duration: 0.3s;
     animation-fill-mode: forwards;
@@ -83,6 +106,15 @@ import.meta.css = /* css */ `
 
   path[data-animation-target="right"] {
     animation-name: morph-to-right;
+  }
+
+  path[data-animation-target="loading"] {
+    animation-name: morph-to-loading;
+  }
+
+  .loading-spinner {
+    animation: rotate-loading 1.5s linear infinite;
+    transform-origin: center;
   }
 `;
 
@@ -155,22 +187,34 @@ export const SPADetails = forwardRef(
   },
 );
 
-const MorphingArrow = ({ isOpen }) => {
+const MorphingArrow = ({ isOpen, isPending }) => {
+  const showLoading = useDebounceTrue(isPending, 300);
+
   return (
     <svg
       viewBox="0 -960 960 960"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path
-        data-animation-target={isOpen ? "down" : "right"}
-        d={isOpen ? downArrowPath : rightArrowPath}
-      />
+      <g className={showLoading ? "loading-spinner" : ""}>
+        <path
+          data-animation-target={
+            isOpen ? (showLoading ? "loading" : "down") : "right"
+          }
+          d={
+            isOpen
+              ? showLoading
+                ? loadingCirclePath
+                : downArrowPath
+              : rightArrowPath
+          }
+        />
+      </g>
     </svg>
   );
 };
 
-// Update the SPADetailsSummary component to use the new MorphingArrow
+// Update the SPADetailsSummary component to pass pending state
 const SPADetailsSummary = ({ children, ...rest }) => {
   const { open, pending } = useDetailsStatus();
 
@@ -178,10 +222,10 @@ const SPADetailsSummary = ({ children, ...rest }) => {
     <summary {...rest}>
       <div className="summary_body">
         <span className="summary_marker">
-          <MorphingArrow isOpen={open} />
+          <MorphingArrow isOpen={open} isPending={pending} />
         </span>
         <div className="summary_label">
-          {children}
+          {children}{" "}
           <span>
             [{open ? "open" : "close"}
             {pending ? " and pending" : ""}]
