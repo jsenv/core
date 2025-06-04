@@ -84,9 +84,14 @@ import.meta.css = /* css */ `
   @keyframes morph-to-loading {
     from {
       d: path("${downArrowPath}");
+      fill: currentColor;
+      stroke: none;
     }
     to {
       d: path("${loadingCirclePath}");
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 60;
     }
   }
 
@@ -114,9 +119,14 @@ import.meta.css = /* css */ `
   }
 
   path[data-animation-target="loading"] {
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-width: 60;
     stroke-dasharray: 503 1507; /* ~25% of circumference filled */
     stroke-dashoffset: 0;
-    animation: progress-around-circle 1.5s linear infinite;
+    animation:
+      morph-to-loading 30s forwards linear,
+      progress-around-circle 1.5s linear 30s infinite;
   }
 
   @keyframes progress-around-circle {
@@ -124,7 +134,7 @@ import.meta.css = /* css */ `
       stroke-dashoffset: 0;
     }
     100% {
-      stroke-dashoffset: -2010; /* Full circumference, negative for clockwise */
+      stroke-dashoffset: 2010;
     }
   }
 `;
@@ -202,17 +212,22 @@ const MorphingArrow = ({ isOpen, isPending }) => {
   const showLoading = useDebounceTrue(isPending, 300);
 
   return (
-    <svg
-      viewBox="0 -960 960 960"
-      fill="currentColor"
-      xmlns="http://www.w3.org/2000/svg"
-    >
+    <svg viewBox="0 -960 960 960" xmlns="http://www.w3.org/2000/svg">
       {/* background circle (faded) */}
       {showLoading && (
-        <circle cx="480" cy="-480" r="320" strokeWidth="60" opacity="0.2" />
+        <circle
+          cx="480"
+          cy="-480"
+          r="320"
+          stroke="currentColor"
+          fill="none"
+          strokeWidth="60"
+          opacity="0.2"
+        />
       )}
       {/* path being either arrow down, arrow right, or foreground circle */}
       <path
+        fill="currentColor"
         data-animation-target={
           isOpen ? (showLoading ? "loading" : "down") : "right"
         }
