@@ -113,17 +113,28 @@ import.meta.css = /* css */ `
 
   .loading-circle {
     stroke-dasharray: 2010;
-    stroke-dashoffset: 503; /* 25% of circumference */
-    animation: smooth-circle-progress 1.5s ease-in-out infinite;
+    stroke-dashoffset: 2010;
+    transform-origin: center;
+    animation:
+      smooth-circle-rotation 2s linear infinite,
+      smooth-circle-progress 2s linear infinite;
   }
 
   @keyframes smooth-circle-progress {
-    0%,
-    100% {
-      stroke-dashoffset: 503; /* 25% filled */
+    0% {
+      stroke-dashoffset: 2010;
     }
-    50% {
-      stroke-dashoffset: 1507; /* 75% filled */
+    100% {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes smooth-circle-rotation {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
     }
   }
 `;
