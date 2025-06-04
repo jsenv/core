@@ -60,6 +60,12 @@ navigation.addEventListener("navigate", (event) => {
     // (used by jsenv hot reload)
     return;
   }
+  const formAction = event.info?.formAction;
+  if (!navMethods && !formAction) {
+    // navigation not installed and there is no action
+    // let the natural browser nav occur
+    return;
+  }
   const isReload = event.navigationType === "reload";
   const isReplace = event.navigationType === "replace";
   const currentUrl = navigation.currentEntry.url;
@@ -73,11 +79,10 @@ navigation.addEventListener("navigate", (event) => {
       destinationState,
     });
   }
-  const formAction = event.info?.formAction;
   const formData = event.formData || event.info?.formData;
   const formUrl = event.info?.formUrl;
-  const abortSignal = signal;
 
+  const abortSignal = signal;
   const stopAbortController = new AbortController();
   const stopSignal = stopAbortController.signal;
   const removeStopButtonClickDetector = detectBrowserStopButtonClick(
@@ -87,20 +92,16 @@ navigation.addEventListener("navigate", (event) => {
     },
   );
 
-  if (!navMethods && !formAction) {
-    // navigation not installed and there is no action
-    return;
-  }
-
   event.intercept({
     handler: async () => {
       let handle;
       if (formAction) {
         handle = async () => {
-          await applyAction(formAction, {
+          const result = await applyAction(formAction, {
             signal: stopSignal,
             formData,
           });
+          event.info.formActionCallback(result);
         };
       } else {
         handle = async () => {

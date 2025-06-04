@@ -22,6 +22,7 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
+import { registerAction } from "../action/action.js";
 import { useResetErrorBoundary } from "../hooks/use_reset_error_boundary.js";
 import { canUseNavigation } from "../router.js";
 import { FormContext } from "./use_spa_form_status.js";
@@ -107,8 +108,12 @@ export const SPAForm = forwardRef(
             resetErrorBoundary();
           }
           setError(null);
-          const action =
+          let action =
             formActionMapRef.current.get(submitEvent.submitter) || formAction;
+          if (typeof action === "function") {
+            action = registerAction(action);
+          }
+
           formStatusSetter({
             pending: true,
             aborted: false,
@@ -206,21 +211,29 @@ const applyActionOnFormSubmission = canUseNavigation
       // je pense qu'il faut fork l'action
       // sinon ça marche pas
 
+      // mais on veut potentiellement que l'action soit partagée entre plusieurs form
+      // et dans ce cas qu'on sache qu'une action d'un coté mette en pending in autre coté
+
       try {
+        let actionResult;
         await navigation.navigate(window.location.href, {
           history: "replace",
           info: {
             method,
             formAction: action,
+            formActionCallback: (result) => {
+              actionResult = result;
+            },
             formData,
           },
         }).finished;
+        return actionResult;
       } catch (e) {
         if (e.name === "AbortError") {
-          return;
+          return { aborted: true, error: null };
         }
         console.error(e);
-        throw e;
+        return { aborted: false, error: e };
       }
     }
   : () => {

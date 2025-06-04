@@ -30,6 +30,16 @@ const createAction = (fn, name = fn.name || "anonymous") => {
   const subscribe = () => {
     subscribeCount++;
     action.subscribeCount = subscribeCount;
+    if (subscribeCount === 1) {
+      disposeDataSignalEffect = effect(() => {
+        data = dataSignal.value;
+        action.data = data;
+      });
+      disposeErrorSignalEffect = effect(() => {
+        error = errorSignal.value;
+        action.error = error;
+      });
+    }
   };
   const unsubscribe = () => {
     subscribeCount--;
@@ -60,14 +70,6 @@ const createAction = (fn, name = fn.name || "anonymous") => {
     unsubscribe,
     toString: () => `<Action> ${name}()`,
   };
-  disposeDataSignalEffect = effect(() => {
-    data = dataSignal.value;
-    action.data = data;
-  });
-  disposeErrorSignalEffect = effect(() => {
-    error = errorSignal.value;
-    action.error = error;
-  });
   return action;
 };
 const boundActionWeakSetWeakMap = new WeakMap();

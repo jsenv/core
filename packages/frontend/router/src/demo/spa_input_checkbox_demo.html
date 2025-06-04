@@ -7,7 +7,7 @@
     <title>SPA Input checkbox loading demo</title>
   </head>
   <body>
-    <div id="root" style="position: relative; width: 200px"></div>
+    <div id="root" style="position: relative"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
@@ -17,14 +17,34 @@
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
-          <div>
-            <SPACheckbox
-              action={async () => {
-                await new Promise(() => {});
-              }}
-              label="Test"
-              style="color: blue"
-            ></SPACheckbox>
+          <div style="display: flex; flex-direction: row; gap: 30px">
+            <div>
+              <p>
+                <strong>Loading</strong>
+              </p>
+              <SPACheckbox
+                action={async () => {
+                  await new Promise(() => {});
+                }}
+                label="Test"
+                style="color: blue"
+              ></SPACheckbox>
+            </div>
+            <div>
+              <p>
+                <strong>Throw after 1s</strong>
+              </p>
+              <SPACheckbox
+                action={async () => {
+                  await new Promise((resolve) => {
+                    setTimeout(resolve, 1000);
+                  });
+                  throw new Error("This is an error");
+                }}
+                label="Test"
+                style="color: blue"
+              ></SPACheckbox>
+            </div>
           </div>
         );
       };
