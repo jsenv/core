@@ -308,11 +308,9 @@ const createRouteFromState = ({
     });
   };
   const shouldReload = ({ targetState }) => {
-    // ici, comme pour les url avec search params
-    // on pourrait considérer que n'importe quel changement de state
-    // reload la route
-    // pour le moment si on retrouve les memes params dans le state alors on touche a rien
-    if (compareTwoJsValues(state, targetState)) {
+    const matchResult = routeMatchMethod({ state });
+    const targetMatchResult = routeMatchMethod({ state: targetState });
+    if (compareTwoJsValues(matchResult, targetMatchResult)) {
       return false;
     }
     return true;

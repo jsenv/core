@@ -50,7 +50,7 @@ const useDetailsStatus = () => {
 };
 
 export const SPADetails = forwardRef(
-  ({ route, children, onToggle, open = false, ...props }, ref) => {
+  ({ route, children, onToggle, ...props }, ref) => {
     const { pending, error } = useRouteStatus(route);
 
     const innerRef = useRef();
@@ -82,6 +82,9 @@ export const SPADetails = forwardRef(
         {...props}
         className="spa_details"
         onToggle={async (toggleEvent) => {
+          if (onToggle) {
+            onToggle(toggleEvent);
+          }
           if (mountedRef.current) {
             try {
               if (toggleEvent.newState === "open") {
@@ -93,16 +96,13 @@ export const SPADetails = forwardRef(
               // handled by the route status
             }
           }
-          if (onToggle) {
-            onToggle(toggleEvent);
-          }
         }}
         ref={innerRef}
-        open={routeIsMatching || open}
+        open={routeIsMatching}
       >
         <DetailsContext.Provider
           value={{
-            open: routeIsMatching || open,
+            open: routeIsMatching,
             pending,
             error,
           }}
