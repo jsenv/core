@@ -1,3 +1,37 @@
+/**
+ * Action Management System
+ *
+ * This module provides a system for creating, tracking and executing async actions with state
+ * management and parameter binding capabilities. It leverages the Preact signals library for
+ * reactive state updates.
+ *
+ * Key Features:
+ * - Registry of reusable actions via WeakMap
+ * - State management (idle, executing, done, failed, aborted)
+ * - Parameter binding with memory-efficient caching using WeakRefs
+ * - Automatic garbage collection of unused bound actions
+ * - Subscription system for tracking usage and cleanup
+ * - Integration with routing system
+ *
+ * Usage:
+ * ```javascript
+ * // Register an action
+ * const fetchUsers = registerAction(async ({ signal, limit = 10 }) => {
+ *   const response = await fetch(`/api/users?limit=${limit}`, { signal });
+ *   return response.json();
+ * }, "fetchUsers");
+ *
+ * // Bind parameters
+ * const fetchAdminUsers = fetchUsers.bindParams({ limit: 5, role: "admin" });
+ *
+ * // Execute with abort signal
+ * const abortController = new AbortController();
+ * const result = await applyAction(fetchAdminUsers, {
+ *   signal: abortController.signal
+ * });
+ * ```
+ */
+
 import { batch, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "../compare_two_js_values.js";
 import { routingWhile } from "../document_routing.js";
@@ -5,7 +39,16 @@ import { ABORTED, DONE, EXECUTING, FAILED, IDLE } from "./action_status.js";
 
 let debug = false;
 
+// Registry of original actions
 const actionWeakMap = new WeakMap();
+
+/**
+ * Registers a function as an action, caching it for reuse
+ *
+ * @param {Function} fn - The function to register as an action
+ * @param {string} [name] - Optional name for the action (defaults to function name)
+ * @returns {Object} The registered action object
+ */
 export const registerAction = (fn, name = fn.name || "anonymous") => {
   const existingAction = actionWeakMap.get(fn);
   if (existingAction) {
@@ -16,6 +59,14 @@ export const registerAction = (fn, name = fn.name || "anonymous") => {
   actionWeakMap.set(fn, action);
   return action;
 };
+
+/**
+ * Creates an action object with state management
+ *
+ * @param {Function} fn - The function to wrap as an action
+ * @param {string} name - Name for the action
+ * @returns {Object} The action object
+ */
 const createAction = (fn, name = fn.name || "anonymous") => {
   let disposeErrorSignalEffect;
   let disposeDataSignalEffect;
@@ -72,9 +123,18 @@ const createAction = (fn, name = fn.name || "anonymous") => {
   };
   return action;
 };
-// Use a Map to store bound actions with their parameters
+
+// Cache for bound actions to prevent excessive recreations
 const boundActionWeakMap = new WeakMap();
 
+/**
+ * Binds parameters to an action, creating a new derived action
+ * Uses memory-efficient WeakRefs to store bound actions that can be garbage collected
+ *
+ * @param {Function|Object} fnOrAction - Either a function or an action object
+ * @param {Object} params - Parameters to bind to the action
+ * @returns {Object} A new action with bound parameters
+ */
 export const bindParamsToAction = (fnOrAction, params) => {
   let fn;
   let name;
@@ -93,12 +153,11 @@ export const bindParamsToAction = (fnOrAction, params) => {
   // Get or create the array for this function
   let boundActions = boundActionWeakMap.get(fn);
   if (!boundActions) {
-    // Use an array of weak references instead of WeakSet
     boundActions = [];
     boundActionWeakMap.set(fn, boundActions);
   }
 
-  // Clean up any garbage collected references first
+  // Clean up any garbage collected references
   const liveActions = boundActions.filter((ref) => ref.deref() !== undefined);
   boundActions.length = 0;
   boundActions.push(...liveActions);
@@ -115,13 +174,21 @@ export const bindParamsToAction = (fnOrAction, params) => {
   }
 
   // Create a new bound action
-  const boundAction = createAction((navParams) =>
-    fn({ ...navParams, ...params }),
+  const boundAction = createAction(
+    (navParams) => fn({ ...navParams, ...params }),
+    `${name}[bound]`,
   );
 
   boundAction.params = params;
-  boundAction.toString = () =>
-    `<BoundAction> ${name}(${JSON.stringify(params)})`;
+  boundAction.toString = () => {
+    const paramsString = Object.entries(params)
+      .map(
+        ([key, value]) =>
+          `${key}: ${typeof value === "object" ? "{...}" : JSON.stringify(value)}`,
+      )
+      .join(", ");
+    return `<BoundAction> ${name}({ ${paramsString} })`;
+  };
 
   // Store weak reference to allow garbage collection
   boundActions.push(new WeakRef(boundAction));
@@ -129,6 +196,15 @@ export const bindParamsToAction = (fnOrAction, params) => {
   return boundAction;
 };
 
+/**
+ * Executes an action with the provided context and handles state management
+ *
+ * @param {Object} action - The action to execute
+ * @param {Object} options - Execution options
+ * @param {AbortSignal} options.signal - AbortSignal to cancel the action
+ * @param {FormData} [options.formData] - Optional form data to pass to the action
+ * @returns {Promise<Object>} The execution result
+ */
 export const applyAction = async (action, { signal, formData }) => {
   const result = await routingWhile(async () => {
     const abortController = new AbortController();
@@ -140,9 +216,12 @@ export const applyAction = async (action, { signal, formData }) => {
       abortController.abort(reason);
       action.executionStateSignal.value = ABORTED;
     };
-    signal.addEventListener("abort", () => {
-      abort(signal.reason);
-    });
+
+    if (signal) {
+      signal.addEventListener("abort", () => {
+        abort(signal.reason);
+      });
+    }
 
     try {
       if (debug) {
@@ -152,7 +231,7 @@ export const applyAction = async (action, { signal, formData }) => {
         action.executionStateSignal.value = EXECUTING;
         action.errorSignal.value = null;
       });
-      const data = await action.fn({ signal, formData });
+      const data = await action.fn({ signal: abortSignal, formData });
       if (abortSignal.aborted) {
         return { aborted: true, error: null };
       }
