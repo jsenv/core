@@ -30,7 +30,7 @@ export const useInputCustomValidationRef = (
       return null;
     }
     const unsubscribe = subscribe(input);
-    const inputValidationInterface = input.validationInterface;
+    const inputValidationInterface = input.__validationInterface__;
     inputCustomValidationRef.current = inputValidationInterface;
     let cleanupInit;
     if (initCallbackMemoized) {

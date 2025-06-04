@@ -54,10 +54,10 @@ export const installInputCustomValidation = (input) => {
     validationInterface.uninstall = uninstall;
   }
 
-  set_property_on_input: {
-    input.validationInterface = validationInterface;
+  expose_on_input: {
+    input.__validationInterface__ = validationInterface;
     cleanupCallbackSet.add(() => {
-      delete input.validationInterface;
+      delete input.__validationInterface__;
     });
   }
 
@@ -185,7 +185,7 @@ export const installInputCustomValidation = (input) => {
     });
   }
 
-  update_on_input: {
+  close_and_check_on_input: {
     const oninput = () => {
       customMessageMap.clear();
       if (validationMessage) {

@@ -87,6 +87,9 @@ export const openValidationMessage = (
   }
   close_on_target_focus: {
     const onfocus = () => {
+      if (targetElement.hasAttribute("data-validation-message-stay-on-focus")) {
+        return;
+      }
       close();
     };
     targetElement.addEventListener("focus", onfocus);
@@ -96,6 +99,9 @@ export const openValidationMessage = (
   }
   close_on_target_blur: {
     const onblur = () => {
+      if (targetElement.hasAttribute("data-validation-message-stay-on-blur")) {
+        return;
+      }
       close();
     };
     targetElement.addEventListener("blur", onblur);
@@ -104,15 +110,15 @@ export const openValidationMessage = (
     });
   }
 
-  // Return cleanup function
-  return {
+  const validationMessage = {
     jsenvValidationMessage,
     update,
     close,
   };
+  return validationMessage;
 };
 
-const css = /*css*/ `
+import.meta.css = /*css*/ `
 .validation_message {
   display: block;
   overflow: visible;
@@ -185,9 +191,6 @@ const css = /*css*/ `
   fill: var(--background-color);
 }
 `;
-const styleElement = document.createElement("style");
-styleElement.textContent = css;
-document.head.appendChild(styleElement);
 
 // HTML template for the validation message
 const validationMessageTemplate = /* html */ `
