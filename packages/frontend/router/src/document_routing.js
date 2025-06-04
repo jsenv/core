@@ -18,7 +18,8 @@ export const endDocumentRouting = () => {
 export const routingWhile = async (fn, ...args) => {
   startDocumentRouting();
   try {
-    await fn(...args);
+    const result = await fn(...args);
+    return result;
   } finally {
     endDocumentRouting();
   }

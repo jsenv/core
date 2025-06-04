@@ -1,5 +1,5 @@
 export { registerAction } from "./src/action/action.js";
-export { useAction, useActionStatus } from "./src/action/action_hooks.js";
+export { useActionStatus } from "./src/action/action_hooks.js";
 export { useCanGoBack, useCanGoForward } from "./src/back_and_forward.js";
 export { SPACheckbox } from "./src/components/spa_checkbox.jsx";
 export { SPADeleteButton } from "./src/components/spa_delete_button.jsx";

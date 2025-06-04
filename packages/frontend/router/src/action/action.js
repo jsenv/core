@@ -109,7 +109,7 @@ export const bindParamsToAction = (fnOrAction, params) => {
 };
 
 export const applyAction = async (action, { signal, formData }) => {
-  await routingWhile(async () => {
+  const result = await routingWhile(async () => {
     const abortController = new AbortController();
     const abortSignal = abortController.signal;
     const abort = (reason) => {
@@ -133,7 +133,7 @@ export const applyAction = async (action, { signal, formData }) => {
       });
       const data = await action.fn({ signal, formData });
       if (abortSignal.aborted) {
-        return;
+        return { aborted: true, error: null };
       }
       if (debug) {
         console.log(`${action} execution done`);
@@ -142,15 +142,18 @@ export const applyAction = async (action, { signal, formData }) => {
         action.executionStateSignal.value = DONE;
         action.dataSignal.value = data;
       });
+      return { aborted: false, error: null };
     } catch (e) {
       if (abortSignal.aborted && e === abortSignal.reason) {
         action.executionStateSignal.value = ABORTED;
-      } else {
-        batch(() => {
-          action.executionStateSignal.value = FAILED;
-          action.errorSignal.value = e;
-        });
+        return { aborted: true, error: null };
       }
+      batch(() => {
+        action.executionStateSignal.value = FAILED;
+        action.errorSignal.value = e;
+      });
+      return { aborted: false, error: e };
     }
   });
+  return result;
 };

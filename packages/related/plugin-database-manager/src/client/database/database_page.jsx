@@ -2,7 +2,6 @@ import {
   ErrorBoundaryContext,
   Route,
   SPADeleteButton,
-  useAction,
   useRouteParam,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";

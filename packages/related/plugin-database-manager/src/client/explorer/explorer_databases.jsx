@@ -1,4 +1,4 @@
-import { useAction, useRouteIsMatching } from "@jsenv/router";
+import { useRouteIsMatching } from "@jsenv/router";
 import { useCallback } from "preact/hooks";
 import { DatabaseWithPlusSvg } from "../database/database_icons.jsx";
 import { DatabaseLink } from "../database/database_link.jsx";

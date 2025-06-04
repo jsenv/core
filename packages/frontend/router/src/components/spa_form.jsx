@@ -22,10 +22,8 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { applyAction } from "../action/action.js";
-import { ABORTED } from "../action/action_status.js";
 import { useResetErrorBoundary } from "../hooks/use_reset_error_boundary.js";
-import { canUseNavigation, navigationInstalled } from "../router.js";
+import { canUseNavigation } from "../router.js";
 import { FormContext } from "./use_spa_form_status.js";
 
 const submit = HTMLFormElement.prototype.submit;
@@ -132,7 +130,7 @@ export const SPAForm = forwardRef(
           if (onSubmitStart) {
             onSubmitStart();
           }
-          await applyRoutingOnFormSubmission({
+          const { aborted, error } = await applyActionOnFormSubmission({
             method: method.toUpperCase(),
             formData,
             action,
@@ -140,8 +138,6 @@ export const SPAForm = forwardRef(
           setTimeout(() => {
             submittingRef.current = false;
           }, 0);
-          const error = action.errorSignal.peek();
-          const aborted = action.executionStateSignal.peek() === ABORTED;
           formStatusSetter({
             pending: false,
             aborted,
@@ -200,16 +196,15 @@ export const SPAButton = forwardRef(
 );
 SPAForm.Button = SPAButton;
 
-const applyRoutingOnFormSubmission = canUseNavigation
+const applyActionOnFormSubmission = canUseNavigation
   ? async ({ method, formData, action }) => {
-      if (!navigationInstalled) {
-        // for demos where there is no routes
-        await applyAction(action, {
-          signal: new AbortController().signal,
-          formData,
-        });
-        return;
-      }
+      // const error = action.errorSignal.peek();
+      // const aborted = action.executionStateSignal.peek() === ABORTED;
+
+      // hum comment faire pour que chaque form ait son propre action status
+      // qui hérite du status de l'action qu'il s'apprete a call?
+      // je pense qu'il faut fork l'action
+      // sinon ça marche pas
 
       try {
         await navigation.navigate(window.location.href, {
