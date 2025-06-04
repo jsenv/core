@@ -4,6 +4,7 @@
  * - https://glitch.com/edit/#!/gigantic-honored-octagon?path=index.html%3A1%3A0
  */
 
+import { applyAction } from "../action/action.js";
 import { updateCanGoBack, updateCanGoForward } from "../back_and_forward.js";
 import { compareTwoJsValues } from "../compare_two_js_values.js";
 import { documentIsLoadingSignal } from "../document_loading.js";
@@ -41,109 +42,117 @@ navigation.reload = (...args) => {
   isReloadFromNavigationAPI = false;
 };
 
-export const installNavigation = ({ applyRouting, applyAction }) => {
-  navigation.addEventListener("navigate", (event) => {
-    if (!event.canIntercept) {
-      return;
-    }
-    if (event.hashChange || event.downloadRequest !== null) {
-      return;
-    }
-    if (
-      !event.userInitiated &&
-      event.navigationType === "reload" &&
-      event.isTrusted &&
-      !isReloadFromNavigationAPI
-    ) {
-      // let window.location.reload() reload the whole document
-      // (used by jsenv hot reload)
-      return;
-    }
-    const isReload = event.navigationType === "reload";
-    const isReplace = event.navigationType === "replace";
-    const currentUrl = navigation.currentEntry.url;
-    const destinationUrl = event.destination.url;
-    const currentState = navigation.currentEntry.getState();
-    const destinationState = event.destination.getState();
-    const { signal } = event;
-    if (debug) {
-      console.log("receive navigate event", {
-        destinationUrl,
-        destinationState,
-      });
-    }
-    const formAction = event.info?.formAction;
-    const formData = event.formData || event.info?.formData;
-    const formUrl = event.info?.formUrl;
-    const abortSignal = signal;
-
-    const stopAbortController = new AbortController();
-    const stopSignal = stopAbortController.signal;
-    const removeStopButtonClickDetector = detectBrowserStopButtonClick(
-      signal,
-      () => {
-        stopAbortController.abort("stop button clicked");
-      },
-    );
-
-    event.intercept({
-      handler: async () => {
-        let handle;
-        if (formAction) {
-          handle = async () => {
-            await applyAction(formAction, {
-              signal: stopSignal,
-              formData,
-            });
-          };
-        } else {
-          handle = async () => {
-            const targetState = destinationState
-              ? { ...currentState, ...destinationState }
-              : currentState;
-            if (targetState) {
-              navigation.updateCurrentEntry({ state: targetState });
-            }
-            await applyRouting({
-              sourceUrl: currentUrl,
-              targetUrl: formUrl || destinationUrl,
-              sourceState: currentState,
-              targetState,
-              abortSignal,
-              stopSignal,
-              isReload,
-              isReplace,
-              info: event.info,
-            });
-            if (formUrl) {
-              const finishedPromise = event.target.transition.finished;
-              (async () => {
-                try {
-                  await finishedPromise;
-                } finally {
-                  navigation.navigate(window.location.href, {
-                    history: "replace",
-                  });
-                }
-              })();
-            }
-          };
-        }
-        try {
-          await handle();
-        } catch (e) {
-          console.error(e); // browser remains silent in case of error during handler so we explicitely log the error to the console
-          throw e;
-        } finally {
-          removeStopButtonClickDetector();
-        }
-      },
-      // https://github.com/WICG/navigation-api?tab=readme-ov-file#focus-management
-      // without this, after clicking <a href="...">, the focus does to document.body
-      // which is problematic for shortcuts for instance
-      focusReset: "manual",
+let navMethods;
+navigation.addEventListener("navigate", (event) => {
+  if (!event.canIntercept) {
+    return;
+  }
+  if (event.hashChange || event.downloadRequest !== null) {
+    return;
+  }
+  if (
+    !event.userInitiated &&
+    event.navigationType === "reload" &&
+    event.isTrusted &&
+    !isReloadFromNavigationAPI
+  ) {
+    // let window.location.reload() reload the whole document
+    // (used by jsenv hot reload)
+    return;
+  }
+  const isReload = event.navigationType === "reload";
+  const isReplace = event.navigationType === "replace";
+  const currentUrl = navigation.currentEntry.url;
+  const destinationUrl = event.destination.url;
+  const currentState = navigation.currentEntry.getState();
+  const destinationState = event.destination.getState();
+  const { signal } = event;
+  if (debug) {
+    console.log("receive navigate event", {
+      destinationUrl,
+      destinationState,
     });
+  }
+  const formAction = event.info?.formAction;
+  const formData = event.formData || event.info?.formData;
+  const formUrl = event.info?.formUrl;
+  const abortSignal = signal;
+
+  const stopAbortController = new AbortController();
+  const stopSignal = stopAbortController.signal;
+  const removeStopButtonClickDetector = detectBrowserStopButtonClick(
+    signal,
+    () => {
+      stopAbortController.abort("stop button clicked");
+    },
+  );
+
+  if (!navMethods && !formAction) {
+    // navigation not installed and there is no action
+    return;
+  }
+
+  event.intercept({
+    handler: async () => {
+      let handle;
+      if (formAction) {
+        handle = async () => {
+          await applyAction(formAction, {
+            signal: stopSignal,
+            formData,
+          });
+        };
+      } else {
+        handle = async () => {
+          const targetState = destinationState
+            ? { ...currentState, ...destinationState }
+            : currentState;
+          if (targetState) {
+            navigation.updateCurrentEntry({ state: targetState });
+          }
+          await navMethods.applyRouting({
+            sourceUrl: currentUrl,
+            targetUrl: formUrl || destinationUrl,
+            sourceState: currentState,
+            targetState,
+            abortSignal,
+            stopSignal,
+            isReload,
+            isReplace,
+            info: event.info,
+          });
+          if (formUrl) {
+            const finishedPromise = event.target.transition.finished;
+            (async () => {
+              try {
+                await finishedPromise;
+              } finally {
+                navigation.navigate(window.location.href, {
+                  history: "replace",
+                });
+              }
+            })();
+          }
+        };
+      }
+      try {
+        await handle();
+      } catch (e) {
+        console.error(e); // browser remains silent in case of error during handler so we explicitely log the error to the console
+        throw e;
+      } finally {
+        removeStopButtonClickDetector();
+      }
+    },
+    // https://github.com/WICG/navigation-api?tab=readme-ov-file#focus-management
+    // without this, after clicking <a href="...">, the focus does to document.body
+    // which is problematic for shortcuts for instance
+    focusReset: "manual",
   });
+});
+
+export const installNavigation = ({ applyRouting, applyAction }) => {
+  navMethods = { applyRouting, applyAction };
   navigation.navigate(window.location.href, { history: "replace" });
 };
 let callEffect = () => {};

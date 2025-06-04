@@ -11,40 +11,17 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { registerAction, useAction } from "@jsenv/router";
       // eslint-disable-next-line no-unused-vars
       import { SPACheckbox } from "../components/spa_checkbox.jsx";
 
-      let resolve;
-      const stopLoading = () => {
-        if (!resolve) {
-          return;
-        }
-        resolve();
-      };
-
-      const ACTION = registerAction(async () => {
-        await new Promise((r) => {
-          resolve = r;
-        });
-      });
-
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const action = useAction(ACTION);
-
         return (
           <div>
-            <button
-              onClick={() => {
-                stopLoading();
-              }}
-            >
-              stop loading
-            </button>
-
             <SPACheckbox
-              action={action}
+              action={async () => {
+                await new Promise(() => {});
+              }}
               label="Test"
               style="color: blue"
             ></SPACheckbox>

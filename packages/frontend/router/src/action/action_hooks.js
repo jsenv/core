@@ -1,19 +1,20 @@
 import { useEffect } from "preact/hooks";
+import { bindParamsToAction } from "./action.js";
 import { ABORTED, EXECUTING } from "./action_status.js";
 
-export const useAction = (action, params = {}) => {
-  const actionWithParams = action.withParams(params);
+export const useAction = (action, params) => {
+  if (params) {
+    action = bindParamsToAction(action, params);
+  }
 
-  // when no one is interested by this action anymore
-  // we can delete the usage of this param and eventually the route
   useEffect(() => {
-    actionWithParams.subscribe();
+    action.subscribe();
     return () => {
-      actionWithParams.unsubscribe();
+      action.unsubscribe();
     };
   }, []);
 
-  return actionWithParams;
+  return action;
 };
 
 export const useActionStatus = (action) => {

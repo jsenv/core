@@ -18,7 +18,8 @@ export const SPACheckbox = ({
   const checkboxRef = useRef(null);
   const [addFormErrorOnInput, removeFormErrorFromInput] =
     useInputValidationMessage(checkboxRef, "form_error");
-  const checkbox = <Checkbox ref={checkboxRef} action={action} {...rest} />;
+  const { pending } = useActionStatus(action);
+  const checkbox = <Checkbox ref={checkboxRef} pending={pending} {...rest} />;
 
   return (
     <SPAForm
@@ -49,8 +50,7 @@ export const SPACheckbox = ({
   );
 };
 
-const Checkbox = forwardRef(({ action, name, checked, ...rest }, ref) => {
-  const { pending } = useActionStatus(action);
+const Checkbox = forwardRef(({ pending, name, checked, ...rest }, ref) => {
   const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
     checked,
     name,

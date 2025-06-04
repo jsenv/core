@@ -5,82 +5,91 @@ import { ABORTED, DONE, EXECUTING, FAILED, IDLE } from "./action_status.js";
 
 let debug = false;
 
-const actionSet = new Set();
-const actionWithParamsSetMap = new Map();
-export const registerAction = (fn) => {
-  const action = {
-    fn,
-    match: ({ formAction }) => formAction.action === action,
-    toString: () => fn.name,
-    withParams: (params) => {
-      let actionWithParamsSet = actionWithParamsSetMap.get(action);
-      if (!actionWithParamsSet) {
-        actionWithParamsSet = new Set();
-        actionWithParamsSetMap.set(action, actionWithParamsSet);
-        const actionWithParams = createActionWithParams(action, params);
-        actionWithParamsSet.add(actionWithParams);
-        return actionWithParams;
-      }
-      for (const actionWithParamsCandidate of actionWithParamsSet) {
-        if (compareTwoJsValues(actionWithParamsCandidate.params, params)) {
-          return actionWithParamsCandidate;
-        }
-      }
-      const actionWithParams = createActionWithParams(action, params);
-      actionWithParamsSet.add(actionWithParams);
-      return actionWithParams;
-    },
-  };
-  actionSet.add(action);
+const actionWeakMap = new WeakMap();
+export const registerAction = (fn, name = fn.name || "anonymous") => {
+  const existingAction = actionWeakMap.get(fn);
+  if (existingAction) {
+    return existingAction;
+  }
+  const action = createAction(fn, name);
+  actionWeakMap.set(fn, action);
   return action;
 };
-const createActionWithParams = (action, params) => {
-  let disposeDataSignalEffect;
+const createAction = (fn, name = fn.name || "anonymous") => {
   let disposeErrorSignalEffect;
-  const actionWithParams = {
-    params,
-    action,
-    fn: (navParams) => {
-      return action.fn({
-        ...navParams,
-        ...params,
-      });
-    },
-    executionStateSignal: signal(IDLE),
-    errorSignal: signal(null),
-    dataSignal: signal(null),
-    error: null,
-    data: undefined,
-    subscribeCount: 0,
-    subscribe: () => {
-      actionWithParams.subscribeCount++;
-    },
-    unsubscribe: () => {
-      actionWithParams.subscribeCount--;
-      if (actionWithParams.subscribeCount === 0) {
-        if (disposeDataSignalEffect) {
-          disposeDataSignalEffect();
-          disposeDataSignalEffect = null;
-        }
-        if (disposeErrorSignalEffect) {
-          disposeErrorSignalEffect();
-          disposeErrorSignalEffect = null;
-        }
+  let disposeDataSignalEffect;
+
+  const executionStateSignal = signal(IDLE);
+  let error;
+  const errorSignal = signal(null);
+  let data;
+  const dataSignal = signal(null);
+
+  let subscribeCount = 0;
+  const subscribe = () => {
+    subscribeCount++;
+    action.subscribeCount = subscribeCount;
+  };
+  const unsubscribe = () => {
+    subscribeCount--;
+    action.subscribeCount = subscribeCount;
+    if (subscribeCount === 0) {
+      if (disposeDataSignalEffect) {
+        disposeDataSignalEffect();
+        disposeDataSignalEffect = null;
       }
-    },
-    toString: () => {
-      const name = action.fn.name || "anonymous";
-      const paramsString = JSON.stringify(actionWithParams.params);
-      return `${name}(${paramsString})`;
-    },
+      if (disposeErrorSignalEffect) {
+        disposeErrorSignalEffect();
+        disposeErrorSignalEffect = null;
+      }
+    }
+  };
+
+  const action = {
+    fn,
+    name,
+    executionStateSignal,
+    errorSignal,
+    dataSignal,
+    error,
+    data,
+    subscribeCount,
+    subscribe,
+    unsubscribe,
+    toString: () => `<Action> ${name}()`,
   };
   disposeDataSignalEffect = effect(() => {
-    actionWithParams.data = actionWithParams.dataSignal.value;
+    data = dataSignal.value;
+    action.data = data;
   });
   disposeErrorSignalEffect = effect(() => {
-    actionWithParams.error = actionWithParams.errorSignal.value;
+    error = errorSignal.value;
+    action.error = error;
   });
-  return actionWithParams;
+  return action;
+};
+const boundActionWeakSetWeakMap = new WeakMap();
+export const bindParamsToAction = (action, params) => {
+  let boundActionWeakSet = boundActionWeakSetWeakMap.get(action);
+  if (!boundActionWeakSet) {
+    boundActionWeakSet = new WeakSet();
+    boundActionWeakSetWeakMap.set(action, boundActionWeakSet);
+  }
+
+  for (const boundActionCandidate of boundActionWeakSet) {
+    if (compareTwoJsValues(boundActionCandidate.params, params)) {
+      return boundActionCandidate;
+    }
+  }
+
+  const boundAction = createAction((navParams) => {
+    return action.fn({ ...navParams, ...params });
+  });
+  boundAction.params = params;
+  boundAction.toString = () =>
+    `<BoundAction> ${action.name}(${JSON.stringify(params)})`;
+  boundActionWeakSet.add(boundAction);
+  return boundAction;
 };
 
 export const applyAction = async (action, { signal, formData }) => {
