@@ -12,7 +12,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       // eslint-disable-next-line no-unused-vars
-      import { SPACheckbox } from "../components/spa_checkbox.jsx";
+      import { SPAInputCheckbox } from "@jsenv/router";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -22,19 +22,19 @@
               <p>
                 <strong>Loading</strong>
               </p>
-              <SPACheckbox
+              <SPAInputCheckbox
                 action={async () => {
                   await new Promise(() => {});
                 }}
                 label="Test"
                 style="color: blue"
-              ></SPACheckbox>
+              ></SPAInputCheckbox>
             </div>
             <div>
               <p>
                 <strong>Throw after 1s</strong>
               </p>
-              <SPACheckbox
+              <SPAInputCheckbox
                 action={async () => {
                   await new Promise((resolve) => {
                     setTimeout(resolve, 1000);
@@ -43,9 +43,9 @@
                 }}
                 label="Test"
                 style="color: blue"
-                data-validation-message-stay-on-focus
-                data-validation-message-stay-on-blur
-              ></SPACheckbox>
+                // data-validation-message-stay-on-focus
+                // data-validation-message-stay-on-blur
+              ></SPAInputCheckbox>
             </div>
           </div>
         );

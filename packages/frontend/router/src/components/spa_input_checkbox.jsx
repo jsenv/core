@@ -7,7 +7,7 @@ import { LoaderBackground } from "./loader_background.jsx";
 import { SPAForm } from "./spa_form.jsx";
 import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 
-export const SPACheckbox = ({
+export const SPAInputCheckbox = ({
   action,
   label,
   method = "PUT",
@@ -15,11 +15,13 @@ export const SPACheckbox = ({
   onSubmitError,
   ...rest
 }) => {
-  const checkboxRef = useRef(null);
+  const inputCheckboxRef = useRef(null);
   const [addFormErrorOnInput, removeFormErrorFromInput] =
-    useInputValidationMessage(checkboxRef, "form_error");
+    useInputValidationMessage(inputCheckboxRef, "form_error");
   const { pending } = useActionStatus(action);
-  const checkbox = <Checkbox ref={checkboxRef} pending={pending} {...rest} />;
+  const inputCheckbox = (
+    <InputCheckbox ref={inputCheckboxRef} pending={pending} {...rest} />
+  );
 
   return (
     <SPAForm
@@ -41,16 +43,16 @@ export const SPACheckbox = ({
       {label ? (
         <label>
           {label}
-          {checkbox}
+          {inputCheckbox}
         </label>
       ) : (
-        checkbox
+        inputCheckbox
       )}
     </SPAForm>
   );
 };
 
-const Checkbox = forwardRef(
+const InputCheckbox = forwardRef(
   ({ pending, name, checked = false, ...rest }, ref) => {
     const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
       checked,
