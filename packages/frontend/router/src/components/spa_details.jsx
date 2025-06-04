@@ -47,19 +47,19 @@ import.meta.css = /* css */ `
 
   @keyframes morph-to-down {
     from {
-      d: path("M530-480l-230 230-60-60 170-170-170-170 60-60 230 230z");
+      d: path("M580-480l-200 200-60-60 140-140-140-140 60-60 200 200z");
     }
     to {
-      d: path("M480-345l-240-240 60-60 180 180 180-180 60 60-240 240z");
+      d: path("M480-380l-200-200 60-60 140 140 140-140 60 60-200 200z");
     }
   }
 
   @keyframes morph-to-right {
     from {
-      d: path("M480-345l-240-240 60-60 180 180 180-180 60 60-240 240z");
+      d: path("M480-380l-200-200 60-60 140 140 140-140 60 60-200 200z");
     }
     to {
-      d: path("M530-480l-230 230-60-60 170-170-170-170 60-60 230 230z");
+      d: path("M580-480l-200 200-60-60 140-140-140-140 60-60 200 200z");
     }
   }
 
@@ -154,9 +154,9 @@ export const SPADetails = forwardRef(
 
 const MorphingArrow = ({ isOpen }) => {
   const rightArrowPath =
-    "M530-480l-230 230-60-60 170-170-170-170 60-60 230 230z";
+    "M580-480l-200 200-60-60 140-140-140-140 60-60 200 200z";
   const downArrowPath =
-    "M480-345l-240-240 60-60 180 180 180-180 60 60-240 240z";
+    "M480-380l-200-200 60-60 140 140 140-140 60 60-200 200z";
 
   return (
     <svg
@@ -164,10 +164,13 @@ const MorphingArrow = ({ isOpen }) => {
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path
-        data-animation-target={isOpen ? "down" : "right"}
-        d={isOpen ? downArrowPath : rightArrowPath}
-      />
+      <g transform="translate(480, -480)" style="transform-origin: center">
+        <path
+          data-animation-target={isOpen ? "down" : "right"}
+          d={isOpen ? downArrowPath : rightArrowPath}
+          transform="translate(-480, 480)"
+        />
+      </g>
     </svg>
   );
 };
