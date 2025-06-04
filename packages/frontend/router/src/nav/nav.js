@@ -196,13 +196,13 @@ const detectBrowserStopButtonClick = (navigateEventSignal, callback) => {
   };
 };
 
-export const goTo = (url, { state, replace, routesLoaded } = {}) => {
+export const goTo = async (url, { state, replace, routesLoaded } = {}) => {
   if (replace) {
-    navigation.navigate(url, {
+    await navigation.navigate(url, {
       state,
       history: "replace",
       info: { routesLoaded },
-    });
+    }).finished;
     return;
   }
   if (matchNavigationEntry(navigation.currentEntry, { url, state })) {
@@ -219,7 +219,7 @@ export const goTo = (url, { state, replace, routesLoaded } = {}) => {
     goForward();
     return;
   }
-  navigation.navigate(url, { state });
+  await navigation.navigate(url, { state }).finished;
 };
 export const stopLoad = () => {
   const documentIsLoading = documentIsLoadingSignal.value;

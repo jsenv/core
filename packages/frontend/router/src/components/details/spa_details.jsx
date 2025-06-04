@@ -81,12 +81,16 @@ export const SPADetails = forwardRef(
       <details
         {...props}
         className="spa_details"
-        onToggle={(toggleEvent) => {
+        onToggle={async (toggleEvent) => {
           if (mountedRef.current) {
-            if (toggleEvent.newState === "open") {
-              route.enter();
-            } else {
-              route.leave();
+            try {
+              if (toggleEvent.newState === "open") {
+                await route.enter();
+              } else {
+                await route.leave();
+              }
+            } catch {
+              // handled by the route status
             }
           }
           if (onToggle) {

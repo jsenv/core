@@ -342,24 +342,24 @@ const createRouteFromState = ({
     shouldReload,
     reload,
     toString,
-    enter: () => {
+    enter: async () => {
       const isMatching = isMatchingSignal.peek();
       if (isMatching) {
         return;
       }
       const stateCopy = { ...state };
       enter(stateCopy);
-      goTo(window.location.href, { state: stateCopy });
+      await goTo(window.location.href, { state: stateCopy });
     },
-    leave: () => {
+    leave: async () => {
       const isMatching = isMatchingSignal.peek();
       if (!isMatching) {
         return;
       }
       const stateCopy = { ...state };
       leave(stateCopy);
-      goTo(window.location.href, { state: stateCopy });
       stateSignal.value = initialState;
+      await goTo(window.location.href, { state: stateCopy });
     },
     name,
   };
