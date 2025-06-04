@@ -347,6 +347,13 @@ const createRouteFromState = ({
       }
       const stateCopy = { ...state };
       enter(stateCopy);
+      // ça c'est pas fou en vrai
+      // parce que ça retrigger tout les states
+      // donc potentiellement les routes en erreurs vont se reload
+      // hors ici on sait d'avance que y'a que cette route a gérer
+      // on sait meme déja qu'elle match (en théorie si elle est bien écrite)
+      // donc il faudrait une sorte d'argument
+      // pour que le routing skip les autres routes et s'occupe que de celle-ci
       await goTo(window.location.href, { state: stateCopy });
     },
     leave: async () => {

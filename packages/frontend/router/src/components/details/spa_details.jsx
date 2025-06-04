@@ -7,6 +7,7 @@ import {
   useImperativeHandle,
   useRef,
 } from "preact/hooks";
+import { Route } from "../../route/route.jsx";
 import { useRouteIsMatching, useRouteStatus } from "../../route/route_hooks.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
@@ -50,8 +51,11 @@ const useDetailsStatus = () => {
 };
 
 export const SPADetails = forwardRef(
-  ({ route, children, onToggle, ...props }, ref) => {
-    const { pending, error } = useRouteStatus(route);
+  (
+    { route, children, loaded, error = () => null, onToggle, ...props },
+    ref,
+  ) => {
+    const routeStatus = useRouteStatus(route);
 
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
@@ -103,11 +107,12 @@ export const SPADetails = forwardRef(
         <DetailsContext.Provider
           value={{
             open: routeIsMatching,
-            pending,
-            error,
+            pending: routeStatus.pending,
+            error: routeStatus.error,
           }}
         >
           {children}
+          <Route route={route} loaded={loaded} error={error}></Route>
         </DetailsContext.Provider>
       </details>
     );
