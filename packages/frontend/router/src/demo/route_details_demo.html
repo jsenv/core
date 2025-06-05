@@ -81,7 +81,7 @@
               </p>
               <Route.Details
                 route={firstDetailsRoute}
-                loaded={({ route }) => <span>{route.data}</span>}
+                renderLoaded={({ data }) => <span>{data}</span>}
               >
                 Text
               </Route.Details>
@@ -92,7 +92,7 @@
               </p>
               <Route.Details
                 route={errorAfter500Route}
-                loaded={({ route }) => <span>{route.data}</span>}
+                renderLoaded={({ data }) => <span>{data}</span>}
               >
                 Text
               </Route.Details>
@@ -103,9 +103,9 @@
               </p>
               <Route.Details
                 route={errorWithHandlerRoute}
-                loaded={({ route }) => <span>{route.data}</span>}
-                error={({ route }) => (
-                  <span style="color: red">{route.error.message}</span>
+                renderLoaded={({ data }) => <span>{data}</span>}
+                renderError={({ error }) => (
+                  <span style="color: red">{error.message}</span>
                 )}
               >
                 Text

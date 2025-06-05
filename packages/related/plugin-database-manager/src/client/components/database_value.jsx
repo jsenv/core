@@ -1,5 +1,5 @@
 import {
-  SPACheckbox,
+  SPAInputCheckbox,
   SPAInputDateAndTime,
   SPAInputInteger,
   SPAInputText,
@@ -14,7 +14,7 @@ export const DatabaseValue = ({ column, ...rest }) => {
   }
   if (column.data_type === "boolean") {
     const { value, ...props } = rest;
-    return <SPACheckbox name={columnName} checked={value} {...props} />;
+    return <SPAInputCheckbox name={columnName} checked={value} {...props} />;
   }
   if (column.data_type === "timestamp with time zone") {
     const props = rest;

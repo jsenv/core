@@ -51,8 +51,8 @@ export const useDetailsStatus = () => {
 };
 
 export const RouteDetails = forwardRef(
-  ({ route, children, loaded, error, onToggle, ...props }, ref) => {
-    const routeStatus = useRouteStatus(route);
+  ({ route, children, renderLoaded, renderError, onToggle, ...props }, ref) => {
+    const { error, pending } = useRouteStatus(route);
     const summaryRef = useRef();
 
     const innerRef = useRef();
@@ -80,18 +80,18 @@ export const RouteDetails = forwardRef(
     }, []);
 
     useEffect(() => {
-      if (!routeStatus.error || error) {
+      if (!error || renderError) {
         return null;
       }
       const validationMessage = openValidationMessage(
         summaryRef.current,
-        routeStatus.error.message,
+        error.message,
         { level: "error" },
       );
       return () => {
         validationMessage.close();
       };
-    }, [error || routeStatus.error]);
+    }, [error, renderError]);
 
     return (
       <details
@@ -115,8 +115,8 @@ export const RouteDetails = forwardRef(
         <DetailsContext.Provider
           value={{
             open: routeIsMatching,
-            pending: routeStatus.pending,
-            error: routeStatus.error,
+            pending,
+            error,
           }}
         >
           <summary
@@ -125,18 +125,15 @@ export const RouteDetails = forwardRef(
             data-validation-message-stay-on-blur
           >
             <div className="summary_body">
-              <SummaryMarker
-                open={routeIsMatching}
-                pending={routeStatus.pending}
-              />
+              <SummaryMarker open={routeIsMatching} pending={pending} />
               <div className="summary_label">{children}</div>
             </div>
           </summary>
 
           <Route
             route={route}
-            loaded={loaded}
-            error={error || (() => null)}
+            renderLoaded={renderLoaded}
+            renderError={renderError || (() => null)}
           ></Route>
         </DetailsContext.Provider>
       </details>
