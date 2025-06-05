@@ -11,15 +11,17 @@ export const connectStoreAndRoute = (store, route, key) => {
     return activeItem;
   });
 
-  store.propertyChangeEffect(activeItemSignal, key, (value) => {
-    route.replaceParams({
-      [key]: value,
-    });
-  });
-  store.deleteEffect(activeItemSignal, () => {
-    route.reload();
-  });
-  store.insertEffect(activeItemSignal, () => {
-    route.reload();
+  store.registerPropertyLifecycle(activeItemSignal, key, {
+    changed: (value) => {
+      route.replaceParams({
+        [key]: value,
+      });
+    },
+    dropped: () => {
+      route.reload();
+    },
+    inserted: () => {
+      route.reload();
+    },
   });
 };
