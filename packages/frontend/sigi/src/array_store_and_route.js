@@ -19,4 +19,7 @@ export const connectStoreAndRoute = (store, route, key) => {
   store.deleteEffect(activeItemSignal, () => {
     route.reload();
   });
+  store.insertEffect(activeItemSignal, () => {
+    route.reload();
+  });
 };

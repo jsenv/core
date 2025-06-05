@@ -1,7 +1,6 @@
 import { registerAction, registerRoute } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
 import { errorFromResponse } from "../error_from_response.js";
-import { roleStore } from "../role/role_store.js";
 import {
   setActiveDatabase,
   setActiveDatabaseColumns,
@@ -75,7 +74,7 @@ export const PUT_DATABASE_ACTION = registerAction(
     if (!response.ok) {
       throw await errorFromResponse(response, `Failed to update database`);
     }
-    roleStore.upsert("datname", datname, { [columnName]: value });
+    databaseStore.upsert("datname", datname, { [columnName]: value });
   },
 );
 export const DELETE_DATABASE_ACTION = registerAction(
@@ -95,7 +94,7 @@ export const DELETE_DATABASE_ACTION = registerAction(
       throw await errorFromResponse(response, `Failed to delete database`);
     }
     const { meta } = await response.json();
-    roleStore.drop("datname", datname);
+    databaseStore.drop("datname", datname);
     setDatabaseCount(meta.count);
   },
 );

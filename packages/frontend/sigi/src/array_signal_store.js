@@ -284,6 +284,29 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       idChangeCallbackSet.delete(detectIdDeleted);
     };
   };
+  const insertEffect = (itemSignal, callback) => {
+    const idToTrackSignal = signal(null);
+    effect(() => {
+      const item = itemSignal.value;
+      if (item) {
+        idToTrackSignal.value = item[idKey];
+      } else {
+        // not found, it was likely deleted
+        // but maybe it was renamed so we need
+        // the other effect to be sure
+      }
+    });
+    const detectIdInserted = (idSet, previousIdSet) => {
+      const idToTrack = idToTrackSignal.value;
+      if (idToTrack && !previousIdSet.has(idToTrack) && idSet.has(idToTrack)) {
+        callback(idToTrack);
+      }
+    };
+    idChangeCallbackSet.add(detectIdInserted);
+    return () => {
+      idChangeCallbackSet.delete(detectIdInserted);
+    };
+  };
 
   return {
     arraySignal,
@@ -292,8 +315,9 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     upsert,
     drop,
 
-    deleteEffect,
     propertyChangeEffect,
+    deleteEffect,
+    insertEffect,
   };
 };
 
