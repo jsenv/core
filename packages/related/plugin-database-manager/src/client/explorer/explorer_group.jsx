@@ -101,7 +101,7 @@ export const ExplorerGroup = forwardRef(
           data-resize={resizable ? "vertical" : "none"}
           data-min-height="150"
           data-requested-height={heightSetting}
-          loaded={() => (
+          renderLoaded={() => (
             <ExplorerGroupContent
               idKey={idKey}
               nameKey={nameKey}

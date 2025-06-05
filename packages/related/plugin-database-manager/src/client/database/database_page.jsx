@@ -21,7 +21,9 @@ import {
 } from "./database_signals.js";
 
 export const DatabaseRoutes = () => {
-  return <Route route={GET_DATABASE_ROUTE} loaded={DatabasePage} />;
+  return (
+    <Route route={GET_DATABASE_ROUTE} renderLoaded={() => <DatabasePage />} />
+  );
 };
 
 const DatabasePage = () => {

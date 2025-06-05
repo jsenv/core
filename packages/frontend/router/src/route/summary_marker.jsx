@@ -7,6 +7,7 @@ import.meta.css = /* css */ `
   .summary_marker {
     width: 1em;
     height: 1em;
+    line-height: 1em;
   }
   .summary_marker_svg .arrow {
     animation-duration: 0.3s;

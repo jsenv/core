@@ -4,7 +4,7 @@ import { GET_TABLES_ROUTE, UPDATE_TABLE_ACTION } from "./table_routes.js";
 import { tableInfoSignal, tablePublicFilterSignal } from "./table_signals.js";
 
 export const TableRoutes = () => {
-  return <Route route={GET_TABLES_ROUTE} loaded={TablePage} />;
+  return <Route route={GET_TABLES_ROUTE} renderLoaded={() => <TablePage />} />;
 };
 
 const TablePage = () => {

@@ -21,7 +21,7 @@ import {
 } from "./role_signals.js";
 
 export const RoleRoutes = () => {
-  return <Route route={GET_ROLE_ROUTE} loaded={RolePage} />;
+  return <Route route={GET_ROLE_ROUTE} renderLoaded={() => <RolePage />} />;
 };
 
 const RolePage = () => {
