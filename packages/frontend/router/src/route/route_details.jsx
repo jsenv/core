@@ -45,17 +45,15 @@ import.meta.css = /* css */ `
 `;
 
 const DetailsContext = createContext();
-const useDetailsStatus = () => {
+export const useDetailsStatus = () => {
   const detailsStatus = useContext(DetailsContext);
   return detailsStatus;
 };
 
 export const RouteDetails = forwardRef(
-  (
-    { route, children, loaded, error = () => null, onToggle, ...props },
-    ref,
-  ) => {
+  ({ route, children, loaded, error, onToggle, ...props }, ref) => {
     const routeStatus = useRouteStatus(route);
+    const summaryRef = useRef();
 
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
@@ -81,6 +79,20 @@ export const RouteDetails = forwardRef(
       mountedRef.current = true;
     }, []);
 
+    useEffect(() => {
+      if (!routeStatus.error || error) {
+        return null;
+      }
+      const validationMessage = openValidationMessage(
+        summaryRef.current,
+        routeStatus.error.message,
+        { level: "error" },
+      );
+      return () => {
+        validationMessage.close();
+      };
+    }, [error || routeStatus.error]);
+
     return (
       <details
         {...props}
@@ -90,14 +102,10 @@ export const RouteDetails = forwardRef(
             onToggle(toggleEvent);
           }
           if (mountedRef.current) {
-            try {
-              if (toggleEvent.newState === "open") {
-                await route.enter();
-              } else {
-                await route.leave();
-              }
-            } catch {
-              // handled by the route status
+            if (toggleEvent.newState === "open") {
+              await route.enter();
+            } else {
+              await route.leave();
             }
           }
         }}
@@ -111,49 +119,27 @@ export const RouteDetails = forwardRef(
             error: routeStatus.error,
           }}
         >
-          <DetailsSummary>{children}</DetailsSummary>
-          <Route route={route} loaded={loaded} error={error}></Route>
+          <summary
+            ref={summaryRef}
+            data-validation-message-stay-on-focus
+            data-validation-message-stay-on-blur
+          >
+            <div className="summary_body">
+              <SummaryMarker
+                open={routeIsMatching}
+                pending={routeStatus.pending}
+              />
+              <div className="summary_label">{children}</div>
+            </div>
+          </summary>
+
+          <Route
+            route={route}
+            loaded={loaded}
+            error={error || (() => null)}
+          ></Route>
         </DetailsContext.Provider>
       </details>
     );
   },
 );
-
-const DetailsSummary = ({ children, ...rest }) => {
-  const ref = useRef();
-  const { open, pending, error } = useDetailsStatus();
-
-  useEffect(() => {
-    if (!error) {
-      return null;
-    }
-    const validationMessage = openValidationMessage(
-      ref.current,
-      error.message,
-      { level: "error" },
-    );
-    return () => {
-      validationMessage.close();
-    };
-  }, [error]);
-
-  return (
-    <summary
-      ref={ref}
-      {...rest}
-      data-validation-message-stay-on-focus
-      data-validation-message-stay-on-blur
-    >
-      <div className="summary_body">
-        <SummaryMarker open={open} pending={pending} />
-        <div className="summary_label">
-          {children}{" "}
-          <span>
-            [{open ? "open" : "close"}
-            {pending ? " and pending" : ""}]
-          </span>
-        </div>
-      </div>
-    </summary>
-  );
-};
