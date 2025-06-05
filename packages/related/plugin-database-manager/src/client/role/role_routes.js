@@ -4,6 +4,7 @@ import {
   setActiveRole,
   setActiveRoleColumns,
   setActiveRoleDatabases,
+  setRoleCount,
 } from "./role_signals.js";
 import { roleStore } from "./role_store.js";
 
@@ -84,8 +85,10 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
   if (!response.ok) {
     throw await errorFromResponse(response, "Failed to create role");
   }
-  const role = await response.json();
+  const { data, meta } = await response.json();
+  const role = data;
   roleStore.upsert(role);
+  setRoleCount(meta.count);
 });
 
 export const DELETE_ROLE_ACTION = registerAction(
@@ -104,6 +107,8 @@ export const DELETE_ROLE_ACTION = registerAction(
     if (!response.ok) {
       throw await errorFromResponse(response, `Failed to delete role`);
     }
+    const { meta } = await response.json();
     roleStore.drop("rolname", rolname);
+    setRoleCount(meta.count);
   },
 );

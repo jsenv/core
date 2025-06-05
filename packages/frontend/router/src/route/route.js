@@ -406,10 +406,6 @@ const applyRouteEnterEffect = async (route, { signal, url, params, state }) => {
   };
   signal.addEventListener("abort", onabort);
   routeAbortEnterMap.set(route, abort);
-
-  if (debug) {
-    console.log(`"${route}": entering route`);
-  }
   route.enterEffect({ url, params, state });
   matchingRouteSet.add(route);
 
@@ -439,15 +435,27 @@ const loadRoute = async (route, { signal, onError }) => {
   try {
     const promisesToWait = [];
     if (route.loadData) {
+      if (debug) {
+        console.log(`"${route}": loadData start`);
+      }
       const routeLoadPromise = (async () => {
         const data = await route.loadData({ signal });
         route.dataSignal.value = data;
+        if (debug) {
+          console.log(`"${route}": loadData end`);
+        }
       })();
       promisesToWait.push(routeLoadPromise);
     }
     if (route.loadUI) {
+      if (debug) {
+        console.log(`"${route}": loadUI start`);
+      }
       const loadUIPromise = (async () => {
         await route.loadUI({ signal });
+        if (debug) {
+          console.log(`"${route}": loadUI end`);
+        }
       })();
       promisesToWait.push(loadUIPromise);
     }
@@ -463,9 +471,11 @@ const loadRoute = async (route, { signal, onError }) => {
       if (signal.aborted) {
         return;
       }
-    }
-    if (debug) {
-      console.log(`"${route}": route load end`);
+      if (debug) {
+        console.log(`"${route}": loaded and rendered`);
+      }
+    } else if (debug) {
+      console.log(`"${route}": loaded`);
     }
     routeAbortEnterMap.delete(route);
     routeEnterPromiseMap.delete(route);

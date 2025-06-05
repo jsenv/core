@@ -31,6 +31,7 @@ export const EXPLORER_DATABASES_ROUTE = registerRoute({
     setCurrentDatabase(currentDatabase);
     databaseStore.upsert(databases);
   },
+  name: "databases_explorer_details",
 });
 
 export const EXPLORER_ROLES_ROUTE = registerRoute({
@@ -49,4 +50,5 @@ export const EXPLORER_ROLES_ROUTE = registerRoute({
     setCurrentRole(currentRole);
     roleStore.upsert(roles);
   },
+  name: "roles_explorer_details",
 });
