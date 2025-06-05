@@ -94,6 +94,13 @@ navigation.addEventListener("navigate", (event) => {
 
   event.intercept({
     handler: async () => {
+      const targetState = destinationState
+        ? { ...currentState, ...destinationState }
+        : currentState;
+      if (targetState) {
+        navigation.updateCurrentEntry({ state: targetState });
+      }
+
       let handle;
       if (formAction) {
         handle = async () => {
