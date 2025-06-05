@@ -96,6 +96,7 @@ const InputText = forwardRef(
         if (autoSelect) {
           input.select();
         }
+        input.scrollIntoView({ inline: "nearest", block: "nearest" });
       }
     }, [autoFocus]);
 

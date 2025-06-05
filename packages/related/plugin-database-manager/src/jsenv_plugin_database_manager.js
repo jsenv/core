@@ -287,7 +287,7 @@ export const jsenvPluginDatabaseManager = ({
           await alterDatabaseQuery(sql, datname, colname, value);
         },
         POST: async ({ datname }) => {
-          await sql`CREATE ROLE ${sql(datname)}`;
+          await sql`CREATE DATABASE ${sql(datname)}`;
           const [database] = await sql`
             SELECT
               *
