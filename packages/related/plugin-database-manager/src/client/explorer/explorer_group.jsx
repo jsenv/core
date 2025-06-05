@@ -179,6 +179,7 @@ const ExplorerGroupContent = ({
           <li className="explorer_group_item">
             <NewItem
               nameKey={nameKey}
+              useItemList={useItemList}
               useCreateItemAction={useCreateItemAction}
               onCancel={() => {
                 // si on a rien rentré on le cré pas, sinon oui on le cré
@@ -286,30 +287,22 @@ const ItemRenameInput = ({
   useRenameItemAction,
   stopRenaming,
 }) => {
+  const itemName = item[nameKey];
   const itemList = useItemList();
   const renameAction = useRenameItemAction(item);
-  const itemName = item[nameKey];
   const inputRef = useRef();
-  const otherNameSet = new Set();
+  const otherValueSet = new Set();
   for (const itemCandidate of itemList) {
     if (itemCandidate === item) {
       continue;
     }
-    otherNameSet.add(itemCandidate[nameKey]);
+    otherValueSet.add(itemCandidate[nameKey]);
   }
-  useInputConstraint(inputRef, (input) => {
-    const inputValue = input.value;
-    const hasConflict = otherNameSet.has(inputValue);
-    // console.log({
-    //   inputValue,
-    //   names: Array.from(otherNameSet.values()),
-    //   hasConflict,
-    // });
-    if (hasConflict) {
-      return `"${inputValue}" already exists. Please choose another name.`;
-    }
-    return "";
-  });
+  useUniqueConstraint(
+    inputRef,
+    otherValueSet,
+    `"{value}" already exist, please choose another name.`,
+  );
   useInputConstraint(inputRef, SINGLE_SPACE_CONSTRAINT);
 
   return (
@@ -335,9 +328,20 @@ const ItemRenameInput = ({
     />
   );
 };
-
-const NewItem = ({ nameKey, useCreateItemAction, ...rest }) => {
+const NewItem = ({ nameKey, useItemList, useCreateItemAction, ...rest }) => {
   const action = useCreateItemAction();
+  const inputRef = useRef();
+  const itemList = useItemList();
+  const valueSet = new Set();
+  for (const item of itemList) {
+    valueSet.add(item[nameKey]);
+  }
+  useUniqueConstraint(
+    inputRef,
+    valueSet,
+    `"{value}" already exists. Please choose an other name.`,
+  );
+  useInputConstraint(inputRef, SINGLE_SPACE_CONSTRAINT);
 
   return (
     <span className="explorer_group_item_content">
@@ -345,6 +349,7 @@ const NewItem = ({ nameKey, useCreateItemAction, ...rest }) => {
         <EnterNameIconSvg />
       </FontSizedSvg>
       <SPAInputText
+        ref={inputRef}
         name={nameKey}
         action={action}
         autoFocus
@@ -354,6 +359,33 @@ const NewItem = ({ nameKey, useCreateItemAction, ...rest }) => {
     </span>
   );
 };
+
+const useUniqueConstraint = (
+  inputRef,
+  // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
+  // but this is already nice to help user with what we know
+  // it's also possible that front is unsync with backend, preventing user to choose a value
+  // that is actually free.
+  // But this is unlikely to happen and user could reload the page to be able to choose that name
+  // that suddenly became available
+  existingValueSet,
+  message = `"{value}" already exists. Please choose another value.`,
+) => {
+  useInputConstraint(inputRef, (input) => {
+    const inputValue = input.value;
+    const hasConflict = existingValueSet.has(inputValue);
+    // console.log({
+    //   inputValue,
+    //   names: Array.from(otherNameSet.values()),
+    //   hasConflict,
+    // });
+    if (hasConflict) {
+      return message.replace("{value}", inputValue);
+    }
+    return "";
+  });
+};
+
 const EnterNameIconSvg = ({ color = "currentColor" }) => {
   return (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

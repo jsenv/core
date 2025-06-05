@@ -28,6 +28,15 @@ import.meta.css = /* css */ `
     padding-right: 20px;
     padding-bottom: 20px;
   }
+
+  .route_error {
+    padding: 20px;
+    background: #fdd;
+    border: 1px solid red;
+
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
 `;
 
 export const PageHead = ({ children, actions = [] }) => {

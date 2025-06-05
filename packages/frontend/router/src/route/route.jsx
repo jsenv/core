@@ -16,7 +16,7 @@ const renderMatchingDefault = () => null;
 const renderLoadingDefault = () => null;
 const renderErrorDefault = ({ error }) => {
   let routeErrorText = error && error.message ? error.message : error;
-  return <p>An error occured: {routeErrorText}</p>;
+  return <p className="route_error">An error occured: {routeErrorText}</p>;
 };
 
 // TODO: if route is registered more than once on a given route we should throw
