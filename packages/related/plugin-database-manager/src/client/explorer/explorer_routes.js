@@ -16,7 +16,9 @@ effect(async () => {
 });
 
 export const EXPLORER_DATABASES_ROUTE = registerRoute({
-  match: (state) => state.explorer_databases_opened === true,
+  match: (state) =>
+    state.explorer_databases_opened === true ||
+    state.explorer_databases_opened === undefined,
   enter: (state) => {
     state.explorer_databases_opened = true;
   },

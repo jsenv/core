@@ -122,7 +122,7 @@ navigation.addEventListener("navigate", (event) => {
             sourceUrl: currentUrl,
             targetUrl: formUrl || destinationUrl,
             sourceState: currentState,
-            targetState,
+            targetState: targetState || {},
             abortSignal,
             stopSignal,
             isReload,
