@@ -14,8 +14,6 @@
       import {
         registerRoute,
         // eslint-disable-next-line no-unused-vars
-        SPADetails,
-        // eslint-disable-next-line no-unused-vars
         Route,
       } from "@jsenv/router";
 
@@ -74,23 +72,23 @@
               <p>
                 <strong>Loading for 1s</strong>
               </p>
-              <SPADetails
+              <Route.Details
                 route={firstDetailsRoute}
                 loaded={({ route }) => <span>{route.data}</span>}
               >
-                <SPADetails.Summary>Text</SPADetails.Summary>
-              </SPADetails>
+                Text
+              </Route.Details>
             </div>
             <div style="width: 200px;">
               <p>
                 <strong>Error after 0.5s</strong>
               </p>
-              <SPADetails
+              <Route.Details
                 route={errorAfter500Route}
                 loaded={({ route }) => <span>{route.data}</span>}
               >
-                <SPADetails.Summary>Text</SPADetails.Summary>
-              </SPADetails>
+                Text
+              </Route.Details>
             </div>
           </div>
         );

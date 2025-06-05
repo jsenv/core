@@ -7,8 +7,8 @@ import {
   useImperativeHandle,
   useRef,
 } from "preact/hooks";
-import { Route } from "../../route/route.jsx";
-import { useRouteIsMatching, useRouteStatus } from "../../route/route_hooks.js";
+import { Route } from "./route.jsx";
+import { useRouteIsMatching, useRouteStatus } from "./route_hooks.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
 import.meta.css = /* css */ `
@@ -50,7 +50,7 @@ const useDetailsStatus = () => {
   return detailsStatus;
 };
 
-export const SPADetails = forwardRef(
+export const RouteDetails = forwardRef(
   (
     { route, children, loaded, error = () => null, onToggle, ...props },
     ref,
@@ -111,7 +111,7 @@ export const SPADetails = forwardRef(
             error: routeStatus.error,
           }}
         >
-          {children}
+          <DetailsSummary>{children}</DetailsSummary>
           <Route route={route} loaded={loaded} error={error}></Route>
         </DetailsContext.Provider>
       </details>
@@ -119,8 +119,7 @@ export const SPADetails = forwardRef(
   },
 );
 
-// Update the SPADetailsSummary component to pass pending state
-const SPADetailsSummary = ({ children, ...rest }) => {
+const DetailsSummary = ({ children, ...rest }) => {
   const ref = useRef();
   const { open, pending, error } = useDetailsStatus();
 
@@ -158,4 +157,3 @@ const SPADetailsSummary = ({ children, ...rest }) => {
     </summary>
   );
 };
-SPADetails.Summary = SPADetailsSummary;

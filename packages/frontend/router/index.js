@@ -1,7 +1,11 @@
+import { Route } from "./src/route/route.jsx";
+import { RouteDetails } from "./src/route/route_details.jsx";
+
+Route.Details = RouteDetails;
+
 export { registerAction } from "./src/action/action.js";
 export { useActionStatus } from "./src/action/action_hooks.js";
 export { useCanGoBack, useCanGoForward } from "./src/back_and_forward.js";
-export { SPADetails } from "./src/components/details/spa_details.jsx";
 export { SPADeleteButton } from "./src/components/spa_delete_button.jsx";
 export { SPAButton, SPAForm } from "./src/components/spa_form.jsx";
 export { SPAInputCheckbox } from "./src/components/spa_input_checkbox.jsx";
@@ -18,14 +22,13 @@ export {
   useResetErrorBoundary,
 } from "./src/hooks/use_reset_error_boundary.js";
 export { registerRoute, setBaseUrl } from "./src/route/route.js";
-export { Route } from "./src/route/route.jsx";
 export {
   useRouteData,
   useRouteError,
   useRouteIsLoading,
   useRouteIsMatching,
-  useRouteLoadIsAborted,
   useRouteLoadingState,
+  useRouteLoadIsAborted,
   useRouteParam,
   useRouteUrl,
 } from "./src/route/route_hooks.js";
@@ -37,3 +40,4 @@ export {
 } from "./src/router_ready_state.js";
 export { useUrlBooleanParam, withUrlStringParam } from "./src/url.js";
 export { valueInLocalStorage } from "./src/value_in_local_storage.js";
+export { Route };

@@ -1,4 +1,4 @@
-import { useDebounceTrue } from "../../hooks/use_debounce_true.js";
+import { useDebounceTrue } from "../hooks/use_debounce_true.js";
 
 const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
