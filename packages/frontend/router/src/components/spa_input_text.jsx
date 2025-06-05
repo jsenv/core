@@ -1,6 +1,11 @@
 import { useInputValidationMessage } from "@jsenv/form";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
+import {
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from "preact/hooks";
 import { useActionStatus } from "../action/action_hooks.js";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { LoaderBackground } from "./loader_background.jsx";
@@ -96,9 +101,15 @@ const InputText = forwardRef(
         if (autoSelect) {
           input.select();
         }
-        input.scrollIntoView({ inline: "nearest", block: "nearest" });
       }
     }, [autoFocus]);
+
+    useEffect(() => {
+      if (autoFocus) {
+        const input = innerRef.current;
+        input.scrollIntoView({ inline: "nearest", block: "nearest" });
+      }
+    }, []);
 
     return (
       <LoaderBackground pending={pending}>

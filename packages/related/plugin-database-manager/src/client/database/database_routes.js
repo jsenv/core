@@ -5,6 +5,7 @@ import {
   setActiveDatabase,
   setActiveDatabaseColumns,
   setActiveDatabaseOwnerRole,
+  setDatabaseCount,
 } from "./database_signals.js";
 import { databaseStore } from "./database_store.js";
 
@@ -33,6 +34,7 @@ export const GET_DATABASE_ROUTE = registerRoute(
   },
 );
 connectStoreAndRoute(databaseStore, GET_DATABASE_ROUTE, "datname");
+
 export const POST_DATABASE_ACTION = registerAction(
   async ({ signal, formData }) => {
     const datname = formData.get("datname");
@@ -56,8 +58,10 @@ export const POST_DATABASE_ACTION = registerAction(
       postError.stack = error.stack || error.message;
       throw postError;
     }
-    const database = await response.json();
+    const { data, meta } = await response.json();
+    const database = data;
     databaseStore.upsert(database);
+    setDatabaseCount(meta.count);
   },
 );
 export const PUT_DATABASE_ACTION = registerAction(
@@ -105,6 +109,8 @@ export const DELETE_DATABASE_ACTION = registerAction(
       deleteError.stack = error.stack || error.message;
       throw deleteError;
     }
+    const { meta } = await response.json();
     roleStore.drop("datname", datname);
+    setDatabaseCount(meta.count);
   },
 );
