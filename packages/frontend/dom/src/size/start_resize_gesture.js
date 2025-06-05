@@ -59,6 +59,7 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
   append_backdrop: {
     const backdrop = document.createElement("div");
     backdrop.style.position = "fixed";
+    backdrop.style.zIndex = "1";
     backdrop.style.inset = "0";
     backdrop.style.cursor =
       resizeDirection.x && resizeDirection.y
