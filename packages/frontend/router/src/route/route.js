@@ -610,7 +610,9 @@ export const applyRouting = async ({
     const promises = [];
     for (const routeToKeepActive of routeToKeepActiveSet) {
       const routeEnterPromise = routeEnterPromiseMap.get(routeToKeepActive);
-      promises.push(routeEnterPromise);
+      if (routeEnterPromise) {
+        promises.push(routeEnterPromise);
+      }
     }
     for (const [routeToEnter, enterParams] of routeToEnterMap) {
       const routeEnterPromise = applyRouteEnterEffect(

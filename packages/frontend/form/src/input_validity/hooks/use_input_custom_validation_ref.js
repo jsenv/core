@@ -49,7 +49,7 @@ export const useInputCustomValidationRef = (
 
 const inputSubscribeCountWeakMap = new WeakMap();
 const subscribe = (input) => {
-  if (input.validationInterface) {
+  if (input.__validationInterface__) {
     let subscribeCount = inputSubscribeCountWeakMap.get(input);
     inputSubscribeCountWeakMap.set(input, subscribeCount + 1);
   } else {
@@ -64,7 +64,7 @@ const subscribe = (input) => {
 const unsubscribe = (input) => {
   const subscribeCount = inputSubscribeCountWeakMap.get(input);
   if (subscribeCount === 1) {
-    input.validationInterface.uninstall();
+    input.__validationInterface__.uninstall();
     inputSubscribeCountWeakMap.delete(input);
   } else {
     inputSubscribeCountWeakMap.set(input, subscribeCount - 1);
