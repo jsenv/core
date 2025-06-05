@@ -43,7 +43,7 @@ export const PageHead = ({ children, actions = [] }) => {
   const headerRef = useRef(null);
 
   useLayoutEffect(() => {
-    initPositionSticky(headerRef.current);
+    return initPositionSticky(headerRef.current);
   }, []);
 
   return (

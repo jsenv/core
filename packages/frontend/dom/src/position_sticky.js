@@ -82,6 +82,9 @@ export const initPositionSticky = (element) => {
 
   let placeholder = createPlaceholderClone();
   parentElement.insertBefore(placeholder, element);
+  cleanupCallbackSet.add(() => {
+    placeholder.remove();
+  });
 
   let width = getWidth(element);
   let height = getHeight(element);
