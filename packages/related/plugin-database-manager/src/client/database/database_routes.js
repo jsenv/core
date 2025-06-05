@@ -1,5 +1,6 @@
 import { registerAction, registerRoute } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
+import { errorFromResponse } from "../error_from_response.js";
 import { roleStore } from "../role/role_store.js";
 import {
   setActiveDatabase,
@@ -20,10 +21,7 @@ export const GET_DATABASE_ROUTE = registerRoute(
       },
     );
     if (!response.ok) {
-      const error = await response.json();
-      const getError = new Error(`Failed to get database: ${error.message}`);
-      getError.stack = error.stack || error.message;
-      throw getError;
+      throw await errorFromResponse(response, `Failed to get database`);
     }
     const { data, meta } = await response.json();
     const database = data;
@@ -51,12 +49,7 @@ export const POST_DATABASE_ACTION = registerAction(
       },
     );
     if (!response.ok) {
-      const error = await response.json();
-      const postError = new Error(
-        `Failed to create database: ${error.message}`,
-      );
-      postError.stack = error.stack || error.message;
-      throw postError;
+      throw await errorFromResponse(response, `Failed to create database`);
     }
     const { data, meta } = await response.json();
     const database = data;
@@ -80,10 +73,7 @@ export const PUT_DATABASE_ACTION = registerAction(
       },
     );
     if (!response.ok) {
-      const error = await response.json();
-      const putError = new Error(`Failed to update database: ${error.message}`);
-      putError.stack = error.stack || error.message;
-      throw putError;
+      throw await errorFromResponse(response, `Failed to update database`);
     }
     roleStore.upsert("datname", datname, { [columnName]: value });
   },
@@ -102,12 +92,7 @@ export const DELETE_DATABASE_ACTION = registerAction(
       },
     );
     if (!response.ok) {
-      const error = await response.json();
-      const deleteError = new Error(
-        `Failed to delete database: ${error.message}`,
-      );
-      deleteError.stack = error.stack || error.message;
-      throw deleteError;
+      throw await errorFromResponse(response, `Failed to delete database`);
     }
     const { meta } = await response.json();
     roleStore.drop("datname", datname);
