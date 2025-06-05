@@ -96,7 +96,10 @@ export const RouteDetails = forwardRef(
     return (
       <details
         {...props}
-        className="spa_details"
+        className={[
+          "spa_details",
+          ...(props.className ? props.className.split(" ") : []),
+        ].join(" ")}
         onToggle={async (toggleEvent) => {
           if (onToggle) {
             onToggle(toggleEvent);
