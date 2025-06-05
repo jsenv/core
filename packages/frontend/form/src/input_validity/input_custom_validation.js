@@ -310,10 +310,16 @@ export const installInputCustomValidation = (input) => {
     });
   }
 
-  cancel_on_blur_empty: {
+  cancel_on_blur: {
     const onblur = () => {
       if (input.value === "") {
         triggerOnCancel("blur_empty");
+        return;
+      }
+      // if we have error, we cancel too
+      if (lastFailedValidityInfo) {
+        triggerOnCancel("blur_error");
+        return;
       }
     };
     input.addEventListener("blur", onblur);
