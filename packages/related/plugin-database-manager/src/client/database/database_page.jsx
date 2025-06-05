@@ -22,11 +22,15 @@ import {
 
 export const DatabaseRoutes = () => {
   return (
-    <Route route={GET_DATABASE_ROUTE} renderLoaded={() => <DatabasePage />} />
+    <Route
+      route={GET_DATABASE_ROUTE}
+      renderLoaded={() => <DatabasePage />}
+      renderError={({ error }) => <DatabasePage routeError={error} />}
+    />
   );
 };
 
-const DatabasePage = () => {
+const DatabasePage = ({ routeError }) => {
   const [error, resetError] = useErrorBoundary();
   const datname = useRouteParam(GET_DATABASE_ROUTE, "datname");
   const deleteDatabaseAction = DELETE_DATABASE_ACTION.bindParams({ datname });
@@ -34,12 +38,14 @@ const DatabasePage = () => {
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
-      {error && <ErrorDetails error={error} />}
       <PageHead
         actions={[
           {
             component: (
-              <SPADeleteButton action={deleteDatabaseAction}>
+              <SPADeleteButton
+                action={deleteDatabaseAction}
+                disabled={error || routeError}
+              >
                 Delete
               </SPADeleteButton>
             ),
@@ -51,13 +57,19 @@ const DatabasePage = () => {
         </PageHead.Label>
       </PageHead>
       <PageBody>
-        <DatabaseFields database={database} />
-        <a
-          href="https://www.postgresql.org/docs/14/sql-alterdatabase.html"
-          target="_blank"
-        >
-          ALTER DATABASE documentation
-        </a>
+        {routeError ? (
+          <ErrorDetails error={routeError} />
+        ) : (
+          <>
+            <DatabaseFields database={database} />
+            <a
+              href="https://www.postgresql.org/docs/14/sql-alterdatabase.html"
+              target="_blank"
+            >
+              ALTER DATABASE documentation
+            </a>
+          </>
+        )}
       </PageBody>
     </ErrorBoundaryContext.Provider>
   );
@@ -65,7 +77,7 @@ const DatabasePage = () => {
 
 const ErrorDetails = ({ error }) => {
   return (
-    <details>
+    <details className="route_error">
       <summary>{error.message}</summary>
       <pre>
         <code>{error.stack}</code>

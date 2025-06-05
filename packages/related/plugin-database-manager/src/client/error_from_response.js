@@ -9,5 +9,6 @@ export const errorFromResponse = async (response, message) => {
   if (serverErrorInfo && typeof serverErrorInfo === "object") {
     error.stack = serverErrorInfo.stack || serverErrorInfo.message;
   }
+  error.status = response.status;
   throw error;
 };
