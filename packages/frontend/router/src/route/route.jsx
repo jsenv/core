@@ -14,8 +14,7 @@ import {
 
 const renderMatchingDefault = () => null;
 const renderLoadingDefault = () => null;
-const renderErrorDefault = ({ route }) => {
-  const { error } = route;
+const renderErrorDefault = ({ error }) => {
   let routeErrorText = error && error.message ? error.message : error;
   return <p>An error occured: {routeErrorText}</p>;
 };
