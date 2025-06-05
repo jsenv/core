@@ -500,7 +500,7 @@ export const applyRouting = async ({
   targetState,
   stopSignal,
   isReload,
-  // isReplace,
+  isReplace,
   info,
 }) => {
   // const sourceResource = resourceFromUrl(sourceUrl);
@@ -541,7 +541,8 @@ export const applyRouting = async ({
       `situation at start:
 - target url: ${targetResource}
 - target state: ${targetState ? JSON.stringify(targetState) : "undefined"}
-- matching routes: ${matchingRouteSet.size === 0 ? "none" : Array.from(matchingRouteSet).join(", ")}`,
+- matching routes: ${matchingRouteSet.size === 0 ? "none" : Array.from(matchingRouteSet).join(", ")}
+- meta: isReload: ${isReload}, isReplace ${isReplace}`,
     );
   }
 

@@ -20,7 +20,7 @@ export const connectStoreAndRoute = (store, route, key) => {
     dropped: () => {
       route.reload();
     },
-    inserted: () => {
+    reinserted: () => {
       route.reload();
     },
   });

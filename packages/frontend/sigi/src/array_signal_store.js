@@ -223,8 +223,9 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
   const registerPropertyLifecycle = (
     itemSignal,
     property,
-    { changed, dropped, inserted },
+    { changed, dropped, reinserted },
   ) => {
+    let wasFound = false;
     const NOT_FOUND = { label: "not_found" };
     const idToTrackSignal = signal(null);
     effect(() => {
@@ -244,11 +245,10 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
         return NOT_FOUND;
       }
       const item = idMap.get(idToTrack);
-      return item
-        ? typeof property === "function"
-          ? property(item)
-          : item[property]
-        : NOT_FOUND;
+      if (!item) {
+        return NOT_FOUND;
+      }
+      return typeof property === "function" ? property(item) : item[property];
     });
     const previousValueSignal = signal(valueSignal.peek());
 
@@ -256,6 +256,7 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       const value = valueSignal.value;
       const previousValue = previousValueSignal.peek();
       previousValueSignal.value = value;
+
       if (
         value !== previousValue &&
         previousValue !== NOT_FOUND &&
@@ -263,9 +264,15 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       ) {
         changed(value, previousValue);
       } else if (previousValue === NOT_FOUND && value !== NOT_FOUND) {
-        inserted(value, previousValue);
+        if (wasFound) {
+          reinserted(value, previousValue);
+        }
       } else if (previousValue !== NOT_FOUND && value === NOT_FOUND) {
         dropped(previousValue);
+      }
+
+      if (value !== NOT_FOUND) {
+        wasFound = true;
       }
     });
   };
