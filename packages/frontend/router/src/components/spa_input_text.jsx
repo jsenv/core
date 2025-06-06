@@ -21,6 +21,8 @@ export const SPAInputText = forwardRef(
       onSubmitError,
       method = "PUT",
       label,
+      defaultValue,
+      name,
       ...rest
     },
     ref,
@@ -32,7 +34,18 @@ export const SPAInputText = forwardRef(
     });
     const [addFormErrorOnInput, removeFormErrorFromInput] =
       useInputValidationMessage(innerRef, "form_error");
-    const input = <InputText ref={innerRef} action={action} {...rest} />;
+
+    const [navStateValue, setNavStateValue] = useNavigationState(name);
+
+    const input = (
+      <InputText
+        ref={innerRef}
+        action={action}
+        name={name}
+        defaultValue={defaultValue || navStateValue}
+        {...rest}
+      />
+    );
 
     return (
       <SPAForm
@@ -45,12 +58,16 @@ export const SPAInputText = forwardRef(
           }
         }}
         onSubmitError={(e) => {
+          setNavStateValue(innerRef.current.value);
           addFormErrorOnInput(e);
           if (onSubmitError) {
             onSubmitError(e);
           }
         }}
-        onSubmitEnd={onSubmitEnd}
+        onSubmitEnd={() => {
+          setNavStateValue(undefined);
+          onSubmitEnd();
+        }}
       >
         {label ? (
           <label>
@@ -65,6 +82,34 @@ export const SPAInputText = forwardRef(
   },
 );
 
+const none = {};
+const useNavigationState = (name) => {
+  const navStateRef = useRef(none);
+  if (navStateRef.current === none) {
+    const navEntryState = navigation.currentEntry.getState();
+    navStateRef.current =
+      navEntryState && name ? navEntryState[name] : undefined;
+  }
+  return [
+    navStateRef.current,
+    (value) => {
+      navStateRef.current = value;
+      if (!name) {
+        return;
+      }
+      const currentState = navigation.currentEntry.getState() || {};
+      if (value === undefined) {
+        delete currentState[name];
+      } else {
+        currentState[name] = value;
+      }
+      navigation.updateCurrentEntry({
+        state: currentState,
+      });
+    },
+  ];
+};
+
 const InputText = forwardRef(
   (
     {
@@ -73,7 +118,8 @@ const InputText = forwardRef(
       required,
       action,
       name,
-      value,
+      defaultValue = "",
+      value = defaultValue,
       onCancel,
       onInput,
       ...rest
@@ -130,7 +176,8 @@ const InputText = forwardRef(
           }}
           // eslint-disable-next-line react/no-unknown-property
           onCancel={(reason) => {
-            innerRef.current.value = value === undefined ? "" : value;
+            innerRef.current.value =
+              value === undefined || value === "" ? defaultValue : value;
             if (onCancel) {
               onCancel(reason);
             }
