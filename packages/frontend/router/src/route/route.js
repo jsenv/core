@@ -6,7 +6,8 @@ import { routingWhile } from "../document_routing.js";
 import { normalizeUrl } from "../normalize_url.js";
 import { goTo, installNavigation, reload } from "../router.js";
 import { ABORTED, FAILED, IDLE, LOADED, LOADING } from "./route_status.js";
-import { navigatorStore } from "./stores/navigator_store.js";
+import { localStorageStateStore } from "./stores/local_storage_state_store.js";
+import { navigatorStateStore } from "./stores/navigator_state_store.js";
 
 let debug = false;
 
@@ -265,7 +266,7 @@ const createRouteConnectedWithState = ({
   leave,
   load,
   name,
-  // store = localStorage, // localStorage, sessionStorage, navigator (will update nnavigation.currentEntry.getState())
+  store = localStorage, // localStorage, sessionStorage, navigator (will update navigation.currentEntry.getState())
   canDisplayOldData,
 }) => {
   const isMatchingSignal = signal(false);
@@ -280,7 +281,8 @@ const createRouteConnectedWithState = ({
   const dataSignal = signal(initialData);
   const loadData = load ? ({ signal }) => load({ signal, state }) : undefined;
 
-  const stateStore = navigatorStore;
+  const stateStore =
+    store === localStorage ? localStorageStateStore : navigatorStateStore;
 
   const initialState = stateStore.getReadonlyState();
   let state = initialState;
@@ -355,12 +357,12 @@ const createRouteConnectedWithState = ({
         }
         return;
       }
-      const stateAfterEnter = stateStore.mutate(enter);
+      const [stateAfterEnter, applyStateAfterEnter] = stateStore.mutate(enter);
       await goTo(window.location.href, {
         routesToEnter: [route],
         state: stateAfterEnter,
         onStart: () => {
-          stateStore.set(stateAfterEnter);
+          applyStateAfterEnter();
         },
       });
     },
@@ -372,12 +374,12 @@ const createRouteConnectedWithState = ({
         }
         return;
       }
-      const stateAfterLeave = stateStore.mutate(leave);
+      const [stateAfterLeave, applyStateAfterLeave] = stateStore.mutate(leave);
       await goTo(window.location.href, {
         routesToLeave: [route],
         state: stateAfterLeave,
         onStart: () => {
-          stateStore.set(stateAfterLeave);
+          applyStateAfterLeave();
         },
       });
     },
