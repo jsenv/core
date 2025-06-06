@@ -1,3 +1,25 @@
+/**
+ * ce qui me parait le mieux:
+ *
+ *
+ * c'est pas vraiment intéréssant de voir tout les base de données en vrai donc:
+ *
+ * -> on affiche la base de données courant + un moyen d'en changer
+ * -> on affiche les tables de la base de données courante
+ * -> un moyen de modifier la base de données courante "chaispascomment"
+ *
+ * 1. les tables apparaissent comme enfant des databases?
+ *
+ * - une icone gear en haut a droite fait apparaitre un menu de réglage dans le header
+ * qui permet de renommer la table et modifier ses params genre son owner etc
+ *
+ * - la page elle se concentre sur l'affiche du contenu de la table
+ * on commencera par les colones de la table elle-meme
+ * qu'on peut bouger, renommer, supprimer, modifier le type etc
+ *
+ *
+ */
+
 import {
   ErrorBoundaryContext,
   Route,
@@ -76,7 +98,7 @@ const ErrorDetails = ({ error }) => {
   return (
     <details className="route_error">
       <summary>{error.message}</summary>
-      <pre>
+      <pre style="white-space: pre-wrap;">
         <code>{error.stack}</code>
       </pre>
     </details>

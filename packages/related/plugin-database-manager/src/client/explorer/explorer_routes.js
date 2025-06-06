@@ -59,9 +59,11 @@ export const EXPLORER_DATABASES_ROUTE = registerRoute({
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/explorer/databases`,
     );
-    const { currentDatabase, databases } = await response.json();
-    setCurrentDatabase(currentDatabase);
+    const { data, meta } = await response.json();
+    const databases = data;
+    const { currentDatabase } = meta;
     databaseStore.upsert(databases);
+    setCurrentDatabase(currentDatabase);
   },
   name: "databases_explorer_details",
 });

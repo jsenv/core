@@ -23,12 +23,13 @@ export const jsenvPluginDatabaseManager = ({
   pathname = "/.internal/database/",
 } = {}) => {
   let databaseManagerRootDirectoryUrl;
+  let defaultUsername;
   let sql;
 
   return {
     name: "jsenv:database_manager",
     init: async ({ rootDirectoryUrl }) => {
-      const defaultUsername = execSync("whoami").toString().trim();
+      defaultUsername = execSync("whoami").toString().trim();
       sql = connectAs({
         username: defaultUsername,
         password: "",
@@ -138,9 +139,42 @@ export const jsenvPluginDatabaseManager = ({
             FROM
               pg_database
           `;
+          debugger;
+
+          const countTables = async (database) => {
+            if (database === currentDatname) {
+              return countRows(sql, "pg_tables");
+            }
+            const sqlConnectedToThatDb = connectAs({
+              username: defaultUsername,
+              password: "",
+              database,
+            });
+            const count = await countRows(sqlConnectedToThatDb, "pg_tables");
+            sqlConnectedToThatDb.end();
+            return count;
+          };
+          const tableCounts = {};
+          const promises = [];
+          for (const database of databases) {
+            if (!database.datallowconn) {
+              continue;
+            }
+            const countPromise = countTables(database.datname);
+            promises.push(countPromise);
+            (async () => {
+              const count = await countPromise;
+              tableCounts[database.datname] = count;
+            })();
+          }
+          await Promise.all(promises);
+
           return Response.json({
-            currentDatabase,
-            databases,
+            data: databases,
+            meta: {
+              currentDatabase,
+              tableCounts,
+            },
           });
         },
       },
