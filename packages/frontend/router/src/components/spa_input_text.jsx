@@ -130,7 +130,7 @@ const InputText = forwardRef(
           }}
           // eslint-disable-next-line react/no-unknown-property
           onCancel={(reason) => {
-            innerRef.current.value = value;
+            innerRef.current.value = value === undefined ? "" : value;
             if (onCancel) {
               onCancel(reason);
             }

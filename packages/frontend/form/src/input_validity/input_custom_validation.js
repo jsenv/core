@@ -54,7 +54,7 @@ export const installInputCustomValidation = (input) => {
     validationInterface.uninstall = uninstall;
   }
 
-  expose_on_input: {
+  expose_as_input_node_property: {
     input.__validationInterface__ = validationInterface;
     cleanupCallbackSet.add(() => {
       delete input.__validationInterface__;
