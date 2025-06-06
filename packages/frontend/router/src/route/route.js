@@ -1,13 +1,10 @@
 import { createResourcePattern } from "@jsenv/url-pattern";
 import { batch, effect, signal } from "@preact/signals";
 import { applyAction } from "../action/action.js";
-import { compareTwoJsValues } from "../compare_two_js_values.js";
 import { routingWhile } from "../document_routing.js";
 import { normalizeUrl } from "../normalize_url.js";
 import { goTo, installNavigation, reload } from "../router.js";
 import { ABORTED, FAILED, IDLE, LOADED, LOADING } from "./route_status.js";
-import { localStorageStateStore } from "./stores/local_storage_state_store.js";
-import { navigatorStateStore } from "./stores/navigator_state_store.js";
 
 let debug = false;
 
@@ -266,7 +263,6 @@ const createRouteConnectedWithState = ({
   leave,
   load,
   name,
-  store = localStorage, // localStorage, sessionStorage, navigator (will update navigation.currentEntry.getState())
   canDisplayOldData,
 }) => {
   const isMatchingSignal = signal(false);
@@ -281,30 +277,27 @@ const createRouteConnectedWithState = ({
   const dataSignal = signal(initialData);
   const loadData = load ? ({ signal }) => load({ signal, state }) : undefined;
 
-  const stateStore =
-    store === localStorage ? localStorageStateStore : navigatorStateStore;
-
-  const initialState = stateStore.getReadonlyState();
-  let state = initialState;
-  const stateSignal = signal(state);
-
-  const getMatchResult = (state) => {
-    const matchResult = match(state);
+  const getMatchResult = () => {
+    const matchResult = match();
     if (matchResult === true) {
       return {};
     }
     return matchResult;
   };
 
+  const initialState = getMatchResult();
+  let state = initialState;
+  const stateSignal = signal(state);
+
   const routeMatchMethod = () => {
-    return getMatchResult(stateStore.getReadonlyState());
+    return getMatchResult();
   };
   const enterEffect = () => {
     batch(() => {
       isMatchingSignal.value = true;
       errorSignal.value = null;
       loadingStateSignal.value = LOADING;
-      stateSignal.value = stateStore.getReadonlyState();
+      stateSignal.value = getMatchResult();
     });
   };
   const leaveEffect = () => {
@@ -317,11 +310,6 @@ const createRouteConnectedWithState = ({
   };
 
   const shouldReload = () => {
-    const matchResult = getMatchResult(stateSignal.peek());
-    const targetMatchResult = getMatchResult(stateStore.getReadonlyState());
-    if (compareTwoJsValues(matchResult, targetMatchResult)) {
-      return false;
-    }
     return true;
   };
   const toString = () => name;
@@ -357,13 +345,9 @@ const createRouteConnectedWithState = ({
         }
         return;
       }
-      const [stateAfterEnter, applyStateAfterEnter] = stateStore.mutate(enter);
+      enter();
       await goTo(window.location.href, {
         routesToEnter: [route],
-        state: stateAfterEnter,
-        onStart: () => {
-          applyStateAfterEnter();
-        },
       });
     },
     leave: async () => {
@@ -374,13 +358,9 @@ const createRouteConnectedWithState = ({
         }
         return;
       }
-      const [stateAfterLeave, applyStateAfterLeave] = stateStore.mutate(leave);
+      leave();
       await goTo(window.location.href, {
         routesToLeave: [route],
-        state: stateAfterLeave,
-        onStart: () => {
-          applyStateAfterLeave();
-        },
       });
     },
     name,
