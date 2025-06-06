@@ -49,7 +49,7 @@ const TablePage = ({ routeError }) => {
           },
         ]}
       >
-        <PageHead.Label icon={<TableSvg />} label={"Tables:"}>
+        <PageHead.Label icon={<TableSvg />} label={"Table:"}>
           {tablename}
         </PageHead.Label>
       </PageHead>
@@ -103,7 +103,6 @@ const TableFields = ({ table }) => {
         });
 
         if (columnName === "tableowner") {
-          // we will display this elswhere
           return (
             <li key={columnName}>
               Owner:

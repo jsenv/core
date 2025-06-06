@@ -2,7 +2,11 @@ import { registerAction, registerRoute } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
 import { errorFromResponse } from "../error_from_response.js";
 import { roleStore } from "../role/role_store.js";
-import { setActiveTable, setTableCount } from "./table_signals.js";
+import {
+  setActiveTable,
+  setActiveTableColumns,
+  setTableCount,
+} from "./table_signals.js";
 import { tableStore } from "./table_store.js";
 
 export const GET_TABLE_ROUTE = registerRoute(
@@ -21,7 +25,9 @@ export const GET_TABLE_ROUTE = registerRoute(
     const { data, meta } = await response.json();
     const table = data;
     const ownerRole = meta.ownerRole;
+    const columns = meta.columns;
     setActiveTable(table);
+    setActiveTableColumns(columns);
     roleStore.upsert(ownerRole);
   },
 );
