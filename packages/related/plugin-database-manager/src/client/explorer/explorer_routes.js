@@ -7,11 +7,13 @@ import {
 import { databaseStore } from "../database/database_store.js";
 import { setCurrentRole, setRoleCount } from "../role/role_signals.js";
 import { roleStore } from "../role/role_store.js";
+import { setTableCount } from "../table/table_signals.js";
 import { tableStore } from "../table/table_store.js";
 
 effect(async () => {
   const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/explorer`);
-  const { databaseCount, roleCount } = await response.json();
+  const { tableCount, databaseCount, roleCount } = await response.json();
+  setTableCount(tableCount);
   setDatabaseCount(databaseCount);
   setRoleCount(roleCount);
 });

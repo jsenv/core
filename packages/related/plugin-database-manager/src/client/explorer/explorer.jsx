@@ -14,6 +14,10 @@ import {
   ExplorerRoles,
   rolesExplorerGroupController,
 } from "./explorer_roles.jsx";
+import {
+  ExplorerTables,
+  tablesExplorerGroupController,
+} from "./explorer_tables.jsx";
 
 export const Explorer = () => {
   return (
@@ -41,6 +45,9 @@ const ExplorerBody = () => {
   useLayoutEffect(() => {
     const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
       onRequestedSizeChange: (element, requestedHeight) => {
+        if (element.id === tablesExplorerGroupController.id) {
+          tablesExplorerGroupController.setHeightSetting(requestedHeight);
+        }
         if (element.id === databaseExplorerGroupController.id) {
           databaseExplorerGroupController.setHeightSetting(requestedHeight);
         }
@@ -64,7 +71,12 @@ const ExplorerBody = () => {
         }
       }}
     >
-      <ExplorerDatabases onOpen={onOpen} onClose={onClose} />
+      <ExplorerTables onOpen={onOpen} onClose={onClose} />
+      <ExplorerDatabases
+        onOpen={onOpen}
+        onClose={onClose}
+        resizable={resizable}
+      />
       <ExplorerRoles onOpen={onOpen} onClose={onClose} resizable={resizable} />
     </div>
   );

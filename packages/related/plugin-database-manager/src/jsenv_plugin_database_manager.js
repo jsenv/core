@@ -87,11 +87,18 @@ export const jsenvPluginDatabaseManager = ({
         fetch: async () => {
           const roleCount = await countRows(sql, "pg_roles");
           const databaseCount = await countRows(sql, "pg_database");
-          const tableCount = await countRows(sql, "pg_tables");
+          const [tableCountResult] = await sql`
+            SELECT
+              COUNT(*)
+            FROM
+              pg_tables
+            WHERE
+              schemaname NOT IN ('pg_catalog', 'information_schema')
+          `;
           return Response.json({
             roleCount,
             databaseCount,
-            tableCount,
+            tableCount: parseInt(tableCountResult.count),
           });
         },
       },
@@ -105,6 +112,8 @@ export const jsenvPluginDatabaseManager = ({
               *
             FROM
               pg_tables
+            WHERE
+              schemaname NOT IN ('pg_catalog', 'information_schema')
           `;
           return Response.json({
             tables,
