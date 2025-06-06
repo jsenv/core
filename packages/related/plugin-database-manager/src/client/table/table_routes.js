@@ -7,9 +7,9 @@ import { tableStore } from "./table_store.js";
 export const GET_TABLE_ROUTE = registerRoute(
   "/tables/:tablename",
   async ({ params, signal }) => {
-    const rolname = params.rolname;
+    const tablename = params.tablename;
     const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}`,
       {
         signal,
       },

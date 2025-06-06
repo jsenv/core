@@ -13,6 +13,7 @@ import {
 import { execSync } from "node:child_process";
 import { alterDatabaseQuery } from "./sql/alter_database_query.js";
 import { alterRoleQuery } from "./sql/alter_role_query.js";
+import { alterTableQuery } from "./sql/alter_table_query.js";
 
 const databaseManagerHtmlFileUrl = import.meta.resolve(
   "./client/database_manager.html",
@@ -87,18 +88,11 @@ export const jsenvPluginDatabaseManager = ({
         fetch: async () => {
           const roleCount = await countRows(sql, "pg_roles");
           const databaseCount = await countRows(sql, "pg_database");
-          const [tableCountResult] = await sql`
-            SELECT
-              COUNT(*)
-            FROM
-              pg_tables
-            WHERE
-              schemaname NOT IN ('pg_catalog', 'information_schema')
-          `;
+          const tableCount = await countRows(sql, "pg_tables");
           return Response.json({
             roleCount,
             databaseCount,
-            tableCount: parseInt(tableCountResult.count),
+            tableCount,
           });
         },
       },
@@ -180,6 +174,72 @@ export const jsenvPluginDatabaseManager = ({
           });
         },
       },
+      ...createRESTRoutes(`${pathname}api/tables`, {
+        GET: async (tablename) => {
+          const results = await sql`
+            SELECT
+              pg_tables.*,
+              role.rolname AS owner_rolname,
+              role.oid AS owner_oid
+            FROM
+              pg_tables
+              LEFT JOIN pg_roles role ON pg_tables.tableowner = role.oid
+            WHERE
+              pg_tables.tablename = ${tablename}
+          `;
+          if (results.length === 0) {
+            return null;
+          }
+          const columns = await getTableColumns(sql, "pg_tables");
+          const [table] = results;
+          const ownerRole = table.owner_oid
+            ? {
+                oid: table.owner_oid,
+                rolname: table.owner_rolname,
+              }
+            : null;
+          delete table.tableowner;
+          delete table.owner_rolname;
+          delete table.owner_oid;
+
+          return {
+            data: table,
+            meta: {
+              ownerRole,
+              columns,
+            },
+          };
+        },
+        PUT: async (tablename, colname, value) => {
+          await alterTableQuery(sql, tablename, colname, value);
+        },
+        POST: async ({ tablename }) => {
+          await sql`CREATE TABLE ${sql(tablename)}`;
+          const [table] = await sql`
+            SELECT
+              *
+            FROM
+              pg_table
+            WHERE
+              tablename = ${tablename}
+          `;
+          return {
+            data: table,
+            meta: {
+              count: await countRows(sql, "pg_tables"),
+            },
+          };
+        },
+        DELETE: async (tablename) => {
+          await sql`DROP TABLE ${sql(tablename)}`;
+          return {
+            data: null,
+            meta: {
+              count: await countRows(sql, "pg_tables"),
+            },
+          };
+        },
+      }),
       ...createRESTRoutes(`${pathname}api/roles`, {
         GET: async (rolname) => {
           const results = await sql`
@@ -281,7 +341,8 @@ export const jsenvPluginDatabaseManager = ({
           const results = await sql`
             SELECT
               pg_database.*,
-              role.rolname AS owner_rolname
+              role.rolname AS owner_rolname,
+              role.oid AS owner_oid
             FROM
               pg_database
               LEFT JOIN pg_roles role ON pg_database.datdba = role.oid
@@ -293,14 +354,15 @@ export const jsenvPluginDatabaseManager = ({
           }
           const columns = await getTableColumns(sql, "pg_database");
           const [database] = results;
-          const ownerRole = database.datdba
+          const ownerRole = database.owner_oid
             ? {
-                oid: database.datdba,
+                oid: database.owner_oid,
                 rolname: database.owner_rolname,
               }
             : null;
           delete database.datdba;
           delete database.owner_rolname;
+          delete database.owner_oid;
 
           return {
             data: database,
@@ -683,6 +745,18 @@ const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
 };
 
 const countRows = async (sql, tableName) => {
+  if (tableName === "pg_tables") {
+    const [tableCountResult] = await sql`
+      SELECT
+        COUNT(*)
+      FROM
+        pg_tables
+      WHERE
+        schemaname NOT IN ('pg_catalog', 'information_schema')
+    `;
+    return parseInt(tableCountResult.count);
+  }
+
   const [countResult] = await sql`
     SELECT
       COUNT(*)
