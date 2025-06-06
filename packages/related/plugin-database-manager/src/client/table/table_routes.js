@@ -1,6 +1,7 @@
 import { registerAction, registerRoute } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
 import { errorFromResponse } from "../error_from_response.js";
+import { roleStore } from "../role/role_store.js";
 import { setActiveTable, setTableCount } from "./table_signals.js";
 import { tableStore } from "./table_store.js";
 
@@ -17,9 +18,11 @@ export const GET_TABLE_ROUTE = registerRoute(
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to get table");
     }
-    const { data } = await response.json();
+    const { data, meta } = await response.json();
     const table = data;
+    const ownerRole = meta.ownerRole;
     setActiveTable(table);
+    roleStore.upsert(ownerRole);
   },
 );
 connectStoreAndRoute(tableStore, GET_TABLE_ROUTE, "tablename");

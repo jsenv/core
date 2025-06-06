@@ -183,7 +183,7 @@ export const jsenvPluginDatabaseManager = ({
               role.oid AS owner_oid
             FROM
               pg_tables
-              LEFT JOIN pg_roles role ON pg_tables.tableowner = role.oid
+              LEFT JOIN pg_roles role ON pg_tables.tableowner = role.rolname
             WHERE
               pg_tables.tablename = ${tablename}
           `;
@@ -198,7 +198,6 @@ export const jsenvPluginDatabaseManager = ({
                 rolname: table.owner_rolname,
               }
             : null;
-          delete table.tableowner;
           delete table.owner_rolname;
           delete table.owner_oid;
 
@@ -219,7 +218,7 @@ export const jsenvPluginDatabaseManager = ({
             SELECT
               *
             FROM
-              pg_table
+              pg_tables
             WHERE
               tablename = ${tablename}
           `;
@@ -345,7 +344,7 @@ export const jsenvPluginDatabaseManager = ({
               role.oid AS owner_oid
             FROM
               pg_database
-              LEFT JOIN pg_roles role ON pg_database.datdba = role.oid
+              LEFT JOIN pg_roles role ON role.oid = pg_database.datdba
             WHERE
               pg_database.datname = ${datname}
           `;
@@ -360,7 +359,6 @@ export const jsenvPluginDatabaseManager = ({
                 rolname: database.owner_rolname,
               }
             : null;
-          delete database.datdba;
           delete database.owner_rolname;
           delete database.owner_oid;
 

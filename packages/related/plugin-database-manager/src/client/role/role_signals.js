@@ -13,8 +13,11 @@ export const setRoleCount = (value) => {
 export const useRoleList = () => {
   return roleStore.arraySignal.value;
 };
-export const useRole = (rolname) => {
+export const useRoleByName = (rolname) => {
   return roleStore.select("rolname", rolname);
+};
+export const useRoleById = (oid) => {
+  return roleStore.select("oid", oid);
 };
 
 const activeRoleIdSignal = signal(null);
