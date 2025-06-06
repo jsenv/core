@@ -119,7 +119,8 @@ const InputText = forwardRef(
       action,
       name,
       defaultValue = "",
-      value = defaultValue,
+      value,
+      cancelOnBlurInvalid,
       onCancel,
       onInput,
       ...rest
@@ -133,7 +134,7 @@ const InputText = forwardRef(
     });
     const { pending } = useActionStatus(action);
     const [optimisticUIState, setOptimisticUIState] = useOptimisticUIState(
-      value,
+      value === undefined ? defaultValue : value,
       name,
     );
     useRequestSubmitOnChange(innerRef, { preventWhenValueMissing: true });
@@ -176,8 +177,11 @@ const InputText = forwardRef(
           }}
           // eslint-disable-next-line react/no-unknown-property
           onCancel={(reason) => {
+            if (reason === "blur_invalid" && !cancelOnBlurInvalid) {
+              return;
+            }
             innerRef.current.value =
-              value === undefined || value === "" ? defaultValue : value;
+              value === undefined || value === "" ? "" : value;
             if (onCancel) {
               onCancel(reason);
             }

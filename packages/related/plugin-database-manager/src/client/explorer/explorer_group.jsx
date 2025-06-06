@@ -181,6 +181,7 @@ const ExplorerGroupContent = ({
               nameKey={nameKey}
               useItemList={useItemList}
               useCreateItemAction={useCreateItemAction}
+              cancelOnBlurInvalid
               onCancel={() => {
                 // si on a rien rentré on le cré pas, sinon oui on le cré
                 stopCreatingNew();
@@ -314,6 +315,7 @@ const ItemRenameInput = ({
       required
       value={itemName}
       action={renameAction}
+      cancelOnBlurInvalid
       onCancel={() => {
         stopRenaming();
       }}

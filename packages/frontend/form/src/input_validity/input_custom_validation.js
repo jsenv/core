@@ -37,7 +37,6 @@ import { openValidationMessage } from "./validation_message.js";
 export const installInputCustomValidation = (input) => {
   const validationInterface = {
     uninstall: undefined,
-    registerCancelCallback: undefined,
     registerConstraint: undefined,
     addCustomMessage: undefined,
     removeCustomMessage: undefined,
@@ -61,23 +60,10 @@ export const installInputCustomValidation = (input) => {
     });
   }
 
-  let triggerOnCancel;
-  register_cancel_callback: {
-    const cancelCallbackSet = new Set();
-    triggerOnCancel = (reason) => {
-      const cancelEvent = new CustomEvent("cancel", { detail: reason });
-      input.dispatchEvent(cancelEvent);
-      for (const cancelCallback of cancelCallbackSet) {
-        cancelCallback(reason);
-      }
-    };
-    validationInterface.registerCancelCallback = (callback) => {
-      cancelCallbackSet.add(callback);
-      return () => {
-        cancelCallbackSet.delete(callback);
-      };
-    };
-  }
+  const dispatchCancelCustomEvent = (reason) => {
+    const cancelEvent = new CustomEvent("cancel", { detail: reason });
+    input.dispatchEvent(cancelEvent);
+  };
 
   let validationMessage;
   const openInputValidationMessage = () => {
@@ -300,7 +286,7 @@ export const installInputCustomValidation = (input) => {
         if (validationMessage) {
           validationMessage.close();
         } else {
-          triggerOnCancel("escape_key");
+          dispatchCancelCustomEvent("escape_key");
         }
       }
     };
@@ -313,12 +299,12 @@ export const installInputCustomValidation = (input) => {
   cancel_on_blur: {
     const onblur = () => {
       if (input.value === "") {
-        triggerOnCancel("blur_empty");
+        dispatchCancelCustomEvent("blur_empty");
         return;
       }
       // if we have error, we cancel too
       if (lastFailedValidityInfo) {
-        triggerOnCancel("blur_error");
+        dispatchCancelCustomEvent("blur_invalid");
         return;
       }
     };
