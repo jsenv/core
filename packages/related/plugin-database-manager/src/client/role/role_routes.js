@@ -30,7 +30,6 @@ export const GET_ROLE_ROUTE = registerRoute(
     setActiveRoleColumns(columns);
   },
 );
-
 connectStoreAndRoute(roleStore, GET_ROLE_ROUTE, "rolname");
 
 export const PUT_ROLE_ACTION = registerAction(

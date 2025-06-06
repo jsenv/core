@@ -87,9 +87,27 @@ export const jsenvPluginDatabaseManager = ({
         fetch: async () => {
           const roleCount = await countRows(sql, "pg_roles");
           const databaseCount = await countRows(sql, "pg_database");
+          const tableCount = await countRows(sql, "pg_tables");
           return Response.json({
             roleCount,
             databaseCount,
+            tableCount,
+          });
+        },
+      },
+      {
+        endpoint: `GET ${pathname}api/explorer/tables`,
+        description: "Get info about tables, meant to build a navbar.",
+        declarationSource: import.meta.url,
+        fetch: async () => {
+          const tables = await sql`
+            SELECT
+              *
+            FROM
+              pg_tables
+          `;
+          return Response.json({
+            tables,
           });
         },
       },

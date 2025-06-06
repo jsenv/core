@@ -17,9 +17,9 @@ const App = () => {
       </Aside>
       <main>
         <div className="main_body">
+          <TableRoutes />
           <RoleRoutes />
           <DatabaseRoutes />
-          <TableRoutes />
         </div>
       </main>
     </div>
