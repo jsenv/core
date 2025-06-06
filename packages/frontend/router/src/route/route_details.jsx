@@ -100,15 +100,15 @@ export const RouteDetails = forwardRef(
           "spa_details",
           ...(props.className ? props.className.split(" ") : []),
         ].join(" ")}
-        onToggle={async (toggleEvent) => {
+        onToggle={(toggleEvent) => {
           if (onToggle) {
             onToggle(toggleEvent);
           }
           if (mountedRef.current) {
             if (toggleEvent.newState === "open") {
-              await route.enter();
+              route.enter();
             } else {
-              await route.leave();
+              route.leave();
             }
           }
         }}

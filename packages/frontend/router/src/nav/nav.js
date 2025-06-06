@@ -94,11 +94,8 @@ navigation.addEventListener("navigate", (event) => {
 
   event.intercept({
     handler: async () => {
-      const targetState = destinationState
-        ? { ...currentState, ...destinationState }
-        : currentState;
-      if (targetState) {
-        navigation.updateCurrentEntry({ state: targetState });
+      if (event.info?.onStart) {
+        event.info.onStart();
       }
 
       let handle;
@@ -116,7 +113,7 @@ navigation.addEventListener("navigate", (event) => {
             sourceUrl: currentUrl,
             targetUrl: formUrl || destinationUrl,
             sourceState: currentState,
-            targetState: targetState || currentState,
+            targetState: destinationState || currentState,
             abortSignal,
             stopSignal,
             isReload,
@@ -199,33 +196,51 @@ const detectBrowserStopButtonClick = (navigateEventSignal, callback) => {
 
 export const goTo = async (
   url,
-  { state, replace, routesLoaded, routesToEnter, routesToLeave } = {},
+  {
+    state = navigation.currentEntry.getState(),
+    replace,
+    routesLoaded,
+    routesToEnter,
+    routesToLeave,
+    onStart,
+  } = {},
 ) => {
   if (replace) {
     await navigation.navigate(url, {
       state,
       history: "replace",
-      info: { routesLoaded, routesToEnter, routesToLeave },
+      info: { routesLoaded, routesToEnter, routesToLeave, onStart },
     }).finished;
     return;
   }
   if (matchNavigationEntry(navigation.currentEntry, { url, state })) {
+    if (debug) {
+      console.debug(
+        "navigation already at the target entry, no need to navigate",
+      );
+    }
     return;
   }
   const entries = navigation.entries();
   const prevEntry = entries[navigation.currentEntry.index - 1];
   if (prevEntry && matchNavigationEntry(prevEntry, { url, state })) {
+    if (debug) {
+      console.debug("want to navigate exactly to previous entry,  going back");
+    }
     goBack();
     return;
   }
   const nextEntry = entries[navigation.currentEntry.index + 1];
   if (nextEntry && matchNavigationEntry(nextEntry, { url, state })) {
+    if (debug) {
+      console.debug("want to navigate exactly to next entry, going forward");
+    }
     goForward();
     return;
   }
   await navigation.navigate(url, {
     state,
-    info: { routesToEnter, routesToLeave },
+    info: { routesToEnter, routesToLeave, onStart },
   }).finished;
 };
 export const stopLoad = () => {

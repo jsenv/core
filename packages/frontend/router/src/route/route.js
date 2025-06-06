@@ -8,7 +8,7 @@ import { goTo, installNavigation, reload } from "../router.js";
 import { ABORTED, FAILED, IDLE, LOADED, LOADING } from "./route_status.js";
 import { navigatorStore } from "./stores/navigator_store.js";
 
-let debug = true;
+let debug = false;
 
 let baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
@@ -348,25 +348,37 @@ const createRouteConnectedWithState = ({
     reload,
     toString,
     enter: async () => {
-      debugger;
       const isMatching = isMatchingSignal.peek();
       if (isMatching) {
+        if (debug) {
+          console.debug(`"${route}" is already matching, no need to enter`);
+        }
         return;
       }
-      enter(stateStore.getWritableState());
+      const stateAfterEnter = stateStore.mutate(enter);
       await goTo(window.location.href, {
         routesToEnter: [route],
+        state: stateAfterEnter,
+        onStart: () => {
+          stateStore.set(stateAfterEnter);
+        },
       });
     },
     leave: async () => {
       const isMatching = isMatchingSignal.peek();
       if (!isMatching) {
+        if (debug) {
+          console.debug(`"${route}" is not matching, no need to leave`);
+        }
         return;
       }
-      leave(stateStore.getWritableState());
-      stateSignal.value = stateStore.getReadonlyState();
+      const stateAfterLeave = stateStore.mutate(leave);
       await goTo(window.location.href, {
         routesToLeave: [route],
+        state: stateAfterLeave,
+        onStart: () => {
+          stateStore.set(stateAfterLeave);
+        },
       });
     },
     name,
