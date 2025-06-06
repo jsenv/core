@@ -310,7 +310,7 @@ const createRouteConnectedWithState = ({
   };
 
   const shouldReload = () => {
-    return true;
+    return false;
   };
   const toString = () => name;
 
