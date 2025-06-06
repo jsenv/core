@@ -176,14 +176,14 @@ const InputText = forwardRef(
             }
           }}
           // eslint-disable-next-line react/no-unknown-property
-          onCancel={(reason) => {
-            if (reason === "blur_invalid" && !cancelOnBlurInvalid) {
+          onCancel={(event) => {
+            if (event.detail === "blur_invalid" && !cancelOnBlurInvalid) {
               return;
             }
             innerRef.current.value =
               value === undefined || value === "" ? "" : value;
             if (onCancel) {
-              onCancel(reason);
+              onCancel(event.detail);
             }
           }}
         />
