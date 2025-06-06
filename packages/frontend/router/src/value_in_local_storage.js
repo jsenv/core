@@ -1,4 +1,5 @@
-export const valueInLocalStorage = (key, { type = "string" } = {}) => {
+export const valueInLocalStorage = (key, options = {}) => {
+  const { type = "string" } = options;
   const converter = typeConverters[type];
   if (converter === undefined) {
     console.warn(
@@ -30,7 +31,7 @@ export const valueInLocalStorage = (key, { type = "string" } = {}) => {
   const get = () => {
     let valueInLocalStorage = window.localStorage.getItem(key);
     if (valueInLocalStorage === null) {
-      return undefined;
+      return Object.hasOwn(options, "default") ? options.default : undefined;
     }
     if (converter && converter.decode) {
       const valueDecoded = converter.decode(valueInLocalStorage);
@@ -73,11 +74,33 @@ export const valueInLocalStorage = (key, { type = "string" } = {}) => {
     }
     window.localStorage.setItem(key, value);
   };
+  const remove = () => {
+    window.localStorage.removeItem(key);
+  };
 
-  return [get, set];
+  return [get, set, remove];
 };
 
 const typeConverters = {
+  boolean: {
+    checkValidity: (value) => {
+      if (typeof value !== "boolean") {
+        return `must be a boolean`;
+      }
+      return "";
+    },
+    decode: (value) => {
+      return value === "true";
+    },
+  },
+  string: {
+    checkValidity: (value) => {
+      if (typeof value !== "string") {
+        return `must be a string`;
+      }
+      return "";
+    },
+  },
   number: {
     decode: (value) => {
       const valueParsed = parseFloat(value);
@@ -141,14 +164,6 @@ const typeConverters = {
       }
       if (percentageFloat < 0 || percentageFloat > 100) {
         return `must be between 0 and 100`;
-      }
-      return "";
-    },
-  },
-  string: {
-    checkValidity: (value) => {
-      if (typeof value !== "string") {
-        return `must be a string`;
       }
       return "";
     },

@@ -1,4 +1,4 @@
-import { registerRoute } from "@jsenv/router";
+import { registerRoute, valueInLocalStorage } from "@jsenv/router";
 import { effect } from "@preact/signals";
 import {
   setCurrentDatabase,
@@ -15,15 +15,18 @@ effect(async () => {
   setRoleCount(roleCount);
 });
 
+const [readDatabaseDetailsOpened, storeDatabaseDetailsOpened] =
+  valueInLocalStorage("databases_details_opened", {
+    type: "boolean",
+    default: true,
+  });
 export const EXPLORER_DATABASES_ROUTE = registerRoute({
-  match: (state) =>
-    state.explorer_databases_opened === true ||
-    state.explorer_databases_opened === undefined,
-  enter: (state) => {
-    state.explorer_databases_opened = true;
+  match: () => readDatabaseDetailsOpened(),
+  enter: () => {
+    storeDatabaseDetailsOpened(true);
   },
-  leave: (state) => {
-    state.explorer_databases_opened = false;
+  leave: () => {
+    storeDatabaseDetailsOpened(false);
   },
   load: async () => {
     const response = await fetch(
@@ -36,13 +39,20 @@ export const EXPLORER_DATABASES_ROUTE = registerRoute({
   name: "databases_explorer_details",
 });
 
+const [
+  readRolesDetailsOpened,
+  storeRolesDetailsOpened,
+  eraseRolesDetailsOpened,
+] = valueInLocalStorage("explorer_roles_opened", {
+  type: "boolean",
+});
 export const EXPLORER_ROLES_ROUTE = registerRoute({
-  match: (state) => state.explorer_roles_opened === true,
-  enter: (state) => {
-    state.explorer_roles_opened = true;
+  match: () => readRolesDetailsOpened,
+  enter: () => {
+    storeRolesDetailsOpened(true);
   },
-  leave: (state) => {
-    state.explorer_roles_opened = false;
+  leave: () => {
+    eraseRolesDetailsOpened();
   },
   load: async () => {
     const response = await fetch(

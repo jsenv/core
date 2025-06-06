@@ -213,7 +213,11 @@ export const goTo = async (
     }).finished;
     return;
   }
-  if (matchNavigationEntry(navigation.currentEntry, { url, state })) {
+  if (
+    !routesToEnter &&
+    !routesToLeave &&
+    matchNavigationEntry(navigation.currentEntry, { url, state })
+  ) {
     if (debug) {
       console.debug(
         "navigation already at the target entry, no need to navigate",
