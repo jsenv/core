@@ -2,7 +2,6 @@ import {
   ErrorBoundaryContext,
   Route,
   SPADeleteButton,
-  SPAInputText,
   useRouteParam,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
@@ -59,8 +58,6 @@ const RolePage = () => {
         >
           ALTER ROLE documentation
         </a>
-
-        <SPAInputText name="test" action={() => {}} label="test" />
       </PageBody>
     </ErrorBoundaryContext.Provider>
   );

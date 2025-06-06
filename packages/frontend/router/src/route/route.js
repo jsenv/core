@@ -592,11 +592,30 @@ export const applyRouting = async ({
     }
     routeToLeaveSet.add(activeRoute);
   }
+
+  // when there is no effect on routes
+  // we stay on the page so we want to preserve the current state
+  // without this navigating to the same page with <a> would reset current entry state
+  if (targetState && routeToEnterMap.size === 0 && routeToLeaveSet.size === 0) {
+    navigation.updateCurrentEntry({
+      state: targetState,
+    });
+  }
+
+  const promises = [];
+  const routeLoadingSet = new Set();
+  for (const routeToKeepActive of routeToKeepActiveSet) {
+    const routeEnterPromise = routeEnterPromiseMap.get(routeToKeepActive);
+    if (routeEnterPromise) {
+      routeLoadingSet.add(routeToKeepActive);
+      promises.push(routeEnterPromise);
+    }
+  }
+
   if (
     routeToEnterMap.size === 0 &&
-    matchingRouteSet.size === 0 &&
-    routeToKeepActiveSet.size === 0 &&
-    routeToLeaveSet.size === 0
+    routeToLeaveSet.size === 0 &&
+    routeLoadingSet.size === 0
   ) {
     if (debug) {
       console.debug("no effect on routes, early return");
@@ -607,21 +626,15 @@ export const applyRouting = async ({
 
   if (debug) {
     console.debug(`situation before updating routes:
-- route still active: ${routeToKeepActiveSet.size === 0 ? "none" : Array.from(routeToKeepActiveSet).join(", ")}
 - route to leave: ${routeToLeaveSet.size === 0 ? "none" : Array.from(routeToLeaveSet).join(", ")}
-- route to enter: ${routeToEnterMap.size === 0 ? "none" : Array.from(routeToEnterMap.keys()).join(", ")}`);
+- route to enter: ${routeToEnterMap.size === 0 ? "none" : Array.from(routeToEnterMap.keys()).join(", ")}
+- route loading: ${routeLoadingSet.size === 0 ? "none" : Array.from(routeLoadingSet).join(", ")}
+- route still active: ${routeToKeepActiveSet.size === 0 ? "none" : Array.from(routeToKeepActiveSet).join(", ")}`);
   }
   for (const routeToLeave of routeToLeaveSet) {
     applyRouteLeaveEffect(routeToLeave, `Navigating to ${targetResource}`);
   }
   await routingWhile(async () => {
-    const promises = [];
-    for (const routeToKeepActive of routeToKeepActiveSet) {
-      const routeEnterPromise = routeEnterPromiseMap.get(routeToKeepActive);
-      if (routeEnterPromise) {
-        promises.push(routeEnterPromise);
-      }
-    }
     for (const [routeToEnter, enterParams] of routeToEnterMap) {
       const routeEnterPromise = applyRouteEnterEffect(
         routeToEnter,

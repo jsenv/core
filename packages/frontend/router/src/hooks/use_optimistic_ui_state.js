@@ -4,7 +4,7 @@ import { useSPAFormStatus } from "../components/use_spa_form_status.js";
 export const useOptimisticUIState = (
   frontendMemoryState,
   name,
-  { revertOnFailure } = {},
+  { revertOnFailure, saveNav } = {},
 ) => {
   const [navState, navStateSetter] = useNavigationState(name);
   const { pending } = useSPAFormStatus();
@@ -18,7 +18,7 @@ export const useOptimisticUIState = (
   }, []);
 
   return [
-    navState === undefined ? optimisticStateRef.current : navState,
+    !saveNav || navState === undefined ? optimisticStateRef.current : navState,
     setOptimisticState,
   ];
 };
