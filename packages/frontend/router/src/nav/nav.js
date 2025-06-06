@@ -112,17 +112,11 @@ navigation.addEventListener("navigate", (event) => {
         };
       } else {
         handle = async () => {
-          const targetState = destinationState
-            ? { ...currentState, ...destinationState }
-            : currentState;
-          if (targetState) {
-            navigation.updateCurrentEntry({ state: targetState });
-          }
           await navMethods.applyRouting({
             sourceUrl: currentUrl,
             targetUrl: formUrl || destinationUrl,
             sourceState: currentState,
-            targetState: targetState || {},
+            targetState: targetState || currentState,
             abortSignal,
             stopSignal,
             isReload,

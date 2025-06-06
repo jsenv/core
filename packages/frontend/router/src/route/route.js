@@ -6,8 +6,9 @@ import { routingWhile } from "../document_routing.js";
 import { normalizeUrl } from "../normalize_url.js";
 import { goTo, installNavigation, reload } from "../router.js";
 import { ABORTED, FAILED, IDLE, LOADED, LOADING } from "./route_status.js";
+import { navigatorStore } from "./stores/navigator_store.js";
 
-let debug = false;
+let debug = true;
 
 let baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
@@ -63,19 +64,19 @@ export const registerRoute = (firstArg, secondArg) => {
         load: secondArg,
       };
     }
-    const routeUpdatingDocumentUrl = createRouteFromResourcePattern(
+    const routeConnectedWithUrl = createRouteConnectedWithUrl(
       firstArg,
       secondArg,
     );
-    routeSet.add(routeUpdatingDocumentUrl);
-    return routeUpdatingDocumentUrl;
+    routeSet.add(routeConnectedWithUrl);
+    return routeConnectedWithUrl;
   }
-  const routeUpdatingDocumentState = createRouteFromState(firstArg);
-  routeSet.add(routeUpdatingDocumentState);
-  return routeUpdatingDocumentState;
+  const routeConnectedWithState = createRouteConnectedWithState(firstArg);
+  routeSet.add(routeConnectedWithState);
+  return routeConnectedWithState;
 };
 
-const createRouteFromResourcePattern = (
+const createRouteConnectedWithUrl = (
   resourcePattern,
   { load, canDisplayOldData },
 ) => {
@@ -258,12 +259,13 @@ const createRouteFromResourcePattern = (
   return route;
 };
 // https://github.com/WICG/navigation-api?tab=readme-ov-file#setting-the-current-entrys-state-without-navigating
-const createRouteFromState = ({
+const createRouteConnectedWithState = ({
   match,
   enter,
   leave,
   load,
   name,
+  // store = localStorage, // localStorage, sessionStorage, navigator (will update nnavigation.currentEntry.getState())
   canDisplayOldData,
 }) => {
   const isMatchingSignal = signal(false);
@@ -278,26 +280,29 @@ const createRouteFromState = ({
   const dataSignal = signal(initialData);
   const loadData = load ? ({ signal }) => load({ signal, state }) : undefined;
 
-  const initialState = {};
+  const stateStore = navigatorStore;
+
+  const initialState = stateStore.getReadonlyState();
   let state = initialState;
   const stateSignal = signal(state);
 
-  const routeMatchMethod = ({ state }) => {
-    if (!state) {
-      return false;
-    }
+  const getMatchResult = (state) => {
     const matchResult = match(state);
     if (matchResult === true) {
       return {};
     }
     return matchResult;
   };
-  const enterEffect = ({ state }) => {
+
+  const routeMatchMethod = () => {
+    return getMatchResult(stateStore.getReadonlyState());
+  };
+  const enterEffect = () => {
     batch(() => {
       isMatchingSignal.value = true;
       errorSignal.value = null;
       loadingStateSignal.value = LOADING;
-      stateSignal.value = state;
+      stateSignal.value = stateStore.getReadonlyState();
     });
   };
   const leaveEffect = () => {
@@ -308,9 +313,10 @@ const createRouteFromState = ({
       stateSignal.value = initialState;
     });
   };
-  const shouldReload = ({ targetState }) => {
-    const matchResult = routeMatchMethod({ state });
-    const targetMatchResult = routeMatchMethod({ state: targetState });
+
+  const shouldReload = () => {
+    const matchResult = getMatchResult(stateSignal.peek());
+    const targetMatchResult = getMatchResult(stateStore.getReadonlyState());
     if (compareTwoJsValues(matchResult, targetMatchResult)) {
       return false;
     }
@@ -342,14 +348,13 @@ const createRouteFromState = ({
     reload,
     toString,
     enter: async () => {
+      debugger;
       const isMatching = isMatchingSignal.peek();
       if (isMatching) {
         return;
       }
-      const stateCopy = { ...state };
-      enter(stateCopy);
+      enter(stateStore.getWritableState());
       await goTo(window.location.href, {
-        state: stateCopy,
         routesToEnter: [route],
       });
     },
@@ -358,11 +363,9 @@ const createRouteFromState = ({
       if (!isMatching) {
         return;
       }
-      const stateCopy = { ...state };
-      leave(stateCopy);
-      stateSignal.value = initialState;
+      leave(stateStore.getWritableState());
+      stateSignal.value = stateStore.getReadonlyState();
       await goTo(window.location.href, {
-        state: stateCopy,
         routesToLeave: [route],
       });
     },
@@ -539,8 +542,8 @@ export const applyRouting = async ({
     console.group(`applyRouting on ${routeCandidateSet.size} routes`);
     console.debug(
       `situation at start:
-- target url: ${targetResource}
-- target state: ${targetState ? JSON.stringify(targetState) : "undefined"}
+- url: ${targetResource}
+- state: ${targetState ? JSON.stringify(targetState) : "undefined"}
 - matching routes: ${matchingRouteSet.size === 0 ? "none" : Array.from(matchingRouteSet).join(", ")}
 - meta: isReload: ${isReload}, isReplace ${isReplace}`,
     );
