@@ -6,6 +6,7 @@ export const useOptimisticUIState = (
   name,
   { revertOnFailure } = {},
 ) => {
+  const [navState, navStateSetter] = useNavigationState(name);
   const { pending } = useSPAFormStatus();
   const optimisticStateRef = useRef(frontendMemoryState);
   if (!pending && revertOnFailure) {
@@ -13,7 +14,31 @@ export const useOptimisticUIState = (
   }
   const setOptimisticState = useCallback((value) => {
     optimisticStateRef.current = value;
+    navStateSetter(value);
   }, []);
 
-  return [optimisticStateRef.current, setOptimisticState];
+  return [
+    navState === undefined ? optimisticStateRef.current : navState,
+    setOptimisticState,
+  ];
+};
+
+const none = {};
+const useNavigationState = (name) => {
+  const navStateRef = useRef(none);
+  if (navStateRef.current === none) {
+    const navEntryState = navigation.currentEntry.getState();
+    navStateRef.current = navEntryState ? navEntryState[name] : undefined;
+  }
+  return [
+    navStateRef.current,
+    (value) => {
+      navStateRef.current = value;
+      const currentState = navigation.currentEntry.getState() || {};
+      const newState = { ...currentState, [name]: value };
+      navigation.updateCurrentEntry({
+        state: newState,
+      });
+    },
+  ];
 };

@@ -217,6 +217,7 @@ const applyActionOnFormSubmission = canUseNavigation
       try {
         let actionResult;
         await navigation.navigate(window.location.href, {
+          state: navigation.currentEntry.getState(), // action must preserve the current state of the page
           history: "replace",
           info: {
             method,

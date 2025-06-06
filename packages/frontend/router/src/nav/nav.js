@@ -127,6 +127,7 @@ navigation.addEventListener("navigate", (event) => {
                 await finishedPromise;
               } finally {
                 navigation.navigate(window.location.href, {
+                  state: navigation.currentEntry.getState(),
                   history: "replace",
                 });
               }
@@ -152,7 +153,10 @@ navigation.addEventListener("navigate", (event) => {
 
 export const installNavigation = ({ applyRouting, applyAction }) => {
   navMethods = { applyRouting, applyAction };
-  navigation.navigate(window.location.href, { history: "replace" });
+  navigation.navigate(window.location.href, {
+    state: navigation.currentEntry.getState(),
+    history: "replace",
+  });
 };
 let callEffect = () => {};
 
@@ -196,18 +200,11 @@ const detectBrowserStopButtonClick = (navigateEventSignal, callback) => {
 
 export const goTo = async (
   url,
-  {
-    state = navigation.currentEntry.getState(),
-    replace,
-    routesLoaded,
-    routesToEnter,
-    routesToLeave,
-    onStart,
-  } = {},
+  { state, replace, routesLoaded, routesToEnter, routesToLeave, onStart } = {},
 ) => {
   if (replace) {
     await navigation.navigate(url, {
-      state,
+      state: state || navigation.currentEntry.getState(),
       history: "replace",
       info: { routesLoaded, routesToEnter, routesToLeave, onStart },
     }).finished;
@@ -243,8 +240,12 @@ export const goTo = async (
     return;
   }
   await navigation.navigate(url, {
-    state,
-    info: { routesToEnter, routesToLeave, onStart },
+    state: state || navigation.currentEntry.getState(),
+    info: {
+      routesToEnter,
+      routesToLeave,
+      onStart,
+    },
   }).finished;
 };
 export const stopLoad = () => {
