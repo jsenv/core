@@ -149,13 +149,28 @@ const InputText = forwardRef(
     // autoFocus does not work so we focus in a useLayoutEffect,
     // see https://github.com/preactjs/preact/issues/1255
     useLayoutEffect(() => {
-      if (autoFocus) {
-        const input = innerRef.current;
-        input.focus();
-        if (autoSelect) {
-          input.select();
-        }
+      if (!autoFocus) {
+        return null;
       }
+      const activeElement = document.activeElement;
+      const input = innerRef.current;
+      input.focus();
+      if (autoSelect) {
+        input.select();
+      }
+      return () => {
+        if (
+          document.activeElement === input ||
+          document.activeElement === document.body
+        ) {
+          // if the input is focused when the component is unmounted,
+          // we restore focus to the element that was focused before
+          // the input was focused
+          if (document.body.contains(activeElement)) {
+            activeElement.focus();
+          }
+        }
+      };
     }, [autoFocus]);
 
     useEffect(() => {
