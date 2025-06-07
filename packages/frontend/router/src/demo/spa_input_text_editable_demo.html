@@ -43,7 +43,7 @@
                 action={async () => {}}
                 style="color: blue"
                 value={value}
-                constraints={SINGLE_SPACE_CONSTRAINT}
+                constraints={[SINGLE_SPACE_CONSTRAINT]}
                 onEditEnd={(value) => {
                   setValue(value);
                   stopEditing();

@@ -1,4 +1,7 @@
-import { useInputValidationMessage } from "@jsenv/form";
+import {
+  useInputCustomValidationRef,
+  useInputValidationMessage,
+} from "@jsenv/form";
 import { forwardRef } from "preact/compat";
 import {
   useEffect,
@@ -159,23 +162,13 @@ const InputText = forwardRef(
       }
     }, []);
 
+    const inputCustomValidationRef = useInputCustomValidationRef(innerRef);
     useLayoutEffect(() => {
+      const inputCustomValidation = inputCustomValidationRef.current;
       const cleanupCallbackSet = new Set();
       for (const constraint of constraints) {
-        if (typeof constraint === "function") {
-          const unregister = inputCustomValidation.registerConstraint({
-            name: constraintName,
-            check: (...args) => {
-              const callback = constraintRef.current;
-              return callback(...args);
-            },
-          });
-          cleanupCallbackSet.add(unregister);
-        } else {
-          const unregister =
-            inputCustomValidation.registerConstraint(constraint);
-          cleanupCallbackSet.add(unregister);
-        }
+        const unregister = inputCustomValidation.registerConstraint(constraint);
+        cleanupCallbackSet.add(unregister);
       }
       return () => {
         for (const cleanupCallback of cleanupCallbackSet) {

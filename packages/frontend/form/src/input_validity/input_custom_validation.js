@@ -95,6 +95,12 @@ export const installInputCustomValidation = (input) => {
   constraintSet.add(TYPE_EMAIL_CONSTRAINT);
   register_constraint: {
     validationInterface.registerConstraint = (constraint) => {
+      if (typeof constraint === "function") {
+        constraint = {
+          name: constraint.name || "custom_function",
+          check: constraint,
+        };
+      }
       constraintSet.add(constraint);
       return () => {
         constraintSet.delete(constraint);

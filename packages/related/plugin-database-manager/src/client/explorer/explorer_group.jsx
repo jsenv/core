@@ -2,7 +2,10 @@
  *
  */
 
-import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
+import {
+  createUniqueValueConstraint,
+  SINGLE_SPACE_CONSTRAINT,
+} from "@jsenv/form";
 import {
   Route,
   SPAInputText,
@@ -229,12 +232,11 @@ const ExplorerGroupItem = ({
     }
     otherValueSet.add(itemCandidate[nameKey]);
   }
-  useUniqueConstraint(
-    inputRef,
+
+  const uniqueNameConstraint = createUniqueValueConstraint(
     otherValueSet,
     `"{value}" already exist, please choose another name.`,
   );
-  useInputConstraint(inputRef, SINGLE_SPACE_CONSTRAINT);
 
   return renderItem(item, {
     autoFocus: editableJustEnded,
@@ -253,6 +255,7 @@ const ExplorerGroupItem = ({
         action={renameAction}
         editable={editable}
         stopEditing={stopEditing}
+        constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
       >
         <span
           style={{
@@ -276,12 +279,10 @@ const NewItem = ({ nameKey, useItemList, useCreateItemAction, ...rest }) => {
   for (const item of itemList) {
     valueSet.add(item[nameKey]);
   }
-  useUniqueConstraint(
-    inputRef,
+  const uniqueNameConstraint = createUniqueValueConstraint(
     valueSet,
     `"{value}" already exists. Please choose an other name.`,
   );
-  useInputConstraint(inputRef, SINGLE_SPACE_CONSTRAINT);
 
   return (
     <span className="explorer_group_item_content">
@@ -294,36 +295,11 @@ const NewItem = ({ nameKey, useItemList, useCreateItemAction, ...rest }) => {
         action={action}
         autoFocus
         required
+        constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
         {...rest}
       />
     </span>
   );
-};
-
-const useUniqueConstraint = (
-  inputRef,
-  // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
-  // but this is already nice to help user with what we know
-  // it's also possible that front is unsync with backend, preventing user to choose a value
-  // that is actually free.
-  // But this is unlikely to happen and user could reload the page to be able to choose that name
-  // that suddenly became available
-  existingValueSet,
-  message = `"{value}" already exists. Please choose another value.`,
-) => {
-  useInputConstraint(inputRef, (input) => {
-    const inputValue = input.value;
-    const hasConflict = existingValueSet.has(inputValue);
-    // console.log({
-    //   inputValue,
-    //   names: Array.from(otherNameSet.values()),
-    //   hasConflict,
-    // });
-    if (hasConflict) {
-      return message.replace("{value}", inputValue);
-    }
-    return "";
-  });
 };
 
 const EnterNameIconSvg = ({ color = "currentColor" }) => {
