@@ -25,6 +25,7 @@
           <div style="display: flex; flex-direction: row; gap: 30px">
             <BasicDemo />
             <LoadingDemo />
+            <ErrorDemo />
           </div>
         );
       };
@@ -86,6 +87,37 @@
                 const value = formData.get("test");
                 await new Promise((resolve) => setTimeout(resolve, 1000));
                 setValue(value);
+              }}
+              value={value}
+              constraints={[SINGLE_SPACE_CONSTRAINT]}
+            ></SPAInputTextEditable>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ErrorDemo = () => {
+        const { editable, startEditing, stopEditing } = useEditableController();
+        const [value] = useState("initial value");
+
+        return (
+          <div>
+            <p>
+              <strong>Error</strong>
+              <button
+                onClick={() => {
+                  startEditing();
+                }}
+              >
+                Edit
+              </button>
+            </p>
+            <SPAInputTextEditable
+              editable={editable}
+              onEditEnd={stopEditing}
+              name="test"
+              action={async () => {
+                throw new Error("error example");
               }}
               value={value}
               constraints={[SINGLE_SPACE_CONSTRAINT]}
