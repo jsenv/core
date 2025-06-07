@@ -223,7 +223,6 @@ const ExplorerGroupItem = ({
     useEditableController();
   const itemList = useItemList();
   const renameAction = useRenameItemAction(item);
-  const inputRef = useRef();
 
   const otherValueSet = new Set();
   for (const itemCandidate of itemList) {
@@ -232,7 +231,6 @@ const ExplorerGroupItem = ({
     }
     otherValueSet.add(itemCandidate[nameKey]);
   }
-
   const uniqueNameConstraint = createUniqueValueConstraint(
     otherValueSet,
     `"{value}" already exist, please choose another name.`,
@@ -251,7 +249,6 @@ const ExplorerGroupItem = ({
     },
     children: (
       <SPAInputTextEditable
-        ref={inputRef}
         action={renameAction}
         editable={editable}
         stopEditing={stopEditing}
@@ -273,7 +270,6 @@ const ExplorerGroupItem = ({
 
 const NewItem = ({ nameKey, useItemList, useCreateItemAction, ...rest }) => {
   const action = useCreateItemAction();
-  const inputRef = useRef();
   const itemList = useItemList();
   const valueSet = new Set();
   for (const item of itemList) {
@@ -290,7 +286,6 @@ const NewItem = ({ nameKey, useItemList, useCreateItemAction, ...rest }) => {
         <EnterNameIconSvg />
       </FontSizedSvg>
       <SPAInputText
-        ref={inputRef}
         name={nameKey}
         action={action}
         autoFocus

@@ -50,12 +50,15 @@ export const SPAInputText = forwardRef(
       />
     );
 
+    const submitStartValueRef = useRef();
+
     return (
       <SPAForm
         action={action}
         method={method}
         onSubmitStart={() => {
           removeFormErrorFromInput();
+          submitStartValueRef.current = innerRef.current.value;
           if (onSubmitStart) {
             onSubmitStart();
           }
@@ -69,7 +72,7 @@ export const SPAInputText = forwardRef(
         }}
         onSubmitEnd={() => {
           setNavStateValue(undefined);
-          onSubmitEnd();
+          onSubmitEnd(submitStartValueRef.current);
         }}
       >
         {label ? (

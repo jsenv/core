@@ -33,7 +33,7 @@ export const SPAInputTextEditable = forwardRef(
         <div style={{ display: editable ? "none" : "inline-flex" }}>
           {children || <span>{value}</span>}
         </div>
-        <div style={{ display: editable ? "inline-flex" : "none" }}>
+        {editable && (
           <SPAInputText
             {...rest}
             ref={innerRef}
@@ -46,8 +46,8 @@ export const SPAInputTextEditable = forwardRef(
             onCancel={() => {
               onEditEnd(value);
             }}
-            onSubmitEnd={() => {
-              onEditEnd(innerRef.current.value);
+            onSubmitEnd={(value) => {
+              onEditEnd(value);
             }}
             onBlur={(e) => {
               if (e.target.value === value) {
@@ -55,7 +55,7 @@ export const SPAInputTextEditable = forwardRef(
               }
             }}
           />
-        </div>
+        )}
       </>
     );
   },
