@@ -3,7 +3,13 @@
  */
 
 import { SINGLE_SPACE_CONSTRAINT, useInputConstraint } from "@jsenv/form";
-import { Route, SPAInputText, valueInLocalStorage } from "@jsenv/router";
+import {
+  Route,
+  SPAInputText,
+  SPAInputTextEditable,
+  useEditableController,
+  valueInLocalStorage,
+} from "@jsenv/router";
 import { effect, signal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import {
@@ -208,90 +214,14 @@ const ExplorerGroupItem = ({
 }) => {
   const itemName = item[nameKey];
   const deleteAction = useDeleteItemAction(item);
-
-  const [isRenaming, setIsRenaming] = useState(false);
-  const startRenaming = useCallback(() => {
-    setIsRenaming(true);
-  }, [setIsRenaming]);
-  const stopRenaming = useCallback(() => {
-    setIsRenaming(false);
-  }, [setIsRenaming]);
-
-  const prevIsRenamingRef = useRef(isRenaming);
-  const autoFocus = prevIsRenamingRef.current && !isRenaming;
-  prevIsRenamingRef.current = isRenaming;
-
-  return renderItem(item, {
-    autoFocus,
-    deleteShortcutAction: deleteAction,
-    deleteShortcutConfirmContent: `Are you sure you want to delete "${itemName}"?`,
-    onKeydown: (e) => {
-      if (e.key === "Enter" && !isRenaming) {
-        e.preventDefault();
-        e.stopPropagation();
-        startRenaming();
-      }
-    },
-    children: (
-      <ItemNameOrRenameInput
-        nameKey={nameKey}
-        item={item}
-        useItemList={useItemList}
-        useItemRouteIsActive={useItemRouteIsActive}
-        useRenameItemAction={useRenameItemAction}
-        isRenaming={isRenaming}
-        stopRenaming={stopRenaming}
-      />
-    ),
-  });
-};
-
-const ItemNameOrRenameInput = ({
-  nameKey,
-  item,
-  useItemList,
-  useItemRouteIsActive,
-  useRenameItemAction,
-  isRenaming,
-  stopRenaming,
-}) => {
-  const itemName = item[nameKey];
   const itemRouteIsActive = useItemRouteIsActive(item);
 
-  if (isRenaming) {
-    return (
-      <ItemRenameInput
-        nameKey={nameKey}
-        item={item}
-        useItemList={useItemList}
-        useRenameItemAction={useRenameItemAction}
-        stopRenaming={stopRenaming}
-      />
-    );
-  }
-  return (
-    <span
-      style={{
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        background: itemRouteIsActive ? "lightgrey" : "none",
-      }}
-    >
-      {itemName}
-    </span>
-  );
-};
-const ItemRenameInput = ({
-  nameKey,
-  item,
-  useItemList,
-  useRenameItemAction,
-  stopRenaming,
-}) => {
-  const itemName = item[nameKey];
+  const { editable, startEditing, stopEditing, editableJustEnded } =
+    useEditableController();
   const itemList = useItemList();
   const renameAction = useRenameItemAction(item);
   const inputRef = useRef();
+
   const otherValueSet = new Set();
   for (const itemCandidate of itemList) {
     if (itemCandidate === item) {
@@ -306,30 +236,38 @@ const ItemRenameInput = ({
   );
   useInputConstraint(inputRef, SINGLE_SPACE_CONSTRAINT);
 
-  return (
-    <SPAInputText
-      ref={inputRef}
-      name={nameKey}
-      autoFocus
-      autoSelect
-      required
-      value={itemName}
-      action={renameAction}
-      cancelOnBlurInvalid
-      onCancel={() => {
-        stopRenaming();
-      }}
-      onSubmitEnd={() => {
-        stopRenaming();
-      }}
-      onBlur={(e) => {
-        if (e.target.value === itemName) {
-          stopRenaming();
-        }
-      }}
-    />
-  );
+  return renderItem(item, {
+    autoFocus: editableJustEnded,
+    deleteShortcutAction: deleteAction,
+    deleteShortcutConfirmContent: `Are you sure you want to delete "${itemName}"?`,
+    onKeydown: (e) => {
+      if (e.key === "Enter" && !editable) {
+        e.preventDefault();
+        e.stopPropagation();
+        startEditing();
+      }
+    },
+    children: (
+      <SPAInputTextEditable
+        ref={inputRef}
+        action={renameAction}
+        editable={editable}
+        stopEditing={stopEditing}
+      >
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            background: itemRouteIsActive ? "lightgrey" : "none",
+          }}
+        >
+          {itemName}
+        </span>
+      </SPAInputTextEditable>
+    ),
+  });
 };
+
 const NewItem = ({ nameKey, useItemList, useCreateItemAction, ...rest }) => {
   const action = useCreateItemAction();
   const inputRef = useRef();

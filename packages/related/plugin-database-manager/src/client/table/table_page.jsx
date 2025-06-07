@@ -8,8 +8,6 @@
  * -> on affiche les tables de la base de données courante
  * -> un moyen de modifier la base de données courante "chaispascomment"
  *
- * 1. les tables apparaissent comme enfant des databases?
- *
  * - une icone gear en haut a droite fait apparaitre un menu de réglage dans le header
  * qui permet de renommer la table et modifier ses params genre son owner etc
  *
