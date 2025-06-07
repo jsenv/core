@@ -11,27 +11,46 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { SINGLE_SPACE_CONSTRAINT } from "@jsenv/form";
       import {
+        useEditableController,
         // eslint-disable-next-line no-unused-vars
-        SPAInputText,
+        SPAInputTextEditable,
       } from "@jsenv/router";
+      import { useState } from "preact/hooks";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
+        const { editable, startEditing, stopEditing } = useEditableController();
+        const [value, setValue] = useState("initial value");
+
         return (
           <div style="display: flex; flex-direction: row; gap: 30px">
             <div>
               <p>
-                <strong>Error</strong>
+                <strong>Editable input</strong>
+                <button
+                  onClick={() => {
+                    startEditing();
+                  }}
+                >
+                  Edit
+                </button>
               </p>
-              <SPAInputText
+              <SPAInputTextEditable
+                editable={editable}
                 name="test"
-                action={async () => {
-                  throw new Error("test");
-                }}
-                label="Test"
+                action={async () => {}}
                 style="color: blue"
-              ></SPAInputText>
+                value={value}
+                constraints={SINGLE_SPACE_CONSTRAINT}
+                onEditEnd={(value) => {
+                  setValue(value);
+                  stopEditing();
+                }}
+              >
+                <span>{value}</span>
+              </SPAInputTextEditable>
             </div>
           </div>
         );

@@ -1,5 +1,10 @@
 import { forwardRef } from "preact/compat";
-import { useCallback, useRef, useState } from "preact/hooks";
+import {
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { SPAInputText } from "./spa_input_text.jsx";
 
 export const useEditableController = () => {
@@ -20,6 +25,9 @@ export const useEditableController = () => {
 
 export const SPAInputTextEditable = forwardRef(
   ({ action, children, editable, value, onEditEnd, ...rest }, ref) => {
+    const innerRef = useRef();
+    useImperativeHandle(ref, () => innerRef.current);
+
     return (
       <>
         <div style={{ display: editable ? "none" : "inline-flex" }}>
@@ -28,7 +36,7 @@ export const SPAInputTextEditable = forwardRef(
         <div style={{ display: editable ? "inline-flex" : "none" }}>
           <SPAInputText
             {...rest}
-            ref={ref}
+            ref={innerRef}
             value={value}
             autoFocus
             autoSelect
@@ -36,14 +44,14 @@ export const SPAInputTextEditable = forwardRef(
             action={action}
             cancelOnBlurInvalid
             onCancel={() => {
-              onEditEnd();
+              onEditEnd(value);
             }}
             onSubmitEnd={() => {
-              onEditEnd();
+              onEditEnd(innerRef.current.value);
             }}
             onBlur={(e) => {
               if (e.target.value === value) {
-                onEditEnd();
+                onEditEnd(e.target.value);
               }
             }}
           />

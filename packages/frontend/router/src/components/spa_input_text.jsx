@@ -120,6 +120,7 @@ const InputText = forwardRef(
       name,
       defaultValue = "",
       value,
+      constraints = [],
       cancelOnBlurInvalid,
       onCancel,
       onInput,
@@ -157,6 +158,31 @@ const InputText = forwardRef(
         input.scrollIntoView({ inline: "nearest", block: "nearest" });
       }
     }, []);
+
+    useLayoutEffect(() => {
+      const cleanupCallbackSet = new Set();
+      for (const constraint of constraints) {
+        if (typeof constraint === "function") {
+          const unregister = inputCustomValidation.registerConstraint({
+            name: constraintName,
+            check: (...args) => {
+              const callback = constraintRef.current;
+              return callback(...args);
+            },
+          });
+          cleanupCallbackSet.add(unregister);
+        } else {
+          const unregister =
+            inputCustomValidation.registerConstraint(constraint);
+          cleanupCallbackSet.add(unregister);
+        }
+      }
+      return () => {
+        for (const cleanupCallback of cleanupCallbackSet) {
+          cleanupCallback();
+        }
+      };
+    }, constraints);
 
     return (
       <LoaderBackground pending={pending}>
