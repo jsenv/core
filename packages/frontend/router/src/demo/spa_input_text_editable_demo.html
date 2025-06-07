@@ -26,6 +26,7 @@
             <BasicDemo />
             <LoadingDemo />
             <ErrorDemo />
+            <CustomStyleDemo />
           </div>
         );
       };
@@ -36,7 +37,7 @@
         const [value, setValue] = useState("initial value");
 
         return (
-          <div>
+          <div style="width: 200px;">
             <p>
               <strong>Basic</strong>
               <button
@@ -68,7 +69,7 @@
         const [value, setValue] = useState("initial value");
 
         return (
-          <div>
+          <div style="width: 200px;">
             <p>
               <strong>Loading 1s</strong>
               <button
@@ -101,7 +102,7 @@
         const [value] = useState("initial value");
 
         return (
-          <div>
+          <div style="width: 200px;">
             <p>
               <strong>Error</strong>
               <button
@@ -122,6 +123,39 @@
               value={value}
               constraints={[SINGLE_SPACE_CONSTRAINT]}
             ></SPAInputTextEditable>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CustomStyleDemo = () => {
+        const { editable, startEditing, stopEditing } = useEditableController();
+        const [value, setValue] = useState("initial value");
+
+        return (
+          <div style="width: 200px;">
+            <p>
+              <strong>Custom style</strong>
+              <button
+                onClick={() => {
+                  startEditing();
+                }}
+              >
+                Edit
+              </button>
+            </p>
+            <SPAInputTextEditable
+              editable={editable}
+              onEditEnd={stopEditing}
+              name="test"
+              action={async ({ formData }) => {
+                setValue(formData.get("test"));
+              }}
+              value={value}
+              constraints={[SINGLE_SPACE_CONSTRAINT]}
+            >
+              <strong>{value}</strong>
+            </SPAInputTextEditable>
           </div>
         );
       };
