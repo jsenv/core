@@ -44,14 +44,14 @@ export const SPAInputTextEditable = forwardRef(
             action={action}
             cancelOnBlurInvalid
             onCancel={() => {
-              onEditEnd(value);
+              onEditEnd();
             }}
-            onSubmitEnd={(value) => {
-              onEditEnd(value);
+            onSubmitEnd={() => {
+              onEditEnd();
             }}
             onBlur={(e) => {
               if (e.target.value === value) {
-                onEditEnd(e.target.value);
+                onEditEnd();
               }
             }}
           />
