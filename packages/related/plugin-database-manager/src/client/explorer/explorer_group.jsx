@@ -7,9 +7,9 @@ import {
   SINGLE_SPACE_CONSTRAINT,
 } from "@jsenv/form";
 import {
+  EditableText,
   Route,
   SPAInputText,
-  SPAInputTextEditable,
   useEditableController,
   valueInLocalStorage,
 } from "@jsenv/router";
@@ -219,8 +219,7 @@ const ExplorerGroupItem = ({
   const deleteAction = useDeleteItemAction(item);
   const itemRouteIsActive = useItemRouteIsActive(item);
 
-  const { editable, startEditing, stopEditing, editableJustEnded } =
-    useEditableController();
+  const { editable, startEditing, stopEditing } = useEditableController();
   const itemList = useItemList();
   const renameAction = useRenameItemAction(item);
 
@@ -237,7 +236,6 @@ const ExplorerGroupItem = ({
   );
 
   return renderItem(item, {
-    autoFocus: editableJustEnded,
     deleteShortcutAction: deleteAction,
     deleteShortcutConfirmContent: `Are you sure you want to delete "${itemName}"?`,
     onKeydown: (e) => {
@@ -248,10 +246,11 @@ const ExplorerGroupItem = ({
       }
     },
     children: (
-      <SPAInputTextEditable
+      <EditableText
+        name={nameKey}
         action={renameAction}
         editable={editable}
-        stopEditing={stopEditing}
+        onEditEnd={stopEditing}
         constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
       >
         <span
@@ -263,7 +262,7 @@ const ExplorerGroupItem = ({
         >
           {itemName}
         </span>
-      </SPAInputTextEditable>
+      </EditableText>
     ),
   });
 };

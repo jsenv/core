@@ -139,7 +139,6 @@ export const jsenvPluginDatabaseManager = ({
             FROM
               pg_database
           `;
-          debugger;
 
           const countTables = async (database) => {
             if (database === currentDatname) {

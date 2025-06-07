@@ -30,6 +30,12 @@ export const SPAInputText = forwardRef(
     },
     ref,
   ) => {
+    if (import.meta.dev && !name) {
+      console.warn(
+        "SPAInputText: name is required for the input to work property with <form> submission.",
+      );
+    }
+
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => {
       const input = innerRef.current;
