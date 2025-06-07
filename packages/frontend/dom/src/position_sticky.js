@@ -147,14 +147,6 @@ export const initPositionSticky = (element) => {
     }
   };
 
-  parent_is_relative: {
-    // Ensure that the node will be positioned relatively to the parent node
-    const restoreParentPositionStyle = forceStyles(parentElement, {
-      position: "relative",
-    });
-    cleanupCallbackSet.add(restoreParentPositionStyle);
-  }
-
   element_is_fixed: {
     const restorePositionStyle = forceStyles(element, {
       "position": "fixed",
