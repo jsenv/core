@@ -6,16 +6,16 @@ Route.Details = RouteDetails;
 export { registerAction } from "./src/action/action.js";
 export { useActionStatus } from "./src/action/action_hooks.js";
 export { useCanGoBack, useCanGoForward } from "./src/back_and_forward.js";
+export {
+  EditableText,
+  useEditableController,
+} from "./src/components/editable_text.jsx";
 export { SPADeleteButton } from "./src/components/spa_delete_button.jsx";
 export { SPAButton, SPAForm } from "./src/components/spa_form.jsx";
 export { SPAInputCheckbox } from "./src/components/spa_input_checkbox.jsx";
 export { SPAInputDateAndTime } from "./src/components/spa_input_date_and_time.jsx";
 export { SPAInputInteger } from "./src/components/spa_input_integer.jsx";
 export { SPAInputText } from "./src/components/spa_input_text.jsx";
-export {
-  SPAInputTextEditable,
-  useEditableController,
-} from "./src/components/spa_input_text_editable.jsx";
 export { SPALink } from "./src/components/spa_link.jsx";
 export { useSPAFormStatus } from "./src/components/use_spa_form_status.js";
 export { useDocumentUrl } from "./src/document_routing.js";

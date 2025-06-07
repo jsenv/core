@@ -23,7 +23,7 @@ export const useEditableController = () => {
   return { editable, startEditing, stopEditing, editableJustEnded };
 };
 
-export const SPAInputTextEditable = forwardRef(
+export const EditableText = forwardRef(
   ({ action, children, editable, value, onEditEnd, ...rest }, ref) => {
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
