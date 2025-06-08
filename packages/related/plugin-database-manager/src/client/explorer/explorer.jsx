@@ -10,7 +10,7 @@ import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_signals.js";
 import "./explorer.css" with { type: "css" };
 import {
-  ExplorerDatabases,
+  // ExplorerDatabases,
   databaseExplorerGroupController,
 } from "./explorer_databases.jsx";
 import {
@@ -18,7 +18,7 @@ import {
   rolesExplorerGroupController,
 } from "./explorer_roles.jsx";
 import {
-  ExplorerTables,
+  // ExplorerTables,
   tablesExplorerGroupController,
 } from "./explorer_tables.jsx";
 
@@ -82,12 +82,12 @@ const ExplorerBody = () => {
         }
       }}
     >
-      <ExplorerTables onOpen={onOpen} onClose={onClose} />
+      {/* <ExplorerTables onOpen={onOpen} onClose={onClose} />
       <ExplorerDatabases
         onOpen={onOpen}
         onClose={onClose}
         resizable={resizable}
-      />
+      /> */}
       <ExplorerRoles onOpen={onOpen} onClose={onClose} resizable={resizable} />
     </div>
   );
