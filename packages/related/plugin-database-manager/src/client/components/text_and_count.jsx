@@ -14,7 +14,7 @@ export const TextAndCount = ({ text, count }) => {
   return (
     <span className="text_and_count">
       <span className="label">{text}</span>
-      <span className="count">({count})</span>
+      {count > 0 && <span className="count">({count})</span>}
     </span>
   );
 };

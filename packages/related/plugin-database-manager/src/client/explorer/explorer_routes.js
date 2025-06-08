@@ -94,3 +94,31 @@ export const EXPLORER_ROLES_ROUTE = registerRoute({
   },
   name: "roles_explorer_details",
 });
+
+const [
+  readOwnersDetailsOpened,
+  storeOwnersDetailsOpened,
+  eraseOwnsersDetailsOpened,
+] = valueInLocalStorage("explorer_owners_opened", {
+  type: "boolean",
+});
+export const EXPLORER_OWNERS_ROUTE = registerRoute({
+  match: () => readOwnersDetailsOpened,
+  enter: () => {
+    storeOwnersDetailsOpened(true);
+  },
+  leave: () => {
+    eraseOwnsersDetailsOpened();
+  },
+  load: async () => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/explorer/owners`,
+    );
+    const { data } = await response.json();
+    const owners = data;
+    for (const role of owners) {
+      roleStore.upsert(role);
+    }
+  },
+  name: "owners_explorer_details",
+});

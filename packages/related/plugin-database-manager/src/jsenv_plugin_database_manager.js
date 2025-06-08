@@ -251,6 +251,53 @@ export const jsenvPluginDatabaseManager = ({
           });
         },
       },
+      {
+        endpoint: `GET ${pathname}api/explorer/owners`,
+        description:
+          "Get info about role owning objects. Meant to build a navbar.",
+        declarationSource: import.meta.url,
+        fetch: async () => {
+          const owners = await sql`
+            SELECT
+              pg_roles.*,
+              COALESCE(table_count_result.table_count, 0) AS table_count,
+              COALESCE(database_count_result.database_count, 0) AS database_count
+            FROM
+              pg_roles
+              LEFT JOIN (
+                SELECT
+                  tableowner,
+                  COUNT(*) AS table_count
+                FROM
+                  pg_tables
+                WHERE
+                  schemaname NOT IN ('pg_catalog', 'information_schema')
+                GROUP BY
+                  tableowner
+              ) table_count_result ON pg_roles.rolname = table_count_result.tableowner
+              LEFT JOIN (
+                SELECT
+                  pg_roles.rolname AS database_owner,
+                  COUNT(*) AS database_count
+                FROM
+                  pg_database
+                  JOIN pg_roles ON pg_roles.oid = pg_database.datdba
+                GROUP BY
+                  pg_roles.rolname
+              ) database_count_result ON pg_roles.rolname = database_count_result.database_owner
+          `;
+          for (const owner of owners) {
+            owner.table_count = parseInt(owner.table_count) || 0;
+            owner.database_count = parseInt(owner.database_count) || 0;
+            owner.object_count = owner.table_count + owner.database_count;
+          }
+
+          return Response.json({
+            data: owners,
+            meta: {},
+          });
+        },
+      },
       ...createRESTRoutes(`${pathname}api/tables`, {
         GET: async (tablename) => {
           const results = await sql`

@@ -9,12 +9,10 @@ import {
   PUT_ROLE_ACTION,
 } from "../../role/role_routes.js";
 import { useRoleCount, useRoleList } from "../../role/role_signals.js";
-import { ExplorerDetails } from "../explorer_details.jsx";
 import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../explorer_group.jsx";
-import { ExplorerItemList } from "../explorer_item_list.jsx";
 import { EXPLORER_ROLES_ROUTE } from "../explorer_routes.js";
 
 export const rolesExplorerGroupController =
@@ -34,64 +32,9 @@ export const ExplorerRoles = (props) => {
       labelChildren={<TextAndCount text={"ROLES"} count={roleCount} />}
       createNewButtonChildren={<UserWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
-        <ExplorerDetails
-          id={`role_details_${role.oid}`}
-          item={role}
-          label={children}
-          {...props}
-        >
-          <ExplorerItemList
-            idKey="id"
-            nameKey="name"
-            renderItem={(subitem) => {
-              if (subitem.id === "tables") {
-                return (
-                  <ExplorerDetails
-                    label={
-                      <TextAndCount text="tables" count={role.table_count} />
-                    }
-                  >
-                    Coucou
-                  </ExplorerDetails>
-                );
-              }
-              if (subitem.id === "databases") {
-                return (
-                  <ExplorerDetails
-                    label={
-                      <TextAndCount
-                        text="databases"
-                        count={role.database_count}
-                      />
-                    }
-                  >
-                    Coucou
-                  </ExplorerDetails>
-                );
-              }
-              // need a link to the details role
-              return <RoleLink role={role}>{role.rolname}</RoleLink>;
-            }}
-          >
-            {[
-              {
-                id: "databases",
-                name: "databases",
-                item: role,
-              },
-              {
-                id: "tables",
-                name: `tables`,
-                item: role,
-              },
-              {
-                id: "props",
-                name: `props`,
-                item: role,
-              },
-            ]}
-          </ExplorerItemList>
-        </ExplorerDetails>
+        <RoleLink role={role} {...props}>
+          {children}
+        </RoleLink>
       )}
       useItemList={useRoleList}
       useItemRouteIsActive={(role) =>

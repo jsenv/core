@@ -18,6 +18,10 @@ import {
   tablesExplorerGroupController,
 } from "./explorer_tables.jsx";
 import {
+  ExplorerOwners,
+  ownersExplorerGroupController,
+} from "./owners/explorer_owners.jsx";
+import {
   ExplorerRoles,
   rolesExplorerGroupController,
 } from "./roles/explorer_roles.jsx";
@@ -65,6 +69,9 @@ const ExplorerBody = () => {
         if (element.id === rolesExplorerGroupController.id) {
           rolesExplorerGroupController.setHeightSetting(requestedHeight);
         }
+        if (element.id === ownersExplorerGroupController.id) {
+          ownersExplorerGroupController.setHeightSetting(requestedHeight);
+        }
       },
     });
     return flexDetailsSet.cleanup;
@@ -88,7 +95,8 @@ const ExplorerBody = () => {
         onClose={onClose}
         resizable={resizable}
       /> */}
-      <ExplorerRoles onOpen={onOpen} onClose={onClose} resizable={resizable} />
+      <ExplorerRoles onOpen={onOpen} onClose={onClose} />
+      <ExplorerOwners onOpen={onOpen} onClose={onClose} resizable={resizable} />
     </div>
   );
 };
