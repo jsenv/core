@@ -13,6 +13,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  padding-left: 6px;
 }
 .explorer_head h2 {
   margin-left: 24px;

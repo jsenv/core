@@ -66,3 +66,4 @@ export const setCurrentDatabase = (database) => {
     currentDatabaseIdSignal.value = null;
   }
 };
+setCurrentDatabase(window.DB_MANAGER_CONFIG.currentDatabase);

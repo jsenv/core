@@ -6,6 +6,8 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { FontSizedSvg } from "../components/font_sized_svg.jsx";
+import { DatabaseSvg } from "../database/database_icons.jsx";
+import { useCurrentDatabase } from "../database/database_signals.js";
 import {
   ExplorerDatabases,
   databaseExplorerGroupController,
@@ -28,16 +30,24 @@ import "./explorer.css" with { type: "css" };
 
 export const Explorer = () => {
   const role = useCurrentRole();
-  const Icon = pickRoleIcon(role);
+  const database = useCurrentDatabase();
+  const RoleIcon = pickRoleIcon(role);
 
   return (
     <nav className="explorer">
       <div className="explorer_head">
         <FontSizedSvg>
-          <Icon />
+          <RoleIcon />
         </FontSizedSvg>
-        <select style="margin-top: 10px; margin-bottom: 10px; margin-left: 10px;">
+        <select style="margin-top: 10px; margin-bottom: 10px; margin-left: 5px;">
           <option selected>{role.rolname}</option>
+        </select>
+        <span style="width: 10px"></span>
+        <FontSizedSvg>
+          <DatabaseSvg />
+        </FontSizedSvg>
+        <select style="margin-top: 10px; margin-bottom: 10px; margin-left: 5px;">
+          <option selected>{database.datname}</option>
         </select>
       </div>
       <ExplorerBody />

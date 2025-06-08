@@ -61,15 +61,24 @@ export const jsenvPluginDatabaseManager = ({
           WHERE
             rolname = ${currentRoleName}
         `;
+
+        const [currentDatabase] = await sql`
+          SELECT
+            *
+          FROM
+            pg_database
+          WHERE
+            datname = current_database()
+        `;
+
         return {
           contentInjections: {
             __DB_MANAGER_CONFIG__: {
               pathname,
               apiUrl: new URL(`${pathname}api`, urlInfo.context.request.origin)
                 .href,
-              me: {
-                role: currentRole,
-              },
+              currentRole,
+              currentDatabase,
             },
           },
         };
