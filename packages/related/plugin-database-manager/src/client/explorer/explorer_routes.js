@@ -87,8 +87,9 @@ export const EXPLORER_ROLES_ROUTE = registerRoute({
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/explorer/roles`,
     );
-    const { currentRole, roles } = await response.json();
-    setCurrentRole(currentRole);
+    const { data, meta } = await response.json();
+    const roles = data;
+    setCurrentRole(meta.currentRole);
     roleStore.upsert(roles);
   },
   name: "roles_explorer_details",

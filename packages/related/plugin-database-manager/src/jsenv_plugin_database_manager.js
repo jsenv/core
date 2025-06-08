@@ -215,13 +215,28 @@ export const jsenvPluginDatabaseManager = ({
           `;
           const roles = await sql`
             SELECT
-              *
+              pg_roles.*,
+              COALESCE(result_set.table_count, 0) AS table_count
             FROM
               pg_roles
+              LEFT JOIN (
+                SELECT
+                  tableowner,
+                  COUNT(*) AS table_count
+                FROM
+                  pg_tables
+                WHERE
+                  schemaname NOT IN ('pg_catalog', 'information_schema')
+                GROUP BY
+                  tableowner
+              ) result_set ON pg_roles.rolname = result_set.tableowner
           `;
+
           return Response.json({
-            currentRole,
-            roles,
+            data: roles,
+            meta: {
+              currentRole,
+            },
           });
         },
       },
