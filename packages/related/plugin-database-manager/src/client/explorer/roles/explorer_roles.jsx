@@ -30,7 +30,7 @@ export const ExplorerRoles = (props) => {
       idKey="oid"
       nameKey="rolname"
       labelChildren={<TextAndCount text={"ROLES"} count={roleCount} />}
-      createNewButtonChildren={<UserWithPlusSvg />}
+      renderNewButtonChildren={() => <UserWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
         <RoleLink role={role} {...props}>
           {children}

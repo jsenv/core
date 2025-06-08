@@ -35,7 +35,7 @@ export const ExplorerTables = (props) => {
           <span style="color: rgba(28, 43, 52, 0.4)">({tableCount})</span>
         </span>
       }
-      createNewButtonChildren={<TableWithPlusSvg />}
+      renderNewButtonChildren={() => <TableWithPlusSvg />}
       renderItem={useCallback(
         (item, props) => (
           <TableLink key={item.oid} table={item} {...props} />

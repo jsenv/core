@@ -76,7 +76,7 @@ const [
   type: "boolean",
 });
 export const EXPLORER_ROLES_ROUTE = registerRoute({
-  match: () => readRolesDetailsOpened,
+  match: () => readRolesDetailsOpened(),
   enter: () => {
     storeRolesDetailsOpened(true);
   },

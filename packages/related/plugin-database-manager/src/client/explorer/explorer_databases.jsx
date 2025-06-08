@@ -38,7 +38,7 @@ export const ExplorerDatabases = (props) => {
           <span style="color: rgba(28, 43, 52, 0.4)">({databaseCount})</span>
         </span>
       }
-      createNewButtonChildren={<DatabaseWithPlusSvg />}
+      renderNewButtonChildren={() => <DatabaseWithPlusSvg />}
       renderItem={useCallback(
         (item, props) => (
           <DatabaseLink key={item.oid} database={item} {...props} />

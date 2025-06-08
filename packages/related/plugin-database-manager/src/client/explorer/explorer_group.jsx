@@ -46,8 +46,8 @@ export const ExplorerGroup = forwardRef(
       nameKey,
       children,
       labelChildren,
+      renderNewButtonChildren,
       renderItem,
-      createNewButtonChildren,
       useItemList,
       useItemRouteIsActive,
       useRenameItemAction,
@@ -120,22 +120,26 @@ export const ExplorerGroup = forwardRef(
           )}
         >
           {labelChildren}
-          <span style="display: flex; flex: 1"></span>
-          <button
-            className="summary_action_icon"
-            style="width: 22px; height: 22px; cursor: pointer;"
-            onMouseDown={(e) => {
-              // ensure when input is focused it stays focused
-              // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
-              e.preventDefault();
-            }}
-            onClick={(e) => {
-              e.preventDefault();
-              startCreatingNew();
-            }}
-          >
-            {createNewButtonChildren}
-          </button>
+          {renderNewButtonChildren ? (
+            <>
+              <span style="display: flex; flex: 1"></span>
+              <button
+                className="summary_action_icon"
+                style="width: 22px; height: 22px; cursor: pointer;"
+                onMouseDown={(e) => {
+                  // ensure when input is focused it stays focused
+                  // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
+                  e.preventDefault();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  startCreatingNew();
+                }}
+              >
+                {renderNewButtonChildren()}
+              </button>
+            </>
+          ) : null}
         </Route.Details>
       </>
     );
