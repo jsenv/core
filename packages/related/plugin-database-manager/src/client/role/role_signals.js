@@ -62,3 +62,4 @@ export const setCurrentRole = (role) => {
     currentRoleIdSignal.value = null;
   }
 };
+setCurrentRole(window.DB_MANAGER_CONFIG.me.role);

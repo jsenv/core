@@ -225,20 +225,6 @@ export const jsenvPluginDatabaseManager = ({
           });
         },
       },
-      {
-        endpoint: `GET ${pathname}api/roles/me`,
-        fetch: () => {
-          // I want to know who I am
-          // but I guess i'll keep this as a meta information embeeded in the HTML
-        },
-      },
-      {
-        endpoint: `POST ${pathname}api/roles/:id/login`,
-        fetch: () => {
-          const token = sign({ role_oid: "" }, JWT_SECRET);
-          return Response.json({ token });
-        },
-      },
       ...createRESTRoutes(`${pathname}api/tables`, {
         GET: async (tablename) => {
           const results = await sql`
