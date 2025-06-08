@@ -1,22 +1,19 @@
 import { useRouteIsMatching } from "@jsenv/router";
 import { useCallback } from "preact/hooks";
-import { DatabaseWithPlusSvg } from "../database/database_icons.jsx";
-import { DatabaseLink } from "../database/database_link.jsx";
+import {
+  createExplorerGroupController,
+  ExplorerGroup,
+} from "../explorer/explorer_group.jsx";
+import { EXPLORER_DATABASES_ROUTE } from "../explorer/explorer_routes.js";
+import { DatabaseWithPlusSvg } from "./database_icons.jsx";
+import { DatabaseLink } from "./database_link.jsx";
 import {
   DELETE_DATABASE_ACTION,
   GET_DATABASE_ROUTE,
   POST_DATABASE_ACTION,
   PUT_DATABASE_ACTION,
-} from "../database/database_routes.js";
-import {
-  useDatabaseCount,
-  useDatabaseList,
-} from "../database/database_signals.js";
-import {
-  createExplorerGroupController,
-  ExplorerGroup,
-} from "./explorer_group.jsx";
-import { EXPLORER_DATABASES_ROUTE } from "./explorer_routes.js";
+} from "./database_routes.js";
+import { useDatabaseCount, useDatabaseList } from "./database_signals.js";
 
 export const databaseExplorerGroupController =
   createExplorerGroupController("databases");

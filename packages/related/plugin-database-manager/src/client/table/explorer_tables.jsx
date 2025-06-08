@@ -1,19 +1,19 @@
 import { useRouteIsMatching } from "@jsenv/router";
-import { useCallback } from "preact/hooks";
-import { TableWithPlusSvg } from "../table/table_icons.jsx";
-import { TableLink } from "../table/table_link.jsx";
+import { TextAndCount } from "../components/text_and_count.jsx";
+import {
+  createExplorerGroupController,
+  ExplorerGroup,
+} from "../explorer/explorer_group.jsx";
+import { TABLE_DETAILS_ROUTE } from "../explorer/explorer_routes.js";
+import { TableWithPlusSvg } from "./table_icons.jsx";
+import { TableLink } from "./table_link.jsx";
 import {
   DELETE_TABLE_ACTION,
   GET_TABLE_ROUTE,
   POST_TABLE_ACTION,
   PUT_TABLE_ACTION,
-} from "../table/table_routes.js";
-import { useTableCount, useTableList } from "../table/table_signals.js";
-import {
-  createExplorerGroupController,
-  ExplorerGroup,
-} from "./explorer_group.jsx";
-import { TABLE_DETAILS_ROUTE } from "./explorer_routes.js";
+} from "./table_routes.js";
+import { useTableCount, useTableList } from "./table_signals.js";
 
 export const tablesExplorerGroupController =
   createExplorerGroupController("tables");
@@ -29,19 +29,9 @@ export const ExplorerTables = (props) => {
       detailsRoute={TABLE_DETAILS_ROUTE}
       idKey="oid"
       nameKey="tablename"
-      labelChildren={
-        <span style="display: flex; align-items: center; gap: 3px">
-          TABLES
-          <span style="color: rgba(28, 43, 52, 0.4)">({tableCount})</span>
-        </span>
-      }
+      labelChildren={<TextAndCount text={"TABLES"} count={tableCount} />}
       renderNewButtonChildren={() => <TableWithPlusSvg />}
-      renderItem={useCallback(
-        (item, props) => (
-          <TableLink key={item.oid} table={item} {...props} />
-        ),
-        [],
-      )}
+      renderItem={(item, props) => <TableLink table={item} {...props} />}
       useItemList={useTableList}
       useItemRouteIsActive={(table) =>
         useRouteIsMatching(GET_TABLE_ROUTE, {

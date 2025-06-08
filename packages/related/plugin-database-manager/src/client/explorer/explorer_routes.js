@@ -103,7 +103,7 @@ const [
   type: "boolean",
 });
 export const EXPLORER_OWNERS_ROUTE = registerRoute({
-  match: () => readOwnersDetailsOpened,
+  match: () => readOwnersDetailsOpened(),
   enter: () => {
     storeOwnersDetailsOpened(true);
   },

@@ -1,12 +1,12 @@
-import { TextAndCount } from "../../components/text_and_count.jsx";
-import { useRoleList } from "../../role/role_signals.js";
-import { ExplorerDetails } from "../explorer_details.jsx";
+import { TextAndCount } from "../components/text_and_count.jsx";
+import { ExplorerDetails } from "../explorer/explorer_details.jsx";
 import {
   createExplorerGroupController,
   ExplorerGroup,
-} from "../explorer_group.jsx";
-import { ExplorerItemList } from "../explorer_item_list.jsx";
-import { EXPLORER_OWNERS_ROUTE } from "../explorer_routes.js";
+} from "../explorer/explorer_group.jsx";
+import { ExplorerItemList } from "../explorer/explorer_item_list.jsx";
+import { EXPLORER_OWNERS_ROUTE } from "../explorer/explorer_routes.js";
+import { useRoleList } from "./role_signals.js";
 
 export const ownersExplorerGroupController =
   createExplorerGroupController("owners");

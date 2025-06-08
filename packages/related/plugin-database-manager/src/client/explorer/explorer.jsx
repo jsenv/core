@@ -6,25 +6,25 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { FontSizedSvg } from "../components/font_sized_svg.jsx";
-import { pickRoleIcon } from "../role/role_icons.jsx";
-import { useCurrentRole } from "../role/role_signals.js";
-import "./explorer.css" with { type: "css" };
 import {
   ExplorerDatabases,
   databaseExplorerGroupController,
-} from "./explorer_databases.jsx";
-import {
-  ExplorerTables,
-  tablesExplorerGroupController,
-} from "./explorer_tables.jsx";
+} from "../database/explorer_databases.jsx";
 import {
   ExplorerOwners,
   ownersExplorerGroupController,
-} from "./owners/explorer_owners.jsx";
+} from "../role/explorer_owners.jsx";
 import {
   ExplorerRoles,
   rolesExplorerGroupController,
-} from "./roles/explorer_roles.jsx";
+} from "../role/explorer_roles.jsx";
+import { pickRoleIcon } from "../role/role_icons.jsx";
+import { useCurrentRole } from "../role/role_signals.js";
+import {
+  ExplorerTables,
+  tablesExplorerGroupController,
+} from "../table/explorer_tables.jsx";
+import "./explorer.css" with { type: "css" };
 
 export const Explorer = () => {
   const role = useCurrentRole();

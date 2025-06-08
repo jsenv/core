@@ -1,19 +1,19 @@
 import { useRouteIsMatching } from "@jsenv/router";
-import { TextAndCount } from "../../components/text_and_count.jsx";
-import { UserWithPlusSvg } from "../../role/role_icons.jsx";
-import { RoleLink } from "../../role/role_link.jsx";
+import { TextAndCount } from "../components/text_and_count.jsx";
+import {
+  createExplorerGroupController,
+  ExplorerGroup,
+} from "../explorer/explorer_group.jsx";
+import { EXPLORER_ROLES_ROUTE } from "../explorer/explorer_routes.js";
+import { UserWithPlusSvg } from "./role_icons.jsx";
+import { RoleLink } from "./role_link.jsx";
 import {
   DELETE_ROLE_ACTION,
   GET_ROLE_ROUTE,
   POST_ROLE_ACTION,
   PUT_ROLE_ACTION,
-} from "../../role/role_routes.js";
-import { useRoleCount, useRoleList } from "../../role/role_signals.js";
-import {
-  createExplorerGroupController,
-  ExplorerGroup,
-} from "../explorer_group.jsx";
-import { EXPLORER_ROLES_ROUTE } from "../explorer_routes.js";
+} from "./role_routes.js";
+import { useRoleCount, useRoleList } from "./role_signals.js";
 
 export const rolesExplorerGroupController =
   createExplorerGroupController("roles");
