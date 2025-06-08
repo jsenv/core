@@ -14,18 +14,62 @@ export const ExplorerItem = ({
   item,
   renderItem,
   useItemList,
-  useItemRouteIsActive,
-  useRenameItemAction,
-  useDeleteItemAction,
+  useItemRouteIsActive = () => false,
+  useRenameItemAction = () => undefined,
+  useDeleteItemAction = () => undefined,
 }) => {
   const itemName = item[nameKey];
   const deleteAction = useDeleteItemAction(item);
   const itemRouteIsActive = useItemRouteIsActive(item);
 
-  const { editable, startEditing, stopEditing } = useEditableController();
-  const itemList = useItemList();
   const renameAction = useRenameItemAction(item);
+  const { editable, startEditing, stopEditing } = useEditableController();
 
+  return renderItem(item, {
+    deleteShortcutAction: deleteAction,
+    deleteShortcutConfirmContent: `Are you sure you want to delete "${itemName}"?`,
+    onKeydown: (e) => {
+      if (e.key === "Enter" && !editable && renameAction) {
+        e.preventDefault();
+        e.stopPropagation();
+        startEditing();
+      }
+    },
+    children: renameAction ? (
+      <RenameInputOrName
+        nameKey={nameKey}
+        item={item}
+        itemRouteIsActive={itemRouteIsActive}
+        useItemList={useItemList}
+        renameAction={renameAction}
+        editable={editable}
+        stopEditing={stopEditing}
+      />
+    ) : (
+      <span
+        style={{
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          background: itemRouteIsActive ? "lightgrey" : "none",
+        }}
+      >
+        {itemName}
+      </span>
+    ),
+  });
+};
+
+const RenameInputOrName = ({
+  nameKey,
+  item,
+  useItemList,
+  itemRouteIsActive,
+  renameAction,
+  editable,
+  stopEditing,
+}) => {
+  const itemName = item[nameKey];
+  const itemList = useItemList();
   const otherValueSet = new Set();
   for (const itemCandidate of itemList) {
     if (itemCandidate === item) {
@@ -38,36 +82,25 @@ export const ExplorerItem = ({
     `"{value}" already exist, please choose another name.`,
   );
 
-  return renderItem(item, {
-    deleteShortcutAction: deleteAction,
-    deleteShortcutConfirmContent: `Are you sure you want to delete "${itemName}"?`,
-    onKeydown: (e) => {
-      if (e.key === "Enter" && !editable) {
-        e.preventDefault();
-        e.stopPropagation();
-        startEditing();
-      }
-    },
-    children: (
-      <EditableText
-        name={nameKey}
-        action={renameAction}
-        editable={editable}
-        onEditEnd={stopEditing}
-        constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
+  return (
+    <EditableText
+      name={nameKey}
+      action={renameAction}
+      editable={editable}
+      onEditEnd={stopEditing}
+      constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
+    >
+      <span
+        style={{
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          background: itemRouteIsActive ? "lightgrey" : "none",
+        }}
       >
-        <span
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            background: itemRouteIsActive ? "lightgrey" : "none",
-          }}
-        >
-          {itemName}
-        </span>
-      </EditableText>
-    ),
-  });
+        {itemName}
+      </span>
+    </EditableText>
+  );
 };
 
 export const ExplorerNewItem = ({

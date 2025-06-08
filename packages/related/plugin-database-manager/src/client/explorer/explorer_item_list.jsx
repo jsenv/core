@@ -39,7 +39,6 @@ export const ExplorerItemList = ({
             useCreateItemAction={useCreateItemAction}
             cancelOnBlurInvalid
             onCancel={() => {
-              // si on a rien rentré on le cré pas, sinon oui on le cré
               stopCreatingNew();
             }}
             onSubmitEnd={() => {

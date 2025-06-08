@@ -1,5 +1,6 @@
 import { SummaryMarker } from "@jsenv/router";
 import { useEffect, useRef, useState } from "preact/hooks";
+import { ExplorerItemList } from "./explorer_item_list.jsx";
 
 import.meta.css = /* css */ `
   .explorer_details {
@@ -66,6 +67,15 @@ export const ExplorerDetails = ({
           <span className="summary_label">{children}</span>
         </div>
       </summary>
+      <ExplorerItemList>
+        {[
+          {
+            id: "role-details",
+            name: "Role Details",
+            content: "Details about the role will be displayed here.",
+          },
+        ]}
+      </ExplorerItemList>
       {/* Role details content goes here */}
     </details>
   );
