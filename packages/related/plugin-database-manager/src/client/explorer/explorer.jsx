@@ -5,6 +5,9 @@
 
 import { initFlexDetailsSet } from "@jsenv/dom";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { FontSizedSvg } from "../components/font_sized_svg.jsx";
+import { pickRoleIcon } from "../role/role_icons.jsx";
+import { useCurrentRole } from "../role/role_signals.js";
 import "./explorer.css" with { type: "css" };
 import {
   ExplorerDatabases,
@@ -20,10 +23,18 @@ import {
 } from "./explorer_tables.jsx";
 
 export const Explorer = () => {
+  const role = useCurrentRole();
+  const Icon = pickRoleIcon(role);
+
   return (
     <nav className="explorer">
       <div className="explorer_head">
-        <h2>Explorer</h2>
+        <FontSizedSvg>
+          <Icon />
+        </FontSizedSvg>
+        <select style="margin-top: 10px; margin-bottom: 10px; margin-left: 10px;">
+          <option selected>postgres</option>
+        </select>
       </div>
       <ExplorerBody />
       <div className="explorer_foot"></div>

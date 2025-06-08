@@ -41,17 +41,35 @@ export const jsenvPluginDatabaseManager = ({
       ).href;
     },
     transformUrlContent: {
-      html: (urlInfo) => {
+      html: async (urlInfo) => {
         const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
         if (urlWithoutSearch !== String(databaseManagerHtmlFileUrl)) {
           return null;
         }
+
+        // we might want to use any available cookie used to auth
+        const currentRoleResult = await sql`
+          SELECT
+            current_user
+        `;
+        const currentRoleName = currentRoleResult[0].current_user;
+        const [currentRole] = await sql`
+          SELECT
+            *
+          FROM
+            pg_roles
+          WHERE
+            rolname = ${currentRoleName}
+        `;
         return {
           contentInjections: {
             __DB_MANAGER_CONFIG__: {
               pathname,
               apiUrl: new URL(`${pathname}api`, urlInfo.context.request.origin)
                 .href,
+              me: {
+                role: currentRole,
+              },
             },
           },
         };
@@ -205,6 +223,20 @@ export const jsenvPluginDatabaseManager = ({
             currentRole,
             roles,
           });
+        },
+      },
+      {
+        endpoint: `GET ${pathname}api/roles/me`,
+        fetch: () => {
+          // I want to know who I am
+          // but I guess i'll keep this as a meta information embeeded in the HTML
+        },
+      },
+      {
+        endpoint: `POST ${pathname}api/roles/:id/login`,
+        fetch: () => {
+          const token = sign({ role_oid: "" }, JWT_SECRET);
+          return Response.json({ token });
         },
       },
       ...createRESTRoutes(`${pathname}api/tables`, {
@@ -711,8 +743,17 @@ export const jsenvPluginDatabaseManager = ({
   };
 };
 
-const createRESTRoutes = (resource, { GET, POST, PUT, DELETE }) => {
+const createRESTRoutes = (resource, { LIST, GET, POST, PUT, DELETE }) => {
   const routes = [];
+  if (LIST) {
+    const listRoute = {
+      // TODO:
+      fetch: () => {
+        // TODO: read request filters params and forward it to the GET function to decide
+      },
+    };
+    routes.push(listRoute);
+  }
   if (GET) {
     const getRoute = {
       endpoint: `GET ${resource}/:id`,

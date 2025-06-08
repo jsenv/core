@@ -37,7 +37,8 @@
     "@jsenv/form": "0.0.1",
     "@tanstack/table-core": "8.21.3",
     "@jsenv/sigi": "0.1.1",
-    "@jsenv/dom": "0.0.1"
+    "@jsenv/dom": "0.0.1",
+    "jsonwebtoken": "9.0.2"
   },
   "devDependencies": {
     "preact": "10.26.5",
