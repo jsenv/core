@@ -8,7 +8,6 @@ import { databaseStore } from "../database/database_store.js";
 import { setCurrentRole, setRoleCount } from "../role/role_signals.js";
 import { roleStore } from "../role/role_store.js";
 import { setTableCount } from "../table/table_signals.js";
-import { tableStore } from "../table/table_store.js";
 
 effect(async () => {
   const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/explorer`);
@@ -16,31 +15,6 @@ effect(async () => {
   setTableCount(tableCount);
   setDatabaseCount(databaseCount);
   setRoleCount(roleCount);
-});
-
-const [readTableDetailsOpened, storeTableDetailsOpened] = valueInLocalStorage(
-  "table_details_opened",
-  {
-    type: "boolean",
-    default: true,
-  },
-);
-export const TABLE_DETAILS_ROUTE = registerRoute({
-  match: () => readTableDetailsOpened(),
-  enter: () => {
-    storeDatabaseDetailsOpened(true);
-  },
-  leave: () => {
-    storeTableDetailsOpened(false);
-  },
-  load: async () => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/explorer/tables`,
-    );
-    const { tables } = await response.json();
-    tableStore.upsert(tables);
-  },
-  name: "table_explorer_details",
 });
 
 const [readDatabaseDetailsOpened, storeDatabaseDetailsOpened] =

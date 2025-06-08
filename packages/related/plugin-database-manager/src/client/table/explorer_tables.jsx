@@ -4,7 +4,7 @@ import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../explorer/explorer_group.jsx";
-import { TABLE_DETAILS_ROUTE } from "../explorer/explorer_routes.js";
+import { TABLE_DETAILS_ROUTE } from "./explorer_table_routes.js";
 import { TableWithPlusSvg } from "./table_icons.jsx";
 import { TableLink } from "./table_link.jsx";
 import {
