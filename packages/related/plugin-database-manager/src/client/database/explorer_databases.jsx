@@ -1,5 +1,5 @@
 import { useRouteIsMatching } from "@jsenv/router";
-import { useCallback } from "preact/hooks";
+import { TextAndCount } from "../components/text_and_count.jsx";
 import {
   createExplorerGroupController,
   ExplorerGroup,
@@ -29,18 +29,10 @@ export const ExplorerDatabases = (props) => {
       detailsRoute={EXPLORER_DATABASES_ROUTE}
       idKey="oid"
       nameKey="datname"
-      labelChildren={
-        <span style="display: flex; align-items: center; gap: 3px">
-          DATABASES
-          <span style="color: rgba(28, 43, 52, 0.4)">({databaseCount})</span>
-        </span>
-      }
+      labelChildren={<TextAndCount text={"DATABASES"} count={databaseCount} />}
       renderNewButtonChildren={() => <DatabaseWithPlusSvg />}
-      renderItem={useCallback(
-        (item, props) => (
-          <DatabaseLink key={item.oid} database={item} {...props} />
-        ),
-        [],
+      renderItem={(item, props) => (
+        <DatabaseLink key={item.oid} database={item} {...props} />
       )}
       useItemList={useDatabaseList}
       useItemRouteIsActive={(database) =>
