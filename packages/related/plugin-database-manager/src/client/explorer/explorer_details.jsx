@@ -64,17 +64,17 @@ export const ExplorerDetails = ({ role, children, ...props }) => {
         </div>
       </summary>
       <ExplorerItemList
-        idKey="oid"
-        nameKey="rolname"
+        idKey="id"
+        nameKey="name"
         renderItem={(item, { children }) => {
           return <span>{children}</span>;
         }}
       >
         {[
           {
+            id: "props",
             item: role,
             name: `${role.rolname}.props`,
-            content: "Details about the role will be displayed here.",
           },
         ]}
       </ExplorerItemList>
