@@ -98,15 +98,15 @@
   overflow-y: hidden;
 }
 
-.explorer_group_list {
+.explorer_item_list {
   margin-top: 0;
   margin-bottom: 0;
   padding-left: 12px;
 }
-.explorer_group_item {
+.explorer_item {
   display: flex;
 }
-.explorer_group_item_content {
+.explorer_item_content {
   align-items: center;
   white-space: nowrap;
   display: flex;

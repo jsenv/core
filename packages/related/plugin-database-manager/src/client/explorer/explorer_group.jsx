@@ -2,17 +2,7 @@
  *
  */
 
-import {
-  createUniqueValueConstraint,
-  SINGLE_SPACE_CONSTRAINT,
-} from "@jsenv/form";
-import {
-  EditableText,
-  Route,
-  SPAInputText,
-  useEditableController,
-  valueInLocalStorage,
-} from "@jsenv/router";
+import { Route, valueInLocalStorage } from "@jsenv/router";
 import { effect, signal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import {
@@ -22,7 +12,7 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { FontSizedSvg } from "../components/font_sized_svg.jsx";
+import { ExplorerItemList } from "./explorer_item_list.jsx";
 
 export const createExplorerGroupController = (id) => {
   const [restoreHeight, storeHeight] = valueInLocalStorage(
@@ -111,20 +101,22 @@ export const ExplorerGroup = forwardRef(
           data-min-height="150"
           data-requested-height={heightSetting}
           renderLoaded={() => (
-            <ExplorerGroupContent
-              idKey={idKey}
-              nameKey={nameKey}
-              renderItem={renderItem}
-              useItemList={useItemList}
-              useItemRouteIsActive={useItemRouteIsActive}
-              useRenameItemAction={useRenameItemAction}
-              useCreateItemAction={useCreateItemAction}
-              useDeleteItemAction={useDeleteItemAction}
-              isCreatingNew={isCreatingNew}
-              stopCreatingNew={stopCreatingNew}
-            >
-              {children}
-            </ExplorerGroupContent>
+            <div className="explorer_group_content">
+              <ExplorerItemList
+                idKey={idKey}
+                nameKey={nameKey}
+                renderItem={renderItem}
+                useItemList={useItemList}
+                useItemRouteIsActive={useItemRouteIsActive}
+                useRenameItemAction={useRenameItemAction}
+                useCreateItemAction={useCreateItemAction}
+                useDeleteItemAction={useDeleteItemAction}
+                isCreatingNew={isCreatingNew}
+                stopCreatingNew={stopCreatingNew}
+              >
+                {children}
+              </ExplorerItemList>
+            </div>
           )}
         >
           <span className="summary_label">
@@ -151,160 +143,3 @@ export const ExplorerGroup = forwardRef(
     );
   },
 );
-
-const ExplorerGroupContent = ({
-  idKey,
-  nameKey,
-  renderItem,
-  useItemList,
-  useItemRouteIsActive,
-  useRenameItemAction,
-  useDeleteItemAction,
-  isCreatingNew,
-  useCreateItemAction,
-  stopCreatingNew,
-  children,
-}) => {
-  return (
-    <div className="explorer_group_content">
-      <ul className="explorer_group_list">
-        {children.map((item) => {
-          return (
-            <li className="explorer_group_item" key={item[idKey]}>
-              <ExplorerGroupItem
-                idKey={idKey}
-                nameKey={nameKey}
-                item={item}
-                renderItem={renderItem}
-                useItemList={useItemList}
-                useItemRouteIsActive={useItemRouteIsActive}
-                useRenameItemAction={useRenameItemAction}
-                useDeleteItemAction={useDeleteItemAction}
-              />
-            </li>
-          );
-        })}
-        {isCreatingNew && (
-          <li className="explorer_group_item">
-            <NewItem
-              nameKey={nameKey}
-              useItemList={useItemList}
-              useCreateItemAction={useCreateItemAction}
-              cancelOnBlurInvalid
-              onCancel={() => {
-                // si on a rien rentré on le cré pas, sinon oui on le cré
-                stopCreatingNew();
-              }}
-              onSubmitEnd={() => {
-                stopCreatingNew();
-              }}
-            />
-          </li>
-        )}
-      </ul>
-    </div>
-  );
-};
-
-const ExplorerGroupItem = ({
-  nameKey,
-  item,
-  renderItem,
-  useItemList,
-  useItemRouteIsActive,
-  useRenameItemAction,
-  useDeleteItemAction,
-}) => {
-  const itemName = item[nameKey];
-  const deleteAction = useDeleteItemAction(item);
-  const itemRouteIsActive = useItemRouteIsActive(item);
-
-  const { editable, startEditing, stopEditing } = useEditableController();
-  const itemList = useItemList();
-  const renameAction = useRenameItemAction(item);
-
-  const otherValueSet = new Set();
-  for (const itemCandidate of itemList) {
-    if (itemCandidate === item) {
-      continue;
-    }
-    otherValueSet.add(itemCandidate[nameKey]);
-  }
-  const uniqueNameConstraint = createUniqueValueConstraint(
-    otherValueSet,
-    `"{value}" already exist, please choose another name.`,
-  );
-
-  return renderItem(item, {
-    deleteShortcutAction: deleteAction,
-    deleteShortcutConfirmContent: `Are you sure you want to delete "${itemName}"?`,
-    onKeydown: (e) => {
-      if (e.key === "Enter" && !editable) {
-        e.preventDefault();
-        e.stopPropagation();
-        startEditing();
-      }
-    },
-    children: (
-      <EditableText
-        name={nameKey}
-        action={renameAction}
-        editable={editable}
-        onEditEnd={stopEditing}
-        constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
-      >
-        <span
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            background: itemRouteIsActive ? "lightgrey" : "none",
-          }}
-        >
-          {itemName}
-        </span>
-      </EditableText>
-    ),
-  });
-};
-
-const NewItem = ({ nameKey, useItemList, useCreateItemAction, ...rest }) => {
-  const action = useCreateItemAction();
-  const itemList = useItemList();
-  const valueSet = new Set();
-  for (const item of itemList) {
-    valueSet.add(item[nameKey]);
-  }
-  const uniqueNameConstraint = createUniqueValueConstraint(
-    valueSet,
-    `"{value}" already exists. Please choose an other name.`,
-  );
-
-  return (
-    <span className="explorer_group_item_content">
-      <FontSizedSvg>
-        <EnterNameIconSvg />
-      </FontSizedSvg>
-      <SPAInputText
-        name={nameKey}
-        action={action}
-        autoFocus
-        required
-        constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
-        {...rest}
-      />
-    </span>
-  );
-};
-
-const EnterNameIconSvg = ({ color = "currentColor" }) => {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M21.1213 2.70705C19.9497 1.53548 18.0503 1.53547 16.8787 2.70705L15.1989 4.38685L7.29289 12.2928C7.16473 12.421 7.07382 12.5816 7.02986 12.7574L6.02986 16.7574C5.94466 17.0982 6.04451 17.4587 6.29289 17.707C6.54127 17.9554 6.90176 18.0553 7.24254 17.9701L11.2425 16.9701C11.4184 16.9261 11.5789 16.8352 11.7071 16.707L19.5556 8.85857L21.2929 7.12126C22.4645 5.94969 22.4645 4.05019 21.2929 2.87862L21.1213 2.70705ZM18.2929 4.12126C18.6834 3.73074 19.3166 3.73074 19.7071 4.12126L19.8787 4.29283C20.2692 4.68336 20.2692 5.31653 19.8787 5.70705L18.8622 6.72357L17.3068 5.10738L18.2929 4.12126ZM15.8923 6.52185L17.4477 8.13804L10.4888 15.097L8.37437 15.6256L8.90296 13.5112L15.8923 6.52185ZM4 7.99994C4 7.44766 4.44772 6.99994 5 6.99994H10C10.5523 6.99994 11 6.55223 11 5.99994C11 5.44766 10.5523 4.99994 10 4.99994H5C3.34315 4.99994 2 6.34309 2 7.99994V18.9999C2 20.6568 3.34315 21.9999 5 21.9999H16C17.6569 21.9999 19 20.6568 19 18.9999V13.9999C19 13.4477 18.5523 12.9999 18 12.9999C17.4477 12.9999 17 13.4477 17 13.9999V18.9999C17 19.5522 16.5523 19.9999 16 19.9999H5C4.44772 19.9999 4 19.5522 4 18.9999V7.99994Z"
-        fill={color}
-      />
-    </svg>
-  );
-};
