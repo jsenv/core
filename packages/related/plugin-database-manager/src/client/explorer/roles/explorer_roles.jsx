@@ -1,19 +1,19 @@
 import { useRouteIsMatching } from "@jsenv/router";
 import { useCallback } from "preact/hooks";
-import { UserWithPlusSvg } from "../role/role_icons.jsx";
-import { RoleLink } from "../role/role_link.jsx";
+import { UserWithPlusSvg } from "../../role/role_icons.jsx";
 import {
   DELETE_ROLE_ACTION,
   GET_ROLE_ROUTE,
   POST_ROLE_ACTION,
   PUT_ROLE_ACTION,
-} from "../role/role_routes.js";
-import { useRoleCount, useRoleList } from "../role/role_signals.js";
+} from "../../role/role_routes.js";
+import { useRoleCount, useRoleList } from "../../role/role_signals.js";
+import { ExplorerDetails } from "../explorer_details.jsx";
 import {
   createExplorerGroupController,
   ExplorerGroup,
-} from "./explorer_group.jsx";
-import { EXPLORER_ROLES_ROUTE } from "./explorer_routes.js";
+} from "../explorer_group.jsx";
+import { EXPLORER_ROLES_ROUTE } from "../explorer_routes.js";
 
 export const rolesExplorerGroupController =
   createExplorerGroupController("roles");
@@ -37,8 +37,10 @@ export const ExplorerRoles = (props) => {
       }
       createNewButtonChildren={<UserWithPlusSvg />}
       renderItem={useCallback(
-        (item, props) => (
-          <RoleLink role={item} {...props} />
+        (item, { children, ...props }) => (
+          <ExplorerDetails role={item} {...props}>
+            {children}
+          </ExplorerDetails>
         ),
         [],
       )}

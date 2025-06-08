@@ -12,7 +12,7 @@ import { useRouteIsMatching, useRouteStatus } from "./route_hooks.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
 import.meta.css = /* css */ `
-  .spa_details {
+  .route_details {
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -21,7 +21,7 @@ import.meta.css = /* css */ `
     flex-shrink: 0;
   }
 
-  .spa_details > summary {
+  .route_details > summary {
     flex-shrink: 0;
     cursor: pointer;
     font-weight: 500;
@@ -97,7 +97,7 @@ export const RouteDetails = forwardRef(
       <details
         {...props}
         className={[
-          "spa_details",
+          "route_details",
           ...(props.className ? props.className.split(" ") : []),
         ].join(" ")}
         onToggle={(toggleEvent) => {

@@ -14,13 +14,13 @@ import {
   databaseExplorerGroupController,
 } from "./explorer_databases.jsx";
 import {
-  ExplorerRoles,
-  rolesExplorerGroupController,
-} from "./explorer_roles.jsx";
-import {
   // ExplorerTables,
   tablesExplorerGroupController,
 } from "./explorer_tables.jsx";
+import {
+  ExplorerRoles,
+  rolesExplorerGroupController,
+} from "./roles/explorer_roles.jsx";
 
 export const Explorer = () => {
   const role = useCurrentRole();
