@@ -1,6 +1,5 @@
 import { SummaryMarker } from "@jsenv/router";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { ExplorerItemList } from "./explorer_item_list.jsx";
 
 import.meta.css = /* css */ `
   .explorer_details {
@@ -34,7 +33,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const ExplorerDetails = ({ role, children, ...props }) => {
+export const ExplorerDetails = ({ label, children, ...props }) => {
   const mountedRef = useRef(false);
   useEffect(() => {
     mountedRef.current = true;
@@ -60,24 +59,10 @@ export const ExplorerDetails = ({ role, children, ...props }) => {
       <summary>
         <div className="summary_body">
           <SummaryMarker open={open} />
-          <span className="summary_label">{children}</span>
+          <span className="summary_label">{label}</span>
         </div>
       </summary>
-      <ExplorerItemList
-        idKey="id"
-        nameKey="name"
-        renderItem={(item, { children }) => {
-          return <span>{children}</span>;
-        }}
-      >
-        {[
-          {
-            id: "props",
-            item: role,
-            name: `${role.rolname}.props`,
-          },
-        ]}
-      </ExplorerItemList>
+      {children}
     </details>
   );
 };

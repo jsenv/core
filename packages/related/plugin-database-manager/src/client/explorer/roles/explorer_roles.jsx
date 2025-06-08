@@ -1,5 +1,6 @@
 import { useRouteIsMatching } from "@jsenv/router";
 import { useCallback } from "preact/hooks";
+import { TextAndCount } from "../../components/text_and_count.jsx";
 import { UserWithPlusSvg } from "../../role/role_icons.jsx";
 import {
   DELETE_ROLE_ACTION,
@@ -13,6 +14,7 @@ import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../explorer_group.jsx";
+import { ExplorerItemList } from "../explorer_item_list.jsx";
 import { EXPLORER_ROLES_ROUTE } from "../explorer_routes.js";
 
 export const rolesExplorerGroupController =
@@ -29,17 +31,42 @@ export const ExplorerRoles = (props) => {
       detailsRoute={EXPLORER_ROLES_ROUTE}
       idKey="oid"
       nameKey="rolname"
-      labelChildren={
-        <span style="display: flex; align-items: center; gap: 3px">
-          ROLES
-          <span style="color: rgba(28, 43, 52, 0.4)">({roleCount})</span>
-        </span>
-      }
+      labelChildren={<TextAndCount text={"ROLES"} count={roleCount} />}
       createNewButtonChildren={<UserWithPlusSvg />}
       renderItem={useCallback(
-        (item, { children, ...props }) => (
-          <ExplorerDetails role={item} {...props}>
-            {children}
+        (role, { children, ...props }) => (
+          <ExplorerDetails
+            id={`role_details_${role.oid}`}
+            item={role}
+            label={children}
+            {...props}
+          >
+            <ExplorerItemList
+              idKey="id"
+              nameKey="name"
+              renderItem={(subitem, { children }) => {
+                if (subitem.id === "tables") {
+                  return <RoleTablesDetails role={role}></RoleTablesDetails>;
+                  // an other component to render tables
+                  // (likely need a route with details)
+                }
+                // need a link to the details role
+                return <span>{children}</span>;
+              }}
+            >
+              {[
+                {
+                  id: "tables",
+                  item: role,
+                  name: `tables`,
+                },
+                {
+                  id: "props",
+                  item: role,
+                  name: `${role.rolname}.props`,
+                },
+              ]}
+            </ExplorerItemList>
           </ExplorerDetails>
         ),
         [],
@@ -65,5 +92,13 @@ export const ExplorerRoles = (props) => {
     >
       {roles}
     </ExplorerGroup>
+  );
+};
+
+const RoleTablesDetails = () => {
+  return (
+    <ExplorerDetails label={<TextAndCount text="tables" count={0} />}>
+      Coucou
+    </ExplorerDetails>
   );
 };
