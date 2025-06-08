@@ -45,15 +45,40 @@ export const ExplorerRoles = (props) => {
             nameKey="name"
             renderItem={(subitem) => {
               if (subitem.id === "tables") {
-                return <RoleTablesDetails role={role}></RoleTablesDetails>;
-                // an other component to render tables
-                // (likely need a route with details)
+                return (
+                  <ExplorerDetails
+                    label={
+                      <TextAndCount text="tables" count={role.table_count} />
+                    }
+                  >
+                    Coucou
+                  </ExplorerDetails>
+                );
+              }
+              if (subitem.id === "databases") {
+                return (
+                  <ExplorerDetails
+                    label={
+                      <TextAndCount
+                        text="databases"
+                        count={role.database_count}
+                      />
+                    }
+                  >
+                    Coucou
+                  </ExplorerDetails>
+                );
               }
               // need a link to the details role
               return <RoleLink role={role}>{role.rolname}</RoleLink>;
             }}
           >
             {[
+              {
+                id: "databases",
+                name: "databases",
+                item: role,
+              },
               {
                 id: "tables",
                 name: `tables`,
@@ -89,13 +114,5 @@ export const ExplorerRoles = (props) => {
     >
       {roles}
     </ExplorerGroup>
-  );
-};
-
-const RoleTablesDetails = () => {
-  return (
-    <ExplorerDetails label={<TextAndCount text="tables" count={0} />}>
-      Coucou
-    </ExplorerDetails>
   );
 };
