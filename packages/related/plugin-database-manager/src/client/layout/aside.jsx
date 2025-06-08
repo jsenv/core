@@ -29,6 +29,8 @@ export const Aside = ({ children }) => {
   const asideRef = useRef(null);
   const widthSetting = useAsideWidth();
   const [resizeWidth, resizeWidthSetter] = useState(null);
+  const resizeWidthRef = useRef(resizeWidth);
+  resizeWidthRef.current = resizeWidth;
   const resizing = resizeWidth !== null;
 
   return (
@@ -70,7 +72,10 @@ export const Aside = ({ children }) => {
             resizeWidthSetter(newWidth);
           },
           onEnd: () => {
-            setAsideWidth();
+            const resizeWidth = resizeWidthRef.current;
+            if (resizeWidth) {
+              setAsideWidth(resizeWidth);
+            }
           },
         });
       }}

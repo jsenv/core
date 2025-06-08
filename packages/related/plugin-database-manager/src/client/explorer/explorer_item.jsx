@@ -88,6 +88,7 @@ const RenameInputOrName = ({
       action={renameAction}
       editable={editable}
       onEditEnd={stopEditing}
+      value={itemName}
       constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
     >
       <span

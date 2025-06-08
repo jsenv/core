@@ -1,7 +1,7 @@
 import { useRouteIsMatching } from "@jsenv/router";
-import { useCallback } from "preact/hooks";
 import { TextAndCount } from "../../components/text_and_count.jsx";
 import { UserWithPlusSvg } from "../../role/role_icons.jsx";
+import { RoleLink } from "../../role/role_link.jsx";
 import {
   DELETE_ROLE_ACTION,
   GET_ROLE_ROUTE,
@@ -33,43 +33,40 @@ export const ExplorerRoles = (props) => {
       nameKey="rolname"
       labelChildren={<TextAndCount text={"ROLES"} count={roleCount} />}
       createNewButtonChildren={<UserWithPlusSvg />}
-      renderItem={useCallback(
-        (role, { children, ...props }) => (
-          <ExplorerDetails
-            id={`role_details_${role.oid}`}
-            item={role}
-            label={children}
-            {...props}
+      renderItem={(role, { children, ...props }) => (
+        <ExplorerDetails
+          id={`role_details_${role.oid}`}
+          item={role}
+          label={children}
+          {...props}
+        >
+          <ExplorerItemList
+            idKey="id"
+            nameKey="name"
+            renderItem={(subitem) => {
+              if (subitem.id === "tables") {
+                return <RoleTablesDetails role={role}></RoleTablesDetails>;
+                // an other component to render tables
+                // (likely need a route with details)
+              }
+              // need a link to the details role
+              return <RoleLink role={role}>{role.rolname}</RoleLink>;
+            }}
           >
-            <ExplorerItemList
-              idKey="id"
-              nameKey="name"
-              renderItem={(subitem, { children }) => {
-                if (subitem.id === "tables") {
-                  return <RoleTablesDetails role={role}></RoleTablesDetails>;
-                  // an other component to render tables
-                  // (likely need a route with details)
-                }
-                // need a link to the details role
-                return <span>{children}</span>;
-              }}
-            >
-              {[
-                {
-                  id: "tables",
-                  item: role,
-                  name: `tables`,
-                },
-                {
-                  id: "props",
-                  item: role,
-                  name: `${role.rolname}.props`,
-                },
-              ]}
-            </ExplorerItemList>
-          </ExplorerDetails>
-        ),
-        [],
+            {[
+              {
+                id: "tables",
+                name: `tables`,
+                item: role,
+              },
+              {
+                id: "props",
+                name: `props`,
+                item: role,
+              },
+            ]}
+          </ExplorerItemList>
+        </ExplorerDetails>
       )}
       useItemList={useRoleList}
       useItemRouteIsActive={(role) =>
