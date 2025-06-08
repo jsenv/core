@@ -33,7 +33,7 @@ export const Explorer = () => {
           <Icon />
         </FontSizedSvg>
         <select style="margin-top: 10px; margin-bottom: 10px; margin-left: 10px;">
-          <option selected>postgres</option>
+          <option selected>{role.rolname}</option>
         </select>
       </div>
       <ExplorerBody />
