@@ -216,7 +216,8 @@ export const jsenvPluginDatabaseManager = ({
           const roles = await sql`
             SELECT
               pg_roles.*,
-              COALESCE(result_set.table_count, 0) AS table_count
+              COALESCE(table_count_result.table_count, 0) AS table_count,
+              COALESCE(database_count_result.database_count, 0) AS database_count
             FROM
               pg_roles
               LEFT JOIN (
@@ -229,7 +230,17 @@ export const jsenvPluginDatabaseManager = ({
                   schemaname NOT IN ('pg_catalog', 'information_schema')
                 GROUP BY
                   tableowner
-              ) result_set ON pg_roles.rolname = result_set.tableowner
+              ) table_count_result ON pg_roles.rolname = table_count_result.tableowner
+              LEFT JOIN (
+                SELECT
+                  pg_roles.rolname AS database_owner,
+                  COUNT(*) AS database_count
+                FROM
+                  pg_database
+                  JOIN pg_roles ON pg_roles.oid = pg_database.datdba
+                GROUP BY
+                  pg_roles.rolname
+              ) database_count_result ON pg_roles.rolname = database_count_result.database_owner
           `;
 
           return Response.json({
