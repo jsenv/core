@@ -34,11 +34,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const ExplorerDetails = ({
-  // role,
-  children,
-  ...props
-}) => {
+export const ExplorerDetails = ({ role, children, ...props }) => {
   const mountedRef = useRef(false);
   useEffect(() => {
     mountedRef.current = true;
@@ -67,16 +63,21 @@ export const ExplorerDetails = ({
           <span className="summary_label">{children}</span>
         </div>
       </summary>
-      <ExplorerItemList>
+      <ExplorerItemList
+        idKey="oid"
+        nameKey="rolname"
+        renderItem={(item, { children }) => {
+          return <span>{children}</span>;
+        }}
+      >
         {[
           {
-            id: "role-details",
-            name: "Role Details",
+            item: role,
+            name: `${role.rolname}.props`,
             content: "Details about the role will be displayed here.",
           },
         ]}
       </ExplorerItemList>
-      {/* Role details content goes here */}
     </details>
   );
 };
