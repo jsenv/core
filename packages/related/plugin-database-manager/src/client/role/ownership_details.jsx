@@ -6,13 +6,13 @@ import {
 } from "../explorer/explorer_group.jsx";
 import { ExplorerItemList } from "../explorer/explorer_item_list.jsx";
 import { OWNERSHIP_DETAILS_ROUTE } from "./role_details_routes.js";
-import { useRoleList } from "./role_signals.js";
+import { useOwnerList } from "./role_signals.js";
 
 export const ownersExplorerGroupController =
   createExplorerGroupController("owners");
 
 export const OwnershipDetails = (props) => {
-  const roles = useRoleList();
+  const owners = useOwnerList();
 
   return (
     <ExplorerGroup
@@ -23,9 +23,6 @@ export const OwnershipDetails = (props) => {
       nameKey="rolname"
       labelChildren={<TextAndCount text={"OWNERSHIP OVERVIEW"} count={0} />}
       renderItem={(role, { children, ...props }) => {
-        if (role.object_count === 0) {
-          return null;
-        }
         return (
           <ExplorerDetails
             id={`role_details_${role.oid}`}
@@ -38,9 +35,6 @@ export const OwnershipDetails = (props) => {
               nameKey="name"
               renderItem={(subitem) => {
                 if (subitem.id === "tables") {
-                  if (role.table_count === 0) {
-                    return null;
-                  }
                   return (
                     <ExplorerDetails
                       label={
@@ -52,9 +46,6 @@ export const OwnershipDetails = (props) => {
                   );
                 }
                 if (subitem.id === "databases") {
-                  if (role.database_count === 0) {
-                    return null;
-                  }
                   return (
                     <ExplorerDetails
                       label={
@@ -72,24 +63,32 @@ export const OwnershipDetails = (props) => {
               }}
             >
               {[
-                {
-                  id: "databases",
-                  name: "databases",
-                  item: role,
-                },
-                {
-                  id: "tables",
-                  name: `tables`,
-                  item: role,
-                },
+                ...(role.database_count > 0
+                  ? [
+                      {
+                        id: "databases",
+                        name: "databases",
+                        item: role,
+                      },
+                    ]
+                  : []),
+                ...(role.table_count > 0
+                  ? [
+                      {
+                        id: "tables",
+                        name: "tables",
+                        item: role,
+                      },
+                    ]
+                  : []),
               ]}
             </ExplorerItemList>
           </ExplorerDetails>
         );
       }}
-      useItemList={useRoleList}
+      useItemList={useOwnerList}
     >
-      {roles}
+      {owners}
     </ExplorerGroup>
   );
 };

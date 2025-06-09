@@ -216,7 +216,9 @@ export const jsenvPluginDatabaseManager = ({
         },
       }),
       ...createRESTRoutes(`${pathname}api/roles`, {
-        "GET": async () => {
+        "GET": async (request) => {
+          const ownersFlag = request.searchParams.has("owners");
+
           const currentRoleResult = await sql`
             SELECT
               current_user
@@ -231,7 +233,7 @@ export const jsenvPluginDatabaseManager = ({
               rolname = ${currentRoleName}
           `;
 
-          const owners = await sql`
+          const roles = await sql`
             SELECT
               pg_roles.*,
               COALESCE(table_count_result.table_count, 0) AS table_count,
@@ -260,14 +262,27 @@ export const jsenvPluginDatabaseManager = ({
                   pg_roles.rolname
               ) database_count_result ON pg_roles.rolname = database_count_result.database_owner
           `;
-          for (const owner of owners) {
-            owner.table_count = parseInt(owner.table_count) || 0;
-            owner.database_count = parseInt(owner.database_count) || 0;
-            owner.object_count = owner.table_count + owner.database_count;
+          for (const role of roles) {
+            role.table_count = parseInt(role.table_count) || 0;
+            role.database_count = parseInt(role.database_count) || 0;
+            role.object_count = role.table_count + role.database_count;
           }
-
+          if (ownersFlag) {
+            const owners = [];
+            for (const role of roles) {
+              if (role.object_count > 0) {
+                owners.push(role);
+              }
+            }
+            return {
+              data: owners,
+              meta: {
+                currentRole,
+              },
+            };
+          }
           return {
-            data: owners,
+            data: roles,
             meta: {
               currentRole,
             },

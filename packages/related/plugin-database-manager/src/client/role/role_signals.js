@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import { databaseStore } from "../database/database_store.js";
 import { roleStore } from "./role_store.js";
 
@@ -63,3 +63,11 @@ export const setCurrentRole = (role) => {
   }
 };
 setCurrentRole(window.DB_MANAGER_CONFIG.currentRole);
+
+const ownerListSignal = computed(() => {
+  const roles = roleStore.arraySignal.value;
+  return roles.filter((role) => role.object_count > 0);
+});
+export const useOwnerList = () => {
+  return ownerListSignal.value;
+};

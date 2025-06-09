@@ -18,7 +18,9 @@ export const ROLES_DETAILS_ROUTE = registerRoute({
     eraseRolesDetailsOpened();
   },
   load: async () => {
-    const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`);
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/roles?owners`,
+    );
     const { data, meta } = await response.json();
     const roles = data;
     setCurrentRole(meta.currentRole);
