@@ -56,7 +56,7 @@ export const UserWithPlusSvg = ({ color }) => {
     <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
       <UserSvg color={color} />
       <svg x="12" y="12" width="16" height="16" overflow="visible">
-        <circle cx="12" cy="12" r="10" fill="transparent" />
+        <circle cx="8" cy="8" r="5" fill="blue" />
         <PlusSvg color="green" />
       </svg>
     </SVGMaskOverlay>
