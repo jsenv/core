@@ -15,8 +15,7 @@ import {
 import { useTableCount, useTableList } from "./table_signals.js";
 import { TABLES_DETAILS_ROUTE } from "./tables_details_routes.js";
 
-export const tablesExplorerGroupController =
-  createExplorerGroupController("tables");
+export const tablesDetailsController = createExplorerGroupController("tables");
 
 export const TablesDetails = (props) => {
   const tables = useTableList();
@@ -25,7 +24,7 @@ export const TablesDetails = (props) => {
   return (
     <ExplorerGroup
       {...props}
-      controller={tablesExplorerGroupController}
+      controller={tablesDetailsController}
       detailsRoute={TABLES_DETAILS_ROUTE}
       idKey="oid"
       nameKey="tablename"

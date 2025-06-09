@@ -4,7 +4,7 @@ import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../../explorer/explorer_group.jsx";
-import { UserWithPlusSvg } from "../role_icons.jsx";
+import { UserGroupWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
 import {
   DELETE_ROLE_ACTION,
@@ -16,8 +16,7 @@ import { useRoleList } from "../role_signals.js";
 import { useGroupCount, useGroupList } from "./group_signals.js";
 import { GROUPS_DETAILS_ROUTE } from "./groups_details_routes.js";
 
-export const rolesExplorerGroupController =
-  createExplorerGroupController("roles");
+export const groupsDetailsController = createExplorerGroupController("groups");
 
 export const GroupsDetails = (props) => {
   const groups = useGroupList();
@@ -26,12 +25,12 @@ export const GroupsDetails = (props) => {
   return (
     <ExplorerGroup
       {...props}
-      controller={rolesExplorerGroupController}
+      controller={groupsDetailsController}
       detailsRoute={GROUPS_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"
       labelChildren={<TextAndCount text={"GROUPS"} count={groupCount} />}
-      renderNewButtonChildren={() => <UserWithPlusSvg />}
+      renderNewButtonChildren={() => <UserGroupWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
         <RoleLink role={role} {...props}>
           {children}

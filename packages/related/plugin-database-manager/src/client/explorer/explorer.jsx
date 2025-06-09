@@ -10,12 +10,15 @@ import { DatabaseSvg } from "../database/database_icons.jsx";
 import { useCurrentDatabase } from "../database/database_signals.js";
 import {
   DatabasesDetails,
-  databaseExplorerGroupController,
+  databasesDetailsController,
 } from "../database/databases_details.jsx";
-import { GroupsDetails } from "../role/group/groups_details.jsx";
+import {
+  GroupsDetails,
+  groupsDetailsController,
+} from "../role/group/groups_details.jsx";
 import {
   OwnershipDetails,
-  ownersExplorerGroupController,
+  ownersshipDetailsController,
 } from "../role/ownership/ownership_details.jsx";
 import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_signals.js";
@@ -25,7 +28,7 @@ import {
 } from "../role/user/users_details.jsx";
 import {
   TablesDetails,
-  tablesExplorerGroupController,
+  tablesDetailsController,
 } from "../table/tables_details.jsx";
 import "./explorer.css" with { type: "css" };
 import "./explorer_routes.js";
@@ -72,17 +75,20 @@ const ExplorerBody = () => {
   useLayoutEffect(() => {
     const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
       onRequestedSizeChange: (element, requestedHeight) => {
-        if (element.id === tablesExplorerGroupController.id) {
-          tablesExplorerGroupController.setHeightSetting(requestedHeight);
+        if (element.id === tablesDetailsController.id) {
+          tablesDetailsController.setHeightSetting(requestedHeight);
         }
-        if (element.id === databaseExplorerGroupController.id) {
-          databaseExplorerGroupController.setHeightSetting(requestedHeight);
+        if (element.id === databasesDetailsController.id) {
+          databasesDetailsController.setHeightSetting(requestedHeight);
         }
         if (element.id === rolesExplorerGroupController.id) {
           rolesExplorerGroupController.setHeightSetting(requestedHeight);
         }
-        if (element.id === ownersExplorerGroupController.id) {
-          ownersExplorerGroupController.setHeightSetting(requestedHeight);
+        if (element.id === groupsDetailsController.id) {
+          groupsDetailsController.setHeightSetting(requestedHeight);
+        }
+        if (element.id === ownersshipDetailsController.id) {
+          ownersshipDetailsController.setHeightSetting(requestedHeight);
         }
       },
     });
@@ -107,7 +113,7 @@ const ExplorerBody = () => {
         onClose={onClose}
         resizable={resizable}
       />
-      <TablesDetails onOpen={onOpen} onClose={onClose} />
+      <TablesDetails onOpen={onOpen} onClose={onClose} resizable={resizable} />
       <GroupsDetails onOpen={onOpen} onClose={onClose} resizable={resizable} />
       <OwnershipDetails
         onOpen={onOpen}

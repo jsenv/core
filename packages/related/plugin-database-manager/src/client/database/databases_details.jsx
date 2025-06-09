@@ -15,7 +15,7 @@ import {
 } from "./database_routes.js";
 import { useDatabaseCount, useDatabaseList } from "./database_signals.js";
 
-export const databaseExplorerGroupController =
+export const databasesDetailsController =
   createExplorerGroupController("databases");
 
 export const DatabasesDetails = (props) => {
@@ -25,7 +25,7 @@ export const DatabasesDetails = (props) => {
   return (
     <ExplorerGroup
       {...props}
-      controller={databaseExplorerGroupController}
+      controller={databasesDetailsController}
       detailsRoute={DATABASES_DETAILS_ROUTE}
       idKey="oid"
       nameKey="datname"

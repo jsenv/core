@@ -8,8 +8,8 @@ import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
 import { useOwnerList } from "../role_signals.js";
 import { OWNERSHIP_DETAILS_ROUTE } from "./ownership_details_routes.js";
 
-export const ownersExplorerGroupController =
-  createExplorerGroupController("owners");
+export const ownersshipDetailsController =
+  createExplorerGroupController("ownership");
 
 export const OwnershipDetails = (props) => {
   const owners = useOwnerList();
@@ -17,7 +17,7 @@ export const OwnershipDetails = (props) => {
   return (
     <ExplorerGroup
       {...props}
-      controller={ownersExplorerGroupController}
+      controller={ownersshipDetailsController}
       detailsRoute={OWNERSHIP_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"

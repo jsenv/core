@@ -80,6 +80,18 @@ export const UserSvg = ({
   );
 };
 
+export const UserGroupWithPlusSvg = ({ color }) => {
+  return (
+    <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
+      <UserGroupSvg color={color} />
+      <svg x="12" y="12" width="16" height="16" overflow="visible">
+        <circle cx="8" cy="8" r="5" fill="transparent" />
+        <PlusSvg color="green" />
+      </svg>
+    </SVGMaskOverlay>
+  );
+};
+
 export const UserWithPlusSvg = ({ color }) => {
   return (
     <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
