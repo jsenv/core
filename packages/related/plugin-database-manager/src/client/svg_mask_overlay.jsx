@@ -35,6 +35,17 @@
 
 import { toChildArray } from "preact";
 
+import.meta.css = /* css */ `
+  .svg_mark_overlay_group * {
+    fill: black !important;
+    stroke: black !important;
+    fill-opacity: 1 !important;
+    stroke-opacity: 1 !important;
+    color: black !important;
+    opacity: 1 !important;
+  }
+`;
+
 export const SVGMaskOverlay = ({ viewBox, children }) => {
   if (!Array.isArray(children)) {
     return children;
@@ -57,10 +68,12 @@ export const SVGMaskOverlay = ({ viewBox, children }) => {
     return null;
   }
 
+  // Generate unique ID for this instance
+  const instanceId = `svgmo-${Math.random().toString(36).slice(2, 9)}`;
+
   // Generate masks for each overlay
   const masks = overlaySvgs
     .map((overlaySvg, index) => {
-      // Get viewBox from current overlay
       const overlayViewBox = findViewBox(overlaySvg);
       if (!overlayViewBox) {
         console.error(
@@ -77,9 +90,9 @@ export const SVGMaskOverlay = ({ viewBox, children }) => {
         height: parseFloat(overlaySvgProps.height || viewBox.split(" ")[3]),
       };
 
-      const uniqueId = `mask-${index}-${Math.random().toString(36).slice(2, 9)}`;
-      const maskId = `overlay-mask-${uniqueId}`;
-      const secondId = `second-${uniqueId}`;
+      const maskId = `mask-${instanceId}-${index}`;
+      const contentId = `content-${instanceId}-${index}`;
+      const secondId = `second-${instanceId}`;
 
       const [, , overlayWidth, overlayHeight] = overlayViewBox
         .split(" ")
@@ -87,6 +100,7 @@ export const SVGMaskOverlay = ({ viewBox, children }) => {
 
       return {
         maskId,
+        contentId,
         secondId,
         overlayPosition,
         overlayWidth,
@@ -94,7 +108,7 @@ export const SVGMaskOverlay = ({ viewBox, children }) => {
         overlaySvg,
       };
     })
-    .filter((mask) => mask !== null);
+    .filter(Boolean);
 
   // Create nested masked elements
   let maskedElement = baseSvg;
@@ -107,15 +121,17 @@ export const SVGMaskOverlay = ({ viewBox, children }) => {
   return (
     <svg viewBox={viewBox} width="100%" height="100%">
       <defs>
-        {/* Define all mask elements */}
+        {/* Define masks that respect position */}
         {masks.map((mask) => (
           <>
             <svg id={mask.secondId}>
               <rect width="100%" height="100%" fill="black" />
             </svg>
-
             <mask id={mask.maskId}>
+              {/* White background makes everything visible by default */}
               <rect width="100%" height="100%" fill="white" />
+
+              {/* SOLUTION AMÉLIORÉE: Utiliser une transformation directe au lieu de foreignObject */}
               <svg
                 x={mask.overlayPosition.x}
                 y={mask.overlayPosition.y}
@@ -123,6 +139,7 @@ export const SVGMaskOverlay = ({ viewBox, children }) => {
                 height={mask.overlayPosition.height}
                 viewBox={`0 0 ${mask.overlayWidth} ${mask.overlayHeight}`}
                 overflow="visible"
+                className="svg_mark_overlay_group"
               >
                 <use href={`#${mask.secondId}`} />
               </svg>
