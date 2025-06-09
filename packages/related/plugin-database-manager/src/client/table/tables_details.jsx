@@ -18,7 +18,7 @@ import { TABLES_DETAILS_ROUTE } from "./tables_details_routes.js";
 export const tablesExplorerGroupController =
   createExplorerGroupController("tables");
 
-export const ExplorerTables = (props) => {
+export const TablesDetails = (props) => {
   const tables = useTableList();
   const tableCount = useTableCount();
 

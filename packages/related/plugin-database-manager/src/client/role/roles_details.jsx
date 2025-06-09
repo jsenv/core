@@ -18,7 +18,7 @@ import { useRoleCount, useRoleList } from "./role_signals.js";
 export const rolesExplorerGroupController =
   createExplorerGroupController("roles");
 
-export const ExplorerRoles = (props) => {
+export const RolesDetails = (props) => {
   const roles = useRoleList();
   const roleCount = useRoleCount();
 

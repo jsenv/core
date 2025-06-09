@@ -9,23 +9,23 @@ import { FontSizedSvg } from "../components/font_sized_svg.jsx";
 import { DatabaseSvg } from "../database/database_icons.jsx";
 import { useCurrentDatabase } from "../database/database_signals.js";
 import {
-  ExplorerDatabases,
+  DatabasesDetails,
   databaseExplorerGroupController,
-} from "../database/explorer_databases.jsx";
+} from "../database/databases_details.jsx";
 import {
-  ExplorerOwnership,
+  OwnershipDetails,
   ownersExplorerGroupController,
-} from "../role/explorer_ownership.jsx";
-import {
-  ExplorerRoles,
-  rolesExplorerGroupController,
-} from "../role/explorer_roles.jsx";
+} from "../role/ownership_details.jsx";
 import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_signals.js";
 import {
-  ExplorerTables,
+  RolesDetails,
+  rolesExplorerGroupController,
+} from "../role/roles_details.jsx";
+import {
+  TablesDetails,
   tablesExplorerGroupController,
-} from "../table/explorer_tables.jsx";
+} from "../table/tables_details.jsx";
 import "./explorer.css" with { type: "css" };
 
 export const Explorer = () => {
@@ -99,14 +99,14 @@ const ExplorerBody = () => {
         }
       }}
     >
-      <ExplorerRoles onOpen={onOpen} onClose={onClose} />
-      <ExplorerDatabases
+      <RolesDetails onOpen={onOpen} onClose={onClose} />
+      <DatabasesDetails
         onOpen={onOpen}
         onClose={onClose}
         resizable={resizable}
       />
-      <ExplorerTables onOpen={onOpen} onClose={onClose} />
-      <ExplorerOwnership
+      <TablesDetails onOpen={onOpen} onClose={onClose} />
+      <OwnershipDetails
         onOpen={onOpen}
         onClose={onClose}
         resizable={resizable}

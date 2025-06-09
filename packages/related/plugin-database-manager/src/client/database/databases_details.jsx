@@ -18,7 +18,7 @@ import { useDatabaseCount, useDatabaseList } from "./database_signals.js";
 export const databaseExplorerGroupController =
   createExplorerGroupController("databases");
 
-export const ExplorerDatabases = (props) => {
+export const DatabasesDetails = (props) => {
   const databases = useDatabaseList();
   const databaseCount = useDatabaseCount();
 

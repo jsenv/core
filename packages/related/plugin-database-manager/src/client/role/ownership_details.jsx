@@ -11,7 +11,7 @@ import { useRoleList } from "./role_signals.js";
 export const ownersExplorerGroupController =
   createExplorerGroupController("owners");
 
-export const ExplorerOwnership = (props) => {
+export const OwnershipDetails = (props) => {
   const roles = useRoleList();
 
   return (
