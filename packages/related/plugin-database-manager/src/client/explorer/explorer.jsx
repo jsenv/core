@@ -27,6 +27,7 @@ import {
   tablesExplorerGroupController,
 } from "../table/tables_details.jsx";
 import "./explorer.css" with { type: "css" };
+import "./explorer_routes.js";
 
 export const Explorer = () => {
   const role = useCurrentRole();
