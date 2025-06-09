@@ -5,7 +5,7 @@ import {
   ExplorerGroup,
 } from "../explorer/explorer_group.jsx";
 import { ExplorerItemList } from "../explorer/explorer_item_list.jsx";
-import { EXPLORER_OWNERS_ROUTE } from "../explorer/explorer_routes.js";
+import { OWNERSHIP_DETAILS_ROUTE } from "./role_details_routes.js";
 import { useRoleList } from "./role_signals.js";
 
 export const ownersExplorerGroupController =
@@ -18,7 +18,7 @@ export const ExplorerOwnership = (props) => {
     <ExplorerGroup
       {...props}
       controller={ownersExplorerGroupController}
-      detailsRoute={EXPLORER_OWNERS_ROUTE}
+      detailsRoute={OWNERSHIP_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"
       labelChildren={<TextAndCount text={"OWNERSHIP OVERVIEW"} count={0} />}

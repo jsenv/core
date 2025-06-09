@@ -4,7 +4,7 @@ import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../explorer/explorer_group.jsx";
-import { EXPLORER_ROLES_ROUTE } from "../explorer/explorer_routes.js";
+import { ROLES_DETAILS_ROUTE } from "./role_details_routes.js";
 import { UserWithPlusSvg } from "./role_icons.jsx";
 import { RoleLink } from "./role_link.jsx";
 import {
@@ -26,7 +26,7 @@ export const ExplorerRoles = (props) => {
     <ExplorerGroup
       {...props}
       controller={rolesExplorerGroupController}
-      detailsRoute={EXPLORER_ROLES_ROUTE}
+      detailsRoute={ROLES_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"
       labelChildren={<TextAndCount text={"ROLES"} count={roleCount} />}
