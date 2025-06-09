@@ -114,16 +114,28 @@ export const jsenvPluginDatabaseManager = ({
         description: "Get info about the database manager explorer.",
         declarationSource: import.meta.url,
         fetch: async () => {
-          const roleCount = await countRows(sql, "pg_roles", {
-            whereClause: sql`
-              WHERE
-                pg_roles.rolcanlogin = TRUE
-            `,
-          });
+          const [roleStats] = await sql`
+            SELECT
+              COUNT(*) AS total_roles,
+              COUNT(
+                CASE
+                  WHEN rolcanlogin = TRUE THEN 1
+                END
+              ) AS login_role_count,
+              COUNT(
+                CASE
+                  WHEN rolcanlogin = FALSE THEN 1
+                END
+              ) AS non_login_role_count
+            FROM
+              pg_roles
+          `;
+          const { login_role_count, non_login_role_count } = roleStats;
           const databaseCount = await countRows(sql, "pg_database");
           const tableCount = await countRows(sql, "pg_tables");
           return Response.json({
-            roleCount,
+            userCount: login_role_count,
+            groupCount: non_login_role_count,
             databaseCount,
             tableCount,
           });

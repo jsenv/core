@@ -5,7 +5,7 @@ import { PlusSvg } from "../icons/icons.jsx";
 import { SVGMaskOverlay } from "../svg_mask_overlay.jsx";
 
 export const pickRoleIcon = (role) => {
-  if (role.rolname.startsWith("pg_")) {
+  if (role.rolcanlogin) {
     return UserWithCheckSvg;
   }
   if (role.rolsuper) {

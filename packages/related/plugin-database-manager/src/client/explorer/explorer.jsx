@@ -15,13 +15,13 @@ import {
 import {
   OwnershipDetails,
   ownersExplorerGroupController,
-} from "../role/ownership_details.jsx";
+} from "../role/ownership/ownership_details.jsx";
 import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_signals.js";
 import {
-  RolesDetails,
+  UsersDetails,
   rolesExplorerGroupController,
-} from "../role/roles_details.jsx";
+} from "../role/user/users_details.jsx";
 import {
   TablesDetails,
   tablesExplorerGroupController,
@@ -100,7 +100,7 @@ const ExplorerBody = () => {
         }
       }}
     >
-      <RolesDetails onOpen={onOpen} onClose={onClose} />
+      <UsersDetails onOpen={onOpen} onClose={onClose} />
       <DatabasesDetails
         onOpen={onOpen}
         onClose={onClose}
