@@ -81,7 +81,12 @@ export const ExplorerGroup = forwardRef(
 
     return (
       <>
-        {resizable && <div data-resize-handle={controller.id}></div>}
+        {resizable && (
+          <div
+            data-resize-handle={controller.id}
+            id={`${controller.id}_resize_handle`}
+          ></div>
+        )}
         <Route.Details
           {...rest}
           route={detailsRoute}

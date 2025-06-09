@@ -16,8 +16,7 @@ import { useRoleList } from "../role_signals.js";
 import { useUserCount, useUserList } from "./user_signals.js";
 import { USERS_DETAILS_ROUTE } from "./users_details_routes.js";
 
-export const rolesExplorerGroupController =
-  createExplorerGroupController("roles");
+export const usersDetailsController = createExplorerGroupController("users");
 
 export const UsersDetails = (props) => {
   const users = useUserList();
@@ -26,7 +25,7 @@ export const UsersDetails = (props) => {
   return (
     <ExplorerGroup
       {...props}
-      controller={rolesExplorerGroupController}
+      controller={usersDetailsController}
       detailsRoute={USERS_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"

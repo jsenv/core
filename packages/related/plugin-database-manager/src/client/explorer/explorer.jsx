@@ -24,7 +24,7 @@ import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_signals.js";
 import {
   UsersDetails,
-  rolesExplorerGroupController,
+  usersDetailsController,
 } from "../role/user/users_details.jsx";
 import {
   TablesDetails,
@@ -75,14 +75,14 @@ const ExplorerBody = () => {
   useLayoutEffect(() => {
     const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
       onRequestedSizeChange: (element, requestedHeight) => {
+        if (element.id === usersDetailsController.id) {
+          usersDetailsController.setHeightSetting(requestedHeight);
+        }
         if (element.id === tablesDetailsController.id) {
           tablesDetailsController.setHeightSetting(requestedHeight);
         }
         if (element.id === databasesDetailsController.id) {
           databasesDetailsController.setHeightSetting(requestedHeight);
-        }
-        if (element.id === rolesExplorerGroupController.id) {
-          rolesExplorerGroupController.setHeightSetting(requestedHeight);
         }
         if (element.id === groupsDetailsController.id) {
           groupsDetailsController.setHeightSetting(requestedHeight);

@@ -13,7 +13,7 @@ import { createSizeAnimationGroupController } from "./size_animation_group_contr
 import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;
-const DEBUG = false;
+const DEBUG = true;
 
 export const initFlexDetailsSet = (
   container,
@@ -449,6 +449,9 @@ export const initFlexDetailsSet = (
   };
 
   const updateSpaceDistribution = (resizeDetails) => {
+    if (debug) {
+      console.group(`updateSpaceDistribution: ${resizeDetails.reason}`);
+    }
     prepareSpaceDistribution();
     distributeAvailableSpace(resizeDetails.reason);
     distributeRemainingSpace({
@@ -463,6 +466,9 @@ export const initFlexDetailsSet = (
     }
     applyAllocatedSpaces(resizeDetails);
     saveCurrentSizeAsRequestedSizes();
+    if (debug) {
+      console.groupEnd();
+    }
   };
 
   initial_size: {
@@ -476,6 +482,9 @@ export const initFlexDetailsSet = (
       const reason = details.open
         ? `${details.id} just opened`
         : `${details.id} just closed`;
+      if (debug) {
+        console.group(`distributeSpaceAfterToggle: ${reason}`);
+      }
       prepareSpaceDistribution();
       distributeAvailableSpace(reason);
 
@@ -516,6 +525,9 @@ export const initFlexDetailsSet = (
           childToGrow: openedDetailsArray[0],
           childToShrinkFrom: lastChild,
         });
+      }
+      if (debug) {
+        console.groupEnd();
       }
     };
 
