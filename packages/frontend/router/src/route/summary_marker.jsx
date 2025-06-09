@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "preact/hooks";
 import { useDebounceTrue } from "../hooks/use_debounce_true.js";
 
 const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
@@ -81,6 +82,13 @@ import.meta.css = /* css */ `
 
 export const SummaryMarker = ({ open, pending }) => {
   const showLoading = useDebounceTrue(pending, 300);
+  const mountedRef = useRef(false);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   return (
     <span className="summary_marker">
@@ -117,7 +125,9 @@ export const SummaryMarker = ({ open, pending }) => {
           <path
             className="arrow"
             fill="currentColor"
-            data-animation-target={open ? "down" : "right"}
+            data-animation-target={
+              mountedRef.current ? (open ? "down" : "right") : undefined
+            }
             d={open ? downArrowPath : rightArrowPath}
           />
         </g>
