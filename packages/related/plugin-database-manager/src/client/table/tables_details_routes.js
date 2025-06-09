@@ -18,7 +18,8 @@ export const TABLES_DETAILS_ROUTE = registerRoute({
   },
   load: async () => {
     const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/tables`);
-    const { tables } = await response.json();
+    const { data } = await response.json();
+    const tables = data;
     tableStore.upsert(tables);
   },
   name: "tables_details",

@@ -126,26 +126,24 @@ export const jsenvPluginDatabaseManager = ({
       },
       ...createRESTRoutes(`${pathname}api/tables`, {
         "GET": async (request) => {
-          // schemaname NOT IN ('pg_catalog', 'information_schema')
-          const publicFilter = request.searchParams.has("public"); // TODO: a dynamic filter param
+          const publicFilter = request.searchParams.has("public");
           const data = await sql`
             SELECT
               *
             FROM
-              pg_tables ${publicFilter
-              ? sql`
-                  WHERE
-                    schemaname = 'public'
-                `
-              : sql``}
+              pg_tables
+            WHERE
+              ${publicFilter
+              ? sql`schemaname = 'public'`
+              : sql`schemaname NOT IN ('pg_catalog', 'information_schema')`}
           `;
           const columns = await getTableColumns(sql, "pg_tables");
-          return Response.json({
+          return {
             data,
             meta: {
               columns,
             },
-          });
+          };
         },
         "POST": async (request) => {
           const { tablename } = await request.json();
@@ -268,12 +266,12 @@ export const jsenvPluginDatabaseManager = ({
             owner.object_count = owner.table_count + owner.database_count;
           }
 
-          return Response.json({
+          return {
             data: owners,
             meta: {
               currentRole,
             },
-          });
+          };
         },
         "POST": async (request) => {
           const { rolname } = await request.json();
@@ -426,13 +424,13 @@ export const jsenvPluginDatabaseManager = ({
           }
           await Promise.all(promises);
 
-          return Response.json({
+          return {
             data: databases,
             meta: {
               currentDatabase,
               tableCounts,
             },
-          });
+          };
         },
         "POST": async (request) => {
           const { datname } = await request.json();
@@ -761,7 +759,7 @@ const createRESTRoutes = (resource, endpoints) => {
   const routes = [];
 
   const onRoute = ({ method, subpath }, handler) => {
-    const endpointResource = `${resource}${subpath}`;
+    const endpointResource = subpath ? `${resource}${subpath}` : resource;
     if (method === "GET") {
       const getRoute = {
         endpoint: `GET ${endpointResource}`,
