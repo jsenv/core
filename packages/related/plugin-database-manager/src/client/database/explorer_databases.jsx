@@ -4,7 +4,6 @@ import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../explorer/explorer_group.jsx";
-import { EXPLORER_DATABASES_ROUTE } from "../explorer/explorer_routes.js";
 import { DatabaseWithPlusSvg } from "./database_icons.jsx";
 import { DatabaseLink } from "./database_link.jsx";
 import {
@@ -14,6 +13,7 @@ import {
   PUT_DATABASE_ACTION,
 } from "./database_routes.js";
 import { useDatabaseCount, useDatabaseList } from "./database_signals.js";
+import { EXPLORER_DATABASES_ROUTE } from "./explorer_database_routes.js";
 
 export const databaseExplorerGroupController =
   createExplorerGroupController("databases");

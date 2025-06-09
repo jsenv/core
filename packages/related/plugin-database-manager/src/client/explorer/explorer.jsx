@@ -13,9 +13,9 @@ import {
   databaseExplorerGroupController,
 } from "../database/explorer_databases.jsx";
 import {
-  ExplorerOwners,
+  ExplorerOwnership,
   ownersExplorerGroupController,
-} from "../role/explorer_owners.jsx";
+} from "../role/explorer_ownership.jsx";
 import {
   ExplorerRoles,
   rolesExplorerGroupController,
@@ -106,7 +106,11 @@ const ExplorerBody = () => {
         resizable={resizable}
       />
       <ExplorerTables onOpen={onOpen} onClose={onClose} />
-      <ExplorerOwners onOpen={onOpen} onClose={onClose} resizable={resizable} />
+      <ExplorerOwnership
+        onOpen={onOpen}
+        onClose={onClose}
+        resizable={resizable}
+      />
     </div>
   );
 };

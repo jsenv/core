@@ -1,10 +1,6 @@
 import { registerRoute, valueInLocalStorage } from "@jsenv/router";
 import { effect } from "@preact/signals";
-import {
-  setCurrentDatabase,
-  setDatabaseCount,
-} from "../database/database_signals.js";
-import { databaseStore } from "../database/database_store.js";
+import { setDatabaseCount } from "../database/database_signals.js";
 import { setCurrentRole, setRoleCount } from "../role/role_signals.js";
 import { roleStore } from "../role/role_store.js";
 import { setTableCount } from "../table/table_signals.js";
@@ -15,31 +11,6 @@ effect(async () => {
   setTableCount(tableCount);
   setDatabaseCount(databaseCount);
   setRoleCount(roleCount);
-});
-
-const [readDatabaseDetailsOpened, storeDatabaseDetailsOpened] =
-  valueInLocalStorage("databases_details_opened", {
-    type: "boolean",
-  });
-export const EXPLORER_DATABASES_ROUTE = registerRoute({
-  match: () => readDatabaseDetailsOpened(),
-  enter: () => {
-    storeDatabaseDetailsOpened(true);
-  },
-  leave: () => {
-    storeDatabaseDetailsOpened(false);
-  },
-  load: async () => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/explorer/databases`,
-    );
-    const { data, meta } = await response.json();
-    const databases = data;
-    const { currentDatabase } = meta;
-    databaseStore.upsert(databases);
-    setCurrentDatabase(currentDatabase);
-  },
-  name: "databases_explorer_details",
 });
 
 const [
@@ -58,9 +29,7 @@ export const EXPLORER_ROLES_ROUTE = registerRoute({
     eraseRolesDetailsOpened();
   },
   load: async () => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/explorer/roles`,
-    );
+    const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`);
     const { data, meta } = await response.json();
     const roles = data;
     setCurrentRole(meta.currentRole);
@@ -85,14 +54,10 @@ export const EXPLORER_OWNERS_ROUTE = registerRoute({
     eraseOwnsersDetailsOpened();
   },
   load: async () => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/explorer/owners`,
-    );
+    const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`);
     const { data } = await response.json();
-    const owners = data;
-    for (const role of owners) {
-      roleStore.upsert(role);
-    }
+    const roles = data;
+    roleStore.upsert(roles);
   },
   name: "owners_explorer_details",
 });

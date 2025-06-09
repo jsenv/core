@@ -11,7 +11,7 @@ import { useRoleList } from "./role_signals.js";
 export const ownersExplorerGroupController =
   createExplorerGroupController("owners");
 
-export const ExplorerOwners = (props) => {
+export const ExplorerOwnership = (props) => {
   const roles = useRoleList();
 
   return (
@@ -21,7 +21,7 @@ export const ExplorerOwners = (props) => {
       detailsRoute={EXPLORER_OWNERS_ROUTE}
       idKey="oid"
       nameKey="rolname"
-      labelChildren={<TextAndCount text={"OWNERS"} count={0} />}
+      labelChildren={<TextAndCount text={"OWNERSHIP OVERVIEW"} count={0} />}
       renderItem={(role, { children, ...props }) => {
         if (role.object_count === 0) {
           return null;
