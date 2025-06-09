@@ -114,28 +114,12 @@ export const jsenvPluginDatabaseManager = ({
         description: "Get info about the database manager explorer.",
         declarationSource: import.meta.url,
         fetch: async () => {
-          const [roleStats] = await sql`
-            SELECT
-              COUNT(*) AS total_roles,
-              COUNT(
-                CASE
-                  WHEN rolcanlogin = TRUE THEN 1
-                END
-              ) AS login_role_count,
-              COUNT(
-                CASE
-                  WHEN rolcanlogin = FALSE THEN 1
-                END
-              ) AS non_login_role_count
-            FROM
-              pg_roles
-          `;
-          const { login_role_count, non_login_role_count } = roleStats;
+          const { userCount, groupCount } = await countRoles(sql);
           const databaseCount = await countRows(sql, "pg_database");
           const tableCount = await countRows(sql, "pg_tables");
           return Response.json({
-            userCount: login_role_count,
-            groupCount: non_login_role_count,
+            userCount,
+            groupCount,
             databaseCount,
             tableCount,
           });
@@ -176,7 +160,7 @@ export const jsenvPluginDatabaseManager = ({
           return {
             data: table,
             meta: {
-              count: await countRows(sql, "pg_tables"),
+              ...(await countRoles(sql)),
             },
           };
         },
@@ -344,7 +328,7 @@ export const jsenvPluginDatabaseManager = ({
           return {
             data: role,
             meta: {
-              count: await countRows(sql, "pg_roles"),
+              ...(await countRoles(sql)),
             },
           };
         },
@@ -422,7 +406,7 @@ export const jsenvPluginDatabaseManager = ({
           return {
             data: null,
             meta: {
-              count: await countRows(sql, "pg_roles"),
+              ...(await countRoles(sql)),
             },
           };
         },
@@ -890,6 +874,30 @@ const createRESTRoutes = (resource, endpoints) => {
   }
 
   return routes;
+};
+
+const countRoles = async (sql) => {
+  const [roleStats] = await sql`
+    SELECT
+      COUNT(*) AS total_roles,
+      COUNT(
+        CASE
+          WHEN rolcanlogin = TRUE THEN 1
+        END
+      ) AS login_role_count,
+      COUNT(
+        CASE
+          WHEN rolcanlogin = FALSE THEN 1
+        END
+      ) AS non_login_role_count
+    FROM
+      pg_roles
+  `;
+  const { login_role_count, non_login_role_count } = roleStats;
+  return {
+    userCount: login_role_count,
+    groupCount: non_login_role_count,
+  };
 };
 
 const countRows = async (sql, tableName, { whereClause } = {}) => {

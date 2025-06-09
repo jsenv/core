@@ -12,6 +12,7 @@ import {
   DatabasesDetails,
   databaseExplorerGroupController,
 } from "../database/databases_details.jsx";
+import { GroupsDetails } from "../role/group/groups_details.jsx";
 import {
   OwnershipDetails,
   ownersExplorerGroupController,
@@ -107,6 +108,7 @@ const ExplorerBody = () => {
         resizable={resizable}
       />
       <TablesDetails onOpen={onOpen} onClose={onClose} />
+      <GroupsDetails onOpen={onOpen} onClose={onClose} resizable={resizable} />
       <OwnershipDetails
         onOpen={onOpen}
         onClose={onClose}

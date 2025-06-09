@@ -1,13 +1,14 @@
 import { registerAction, registerRoute } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
 import { errorFromResponse } from "../error_from_response.js";
+import { setGroupCount } from "./group/group_signals.js";
 import {
   setActiveRole,
   setActiveRoleColumns,
   setActiveRoleDatabases,
-  setRoleCount,
 } from "./role_signals.js";
 import { roleStore } from "./role_store.js";
+import { setUserCount } from "./user/user_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
   "/roles/:rolname",
@@ -74,7 +75,8 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
   const { data, meta } = await response.json();
   const role = data;
   roleStore.upsert(role);
-  setRoleCount(meta.count);
+  setUserCount(meta.userCount);
+  setGroupCount(meta.groupCount);
 });
 
 export const DELETE_ROLE_ACTION = registerAction(
@@ -95,6 +97,7 @@ export const DELETE_ROLE_ACTION = registerAction(
     }
     const { meta } = await response.json();
     roleStore.drop("rolname", rolname);
-    setRoleCount(meta.count);
+    setUserCount(meta.userCount);
+    setGroupCount(meta.groupCount);
   },
 );

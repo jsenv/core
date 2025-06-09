@@ -5,13 +5,31 @@ import { PlusSvg } from "../icons/icons.jsx";
 import { SVGMaskOverlay } from "../svg_mask_overlay.jsx";
 
 export const pickRoleIcon = (role) => {
-  if (role.rolcanlogin) {
-    return UserWithCheckSvg;
+  if (!role.rolcanlogin) {
+    return UserGroupSvg;
   }
   if (role.rolsuper) {
     return UserWithHatSvg;
   }
   return UserSvg;
+};
+
+export const UserGroupSvg = ({ color = "currentColor" }) => {
+  return (
+    <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
+      <svg>
+        <svg x="0" y="0" width="16" height="16" overflow="visible">
+          <UserSvg color={color} />
+        </svg>
+        <svg x="8" y="0" width="16" height="16" overflow="visible">
+          <UserSvg color={color} />
+        </svg>
+      </svg>
+      <svg x="4" y="8" width="16" height="18" overflow="visible">
+        <UserSvg color={color} />
+      </svg>
+    </SVGMaskOverlay>
+  );
 };
 
 export const UserSvg = ({ color = "currentColor" }) => {
