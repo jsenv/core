@@ -2,17 +2,17 @@ import { registerRoute, valueInLocalStorage } from "@jsenv/router";
 import { setCurrentDatabase } from "./database_signals.js";
 import { databaseStore } from "./database_store.js";
 
-const [readDatabaseDetailsOpened, storeDatabaseDetailsOpened] =
+const [readDatabasesDetailsOpened, storeDatabasesDetailsOpened] =
   valueInLocalStorage("databases_details_opened", {
     type: "boolean",
   });
-export const EXPLORER_DATABASES_ROUTE = registerRoute({
-  match: () => readDatabaseDetailsOpened(),
+export const DATABASES_DETAILS_ROUTE = registerRoute({
+  match: () => readDatabasesDetailsOpened(),
   enter: () => {
-    storeDatabaseDetailsOpened(true);
+    storeDatabasesDetailsOpened(true);
   },
   leave: () => {
-    storeDatabaseDetailsOpened(false);
+    storeDatabasesDetailsOpened(false);
   },
   load: async () => {
     const response = await fetch(
@@ -24,5 +24,5 @@ export const EXPLORER_DATABASES_ROUTE = registerRoute({
     databaseStore.upsert(databases);
     setCurrentDatabase(currentDatabase);
   },
-  name: "databases_explorer_details",
+  name: "databases_details",
 });

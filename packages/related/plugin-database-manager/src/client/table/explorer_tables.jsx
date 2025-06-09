@@ -4,7 +4,6 @@ import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../explorer/explorer_group.jsx";
-import { TABLE_DETAILS_ROUTE } from "./explorer_table_routes.js";
 import { TableWithPlusSvg } from "./table_icons.jsx";
 import { TableLink } from "./table_link.jsx";
 import {
@@ -14,6 +13,7 @@ import {
   PUT_TABLE_ACTION,
 } from "./table_routes.js";
 import { useTableCount, useTableList } from "./table_signals.js";
+import { TABLES_DETAILS_ROUTE } from "./tables_details_routes.js";
 
 export const tablesExplorerGroupController =
   createExplorerGroupController("tables");
@@ -26,7 +26,7 @@ export const ExplorerTables = (props) => {
     <ExplorerGroup
       {...props}
       controller={tablesExplorerGroupController}
-      detailsRoute={TABLE_DETAILS_ROUTE}
+      detailsRoute={TABLES_DETAILS_ROUTE}
       idKey="oid"
       nameKey="tablename"
       labelChildren={<TextAndCount text={"TABLES"} count={tableCount} />}
