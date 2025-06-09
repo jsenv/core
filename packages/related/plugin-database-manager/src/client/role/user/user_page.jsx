@@ -13,13 +13,12 @@ import {
   GET_ROLE_ROUTE,
   PUT_ROLE_ACTION,
 } from "../role_routes.js";
-import { useActiveRole, useActiveRoleColumns } from "../role_signals.js";
+import { useActiveRoleColumns } from "../role_signals.js";
 
-export const UserPage = () => {
+export const UserPage = ({ role }) => {
   const [error, resetError] = useErrorBoundary();
   const rolname = useRouteParam(GET_ROLE_ROUTE, "rolname");
   const deleteRoleAction = DELETE_ROLE_ACTION.bindParams({ rolname });
-  const role = useActiveRole();
   const RoleIcon = pickRoleIcon(role);
 
   return (

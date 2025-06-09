@@ -11,7 +11,7 @@ export const RoleRoutes = () => {
 const RolePage = () => {
   const role = useActiveRole();
   if (role.rolcanlogin) {
-    return <UserPage />;
+    return <UserPage role={role} />;
   }
-  return <RoleGroupPage />;
+  return <RoleGroupPage role={role} />;
 };

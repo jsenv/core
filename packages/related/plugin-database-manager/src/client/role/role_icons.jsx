@@ -182,7 +182,11 @@ export const UserWithShieldSvg = ({ color = "currentColor" }) => {
     </svg>
   );
 };
-export const UserWithHatSvg = ({ color = "currentColor" }) => {
+export const UserWithHatSvg = ({
+  color = "currentColor",
+  hatColor = "transparent",
+  headColor = "transparent",
+}) => {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -191,6 +195,18 @@ export const UserWithHatSvg = ({ color = "currentColor" }) => {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
+      {headColor && (
+        <path
+          d="M8 10C8 12.2091 9.79086 14 12 14C14.2091 14 16 12.2091 16 10C16 9.4 15.87 8.83 15.63 8.31L12.45 9.89C12.17 10.03 11.83 10.03 11.55 9.89L8.37 8.31C8.13 8.83 8 9.4 8 10Z"
+          fill={headColor}
+        />
+      )}
+      {hatColor && (
+        <path
+          d="M4.55279 4.60557L11.5528 1.10557C11.8343 0.964809 12.1657 0.964809 12.4472 1.10557L19.4472 4.60557C19.786 4.77496 20 5.12123 20 5.5C20 5.87877 19.786 6.22504 19.4472 6.39443L12.4472 9.89443C12.1657 10.0352 11.8343 10.0352 11.5528 9.89443L4.55279 6.39443C4.214 6.22504 4 5.87877 4 5.5C4 5.12123 4.214 4.77496 4.55279 4.60557Z"
+          fill={hatColor}
+        />
+      )}
       <path
         fill-rule="evenodd"
         clip-rule="evenodd"
