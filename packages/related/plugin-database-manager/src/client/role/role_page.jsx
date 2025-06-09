@@ -80,14 +80,18 @@ const RoleFields = ({ role }) => {
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
   });
-  const fields = columns.map((column) => {
+  const fields = [];
+  for (const column of columns) {
     const columnName = column.column_name;
+    if (columnName === "rolcanlogin") {
+      continue;
+    }
     const value = role ? role[columnName] : "";
-    return {
+    fields.push({
       column,
       value,
-    };
-  });
+    });
+  }
 
   return (
     <ul>
