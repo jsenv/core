@@ -6,6 +6,9 @@ import { SVGMaskOverlay } from "../svg_mask_overlay.jsx";
 
 export const pickRoleIcon = (role) => {
   if (!role.rolcanlogin) {
+    if (role.rolsuper) {
+      return SuperUserGroupSvg;
+    }
     return UserGroupSvg;
   }
   if (role.rolsuper) {
@@ -14,19 +17,27 @@ export const pickRoleIcon = (role) => {
   return UserSvg;
 };
 
+export const SuperUserGroupSvg = ({ color = "currentColor" }) => {
+  return <GroupSvg color={color} UserIcon={UserWithHatSvg} />;
+};
+
 export const UserGroupSvg = ({ color = "currentColor" }) => {
+  return <GroupSvg color={color} UserIcon={UserSvg} />;
+};
+
+export const GroupSvg = ({ color = "currentColor", UserIcon }) => {
   return (
     <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
       <svg>
         <svg x="0" y="0" width="16" height="16" overflow="visible">
-          <UserSvg color={color} />
+          <UserIcon color={color} />
         </svg>
         <svg x="8" y="0" width="16" height="16" overflow="visible">
-          <UserSvg color={color} />
+          <UserIcon color={color} />
         </svg>
       </svg>
       <svg x="4" y="8" width="16" height="18" overflow="visible">
-        <UserSvg color={color} />
+        <UserIcon color={color} />
       </svg>
     </SVGMaskOverlay>
   );
