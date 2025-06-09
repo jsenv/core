@@ -114,7 +114,12 @@ export const jsenvPluginDatabaseManager = ({
         description: "Get info about the database manager explorer.",
         declarationSource: import.meta.url,
         fetch: async () => {
-          const roleCount = await countRows(sql, "pg_roles");
+          const roleCount = await countRows(sql, "pg_roles", {
+            whereClause: sql`
+              WHERE
+                pg_roles.rolcanlogin = TRUE
+            `,
+          });
           const databaseCount = await countRows(sql, "pg_database");
           const tableCount = await countRows(sql, "pg_tables");
           return Response.json({
@@ -217,22 +222,28 @@ export const jsenvPluginDatabaseManager = ({
       }),
       ...createRESTRoutes(`${pathname}api/roles`, {
         "GET": async (request) => {
+          const canLogin = request.searchParams.get("can_login");
+          let whereClause = "";
+          if (canLogin !== null) {
+            const canLoginValue = canLogin.toLowerCase();
+            if (
+              canLoginValue === "" ||
+              canLoginValue === "1" ||
+              canLoginValue === "true"
+            ) {
+              whereClause = sql`
+                WHERE
+                  pg_roles.rolcanlogin = TRUE
+              `;
+            } else if (canLoginValue === "0" || canLoginValue === "false") {
+              whereClause = sql`
+                WHERE
+                  pg_roles.rolcanlogin = FALSE
+              `;
+            }
+          }
+
           const ownersFlag = request.searchParams.has("owners");
-
-          const currentRoleResult = await sql`
-            SELECT
-              current_user
-          `;
-          const currentRoleName = currentRoleResult[0].current_user;
-          const [currentRole] = await sql`
-            SELECT
-              *
-            FROM
-              pg_roles
-            WHERE
-              rolname = ${currentRoleName}
-          `;
-
           const roles = await sql`
             SELECT
               pg_roles.*,
@@ -260,13 +271,28 @@ export const jsenvPluginDatabaseManager = ({
                   JOIN pg_roles ON pg_roles.oid = pg_database.datdba
                 GROUP BY
                   pg_roles.rolname
-              ) database_count_result ON pg_roles.rolname = database_count_result.database_owner
+              ) database_count_result ON pg_roles.rolname = database_count_result.database_owner ${whereClause ||
+            sql``}
           `;
           for (const role of roles) {
             role.table_count = parseInt(role.table_count) || 0;
             role.database_count = parseInt(role.database_count) || 0;
             role.object_count = role.table_count + role.database_count;
           }
+
+          const currentRoleResult = await sql`
+            SELECT
+              current_user
+          `;
+          const currentRoleName = currentRoleResult[0].current_user;
+          const [currentRole] = await sql`
+            SELECT
+              *
+            FROM
+              pg_roles
+            WHERE
+              rolname = ${currentRoleName}
+          `;
           if (ownersFlag) {
             const owners = [];
             for (const role of roles) {
@@ -854,7 +880,7 @@ const createRESTRoutes = (resource, endpoints) => {
   return routes;
 };
 
-const countRows = async (sql, tableName) => {
+const countRows = async (sql, tableName, { whereClause } = {}) => {
   if (tableName === "pg_tables") {
     const [tableCountResult] = await sql`
       SELECT
@@ -871,7 +897,7 @@ const countRows = async (sql, tableName) => {
     SELECT
       COUNT(*)
     FROM
-      ${sql(tableName)}
+      ${sql(tableName)} ${whereClause || sql``}
   `;
   return parseInt(countResult.count);
 };
