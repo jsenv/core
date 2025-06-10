@@ -4,9 +4,11 @@ import { errorFromResponse } from "../error_from_response.js";
 import { setRoleCanLoginCount } from "./role_can_login/role_can_login_signals.js";
 import { setRoleGroupCount } from "./role_group/role_group_signals.js";
 import {
+  addMember,
   setActiveRole,
   setActiveRoleColumns,
   setActiveRoleDatabases,
+  setRoleMembers,
 } from "./role_signals.js";
 import { roleStore } from "./role_store.js";
 import { setRoleWithOwnershipCount } from "./role_with_ownership/role_with_ownership_signals.js";
@@ -26,10 +28,11 @@ export const GET_ROLE_ROUTE = registerRoute(
     }
     const { data, meta } = await response.json();
     const role = data;
-    const { databases, columns } = meta;
+    const { databases, columns, members } = meta;
     setActiveRole(role);
     setActiveRoleDatabases(databases);
     setActiveRoleColumns(columns);
+    setRoleMembers(role, members);
   },
 );
 connectStoreAndRoute(roleStore, GET_ROLE_ROUTE, "rolname");
@@ -125,8 +128,10 @@ export const ADD_MEMBER_ACTION = registerAction(
         `Failed to add ${memberRolname} to ${rolname}`,
       );
     }
-    // TODO: insert the members in the role array
-    // roleStore.upsert("rolname", rolname, { members: [...role.members] });
+    const { data } = await response.json();
+    const member = data;
+    const role = roleStore.select("rolname", rolname);
+    addMember(role, member);
   },
 );
 

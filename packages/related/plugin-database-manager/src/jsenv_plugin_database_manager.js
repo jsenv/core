@@ -403,7 +403,11 @@ export const jsenvPluginDatabaseManager = ({
         },
         "GET /:rolname": async (request) => {
           const { rolname } = request.params;
-          const { role, ...meta } = await getRoleByName(rolname);
+          const result = await getRoleByName(rolname);
+          if (!result) {
+            return null;
+          }
+          const { role, ...meta } = result;
           return {
             data: role,
             meta,

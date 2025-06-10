@@ -122,6 +122,9 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     } else if (args.length === 2) {
       property = idKey;
       value = args[0];
+      if (typeof value === "object") {
+        value = value[idKey];
+      }
       props = args[1];
     } else if (args.length === 3) {
       property = args[0];

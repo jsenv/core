@@ -81,13 +81,27 @@ export const useRoleTables = (role) => {
   return tableArray;
 };
 
-export const setRoleMembers = (rolname, value) => {
+export const setRoleMembers = (role, value) => {
   roleStore.upsert(value);
-  roleStore.upsert("rolname", rolname, { members: value });
+  roleStore.upsert(role, { members: value });
 };
 export const useRoleMemberList = (role) => {
   const { members } = role;
   const memberIdArray = members ? members.map((member) => member.oid) : [];
   const memberArray = roleStore.selectAll(memberIdArray);
   return memberArray;
+};
+export const addMember = (role, member) => {
+  const { members } = role;
+  if (!members) {
+    roleStore.upsert(role, { members: [member] });
+    return;
+  }
+  for (const existingMember of members) {
+    if (existingMember.oid === member.oid) {
+      return; // already a member
+    }
+  }
+  roleStore.upsert(member);
+  members.push(member);
 };
