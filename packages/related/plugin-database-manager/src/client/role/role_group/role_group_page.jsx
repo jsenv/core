@@ -1,20 +1,12 @@
-import {
-  ErrorBoundaryContext,
-  SPADeleteButton,
-  SPAInputText,
-} from "@jsenv/router";
-import { useErrorBoundary, useState } from "preact/hooks";
+import { ErrorBoundaryContext, SPADeleteButton } from "@jsenv/router";
+import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../../components/database_value.jsx";
 import { PageBody, PageHead } from "../../layout/page.jsx";
 import { RoleDatabaseList } from "../role_database_list.jsx";
 import { pickRoleIcon } from "../role_icons.jsx";
-import { RoleLink } from "../role_link.jsx";
-import {
-  ADD_MEMBER_ACTION,
-  DELETE_ROLE_ACTION,
-  PUT_ROLE_ACTION,
-} from "../role_routes.js";
-import { useActiveRoleColumns, useRoleMemberList } from "../role_signals.js";
+import { DELETE_ROLE_ACTION, PUT_ROLE_ACTION } from "../role_routes.js";
+import { useActiveRoleColumns } from "../role_signals.js";
+import { RoleGroupMemberList } from "./role_group_member_list.jsx";
 
 export const RoleGroupPage = ({ role }) => {
   const [error, resetError] = useErrorBoundary();
@@ -63,62 +55,6 @@ const ErrorDetails = ({ error }) => {
         <code>{error.stack}</code>
       </pre>
     </details>
-  );
-};
-
-// TODO: add a button to add a member to this group
-const RoleGroupMemberList = ({ role }) => {
-  const memberList = useRoleMemberList(role);
-  const [isAdding, isAddingSetter] = useState(false);
-
-  return (
-    <div>
-      <h2 style="gap: 10px; display: flex; align-items: center;">
-        <span>Members of this group</span>
-        <div className="actions">
-          <button
-            disabled={isAdding}
-            onClick={() => {
-              isAddingSetter(true);
-            }}
-          >
-            Add
-          </button>
-        </div>
-      </h2>
-      {isAdding && (
-        <div>
-          <SPAInputText
-            autoFocus
-            action={ADD_MEMBER_ACTION.bindParams({
-              rolname: role.rolename,
-            })}
-            placeholder="Role name"
-          ></SPAInputText>
-          <button>Submit</button>
-          <button
-            onClick={() => {
-              isAddingSetter(false);
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-      {memberList.length === 0 ? (
-        <span>No members</span>
-      ) : (
-        <ul>
-          {memberList.map((memberRole) => {
-            return (
-              <li key={memberRole.oid}>
-                <RoleLink role={memberRole}>{memberRole.rolname}</RoleLink>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
   );
 };
 
