@@ -11,6 +11,10 @@ import.meta.css = /* css */ `
     display: inline-flex;
     overflow: hidden;
   }
+
+  .link_with_icon[data-active] {
+    background-color: lightgrey;
+  }
 `;
 
 export const LinkWithIcon = ({ icon, isCurrent, children, ...rest }) => {

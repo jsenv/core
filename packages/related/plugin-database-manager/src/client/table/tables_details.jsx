@@ -1,4 +1,3 @@
-import { useRouteIsMatching } from "@jsenv/router";
 import { TextAndCount } from "../components/text_and_count.jsx";
 import {
   createExplorerGroupController,
@@ -8,7 +7,6 @@ import { TableWithPlusSvg } from "./table_icons.jsx";
 import { TableLink } from "./table_link.jsx";
 import {
   DELETE_TABLE_ACTION,
-  GET_TABLE_ROUTE,
   POST_TABLE_ACTION,
   PUT_TABLE_ACTION,
 } from "./table_routes.js";
@@ -32,11 +30,6 @@ export const TablesDetails = (props) => {
       renderNewButtonChildren={() => <TableWithPlusSvg />}
       renderItem={(item, props) => <TableLink table={item} {...props} />}
       useItemList={useTableList}
-      useItemRouteIsActive={(table) =>
-        useRouteIsMatching(GET_TABLE_ROUTE, {
-          tablename: table.tablename,
-        })
-      }
       useRenameItemAction={(table) =>
         PUT_TABLE_ACTION.bindParams({
           tablename: table.tablename,

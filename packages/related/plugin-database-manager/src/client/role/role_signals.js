@@ -62,15 +62,9 @@ export const setRoleTables = (rolname, value) => {
     tables: value,
   });
 };
-export const useRoleTables = (rolname) => {
-  const role = roleStore.select("rolname", rolname);
-  let tableIdArray;
-  if (!role) {
-    tableIdArray = [];
-  } else {
-    const tables = role.tables;
-    tableIdArray = tables ? tables.map((table) => table.oid) : [];
-  }
-  const tableArray = tableStore.selectAll(tableIdArray);
+export const useRoleTables = (role) => {
+  const { tables } = role;
+  const tableNameArray = tables ? tables.map((table) => table.tablename) : [];
+  const tableArray = tableStore.selectAll(tableNameArray);
   return tableArray;
 };

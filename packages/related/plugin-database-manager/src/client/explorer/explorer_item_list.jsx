@@ -5,7 +5,6 @@ export const ExplorerItemList = ({
   nameKey,
   renderItem,
   useItemList,
-  useItemRouteIsActive,
   useRenameItemAction,
   useDeleteItemAction,
   isCreatingNew,
@@ -24,7 +23,6 @@ export const ExplorerItemList = ({
               item={item}
               renderItem={renderItem}
               useItemList={useItemList}
-              useItemRouteIsActive={useItemRouteIsActive}
               useRenameItemAction={useRenameItemAction}
               useDeleteItemAction={useDeleteItemAction}
             />

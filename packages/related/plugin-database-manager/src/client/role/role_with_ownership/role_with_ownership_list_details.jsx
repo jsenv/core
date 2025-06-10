@@ -6,7 +6,8 @@ import {
   ExplorerGroup,
 } from "../../explorer/explorer_group.jsx";
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
-import { useRoleList } from "../role_signals.js";
+import { TableLink } from "../../table/table_link.jsx";
+import { useRoleList, useRoleTables } from "../role_signals.js";
 import { ROLE_WITH_OWNERSHIP_LIST_DETAILS_ROUTE } from "./role_with_ownership_list_details_routes.js";
 import { getRoleTableListDetailsRoute } from "./role_with_ownership_routes.js";
 import {
@@ -50,9 +51,19 @@ export const RoleWithOwnershipListDetails = (props) => {
                   return (
                     <Route.Details
                       route={getRoleTableListDetailsRoute(role)}
-                      renderLoaded={({ data }) => {
-                        debugger;
-                        return JSON.stringify(data, null, 2);
+                      renderLoaded={() => {
+                        const tables = useRoleTables(role);
+                        return (
+                          <ExplorerItemList
+                            renderItem={(table) => (
+                              <TableLink table={table}>
+                                {table.tablename}
+                              </TableLink>
+                            )}
+                          >
+                            {tables}
+                          </ExplorerItemList>
+                        );
                       }}
                     >
                       <TextAndCount text="tables" count={role.table_count} />

@@ -1,4 +1,3 @@
-import { useRouteIsMatching } from "@jsenv/router";
 import { TextAndCount } from "../components/text_and_count.jsx";
 import {
   createExplorerGroupController,
@@ -9,7 +8,6 @@ import { DatabaseWithPlusSvg } from "./database_icons.jsx";
 import { DatabaseLink } from "./database_link.jsx";
 import {
   DELETE_DATABASE_ACTION,
-  GET_DATABASE_ROUTE,
   POST_DATABASE_ACTION,
   PUT_DATABASE_ACTION,
 } from "./database_routes.js";
@@ -35,11 +33,6 @@ export const DatabasesDetails = (props) => {
         <DatabaseLink key={item.oid} database={item} {...props} />
       )}
       useItemList={useDatabaseList}
-      useItemRouteIsActive={(database) =>
-        useRouteIsMatching(GET_DATABASE_ROUTE, {
-          datname: database.datname,
-        })
-      }
       useRenameItemAction={(database) =>
         PUT_DATABASE_ACTION.bindParams({
           datname: database.datname,

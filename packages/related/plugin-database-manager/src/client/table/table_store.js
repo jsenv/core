@@ -1,3 +1,3 @@
 import { arraySignalStore } from "@jsenv/sigi";
 
-export const tableStore = arraySignalStore([], "oid");
+export const tableStore = arraySignalStore([], "tablename");

@@ -14,13 +14,11 @@ export const ExplorerItem = ({
   item,
   renderItem,
   useItemList,
-  useItemRouteIsActive = () => false,
   useRenameItemAction = () => undefined,
   useDeleteItemAction = () => undefined,
 }) => {
   const itemName = item[nameKey];
   const deleteAction = useDeleteItemAction(item);
-  const itemRouteIsActive = useItemRouteIsActive(item);
 
   const renameAction = useRenameItemAction(item);
   const { editable, startEditing, stopEditing } = useEditableController();
@@ -39,7 +37,6 @@ export const ExplorerItem = ({
       <RenameInputOrName
         nameKey={nameKey}
         item={item}
-        itemRouteIsActive={itemRouteIsActive}
         useItemList={useItemList}
         renameAction={renameAction}
         editable={editable}
@@ -50,7 +47,6 @@ export const ExplorerItem = ({
         style={{
           overflow: "hidden",
           textOverflow: "ellipsis",
-          background: itemRouteIsActive ? "lightgrey" : "none",
         }}
       >
         {itemName}
@@ -63,7 +59,6 @@ const RenameInputOrName = ({
   nameKey,
   item,
   useItemList,
-  itemRouteIsActive,
   renameAction,
   editable,
   stopEditing,
@@ -95,7 +90,6 @@ const RenameInputOrName = ({
         style={{
           overflow: "hidden",
           textOverflow: "ellipsis",
-          background: itemRouteIsActive ? "lightgrey" : "none",
         }}
       >
         {itemName}

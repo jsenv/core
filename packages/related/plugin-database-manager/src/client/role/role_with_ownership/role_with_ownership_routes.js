@@ -33,6 +33,7 @@ const ROLE_TABLE_LIST_DETAILS_ROUTE_TEMPLATE = createRouteTemplate(
         }
         const { data } = await response.json();
         setRoleTables(rolname, data);
+        return data;
       },
       name: `role_${rolname}_table_list_details`,
     };

@@ -49,7 +49,6 @@ export const ExplorerGroup = forwardRef(
       renderNewButtonChildren,
       renderItem,
       useItemList,
-      useItemRouteIsActive,
       useRenameItemAction,
       useCreateItemAction,
       useDeleteItemAction,
@@ -112,7 +111,6 @@ export const ExplorerGroup = forwardRef(
                 nameKey={nameKey}
                 renderItem={renderItem}
                 useItemList={useItemList}
-                useItemRouteIsActive={useItemRouteIsActive}
                 useRenameItemAction={useRenameItemAction}
                 useCreateItemAction={useCreateItemAction}
                 useDeleteItemAction={useDeleteItemAction}
