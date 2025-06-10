@@ -1,4 +1,4 @@
-import { PlusSvg } from "../icons/icons.jsx";
+import { PlusSvg } from "./icons.jsx";
 import { SVGMaskOverlay } from "./svg_mask_overlay.jsx";
 
 export const SvgIconGroup = ({ children }) => {

@@ -1,5 +1,4 @@
-import { PlusSvg } from "../icons/icons.jsx";
-import { SVGMaskOverlay } from "../svg_mask_overlay.jsx";
+import { SvgWithPlus } from "../svg/svg_composition.jsx";
 
 // https://www.svgrepo.com/svg/437830/database
 export const DatabaseSvg = () => {
@@ -23,12 +22,8 @@ export const DatabaseSvg = () => {
 
 export const DatabaseWithPlusSvg = ({ color }) => {
   return (
-    <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
+    <SvgWithPlus>
       <DatabaseSvg color={color} />
-      <svg x="12" y="12" width="16" height="16" overflow="visible">
-        <circle cx="12" cy="12" r="10" fill="transparent" />
-        <PlusSvg color="green" />
-      </svg>
-    </SVGMaskOverlay>
+    </SvgWithPlus>
   );
 };

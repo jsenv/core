@@ -1,4 +1,4 @@
-import { FontSizedSvg } from "./font_sized_svg.jsx";
+import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
 export const IconAndText = ({ icon, children, ...rest }) => {
   return (

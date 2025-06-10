@@ -1,6 +1,6 @@
 import { SPALink } from "@jsenv/router";
-import { CurrentSvg } from "../icons/icons.jsx";
-import { FontSizedSvg } from "./font_sized_svg.jsx";
+import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
+import { CurrentSvg } from "../svg/icons.jsx";
 
 import.meta.css = /* css */ `
   .link_with_icon {

@@ -7,7 +7,7 @@ import {
   SPAInputText,
   useEditableController,
 } from "@jsenv/router";
-import { FontSizedSvg } from "../components/font_sized_svg.jsx";
+import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
 export const ExplorerItem = ({
   nameKey,

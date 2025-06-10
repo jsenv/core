@@ -4,7 +4,7 @@ import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../../explorer/explorer_group.jsx";
-import { UserWithPlusSvg } from "../role_icons.jsx";
+import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
 import {
   DELETE_ROLE_ACTION,
@@ -29,8 +29,8 @@ export const UsersDetails = (props) => {
       detailsRoute={USERS_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"
-      labelChildren={<TextAndCount text={"USERS"} count={userCount} />}
-      renderNewButtonChildren={() => <UserWithPlusSvg />}
+      labelChildren={<TextAndCount text={"ROLE LOGINS"} count={userCount} />}
+      renderNewButtonChildren={() => <RoleCanLoginWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
         <RoleLink role={role} {...props}>
           {children}

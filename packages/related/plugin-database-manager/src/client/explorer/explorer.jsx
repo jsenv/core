@@ -1,6 +1,5 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
-import { FontSizedSvg } from "../components/font_sized_svg.jsx";
 import { DatabaseSvg } from "../database/database_icons.jsx";
 import { useCurrentDatabase } from "../database/database_signals.js";
 import {
@@ -21,6 +20,7 @@ import {
   UsersDetails,
   usersDetailsController,
 } from "../role/user/users_details.jsx";
+import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 import {
   TablesDetails,
   tablesDetailsController,
