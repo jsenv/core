@@ -65,6 +65,7 @@ const PageHeadLabel = ({ icon, label, children }) => {
         style={{
           color: "lightgrey",
           userSelect: "none",
+          whiteSpace: "nowrap",
         }}
       >
         {label}

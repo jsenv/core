@@ -27,7 +27,7 @@ export const RoleGroupPage = ({ role }) => {
           },
         ]}
       >
-        <PageHead.Label icon={<RoleIcon />} label={"Group:"}>
+        <PageHead.Label icon={<RoleIcon />} label={"Role Group:"}>
           {rolname}
         </PageHead.Label>
       </PageHead>

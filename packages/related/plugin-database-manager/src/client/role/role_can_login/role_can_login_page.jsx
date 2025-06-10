@@ -35,7 +35,7 @@ export const RoleCanLoginPage = ({ role }) => {
           },
         ]}
       >
-        <PageHead.Label icon={<RoleIcon />} label={"User:"}>
+        <PageHead.Label icon={<RoleIcon />} label={"Role Login:"}>
           {rolname}
         </PageHead.Label>
       </PageHead>

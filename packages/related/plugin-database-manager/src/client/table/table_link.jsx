@@ -14,7 +14,7 @@ export const TableLink = ({ table, children, ...rest }) => {
     <LinkWithIcon
       icon={<TableSvg color="#333" />}
       href={tableRouteUrl}
-      data-active={tableRouteIsMatching}
+      data-active={tableRouteIsMatching ? "" : undefined}
       {...rest}
     >
       {children}

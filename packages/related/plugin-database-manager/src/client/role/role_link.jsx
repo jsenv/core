@@ -16,7 +16,7 @@ export const RoleLink = ({ role, children, ...rest }) => {
     <LinkWithIcon
       icon={<RoleIcon color="#333" />}
       isCurrent={isCurrent}
-      data-active={roleRouteIsMatching}
+      data-active={roleRouteIsMatching ? "" : undefined}
       href={roleRouteUrl}
       {...rest}
     >
