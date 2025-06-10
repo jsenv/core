@@ -103,7 +103,7 @@ export const addMember = (role, member) => {
     }
   }
   roleStore.upsert(member);
-  members.push(member);
+  roleStore.upsert(role, { members: [...members, member] });
 };
 export const removeMember = (role, member) => {
   const { members } = role;
@@ -113,8 +113,17 @@ export const removeMember = (role, member) => {
   const index = members.findIndex(
     (existingMember) => existingMember.oid === member.oid,
   );
-  if (index !== -1) {
+  let found = false;
+  const membersWithoutThisOne = [];
+  for (const existingMember of members) {
+    if (existingMember.oid === member.oid) {
+      found = true;
+    } else {
+      membersWithoutThisOne.push(existingMember);
+    }
+  }
+  if (found) {
     members.splice(index, 1);
-    roleStore.upsert(role, { members });
+    roleStore.upsert(role, { members: membersWithoutThisOne });
   }
 };

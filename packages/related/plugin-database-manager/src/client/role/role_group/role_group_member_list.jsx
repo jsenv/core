@@ -50,7 +50,7 @@ export const RoleGroupMemberList = ({ role }) => {
               gap: "10px",
             }}
           >
-            Adding a member
+            Adding member
           </h3>
           <SPAForm
             action={ADD_MEMBER_ACTION.bindParams({
