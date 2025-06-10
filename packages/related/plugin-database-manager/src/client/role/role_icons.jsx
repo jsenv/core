@@ -1,51 +1,25 @@
 // https://www.svgrepo.com/collection/zest-interface-icons/12
 // https://flowbite.com/icons/
 
-import { PlusSvg } from "../icons/icons.jsx";
-import { SVGMaskOverlay } from "../svg_mask_overlay.jsx";
+import { SvgIconGroup, SvgWithPlus } from "../svg/svg_composition.jsx";
 
 export const pickRoleIcon = (role) => {
   if (!role.rolcanlogin) {
     if (role.rolsuper) {
-      return SuperUserGroupSvg;
+      return SuperRoleGroupSvg;
     }
-    return UserGroupSvg;
+    return RoleGroupSvg;
   }
   if (role.rolsuper) {
-    return UserWithHatSvg;
+    return SuperRoleCanLoginSvg;
   }
-  return UserSvg;
+  return RoleCanLoginSvg;
 };
 
-export const SuperUserGroupSvg = ({ color = "currentColor" }) => {
-  return <GroupSvg color={color} UserIcon={UserWithHatSvg} />;
-};
-
-export const UserGroupSvg = ({ color = "currentColor" }) => {
-  return <GroupSvg color={color} UserIcon={UserSvg} />;
-};
-
-export const GroupSvg = ({ color = "currentColor", UserIcon }) => {
-  return (
-    <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
-      <svg>
-        <svg x="0" y="0" width="16" height="16" overflow="visible">
-          <UserIcon color={color} />
-        </svg>
-        <svg x="8" y="0" width="16" height="16" overflow="visible">
-          <UserIcon color={color} />
-        </svg>
-      </svg>
-      <svg x="4" y="8" width="16" height="18" overflow="visible">
-        <UserIcon color={color} />
-      </svg>
-    </SVGMaskOverlay>
-  );
-};
-
-export const UserSvg = ({
+export const RoleCanLoginSvg = ({
   color = "currentColor",
-  fillColor = "transparent",
+  headColor = "transparent",
+  bodyColor = "transparent",
 }) => {
   return (
     <svg
@@ -55,20 +29,13 @@ export const UserSvg = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Remplissage complet (uniquement quand fillColor est fourni) */}
-      {fillColor && (
-        <>
-          {/* Cercle de la tête complètement rempli */}
-          <circle cx="12" cy="9" r="4" fill={fillColor} />
-
-          <path
-            d="M4.5 19.8C4.5 17.5 6.8 15 12 15C17.2 15 19.5 17.5 19.5 19.8C19.5 20.4 19.2 20.8 18.8 20.8H5.2C4.8 20.8 4.5 20.4 4.5 19.8Z"
-            fill={fillColor}
-          />
-        </>
+      {bodyColor && (
+        <path
+          d="M4.5 19.8C4.5 17.5 6.8 15 12 15C17.2 15 19.5 17.5 19.5 19.8C19.5 20.4 19.2 20.8 18.8 20.8H5.2C4.8 20.8 4.5 20.4 4.5 19.8Z"
+          fill={bodyColor}
+        />
       )}
-
-      {/* Chemin original conservé tel quel */}
+      {headColor && <circle cx="12" cy="9" r="4" fill={headColor} />}
       <path
         fill-rule="evenodd"
         clip-rule="evenodd"
@@ -79,28 +46,67 @@ export const UserSvg = ({
     </svg>
   );
 };
-
-export const UserGroupWithPlusSvg = ({ color }) => {
+export const RoleCanLoginWithPlusSvg = ({ color }) => {
   return (
-    <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
-      <UserGroupSvg color={color} />
-      <svg x="12" y="12" width="16" height="16" overflow="visible">
-        <circle cx="8" cy="8" r="5" fill="transparent" />
-        <PlusSvg color="green" />
-      </svg>
-    </SVGMaskOverlay>
+    <SvgWithPlus>
+      <RoleCanLoginSvg color={color} />
+    </SvgWithPlus>
+  );
+};
+export const SuperRoleCanLoginSvg = ({
+  color = "currentColor",
+  hatColor = "transparent",
+  headColor = "transparent",
+}) => {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="100%"
+      height="100%"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {headColor && (
+        <path
+          d="M8 10C8 12.2091 9.79086 14 12 14C14.2091 14 16 12.2091 16 10C16 9.4 15.87 8.83 15.63 8.31L12.45 9.89C12.17 10.03 11.83 10.03 11.55 9.89L8.37 8.31C8.13 8.83 8 9.4 8 10Z"
+          fill={headColor}
+        />
+      )}
+      {hatColor && (
+        <path
+          d="M4.55279 4.60557L11.5528 1.10557C11.8343 0.964809 12.1657 0.964809 12.4472 1.10557L19.4472 4.60557C19.786 4.77496 20 5.12123 20 5.5C20 5.87877 19.786 6.22504 19.4472 6.39443L12.4472 9.89443C12.1657 10.0352 11.8343 10.0352 11.5528 9.89443L4.55279 6.39443C4.214 6.22504 4 5.87877 4 5.5C4 5.12123 4.214 4.77496 4.55279 4.60557Z"
+          fill={hatColor}
+        />
+      )}
+      <path
+        fill-rule="evenodd"
+        clip-rule="evenodd"
+        d="M12.4472 1.10557C12.1657 0.964809 11.8343 0.964809 11.5528 1.10557L4.55279 4.60557C4.214 4.77496 4 5.12123 4 5.5C4 5.87877 4.214 6.22504 4.55279 6.39443L6.58603 7.41105C6.21046 8.19525 6 9.07373 6 10C6 11.8604 6.84668 13.523 8.17572 14.6235C4.98421 15.7459 3 18.2474 3 21C3 21.5523 3.44772 22 4 22C4.55228 22 5 21.5523 5 21C5 18.7306 7.3553 16 12 16C16.6447 16 19 18.7306 19 21C19 21.5523 19.4477 22 20 22C20.5523 22 21 21.5523 21 21C21 18.2474 19.0158 15.7459 15.8243 14.6235C17.1533 13.523 18 11.8604 18 10C18 9.07373 17.7895 8.19525 17.414 7.41105L19.4472 6.39443C19.786 6.22504 20 5.87877 20 5.5C20 5.12123 19.786 4.77496 19.4472 4.60557L12.4472 1.10557ZM12 14C14.2091 14 16 12.2091 16 10C16 9.39352 15.8656 8.81975 15.6248 8.30566L12.4472 9.89443C12.1657 10.0352 11.8343 10.0352 11.5528 9.89443L8.37525 8.30566C8.13443 8.81975 8 9.39352 8 10C8 12.2091 9.79086 14 12 14ZM8.44695 6.10544L7.23607 5.5L12 3.11803L16.7639 5.5L15.5531 6.10544L12 7.88197L8.44695 6.10544Z"
+        fill={color}
+      />
+    </svg>
   );
 };
 
-export const UserWithPlusSvg = ({ color }) => {
+export const SuperRoleGroupSvg = ({ color = "currentColor" }) => {
   return (
-    <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
-      <UserSvg color={color} />
-      <svg x="12" y="12" width="16" height="16" overflow="visible">
-        <circle cx="8" cy="8" r="5" fill="transparent" />
-        <PlusSvg color="green" />
-      </svg>
-    </SVGMaskOverlay>
+    <SvgIconGroup>
+      <SuperRoleCanLoginSvg color={color} />
+    </SvgIconGroup>
+  );
+};
+export const RoleGroupSvg = ({ color = "currentColor" }) => {
+  return (
+    <SvgIconGroup>
+      <RoleCanLoginSvg color={color} />
+    </SvgIconGroup>
+  );
+};
+export const RoleGroupWithPlusSvg = ({ color }) => {
+  return (
+    <SvgWithPlus>
+      <RoleGroupSvg color={color} />
+    </SvgWithPlus>
   );
 };
 
@@ -178,40 +184,6 @@ export const UserWithShieldSvg = ({ color = "currentColor" }) => {
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
-      />
-    </svg>
-  );
-};
-export const UserWithHatSvg = ({
-  color = "currentColor",
-  hatColor = "transparent",
-  headColor = "transparent",
-}) => {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="100%"
-      height="100%"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {headColor && (
-        <path
-          d="M8 10C8 12.2091 9.79086 14 12 14C14.2091 14 16 12.2091 16 10C16 9.4 15.87 8.83 15.63 8.31L12.45 9.89C12.17 10.03 11.83 10.03 11.55 9.89L8.37 8.31C8.13 8.83 8 9.4 8 10Z"
-          fill={headColor}
-        />
-      )}
-      {hatColor && (
-        <path
-          d="M4.55279 4.60557L11.5528 1.10557C11.8343 0.964809 12.1657 0.964809 12.4472 1.10557L19.4472 4.60557C19.786 4.77496 20 5.12123 20 5.5C20 5.87877 19.786 6.22504 19.4472 6.39443L12.4472 9.89443C12.1657 10.0352 11.8343 10.0352 11.5528 9.89443L4.55279 6.39443C4.214 6.22504 4 5.87877 4 5.5C4 5.12123 4.214 4.77496 4.55279 4.60557Z"
-          fill={hatColor}
-        />
-      )}
-      <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M12.4472 1.10557C12.1657 0.964809 11.8343 0.964809 11.5528 1.10557L4.55279 4.60557C4.214 4.77496 4 5.12123 4 5.5C4 5.87877 4.214 6.22504 4.55279 6.39443L6.58603 7.41105C6.21046 8.19525 6 9.07373 6 10C6 11.8604 6.84668 13.523 8.17572 14.6235C4.98421 15.7459 3 18.2474 3 21C3 21.5523 3.44772 22 4 22C4.55228 22 5 21.5523 5 21C5 18.7306 7.3553 16 12 16C16.6447 16 19 18.7306 19 21C19 21.5523 19.4477 22 20 22C20.5523 22 21 21.5523 21 21C21 18.2474 19.0158 15.7459 15.8243 14.6235C17.1533 13.523 18 11.8604 18 10C18 9.07373 17.7895 8.19525 17.414 7.41105L19.4472 6.39443C19.786 6.22504 20 5.87877 20 5.5C20 5.12123 19.786 4.77496 19.4472 4.60557L12.4472 1.10557ZM12 14C14.2091 14 16 12.2091 16 10C16 9.39352 15.8656 8.81975 15.6248 8.30566L12.4472 9.89443C12.1657 10.0352 11.8343 10.0352 11.5528 9.89443L8.37525 8.30566C8.13443 8.81975 8 9.39352 8 10C8 12.2091 9.79086 14 12 14ZM8.44695 6.10544L7.23607 5.5L12 3.11803L16.7639 5.5L15.5531 6.10544L12 7.88197L8.44695 6.10544Z"
-        fill={color}
       />
     </svg>
   );
