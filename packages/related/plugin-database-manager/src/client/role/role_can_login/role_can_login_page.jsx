@@ -43,10 +43,10 @@ export const RoleCanLoginPage = ({ role }) => {
         <RoleFields role={role} />
         <RoleDatabaseList role={role} />
         <a
-          href="https://www.postgresql.org/docs/14/sql-alterrole.html"
+          href="https://www.postgresql.org/docs/current/sql-createrole.html"
           target="_blank"
         >
-          ALTER ROLE documentation
+          ROLE documentation
         </a>
       </PageBody>
     </ErrorBoundaryContext.Provider>
