@@ -54,7 +54,7 @@ export const RoleGroupMemberList = ({ role }) => {
           </h3>
           <SPAForm
             action={ADD_MEMBER_ACTION.bindParams({
-              rolname: role.rolename,
+              rolname: role.rolname,
             })}
             errorTarget="input"
           >
