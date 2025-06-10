@@ -172,9 +172,9 @@ export const SPAForm = forwardRef(
 );
 
 export const SPAButton = forwardRef(
-  ({ formAction, children, ...props }, ref) => {
+  ({ formAction, children, disabled, ...props }, ref) => {
     const innerRef = useRef();
-    const [, formActionMapRef] = useContext(FormContext);
+    const [formStatus, formActionMapRef] = useContext(FormContext);
     useImperativeHandle(ref, () => innerRef.current);
 
     useEffect(() => {
@@ -193,6 +193,7 @@ export const SPAButton = forwardRef(
             props.onClick(clickEvent);
           }
         }}
+        disabled={formStatus.pending || disabled}
       >
         {children}
       </button>

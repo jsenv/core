@@ -25,31 +25,46 @@ export const RoleGroupMemberList = ({ role }) => {
         <span>Members of this group</span>
         <div className="actions">
           <button
-            disabled={isAdding}
             onClick={() => {
-              isAddingSetter(true);
+              isAddingSetter((prev) => !prev);
             }}
           >
-            Add
+            {isAdding ? "Cancel" : "Add"}
           </button>
         </div>
       </h2>
       {isAdding && (
-        <SPAForm
-          action={ADD_MEMBER_ACTION.bindParams({
-            rolname: role.rolename,
-          })}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            background: "lightgrey",
+            padding: "10px",
+          }}
         >
-          <InputText autoFocus placeholder="Role name" />
-          <button>Submit</button>
-          <button
-            onClick={() => {
-              isAddingSetter(false);
+          <h3
+            style={{
+              display: "flex",
+              alignItems: "center",
+              margin: "0px",
+              gap: "10px",
             }}
           >
-            Cancel
-          </button>
-        </SPAForm>
+            Adding a member
+          </h3>
+          <SPAForm
+            action={ADD_MEMBER_ACTION.bindParams({
+              rolname: role.rolename,
+            })}
+          >
+            <label>
+              <span>Role name: </span>
+              <InputText name="membername" autoFocus placeholder="Role name" />
+            </label>
+
+            <SPAForm.Button>Submit</SPAForm.Button>
+          </SPAForm>
+        </div>
       )}
       {memberList.length === 0 ? (
         <span>No members</span>

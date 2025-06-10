@@ -110,7 +110,8 @@ export const DELETE_ROLE_ACTION = registerAction(
 );
 
 export const ADD_MEMBER_ACTION = registerAction(
-  async ({ rolname, memberRolname, signal }) => {
+  async ({ rolname, formData, signal }) => {
+    const memberRolname = formData.get("membername");
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/members/${memberRolname}`,
       {
