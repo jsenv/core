@@ -108,3 +108,27 @@ export const DELETE_ROLE_ACTION = registerAction(
     setRoleWithOwnershipCount(withOwnershipCount);
   },
 );
+
+export const ADD_MEMBER_ROLE_ACTION = registerAction(
+  async ({ rolname, memberRolname, signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/members/${memberRolname}`,
+      {
+        signal,
+        method: "PUT",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(
+        response,
+        `Failed to add ${memberRolname} to ${rolname}`,
+      );
+    }
+    // TODO: insert the members in the role array
+    //  roleStore.upsert("rolname", rolname, { members: [...role.members] });
+  },
+);

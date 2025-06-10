@@ -469,6 +469,24 @@ export const jsenvPluginDatabaseManager = ({
             meta: {},
           };
         },
+        "PUT /:rolname/members/:memberRolname": async (request) => {
+          const { rolname, memberRolname } = request.params;
+          await sql`GRANT ${sql(rolname)} TO ${sql(memberRolname)}`;
+          return {
+            data: null,
+          };
+        },
+        "DELETE /:rolname/members/:memberRolname": async (request) => {
+          const { rolname, memberRolname } = request.params;
+          await sql`
+            REVOKE ${sql(memberRolname)}
+            FROM
+              ${sql(rolname)}
+          `;
+          return {
+            data: null,
+          };
+        },
       }),
       ...createRESTRoutes(`${pathname}api/databases`, {
         "GET": async () => {

@@ -58,6 +58,7 @@ const ErrorDetails = ({ error }) => {
   );
 };
 
+// TODO: add a button to add a member to this group
 const RoleGroupMemberList = ({ role }) => {
   const memberList = useRoleMemberList(role);
 
