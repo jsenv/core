@@ -4,8 +4,9 @@ import { DatabaseValue } from "../../components/database_value.jsx";
 import { PageBody, PageHead } from "../../layout/page.jsx";
 import { RoleDatabaseList } from "../role_database_list.jsx";
 import { pickRoleIcon } from "../role_icons.jsx";
+import { RoleLink } from "../role_link.jsx";
 import { DELETE_ROLE_ACTION, PUT_ROLE_ACTION } from "../role_routes.js";
-import { useActiveRoleColumns } from "../role_signals.js";
+import { useActiveRoleColumns, useRoleMemberList } from "../role_signals.js";
 
 export const RoleGroupPage = ({ role }) => {
   const [error, resetError] = useErrorBoundary();
@@ -33,6 +34,7 @@ export const RoleGroupPage = ({ role }) => {
       </PageHead>
       <PageBody>
         <RoleFields role={role} />
+        <RoleGroupMemberList role={role} />
         <RoleDatabaseList role={role} />
         <a
           href="https://www.postgresql.org/docs/current/sql-createrole.html"
@@ -53,6 +55,29 @@ const ErrorDetails = ({ error }) => {
         <code>{error.stack}</code>
       </pre>
     </details>
+  );
+};
+
+const RoleGroupMemberList = ({ role }) => {
+  const memberList = useRoleMemberList(role);
+
+  return (
+    <div>
+      <h2>Members of this group</h2>
+      {memberList.length === 0 ? (
+        <span>No members</span>
+      ) : (
+        <ul>
+          {memberList.map((memberRole) => {
+            return (
+              <li key={memberRole.oid}>
+                <RoleLink role={memberRole}>{memberRole.rolname}</RoleLink>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 };
 

@@ -80,3 +80,14 @@ export const useRoleTables = (role) => {
   const tableArray = tableStore.selectAll(tableNameArray);
   return tableArray;
 };
+
+export const setRoleMembers = (rolname, value) => {
+  roleStore.upsert(value);
+  roleStore.upsert("rolname", rolname, { members: value });
+};
+export const useRoleMemberList = (role) => {
+  const { members } = role;
+  const memberIdArray = members ? members.map((member) => member.oid) : [];
+  const memberArray = roleStore.selectAll(memberIdArray);
+  return memberArray;
+};

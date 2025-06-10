@@ -383,9 +383,25 @@ export const jsenvPluginDatabaseManager = ({
             WHERE
               pg_roles.rolname = ${rolname}
           `;
+
+          const members = await sql`
+            SELECT
+              member_role.*,
+              grantor_role.rolname AS grantor_rolname,
+              pg_auth_members.admin_option
+            FROM
+              pg_auth_members
+              JOIN pg_roles AS parent_role ON pg_auth_members.roleid = parent_role.oid
+              JOIN pg_roles AS member_role ON pg_auth_members.member = member_role.oid
+              LEFT JOIN pg_roles AS grantor_role ON pg_auth_members.grantor = grantor_role.oid
+            WHERE
+              parent_role.rolname = ${rolname}
+          `;
+
           return {
             data: role,
             meta: {
+              members,
               databases,
               objects,
               // privileges,
