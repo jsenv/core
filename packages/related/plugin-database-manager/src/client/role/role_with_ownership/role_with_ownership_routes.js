@@ -2,7 +2,21 @@ import { registerRoute, valueInLocalStorage } from "@jsenv/router";
 import { errorFromResponse } from "../../error_from_response.js";
 import { setRoleTables } from "../role_signals.js";
 
+// Cache avec WeakRef pour les routes
+const roleRouteWeakRefs = new Map();
+
 export const createRoleTableListDetailsRoute = ({ rolname }) => {
+  // Vérifier si une route existe déjà
+  const existingWeakRef = roleRouteWeakRefs.get(rolname);
+  if (existingWeakRef) {
+    const existingRoute = existingWeakRef.deref();
+    if (existingRoute) {
+      return existingRoute;
+    }
+    // La route a été garbage collectée, supprimer la WeakRef
+    roleRouteWeakRefs.delete(rolname);
+  }
+
   const [
     readRoleTableListDetailsOpened,
     storeRoleTableListDetailsOpened,
@@ -11,7 +25,8 @@ export const createRoleTableListDetailsRoute = ({ rolname }) => {
     type: "boolean",
   });
 
-  const ROLE_TABLE_LIST_DETAILS_ROUTE = registerRoute({
+  // Créer une nouvelle route
+  const route = registerRoute({
     match: () => readRoleTableListDetailsOpened(),
     enter: () => {
       storeRoleTableListDetailsOpened(true);
@@ -38,5 +53,8 @@ export const createRoleTableListDetailsRoute = ({ rolname }) => {
     name: `role_${rolname}_table_list_details`,
   });
 
-  return ROLE_TABLE_LIST_DETAILS_ROUTE;
+  // Stocker une WeakRef vers la route
+  roleRouteWeakRefs.set(rolname, new WeakRef(route));
+
+  return route;
 };
