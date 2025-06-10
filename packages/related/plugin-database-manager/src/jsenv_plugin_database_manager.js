@@ -409,6 +409,28 @@ export const jsenvPluginDatabaseManager = ({
             },
           };
         },
+        "GET /:rolname/tables": async (request) => {
+          const { rolname } = request.params;
+          const tables = await sql`
+            SELECT
+              pg_tables.*
+            FROM
+              pg_tables
+              JOIN pg_roles ON pg_roles.rolname = pg_tables.tableowner
+            WHERE
+              pg_roles.rolname = ${rolname}
+              AND pg_tables.schemaname NOT IN ('pg_catalog', 'information_schema')
+          `;
+          if (tables.length === 0) {
+            return {
+              data: [],
+            };
+          }
+          return {
+            data: tables,
+            meta: {},
+          };
+        },
       }),
       ...createRESTRoutes(`${pathname}api/databases`, {
         "GET": async () => {

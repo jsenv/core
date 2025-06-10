@@ -1,5 +1,6 @@
 import { signal } from "@preact/signals";
 import { databaseStore } from "../database/database_store.js";
+import { tableStore } from "../table/table_store.js";
 import { roleStore } from "./role_store.js";
 
 export const useRoleList = () => {
@@ -55,3 +56,21 @@ export const setCurrentRole = (role) => {
   }
 };
 setCurrentRole(window.DB_MANAGER_CONFIG.currentRole);
+
+export const setRoleTables = (rolname, value) => {
+  roleStore.upsert("rolname", rolname, {
+    tables: value,
+  });
+};
+export const useRoleTables = (rolname) => {
+  const role = roleStore.select("rolname", rolname);
+  let tableIdArray;
+  if (!role) {
+    tableIdArray = [];
+  } else {
+    const tables = role.tables;
+    tableIdArray = tables ? tables.map((table) => table.oid) : [];
+  }
+  const tableArray = tableStore.selectAll(tableIdArray);
+  return tableArray;
+};
