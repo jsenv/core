@@ -102,7 +102,9 @@ export const ExplorerNewItem = ({
   nameKey,
   useItemList,
   useCreateItemAction,
-  ...rest
+  cancelOnBlurInvalid,
+  onCancel,
+  onSubmitEnd,
 }) => {
   const action = useCreateItemAction();
   const itemList = useItemList();
@@ -126,7 +128,9 @@ export const ExplorerNewItem = ({
         autoFocus
         required
         constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
-        {...rest}
+        cancelOnBlurInvalid={cancelOnBlurInvalid}
+        onCancel={onCancel}
+        onSubmitEnd={onSubmitEnd}
       />
     </span>
   );

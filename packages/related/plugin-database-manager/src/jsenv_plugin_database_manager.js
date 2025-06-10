@@ -310,12 +310,13 @@ export const jsenvPluginDatabaseManager = ({
           };
         },
         "POST": async (request) => {
-          const { rolname } = await request.json();
-          // ideally we would support more options like
-          // const { rolname, ...options} = role and pass them to the sql query
-          // as documented in https://www.postgresql.org/docs/current/sql-createrole.html
-          // but we need only the name for now
-          await sql`CREATE ROLE ${sql(rolname)}`;
+          const { rolname, rolcanlogin } = await request.json();
+          // https://www.postgresql.org/docs/current/sql-createrole.html
+          if (rolcanlogin) {
+            await sql`CREATE ROLE ${sql(rolname)} LOGIN`;
+          } else {
+            await sql`CREATE ROLE ${sql(rolname)}`;
+          }
           const [role] = await sql`
             SELECT
               *

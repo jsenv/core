@@ -59,28 +59,30 @@ export const PUT_ROLE_ACTION = registerAction(
   },
 );
 
-export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
-  const rolname = formData.get("rolname");
-  const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`, {
-    signal,
-    method: "POST",
-    headers: {
-      "accept": "application/json",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ rolname }),
-  });
-  if (!response.ok) {
-    throw await errorFromResponse(response, "Failed to create role");
-  }
-  const { data, meta } = await response.json();
-  const role = data;
-  roleStore.upsert(role);
-  const { canLoginCount, groupCount, withOwnershipCount } = meta;
-  setRoleCanLoginCount(canLoginCount);
-  setRoleGroupCount(groupCount);
-  setRoleWithOwnershipCount(withOwnershipCount);
-});
+export const POST_ROLE_ACTION = registerAction(
+  async ({ signal, rolcanlogin, formData }) => {
+    const rolname = formData.get("rolname");
+    const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`, {
+      signal,
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ rolname, rolcanlogin }),
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to create role");
+    }
+    const { data, meta } = await response.json();
+    const role = data;
+    roleStore.upsert(role);
+    const { canLoginCount, groupCount, withOwnershipCount } = meta;
+    setRoleCanLoginCount(canLoginCount);
+    setRoleGroupCount(groupCount);
+    setRoleWithOwnershipCount(withOwnershipCount);
+  },
+);
 
 export const DELETE_ROLE_ACTION = registerAction(
   async ({ rolname, signal }) => {

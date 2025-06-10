@@ -48,7 +48,11 @@ export const RoleCanLoginListDetails = (props) => {
           columnName: "rolname",
         })
       }
-      useCreateItemAction={() => POST_ROLE_ACTION}
+      useCreateItemAction={() =>
+        POST_ROLE_ACTION.bindParams({
+          rolcanlogin: true,
+        })
+      }
       useDeleteItemAction={(role) =>
         DELETE_ROLE_ACTION.bindParams({
           rolname: role.rolname,
