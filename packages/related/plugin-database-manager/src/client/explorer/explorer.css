@@ -67,6 +67,10 @@
   padding-right: 10px;
 }
 
+.explorer_group > summary .summary_label {
+  font-weight: 500;
+}
+
 .explorer_body > [data-resize-handle] {
   width: 100%;
   height: 5px;

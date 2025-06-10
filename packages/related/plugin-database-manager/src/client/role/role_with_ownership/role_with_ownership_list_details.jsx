@@ -1,5 +1,6 @@
 import { Route } from "@jsenv/router";
 import { TextAndCount } from "../../components/text_and_count.jsx";
+import { DatabaseLink } from "../../database/database_link.jsx";
 import { ExplorerDetails } from "../../explorer/explorer_details.jsx";
 import {
   createExplorerGroupController,
@@ -7,9 +8,16 @@ import {
 } from "../../explorer/explorer_group.jsx";
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
 import { TableLink } from "../../table/table_link.jsx";
-import { useRoleList, useRoleTables } from "../role_signals.js";
+import {
+  useRoleDatabases,
+  useRoleList,
+  useRoleTables,
+} from "../role_signals.js";
 import { ROLE_WITH_OWNERSHIP_LIST_DETAILS_ROUTE } from "./role_with_ownership_list_details_routes.js";
-import { getRoleTableListDetailsRoute } from "./role_with_ownership_routes.js";
+import {
+  getRoleDatabaseListDetailsRoute,
+  getRoleTableListDetailsRoute,
+} from "./role_with_ownership_routes.js";
 import {
   useRoleWithOwnershipCount,
   useRoleWithOwnershipList,
@@ -70,16 +78,28 @@ export const RoleWithOwnershipListDetails = (props) => {
                 }
                 if (subitem.id === "databases") {
                   return (
-                    <ExplorerDetails
-                      label={
-                        <TextAndCount
-                          text="databases"
-                          count={role.database_count}
-                        />
-                      }
+                    <Route.Details
+                      route={getRoleDatabaseListDetailsRoute(role)}
+                      renderLoaded={() => {
+                        const databaseList = useRoleDatabases(role);
+                        return (
+                          <ExplorerItemList
+                            renderItem={(database) => (
+                              <DatabaseLink database={database}>
+                                {database.datname}
+                              </DatabaseLink>
+                            )}
+                          >
+                            {databaseList}
+                          </ExplorerItemList>
+                        );
+                      }}
                     >
-                      Coucou
-                    </ExplorerDetails>
+                      <TextAndCount
+                        text="databases"
+                        count={role.database_count}
+                      />
+                    </Route.Details>
                   );
                 }
                 return null;

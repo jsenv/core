@@ -57,6 +57,19 @@ export const setCurrentRole = (role) => {
 };
 setCurrentRole(window.DB_MANAGER_CONFIG.currentRole);
 
+export const useRoleDatabases = (role) => {
+  const { databases } = role;
+  const databaseIdArray = databases
+    ? databases.map((database) => database.oid)
+    : [];
+  const databaseArray = databaseStore.selectAll(databaseIdArray);
+  return databaseArray;
+};
+export const setRoleDatabases = (rolname, value) => {
+  roleStore.upsert("rolname", rolname, { databases: value });
+  databaseStore.upsert(value);
+};
+
 export const setRoleTables = (rolname, value) => {
   roleStore.upsert("rolname", rolname, { tables: value });
   tableStore.upsert(value);

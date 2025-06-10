@@ -24,7 +24,6 @@ import.meta.css = /* css */ `
   .route_details > summary {
     flex-shrink: 0;
     cursor: pointer;
-    font-weight: 500;
     display: flex;
     flex-direction: column;
     user-select: none;
