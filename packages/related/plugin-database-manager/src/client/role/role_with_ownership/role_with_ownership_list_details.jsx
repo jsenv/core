@@ -35,13 +35,11 @@ export const RoleWithOwnershipListDetails = (props) => {
           count={roleWithOwnershipCount}
         />
       }
-      renderItem={(role, { children, ...props }) => {
+      renderItem={(role, { children }) => {
         return (
           <ExplorerDetails
-            id={`role_ownership_details_${role.oid}`}
-            item={role}
+            id={`role_${role.rolname}_ownership_details`}
             label={<TextAndCount text={children} count={role.object_count} />}
-            {...props}
           >
             <ExplorerItemList
               idKey="id"

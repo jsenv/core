@@ -1,4 +1,4 @@
-import { SummaryMarker } from "@jsenv/router";
+import { SummaryMarker, valueInLocalStorage } from "@jsenv/router";
 import { useEffect, useRef, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
@@ -33,7 +33,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const ExplorerDetails = ({ label, children, ...props }) => {
+export const ExplorerDetails = ({ id, label, children, ...props }) => {
   const mountedRef = useRef(false);
   useEffect(() => {
     mountedRef.current = true;
@@ -41,20 +41,33 @@ export const ExplorerDetails = ({ label, children, ...props }) => {
       mountedRef.current = false;
     };
   }, []);
-  const [open, setOpen] = useState(false);
+
+  const [readOpened, storeOpened] = valueInLocalStorage(id, {
+    type: "boolean",
+  });
+  const [open, setOpen] = useState(id ? readOpened() : null);
+
   return (
     <details
+      id={id}
       className="explorer_details"
       {...props}
       onToggle={(toggleEvent) => {
         if (mountedRef.current) {
           if (toggleEvent.newState === "open") {
+            if (id) {
+              storeOpened(true);
+            }
             setOpen(true);
           } else {
+            if (id) {
+              storeOpened(false);
+            }
             setOpen(false);
           }
         }
       }}
+      open={open}
     >
       <summary>
         <div className="summary_body">
