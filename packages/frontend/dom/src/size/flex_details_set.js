@@ -17,7 +17,13 @@ const DEBUG = true;
 
 export const initFlexDetailsSet = (
   container,
-  { onSizeChange, onMouseResizeEnd, onRequestedSizeChange, debug = DEBUG } = {},
+  {
+    onSizeChange,
+    onResizableDetailsChange,
+    onMouseResizeEnd,
+    onRequestedSizeChange,
+    debug = DEBUG,
+  } = {},
 ) => {
   const flexDetailsSet = {
     cleanup: null,
@@ -471,10 +477,49 @@ export const initFlexDetailsSet = (
     }
   };
 
+  const resizableDetailsIdSet = new Set();
+  const updateResizableDetails = () => {
+    const currentResizableDetailsIdSet = new Set();
+    let hasPreviousOpen = false;
+    for (const child of container.children) {
+      if (!isDetailsElement(child)) {
+        continue;
+      }
+      if (!child.open) {
+        continue;
+      }
+      if (hasPreviousOpen) {
+        currentResizableDetailsIdSet.add(child.id);
+      }
+      if (!hasPreviousOpen && child.open) {
+        hasPreviousOpen = true;
+      }
+    }
+
+    let someNew;
+    let someOld;
+    for (const currentId of currentResizableDetailsIdSet) {
+      if (!resizableDetailsIdSet.has(currentId)) {
+        resizableDetailsIdSet.add(currentId);
+        someNew = true;
+      }
+    }
+    for (const id of resizableDetailsIdSet) {
+      if (!currentResizableDetailsIdSet.has(id)) {
+        resizableDetailsIdSet.delete(id);
+        someOld = true;
+      }
+    }
+    if (someNew || someOld) {
+      onResizableDetailsChange?.(resizableDetailsIdSet);
+    }
+  };
+
   initial_size: {
     updateSpaceDistribution({
       reason: "initial_space_distribution",
     });
+    updateResizableDetails();
   }
 
   update_on_toggle: {
@@ -542,6 +587,7 @@ export const initFlexDetailsSet = (
           reason: details.open ? "details_opened" : "details_closed",
           animated: true,
         });
+        updateResizableDetails();
       };
       if (details.open) {
         setTimeout(() => {

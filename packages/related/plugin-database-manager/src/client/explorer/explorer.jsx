@@ -1,10 +1,5 @@
-/**
- * each section should have its own scrollbar
- * right now it does not work, the content is not scrollable and gets hidden
- */
-
 import { initFlexDetailsSet } from "@jsenv/dom";
-import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { FontSizedSvg } from "../components/font_sized_svg.jsx";
 import { DatabaseSvg } from "../database/database_icons.jsx";
 import { useCurrentDatabase } from "../database/database_signals.js";
@@ -18,7 +13,7 @@ import {
 } from "../role/group/groups_details.jsx";
 import {
   OwnershipDetails,
-  ownersshipDetailsController,
+  ownershipDetailsController,
 } from "../role/ownership/ownership_details.jsx";
 import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_signals.js";
@@ -62,18 +57,13 @@ export const Explorer = () => {
 };
 
 const ExplorerBody = () => {
-  const [detailsOpenCount, setDetailsOpenCount] = useState(0);
-  const resizable = detailsOpenCount > 1;
-  const onOpen = useCallback(() => {
-    setDetailsOpenCount((count) => count + 1);
-  }, []);
-  const onClose = useCallback(() => {
-    setDetailsOpenCount((count) => count - 1);
-  }, []);
   const flexDetailsSetRef = useRef();
-
+  const [resizableDetailsIdSet, setResizableDetailsIdSet] = useState(new Set());
   useLayoutEffect(() => {
     const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
+      onResizableDetailsChange: (resizableDetailsIdSet) => {
+        setResizableDetailsIdSet(resizableDetailsIdSet);
+      },
       onRequestedSizeChange: (element, requestedHeight) => {
         if (element.id === usersDetailsController.id) {
           usersDetailsController.setHeightSetting(requestedHeight);
@@ -87,8 +77,8 @@ const ExplorerBody = () => {
         if (element.id === groupsDetailsController.id) {
           groupsDetailsController.setHeightSetting(requestedHeight);
         }
-        if (element.id === ownersshipDetailsController.id) {
-          ownersshipDetailsController.setHeightSetting(requestedHeight);
+        if (element.id === ownershipDetailsController.id) {
+          ownershipDetailsController.setHeightSetting(requestedHeight);
         }
       },
     });
@@ -96,29 +86,21 @@ const ExplorerBody = () => {
   }, []);
 
   return (
-    <div
-      ref={flexDetailsSetRef}
-      className="explorer_body"
-      onToggle={(toggleEvent) => {
-        if (toggleEvent.newState === "open") {
-          setDetailsOpenCount((count) => count + 1);
-        } else {
-          setDetailsOpenCount((count) => count - 1);
-        }
-      }}
-    >
-      <UsersDetails onOpen={onOpen} onClose={onClose} />
-      <DatabasesDetails
-        onOpen={onOpen}
-        onClose={onClose}
-        resizable={resizable}
+    <div ref={flexDetailsSetRef} className="explorer_body">
+      <UsersDetails
+        resizable={resizableDetailsIdSet.has(usersDetailsController.id)}
       />
-      <TablesDetails onOpen={onOpen} onClose={onClose} resizable={resizable} />
-      <GroupsDetails onOpen={onOpen} onClose={onClose} resizable={resizable} />
+      <DatabasesDetails
+        resizable={resizableDetailsIdSet.has(databasesDetailsController.id)}
+      />
+      <TablesDetails
+        resizable={resizableDetailsIdSet.has(tablesDetailsController.id)}
+      />
+      <GroupsDetails
+        resizable={resizableDetailsIdSet.has(groupsDetailsController.id)}
+      />
       <OwnershipDetails
-        onOpen={onOpen}
-        onClose={onClose}
-        resizable={resizable}
+        resizable={resizableDetailsIdSet.has(ownershipDetailsController.id)}
       />
     </div>
   );

@@ -72,10 +72,18 @@
         const [bHeight, bHeightSetter] = useState(0);
         const [cHeight, cHeightSetter] = useState(0);
 
+        const [resizableDetailsIdSet, setResizableDetailsIdSet] = useState(
+          new Set(),
+        );
+
         // to test: put sizes in local storage to see if that works
 
         useLayoutEffect(() => {
           const flexDetailsSet = initFlexDetailsSet(ref.current, {
+            onResizableDetailsChange: (resizableDetailsIdSet) => {
+              console.log("resizableDetailsIdSet", resizableDetailsIdSet);
+              setResizableDetailsIdSet(resizableDetailsIdSet);
+            },
             onSizeChange: (sizeChangeEntries) => {
               for (const { element, value } of sizeChangeEntries) {
                 if (element.id === "a") {
@@ -226,21 +234,31 @@
 
             <br />
             <div ref={ref} className="flex_details_set">
-              <FlexDetails id="a" color="blue" open>
+              <FlexDetails id="a" color="blue">
                 This is the main content area. Lorem ipsum dolor sit amet,
                 consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
                 labore et dolore magna aliqua. Ut enim ad minim veniam, quis
                 nostrud exercitation. This is the main content area. Lorem ipsum
                 dolor sit amet, consectetur adipiscing elit.
               </FlexDetails>
-              <FlexDetails id="b" color="green" open resizable>
+              <FlexDetails
+                id="b"
+                color="green"
+                open
+                resizable={resizableDetailsIdSet.has("b")}
+              >
                 This is the main content area. Lorem ipsum dolor sit amet,
                 consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
                 labore et dolore magna aliqua. Ut enim ad minim veniam, quis
                 nostrud exercitation.
               </FlexDetails>
               {detailsCount === 3 && (
-                <FlexDetails id="c" color="red" open resizable>
+                <FlexDetails
+                  id="c"
+                  color="red"
+                  open
+                  resizable={resizableDetailsIdSet.has("c")}
+                >
                   This is the main content area. Lorem ipsum dolor sit amet,
                   consectetur adipiscing elit. Sed do eiusmod tempor incididunt
                   ut labore et dolore magna aliqua. Ut enim ad minim veniam,
