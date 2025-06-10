@@ -8,7 +8,7 @@ import {
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
 import { useRoleList } from "../role_signals.js";
 import { ROLE_WITH_OWNERSHIP_LIST_DETAILS_ROUTE } from "./role_with_ownership_list_details_routes.js";
-import { createRoleTableListDetailsRoute } from "./role_with_ownership_routes.js";
+import { getRoleTableListDetailsRoute } from "./role_with_ownership_routes.js";
 import {
   useRoleWithOwnershipCount,
   useRoleWithOwnershipList,
@@ -49,9 +49,7 @@ export const RoleWithOwnershipListDetails = (props) => {
                 if (subitem.id === "tables") {
                   return (
                     <Route.Details
-                      route={createRoleTableListDetailsRoute({
-                        rolename: role.rolname,
-                      })}
+                      route={getRoleTableListDetailsRoute(role)}
                       renderLoaded={({ data }) => {
                         debugger;
                         return JSON.stringify(data, null, 2);

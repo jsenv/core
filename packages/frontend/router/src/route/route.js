@@ -52,26 +52,39 @@ export const onRouterUILoaded = () => {
 
 const routeAbortEnterMap = new Map();
 const routeEnterPromiseMap = new Map();
-const routeSet = new Set();
+const routeWeakRefSet = new Set(); // WeakRef de toutes les routes
 const matchingRouteSet = new Set();
 
+const getAliveRouteSet = () => {
+  const aliveRouteSet = new Set();
+  for (const weakRef of routeWeakRefSet) {
+    const route = weakRef.deref();
+    if (route) {
+      aliveRouteSet.add(route);
+    } else {
+      routeWeakRefSet.delete(weakRef);
+    }
+  }
+
+  return aliveRouteSet;
+};
+
 export const registerRoute = (firstArg, secondArg) => {
+  let route;
+
   if (typeof firstArg === "string") {
     if (typeof secondArg === "function") {
       secondArg = {
         load: secondArg,
       };
     }
-    const routeConnectedWithUrl = createRouteConnectedWithUrl(
-      firstArg,
-      secondArg,
-    );
-    routeSet.add(routeConnectedWithUrl);
-    return routeConnectedWithUrl;
+    route = createRouteConnectedWithUrl(firstArg, secondArg);
+  } else {
+    route = createRouteConnectedWithState(firstArg);
   }
-  const routeConnectedWithState = createRouteConnectedWithState(firstArg);
-  routeSet.add(routeConnectedWithState);
-  return routeConnectedWithState;
+  const weakRef = new WeakRef(route);
+  routeWeakRefSet.add(weakRef);
+  return route;
 };
 
 const createRouteConnectedWithUrl = (
@@ -500,7 +513,6 @@ export const applyRouting = async ({
   isReplace,
   info,
 }) => {
-  // const sourceResource = resourceFromUrl(sourceUrl);
   const targetResource = resourceFromUrl(targetUrl);
   const targetUrlObject = new URL(targetResource, baseUrl);
   const matchParams = {
@@ -510,6 +522,7 @@ export const applyRouting = async ({
     pathname: targetUrlObject.pathname,
     hash: targetUrlObject.hash,
   };
+
   const routesToEnter = info?.routesToEnter;
   const routesToLeave = info?.routesToLeave;
   const routesLoaded = info?.routesLoaded;
@@ -528,7 +541,8 @@ export const applyRouting = async ({
       routeCandidateSet.add(routeToLeave);
     }
   } else {
-    routeCandidateSet = routeSet;
+    // Utiliser toutes les routes actives (non GC)
+    routeCandidateSet = getAliveRouteSet();
     routeToKeepActiveSet = new Set();
   }
 

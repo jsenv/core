@@ -36,6 +36,7 @@ export {
   useRouteParam,
   useRouteUrl,
 } from "./src/route/route_hooks.js";
+export { createRouteTemplate } from "./src/route/route_template.js";
 export { SummaryMarker } from "./src/route/summary_marker.jsx";
 export { goBack, goForward, goTo, reload, stopLoad } from "./src/router.js";
 export {
