@@ -431,6 +431,27 @@ export const jsenvPluginDatabaseManager = ({
             meta: {},
           };
         },
+        "GET /:rolname/databases": async (request) => {
+          const { rolname } = request.params;
+          const databases = await sql`
+            SELECT
+              pg_database.*
+            FROM
+              pg_database
+              JOIN pg_roles ON pg_roles.oid = pg_database.datdba
+            WHERE
+              pg_roles.rolname = ${rolname}
+          `;
+          if (databases.length === 0) {
+            return {
+              data: [],
+            };
+          }
+          return {
+            data: databases,
+            meta: {},
+          };
+        },
       }),
       ...createRESTRoutes(`${pathname}api/databases`, {
         "GET": async () => {
