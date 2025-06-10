@@ -1,13 +1,8 @@
-import { useCallback, useLayoutEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 import { installInputCustomValidation } from "../input_custom_validation.js";
 
-export const useInputCustomValidationRef = (
-  inputRef,
-  initCallback,
-  initCallbackDeps,
-) => {
-  const inputCustomValidationRef = useRef();
-  const initCallbackMemoized = useCallback(initCallback, initCallbackDeps);
+export const useInputCustomValidationRef = (inputRef, target) => {
+  const customValidationRef = useRef();
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -29,22 +24,16 @@ export const useInputCustomValidationRef = (
       */
       return null;
     }
-    const unsubscribe = subscribe(input);
-    const inputValidationInterface = input.__validationInterface__;
-    inputCustomValidationRef.current = inputValidationInterface;
-    let cleanupInit;
-    if (initCallbackMemoized) {
-      cleanupInit = initCallbackMemoized(inputValidationInterface);
-    }
+    const element = target ? input.querySelector(target) : input;
+    const unsubscribe = subscribe(element);
+    const validationInterface = element.__validationInterface__;
+    customValidationRef.current = validationInterface;
     return () => {
       unsubscribe();
-      if (typeof cleanupInit === "function") {
-        cleanupInit();
-      }
     };
-  }, [initCallbackMemoized]);
+  }, [target]);
 
-  return inputCustomValidationRef;
+  return customValidationRef;
 };
 
 const inputSubscribeCountWeakMap = new WeakMap();

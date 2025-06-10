@@ -13,6 +13,7 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
+import { useInputValidationMessage } from "@jsenv/form";
 import { forwardRef } from "preact/compat";
 import {
   useContext,
@@ -42,6 +43,7 @@ export const SPAForm = forwardRef(
     {
       action: formAction,
       method = "get",
+      errorTarget,
       formDataMappings,
       children,
       onSubmitStart,
@@ -53,6 +55,9 @@ export const SPAForm = forwardRef(
   ) => {
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
+
+    const [addFormErrorOnTarget, removeFormErrorFromTarget] =
+      useInputValidationMessage(innerRef, "form_error", errorTarget);
 
     // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
     // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
@@ -107,6 +112,7 @@ export const SPAForm = forwardRef(
           if (resetErrorBoundary) {
             resetErrorBoundary();
           }
+          removeFormErrorFromTarget();
           setError(null);
           let action =
             formActionMapRef.current.get(submitEvent.submitter) || formAction;
@@ -153,6 +159,8 @@ export const SPAForm = forwardRef(
           if (error) {
             if (onSubmitError) {
               onSubmitError(error);
+            } else if (errorTarget) {
+              addFormErrorOnTarget(error);
             } else {
               setError(error);
             }

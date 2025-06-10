@@ -56,6 +56,7 @@ export const RoleGroupMemberList = ({ role }) => {
             action={ADD_MEMBER_ACTION.bindParams({
               rolname: role.rolename,
             })}
+            errorTarget="input"
           >
             <label>
               <span>Role name: </span>
