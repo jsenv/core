@@ -105,3 +105,16 @@ export const addMember = (role, member) => {
   roleStore.upsert(member);
   members.push(member);
 };
+export const removeMember = (role, member) => {
+  const { members } = role;
+  if (!members) {
+    return; // no members to remove
+  }
+  const index = members.findIndex(
+    (existingMember) => existingMember.oid === member.oid,
+  );
+  if (index !== -1) {
+    members.splice(index, 1);
+    roleStore.upsert(role, { members });
+  }
+};

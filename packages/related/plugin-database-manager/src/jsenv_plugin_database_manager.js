@@ -491,9 +491,9 @@ export const jsenvPluginDatabaseManager = ({
         "DELETE /:rolname/members/:memberRolname": async (request) => {
           const { rolname, memberRolname } = request.params;
           await sql`
-            REVOKE ${sql(memberRolname)}
+            REVOKE ${sql(rolname)}
             FROM
-              ${sql(rolname)}
+              ${sql(memberRolname)}
           `;
           return {
             data: null,

@@ -5,6 +5,7 @@ import { setRoleCanLoginCount } from "./role_can_login/role_can_login_signals.js
 import { setRoleGroupCount } from "./role_group/role_group_signals.js";
 import {
   addMember,
+  removeMember,
   setActiveRole,
   setActiveRoleColumns,
   setActiveRoleDatabases,
@@ -150,5 +151,8 @@ export const REMOVE_MEMBER_ACTION = registerAction(
         `Failed to remove ${memberRolname} from ${rolname}`,
       );
     }
+    const role = roleStore.select("rolname", rolname);
+    const memberRole = roleStore.select("rolname", memberRolname);
+    removeMember(role, memberRole);
   },
 );

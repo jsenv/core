@@ -2,7 +2,7 @@ import {
   useInputCustomValidationRef,
   useInputValidationMessage,
 } from "@jsenv/form";
-import { SPAForm, useSPAFormStatus } from "@jsenv/router";
+import { SPADeleteButton, SPAForm, useSPAFormStatus } from "@jsenv/router";
 import { forwardRef } from "preact/compat";
 import {
   useEffect,
@@ -12,7 +12,7 @@ import {
   useState,
 } from "preact/hooks";
 import { RoleLink } from "../role_link.jsx";
-import { ADD_MEMBER_ACTION } from "../role_routes.js";
+import { ADD_MEMBER_ACTION, REMOVE_MEMBER_ACTION } from "../role_routes.js";
 import { useRoleMemberList } from "../role_signals.js";
 
 export const RoleGroupMemberList = ({ role }) => {
@@ -73,8 +73,16 @@ export const RoleGroupMemberList = ({ role }) => {
         <ul>
           {memberList.map((memberRole) => {
             return (
-              <li key={memberRole.oid}>
+              <li key={memberRole.oid} style="display: flex; gap: 10px;">
                 <RoleLink role={memberRole}>{memberRole.rolname}</RoleLink>
+                <SPADeleteButton
+                  action={REMOVE_MEMBER_ACTION.bindParams({
+                    rolname: role.rolname,
+                    memberRolname: memberRole.rolname,
+                  })}
+                >
+                  Remove
+                </SPADeleteButton>
               </li>
             );
           })}
