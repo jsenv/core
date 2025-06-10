@@ -7,12 +7,16 @@ import {
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
 import { useRoleList } from "../role_signals.js";
 import { ROLE_WITH_OWNERSHIP_LIST_DETAILS_ROUTE } from "./role_with_ownership_list_details_routes.js";
-import { useRoleWithOwnershipList } from "./role_with_ownership_signals.js";
+import {
+  useRoleWithOwnershipCount,
+  useRoleWithOwnershipList,
+} from "./role_with_ownership_signals.js";
 
 export const roleWithOwnershipListDetailsController =
   createExplorerGroupController("role_with_ownership_list");
 
 export const RoleWithOwnershipListDetails = (props) => {
+  const roleWithOwnershipCount = useRoleWithOwnershipCount();
   const roleWithOwnershipList = useRoleWithOwnershipList();
 
   return (
@@ -22,7 +26,12 @@ export const RoleWithOwnershipListDetails = (props) => {
       detailsRoute={ROLE_WITH_OWNERSHIP_LIST_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"
-      labelChildren={<TextAndCount text={"ROLES OWNERSHIP"} count={0} />}
+      labelChildren={
+        <TextAndCount
+          text={"ROLE WITH OWNERSHIP"}
+          count={roleWithOwnershipCount}
+        />
+      }
       renderItem={(role, { children, ...props }) => {
         return (
           <ExplorerDetails

@@ -5,14 +5,14 @@ export const SvgIconGroup = ({ children }) => {
   return (
     <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
       <svg>
-        <svg x="0" y="0" width="16" height="16" overflow="visible">
+        <svg x="2" y="4" width="12" height="12" overflow="visible">
           {children}
         </svg>
-        <svg x="8" y="0" width="16" height="16" overflow="visible">
+        <svg x="10" y="4" width="12" height="12" overflow="visible">
           {children}
         </svg>
       </svg>
-      <svg x="4" y="8" width="16" height="18" overflow="visible">
+      <svg x="6" y="8" width="12" height="12" overflow="visible">
         {children}
       </svg>
     </SVGMaskOverlay>
