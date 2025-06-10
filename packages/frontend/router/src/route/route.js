@@ -167,7 +167,7 @@ const createRouteConnectedWithUrl = (
     }
     const currentUrlWithoutSearch = urlWithoutSearch(url);
     const targetUrlWithoutSearch = urlWithoutSearch(targetUrl);
-    if (targetUrlWithoutSearch.startsWith(currentUrlWithoutSearch)) {
+    if (targetUrlWithoutSearch.startsWith(`${currentUrlWithoutSearch}/`)) {
       // this is a sub url of the current url
       // so we should not reload the route
       // even if search params are different
