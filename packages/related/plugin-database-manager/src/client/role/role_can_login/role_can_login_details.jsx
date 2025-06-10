@@ -13,23 +13,29 @@ import {
   PUT_ROLE_ACTION,
 } from "../role_routes.js";
 import { useRoleList } from "../role_signals.js";
-import { useUserCount, useUserList } from "./user_signals.js";
-import { USERS_DETAILS_ROUTE } from "./users_details_routes.js";
+import { ROLE_CAN_LOGIN_DETAILS_ROUTE } from "./role_can_login_details_routes.js";
+import {
+  useRoleCanLoginCount,
+  useRoleCanLoginList,
+} from "./role_can_login_signals.js";
 
-export const usersDetailsController = createExplorerGroupController("users");
+export const roleCanLoginDetailsController =
+  createExplorerGroupController("role_can_login");
 
-export const UsersDetails = (props) => {
-  const users = useUserList();
-  const userCount = useUserCount();
+export const RoleCanLoginDetails = (props) => {
+  const roleCanLoginCount = useRoleCanLoginCount();
+  const roleCanLoginList = useRoleCanLoginList();
 
   return (
     <ExplorerGroup
       {...props}
-      controller={usersDetailsController}
-      detailsRoute={USERS_DETAILS_ROUTE}
+      controller={roleCanLoginDetailsController}
+      detailsRoute={ROLE_CAN_LOGIN_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"
-      labelChildren={<TextAndCount text={"ROLE LOGINS"} count={userCount} />}
+      labelChildren={
+        <TextAndCount text={"ROLE LOGINS"} count={roleCanLoginCount} />
+      }
       renderNewButtonChildren={() => <RoleCanLoginWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
         <RoleLink role={role} {...props}>
@@ -55,7 +61,7 @@ export const UsersDetails = (props) => {
         })
       }
     >
-      {users}
+      {roleCanLoginList}
     </ExplorerGroup>
   );
 };

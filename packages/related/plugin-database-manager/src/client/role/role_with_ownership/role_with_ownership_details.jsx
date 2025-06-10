@@ -5,27 +5,29 @@ import {
   ExplorerGroup,
 } from "../../explorer/explorer_group.jsx";
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
-import { useOwnerList } from "../role_signals.js";
-import { OWNERSHIP_DETAILS_ROUTE } from "./ownership_details_routes.js";
+import { useRoleList } from "../role_signals.js";
+import { ROLE_WITH_OWNERSHIP_DETAILS_ROUTE } from "./role_with_ownership_details_routes.js";
+import { useRoleWithOwnershipList } from "./role_with_ownership_signals.js";
 
-export const ownershipDetailsController =
-  createExplorerGroupController("ownership");
+export const roleWithOwnershipDetailsController = createExplorerGroupController(
+  "role_with_ownership",
+);
 
-export const OwnershipDetails = (props) => {
-  const owners = useOwnerList();
+export const RoleOwnershipDetails = (props) => {
+  const roleWithOwnershipList = useRoleWithOwnershipList();
 
   return (
     <ExplorerGroup
       {...props}
-      controller={ownershipDetailsController}
-      detailsRoute={OWNERSHIP_DETAILS_ROUTE}
+      controller={roleWithOwnershipDetailsController}
+      detailsRoute={ROLE_WITH_OWNERSHIP_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"
-      labelChildren={<TextAndCount text={"OWNERSHIP OVERVIEW"} count={0} />}
+      labelChildren={<TextAndCount text={"ROLES OWNERSHIP"} count={0} />}
       renderItem={(role, { children, ...props }) => {
         return (
           <ExplorerDetails
-            id={`role_details_${role.oid}`}
+            id={`role_ownership_details_${role.oid}`}
             item={role}
             label={<TextAndCount text={children} count={role.object_count} />}
             {...props}
@@ -86,9 +88,9 @@ export const OwnershipDetails = (props) => {
           </ExplorerDetails>
         );
       }}
-      useItemList={useOwnerList}
+      useItemList={useRoleList}
     >
-      {owners}
+      {roleWithOwnershipList}
     </ExplorerGroup>
   );
 };

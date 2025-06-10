@@ -13,23 +13,26 @@ import {
   PUT_ROLE_ACTION,
 } from "../role_routes.js";
 import { useRoleList } from "../role_signals.js";
-import { useGroupCount, useGroupList } from "./group_signals.js";
-import { GROUPS_DETAILS_ROUTE } from "./groups_details_routes.js";
+import { useRoleGroupCount, useRoleGroupList } from "./role_group_signals.js";
+import { ROLE_GROUPS_DETAILS_ROUTE } from "./role_groups_details_routes.js";
 
-export const groupsDetailsController = createExplorerGroupController("groups");
+export const roleGroupsDetailsController =
+  createExplorerGroupController("groups");
 
-export const GroupsDetails = (props) => {
-  const groups = useGroupList();
-  const groupCount = useGroupCount();
+export const RoleGroupsDetails = (props) => {
+  const roleGroupCount = useRoleGroupCount();
+  const roleGroups = useRoleGroupList();
 
   return (
     <ExplorerGroup
       {...props}
-      controller={groupsDetailsController}
-      detailsRoute={GROUPS_DETAILS_ROUTE}
+      controller={roleGroupsDetailsController}
+      detailsRoute={ROLE_GROUPS_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"
-      labelChildren={<TextAndCount text={"ROLE GROUPS"} count={groupCount} />}
+      labelChildren={
+        <TextAndCount text={"ROLE GROUPS"} count={roleGroupCount} />
+      }
       renderNewButtonChildren={() => <RoleGroupWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
         <RoleLink role={role} {...props}>
@@ -55,7 +58,7 @@ export const GroupsDetails = (props) => {
         })
       }
     >
-      {groups}
+      {roleGroups}
     </ExplorerGroup>
   );
 };

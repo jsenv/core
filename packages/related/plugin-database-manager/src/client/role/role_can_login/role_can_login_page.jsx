@@ -15,7 +15,7 @@ import {
 } from "../role_routes.js";
 import { useActiveRoleColumns } from "../role_signals.js";
 
-export const UserPage = ({ role }) => {
+export const RoleCanLoginPage = ({ role }) => {
   const [error, resetError] = useErrorBoundary();
   const rolname = useRouteParam(GET_ROLE_ROUTE, "rolname");
   const deleteRoleAction = DELETE_ROLE_ACTION.bindParams({ rolname });

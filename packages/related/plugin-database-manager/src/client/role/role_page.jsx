@@ -1,8 +1,8 @@
 import { Route } from "@jsenv/router";
-import { RoleGroupPage } from "./group/role_group_page.jsx";
+import { RoleCanLoginPage } from "./role_can_login/role_can_login_page.jsx";
+import { RoleGroupPage } from "./role_group/role_group_page.jsx";
 import { GET_ROLE_ROUTE } from "./role_routes.js";
 import { useActiveRole } from "./role_signals.js";
-import { UserPage } from "./user/user_page.jsx";
 
 export const RoleRoutes = () => {
   return <Route route={GET_ROLE_ROUTE} renderLoaded={() => <RolePage />} />;
@@ -11,7 +11,7 @@ export const RoleRoutes = () => {
 const RolePage = () => {
   const role = useActiveRole();
   if (role.rolcanlogin) {
-    return <UserPage role={role} />;
+    return <RoleCanLoginPage role={role} />;
   }
   return <RoleGroupPage role={role} />;
 };
