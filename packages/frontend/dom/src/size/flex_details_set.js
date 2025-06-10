@@ -13,7 +13,7 @@ import { createSizeAnimationGroupController } from "./size_animation_group_contr
 import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;
-const DEBUG = true;
+const DEBUG = false;
 
 export const initFlexDetailsSet = (
   container,
