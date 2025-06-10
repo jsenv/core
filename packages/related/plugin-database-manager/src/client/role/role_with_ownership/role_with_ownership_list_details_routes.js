@@ -21,8 +21,8 @@ export const ROLE_WITH_OWNERSHIP_LIST_DETAILS_ROUTE = registerRoute({
       `${window.DB_MANAGER_CONFIG.apiUrl}/roles?owners`,
     );
     const { data } = await response.json();
-    const rolesWithOwnership = data;
-    roleStore.upsert(rolesWithOwnership);
+    const roleWithOwnershipArray = data;
+    roleStore.upsert(roleWithOwnershipArray);
   },
   name: "role_with_ownership_list_details",
 });

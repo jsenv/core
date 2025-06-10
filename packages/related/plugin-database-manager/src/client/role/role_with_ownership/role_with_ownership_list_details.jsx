@@ -1,3 +1,4 @@
+import { Route } from "@jsenv/router";
 import { TextAndCount } from "../../components/text_and_count.jsx";
 import { ExplorerDetails } from "../../explorer/explorer_details.jsx";
 import {
@@ -7,6 +8,7 @@ import {
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
 import { useRoleList } from "../role_signals.js";
 import { ROLE_WITH_OWNERSHIP_LIST_DETAILS_ROUTE } from "./role_with_ownership_list_details_routes.js";
+import { createRoleTableListDetailsRoute } from "./role_with_ownership_routes.js";
 import {
   useRoleWithOwnershipCount,
   useRoleWithOwnershipList,
@@ -46,13 +48,17 @@ export const RoleWithOwnershipListDetails = (props) => {
               renderItem={(subitem) => {
                 if (subitem.id === "tables") {
                   return (
-                    <ExplorerDetails
-                      label={
-                        <TextAndCount text="tables" count={role.table_count} />
-                      }
+                    <Route.Details
+                      route={createRoleTableListDetailsRoute({
+                        rolename: role.rolname,
+                      })}
+                      renderLoaded={({ data }) => {
+                        debugger;
+                        return JSON.stringify(data, null, 2);
+                      }}
                     >
-                      Coucou
-                    </ExplorerDetails>
+                      <TextAndCount text="tables" count={role.table_count} />
+                    </Route.Details>
                   );
                 }
                 if (subitem.id === "databases") {
