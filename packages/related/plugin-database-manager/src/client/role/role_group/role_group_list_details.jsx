@@ -4,7 +4,7 @@ import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../../explorer/explorer_group.jsx";
-import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
+import { RoleGroupWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
 import {
   DELETE_ROLE_ACTION,
@@ -13,30 +13,27 @@ import {
   PUT_ROLE_ACTION,
 } from "../role_routes.js";
 import { useRoleList } from "../role_signals.js";
-import { ROLE_CAN_LOGIN_DETAILS_ROUTE } from "./role_can_login_details_routes.js";
-import {
-  useRoleCanLoginCount,
-  useRoleCanLoginList,
-} from "./role_can_login_signals.js";
+import { ROLE_GROUP_LIST_DETAILS_ROUTE } from "./role_group_list_details_routes.js";
+import { useRoleGroupCount, useRoleGroupList } from "./role_group_signals.js";
 
-export const roleCanLoginDetailsController =
-  createExplorerGroupController("role_can_login");
+export const roleGroupListDetailsController =
+  createExplorerGroupController("role_group_list");
 
-export const RoleCanLoginDetails = (props) => {
-  const roleCanLoginCount = useRoleCanLoginCount();
-  const roleCanLoginList = useRoleCanLoginList();
+export const RoleGroupListDetails = (props) => {
+  const roleGroupCount = useRoleGroupCount();
+  const roleGroupList = useRoleGroupList();
 
   return (
     <ExplorerGroup
       {...props}
-      controller={roleCanLoginDetailsController}
-      detailsRoute={ROLE_CAN_LOGIN_DETAILS_ROUTE}
+      controller={roleGroupListDetailsController}
+      detailsRoute={ROLE_GROUP_LIST_DETAILS_ROUTE}
       idKey="oid"
       nameKey="rolname"
       labelChildren={
-        <TextAndCount text={"ROLE LOGINS"} count={roleCanLoginCount} />
+        <TextAndCount text={"ROLE GROUPS"} count={roleGroupCount} />
       }
-      renderNewButtonChildren={() => <RoleCanLoginWithPlusSvg />}
+      renderNewButtonChildren={() => <RoleGroupWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
         <RoleLink role={role} {...props}>
           {children}
@@ -61,7 +58,7 @@ export const RoleCanLoginDetails = (props) => {
         })
       }
     >
-      {roleCanLoginList}
+      {roleGroupList}
     </ExplorerGroup>
   );
 };

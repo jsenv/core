@@ -7,19 +7,19 @@ import {
   databasesDetailsController,
 } from "../database/databases_details.jsx";
 import {
-  GroupsDetails,
-  groupsDetailsController,
-} from "../role/group/groups_details.jsx";
+  RoleCanLoginListDetails,
+  roleCanLoginListDetailsController,
+} from "../role/role_can_login/role_can_login_list_details.jsx";
 import {
-  OwnershipDetails,
-  ownershipDetailsController,
-} from "../role/ownership/ownership_details.jsx";
+  RoleGroupListDetails,
+  roleGroupListDetailsController,
+} from "../role/role_group/role_group_list_details.jsx";
 import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_signals.js";
 import {
-  UsersDetails,
-  usersDetailsController,
-} from "../role/user/users_details.jsx";
+  RoleWithOwnershipListDetails,
+  roleWithOwnershipListDetailsController,
+} from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 import {
   TablesDetails,
@@ -65,20 +65,22 @@ const ExplorerBody = () => {
         setResizableDetailsIdSet(resizableDetailsIdSet);
       },
       onRequestedSizeChange: (element, requestedHeight) => {
-        if (element.id === usersDetailsController.id) {
-          usersDetailsController.setHeightSetting(requestedHeight);
-        }
         if (element.id === tablesDetailsController.id) {
           tablesDetailsController.setHeightSetting(requestedHeight);
         }
         if (element.id === databasesDetailsController.id) {
           databasesDetailsController.setHeightSetting(requestedHeight);
         }
-        if (element.id === groupsDetailsController.id) {
-          groupsDetailsController.setHeightSetting(requestedHeight);
+        if (element.id === roleCanLoginListDetailsController.id) {
+          roleCanLoginListDetailsController.setHeightSetting(requestedHeight);
         }
-        if (element.id === ownershipDetailsController.id) {
-          ownershipDetailsController.setHeightSetting(requestedHeight);
+        if (element.id === roleGroupListDetailsController.id) {
+          roleGroupListDetailsController.setHeightSetting(requestedHeight);
+        }
+        if (element.id === roleWithOwnershipListDetailsController.id) {
+          roleWithOwnershipListDetailsController.setHeightSetting(
+            requestedHeight,
+          );
         }
       },
     });
@@ -87,20 +89,24 @@ const ExplorerBody = () => {
 
   return (
     <div ref={flexDetailsSetRef} className="explorer_body">
-      <UsersDetails
-        resizable={resizableDetailsIdSet.has(usersDetailsController.id)}
+      <TablesDetails
+        resizable={resizableDetailsIdSet.has(tablesDetailsController.id)}
       />
       <DatabasesDetails
         resizable={resizableDetailsIdSet.has(databasesDetailsController.id)}
       />
-      <TablesDetails
-        resizable={resizableDetailsIdSet.has(tablesDetailsController.id)}
+      <RoleCanLoginListDetails
+        resizable={resizableDetailsIdSet.has(
+          roleCanLoginListDetailsController.id,
+        )}
       />
-      <GroupsDetails
-        resizable={resizableDetailsIdSet.has(groupsDetailsController.id)}
+      <RoleGroupListDetails
+        resizable={resizableDetailsIdSet.has(roleGroupListDetailsController.id)}
       />
-      <OwnershipDetails
-        resizable={resizableDetailsIdSet.has(ownershipDetailsController.id)}
+      <RoleWithOwnershipListDetails
+        resizable={resizableDetailsIdSet.has(
+          roleWithOwnershipListDetailsController.id,
+        )}
       />
     </div>
   );

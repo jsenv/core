@@ -2,19 +2,19 @@ import { registerRoute, valueInLocalStorage } from "@jsenv/router";
 import { roleStore } from "../role_store.js";
 
 const [
-  readRoleGroupsDetailsOpened,
-  storeRoleGroupsDetailsOpened,
-  eraseRoleGroupsDetailsOpened,
-] = valueInLocalStorage("role_groups_details_opened", {
+  readRoleGroupListDetailsOpened,
+  storeRoleGroupListDetailsOpened,
+  eraseRoleGroupListDetailsOpened,
+] = valueInLocalStorage("role_group_list_details_opened", {
   type: "boolean",
 });
-export const ROLE_GROUPS_DETAILS_ROUTE = registerRoute({
-  match: () => readRoleGroupsDetailsOpened(),
+export const ROLE_GROUP_LIST_DETAILS_ROUTE = registerRoute({
+  match: () => readRoleGroupListDetailsOpened(),
   enter: () => {
-    storeRoleGroupsDetailsOpened(true);
+    storeRoleGroupListDetailsOpened(true);
   },
   leave: () => {
-    eraseRoleGroupsDetailsOpened();
+    eraseRoleGroupListDetailsOpened();
   },
   load: async () => {
     const response = await fetch(
@@ -24,5 +24,5 @@ export const ROLE_GROUPS_DETAILS_ROUTE = registerRoute({
     const roleGroups = data;
     roleStore.upsert(roleGroups);
   },
-  name: "role_groups_details",
+  name: "role_group_list_details",
 });

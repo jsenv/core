@@ -3,19 +3,19 @@ import { setCurrentRole } from "../role_signals.js";
 import { roleStore } from "../role_store.js";
 
 const [
-  readRoleCanLoginDetailsOpened,
-  storeRoleCanLoginDetailsOpened,
-  eraseRoleCanLoginDetailsOpened,
-] = valueInLocalStorage("role_can_login_details_opened", {
+  readRoleCanLoginListDetailsOpened,
+  storeRoleCanLoginListDetailsOpened,
+  eraseRoleCanLoginListDetailsOpened,
+] = valueInLocalStorage("role_can_login_list_details_opened", {
   type: "boolean",
 });
-export const ROLE_CAN_LOGIN_DETAILS_ROUTE = registerRoute({
-  match: () => readRoleCanLoginDetailsOpened(),
+export const ROLE_CAN_LOGIN_LIST_DETAILS_ROUTE = registerRoute({
+  match: () => readRoleCanLoginListDetailsOpened(),
   enter: () => {
-    storeRoleCanLoginDetailsOpened(true);
+    storeRoleCanLoginListDetailsOpened(true);
   },
   leave: () => {
-    eraseRoleCanLoginDetailsOpened();
+    eraseRoleCanLoginListDetailsOpened();
   },
   load: async () => {
     const response = await fetch(
@@ -26,5 +26,5 @@ export const ROLE_CAN_LOGIN_DETAILS_ROUTE = registerRoute({
     setCurrentRole(meta.currentRole);
     roleStore.upsert(rolesCanLogin);
   },
-  name: "role_can_login_details",
+  name: "role_can_login_list_details",
 });

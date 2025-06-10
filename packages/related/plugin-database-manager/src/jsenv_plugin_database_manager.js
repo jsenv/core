@@ -114,14 +114,13 @@ export const jsenvPluginDatabaseManager = ({
         description: "Get info about the database manager explorer.",
         declarationSource: import.meta.url,
         fetch: async () => {
-          const { userCount, groupCount } = await countRoles(sql);
           const databaseCount = await countRows(sql, "pg_database");
           const tableCount = await countRows(sql, "pg_tables");
+          const roleCounts = await countRoles(sql);
           return Response.json({
-            userCount,
-            groupCount,
             databaseCount,
             tableCount,
+            roleCounts,
           });
         },
       },
@@ -884,19 +883,45 @@ const countRoles = async (sql) => {
         CASE
           WHEN rolcanlogin = TRUE THEN 1
         END
-      ) AS login_role_count,
+      ) AS can_login_count,
       COUNT(
         CASE
           WHEN rolcanlogin = FALSE THEN 1
         END
-      ) AS non_login_role_count
+      ) AS group_count,
+      COUNT(
+        CASE
+          WHEN (
+            table_owners.tableowner IS NOT NULL
+            OR database_owners.database_owner IS NOT NULL
+          ) THEN 1
+        END
+      ) AS with_ownership_count
     FROM
       pg_roles
+      LEFT JOIN (
+        SELECT DISTINCT
+          tableowner
+        FROM
+          pg_tables
+        WHERE
+          schemaname NOT IN ('pg_catalog', 'information_schema')
+      ) table_owners ON pg_roles.rolname = table_owners.tableowner
+      LEFT JOIN (
+        SELECT DISTINCT
+          pg_roles.rolname AS database_owner
+        FROM
+          pg_database
+          JOIN pg_roles ON pg_roles.oid = pg_database.datdba
+      ) database_owners ON pg_roles.rolname = database_owners.database_owner
   `;
-  const { login_role_count, non_login_role_count } = roleStats;
+  const { total_roles, can_login_count, group_count, with_ownership_count } =
+    roleStats;
   return {
-    userCount: login_role_count,
-    groupCount: non_login_role_count,
+    total: parseInt(total_roles),
+    canLoginCount: parseInt(can_login_count),
+    groupCount: parseInt(group_count),
+    withOwnershipCount: parseInt(with_ownership_count),
   };
 };
 

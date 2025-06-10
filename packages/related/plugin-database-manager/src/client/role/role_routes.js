@@ -1,14 +1,15 @@
 import { registerAction, registerRoute } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
 import { errorFromResponse } from "../error_from_response.js";
-import { setGroupCount } from "./group/group_signals.js";
+import { setRoleCanLoginCount } from "./role_can_login/role_can_login_signals.js";
+import { setRoleGroupCount } from "./role_group/role_group_signals.js";
 import {
   setActiveRole,
   setActiveRoleColumns,
   setActiveRoleDatabases,
 } from "./role_signals.js";
 import { roleStore } from "./role_store.js";
-import { setUserCount } from "./user/user_signals.js";
+import { setRoleWithOwnershipCount } from "./role_with_ownership/role_with_ownership_signals.js";
 
 export const GET_ROLE_ROUTE = registerRoute(
   "/roles/:rolname",
@@ -75,8 +76,10 @@ export const POST_ROLE_ACTION = registerAction(async ({ signal, formData }) => {
   const { data, meta } = await response.json();
   const role = data;
   roleStore.upsert(role);
-  setUserCount(meta.userCount);
-  setGroupCount(meta.groupCount);
+  const { canLoginCount, groupCount, withOwnershipCount } = meta;
+  setRoleCanLoginCount(canLoginCount);
+  setRoleGroupCount(groupCount);
+  setRoleWithOwnershipCount(withOwnershipCount);
 });
 
 export const DELETE_ROLE_ACTION = registerAction(
@@ -97,7 +100,9 @@ export const DELETE_ROLE_ACTION = registerAction(
     }
     const { meta } = await response.json();
     roleStore.drop("rolname", rolname);
-    setUserCount(meta.userCount);
-    setGroupCount(meta.groupCount);
+    const { canLoginCount, groupCount, withOwnershipCount } = meta;
+    setRoleCanLoginCount(canLoginCount);
+    setRoleGroupCount(groupCount);
+    setRoleWithOwnershipCount(withOwnershipCount);
   },
 );
