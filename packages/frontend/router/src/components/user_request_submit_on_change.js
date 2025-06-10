@@ -3,11 +3,14 @@ import { useLayoutEffect } from "preact/hooks";
 // see https://github.com/preactjs/preact/issues/1034#issuecomment-2857877043
 export const useRequestSubmitOnChange = (
   inputRef,
-  { preventWhenValueMissing } = {},
+  { requestSubmitOnChange, preventWhenValueMissing } = {},
 ) => {
   useLayoutEffect(() => {
     const input = inputRef.current;
     const onChange = () => {
+      if (!requestSubmitOnChange) {
+        return;
+      }
       if (preventWhenValueMissing && input.validity.valueMissing) {
         // it would display the message twice, see https://codepen.io/dmail/pen/dPPwvGW
         return;

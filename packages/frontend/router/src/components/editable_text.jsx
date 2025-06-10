@@ -42,6 +42,7 @@ export const EditableText = forwardRef(
             autoSelect
             required
             action={action}
+            requestSubmitOnChange
             cancelOnBlurInvalid
             onCancel={() => {
               onEditEnd();

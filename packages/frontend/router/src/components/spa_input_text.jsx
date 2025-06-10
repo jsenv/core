@@ -133,6 +133,7 @@ const InputText = forwardRef(
       defaultValue = "",
       value,
       constraints = [],
+      requestSubmitOnChange,
       cancelOnBlurInvalid,
       onCancel,
       onInput,
@@ -150,7 +151,10 @@ const InputText = forwardRef(
       value === undefined ? defaultValue : value,
       name,
     );
-    useRequestSubmitOnChange(innerRef, { preventWhenValueMissing: true });
+    useRequestSubmitOnChange(innerRef, {
+      requestSubmitOnChange,
+      preventWhenValueMissing: true,
+    });
 
     // autoFocus does not work so we focus in a useLayoutEffect,
     // see https://github.com/preactjs/preact/issues/1255

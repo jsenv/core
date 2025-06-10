@@ -127,6 +127,7 @@ export const ExplorerNewItem = ({
         action={action}
         autoFocus
         required
+        requestSubmitOnChange
         constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
         cancelOnBlurInvalid={cancelOnBlurInvalid}
         onCancel={onCancel}
