@@ -56,7 +56,12 @@ export const RoleGroupMemberList = ({ role }) => {
           >
             <label>
               <span>Role name: </span>
-              <InputText name="membername" autoFocus placeholder="Role name" />
+              <InputText
+                id="membername"
+                name="membername"
+                autoFocus
+                placeholder="Role name"
+              />
             </label>
 
             <SPAForm.Button>Submit</SPAForm.Button>

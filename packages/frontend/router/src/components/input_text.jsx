@@ -25,6 +25,7 @@ export const InputText = forwardRef(
       formPendingEffect,
       oncancel,
       disabled,
+      onInput,
       ...rest
     },
     ref,
@@ -53,6 +54,10 @@ export const InputText = forwardRef(
         value={value === undefined ? defaultValue : value}
         disabled={disabled || pending}
         required={required}
+        onInput={(e) => {
+          setNavStateValue(e.target.value);
+          onInput?.(e);
+        }}
         // eslint-disable-next-line react/no-unknown-property
         oncancel={(event) => {
           if (event.detail === "blur_invalid" && !cancelOnBlurInvalid) {
@@ -69,8 +74,8 @@ export const InputText = forwardRef(
           setNavStateValue(undefined);
         }}
         // eslint-disable-next-line react/no-unknown-property
-        onactionerror={() => {
-          setNavStateValue(innerRef.current.value);
+        onactionerror={(e) => {
+          setNavStateValue(e.target.value);
         }}
       />
     );
