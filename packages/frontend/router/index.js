@@ -23,6 +23,7 @@ export { useSPAFormStatus } from "./src/components/use_spa_form_status.js";
 export { useDocumentUrl } from "./src/document_routing.js";
 export { useDetailsControlledByDocumentState } from "./src/hooks/use_details_controlled_by_document_state.js";
 export { useDetailsControlledByUrlSearchParam } from "./src/hooks/use_details_controlled_by_url_search_param.js";
+export { useNavState } from "./src/hooks/use_nav_state.js";
 export {
   ErrorBoundaryContext,
   useResetErrorBoundary,

@@ -3,15 +3,18 @@ import {
   InputText,
   SPADeleteButton,
   SPAForm,
+  useNavState,
 } from "@jsenv/router";
-import { useState } from "preact/hooks";
 import { RoleLink } from "../role_link.jsx";
 import { ADD_MEMBER_ACTION, REMOVE_MEMBER_ACTION } from "../role_routes.js";
 import { useRoleMemberList } from "../role_signals.js";
 
 export const RoleGroupMemberList = ({ role }) => {
   const memberList = useRoleMemberList(role);
-  const [isAdding, isAddingSetter] = useState(false);
+  const [isAdding, isAddingSetter] = useNavState(
+    `group_member_list_opened`,
+    false,
+  );
 
   return (
     <div>
@@ -19,6 +22,7 @@ export const RoleGroupMemberList = ({ role }) => {
         <span>Members of this group</span>
         <div className="actions">
           <InputCheckbox
+            checked={isAdding}
             action={() => {
               isAddingSetter((prev) => !prev);
             }}
