@@ -10,6 +10,8 @@ export {
   EditableText,
   useEditableController,
 } from "./src/components/editable_text.jsx";
+export { InputCheckbox } from "./src/components/input_checkbox.jsx";
+export { InputText } from "./src/components/input_text.jsx";
 export { SPADeleteButton } from "./src/components/spa_delete_button.jsx";
 export { SPAButton, SPAForm } from "./src/components/spa_form.jsx";
 export { SPAInputCheckbox } from "./src/components/spa_input_checkbox.jsx";

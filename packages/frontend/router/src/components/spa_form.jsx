@@ -84,6 +84,7 @@ export const SPAForm = forwardRef(
     const dispatchCustomEventOnFormAndFormElements = (type, options) => {
       const form = innerRef.current;
       const customEvent = new CustomEvent(type, options);
+      // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
       for (const element of form.elements) {
         element.dispatchEvent(customEvent);
       }

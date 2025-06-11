@@ -23,6 +23,7 @@ export const InputText = forwardRef(
       cancelOnBlurInvalid,
       formPendingEffect,
       oncancel,
+      disabled,
       ...rest
     },
     ref,
@@ -47,7 +48,7 @@ export const InputText = forwardRef(
         type="text"
         name={name}
         value={value === undefined ? defaultValue : value}
-        disabled={pending}
+        disabled={disabled || pending}
         required={required}
         // eslint-disable-next-line react/no-unknown-property
         oncancel={(event) => {
