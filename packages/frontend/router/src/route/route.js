@@ -250,21 +250,28 @@ const createRouteConnectedWithUrl = (
   };
   Object.preventExtensions(route);
 
-  effect(() => {
+  const routeWeakRef = new WeakRef(route);
+  const routeWeakEffect = (callback) => {
+    const dispose = effect(() => {
+      const routeInstance = routeWeakRef.deref();
+      if (routeInstance) {
+        callback(routeInstance);
+      } else {
+        dispose();
+      }
+    });
+  };
+  routeWeakEffect((routeInstance) => {
     error = errorSignal.value;
-    route.error = error;
+    routeInstance.error = error;
   });
-  effect(() => {
+  routeWeakEffect((routeInstance) => {
     data = dataSignal.value;
-    route.data = data;
+    routeInstance.data = data;
   });
-  effect(() => {
-    url = urlSignal.value;
-    route.url = url;
-  });
-  effect(() => {
+  routeWeakEffect((routeInstance) => {
     params = paramsSignal.value;
-    route.params = params;
+    routeInstance.params = params;
   });
 
   return route;
@@ -380,17 +387,28 @@ const createRouteConnectedWithState = ({
   };
   Object.preventExtensions(route);
 
-  effect(() => {
+  const routeWeakRef = new WeakRef(route);
+  const routeWeakEffect = (callback) => {
+    const dispose = effect(() => {
+      const routeInstance = routeWeakRef.deref();
+      if (routeInstance) {
+        callback(routeInstance);
+      } else {
+        dispose();
+      }
+    });
+  };
+  routeWeakEffect((routeInstance) => {
     error = errorSignal.value;
-    route.error = error;
+    routeInstance.error = error;
   });
-  effect(() => {
+  routeWeakEffect((routeInstance) => {
     data = dataSignal.value;
-    route.data = data;
+    routeInstance.data = data;
   });
-  effect(() => {
+  routeWeakEffect((routeInstance) => {
     state = stateSignal.value;
-    route.state = state;
+    routeInstance.state = state;
   });
 
   return route;
