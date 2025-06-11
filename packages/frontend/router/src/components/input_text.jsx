@@ -22,7 +22,7 @@ export const InputText = forwardRef(
       requestSubmitOnChange,
       cancelOnBlurInvalid,
       formPendingEffect,
-      onCancel,
+      oncancel,
       ...rest
     },
     ref,
@@ -50,22 +50,22 @@ export const InputText = forwardRef(
         disabled={pending}
         required={required}
         // eslint-disable-next-line react/no-unknown-property
-        onCancel={(event) => {
+        oncancel={(event) => {
           if (event.detail === "blur_invalid" && !cancelOnBlurInvalid) {
             return;
           }
           innerRef.current.value =
             value === undefined || value === "" ? "" : value;
-          if (onCancel) {
-            onCancel(event.detail);
+          if (oncancel) {
+            oncancel(event);
           }
         }}
         // eslint-disable-next-line react/no-unknown-property
-        onSubmitStart={() => {
+        onactionstart={() => {
           setNavStateValue(undefined);
         }}
         // eslint-disable-next-line react/no-unknown-property
-        onSubmitError={() => {
+        onactionerror={() => {
           setNavStateValue(innerRef.current.value);
         }}
       />

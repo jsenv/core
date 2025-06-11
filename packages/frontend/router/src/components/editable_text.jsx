@@ -44,10 +44,10 @@ export const EditableText = forwardRef(
             action={action}
             requestSubmitOnChange
             cancelOnBlurInvalid
-            onCancel={() => {
+            oncancel={() => {
               onEditEnd();
             }}
-            onSubmitEnd={() => {
+            onactionend={() => {
               onEditEnd();
             }}
             onBlur={(e) => {

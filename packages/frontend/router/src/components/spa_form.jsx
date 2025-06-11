@@ -43,12 +43,10 @@ export const SPAForm = forwardRef(
     {
       action: formAction,
       method = "get",
+      errorEffect = "show_validation_message", // "show_validation_message" or "throw"
       errorTarget,
       formDataMappings,
       children,
-      onSubmitStart,
-      onSubmitError,
-      onSubmitEnd,
       ...rest
     },
     ref,
@@ -56,7 +54,7 @@ export const SPAForm = forwardRef(
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
-    const [addFormErrorOnTarget, removeFormErrorFromTarget] =
+    const [addFormErrorMessage, removeFormErrorMessage] =
       useInputValidationMessage(innerRef, "form_error", errorTarget);
 
     // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
@@ -82,6 +80,15 @@ export const SPAForm = forwardRef(
     });
     const formActionMapRef = useRef(new Map());
     const submittingRef = useRef(false);
+
+    const dispatchCustomEventOnFormAndFormElements = (type, options) => {
+      const form = innerRef.current;
+      const customEvent = new CustomEvent(type, options);
+      for (const element of form.elements) {
+        element.dispatchEvent(customEvent);
+      }
+      form.dispatchEvent(customEvent);
+    };
 
     return (
       <form
@@ -112,7 +119,7 @@ export const SPAForm = forwardRef(
           if (resetErrorBoundary) {
             resetErrorBoundary();
           }
-          removeFormErrorFromTarget();
+          removeFormErrorMessage();
           setError(null);
           let action =
             formActionMapRef.current.get(submitEvent.submitter) || formAction;
@@ -138,9 +145,7 @@ export const SPAForm = forwardRef(
             }
           }
 
-          if (onSubmitStart) {
-            onSubmitStart();
-          }
+          dispatchCustomEventOnFormAndFormElements("actionstart");
           const { aborted, error } = await applyActionOnFormSubmission({
             method: method.toUpperCase(),
             formData,
@@ -157,15 +162,16 @@ export const SPAForm = forwardRef(
             action,
           });
           if (error) {
-            if (onSubmitError) {
-              onSubmitError(error);
-            } else if (errorTarget) {
-              addFormErrorOnTarget(error);
+            dispatchCustomEventOnFormAndFormElements("actionerror", {
+              detail: { error },
+            });
+            if (errorEffect === "show_validation_message") {
+              addFormErrorMessage(error);
             } else {
               setError(error);
             }
-          } else if (onSubmitEnd) {
-            onSubmitEnd();
+          } else {
+            dispatchCustomEventOnFormAndFormElements("actionend");
           }
         }}
         method={method === "get" ? "get" : "post"}
