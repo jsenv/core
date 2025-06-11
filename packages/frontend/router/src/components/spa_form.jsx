@@ -145,7 +145,6 @@ export const SPAForm = forwardRef(
               }
             }
           }
-
           dispatchCustomEventOnFormAndFormElements("actionstart");
           const { aborted, error } = await applyActionOnFormSubmission({
             method: method.toUpperCase(),
@@ -163,15 +162,23 @@ export const SPAForm = forwardRef(
             action,
           });
           if (error) {
-            dispatchCustomEventOnFormAndFormElements("actionerror", {
-              detail: { error },
-            });
+            if (
+              // at this stage the action side effect might have remove the <form> from the DOM
+              innerRef.current
+            ) {
+              dispatchCustomEventOnFormAndFormElements("actionerror", {
+                detail: { error },
+              });
+            }
             if (errorEffect === "show_validation_message") {
               addFormErrorMessage(error);
             } else {
               setError(error);
             }
-          } else {
+          } else if (
+            // at this stage the action side effect might have remove the <form> from the DOM
+            innerRef.current
+          ) {
             dispatchCustomEventOnFormAndFormElements("actionend");
           }
         }}
