@@ -1,4 +1,9 @@
-import { InputText, SPADeleteButton, SPAForm } from "@jsenv/router";
+import {
+  InputCheckbox,
+  InputText,
+  SPADeleteButton,
+  SPAForm,
+} from "@jsenv/router";
 import { useState } from "preact/hooks";
 import { RoleLink } from "../role_link.jsx";
 import { ADD_MEMBER_ACTION, REMOVE_MEMBER_ACTION } from "../role_routes.js";
@@ -13,13 +18,13 @@ export const RoleGroupMemberList = ({ role }) => {
       <h2 style="gap: 10px; display: flex; align-items: center;">
         <span>Members of this group</span>
         <div className="actions">
-          <button
-            onClick={() => {
+          <InputCheckbox
+            action={() => {
               isAddingSetter((prev) => !prev);
             }}
           >
             {isAdding ? "Cancel" : "Add"}
-          </button>
+          </InputCheckbox>
         </div>
       </h2>
       {isAdding && (

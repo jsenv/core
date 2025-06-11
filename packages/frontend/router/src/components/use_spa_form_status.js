@@ -3,6 +3,10 @@ import { useContext } from "preact/hooks";
 
 export const FormContext = createContext();
 export const useSPAFormStatus = () => {
-  const [formStatus] = useContext(FormContext);
+  const value = useContext(FormContext);
+  if (!value) {
+    return { pending: false, aborted: false, error: null, action: null };
+  }
+  const [formStatus] = value;
   return formStatus;
 };
