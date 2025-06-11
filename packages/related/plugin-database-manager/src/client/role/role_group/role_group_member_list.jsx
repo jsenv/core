@@ -1,5 +1,4 @@
 import {
-  InputCheckbox,
   InputText,
   SPADeleteButton,
   SPAForm,
@@ -21,14 +20,13 @@ export const RoleGroupMemberList = ({ role }) => {
       <h2 style="gap: 10px; display: flex; align-items: center;">
         <span>Members of this group</span>
         <div className="actions">
-          <InputCheckbox
-            checked={isAdding}
-            action={() => {
+          <button
+            onClick={() => {
               isAddingSetter((prev) => !prev);
             }}
           >
             {isAdding ? "Cancel" : "Add"}
-          </InputCheckbox>
+          </button>
         </div>
       </h2>
       {isAdding && (
