@@ -1,5 +1,6 @@
 export { createUniqueValueConstraint } from "./input_validity/constraints/create_unique_value_constraint.js";
 export { SINGLE_SPACE_CONSTRAINT } from "./input_validity/constraints/single_space_constraint.js";
+export { useConstraints } from "./input_validity/hooks/use_constraints.js";
 export { useInputCustomValidationRef } from "./input_validity/hooks/use_input_custom_validation_ref.js";
 export { useInputValidationMessage } from "./input_validity/hooks/use_input_validation_message.js";
 export { installInputCustomValidation } from "./input_validity/input_custom_validation.js";
