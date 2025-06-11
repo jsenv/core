@@ -4,6 +4,7 @@ import { useActionStatus } from "../action/action_hooks.js";
 import { useNavState } from "../hooks/use_nav_state.js";
 import { useOptimisticUIState } from "../hooks/use_optimistic_ui_state.js";
 import { LoaderBackground } from "./loader_background.jsx";
+import { useSPAFormStatus } from "./use_spa_form_status.js";
 import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 
 export const InputCheckbox = forwardRef(
@@ -23,6 +24,8 @@ export const InputCheckbox = forwardRef(
   ) => {
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
+    const spaFormStatus = useSPAFormStatus();
+    action = action || spaFormStatus.action;
     useRequestSubmitOnChange(innerRef, {
       requestSubmitOnChange,
       preventWhenValueMissing: true,

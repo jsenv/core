@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { installInputCustomValidation } from "../input_custom_validation.js";
 
-export const useInputCustomValidationRef = (inputRef, target) => {
+export const useInputCustomValidationRef = (inputRef, targetSelector) => {
   const customValidationRef = useRef();
 
   useLayoutEffect(() => {
@@ -24,14 +24,25 @@ export const useInputCustomValidationRef = (inputRef, target) => {
       */
       return null;
     }
-    const element = target ? input.querySelector(target) : input;
-    const unsubscribe = subscribe(element);
-    const validationInterface = element.__validationInterface__;
+    let target;
+    if (targetSelector) {
+      target = input.querySelector(targetSelector);
+      if (!target) {
+        console.warn(
+          `useInputCustomValidation: targetSelector "${targetSelector}" did not match any element in the input`,
+        );
+        return null;
+      }
+    } else {
+      target = input;
+    }
+    const unsubscribe = subscribe(target);
+    const validationInterface = target.__validationInterface__;
     customValidationRef.current = validationInterface;
     return () => {
       unsubscribe();
     };
-  }, [target]);
+  }, [targetSelector]);
 
   return customValidationRef;
 };

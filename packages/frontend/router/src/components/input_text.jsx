@@ -5,6 +5,7 @@ import { useActionStatus } from "../action/action_hooks.js";
 import { useAutoFocus } from "../hooks/use_auto_focus.js";
 import { useNavState } from "../hooks/use_nav_state.js";
 import { LoaderBackground } from "./loader_background.jsx";
+import { useSPAFormStatus } from "./use_spa_form_status.js";
 import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
 
 export const InputText = forwardRef(
@@ -30,6 +31,8 @@ export const InputText = forwardRef(
   ) => {
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
+    const spaFormStatus = useSPAFormStatus();
+    action = action || spaFormStatus.action;
     const { pending } = useActionStatus(action);
     useAutoFocus(innerRef, autoFocus, autoSelect);
     useRequestSubmitOnChange(innerRef, {
