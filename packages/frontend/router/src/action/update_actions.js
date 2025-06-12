@@ -59,20 +59,16 @@ export const updateActions = async ({
   }
 
   for (const actionCandidate of candidateSet) {
-    const matchResult = actionCandidate.getMatchResult();
-    if (!matchResult) {
+    const matchParams = actionCandidate.getMatchParams();
+    if (!matchParams) {
       continue;
     }
-    const targetParams = {
-      ...matchResult.named,
-      ...matchResult.stars,
-    };
     const enterParams = {
       signal,
-      matchResult: targetParams,
+      matchParams,
     };
     const startsMatching = !matchingActionSet.has(actionCandidate);
-    if (startsMatching || actionCandidate.shouldReload({ matchResult })) {
+    if (startsMatching || actionCandidate.shouldReload({ matchParams })) {
       toActivateMap.set(actionCandidate, enterParams);
     } else {
       const hasError = actionCandidate.errorSignal.peek();
@@ -140,7 +136,7 @@ export const updateActions = async ({
   }
 };
 
-const activate = async (action, { signal, matchResult }) => {
+const activate = async (action, { signal, matchParams }) => {
   const abortController = new AbortController();
   const abortSignal = abortController.signal;
   const abort = (reason) => {
@@ -159,11 +155,11 @@ const activate = async (action, { signal, matchResult }) => {
 
   batch(() => {
     action.isMatchingSignal.value = true;
-    action.paramsSignal.value = matchResult;
+    action.paramsSignal.value = matchParams;
     action.errorSignal.value = null;
     action.stateSignal.value = ACTIVATING;
   });
-  action.activationEffect({ matchResult });
+  action.activationEffect({ matchParams });
   matchingActionSet.add(action);
 
   try {
@@ -222,7 +218,6 @@ const createAction = (
     name = callback.name || "anonymous",
     initialParams = initialParamsDefault,
     parentAction,
-    isParametrized = false,
   } = {},
 ) => {
   const isMatchingSignal = parentAction
@@ -281,7 +276,6 @@ const createAction = (
         parametrizedActionsWeakRefs.delete(weakRef);
       }
     }
-
     for (const [existingParams, weakRef] of parametrizedActions) {
       const existingAction = weakRef.deref();
       if (
@@ -301,7 +295,6 @@ const createAction = (
       name: parametrizedName,
       initialParams: combinedParams,
       parentAction: action,
-      isParametrized: true,
     });
     const weakRef = new WeakRef(parametrizedAction);
     parametrizedActions.set(combinedParams, weakRef);
@@ -314,20 +307,21 @@ const createAction = (
     initialParams,
     params,
     paramsSignal,
-    match: () => action.getMatchResult(),
-    getMatchResult: () => {
-      const matchResult = {};
+    match: () => false,
+    getMatchParams: () => {
+      const matchResult = action.match();
       if (!matchResult) {
         return null;
       }
+      const matchParams = matchResult === true ? {} : matchResult;
       for (const [params] of parametrizedActions) {
-        for (const [key, value] of Object.entries(params)) {
-          if (matchResult[key] !== value) {
-            return null; // Paramètres ne correspondent pas
-          }
+        if (compareTwoJsValues(params, matchParams)) {
+          parametrizedActions.isMatchingSignal.value = true;
+        } else {
+          parametrizedActions.isMatchingSignal.value = false;
         }
       }
-      return matchResult;
+      return matchParams;
     },
     load: ({ signal }) => callback({ signal, ...params }),
 
@@ -346,7 +340,6 @@ const createAction = (
     start,
     stop,
     withParams,
-    isParametrized,
     parametrizedActions,
   };
   Object.preventExtensions(action);
@@ -445,10 +438,8 @@ export const connectActionWithLocalStorageString = (
     return { [paramName]: value };
   };
 
-  const activationEffect = ({ matchResult } = {}) => {
-    // Utiliser les paramètres de l'action pour écrire en localStorage
-    const valueToStore =
-      action.params[paramName] || matchResult?.[paramName] || "";
+  const activationEffect = () => {
+    const valueToStore = action.params[paramName];
     localStorage.setItem(key, valueToStore);
   };
 
