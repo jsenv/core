@@ -13,26 +13,6 @@
       /**
        * Test the action renderer
        *
-       * It must render the action in different status
-       *
-       * Ideally any render can be async and will be part of the action loading mecanism
-       *
-       * even if the action is done
-       * once a UI is associated with the action
-       * we should link the loading of the action UI to the action itself
-       * so that
-       * -> browser stop button goes loading
-       * -> we can abort the action loading UI (because action stops matching for instance)
-       *
-       * but it would be strange to consider action is still loading while it's not right?
-       *
-       * so ideally we want to
-       * -> react to action being deactiveted to cancel UI loading
-       * -> trigger the browser reload stuff
-       *
-       * I think the best bet here is rather to introduce a dynamic import to the action no? actually no
-       *
-       * it's fine to handle this UI side
        */
 
       import { render } from "preact";
@@ -45,68 +25,83 @@
         ActionRenderer,
       } from "../action_renderer.jsx";
 
-      const loadUserAction = registerAction(
-        async ({ userName }) => {
+      const loadPageAction = registerAction(
+        async ({ pageName }) => {
           await new Promise((resolve) => setTimeout(resolve, 1000));
           return {
-            name: userName,
+            name: pageName,
           };
         },
         {
-          name: "load_user",
+          name: "load_page",
         },
       );
-
-      connectActionWithLocalStorageString(loadUserAction, "userName");
+      connectActionWithLocalStorageString(loadPageAction, "pageName");
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const loadDamAction = loadUserAction.withParams({
-          userName: "dam",
+        const loadPageTotoAction = loadPageAction.withParams({
+          pageName: "toto",
         });
-        const loadSebAction = loadUserAction.withParams({
-          userName: "seb",
+        const loadPageTataAction = loadPageAction.withParams({
+          pageName: "tata",
         });
-        const loadFloreAction = loadUserAction.withParams({
-          userName: "flore",
+        const loadImportErrorPageAction = loadPageAction.withParams({
+          pageName: "import_error",
         });
         return (
           <div>
             <button
               onClick={() => {
-                loadDamAction.start();
+                loadPageTotoAction.start();
               }}
             >
               Load dam
             </button>
             <button
               onClick={() => {
-                loadSebAction.start();
+                loadPageTataAction.start();
               }}
             >
               Load seb
             </button>
             <button
               onClick={() => {
-                loadFloreAction.start();
+                loadImportErrorPageAction.start();
               }}
             >
               Load flore
             </button>
 
             <ActionRenderer
-              action={loadUserAction}
-              renderLoaded={(user) => {
-                return <User user={user} />;
+              action={loadPageTotoAction}
+              // c'est pas optimal d'attendre le renderLoaded en vrai
+              // on voudrait des qu'on est matching faire l'import dynamique
+              renderAsync={async () => {
+                // eslint-disable-next-line no-unused-vars
+                const { Toto } = await import("./toto.jsx");
+                return {
+                  renderLoaded: () => <Toto />,
+                };
+              }}
+            />
+            <ActionRenderer
+              action={loadPageTataAction}
+              renderMatching={async () => {
+                // eslint-disable-next-line no-unused-vars
+                const { Tata } = await import("./tata.jsx");
+                return <Tata />;
+              }}
+            />
+            <ActionRenderer
+              action={loadImportErrorPageAction}
+              renderLoaded={async () => {
+                // eslint-disable-next-line import-x/no-unresolved
+                await import("./not_found.jsx");
               }}
             />
           </div>
         );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const User = ({ user }) => {
-        return <div>{user.name}</div>;
       };
 
       render(<App />, document.querySelector("#root"));
