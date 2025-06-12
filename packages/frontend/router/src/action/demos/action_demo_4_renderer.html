@@ -93,13 +93,11 @@
             >
               Load flore
             </button>
-
-            <ActionRenderer
-              action={loadUserAction}
-              renderLoaded={(user) => {
-                return <User user={user} />;
+            <ActionRenderer action={loadUserAction}>
+              {{
+                loaded: (user) => <User user={user} />,
               }}
-            />
+            </ActionRenderer>
           </div>
         );
       };
