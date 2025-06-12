@@ -30,7 +30,12 @@ export const updateActions = async ({
   isReload,
   isReplace,
   reason,
-}) => {
+} = {}) => {
+  if (!signal) {
+    const abortController = new AbortController();
+    signal = abortController.signal;
+  }
+
   const toDeactivateSet = new Set();
   const toActivateMap = new Map();
   const candidateSet = getAliveActionSet();
@@ -209,7 +214,10 @@ export const registerAction = (...args) => {
   actionWeakRefSet.add(weakRef);
   return action;
 };
-const createAction = (callback, { name = callback.name } = {}) => {
+const createAction = (
+  callback,
+  { name = callback.name || "anonymous" } = {},
+) => {
   const isMatchingSignal = signal(false);
   const stateSignal = signal(IDLE);
   let error;
@@ -230,6 +238,14 @@ const createAction = (callback, { name = callback.name } = {}) => {
   const deactivationEffect = () => {};
   const shouldReload = () => false;
   const toString = () => name;
+  const start = async (options) => {
+    action.activationEffect();
+    await updateActions(options);
+  };
+  const stop = async (options) => {
+    action.deactivationEffect();
+    await updateActions(options);
+  };
 
   const action = {
     isMatchingSignal,
@@ -250,6 +266,8 @@ const createAction = (callback, { name = callback.name } = {}) => {
     shouldReload,
     toString,
     name,
+    start,
+    stop,
   };
   Object.preventExtensions(action);
 
@@ -278,4 +296,46 @@ const createAction = (callback, { name = callback.name } = {}) => {
   });
 
   return action;
+};
+
+export const useActionStatus = (action) => {
+  const { isMatching } = action.isMatchingSignal.value;
+  const params = action.paramsSignal.value;
+  const error = action.errorSignal.value;
+  const state = action.stateSignal.value;
+  const pending = state === ACTIVATING;
+  const aborted = state === ABORTED;
+  const data = action.dataSignal.value;
+  return {
+    matching: isMatching,
+    params,
+    error,
+    aborted,
+    pending,
+    data,
+  };
+};
+
+export const connectActionWithLocalStorageBooleanState = (
+  action,
+  key,
+  { trueByDefault = false } = {},
+) => {
+  action.match = () => {
+    const value = localStorage.getItem(key);
+    return value === null ? trueByDefault : value === "true";
+  };
+
+  const activationEffect = () => {
+    localStorage.setItem(key, "true");
+  };
+  const deactivationEffect = () => {
+    if (trueByDefault) {
+      localStorage.setItem(key, "false");
+    } else {
+      localStorage.removeItem(key);
+    }
+  };
+  action.activationEffect = activationEffect;
+  action.deactivationEffect = deactivationEffect;
 };

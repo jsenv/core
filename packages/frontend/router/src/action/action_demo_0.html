@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Action demo 0</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 200px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      /**
+       * ce qu'on veut tester:
+       * - une action par defaut ne fait rien (elle ne matche pas)
+       * - on peut connecter une action au local storage
+       * elle va alors s'associer a une valeur, et lorsqu'elle démarre mettre cette valeur a quelque chose (genre true)
+       * - elle met cette valeur a false lorsqu'on la leave. Sauf que pour qu'on la leave
+       * il faut qu'on mettre cette valeur a false et qu'on rapelle updateActions
+       *
+       * - on veut vérifier que si on register une action
+       * et qu'on l'utilise dans la UI
+       * et qu'ensuite on supprime cette action et le UI associé
+       * l'action est bien garage collect
+       *
+       */
+
+      import { render } from "preact";
+      import {
+        registerAction,
+        useActionStatus,
+        connectActionWithLocalStorageBooleanState,
+      } from "./update_actions.js";
+
+      const loadUsersAction = registerAction(() => {
+        return "list of users";
+      });
+      connectActionWithLocalStorageBooleanState(loadUsersAction, "load_users");
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const { matching, data } = useActionStatus(loadUsersAction);
+
+        return (
+          <div>
+            <details
+              open={matching}
+              onToggle={(e) => {
+                if (e.target.open) {
+                  loadUsersAction.start();
+                } else {
+                  loadUsersAction.stop();
+                }
+              }}
+            >
+              <summary>Users</summary>
+              {data}
+            </details>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
