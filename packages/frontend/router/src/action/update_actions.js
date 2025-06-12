@@ -10,8 +10,12 @@ export const ACTIVATED = { id: "activated" };
 
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
-const actionWeakRefSet = new Set(); // WeakRef de toutes les routes
+const actionWeakRefSet = new Set();
 const matchingActionSet = new Set();
+
+// Map pour les actions paramétrées
+const parametrizedActionWeakRefSet = new Set();
+
 const getAliveActionSet = () => {
   const aliveSet = new Set();
   for (const weakRef of actionWeakRefSet) {
@@ -20,6 +24,15 @@ const getAliveActionSet = () => {
       aliveSet.add(action);
     } else {
       actionWeakRefSet.delete(weakRef);
+    }
+  }
+  // Ajouter les actions paramétrées
+  for (const weakRef of parametrizedActionWeakRefSet) {
+    const action = weakRef.deref();
+    if (action) {
+      aliveSet.add(action);
+    } else {
+      parametrizedActionWeakRefSet.delete(weakRef);
     }
   }
   return aliveSet;
@@ -83,7 +96,6 @@ export const updateActions = async ({
       } else if (isAborted) {
         toActivateMap.set(actionCandidate, enterParams);
       } else {
-        alreadyActivatedSet.add(actionCandidate);
         const actionPromise = actionPromiseMap.get(actionCandidate);
         if (actionPromise) {
           alreadyActivatingSet.add(actionCandidate);
@@ -139,6 +151,7 @@ export const updateActions = async ({
     console.groupEnd();
   }
 };
+
 const activate = async (action, { signal, matchResult }) => {
   const abortController = new AbortController();
   const abortSignal = abortController.signal;
@@ -185,6 +198,7 @@ const activate = async (action, { signal, matchResult }) => {
     });
   }
 };
+
 const deactivate = (action, reason) => {
   const abort = actionAbortMap.get(action);
   if (abort) {
@@ -212,9 +226,14 @@ export const registerAction = (...args) => {
   actionWeakRefSet.add(weakRef);
   return action;
 };
+
+const initialParamsDefault = {};
 const createAction = (
   callback,
-  { name = callback.name || "anonymous" } = {},
+  {
+    name = callback.name || "anonymous",
+    initialParams = initialParamsDefault,
+  } = {},
 ) => {
   const isMatchingSignal = signal(false);
   const stateSignal = signal(IDLE);
@@ -227,7 +246,6 @@ const createAction = (
   let data = initialData;
   const dataSignal = signal(initialData);
 
-  const initialParams = {};
   let params = initialParams;
   const paramsSignal = signal(initialParams);
 
@@ -243,6 +261,34 @@ const createAction = (
   const stop = async (options) => {
     action.deactivationEffect();
     await updateActions(options);
+  };
+
+  // Implémentation de withParams
+  const withParams = (newParams) => {
+    const combinedParams = { ...initialParams, ...newParams };
+    const parametrizedName = `${name}(${JSON.stringify(combinedParams)})`;
+
+    const parametrizedAction = createAction(callback, {
+      name: parametrizedName,
+      params: combinedParams,
+    });
+
+    // Copier les méthodes de connexion depuis l'action parent
+    parametrizedAction.match = action.match;
+    parametrizedAction.activationEffect = (options) => {
+      // Appeler l'effet d'activation du parent avec les nouveaux params
+      action.activationEffect.call(parametrizedAction, options);
+    };
+    parametrizedAction.deactivationEffect = (options) => {
+      action.deactivationEffect.call(parametrizedAction, options);
+    };
+    parametrizedAction.shouldReload = action.shouldReload;
+
+    // Ajouter à la liste des actions paramétrées pour le GC
+    const weakRef = new WeakRef(parametrizedAction);
+    parametrizedActionWeakRefSet.add(weakRef);
+
+    return parametrizedAction;
   };
 
   const action = {
@@ -266,6 +312,7 @@ const createAction = (
     name,
     start,
     stop,
+    withParams,
   };
   Object.preventExtensions(action);
 
@@ -314,21 +361,32 @@ export const useActionStatus = (action) => {
   };
 };
 
-export const connectActionWithLocalStorageBooleanState = (
+let idleCallbackId;
+const onActionConnected = () => {
+  cancelIdleCallback(idleCallbackId);
+  idleCallbackId = requestIdleCallback(() => {
+    updateActions();
+  });
+};
+
+export const connectActionWithLocalStorageBoolean = (
   action,
   key,
-  { trueByDefault = false } = {},
+  { defaultValue = false } = {},
 ) => {
   action.match = () => {
     const value = localStorage.getItem(key);
-    return value === null ? trueByDefault : value === "true";
+    if (value === null) {
+      return defaultValue;
+    }
+    return value === "true";
   };
 
   const activationEffect = () => {
     localStorage.setItem(key, "true");
   };
   const deactivationEffect = () => {
-    if (trueByDefault) {
+    if (defaultValue === true) {
       localStorage.setItem(key, "false");
     } else {
       localStorage.removeItem(key);
@@ -336,6 +394,35 @@ export const connectActionWithLocalStorageBooleanState = (
   };
   action.activationEffect = activationEffect;
   action.deactivationEffect = deactivationEffect;
+  onActionConnected();
+};
 
-  updateActions();
+export const connectActionWithLocalStorageString = (
+  action,
+  key,
+  paramName = key,
+  { defaultValue = "" } = {},
+) => {
+  action.match = () => {
+    const value = localStorage.getItem(key);
+    if (value === null) {
+      return defaultValue ? { [paramName]: defaultValue } : null;
+    }
+    return { [paramName]: value };
+  };
+
+  const activationEffect = ({ matchResult } = {}) => {
+    // Utiliser les paramètres de l'action pour écrire en localStorage
+    const valueToStore =
+      action.params[paramName] || matchResult?.[paramName] || "";
+    localStorage.setItem(key, valueToStore);
+  };
+
+  const deactivationEffect = () => {
+    localStorage.removeItem(key);
+  };
+
+  action.activationEffect = activationEffect;
+  action.deactivationEffect = deactivationEffect;
+  onActionConnected();
 };

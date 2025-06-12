@@ -21,7 +21,7 @@
       import {
         registerAction,
         useActionStatus,
-        connectActionWithLocalStorageBooleanState,
+        connectActionWithLocalStorageBoolean,
       } from "./update_actions.js";
 
       let currentAction = null;
@@ -107,7 +107,7 @@
         );
 
         // Connecter au localStorage
-        connectActionWithLocalStorageBooleanState(currentAction, "load_users");
+        connectActionWithLocalStorageBoolean(currentAction, "load_users");
 
         // Créer les WeakRef pour le monitoring
         actionWeakRef = new WeakRef(currentAction);
