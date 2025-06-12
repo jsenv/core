@@ -29,14 +29,18 @@
         registerAction,
         useActionStatus,
         connectActionWithLocalStorageString,
+        connectActionWithLocalStorageBoolean,
       } from "./update_actions.js";
 
       const loadUserAction = registerAction(
         ({ userName }) => {
-          const loadTableAction = loadUserTablesAction.withParams({
-            userName,
-          });
-          connectActionWithLocalStorageString(
+          const loadUserTablesAction = registerAction(
+            () => `${userName}/tables`,
+            {
+              name: "load_user_tables",
+            },
+          );
+          connectActionWithLocalStorageBoolean(
             loadUserTablesAction,
             `${userName}/tables_opened`,
           );
@@ -44,21 +48,14 @@
           return {
             name: userName,
             tables: ["table1", "table2"],
-            tableRoute: loadTableAction,
+            tablesAction: loadUserTablesAction,
           };
         },
         {
           name: "load_user",
         },
       );
-      const loadUserTablesAction = registerAction(
-        ({ userName }) => {
-          return `${userName}/tables`;
-        },
-        {
-          name: "load_user_tables",
-        },
-      );
+
       connectActionWithLocalStorageString(loadUserAction, "userName");
 
       // eslint-disable-next-line no-unused-vars
@@ -92,8 +89,33 @@
             <ActionStatus action={loadDamAction} />
             <ActionStatus action={loadSebAction} />
 
-            <div>User: {data?.name}</div>
+            <div>User: {data && <User user={data} />}</div>
           </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const User = ({ user }) => {
+        const tablesAction = user.tablesAction;
+        const { matching, data } = useActionStatus(tablesAction);
+
+        return (
+          <>
+            {user.name}
+            <details
+              open={matching}
+              onToggle={(e) => {
+                if (e.target.open) {
+                  tablesAction.start(user);
+                } else {
+                  tablesAction.stop(user);
+                }
+              }}
+            >
+              <summary>tables</summary>
+              {data}
+            </details>
+          </>
         );
       };
 
