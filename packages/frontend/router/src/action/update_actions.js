@@ -1,6 +1,6 @@
 import { batch, effect, signal } from "@preact/signals";
 
-let debug = true;
+let debug = false;
 
 export const IDLE = { id: "idle" };
 export const ACTIVATING = { id: "activating" };
