@@ -162,41 +162,42 @@ const createRouteConnectedWithUrl = (
       paramsSignal.value = initialParams;
     });
   };
-  const shouldReload = ({ targetUrl }) => {
-    if (url === targetUrl) {
+  const shouldReload = () => {
+    const documentUrl = window.location.href;
+    if (documentUrl === url) {
       return false;
     }
+    const documentUrlWithoutSearch = urlWithoutSearch(documentUrl);
     const currentUrlWithoutSearch = urlWithoutSearch(url);
-    const targetUrlWithoutSearch = urlWithoutSearch(targetUrl);
-    if (targetUrlWithoutSearch.startsWith(`${currentUrlWithoutSearch}/`)) {
+    if (documentUrlWithoutSearch.startsWith(`${currentUrlWithoutSearch}/`)) {
       // this is a sub url of the current url
       // so we should not reload the route
       // even if search params are different
       // we suppose the other url/search params compbination will be handled by a sub route
       return false;
     }
-    if (targetUrlWithoutSearch !== currentUrlWithoutSearch) {
+    if (documentUrlWithoutSearch !== currentUrlWithoutSearch) {
       return true;
     }
     // same url, check for search params
     // so we should reload the route if search params are different
     const currentUrlSearchParams = new URL(url).searchParams;
-    const targetUrlSearchParams = new URL(targetUrl).searchParams;
+    const documentUrlSearchParams = new URL(documentUrl).searchParams;
 
     const allParamNames = new Set([
       ...Array.from(currentUrlSearchParams.keys()),
-      ...Array.from(targetUrlSearchParams.keys()),
+      ...Array.from(documentUrlSearchParams.keys()),
     ]);
     for (const paramName of allParamNames) {
       const currentValues = currentUrlSearchParams.getAll(paramName);
-      const targetValues = targetUrlSearchParams.getAll(paramName);
+      const documentValues = documentUrlSearchParams.getAll(paramName);
       // Different number of values for this parameter
-      if (currentValues.length !== targetValues.length) {
+      if (currentValues.length !== documentValues.length) {
         return true; // Reload needed
       }
       // Compare each value in order (for params with multiple values)
       for (let i = 0; i < currentValues.length; i++) {
-        if (currentValues[i] !== targetValues[i]) {
+        if (currentValues[i] !== documentValues[i]) {
           return true; // Reload needed
         }
       }
@@ -585,10 +586,7 @@ export const applyRouting = async ({
       matchResult: targetParams,
     };
     const startsMatching = !matchingRouteSet.has(routeCandidate);
-    if (
-      startsMatching ||
-      routeCandidate.shouldReload({ targetUrl, targetState, targetParams })
-    ) {
+    if (startsMatching || routeCandidate.shouldReload({ matchResult })) {
       routeToEnterMap.set(routeCandidate, enterParams);
     } else {
       const hasError = routeCandidate.errorSignal.peek();
