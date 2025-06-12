@@ -48,16 +48,16 @@ export const ActionRenderer = ({ action, children }) => {
   if (error) {
     return renderError(error, "action_error");
   }
+  const renderLoadedSafe =
+    renderLoaded || action.ui.renderLoaded || renderLoadedDefault;
   if (pending) {
     if (action.canDisplayOldData && data !== undefined) {
-      return (renderLoaded || action.ui.renderLoaded || renderLoadedDefault)(
-        data,
-      );
+      return renderLoadedSafe(data);
     }
     return renderLoading();
   }
 
-  return (renderLoaded || action.ui.renderLoaded || renderLoadedDefault)(data);
+  return renderLoadedSafe(data);
 };
 
 const actionUIRenderedPromiseWeakMap = new WeakMap();

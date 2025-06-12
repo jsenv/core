@@ -219,7 +219,7 @@ const createAction = (
     initialParams = initialParamsDefault,
     initialData,
     parentAction,
-    renderLoaded,
+    renderLoadedAsync,
   } = {},
 ) => {
   const isMatchingSignal = signal(false);
@@ -362,21 +362,17 @@ const createAction = (
       return result;
     },
     ui: {
-      renderLoaded,
+      renderLoaded: null,
+      renderLoadedAsync,
       load: async (...args) => {
         if (matchingParametrizedAction) {
-          await matchingParametrizedAction.ui.load({ signal, ...params });
+          await matchingParametrizedAction.ui.load(...args);
         }
-        const renderLoaded = action.ui.renderLoaded;
-        if (!renderLoaded) {
-          return null;
+        const renderLoadedAsync = action.ui.renderLoadedAsync;
+        if (renderLoadedAsync) {
+          const renderLoaded = await renderLoadedAsync(...args);
+          action.ui.renderLoaded = () => renderLoaded;
         }
-        const renderLoadedResult = renderLoaded(...args);
-        return Promise.resolve(renderLoadedResult).then(
-          (renderLoadedResolved) => {
-            action.ui.renderLoaded = () => renderLoadedResolved;
-          },
-        );
       },
     },
 
@@ -508,3 +504,15 @@ export const connectActionWithLocalStorageString = (
   action.deactivationEffect = deactivationEffect;
   onActionConnected();
 };
+
+if (import.meta.hot) {
+  import.meta.hot.accept(() => {
+    // important sinon les actions ne se mettent pas a jour
+    // par example action.ui.load DOIT etre appelé
+    // pour que ui.renderLoaded soit la
+    if (debug) {
+      console.debug("updateActions() on hot reload");
+    }
+    updateActions({ isReload: true });
+  });
+}

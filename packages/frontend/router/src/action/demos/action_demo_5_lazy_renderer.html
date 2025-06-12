@@ -43,7 +43,7 @@
           pageName: "toto",
         },
         {
-          renderLoaded: async () => {
+          renderLoadedAsync: async () => {
             // eslint-disable-next-line no-unused-vars
             const { Toto } = await import("./toto.jsx");
             return <Toto />;
@@ -55,7 +55,7 @@
           pageName: "tata",
         },
         {
-          renderLoaded: async () => {
+          renderLoadedAsync: async () => {
             // eslint-disable-next-line no-unused-vars
             const { Tata } = await import("./tata.jsx");
             return <Tata />;
@@ -67,7 +67,7 @@
           pageName: "import_error",
         },
         {
-          renderLoaded: async () => {
+          renderLoadedAsync: async () => {
             // eslint-disable-next-line import-x/no-unresolved
             await import("./not_found.jsx");
           },
