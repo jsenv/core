@@ -5,6 +5,7 @@ plugins:
     "prettier-plugin-sql",
     "prettier-plugin-embed",
     "prettier-plugin-organize-imports",
+    "prettier-plugin-packagejson",
   ]
 organizeImportsSkipDestructiveCodeActions: true
 # https://github.com/un-ts/prettier/tree/master/packages/sql#parser-options

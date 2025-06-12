@@ -56,7 +56,18 @@ export const RoleWithOwnershipListDetails = (props) => {
                 if (subitem.id === "tables") {
                   return (
                     <Route.Details
-                      route={getRoleTableListDetailsRoute(role)}
+                      route={
+                        // ceci se produit un peu tard en réalité
+                        // idéalement la route devrait etre crée plus tot pour se charger plus tot
+                        // genre dans le signal du coup
+                        // si on a un role avec ownership
+                        // alors il faut immédiatement lui créer une route
+                        // pour les tables qu'ils own (au cas ou elle soit deja ouverte)
+                        // et donc qu'on veuille load direct
+                        // (il faut aussi que des qu'on perd ce role dans la liste des roles
+                        // la route soit bien garbage collect)
+                        getRoleTableListDetailsRoute(role)
+                      }
                       renderLoaded={() => {
                         const tables = useRoleTables(role);
                         return (

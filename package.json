@@ -2,21 +2,21 @@
   "name": "@jsenv/core",
   "version": "40.8.0",
   "description": "Tool to develop, test and build js projects",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core"
+  },
   "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/jsenv/core"
-  },
-  "engines": {
-    "node": ">=20.8.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "sideEffects": [
+    "./src/kitchen/client/inline_content.js",
+    "./dist/client/new_stylesheet/new_stylesheet.js",
+    "./dist/client/inline_content/inline_content.js",
+    "./dist/client/directory_listing/jsenv_core_node_modules.js"
+  ],
   "type": "module",
   "imports": {},
   "exports": {
@@ -33,11 +33,6 @@
     "/dist/",
     "/src/"
   ],
-  "volta": {
-    "node": "24.1.0",
-    "npm": "11.3.0"
-  },
-  "packageManager": "npm@11.3.0",
   "workspaces": [
     "./packages/backend/*",
     "./packages/frontend/*",
@@ -48,41 +43,35 @@
     "./packages/related/cli/*",
     "./packages/tooling/*"
   ],
-  "sideEffects": [
-    "./src/kitchen/client/inline_content.js",
-    "./dist/client/new_stylesheet/new_stylesheet.js",
-    "./dist/client/inline_content/inline_content.js",
-    "./dist/client/directory_listing/jsenv_core_node_modules.js"
-  ],
   "scripts": {
-    "eslint": "npx eslint .",
-    "test": "node --conditions=dev:jsenv ./scripts/test/test.mjs",
-    "test:packages": "npm run test -- ./packages/",
     "build": "node --conditions=dev:jsenv ./scripts/build/build.mjs",
-    "build:packages": "npm run build --workspaces --if-present --conditions=developement",
-    "monorepo:sync_packages_versions": "node ./scripts/monorepo/sync_packages_versions.mjs",
-    "monorepo:publish": "node ./scripts/monorepo/publish_packages.mjs",
-    "monorepo:upgrade_versions": "node ./scripts/monorepo/upgrade_external_versions.mjs",
-    "monorepo:node_modules_clear": "npx @jsenv/filesystem clear **/node_modules/",
-    "md:build": "node ./docs/build.js",
-    "performances": "node --expose-gc ./scripts/performance/generate_performance_report.mjs --log --once",
     "build:file_size": "node ./scripts/build/build_file_size.mjs --log",
-    "prettier": "prettier --write .",
-    "test:snapshot_clear": "npx @jsenv/filesystem clear **/tests/**/side_effects/",
-    "test:ci": "CI=1 npm run test",
-    "test:packages:ci": "CI=1 npm run workspace:test",
-    "test:only_dev_server_errors": "node --conditions=dev:jsenv ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",
-    "dev": "node --watch --conditions=dev:jsenv ./scripts/dev/dev.mjs",
-    "dev:route-inspector": "node --watch --conditions=dev:jsenv ./packages/backend/server/tests/route_inspector/start_server.js",
-    "playwright:install": "npx playwright install-deps && npx playwright install",
-    "https:setup": "npx @jsenv/https-local setup",
-    "prepublishOnly": "npm run build",
+    "build:packages": "npm run build --workspaces --if-present --conditions=developement",
     "database:install": "npx @jsenv/database install",
+    "database:manage": "node --conditions=dev:jsenv ./packages/backend/database/src/cli/manage.js",
     "database:setup": "npm run database:setup --workspaces --if-present --conditions=dev:jsenv",
     "database:start": "npx @jsenv/database start",
     "database:stop": "npx @jsenv/database stop",
-    "database:manage": "node --conditions=dev:jsenv ./packages/backend/database/src/cli/manage.js",
-    "oto:start": "npm run start -w oto"
+    "dev": "node --watch --conditions=dev:jsenv ./scripts/dev/dev.mjs",
+    "dev:route-inspector": "node --watch --conditions=dev:jsenv ./packages/backend/server/tests/route_inspector/start_server.js",
+    "eslint": "npx eslint .",
+    "https:setup": "npx @jsenv/https-local setup",
+    "md:build": "node ./docs/build.js",
+    "monorepo:node_modules_clear": "npx @jsenv/filesystem clear **/node_modules/",
+    "monorepo:publish": "node ./scripts/monorepo/publish_packages.mjs",
+    "monorepo:sync_packages_versions": "node ./scripts/monorepo/sync_packages_versions.mjs",
+    "monorepo:upgrade_versions": "node ./scripts/monorepo/upgrade_external_versions.mjs",
+    "oto:start": "npm run start -w oto",
+    "performances": "node --expose-gc ./scripts/performance/generate_performance_report.mjs --log --once",
+    "playwright:install": "npx playwright install-deps && npx playwright install",
+    "prepublishOnly": "npm run build",
+    "prettier": "prettier --write .",
+    "test": "node --conditions=dev:jsenv ./scripts/test/test.mjs",
+    "test:ci": "CI=1 npm run test",
+    "test:only_dev_server_errors": "node --conditions=dev:jsenv ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",
+    "test:packages": "npm run test -- ./packages/",
+    "test:packages:ci": "CI=1 npm run workspace:test",
+    "test:snapshot_clear": "npx @jsenv/filesystem clear **/tests/**/side_effects/"
   },
   "dependencies": {
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
@@ -138,7 +127,19 @@
     "prettier": "3.5.3",
     "prettier-plugin-embed": "0.5.0",
     "prettier-plugin-organize-imports": "4.1.0",
+    "prettier-plugin-packagejson": "2.5.15",
     "prettier-plugin-sql": "0.19.0",
     "strip-ansi": "7.1.0"
+  },
+  "packageManager": "npm@11.3.0",
+  "engines": {
+    "node": ">=20.8.0"
+  },
+  "volta": {
+    "node": "24.1.0",
+    "npm": "11.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
