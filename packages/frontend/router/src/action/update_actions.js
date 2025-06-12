@@ -1,6 +1,6 @@
 import { batch, effect, signal } from "@preact/signals";
 
-let debug = false;
+let debug = true;
 
 export const IDLE = { id: "idle" };
 export const ACTIVATING = { id: "activating" };
@@ -233,21 +233,28 @@ const createAction = (
   {
     name = callback.name || "anonymous",
     initialParams = initialParamsDefault,
+    parentAction,
   } = {},
 ) => {
-  const isMatchingSignal = signal(false);
+  const isMatchingSignal = parentAction
+    ? parentAction.isMatchingSignal
+    : signal(false);
   const stateSignal = signal(IDLE);
   let error;
-  const errorSignal = signal(null);
+  const errorSignal = parentAction ? parentAction.errorSignal : signal(null);
   const reportError = (e) => {
     errorSignal.value = e;
   };
   const initialData = undefined;
   let data = initialData;
-  const dataSignal = signal(initialData);
+  const dataSignal = parentAction
+    ? parentAction.dataSignal
+    : signal(initialData);
 
   let params = initialParams;
-  const paramsSignal = signal(initialParams);
+  const paramsSignal = parentAction
+    ? parentAction.paramsSignal
+    : signal(initialParams);
 
   const match = () => null;
   const activationEffect = () => {};
@@ -270,13 +277,13 @@ const createAction = (
 
     const parametrizedAction = createAction(callback, {
       name: parametrizedName,
-      params: combinedParams,
+      initialParams: combinedParams,
+      parentAction: action,
     });
 
     // Copier les méthodes de connexion depuis l'action parent
     parametrizedAction.match = action.match;
     parametrizedAction.activationEffect = (options) => {
-      // Appeler l'effet d'activation du parent avec les nouveaux params
       action.activationEffect.call(parametrizedAction, options);
     };
     parametrizedAction.deactivationEffect = (options) => {
