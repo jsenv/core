@@ -1,4 +1,5 @@
 import { batch, effect, signal } from "@preact/signals";
+import { compareTwoJsValues } from "../compare_two_js_values.js";
 
 let debug = true;
 
@@ -257,19 +258,42 @@ const createAction = (
     await updateActions(options);
   };
 
-  const parametrizedActions = new Set();
+  const parametrizedActions = new Map(); // Changer de Set à Map pour stocker params -> action
+  const parametrizedActionsWeakRefs = new Set();
+
   const withParams = (newParams) => {
     const combinedParams = { ...initialParams, ...newParams };
-    const parametrizedName = `${name}(${JSON.stringify(combinedParams)})`;
+    for (const weakRef of parametrizedActionsWeakRefs) {
+      if (!weakRef.deref()) {
+        parametrizedActionsWeakRefs.delete(weakRef);
+      }
+    }
 
+    for (const [existingParams, weakRef] of parametrizedActions) {
+      const existingAction = weakRef.deref();
+      if (
+        existingAction &&
+        compareTwoJsValues(existingParams, combinedParams)
+      ) {
+        return existingAction;
+      }
+      if (!existingAction) {
+        // Nettoyer les références mortes
+        parametrizedActions.delete(existingParams);
+      }
+    }
+
+    const parametrizedName = `${name}(${JSON.stringify(combinedParams)})`;
     const parametrizedAction = createAction(callback, {
       name: parametrizedName,
       initialParams: combinedParams,
       parentAction: action,
       isParametrized: true,
     });
+    const weakRef = new WeakRef(parametrizedAction);
+    parametrizedActions.set(combinedParams, weakRef);
+    parametrizedActionsWeakRefs.add(weakRef);
 
-    parametrizedActions.add(parametrizedAction);
     // Copier les méthodes de connexion depuis l'action parent
     parametrizedAction.activationEffect = (options) => {
       action.activationEffect.call(parametrizedAction, options);
@@ -288,14 +312,13 @@ const createAction = (
     params,
     paramsSignal,
     match: () => {
+      // TODO: would be overriden by connect
       const matchResult = {};
       if (!matchResult) {
         return null;
       }
-      for (const parametrizedAction of parametrizedActions) {
-        for (const [key, value] of Object.entries(
-          parametrizedAction.initialParams,
-        )) {
+      for (const [params] of parametrizedActions) {
+        for (const [key, value] of Object.entries(params)) {
           if (matchResult[key] !== value) {
             return null; // Paramètres ne correspondent pas
           }
