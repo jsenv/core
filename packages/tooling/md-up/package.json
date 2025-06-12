@@ -1,16 +1,13 @@
 {
   "name": "@jsenv/md-up",
   "version": "0.1.36",
-  "license": "MIT",
   "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/md-up"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -22,10 +19,13 @@
     "/src/"
   ],
   "dependencies": {
-    "anchor-markdown-header": "0.7.0",
-    "marked": "15.0.11",
+    "@jsenv/ast": "6.7.6",
     "@jsenv/filesystem": "4.15.4",
     "@jsenv/urls": "2.9.0",
-    "@jsenv/ast": "6.7.6"
+    "anchor-markdown-header": "0.7.0",
+    "marked": "15.0.11"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

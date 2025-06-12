@@ -2,18 +2,12 @@
   "name": "@jsenv/github-release-package",
   "version": "1.6.31",
   "description": "Create github release when package version changes.",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/github-release-package"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -26,7 +20,13 @@
   ],
   "dependencies": {
     "@jsenv/filesystem": "4.15.4",
-    "@jsenv/humanize": "1.6.0",
-    "@jsenv/github-pull-request-impact": "1.8.31"
+    "@jsenv/github-pull-request-impact": "1.8.31",
+    "@jsenv/humanize": "1.6.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

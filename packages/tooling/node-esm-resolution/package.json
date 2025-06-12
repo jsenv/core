@@ -1,15 +1,13 @@
 {
   "name": "@jsenv/node-esm-resolution",
   "version": "1.2.5",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/node-esm-resolution"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -23,13 +21,15 @@
     "/src/",
     "/main.js"
   ],
-  "sideEffects": false,
   "dependencies": {
     "@jsenv/filesystem": "4.15.4"
   },
   "devDependencies": {
-    "@jsenv/snapshot": "../snapshot",
     "@jsenv/assert": "../assert",
-    "@jsenv/node-esm-resolution": "./"
+    "@jsenv/node-esm-resolution": "./",
+    "@jsenv/snapshot": "../snapshot"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

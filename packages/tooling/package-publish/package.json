@@ -2,18 +2,12 @@
   "name": "@jsenv/package-publish",
   "version": "1.11.32",
   "description": "Publish package to one or many registry.",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/package-publish"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -32,5 +26,11 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../assert"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

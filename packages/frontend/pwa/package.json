@@ -2,22 +2,17 @@
   "name": "@jsenv/pwa",
   "version": "6.1.9",
   "description": "Service worker and other progressive web application helpers",
-  "license": "MIT",
-  "author": {
-    "name": "dmail",
-    "email": "dmaillard06@gmail.com"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/frontend/pwa"
   },
-  "engines": {
-    "node": ">=16.3.0"
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -29,15 +24,20 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
   "dependencies": {
     "@jsenv/sigi": "0.1.1"
   },
   "devDependencies": {
-    "@jsenv/core": "../../../",
     "@jsenv/assert": "../../tooling/assert",
+    "@jsenv/core": "../../../",
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/plugin-explorer": "../../related/plugin-explorer",
     "playwright": "1.52.0"
+  },
+  "engines": {
+    "node": ">=16.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

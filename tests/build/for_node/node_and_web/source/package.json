@@ -2,7 +2,7 @@
   "name": "test",
   "private": true,
   "devDependencies": {
-    "foo": "*",
-    "bar": "*"
+    "bar": "*",
+    "foo": "*"
   }
 }

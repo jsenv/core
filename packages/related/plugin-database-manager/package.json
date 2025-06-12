@@ -1,15 +1,12 @@
 {
   "name": "@jsenv/plugin-database-manager",
   "version": "0.0.1",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-database-manager"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -30,20 +27,23 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "postgres": "3.4.5",
-    "@jsenv/urls": "2.9.0",
     "@jsenv/database": "0.0.1",
-    "@jsenv/router": "0.0.9",
-    "@jsenv/form": "0.0.1",
-    "@tanstack/table-core": "8.21.3",
-    "@jsenv/sigi": "0.1.1",
     "@jsenv/dom": "0.0.1",
-    "jsonwebtoken": "9.0.2"
+    "@jsenv/form": "0.0.1",
+    "@jsenv/router": "0.0.9",
+    "@jsenv/sigi": "0.1.1",
+    "@jsenv/urls": "2.9.0",
+    "@tanstack/table-core": "8.21.3",
+    "jsonwebtoken": "9.0.2",
+    "postgres": "3.4.5"
   },
   "devDependencies": {
-    "preact": "10.26.5",
-    "@preact/signals": "2.0.4",
+    "@jsenv/core": "../../../",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
-    "@jsenv/core": "../../../"
+    "@preact/signals": "2.0.4",
+    "preact": "10.26.5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

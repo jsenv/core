@@ -1,43 +1,43 @@
 {
   "name": "@jsenv/filesystem",
   "version": "4.15.4",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/filesystem"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
+  "sideEffects": false,
   "type": "module",
-  "engines": {
-    "node": ">=19.1.0"
-  },
-  "bin": "./src/cli.mjs",
   "exports": {
     ".": {
       "import": "./src/main.js"
     },
     "./*": "./*"
   },
+  "bin": "./src/cli.mjs",
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
   "dependencies": {
-    "@jsenv/urls": "2.9.0",
-    "@jsenv/url-meta": "8.5.7",
     "@jsenv/abort": "4.3.1",
+    "@jsenv/url-meta": "8.5.7",
+    "@jsenv/urls": "2.9.0",
     "@jsenv/utils": "2.3.1"
   },
   "devDependencies": {
-    "@jsenv/snapshot": "../snapshot",
     "@jsenv/assert": "../assert",
-    "@jsenv/filesystem": "./"
+    "@jsenv/filesystem": "./",
+    "@jsenv/snapshot": "../snapshot"
+  },
+  "engines": {
+    "node": ">=19.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

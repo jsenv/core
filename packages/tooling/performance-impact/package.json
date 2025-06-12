@@ -2,18 +2,12 @@
   "name": "@jsenv/performance-impact",
   "version": "4.4.31",
   "description": "Report pull request impacts on performance metrics",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/performance-impact"
   },
-  "engines": {
-    "node": ">=16.13.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -38,5 +32,11 @@
     "@jsenv/assert": "../assert",
     "@jsenv/performance-impact": "./",
     "@jsenv/test": "../../related/test"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

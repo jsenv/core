@@ -2,22 +2,17 @@
   "name": "@jsenv/snapshot",
   "version": "2.15.12",
   "description": "Snapshot testing",
-  "license": "MIT",
-  "author": {
-    "name": "dmail",
-    "email": "dmaillard06@gmail.com"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/snapshot"
   },
-  "engines": {
-    "node": ">=20.0.0"
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -29,25 +24,30 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
   "dependencies": {
     "@jsenv/assert": "4.5.3",
     "@jsenv/ast": "6.7.6",
-    "@jsenv/url-meta": "8.5.7",
     "@jsenv/exception": "1.2.1",
-    "@jsenv/humanize": "1.6.0",
     "@jsenv/filesystem": "4.15.4",
+    "@jsenv/humanize": "1.6.0",
     "@jsenv/terminal-recorder": "1.5.20",
+    "@jsenv/url-meta": "8.5.7",
     "@jsenv/urls": "2.9.0",
     "@jsenv/utils": "2.3.1",
     "ansi-regex": "6.1.0",
     "pixelmatch": "7.1.0",
+    "pngjs": "7.0.0",
     "prettier": "3.5.3",
-    "strip-ansi": "7.1.0",
-    "pngjs": "7.0.0"
+    "strip-ansi": "7.1.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
     "@jsenv/snapshot": "./"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

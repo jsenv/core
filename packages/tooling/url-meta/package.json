@@ -1,19 +1,17 @@
 {
   "name": "@jsenv/url-meta",
   "version": "8.5.7",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/url-meta"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -24,8 +22,10 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
   "devDependencies": {
     "@jsenv/assert": "../assert"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

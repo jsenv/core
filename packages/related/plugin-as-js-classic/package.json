@@ -1,15 +1,13 @@
 {
   "name": "@jsenv/plugin-as-js-classic",
   "version": "1.6.19",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-as-js-classic"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -20,19 +18,21 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
   "dependencies": {
-    "@jsenv/urls": "2.9.0",
     "@jsenv/js-module-fallback": "1.4.18",
-    "@jsenv/plugin-bundling": "2.9.8"
+    "@jsenv/plugin-bundling": "2.9.8",
+    "@jsenv/urls": "2.9.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../../tooling/assert",
-    "@jsenv/snapshot": "../../tooling/snapshot",
-    "@jsenv/filesystem": "../../tooling/filesystem",
-    "@jsenv/plugin-preact": "../plugin-preact",
     "@jsenv/core": "../../../",
+    "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-as-js-classic": "./",
+    "@jsenv/plugin-preact": "../plugin-preact",
+    "@jsenv/snapshot": "../../tooling/snapshot",
     "playwright": "1.52.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

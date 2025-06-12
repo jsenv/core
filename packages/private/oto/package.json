@@ -1,36 +1,33 @@
 {
   "name": "oto",
-  "private": true,
   "version": "0.0.2",
+  "private": true,
   "type": "module",
-  "volta": {
-    "node": "22.13.1"
-  },
   "exports": {
     "./*": "./*"
-  },
-  "scripts": {
-    "start": "npm run dev -- --open",
-    "dev": "node ./scripts/dev.mjs",
-    "test": "node ./scripts/test.mjs",
-    "test:coverage": "npm run test -- --coverage",
-    "build": "node ./scripts/build.mjs",
-    "build:serve": "node ./scripts/build_serve.mjs --open",
-    "eslint": "npx eslint .",
-    "prettier": "prettier --write .",
-    "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "workspaces": [
     "./packages/*"
   ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "build:serve": "node ./scripts/build_serve.mjs --open",
+    "dev": "node ./scripts/dev.mjs",
+    "eslint": "npx eslint .",
+    "playwright:install": "npx playwright install-deps && npx playwright install",
+    "prettier": "prettier --write .",
+    "start": "npm run dev -- --open",
+    "test": "node ./scripts/test.mjs",
+    "test:coverage": "npm run test -- --coverage"
+  },
   "dependencies": {
-    "@preact/signals": "2.0.4",
-    "preact": "10.26.5",
-    "hooks": "./packages/hooks",
-    "@jsenv/router": "./packages/router",
     "@jsenv/dom": "./packages/dom",
+    "@jsenv/router": "./packages/router",
+    "@preact/signals": "2.0.4",
     "dom": "./packages/dom",
-    "matrix": "./packages/matrix"
+    "hooks": "./packages/hooks",
+    "matrix": "./packages/matrix",
+    "preact": "10.26.5"
   },
   "devDependencies": {
     "@babel/plugin-syntax-import-attributes": "7.27.1",
@@ -46,5 +43,8 @@
     "open": "10.1.2",
     "prettier": "3.5.3",
     "prettier-plugin-organize-imports": "4.1.0"
+  },
+  "volta": {
+    "node": "22.13.1"
   }
 }

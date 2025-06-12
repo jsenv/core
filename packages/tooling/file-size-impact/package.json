@@ -2,18 +2,12 @@
   "name": "@jsenv/file-size-impact",
   "version": "14.3.31",
   "description": "Add files size impact into pull requests",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/file-size-impact"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -21,26 +15,32 @@
     },
     "./*": "./*"
   },
+  "main": "./src/main.js",
   "bin": {
     "filesize": "./bin/filesize.mjs"
   },
-  "main": "./src/main.js",
   "files": [
     "/src/"
   ],
   "scripts": {
-    "snapshot": "node ./tests/comment/generate_comment_snapshot_file.mjs",
-    "file-size": "node ./scripts/file_size.mjs --log"
+    "file-size": "node ./scripts/file_size.mjs --log",
+    "snapshot": "node ./tests/comment/generate_comment_snapshot_file.mjs"
   },
   "dependencies": {
     "@jsenv/dynamic-import-worker": "1.2.1",
     "@jsenv/filesystem": "4.15.4",
     "@jsenv/github-pull-request-impact": "1.8.31",
-    "@jsenv/urls": "2.9.0",
-    "@jsenv/humanize": "1.6.0"
+    "@jsenv/humanize": "1.6.0",
+    "@jsenv/urls": "2.9.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
     "@jsenv/file-size-impact": "./"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

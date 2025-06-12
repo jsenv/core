@@ -2,18 +2,12 @@
   "name": "@jsenv/lighthouse-impact",
   "version": "4.2.35",
   "description": "Package description",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/lighthouse-impact"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -38,8 +32,14 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
-    "@jsenv/server": "../../backend/server",
     "@jsenv/lighthouse-impact": "./",
+    "@jsenv/server": "../../backend/server",
     "playwright": "1.52.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

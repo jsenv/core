@@ -3,48 +3,48 @@
   "version": "0.0.1",
   "private": true,
   "description": "TODO",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/backend/database"
+  },
   "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/jsenv/core",
-    "directory": "packages/backend/database"
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": "./src/main.js",
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "bin": "./src/cli.mjs",
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "database:setup": "npx @jsenv/database setup"
+  },
+  "dependencies": {
+    "@jsenv/filesystem": "4.15.4",
+    "@jsenv/humanize": "1.6.0",
+    "@jsenv/url-meta": "8.5.7",
+    "@jsenv/urls": "2.9.0",
+    "dotenv": "16.5.0",
+    "postgres": "3.4.5"
+  },
+  "devDependencies": {
+    "@jsenv/core": "../../../",
+    "@jsenv/plugin-commonjs": "../../related/plugin-commonjs",
+    "@jsenv/plugin-database-manager": "../../related/plugin-database-manager",
+    "@jsenv/plugin-preact": "../../related/plugin-preact"
   },
   "engines": {
     "node": ">=22.13.1"
   },
   "publishConfig": {
     "access": "public"
-  },
-  "type": "module",
-  "exports": {
-    ".": "./src/main.js",
-    "./*": "./*"
-  },
-  "bin": "./src/cli.mjs",
-  "main": "./src/main.js",
-  "files": [
-    "/src/"
-  ],
-  "sideEffects": false,
-  "scripts": {
-    "database:setup": "npx @jsenv/database setup"
-  },
-  "dependencies": {
-    "postgres": "3.4.5",
-    "@jsenv/humanize": "1.6.0",
-    "@jsenv/url-meta": "8.5.7",
-    "@jsenv/filesystem": "4.15.4",
-    "@jsenv/urls": "2.9.0",
-    "dotenv": "16.5.0"
-  },
-  "devDependencies": {
-    "@jsenv/core": "../../../",
-    "@jsenv/plugin-database-manager": "../../related/plugin-database-manager",
-    "@jsenv/plugin-preact": "../../related/plugin-preact",
-    "@jsenv/plugin-commonjs": "../../related/plugin-commonjs"
   }
 }

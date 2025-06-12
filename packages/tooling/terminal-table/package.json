@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/terminal-table",
   "version": "0.0.5",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -8,11 +9,7 @@
     },
     "./*": "./*"
   },
-  "publishConfig": {
-    "access": "public"
-  },
   "main": "./src/main.js",
-  "sideEffects": false,
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
@@ -22,10 +19,13 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
-    "@jsenv/snapshot": "../snapshot",
-    "@jsenv/terminal-table": "./",
-    "@jsenv/terminal-text-size": "../terminal-text-size",
     "@jsenv/filesystem": "../../backend/filesystem",
-    "@jsenv/terminal-recorder": "../terminal-recorder"
+    "@jsenv/snapshot": "../snapshot",
+    "@jsenv/terminal-recorder": "../terminal-recorder",
+    "@jsenv/terminal-table": "./",
+    "@jsenv/terminal-text-size": "../terminal-text-size"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

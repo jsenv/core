@@ -2,18 +2,12 @@
   "name": "@jsenv/github-pull-request-impact",
   "version": "1.8.31",
   "description": "Report pull request impact on something",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/github-pull-request-impact"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -31,5 +25,11 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../assert"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

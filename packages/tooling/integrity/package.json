@@ -2,27 +2,27 @@
   "name": "@jsenv/integrity",
   "version": "0.0.2",
   "description": "Sub resource integrity helpers",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/integrity"
   },
-  "engines": {
-    "node": ">=16.13.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
+  "sideEffects": false,
   "type": "module",
   "main": "./main.js",
   "files": [
     "/src/",
     "/main.js"
   ],
-  "sideEffects": false,
   "devDependencies": {
     "@jsenv/assert": "../assert",
     "@jsenv/integrity": "./"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

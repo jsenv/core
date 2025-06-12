@@ -1,10 +1,10 @@
 {
   "name": "self",
   "private": true,
-  "dependencies": {
-    "foo": "./packages/foo"
-  },
   "exports": {
     "./*": "./*"
+  },
+  "dependencies": {
+    "foo": "./packages/foo"
   }
 }

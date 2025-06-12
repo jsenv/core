@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/dom",
-  "private": true,
   "version": "0.0.1",
+  "private": true,
   "exports": {
     ".": "./src/dom.js",
     "./details_content_full_height": "./src/size/details_content_full_height.js",
@@ -9,8 +9,8 @@
     "./resize": "./src/size/resize.js"
   },
   "dependencies": {
+    "@jsenv/animation": "0.0.1",
     "@preact/signals": "2.0.4",
-    "preact": "10.26.5",
-    "@jsenv/animation": "0.0.1"
+    "preact": "10.26.5"
   }
 }

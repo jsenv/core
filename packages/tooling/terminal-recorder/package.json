@@ -2,18 +2,15 @@
   "name": "@jsenv/terminal-recorder",
   "version": "1.5.20",
   "description": "Record terminal output as .svg, .gif, .webm, .mp4",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/terminal-recorder"
   },
+  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "type": "module",
   "exports": {
@@ -32,33 +29,36 @@
     "/src/"
   ],
   "scripts": {
-    "dev": "node ./scripts/dev.mjs",
     "build": "node ./scripts/build.mjs",
+    "dev": "node ./scripts/dev.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@jsenv/humanize": "1.6.0",
     "@jsenv/server": "16.1.2",
-    "@playwright/browser-chromium": "1.52.0",
     "@jsenv/terminal-text-size": "0.0.2",
+    "@playwright/browser-chromium": "1.52.0",
     "ansi-regex": "6.1.0",
+    "eastasianwidth": "0.3.0",
     "he": "1.2.0",
     "playwright": "1.52.0",
     "strip-ansi": "7.1.0",
-    "eastasianwidth": "0.3.0",
     "webm-to-mp4": "1.0.0"
   },
   "devDependencies": {
+    "@jsenv/assert": "../assert",
+    "@jsenv/core": "../../../",
+    "@jsenv/filesystem": "../filesystem",
+    "@jsenv/https-local": "../https-local",
+    "@jsenv/plugin-commonjs": "../../related/plugin-commonjs",
+    "@jsenv/snapshot": "../snapshot",
+    "@jsenv/terminal-recorder": "./",
     "@xterm/addon-fit": "0.10.0",
     "@xterm/addon-serialize": "0.13.0",
     "@xterm/addon-webgl": "0.18.0",
-    "@xterm/xterm": "5.5.0",
-    "@jsenv/core": "../../../",
-    "@jsenv/assert": "../assert",
-    "@jsenv/https-local": "../https-local",
-    "@jsenv/filesystem": "../filesystem",
-    "@jsenv/snapshot": "../snapshot",
-    "@jsenv/terminal-recorder": "./",
-    "@jsenv/plugin-commonjs": "../../related/plugin-commonjs"
+    "@xterm/xterm": "5.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

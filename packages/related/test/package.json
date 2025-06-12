@@ -1,18 +1,20 @@
 {
   "name": "@jsenv/test",
   "version": "3.7.7",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/test"
   },
-  "engines": {
-    "node": ">=20.11.0"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
+  "sideEffects": [
+    "./src/runtime_node/node_child_process_controlled.mjs",
+    "./src/runtime_node/node_worker_thread_controlled.mjs",
+    "./dist/js/node_child_process_controlled.mjs",
+    "./dist/js/node_worker_thread_controlled.mjs",
+    "./dist/jsenv_test_node_modules.js",
+    "./dist/jsenv_test.js"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -27,21 +29,9 @@
     "/dist/",
     "/src/"
   ],
-  "sideEffects": [
-    "./src/runtime_node/node_child_process_controlled.mjs",
-    "./src/runtime_node/node_worker_thread_controlled.mjs",
-    "./dist/js/node_child_process_controlled.mjs",
-    "./dist/js/node_worker_thread_controlled.mjs",
-    "./dist/jsenv_test_node_modules.js",
-    "./dist/jsenv_test.js"
-  ],
   "scripts": {
     "build": "node --conditions=dev:jsenv ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
-  },
-  "optionalDependencies": {
-    "playwright": "1.x",
-    "playwright-core": "1.x"
   },
   "dependencies": {
     "@c88/v8-coverage": "0.1.1",
@@ -57,26 +47,36 @@
     "v8-to-istanbul": "9.3.0"
   },
   "devDependencies": {
-    "@jsenv/assert": "../tooling/assert",
-    "@jsenv/snapshot": "../tooling/snapshot",
-    "@jsenv/terminal-recorder": "../tooling/terminal-recorder",
-    "@jsenv/server": "../backend/server",
-    "@jsenv/core": "../../",
-    "@jsenv/os-metrics": "../../tooling/os-metrics",
-    "@jsenv/importmap": "../../tooling/importmap",
-    "@jsenv/plugin-explorer": "../plugin-explorer",
-    "@jsenv/test": "./",
     "@jsenv/abort": "../../tooling/abort",
+    "@jsenv/assert": "../tooling/assert",
+    "@jsenv/core": "../../",
     "@jsenv/exception": "../../backend/exception",
     "@jsenv/filesystem": "../../backend/filesystem",
     "@jsenv/github-check-run": "../../tooling/github-check-run",
+    "@jsenv/humanize": "../../tooling/humanize",
+    "@jsenv/importmap": "../../tooling/importmap",
     "@jsenv/node-esm-resolution": "../../tooling/node-esm-resolution",
+    "@jsenv/os-metrics": "../../tooling/os-metrics",
+    "@jsenv/plugin-explorer": "../plugin-explorer",
+    "@jsenv/server": "../backend/server",
+    "@jsenv/snapshot": "../tooling/snapshot",
+    "@jsenv/terminal-recorder": "../tooling/terminal-recorder",
+    "@jsenv/test": "./",
     "@jsenv/url-meta": "../../tooling/url-meta",
     "@jsenv/urls": "../../tooling/urls",
     "@jsenv/utils": "../../tooling/utils",
-    "@jsenv/humanize": "../../tooling/humanize",
+    "prettier": "3.5.3",
     "strip-ansi": "7.1.0",
-    "supports-color": "10.0.0",
-    "prettier": "3.5.3"
+    "supports-color": "10.0.0"
+  },
+  "optionalDependencies": {
+    "playwright": "1.x",
+    "playwright-core": "1.x"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
