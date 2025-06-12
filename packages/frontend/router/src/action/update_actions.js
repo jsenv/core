@@ -59,7 +59,7 @@ export const updateActions = async ({
   }
 
   for (const actionCandidate of candidateSet) {
-    const matchResult = actionCandidate.match();
+    const matchResult = actionCandidate.getMatchResult();
     if (!matchResult) {
       continue;
     }
@@ -245,9 +245,22 @@ const createAction = (
     ? parentAction.paramsSignal
     : signal(initialParams);
 
-  const activationEffect = () => {};
-  const deactivationEffect = () => {};
-  const shouldReload = () => false;
+  const activationEffect = () => {
+    if (parentAction) {
+      parentAction.activationEffect();
+    }
+  };
+  const deactivationEffect = () => {
+    if (parentAction) {
+      parentAction.deactivationEffect();
+    }
+  };
+  const shouldReload = () => {
+    if (parentAction) {
+      return parentAction.shouldReload();
+    }
+    return false;
+  };
   const toString = () => name;
   const start = async (options) => {
     action.activationEffect();
@@ -293,16 +306,6 @@ const createAction = (
     const weakRef = new WeakRef(parametrizedAction);
     parametrizedActions.set(combinedParams, weakRef);
     parametrizedActionsWeakRefs.add(weakRef);
-
-    // Copier les méthodes de connexion depuis l'action parent
-    parametrizedAction.activationEffect = (options) => {
-      action.activationEffect.call(parametrizedAction, options);
-    };
-    parametrizedAction.deactivationEffect = (options) => {
-      action.deactivationEffect.call(parametrizedAction, options);
-    };
-    parametrizedAction.shouldReload = action.shouldReload;
-
     return parametrizedAction;
   };
 
@@ -311,8 +314,8 @@ const createAction = (
     initialParams,
     params,
     paramsSignal,
-    match: () => {
-      // TODO: would be overriden by connect
+    match: () => action.getMatchResult(),
+    getMatchResult: () => {
       const matchResult = {};
       if (!matchResult) {
         return null;
@@ -428,7 +431,6 @@ export const connectActionWithLocalStorageBoolean = (
   action.deactivationEffect = deactivationEffect;
   onActionConnected();
 };
-
 export const connectActionWithLocalStorageString = (
   action,
   key,
