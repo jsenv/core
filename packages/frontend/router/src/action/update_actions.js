@@ -1,4 +1,4 @@
-import { batch } from "@preact/signals";
+import { batch, effect, signal } from "@preact/signals";
 
 let debug = true;
 
@@ -70,7 +70,7 @@ export const updateActions = async ({
       toActivateMap.set(actionCandidate, enterParams);
     } else {
       const hasError = actionCandidate.errorSignal.peek();
-      const isAborted = actionCandidate.loadingStateSignal.peek() === ABORTED;
+      const isAborted = actionCandidate.stateSignal.peek() === ABORTED;
       if (isReload) {
         toActivateMap.set(actionCandidate, enterParams);
       } else if (hasError) {
@@ -134,7 +134,6 @@ export const updateActions = async ({
     console.groupEnd();
   }
 };
-
 const activate = async (action, { signal, matchResult }) => {
   const abortController = new AbortController();
   const abortSignal = abortController.signal;
@@ -142,7 +141,7 @@ const activate = async (action, { signal, matchResult }) => {
     if (debug) {
       console.log(`"${action}": abort activation.`);
     }
-    action.loadingStateSignal.value = ABORTED;
+    action.stateSignal.value = ABORTED;
     abortController.abort(reason);
     actionAbortMap.delete(action);
   };
@@ -151,12 +150,19 @@ const activate = async (action, { signal, matchResult }) => {
   };
   signal.addEventListener("abort", onabort);
   actionAbortMap.set(action, abort);
-  action.enterEffect({ matchResult });
+
+  batch(() => {
+    action.isMatchingSignal.value = true;
+    action.paramsSignal.value = matchResult;
+    action.errorSignal.value = null;
+    action.stateSignal.value = ACTIVATING;
+  });
+  action.activationEffect({ matchResult });
   matchingActionSet.add(action);
 
   try {
     await action.load({ signal: abortSignal });
-    action.loadingStateSignal.value = ACTIVATED;
+    action.stateSignal.value = ACTIVATED;
     if (abortSignal.aborted) {
       return;
     }
@@ -167,16 +173,15 @@ const activate = async (action, { signal, matchResult }) => {
     actionAbortMap.delete(action);
     actionPromiseMap.delete(action);
     if (abortSignal.aborted && e === abortSignal.reason) {
-      action.loadingStateSignal.value = ABORTED;
+      action.stateSignal.value = ABORTED;
       return;
     }
     batch(() => {
       action.reportError(e);
-      action.loadingStateSignal.value = FAILED;
+      action.stateSignal.value = FAILED;
     });
   }
 };
-
 const deactivate = (action, reason) => {
   const abort = actionAbortMap.get(action);
   if (abort) {
@@ -187,7 +192,90 @@ const deactivate = (action, reason) => {
   } else if (debug) {
     console.log(`"${action}": deactivating route (reason: ${reason})`);
   }
-  action.leaveEffect(reason);
+  action.deactivateEffect(reason);
   matchingActionSet.delete(action);
   actionPromiseMap.delete(action);
+  batch(() => {
+    action.isMatchingSignal.value = false;
+    action.paramsSignal.value = action.initialParams;
+    action.errorSignal.value = null;
+    action.stateSignal.value = IDLE;
+  });
+};
+
+export const registerAction = (...args) => {
+  const action = createAction(...args);
+  const weakRef = new WeakRef(action);
+  actionWeakRefSet.add(weakRef);
+  return action;
+};
+const createAction = (callback, { name = callback.name } = {}) => {
+  const isMatchingSignal = signal(false);
+  const stateSignal = signal(IDLE);
+  let error;
+  const errorSignal = signal(null);
+  const reportError = (e) => {
+    errorSignal.value = e;
+  };
+  const initialData = undefined;
+  let data = initialData;
+  const dataSignal = signal(initialData);
+
+  const initialParams = {};
+  let params = initialParams;
+  const paramsSignal = signal(initialParams);
+
+  const match = () => null;
+  const activationEffect = () => {};
+  const deactivationEffect = () => {};
+  const shouldReload = () => false;
+  const toString = () => name;
+
+  const action = {
+    isMatchingSignal,
+    initialParams,
+    params,
+    paramsSignal,
+    load: ({ signal }) => callback({ signal, ...params }),
+    stateSignal,
+    error,
+    errorSignal,
+    reportError,
+    data,
+    dataSignal,
+
+    match,
+    activationEffect,
+    deactivationEffect,
+    shouldReload,
+    toString,
+    name,
+  };
+  Object.preventExtensions(action);
+
+  const actionWeakRef = new WeakRef(action);
+  const actionWeakEffect = (callback) => {
+    const dispose = effect(() => {
+      const actionRef = actionWeakRef.deref();
+      if (actionRef) {
+        callback(actionRef);
+      } else {
+        dispose();
+      }
+    });
+  };
+  actionWeakEffect((actionRef) => {
+    params = paramsSignal.value;
+    actionRef.params = params;
+  });
+  actionWeakEffect((actionRef) => {
+    error = errorSignal.value;
+    actionRef.error = error;
+  });
+  actionWeakEffect((actionRef) => {
+    data = dataSignal.value;
+    actionRef.data = data;
+  });
+
+  return action;
 };
