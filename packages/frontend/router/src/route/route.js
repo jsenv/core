@@ -136,20 +136,21 @@ const createRouteConnectedWithUrl = (
     goTo(routeUrl, { replace: true, routesLoaded: [route] });
   };
 
-  const match = ({ resource }) => {
+  const match = () => {
+    const resource = resourceFromUrl(window.location.href);
     const matchResult = resourcePatternParsed.match(resource);
     if (!matchResult) {
       return false;
     }
     return matchResult;
   };
-  const enterEffect = ({ url, params }) => {
+  const enterEffect = ({ matchResult }) => {
     batch(() => {
       isMatchingSignal.value = true;
       errorSignal.value = null;
       loadingStateSignal.value = LOADING;
-      urlSignal.value = url;
-      paramsSignal.value = params;
+      urlSignal.value = window.location.href;
+      paramsSignal.value = matchResult;
     });
   };
   const leaveEffect = () => {
@@ -414,7 +415,7 @@ const createRouteConnectedWithState = ({
   return route;
 };
 
-const applyRouteEnterEffect = async (route, { signal, url, params, state }) => {
+const applyRouteEnterEffect = async (route, { signal, matchResult }) => {
   // here we must pass a signal that gets aborted when
   // 1. any route is stopped (browser stop button)
   // 2. route is left
@@ -434,7 +435,7 @@ const applyRouteEnterEffect = async (route, { signal, url, params, state }) => {
   };
   signal.addEventListener("abort", onabort);
   routeAbortEnterMap.set(route, abort);
-  route.enterEffect({ url, params, state });
+  route.enterEffect({ matchResult });
   matchingRouteSet.add(route);
 
   await loadRoute(route, {
@@ -532,15 +533,6 @@ export const applyRouting = async ({
   info,
 }) => {
   const targetResource = resourceFromUrl(targetUrl);
-  const targetUrlObject = new URL(targetResource, baseUrl);
-  const matchParams = {
-    resource: targetResource,
-    state: targetState,
-    searchParams: targetUrlObject.searchParams,
-    pathname: targetUrlObject.pathname,
-    hash: targetUrlObject.hash,
-  };
-
   const routesToEnter = info?.routesToEnter;
   const routesToLeave = info?.routesToLeave;
   const routesLoaded = info?.routesLoaded;
@@ -580,7 +572,7 @@ export const applyRouting = async ({
       routeToKeepActiveSet.add(routeCandidate);
       continue;
     }
-    const matchResult = routeCandidate.match(matchParams);
+    const matchResult = routeCandidate.match(targetResource);
     if (!matchResult) {
       continue;
     }
@@ -590,10 +582,7 @@ export const applyRouting = async ({
     };
     const enterParams = {
       signal: stopSignal,
-      url: targetUrl,
-      resource: targetResource,
-      state: targetState,
-      params: targetParams,
+      matchResult: targetParams,
     };
     const startsMatching = !matchingRouteSet.has(routeCandidate);
     if (
