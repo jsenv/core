@@ -18,7 +18,7 @@
        * On veut pas supprimer du local storage que la table est ouverte parcqu'elle est scope
        * a chaque utilisateur
        *
-       * En local storage on pourrait scotker ça comme ça:
+       * En local storage on pourrait stocker ça comme ça:
        *
        * ":user_name/tables_opened": "true"|"false"
        * "users_with_tables_opened": ["dam", "seb"]
@@ -30,7 +30,7 @@
         useActionStatus,
         connectActionWithLocalStorageString,
         connectActionWithLocalStorageBoolean,
-      } from "./update_actions.js";
+      } from "./actions.js";
 
       const loadUserAction = registerAction(
         ({ userName }) => {
