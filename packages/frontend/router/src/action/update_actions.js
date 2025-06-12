@@ -217,6 +217,7 @@ const createAction = (
   {
     name = callback.name || "anonymous",
     initialParams = initialParamsDefault,
+    initialData,
     parentAction,
   } = {},
 ) => {
@@ -227,16 +228,13 @@ const createAction = (
   const reportError = (e) => {
     errorSignal.value = e;
   };
-  const initialData = undefined;
   let data = initialData;
   const dataSignal = parentAction
     ? parentAction.dataSignal
     : signal(initialData);
 
   let params = initialParams;
-  const paramsSignal = parentAction
-    ? parentAction.paramsSignal
-    : signal(initialParams);
+  const paramsSignal = signal(initialParams);
 
   const activationEffect = (...args) => {
     if (parentAction) {
@@ -257,11 +255,21 @@ const createAction = (
     }
     return true;
   };
-  const toString = () => {
-    if (Object.keys(params).length === 0) {
-      return name;
+  const generateParamsSuffix = (params) => {
+    const keys = Object.keys(params);
+    if (keys.length === 0) {
+      return "";
     }
-    return `${name}(${JSON.stringify(params)})`;
+    if (keys.length === 1) {
+      const value = params[keys[0]];
+      return `: ${value}`;
+    }
+    return `(${JSON.stringify(params)})`;
+  };
+
+  const toString = () => {
+    const suffix = generateParamsSuffix(initialParams);
+    return `${name}${suffix}`;
   };
   const start = async (options) => {
     action.activationEffect(initialParams);
@@ -296,9 +304,8 @@ const createAction = (
       }
     }
 
-    const parametrizedName = `${name}(${JSON.stringify(combinedParams)})`;
     const parametrizedAction = createAction(callback, {
-      name: parametrizedName,
+      name: action.name,
       initialParams: combinedParams,
       parentAction: action,
     });
@@ -311,6 +318,7 @@ const createAction = (
   const action = {
     isMatchingSignal,
     initialParams,
+    initialData,
     params,
     paramsSignal,
     match: () => false,
@@ -324,8 +332,11 @@ const createAction = (
         const parametrizedAction = parametrizedActionWeakRef.deref();
         if (compareTwoJsValues(params, matchParams)) {
           parametrizedAction.isMatchingSignal.value = true;
+          parametrizedAction.paramsSignal.value = matchParams;
         } else {
           parametrizedAction.isMatchingSignal.value = false;
+          parametrizedAction.paramsSignal.value =
+            parametrizedAction.initialParams;
         }
       }
       return matchParams;
@@ -343,7 +354,9 @@ const createAction = (
     deactivationEffect,
     shouldReload,
     toString,
-    name,
+    get name() {
+      return toString();
+    },
     start,
     stop,
     withParams,

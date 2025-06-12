@@ -11,9 +11,9 @@
 
     <script type="module" jsenv-type="module/jsx">
       /**
-       * Ici on teste juste que d'ouvrir le details
-       * charge l'action et que la donée est affichée
-       * Si on reload la page, le details est open et l'action est lancée
+       * Ici on test une action ayant un param qui est lu dans le local storage
+       * On peut utiliser deux actions dérivées pour charger deux users différents
+       * on peut aussi savoir qui est l'utilisateur courant
        */
 
       import { render } from "preact";
@@ -59,8 +59,65 @@
             >
               Load seb
             </button>
+
+            <ActionStatus action={loadUserAction} />
+            <ActionStatus action={loadDamAction} />
+            <ActionStatus action={loadSebAction} />
+
             <div>User: {data}</div>
           </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ActionStatus = ({ action, name = action.name }) => {
+        const { matching, params, error, aborted, data } =
+          useActionStatus(action);
+        return (
+          <fieldset style={{ width: "200px" }}>
+            <legend>{action.name}</legend>
+
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div>
+                {matching ? (
+                  <span>
+                    matching: <strong>yes</strong>
+                  </span>
+                ) : (
+                  <span>matching: no</span>
+                )}
+              </div>
+              <div style="display: flex; align-items: center; gap: 5px;">
+                <span>params: </span>
+                <pre style="margin: 0">{JSON.stringify(params)}</pre>
+              </div>
+              <div>
+                {aborted ? (
+                  <span>
+                    aborted: <strong>yes</strong>
+                  </span>
+                ) : (
+                  <span>aborted: no</span>
+                )}
+              </div>
+              <div>
+                {error ? (
+                  <span>error: {error.message}</span>
+                ) : (
+                  <span>error</span>
+                )}
+              </div>
+              <div>
+                {data ? (
+                  <span>
+                    data: <strong>{JSON.stringify(data)}</strong>
+                  </span>
+                ) : (
+                  <span>data</span>
+                )}
+              </div>
+            </div>
+          </fieldset>
         );
       };
 
