@@ -11,18 +11,9 @@
 
     <script type="module" jsenv-type="module/jsx">
       /**
-       * ce qu'on veut tester:
-       * - une action par defaut ne fait rien (elle ne matche pas)
-       * - on peut connecter une action au local storage
-       * elle va alors s'associer a une valeur, et lorsqu'elle démarre mettre cette valeur a quelque chose (genre true)
-       * - elle met cette valeur a false lorsqu'on la leave. Sauf que pour qu'on la leave
-       * il faut qu'on mettre cette valeur a false et qu'on rapelle updateActions
-       *
-       * - on veut vérifier que si on register une action
-       * et qu'on l'utilise dans la UI
-       * et qu'ensuite on supprime cette action et le UI associé
-       * l'action est bien garage collect
-       *
+       * Ici on teste juste que d'ouvrir le details
+       * charge l'action et que la donée est affichée
+       * Si on reload la page, le details est open et l'action est lancée
        */
 
       import { render } from "preact";

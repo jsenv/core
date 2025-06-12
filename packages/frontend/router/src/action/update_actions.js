@@ -166,11 +166,9 @@ const activate = async (action, { signal, matchResult }) => {
   matchingActionSet.add(action);
 
   try {
-    await action.load({ signal: abortSignal });
+    const loadResult = await action.load({ signal: abortSignal });
+    action.dataSignal.value = loadResult;
     action.stateSignal.value = ACTIVATED;
-    if (abortSignal.aborted) {
-      return;
-    }
     actionAbortMap.delete(action);
     actionPromiseMap.delete(action);
   } catch (e) {
@@ -197,7 +195,7 @@ const deactivate = (action, reason) => {
   } else if (debug) {
     console.log(`"${action}": deactivating route (reason: ${reason})`);
   }
-  action.deactivateEffect(reason);
+  action.deactivationEffect(reason);
   matchingActionSet.delete(action);
   actionPromiseMap.delete(action);
   batch(() => {
@@ -299,7 +297,7 @@ const createAction = (
 };
 
 export const useActionStatus = (action) => {
-  const { isMatching } = action.isMatchingSignal.value;
+  const isMatching = action.isMatchingSignal.value;
   const params = action.paramsSignal.value;
   const error = action.errorSignal.value;
   const state = action.stateSignal.value;
@@ -338,4 +336,6 @@ export const connectActionWithLocalStorageBooleanState = (
   };
   action.activationEffect = activationEffect;
   action.deactivationEffect = deactivationEffect;
+
+  updateActions();
 };
