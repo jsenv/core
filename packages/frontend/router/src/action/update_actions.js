@@ -244,29 +244,6 @@ const createAction = (
     ? parentAction.paramsSignal
     : signal(initialParams);
 
-  const match = () => {
-    if (isParametrized && parentAction) {
-      // L'action paramétrée match seulement si :
-      // 1. Le parent match
-      // 2. Les paramètres correspondent
-      const parentMatchResult = parentAction.match();
-      if (!parentMatchResult) {
-        return null; // Parent ne match pas
-      }
-
-      // Vérifier si les paramètres fixes correspondent aux paramètres du match
-      const matchParams =
-        typeof parentMatchResult === "object" ? parentMatchResult : {};
-      for (const [key, value] of Object.entries(initialParams)) {
-        if (matchParams[key] !== value) {
-          return null; // Paramètres ne correspondent pas
-        }
-      }
-      return parentMatchResult; // Match !
-    }
-
-    return null; // Actions normales ont match = null par défaut
-  };
   const activationEffect = () => {};
   const deactivationEffect = () => {};
   const shouldReload = () => false;
@@ -281,7 +258,6 @@ const createAction = (
   };
 
   const parametrizedActions = new Set();
-  // Implémentation de withParams
   const withParams = (newParams) => {
     const combinedParams = { ...initialParams, ...newParams };
     const parametrizedName = `${name}(${JSON.stringify(combinedParams)})`;
@@ -306,30 +282,29 @@ const createAction = (
     return parametrizedAction;
   };
 
-  const findMatchingParametrizedAction = () => {
-    for (const parametrizedAction of parametrizedActions) {
-      const matchResult = parametrizedAction.match();
-      if (matchResult) {
-        return parametrizedAction;
-      }
-    }
-    return null;
-  };
-
   const action = {
     isMatchingSignal,
     initialParams,
     params,
     paramsSignal,
-    load: ({ signal }) => {
-      if (!isParametrized && parametrizedActions.size > 0) {
-        const matchingParametrized = findMatchingParametrizedAction();
-        if (matchingParametrized) {
-          return matchingParametrized.load({ signal });
+    match: () => {
+      const matchResult = {};
+      if (!matchResult) {
+        return null;
+      }
+      for (const parametrizedAction of parametrizedActions) {
+        for (const [key, value] of Object.entries(
+          parametrizedAction.initialParams,
+        )) {
+          if (matchResult[key] !== value) {
+            return null; // Paramètres ne correspondent pas
+          }
         }
       }
-      return callback({ signal, ...params });
+      return matchResult;
     },
+    load: ({ signal }) => callback({ signal, ...params }),
+
     stateSignal,
     error,
     errorSignal,
@@ -337,19 +312,6 @@ const createAction = (
     data,
     dataSignal,
 
-    match: isParametrized
-      ? match
-      : () => {
-          // ✅ NOUVEAU : Action parent match si elle-même ou une paramétrée match
-          const selfMatch = action._originalMatch
-            ? action._originalMatch()
-            : null;
-          if (selfMatch) return selfMatch;
-
-          // Vérifier les actions paramétrées
-          const matchingParametrized = findMatchingParametrizedAction();
-          return matchingParametrized ? matchingParametrized.match() : null;
-        },
     activationEffect,
     deactivationEffect,
     shouldReload,
