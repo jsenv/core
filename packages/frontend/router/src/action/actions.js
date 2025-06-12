@@ -219,6 +219,7 @@ const createAction = (
     initialParams = initialParamsDefault,
     initialData,
     parentAction,
+    renderLoaded,
   } = {},
 ) => {
   const isMatchingSignal = signal(false);
@@ -282,8 +283,9 @@ const createAction = (
 
   const parametrizedActions = new Map(); // Changer de Set à Map pour stocker params -> action
   const parametrizedActionsWeakRefs = new Set();
+  let matchingParametrizedAction;
 
-  const withParams = (newParams) => {
+  const withParams = (newParams, options = {}) => {
     const combinedParams = { ...initialParams, ...newParams };
     for (const weakRef of parametrizedActionsWeakRefs) {
       if (!weakRef.deref()) {
@@ -308,6 +310,7 @@ const createAction = (
       name: action.name,
       initialParams: combinedParams,
       parentAction: action,
+      ...options,
     });
     const weakRef = new WeakRef(parametrizedAction);
     parametrizedActions.set(combinedParams, weakRef);
@@ -323,6 +326,7 @@ const createAction = (
     paramsSignal,
     match: () => false,
     getMatchParams: () => {
+      matchingParametrizedAction = null;
       const matchResult = action.match();
       if (!matchResult) {
         return null;
@@ -333,6 +337,7 @@ const createAction = (
         if (compareTwoJsValues(params, matchParams)) {
           parametrizedAction.isMatchingSignal.value = true;
           parametrizedAction.paramsSignal.value = matchParams;
+          matchingParametrizedAction = parametrizedAction;
         } else {
           parametrizedAction.isMatchingSignal.value = false;
           parametrizedAction.paramsSignal.value =
@@ -341,7 +346,39 @@ const createAction = (
       }
       return matchParams;
     },
-    load: ({ signal }) => callback({ signal, ...params }),
+    load: async ({ signal }) => {
+      const promises = [];
+      const loadPromise = callback({ signal, ...params });
+      promises.push(loadPromise);
+      let result;
+      loadPromise.then((value) => {
+        result = value;
+      });
+      if (action.ui.load) {
+        const uiLoadPromise = action.ui.load({ signal, ...params });
+        promises.push(uiLoadPromise);
+      }
+      await Promise.all(promises);
+      return result;
+    },
+    ui: {
+      renderLoaded,
+      load: async (...args) => {
+        if (matchingParametrizedAction) {
+          await matchingParametrizedAction.ui.load({ signal, ...params });
+        }
+        const renderLoaded = action.ui.renderLoaded;
+        if (!renderLoaded) {
+          return null;
+        }
+        const renderLoadedResult = renderLoaded(...args);
+        return Promise.resolve(renderLoadedResult).then(
+          (renderLoadedResolved) => {
+            action.ui.renderLoaded = () => renderLoadedResolved;
+          },
+        );
+      },
+    },
 
     stateSignal,
     error,

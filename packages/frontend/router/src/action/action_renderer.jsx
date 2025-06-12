@@ -21,7 +21,7 @@ export const ActionRenderer = ({
 }) => {
   if (renderNotMatching) {
     return (
-      <ActionHandler
+      <Renderer
         action={action}
         renderNotMatching={renderNotMatching}
         renderMatching={renderMatching || renderMatchingDefault}
@@ -33,7 +33,7 @@ export const ActionRenderer = ({
   }
   if (renderMatching) {
     return (
-      <ActionHandler
+      <Renderer
         action={action}
         renderNotMatching={renderNotMatchingDefault}
         renderMatching={renderMatching}
@@ -46,7 +46,7 @@ export const ActionRenderer = ({
   if (renderLoaded) {
     // cas le plus courant: le composant qu'on veut render est disponible
     return (
-      <ActionHandler
+      <Renderer
         action={action}
         renderNotMatching={renderNotMatchingDefault}
         renderMatching={renderMatchingDefault}
@@ -59,7 +59,17 @@ export const ActionRenderer = ({
   if (render) {
     return render(action);
   }
-  // TODO: throw error explaining one of the render must be provided
+  if (action.ui.renderLoaded) {
+    return (
+      <Renderer
+        action={action}
+        renderNotMatching={renderNotMatchingDefault}
+        renderMatching={renderMatchingDefault}
+        renderLoading={renderLoading || renderLoadingDefault}
+        renderError={renderError || renderErrorDefault}
+      />
+    );
+  }
   return null;
 };
 
@@ -78,7 +88,7 @@ const useUIRenderedPromise = (route) => {
   return promise;
 };
 
-const ActionHandler = ({
+const Renderer = ({
   action,
   renderNotMatching,
   renderMatching,
@@ -114,7 +124,7 @@ const ActionHandler = ({
     return (
       <ActionErrorBoundary
         action={action}
-        renderChild={renderLoaded}
+        renderChild={renderLoaded || action.ui.renderLoaded}
         renderChildArg={data}
       />
     );
@@ -123,7 +133,7 @@ const ActionHandler = ({
     return (
       <ActionErrorBoundary
         action={action}
-        renderChild={renderLoaded}
+        renderChild={renderLoaded || action.ui.renderLoaded}
         renderChildArg={action.data}
       />
     );

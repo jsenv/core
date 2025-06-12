@@ -38,17 +38,44 @@
       );
       connectActionWithLocalStorageString(loadPageAction, "pageName");
 
+      const loadPageTotoAction = loadPageAction.withParams(
+        {
+          pageName: "toto",
+        },
+        {
+          renderLoaded: async () => {
+            // eslint-disable-next-line no-unused-vars
+            const { Toto } = await import("./toto.jsx");
+            return <Toto />;
+          },
+        },
+      );
+      const loadPageTataAction = loadPageAction.withParams(
+        {
+          pageName: "tata",
+        },
+        {
+          renderLoaded: async () => {
+            // eslint-disable-next-line no-unused-vars
+            const { Tata } = await import("./tata.jsx");
+            return <Tata />;
+          },
+        },
+      );
+      const loadImportErrorPageAction = loadPageAction.withParams(
+        {
+          pageName: "import_error",
+        },
+        {
+          renderLoaded: async () => {
+            // eslint-disable-next-line import-x/no-unresolved
+            await import("./not_found.jsx");
+          },
+        },
+      );
+
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const loadPageTotoAction = loadPageAction.withParams({
-          pageName: "toto",
-        });
-        const loadPageTataAction = loadPageAction.withParams({
-          pageName: "tata",
-        });
-        const loadImportErrorPageAction = loadPageAction.withParams({
-          pageName: "import_error",
-        });
         return (
           <div>
             <button
@@ -73,33 +100,9 @@
               Load flore
             </button>
 
-            <ActionRenderer
-              action={loadPageTotoAction}
-              // c'est pas optimal d'attendre le renderLoaded en vrai
-              // on voudrait des qu'on est matching faire l'import dynamique
-              renderAsync={async () => {
-                // eslint-disable-next-line no-unused-vars
-                const { Toto } = await import("./toto.jsx");
-                return {
-                  renderLoaded: () => <Toto />,
-                };
-              }}
-            />
-            <ActionRenderer
-              action={loadPageTataAction}
-              renderMatching={async () => {
-                // eslint-disable-next-line no-unused-vars
-                const { Tata } = await import("./tata.jsx");
-                return <Tata />;
-              }}
-            />
-            <ActionRenderer
-              action={loadImportErrorPageAction}
-              renderLoaded={async () => {
-                // eslint-disable-next-line import-x/no-unresolved
-                await import("./not_found.jsx");
-              }}
-            />
+            <ActionRenderer action={loadPageTotoAction} />
+            <ActionRenderer action={loadPageTataAction} />
+            <ActionRenderer action={loadImportErrorPageAction} />
           </div>
         );
       };
