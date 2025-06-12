@@ -51,7 +51,7 @@ export const updateActions = async ({
     console.group(`updateActions() on ${candidateSet.size} actions`);
     console.debug(
       `situation at start:
-- document url: ${documentUrl}
+- document url: ${documentUrl.slice(window.origin.length)}
 - document state: ${documentState}
 - matching actions: ${matchingActionSet.size === 0 ? "none" : Array.from(matchingActionSet).join(", ")}
 - meta: isReload: ${isReload}, isReplace ${isReplace}`,
@@ -159,7 +159,7 @@ const activate = async (action, { signal, matchParams }) => {
     action.errorSignal.value = null;
     action.stateSignal.value = ACTIVATING;
   });
-  action.activationEffect({ matchParams });
+  action.activationEffect(matchParams);
   matchingActionSet.add(action);
 
   try {
@@ -220,9 +220,7 @@ const createAction = (
     parentAction,
   } = {},
 ) => {
-  const isMatchingSignal = parentAction
-    ? parentAction.isMatchingSignal
-    : signal(false);
+  const isMatchingSignal = signal(false);
   const stateSignal = parentAction ? parentAction.stateSignal : signal(IDLE);
   let error;
   const errorSignal = parentAction ? parentAction.errorSignal : signal(null);
@@ -240,25 +238,33 @@ const createAction = (
     ? parentAction.paramsSignal
     : signal(initialParams);
 
-  const activationEffect = () => {
+  const activationEffect = (...args) => {
     if (parentAction) {
-      parentAction.activationEffect();
+      parentAction.activationEffect(...args);
     }
   };
-  const deactivationEffect = () => {
+  const deactivationEffect = (...args) => {
     if (parentAction) {
-      parentAction.deactivationEffect();
+      parentAction.deactivationEffect(...args);
     }
   };
-  const shouldReload = () => {
+  const shouldReload = ({ matchParams }) => {
     if (parentAction) {
       return parentAction.shouldReload();
     }
-    return false;
+    if (compareTwoJsValues(matchParams, params)) {
+      return false;
+    }
+    return true;
   };
-  const toString = () => name;
+  const toString = () => {
+    if (Object.keys(params).length === 0) {
+      return name;
+    }
+    return `${name}(${JSON.stringify(params)})`;
+  };
   const start = async (options) => {
-    action.activationEffect();
+    action.activationEffect(initialParams);
     await updateActions(options);
   };
   const stop = async (options) => {
@@ -314,11 +320,12 @@ const createAction = (
         return null;
       }
       const matchParams = matchResult === true ? {} : matchResult;
-      for (const [params] of parametrizedActions) {
+      for (const [params, parametrizedActionWeakRef] of parametrizedActions) {
+        const parametrizedAction = parametrizedActionWeakRef.deref();
         if (compareTwoJsValues(params, matchParams)) {
-          parametrizedActions.isMatchingSignal.value = true;
+          parametrizedAction.isMatchingSignal.value = true;
         } else {
-          parametrizedActions.isMatchingSignal.value = false;
+          parametrizedAction.isMatchingSignal.value = false;
         }
       }
       return matchParams;
@@ -438,8 +445,8 @@ export const connectActionWithLocalStorageString = (
     return { [paramName]: value };
   };
 
-  const activationEffect = () => {
-    const valueToStore = action.params[paramName];
+  const activationEffect = (params) => {
+    const valueToStore = params[paramName];
     localStorage.setItem(key, valueToStore);
   };
 

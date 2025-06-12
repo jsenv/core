@@ -23,9 +23,14 @@
         connectActionWithLocalStorageString,
       } from "./update_actions.js";
 
-      const loadUserAction = registerAction(({ userName }) => {
-        return `user: ${userName}`;
-      });
+      const loadUserAction = registerAction(
+        ({ userName }) => {
+          return `${userName}`;
+        },
+        {
+          name: "load_user",
+        },
+      );
       connectActionWithLocalStorageString(loadUserAction, "userName");
 
       // eslint-disable-next-line no-unused-vars
