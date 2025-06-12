@@ -2,7 +2,6 @@ import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
 import { useActionStatus } from "./actions.js";
 
 const renderNotMatchingDefault = () => null;
-const renderMatchingDefault = () => null;
 const renderLoadingDefault = () => null;
 const renderLoadedDefault = () => null;
 const renderErrorDefault = (error) => {
@@ -10,67 +9,55 @@ const renderErrorDefault = (error) => {
   return <p className="route_error">An error occured: {routeErrorText}</p>;
 };
 
-export const ActionRenderer = ({
-  action,
-  render,
-  renderNotMatching,
-  renderMatching,
-  renderLoading,
-  renderError,
-  renderLoaded,
-}) => {
-  if (renderNotMatching) {
-    return (
-      <Renderer
-        action={action}
-        renderNotMatching={renderNotMatching}
-        renderMatching={renderMatching || renderMatchingDefault}
-        renderLoading={renderLoading || renderLoadingDefault}
-        renderError={renderError || renderErrorDefault}
-        renderLoaded={renderLoaded || renderLoadedDefault}
-      />
-    );
+export const ActionRenderer = ({ action, children }) => {
+  const {
+    notMatching: renderNotMatching = renderNotMatchingDefault,
+    loading: renderLoading = renderLoadingDefault,
+    error: renderError = renderErrorDefault,
+    loaded: renderLoaded,
+  } = children || {};
+
+  const { matching, pending, error, data } = useActionStatus(action);
+  const UIRenderedPromise = useUIRenderedPromise(action);
+  const [errorBoundary, resetError] = useErrorBoundary();
+
+  useLayoutEffect(() => {
+    if (error && !errorBoundary) {
+      action.reportError(error);
+    }
+  }, [error, errorBoundary, action]);
+
+  useLayoutEffect(() => {
+    // Réinitialiser l'erreur du boundary quand l'action change
+    resetError();
+  }, [action, resetError]);
+
+  useLayoutEffect(() => {
+    UIRenderedPromise.resolve();
+    return () => {
+      actionUIRenderedPromiseWeakMap.delete(action);
+    };
+  }, []);
+
+  if (!matching) {
+    return renderNotMatching(action);
   }
-  if (renderMatching) {
-    return (
-      <Renderer
-        action={action}
-        renderNotMatching={renderNotMatchingDefault}
-        renderMatching={renderMatching}
-        renderLoading={renderLoading || renderLoadingDefault}
-        renderError={renderError || renderErrorDefault}
-        renderLoaded={renderLoaded || renderLoadedDefault}
-      />
-    );
+  if (errorBoundary) {
+    return renderError(errorBoundary, "ui_error");
   }
-  if (renderLoaded) {
-    // cas le plus courant: le composant qu'on veut render est disponible
-    return (
-      <Renderer
-        action={action}
-        renderNotMatching={renderNotMatchingDefault}
-        renderMatching={renderMatchingDefault}
-        renderLoading={renderLoading || renderLoadingDefault}
-        renderError={renderError || renderErrorDefault}
-        renderLoaded={renderLoaded}
-      />
-    );
+  if (error) {
+    return renderError(error, "action_error");
   }
-  if (render) {
-    return render(action);
+  if (pending) {
+    if (action.canDisplayOldData && data !== undefined) {
+      return (renderLoaded || action.ui.renderLoaded || renderLoadedDefault)(
+        data,
+      );
+    }
+    return renderLoading();
   }
-  if (action.ui.renderLoaded) {
-    return (
-      <Renderer
-        action={action}
-        renderNotMatching={renderNotMatchingDefault}
-        renderMatching={renderMatchingDefault}
-        renderLoading={renderLoading || renderLoadingDefault}
-        renderError={renderError || renderErrorDefault}
-      />
-    );
-  }
-  return null;
+
+  return (renderLoaded || action.ui.renderLoaded || renderLoadedDefault)(data);
 };
 
 const actionUIRenderedPromiseWeakMap = new WeakMap();
@@ -86,70 +73,4 @@ const useUIRenderedPromise = (route) => {
   promise.resolve = resolve;
   actionUIRenderedPromiseWeakMap.set(route, promise);
   return promise;
-};
-
-const Renderer = ({
-  action,
-  renderNotMatching,
-  renderMatching,
-  renderLoading,
-  renderError,
-  renderLoaded,
-}) => {
-  const { matching, pending, aborted, error, data } = useActionStatus(action);
-  const shouldDisplayOldData = action.canDisplayOldData && data !== undefined;
-  const UIRenderedPromise = useUIRenderedPromise(action);
-
-  useLayoutEffect(() => {
-    UIRenderedPromise.resolve();
-    return () => {
-      actionUIRenderedPromiseWeakMap.delete(action);
-    };
-  }, []);
-
-  if (!matching) {
-    return renderNotMatching === renderNotMatchingDefault ? null : (
-      <ActionErrorBoundary action={action} renderChild={renderNotMatching} />
-    );
-  }
-  if (error) {
-    return renderError(error);
-  }
-  if (pending && !shouldDisplayOldData) {
-    return renderLoading === renderLoadingDefault ? null : (
-      <ActionErrorBoundary action={action} renderChild={renderLoading} />
-    );
-  }
-  if (!aborted) {
-    return (
-      <ActionErrorBoundary
-        action={action}
-        renderChild={renderLoaded || action.ui.renderLoaded}
-        renderChildArg={data}
-      />
-    );
-  }
-  if (shouldDisplayOldData) {
-    return (
-      <ActionErrorBoundary
-        action={action}
-        renderChild={renderLoaded || action.ui.renderLoaded}
-        renderChildArg={action.data}
-      />
-    );
-  }
-  return <ActionErrorBoundary action={action} renderChild={renderMatching} />;
-};
-
-const ActionErrorBoundary = ({
-  action,
-  renderChild,
-  renderChildArg = action,
-}) => {
-  const [error] = useErrorBoundary();
-  if (error) {
-    action.reportError(error);
-    return null;
-  }
-  return renderChild(renderChildArg);
 };
