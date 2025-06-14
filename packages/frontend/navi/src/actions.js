@@ -1,5 +1,5 @@
 import { batch, effect, signal } from "@preact/signals";
-import { compareTwoJsValues } from "../compare_two_js_values.js";
+import { compareTwoJsValues } from "./compare_two_js_values.js";
 
 let debug = true;
 
