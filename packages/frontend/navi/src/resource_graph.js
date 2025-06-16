@@ -174,16 +174,17 @@ export const resource = (name, { idKey = "id" } = {}) => {
           reloadActions([getAction], { reason: `${value} dropped` });
         },
         reinserted: (value) => {
-          // this will reload all routes which works but
-          // - most of the time only "route" is impacted, any other route could stay as is
-          // - we already have the data, reloading the route will refetch the backend which is unnecessary
-          // we could just remove routing error (which is cause by 404 likely)
+          // this will reload all actions already matching which works but
+          // - most of the time only "getAction" is impacted, any other action could stay as is
+          // - we already have the data, reloading the action will refetch the backend which is unnecessary
+          // we could just eventual action error (which is cause by 404 likely)
           // to actually let the data be displayed
-          // because they are available, but in reality the route has no data
+          // because they are available, but in reality the action has no data
           // because the fetch failed
           // so conceptually reloading is fine,
-          // the only thing that bothers me a little is that it reloads all routes
-          reloadActions([getAction], { reason: `${value} reinserted` });
+          // the only thing that bothers me a little is that it reloads all other actions
+          //  but thing is it might have impact on other actions so let's keep as is for now
+          reloadActions({ reason: `${value} reinserted` });
         },
       });
 

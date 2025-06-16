@@ -136,10 +136,12 @@ export const updateActions = async ({
     console.groupEnd();
   }
 };
-export const reloadActions = async (actions, { reason } = {}) => {
+export const reloadActions = async ({ reason } = {}) => {
+  const toReloadSet = new Set(matchingActionSet);
+
   await updateActions({
     isReload: true,
-    toReloadSet: new Set(actions),
+    toReloadSet,
     reason,
   });
 };
