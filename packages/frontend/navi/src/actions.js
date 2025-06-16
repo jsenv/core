@@ -31,6 +31,7 @@ export const updateActions = async ({
   isReload,
   isReplace,
   reason,
+  toReloadSet,
 } = {}) => {
   if (!signal) {
     const abortController = new AbortController();
@@ -39,7 +40,7 @@ export const updateActions = async ({
 
   const toDeactivateSet = new Set();
   const toActivateMap = new Map();
-  const candidateSet = getAliveActionSet();
+  const candidateSet = toReloadSet || getAliveActionSet();
   const promises = [];
   const alreadyActivatingSet = new Set();
   const alreadyActivatedSet = new Set();
@@ -134,6 +135,17 @@ export const updateActions = async ({
   if (debug) {
     console.groupEnd();
   }
+};
+export const reloadActions = async (actions, { reason } = {}) => {
+  await updateActions({
+    isReload: true,
+    toReloadSet: new Set(actions),
+    reason,
+  });
+};
+export const updateMatchingActionParams = async (action, params) => {
+  action.paramsSignal.value = params;
+  action.activationEffect(params);
 };
 
 const activate = async (action, { signal, matchParams }) => {

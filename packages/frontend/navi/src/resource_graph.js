@@ -1,5 +1,9 @@
 import { computed, effect, signal } from "@preact/signals";
-import { registerAction } from "./actions.js";
+import {
+  registerAction,
+  reloadActions,
+  updateMatchingActionParams,
+} from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 
 export const resource = (name, { idKey = "id" } = {}) => {
@@ -15,9 +19,12 @@ export const resource = (name, { idKey = "id" } = {}) => {
   };
 
   const activeIdSignal = signal(null);
-  const useActiveItem = () => {
+  const activeItemSignal = computed(() => {
     const activeItemId = activeIdSignal.value;
-    const activeItem = store.select(activeItemId);
+    return store.select(activeItemId);
+  });
+  const useActiveItem = () => {
+    const activeItem = activeItemSignal.value;
     return activeItem;
   };
   const setActiveItem = (props) => {
@@ -139,15 +146,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
       }, `getAll ${name}`);
       return getAllAction;
     },
-    get: (
-      callback,
-      {
-        // could we decude the url key somehow?
-        // at this stage the action is not connected to an url
-        // and might never be
-        urlKey = idKey,
-      } = {},
-    ) => {
+    get: (callback, { key = idKey } = {}) => {
       const getAction = addAction(async (params) => {
         const props = await callback(params);
         // lors du uprset il faut potentiellement injecter ce qu'on trouve dans les collectionPropertyMap
@@ -157,13 +156,37 @@ export const resource = (name, { idKey = "id" } = {}) => {
 
       effect(() => {
         const isMatching = getAction.isMatchingSignal.value;
-        const params = getAction.paramsSignal.value;
-        const activeItem = store.select(urlKey, params[urlKey]);
+        const actionParams = getAction.paramsSignal.value;
+        const activeItem = store.select(key, actionParams[key]);
         if (isMatching) {
-          activeResourceIdSignal.value = activeItem[idKey];
+          const activeItemId = activeItem ? activeItem[idKey] : null;
+          activeIdSignal.value = activeItemId;
+        } else {
+          activeIdSignal.value = null;
         }
       });
-      connectStoreAndGetAction(store, activeResourceIdSignal, getAction, idKey);
+
+      store.registerPropertyLifecycle(activeItemSignal, key, {
+        changed: (value) => {
+          updateMatchingActionParams(getAction, { [key]: value });
+        },
+        dropped: (value) => {
+          reloadActions([getAction], { reason: `${value} dropped` });
+        },
+        reinserted: (value) => {
+          // this will reload all routes which works but
+          // - most of the time only "route" is impacted, any other route could stay as is
+          // - we already have the data, reloading the route will refetch the backend which is unnecessary
+          // we could just remove routing error (which is cause by 404 likely)
+          // to actually let the data be displayed
+          // because they are available, but in reality the route has no data
+          // because the fetch failed
+          // so conceptually reloading is fine,
+          // the only thing that bothers me a little is that it reloads all routes
+          reloadActions([getAction], { reason: `${value} reinserted` });
+        },
+      });
+
       return getAction;
     },
     put: (callback) => {
@@ -185,38 +208,4 @@ export const resource = (name, { idKey = "id" } = {}) => {
 const addAction = (callback, name) => {
   const action = registerAction(callback, { name });
   return action;
-};
-
-const connectStoreAndGetAction = (
-  store,
-  activeResourceIdSignal,
-  action,
-  key,
-) => {
-  const activeItemSignal = computed(() => {
-    const activeResourceId = activeResourceIdSignal.value;
-    return store.select(activeResourceId);
-  });
-  store.registerPropertyLifecycle(activeItemSignal, key, {
-    changed: (value) => {
-      action.replaceParams({
-        [key]: value,
-      });
-    },
-    dropped: () => {
-      action.reload();
-    },
-    reinserted: () => {
-      // this will reload all routes which works but
-      // - most of the time only "route" is impacted, any other route could stay as is
-      // - we already have the data, reloading the route will refetch the backend which is unnecessary
-      // we could just remove routing error (which is cause by 404 likely)
-      // to actually let the data be displayed
-      // because they are available, but in reality the route has no data
-      // because the fetch failed
-      // so conceptually reloading is fine,
-      // the only thing that bothers me a little is that it reloads all routes
-      action.reload();
-    },
-  });
 };
