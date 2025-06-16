@@ -9,10 +9,78 @@ export const ABORTED = { id: "aborted" };
 export const FAILED = { id: "failed" };
 export const ACTIVATED = { id: "activated" };
 
+const matchingActionRegistry = (() => {
+  const actionToIdMap = new WeakMap();
+  const idToActionMap = new Map();
+  let nextId = 1;
+
+  const getMatchingSet = () => {
+    const matchingSet = new Set();
+    for (const [id, weakRef] of idToActionMap) {
+      const action = weakRef.deref();
+      if (action) {
+        matchingSet.add(action);
+      } else {
+        idToActionMap.delete(id);
+      }
+    }
+    return matchingSet;
+  };
+
+  return {
+    add(action) {
+      let id = actionToIdMap.get(action);
+      if (id === undefined) {
+        id = nextId++;
+        actionToIdMap.set(action, id);
+      }
+      idToActionMap.set(id, new WeakRef(action));
+    },
+
+    delete(action) {
+      const id = actionToIdMap.get(action);
+      if (id !== undefined) {
+        idToActionMap.delete(id);
+      }
+    },
+
+    has(action) {
+      const id = actionToIdMap.get(action);
+      if (id === undefined) {
+        return false;
+      }
+
+      const weakRef = idToActionMap.get(id);
+      const actionRef = weakRef?.deref();
+
+      if (!actionRef) {
+        idToActionMap.delete(id);
+        return false;
+      }
+
+      return true;
+    },
+
+    getMatchingSet,
+
+    get size() {
+      return getMatchingSet().size;
+    },
+
+    clear() {
+      idToActionMap.clear();
+    },
+
+    // Méthodes pour compatibilité avec l'API Set
+    [Symbol.iterator]() {
+      return getMatchingSet()[Symbol.iterator]();
+    },
+  };
+})();
+
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
 const actionWeakRefSet = new Set();
-const matchingActionSet = new Set();
 const getAliveActionSet = () => {
   const aliveSet = new Set();
   for (const weakRef of actionWeakRefSet) {
@@ -44,6 +112,7 @@ export const updateActions = async ({
   const promises = [];
   const alreadyActivatingSet = new Set();
   const alreadyActivatedSet = new Set();
+  const matchingActionSet = matchingActionRegistry.getMatchingSet();
 
   if (debug) {
     const documentUrl = window.location.href;
@@ -137,7 +206,7 @@ export const updateActions = async ({
   }
 };
 export const reloadActions = async ({ reason } = {}) => {
-  const toReloadSet = new Set(matchingActionSet);
+  const toReloadSet = matchingActionRegistry.getMatchingSet();
 
   await updateActions({
     isReload: true,
@@ -174,7 +243,7 @@ const activate = async (action, { signal, matchParams }) => {
     action.stateSignal.value = ACTIVATING;
   });
   action.activationEffect(matchParams);
-  matchingActionSet.add(action);
+  matchingActionRegistry.add(action);
 
   try {
     const loadResult = await action.load({ signal: abortSignal });
@@ -208,7 +277,7 @@ const deactivate = (action, reason) => {
     console.log(`"${action}": deactivating route (reason: ${reason})`);
   }
   action.deactivationEffect(reason);
-  matchingActionSet.delete(action);
+  matchingActionRegistry.delete(action);
   actionPromiseMap.delete(action);
   batch(() => {
     action.isMatchingSignal.value = false;
