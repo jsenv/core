@@ -1,146 +1,169 @@
-/* eslint-disable import-x/first */
-const role = resource("role");
-const table = resource("table");
-
-const tableOwner = table.one(role, "owner");
-const roleTables = role.many(table, "tables");
-const getRoleTables = roleTables.get(async () => {
-  // fetch /:rolename/tables
-});
-
-// "members" is the equivalent of "groups" but from the perspective the role grouping other roles
-const roleMembers = role.many(role, "members");
-const getMembers = roleMembers.get(async ({ roleId }) => {
-  // fetch /:roleId/members
-});
-const addMember = roleMembers.put(async ({ roleId, memberId }) => {
-  // put /:roleId/members/:memberId
-});
-const removeMember = roleMembers.delete(async ({ roleId, memberId }) => {
-  // delete /:roleId/members/:memberId
-});
-// "groups" is the equivalent of "members" but from the perspective of a role
-const roleGroups = role.many(role, "groups");
-const getGroups = roleMembers.get(async ({ roleId }) => {
-  // fetch /:roleId/groups
-});
-const joinGroup = roleGroups.put(async ({ roleId, groupId }) => {
-  // put /:roleId/groups/:groupId
-});
-const leaveGroup = roleGroups.delete(async ({ roleId, groupId }) => {
-  // delete /:roleId/groups/:groupId
-});
-
-// now the implementation:
-import { computed, signal } from "@preact/signals";
+import { computed, effect, signal } from "@preact/signals";
 import { registerAction } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 
-const resource = (name, { idKey = "id", isCollection } = {}) => {
-  const collectionPropertyMap = new Map();
+export const resource = (name, { idKey = "id" } = {}) => {
+  const oneToOnePropertyMap = new Map();
+  const oneToManyPropertyMap = new Map();
   const store = arraySignalStore([], idKey);
 
-  const useCollection = () => {
+  const useArray = () => {
     return store.arraySignal.value;
   };
   const useById = (id) => {
     return store.select(idKey, id);
   };
-  const activeResourceIdSignal = signal(null);
-  const useActiveResource = () => {
-    const activeResourceId = activeResourceIdSignal.value;
-    const activeResource = store.select(activeResourceId);
-    return activeResource;
-  };
-  const setActiveResource = (props) => {
-    const resource = store.upsert(props);
-    activeResourceIdSignal.value = resource[idKey];
-  };
 
-  const addAction = (callback) => {
-    const action = registerAction(callback);
-    return action;
+  const activeIdSignal = signal(null);
+  const useActiveItem = () => {
+    const activeItemId = activeIdSignal.value;
+    const activeItem = store.select(activeItemId);
+    return activeItem;
+  };
+  const setActiveItem = (props) => {
+    const item = store.upsert(props);
+    activeIdSignal.value = item[idKey];
   };
 
   return {
     name,
     store,
 
-    useCollection,
+    useArray,
     useById,
-    useActiveResource,
-    setActiveResource,
+    useActiveItem,
+    setActiveItem,
 
-    many: (resource, propertyName) => {
-      collectionPropertyMap.set(propertyName, resource);
-      const collection = resource(name, { isCollection: true });
-
-      //   export const setRoleMembers = (role, value) => {
-      //     roleStore.upsert(value);
-      //     roleStore.upsert(role, { members: value });
-      //   };
-      //   export const useRoleMemberList = (role) => {
-      //     const { members } = role;
-      //     const memberIdArray = members
-      //       ? members.map((member) => member.oid)
-      //       : [];
-      //     const memberArray = roleStore.selectAll(memberIdArray);
-      //     return memberArray;
-      //   };
-      //   export const addMember = (role, member) => {
-      //     const { members } = role;
-      //     if (!members) {
-      //       roleStore.upsert(role, { members: [member] });
-      //       return;
-      //     }
-      //     for (const existingMember of members) {
-      //       if (existingMember.oid === member.oid) {
-      //         return; // already a member
-      //       }
-      //     }
-      //     roleStore.upsert(member);
-      //     roleStore.upsert(role, { members: [...members, member] });
-      //   };
-      //   export const removeMember = (role, member) => {
-      //     const { members } = role;
-      //     if (!members) {
-      //       return; // no members to remove
-      //     }
-      //     const index = members.findIndex(
-      //       (existingMember) => existingMember.oid === member.oid,
-      //     );
-      //     let found = false;
-      //     const membersWithoutThisOne = [];
-      //     for (const existingMember of members) {
-      //       if (existingMember.oid === member.oid) {
-      //         found = true;
-      //       } else {
-      //         membersWithoutThisOne.push(existingMember);
-      //       }
-      //     }
-      //     if (found) {
-      //       members.splice(index, 1);
-      //       roleStore.upsert(role, { members: membersWithoutThisOne });
-      //     }
-      //   };
-
-      return collection;
-    },
-    get: (callback) => {
-      const getAction = addAction(async (params) => {
-        const propsOrPropsArray = await callback(params);
-        // lors du uprset il faut potentiellement injecter ce qu'on trouve dans les collectionPropertyMap
-        const itemOrItemArray = store.upsert(propsOrPropsArray);
-        return itemOrItemArray;
+    one: (childResource, propertyName) => {
+      oneToOnePropertyMap.set(propertyName, childResource);
+      const childIdKey = childResource.idKey;
+      const childItemInfoMap = new Map();
+      const getChildItemInfo = (item) => {
+        const existingChildItemInfo = childItemInfoMap.get(item);
+        if (existingChildItemInfo) {
+          return existingChildItemInfo;
+        }
+        const childItemSignal = computed(() => {
+          const childItem = item[propertyName];
+          const childItemId = childItem ? childItem[childIdKey] : null;
+          return childResource.store.select(childItemId);
+        });
+        childItemInfoMap.set(item, {
+          value: undefined,
+          signal: childItemSignal,
+        });
+        return childItemSignal;
+      };
+      store.defineGetSet(propertyName, {
+        get: (item) => {
+          const childItemInfo = getChildItemInfo(item);
+          return childItemInfo.signal.value;
+        },
+        set: (item, value) => {
+          const childItemInfo = getChildItemInfo(item);
+          childItemInfo.value = value;
+          const childItem = childResource.store.upsert(value);
+          return childItem;
+        },
       });
-      if (!isCollection) {
-        connectStoreAndGetAction(
-          store,
-          activeResourceIdSignal,
-          getAction,
-          idKey,
-        );
-      }
+    },
+
+    many: (childResource, propertyName) => {
+      oneToManyPropertyMap.set(propertyName, childResource);
+      const childIdKey = childResource.idKey;
+
+      const addToCollection = (item, childProps) => {
+        const childItemArray = item[propertyName];
+        const childIdToAdd = childProps[childResource.idKey];
+        for (const existingChildItem of childItemArray) {
+          if (existingChildItem[childResource.idKey] === childIdToAdd) {
+            return existingChildItem;
+          }
+        }
+        const childItem = childResource.store.upsert(childProps);
+        const childItemArrayWithNewChild = [...childItemArray, childItem];
+        store.upsert(item, { [propertyName]: childItemArrayWithNewChild });
+        return childItem;
+      };
+      const removeFromCollection = (item, childProps) => {
+        const childItemArray = item[propertyName];
+        let childItemIndex = -1;
+        const childItemArrayWithoutThisOne = [];
+        const idToRemove = childProps[childIdKey];
+        let i = 0;
+        for (const childItem of childItemArray) {
+          if (childItem[childIdKey] === idToRemove) {
+            childItemIndex = i;
+          } else {
+            childItemArrayWithoutThisOne.push(childItem);
+          }
+          i++;
+        }
+        if (childItemIndex === -1) {
+          return false;
+        }
+        store.upsert(item, { [propertyName]: childItemArrayWithoutThisOne });
+        return true;
+      };
+      const childItemArrayMap = new Map();
+      store.defineObjectCreator(propertyName, (item) => {
+        const childItemArray = [];
+        childItemArray.add = addToCollection.bind(item);
+        childItemArray.remove = removeFromCollection.bind(item);
+        childItemArrayMap.set(item, childItemArray);
+        return childItemArray;
+      });
+      store.defineGetSet(propertyName, {
+        get: (item) => {
+          const childItemArray = childItemArrayMap.get(item);
+          const childIdArray = childItemArray.map(
+            (childItem) => childItem[childIdKey],
+          );
+          return childResource.store.selectAll(childIdArray);
+        },
+        set: (item, childPropsArray) => {
+          const childItemArray = childResource.store.upsert(childPropsArray);
+          store.upsert(item, { [propertyName]: childItemArray });
+          childItemArrayMap.set(item, childItemArray);
+          return childItemArray;
+        },
+      });
+
+      return resource(`${name}.${propertyName}`);
+    },
+    getAll: (callback) => {
+      const getAllAction = addAction(async (params) => {
+        const propsArray = await callback(params);
+        const itemArray = store.upsert(propsArray);
+        return itemArray;
+      }, `getAll ${name}`);
+      return getAllAction;
+    },
+    get: (
+      callback,
+      {
+        // could we decude the url key somehow?
+        // at this stage the action is not connected to an url
+        // and might never be
+        urlKey = idKey,
+      } = {},
+    ) => {
+      const getAction = addAction(async (params) => {
+        const props = await callback(params);
+        // lors du uprset il faut potentiellement injecter ce qu'on trouve dans les collectionPropertyMap
+        const item = store.upsert(props);
+        return item;
+      }, `get ${name}`);
+
+      effect(() => {
+        const isMatching = getAction.isMatchingSignal.value;
+        const params = getAction.paramsSignal.value;
+        const activeItem = store.select(urlKey, params[urlKey]);
+        if (isMatching) {
+          activeResourceIdSignal.value = activeItem[idKey];
+        }
+      });
+      connectStoreAndGetAction(store, activeResourceIdSignal, getAction, idKey);
       return getAction;
     },
     put: (callback) => {
@@ -148,15 +171,20 @@ const resource = (name, { idKey = "id", isCollection } = {}) => {
         const propsOrPropsArray = await callback(params);
         const itemOrItemArray = store.upsert(propsOrPropsArray);
         return itemOrItemArray;
-      });
+      }, `put ${name}`);
     },
     delete: (callback) => {
       return addAction(async (params) => {
         const itemIdOrItemIdArray = await callback(params);
         store.drop(itemIdOrItemIdArray);
-      });
+      }, `delete ${name}`);
     },
   };
+};
+
+const addAction = (callback, name) => {
+  const action = registerAction(callback, { name });
+  return action;
 };
 
 const connectStoreAndGetAction = (

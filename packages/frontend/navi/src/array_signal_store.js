@@ -1,6 +1,57 @@
 import { computed, effect, signal } from "@preact/signals";
 
 export const arraySignalStore = (initialArray = [], idKey = "id") => {
+  const propertyCreatorMap = new Map();
+  const propertyAccessorMap = new Map();
+  const store = {
+    defineObjectCreator: (propertyName, createValueForItem) => {
+      propertyCreatorMap.set(propertyName, createValueForItem);
+    },
+    defineGetSet: (propertyName, { get, set }) => {
+      propertyAccessorMap.set(propertyName, {
+        get,
+        set,
+      });
+    },
+  };
+
+  const createItemFromProps = (props) => {
+    const item = {
+      ...props,
+    };
+    for (const [propertyName, createValueForItem] of propertyCreatorMap) {
+      item[propertyName] = createValueForItem(item);
+    }
+    for (const [propertyName, { get, set }] of propertyAccessorMap) {
+      Object.defineProperty(item, propertyName, {
+        get: () => get(item),
+        set: (value) => {
+          set(item, value);
+        },
+      });
+    }
+    return item;
+  };
+
+  const assign = (item, props) => {
+    let modified = false;
+    const itemWithProps = { ...item };
+    for (const key of Object.keys(props)) {
+      const newValue = props[key];
+      if (key in item) {
+        const value = item[key];
+        if (newValue !== value) {
+          modified = true;
+          itemWithProps[key] = newValue;
+        }
+      } else {
+        modified = true;
+        itemWithProps[key] = newValue;
+      }
+    }
+    return modified ? itemWithProps : item;
+  };
+
   const arraySignal = signal(initialArray);
   const derivedSignal = computed(() => {
     const array = arraySignal.value;
@@ -69,8 +120,13 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     if (args.length === 1 && Array.isArray(args[0])) {
       const propsArray = args[0];
       if (array.length === 0) {
-        arraySignal.value = propsArray;
-        return propsArray;
+        const itemArray = [];
+        for (const props of propsArray) {
+          const item = createItemFromProps(props);
+          itemArray.push(item);
+        }
+        arraySignal.value = itemArray;
+        return itemArray;
       }
       let hasNew = false;
       let hasUpdate = false;
@@ -100,7 +156,8 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
           }
         } else {
           hasNew = true;
-          arrayUpdated.push(props);
+          const item = createItemFromProps(props);
+          arrayUpdated.push(item);
         }
       }
       if (hasNew || hasUpdate) {
@@ -155,7 +212,8 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       arraySignal.value = arrayUpdated;
       return updatedItem;
     }
-    arrayUpdated.push(props);
+    const item = createItemFromProps(props);
+    arrayUpdated.push(item);
     arraySignal.value = arrayUpdated;
     return props;
   };
@@ -212,9 +270,6 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
   };
 
   /**
-   * Both propertyChangeEffect and deleteEffect might receive a signal
-   * That starts to return a falsy value because it rely on a given property to find an item
-   *
    * For example a signal like this:
    * const currentItemSignal = computed(() => {
    *    return arrayStore.select("name", "a");
@@ -279,31 +334,8 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
       }
     });
   };
-  // const deleteEffect = (itemSignal, callback) => {
-  //   const idToTrackSignal = signal(null);
-  //   effect(() => {
-  //     const item = itemSignal.value;
-  //     if (item) {
-  //       idToTrackSignal.value = item[idKey];
-  //     } else {
-  //       // not found, it was likely deleted
-  //       // but maybe it was renamed so we need
-  //       // the other effect to be sure
-  //     }
-  //   });
-  //   const detectIdDeleted = (idSet, previousIdSet) => {
-  //     const idToTrack = idToTrackSignal.value;
-  //     if (idToTrack && previousIdSet.has(idToTrack) && !idSet.has(idToTrack)) {
-  //       callback(idToTrack);
-  //     }
-  //   };
-  //   idChangeCallbackSet.add(detectIdDeleted);
-  //   return () => {
-  //     idChangeCallbackSet.delete(detectIdDeleted);
-  //   };
-  // };
 
-  return {
+  Object.assign(store, {
     arraySignal,
     select,
     selectAll,
@@ -311,56 +343,6 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     drop,
 
     registerPropertyLifecycle,
-  };
+  });
+  return store;
 };
-
-const assign = (item, props) => {
-  let modified = false;
-  const itemWithProps = { ...item };
-  for (const key of Object.keys(props)) {
-    const newValue = props[key];
-    if (key in item) {
-      const value = item[key];
-      if (newValue !== value) {
-        modified = true;
-        itemWithProps[key] = newValue;
-      }
-    } else {
-      modified = true;
-      itemWithProps[key] = newValue;
-    }
-  }
-  return modified ? itemWithProps : item;
-};
-
-// const arrayStore = arraySignalStore(
-//   [
-//     {
-//       name: "a",
-//     },
-//     {
-//       name: "b",
-//     },
-//   ],
-//   "name",
-// );
-
-// arrayStore.setCurrentItem({ name: "a" });
-
-// detect_renaming: {
-//   arrayStore.onItemPropertyChange(
-//     arrayStore.currentItemSignal,
-//     "name",
-//     (from, to) => {
-//       console.log(`renamed from ${from} to ${to}`);
-//     },
-//   );
-//   arrayStore.upsert("a", { name: "a_renamed" });
-// }
-
-// detect_deletion: {
-//   arrayStore.onItemRemoved(arrayStore.currentItemSignal, (item) => {
-//     console.log(`deleted ${item.name}`);
-//   });
-//   arrayStore.drop("a_renamed");
-// }
