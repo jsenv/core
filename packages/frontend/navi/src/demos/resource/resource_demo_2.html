@@ -31,42 +31,41 @@
       const loadUserAction = user.get(({ name }) => {
         return { name, greeting: `Hello ${name}` };
       });
-      loadUsersAction.start();
       connectActionWithLocalStorageString(
         loadUserAction,
         "current_user_name",
         "name",
       );
+      loadUsersAction.start();
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const { data: user } = useActionStatus(loadUserAction);
         const { data: users } = useActionStatus(loadUsersAction);
+        console.log(users);
 
-        const [dam, seb] = users;
-        const damUserAction = getItemAction(dam, loadUserAction);
-        const sebUserAction = getItemAction(seb, loadUserAction);
+        // const [dam, seb] = users;
+        // const damUserAction = getItemAction(dam, loadUserAction);
+        // const sebUserAction = getItemAction(seb, loadUserAction);
 
         return (
           <div>
             <button
               onClick={() => {
-                damUserAction.start();
+                // damUserAction.start();
               }}
             >
               Load dam
             </button>
             <button
               onClick={() => {
-                sebUserAction.start();
+                // sebUserAction.start();
               }}
             >
               Load seb
             </button>
 
             <ActionStatus action={loadUserAction} />
-            <ActionStatus action={damUserAction} />
-            <ActionStatus action={sebUserAction} />
 
             <div>User: {JSON.stringify(user)}</div>
           </div>

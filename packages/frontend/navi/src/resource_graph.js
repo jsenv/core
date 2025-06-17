@@ -41,7 +41,11 @@ export const resource = (name, { idKey = "id" } = {}) => {
   };
 
   store.addSetup((item) => {
-    item[itemActionSetSymbol] = new Set();
+    Object.defineProperty(item, itemActionSetSymbol, {
+      enumerable: true,
+      writable: true,
+      value: new Set(),
+    });
   });
 
   return {

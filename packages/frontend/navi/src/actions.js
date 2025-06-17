@@ -1,7 +1,7 @@
 import { batch, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "./compare_two_js_values.js";
 
-let debug = false;
+let debug = true;
 
 export const IDLE = { id: "idle" };
 export const ACTIVATING = { id: "activating" };
@@ -94,6 +94,14 @@ const getAliveActionSet = () => {
   return aliveSet;
 };
 
+let idleCallbackId;
+const onActionConnected = () => {
+  cancelIdleCallback(idleCallbackId);
+  idleCallbackId = requestIdleCallback(() => {
+    updateActions();
+  });
+};
+
 export const updateActions = async ({
   signal,
   isReload,
@@ -101,6 +109,8 @@ export const updateActions = async ({
   reason,
   toReloadSet,
 } = {}) => {
+  cancelIdleCallback(idleCallbackId);
+
   if (!signal) {
     const abortController = new AbortController();
     signal = abortController.signal;
@@ -248,12 +258,22 @@ const activate = async (action, { signal, matchParams }) => {
   action.activationEffect(matchParams);
   matchingActionRegistry.add(action);
 
-  try {
-    const loadResult = await action.load({ signal: abortSignal });
+  let loadResult;
+  const onLoadEnd = () => {
     action.dataSignal.value = loadResult;
     action.activationStateSignal.value = ACTIVATED;
     actionAbortMap.delete(action);
     actionPromiseMap.delete(action);
+  };
+
+  try {
+    loadResult = action.load({ signal: abortSignal });
+    if (loadResult && typeof loadResult.then === "function") {
+      loadResult = await loadResult;
+      onLoadEnd();
+    } else {
+      onLoadEnd();
+    }
   } catch (e) {
     signal.removeEventListener("abort", onabort);
     actionAbortMap.delete(action);
@@ -553,14 +573,6 @@ export const useActionStatus = (action) => {
     pending,
     data,
   };
-};
-
-let idleCallbackId;
-const onActionConnected = () => {
-  cancelIdleCallback(idleCallbackId);
-  idleCallbackId = requestIdleCallback(() => {
-    updateActions();
-  });
 };
 
 export const connectActionWithLocalStorageBoolean = (
