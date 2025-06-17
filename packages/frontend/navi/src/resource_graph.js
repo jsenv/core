@@ -149,7 +149,6 @@ export const resource = (name, { idKey = "id" } = {}) => {
     get: (callback, { key = idKey } = {}) => {
       const getAction = addAction(async (params) => {
         const props = await callback(params);
-        // lors du uprset il faut potentiellement injecter ce qu'on trouve dans les collectionPropertyMap
         const item = store.upsert(props);
         return item;
       }, `get ${name}`);
@@ -200,7 +199,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
     delete: (callback) => {
       return addAction(async (params) => {
         const itemIdOrItemIdArray = await callback(params);
-        store.drop(itemIdOrItemIdArray);
+        return store.drop(itemIdOrItemIdArray);
       }, `delete ${name}`);
     },
   };
