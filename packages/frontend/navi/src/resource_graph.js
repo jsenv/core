@@ -7,11 +7,12 @@ import {
 } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 
-const itemActionSetSymbol = Symbol("item_action_set");
+const itemActionMapSymbol = Symbol("item_action_map");
 
 export const getItemAction = (item, actionTemplate) => {
-  const itemActionSet = item[itemActionSetSymbol];
-  return itemActionSet.get(actionTemplate);
+  const itemActionMap = item[itemActionMapSymbol];
+  const action = itemActionMap.get(actionTemplate);
+  return action;
 };
 
 export const resource = (name, { idKey = "id" } = {}) => {
@@ -41,10 +42,10 @@ export const resource = (name, { idKey = "id" } = {}) => {
   };
 
   store.addSetup((item) => {
-    Object.defineProperty(item, itemActionSetSymbol, {
+    Object.defineProperty(item, itemActionMapSymbol, {
       enumerable: true,
       writable: true,
-      value: new Set(),
+      value: new Map(),
     });
   });
 
@@ -56,6 +57,104 @@ export const resource = (name, { idKey = "id" } = {}) => {
     useById,
     useActiveItem,
     setActiveItem,
+
+    getAll: (callback) => {
+      const getAllAction = registerAction(
+        (params) => {
+          const callbackResult = callback(params);
+          if (callbackResult && typeof callbackResult.then === "function") {
+            return callbackResult.then((propsArray) => {
+              const itemArray = store.upsert(propsArray);
+              return itemArray;
+            });
+          }
+          const propsArray = callbackResult;
+          const itemArray = store.upsert(propsArray);
+          return itemArray;
+        },
+        {
+          name: `getAll ${name}`,
+          initialData: [],
+        },
+      );
+      return getAllAction;
+    },
+    get: (callback, { key = idKey } = {}) => {
+      const getAction = registerAction(
+        async (params) => {
+          const props = await callback(params);
+          const item = store.upsert(props);
+          return item;
+        },
+        {
+          name: `get ${name}`,
+        },
+      );
+
+      store.addSetup((item) => {
+        const itemGetAction = getAction.withParams(item);
+        item[itemActionMapSymbol].set(getAction, itemGetAction);
+      });
+
+      effect(() => {
+        const isMatching = getAction.isMatchingSignal.value;
+        const actionParams = getAction.paramsSignal.value;
+        const activeItem = store.select(key, actionParams[key]);
+        if (isMatching) {
+          const activeItemId = activeItem ? activeItem[idKey] : null;
+          activeIdSignal.value = activeItemId;
+        } else {
+          activeIdSignal.value = null;
+        }
+      });
+
+      store.registerPropertyLifecycle(activeItemSignal, key, {
+        changed: (value) => {
+          updateMatchingActionParams(getAction, { [key]: value });
+        },
+        dropped: (value) => {
+          reloadActions([getAction], { reason: `${value} dropped` });
+        },
+        reinserted: (value) => {
+          // this will reload all actions already matching which works but
+          // - most of the time only "getAction" is impacted, any other action could stay as is
+          // - we already have the data, reloading the action will refetch the backend which is unnecessary
+          // we could just eventual action error (which is cause by 404 likely)
+          // to actually let the data be displayed
+          // because they are available, but in reality the action has no data
+          // because the fetch failed
+          // so conceptually reloading is fine,
+          // the only thing that bothers me a little is that it reloads all other actions
+          //  but thing is it might have impact on other actions so let's keep as is for now
+          reloadActions({ reason: `${value} reinserted` });
+        },
+      });
+
+      return getAction;
+    },
+    put: (callback) => {
+      return createAction(
+        async (params) => {
+          const propsOrPropsArray = await callback(params);
+          const itemOrItemArray = store.upsert(propsOrPropsArray);
+          return itemOrItemArray;
+        },
+        {
+          name: `put ${name}`,
+        },
+      );
+    },
+    delete: (callback) => {
+      return createAction(
+        async (params) => {
+          const itemIdOrItemIdArray = await callback(params);
+          return store.drop(itemIdOrItemIdArray);
+        },
+        {
+          name: `delete ${name}`,
+        },
+      );
+    },
 
     one: (childResource, propertyName) => {
       oneToOnePropertyMap.set(propertyName, childResource);
@@ -90,7 +189,6 @@ export const resource = (name, { idKey = "id" } = {}) => {
         },
       });
     },
-
     many: (childResource, propertyName) => {
       oneToManyPropertyMap.set(propertyName, childResource);
       const childIdKey = childResource.idKey;
@@ -153,103 +251,6 @@ export const resource = (name, { idKey = "id" } = {}) => {
       });
 
       return resource(`${name}.${propertyName}`);
-    },
-    getAll: (callback) => {
-      const getAllAction = registerAction(
-        (params) => {
-          const callbackResult = callback(params);
-          if (callbackResult && typeof callbackResult.then === "function") {
-            return callbackResult.then((propsArray) => {
-              const itemArray = store.upsert(propsArray);
-              return itemArray;
-            });
-          }
-          const propsArray = callbackResult;
-          const itemArray = store.upsert(propsArray);
-          return itemArray;
-        },
-        {
-          name: `getAll ${name}`,
-          initialData: [],
-        },
-      );
-      return getAllAction;
-    },
-    get: (callback, { key = idKey } = {}) => {
-      const getAction = registerAction(
-        async (params) => {
-          const props = await callback(params);
-          const item = store.upsert(props);
-          return item;
-        },
-        {
-          name: `get ${name}`,
-        },
-      );
-
-      store.addSetup((item) => {
-        const itemGetAction = getAction.withParams(item);
-        item[itemActionSetSymbol].add(itemGetAction);
-      });
-
-      effect(() => {
-        const isMatching = getAction.isMatchingSignal.value;
-        const actionParams = getAction.paramsSignal.value;
-        const activeItem = store.select(key, actionParams[key]);
-        if (isMatching) {
-          const activeItemId = activeItem ? activeItem[idKey] : null;
-          activeIdSignal.value = activeItemId;
-        } else {
-          activeIdSignal.value = null;
-        }
-      });
-
-      store.registerPropertyLifecycle(activeItemSignal, key, {
-        changed: (value) => {
-          updateMatchingActionParams(getAction, { [key]: value });
-        },
-        dropped: (value) => {
-          reloadActions([getAction], { reason: `${value} dropped` });
-        },
-        reinserted: (value) => {
-          // this will reload all actions already matching which works but
-          // - most of the time only "getAction" is impacted, any other action could stay as is
-          // - we already have the data, reloading the action will refetch the backend which is unnecessary
-          // we could just eventual action error (which is cause by 404 likely)
-          // to actually let the data be displayed
-          // because they are available, but in reality the action has no data
-          // because the fetch failed
-          // so conceptually reloading is fine,
-          // the only thing that bothers me a little is that it reloads all other actions
-          //  but thing is it might have impact on other actions so let's keep as is for now
-          reloadActions({ reason: `${value} reinserted` });
-        },
-      });
-
-      return getAction;
-    },
-    put: (callback) => {
-      return createAction(
-        async (params) => {
-          const propsOrPropsArray = await callback(params);
-          const itemOrItemArray = store.upsert(propsOrPropsArray);
-          return itemOrItemArray;
-        },
-        {
-          name: `put ${name}`,
-        },
-      );
-    },
-    delete: (callback) => {
-      return createAction(
-        async (params) => {
-          const itemIdOrItemIdArray = await callback(params);
-          return store.drop(itemIdOrItemIdArray);
-        },
-        {
-          name: `delete ${name}`,
-        },
-      );
     },
   };
 };
