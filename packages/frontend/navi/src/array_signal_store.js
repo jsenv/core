@@ -16,6 +16,9 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
   };
 
   const createItemFromProps = (props) => {
+    if (props === null || typeof props !== "object") {
+      return props;
+    }
     const item = {
       ...props,
     };

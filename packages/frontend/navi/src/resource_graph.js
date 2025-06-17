@@ -1,5 +1,6 @@
 import { computed, effect, signal } from "@preact/signals";
 import {
+  createAction,
   registerAction,
   reloadActions,
   updateMatchingActionParams,
@@ -139,19 +140,30 @@ export const resource = (name, { idKey = "id" } = {}) => {
       return resource(`${name}.${propertyName}`);
     },
     getAll: (callback) => {
-      const getAllAction = addAction(async (params) => {
-        const propsArray = await callback(params);
-        const itemArray = store.upsert(propsArray);
-        return itemArray;
-      }, `getAll ${name}`);
+      const getAllAction = registerAction(
+        async (params) => {
+          const propsArray = await callback(params);
+          const itemArray = store.upsert(propsArray);
+          return itemArray;
+        },
+        {
+          name: `getAll ${name}`,
+          initialData: [],
+        },
+      );
       return getAllAction;
     },
     get: (callback, { key = idKey } = {}) => {
-      const getAction = addAction(async (params) => {
-        const props = await callback(params);
-        const item = store.upsert(props);
-        return item;
-      }, `get ${name}`);
+      const getAction = registerAction(
+        async (params) => {
+          const props = await callback(params);
+          const item = store.upsert(props);
+          return item;
+        },
+        {
+          name: `get ${name}`,
+        },
+      );
 
       effect(() => {
         const isMatching = getAction.isMatchingSignal.value;
@@ -190,22 +202,27 @@ export const resource = (name, { idKey = "id" } = {}) => {
       return getAction;
     },
     put: (callback) => {
-      return addAction(async (params) => {
-        const propsOrPropsArray = await callback(params);
-        const itemOrItemArray = store.upsert(propsOrPropsArray);
-        return itemOrItemArray;
-      }, `put ${name}`);
+      return createAction(
+        async (params) => {
+          const propsOrPropsArray = await callback(params);
+          const itemOrItemArray = store.upsert(propsOrPropsArray);
+          return itemOrItemArray;
+        },
+        {
+          name: `put ${name}`,
+        },
+      );
     },
     delete: (callback) => {
-      return addAction(async (params) => {
-        const itemIdOrItemIdArray = await callback(params);
-        return store.drop(itemIdOrItemIdArray);
-      }, `delete ${name}`);
+      return createAction(
+        async (params) => {
+          const itemIdOrItemIdArray = await callback(params);
+          return store.drop(itemIdOrItemIdArray);
+        },
+        {
+          name: `delete ${name}`,
+        },
+      );
     },
   };
-};
-
-const addAction = (callback, name) => {
-  const action = registerAction(callback, { name });
-  return action;
 };

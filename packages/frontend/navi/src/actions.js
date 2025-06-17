@@ -295,7 +295,7 @@ export const registerAction = (...args) => {
 };
 
 const initialParamsDefault = {};
-const createAction = (
+export const createAction = (
   callback,
   {
     name = callback.name || "anonymous",

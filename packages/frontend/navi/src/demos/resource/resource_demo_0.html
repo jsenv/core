@@ -25,7 +25,7 @@
 
       const user = resource("user");
       const loadUsers = user.getAll(() => {
-        return "list of users";
+        return ["Alice", "Bob", "Charlie"];
       });
       connectActionWithLocalStorageBoolean(loadUsers, "load_users");
 
@@ -46,7 +46,9 @@
               }}
             >
               <summary>Users</summary>
-              {data}
+              {data.map((name) => {
+                return <span>{name}</span>;
+              })}
             </details>
           </div>
         );
