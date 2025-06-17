@@ -42,7 +42,6 @@
       const App = () => {
         const { data: user } = useActionStatus(loadUserAction);
         const { data: users } = useActionStatus(loadUsersAction);
-        console.log(users);
 
         const [dam, seb] = users;
         const damUserAction = getItemAction(dam, loadUserAction);
@@ -52,6 +51,7 @@
           <div>
             <button
               onClick={() => {
+                debugger;
                 damUserAction.start();
               }}
             >

@@ -315,11 +315,18 @@ const deactivate = (action, reason) => {
   });
 };
 
+const registeredActionWeakSet = new WeakSet();
 export const registerAction = (...args) => {
   const action = createAction(...args);
   const weakRef = new WeakRef(action);
   actionWeakRefSet.add(weakRef);
+
+  registeredActionWeakSet.set(action, true);
   return action;
+};
+
+const isRegistered = (action) => {
+  return registeredActionWeakSet.has(action);
 };
 
 const initialParamsDefault = {};
@@ -329,66 +336,37 @@ export const createAction = (
     name = callback.name || "anonymous",
     initialParams = initialParamsDefault,
     initialData,
-    parentAction,
     renderLoadedAsync,
   } = {},
 ) => {
   const isMatchingSignal = signal(false);
   let activationState = IDLE;
-  const activationStateSignal = parentAction
-    ? parentAction.activationStateSignal
-    : signal(activationState);
+  const activationStateSignal = signal(activationState);
   let error;
-  const errorSignal = parentAction ? parentAction.errorSignal : signal(null);
+  const errorSignal = signal(null);
   const reportError = (e) => {
     errorSignal.value = e;
   };
   let data = initialData;
-  const dataSignal = parentAction
-    ? parentAction.dataSignal
-    : signal(initialData);
+  const dataSignal = signal(initialData);
 
   let params = initialParams;
   const paramsSignal = signal(initialParams);
 
   const match = () => false;
 
-  const activationEffect = (...args) => {
-    if (parentAction) {
-      parentAction.activationEffect(...args);
-    }
-  };
-  const deactivationEffect = (...args) => {
-    if (parentAction) {
-      parentAction.deactivationEffect(...args);
-    }
-  };
+  const activationEffect = () => {};
+  const deactivationEffect = () => {};
   const shouldReload = ({ matchParams }) => {
-    if (parentAction) {
-      return parentAction.shouldReload();
-    }
     if (compareTwoJsValues(matchParams, params)) {
       return false;
     }
     return true;
   };
-  const generateParamsSuffix = (params) => {
-    const keys = Object.keys(params);
-    if (keys.length === 0) {
-      return "";
-    }
-    if (keys.length === 1) {
-      const value = params[keys[0]];
-      return `: ${value}`;
-    }
-    return `(${JSON.stringify(params)})`;
-  };
 
-  const toString = () => {
-    const suffix = generateParamsSuffix(initialParams);
-    return `${name}${suffix}`;
-  };
   const start = async (params = initialParams) => {
+    // TOFIX: quand l'action est paramétrée c'est le start du parent qui se délenche
+    // et qui fail parce qu'il toruve pas ce qu'il faut dans le local storage
     const matchPrevious = action.match;
     const stopPrevious = action.stop;
     const startPrevious = action.start;
@@ -408,17 +386,14 @@ export const createAction = (
       action.match = matchPrevious;
       await updateActions();
     };
-    debugger;
     await updateActions();
   };
   const stop = () => {
     // nothing to do, only match can change that right?
   };
 
-  const parametrizedActions = new Map(); // Changer de Set à Map pour stocker params -> action
+  const parametrizedActions = new Map();
   const parametrizedActionsWeakRefs = new Set();
-  let matchingParametrizedAction;
-
   const withParams = (newParams, options = {}) => {
     const combinedParams = { ...initialParams, ...newParams };
     for (const weakRef of parametrizedActionsWeakRefs) {
@@ -441,14 +416,16 @@ export const createAction = (
     }
 
     const parametrizedAction = createAction(callback, {
-      name: action.name,
+      name: `${action.name}${generateParamsSuffix(combinedParams)}`,
       initialParams: combinedParams,
-      parentAction: action,
       ...options,
     });
     const weakRef = new WeakRef(parametrizedAction);
     parametrizedActions.set(combinedParams, weakRef);
     parametrizedActionsWeakRefs.add(weakRef);
+    if (isRegistered(action)) {
+      registerAction(parametrizedAction);
+    }
     return parametrizedAction;
   };
 
@@ -460,25 +437,11 @@ export const createAction = (
     paramsSignal,
     match,
     getMatchParams: () => {
-      matchingParametrizedAction = null;
       const matchResult = action.match();
       if (!matchResult) {
         return null;
       }
-      const matchParams = matchResult === true ? {} : matchResult;
-      for (const [params, parametrizedActionWeakRef] of parametrizedActions) {
-        const parametrizedAction = parametrizedActionWeakRef.deref();
-        if (compareTwoJsValues(params, matchParams)) {
-          parametrizedAction.isMatchingSignal.value = true;
-          parametrizedAction.paramsSignal.value = matchParams;
-          matchingParametrizedAction = parametrizedAction;
-        } else {
-          parametrizedAction.isMatchingSignal.value = false;
-          parametrizedAction.paramsSignal.value =
-            parametrizedAction.initialParams;
-        }
-      }
-      return matchParams;
+      return matchResult;
     },
     load: ({ signal }) => {
       let result;
@@ -507,9 +470,6 @@ export const createAction = (
       renderLoaded: null,
       renderLoadedAsync,
       load: (...args) => {
-        if (matchingParametrizedAction) {
-          return matchingParametrizedAction.ui.load(...args);
-        }
         const renderLoadedAsync = action.ui.renderLoadedAsync;
         if (renderLoadedAsync) {
           return renderLoadedAsync(...args).then((renderLoaded) => {
@@ -531,14 +491,11 @@ export const createAction = (
     activationEffect,
     deactivationEffect,
     shouldReload,
-    toString,
-    get name() {
-      return toString();
-    },
+    toString: () => name,
+    name,
     start,
     stop,
     withParams,
-    parametrizedActions,
   };
   Object.preventExtensions(action);
 
@@ -571,6 +528,18 @@ export const createAction = (
   });
 
   return action;
+};
+
+const generateParamsSuffix = (params) => {
+  const keys = Object.keys(params);
+  if (keys.length === 0) {
+    return "";
+  }
+  if (keys.length === 1) {
+    const value = params[keys[0]];
+    return `: ${value}`;
+  }
+  return `(${JSON.stringify(params)})`;
 };
 
 export const useActionStatus = (action) => {
