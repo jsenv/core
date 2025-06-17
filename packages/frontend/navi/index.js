@@ -1,7 +1,9 @@
-export { ActionRenderer } from "./src/action_renderer.jsx";
 export {
   connectActionWithLocalStorageBoolean,
   connectActionWithLocalStorageString,
+} from "./src/action_connections.js";
+export { ActionRenderer } from "./src/action_renderer.jsx";
+export {
   registerAction,
   reloadActions,
   updateActions,

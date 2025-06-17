@@ -81,7 +81,7 @@ const matchingActionRegistry = (() => {
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
 const actionWeakRefSet = new Set();
-const getAliveActionSet = () => {
+const getAliveRegisteredActionSet = () => {
   const aliveSet = new Set();
   for (const weakRef of actionWeakRefSet) {
     const action = weakRef.deref();
@@ -93,6 +93,18 @@ const getAliveActionSet = () => {
   }
   return aliveSet;
 };
+const registeredActionWeakSet = new WeakSet();
+export const registerAction = (action) => {
+  if (isRegistered(action)) {
+    return;
+  }
+  const weakRef = new WeakRef(action);
+  actionWeakRefSet.add(weakRef);
+  registeredActionWeakSet.set(action, true);
+};
+export const isRegistered = (action) => {
+  return registeredActionWeakSet.has(action);
+};
 
 let idleCallbackId;
 const onActionConnected = () => {
@@ -102,12 +114,24 @@ const onActionConnected = () => {
   });
 };
 
-export const updateActions = async ({
+export const connectAction = (
+  action,
+  { getParams, activationEffect, deactivationEffect },
+) => {
+  action.connectorSet.add({
+    getParams,
+    activationEffect,
+    deactivationEffect,
+  });
+  onActionConnected();
+};
+
+export const updateActions = ({
   signal,
   isReload,
   isReplace,
   reason,
-  toReloadSet,
+  candidateSet,
 } = {}) => {
   cancelIdleCallback(idleCallbackId);
 
@@ -118,11 +142,11 @@ export const updateActions = async ({
 
   const toDeactivateSet = new Set();
   const toActivateMap = new Map();
-  const candidateSet = toReloadSet || getAliveActionSet();
-  const promises = [];
+  candidateSet = candidateSet || getAliveRegisteredActionSet();
   const alreadyActivatingSet = new Set();
   const alreadyActivatedSet = new Set();
   const matchingActionSet = matchingActionRegistry.getMatchingSet();
+  const thenableArray = [];
 
   if (debug) {
     const documentUrl = window.location.href;
@@ -139,8 +163,8 @@ export const updateActions = async ({
   }
 
   for (const actionCandidate of candidateSet) {
-    const matchParams = actionCandidate.getMatchParams();
-    if (!matchParams) {
+    const matchResult = actionCandidate.match();
+    if (!matchResult) {
       continue;
     }
     const enterParams = {
@@ -166,7 +190,7 @@ export const updateActions = async ({
         const actionPromise = actionPromiseMap.get(actionCandidate);
         if (actionPromise) {
           alreadyActivatingSet.add(actionCandidate);
-          promises.push(actionPromise);
+          thenableArray.push(actionPromise);
         } else {
           alreadyActivatedSet.add(actionCandidate);
         }
@@ -193,7 +217,7 @@ export const updateActions = async ({
       console.debug("no effect on actions, early return");
       console.groupEnd();
     }
-    return;
+    return undefined;
   }
 
   if (debug) {
@@ -214,21 +238,24 @@ export const updateActions = async ({
       action.activationStateSignal.peek() === ACTIVATING
     ) {
       actionPromiseMap.set(action, actionPromise);
-      promises.push(actionPromise);
+      thenableArray.push(actionPromise);
     }
   }
-  await Promise.all(promises);
 
   if (debug) {
     console.groupEnd();
   }
+
+  if (thenableArray.length) {
+    return Promise.all(thenableArray);
+  }
+  return null;
 };
 export const reloadActions = async ({ reason } = {}) => {
-  const toReloadSet = matchingActionRegistry.getMatchingSet();
-
-  await updateActions({
+  const candidateSet = matchingActionRegistry.getMatchingSet();
+  updateActions({
     isReload: true,
-    toReloadSet,
+    candidateSet,
     reason,
   });
 };
@@ -315,20 +342,6 @@ const deactivate = (action, reason) => {
   });
 };
 
-const registeredActionWeakSet = new WeakSet();
-export const registerAction = (...args) => {
-  const action = createAction(...args);
-  const weakRef = new WeakRef(action);
-  actionWeakRefSet.add(weakRef);
-
-  registeredActionWeakSet.set(action, true);
-  return action;
-};
-
-const isRegistered = (action) => {
-  return registeredActionWeakSet.has(action);
-};
-
 const initialParamsDefault = {};
 export const createAction = (
   callback,
@@ -353,7 +366,29 @@ export const createAction = (
   let params = initialParams;
   const paramsSignal = signal(initialParams);
 
-  const match = () => false;
+  let initialMatchResult = false;
+  let matchResult = initialMatchResult;
+
+  const connectorSet = new Set();
+  const defaultConnector = {
+    getParams: () => {
+      return matchResult;
+    },
+  };
+  connectorSet.add(defaultConnector);
+
+  const start = (params = initialParams) => {
+    matchResult = params;
+    return updateActions({
+      candidateSet: new Set([action]),
+    });
+  };
+  const stop = () => {
+    matchResult = initialMatchResult;
+    return updateActions({
+      candidateSet: new Set([action]),
+    });
+  };
 
   const activationEffect = () => {};
   const deactivationEffect = () => {};
@@ -362,34 +397,6 @@ export const createAction = (
       return false;
     }
     return true;
-  };
-
-  const start = async (params = initialParams) => {
-    // TOFIX: quand l'action est paramétrée c'est le start du parent qui se délenche
-    // et qui fail parce qu'il toruve pas ce qu'il faut dans le local storage
-    const matchPrevious = action.match;
-    const stopPrevious = action.stop;
-    const startPrevious = action.start;
-
-    action.start = (...args) => {
-      // when starting again, we first restore stop/match so that updateActions would stop this one
-      // then we actually start (which would hook into .match and .stop then call updateActions)
-      // which in turn will first
-      action.start = startPrevious;
-      action.stop = stopPrevious;
-      action.match = matchPrevious;
-      return startPrevious(...args);
-    };
-    action.match = () => params;
-    action.stop = async () => {
-      action.stop = stopPrevious;
-      action.match = matchPrevious;
-      await updateActions();
-    };
-    await updateActions();
-  };
-  const stop = () => {
-    // nothing to do, only match can change that right?
   };
 
   const parametrizedActions = new Map();
@@ -410,7 +417,6 @@ export const createAction = (
         return existingAction;
       }
       if (!existingAction) {
-        // Nettoyer les références mortes
         parametrizedActions.delete(existingParams);
       }
     }
@@ -423,9 +429,6 @@ export const createAction = (
     const weakRef = new WeakRef(parametrizedAction);
     parametrizedActions.set(combinedParams, weakRef);
     parametrizedActionsWeakRefs.add(weakRef);
-    if (isRegistered(action)) {
-      registerAction(parametrizedAction);
-    }
     return parametrizedAction;
   };
 
@@ -435,14 +438,27 @@ export const createAction = (
     initialData,
     params,
     paramsSignal,
-    match,
-    getMatchParams: () => {
-      const matchResult = action.match();
-      if (!matchResult) {
-        return null;
+    match: () => {
+      // we want the list of matching connectors
+      // this will give us
+      // 1. if we match
+      // 2. the params constructed by connectors
+      // 3. all the activation effect to run
+      const matchParams = {};
+      let someMatch = false;
+      for (const connector of connectorSet) {
+        const connectorParams = connector.getParams();
+        if (!connectorParams) {
+          continue;
+        }
+        someMatch = true;
+        if (typeof connectorParams === "object") {
+          Object.assign(matchParams, connectorParams);
+        }
       }
-      return matchResult;
+      return someMatch ? matchParams : null;
     },
+    connectorSet,
     load: ({ signal }) => {
       let result;
       const thenableArray = [];
@@ -558,61 +574,6 @@ export const useActionStatus = (action) => {
     pending,
     data,
   };
-};
-
-export const connectActionWithLocalStorageBoolean = (
-  action,
-  key,
-  { defaultValue = false } = {},
-) => {
-  action.match = () => {
-    const value = localStorage.getItem(key);
-    if (value === null) {
-      return defaultValue;
-    }
-    return value === "true";
-  };
-
-  const activationEffect = () => {
-    localStorage.setItem(key, "true");
-  };
-  const deactivationEffect = () => {
-    if (defaultValue === true) {
-      localStorage.setItem(key, "false");
-    } else {
-      localStorage.removeItem(key);
-    }
-  };
-  action.activationEffect = activationEffect;
-  action.deactivationEffect = deactivationEffect;
-  onActionConnected();
-};
-export const connectActionWithLocalStorageString = (
-  action,
-  key,
-  actionParamName = key,
-  { defaultValue = "" } = {},
-) => {
-  action.match = () => {
-    const value = localStorage.getItem(key);
-    if (value === null) {
-      return defaultValue ? { [actionParamName]: defaultValue } : null;
-    }
-    return { [actionParamName]: value };
-  };
-
-  const activationEffect = (params) => {
-    const valueToStore = params[actionParamName];
-    localStorage.setItem(key, valueToStore);
-  };
-
-  const deactivationEffect = () => {
-    localStorage.removeItem(key);
-  };
-
-  action.activationEffect = activationEffect;
-  action.deactivationEffect = deactivationEffect;
-  onActionConnected();
 };
 
 if (import.meta.hot) {

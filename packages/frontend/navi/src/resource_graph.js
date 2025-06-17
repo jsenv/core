@@ -59,7 +59,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
     setActiveItem,
 
     getAll: (callback) => {
-      const getAllAction = registerAction(
+      const getAllAction = createAction(
         (params) => {
           const callbackResult = callback(params);
           if (callbackResult && typeof callbackResult.then === "function") {
@@ -77,10 +77,11 @@ export const resource = (name, { idKey = "id" } = {}) => {
           initialData: [],
         },
       );
+      registerAction(getAllAction);
       return getAllAction;
     },
     get: (callback, { key = idKey } = {}) => {
-      const getAction = registerAction(
+      const getActionTemplate = createAction(
         async (params) => {
           const props = await callback(params);
           const item = store.upsert(props);
@@ -92,13 +93,14 @@ export const resource = (name, { idKey = "id" } = {}) => {
       );
 
       store.addSetup((item) => {
-        const itemGetAction = getAction.withParams(item);
-        item[itemActionMapSymbol].set(getAction, itemGetAction);
+        const itemGetAction = getActionTemplate.withParams(item);
+        registerAction(itemGetAction);
+        item[itemActionMapSymbol].set(getActionTemplate, itemGetAction);
       });
 
       effect(() => {
-        const isMatching = getAction.isMatchingSignal.value;
-        const actionParams = getAction.paramsSignal.value;
+        const isMatching = getActionTemplate.isMatchingSignal.value;
+        const actionParams = getActionTemplate.paramsSignal.value;
         const activeItem = store.select(key, actionParams[key]);
         if (isMatching) {
           const activeItemId = activeItem ? activeItem[idKey] : null;
@@ -110,10 +112,10 @@ export const resource = (name, { idKey = "id" } = {}) => {
 
       store.registerPropertyLifecycle(activeItemSignal, key, {
         changed: (value) => {
-          updateMatchingActionParams(getAction, { [key]: value });
+          updateMatchingActionParams(getActionTemplate, { [key]: value });
         },
         dropped: (value) => {
-          reloadActions([getAction], { reason: `${value} dropped` });
+          reloadActions({ reason: `${value} dropped` });
         },
         reinserted: (value) => {
           // this will reload all actions already matching which works but
@@ -129,11 +131,10 @@ export const resource = (name, { idKey = "id" } = {}) => {
           reloadActions({ reason: `${value} reinserted` });
         },
       });
-
-      return getAction;
+      return getActionTemplate;
     },
     put: (callback) => {
-      return createAction(
+      const putActionTemplate = createAction(
         async (params) => {
           const propsOrPropsArray = await callback(params);
           const itemOrItemArray = store.upsert(propsOrPropsArray);
@@ -143,6 +144,11 @@ export const resource = (name, { idKey = "id" } = {}) => {
           name: `put ${name}`,
         },
       );
+      store.addSetup((item) => {
+        const itemPutAction = putActionTemplate.withParams(item);
+        item[itemActionMapSymbol].set(itemPutAction, putActionTemplate);
+      });
+      return putActionTemplate;
     },
     delete: (callback) => {
       return createAction(
