@@ -23,9 +23,19 @@
         resource,
       } from "@jsenv/navi";
 
-      const user = resource("user");
+      const user = resource("user", { idKey: "name" });
       const loadUsers = user.getAll(() => {
-        return ["Alice", "Bob", "Charlie"];
+        return [
+          {
+            name: "Alice",
+          },
+          {
+            name: "bob",
+          },
+          {
+            name: "Charlie",
+          },
+        ];
       });
       connectActionWithLocalStorageBoolean(loadUsers, "load_users");
 
@@ -46,7 +56,7 @@
               }}
             >
               <summary>Users</summary>
-              {data.map((name) => {
+              {data.map(({ name }) => {
                 return <span>{name}</span>;
               })}
             </details>
