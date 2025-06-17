@@ -58,7 +58,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
     useActiveItem,
     setActiveItem,
 
-    getAll: (callback) => {
+    getAll: (callback, options) => {
       const getAllAction = createAction(
         (params) => {
           const callbackResult = callback(params);
@@ -75,12 +75,13 @@ export const resource = (name, { idKey = "id" } = {}) => {
         {
           name: `getAll ${name}`,
           initialData: [],
+          ...options,
         },
       );
       registerAction(getAllAction);
       return getAllAction;
     },
-    get: (callback, { key = idKey } = {}) => {
+    get: (callback, { key = idKey, ...options } = {}) => {
       const getActionTemplate = createAction(
         async (params) => {
           const props = await callback(params);
@@ -89,6 +90,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
         },
         {
           name: `get ${name}`,
+          ...options,
         },
       );
 
@@ -133,7 +135,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
       });
       return getActionTemplate;
     },
-    put: (callback) => {
+    put: (callback, options) => {
       const putActionTemplate = createAction(
         async (params) => {
           const propsOrPropsArray = await callback(params);
@@ -142,6 +144,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
         },
         {
           name: `put ${name}`,
+          ...options,
         },
       );
       store.addSetup((item) => {
@@ -150,7 +153,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
       });
       return putActionTemplate;
     },
-    delete: (callback) => {
+    delete: (callback, options) => {
       return createAction(
         async (params) => {
           const itemIdOrItemIdArray = await callback(params);
@@ -158,6 +161,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
         },
         {
           name: `delete ${name}`,
+          ...options,
         },
       );
     },

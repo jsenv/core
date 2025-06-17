@@ -163,7 +163,7 @@ export const updateActions = ({
   }
 
   for (const actionCandidate of candidateSet) {
-    const matchParams = actionCandidate.match();
+    const matchParams = actionCandidate.getMatchResult();
     if (!matchParams) {
       continue;
     }
@@ -350,6 +350,9 @@ export const createAction = (
     initialParams = initialParamsDefault,
     initialData,
     renderLoadedAsync,
+    match = () => false,
+    activationEffect = () => {},
+    deactivationEffect = () => {},
   } = {},
 ) => {
   const isMatchingSignal = signal(false);
@@ -366,7 +369,7 @@ export const createAction = (
   let params = initialParams;
   const paramsSignal = signal(initialParams);
 
-  let initialMatchResult = false;
+  let initialMatchResult = match();
   let matchResult = initialMatchResult;
   const start = (params = initialParams) => {
     // this can't bypass automatch, but in case action does not already matches
@@ -384,8 +387,6 @@ export const createAction = (
     });
   };
 
-  const activationEffect = () => {};
-  const deactivationEffect = () => {};
   const shouldReload = ({ matchParams }) => {
     if (compareTwoJsValues(matchParams, params)) {
       return false;
@@ -426,35 +427,18 @@ export const createAction = (
     return parametrizedAction;
   };
 
-  let autoMatch;
-
   const action = {
     isMatchingSignal,
     initialParams,
     initialData,
     params,
     paramsSignal,
-    setAutostart: ({
-      getParams,
-      activationEffect = () => {},
-      deactivationEffect = () => {},
-    }) => {
-      autoMatch = getParams;
-      onActionConnected();
-      action.activationEffect = activationEffect;
-      action.deactivationEffect = deactivationEffect;
-    },
-    match: () => {
-      if (autoMatch) {
-        const autoMatchResult = autoMatch();
-        if (autoMatchResult) {
-          return autoMatchResult;
-        }
-      }
+    match,
+    getMatchResult: () => {
       if (matchResult) {
         return matchResult;
       }
-      return false;
+      return match();
     },
     load: ({ signal }) => {
       let result;

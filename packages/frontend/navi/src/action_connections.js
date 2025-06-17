@@ -1,10 +1,9 @@
-export const connectActionWithLocalStorageBoolean = (
-  action,
+export const getOptionsForActionConnectedToLocalStorageBoolean = (
   key,
   { defaultValue = false } = {},
 ) => {
-  action.setAutostart({
-    getParams: () => {
+  return {
+    match: () => {
       const value = localStorage.getItem(key);
       if (value === null) {
         return defaultValue;
@@ -21,16 +20,15 @@ export const connectActionWithLocalStorageBoolean = (
         localStorage.removeItem(key);
       }
     },
-  });
+  };
 };
-export const connectActionWithLocalStorageString = (
-  action,
+export const getOptionsForActionConnectedToLocalStorageString = (
   key,
   actionParamName = key,
   { defaultValue = "" } = {},
 ) => {
-  action.setAutostart({
-    getParams: () => {
+  return {
+    match: () => {
       const value = localStorage.getItem(key);
       if (value === null) {
         return defaultValue ? { [actionParamName]: defaultValue } : null;
@@ -44,5 +42,5 @@ export const connectActionWithLocalStorageString = (
     deactivationEffect: () => {
       localStorage.removeItem(key);
     },
-  });
+  };
 };
