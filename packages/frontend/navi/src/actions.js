@@ -163,8 +163,8 @@ export const updateActions = ({
   }
 
   for (const actionCandidate of candidateSet) {
-    const matchResult = actionCandidate.match();
-    if (!matchResult) {
+    const matchParams = actionCandidate.match();
+    if (!matchParams) {
       continue;
     }
     const enterParams = {
@@ -368,16 +368,9 @@ export const createAction = (
 
   let initialMatchResult = false;
   let matchResult = initialMatchResult;
-
-  const connectorSet = new Set();
-  const defaultConnector = {
-    getParams: () => {
-      return matchResult;
-    },
-  };
-  connectorSet.add(defaultConnector);
-
   const start = (params = initialParams) => {
+    // this can't bypass automatch, but in case action does not already matches
+    // it will start with provided params (preloading or just programmatic control over the action)
     matchResult = params;
     return updateActions({
       candidateSet: new Set([action]),
@@ -385,6 +378,7 @@ export const createAction = (
   };
   const stop = () => {
     matchResult = initialMatchResult;
+    // TODO: here even if auto match is true, we would like to stop the action
     return updateActions({
       candidateSet: new Set([action]),
     });
@@ -432,33 +426,36 @@ export const createAction = (
     return parametrizedAction;
   };
 
+  let autoMatch;
+
   const action = {
     isMatchingSignal,
     initialParams,
     initialData,
     params,
     paramsSignal,
+    setAutostart: ({
+      getParams,
+      activationEffect = () => {},
+      deactivationEffect = () => {},
+    }) => {
+      autoMatch = getParams;
+      onActionConnected();
+      action.activationEffect = activationEffect;
+      action.deactivationEffect = deactivationEffect;
+    },
     match: () => {
-      // we want the list of matching connectors
-      // this will give us
-      // 1. if we match
-      // 2. the params constructed by connectors
-      // 3. all the activation effect to run
-      const matchParams = {};
-      let someMatch = false;
-      for (const connector of connectorSet) {
-        const connectorParams = connector.getParams();
-        if (!connectorParams) {
-          continue;
-        }
-        someMatch = true;
-        if (typeof connectorParams === "object") {
-          Object.assign(matchParams, connectorParams);
+      if (autoMatch) {
+        const autoMatchResult = autoMatch();
+        if (autoMatchResult) {
+          return autoMatchResult;
         }
       }
-      return someMatch ? matchParams : null;
+      if (matchResult) {
+        return matchResult;
+      }
+      return false;
     },
-    connectorSet,
     load: ({ signal }) => {
       let result;
       const thenableArray = [];

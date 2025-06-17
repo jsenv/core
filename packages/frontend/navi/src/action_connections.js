@@ -1,11 +1,9 @@
-import { connectAction } from "./actions.js";
-
 export const connectActionWithLocalStorageBoolean = (
   action,
   key,
   { defaultValue = false } = {},
 ) => {
-  connectAction(action, {
+  action.setAutostart({
     getParams: () => {
       const value = localStorage.getItem(key);
       if (value === null) {
@@ -31,7 +29,7 @@ export const connectActionWithLocalStorageString = (
   actionParamName = key,
   { defaultValue = "" } = {},
 ) => {
-  connectAction(action, {
+  action.setAutostart({
     getParams: () => {
       const value = localStorage.getItem(key);
       if (value === null) {
