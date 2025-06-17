@@ -156,8 +156,15 @@ export const resource = (name, { idKey = "id" } = {}) => {
     },
     getAll: (callback) => {
       const getAllAction = registerAction(
-        async (params) => {
-          const propsArray = await callback(params);
+        (params) => {
+          const callbackResult = callback(params);
+          if (callbackResult && typeof callbackResult.then === "function") {
+            return callbackResult.then((propsArray) => {
+              const itemArray = store.upsert(propsArray);
+              return itemArray;
+            });
+          }
+          const propsArray = callbackResult;
           const itemArray = store.upsert(propsArray);
           return itemArray;
         },

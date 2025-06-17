@@ -474,33 +474,43 @@ export const createAction = (
       }
       return matchParams;
     },
-    load: async ({ signal }) => {
-      const promises = [];
-      const loadPromise = callback({ signal, ...params });
-      promises.push(loadPromise);
+    load: ({ signal }) => {
       let result;
-      loadPromise.then((value) => {
-        result = value;
-      });
-      if (action.ui.load) {
-        const uiLoadPromise = action.ui.load({ signal, ...params });
-        promises.push(uiLoadPromise);
+      const thenableArray = [];
+      const callbackResult = callback({ signal, ...params });
+      if (callbackResult && typeof callbackResult.then === "function") {
+        thenableArray.push(callbackResult);
+        callbackResult.then((value) => {
+          result = value;
+        });
+      } else {
+        result = callbackResult;
       }
-      await Promise.all(promises);
-      return result;
+      if (action.ui.load) {
+        const uiLoadResult = action.ui.load({ signal, ...params });
+        if (uiLoadResult && typeof uiLoadResult.then === "function") {
+          thenableArray.push(uiLoadResult);
+        }
+      }
+      if (thenableArray.length === 0) {
+        return result;
+      }
+      return Promise.all(thenableArray).then(() => result);
     },
     ui: {
       renderLoaded: null,
       renderLoadedAsync,
-      load: async (...args) => {
+      load: (...args) => {
         if (matchingParametrizedAction) {
-          await matchingParametrizedAction.ui.load(...args);
+          return matchingParametrizedAction.ui.load(...args);
         }
         const renderLoadedAsync = action.ui.renderLoadedAsync;
         if (renderLoadedAsync) {
-          const renderLoaded = await renderLoadedAsync(...args);
-          action.ui.renderLoaded = () => renderLoaded;
+          return renderLoadedAsync(...args).then((renderLoaded) => {
+            action.ui.renderLoaded = () => renderLoaded;
+          });
         }
+        return null;
       },
     },
 
