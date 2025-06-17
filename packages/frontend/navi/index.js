@@ -1,6 +1,6 @@
 export {
-  connectActionWithLocalStorageBoolean,
-  connectActionWithLocalStorageString,
+  getOptionsForActionConnectedToLocalStorageBoolean,
+  getOptionsForActionConnectedToLocalStorageString,
 } from "./src/action_connections.js";
 export { ActionRenderer } from "./src/action_renderer.jsx";
 export {

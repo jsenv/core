@@ -19,7 +19,7 @@
       import { render } from "preact";
       import {
         useActionStatus,
-        connectActionWithLocalStorageString,
+        getOptionsForActionConnectedToLocalStorageString,
         resource,
         getItemAction,
       } from "@jsenv/navi";
@@ -28,13 +28,14 @@
       const loadUsersAction = user.getAll(() => {
         return [{ name: "dam" }, { name: "seb" }];
       });
-      const loadUserAction = user.get(({ name }) => {
-        return { name, greeting: `Hello ${name}` };
-      });
-      connectActionWithLocalStorageString(
-        loadUserAction,
-        "current_user_name",
-        "name",
+      const loadUserAction = user.get(
+        ({ name }) => {
+          return { name, greeting: `Hello ${name}` };
+        },
+        getOptionsForActionConnectedToLocalStorageString(
+          "current_user_name",
+          "name",
+        ),
       );
       loadUsersAction.start();
 

@@ -264,7 +264,7 @@ export const updateMatchingActionParams = async (action, params) => {
   action.activationEffect(params);
 };
 
-const activate = async (action, { signal, matchParams }) => {
+const activate = (action, { signal, matchParams }) => {
   const abortController = new AbortController();
   const abortSignal = abortController.signal;
   const abort = (reason) => {
@@ -297,16 +297,7 @@ const activate = async (action, { signal, matchParams }) => {
     actionAbortMap.delete(action);
     actionPromiseMap.delete(action);
   };
-
-  try {
-    loadResult = action.load({ signal: abortSignal });
-    if (loadResult && typeof loadResult.then === "function") {
-      loadResult = await loadResult;
-      onLoadEnd();
-    } else {
-      onLoadEnd();
-    }
-  } catch (e) {
+  const onLoadError = (e) => {
     signal.removeEventListener("abort", onabort);
     actionAbortMap.delete(action);
     actionPromiseMap.delete(action);
@@ -318,7 +309,26 @@ const activate = async (action, { signal, matchParams }) => {
       action.reportError(e);
       action.activationStateSignal.value = FAILED;
     });
+  };
+
+  try {
+    loadResult = action.load({ signal: abortSignal });
+    if (loadResult && typeof loadResult.then === "function") {
+      return loadResult.then(
+        (value) => {
+          loadResult = value;
+          onLoadEnd();
+        },
+        (e) => {
+          onLoadError(e);
+        },
+      );
+    }
+    onLoadEnd();
+  } catch (e) {
+    onLoadError(e);
   }
+  return undefined;
 };
 
 const deactivate = (action, reason) => {
