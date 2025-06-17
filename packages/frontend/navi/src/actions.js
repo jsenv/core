@@ -209,8 +209,13 @@ export const updateActions = async ({
 
   for (const [action, actionParams] of toActivateMap) {
     const actionPromise = activate(action, actionParams);
-    actionPromiseMap.set(action, actionPromise);
-    promises.push(actionPromise);
+    if (
+      // sync actions are already done, no need to wait for activate promise
+      action.activationStateSignal.peek() === ACTIVATING
+    ) {
+      actionPromiseMap.set(action, actionPromise);
+      promises.push(actionPromise);
+    }
   }
   await Promise.all(promises);
 
@@ -403,6 +408,7 @@ export const createAction = (
       action.match = matchPrevious;
       await updateActions();
     };
+    debugger;
     await updateActions();
   };
   const stop = () => {
