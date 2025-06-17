@@ -141,8 +141,8 @@ export const updateActions = async ({
     if (startsMatching || actionCandidate.shouldReload({ matchParams })) {
       toActivateMap.set(actionCandidate, enterParams);
     } else {
-      const hasError = actionCandidate.errorSignal.peek();
-      const isAborted = actionCandidate.stateSignal.peek() === ABORTED;
+      const hasError = actionCandidate.error;
+      const isAborted = actionCandidate.activationState === ABORTED;
       if (isReload) {
         toActivateMap.set(actionCandidate, enterParams);
       } else if (hasError) {
@@ -226,7 +226,7 @@ const activate = async (action, { signal, matchParams }) => {
     if (debug) {
       console.log(`"${action}": abort activation.`);
     }
-    action.stateSignal.value = ABORTED;
+    action.activationStateSignal.value = ABORTED;
     abortController.abort(reason);
     actionAbortMap.delete(action);
   };
@@ -240,7 +240,7 @@ const activate = async (action, { signal, matchParams }) => {
     action.isMatchingSignal.value = true;
     action.paramsSignal.value = matchParams;
     action.errorSignal.value = null;
-    action.stateSignal.value = ACTIVATING;
+    action.activationStateSignal.value = ACTIVATING;
   });
   action.activationEffect(matchParams);
   matchingActionRegistry.add(action);
@@ -248,7 +248,7 @@ const activate = async (action, { signal, matchParams }) => {
   try {
     const loadResult = await action.load({ signal: abortSignal });
     action.dataSignal.value = loadResult;
-    action.stateSignal.value = ACTIVATED;
+    action.activationStateSignal.value = ACTIVATED;
     actionAbortMap.delete(action);
     actionPromiseMap.delete(action);
   } catch (e) {
@@ -256,12 +256,12 @@ const activate = async (action, { signal, matchParams }) => {
     actionAbortMap.delete(action);
     actionPromiseMap.delete(action);
     if (abortSignal.aborted && e === abortSignal.reason) {
-      action.stateSignal.value = ABORTED;
+      action.activationStateSignal.value = ABORTED;
       return;
     }
     batch(() => {
       action.reportError(e);
-      action.stateSignal.value = FAILED;
+      action.activationStateSignal.value = FAILED;
     });
   }
 };
@@ -283,7 +283,7 @@ const deactivate = (action, reason) => {
     action.isMatchingSignal.value = false;
     action.paramsSignal.value = action.initialParams;
     action.errorSignal.value = null;
-    action.stateSignal.value = IDLE;
+    action.activationStateSignal.value = IDLE;
   });
 };
 
@@ -306,7 +306,10 @@ export const createAction = (
   } = {},
 ) => {
   const isMatchingSignal = signal(false);
-  const stateSignal = parentAction ? parentAction.stateSignal : signal(IDLE);
+  let activationState = IDLE;
+  const activationStateSignal = parentAction
+    ? parentAction.activationStateSignal
+    : signal(activationState);
   let error;
   const errorSignal = parentAction ? parentAction.errorSignal : signal(null);
   const reportError = (e) => {
@@ -319,6 +322,8 @@ export const createAction = (
 
   let params = initialParams;
   const paramsSignal = signal(initialParams);
+
+  const match = () => false;
 
   const activationEffect = (...args) => {
     if (parentAction) {
@@ -355,13 +360,15 @@ export const createAction = (
     const suffix = generateParamsSuffix(initialParams);
     return `${name}${suffix}`;
   };
-  const start = async (options) => {
-    action.activationEffect(initialParams);
-    await updateActions(options);
+  const start = async (params = initialParams) => {
+    action.paramsSignal.value = params;
+    action.activationEffect(params);
+    //
   };
-  const stop = async (options) => {
+  const stop = async () => {
+    action.paramsSignal.value = initialParams;
     action.deactivationEffect();
-    await updateActions(options);
+    // we want to undo the
   };
 
   const parametrizedActions = new Map(); // Changer de Set à Map pour stocker params -> action
@@ -407,7 +414,7 @@ export const createAction = (
     initialData,
     params,
     paramsSignal,
-    match: () => false,
+    match,
     getMatchParams: () => {
       matchingParametrizedAction = null;
       const matchResult = action.match();
@@ -459,7 +466,8 @@ export const createAction = (
       },
     },
 
-    stateSignal,
+    activationState,
+    activationStateSignal,
     error,
     errorSignal,
     reportError,
@@ -496,6 +504,10 @@ export const createAction = (
     actionRef.params = params;
   });
   actionWeakEffect((actionRef) => {
+    activationState = activationStateSignal.value;
+    actionRef.activationState = activationState;
+  });
+  actionWeakEffect((actionRef) => {
     error = errorSignal.value;
     actionRef.error = error;
   });
@@ -511,9 +523,9 @@ export const useActionStatus = (action) => {
   const isMatching = action.isMatchingSignal.value;
   const params = action.paramsSignal.value;
   const error = action.errorSignal.value;
-  const state = action.stateSignal.value;
-  const pending = state === ACTIVATING;
-  const aborted = state === ABORTED;
+  const activationState = action.activationState.value;
+  const pending = activationState === ACTIVATING;
+  const aborted = activationState === ABORTED;
   const data = action.dataSignal.value;
   return {
     matching: isMatching,

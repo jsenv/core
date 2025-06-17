@@ -1,5 +1,6 @@
 export {
   connectActionWithLocalStorageBoolean,
+  connectActionWithLocalStorageString,
   registerAction,
   reloadActions,
   updateActions,

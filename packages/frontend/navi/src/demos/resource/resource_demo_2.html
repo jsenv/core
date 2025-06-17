@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Action demo 2</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 200px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      /**
+       * Ici on test une action ayant un param qui est lu dans le local storage
+       * On peut utiliser deux actions dérivées pour charger deux users différents
+       * on peut aussi savoir qui est l'utilisateur courant
+       */
+
+      import { render } from "preact";
+      import {
+        useActionStatus,
+        connectActionWithLocalStorageString,
+        resource,
+      } from "@jsenv/navi";
+
+      const user = resource("user", { idKey: "name" });
+      const loadUsersAction = user.getAll(() => {
+        return [{ name: "Alice" }, { name: "bob" }, { name: "Charlie" }];
+      });
+      const loadUserAction = user.get(({ userName }) => {
+        return { name: userName };
+      });
+      connectActionWithLocalStorageString(loadUserAction, "user_name");
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const loadDamAction = loadUserAction.withParams({
+          userName: "dam",
+        });
+        const loadSebAction = loadUserAction.withParams({
+          userName: "seb",
+        });
+        const { data } = useActionStatus(loadUserAction);
+
+        return (
+          <div>
+            <button
+              onClick={() => {
+                loadDamAction.start();
+              }}
+            >
+              Load dam
+            </button>
+            <button
+              onClick={() => {
+                loadSebAction.start();
+              }}
+            >
+              Load seb
+            </button>
+
+            <ActionStatus action={loadUserAction} />
+            <ActionStatus action={loadDamAction} />
+            <ActionStatus action={loadSebAction} />
+
+            <div>User: {data}</div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ActionStatus = ({ action, name = action.name }) => {
+        const { matching, params, error, aborted, data } =
+          useActionStatus(action);
+        return (
+          <fieldset style={{ width: "200px" }}>
+            <legend>{action.name}</legend>
+
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div>
+                {matching ? (
+                  <span>
+                    matching: <strong>yes</strong>
+                  </span>
+                ) : (
+                  <span>matching: no</span>
+                )}
+              </div>
+              <div style="display: flex; align-items: center; gap: 5px;">
+                <span>params: </span>
+                <pre style="margin: 0">{JSON.stringify(params)}</pre>
+              </div>
+              <div>
+                {aborted ? (
+                  <span>
+                    aborted: <strong>yes</strong>
+                  </span>
+                ) : (
+                  <span>aborted: no</span>
+                )}
+              </div>
+              <div>
+                {error ? (
+                  <span>error: {error.message}</span>
+                ) : (
+                  <span>error</span>
+                )}
+              </div>
+              <div>
+                {data ? (
+                  <span>
+                    data: <strong>{JSON.stringify(data)}</strong>
+                  </span>
+                ) : (
+                  <span>data</span>
+                )}
+              </div>
+            </div>
+          </fieldset>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
