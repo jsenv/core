@@ -138,7 +138,10 @@ export const updateActions = async ({
       matchParams,
     };
     const startsMatching = !matchingActionSet.has(actionCandidate);
-    if (startsMatching || actionCandidate.shouldReload({ matchParams })) {
+    if (startsMatching) {
+      toActivateMap.set(actionCandidate, enterParams);
+    } else if (actionCandidate.shouldReload({ matchParams })) {
+      toDeactivateSet.add(actionCandidate);
       toActivateMap.set(actionCandidate, enterParams);
     } else {
       const hasError = actionCandidate.error;
@@ -361,14 +364,29 @@ export const createAction = (
     return `${name}${suffix}`;
   };
   const start = async (params = initialParams) => {
-    action.paramsSignal.value = params;
-    action.activationEffect(params);
-    //
+    const matchPrevious = action.match;
+    const stopPrevious = action.stop;
+    const startPrevious = action.start;
+
+    action.start = (...args) => {
+      // when starting again, we first restore stop/match so that updateActions would stop this one
+      // then we actually start (which would hook into .match and .stop then call updateActions)
+      // which in turn will first
+      action.start = startPrevious;
+      action.stop = stopPrevious;
+      action.match = matchPrevious;
+      return startPrevious(...args);
+    };
+    action.match = () => params;
+    action.stop = async () => {
+      action.stop = stopPrevious;
+      action.match = matchPrevious;
+      await updateActions();
+    };
+    await updateActions();
   };
-  const stop = async () => {
-    action.paramsSignal.value = initialParams;
-    action.deactivationEffect();
-    // we want to undo the
+  const stop = () => {
+    // nothing to do, only match can change that right?
   };
 
   const parametrizedActions = new Map(); // Changer de Set à Map pour stocker params -> action
@@ -575,19 +593,19 @@ export const connectActionWithLocalStorageBoolean = (
 export const connectActionWithLocalStorageString = (
   action,
   key,
-  paramName = key,
+  actionParamName = key,
   { defaultValue = "" } = {},
 ) => {
   action.match = () => {
     const value = localStorage.getItem(key);
     if (value === null) {
-      return defaultValue ? { [paramName]: defaultValue } : null;
+      return defaultValue ? { [actionParamName]: defaultValue } : null;
     }
-    return { [paramName]: value };
+    return { [actionParamName]: value };
   };
 
   const activationEffect = (params) => {
-    const valueToStore = params[paramName];
+    const valueToStore = params[actionParamName];
     localStorage.setItem(key, valueToStore);
   };
 

@@ -7,6 +7,13 @@ import {
 } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 
+const itemActionSetSymbol = Symbol("item_action_set");
+
+export const getItemAction = (item, actionTemplate) => {
+  const itemActionSet = item[itemActionSetSymbol];
+  return itemActionSet.get(actionTemplate);
+};
+
 export const resource = (name, { idKey = "id" } = {}) => {
   const oneToOnePropertyMap = new Map();
   const oneToManyPropertyMap = new Map();
@@ -32,6 +39,10 @@ export const resource = (name, { idKey = "id" } = {}) => {
     const item = store.upsert(props);
     activeIdSignal.value = item[idKey];
   };
+
+  store.addSetup((item) => {
+    item[itemActionSetSymbol] = new Set();
+  });
 
   return {
     name,
@@ -114,12 +125,12 @@ export const resource = (name, { idKey = "id" } = {}) => {
         return true;
       };
       const childItemArrayMap = new Map();
-      store.defineObjectCreator(propertyName, (item) => {
+      store.addSetup((item) => {
         const childItemArray = [];
         childItemArray.add = addToCollection.bind(item);
         childItemArray.remove = removeFromCollection.bind(item);
         childItemArrayMap.set(item, childItemArray);
-        return childItemArray;
+        item[propertyName] = childItemArray;
       });
       store.defineGetSet(propertyName, {
         get: (item) => {
@@ -164,6 +175,11 @@ export const resource = (name, { idKey = "id" } = {}) => {
           name: `get ${name}`,
         },
       );
+
+      store.addSetup((item) => {
+        const itemGetAction = getAction.withParams(item);
+        item[itemActionSetSymbol].add(itemGetAction);
+      });
 
       effect(() => {
         const isMatching = getAction.isMatchingSignal.value;

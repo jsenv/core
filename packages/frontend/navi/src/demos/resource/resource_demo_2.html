@@ -21,49 +21,54 @@
         useActionStatus,
         connectActionWithLocalStorageString,
         resource,
+        getItemAction,
       } from "@jsenv/navi";
 
       const user = resource("user", { idKey: "name" });
       const loadUsersAction = user.getAll(() => {
-        return [{ name: "Alice" }, { name: "bob" }, { name: "Charlie" }];
+        return [{ name: "dam" }, { name: "seb" }];
       });
-      const loadUserAction = user.get(({ userName }) => {
-        return { name: userName };
+      const loadUserAction = user.get(({ name }) => {
+        return { name, greeting: `Hello ${name}` };
       });
-      connectActionWithLocalStorageString(loadUserAction, "user_name");
+      loadUsersAction.start();
+      connectActionWithLocalStorageString(
+        loadUserAction,
+        "current_user_name",
+        "name",
+      );
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const loadDamAction = loadUserAction.withParams({
-          userName: "dam",
-        });
-        const loadSebAction = loadUserAction.withParams({
-          userName: "seb",
-        });
-        const { data } = useActionStatus(loadUserAction);
+        const { data: user } = useActionStatus(loadUserAction);
+        const { data: users } = useActionStatus(loadUsersAction);
+
+        const [dam, seb] = users;
+        const damUserAction = getItemAction(dam, loadUserAction);
+        const sebUserAction = getItemAction(seb, loadUserAction);
 
         return (
           <div>
             <button
               onClick={() => {
-                loadDamAction.start();
+                damUserAction.start();
               }}
             >
               Load dam
             </button>
             <button
               onClick={() => {
-                loadSebAction.start();
+                sebUserAction.start();
               }}
             >
               Load seb
             </button>
 
             <ActionStatus action={loadUserAction} />
-            <ActionStatus action={loadDamAction} />
-            <ActionStatus action={loadSebAction} />
+            <ActionStatus action={damUserAction} />
+            <ActionStatus action={sebUserAction} />
 
-            <div>User: {data}</div>
+            <div>User: {JSON.stringify(user)}</div>
           </div>
         );
       };
