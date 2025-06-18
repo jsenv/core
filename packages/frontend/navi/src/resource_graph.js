@@ -1,10 +1,5 @@
-import { computed, effect, signal } from "@preact/signals";
-import {
-  createAction,
-  registerAction,
-  reloadActions,
-  updateMatchingActionParams,
-} from "./actions.js";
+import { computed, signal } from "@preact/signals";
+import { createAction, reloadActions } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 
 const itemActionMapSymbol = Symbol("item_action_map");
@@ -78,7 +73,6 @@ export const resource = (name, { idKey = "id" } = {}) => {
           ...options,
         },
       );
-      registerAction(getAllAction);
       return getAllAction;
     },
     get: (callback, { key = idKey, ...options } = {}) => {
@@ -96,25 +90,24 @@ export const resource = (name, { idKey = "id" } = {}) => {
 
       store.addSetup((item) => {
         const itemGetAction = getActionTemplate.withParams(item);
-        registerAction(itemGetAction);
         item[itemActionMapSymbol].set(getActionTemplate, itemGetAction);
       });
 
-      effect(() => {
-        const isMatching = getActionTemplate.isMatchingSignal.value;
-        const actionParams = getActionTemplate.paramsSignal.value;
-        const activeItem = store.select(key, actionParams[key]);
-        if (isMatching) {
-          const activeItemId = activeItem ? activeItem[idKey] : null;
-          activeIdSignal.value = activeItemId;
-        } else {
-          activeIdSignal.value = null;
-        }
-      });
+      // effect(() => {
+      //   const isMatching = getActionTemplate.isMatchingSignal.value;
+      //   const actionParams = getActionTemplate.paramsSignal.value;
+      //   const activeItem = store.select(key, actionParams[key]);
+      //   if (isMatching) {
+      //     const activeItemId = activeItem ? activeItem[idKey] : null;
+      //     activeIdSignal.value = activeItemId;
+      //   } else {
+      //     activeIdSignal.value = null;
+      //   }
+      // });
 
       store.registerPropertyLifecycle(activeItemSignal, key, {
-        changed: (value) => {
-          updateMatchingActionParams(getActionTemplate, { [key]: value });
+        changed: () => {
+          // updateMatchingActionParams(getActionTemplate, { [key]: value });
         },
         dropped: (value) => {
           reloadActions({ reason: `${value} dropped` });

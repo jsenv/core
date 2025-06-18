@@ -10,8 +10,10 @@ export const FAILED = { id: "failed" };
 export const ACTIVATED = { id: "activated" };
 
 const requestActionsUpdates = ({ toDeactivateSet, toActivateSet }) => {
+  const signal = new AbortController().signal;
   // intermediate representing the fact we'll use navigation.navigate to call update action later on
   return updateActions({
+    signal,
     toActivateSet,
     toDeactivateSet,
   });
@@ -99,11 +101,11 @@ const activationRegistry = (() => {
 
 export const updateActions = ({
   signal,
-  isReload,
-  isReplace,
+  isReload = false,
+  isReplace = false,
   reason,
-  toActivateSet,
-  toDeactivateSet,
+  toActivateSet = new Set(),
+  toDeactivateSet = new Set(),
 } = {}) => {
   if (!signal) {
     const abortController = new AbortController();
@@ -117,12 +119,11 @@ export const updateActions = ({
   if (debug) {
     console.group(`updateActions()`);
     console.debug(
-      `
-- to activate: ${toActivateSet.size === 0 ? "none" : Array.from(toActivateSet).join(", ")}
+      `- to activate: ${toActivateSet.size === 0 ? "none" : Array.from(toActivateSet).join(", ")}
 - to deactivate: ${toDeactivateSet.size === 0 ? "none" : Array.from(toDeactivateSet).join(", ")}
 - already activating: ${alreadyActivatingSet.size === 0 ? "none" : Array.from(alreadyActivatingSet).join(", ")}
 - already activated: ${alreadyActivatedSet.size === 0 ? "none" : Array.from(alreadyActivatedSet).join(", ")}
-- meta: { isReload: ${isReload}, isReplace ${isReplace} }`,
+- meta: { reason: ${reason}, isReload: ${isReload}, isReplace ${isReplace} }`,
     );
   }
 
@@ -150,7 +151,9 @@ export const updateActions = ({
     const actionToActivatePrivateProperties =
       getActionPrivateProperties(actionToActivate);
     activationRegistry.add(actionToActivate);
-    const activatePromise = actionToActivatePrivateProperties.activate();
+    const activatePromise = actionToActivatePrivateProperties.activate({
+      signal,
+    });
     if (
       // sync actions are already done, no need to wait for activate promise
       actionToActivate.activationState === ACTIVATED
