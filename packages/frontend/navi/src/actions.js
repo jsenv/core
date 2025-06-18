@@ -292,6 +292,24 @@ export const createAction = (
       parent: action,
       ...options,
     });
+
+    const parametrizedActionPrivateProperties =
+      getActionPrivateProperties(parametrizedAction);
+    // TODO: this effect should be weak
+    effect(() => {
+      const parametrizedActionActivationState =
+        parametrizedActionPrivateProperties.activationStateSignal.value;
+      activationStateSignal.value = parametrizedActionActivationState;
+
+      const parametrizedActionError =
+        parametrizedActionPrivateProperties.errorSignal.value;
+      errorSignal.value = parametrizedActionError;
+
+      const parametrizedActionData =
+        parametrizedActionPrivateProperties.dataSignal.value;
+      dataSignal.value = parametrizedActionData;
+    });
+
     const weakRef = new WeakRef(parametrizedAction);
     parametrizedActions.set(combinedParams, weakRef);
     parametrizedActionsWeakRefs.add(weakRef);
