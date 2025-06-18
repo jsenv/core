@@ -147,6 +147,7 @@ export const updateActions = ({
   const toUnloadSet = new Set();
   const toPreloadSet = new Set();
   const toLoadSet = new Set();
+  const toPromoteActiveSet = new Set();
   const staysLoadingSet = new Set();
   const staysLoadedSet = new Set();
   list_to_unload: {
@@ -197,6 +198,12 @@ export const updateActions = ({
       onActionToLoadOrPreload(actionToPreload, true);
     }
     for (const actionToLoad of loadSet) {
+      if (!actionToLoad.active && actionToLoad.loadingState !== IDLE) {
+        // was preloaded but is not active
+        // -> can move to active state no matter the loading state
+        toPromoteActiveSet.add(actionToLoad);
+        continue;
+      }
       onActionToLoadOrPreload(actionToLoad, false);
     }
   }
@@ -232,6 +239,9 @@ export const updateActions = ({
         : []),
       ...(toPreloadSet.size
         ? [`- to preload: ${Array.from(toPreloadSet).join(", ")}`]
+        : []),
+      ...(toPromoteActiveSet.size
+        ? [`- to promote active: ${Array.from(toPromoteActiveSet).join(", ")}`]
         : []),
       ...(toLoadSet.size
         ? [`- to load: ${Array.from(toLoadSet).join(", ")}`]
@@ -280,6 +290,12 @@ ${lines.join("\n")}`);
     }
     for (const actionToLoad of toLoadSet) {
       onActionToLoadOrPreload(actionToLoad, false);
+    }
+    for (const actionToPromoteActive of toPromoteActiveSet) {
+      const actionToPromoteActivePrivateProperties = getActionPrivateProperties(
+        actionToPromoteActive,
+      );
+      actionToPromoteActivePrivateProperties.activeSignal.value = true;
     }
   }
   if (debug) {
@@ -461,6 +477,7 @@ export const createAction = (
     name,
     params,
     loadingState,
+    active,
     error,
     data,
     preloadRequested: false,
@@ -489,6 +506,10 @@ export const createAction = (
     actionWeakEffect((actionRef) => {
       params = paramsSignal.value;
       actionRef.params = params;
+    });
+    actionWeakEffect((actionRef) => {
+      active = activeSignal.value;
+      actionRef.active = active;
     });
     actionWeakEffect((actionRef) => {
       loadingState = loadingStateSignal.value;
