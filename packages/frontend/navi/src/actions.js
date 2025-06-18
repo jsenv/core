@@ -11,6 +11,7 @@ export const LOADED = { id: "loaded" };
 
 // intermediate function representing the fact we'll use navigation.navigate update action and get a signal
 export const requestActionsUpdates = ({
+  preloadSet,
   loadSet,
   unloadSet,
   isReload,
@@ -19,6 +20,7 @@ export const requestActionsUpdates = ({
   const signal = new AbortController().signal;
   return updateActions({
     signal,
+    preloadSet,
     loadSet,
     unloadSet,
     isReload,
@@ -181,6 +183,8 @@ export const updateActions = ({
           }
         } else {
         }
+      } else if (isPreload) {
+        toPreloadSet.add(actionToLoadOrPreload);
       } else {
         toLoadSet.add(actionToLoadOrPreload);
       }
@@ -201,7 +205,10 @@ export const updateActions = ({
     for (const actionLoading of loadingSet) {
       if (toUnloadSet.has(actionLoading)) {
         // will be unloaded (aborted), we don't want to wait
-      } else if (toLoadSet.has(actionLoading)) {
+      } else if (
+        toLoadSet.has(actionLoading) ||
+        toPreloadSet.has(actionLoading)
+      ) {
         // will be loaded, we'll wait for the new load promise
       } else {
         // an action that was loading and not affected by this update
@@ -222,6 +229,9 @@ export const updateActions = ({
     const lines = [
       ...(toUnloadSet.size
         ? [`- to unload: ${Array.from(toUnloadSet).join(", ")}`]
+        : []),
+      ...(toPreloadSet.size
+        ? [`- to preload: ${Array.from(toPreloadSet).join(", ")}`]
         : []),
       ...(toLoadSet.size
         ? [`- to load: ${Array.from(toLoadSet).join(", ")}`]
@@ -371,7 +381,7 @@ export const createAction = (
         // we should keep preloaded item preloaded
         unloadSet = new Set();
         for (const aliveParametrizedAction of aliveParametrizedActionSet) {
-          if (!aliveParametrizedAction.preloadRequested) {
+          if (aliveParametrizedAction.active) {
             unloadSet.add(aliveParametrizedAction);
           }
         }

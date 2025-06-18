@@ -7,7 +7,7 @@
     <title>Action demo 2</title>
   </head>
   <body>
-    <div id="root" style="position: relative; width: 200px"></div>
+    <div id="root" style="position: relative; width: 400px"></div>
 
     <script type="module" jsenv-type="module/jsx">
       /**
@@ -36,13 +36,13 @@
           },
         },
       );
-      const currentUserName = localStorage.getItem("current_user_name");
-      if (currentUserName) {
-        const loadCurrentUserAction = loadUserAction.withParams({
-          name: currentUserName,
-        });
-        loadCurrentUserAction.load();
-      }
+      // const currentUserName = localStorage.getItem("current_user_name");
+      // if (currentUserName) {
+      //   const loadCurrentUserAction = loadUserAction.withParams({
+      //     name: currentUserName,
+      //   });
+      //   loadCurrentUserAction.load();
+      // }
       loadUsersAction.load();
 
       // eslint-disable-next-line no-unused-vars
@@ -72,6 +72,14 @@
             </button>
             <button
               onClick={() => {
+                damUserAction.preload();
+              }}
+            >
+              Preload dam
+            </button>
+            <br />
+            <button
+              onClick={() => {
                 sebUserAction.load();
               }}
             >
@@ -83,6 +91,13 @@
               }}
             >
               Unload seb
+            </button>
+            <button
+              onClick={() => {
+                sebUserAction.preload();
+              }}
+            >
+              Preload seb
             </button>
 
             <ActionStatus action={loadUserAction} />
