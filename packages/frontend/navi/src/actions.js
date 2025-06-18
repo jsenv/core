@@ -20,7 +20,6 @@ const requestActionsUpdates = ({ toDeactivateSet, toActivateSet }) => {
 };
 export const reloadActions = async (actionSet, { reason } = {}) => {
   requestActionsUpdates({
-    toDeactivateSet: actionSet,
     toActivateSet: actionSet,
     reason,
     isReload: true,
@@ -69,16 +68,16 @@ const activationRegistry = (() => {
     },
 
     getInfo() {
-      const alreadyActivatingSet = new Set();
-      const alreadyActivatedSet = new Set();
+      const activatingSet = new Set();
+      const activatedSet = new Set();
 
       for (const [id, weakRef] of idToActionMap) {
         const action = weakRef.deref();
         if (action) {
           if (action.activationState === ACTIVATING) {
-            alreadyActivatingSet.add(action);
+            activatingSet.add(action);
           } else if (action.activationState === ACTIVATED) {
-            alreadyActivatedSet.add(action);
+            activatedSet.add(action);
           } else {
             throw new Error(
               `An action in the activation registry should be ACTIVATING or ACTIVATED, but got "${action.activationState.id}" for action "${action.name}"`,
@@ -89,8 +88,8 @@ const activationRegistry = (() => {
         }
       }
       return {
-        alreadyActivatingSet,
-        alreadyActivatedSet,
+        activatingSet,
+        activatedSet,
       };
     },
 
@@ -113,45 +112,95 @@ export const updateActions = ({
     signal = abortController.signal;
   }
 
-  const { alreadyActivatingSet, alreadyActivatedSet } =
-    activationRegistry.getInfo();
-  const thenableArray = [];
+  const { activatingSet, activatedSet } = activationRegistry.getInfo();
 
   if (debug) {
     console.group(`updateActions()`);
+    const lines = [
+      ...(toActivateSet.size
+        ? [`- to activate: ${Array.from(toActivateSet).join(", ")}`]
+        : []),
+      ...(toDeactivateSet.size
+        ? [`- to deactivate: ${Array.from(toDeactivateSet).join(", ")}`]
+        : []),
+    ];
     console.debug(
-      `- to activate: ${toActivateSet.size === 0 ? "none" : Array.from(toActivateSet).join(", ")}
-- to deactivate: ${toDeactivateSet.size === 0 ? "none" : Array.from(toDeactivateSet).join(", ")}
-- already activating: ${alreadyActivatingSet.size === 0 ? "none" : Array.from(alreadyActivatingSet).join(", ")}
-- already activated: ${alreadyActivatedSet.size === 0 ? "none" : Array.from(alreadyActivatedSet).join(", ")}
+      `${lines.join("\n")}
 - meta: { reason: ${reason}, isReload: ${isReload}, isReplace ${isReplace} }`,
     );
   }
 
+  const actualToDeactivateSet = new Set();
+  const actualToActivateSet = new Set();
+  const staysActivatingSet = new Set();
+  const staysActivatedSet = new Set();
+
+  for (const actionToActivate of toActivateSet) {
+    if (
+      activatingSet.has(actionToActivate) ||
+      activatedSet.has(actionToActivate)
+    ) {
+      actualToDeactivateSet.add(actionToActivate);
+      actualToActivateSet.add(actionToActivate);
+    } else {
+      actualToActivateSet.add(actionToActivate);
+    }
+  }
   for (const actionToDeactivate of toDeactivateSet) {
+    if (actionToDeactivate.activationState === ACTIVATING) {
+      actualToDeactivateSet.add(actionToDeactivate);
+    }
+  }
+  const thenableArray = [];
+  for (const actionActivating of activatingSet) {
+    if (actualToDeactivateSet.has(actionActivating)) {
+      // will be de-activated (aborted), we don't want to wait
+    } else if (actualToActivateSet.has(actionActivating)) {
+      // will be activated, we'll wait for the new activate promise
+    } else {
+      // an action that was activating and not affected by this update
+      // add it to the list of pending things
+      const actionPromise = actionPromiseMap.get(actionActivating);
+      thenableArray.push(actionPromise);
+      staysActivatingSet.add(actionActivating);
+    }
+  }
+  for (const actionActivated of activatedSet) {
+    if (actualToDeactivateSet.has(actionActivated)) {
+      // will be de-activated
+    } else {
+      staysActivatedSet.add(actionActivated);
+    }
+  }
+
+  if (debug) {
+    const lines = [
+      ...(actualToDeactivateSet.size
+        ? [`- to de-activate: ${Array.from(actualToDeactivateSet).join(", ")}`]
+        : []),
+      ...(actualToActivateSet.size
+        ? [`- to activate: ${Array.from(actualToActivateSet).join(", ")}`]
+        : []),
+      ...(staysActivatingSet.size
+        ? [`- stays activating: ${Array.from(staysActivatingSet).join(", ")}`]
+        : []),
+      ...(staysActivatedSet.size
+        ? [`- stays activated: ${Array.from(staysActivatedSet).join(", ")}`]
+        : []),
+    ];
+    console.debug(`situation before updating actions:
+${lines.join("\n")}`);
+  }
+
+  for (const actionToDeactivate of actualToDeactivateSet) {
     const actionToDeactivatePrivateProperties =
       getActionPrivateProperties(actionToDeactivate);
     actionToDeactivatePrivateProperties.deactivate(reason);
     activationRegistry.delete(actionToDeactivate);
-    alreadyActivatingSet.delete(actionToDeactivate);
-    alreadyActivatedSet.delete(actionToDeactivate);
   }
-
-  for (const actionActivating of alreadyActivatingSet) {
-    const actionPromise = actionPromiseMap.get(actionActivating);
-    thenableArray.push(actionPromise);
-  }
-
-  for (const actionToActivate of toActivateSet) {
-    if (
-      alreadyActivatingSet.has(actionToActivate) ||
-      alreadyActivatedSet.has(actionToActivate)
-    ) {
-      continue;
-    }
+  for (const actionToActivate of actualToActivateSet) {
     const actionToActivatePrivateProperties =
       getActionPrivateProperties(actionToActivate);
-    activationRegistry.add(actionToActivate);
     const activatePromise = actionToActivatePrivateProperties.activate({
       signal,
     });
@@ -159,13 +208,11 @@ export const updateActions = ({
       // sync actions are already done, no need to wait for activate promise
       actionToActivate.activationState === ACTIVATED
     ) {
-      activationRegistry.delete(actionToActivate);
     } else {
       actionPromiseMap.set(actionToActivate, activatePromise);
       thenableArray.push(activatePromise);
     }
   }
-
   if (debug) {
     console.groupEnd();
   }
