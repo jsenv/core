@@ -41,9 +41,9 @@
         const loadCurrentUserAction = loadUserAction.withParams({
           name: currentUserName,
         });
-        loadCurrentUserAction.start();
+        loadCurrentUserAction.load();
       }
-      loadUsersAction.start();
+      loadUsersAction.load();
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -58,28 +58,28 @@
           <div>
             <button
               onClick={() => {
-                damUserAction.start();
+                damUserAction.load();
               }}
             >
               Load dam
             </button>
             <button
               onClick={() => {
-                damUserAction.stop();
+                damUserAction.unload();
               }}
             >
               Unload dam
             </button>
             <button
               onClick={() => {
-                sebUserAction.start();
+                sebUserAction.load();
               }}
             >
               Load seb
             </button>
             <button
               onClick={() => {
-                sebUserAction.stop();
+                sebUserAction.unload();
               }}
             >
               Unload seb
@@ -96,7 +96,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const ActionStatus = ({ action, name = action.name }) => {
-        const { matching, params, error, aborted, data } =
+        const { active, pending, params, error, aborted, data } =
           useActionStatus(action);
         return (
           <fieldset style={{ width: "200px" }}>
@@ -104,33 +104,33 @@
 
             <div style="display: flex; flex-direction: column; gap: 5px;">
               <div>
-                {matching ? (
+                <span>
+                  <span>loading state:</span>{" "}
+                  <strong>
+                    {aborted
+                      ? "aborted"
+                      : error
+                        ? "error"
+                        : pending
+                          ? "pending"
+                          : active
+                            ? "loaded"
+                            : "idle"}
+                  </strong>
+                </span>
+              </div>
+              <div>
+                {active ? (
                   <span>
-                    matching: <strong>yes</strong>
+                    active: <strong>yes</strong>
                   </span>
                 ) : (
-                  <span>matching: no</span>
+                  <span>active: no</span>
                 )}
               </div>
               <div style="display: flex; align-items: center; gap: 5px;">
                 <span>params: </span>
                 <pre style="margin: 0">{JSON.stringify(params)}</pre>
-              </div>
-              <div>
-                {aborted ? (
-                  <span>
-                    aborted: <strong>yes</strong>
-                  </span>
-                ) : (
-                  <span>aborted: no</span>
-                )}
-              </div>
-              <div>
-                {error ? (
-                  <span>error: {error.message}</span>
-                ) : (
-                  <span>error</span>
-                )}
               </div>
               <div>
                 {data ? (

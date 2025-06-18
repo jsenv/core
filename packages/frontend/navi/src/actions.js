@@ -144,7 +144,7 @@ export const updateActions = ({
   const staysLoadingSet = new Set();
   const staysLoadedSet = new Set();
 
-  for (const actionToLoad of toLoadSet) {
+  for (const actionToLoad of loadSet) {
     if (
       actionToLoad.loadingState === LOADING ||
       actionToLoad.loadingState === LOADED
@@ -168,7 +168,7 @@ export const updateActions = ({
       toLoadSet.add(actionToLoad);
     }
   }
-  for (const actionToUnload of toUnloadSet) {
+  for (const actionToUnload of unloadSet) {
     if (actionToUnload.loadingState !== IDLE) {
       toUnloadSet.add(actionToUnload);
     }
@@ -217,13 +217,16 @@ ${lines.join("\n")}`);
   for (const actionToUnload of toUnloadSet) {
     const actionToUnloadPrivateProperties =
       getActionPrivateProperties(actionToUnload);
-    actionToUnloadPrivateProperties.unload(reason);
+    actionToUnloadPrivateProperties.performUnload(reason);
     activationRegistry.delete(actionToUnload);
   }
   for (const actionToLoad of toLoadSet) {
     const actionToLoadPrivateProperties =
       getActionPrivateProperties(actionToLoad);
-    const loadPromise = actionToLoadPrivateProperties.load({ signal, reason });
+    const loadPromise = actionToLoadPrivateProperties.performLoad({
+      signal,
+      reason,
+    });
     activationRegistry.add(actionToLoad);
     if (
       // sync actions are already done, no need to wait for activate promise
@@ -424,7 +427,7 @@ export const createAction = (
       renderLoadedAsync,
     };
     let sideEffectCleanup;
-    const load = ({ signal, reason }) => {
+    const performLoad = ({ signal, reason }) => {
       const abortController = new AbortController();
       const abortSignal = abortController.signal;
       const abort = (reason) => {
@@ -510,7 +513,7 @@ export const createAction = (
       }
       return undefined;
     };
-    const unload = (reason) => {
+    const performUnload = (reason) => {
       const abort = actionAbortMap.get(action);
       if (abort) {
         if (debug) {
@@ -543,8 +546,8 @@ export const createAction = (
       dataSignal,
       errorSignal,
 
-      load,
-      unload,
+      performLoad,
+      performUnload,
       ui,
     };
     actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
