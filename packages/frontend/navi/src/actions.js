@@ -79,10 +79,11 @@ const activationRegistry = (() => {
             alreadyActivatingSet.add(action);
           } else if (action.activationState === ACTIVATED) {
             alreadyActivatedSet.add(action);
+          } else {
+            throw new Error(
+              `An action in the activation registry should be ACTIVATING or ACTIVATED, but got "${action.activationState.id}" for action "${action.name}"`,
+            );
           }
-          throw new Error(
-            `An action in the activation registry should be ACTIVATING or ACTIVATED, but got "${action.activationState.id}" for action "${action.name}"`,
-          );
         } else {
           idToActionMap.delete(id);
         }
@@ -229,7 +230,7 @@ export const createAction = (
 
     const parametrizedAction = createAction(callback, {
       name: `${action.name}${generateParamsSuffix(combinedParams)}`,
-      initialParams: combinedParams,
+      params: combinedParams,
       sideEffect,
       ...options,
     });
@@ -316,7 +317,7 @@ export const createAction = (
         activationStateSignal.value = ACTIVATING;
       });
 
-      const returnValue = sideEffect();
+      const returnValue = sideEffect(params);
       if (typeof returnValue === "function") {
         sideEffectCleanup = returnValue;
       }
