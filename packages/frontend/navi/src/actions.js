@@ -204,6 +204,7 @@ ${lines.join("\n")}`);
     const activatePromise = actionToActivatePrivateProperties.activate({
       signal,
     });
+    activationRegistry.add(actionToActivate);
     if (
       // sync actions are already done, no need to wait for activate promise
       actionToActivate.activationState === ACTIVATED
@@ -283,7 +284,9 @@ export const createAction = (
         paramsSignal.value = params;
         return (...args) => {
           paramsSignal.value = initialParams;
-          returnValue(...args);
+          if (typeof returnValue === "function") {
+            returnValue(...args);
+          }
         };
       },
       parent: action,
