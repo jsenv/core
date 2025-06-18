@@ -65,10 +65,24 @@
             </button>
             <button
               onClick={() => {
+                damUserAction.stop();
+              }}
+            >
+              Unload dam
+            </button>
+            <button
+              onClick={() => {
                 sebUserAction.start();
               }}
             >
               Load seb
+            </button>
+            <button
+              onClick={() => {
+                sebUserAction.stop();
+              }}
+            >
+              Unload seb
             </button>
 
             <ActionStatus action={loadUserAction} />

@@ -1,4 +1,4 @@
-import { batch, effect, signal } from "@preact/signals";
+import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "./compare_two_js_values.js";
 
 let debug = true;
@@ -140,14 +140,27 @@ export const updateActions = ({
       activatingSet.has(actionToActivate) ||
       activatedSet.has(actionToActivate)
     ) {
-      actualToDeactivateSet.add(actionToActivate);
-      actualToActivateSet.add(actionToActivate);
+      // by default when an action is already activating/activated
+      // requesting an activation does nothing.
+      // this way
+      // - clicking a link already activate in the UI does nothing
+      // - requesting to load an action already pending does not abort + reload it
+      // in order to re-activate the same action
+      // code has to
+      // - first deactivate it
+      // - or request deactivationg + activation at the same time
+      // - or use isReload: true when requesting the activation of this action
+      if (isReload || toDeactivateSet.has(actionToActivate)) {
+        actualToDeactivateSet.add(actionToActivate);
+        actualToActivateSet.add(actionToActivate);
+      } else {
+      }
     } else {
       actualToActivateSet.add(actionToActivate);
     }
   }
   for (const actionToDeactivate of toDeactivateSet) {
-    if (actionToDeactivate.activationState === ACTIVATING) {
+    if (actionToDeactivate.activationState === IDLE) {
       actualToDeactivateSet.add(actionToDeactivate);
     }
   }
@@ -245,6 +258,10 @@ export const createAction = (
 ) => {
   let activationState = IDLE;
   const activationStateSignal = signal(activationState);
+  const matchingSignal = computed(() => {
+    const activationState = activationStateSignal.value;
+    return activationState !== IDLE;
+  });
   let error;
   const errorSignal = signal(null);
   let data = initialData;
@@ -282,16 +299,7 @@ export const createAction = (
     const parametrizedAction = createAction(callback, {
       name: `${action.name}${generateParamsSuffix(combinedParams)}`,
       params: combinedParams,
-      sideEffect: (params) => {
-        let returnValue = sideEffect(params);
-        paramsSignal.value = params;
-        return (...args) => {
-          paramsSignal.value = initialParams;
-          if (typeof returnValue === "function") {
-            returnValue(...args);
-          }
-        };
-      },
+      sideEffect, // call the parent side effect
       parent: action,
       ...options,
     });
@@ -303,6 +311,10 @@ export const createAction = (
       const parametrizedActionActivationState =
         parametrizedActionPrivateProperties.activationStateSignal.value;
       activationStateSignal.value = parametrizedActionActivationState;
+
+      const parametrizedActionParams =
+        parametrizedActionPrivateProperties.paramsSignal.value;
+      paramsSignal.value = parametrizedActionParams;
 
       const parametrizedActionError =
         parametrizedActionPrivateProperties.errorSignal.value;
@@ -507,11 +519,12 @@ export const createAction = (
     const actionPrivateProperties = {
       initialParams,
       initialData,
-      paramsSignal,
 
+      activationStateSignal,
+      matchingSignal,
+      paramsSignal,
       dataSignal,
       errorSignal,
-      activationStateSignal,
 
       activate,
       deactivate,
@@ -538,9 +551,15 @@ const generateParamsSuffix = (params) => {
 };
 
 export const useActionStatus = (action) => {
-  const { paramsSignal, errorSignal, activationStateSignal, dataSignal } =
-    getActionPrivateProperties(action);
+  const {
+    matchingSignal,
+    paramsSignal,
+    errorSignal,
+    activationStateSignal,
+    dataSignal,
+  } = getActionPrivateProperties(action);
 
+  const matching = matchingSignal.value;
   const params = paramsSignal.value;
   const error = errorSignal.value;
   const activationState = activationStateSignal.value;
@@ -548,6 +567,7 @@ export const useActionStatus = (action) => {
   const aborted = activationState === ABORTED;
   const data = dataSignal.value;
   return {
+    matching,
     params,
     error,
     aborted,
