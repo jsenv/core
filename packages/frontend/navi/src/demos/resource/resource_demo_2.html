@@ -28,21 +28,21 @@
           return { name, greeting: `Hello ${name}` };
         },
         {
-          // sideEffect: ({ name }) => {
-          //   localStorage.setItem("current_user_name", name);
-          //   return () => {
-          //     localStorage.removeItem("current_user_name");
-          //   };
-          // },
+          sideEffect: ({ name }) => {
+            localStorage.setItem("current_user_name", name);
+            return () => {
+              localStorage.removeItem("current_user_name");
+            };
+          },
         },
       );
-      // const currentUserName = localStorage.getItem("current_user_name");
-      // if (currentUserName) {
-      //   const loadCurrentUserAction = loadUserAction.withParams({
-      //     name: currentUserName,
-      //   });
-      //   loadCurrentUserAction.start();
-      // }
+      const currentUserName = localStorage.getItem("current_user_name");
+      if (currentUserName) {
+        const loadCurrentUserAction = loadUserAction.withParams({
+          name: currentUserName,
+        });
+        loadCurrentUserAction.start();
+      }
       loadUsersAction.start();
 
       // eslint-disable-next-line no-unused-vars

@@ -240,7 +240,8 @@ export const createAction = (
     data: initialData,
     renderLoadedAsync,
     sideEffect = () => {},
-  } = {},
+    isTemplate = false,
+  },
 ) => {
   let activationState = IDLE;
   const activationStateSignal = signal(activationState);
@@ -257,7 +258,9 @@ export const createAction = (
     const combinedParams =
       initialParams === initialParamsDefault
         ? newParams
-        : { ...initialParams, ...newParams };
+        : typeof initialParams === "object" && initialParams !== null
+          ? { ...initialParams, ...newParams }
+          : newParams;
     for (const weakRef of parametrizedActionsWeakRefs) {
       if (!weakRef.deref()) {
         parametrizedActionsWeakRefs.delete(weakRef);
@@ -315,16 +318,25 @@ export const createAction = (
     parametrizedActionsWeakRefs.add(weakRef);
     return parametrizedAction;
   };
-  const start = () => {
-    return requestActionsUpdates({
-      toActivateSet: new Set([action]),
-    });
-  };
-  const stop = () => {
-    return requestActionsUpdates({
-      toDeactivateSet: new Set([action]),
-    });
-  };
+  const start = isTemplate
+    ? () => {
+        throw new Error(
+          `Cannot start action template "${name}", use withParams() to set parameters first.`,
+        );
+      }
+    : () =>
+        requestActionsUpdates({
+          toActivateSet: new Set([action]),
+        });
+
+  const stop = isTemplate
+    ? () => {
+        throw new Error(`Cannot stop action template "${name}".`);
+      }
+    : () =>
+        requestActionsUpdates({
+          toDeactivateSet: new Set([action]),
+        });
 
   const action = {
     name,
@@ -471,10 +483,10 @@ export const createAction = (
       }
       return null;
     };
-    const load = ({ signal }) => {
+    const load = (loadParams) => {
       let result;
       const thenableArray = [];
-      const callbackResult = callback({ signal, ...params });
+      const callbackResult = callback(params, loadParams);
       if (callbackResult && typeof callbackResult.then === "function") {
         thenableArray.push(callbackResult);
         callbackResult.then((value) => {
@@ -483,7 +495,7 @@ export const createAction = (
       } else {
         result = callbackResult;
       }
-      const uiLoadResult = loadUI({ signal, ...params });
+      const uiLoadResult = loadUI(params, loadParams);
       if (uiLoadResult && typeof uiLoadResult.then === "function") {
         thenableArray.push(uiLoadResult);
       }
@@ -510,15 +522,17 @@ export const createAction = (
 
   return action;
 };
+export const createActionTemplate = (callback, options) => {
+  return createAction(callback, { isTemplate: true, ...options });
+};
 
 const generateParamsSuffix = (params) => {
+  if (params === null || typeof params !== "object") {
+    return `(${params})`;
+  }
   const keys = Object.keys(params);
   if (keys.length === 0) {
     return "";
-  }
-  if (keys.length === 1) {
-    const value = params[keys[0]];
-    return `: ${value}`;
   }
   return `(${JSON.stringify(params)})`;
 };

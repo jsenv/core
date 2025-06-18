@@ -1,5 +1,9 @@
 import { computed, signal } from "@preact/signals";
-import { createAction, reloadActions } from "./actions.js";
+import {
+  createAction,
+  createActionTemplate,
+  reloadActions,
+} from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 
 const itemActionMapSymbol = Symbol("item_action_map");
@@ -76,7 +80,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
       return getAllAction;
     },
     get: (callback, { key = idKey, ...options } = {}) => {
-      const getActionTemplate = createAction(
+      const getActionTemplate = createActionTemplate(
         async (params) => {
           const props = await callback(params);
           const item = store.upsert(props);
@@ -129,7 +133,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
       return getActionTemplate;
     },
     put: (callback, options) => {
-      const putActionTemplate = createAction(
+      const putActionTemplate = createActionTemplate(
         async (params) => {
           const propsOrPropsArray = await callback(params);
           const itemOrItemArray = store.upsert(propsOrPropsArray);
@@ -147,7 +151,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
       return putActionTemplate;
     },
     delete: (callback, options) => {
-      return createAction(
+      const deleteActionTemplate = createActionTemplate(
         async (params) => {
           const itemIdOrItemIdArray = await callback(params);
           return store.drop(itemIdOrItemIdArray);
@@ -157,6 +161,11 @@ export const resource = (name, { idKey = "id" } = {}) => {
           ...options,
         },
       );
+      store.addSetup((item) => {
+        const itemDeleteAction = deleteActionTemplate.withParams(item);
+        item[itemActionMapSymbol].set(itemDeleteAction, deleteActionTemplate);
+      });
+      return deleteActionTemplate;
     },
 
     one: (childResource, propertyName) => {
