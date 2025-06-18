@@ -88,6 +88,12 @@ export const resource = (name, { idKey = "id" } = {}) => {
         },
         {
           name: `get ${name}`,
+          // WARNING: this should be enabled only if the action is used to display the main content of the page
+          // because only then it makes sense to prevent loading something user don't need anymore
+          // if this action is used to let's say load an item details
+          // and UI displays a list of item with details
+          // we could totally want to load many item details in parallel
+          oneActiveActionAtATime: true,
           ...options,
         },
       );

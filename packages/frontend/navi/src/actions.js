@@ -1,4 +1,4 @@
-import { batch, computed, effect, signal } from "@preact/signals";
+import { batch, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "./compare_two_js_values.js";
 
 let debug = true;
@@ -113,6 +113,7 @@ export const updateActions = ({
   isReload = false,
   isReplace = false,
   reason,
+  preloadSet = new Set(),
   loadSet = new Set(),
   unloadSet = new Set(),
 } = {}) => {
@@ -126,6 +127,9 @@ export const updateActions = ({
   if (debug) {
     console.group(`updateActions()`);
     const lines = [
+      ...(preloadSet.size
+        ? [`- preload requested: ${Array.from(preloadSet).join(", ")}`]
+        : []),
       ...(loadSet.size
         ? [`- load requested: ${Array.from(loadSet).join(", ")}`]
         : []),
@@ -138,63 +142,82 @@ export const updateActions = ({
 - meta: { reason: ${reason}, isReload: ${isReload}, isReplace ${isReplace} }`,
     );
   }
-
   const toUnloadSet = new Set();
+  const toPreloadSet = new Set();
   const toLoadSet = new Set();
   const staysLoadingSet = new Set();
   const staysLoadedSet = new Set();
-
-  for (const actionToLoad of loadSet) {
-    if (
-      actionToLoad.loadingState === LOADING ||
-      actionToLoad.loadingState === LOADED
-    ) {
-      // by default when an action is already activating/activated
-      // requesting an activation does nothing.
-      // this way
-      // - clicking a link already active in the UI does nothing
-      // - requesting to load an action already pending does not abort + reload it
-      // in order to re-activate the same action
-      // code has to
-      // - first deactivate it
-      // - or request deactivationg + activation at the same time
-      // - or use isReload: true when requesting the activation of this action
-      if (isReload || toUnloadSet.has(actionToLoad)) {
-        toUnloadSet.add(actionToLoad);
-        toLoadSet.add(actionToLoad);
-      } else {
+  list_to_unload: {
+    for (const actionToUnload of unloadSet) {
+      if (actionToUnload.loadingState !== IDLE) {
+        toUnloadSet.add(actionToUnload);
       }
-    } else {
-      toLoadSet.add(actionToLoad);
     }
   }
-  for (const actionToUnload of unloadSet) {
-    if (actionToUnload.loadingState !== IDLE) {
-      toUnloadSet.add(actionToUnload);
+  list_to_preload_and_to_load: {
+    const onActionToLoadOrPreload = (actionToLoadOrPreload, isPreload) => {
+      if (
+        actionToLoadOrPreload.loadingState === LOADING ||
+        actionToLoadOrPreload.loadingState === LOADED
+      ) {
+        // by default when an action is already loading/loaded
+        // requesting to load it does nothing so that:
+        // - clicking a link already active in the UI does nothing
+        // - requesting to load an action already pending does not abort + reload it
+        //   (instead it stays pending)
+        //   only trying to load this action with other params
+        //   would abort the current one and load an other.
+        // in order to load the same action code has to do one of:
+        // - unload it first
+        // - request unload + load at the same time
+        // - use isReload: true when requesting the load of this action
+        //   this is default when using action.load()
+        if (isReload || toUnloadSet.has(actionToLoadOrPreload)) {
+          toUnloadSet.add(actionToLoadOrPreload);
+          if (isPreload) {
+            toPreloadSet.add(actionToLoadOrPreload);
+          } else {
+            toLoadSet.add(actionToLoadOrPreload);
+          }
+        } else {
+        }
+      } else {
+        toLoadSet.add(actionToLoadOrPreload);
+      }
+    };
+    for (const actionToPreload of preloadSet) {
+      if (loadSet.has(actionToPreload)) {
+        // load wins over preload
+        continue;
+      }
+      onActionToLoadOrPreload(actionToPreload, true);
+    }
+    for (const actionToLoad of loadSet) {
+      onActionToLoadOrPreload(actionToLoad, false);
     }
   }
   const thenableArray = [];
-  for (const actionLoading of loadingSet) {
-    if (toUnloadSet.has(actionLoading)) {
-      // will be de-activated (aborted), we don't want to wait
-    } else if (toLoadSet.has(actionLoading)) {
-      // will be activated, we'll wait for the new activate promise
-    } else {
-      // an action that was activating and not affected by this update
-      // add it to the list of pending things
-      const actionPromise = actionPromiseMap.get(actionLoading);
-      thenableArray.push(actionPromise);
-      staysLoadingSet.add(actionLoading);
+  list_stays_loading_and_stays_loaded: {
+    for (const actionLoading of loadingSet) {
+      if (toUnloadSet.has(actionLoading)) {
+        // will be unloaded (aborted), we don't want to wait
+      } else if (toLoadSet.has(actionLoading)) {
+        // will be loaded, we'll wait for the new load promise
+      } else {
+        // an action that was loading and not affected by this update
+        const actionPromise = actionPromiseMap.get(actionLoading);
+        thenableArray.push(actionPromise);
+        staysLoadingSet.add(actionLoading);
+      }
+    }
+    for (const actionLoaded of loadedSet) {
+      if (toUnloadSet.has(actionLoaded)) {
+        // will be unloaded
+      } else {
+        staysLoadedSet.add(actionLoaded);
+      }
     }
   }
-  for (const actionLoaded of loadedSet) {
-    if (toUnloadSet.has(actionLoaded)) {
-      // will be de-activated
-    } else {
-      staysLoadedSet.add(actionLoaded);
-    }
-  }
-
   if (debug) {
     const lines = [
       ...(toUnloadSet.size
@@ -214,27 +237,39 @@ export const updateActions = ({
 ${lines.join("\n")}`);
   }
 
-  for (const actionToUnload of toUnloadSet) {
-    const actionToUnloadPrivateProperties =
-      getActionPrivateProperties(actionToUnload);
-    actionToUnloadPrivateProperties.performUnload(reason);
-    activationRegistry.delete(actionToUnload);
+  peform_unloads: {
+    for (const actionToUnload of toUnloadSet) {
+      const actionToUnloadPrivateProperties =
+        getActionPrivateProperties(actionToUnload);
+      actionToUnloadPrivateProperties.performUnload(reason);
+      activationRegistry.delete(actionToUnload);
+    }
   }
-  for (const actionToLoad of toLoadSet) {
-    const actionToLoadPrivateProperties =
-      getActionPrivateProperties(actionToLoad);
-    const loadPromise = actionToLoadPrivateProperties.performLoad({
-      signal,
-      reason,
-    });
-    activationRegistry.add(actionToLoad);
-    if (
-      // sync actions are already done, no need to wait for activate promise
-      actionToLoad.loadingState === LOADED
-    ) {
-    } else {
-      actionPromiseMap.set(actionToLoad, loadPromise);
-      thenableArray.push(loadPromise);
+  perform_preloads_and_loads: {
+    const onActionToLoadOrPreload = (actionToPreloadOrLoad, isPreload) => {
+      const actionToLoadPrivateProperties = getActionPrivateProperties(
+        actionToPreloadOrLoad,
+      );
+      const loadPromise = actionToLoadPrivateProperties.performLoad({
+        signal,
+        reason,
+        isPreload,
+      });
+      activationRegistry.add(actionToPreloadOrLoad);
+      if (
+        // sync actions are already done, no need to wait for activate promise
+        actionToPreloadOrLoad.loadingState === LOADED
+      ) {
+      } else {
+        actionPromiseMap.set(actionToPreloadOrLoad, loadPromise);
+        thenableArray.push(loadPromise);
+      }
+    };
+    for (const actionToPreload of toPreloadSet) {
+      onActionToLoadOrPreload(actionToPreload, true);
+    }
+    for (const actionToLoad of toLoadSet) {
+      onActionToLoadOrPreload(actionToLoad, false);
     }
   }
   if (debug) {
@@ -265,14 +300,21 @@ export const createAction = (
     sideEffect = () => {},
     isTemplate = false,
     keepOldData = false,
+    // loading an other item will:
+    // - abort an other item that would be loading
+    // - or unload an other item that would be loaded
+    // this option is enabled only for "get" actions
+    // because we display one item at a time
+    // in the UI
+    // other actions are allowed to have many concurrent actions
+    // (like I can delete item "a" and "b" at the same time for instance)
+    oneActiveActionAtATime = false,
   },
 ) => {
+  let active = false;
+  const activeSignal = signal(active);
   let loadingState = IDLE;
   const loadingStateSignal = signal(loadingState);
-  const activeSignal = computed(() => {
-    const loadingState = loadingStateSignal.value;
-    return loadingState !== IDLE;
-  });
   let error;
   const errorSignal = signal(null);
   let data = initialData;
@@ -323,9 +365,20 @@ export const createAction = (
       ...options,
     });
     parametrizedAction.load = (options) => {
-      const aliveParametrizedActionSet = getAliveParametrizedActionSet();
+      let unloadSet;
+      if (oneActiveActionAtATime) {
+        const aliveParametrizedActionSet = getAliveParametrizedActionSet();
+        // we should keep preloaded item preloaded
+        unloadSet = new Set();
+        for (const aliveParametrizedAction of aliveParametrizedActionSet) {
+          if (!aliveParametrizedAction.preloadRequested) {
+            unloadSet.add(aliveParametrizedAction);
+          }
+        }
+      }
+
       return requestActionsUpdates({
-        unloadSet: aliveParametrizedActionSet,
+        unloadSet,
         loadSet: new Set([parametrizedAction]),
         ...options,
       });
@@ -335,6 +388,10 @@ export const createAction = (
       getActionPrivateProperties(parametrizedAction);
     // TODO: this effect should be weak
     effect(() => {
+      const parametrizedActionActive =
+        parametrizedActionPrivateProperties.activeSignal.value;
+      activeSignal.value = parametrizedActionActive;
+
       const parametrizedActionLoadingState =
         parametrizedActionPrivateProperties.loadingStateSignal.value;
       loadingStateSignal.value = parametrizedActionLoadingState;
@@ -357,6 +414,15 @@ export const createAction = (
     parametrizedActionsWeakRefs.add(weakRef);
     return parametrizedAction;
   };
+  const preload = () => {
+    return requestActionsUpdates({
+      preloadSet: new Set([action]),
+    });
+  };
+  const requestLoad = (options) => {
+    // request load is a way to load an action only if it is not already loading/loaded
+    return load({ isReload: false, ...options });
+  };
   const load = isTemplate
     ? () => {
         throw new Error(
@@ -366,8 +432,11 @@ export const createAction = (
     : (options) =>
         requestActionsUpdates({
           loadSet: new Set([action]),
+          isReload: true,
           ...options,
         });
+  // reload is useless because it's the way load works right?
+  const reload = load;
 
   const unload = isTemplate
     ? () => {
@@ -384,7 +453,11 @@ export const createAction = (
     loadingState,
     error,
     data,
+    preloadRequested: false,
+    preload,
+    requestLoad,
     load,
+    reload,
     unload,
     withParams,
     toString: () => name,
@@ -427,7 +500,7 @@ export const createAction = (
       renderLoadedAsync,
     };
     let sideEffectCleanup;
-    const performLoad = ({ signal, reason }) => {
+    const performLoad = ({ signal, reason, isPreload }) => {
       const abortController = new AbortController();
       const abortSignal = abortController.signal;
       const abort = (reason) => {
@@ -447,6 +520,9 @@ export const createAction = (
       batch(() => {
         errorSignal.value = null;
         loadingStateSignal.value = LOADING;
+        if (!isPreload) {
+          activeSignal.value = true;
+        }
       });
 
       const returnValue = sideEffect(params);
@@ -475,9 +551,10 @@ export const createAction = (
         });
       };
 
+      const loadParams = { signal, reason, isPreload };
       try {
         const thenableArray = [];
-        const callbackResult = callback(params, { signal, reason });
+        const callbackResult = callback(params, loadParams);
         if (callbackResult && typeof callbackResult.then === "function") {
           thenableArray.push(callbackResult);
           callbackResult.then((value) => {
@@ -488,10 +565,10 @@ export const createAction = (
         }
         const renderLoadedAsync = ui.renderLoadedAsync;
         if (renderLoadedAsync) {
-          const renderLoadedPromise = renderLoadedAsync(params, {
-            signal,
-            reason,
-          }).then((renderLoaded) => {
+          const renderLoadedPromise = renderLoadedAsync(
+            params,
+            loadParams,
+          ).then((renderLoaded) => {
             ui.renderLoaded = () => renderLoaded;
           });
           thenableArray.push(renderLoadedPromise);
@@ -533,6 +610,7 @@ export const createAction = (
         if (!keepOldData) {
           dataSignal.value = initialData;
         }
+        activeSignal.value = false;
         loadingStateSignal.value = IDLE;
       });
     };
