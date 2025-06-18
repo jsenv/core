@@ -27,6 +27,12 @@ export const getOptionsForActionConnectedToLocalStorageString = (
   actionParamName = key,
   { defaultValue = "" } = {},
 ) => {
+  // hummmmmm
+  // j'ai le sentiment qu'ici c'est différent en fait
+  // on a une action qui correspond a un param dans le local storage
+  // donc en gros c'est quand on instantie le template
+  // si le user dans le local storage match avec les params de l'instance
+  // alors on start l'action (on fetch le user)
   return {
     match: () => {
       const value = localStorage.getItem(key);

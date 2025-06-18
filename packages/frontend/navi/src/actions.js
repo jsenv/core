@@ -94,6 +94,13 @@ const getAliveRegisteredActionSet = () => {
   return aliveSet;
 };
 const registeredActionWeakSet = new WeakSet();
+let idleCallbackId;
+const onActionRegistered = () => {
+  cancelIdleCallback(idleCallbackId);
+  idleCallbackId = requestIdleCallback(() => {
+    updateActions();
+  });
+};
 export const registerAction = (action) => {
   if (isRegistered(action)) {
     return;
@@ -101,29 +108,10 @@ export const registerAction = (action) => {
   const weakRef = new WeakRef(action);
   actionWeakRefSet.add(weakRef);
   registeredActionWeakSet.set(action, true);
+  onActionRegistered();
 };
 export const isRegistered = (action) => {
   return registeredActionWeakSet.has(action);
-};
-
-let idleCallbackId;
-const onActionConnected = () => {
-  cancelIdleCallback(idleCallbackId);
-  idleCallbackId = requestIdleCallback(() => {
-    updateActions();
-  });
-};
-
-export const connectAction = (
-  action,
-  { getParams, activationEffect, deactivationEffect },
-) => {
-  action.connectorSet.add({
-    getParams,
-    activationEffect,
-    deactivationEffect,
-  });
-  onActionConnected();
 };
 
 export const updateActions = ({
@@ -163,19 +151,23 @@ export const updateActions = ({
   }
 
   for (const actionCandidate of candidateSet) {
-    const matchParams = actionCandidate.getMatchResult();
-    if (!matchParams) {
+    const matchResult = actionCandidate.match();
+    if (!matchResult) {
+      if (matchingActionSet.has(actionCandidate)) {
+        toDeactivateSet.add(actionCandidate);
+      }
       continue;
     }
+    const matchParams =
+      typeof matchResult === "object" && matchResult !== null
+        ? matchResult
+        : {};
     const enterParams = {
       signal,
       matchParams,
     };
     const startsMatching = !matchingActionSet.has(actionCandidate);
     if (startsMatching) {
-      toActivateMap.set(actionCandidate, enterParams);
-    } else if (actionCandidate.shouldReload({ matchParams })) {
-      toDeactivateSet.add(actionCandidate);
       toActivateMap.set(actionCandidate, enterParams);
     } else {
       const hasError = actionCandidate.error;
@@ -196,16 +188,6 @@ export const updateActions = ({
         }
       }
     }
-  }
-  for (const matchingAction of matchingActionSet) {
-    if (
-      alreadyActivatingSet.has(matchingAction) ||
-      alreadyActivatedSet.has(matchingAction) ||
-      toActivateMap.has(matchingAction)
-    ) {
-      continue;
-    }
-    toDeactivateSet.add(matchingAction);
   }
 
   if (
@@ -228,11 +210,11 @@ export const updateActions = ({
 - already activated: ${alreadyActivatedSet.size === 0 ? "none" : Array.from(alreadyActivatedSet).join(", ")}`);
   }
   for (const actionToDeactivate of toDeactivateSet) {
-    deactivate(actionToDeactivate, reason);
+    actionToDeactivate.deactivate(reason);
   }
 
   for (const [action, actionParams] of toActivateMap) {
-    const actionPromise = activate(action, actionParams);
+    const actionPromise = action.activate(actionParams);
     if (
       // sync actions are already done, no need to wait for activate promise
       action.activationStateSignal.peek() === ACTIVATING
@@ -264,105 +246,15 @@ export const updateMatchingActionParams = async (action, params) => {
   action.activationEffect(params);
 };
 
-const activate = (action, { signal, matchParams }) => {
-  const abortController = new AbortController();
-  const abortSignal = abortController.signal;
-  const abort = (reason) => {
-    if (debug) {
-      console.log(`"${action}": abort activation.`);
-    }
-    action.activationStateSignal.value = ABORTED;
-    abortController.abort(reason);
-    actionAbortMap.delete(action);
-  };
-  const onabort = () => {
-    abort(signal.reason);
-  };
-  signal.addEventListener("abort", onabort);
-  actionAbortMap.set(action, abort);
-
-  batch(() => {
-    action.isMatchingSignal.value = true;
-    action.paramsSignal.value = matchParams;
-    action.errorSignal.value = null;
-    action.activationStateSignal.value = ACTIVATING;
-  });
-  action.activationEffect(matchParams);
-  matchingActionRegistry.add(action);
-
-  let loadResult;
-  const onLoadEnd = () => {
-    action.dataSignal.value = loadResult;
-    action.activationStateSignal.value = ACTIVATED;
-    actionAbortMap.delete(action);
-    actionPromiseMap.delete(action);
-  };
-  const onLoadError = (e) => {
-    signal.removeEventListener("abort", onabort);
-    actionAbortMap.delete(action);
-    actionPromiseMap.delete(action);
-    if (abortSignal.aborted && e === abortSignal.reason) {
-      action.activationStateSignal.value = ABORTED;
-      return;
-    }
-    batch(() => {
-      action.reportError(e);
-      action.activationStateSignal.value = FAILED;
-    });
-  };
-
-  try {
-    loadResult = action.load({ signal: abortSignal });
-    if (loadResult && typeof loadResult.then === "function") {
-      return loadResult.then(
-        (value) => {
-          loadResult = value;
-          onLoadEnd();
-        },
-        (e) => {
-          onLoadError(e);
-        },
-      );
-    }
-    onLoadEnd();
-  } catch (e) {
-    onLoadError(e);
-  }
-  return undefined;
-};
-
-const deactivate = (action, reason) => {
-  const abort = actionAbortMap.get(action);
-  if (abort) {
-    if (debug) {
-      console.log(`"${action}": aborting (reason: ${reason})`);
-    }
-    abort(reason);
-  } else if (debug) {
-    console.log(`"${action}": deactivating route (reason: ${reason})`);
-  }
-  action.deactivationEffect(reason);
-  matchingActionRegistry.delete(action);
-  actionPromiseMap.delete(action);
-  batch(() => {
-    action.isMatchingSignal.value = false;
-    action.paramsSignal.value = action.initialParams;
-    action.errorSignal.value = null;
-    action.activationStateSignal.value = IDLE;
-  });
-};
-
 const initialParamsDefault = {};
 export const createAction = (
   callback,
   {
     name = callback.name || "anonymous",
-    initialParams = initialParamsDefault,
-    initialData,
+    params: initialParams = initialParamsDefault,
+    data: initialData,
     renderLoadedAsync,
-    match = () => false,
-    activationEffect = () => {},
-    deactivationEffect = () => {},
+    sideEffect = () => {},
   } = {},
 ) => {
   const isMatchingSignal = signal(false);
@@ -378,36 +270,13 @@ export const createAction = (
 
   let params = initialParams;
   const paramsSignal = signal(initialParams);
-
-  let initialMatchResult = match();
-  let matchResult = initialMatchResult;
-  const start = (params = initialParams) => {
-    // this can't bypass automatch, but in case action does not already matches
-    // it will start with provided params (preloading or just programmatic control over the action)
-    matchResult = params;
-    return updateActions({
-      candidateSet: new Set([action]),
-    });
-  };
-  const stop = () => {
-    matchResult = initialMatchResult;
-    // TODO: here even if auto match is true, we would like to stop the action
-    return updateActions({
-      candidateSet: new Set([action]),
-    });
-  };
-
-  const shouldReload = ({ matchParams }) => {
-    if (compareTwoJsValues(matchParams, params)) {
-      return false;
-    }
-    return true;
-  };
-
   const parametrizedActions = new Map();
   const parametrizedActionsWeakRefs = new Set();
   const withParams = (newParams, options = {}) => {
-    const combinedParams = { ...initialParams, ...newParams };
+    const combinedParams =
+      initialParams === initialParamsDefault
+        ? newParams
+        : { ...initialParams, ...newParams };
     for (const weakRef of parametrizedActionsWeakRefs) {
       if (!weakRef.deref()) {
         parametrizedActionsWeakRefs.delete(weakRef);
@@ -429,6 +298,7 @@ export const createAction = (
     const parametrizedAction = createAction(callback, {
       name: `${action.name}${generateParamsSuffix(combinedParams)}`,
       initialParams: combinedParams,
+      sideEffect,
       ...options,
     });
     const weakRef = new WeakRef(parametrizedAction);
@@ -437,19 +307,119 @@ export const createAction = (
     return parametrizedAction;
   };
 
+  const start = () => {
+    return updateActions({
+      candidateSet: new Set([action]),
+    });
+  };
+  const stop = () => {
+    return updateActions({
+      candidateSet: new Set([action]),
+    });
+  };
+  let sideEffectCleanup;
+  const activate = ({ signal, matchParams }) => {
+    const abortController = new AbortController();
+    const abortSignal = abortController.signal;
+    const abort = (reason) => {
+      if (debug) {
+        console.log(`"${action}": abort activation.`);
+      }
+      action.activationStateSignal.value = ABORTED;
+      abortController.abort(reason);
+      actionAbortMap.delete(action);
+    };
+    const onabort = () => {
+      abort(signal.reason);
+    };
+    signal.addEventListener("abort", onabort);
+    actionAbortMap.set(action, abort);
+
+    batch(() => {
+      action.isMatchingSignal.value = true;
+      action.paramsSignal.value = matchParams;
+      action.errorSignal.value = null;
+      action.activationStateSignal.value = ACTIVATING;
+    });
+    matchingActionRegistry.add(action);
+
+    const returnValue = sideEffect();
+    if (typeof returnValue === "function") {
+      sideEffectCleanup = returnValue;
+    }
+
+    let loadResult;
+    const onLoadEnd = () => {
+      action.dataSignal.value = loadResult;
+      action.activationStateSignal.value = ACTIVATED;
+      actionAbortMap.delete(action);
+      actionPromiseMap.delete(action);
+    };
+    const onLoadError = (e) => {
+      signal.removeEventListener("abort", onabort);
+      actionAbortMap.delete(action);
+      actionPromiseMap.delete(action);
+      if (abortSignal.aborted && e === abortSignal.reason) {
+        action.activationStateSignal.value = ABORTED;
+        return;
+      }
+      batch(() => {
+        action.reportError(e);
+        action.activationStateSignal.value = FAILED;
+      });
+    };
+
+    try {
+      loadResult = action.load({ signal: abortSignal });
+      if (loadResult && typeof loadResult.then === "function") {
+        return loadResult.then(
+          (value) => {
+            loadResult = value;
+            onLoadEnd();
+          },
+          (e) => {
+            onLoadError(e);
+          },
+        );
+      }
+      onLoadEnd();
+    } catch (e) {
+      onLoadError(e);
+    }
+    return undefined;
+  };
+  const deactivate = (reason) => {
+    const abort = actionAbortMap.get(action);
+    if (abort) {
+      if (debug) {
+        console.log(`"${action}": aborting (reason: ${reason})`);
+      }
+      abort(reason);
+    } else if (debug) {
+      console.log(`"${action}": deactivating route (reason: ${reason})`);
+    }
+    if (sideEffectCleanup) {
+      sideEffectCleanup(reason);
+      sideEffectCleanup = undefined;
+    }
+    matchingActionRegistry.delete(action);
+    actionPromiseMap.delete(action);
+    batch(() => {
+      action.isMatchingSignal.value = false;
+      action.paramsSignal.value = action.initialParams;
+      action.errorSignal.value = null;
+      action.activationStateSignal.value = IDLE;
+    });
+  };
+
   const action = {
     isMatchingSignal,
     initialParams,
     initialData,
     params,
     paramsSignal,
-    match,
-    getMatchResult: () => {
-      if (matchResult) {
-        return matchResult;
-      }
-      return match();
-    },
+    activate,
+    deactivate,
     load: ({ signal }) => {
       let result;
       const thenableArray = [];
@@ -495,9 +465,6 @@ export const createAction = (
     data,
     dataSignal,
 
-    activationEffect,
-    deactivationEffect,
-    shouldReload,
     toString: () => name,
     name,
     start,

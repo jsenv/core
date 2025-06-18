@@ -17,12 +17,7 @@
        */
 
       import { render } from "preact";
-      import {
-        useActionStatus,
-        getOptionsForActionConnectedToLocalStorageString,
-        resource,
-        getItemAction,
-      } from "@jsenv/navi";
+      import { useActionStatus, resource, getItemAction } from "@jsenv/navi";
 
       const user = resource("user", { idKey: "name" });
       const loadUsersAction = user.getAll(() => {
@@ -32,11 +27,22 @@
         ({ name }) => {
           return { name, greeting: `Hello ${name}` };
         },
-        getOptionsForActionConnectedToLocalStorageString(
-          "current_user_name",
-          "name",
-        ),
+        {
+          sideEffect: ({ name }) => {
+            localStorage.setItem("current_user_name", name);
+            return () => {
+              localStorage.removeItem("current_user_name");
+            };
+          },
+        },
       );
+      const currentUserName = localStorage.getItem("current_user_name");
+      if (currentUserName) {
+        const loadCurrentUserAction = loadUserAction.withParams({
+          name: currentUserName,
+        });
+        loadCurrentUserAction.start();
+      }
       loadUsersAction.start();
 
       // eslint-disable-next-line no-unused-vars
