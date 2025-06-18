@@ -114,6 +114,10 @@ export const isRegistered = (action) => {
   return registeredActionWeakSet.has(action);
 };
 
+const requestActionsUpdates = () => {
+  // intermediate representing the fact we'll use navigation.navigate to call update action later on
+};
+
 export const updateActions = ({
   signal,
   isReload,
@@ -210,14 +214,17 @@ export const updateActions = ({
 - already activated: ${alreadyActivatedSet.size === 0 ? "none" : Array.from(alreadyActivatedSet).join(", ")}`);
   }
   for (const actionToDeactivate of toDeactivateSet) {
-    actionToDeactivate.deactivate(reason);
+    const actionToDeactivatePrivateProperties =
+      getActionPrivateProperties(actionToDeactivate);
+    actionToDeactivatePrivateProperties.deactivate(reason);
   }
 
   for (const [action, actionParams] of toActivateMap) {
-    const actionPromise = action.activate(actionParams);
+    const actionPrivateProperties = getActionPrivateProperties(action);
+    const actionPromise = actionPrivateProperties.activate(actionParams);
     if (
       // sync actions are already done, no need to wait for activate promise
-      action.activationStateSignal.peek() === ACTIVATING
+      action.activationState === ACTIVATING
     ) {
       actionPromiseMap.set(action, actionPromise);
       thenableArray.push(actionPromise);
@@ -247,6 +254,14 @@ export const updateMatchingActionParams = async (action, params) => {
 };
 
 const initialParamsDefault = {};
+const actionPrivatePropertiesWeakMap = new WeakMap();
+const getActionPrivateProperties = (action) => {
+  const actionPrivateProperties = actionPrivatePropertiesWeakMap.get(action);
+  if (!actionPrivateProperties) {
+    throw new Error(`Cannot find action private properties for "${action}"`);
+  }
+  return actionPrivateProperties;
+};
 export const createAction = (
   callback,
   {
@@ -257,14 +272,10 @@ export const createAction = (
     sideEffect = () => {},
   } = {},
 ) => {
-  const isMatchingSignal = signal(false);
   let activationState = IDLE;
   const activationStateSignal = signal(activationState);
   let error;
   const errorSignal = signal(null);
-  const reportError = (e) => {
-    errorSignal.value = e;
-  };
   let data = initialData;
   const dataSignal = signal(initialData);
 
@@ -306,17 +317,30 @@ export const createAction = (
     parametrizedActionsWeakRefs.add(weakRef);
     return parametrizedAction;
   };
-
   const start = () => {
-    return updateActions({
-      candidateSet: new Set([action]),
+    return requestActionsUpdates({
+      toActivateSet: new Set([action]),
     });
   };
   const stop = () => {
-    return updateActions({
-      candidateSet: new Set([action]),
+    return requestActionsUpdates({
+      toDeactivateSet: new Set([action]),
     });
   };
+
+  const action = {
+    name,
+    params,
+    activationState,
+    error,
+    data,
+    start,
+    stop,
+    withParams,
+    toString: () => name,
+  };
+  Object.preventExtensions(action);
+
   let sideEffectCleanup;
   const activate = ({ signal, matchParams }) => {
     const abortController = new AbortController();
@@ -325,7 +349,7 @@ export const createAction = (
       if (debug) {
         console.log(`"${action}": abort activation.`);
       }
-      action.activationStateSignal.value = ABORTED;
+      activationStateSignal.value = ABORTED;
       abortController.abort(reason);
       actionAbortMap.delete(action);
     };
@@ -336,10 +360,9 @@ export const createAction = (
     actionAbortMap.set(action, abort);
 
     batch(() => {
-      action.isMatchingSignal.value = true;
-      action.paramsSignal.value = matchParams;
-      action.errorSignal.value = null;
-      action.activationStateSignal.value = ACTIVATING;
+      paramsSignal.value = matchParams;
+      errorSignal.value = null;
+      activationStateSignal.value = ACTIVATING;
     });
     matchingActionRegistry.add(action);
 
@@ -350,8 +373,8 @@ export const createAction = (
 
     let loadResult;
     const onLoadEnd = () => {
-      action.dataSignal.value = loadResult;
-      action.activationStateSignal.value = ACTIVATED;
+      dataSignal.value = loadResult;
+      activationStateSignal.value = ACTIVATED;
       actionAbortMap.delete(action);
       actionPromiseMap.delete(action);
     };
@@ -360,17 +383,17 @@ export const createAction = (
       actionAbortMap.delete(action);
       actionPromiseMap.delete(action);
       if (abortSignal.aborted && e === abortSignal.reason) {
-        action.activationStateSignal.value = ABORTED;
+        activationStateSignal.value = ABORTED;
         return;
       }
       batch(() => {
-        action.reportError(e);
-        action.activationStateSignal.value = FAILED;
+        errorSignal.value = e;
+        activationStateSignal.value = FAILED;
       });
     };
 
     try {
-      loadResult = action.load({ signal: abortSignal });
+      loadResult = load({ signal: abortSignal });
       if (loadResult && typeof loadResult.then === "function") {
         return loadResult.then(
           (value) => {
@@ -405,73 +428,60 @@ export const createAction = (
     matchingActionRegistry.delete(action);
     actionPromiseMap.delete(action);
     batch(() => {
-      action.isMatchingSignal.value = false;
-      action.paramsSignal.value = action.initialParams;
-      action.errorSignal.value = null;
-      action.activationStateSignal.value = IDLE;
+      paramsSignal.value = initialParams;
+      errorSignal.value = null;
+      activationStateSignal.value = IDLE;
     });
   };
+  const ui = {
+    renderLoaded: null,
+    renderLoadedAsync,
+  };
+  const loadUI = (...args) => {
+    const renderLoadedAsync = ui.renderLoadedAsync;
+    if (renderLoadedAsync) {
+      return renderLoadedAsync(...args).then((renderLoaded) => {
+        ui.renderLoaded = () => renderLoaded;
+      });
+    }
+    return null;
+  };
+  const load = ({ signal }) => {
+    let result;
+    const thenableArray = [];
+    const callbackResult = callback({ signal, ...params });
+    if (callbackResult && typeof callbackResult.then === "function") {
+      thenableArray.push(callbackResult);
+      callbackResult.then((value) => {
+        result = value;
+      });
+    } else {
+      result = callbackResult;
+    }
+    const uiLoadResult = loadUI({ signal, ...params });
+    if (uiLoadResult && typeof uiLoadResult.then === "function") {
+      thenableArray.push(uiLoadResult);
+    }
+    if (thenableArray.length === 0) {
+      return result;
+    }
+    return Promise.all(thenableArray).then(() => result);
+  };
 
-  const action = {
-    isMatchingSignal,
+  const actionPrivateProperties = {
     initialParams,
     initialData,
-    params,
     paramsSignal,
+
+    dataSignal,
+    errorSignal,
+    activationStateSignal,
+
     activate,
     deactivate,
-    load: ({ signal }) => {
-      let result;
-      const thenableArray = [];
-      const callbackResult = callback({ signal, ...params });
-      if (callbackResult && typeof callbackResult.then === "function") {
-        thenableArray.push(callbackResult);
-        callbackResult.then((value) => {
-          result = value;
-        });
-      } else {
-        result = callbackResult;
-      }
-      if (action.ui.load) {
-        const uiLoadResult = action.ui.load({ signal, ...params });
-        if (uiLoadResult && typeof uiLoadResult.then === "function") {
-          thenableArray.push(uiLoadResult);
-        }
-      }
-      if (thenableArray.length === 0) {
-        return result;
-      }
-      return Promise.all(thenableArray).then(() => result);
-    },
-    ui: {
-      renderLoaded: null,
-      renderLoadedAsync,
-      load: (...args) => {
-        const renderLoadedAsync = action.ui.renderLoadedAsync;
-        if (renderLoadedAsync) {
-          return renderLoadedAsync(...args).then((renderLoaded) => {
-            action.ui.renderLoaded = () => renderLoaded;
-          });
-        }
-        return null;
-      },
-    },
-
-    activationState,
-    activationStateSignal,
-    error,
-    errorSignal,
-    reportError,
-    data,
-    dataSignal,
-
-    toString: () => name,
-    name,
-    start,
-    stop,
-    withParams,
+    ui,
   };
-  Object.preventExtensions(action);
+  actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
 
   const actionWeakRef = new WeakRef(action);
   const actionWeakEffect = (callback) => {
@@ -517,13 +527,21 @@ const generateParamsSuffix = (params) => {
 };
 
 export const useActionStatus = (action) => {
-  const isMatching = action.isMatchingSignal.value;
-  const params = action.paramsSignal.value;
-  const error = action.errorSignal.value;
-  const activationState = action.activationState.value;
+  const {
+    isMatchingSignal,
+    paramsSignal,
+    errorSignal,
+    activationStateSignal,
+    dataSignal,
+  } = getActionPrivateProperties(action);
+
+  const isMatching = isMatchingSignal.value;
+  const params = paramsSignal.value;
+  const error = errorSignal.value;
+  const activationState = activationStateSignal.value;
   const pending = activationState === ACTIVATING;
   const aborted = activationState === ABORTED;
-  const data = action.dataSignal.value;
+  const data = dataSignal.value;
   return {
     matching: isMatching,
     params,
