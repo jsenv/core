@@ -9,22 +9,31 @@ export const ABORTED = { id: "aborted" };
 export const FAILED = { id: "failed" };
 export const ACTIVATED = { id: "activated" };
 
-const requestActionsUpdates = ({ toDeactivateSet, toActivateSet }) => {
+// intermediate function representing the fact we'll use navigation.navigate update action and get a signal
+export const requestActionsUpdates = ({
+  toActivateSet,
+  toDeactivateSet,
+  isReload,
+  reason,
+}) => {
   const signal = new AbortController().signal;
-  // intermediate representing the fact we'll use navigation.navigate to call update action later on
   return updateActions({
     signal,
     toActivateSet,
     toDeactivateSet,
+    isReload,
+    reason,
   });
 };
 export const reloadActions = async (actionSet, { reason } = {}) => {
-  requestActionsUpdates({
+  return requestActionsUpdates({
     toActivateSet: actionSet,
     reason,
     isReload: true,
   });
 };
+// export const reloadPendingActions
+// export const abortPendingActions
 
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
@@ -160,7 +169,7 @@ export const updateActions = ({
     }
   }
   for (const actionToDeactivate of toDeactivateSet) {
-    if (actionToDeactivate.activationState === IDLE) {
+    if (actionToDeactivate.activationState !== IDLE) {
       actualToDeactivateSet.add(actionToDeactivate);
     }
   }
@@ -254,6 +263,7 @@ export const createAction = (
     renderLoadedAsync,
     sideEffect = () => {},
     isTemplate = false,
+    keepOldData = false,
   },
 ) => {
   let activationState = IDLE;
@@ -271,6 +281,19 @@ export const createAction = (
   const paramsSignal = signal(initialParams);
   const parametrizedActions = new Map();
   const parametrizedActionsWeakRefs = new Set();
+  const getAliveParametrizedActionSet = () => {
+    const aliveParametrizedActionSet = new Set();
+    for (const weakRef of parametrizedActionsWeakRefs) {
+      const parametrizedAction = weakRef.deref();
+      if (parametrizedAction) {
+        aliveParametrizedActionSet.add(parametrizedAction);
+      } else {
+        parametrizedActionsWeakRefs.delete(weakRef);
+      }
+    }
+    return aliveParametrizedActionSet;
+  };
+
   const withParams = (newParams, options = {}) => {
     const combinedParams =
       initialParams === initialParamsDefault
@@ -278,11 +301,6 @@ export const createAction = (
         : typeof initialParams === "object" && initialParams !== null
           ? { ...initialParams, ...newParams }
           : newParams;
-    for (const weakRef of parametrizedActionsWeakRefs) {
-      if (!weakRef.deref()) {
-        parametrizedActionsWeakRefs.delete(weakRef);
-      }
-    }
     for (const [existingParams, weakRef] of parametrizedActions) {
       const existingAction = weakRef.deref();
       if (
@@ -303,6 +321,14 @@ export const createAction = (
       parent: action,
       ...options,
     });
+    parametrizedAction.start = (options) => {
+      const aliveParametrizedActionSet = getAliveParametrizedActionSet();
+      return requestActionsUpdates({
+        toDeactivateSet: aliveParametrizedActionSet,
+        toActivateSet: new Set([action]),
+        ...options,
+      });
+    };
 
     const parametrizedActionPrivateProperties =
       getActionPrivateProperties(parametrizedAction);
@@ -336,9 +362,10 @@ export const createAction = (
           `Cannot start action template "${name}", use withParams() to set parameters first.`,
         );
       }
-    : () =>
+    : (options) =>
         requestActionsUpdates({
           toActivateSet: new Set([action]),
+          ...options,
         });
 
   const stop = isTemplate
@@ -479,6 +506,9 @@ export const createAction = (
       actionPromiseMap.delete(action);
       batch(() => {
         errorSignal.value = null;
+        if (!keepOldData) {
+          dataSignal.value = initialData;
+        }
         activationStateSignal.value = IDLE;
       });
     };
