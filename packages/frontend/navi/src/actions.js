@@ -165,15 +165,10 @@ export const updateActions = ({
   if (debug) {
     console.groupEnd();
   }
-
   if (thenableArray.length) {
     return Promise.all(thenableArray);
   }
   return null;
-};
-export const updateMatchingActionParams = async (action, params) => {
-  action.paramsSignal.value = params;
-  action.activationEffect(params);
 };
 
 const initialParamsDefault = {};
@@ -264,171 +259,174 @@ export const createAction = (
   };
   Object.preventExtensions(action);
 
-  let sideEffectCleanup;
-  const activate = ({ signal }) => {
-    const abortController = new AbortController();
-    const abortSignal = abortController.signal;
-    const abort = (reason) => {
-      if (debug) {
-        console.log(`"${action}": abort activation.`);
-      }
-      activationStateSignal.value = ABORTED;
-      abortController.abort(reason);
-      actionAbortMap.delete(action);
+  effects: {
+    const actionWeakRef = new WeakRef(action);
+    const actionWeakEffect = (callback) => {
+      const dispose = effect(() => {
+        const actionRef = actionWeakRef.deref();
+        if (actionRef) {
+          callback(actionRef);
+        } else {
+          dispose();
+        }
+      });
     };
-    const onabort = () => {
-      abort(signal.reason);
-    };
-    signal.addEventListener("abort", onabort);
-    actionAbortMap.set(action, abort);
-
-    batch(() => {
-      errorSignal.value = null;
-      activationStateSignal.value = ACTIVATING;
+    actionWeakEffect((actionRef) => {
+      params = paramsSignal.value;
+      actionRef.params = params;
     });
+    actionWeakEffect((actionRef) => {
+      activationState = activationStateSignal.value;
+      actionRef.activationState = activationState;
+    });
+    actionWeakEffect((actionRef) => {
+      error = errorSignal.value;
+      actionRef.error = error;
+    });
+    actionWeakEffect((actionRef) => {
+      data = dataSignal.value;
+      actionRef.data = data;
+    });
+  }
 
-    const returnValue = sideEffect();
-    if (typeof returnValue === "function") {
-      sideEffectCleanup = returnValue;
-    }
-
-    let loadResult;
-    const onLoadEnd = () => {
-      dataSignal.value = loadResult;
-      activationStateSignal.value = ACTIVATED;
-      actionAbortMap.delete(action);
-      actionPromiseMap.delete(action);
-    };
-    const onLoadError = (e) => {
-      signal.removeEventListener("abort", onabort);
-      actionAbortMap.delete(action);
-      actionPromiseMap.delete(action);
-      if (abortSignal.aborted && e === abortSignal.reason) {
+  private_properties: {
+    let sideEffectCleanup;
+    const activate = ({ signal }) => {
+      const abortController = new AbortController();
+      const abortSignal = abortController.signal;
+      const abort = (reason) => {
+        if (debug) {
+          console.log(`"${action}": abort activation.`);
+        }
         activationStateSignal.value = ABORTED;
-        return;
-      }
+        abortController.abort(reason);
+        actionAbortMap.delete(action);
+      };
+      const onabort = () => {
+        abort(signal.reason);
+      };
+      signal.addEventListener("abort", onabort);
+      actionAbortMap.set(action, abort);
+
       batch(() => {
-        errorSignal.value = e;
-        activationStateSignal.value = FAILED;
+        errorSignal.value = null;
+        activationStateSignal.value = ACTIVATING;
+      });
+
+      const returnValue = sideEffect();
+      if (typeof returnValue === "function") {
+        sideEffectCleanup = returnValue;
+      }
+
+      let loadResult;
+      const onLoadEnd = () => {
+        dataSignal.value = loadResult;
+        activationStateSignal.value = ACTIVATED;
+        actionAbortMap.delete(action);
+        actionPromiseMap.delete(action);
+      };
+      const onLoadError = (e) => {
+        signal.removeEventListener("abort", onabort);
+        actionAbortMap.delete(action);
+        actionPromiseMap.delete(action);
+        if (abortSignal.aborted && e === abortSignal.reason) {
+          activationStateSignal.value = ABORTED;
+          return;
+        }
+        batch(() => {
+          errorSignal.value = e;
+          activationStateSignal.value = FAILED;
+        });
+      };
+
+      try {
+        loadResult = load({ signal: abortSignal });
+        if (loadResult && typeof loadResult.then === "function") {
+          return loadResult.then(
+            (value) => {
+              loadResult = value;
+              onLoadEnd();
+            },
+            (e) => {
+              onLoadError(e);
+            },
+          );
+        }
+        onLoadEnd();
+      } catch (e) {
+        onLoadError(e);
+      }
+      return undefined;
+    };
+    const deactivate = (reason) => {
+      const abort = actionAbortMap.get(action);
+      if (abort) {
+        if (debug) {
+          console.log(`"${action}": aborting (reason: ${reason})`);
+        }
+        abort(reason);
+      } else if (debug) {
+        console.log(`"${action}": deactivating route (reason: ${reason})`);
+      }
+      if (sideEffectCleanup) {
+        sideEffectCleanup(reason);
+        sideEffectCleanup = undefined;
+      }
+      actionPromiseMap.delete(action);
+      batch(() => {
+        errorSignal.value = null;
+        activationStateSignal.value = IDLE;
       });
     };
-
-    try {
-      loadResult = load({ signal: abortSignal });
-      if (loadResult && typeof loadResult.then === "function") {
-        return loadResult.then(
-          (value) => {
-            loadResult = value;
-            onLoadEnd();
-          },
-          (e) => {
-            onLoadError(e);
-          },
-        );
+    const ui = {
+      renderLoaded: null,
+      renderLoadedAsync,
+    };
+    const loadUI = (...args) => {
+      const renderLoadedAsync = ui.renderLoadedAsync;
+      if (renderLoadedAsync) {
+        return renderLoadedAsync(...args).then((renderLoaded) => {
+          ui.renderLoaded = () => renderLoaded;
+        });
       }
-      onLoadEnd();
-    } catch (e) {
-      onLoadError(e);
-    }
-    return undefined;
-  };
-  const deactivate = (reason) => {
-    const abort = actionAbortMap.get(action);
-    if (abort) {
-      if (debug) {
-        console.log(`"${action}": aborting (reason: ${reason})`);
-      }
-      abort(reason);
-    } else if (debug) {
-      console.log(`"${action}": deactivating route (reason: ${reason})`);
-    }
-    if (sideEffectCleanup) {
-      sideEffectCleanup(reason);
-      sideEffectCleanup = undefined;
-    }
-    actionPromiseMap.delete(action);
-    batch(() => {
-      errorSignal.value = null;
-      activationStateSignal.value = IDLE;
-    });
-  };
-  const ui = {
-    renderLoaded: null,
-    renderLoadedAsync,
-  };
-  const loadUI = (...args) => {
-    const renderLoadedAsync = ui.renderLoadedAsync;
-    if (renderLoadedAsync) {
-      return renderLoadedAsync(...args).then((renderLoaded) => {
-        ui.renderLoaded = () => renderLoaded;
-      });
-    }
-    return null;
-  };
-  const load = ({ signal }) => {
-    let result;
-    const thenableArray = [];
-    const callbackResult = callback({ signal, ...params });
-    if (callbackResult && typeof callbackResult.then === "function") {
-      thenableArray.push(callbackResult);
-      callbackResult.then((value) => {
-        result = value;
-      });
-    } else {
-      result = callbackResult;
-    }
-    const uiLoadResult = loadUI({ signal, ...params });
-    if (uiLoadResult && typeof uiLoadResult.then === "function") {
-      thenableArray.push(uiLoadResult);
-    }
-    if (thenableArray.length === 0) {
-      return result;
-    }
-    return Promise.all(thenableArray).then(() => result);
-  };
-
-  const actionPrivateProperties = {
-    initialParams,
-    initialData,
-    paramsSignal,
-
-    dataSignal,
-    errorSignal,
-    activationStateSignal,
-
-    activate,
-    deactivate,
-    ui,
-  };
-  actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
-
-  const actionWeakRef = new WeakRef(action);
-  const actionWeakEffect = (callback) => {
-    const dispose = effect(() => {
-      const actionRef = actionWeakRef.deref();
-      if (actionRef) {
-        callback(actionRef);
+      return null;
+    };
+    const load = ({ signal }) => {
+      let result;
+      const thenableArray = [];
+      const callbackResult = callback({ signal, ...params });
+      if (callbackResult && typeof callbackResult.then === "function") {
+        thenableArray.push(callbackResult);
+        callbackResult.then((value) => {
+          result = value;
+        });
       } else {
-        dispose();
+        result = callbackResult;
       }
-    });
-  };
-  actionWeakEffect((actionRef) => {
-    params = paramsSignal.value;
-    actionRef.params = params;
-  });
-  actionWeakEffect((actionRef) => {
-    activationState = activationStateSignal.value;
-    actionRef.activationState = activationState;
-  });
-  actionWeakEffect((actionRef) => {
-    error = errorSignal.value;
-    actionRef.error = error;
-  });
-  actionWeakEffect((actionRef) => {
-    data = dataSignal.value;
-    actionRef.data = data;
-  });
+      const uiLoadResult = loadUI({ signal, ...params });
+      if (uiLoadResult && typeof uiLoadResult.then === "function") {
+        thenableArray.push(uiLoadResult);
+      }
+      if (thenableArray.length === 0) {
+        return result;
+      }
+      return Promise.all(thenableArray).then(() => result);
+    };
+    const actionPrivateProperties = {
+      initialParams,
+      initialData,
+      paramsSignal,
+
+      dataSignal,
+      errorSignal,
+      activationStateSignal,
+
+      activate,
+      deactivate,
+      ui,
+    };
+    actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
+  }
 
   return action;
 };
@@ -446,15 +444,9 @@ const generateParamsSuffix = (params) => {
 };
 
 export const useActionStatus = (action) => {
-  const {
-    isMatchingSignal,
-    paramsSignal,
-    errorSignal,
-    activationStateSignal,
-    dataSignal,
-  } = getActionPrivateProperties(action);
+  const { paramsSignal, errorSignal, activationStateSignal, dataSignal } =
+    getActionPrivateProperties(action);
 
-  const isMatching = isMatchingSignal.value;
   const params = paramsSignal.value;
   const error = errorSignal.value;
   const activationState = activationStateSignal.value;
@@ -462,7 +454,6 @@ export const useActionStatus = (action) => {
   const aborted = activationState === ABORTED;
   const data = dataSignal.value;
   return {
-    matching: isMatching,
     params,
     error,
     aborted,
