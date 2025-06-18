@@ -231,7 +231,15 @@ export const createAction = (
     const parametrizedAction = createAction(callback, {
       name: `${action.name}${generateParamsSuffix(combinedParams)}`,
       params: combinedParams,
-      sideEffect,
+      sideEffect: (params) => {
+        let returnValue = sideEffect(params);
+        paramsSignal.value = params;
+        return (...args) => {
+          paramsSignal.value = initialParams;
+          returnValue(...args);
+        };
+      },
+      parent: action,
       ...options,
     });
     const weakRef = new WeakRef(parametrizedAction);
