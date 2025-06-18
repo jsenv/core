@@ -4,30 +4,30 @@ import { compareTwoJsValues } from "./compare_two_js_values.js";
 let debug = true;
 
 export const IDLE = { id: "idle" };
-export const ACTIVATING = { id: "activating" };
+export const LOADING = { id: "loading" };
 export const ABORTED = { id: "aborted" };
 export const FAILED = { id: "failed" };
-export const ACTIVATED = { id: "activated" };
+export const LOADED = { id: "loaded" };
 
 // intermediate function representing the fact we'll use navigation.navigate update action and get a signal
 export const requestActionsUpdates = ({
-  toActivateSet,
-  toDeactivateSet,
+  loadSet,
+  unloadSet,
   isReload,
   reason,
 }) => {
   const signal = new AbortController().signal;
   return updateActions({
     signal,
-    toActivateSet,
-    toDeactivateSet,
+    loadSet,
+    unloadSet,
     isReload,
     reason,
   });
 };
 export const reloadActions = async (actionSet, { reason } = {}) => {
   return requestActionsUpdates({
-    toActivateSet: actionSet,
+    loadSet: actionSet,
     reason,
     isReload: true,
   });
@@ -77,19 +77,19 @@ const activationRegistry = (() => {
     },
 
     getInfo() {
-      const activatingSet = new Set();
-      const activatedSet = new Set();
+      const loadingSet = new Set();
+      const loadedSet = new Set();
 
       for (const [id, weakRef] of idToActionMap) {
         const action = weakRef.deref();
         if (action) {
-          if (action.activationState === ACTIVATING) {
-            activatingSet.add(action);
-          } else if (action.activationState === ACTIVATED) {
-            activatedSet.add(action);
+          if (action.loadingState === LOADING) {
+            loadingSet.add(action);
+          } else if (action.loadingState === LOADED) {
+            loadedSet.add(action);
           } else {
             throw new Error(
-              `An action in the activation registry should be ACTIVATING or ACTIVATED, but got "${action.activationState.id}" for action "${action.name}"`,
+              `An action in the activation registry should be LOADING or LOADED, but got "${action.loadingState.id}" for action "${action.name}"`,
             );
           }
         } else {
@@ -97,8 +97,8 @@ const activationRegistry = (() => {
         }
       }
       return {
-        activatingSet,
-        activatedSet,
+        loadingSet,
+        loadedSet,
       };
     },
 
@@ -113,24 +113,24 @@ export const updateActions = ({
   isReload = false,
   isReplace = false,
   reason,
-  toActivateSet = new Set(),
-  toDeactivateSet = new Set(),
+  loadSet = new Set(),
+  unloadSet = new Set(),
 } = {}) => {
   if (!signal) {
     const abortController = new AbortController();
     signal = abortController.signal;
   }
 
-  const { activatingSet, activatedSet } = activationRegistry.getInfo();
+  const { loadingSet, loadedSet } = activationRegistry.getInfo();
 
   if (debug) {
     console.group(`updateActions()`);
     const lines = [
-      ...(toActivateSet.size
-        ? [`- to activate: ${Array.from(toActivateSet).join(", ")}`]
+      ...(loadSet.size
+        ? [`- load requested: ${Array.from(loadSet).join(", ")}`]
         : []),
-      ...(toDeactivateSet.size
-        ? [`- to deactivate: ${Array.from(toDeactivateSet).join(", ")}`]
+      ...(unloadSet.size
+        ? [`- unload requested: ${Array.from(unloadSet).join(", ")}`]
         : []),
     ];
     console.debug(
@@ -139,101 +139,99 @@ export const updateActions = ({
     );
   }
 
-  const actualToDeactivateSet = new Set();
-  const actualToActivateSet = new Set();
-  const staysActivatingSet = new Set();
-  const staysActivatedSet = new Set();
+  const toUnloadSet = new Set();
+  const toLoadSet = new Set();
+  const staysLoadingSet = new Set();
+  const staysLoadedSet = new Set();
 
-  for (const actionToActivate of toActivateSet) {
+  for (const actionToLoad of toLoadSet) {
     if (
-      activatingSet.has(actionToActivate) ||
-      activatedSet.has(actionToActivate)
+      actionToLoad.loadingState === LOADING ||
+      actionToLoad.loadingState === LOADED
     ) {
       // by default when an action is already activating/activated
       // requesting an activation does nothing.
       // this way
-      // - clicking a link already activate in the UI does nothing
+      // - clicking a link already active in the UI does nothing
       // - requesting to load an action already pending does not abort + reload it
       // in order to re-activate the same action
       // code has to
       // - first deactivate it
       // - or request deactivationg + activation at the same time
       // - or use isReload: true when requesting the activation of this action
-      if (isReload || toDeactivateSet.has(actionToActivate)) {
-        actualToDeactivateSet.add(actionToActivate);
-        actualToActivateSet.add(actionToActivate);
+      if (isReload || toUnloadSet.has(actionToLoad)) {
+        toUnloadSet.add(actionToLoad);
+        toLoadSet.add(actionToLoad);
       } else {
       }
     } else {
-      actualToActivateSet.add(actionToActivate);
+      toLoadSet.add(actionToLoad);
     }
   }
-  for (const actionToDeactivate of toDeactivateSet) {
-    if (actionToDeactivate.activationState !== IDLE) {
-      actualToDeactivateSet.add(actionToDeactivate);
+  for (const actionToUnload of toUnloadSet) {
+    if (actionToUnload.loadingState !== IDLE) {
+      toUnloadSet.add(actionToUnload);
     }
   }
   const thenableArray = [];
-  for (const actionActivating of activatingSet) {
-    if (actualToDeactivateSet.has(actionActivating)) {
+  for (const actionLoading of loadingSet) {
+    if (toUnloadSet.has(actionLoading)) {
       // will be de-activated (aborted), we don't want to wait
-    } else if (actualToActivateSet.has(actionActivating)) {
+    } else if (toLoadSet.has(actionLoading)) {
       // will be activated, we'll wait for the new activate promise
     } else {
       // an action that was activating and not affected by this update
       // add it to the list of pending things
-      const actionPromise = actionPromiseMap.get(actionActivating);
+      const actionPromise = actionPromiseMap.get(actionLoading);
       thenableArray.push(actionPromise);
-      staysActivatingSet.add(actionActivating);
+      staysLoadingSet.add(actionLoading);
     }
   }
-  for (const actionActivated of activatedSet) {
-    if (actualToDeactivateSet.has(actionActivated)) {
+  for (const actionLoaded of loadedSet) {
+    if (toUnloadSet.has(actionLoaded)) {
       // will be de-activated
     } else {
-      staysActivatedSet.add(actionActivated);
+      staysLoadedSet.add(actionLoaded);
     }
   }
 
   if (debug) {
     const lines = [
-      ...(actualToDeactivateSet.size
-        ? [`- to de-activate: ${Array.from(actualToDeactivateSet).join(", ")}`]
+      ...(toUnloadSet.size
+        ? [`- to unload: ${Array.from(toUnloadSet).join(", ")}`]
         : []),
-      ...(actualToActivateSet.size
-        ? [`- to activate: ${Array.from(actualToActivateSet).join(", ")}`]
+      ...(toLoadSet.size
+        ? [`- to load: ${Array.from(toLoadSet).join(", ")}`]
         : []),
-      ...(staysActivatingSet.size
-        ? [`- stays activating: ${Array.from(staysActivatingSet).join(", ")}`]
+      ...(staysLoadingSet.size
+        ? [`- stays loading: ${Array.from(staysLoadingSet).join(", ")}`]
         : []),
-      ...(staysActivatedSet.size
-        ? [`- stays activated: ${Array.from(staysActivatedSet).join(", ")}`]
+      ...(staysLoadedSet.size
+        ? [`- stays loaded: ${Array.from(staysLoadedSet).join(", ")}`]
         : []),
     ];
     console.debug(`situation before updating actions:
 ${lines.join("\n")}`);
   }
 
-  for (const actionToDeactivate of actualToDeactivateSet) {
-    const actionToDeactivatePrivateProperties =
-      getActionPrivateProperties(actionToDeactivate);
-    actionToDeactivatePrivateProperties.deactivate(reason);
-    activationRegistry.delete(actionToDeactivate);
+  for (const actionToUnload of toUnloadSet) {
+    const actionToUnloadPrivateProperties =
+      getActionPrivateProperties(actionToUnload);
+    actionToUnloadPrivateProperties.unload(reason);
+    activationRegistry.delete(actionToUnload);
   }
-  for (const actionToActivate of actualToActivateSet) {
-    const actionToActivatePrivateProperties =
-      getActionPrivateProperties(actionToActivate);
-    const activatePromise = actionToActivatePrivateProperties.activate({
-      signal,
-    });
-    activationRegistry.add(actionToActivate);
+  for (const actionToLoad of toLoadSet) {
+    const actionToLoadPrivateProperties =
+      getActionPrivateProperties(actionToLoad);
+    const loadPromise = actionToLoadPrivateProperties.load({ signal, reason });
+    activationRegistry.add(actionToLoad);
     if (
       // sync actions are already done, no need to wait for activate promise
-      actionToActivate.activationState === ACTIVATED
+      actionToLoad.loadingState === LOADED
     ) {
     } else {
-      actionPromiseMap.set(actionToActivate, activatePromise);
-      thenableArray.push(activatePromise);
+      actionPromiseMap.set(actionToLoad, loadPromise);
+      thenableArray.push(loadPromise);
     }
   }
   if (debug) {
@@ -266,11 +264,11 @@ export const createAction = (
     keepOldData = false,
   },
 ) => {
-  let activationState = IDLE;
-  const activationStateSignal = signal(activationState);
-  const matchingSignal = computed(() => {
-    const activationState = activationStateSignal.value;
-    return activationState !== IDLE;
+  let loadingState = IDLE;
+  const loadingStateSignal = signal(loadingState);
+  const activeSignal = computed(() => {
+    const loadingState = loadingStateSignal.value;
+    return loadingState !== IDLE;
   });
   let error;
   const errorSignal = signal(null);
@@ -321,11 +319,11 @@ export const createAction = (
       parent: action,
       ...options,
     });
-    parametrizedAction.start = (options) => {
+    parametrizedAction.load = (options) => {
       const aliveParametrizedActionSet = getAliveParametrizedActionSet();
       return requestActionsUpdates({
-        toDeactivateSet: aliveParametrizedActionSet,
-        toActivateSet: new Set([action]),
+        unloadSet: aliveParametrizedActionSet,
+        loadSet: new Set([parametrizedAction]),
         ...options,
       });
     };
@@ -334,9 +332,9 @@ export const createAction = (
       getActionPrivateProperties(parametrizedAction);
     // TODO: this effect should be weak
     effect(() => {
-      const parametrizedActionActivationState =
-        parametrizedActionPrivateProperties.activationStateSignal.value;
-      activationStateSignal.value = parametrizedActionActivationState;
+      const parametrizedActionLoadingState =
+        parametrizedActionPrivateProperties.loadingStateSignal.value;
+      loadingStateSignal.value = parametrizedActionLoadingState;
 
       const parametrizedActionParams =
         parametrizedActionPrivateProperties.paramsSignal.value;
@@ -356,35 +354,35 @@ export const createAction = (
     parametrizedActionsWeakRefs.add(weakRef);
     return parametrizedAction;
   };
-  const start = isTemplate
+  const load = isTemplate
     ? () => {
         throw new Error(
-          `Cannot start action template "${name}", use withParams() to set parameters first.`,
+          `Cannot load action template "${name}", use withParams() to set parameters first.`,
         );
       }
     : (options) =>
         requestActionsUpdates({
-          toActivateSet: new Set([action]),
+          loadSet: new Set([action]),
           ...options,
         });
 
-  const stop = isTemplate
+  const unload = isTemplate
     ? () => {
-        throw new Error(`Cannot stop action template "${name}".`);
+        throw new Error(`Cannot unload action template "${name}".`);
       }
     : () =>
         requestActionsUpdates({
-          toDeactivateSet: new Set([action]),
+          unloadSet: new Set([action]),
         });
 
   const action = {
     name,
     params,
-    activationState,
+    loadingState,
     error,
     data,
-    start,
-    stop,
+    load,
+    unload,
     withParams,
     toString: () => name,
   };
@@ -407,8 +405,8 @@ export const createAction = (
       actionRef.params = params;
     });
     actionWeakEffect((actionRef) => {
-      activationState = activationStateSignal.value;
-      actionRef.activationState = activationState;
+      loadingState = loadingStateSignal.value;
+      actionRef.loadingState = loadingState;
     });
     actionWeakEffect((actionRef) => {
       error = errorSignal.value;
@@ -421,15 +419,19 @@ export const createAction = (
   }
 
   private_properties: {
+    const ui = {
+      renderLoaded: null,
+      renderLoadedAsync,
+    };
     let sideEffectCleanup;
-    const activate = ({ signal }) => {
+    const load = ({ signal, reason }) => {
       const abortController = new AbortController();
       const abortSignal = abortController.signal;
       const abort = (reason) => {
         if (debug) {
           console.log(`"${action}": abort activation.`);
         }
-        activationStateSignal.value = ABORTED;
+        loadingStateSignal.value = ABORTED;
         abortController.abort(reason);
         actionAbortMap.delete(action);
       };
@@ -441,7 +443,7 @@ export const createAction = (
 
       batch(() => {
         errorSignal.value = null;
-        activationStateSignal.value = ACTIVATING;
+        loadingStateSignal.value = LOADING;
       });
 
       const returnValue = sideEffect(params);
@@ -452,7 +454,7 @@ export const createAction = (
       let loadResult;
       const onLoadEnd = () => {
         dataSignal.value = loadResult;
-        activationStateSignal.value = ACTIVATED;
+        loadingStateSignal.value = LOADED;
         actionAbortMap.delete(action);
         actionPromiseMap.delete(action);
       };
@@ -461,35 +463,54 @@ export const createAction = (
         actionAbortMap.delete(action);
         actionPromiseMap.delete(action);
         if (abortSignal.aborted && e === abortSignal.reason) {
-          activationStateSignal.value = ABORTED;
+          loadingStateSignal.value = ABORTED;
           return;
         }
         batch(() => {
           errorSignal.value = e;
-          activationStateSignal.value = FAILED;
+          loadingStateSignal.value = FAILED;
         });
       };
 
       try {
-        loadResult = load({ signal: abortSignal });
-        if (loadResult && typeof loadResult.then === "function") {
-          return loadResult.then(
-            (value) => {
-              loadResult = value;
-              onLoadEnd();
-            },
-            (e) => {
-              onLoadError(e);
-            },
-          );
+        const thenableArray = [];
+        const callbackResult = callback(params, { signal, reason });
+        if (callbackResult && typeof callbackResult.then === "function") {
+          thenableArray.push(callbackResult);
+          callbackResult.then((value) => {
+            loadResult = value;
+          });
+        } else {
+          loadResult = callbackResult;
         }
-        onLoadEnd();
+        const renderLoadedAsync = ui.renderLoadedAsync;
+        if (renderLoadedAsync) {
+          const renderLoadedPromise = renderLoadedAsync(params, {
+            signal,
+            reason,
+          }).then((renderLoaded) => {
+            ui.renderLoaded = () => renderLoaded;
+          });
+          thenableArray.push(renderLoadedPromise);
+        }
+        if (thenableArray.length === 0) {
+          onLoadEnd();
+          return undefined;
+        }
+        return Promise.all(thenableArray).then(
+          () => {
+            onLoadEnd();
+          },
+          (e) => {
+            onLoadError(e);
+          },
+        );
       } catch (e) {
         onLoadError(e);
       }
       return undefined;
     };
-    const deactivate = (reason) => {
+    const unload = (reason) => {
       const abort = actionAbortMap.get(action);
       if (abort) {
         if (debug) {
@@ -497,7 +518,7 @@ export const createAction = (
         }
         abort(reason);
       } else if (debug) {
-        console.log(`"${action}": deactivating route (reason: ${reason})`);
+        console.log(`"${action}": unload route (reason: ${reason})`);
       }
       if (sideEffectCleanup) {
         sideEffectCleanup(reason);
@@ -509,55 +530,21 @@ export const createAction = (
         if (!keepOldData) {
           dataSignal.value = initialData;
         }
-        activationStateSignal.value = IDLE;
+        loadingStateSignal.value = IDLE;
       });
-    };
-    const ui = {
-      renderLoaded: null,
-      renderLoadedAsync,
-    };
-    const loadUI = (...args) => {
-      const renderLoadedAsync = ui.renderLoadedAsync;
-      if (renderLoadedAsync) {
-        return renderLoadedAsync(...args).then((renderLoaded) => {
-          ui.renderLoaded = () => renderLoaded;
-        });
-      }
-      return null;
-    };
-    const load = (loadParams) => {
-      let result;
-      const thenableArray = [];
-      const callbackResult = callback(params, loadParams);
-      if (callbackResult && typeof callbackResult.then === "function") {
-        thenableArray.push(callbackResult);
-        callbackResult.then((value) => {
-          result = value;
-        });
-      } else {
-        result = callbackResult;
-      }
-      const uiLoadResult = loadUI(params, loadParams);
-      if (uiLoadResult && typeof uiLoadResult.then === "function") {
-        thenableArray.push(uiLoadResult);
-      }
-      if (thenableArray.length === 0) {
-        return result;
-      }
-      return Promise.all(thenableArray).then(() => result);
     };
     const actionPrivateProperties = {
       initialParams,
       initialData,
 
-      activationStateSignal,
-      matchingSignal,
+      loadingStateSignal,
+      activeSignal,
       paramsSignal,
       dataSignal,
       errorSignal,
 
-      activate,
-      deactivate,
+      load,
+      unload,
       ui,
     };
     actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
@@ -582,22 +569,22 @@ const generateParamsSuffix = (params) => {
 
 export const useActionStatus = (action) => {
   const {
-    matchingSignal,
+    loadingStateSignal,
+    activeSignal,
     paramsSignal,
     errorSignal,
-    activationStateSignal,
     dataSignal,
   } = getActionPrivateProperties(action);
 
-  const matching = matchingSignal.value;
+  const active = activeSignal.value;
   const params = paramsSignal.value;
   const error = errorSignal.value;
-  const activationState = activationStateSignal.value;
-  const pending = activationState === ACTIVATING;
-  const aborted = activationState === ABORTED;
+  const loadingState = loadingStateSignal.value;
+  const pending = loadingState === LOADING;
+  const aborted = loadingState === ABORTED;
   const data = dataSignal.value;
   return {
-    matching,
+    active,
     params,
     error,
     aborted,
