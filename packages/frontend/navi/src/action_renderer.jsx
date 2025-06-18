@@ -1,7 +1,7 @@
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
 import { useActionStatus } from "./actions.js";
 
-const renderNotMatchingDefault = () => null;
+const renderOtherwiseDefault = () => null;
 const renderLoadingDefault = () => null;
 const renderLoadedDefault = () => null;
 const renderErrorDefault = (error) => {
@@ -11,13 +11,13 @@ const renderErrorDefault = (error) => {
 
 export const ActionRenderer = ({ action, children }) => {
   const {
-    notMatching: renderNotMatching = renderNotMatchingDefault,
+    otherwise: renderOtherwise = renderOtherwiseDefault,
     loading: renderLoading = renderLoadingDefault,
     error: renderError = renderErrorDefault,
     loaded: renderLoaded,
   } = children || {};
 
-  const { matching, pending, error, data } = useActionStatus(action);
+  const { active, pending, error, data } = useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetError] = useErrorBoundary();
 
@@ -39,8 +39,8 @@ export const ActionRenderer = ({ action, children }) => {
     };
   }, []);
 
-  if (!matching) {
-    return renderNotMatching(action);
+  if (!active) {
+    return renderOtherwise(action);
   }
   if (errorBoundary) {
     return renderError(errorBoundary, "ui_error");

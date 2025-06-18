@@ -1,3 +1,16 @@
+/*
+ * certaines actions ne devrait pas rester dans activationRegistry, je vois pas l'interet
+ * genre tout ce qui est PUT/DELETE/POST/PATCH c'est du volatile
+ * (quoiqu'on pourrait imaginer une UI qui affiche le résulat d'un POST et le user choisi
+ * ce qu'il fait ensuite, dans ce cas action.active doit rester true ainsi que sa data)
+ *
+ * mais on peut surement obtenir cela puisque si personne ne sinteresse a l'action est est garbage collect
+ * donc en fait on est good
+ * -> si aucune UI ne se branche sur ces actions elle reste brievement dans la mémoire de l'appli
+ * -> si une UI se branche, elle y reste jusqu'à ce que l'utilisateur quitte la page
+ *
+ */
+
 import { batch, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "./compare_two_js_values.js";
 
@@ -34,8 +47,16 @@ export const reloadActions = async (actionSet, { reason } = {}) => {
     isReload: true,
   });
 };
-// export const reloadPendingActions
-// export const abortPendingActions
+export const abortPendingActions = (
+  reason = "abortPendingActions was called",
+) => {
+  const { loadingSet } = activationRegistry.getInfo();
+  const unloadSet = loadingSet;
+  return requestActionsUpdates({
+    unloadSet,
+    reason,
+  });
+};
 
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
