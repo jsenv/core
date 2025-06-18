@@ -21,7 +21,7 @@
 
       const user = resource("user", { idKey: "name" });
       const loadUsersAction = user.getAll(() => {
-        return [{ name: "dam" }, { name: "seb" }];
+        return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
       });
       const loadUserAction = user.get(
         ({ name }) => {
@@ -36,13 +36,13 @@
           },
         },
       );
-      // const currentUserName = localStorage.getItem("current_user_name");
-      // if (currentUserName) {
-      //   const loadCurrentUserAction = loadUserAction.withParams({
-      //     name: currentUserName,
-      //   });
-      //   loadCurrentUserAction.load();
-      // }
+      const currentUserName = localStorage.getItem("current_user_name");
+      if (currentUserName) {
+        const loadCurrentUserAction = loadUserAction.withParams({
+          name: currentUserName,
+        });
+        loadCurrentUserAction.load();
+      }
       loadUsersAction.load();
 
       // eslint-disable-next-line no-unused-vars
@@ -50,9 +50,10 @@
         const { data: user } = useActionStatus(loadUserAction);
         const { data: users } = useActionStatus(loadUsersAction);
 
-        const [dam, seb] = users;
+        const [dam, seb, john] = users;
         const damUserAction = getItemAction(dam, loadUserAction);
         const sebUserAction = getItemAction(seb, loadUserAction);
+        const johnUserAction = getItemAction(john, loadUserAction);
 
         return (
           <div>
@@ -99,10 +100,33 @@
             >
               Preload seb
             </button>
+            <br />
+            <button
+              onClick={() => {
+                johnUserAction.load();
+              }}
+            >
+              Load john
+            </button>
+            <button
+              onClick={() => {
+                johnUserAction.unload();
+              }}
+            >
+              Unload john
+            </button>
+            <button
+              onClick={() => {
+                johnUserAction.preload();
+              }}
+            >
+              Preload john
+            </button>
 
             <ActionStatus action={loadUserAction} />
             <ActionStatus action={damUserAction} />
             <ActionStatus action={sebUserAction} />
+            <ActionStatus action={johnUserAction} />
 
             <div>User: {JSON.stringify(user)}</div>
           </div>
@@ -111,7 +135,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const ActionStatus = ({ action, name = action.name }) => {
-        const { active, pending, params, error, aborted, data } =
+        const { preloaded, active, pending, params, error, aborted, data } =
           useActionStatus(action);
         return (
           <fieldset style={{ width: "200px" }}>
@@ -130,7 +154,9 @@
                           ? "pending"
                           : active
                             ? "loaded"
-                            : "idle"}
+                            : preloaded
+                              ? "preloaded"
+                              : "idle"}
                   </strong>
                 </span>
               </div>

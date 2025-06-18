@@ -694,6 +694,7 @@ export const useActionStatus = (action) => {
   const loadingState = loadingStateSignal.value;
   const pending = loadingState === LOADING;
   const aborted = loadingState === ABORTED;
+  const preloaded = !active && loadingState === LOADED;
   const data = dataSignal.value;
   return {
     active,
@@ -701,6 +702,7 @@ export const useActionStatus = (action) => {
     error,
     aborted,
     pending,
+    preloaded,
     data,
   };
 };
