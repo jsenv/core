@@ -222,7 +222,8 @@ export const resource = (name, { idKey = "id" } = {}) => {
           continue;
         }
         if (value.isResource) {
-          one(value, key);
+          const childResourceSingleton = one(value, key);
+          info[key] = childResourceSingleton;
           continue;
         }
         if (Array.isArray(value) && value.length === 1 && value[0].isResource) {

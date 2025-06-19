@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resource demo describe one</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 200px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { resource, useActionStatus, getItemAction } from "@jsenv/navi";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        ActionStatus,
+      } from "./action_status.jsx";
+
+      const user = resource("user");
+      const table = resource("table");
+      const { owner: tableOwner } = table.describe({
+        owner: user,
+      });
+      const getUsers = user.getAll(() => {
+        return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
+      });
+      const getTables = table.getAll(() => {
+        return [
+          { name: "table1", owner: "dam" },
+          { name: "table2", owner: "seb" },
+          { name: "table3", owner: "john" },
+        ];
+      });
+      const getTable = table.get(({ name, owner }) => {
+        return { name, owner };
+      });
+      const getUser = user.get(({ name }) => {
+        return { name };
+      });
+      const getTableOwnerTemplate = tableOwner.get((table) => {
+        return { name: table.owner.name };
+      });
+
+      getUsers.load();
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [table1, table2] = getTables.data;
+        const getTable1Action = getItemAction(table1, getUser);
+        const getTable2Action = getItemAction(table2, getUser);
+        const { data } = useActionStatus(getTable);
+
+        return (
+          <div>
+            <button
+              onClick={() => {
+                getTable1Action.reload();
+              }}
+            >
+              Reload table1
+            </button>
+            <button
+              onClick={() => {
+                getTable2Action.reload();
+              }}
+            >
+              Reload table2
+            </button>
+
+            <ActionStatus action={getUser} />
+
+            <div>Table: {data && <Table table={data} />}</div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const Table = ({ table }) => {
+        const getTableOwner = getItemAction(table, getTableOwnerTemplate);
+        const { active, data } = useActionStatus(getTableOwner);
+
+        return (
+          <>
+            {table.name}
+            <details
+              open={active}
+              onToggle={(e) => {
+                if (e.target.open) {
+                  getTableOwner.reload();
+                } else {
+                  // tablesAction.unload(user);
+                }
+              }}
+            >
+              <summary>tables</summary>
+              {data}
+            </details>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

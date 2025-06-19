@@ -385,6 +385,25 @@ export const createAction = (
     return aliveParametrizedActionSet;
   };
 
+  let applyAutoload;
+  if (autoload) {
+    const autoloadResult = autoload();
+    if (autoloadResult === true) {
+      autoload = null;
+      applyAutoload = () => {
+        action.load();
+      };
+    } else if (autoloadResult && typeof autoloadResult === "object") {
+      autoload = null;
+      applyAutoload = () => {
+        const autoloadAction = action.withParams(autoloadResult);
+        autoloadAction.load();
+      };
+    } else if (typeof autoloadResult === "function") {
+      autoload = autoloadResult; // will be given to withParams actions
+    }
+  }
+
   const withParams = (newParams, options = {}) => {
     const combinedParams =
       initialParams === initialParamsDefault
@@ -410,6 +429,7 @@ export const createAction = (
       params: combinedParams,
       sideEffect, // call the parent side effect
       parent: action,
+      autoload,
       ...options,
     });
     parametrizedAction.load = (options) => {
@@ -679,13 +699,8 @@ export const createAction = (
     actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
   }
 
-  if (autoload) {
-    if (isTemplate || typeof autoload === "object") {
-      const autoloadAction = action.withParams(autoload);
-      autoloadAction.load();
-    } else {
-      action.load();
-    }
+  if (applyAutoload) {
+    applyAutoload();
   }
 
   return action;
