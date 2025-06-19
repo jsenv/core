@@ -22,34 +22,29 @@
       const { owner: tableOwner } = table.describe({
         owner: user,
       });
-      const getUsers = user.getAll(() => {
-        return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
-      });
-      const getTables = table.getAll(() => {
-        return [
-          { name: "table1", owner: "dam" },
-          { name: "table2", owner: "seb" },
-          { name: "table3", owner: "john" },
-        ];
-      });
-      const getTable = table.get(({ name, owner }) => {
+      const getTableTemplate = table.get(({ name, owner }) => {
         return { name, owner };
       });
-      const getUser = user.get(({ name }) => {
-        return { name };
-      });
       const getTableOwnerTemplate = tableOwner.get((table) => {
-        return { name: table.owner.name };
+        return { name: table.owner };
       });
 
-      getUsers.load();
+      const getTable1Action = getTableTemplate.withParams({
+        name: "table1",
+        owner: "user1",
+      });
+      getTable1Action.load();
+      const getTable2Action = getTableTemplate.withParams({
+        name: "table2",
+        owner: "user2",
+      });
+      getTable2Action.load();
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const [table1, table2] = getTables.data;
-        const getTable1Action = getItemAction(table1, getUser);
-        const getTable2Action = getItemAction(table2, getUser);
-        const { data } = useActionStatus(getTable);
+        // const { data: table1 } = useActionStatus(getTable1Action);
+        // const { data: table2 } = useActionStatus(getTable2Action);
+        const { data } = useActionStatus(getTableTemplate);
 
         return (
           <div>
@@ -68,7 +63,7 @@
               Reload table2
             </button>
 
-            <ActionStatus action={getUser} />
+            <ActionStatus action={getTableTemplate} />
 
             <div>Table: {data && <Table table={data} />}</div>
           </div>

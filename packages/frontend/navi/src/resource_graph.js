@@ -236,36 +236,25 @@ export const resource = (name, { idKey = "id" } = {}) => {
     };
     const one = (childResource, propertyName) => {
       const childIdKey = childResource.idKey;
-      const childItemInfoMap = new Map();
-      const getChildItemInfo = (item) => {
-        const existingChildItemInfo = childItemInfoMap.get(item);
-        if (existingChildItemInfo) {
-          return existingChildItemInfo;
-        }
-        const childItemSignal = computed(() => {
-          const childItem = item[propertyName];
-          const childItemId = childItem ? childItem[childIdKey] : null;
-          return childResource.store.select(childItemId);
-        });
-        childItemInfoMap.set(item, {
-          value: undefined,
-          signal: childItemSignal,
-        });
-        return childItemSignal;
-      };
-      store.defineGetSet(propertyName, {
-        get: (item) => {
-          const childItemInfo = getChildItemInfo(item);
-          return childItemInfo.signal.value;
-        },
-        set: (item, value) => {
-          const childItemInfo = getChildItemInfo(item);
-          childItemInfo.value = value;
-          const childItem = childResource.store.upsert(value);
+      store.addSetup((item) => {
+        let childProps = item[propertyName];
+        const signal = computed(() => {
+          const childItemId = childProps ? childProps[childIdKey] : null;
+          const childItem = childResource.store.select(childItemId);
           return childItem;
-        },
+        });
+
+        Object.defineProperty(item, propertyName, {
+          get: () => {
+            return signal.value;
+          },
+          set: (value) => {
+            childProps = value;
+            childResource.store.upsert(childProps);
+          },
+        });
       });
-      return childResource;
+      return resourceInstance;
     };
     const many = (childResource, propertyName) => {
       const childIdKey = childResource.idKey;

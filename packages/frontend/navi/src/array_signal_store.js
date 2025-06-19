@@ -333,7 +333,10 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
 
 export const assign = (item, props) => {
   let modified = false;
-  const itemWithProps = { ...item };
+  const itemWithProps = Object.create(
+    Object.getPrototypeOf(item),
+    Object.getOwnPropertyDescriptors(item),
+  );
   for (const key of Object.keys(props)) {
     const newValue = props[key];
     if (key in item) {
