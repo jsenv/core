@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Action demo 2</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 200px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      /**
+       * Ici il peut y avoir plusieurs valeurs dans le local storage qui disent quelles actions sont dans quel état
+       * Cela correspond au cas ou on a un details sur un sous-object d'un user
+       * (les tables owned par un role par exemple)
+       *
+       * On veut pas supprimer du local storage que la table est ouverte parcqu'elle est scope
+       * a chaque utilisateur
+       *
+       * En local storage on pourrait stocker ça comme ça:
+       *
+       * ":user_name/tables_opened": "true"|"false"
+       * "users_with_tables_opened": ["dam", "seb"]
+       */
+
+      import { render } from "preact";
+      import { resource, useActionStatus } from "@jsenv/navi";
+
+      const user = resource("user");
+      const table = resource("table");
+      const userTables = user.many(table, "tables");
+
+      const getUsers = user.getAll(() => {
+        return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
+      });
+      const getUser = user.get(
+        ({ name }) => {
+          return {
+            name,
+          };
+        },
+        {
+          name: "load_user",
+        },
+      );
+      const getUserTables = userTables.get(() => {
+        return ["table1", "table2"];
+      });
+
+      // how can we do this:
+      // we want to connect the user tables action being autoloaded
+      // when some local storage key is found
+
+      // connectActionWithLocalStorageBoolean(
+      //   loadUserTablesAction,
+      //   `${userName}/tables_opened`,
+      // );
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const loadDamAction = loadUserAction.withParams({
+          userName: "dam",
+        });
+        const loadSebAction = loadUserAction.withParams({
+          userName: "seb",
+        });
+        const { data } = useActionStatus(loadUserAction);
+
+        return (
+          <div>
+            <button
+              onClick={() => {
+                loadDamAction.start();
+              }}
+            >
+              Load dam
+            </button>
+            <button
+              onClick={() => {
+                loadSebAction.start();
+              }}
+            >
+              Load seb
+            </button>
+
+            <ActionStatus action={loadUserAction} />
+            <ActionStatus action={loadDamAction} />
+            <ActionStatus action={loadSebAction} />
+
+            <div>User: {data && <User user={data} />}</div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const User = ({ user }) => {
+        const tablesAction = user.tablesAction;
+        const { matching, data } = useActionStatus(tablesAction);
+
+        return (
+          <>
+            {user.name}
+            <details
+              open={matching}
+              onToggle={(e) => {
+                if (e.target.open) {
+                  tablesAction.start(user);
+                } else {
+                  tablesAction.stop(user);
+                }
+              }}
+            >
+              <summary>tables</summary>
+              {data}
+            </details>
+          </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ActionStatus = ({ action, name = action.name }) => {
+        const { matching, params, error, aborted, data } =
+          useActionStatus(action);
+        return (
+          <fieldset style={{ width: "200px" }}>
+            <legend>{action.name}</legend>
+
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div>
+                {matching ? (
+                  <span>
+                    matching: <strong>yes</strong>
+                  </span>
+                ) : (
+                  <span>matching: no</span>
+                )}
+              </div>
+              <div style="display: flex; align-items: center; gap: 5px;">
+                <span>params: </span>
+                <pre style="margin: 0">{JSON.stringify(params)}</pre>
+              </div>
+              <div>
+                {aborted ? (
+                  <span>
+                    aborted: <strong>yes</strong>
+                  </span>
+                ) : (
+                  <span>aborted: no</span>
+                )}
+              </div>
+              <div>
+                {error ? (
+                  <span>error: {error.message}</span>
+                ) : (
+                  <span>error</span>
+                )}
+              </div>
+              <div>
+                {data ? (
+                  <span>
+                    data: <strong>{String(data)}</strong>
+                  </span>
+                ) : (
+                  <span>data</span>
+                )}
+              </div>
+            </div>
+          </fieldset>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
