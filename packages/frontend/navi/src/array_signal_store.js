@@ -199,7 +199,7 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     const item = createItemFromProps(props);
     arrayUpdated.push(item);
     arraySignal.value = arrayUpdated;
-    return props;
+    return item;
   };
   const drop = (...args) => {
     if (args.length === 1 && Array.isArray(args[0])) {

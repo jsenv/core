@@ -197,6 +197,9 @@ export const resource = (name, { idKey = "id" } = {}) => {
   });
 
   store.addSetup((item) => {
+    if (debug) {
+      console.log(`install item action map symbol on ${item.id}`);
+    }
     Object.defineProperty(item, itemActionMapSymbol, {
       enumerable: true,
       writable: true,
@@ -234,7 +237,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
         let childProps = item[propertyName];
         if (debug) {
           console.log(
-            `setting up one_to_one relationship for ${item.id} on prop ${propertyName} (current value: ${childProps})`,
+            `setup one_to_one relationship on ${item.id}.${propertyName} (current value: ${childProps ? childProps[childIdKey] : "null"})`,
           );
         }
         const signal = computed(() => {
@@ -248,7 +251,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
             const childItem = signal.value;
             if (debug) {
               console.log(
-                `getting one_to_one relationship for ${item.id} on prop ${propertyName}: ${childItem ? childItem.id : "null"}`,
+                `return ${childItem ? childItem.id : "null"} for ${item.id}.${propertyName}`,
               );
             }
             return childItem;
@@ -256,7 +259,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
           set: (value) => {
             if (debug) {
               console.log(
-                `update one_to_one relationship for ${item.id} on prop ${propertyName} from ${childProps} to ${value}`,
+                `update ${item.id}.${propertyName} from ${childProps ? childProps.id : "null"} to ${value ? value.id : "null"}`,
               );
             }
             childProps = value;
