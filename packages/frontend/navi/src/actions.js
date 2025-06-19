@@ -194,7 +194,7 @@ export const updateActions = ({
   const toUnloadSet = new Set();
   const toPreloadSet = new Set();
   const toLoadSet = new Set();
-  const toPromoteActiveSet = new Set();
+  const toPromoteSet = new Set();
   const staysLoadingSet = new Set();
   const staysLoadedSet = new Set();
   list_to_unload: {
@@ -246,9 +246,9 @@ export const updateActions = ({
     }
     for (const actionToLoad of loadSet) {
       if (!actionToLoad.active && actionToLoad.loadingState !== IDLE) {
-        // was preloaded but is not active
-        // -> can move to active state no matter the loading state
-        toPromoteActiveSet.add(actionToLoad);
+        // was preloaded but is not requested to load
+        // -> can move to load requested state no matter the loading state
+        toPromoteSet.add(actionToLoad);
         continue;
       }
       onActionToLoadOrPreload(actionToLoad, false);
@@ -287,8 +287,8 @@ export const updateActions = ({
       ...(toPreloadSet.size
         ? [`- to preload: ${Array.from(toPreloadSet).join(", ")}`]
         : []),
-      ...(toPromoteActiveSet.size
-        ? [`- to promote active: ${Array.from(toPromoteActiveSet).join(", ")}`]
+      ...(toPromoteSet.size
+        ? [`- to promote: ${Array.from(toPromoteSet).join(", ")}`]
         : []),
       ...(toLoadSet.size
         ? [`- to load: ${Array.from(toLoadSet).join(", ")}`]
@@ -338,11 +338,10 @@ ${lines.join("\n")}`);
     for (const actionToLoad of toLoadSet) {
       onActionToLoadOrPreload(actionToLoad, false);
     }
-    for (const actionToPromoteActive of toPromoteActiveSet) {
-      const actionToPromoteActivePrivateProperties = getActionPrivateProperties(
-        actionToPromoteActive,
-      );
-      actionToPromoteActivePrivateProperties.activeSignal.value = true;
+    for (const actionToPromote of toPromoteSet) {
+      const actionToPromotePrivateProperties =
+        getActionPrivateProperties(actionToPromote);
+      actionToPromotePrivateProperties.loadRequestedSignal.value = true;
     }
   }
   if (debug) {
@@ -376,8 +375,8 @@ export const createAction = (
     autoload,
   },
 ) => {
-  let active = false;
-  const activeSignal = signal(active);
+  let loadRequested = false;
+  const loadRequestedSignal = signal(loadRequested);
   let loadingState = IDLE;
   const loadingStateSignal = signal(loadingState);
   let error;
@@ -448,9 +447,9 @@ export const createAction = (
       getActionPrivateProperties(parametrizedAction);
     // TODO: this effect should be weak
     effect(() => {
-      const parametrizedActionActive =
-        parametrizedActionPrivateProperties.activeSignal.value;
-      activeSignal.value = parametrizedActionActive;
+      const parametrizedActionLoadRequested =
+        parametrizedActionPrivateProperties.loadRequestedSignal.value;
+      loadRequestedSignal.value = parametrizedActionLoadRequested;
 
       const parametrizedActionLoadingState =
         parametrizedActionPrivateProperties.loadingStateSignal.value;
@@ -507,7 +506,7 @@ export const createAction = (
     name,
     params,
     loadingState,
-    active,
+    loadRequested,
     error,
     data,
     preloadRequested: false,
@@ -537,8 +536,8 @@ export const createAction = (
       actionRef.params = params;
     });
     actionWeakEffect((actionRef) => {
-      active = activeSignal.value;
-      actionRef.active = active;
+      loadRequested = loadRequestedSignal.value;
+      actionRef.loadRequested = loadRequested;
     });
     actionWeakEffect((actionRef) => {
       loadingState = loadingStateSignal.value;
@@ -581,7 +580,7 @@ export const createAction = (
         errorSignal.value = null;
         loadingStateSignal.value = LOADING;
         if (!isPreload) {
-          activeSignal.value = true;
+          loadRequestedSignal.value = true;
         }
       });
 
@@ -670,7 +669,7 @@ export const createAction = (
         if (!keepOldData) {
           dataSignal.value = initialData;
         }
-        activeSignal.value = false;
+        loadRequested.value = false;
         loadingStateSignal.value = IDLE;
       });
     };
@@ -679,7 +678,7 @@ export const createAction = (
       initialData,
 
       loadingStateSignal,
-      activeSignal,
+      loadRequestedSignal,
       paramsSignal,
       dataSignal,
       errorSignal,
@@ -715,6 +714,7 @@ const generateParamsSuffix = (params) => {
 export const useActionStatus = (action) => {
   const {
     loadingStateSignal,
+    loadRequestedSignal,
     activeSignal,
     paramsSignal,
     errorSignal,
@@ -724,11 +724,13 @@ export const useActionStatus = (action) => {
   const active = activeSignal.value;
   const params = paramsSignal.value;
   const error = errorSignal.value;
+  const loadRequested = loadRequestedSignal.value;
   const loadingState = loadingStateSignal.value;
   const pending = loadingState === LOADING;
   const aborted = loadingState === ABORTED;
-  const preloaded = !active && loadingState === LOADED;
+  const preloaded = loadingState === LOADED && !loadRequested;
   const data = dataSignal.value;
+
   return {
     active,
     params,
