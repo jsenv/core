@@ -37,7 +37,7 @@
  *   la elle a le concept de "active"
  */
 
-import { batch, effect, signal } from "@preact/signals";
+import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "./compare_two_js_values.js";
 
 let debug = true;
@@ -373,7 +373,6 @@ export const createAction = (
     isTemplate = false,
     keepOldData = false,
     autoload,
-    activeActionSignal,
   },
 ) => {
   let loadRequested = false;
@@ -480,6 +479,7 @@ export const createAction = (
 
   const action = {
     name,
+    isTemplate,
     params,
     loadingState,
     loadRequested,
@@ -645,7 +645,7 @@ export const createAction = (
         if (!keepOldData) {
           dataSignal.value = initialData;
         }
-        loadRequested.value = false;
+        loadRequestedSignal.value = false;
         loadingStateSignal.value = IDLE;
       });
     };
@@ -662,8 +662,6 @@ export const createAction = (
       performLoad,
       performUnload,
       ui,
-
-      activeActionSignal,
     };
     actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
   }
@@ -674,8 +672,31 @@ export const createAction = (
 
   return action;
 };
-export const createActionTemplate = (callback, options) => {
-  return createAction(callback, { isTemplate: true, ...options });
+export const createActionTemplate = (
+  callback,
+  { activeParamsSignal, ...options } = {},
+) => {
+  const actionTemplate = createAction(callback, {
+    isTemplate: true,
+    ...options,
+  });
+  if (!activeParamsSignal) {
+    return actionTemplate;
+  }
+  const activeActionSignal = computed(() => {
+    const activeParams = activeParamsSignal.value;
+    if (!activeParams) {
+      return null;
+    }
+    const activeAction = actionTemplate.withParams(activeParams);
+    return activeAction;
+  });
+  const actionPrivateProperties = getActionPrivateProperties(actionTemplate);
+  actionPrivatePropertiesWeakMap.set(actionTemplate, {
+    ...actionPrivateProperties,
+    activeActionSignal,
+  });
+  return actionTemplate;
 };
 
 const generateParamsSuffix = (params) => {
@@ -690,23 +711,33 @@ const generateParamsSuffix = (params) => {
 };
 
 export const useActionStatus = (action) => {
+  if (action.isTemplate) {
+    const { activeActionSignal } = getActionPrivateProperties(action);
+    if (activeActionSignal) {
+      const activeAction = activeActionSignal.value;
+      if (activeAction) {
+        return useActionStatus(activeAction);
+      }
+    }
+    return {
+      active: false,
+      idle: true,
+      params: action.params,
+      error: action.error,
+      aborted: false,
+      pending: false,
+      preloaded: false,
+      data: action.data,
+    };
+  }
+
   const {
-    activeActionSignal,
     loadingStateSignal,
     loadRequestedSignal,
     paramsSignal,
     errorSignal,
     dataSignal,
   } = getActionPrivateProperties(action);
-  let active = true;
-
-  if (activeActionSignal) {
-    const activeAction = activeActionSignal.value;
-    if (activeAction) {
-      return useActionStatus(activeAction);
-    }
-    active = false;
-  }
 
   const params = paramsSignal.value;
   const error = errorSignal.value;
@@ -719,7 +750,7 @@ export const useActionStatus = (action) => {
   const data = dataSignal.value;
 
   return {
-    active,
+    active: true,
     idle,
     params,
     error,

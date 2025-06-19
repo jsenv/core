@@ -252,19 +252,10 @@ const createMethodsForStore = ({
       return getAllAction;
     },
     get: (callback, options) => {
-      const activeActionSignal = computed(() => {
+      const activeParamsSignal = computed(() => {
         const activeItem = resource.activeItemSignal.value;
-        console.log("activeItem", activeItem);
-        if (!activeItem) {
-          return null;
-        }
-        const activeItemGetAction = getItemAction(
-          activeItem,
-          getActionTemplate,
-        );
-        return activeItemGetAction;
+        return activeItem;
       });
-
       const getActionTemplate = createActionTemplate(
         async (params) => {
           const props = await callback(params);
@@ -273,7 +264,7 @@ const createMethodsForStore = ({
         },
         {
           name: `get ${name}`,
-          activeActionSignal,
+          activeParamsSignal,
           ...options,
         },
       );
