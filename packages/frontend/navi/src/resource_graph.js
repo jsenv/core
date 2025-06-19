@@ -211,6 +211,21 @@ export const resource = (name, { isSingleton = false, idKey = "id" } = {}) => {
       setActiveItem,
     });
 
+    const storeMethodEffects = {
+      get: (props) => {
+        return store.upsert(props);
+      },
+      put: (propsOrPropsArray) => {
+        return store.upsert(propsOrPropsArray);
+      },
+      patch: (propsOrPropsArray) => {
+        return store.upsert(propsOrPropsArray);
+      },
+      delete: (itemIdOrItemIdArray) => {
+        return store.drop(itemIdOrItemIdArray);
+      },
+    };
+
     Object.assign(resourceInstance, {
       getAll: (callback, options) => {
         const getAllAction = createAction(
@@ -238,7 +253,7 @@ export const resource = (name, { isSingleton = false, idKey = "id" } = {}) => {
         const getActionTemplate = createActionTemplate(
           async (params) => {
             const props = await callback(params);
-            const item = store.upsert(props);
+            const item = storeMethodEffects.get(props);
             return item;
           },
           {
@@ -297,7 +312,7 @@ export const resource = (name, { isSingleton = false, idKey = "id" } = {}) => {
         const putActionTemplate = createActionTemplate(
           async (params) => {
             const propsOrPropsArray = await callback(params);
-            const itemOrItemArray = store.upsert(propsOrPropsArray);
+            const itemOrItemArray = storeMethodEffects.put(propsOrPropsArray);
             return itemOrItemArray;
           },
           {
@@ -311,11 +326,28 @@ export const resource = (name, { isSingleton = false, idKey = "id" } = {}) => {
         });
         return putActionTemplate;
       },
+      patch: (callback, options) => {
+        const patchActionTemplate = createActionTemplate(
+          async (params) => {
+            const propsOrPropsArray = await callback(params);
+            return storeMethodEffects.patch(propsOrPropsArray);
+          },
+          {
+            name: `patch ${name}`,
+            ...options,
+          },
+        );
+        store.addSetup((item) => {
+          const itemPatchAction = patchActionTemplate.withParams(item);
+          item[itemActionMapSymbol].set(itemPatchAction, patchActionTemplate);
+        });
+        return patchActionTemplate;
+      },
       delete: (callback, options) => {
         const deleteActionTemplate = createActionTemplate(
           async (params) => {
             const itemIdOrItemIdArray = await callback(params);
-            return store.drop(itemIdOrItemIdArray);
+            return storeMethodEffects.delete(itemIdOrItemIdArray);
           },
           {
             name: `delete ${name}`,
