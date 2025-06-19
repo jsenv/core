@@ -46,23 +46,31 @@
       const getUser = user.get(({ name }) => {
         return { name };
       });
-      const getTable = table.get(({ name }) => {
-        return name;
-      });
-      const getUserTables = userTables.get(() => {
-        return [{ name: "table1" }, { name: "table2" }];
-      });
+      // const getTable = table.get(({ name }) => {
+      //   return name;
+      // });
+      const getUserTables = userTables.get(
+        () => {
+          return [{ name: "table1" }, { name: "table2" }];
+        },
+        {
+          sideEffect: ({ name }) => {
+            localStorage.setItem(`${user.name}/tables_opened`, name);
+            return () => {
+              localStorage.removeItem(`${user.name}/tables_opened`);
+            };
+          },
+          autoload: (user) => {
+            const isOpened = localStorage.getItem(`${user.name}/tables_opened`);
+            if (isOpened) {
+              return true;
+            }
+            return false;
+          },
+        },
+      );
 
       getUsers.load();
-
-      // how can we do this:
-      // we want to connect the user tables action being autoloaded
-      // when some local storage key is found
-
-      // connectActionWithLocalStorageBoolean(
-      //   loadUserTablesAction,
-      //   `${userName}/tables_opened`,
-      // );
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {

@@ -356,6 +356,7 @@ export const createAction = (
     // other actions are allowed to have many concurrent actions
     // (like I can delete item "a" and "b" at the same time for instance)
     oneActiveActionAtATime = false,
+    autoload,
   },
 ) => {
   let active = false;
@@ -676,6 +677,15 @@ export const createAction = (
       ui,
     };
     actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
+  }
+
+  if (autoload) {
+    if (isTemplate || typeof autoload === "object") {
+      const autoloadAction = action.withParams(autoload);
+      autoloadAction.load();
+    } else {
+      action.load();
+    }
   }
 
   return action;

@@ -38,15 +38,16 @@
               localStorage.removeItem("current_user_name");
             };
           },
+          autoload: () => {
+            const currentUserName = localStorage.getItem("current_user_name");
+            if (currentUserName) {
+              return { name: currentUserName };
+            }
+            return null;
+          },
         },
       );
-      const currentUserName = localStorage.getItem("current_user_name");
-      if (currentUserName) {
-        const loadCurrentUserAction = loadUserAction.withParams({
-          name: currentUserName,
-        });
-        loadCurrentUserAction.load();
-      }
+
       loadUsersAction.load();
 
       // eslint-disable-next-line no-unused-vars
