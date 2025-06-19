@@ -15,8 +15,6 @@ export const getItemAction = (item, actionTemplate) => {
 };
 
 export const resource = (name, { idKey = "id" } = {}) => {
-  const oneToOnePropertyMap = new Map();
-  const oneToManyPropertyMap = new Map();
   const store = arraySignalStore([], idKey);
 
   const useArray = () => {
@@ -48,7 +46,125 @@ export const resource = (name, { idKey = "id" } = {}) => {
     });
   });
 
+  let describe;
+  {
+    describe = (description) => {
+      const info = {};
+      for (const key of Object.keys(description)) {
+        const value = description[key];
+        if (!value) {
+          continue;
+        }
+        if (value.isResource) {
+          one(value, key);
+          continue;
+        }
+        if (Array.isArray(value) && value.length === 1 && value[0].isResource) {
+          const childResourceCollection = many(value[0], key);
+          info[key] = childResourceCollection;
+          continue;
+        }
+      }
+      return info;
+    };
+    const one = (childResource, propertyName) => {
+      const childIdKey = childResource.idKey;
+      const childItemInfoMap = new Map();
+      const getChildItemInfo = (item) => {
+        const existingChildItemInfo = childItemInfoMap.get(item);
+        if (existingChildItemInfo) {
+          return existingChildItemInfo;
+        }
+        const childItemSignal = computed(() => {
+          const childItem = item[propertyName];
+          const childItemId = childItem ? childItem[childIdKey] : null;
+          return childResource.store.select(childItemId);
+        });
+        childItemInfoMap.set(item, {
+          value: undefined,
+          signal: childItemSignal,
+        });
+        return childItemSignal;
+      };
+      store.defineGetSet(propertyName, {
+        get: (item) => {
+          const childItemInfo = getChildItemInfo(item);
+          return childItemInfo.signal.value;
+        },
+        set: (item, value) => {
+          const childItemInfo = getChildItemInfo(item);
+          childItemInfo.value = value;
+          const childItem = childResource.store.upsert(value);
+          return childItem;
+        },
+      });
+    };
+    const many = (childResource, propertyName) => {
+      const childIdKey = childResource.idKey;
+
+      const addToCollection = (item, childProps) => {
+        const childItemArray = item[propertyName];
+        const childIdToAdd = childProps[childResource.idKey];
+        for (const existingChildItem of childItemArray) {
+          if (existingChildItem[childResource.idKey] === childIdToAdd) {
+            return existingChildItem;
+          }
+        }
+        const childItem = childResource.store.upsert(childProps);
+        const childItemArrayWithNewChild = [...childItemArray, childItem];
+        store.upsert(item, { [propertyName]: childItemArrayWithNewChild });
+        return childItem;
+      };
+      const removeFromCollection = (item, childProps) => {
+        const childItemArray = item[propertyName];
+        let childItemIndex = -1;
+        const childItemArrayWithoutThisOne = [];
+        const idToRemove = childProps[childIdKey];
+        let i = 0;
+        for (const childItem of childItemArray) {
+          if (childItem[childIdKey] === idToRemove) {
+            childItemIndex = i;
+          } else {
+            childItemArrayWithoutThisOne.push(childItem);
+          }
+          i++;
+        }
+        if (childItemIndex === -1) {
+          return false;
+        }
+        store.upsert(item, { [propertyName]: childItemArrayWithoutThisOne });
+        return true;
+      };
+      const childItemArrayMap = new Map();
+      store.addSetup((item) => {
+        const childItemArray = [];
+        childItemArray.add = addToCollection.bind(item);
+        childItemArray.remove = removeFromCollection.bind(item);
+        childItemArrayMap.set(item, childItemArray);
+        item[propertyName] = childItemArray;
+      });
+      store.defineGetSet(propertyName, {
+        get: (item) => {
+          const childItemArray = childItemArrayMap.get(item);
+          const childIdArray = childItemArray.map(
+            (childItem) => childItem[childIdKey],
+          );
+          return childResource.store.selectAll(childIdArray);
+        },
+        set: (item, childPropsArray) => {
+          const childItemArray = childResource.store.upsert(childPropsArray);
+          store.upsert(item, { [propertyName]: childItemArray });
+          childItemArrayMap.set(item, childItemArray);
+          return childItemArray;
+        },
+      });
+
+      return resource(`${name}.${propertyName}`);
+    };
+  }
+
   return {
+    isResource: true,
     name,
     store,
 
@@ -173,102 +289,6 @@ export const resource = (name, { idKey = "id" } = {}) => {
       });
       return deleteActionTemplate;
     },
-
-    one: (childResource, propertyName) => {
-      oneToOnePropertyMap.set(propertyName, childResource);
-      const childIdKey = childResource.idKey;
-      const childItemInfoMap = new Map();
-      const getChildItemInfo = (item) => {
-        const existingChildItemInfo = childItemInfoMap.get(item);
-        if (existingChildItemInfo) {
-          return existingChildItemInfo;
-        }
-        const childItemSignal = computed(() => {
-          const childItem = item[propertyName];
-          const childItemId = childItem ? childItem[childIdKey] : null;
-          return childResource.store.select(childItemId);
-        });
-        childItemInfoMap.set(item, {
-          value: undefined,
-          signal: childItemSignal,
-        });
-        return childItemSignal;
-      };
-      store.defineGetSet(propertyName, {
-        get: (item) => {
-          const childItemInfo = getChildItemInfo(item);
-          return childItemInfo.signal.value;
-        },
-        set: (item, value) => {
-          const childItemInfo = getChildItemInfo(item);
-          childItemInfo.value = value;
-          const childItem = childResource.store.upsert(value);
-          return childItem;
-        },
-      });
-    },
-    many: (childResource, propertyName) => {
-      oneToManyPropertyMap.set(propertyName, childResource);
-      const childIdKey = childResource.idKey;
-
-      const addToCollection = (item, childProps) => {
-        const childItemArray = item[propertyName];
-        const childIdToAdd = childProps[childResource.idKey];
-        for (const existingChildItem of childItemArray) {
-          if (existingChildItem[childResource.idKey] === childIdToAdd) {
-            return existingChildItem;
-          }
-        }
-        const childItem = childResource.store.upsert(childProps);
-        const childItemArrayWithNewChild = [...childItemArray, childItem];
-        store.upsert(item, { [propertyName]: childItemArrayWithNewChild });
-        return childItem;
-      };
-      const removeFromCollection = (item, childProps) => {
-        const childItemArray = item[propertyName];
-        let childItemIndex = -1;
-        const childItemArrayWithoutThisOne = [];
-        const idToRemove = childProps[childIdKey];
-        let i = 0;
-        for (const childItem of childItemArray) {
-          if (childItem[childIdKey] === idToRemove) {
-            childItemIndex = i;
-          } else {
-            childItemArrayWithoutThisOne.push(childItem);
-          }
-          i++;
-        }
-        if (childItemIndex === -1) {
-          return false;
-        }
-        store.upsert(item, { [propertyName]: childItemArrayWithoutThisOne });
-        return true;
-      };
-      const childItemArrayMap = new Map();
-      store.addSetup((item) => {
-        const childItemArray = [];
-        childItemArray.add = addToCollection.bind(item);
-        childItemArray.remove = removeFromCollection.bind(item);
-        childItemArrayMap.set(item, childItemArray);
-        item[propertyName] = childItemArray;
-      });
-      store.defineGetSet(propertyName, {
-        get: (item) => {
-          const childItemArray = childItemArrayMap.get(item);
-          const childIdArray = childItemArray.map(
-            (childItem) => childItem[childIdKey],
-          );
-          return childResource.store.selectAll(childIdArray);
-        },
-        set: (item, childPropsArray) => {
-          const childItemArray = childResource.store.upsert(childPropsArray);
-          store.upsert(item, { [propertyName]: childItemArray });
-          childItemArrayMap.set(item, childItemArray);
-          return childItemArray;
-        },
-      });
-
-      return resource(`${name}.${propertyName}`);
-    },
+    describe,
   };
 };

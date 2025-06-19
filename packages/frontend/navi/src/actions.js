@@ -466,10 +466,6 @@ export const createAction = (
       preloadSet: new Set([action]),
     });
   };
-  const requestLoad = (options) => {
-    // request load is a way to load an action only if it is not already loading/loaded
-    return load({ isReload: false, ...options });
-  };
   const load = isTemplate
     ? () => {
         throw new Error(
@@ -479,11 +475,11 @@ export const createAction = (
     : (options) =>
         requestActionsUpdates({
           loadSet: new Set([action]),
-          isReload: true,
           ...options,
         });
-  // reload is useless because it's the way load works right?
-  const reload = load;
+  const reload = (options) => {
+    return load({ isReload: true, ...options });
+  };
 
   const unload = isTemplate
     ? () => {
@@ -503,7 +499,6 @@ export const createAction = (
     data,
     preloadRequested: false,
     preload,
-    requestLoad,
     load,
     reload,
     unload,

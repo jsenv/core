@@ -25,28 +25,35 @@
        */
 
       import { render } from "preact";
-      import { resource, useActionStatus } from "@jsenv/navi";
+      import { resource, useActionStatus, getItemAction } from "@jsenv/navi";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        ActionStatus,
+      } from "./action_status.jsx";
 
       const user = resource("user");
       const table = resource("table");
-      const userTables = user.many(table, "tables");
+      table.describe({
+        owner: user,
+      });
+      const { tables: userTables } = user.describe({
+        tables: [table],
+      });
 
       const getUsers = user.getAll(() => {
         return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
       });
-      const getUser = user.get(
-        ({ name }) => {
-          return {
-            name,
-          };
-        },
-        {
-          name: "load_user",
-        },
-      );
-      const getUserTables = userTables.get(() => {
-        return ["table1", "table2"];
+      const getUser = user.get(({ name }) => {
+        return { name };
       });
+      const getTable = table.get(({ name }) => {
+        return name;
+      });
+      const getUserTables = userTables.get(() => {
+        return [{ name: "table1" }, { name: "table2" }];
+      });
+
+      getUsers.load();
 
       // how can we do this:
       // we want to connect the user tables action being autoloaded
@@ -59,34 +66,31 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const loadDamAction = loadUserAction.withParams({
-          userName: "dam",
-        });
-        const loadSebAction = loadUserAction.withParams({
-          userName: "seb",
-        });
-        const { data } = useActionStatus(loadUserAction);
+        const [dam, seb] = getUsers.data;
+        const getDamAction = getItemAction(dam, getUser);
+        const getSebAction = getItemAction(seb, getUser);
+        const { data } = useActionStatus(getUser);
 
         return (
           <div>
             <button
               onClick={() => {
-                loadDamAction.start();
+                getDamAction.reload();
               }}
             >
-              Load dam
+              Reload dam
             </button>
             <button
               onClick={() => {
-                loadSebAction.start();
+                getSebAction.reload();
               }}
             >
-              Load seb
+              Reload seb
             </button>
 
-            <ActionStatus action={loadUserAction} />
-            <ActionStatus action={loadDamAction} />
-            <ActionStatus action={loadSebAction} />
+            <ActionStatus action={getUser} />
+            <ActionStatus action={getDamAction} />
+            <ActionStatus action={getSebAction} />
 
             <div>User: {data && <User user={data} />}</div>
           </div>
@@ -95,8 +99,8 @@
 
       // eslint-disable-next-line no-unused-vars
       const User = ({ user }) => {
-        const tablesAction = user.tablesAction;
-        const { matching, data } = useActionStatus(tablesAction);
+        const getTablesAction = getItemAction(user, getUserTables);
+        const { matching, data } = useActionStatus(getTablesAction);
 
         return (
           <>
@@ -105,9 +109,9 @@
               open={matching}
               onToggle={(e) => {
                 if (e.target.open) {
-                  tablesAction.start(user);
+                  getTablesAction.reload(user);
                 } else {
-                  tablesAction.stop(user);
+                  // tablesAction.unload(user);
                 }
               }}
             >
@@ -115,58 +119,6 @@
               {data}
             </details>
           </>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const ActionStatus = ({ action, name = action.name }) => {
-        const { matching, params, error, aborted, data } =
-          useActionStatus(action);
-        return (
-          <fieldset style={{ width: "200px" }}>
-            <legend>{action.name}</legend>
-
-            <div style="display: flex; flex-direction: column; gap: 5px;">
-              <div>
-                {matching ? (
-                  <span>
-                    matching: <strong>yes</strong>
-                  </span>
-                ) : (
-                  <span>matching: no</span>
-                )}
-              </div>
-              <div style="display: flex; align-items: center; gap: 5px;">
-                <span>params: </span>
-                <pre style="margin: 0">{JSON.stringify(params)}</pre>
-              </div>
-              <div>
-                {aborted ? (
-                  <span>
-                    aborted: <strong>yes</strong>
-                  </span>
-                ) : (
-                  <span>aborted: no</span>
-                )}
-              </div>
-              <div>
-                {error ? (
-                  <span>error: {error.message}</span>
-                ) : (
-                  <span>error</span>
-                )}
-              </div>
-              <div>
-                {data ? (
-                  <span>
-                    data: <strong>{String(data)}</strong>
-                  </span>
-                ) : (
-                  <span>data</span>
-                )}
-              </div>
-            </div>
-          </fieldset>
         );
       };
 
