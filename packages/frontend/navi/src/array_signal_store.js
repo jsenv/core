@@ -36,25 +36,6 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     return item;
   };
 
-  const assign = (item, props) => {
-    let modified = false;
-    const itemWithProps = { ...item };
-    for (const key of Object.keys(props)) {
-      const newValue = props[key];
-      if (key in item) {
-        const value = item[key];
-        if (newValue !== value) {
-          modified = true;
-          itemWithProps[key] = newValue;
-        }
-      } else {
-        modified = true;
-        itemWithProps[key] = newValue;
-      }
-    }
-    return modified ? itemWithProps : item;
-  };
-
   const arraySignal = signal(initialArray);
   const derivedSignal = computed(() => {
     const array = arraySignal.value;
@@ -348,4 +329,23 @@ export const arraySignalStore = (initialArray = [], idKey = "id") => {
     registerPropertyLifecycle,
   });
   return store;
+};
+
+export const assign = (item, props) => {
+  let modified = false;
+  const itemWithProps = { ...item };
+  for (const key of Object.keys(props)) {
+    const newValue = props[key];
+    if (key in item) {
+      const value = item[key];
+      if (newValue !== value) {
+        modified = true;
+        itemWithProps[key] = newValue;
+      }
+    } else {
+      modified = true;
+      itemWithProps[key] = newValue;
+    }
+  }
+  return modified ? itemWithProps : item;
 };
