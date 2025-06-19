@@ -48,6 +48,8 @@ export const ABORTED = { id: "aborted" };
 export const FAILED = { id: "failed" };
 export const LOADED = { id: "loaded" };
 
+const ACTION_PARAMS_IDENTITY_SYMBOL = Symbol("action_params_identity");
+
 // intermediate function representing the fact we'll use navigation.navigate update action and get a signal
 export const requestActionsUpdates = ({
   preloadSet,
@@ -410,11 +412,37 @@ export const createAction = (
 
   const withParams = (newParams, options = {}) => {
     const combinedParams =
-      initialParams === initialParamsDefault
-        ? newParams
-        : typeof initialParams === "object" && initialParams !== null
-          ? { ...initialParams, ...newParams }
-          : newParams;
+      initialParams === initialParamsDefault ? newParams : newParams;
+
+    if (typeof combinedParams === "object" && combinedParams !== null) {
+      const actionIdentity = combinedParams[ACTION_PARAMS_IDENTITY_SYMBOL];
+
+      if (!actionIdentity) {
+        Object.defineProperty(combinedParams, ACTION_PARAMS_IDENTITY_SYMBOL, {
+          value: Symbol("action_params_identity"),
+          writable: false,
+          enumerable: false,
+          configurable: false,
+        });
+      } else {
+        for (const [existingParams, weakRef] of parametrizedActions) {
+          const existingAction = weakRef.deref();
+          if (!existingAction) {
+            parametrizedActions.delete(existingParams);
+            continue;
+          }
+          if (
+            existingParams[ACTION_PARAMS_IDENTITY_SYMBOL] === actionIdentity
+          ) {
+            const existingActionPrivateProperties =
+              getActionPrivateProperties(existingAction);
+            existingActionPrivateProperties.paramsSignal.value = combinedParams;
+            return existingAction;
+          }
+        }
+      }
+    }
+
     for (const [existingParams, weakRef] of parametrizedActions) {
       const existingAction = weakRef.deref();
       if (
