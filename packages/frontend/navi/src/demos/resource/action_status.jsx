@@ -1,7 +1,7 @@
 import { useActionStatus } from "@jsenv/navi";
 
 export const ActionStatus = ({ action }) => {
-  const { preloaded, active, pending, params, error, aborted, data } =
+  const { idle, preloaded, active, pending, params, error, aborted, data } =
     useActionStatus(action);
   return (
     <fieldset style={{ width: "200px" }}>
@@ -12,17 +12,17 @@ export const ActionStatus = ({ action }) => {
           <span>
             <span>loading state:</span>{" "}
             <strong>
-              {aborted
-                ? "aborted"
-                : error
-                  ? "error"
-                  : pending
-                    ? "pending"
-                    : active
-                      ? "loaded"
+              {idle
+                ? "idle"
+                : aborted
+                  ? "aborted"
+                  : error
+                    ? "error"
+                    : pending
+                      ? "pending"
                       : preloaded
                         ? "preloaded"
-                        : "idle"}
+                        : "loaded"}
             </strong>
           </span>
         </div>

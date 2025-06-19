@@ -373,6 +373,7 @@ export const createAction = (
     isTemplate = false,
     keepOldData = false,
     autoload,
+    activeActionSignal,
   },
 ) => {
   let loadRequested = false;
@@ -442,31 +443,6 @@ export const createAction = (
         ...options,
       });
     };
-
-    const parametrizedActionPrivateProperties =
-      getActionPrivateProperties(parametrizedAction);
-    // TODO: this effect should be weak
-    effect(() => {
-      const parametrizedActionLoadRequested =
-        parametrizedActionPrivateProperties.loadRequestedSignal.value;
-      loadRequestedSignal.value = parametrizedActionLoadRequested;
-
-      const parametrizedActionLoadingState =
-        parametrizedActionPrivateProperties.loadingStateSignal.value;
-      loadingStateSignal.value = parametrizedActionLoadingState;
-
-      const parametrizedActionParams =
-        parametrizedActionPrivateProperties.paramsSignal.value;
-      paramsSignal.value = parametrizedActionParams;
-
-      const parametrizedActionError =
-        parametrizedActionPrivateProperties.errorSignal.value;
-      errorSignal.value = parametrizedActionError;
-
-      const parametrizedActionData =
-        parametrizedActionPrivateProperties.dataSignal.value;
-      dataSignal.value = parametrizedActionData;
-    });
 
     const weakRef = new WeakRef(parametrizedAction);
     parametrizedActions.set(combinedParams, weakRef);
@@ -686,6 +662,8 @@ export const createAction = (
       performLoad,
       performUnload,
       ui,
+
+      activeActionSignal,
     };
     actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
   }
@@ -713,19 +691,29 @@ const generateParamsSuffix = (params) => {
 
 export const useActionStatus = (action) => {
   const {
+    activeActionSignal,
     loadingStateSignal,
     loadRequestedSignal,
-    activeSignal,
     paramsSignal,
     errorSignal,
     dataSignal,
   } = getActionPrivateProperties(action);
+  let active = true;
 
-  const active = activeSignal.value;
+  if (activeActionSignal) {
+    const activeAction = activeActionSignal.value;
+    if (activeAction) {
+      debugger;
+      return useActionStatus(activeAction);
+    }
+    active = false;
+  }
+
   const params = paramsSignal.value;
   const error = errorSignal.value;
   const loadRequested = loadRequestedSignal.value;
   const loadingState = loadingStateSignal.value;
+  const idle = loadingState === IDLE;
   const pending = loadingState === LOADING;
   const aborted = loadingState === ABORTED;
   const preloaded = loadingState === LOADED && !loadRequested;
@@ -733,6 +721,7 @@ export const useActionStatus = (action) => {
 
   return {
     active,
+    idle,
     params,
     error,
     aborted,

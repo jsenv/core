@@ -18,7 +18,13 @@
 
       import { render } from "preact";
       import { signal, effect } from "@preact/signals";
-      import { useActionStatus, resource, getItemAction } from "@jsenv/navi";
+      import {
+        useActionStatus,
+        resource,
+        getItemAction,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
       import {
         // eslint-disable-next-line no-unused-vars
         ActionStatus,
@@ -41,6 +47,7 @@
         idKey: "name",
         activeIdSignal: currentUsernameSignal,
       });
+      // const useActiveUser = user.useActiveItem;
       const loadUsersAction = user.getAll(() => {
         return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
       });
@@ -52,7 +59,6 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const { data: user } = useActionStatus(loadUserAction);
         const { data: users } = useActionStatus(loadUsersAction);
 
         const [dam, seb, john] = users;
@@ -133,7 +139,14 @@
             <ActionStatus action={sebUserAction} />
             <ActionStatus action={johnUserAction} />
 
-            <div>User: {JSON.stringify(user)}</div>
+            <ActionRenderer action={loadUserAction}>
+              {{
+                loading: () => <div>Loading user...</div>,
+                error: (error) => <div>Error: {error.message}</div>,
+                unloaded: () => <div>User not loaded</div>,
+                loaded: (user) => <div>{user.greeting}</div>,
+              }}
+            </ActionRenderer>
           </div>
         );
       };

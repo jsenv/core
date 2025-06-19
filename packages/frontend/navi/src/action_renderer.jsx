@@ -16,7 +16,6 @@ export const ActionRenderer = ({ action, children }) => {
     error: renderError = renderErrorDefault,
     loaded: renderLoaded,
   } = children || {};
-
   const { active, pending, error, data } = useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetError] = useErrorBoundary();

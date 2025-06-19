@@ -16,7 +16,10 @@ export const getItemAction = (item, actionTemplate) => {
   return action;
 };
 
-export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
+export const resource = (
+  name,
+  { sourceStore, store, idKey = "id", activeIdSignal = signal(null) } = {},
+) => {
   const resourceInstance = {
     isResource: true,
     name,
@@ -31,7 +34,6 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
     const useById = (id) => {
       return store.select(idKey, id);
     };
-    const activeIdSignal = signal(null);
     const activeItemSignal = computed(() => {
       const activeId = activeIdSignal.value;
       return store.select(activeId);
@@ -42,6 +44,7 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
     };
 
     Object.assign(resourceInstance, {
+      activeItemSignal,
       useArray,
       useById,
       useActiveItem,
@@ -249,6 +252,19 @@ const createMethodsForStore = ({
       return getAllAction;
     },
     get: (callback, options) => {
+      const activeActionSignal = computed(() => {
+        const activeItem = resource.activeItemSignal.value;
+        console.log("activeItem", activeItem);
+        if (!activeItem) {
+          return null;
+        }
+        const activeItemGetAction = getItemAction(
+          activeItem,
+          getActionTemplate,
+        );
+        return activeItemGetAction;
+      });
+
       const getActionTemplate = createActionTemplate(
         async (params) => {
           const props = await callback(params);
@@ -257,6 +273,7 @@ const createMethodsForStore = ({
         },
         {
           name: `get ${name}`,
+          activeActionSignal,
           ...options,
         },
       );
