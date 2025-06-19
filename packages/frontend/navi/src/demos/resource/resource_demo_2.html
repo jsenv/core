@@ -17,37 +17,37 @@
        */
 
       import { render } from "preact";
+      import { signal, effect } from "@preact/signals";
       import { useActionStatus, resource, getItemAction } from "@jsenv/navi";
       import {
         // eslint-disable-next-line no-unused-vars
         ActionStatus,
       } from "./action_status.jsx";
 
-      const user = resource("user", { idKey: "name" });
+      const currentUsername = localStorage.getItem("current_user_name");
+      const currentUsernameSignal = signal(currentUsername);
+      const setCurrentUsername = (username) => {
+        currentUsernameSignal.value = username;
+      };
+      effect(() => {
+        const currentUsername = currentUsernameSignal.value;
+        if (currentUsername) {
+          localStorage.setItem("current_user_name", currentUsername);
+        } else {
+          localStorage.removeItem("current_user_name");
+        }
+      });
+      const user = resource("user", {
+        idKey: "name",
+        activeIdSignal: currentUsernameSignal,
+      });
       const loadUsersAction = user.getAll(() => {
         return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
       });
-      const loadUserAction = user.get(
-        ({ name }) => {
-          return { name, greeting: `Hello ${name}` };
-        },
-        {
-          sideEffect: ({ name }) => {
-            localStorage.setItem("current_user_name", name);
-            return () => {
-              localStorage.removeItem("current_user_name");
-            };
-          },
-          autoload: () => {
-            const currentUserName = localStorage.getItem("current_user_name");
-            if (currentUserName) {
-              return { name: currentUserName };
-            }
-            return null;
-          },
-        },
-      );
 
+      const loadUserAction = user.get(({ name }) => {
+        return { name, greeting: `Hello ${name}` };
+      });
       loadUsersAction.load();
 
       // eslint-disable-next-line no-unused-vars
@@ -64,7 +64,7 @@
           <div>
             <button
               onClick={() => {
-                damUserAction.load();
+                setCurrentUsername(dam.name);
               }}
             >
               Load dam
@@ -86,7 +86,7 @@
             <br />
             <button
               onClick={() => {
-                sebUserAction.load();
+                setCurrentUsername(seb.name);
               }}
             >
               Load seb
@@ -108,7 +108,7 @@
             <br />
             <button
               onClick={() => {
-                johnUserAction.load();
+                setCurrentUsername(john.name);
               }}
             >
               Load john

@@ -9,6 +9,32 @@
  * -> si aucune UI ne se branche sur ces actions elle reste brievement dans la mémoire de l'appli
  * -> si une UI se branche, elle y reste jusqu'à ce que l'utilisateur quitte la page
  *
+ *
+ * En fait les actions ne devraint pas avoir de notion de "active" je crois...
+ * Le truc c'est que si je suis sur la page
+ *
+ * - users/:userId
+ *
+ *   pour savoir qui est actif je peux regarder l'url
+ *   -> donc c'est bien sur le template qu'on dit qui est actif
+ *   je peux faire const currentUserGetAction = userGetActionTemplate.withParams({ userId }) et
+ *   la on se moque si on est actif ou pas
+ *   lorsqu'on reçoit une action on peut
+ *   const currentUserId = currentUserIdSignal.value
+ *   const active = currentUserGetAction.params.userId === currentUserId;
+ *
+ *  le souci du coup c'est le action renderer qui ne marche plus du coup
+ *   puisqu'une action n'a plus le concept de "actif"
+ *
+ *   tout ça c'est parce que je veux pas que les actions getUser puisse etre unload
+ *   ou considérer inactif lorsqu'on passe sur une page qui mettons affiche plusieurs users
+ *   et la le concept de current user ne s'applique plus mais on veut pouvoir utiliser l'action
+ *   getUser qui existe deja
+ *
+ *   on pourrait avoir un concept d'action active ou non par contre ....
+ *
+ *   genre on bind un action template a un activeSignal et cette action par contre
+ *   la elle a le concept de "active"
  */
 
 import { batch, effect, signal } from "@preact/signals";
@@ -347,15 +373,6 @@ export const createAction = (
     sideEffect = () => {},
     isTemplate = false,
     keepOldData = false,
-    // loading an other item will:
-    // - abort an other item that would be loading
-    // - or unload an other item that would be loaded
-    // this option is enabled only for "get" actions
-    // because we display one item at a time
-    // in the UI
-    // other actions are allowed to have many concurrent actions
-    // (like I can delete item "a" and "b" at the same time for instance)
-    oneActiveActionAtATime = false,
     autoload,
   },
 ) => {
@@ -372,18 +389,6 @@ export const createAction = (
   const paramsSignal = signal(initialParams);
   const parametrizedActions = new Map();
   const parametrizedActionsWeakRefs = new Set();
-  const getAliveParametrizedActionSet = () => {
-    const aliveParametrizedActionSet = new Set();
-    for (const weakRef of parametrizedActionsWeakRefs) {
-      const parametrizedAction = weakRef.deref();
-      if (parametrizedAction) {
-        aliveParametrizedActionSet.add(parametrizedAction);
-      } else {
-        parametrizedActionsWeakRefs.delete(weakRef);
-      }
-    }
-    return aliveParametrizedActionSet;
-  };
 
   let applyAutoload;
   if (autoload) {
@@ -433,20 +438,7 @@ export const createAction = (
       ...options,
     });
     parametrizedAction.load = (options) => {
-      let unloadSet;
-      if (oneActiveActionAtATime) {
-        const aliveParametrizedActionSet = getAliveParametrizedActionSet();
-        // we should keep preloaded item preloaded
-        unloadSet = new Set();
-        for (const aliveParametrizedAction of aliveParametrizedActionSet) {
-          if (aliveParametrizedAction.active) {
-            unloadSet.add(aliveParametrizedAction);
-          }
-        }
-      }
-
       return requestActionsUpdates({
-        unloadSet,
         loadSet: new Set([parametrizedAction]),
         ...options,
       });

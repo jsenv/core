@@ -33,22 +33,18 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
     };
     const activeIdSignal = signal(null);
     const activeItemSignal = computed(() => {
-      const activeItemId = activeIdSignal.value;
-      return store.select(activeItemId);
+      const activeId = activeIdSignal.value;
+      return store.select(activeId);
     });
     const useActiveItem = () => {
       const activeItem = activeItemSignal.value;
       return activeItem;
     };
-    const setActiveItem = (props) => {
-      const item = store.upsert(props);
-      activeIdSignal.value = item[idKey];
-    };
+
     Object.assign(resourceInstance, {
       useArray,
       useById,
       useActiveItem,
-      setActiveItem,
     });
     store.addSetup((item) => {
       if (debug) {
@@ -252,19 +248,7 @@ const createMethodsForStore = ({
       );
       return getAllAction;
     },
-    get: (
-      callback,
-      {
-        // key = idKey,
-        // WARNING: this should be enabled only if the action is used to display the main content of the page
-        // because only then it makes sense to prevent loading something user don't need anymore
-        // if this action is used to let's say load an item details
-        // and UI displays a list of item with details
-        // we could totally want to load many item details in parallel
-        oneActiveActionAtATime,
-        ...options
-      } = {},
-    ) => {
+    get: (callback, options) => {
       const getActionTemplate = createActionTemplate(
         async (params) => {
           const props = await callback(params);
@@ -273,7 +257,6 @@ const createMethodsForStore = ({
         },
         {
           name: `get ${name}`,
-          oneActiveActionAtATime,
           ...options,
         },
       );
@@ -283,7 +266,7 @@ const createMethodsForStore = ({
         item[itemActionMapSymbol].set(getActionTemplate, itemGetAction);
       });
 
-      // store.registerPropertyLifecycle(activeItemSignal, key, {
+      // store.registerPropertyLifecycle(resource.activeItemSignal, key, {
       //   changed: () => {
       //     // updateMatchingActionParams(getActionTemplate, { [key]: value });
       //   },
@@ -304,6 +287,7 @@ const createMethodsForStore = ({
       //     reloadActions({ reason: `${value} reinserted` });
       //   },
       // });
+
       return getActionTemplate;
     },
     put: (callback, options) => {
