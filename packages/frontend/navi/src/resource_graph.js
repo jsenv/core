@@ -1,9 +1,5 @@
 import { computed, signal } from "@preact/signals";
-import {
-  createAction,
-  createActionTemplate,
-  reloadActions,
-} from "./actions.js";
+import { createAction, createActionTemplate } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 
 const itemActionMapSymbol = Symbol("item_action_map");
@@ -20,195 +16,59 @@ export const getItemAction = (item, actionTemplate) => {
   return action;
 };
 
-export const resource = (name, { idKey = "id" } = {}) => {
+export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
   const resourceInstance = {
     isResource: true,
     name,
+    idKey,
   };
 
-  let store;
-  store = arraySignalStore([], idKey);
-
-  const useArray = () => {
-    return store.arraySignal.value;
-  };
-  const useById = (id) => {
-    return store.select(idKey, id);
-  };
-
-  const activeIdSignal = signal(null);
-  const activeItemSignal = computed(() => {
-    const activeItemId = activeIdSignal.value;
-    return store.select(activeItemId);
-  });
-  const useActiveItem = () => {
-    const activeItem = activeItemSignal.value;
-    return activeItem;
-  };
-  const setActiveItem = (props) => {
-    const item = store.upsert(props);
-    activeIdSignal.value = item[idKey];
-  };
-
-  Object.assign(resourceInstance, {
-    useArray,
-    useById,
-    useActiveItem,
-    setActiveItem,
-  });
-
-  const storeMethodEffects = {
-    get: (props) => {
-      return store.upsert(props);
-    },
-    put: (propsOrPropsArray) => {
-      return store.upsert(propsOrPropsArray);
-    },
-    patch: (propsOrPropsArray) => {
-      return store.upsert(propsOrPropsArray);
-    },
-    delete: (itemIdOrItemIdArray) => {
-      return store.drop(itemIdOrItemIdArray);
-    },
-  };
-
-  Object.assign(resourceInstance, {
-    getAll: (callback, options) => {
-      const getAllAction = createAction(
-        (params) => {
-          const callbackResult = callback(params);
-          if (callbackResult && typeof callbackResult.then === "function") {
-            return callbackResult.then((propsArray) => {
-              const itemArray = store.upsert(propsArray);
-              return itemArray;
-            });
-          }
-          const propsArray = callbackResult;
-          const itemArray = store.upsert(propsArray);
-          return itemArray;
-        },
-        {
-          name: `getAll ${name}`,
-          initialData: [],
-          ...options,
-        },
-      );
-      return getAllAction;
-    },
-    get: (callback, { key = idKey, ...options } = {}) => {
-      const getActionTemplate = createActionTemplate(
-        async (params) => {
-          const props = await callback(params);
-          const item = storeMethodEffects.get(props);
-          return item;
-        },
-        {
-          name: `get ${name}`,
-          // WARNING: this should be enabled only if the action is used to display the main content of the page
-          // because only then it makes sense to prevent loading something user don't need anymore
-          // if this action is used to let's say load an item details
-          // and UI displays a list of item with details
-          // we could totally want to load many item details in parallel
-          oneActiveActionAtATime: true,
-          ...options,
-        },
-      );
-
-      store.addSetup((item) => {
-        const itemGetAction = getActionTemplate.withParams(item);
-        item[itemActionMapSymbol].set(getActionTemplate, itemGetAction);
-      });
-
-      store.registerPropertyLifecycle(activeItemSignal, key, {
-        changed: () => {
-          // updateMatchingActionParams(getActionTemplate, { [key]: value });
-        },
-        dropped: (value) => {
-          reloadActions({ reason: `${value} dropped` });
-        },
-        reinserted: (value) => {
-          // this will reload all actions already matching which works but
-          // - most of the time only "getAction" is impacted, any other action could stay as is
-          // - we already have the data, reloading the action will refetch the backend which is unnecessary
-          // we could just eventual action error (which is cause by 404 likely)
-          // to actually let the data be displayed
-          // because they are available, but in reality the action has no data
-          // because the fetch failed
-          // so conceptually reloading is fine,
-          // the only thing that bothers me a little is that it reloads all other actions
-          //  but thing is it might have impact on other actions so let's keep as is for now
-          reloadActions({ reason: `${value} reinserted` });
-        },
-      });
-      return getActionTemplate;
-    },
-    put: (callback, options) => {
-      const putActionTemplate = createActionTemplate(
-        async (params) => {
-          const propsOrPropsArray = await callback(params);
-          const itemOrItemArray = storeMethodEffects.put(propsOrPropsArray);
-          return itemOrItemArray;
-        },
-        {
-          name: `put ${name}`,
-          ...options,
-        },
-      );
-      store.addSetup((item) => {
-        const itemPutAction = putActionTemplate.withParams(item);
-        item[itemActionMapSymbol].set(itemPutAction, putActionTemplate);
-      });
-      return putActionTemplate;
-    },
-    patch: (callback, options) => {
-      const patchActionTemplate = createActionTemplate(
-        async (params) => {
-          const propsOrPropsArray = await callback(params);
-          return storeMethodEffects.patch(propsOrPropsArray);
-        },
-        {
-          name: `patch ${name}`,
-          ...options,
-        },
-      );
-      store.addSetup((item) => {
-        const itemPatchAction = patchActionTemplate.withParams(item);
-        item[itemActionMapSymbol].set(itemPatchAction, patchActionTemplate);
-      });
-      return patchActionTemplate;
-    },
-    delete: (callback, options) => {
-      const deleteActionTemplate = createActionTemplate(
-        async (params) => {
-          const itemIdOrItemIdArray = await callback(params);
-          return storeMethodEffects.delete(itemIdOrItemIdArray);
-        },
-        {
-          name: `delete ${name}`,
-          ...options,
-        },
-      );
-      store.addSetup((item) => {
-        const itemDeleteAction = deleteActionTemplate.withParams(item);
-        item[itemActionMapSymbol].set(itemDeleteAction, deleteActionTemplate);
-      });
-      return deleteActionTemplate;
-    },
-  });
-
-  store.addSetup((item) => {
-    if (debug) {
-      console.log(`install item action map symbol on ${item.id}`);
-    }
-    Object.defineProperty(item, itemActionMapSymbol, {
-      enumerable: true,
-      writable: true,
-      value: new Map(),
+  if (!store) {
+    store = arraySignalStore([], idKey, { name: `${name} store` });
+    const useArray = () => {
+      return store.arraySignal.value;
+    };
+    const useById = (id) => {
+      return store.select(idKey, id);
+    };
+    const activeIdSignal = signal(null);
+    const activeItemSignal = computed(() => {
+      const activeItemId = activeIdSignal.value;
+      return store.select(activeItemId);
     });
+    const useActiveItem = () => {
+      const activeItem = activeItemSignal.value;
+      return activeItem;
+    };
+    const setActiveItem = (props) => {
+      const item = store.upsert(props);
+      activeIdSignal.value = item[idKey];
+    };
+    Object.assign(resourceInstance, {
+      useArray,
+      useById,
+      useActiveItem,
+      setActiveItem,
+    });
+    store.addSetup((item) => {
+      if (debug) {
+        console.log(`setup ${item.id}[itemActionMapSymbol]`);
+      }
+      Object.defineProperty(item, itemActionMapSymbol, {
+        enumerable: true,
+        writable: true,
+        value: new Map(),
+      });
+    });
+    Object.assign(resourceInstance, { store });
+  }
+
+  const methodsForStore = createMethodsForStore({
+    sourceStore: sourceStore || store,
+    targetStore: store,
+    resource: resourceInstance,
   });
-  Object.assign(resourceInstance, {
-    store,
-  });
+  Object.assign(resourceInstance, methodsForStore);
 
   {
     const describe = (description) => {
@@ -237,7 +97,7 @@ export const resource = (name, { idKey = "id" } = {}) => {
         let childProps = item[propertyName];
         if (debug) {
           console.log(
-            `setup one_to_one relationship on ${item.id}.${propertyName} (current value: ${childProps ? childProps[childIdKey] : "null"})`,
+            `setup ${item.id}.${propertyName} one-to-one with "${childResource.name}" item (current value: ${childProps ? childProps[childIdKey] : "null"})`,
           );
         }
         const signal = computed(() => {
@@ -267,7 +127,13 @@ export const resource = (name, { idKey = "id" } = {}) => {
           },
         });
       });
-      return resourceInstance;
+      // lorsqu'on call get sur ce sous objet
+      // il faut qu'on stocke sur celui-ci par contre
+      return resource(`${name}.${propertyName}`, {
+        sourceStore: store,
+        store: childResource.store,
+        idKey: childIdKey,
+      });
     };
     const many = (childResource, propertyName) => {
       const childIdKey = childResource.idKey;
@@ -340,4 +206,158 @@ export const resource = (name, { idKey = "id" } = {}) => {
   }
 
   return resourceInstance;
+};
+
+const createMethodsForStore = ({
+  sourceStore,
+  targetStore = sourceStore,
+  resource,
+}) => {
+  const { name } = resource;
+  const targetStoreMethodEffects = {
+    get: (props) => {
+      return targetStore.upsert(props);
+    },
+    put: (propsOrPropsArray) => {
+      return targetStore.upsert(propsOrPropsArray);
+    },
+    patch: (propsOrPropsArray) => {
+      return targetStore.upsert(propsOrPropsArray);
+    },
+    delete: (itemIdOrItemIdArray) => {
+      return targetStore.drop(itemIdOrItemIdArray);
+    },
+  };
+
+  return {
+    getAll: (callback, options) => {
+      const getAllAction = createAction(
+        (params) => {
+          const callbackResult = callback(params);
+          if (callbackResult && typeof callbackResult.then === "function") {
+            return callbackResult.then((propsArray) => {
+              const itemArray = targetStore.upsert(propsArray);
+              return itemArray;
+            });
+          }
+          const propsArray = callbackResult;
+          const itemArray = targetStore.upsert(propsArray);
+          return itemArray;
+        },
+        {
+          name: `getAll ${name}`,
+          initialData: [],
+          ...options,
+        },
+      );
+      return getAllAction;
+    },
+    get: (
+      callback,
+      {
+        // key = idKey,
+        // WARNING: this should be enabled only if the action is used to display the main content of the page
+        // because only then it makes sense to prevent loading something user don't need anymore
+        // if this action is used to let's say load an item details
+        // and UI displays a list of item with details
+        // we could totally want to load many item details in parallel
+        oneActiveActionAtATime,
+        ...options
+      } = {},
+    ) => {
+      const getActionTemplate = createActionTemplate(
+        async (params) => {
+          const props = await callback(params);
+          const item = targetStoreMethodEffects.get(props);
+          return item;
+        },
+        {
+          name: `get ${name}`,
+          oneActiveActionAtATime,
+          ...options,
+        },
+      );
+
+      sourceStore.addSetup((item) => {
+        const itemGetAction = getActionTemplate.withParams(item);
+        item[itemActionMapSymbol].set(getActionTemplate, itemGetAction);
+      });
+
+      // store.registerPropertyLifecycle(activeItemSignal, key, {
+      //   changed: () => {
+      //     // updateMatchingActionParams(getActionTemplate, { [key]: value });
+      //   },
+      //   dropped: (value) => {
+      //     reloadActions({ reason: `${value} dropped` });
+      //   },
+      //   reinserted: (value) => {
+      //     // this will reload all actions already matching which works but
+      //     // - most of the time only "getAction" is impacted, any other action could stay as is
+      //     // - we already have the data, reloading the action will refetch the backend which is unnecessary
+      //     // we could just eventual action error (which is cause by 404 likely)
+      //     // to actually let the data be displayed
+      //     // because they are available, but in reality the action has no data
+      //     // because the fetch failed
+      //     // so conceptually reloading is fine,
+      //     // the only thing that bothers me a little is that it reloads all other actions
+      //     //  but thing is it might have impact on other actions so let's keep as is for now
+      //     reloadActions({ reason: `${value} reinserted` });
+      //   },
+      // });
+      return getActionTemplate;
+    },
+    put: (callback, options) => {
+      const putActionTemplate = createActionTemplate(
+        async (params) => {
+          const propsOrPropsArray = await callback(params);
+          const itemOrItemArray =
+            targetStoreMethodEffects.put(propsOrPropsArray);
+          return itemOrItemArray;
+        },
+        {
+          name: `put ${name}`,
+          ...options,
+        },
+      );
+      sourceStore.addSetup((item) => {
+        const itemPutAction = putActionTemplate.withParams(item);
+        item[itemActionMapSymbol].set(itemPutAction, putActionTemplate);
+      });
+      return putActionTemplate;
+    },
+    patch: (callback, options) => {
+      const patchActionTemplate = createActionTemplate(
+        async (params) => {
+          const propsOrPropsArray = await callback(params);
+          return targetStoreMethodEffects.patch(propsOrPropsArray);
+        },
+        {
+          name: `patch ${name}`,
+          ...options,
+        },
+      );
+      sourceStore.addSetup((item) => {
+        const itemPatchAction = patchActionTemplate.withParams(item);
+        item[itemActionMapSymbol].set(itemPatchAction, patchActionTemplate);
+      });
+      return patchActionTemplate;
+    },
+    delete: (callback, options) => {
+      const deleteActionTemplate = createActionTemplate(
+        async (params) => {
+          const itemIdOrItemIdArray = await callback(params);
+          return targetStoreMethodEffects.delete(itemIdOrItemIdArray);
+        },
+        {
+          name: `delete ${name}`,
+          ...options,
+        },
+      );
+      sourceStore.addSetup((item) => {
+        const itemDeleteAction = deleteActionTemplate.withParams(item);
+        item[itemActionMapSymbol].set(itemDeleteAction, deleteActionTemplate);
+      });
+      return deleteActionTemplate;
+    },
+  };
 };

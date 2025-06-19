@@ -1,9 +1,10 @@
 import { computed, effect, signal } from "@preact/signals";
 
-export const arraySignalStore = (initialArray = [], idKey = "id") => {
+export const arraySignalStore = (initialArray = [], idKey = "id", { name }) => {
   const setupCallbackSet = new Set();
   const propertyAccessorMap = new Map();
   const store = {
+    name,
     addSetup: (setupCallback) => {
       setupCallbackSet.add(setupCallback);
     },

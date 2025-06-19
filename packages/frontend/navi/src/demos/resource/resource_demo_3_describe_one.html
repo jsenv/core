@@ -28,12 +28,18 @@
       const { owner: tableOwner } = table.describe({
         owner: user,
       });
-      const getTableTemplate = table.get(({ name, owner }) => {
-        return { id: name, name, owner };
-      });
+      const getTableTemplate = table.get(
+        ({ name, owner }) => {
+          return { id: name, name, owner };
+        },
+        {
+          oneActiveActionAtATime: true,
+        },
+      );
       const getTableOwnerTemplate = tableOwner.get(async (table) => {
-        console.log("start loading table owner for", table.name, table.owner);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        console.log("start loading table owner for", table);
+        // await new Promise((resolve) => setTimeout(resolve, 1000));
+        debugger;
         return { id: table.owner, name: table.owner };
       });
 
@@ -41,12 +47,10 @@
         name: "table_1",
         owner: "user_1",
       });
-      getTable1Action.load();
       const getTable2Action = getTableTemplate.withParams({
         name: "table_2",
         owner: "user_2",
       });
-      getTable2Action.load();
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
