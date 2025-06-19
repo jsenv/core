@@ -71,6 +71,7 @@
             <button
               onClick={() => {
                 setCurrentUsername(dam.name);
+                damUserAction.reload();
               }}
             >
               Load dam
@@ -93,6 +94,7 @@
             <button
               onClick={() => {
                 setCurrentUsername(seb.name);
+                sebUserAction.reload();
               }}
             >
               Load seb
@@ -115,6 +117,7 @@
             <button
               onClick={() => {
                 setCurrentUsername(john.name);
+                johnUserAction.reload();
               }}
             >
               Load john
@@ -144,7 +147,9 @@
                 loading: () => <div>Loading user...</div>,
                 error: (error) => <div>Error: {error.message}</div>,
                 unloaded: () => <div>User not loaded</div>,
-                loaded: (user) => <div>{user.greeting}</div>,
+                loaded: (user) => {
+                  return <div>{user.greeting}</div>;
+                },
               }}
             </ActionRenderer>
           </div>

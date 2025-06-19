@@ -703,7 +703,6 @@ export const useActionStatus = (action) => {
   if (activeActionSignal) {
     const activeAction = activeActionSignal.value;
     if (activeAction) {
-      debugger;
       return useActionStatus(activeAction);
     }
     active = false;
