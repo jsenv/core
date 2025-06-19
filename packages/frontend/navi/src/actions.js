@@ -14,7 +14,7 @@
 import { batch, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "./compare_two_js_values.js";
 
-let debug = true;
+let debug = false;
 
 export const IDLE = { id: "idle" };
 export const LOADING = { id: "loading" };

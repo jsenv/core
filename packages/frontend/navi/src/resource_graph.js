@@ -8,8 +8,14 @@ import { arraySignalStore } from "./array_signal_store.js";
 
 const itemActionMapSymbol = Symbol("item_action_map");
 
+let debug = true;
+
 export const getItemAction = (item, actionTemplate) => {
   const itemActionMap = item[itemActionMapSymbol];
+  if (!itemActionMap) {
+    console.error(item);
+    throw new Error(`itemActionMap is not defined on item`);
+  }
   const action = itemActionMap.get(actionTemplate);
   return action;
 };
@@ -112,18 +118,6 @@ export const resource = (name, { idKey = "id" } = {}) => {
         const itemGetAction = getActionTemplate.withParams(item);
         item[itemActionMapSymbol].set(getActionTemplate, itemGetAction);
       });
-
-      // effect(() => {
-      //   const isMatching = getActionTemplate.isMatchingSignal.value;
-      //   const actionParams = getActionTemplate.paramsSignal.value;
-      //   const activeItem = store.select(key, actionParams[key]);
-      //   if (isMatching) {
-      //     const activeItemId = activeItem ? activeItem[idKey] : null;
-      //     activeIdSignal.value = activeItemId;
-      //   } else {
-      //     activeIdSignal.value = null;
-      //   }
-      // });
 
       store.registerPropertyLifecycle(activeItemSignal, key, {
         changed: () => {
@@ -238,6 +232,11 @@ export const resource = (name, { idKey = "id" } = {}) => {
       const childIdKey = childResource.idKey;
       store.addSetup((item) => {
         let childProps = item[propertyName];
+        if (debug) {
+          console.log(
+            `setting up one_to_one relationship for ${item.id} on prop ${propertyName} (current value: ${childProps})`,
+          );
+        }
         const signal = computed(() => {
           const childItemId = childProps ? childProps[childIdKey] : null;
           const childItem = childResource.store.select(childItemId);
@@ -246,9 +245,20 @@ export const resource = (name, { idKey = "id" } = {}) => {
 
         Object.defineProperty(item, propertyName, {
           get: () => {
-            return signal.value;
+            const childItem = signal.value;
+            if (debug) {
+              console.log(
+                `getting one_to_one relationship for ${item.id} on prop ${propertyName}: ${childItem ? childItem.id : "null"}`,
+              );
+            }
+            return childItem;
           },
           set: (value) => {
+            if (debug) {
+              console.log(
+                `update one_to_one relationship for ${item.id} on prop ${propertyName} from ${childProps} to ${value}`,
+              );
+            }
             childProps = value;
             childResource.store.upsert(childProps);
           },

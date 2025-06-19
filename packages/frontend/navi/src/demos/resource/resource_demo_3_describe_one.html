@@ -29,20 +29,22 @@
         owner: user,
       });
       const getTableTemplate = table.get(({ name, owner }) => {
-        return { name, owner };
+        return { id: name, name, owner };
       });
-      const getTableOwnerTemplate = tableOwner.get((table) => {
-        return { name: table.owner };
+      const getTableOwnerTemplate = tableOwner.get(async (table) => {
+        console.log("start loading table owner for", table.name, table.owner);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        return { id: table.owner, name: table.owner };
       });
 
       const getTable1Action = getTableTemplate.withParams({
-        name: "table1",
-        owner: "user1",
+        name: "table_1",
+        owner: "user_1",
       });
       getTable1Action.load();
       const getTable2Action = getTableTemplate.withParams({
-        name: "table2",
-        owner: "user2",
+        name: "table_2",
+        owner: "user_2",
       });
       getTable2Action.load();
 
@@ -50,7 +52,7 @@
       const App = () => {
         // const { data: table1 } = useActionStatus(getTable1Action);
         // const { data: table2 } = useActionStatus(getTable2Action);
-        const { data } = useActionStatus(getTableTemplate);
+        const { data: table } = useActionStatus(getTableTemplate);
 
         return (
           <div>
@@ -71,7 +73,7 @@
 
             <ActionStatus action={getTableTemplate} />
 
-            <div>Table: {data && <Table table={data} />}</div>
+            <div>Table: {table && <Table table={table} />}</div>
           </div>
         );
       };
@@ -90,11 +92,11 @@
                 if (e.target.open) {
                   getTableOwner.reload();
                 } else {
-                  // tablesAction.unload(user);
+                  // getTableOwner.unload(user);
                 }
               }}
             >
-              <summary>tables</summary>
+              <summary>owner</summary>
               <ActionRenderer action={getTableOwner}>
                 {{
                   loaded: (owner) => (
