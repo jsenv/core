@@ -11,7 +11,13 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { resource, useActionStatus, getItemAction } from "@jsenv/navi";
+      import {
+        resource,
+        useActionStatus,
+        getItemAction,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
       import {
         // eslint-disable-next-line no-unused-vars
         ActionStatus,
@@ -73,7 +79,7 @@
       // eslint-disable-next-line no-unused-vars
       const Table = ({ table }) => {
         const getTableOwner = getItemAction(table, getTableOwnerTemplate);
-        const { active, data } = useActionStatus(getTableOwner);
+        const { active } = useActionStatus(getTableOwner);
 
         return (
           <>
@@ -89,7 +95,15 @@
               }}
             >
               <summary>tables</summary>
-              {data}
+              <ActionRenderer action={getTableOwner}>
+                {{
+                  loaded: (owner) => (
+                    <span>
+                      owner: <strong>{owner.name}</strong>
+                    </span>
+                  ),
+                }}
+              </ActionRenderer>
             </details>
           </>
         );
