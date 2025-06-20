@@ -48,8 +48,6 @@ export const ABORTED = { id: "aborted" };
 export const FAILED = { id: "failed" };
 export const LOADED = { id: "loaded" };
 
-const ACTION_PARAMS_IDENTITY_SYMBOL = Symbol("action_params_identity");
-
 // intermediate function representing the fact we'll use navigation.navigate update action and get a signal
 export const requestActionsUpdates = ({
   preloadSet,
@@ -364,7 +362,9 @@ const getActionPrivateProperties = (action) => {
   }
   return actionPrivateProperties;
 };
-export const createAction = (
+
+const ACTION_ITEM_IDENTITY_SYMBOL = Symbol("action_item_identity");
+export const createActionTemplate = (
   callback,
   {
     name = callback.name || "anonymous",
@@ -372,359 +372,329 @@ export const createAction = (
     data: initialData,
     renderLoadedAsync,
     sideEffect = () => {},
-    isTemplate = false,
     keepOldData = false,
-    autoload,
-  },
+  } = {},
 ) => {
-  let loadRequested = false;
-  const loadRequestedSignal = signal(loadRequested);
-  let loadingState = IDLE;
-  const loadingStateSignal = signal(loadingState);
-  let error;
-  const errorSignal = signal(null);
-  let data = initialData;
-  const dataSignal = signal(initialData);
+  const instantiate = (
+    item,
+    { actionName = name, actionParams = initialParams } = {},
+  ) => {
+    const itemSignal = signal(item);
+    let params = actionParams;
+    const paramsSignal = signal(params);
 
-  let params = initialParams;
-  const paramsSignal = signal(initialParams);
-  const parametrizedActions = new Map();
-  const parametrizedActionsWeakRefs = new Set();
+    let loadRequested = false;
+    const loadRequestedSignal = signal(loadRequested);
+    let loadingState = IDLE;
+    const loadingStateSignal = signal(loadingState);
+    let error;
+    const errorSignal = signal(null);
+    let data = initialData;
+    const dataSignal = signal(initialData);
 
-  let applyAutoload;
-  if (autoload) {
-    const autoloadResult = autoload();
-    if (autoloadResult === true) {
-      autoload = null;
-      applyAutoload = () => {
-        action.load();
+    const boundActionWeakRefMap = new Map();
+    const withParams = (newParams) => {
+      const combinedParams =
+        initialParams === initialParamsDefault
+          ? newParams
+          : { ...initialParams, ...newParams };
+      for (const [paramsCandidate, weakRef] of boundActionWeakRefMap) {
+        const existingAction = weakRef.deref();
+        if (!existingAction) {
+          boundActionWeakRefMap.delete(paramsCandidate);
+          continue;
+        }
+        if (compareTwoJsValues(paramsCandidate, combinedParams)) {
+          return existingAction;
+        }
+      }
+      const boundAction = instantiate(item, {
+        actionName: `${name}${generateParamsSuffix(combinedParams)}`,
+        actionParams: combinedParams,
+      });
+      const weakRef = new WeakRef(boundAction);
+      boundActionWeakRefMap.set(combinedParams, weakRef);
+      return boundAction;
+    };
+
+    const preload = () => {
+      return requestActionsUpdates({
+        preloadSet: new Set([action]),
+      });
+    };
+    const load = (options) =>
+      requestActionsUpdates({
+        loadSet: new Set([action]),
+        ...options,
+      });
+    const reload = (options) => {
+      return load({ isReload: true, ...options });
+    };
+    const unload = () =>
+      requestActionsUpdates({
+        unloadSet: new Set([action]),
+      });
+
+    const action = {
+      name: actionName,
+      item,
+      params,
+      loadingState,
+      loadRequested,
+      error,
+      data,
+      preloadRequested: false,
+      preload,
+      load,
+      reload,
+      unload,
+      withParams,
+      toString: () => name,
+    };
+    Object.preventExtensions(action);
+    effects: {
+      const actionWeakRef = new WeakRef(action);
+      const actionWeakEffect = (callback) => {
+        const dispose = effect(() => {
+          const actionRef = actionWeakRef.deref();
+          if (actionRef) {
+            callback(actionRef);
+          } else {
+            dispose();
+          }
+        });
       };
-    } else if (autoloadResult && typeof autoloadResult === "object") {
-      autoload = null;
-      applyAutoload = () => {
-        const autoloadAction = action.withParams(autoloadResult);
-        autoloadAction.load();
-      };
-    } else if (typeof autoloadResult === "function") {
-      autoload = autoloadResult; // will be given to withParams actions
+      actionWeakEffect((actionRef) => {
+        item = itemSignal.value;
+        actionRef.item = item;
+      });
+      actionWeakEffect((actionRef) => {
+        params = paramsSignal.value;
+        actionRef.params = params;
+      });
+      actionWeakEffect((actionRef) => {
+        loadRequested = loadRequestedSignal.value;
+        actionRef.loadRequested = loadRequested;
+      });
+      actionWeakEffect((actionRef) => {
+        loadingState = loadingStateSignal.value;
+        actionRef.loadingState = loadingState;
+      });
+      actionWeakEffect((actionRef) => {
+        error = errorSignal.value;
+        actionRef.error = error;
+      });
+      actionWeakEffect((actionRef) => {
+        data = dataSignal.value;
+        actionRef.data = data;
+      });
     }
-  }
+    private_properties: {
+      const ui = {
+        renderLoaded: null,
+        renderLoadedAsync,
+      };
+      let sideEffectCleanup;
+      const performLoad = ({ signal, reason, isPreload }) => {
+        const abortController = new AbortController();
+        const abortSignal = abortController.signal;
+        const abort = (reason) => {
+          if (debug) {
+            console.log(`"${action}": abort activation.`);
+          }
+          loadingStateSignal.value = ABORTED;
+          abortController.abort(reason);
+          actionAbortMap.delete(action);
+        };
+        const onabort = () => {
+          abort(signal.reason);
+        };
+        signal.addEventListener("abort", onabort);
+        actionAbortMap.set(action, abort);
 
-  const withParams = (newParams, options = {}) => {
-    const combinedParams =
-      initialParams === initialParamsDefault ? newParams : newParams;
+        batch(() => {
+          errorSignal.value = null;
+          loadingStateSignal.value = LOADING;
+          if (!isPreload) {
+            loadRequestedSignal.value = true;
+          }
+        });
 
-    if (typeof combinedParams === "object" && combinedParams !== null) {
-      const actionIdentity = combinedParams[ACTION_PARAMS_IDENTITY_SYMBOL];
+        const returnValue = sideEffect(params);
+        if (typeof returnValue === "function") {
+          sideEffectCleanup = returnValue;
+        }
 
-      if (!actionIdentity) {
-        Object.defineProperty(combinedParams, ACTION_PARAMS_IDENTITY_SYMBOL, {
-          value: Symbol("action_params_identity"),
+        let loadResult;
+        const onLoadEnd = () => {
+          dataSignal.value = loadResult;
+          loadingStateSignal.value = LOADED;
+          actionAbortMap.delete(action);
+          actionPromiseMap.delete(action);
+        };
+        const onLoadError = (e) => {
+          signal.removeEventListener("abort", onabort);
+          actionAbortMap.delete(action);
+          actionPromiseMap.delete(action);
+          if (abortSignal.aborted && e === abortSignal.reason) {
+            loadingStateSignal.value = ABORTED;
+            return;
+          }
+          batch(() => {
+            errorSignal.value = e;
+            loadingStateSignal.value = FAILED;
+          });
+        };
+
+        const loadParams = { signal, reason, isPreload };
+        try {
+          const thenableArray = [];
+          const callbackResult = callback(item, { ...params, ...loadParams });
+          if (callbackResult && typeof callbackResult.then === "function") {
+            thenableArray.push(callbackResult);
+            callbackResult.then((value) => {
+              loadResult = value;
+            });
+          } else {
+            loadResult = callbackResult;
+          }
+          const renderLoadedAsync = ui.renderLoadedAsync;
+          if (renderLoadedAsync) {
+            const renderLoadedPromise = renderLoadedAsync(
+              params,
+              loadParams,
+            ).then((renderLoaded) => {
+              ui.renderLoaded = () => renderLoaded;
+            });
+            thenableArray.push(renderLoadedPromise);
+          }
+          if (thenableArray.length === 0) {
+            onLoadEnd();
+            return undefined;
+          }
+          return Promise.all(thenableArray).then(
+            () => {
+              onLoadEnd();
+            },
+            (e) => {
+              onLoadError(e);
+            },
+          );
+        } catch (e) {
+          onLoadError(e);
+        }
+        return undefined;
+      };
+      const performUnload = (reason) => {
+        const abort = actionAbortMap.get(action);
+        if (abort) {
+          if (debug) {
+            console.log(`"${action}": aborting (reason: ${reason})`);
+          }
+          abort(reason);
+        } else if (debug) {
+          console.log(`"${action}": unload route (reason: ${reason})`);
+        }
+        if (sideEffectCleanup) {
+          sideEffectCleanup(reason);
+          sideEffectCleanup = undefined;
+        }
+        actionPromiseMap.delete(action);
+        batch(() => {
+          errorSignal.value = null;
+          if (!keepOldData) {
+            dataSignal.value = initialData;
+          }
+          loadRequestedSignal.value = false;
+          loadingStateSignal.value = IDLE;
+        });
+      };
+      const actionPrivateProperties = {
+        initialParams,
+        initialData,
+
+        loadingStateSignal,
+        loadRequestedSignal,
+        paramsSignal,
+        dataSignal,
+        errorSignal,
+
+        performLoad,
+        performUnload,
+        ui,
+      };
+      actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
+    }
+    return action;
+  };
+
+  const actionWeakRefMap = new Map();
+  const memoizedInstantiate = (item) => {
+    return_memoized_action: {
+      if (typeof item !== "object" || item === null) {
+        break return_memoized_action;
+      }
+      const itemIdentity = item[ACTION_ITEM_IDENTITY_SYMBOL];
+      if (!itemIdentity) {
+        // we would not need this if we rely on item id
+        // but at action are better decouple by not knowing what is newParams
+        // and not force the presence of an id on the object
+        // instead we prefer to set a symbol that will be forward even when params are modified
+        // because array_signal_store.js uses Object.getOwnPropertyDescriptors which copy symbols
+        // as a result an item can be recognized and we return the same action for the "same" item
+        // an other approach would be to keep the object identity in array_signal_store.js
+        // but that means using a Proxy to transform all object properties into signals
+        // so that later on preact can detect changes
+        // it's simpler and more robust to actually change the object identity when it changes
+        // (because I'm not sure what would happen if the preact component was trying to read a non existing property for instance)
+        Object.defineProperty(itemIdentity, ACTION_ITEM_IDENTITY_SYMBOL, {
+          value: Symbol("action_item_identity"),
           writable: false,
           enumerable: false,
           configurable: false,
         });
-      } else {
-        for (const [existingParams, weakRef] of parametrizedActions) {
-          const existingAction = weakRef.deref();
-          if (!existingAction) {
-            parametrizedActions.delete(existingParams);
-            continue;
-          }
-          if (
-            existingParams[ACTION_PARAMS_IDENTITY_SYMBOL] === actionIdentity
-          ) {
-            const existingActionPrivateProperties =
-              getActionPrivateProperties(existingAction);
-            existingActionPrivateProperties.paramsSignal.value = combinedParams;
-            return existingAction;
-          }
+        break return_memoized_action;
+      }
+      for (const [itemCandidate, weakRef] of actionWeakRefMap) {
+        const actionCandidate = weakRef.deref();
+        if (!actionCandidate) {
+          actionWeakRefMap.delete(itemCandidate);
+          continue;
+        }
+        const itemCandidateIdentity =
+          itemCandidate[ACTION_ITEM_IDENTITY_SYMBOL];
+        if (itemCandidateIdentity === itemIdentity) {
+          const actionPrivateProperties =
+            getActionPrivateProperties(actionCandidate);
+          actionPrivateProperties.itemSignal.value = item;
+          return actionCandidate;
         }
       }
     }
-
-    for (const [existingParams, weakRef] of parametrizedActions) {
-      const existingAction = weakRef.deref();
-      if (
-        existingAction &&
-        compareTwoJsValues(existingParams, combinedParams)
-      ) {
-        return existingAction;
-      }
-      if (!existingAction) {
-        parametrizedActions.delete(existingParams);
-      }
-    }
-
-    const parametrizedAction = createAction(callback, {
-      name: `${action.name}${generateParamsSuffix(combinedParams)}`,
-      params: combinedParams,
-      sideEffect, // call the parent side effect
-      parent: action,
-      autoload,
-      ...options,
-    });
-    parametrizedAction.load = (options) => {
-      return requestActionsUpdates({
-        loadSet: new Set([parametrizedAction]),
-        ...options,
-      });
-    };
-
-    const weakRef = new WeakRef(parametrizedAction);
-    parametrizedActions.set(combinedParams, weakRef);
-    parametrizedActionsWeakRefs.add(weakRef);
-    return parametrizedAction;
-  };
-  const preload = () => {
-    return requestActionsUpdates({
-      preloadSet: new Set([action]),
-    });
-  };
-  const load = isTemplate
-    ? () => {
-        throw new Error(
-          `Cannot load action template "${name}", use withParams() to set parameters first.`,
-        );
-      }
-    : (options) =>
-        requestActionsUpdates({
-          loadSet: new Set([action]),
-          ...options,
-        });
-  const reload = (options) => {
-    return load({ isReload: true, ...options });
-  };
-
-  const unload = isTemplate
-    ? () => {
-        throw new Error(`Cannot unload action template "${name}".`);
-      }
-    : () =>
-        requestActionsUpdates({
-          unloadSet: new Set([action]),
-        });
-
-  const action = {
-    name,
-    isTemplate,
-    params,
-    loadingState,
-    loadRequested,
-    error,
-    data,
-    preloadRequested: false,
-    preload,
-    load,
-    reload,
-    unload,
-    withParams,
-    toString: () => name,
-  };
-  Object.preventExtensions(action);
-
-  effects: {
+    const action = instantiate(item);
     const actionWeakRef = new WeakRef(action);
-    const actionWeakEffect = (callback) => {
-      const dispose = effect(() => {
-        const actionRef = actionWeakRef.deref();
-        if (actionRef) {
-          callback(actionRef);
-        } else {
-          dispose();
-        }
-      });
-    };
-    actionWeakEffect((actionRef) => {
-      params = paramsSignal.value;
-      actionRef.params = params;
+    actionWeakRefMap.set(item, actionWeakRef);
+    return action;
+  };
+
+  const actionTemplate = {};
+  actionTemplate.instantiate = memoizedInstantiate;
+
+  const actionSignalFromItemSignal = (itemSignal) => {
+    return computed(() => {
+      const item = itemSignal.value;
+      const action = memoizedInstantiate(item);
+      return action;
     });
-    actionWeakEffect((actionRef) => {
-      loadRequested = loadRequestedSignal.value;
-      actionRef.loadRequested = loadRequested;
-    });
-    actionWeakEffect((actionRef) => {
-      loadingState = loadingStateSignal.value;
-      actionRef.loadingState = loadingState;
-    });
-    actionWeakEffect((actionRef) => {
-      error = errorSignal.value;
-      actionRef.error = error;
-    });
-    actionWeakEffect((actionRef) => {
-      data = dataSignal.value;
-      actionRef.data = data;
-    });
-  }
+  };
+  actionTemplate.actionSignalFromItemSignal = actionSignalFromItemSignal;
+  actionTemplate.isTemplate = true;
 
-  private_properties: {
-    const ui = {
-      renderLoaded: null,
-      renderLoadedAsync,
-    };
-    let sideEffectCleanup;
-    const performLoad = ({ signal, reason, isPreload }) => {
-      const abortController = new AbortController();
-      const abortSignal = abortController.signal;
-      const abort = (reason) => {
-        if (debug) {
-          console.log(`"${action}": abort activation.`);
-        }
-        loadingStateSignal.value = ABORTED;
-        abortController.abort(reason);
-        actionAbortMap.delete(action);
-      };
-      const onabort = () => {
-        abort(signal.reason);
-      };
-      signal.addEventListener("abort", onabort);
-      actionAbortMap.set(action, abort);
-
-      batch(() => {
-        errorSignal.value = null;
-        loadingStateSignal.value = LOADING;
-        if (!isPreload) {
-          loadRequestedSignal.value = true;
-        }
-      });
-
-      const returnValue = sideEffect(params);
-      if (typeof returnValue === "function") {
-        sideEffectCleanup = returnValue;
-      }
-
-      let loadResult;
-      const onLoadEnd = () => {
-        dataSignal.value = loadResult;
-        loadingStateSignal.value = LOADED;
-        actionAbortMap.delete(action);
-        actionPromiseMap.delete(action);
-      };
-      const onLoadError = (e) => {
-        signal.removeEventListener("abort", onabort);
-        actionAbortMap.delete(action);
-        actionPromiseMap.delete(action);
-        if (abortSignal.aborted && e === abortSignal.reason) {
-          loadingStateSignal.value = ABORTED;
-          return;
-        }
-        batch(() => {
-          errorSignal.value = e;
-          loadingStateSignal.value = FAILED;
-        });
-      };
-
-      const loadParams = { signal, reason, isPreload };
-      try {
-        const thenableArray = [];
-        const callbackResult = callback(params, loadParams);
-        if (callbackResult && typeof callbackResult.then === "function") {
-          thenableArray.push(callbackResult);
-          callbackResult.then((value) => {
-            loadResult = value;
-          });
-        } else {
-          loadResult = callbackResult;
-        }
-        const renderLoadedAsync = ui.renderLoadedAsync;
-        if (renderLoadedAsync) {
-          const renderLoadedPromise = renderLoadedAsync(
-            params,
-            loadParams,
-          ).then((renderLoaded) => {
-            ui.renderLoaded = () => renderLoaded;
-          });
-          thenableArray.push(renderLoadedPromise);
-        }
-        if (thenableArray.length === 0) {
-          onLoadEnd();
-          return undefined;
-        }
-        return Promise.all(thenableArray).then(
-          () => {
-            onLoadEnd();
-          },
-          (e) => {
-            onLoadError(e);
-          },
-        );
-      } catch (e) {
-        onLoadError(e);
-      }
-      return undefined;
-    };
-    const performUnload = (reason) => {
-      const abort = actionAbortMap.get(action);
-      if (abort) {
-        if (debug) {
-          console.log(`"${action}": aborting (reason: ${reason})`);
-        }
-        abort(reason);
-      } else if (debug) {
-        console.log(`"${action}": unload route (reason: ${reason})`);
-      }
-      if (sideEffectCleanup) {
-        sideEffectCleanup(reason);
-        sideEffectCleanup = undefined;
-      }
-      actionPromiseMap.delete(action);
-      batch(() => {
-        errorSignal.value = null;
-        if (!keepOldData) {
-          dataSignal.value = initialData;
-        }
-        loadRequestedSignal.value = false;
-        loadingStateSignal.value = IDLE;
-      });
-    };
-    const actionPrivateProperties = {
-      initialParams,
-      initialData,
-
-      loadingStateSignal,
-      loadRequestedSignal,
-      paramsSignal,
-      dataSignal,
-      errorSignal,
-
-      performLoad,
-      performUnload,
-      ui,
-    };
-    actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
-  }
-
-  if (applyAutoload) {
-    applyAutoload();
-  }
-
-  return action;
-};
-export const createActionTemplate = (
-  callback,
-  { activeParamsSignal, ...options } = {},
-) => {
-  const actionTemplate = createAction(callback, {
-    isTemplate: true,
-    ...options,
-  });
-  if (!activeParamsSignal) {
-    return actionTemplate;
-  }
-  const activeActionSignal = computed(() => {
-    const activeParams = activeParamsSignal.value;
-    if (!activeParams) {
-      return null;
-    }
-    const activeAction = actionTemplate.withParams(activeParams);
-    return activeAction;
-  });
-  const actionPrivateProperties = getActionPrivateProperties(actionTemplate);
-  actionPrivatePropertiesWeakMap.set(actionTemplate, {
-    ...actionPrivateProperties,
-    activeActionSignal,
-  });
   return actionTemplate;
+};
+
+export const createAction = (callback, options) => {
+  return createActionTemplate(callback, options).instantiate();
 };
 
 const generateParamsSuffix = (params) => {
@@ -740,23 +710,9 @@ const generateParamsSuffix = (params) => {
 
 export const useActionStatus = (action) => {
   if (action.isTemplate) {
-    const { activeActionSignal } = getActionPrivateProperties(action);
-    if (activeActionSignal) {
-      const activeAction = activeActionSignal.value;
-      if (activeAction) {
-        return useActionStatus(activeAction);
-      }
-    }
-    return {
-      active: false,
-      idle: true,
-      params: action.params,
-      error: action.error,
-      aborted: false,
-      pending: false,
-      preloaded: false,
-      data: action.data,
-    };
+    throw new Error(
+      `useActionStatus() cannot be used on an action template, only on an action.`,
+    );
   }
 
   const {

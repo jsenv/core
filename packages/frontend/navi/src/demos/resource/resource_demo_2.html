@@ -43,18 +43,23 @@
           localStorage.removeItem("current_user_name");
         }
       });
-      const user = resource("user", {
-        idKey: "name",
-        activeIdSignal: currentUsernameSignal,
-      });
+
+      const user = resource("user", { idKey: "name" });
       // const useActiveUser = user.useActiveItem;
       const loadUsersAction = user.getAll(() => {
         return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
       });
 
-      const loadUserAction = user.get(({ name }) => {
+      const loadUserActionTemplate = user.get(({ name }) => {
         return { name, greeting: `Hello ${name}` };
       });
+
+      const currentUserSignal = user.itemSignalFromIdSignal(
+        currentUsernameSignal,
+      );
+      const currentUserAction =
+        loadUserActionTemplate.actionSignalFromItemSignal(currentUserSignal);
+
       loadUsersAction.load();
 
       // eslint-disable-next-line no-unused-vars
@@ -62,9 +67,9 @@
         const { data: users } = useActionStatus(loadUsersAction);
 
         const [dam, seb, john] = users;
-        const damUserAction = getItemAction(dam, loadUserAction);
-        const sebUserAction = getItemAction(seb, loadUserAction);
-        const johnUserAction = getItemAction(john, loadUserAction);
+        const damUserAction = getItemAction(dam, loadUserActionTemplate);
+        const sebUserAction = getItemAction(seb, loadUserActionTemplate);
+        const johnUserAction = getItemAction(john, loadUserActionTemplate);
 
         return (
           <div>
@@ -137,12 +142,11 @@
               Preload john
             </button>
 
-            <ActionStatus action={loadUserAction} />
             <ActionStatus action={damUserAction} />
             <ActionStatus action={sebUserAction} />
             <ActionStatus action={johnUserAction} />
 
-            <ActionRenderer action={loadUserAction}>
+            <ActionRenderer action={currentUserAction}>
               {{
                 loading: () => <div>Loading user...</div>,
                 error: (error) => <div>Error: {error.message}</div>,

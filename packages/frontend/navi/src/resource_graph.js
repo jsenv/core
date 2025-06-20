@@ -1,4 +1,4 @@
-import { computed, signal } from "@preact/signals";
+import { computed } from "@preact/signals";
 import { createAction, createActionTemplate } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 
@@ -16,10 +16,7 @@ export const getItemAction = (item, actionTemplate) => {
   return action;
 };
 
-export const resource = (
-  name,
-  { sourceStore, store, idKey = "id", activeIdSignal = signal(null) } = {},
-) => {
+export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
   const resourceInstance = {
     isResource: true,
     name,
@@ -34,20 +31,10 @@ export const resource = (
     const useById = (id) => {
       return store.select(idKey, id);
     };
-    const activeItemSignal = computed(() => {
-      const activeId = activeIdSignal.value;
-      return store.select(activeId);
-    });
-    const useActiveItem = () => {
-      const activeItem = activeItemSignal.value;
-      return activeItem;
-    };
 
     Object.assign(resourceInstance, {
-      activeItemSignal,
       useArray,
       useById,
-      useActiveItem,
     });
     store.addSetup((item) => {
       if (debug) {
@@ -204,6 +191,14 @@ export const resource = (
     });
   }
 
+  resourceInstance.itemSignalFromIdSignal = (idSignal) => {
+    return computed(() => {
+      const id = idSignal.value;
+      const item = store.upsert({ [idKey]: id });
+      return item;
+    });
+  };
+
   return resourceInstance;
 };
 
@@ -252,10 +247,6 @@ const createMethodsForStore = ({
       return getAllAction;
     },
     get: (callback, options) => {
-      const activeParamsSignal = computed(() => {
-        const activeItem = resource.activeItemSignal.value;
-        return activeItem;
-      });
       const getActionTemplate = createActionTemplate(
         async (params) => {
           const props = await callback(params);
@@ -264,13 +255,12 @@ const createMethodsForStore = ({
         },
         {
           name: `get ${name}`,
-          activeParamsSignal,
           ...options,
         },
       );
 
       sourceStore.addSetup((item) => {
-        const itemGetAction = getActionTemplate.withParams(item);
+        const itemGetAction = getActionTemplate.instantiate(item);
         item[itemActionMapSymbol].set(getActionTemplate, itemGetAction);
       });
 
@@ -312,7 +302,7 @@ const createMethodsForStore = ({
         },
       );
       sourceStore.addSetup((item) => {
-        const itemPutAction = putActionTemplate.withParams(item);
+        const itemPutAction = putActionTemplate.instantiate(item);
         item[itemActionMapSymbol].set(itemPutAction, putActionTemplate);
       });
       return putActionTemplate;
@@ -329,7 +319,7 @@ const createMethodsForStore = ({
         },
       );
       sourceStore.addSetup((item) => {
-        const itemPatchAction = patchActionTemplate.withParams(item);
+        const itemPatchAction = patchActionTemplate.instantiate(item);
         item[itemActionMapSymbol].set(itemPatchAction, patchActionTemplate);
       });
       return patchActionTemplate;
@@ -346,7 +336,7 @@ const createMethodsForStore = ({
         },
       );
       sourceStore.addSetup((item) => {
-        const itemDeleteAction = deleteActionTemplate.withParams(item);
+        const itemDeleteAction = deleteActionTemplate.instantiate(item);
         item[itemActionMapSymbol].set(itemDeleteAction, deleteActionTemplate);
       });
       return deleteActionTemplate;
