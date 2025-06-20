@@ -377,10 +377,10 @@ export const createActionTemplate = (
 ) => {
   const instantiate = (
     item,
-    { actionName = name, actionParams = initialParams } = {},
+    { instanceName = name, instanceParams = initialParams } = {},
   ) => {
     const itemSignal = signal(item);
-    let params = actionParams;
+    let params = instanceParams;
     const paramsSignal = signal(params);
 
     let loadRequested = false;
@@ -395,9 +395,9 @@ export const createActionTemplate = (
     const boundActionWeakRefMap = new Map();
     const withParams = (newParams) => {
       const combinedParams =
-        initialParams === initialParamsDefault
+        instanceParams === initialParamsDefault
           ? newParams
-          : { ...initialParams, ...newParams };
+          : { ...instanceParams, ...newParams };
       for (const [paramsCandidate, weakRef] of boundActionWeakRefMap) {
         const existingAction = weakRef.deref();
         if (!existingAction) {
@@ -436,7 +436,7 @@ export const createActionTemplate = (
       });
 
     const action = {
-      name: actionName,
+      name: instanceName,
       item,
       params,
       loadingState,
@@ -620,7 +620,7 @@ export const createActionTemplate = (
         });
       };
       const actionPrivateProperties = {
-        initialParams,
+        initialParams: instanceParams,
         initialData,
 
         itemSignal,
@@ -694,6 +694,7 @@ export const createActionTemplate = (
   const actionSignalFromItemSignal = (itemSignal) => {
     return computed(() => {
       const item = itemSignal.value;
+      console.log(item);
       const action = memoizedInstantiate(item);
       return action;
     });
@@ -727,13 +728,15 @@ export const useActionStatus = (action) => {
   }
 
   const {
+    itemSignal,
+    paramsSignal,
     loadingStateSignal,
     loadRequestedSignal,
-    paramsSignal,
     errorSignal,
     dataSignal,
   } = getActionPrivateProperties(action);
 
+  const item = itemSignal.value;
   const params = paramsSignal.value;
   const error = errorSignal.value;
   const loadRequested = loadRequestedSignal.value;
@@ -746,8 +749,9 @@ export const useActionStatus = (action) => {
 
   return {
     active: true,
-    idle,
+    item,
     params,
+    idle,
     error,
     aborted,
     pending,
