@@ -495,7 +495,12 @@ export const createActionTemplate = (
         renderLoadedAsync,
       };
       let sideEffectCleanup;
-      const performLoad = ({ signal, reason, isPreload }) => {
+      const performLoad = (loadParams) => {
+        const {
+          signal,
+          // reason,
+          isPreload,
+        } = loadParams;
         const abortController = new AbortController();
         const abortSignal = abortController.signal;
         const abort = (reason) => {
@@ -533,6 +538,7 @@ export const createActionTemplate = (
           actionPromiseMap.delete(action);
         };
         const onLoadError = (e) => {
+          console.error(e);
           signal.removeEventListener("abort", onabort);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
@@ -546,10 +552,14 @@ export const createActionTemplate = (
           });
         };
 
-        const loadParams = { signal, reason, isPreload };
+        const secondParam =
+          params === initialParamsDefault
+            ? loadParams
+            : { ...loadParams, ...params };
+
         try {
           const thenableArray = [];
-          const callbackResult = callback(item, { ...params, ...loadParams });
+          const callbackResult = callback(item, secondParam);
           if (callbackResult && typeof callbackResult.then === "function") {
             thenableArray.push(callbackResult);
             callbackResult.then((value) => {
@@ -561,8 +571,8 @@ export const createActionTemplate = (
           const renderLoadedAsync = ui.renderLoadedAsync;
           if (renderLoadedAsync) {
             const renderLoadedPromise = renderLoadedAsync(
-              params,
-              loadParams,
+              item,
+              secondParam,
             ).then((renderLoaded) => {
               ui.renderLoaded = () => renderLoaded;
             });
@@ -613,9 +623,10 @@ export const createActionTemplate = (
         initialParams,
         initialData,
 
+        itemSignal,
+        paramsSignal,
         loadingStateSignal,
         loadRequestedSignal,
-        paramsSignal,
         dataSignal,
         errorSignal,
 
@@ -631,7 +642,7 @@ export const createActionTemplate = (
   const actionWeakRefMap = new Map();
   const memoizedInstantiate = (item) => {
     return_memoized_action: {
-      if (typeof item !== "object" || item === null) {
+      if (item === null || typeof item !== "object") {
         break return_memoized_action;
       }
       const itemIdentity = item[ACTION_ITEM_IDENTITY_SYMBOL];
@@ -647,7 +658,7 @@ export const createActionTemplate = (
         // so that later on preact can detect changes
         // it's simpler and more robust to actually change the object identity when it changes
         // (because I'm not sure what would happen if the preact component was trying to read a non existing property for instance)
-        Object.defineProperty(itemIdentity, ACTION_ITEM_IDENTITY_SYMBOL, {
+        Object.defineProperty(item, ACTION_ITEM_IDENTITY_SYMBOL, {
           value: Symbol("action_item_identity"),
           writable: false,
           enumerable: false,

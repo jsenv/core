@@ -38,7 +38,7 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
     });
     store.addSetup((item) => {
       if (debug) {
-        console.log(`setup ${item.id}[itemActionMapSymbol]`);
+        console.log(`setup ${item[idKey]}[itemActionMapSymbol]`);
       }
       Object.defineProperty(item, itemActionMapSymbol, {
         enumerable: true,
@@ -83,7 +83,7 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
         let childProps = item[propertyName];
         if (debug) {
           console.log(
-            `setup ${item.id}.${propertyName} one-to-one with "${childResource.name}" item (current value: ${childProps ? childProps[childIdKey] : "null"})`,
+            `setup ${item[idKey]}.${propertyName} one-to-one with "${childResource.name}" item (current value: ${childProps ? childProps[childIdKey] : "null"})`,
           );
         }
         const signal = computed(() => {
@@ -97,7 +97,7 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
             const childItem = signal.value;
             if (debug) {
               console.log(
-                `return ${childItem ? childItem.id : "null"} for ${item.id}.${propertyName}`,
+                `return ${childItem ? childItem[childIdKey] : "null"} for ${item[idKey]}.${propertyName}`,
               );
             }
             return childItem;
@@ -105,7 +105,7 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
           set: (value) => {
             if (debug) {
               console.log(
-                `update ${item.id}.${propertyName} from ${childProps ? childProps.id : "null"} to ${value ? value.id : "null"}`,
+                `update ${item[idKey]}.${propertyName} from ${childProps ? childProps[childIdKey] : "null"} to ${value ? value[idKey] : "null"}`,
               );
             }
             childProps = value;
@@ -226,8 +226,8 @@ const createMethodsForStore = ({
   return {
     getAll: (callback, options) => {
       const getAllAction = createAction(
-        (params) => {
-          const callbackResult = callback(params);
+        (...args) => {
+          const callbackResult = callback(...args);
           if (callbackResult && typeof callbackResult.then === "function") {
             return callbackResult.then((propsArray) => {
               const itemArray = targetStore.upsert(propsArray);
@@ -248,8 +248,8 @@ const createMethodsForStore = ({
     },
     get: (callback, options) => {
       const getActionTemplate = createActionTemplate(
-        async (params) => {
-          const props = await callback(params);
+        async (...args) => {
+          const props = await callback(...args);
           const item = targetStoreMethodEffects.get(props);
           return item;
         },
