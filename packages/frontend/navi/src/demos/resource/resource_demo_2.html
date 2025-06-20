@@ -57,8 +57,10 @@
       const currentUserSignal = user.itemSignalFromIdSignal(
         currentUsernameSignal,
       );
-      const currentUserAction =
-        loadUserActionTemplate.actionSignalFromItemSignal(currentUserSignal);
+      const currentUserActionSignal =
+        loadUserActionTemplate.actionSignalFromItemSignal(currentUserSignal, {
+          autoload: true,
+        });
 
       loadUsersAction.load();
 
@@ -70,6 +72,7 @@
         const damUserAction = getItemAction(dam, loadUserActionTemplate);
         const sebUserAction = getItemAction(seb, loadUserActionTemplate);
         const johnUserAction = getItemAction(john, loadUserActionTemplate);
+        const currentUserAction = currentUserActionSignal.value;
 
         return (
           <div>

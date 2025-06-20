@@ -375,10 +375,8 @@ export const createActionTemplate = (
     keepOldData = false,
   } = {},
 ) => {
-  const instantiate = (
-    item,
-    { instanceName = name, instanceParams = initialParams } = {},
-  ) => {
+  const instantiate = (item, { instanceParams = initialParams } = {}) => {
+    const instanceName = generateActionName(item, instanceParams);
     const itemSignal = signal(item);
     let params = instanceParams;
     const paramsSignal = signal(params);
@@ -409,8 +407,7 @@ export const createActionTemplate = (
         }
       }
       const boundAction = instantiate(item, {
-        actionName: `${name}${generateParamsSuffix(combinedParams)}`,
-        actionParams: combinedParams,
+        instanceParams: combinedParams,
       });
       const weakRef = new WeakRef(boundAction);
       boundActionWeakRefMap.set(combinedParams, weakRef);
@@ -639,6 +636,27 @@ export const createActionTemplate = (
     return action;
   };
 
+  const generateActionName = (item, params) => {
+    let instanceName = name;
+    if (item) {
+      instanceName += `: ${item.name}`;
+    }
+    if (params !== initialParamsDefault) {
+      instanceName += generateParamsSuffix(params);
+    }
+    return instanceName;
+  };
+  const generateParamsSuffix = (params) => {
+    if (params === null || typeof params !== "object") {
+      return `, ${params}`;
+    }
+    const keys = Object.keys(params);
+    if (keys.length === 0) {
+      return "";
+    }
+    return `, { ${JSON.stringify(params)} }`;
+  };
+
   const actionWeakRefMap = new Map();
   const memoizedInstantiate = (item) => {
     return_memoized_action: {
@@ -688,14 +706,18 @@ export const createActionTemplate = (
     return action;
   };
 
-  const actionTemplate = {};
+  const actionTemplate = {
+    name,
+  };
   actionTemplate.instantiate = memoizedInstantiate;
 
-  const actionSignalFromItemSignal = (itemSignal) => {
+  const actionSignalFromItemSignal = (itemSignal, { autoload } = {}) => {
     return computed(() => {
       const item = itemSignal.value;
-      console.log(item);
       const action = memoizedInstantiate(item);
+      if (item && autoload) {
+        action.load();
+      }
       return action;
     });
   };
@@ -707,17 +729,6 @@ export const createActionTemplate = (
 
 export const createAction = (callback, options) => {
   return createActionTemplate(callback, options).instantiate();
-};
-
-const generateParamsSuffix = (params) => {
-  if (params === null || typeof params !== "object") {
-    return `(${params})`;
-  }
-  const keys = Object.keys(params);
-  if (keys.length === 0) {
-    return "";
-  }
-  return `(${JSON.stringify(params)})`;
 };
 
 export const useActionStatus = (action) => {
