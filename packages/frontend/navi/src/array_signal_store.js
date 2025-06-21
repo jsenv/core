@@ -108,17 +108,18 @@ export const arraySignalStore = (
     if (args.length === 1 && Array.isArray(args[0])) {
       const propsArray = args[0];
       if (array.length === 0) {
-        const itemArray = [];
+        const arrayAllCreated = [];
         for (const props of propsArray) {
           const item = createItemFromProps(props);
-          itemArray.push(item);
+          arrayAllCreated.push(item);
         }
-        arraySignal.value = itemArray;
-        return itemArray;
+        arraySignal.value = arrayAllCreated;
+        return arrayAllCreated;
       }
       let hasNew = false;
       let hasUpdate = false;
-      const arrayUpdated = [];
+      const arraySomeUpdated = [];
+      const arrayWithOnlyAffectedItems = [];
       const existingEntryMap = new Map();
       let index = 0;
       while (index < array.length) {
@@ -141,30 +142,32 @@ export const arraySignalStore = (
           if (itemWithPropsOrItem !== existingItem) {
             hasUpdate = true;
           }
-          arrayUpdated.push(itemWithPropsOrItem);
+          arraySomeUpdated.push(itemWithPropsOrItem);
           existingEntry.processed = true;
+          arrayWithOnlyAffectedItems.push(itemWithPropsOrItem);
         } else {
           hasNew = true;
           const item = createItemFromProps(props);
-          arrayUpdated.push(item);
+          arraySomeUpdated.push(item);
+          arrayWithOnlyAffectedItems.push(item);
         }
       }
 
       for (const [, existingEntry] of existingEntryMap) {
         if (!existingEntry.processed) {
-          arrayUpdated.push(existingEntry.existingItem);
+          arraySomeUpdated.push(existingEntry.existingItem);
         }
       }
 
       if (hasNew || hasUpdate) {
-        arraySignal.value = arrayUpdated;
-        return arrayUpdated;
+        arraySignal.value = arraySomeUpdated;
+        return arrayWithOnlyAffectedItems;
       }
-      return array;
+      return arrayWithOnlyAffectedItems;
     }
     let existingItem = null;
     let updatedItem = null;
-    const arrayUpdated = [];
+    const arraySomeUpdated = [];
     let property;
     let value;
     let props;
@@ -196,21 +199,21 @@ export const arraySignalStore = (
         } else {
           updatedItem = itemWithPropsOrItem;
         }
-        arrayUpdated.push(itemWithPropsOrItem);
+        arraySomeUpdated.push(itemWithPropsOrItem);
       } else {
-        arrayUpdated.push(itemCandidate);
+        arraySomeUpdated.push(itemCandidate);
       }
     }
     if (existingItem) {
       return existingItem;
     }
     if (updatedItem) {
-      arraySignal.value = arrayUpdated;
+      arraySignal.value = arraySomeUpdated;
       return updatedItem;
     }
     const item = createItemFromProps(props);
-    arrayUpdated.push(item);
-    arraySignal.value = arrayUpdated;
+    arraySomeUpdated.push(item);
+    arraySignal.value = arraySomeUpdated;
     return item;
   };
   const drop = (...args) => {

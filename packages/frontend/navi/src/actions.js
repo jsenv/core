@@ -390,6 +390,7 @@ export const createActionTemplate = (
     name = callback.name || "anonymous",
     params: initialParams = initialParamsDefault,
     data: initialData,
+    computedDataSignal,
     renderLoadedAsync,
     sideEffect = () => {},
     keepOldData = false,
@@ -639,6 +640,7 @@ export const createActionTemplate = (
         loadingStateSignal,
         loadRequestedSignal,
         dataSignal,
+        computedDataSignal,
         errorSignal,
 
         performLoad,
@@ -756,6 +758,7 @@ export const useActionStatus = (action) => {
     loadRequestedSignal,
     errorSignal,
     dataSignal,
+    computedDataSignal,
   } = getActionPrivateProperties(action);
 
   const item = itemSignal.value;
@@ -767,7 +770,7 @@ export const useActionStatus = (action) => {
   const pending = loadingState === LOADING;
   const aborted = loadingState === ABORTED;
   const preloaded = loadingState === LOADED && !loadRequested;
-  const data = dataSignal.value;
+  const data = computedDataSignal ? computedDataSignal.value : dataSignal.value;
 
   return {
     active: true,

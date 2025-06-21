@@ -251,12 +251,17 @@ const createMethodsForStore = ({
   resourceInstance,
 }) => {
   const { name } = resourceInstance;
+
+  const idArraySignal = signal([]);
   const targetStoreMethodEffects = {
     getAll: (propsArray) => {
       // ici en fait il faut override en quelque sorte
       // enfin chais pas mais il faut respecter l'ordre
       // on veut garder tout le monde
-      return targetStore.upsert(propsArray);
+      const itemArray = targetStore.upsert(propsArray);
+      const idArray = itemArray.map((item) => item[resourceInstance.idKey]);
+      idArraySignal.value = idArray;
+      return itemArray;
     },
     get: (props) => {
       return targetStore.upsert(props);
@@ -290,6 +295,10 @@ const createMethodsForStore = ({
         {
           name: `getAll ${name}`,
           data: [],
+          computedDataSignal: computed(() => {
+            const idArray = idArraySignal.value;
+            return targetStore.selectAll(idArray);
+          }),
           ...options,
         },
       );
