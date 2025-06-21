@@ -396,8 +396,11 @@ export const createActionTemplate = (
     keepOldData = false,
   } = {},
 ) => {
-  const instantiate = (item, { instanceParams = initialParams } = {}) => {
-    const instanceName = generateActionName(item, instanceParams);
+  const instantiate = (
+    item,
+    { instanceName = name, instanceParams = initialParams } = {},
+  ) => {
+    instanceName = generateActionName(instanceName, item, instanceParams);
     const itemSignal = signal(item);
     let params = instanceParams;
     const paramsSignal = signal(params);
@@ -657,15 +660,15 @@ export const createActionTemplate = (
     return action;
   };
 
-  const generateActionName = (item, params) => {
-    let instanceName = name;
+  const generateActionName = (name, item, params) => {
+    let actionName = name;
     if (item) {
-      instanceName += `: ${itemAsHumanString(item)}`;
+      actionName += `: ${itemAsHumanString(item)}`;
     }
     if (params !== initialParamsDefault) {
-      instanceName += generateParamsSuffix(params);
+      actionName += generateParamsSuffix(params);
     }
-    return instanceName;
+    return actionName;
   };
   const generateParamsSuffix = (params) => {
     if (params === null || typeof params !== "object") {
@@ -680,14 +683,14 @@ export const createActionTemplate = (
 
   const actionItemWeakMap = createWeakCacheMap();
   const actionItemIdentityWeakMap = new WeakMap();
-  const memoizedInstantiate = (item) => {
+  const memoizedInstantiate = (item, options) => {
     const actionForItem = actionItemWeakMap.get(item);
     if (actionForItem) {
       return actionForItem;
     }
     const isObject = item && typeof item === "object";
     if (!isObject) {
-      const action = instantiate(item);
+      const action = instantiate(item, options);
       actionItemWeakMap.set(item, action);
       return action;
     }
@@ -722,7 +725,7 @@ export const createActionTemplate = (
         configurable: false,
       });
     }
-    const action = instantiate(item);
+    const action = instantiate(item, options);
     actionItemWeakMap.set(item, action);
     actionItemIdentityWeakMap.set(itemIdentity, action);
     return action;

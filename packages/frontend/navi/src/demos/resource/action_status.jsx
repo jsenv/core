@@ -1,11 +1,11 @@
 import { useActionStatus } from "@jsenv/navi";
 
-export const ActionStatus = ({ action }) => {
+export const ActionStatus = ({ action, name = action.name }) => {
   const { idle, preloaded, active, pending, params, error, aborted, data } =
     useActionStatus(action);
   return (
     <fieldset style={{ width: "200px" }}>
-      <legend>{action.name}</legend>
+      <legend>{name}</legend>
 
       <div style="display: flex; flex-direction: column; gap: 5px;">
         <div>

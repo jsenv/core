@@ -30,17 +30,17 @@
         ActionStatus,
       } from "./action_status.jsx";
 
-      const currentUsername = localStorage.getItem("current_user_name");
-      const currentUsernameSignal = signal(currentUsername);
-      const setCurrentUsername = (username) => {
-        currentUsernameSignal.value = username;
+      const activeUsername = localStorage.getItem("active_user_name");
+      const activeUsernameSignal = signal(activeUsername);
+      const setActiveUsername = (username) => {
+        activeUsernameSignal.value = username;
       };
       effect(() => {
-        const currentUsername = currentUsernameSignal.value;
-        if (currentUsername) {
-          localStorage.setItem("current_user_name", currentUsername);
+        const activeUsername = activeUsernameSignal.value;
+        if (activeUsername) {
+          localStorage.setItem("active_user_name", activeUsername);
         } else {
-          localStorage.removeItem("current_user_name");
+          localStorage.removeItem("active_user_name");
         }
       });
 
@@ -54,11 +54,10 @@
         return { name, greeting: `Hello ${name}` };
       });
 
-      const currentUserSignal = user.itemSignalFromIdSignal(
-        currentUsernameSignal,
-      );
-      const currentUserActionSignal =
-        loadUserActionTemplate.actionSignalFromItemSignal(currentUserSignal, {
+      const activeUserSignal =
+        user.itemSignalFromIdSignal(activeUsernameSignal);
+      const activeUserActionSignal =
+        loadUserActionTemplate.actionSignalFromItemSignal(activeUserSignal, {
           autoload: true,
         });
 
@@ -72,13 +71,13 @@
         const damUserAction = getItemAction(dam, loadUserActionTemplate);
         const sebUserAction = getItemAction(seb, loadUserActionTemplate);
         const johnUserAction = getItemAction(john, loadUserActionTemplate);
-        const currentUserAction = currentUserActionSignal.value;
+        const activeUserAction = activeUserActionSignal.value;
 
         return (
           <div>
             <button
               onClick={() => {
-                setCurrentUsername(dam.name);
+                setActiveUsername(dam.name);
                 damUserAction.reload();
               }}
             >
@@ -101,7 +100,7 @@
             <br />
             <button
               onClick={() => {
-                setCurrentUsername(seb.name);
+                setActiveUsername(seb.name);
                 sebUserAction.reload();
               }}
             >
@@ -124,7 +123,7 @@
             <br />
             <button
               onClick={() => {
-                setCurrentUsername(john.name);
+                setActiveUsername(john.name);
                 johnUserAction.reload();
               }}
             >
@@ -148,8 +147,9 @@
             <ActionStatus action={damUserAction} />
             <ActionStatus action={sebUserAction} />
             <ActionStatus action={johnUserAction} />
+            <ActionStatus action={activeUserAction} name="get user: active" />
 
-            <ActionRenderer action={currentUserAction}>
+            <ActionRenderer action={activeUserAction}>
               {{
                 loading: () => <div>Loading user...</div>,
                 error: (error) => <div>Error: {error.message}</div>,

@@ -2,17 +2,9 @@ export const createWeakCacheMap = () => {
   const objectCache = new WeakMap(); // Pour les objets
   const primitiveCache = new Map(); // primitive -> WeakRef<item>
 
-  const cleanupDeadRefs = () => {
-    const keysToDelete = [];
-    for (const [primitive, weakRef] of primitiveCache) {
-      if (!weakRef.deref()) {
-        keysToDelete.push(primitive);
-      }
-    }
-    for (const key of keysToDelete) {
-      primitiveCache.delete(key);
-    }
-  };
+  const cleanupRegistry = new FinalizationRegistry((primitive) => {
+    primitiveCache.delete(primitive);
+  });
 
   return {
     get(item) {
@@ -37,11 +29,7 @@ export const createWeakCacheMap = () => {
         objectCache.set(item, value);
       } else {
         primitiveCache.set(item, new WeakRef(value));
-
-        // Nettoyage périodique pour éviter l'accumulation
-        if (primitiveCache.size % 100 === 0) {
-          cleanupDeadRefs();
-        }
+        cleanupRegistry.register(value, item);
       }
     },
   };
