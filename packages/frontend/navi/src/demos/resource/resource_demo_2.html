@@ -22,6 +22,7 @@
         useActionStatus,
         resource,
         getItemAction,
+        createActionProxy,
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
       } from "@jsenv/navi";
@@ -52,11 +53,9 @@
         }
       });
 
-      const activeUserActionSignal = loadUserActionTemplate.actionSignal(
+      const activeUserAction = createActionProxy(
+        loadUserActionTemplate,
         activeUserSignal,
-        {
-          autoload: true,
-        },
       );
 
       loadUsersAction.load();
@@ -69,7 +68,6 @@
         const damUserAction = getItemAction(dam, loadUserActionTemplate);
         const sebUserAction = getItemAction(seb, loadUserActionTemplate);
         const johnUserAction = getItemAction(john, loadUserActionTemplate);
-        const activeUserAction = activeUserActionSignal.value;
 
         return (
           <div>

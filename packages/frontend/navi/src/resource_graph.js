@@ -255,9 +255,6 @@ const createMethodsForStore = ({
   const idArraySignal = signal([]);
   const targetStoreMethodEffects = {
     getAll: (propsArray) => {
-      // ici en fait il faut override en quelque sorte
-      // enfin chais pas mais il faut respecter l'ordre
-      // on veut garder tout le monde
       const itemArray = targetStore.upsert(propsArray);
       const idArray = itemArray.map((item) => item[resourceInstance.idKey]);
       idArraySignal.value = idArray;

@@ -37,7 +37,7 @@
  *   la elle a le concept de "active"
  */
 
-import { batch, effect, signal } from "@preact/signals";
+import { batch, computed, effect, signal } from "@preact/signals";
 import { createWeakCacheMap } from "./weak_cache_map.js";
 
 let debug = true;
@@ -389,6 +389,9 @@ export const createActionTemplate = (
   {
     name = callback.name || "anonymous",
     params: initialParams = initialParamsDefault,
+    loadRequested: initialLoadRequested = false,
+    loadingState: initialLoadingState = IDLE,
+    error: initialError = null,
     data: initialData,
     computedDataSignal,
     renderLoadedAsync,
@@ -405,14 +408,17 @@ export const createActionTemplate = (
     let params = instanceParams;
     const paramsSignal = signal(params);
 
-    let loadRequested = false;
+    let loadRequested = initialLoadRequested;
     const loadRequestedSignal = signal(loadRequested);
-    let loadingState = IDLE;
+    let loadingState = initialLoadingState;
     const loadingStateSignal = signal(loadingState);
-    let error;
-    const errorSignal = signal(null);
+    let error = initialError;
+    const errorSignal = signal(error);
     let data = initialData;
     const dataSignal = signal(initialData);
+    if (!computedDataSignal) {
+      computedDataSignal = dataSignal;
+    }
 
     const fromParamsSignal = (newParamsSignal) => {
       const boundAction = instantiate(item);
@@ -631,9 +637,12 @@ export const createActionTemplate = (
           loadingStateSignal.value = IDLE;
         });
       };
-      const actionPrivateProperties = {
+      const privateProperties = {
+        initialLoadRequested,
+        initialLoadingState,
         initialParams: instanceParams,
         initialData,
+        initialError,
 
         itemSignal,
         paramsSignal,
@@ -647,7 +656,7 @@ export const createActionTemplate = (
         performUnload,
         ui,
       };
-      actionPrivatePropertiesWeakMap.set(action, actionPrivateProperties);
+      actionPrivatePropertiesWeakMap.set(action, privateProperties);
     }
     return action;
   };
@@ -725,6 +734,11 @@ export const createActionTemplate = (
 
   const actionTemplate = {
     name,
+    initialParams,
+    initialData,
+    initialLoadingState,
+    initialLoadRequested,
+    initialError,
   };
   actionTemplate.instantiate = memoizedInstantiate;
 
@@ -744,6 +758,129 @@ export const createAction = (callback, options) => {
   return createActionTemplate(callback, options).instantiate();
 };
 
+export const createActionProxy = (action, itemSignal) => {
+  const getActionForItem = () => {
+    const item = itemSignal.value;
+    if (!item) {
+      return null;
+    }
+    return action.instantiate(item);
+  };
+  const proxyMethod = (method) => {
+    return (...args) => {
+      const actionForItem = getActionForItem();
+      if (!actionForItem) {
+        throw new Error(
+          `Cannot call "${action.name}" on action proxy because item is not set.`,
+        );
+      }
+      return actionForItem[method](...args);
+    };
+  };
+
+  const actionProxy = {
+    name: `Proxy on ${action.name}`,
+    item: action.item,
+    params: action.params,
+    loadingState: action.loadingState,
+    loadRequested: action.loadRequested,
+    error: action.error,
+    data: action.data,
+    preload: proxyMethod("preload"),
+    load: proxyMethod("load"),
+    reload: proxyMethod("reload"),
+    unload: proxyMethod("unload"),
+    toString: () => `Proxy on ${action.name}`,
+  };
+
+  const initialValues = action.isTemplate
+    ? action
+    : getActionPrivateProperties(action);
+
+  const proxySignal = (
+    signalPropertyName,
+    propertyName,
+    initialValuePrivatePropertyName,
+  ) => {
+    const signalProxy = computed(() => {
+      const actionForItem = getActionForItem();
+      if (!actionForItem) {
+        if (!propertyName) {
+          return undefined;
+        }
+        const initialValue = initialValues[initialValuePrivatePropertyName];
+        actionProxy[propertyName] = initialValue;
+        return initialValue;
+      }
+      const actionForItemPrivateProperties =
+        getActionPrivateProperties(actionForItem);
+      const actionForItemSignal =
+        actionForItemPrivateProperties[signalPropertyName];
+      const value = actionForItemSignal.value;
+      if (propertyName) {
+        actionProxy[propertyName] = value;
+      }
+      return value;
+    });
+    return signalProxy;
+  };
+  effect(() => {
+    const item = itemSignal.value;
+    actionProxy.item = item;
+  });
+
+  const proxyPrivateProperties = {
+    initialLoadRequested: action.loadRequested,
+    initialLoadingState: action.loadingState,
+    initialParams: action.params,
+    initialData: action.data,
+    initialError: action.error,
+
+    itemSignal,
+    paramsSignal: proxySignal("paramsSignal", "params", "initialParams"),
+    loadingStateSignal: proxySignal(
+      "loadingStateSignal",
+      "loadingState",
+      "initialLoadingState",
+    ),
+    loadRequestedSignal: proxySignal(
+      "loadRequestedSignal",
+      "loadRequested",
+      "initialLoadRequested",
+    ),
+    errorSignal: proxySignal("errorSignal", "error", "initialError"),
+    dataSignal: proxySignal("dataSignal", "data", "initialData"),
+    computedDataSignal: proxySignal("computedDataSignal"),
+
+    performLoad: (...args) => {
+      const actionForItem = getActionForItem();
+      if (!actionForItem) {
+        throw new Error(
+          `Cannot perform load on action proxy "${actionProxy.name}" because item is not set.`,
+        );
+      }
+      const actionPrivatePropertiesForItem =
+        getActionPrivateProperties(actionForItem);
+      return actionPrivatePropertiesForItem.performLoad(...args);
+    },
+    performUnload: (...args) => {
+      const actionForItem = getActionForItem();
+      if (!actionForItem) {
+        throw new Error(
+          `Cannot perform unload on action proxy "${actionProxy.name}" because item is not set.`,
+        );
+      }
+      const actionPrivatePropertiesForItem =
+        getActionPrivateProperties(actionForItem);
+      return actionPrivatePropertiesForItem.performUnload(...args);
+    },
+    ui: action.ui,
+  };
+  actionPrivatePropertiesWeakMap.set(actionProxy, proxyPrivateProperties);
+
+  return actionProxy;
+};
+
 export const useActionStatus = (action) => {
   if (action.isTemplate) {
     throw new Error(
@@ -757,20 +894,19 @@ export const useActionStatus = (action) => {
     loadingStateSignal,
     loadRequestedSignal,
     errorSignal,
-    dataSignal,
     computedDataSignal,
   } = getActionPrivateProperties(action);
 
   const item = itemSignal.value;
   const params = paramsSignal.value;
-  const error = errorSignal.value;
   const loadRequested = loadRequestedSignal.value;
   const loadingState = loadingStateSignal.value;
+  const error = errorSignal.value;
   const idle = loadingState === IDLE;
   const pending = loadingState === LOADING;
   const aborted = loadingState === ABORTED;
   const preloaded = loadingState === LOADED && !loadRequested;
-  const data = computedDataSignal ? computedDataSignal.value : dataSignal.value;
+  const data = computedDataSignal.value;
 
   return {
     active: true,

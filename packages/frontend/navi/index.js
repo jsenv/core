@@ -5,6 +5,7 @@ export {
 export { ActionRenderer } from "./src/action_renderer.jsx";
 export {
   createAction,
+  createActionProxy,
   createActionTemplate,
   reloadActions,
   updateActions,
