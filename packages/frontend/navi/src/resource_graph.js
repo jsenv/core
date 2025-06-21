@@ -35,7 +35,7 @@ export const resource = (
 
     const itemPrototype = {
       [Symbol.toStringTag]: name,
-      toString: () => {
+      toString() {
         let string = `${name}`;
         for (const uniqueKey of uniqueKeys) {
           const value = this[uniqueKey];
@@ -54,13 +54,14 @@ export const resource = (
 
     store = arraySignalStore([], idKey, {
       name: `${name} store`,
-      createItem: () => {
+      createItem: (props) => {
         const item = Object.create(itemPrototype);
         Object.defineProperty(item, itemActionMapSymbol, {
           enumerable: true,
           writable: true,
           value: new Map(),
         });
+        Object.assign(item, props);
         for (const setupCallback of setupCallbackSet) {
           setupCallback(item);
         }

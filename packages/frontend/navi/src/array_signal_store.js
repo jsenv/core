@@ -5,8 +5,8 @@ export const arraySignalStore = (
   idKey = "id",
   {
     name,
-    createItem = () => {
-      return {};
+    createItem = (props) => {
+      return { ...props };
     },
   },
 ) => {
@@ -26,8 +26,7 @@ export const arraySignalStore = (
       return props;
     }
 
-    const item = createItem();
-    Object.assign(item, props);
+    const item = createItem(props);
 
     for (const [propertyName, { get, set }] of propertyAccessorMap) {
       Object.defineProperty(item, propertyName, {

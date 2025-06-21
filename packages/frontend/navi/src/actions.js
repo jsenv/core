@@ -367,7 +367,8 @@ const itemAsHumanString = (item) => {
   if (!item) {
     return String(item);
   }
-  if (Object.hasOwn(item, "toString")) {
+  const toString = item.toString;
+  if (toString !== Object.prototype.toString) {
     return item.toString();
   }
   if (Object.hasOwn(item, "name")) {
@@ -383,7 +384,7 @@ const itemAsHumanString = (item) => {
   return toString(item);
 };
 
-const ACTION_ITEM_IDENTITY_SYMBOL = Symbol("action_item_identity");
+const ITEM_IDENTITY_SYMBOL = Symbol("item_identity");
 export const createActionTemplate = (
   callback,
   {
@@ -696,8 +697,8 @@ export const createActionTemplate = (
       return action;
     }
     let itemIdentity;
-    if (Object.hasOwn(item, ACTION_ITEM_IDENTITY_SYMBOL)) {
-      itemIdentity = item[ACTION_ITEM_IDENTITY_SYMBOL];
+    if (Object.hasOwn(item, ITEM_IDENTITY_SYMBOL)) {
+      itemIdentity = item[ITEM_IDENTITY_SYMBOL];
       const actionForItemIdentity = actionItemIdentityWeakMap.get(itemIdentity);
       if (actionForItemIdentity) {
         const actionPrivateProperties = getActionPrivateProperties(
@@ -718,8 +719,8 @@ export const createActionTemplate = (
       // so that later on preact can detect changes
       // it's simpler and more robust to actually change the object identity when it changes
       // (because I'm not sure what would happen if the preact component was trying to read a non existing property for instance)
-      itemIdentity = Symbol(`action_${itemAsHumanString(item)}_identity`);
-      Object.defineProperty(item, ACTION_ITEM_IDENTITY_SYMBOL, {
+      itemIdentity = Symbol(`${itemAsHumanString(item)}`);
+      Object.defineProperty(item, ITEM_IDENTITY_SYMBOL, {
         value: itemIdentity,
         writable: false,
         enumerable: false,
@@ -838,15 +839,15 @@ export const createActionProxy = (action, itemSignal) => {
 
     itemSignal,
     paramsSignal: proxySignal("paramsSignal", "params", "initialParams"),
-    loadingStateSignal: proxySignal(
-      "loadingStateSignal",
-      "loadingState",
-      "initialLoadingState",
-    ),
     loadRequestedSignal: proxySignal(
       "loadRequestedSignal",
       "loadRequested",
       "initialLoadRequested",
+    ),
+    loadingStateSignal: proxySignal(
+      "loadingStateSignal",
+      "loadingState",
+      "initialLoadingState",
     ),
     errorSignal: proxySignal("errorSignal", "error", "initialError"),
     dataSignal: proxySignal("dataSignal", "data", "initialData"),
