@@ -39,6 +39,7 @@
 
 import { batch, computed, effect, signal } from "@preact/signals";
 import { compareTwoJsValues } from "./compare_two_js_values.js";
+import { createWeakCacheMap } from "./weak_cache_map.js";
 
 let debug = true;
 
@@ -363,6 +364,26 @@ const getActionPrivateProperties = (action) => {
   return actionPrivateProperties;
 };
 
+const itemAsHumanString = (item) => {
+  if (!item) {
+    return String(item);
+  }
+  if (Object.hasOwn(item, "toString")) {
+    return item.toString();
+  }
+  if (Object.hasOwn(item, "name")) {
+    return item.name;
+  }
+  if (Object.hasOwn(item, "id")) {
+    return item.id;
+  }
+  const toStringTag = item[Symbol.toStringTag];
+  if (toStringTag) {
+    return toStringTag;
+  }
+  return toString(item);
+};
+
 const ACTION_ITEM_IDENTITY_SYMBOL = Symbol("action_item_identity");
 export const createActionTemplate = (
   callback,
@@ -639,7 +660,7 @@ export const createActionTemplate = (
   const generateActionName = (item, params) => {
     let instanceName = name;
     if (item) {
-      instanceName += `: ${item.name}`;
+      instanceName += `: ${itemAsHumanString(item)}`;
     }
     if (params !== initialParamsDefault) {
       instanceName += generateParamsSuffix(params);
@@ -657,52 +678,53 @@ export const createActionTemplate = (
     return `, { ${JSON.stringify(params)} }`;
   };
 
-  const actionWeakRefMap = new Map();
+  const actionItemWeakMap = createWeakCacheMap();
+  const actionItemIdentityWeakMap = new WeakMap();
   const memoizedInstantiate = (item) => {
-    return_memoized_action: {
-      if (item === null || typeof item !== "object") {
-        break return_memoized_action;
+    const actionForItem = actionItemWeakMap.get(item);
+    if (actionForItem) {
+      return actionForItem;
+    }
+    const isObject = item && typeof item === "object";
+    if (!isObject) {
+      const action = instantiate(item);
+      actionItemWeakMap.set(item, action);
+      return action;
+    }
+    let itemIdentity;
+    if (Object.hasOwn(item, ACTION_ITEM_IDENTITY_SYMBOL)) {
+      itemIdentity = item[ACTION_ITEM_IDENTITY_SYMBOL];
+      const actionForItemIdentity = actionItemIdentityWeakMap.get(itemIdentity);
+      if (actionForItemIdentity) {
+        const actionPrivateProperties = getActionPrivateProperties(
+          actionForItemIdentity,
+        );
+        actionPrivateProperties.itemSignal.value = item;
+        return actionForItemIdentity;
       }
-      const itemIdentity = item[ACTION_ITEM_IDENTITY_SYMBOL];
-      if (!itemIdentity) {
-        // we would not need this if we rely on item id
-        // but at action are better decouple by not knowing what is newParams
-        // and not force the presence of an id on the object
-        // instead we prefer to set a symbol that will be forward even when params are modified
-        // because array_signal_store.js uses Object.getOwnPropertyDescriptors which copy symbols
-        // as a result an item can be recognized and we return the same action for the "same" item
-        // an other approach would be to keep the object identity in array_signal_store.js
-        // but that means using a Proxy to transform all object properties into signals
-        // so that later on preact can detect changes
-        // it's simpler and more robust to actually change the object identity when it changes
-        // (because I'm not sure what would happen if the preact component was trying to read a non existing property for instance)
-        Object.defineProperty(item, ACTION_ITEM_IDENTITY_SYMBOL, {
-          value: Symbol("action_item_identity"),
-          writable: false,
-          enumerable: false,
-          configurable: false,
-        });
-        break return_memoized_action;
-      }
-      for (const [itemCandidate, weakRef] of actionWeakRefMap) {
-        const actionCandidate = weakRef.deref();
-        if (!actionCandidate) {
-          actionWeakRefMap.delete(itemCandidate);
-          continue;
-        }
-        const itemCandidateIdentity =
-          itemCandidate[ACTION_ITEM_IDENTITY_SYMBOL];
-        if (itemCandidateIdentity === itemIdentity) {
-          const actionPrivateProperties =
-            getActionPrivateProperties(actionCandidate);
-          actionPrivateProperties.itemSignal.value = item;
-          return actionCandidate;
-        }
-      }
+    } else {
+      // we would not need this if we rely on item id
+      // but at action are better decouple by not knowing what is newParams
+      // and not force the presence of an id on the object
+      // instead we prefer to set a symbol that will be forward even when params are modified
+      // because array_signal_store.js uses Object.getOwnPropertyDescriptors which copy symbols
+      // as a result an item can be recognized and we return the same action for the "same" item
+      // an other approach would be to keep the object identity in array_signal_store.js
+      // but that means using a Proxy to transform all object properties into signals
+      // so that later on preact can detect changes
+      // it's simpler and more robust to actually change the object identity when it changes
+      // (because I'm not sure what would happen if the preact component was trying to read a non existing property for instance)
+      itemIdentity = Symbol(`action_${itemAsHumanString(item)}_identity`);
+      Object.defineProperty(item, ACTION_ITEM_IDENTITY_SYMBOL, {
+        value: itemIdentity,
+        writable: false,
+        enumerable: false,
+        configurable: false,
+      });
     }
     const action = instantiate(item);
-    const actionWeakRef = new WeakRef(action);
-    actionWeakRefMap.set(item, actionWeakRef);
+    actionItemWeakMap.set(item, action);
+    actionItemIdentityWeakMap.set(itemIdentity, action);
     return action;
   };
 
