@@ -219,7 +219,7 @@
                     value="all"
                     checked={filtersSignal.value.gender === undefined}
                     onChange={(e) => {
-                      if (e.checked) {
+                      if (e.target.checked) {
                         filtersSignal.value = {
                           ...filtersSignal.value,
                           gender: undefined,
@@ -237,10 +237,10 @@
                     value="male"
                     checked={filtersSignal.value.gender === "male"}
                     onChange={(e) => {
-                      if (e.checked) {
+                      if (e.target.checked) {
                         filtersSignal.value = {
                           ...filtersSignal.value,
-                          gender: "male",
+                          gender: e.target.value,
                         };
                       }
                     }}
@@ -255,10 +255,10 @@
                     value="female"
                     checked={filtersSignal.value.gender === "female"}
                     onChange={(e) => {
-                      if (e.checked) {
+                      if (e.target.checked) {
                         filtersSignal.value = {
                           ...filtersSignal.value,
-                          gender: "female",
+                          gender: e.target.value,
                         };
                       }
                     }}

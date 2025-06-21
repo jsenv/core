@@ -289,7 +289,7 @@ const createMethodsForStore = ({
         },
         {
           name: `getAll ${name}`,
-          initialData: [],
+          data: [],
           ...options,
         },
       );
