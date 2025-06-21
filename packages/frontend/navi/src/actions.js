@@ -567,7 +567,7 @@ export const createActionTemplate = (
         const secondParam =
           params === initialParamsDefault
             ? loadParams
-            : { ...loadParams, ...params };
+            : { ...loadParams, ...paramsSignal.peek() };
 
         try {
           const thenableArray = [];

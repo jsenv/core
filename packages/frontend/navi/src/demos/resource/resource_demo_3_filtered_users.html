@@ -137,7 +137,7 @@
         filtersSignal,
         (filters) => {
           return {
-            gender: filters.genrer,
+            gender: filters.gender,
             department: filters.department,
           };
         },
@@ -158,8 +158,9 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const { data: serverUsers = [], pending: loadingUsers } =
-          useActionStatus(loadFilteredUsersAction);
+        const { data: serverUsers, pending: loadingUsers } = useActionStatus(
+          loadFilteredUsersAction,
+        );
 
         const [newUserName, setNewUserName] = useState("");
         const [newUserGender, setNewUserGender] = useState("male");
