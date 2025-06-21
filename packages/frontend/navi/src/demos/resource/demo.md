@@ -1,3 +1,22 @@
+## Prochain truc a faire:
+
+Une page affichant une liste de user (correspond a getAll)
+
+On pourra filtrer cette liste (genre par gender, age, etc)
+
+A ce stade on verra pas forcément qu'il faut un array dédié pour le getAll
+
+Puis introduire le fait qu'on puisse charge n'importe quel user (voir juste en crée un en fait)
+
+S'il ne match pas le filtre il doit pas apparaitre
+
+-> ce sera ptet simple en vrai
+on fera juste un useFilteredUsers() qui applique les meme filtres que le getAll
+l'avantage c'est qu'on aurait le user qu'on ajoute sans souci
+l'inconvénient c'est qu'on doit réapliquer la logique de filtre en front (berk, trop gros désavantage)
+
+On pourra renommer les users pour voir qu'il se mettent bien a jour
+
 Next steps:
 
 J'identifie un "gros" souci
