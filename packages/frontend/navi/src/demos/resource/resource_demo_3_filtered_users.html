@@ -112,25 +112,9 @@
 
       // Signal pour les filtres
       const filtersSignal = signal({
-        gender: "all",
-        department: "all",
-        minAge: 0,
+        gender: undefined,
+        department: undefined,
       });
-
-      // Fonction de filtrage côté serveur (simulé)
-      const applyServerFilters = (users, filters) => {
-        return users.filter((user) => {
-          if (filters.gender !== "all" && user.gender !== filters.gender)
-            return false;
-          if (
-            filters.department !== "all" &&
-            user.department !== filters.department
-          )
-            return false;
-          if (user.age < filters.minAge) return false;
-          return true;
-        });
-      };
 
       // Action pour charger tous les utilisateurs avec filtres
       const loadUsersAction = user.getAll(async () => {
@@ -138,8 +122,18 @@
         console.log("Loading users with filters:", filters);
         // Simuler un délai réseau
         await new Promise((resolve) => setTimeout(resolve, 500));
-        const filteredUsers = applyServerFilters(allUsers, filters);
-        return filteredUsers;
+        return allUsers.filter((user) => {
+          if (filters.gender !== undefined && user.gender !== filters.gender) {
+            return false;
+          }
+          if (
+            filters.department !== undefined &&
+            user.department !== filters.department
+          ) {
+            return false;
+          }
+          return true;
+        });
       });
       // Charger la liste initiale
       loadUsersAction.load();
@@ -212,56 +206,82 @@
           <div>
             <h1>Users Management Demo</h1>
 
-            {/* Filtres */}
             <div className="filters">
-              <h3>Filters (Server-side only)</h3>
-              <label>
-                Gender:
-                <select
-                  value={filtersSignal.value.gender}
-                  onChange={(e) =>
-                    (filtersSignal.value = {
-                      ...filtersSignal.value,
-                      gender: e.target.value,
-                    })
-                  }
-                >
-                  <option value="all">All</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                </select>
-              </label>
+              <h3>Filters</h3>
+              <fieldset>
+                <legend>Gender</legend>
+
+                <label>
+                  All:
+                  <input
+                    name="gender"
+                    type="radio"
+                    value="all"
+                    checked={filtersSignal.value.gender === undefined}
+                    onChange={(e) => {
+                      if (e.checked) {
+                        filtersSignal.value = {
+                          ...filtersSignal.value,
+                          gender: undefined,
+                        };
+                      }
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Male:
+                  <input
+                    name="gender"
+                    type="radio"
+                    value="male"
+                    checked={filtersSignal.value.gender === "male"}
+                    onChange={(e) => {
+                      if (e.checked) {
+                        filtersSignal.value = {
+                          ...filtersSignal.value,
+                          gender: "male",
+                        };
+                      }
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Female:
+                  <input
+                    name="gender"
+                    type="radio"
+                    value="female"
+                    checked={filtersSignal.value.gender === "female"}
+                    onChange={(e) => {
+                      if (e.checked) {
+                        filtersSignal.value = {
+                          ...filtersSignal.value,
+                          gender: "female",
+                        };
+                      }
+                    }}
+                  />
+                </label>
+              </fieldset>
 
               <label>
                 Department:
                 <select
                   value={filtersSignal.value.department}
-                  onChange={(e) =>
-                    (filtersSignal.value = {
+                  onChange={(e) => {
+                    filtersSignal.value = {
                       ...filtersSignal.value,
                       department: e.target.value,
-                    })
-                  }
+                    };
+                  }}
                 >
                   <option value="all">All</option>
                   <option value="Engineering">Engineering</option>
                   <option value="Marketing">Marketing</option>
                   <option value="Sales">Sales</option>
                 </select>
-              </label>
-
-              <label>
-                Min Age:
-                <input
-                  type="number"
-                  value={filtersSignal.value.minAge}
-                  onChange={(e) =>
-                    (filtersSignal.value = {
-                      ...filtersSignal.value,
-                      minAge: parseInt(e.target.value) || 0,
-                    })
-                  }
-                />
               </label>
             </div>
 
@@ -271,9 +291,6 @@
                 Filtered Users from Server {loadingUsers && "- Loading..."}
               </h3>
               <p>Count: {serverUsers.length}</p>
-              <p>
-                <em>✅ Filtrage uniquement côté serveur</em>
-              </p>
               {serverUsers.map((user) => (
                 <UserItem
                   key={user.id}
