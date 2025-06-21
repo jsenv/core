@@ -194,6 +194,9 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
   resourceInstance.itemSignalFromIdSignal = (idSignal) => {
     return computed(() => {
       const id = idSignal.value;
+      if (!id) {
+        return null;
+      }
       const item = store.upsert({ [idKey]: id });
       return item;
     });
