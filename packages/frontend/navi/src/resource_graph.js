@@ -1,4 +1,4 @@
-import { computed } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import { createAction, createActionTemplate } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 
@@ -191,8 +191,9 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
     });
   }
 
-  resourceInstance.itemSignalFromIdSignal = (idSignal) => {
-    return computed(() => {
+  resourceInstance.useItemSignal = (initialValue) => {
+    const idSignal = signal(initialValue);
+    const itemSignal = computed(() => {
       const id = idSignal.value;
       if (!id) {
         return null;
@@ -200,6 +201,13 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
       const item = store.upsert({ [idKey]: id });
       return item;
     });
+    return [
+      itemSignal,
+      (value) => {
+        const id = value && typeof value === "object" ? value[idKey] : value;
+        idSignal.value = id;
+      },
+    ];
   };
 
   return resourceInstance;
@@ -212,6 +220,12 @@ const createMethodsForStore = ({
 }) => {
   const { name } = resource;
   const targetStoreMethodEffects = {
+    getAll: (propsArray) => {
+      // ici en fait il faut override en quelque sorte
+      // enfin chais pas mais il faut respecter l'ordre
+      // on veut garder tout le monde
+      return targetStore.upsert(propsArray);
+    },
     get: (props) => {
       return targetStore.upsert(props);
     },
@@ -233,12 +247,12 @@ const createMethodsForStore = ({
           const callbackResult = callback(...args);
           if (callbackResult && typeof callbackResult.then === "function") {
             return callbackResult.then((propsArray) => {
-              const itemArray = targetStore.upsert(propsArray);
+              const itemArray = targetStoreMethodEffects.getAll(propsArray);
               return itemArray;
             });
           }
           const propsArray = callbackResult;
-          const itemArray = targetStore.upsert(propsArray);
+          const itemArray = targetStoreMethodEffects.getAll(propsArray);
           return itemArray;
         },
         {

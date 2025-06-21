@@ -17,7 +17,7 @@
        */
 
       import { render } from "preact";
-      import { signal, effect } from "@preact/signals";
+      import { effect } from "@preact/signals";
       import {
         useActionStatus,
         resource,
@@ -30,20 +30,6 @@
         ActionStatus,
       } from "./action_status.jsx";
 
-      const activeUsername = localStorage.getItem("active_user_name");
-      const activeUsernameSignal = signal(activeUsername);
-      const setActiveUsername = (username) => {
-        activeUsernameSignal.value = username;
-      };
-      effect(() => {
-        const activeUsername = activeUsernameSignal.value;
-        if (activeUsername) {
-          localStorage.setItem("active_user_name", activeUsername);
-        } else {
-          localStorage.removeItem("active_user_name");
-        }
-      });
-
       const user = resource("user", { idKey: "name" });
       // const useActiveUser = user.useActiveItem;
       const loadUsersAction = user.getAll(() => {
@@ -54,8 +40,18 @@
         return { name, greeting: `Hello ${name}` };
       });
 
-      const activeUserSignal =
-        user.itemSignalFromIdSignal(activeUsernameSignal);
+      const [activeUserSignal, setActiveUser] = user.useItemSignal(
+        localStorage.getItem("active_user_name"),
+      );
+      effect(() => {
+        const activeUser = activeUserSignal.value;
+        if (activeUser) {
+          localStorage.setItem("active_user_name", activeUser.name);
+        } else {
+          localStorage.removeItem("active_user_name");
+        }
+      });
+
       const activeUserActionSignal =
         loadUserActionTemplate.actionSignalFromItemSignal(activeUserSignal, {
           autoload: true,
@@ -77,7 +73,7 @@
           <div>
             <button
               onClick={() => {
-                setActiveUsername(dam.name);
+                setActiveUser(dam);
                 damUserAction.reload();
               }}
             >
@@ -100,7 +96,7 @@
             <br />
             <button
               onClick={() => {
-                setActiveUsername(seb.name);
+                setActiveUser(seb);
                 sebUserAction.reload();
               }}
             >
@@ -123,7 +119,7 @@
             <br />
             <button
               onClick={() => {
-                setActiveUsername(john.name);
+                setActiveUser(john);
                 johnUserAction.reload();
               }}
             >
