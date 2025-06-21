@@ -37,7 +37,7 @@
  *   la elle a le concept de "active"
  */
 
-import { batch, computed, effect, signal } from "@preact/signals";
+import { batch, effect, signal } from "@preact/signals";
 import { createWeakCacheMap } from "./weak_cache_map.js";
 
 let debug = true;
@@ -413,11 +413,10 @@ export const createActionTemplate = (
     let data = initialData;
     const dataSignal = signal(initialData);
 
-    const withParams = (newParamsSignal, newParamsMapper) => {
+    const fromParamsSignal = (newParamsSignal) => {
       const boundAction = instantiate(item);
       effect(() => {
-        let newParams = newParamsSignal.value;
-        newParams = newParamsMapper(newParams);
+        const newParams = newParamsSignal.value;
         const combinedParams =
           instanceParams === initialParamsDefault
             ? newParams
@@ -460,7 +459,7 @@ export const createActionTemplate = (
       load,
       reload,
       unload,
-      withParams,
+      fromParamsSignal,
       toString: () => name,
     };
     Object.preventExtensions(action);
@@ -727,17 +726,13 @@ export const createActionTemplate = (
   };
   actionTemplate.instantiate = memoizedInstantiate;
 
-  const actionSignal = (itemSignal, { autoload } = {}) => {
-    return computed(() => {
-      const item = itemSignal.value;
-      const action = memoizedInstantiate(item);
-      if (item && autoload) {
-        action.load();
-      }
-      return action;
-    });
+  const fromItemSignal = (itemSignal) => {
+    const item = itemSignal.peek();
+    const actionForItem = instantiate(item);
+    getActionPrivateProperties(actionForItem).itemSignal = itemSignal;
+    return actionForItem;
   };
-  actionTemplate.actionSignal = actionSignal;
+  actionTemplate.fromItemSignal = fromItemSignal;
   actionTemplate.isTemplate = true;
 
   return actionTemplate;

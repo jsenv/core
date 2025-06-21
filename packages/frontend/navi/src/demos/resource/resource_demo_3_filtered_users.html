@@ -55,7 +55,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { signal, effect } from "@preact/signals";
+      import { signal } from "@preact/signals";
       import { useState } from "preact/hooks";
       import {
         useActionStatus,
@@ -118,7 +118,7 @@
 
       // Action pour charger tous les utilisateurs avec filtres
       const loadUsersAction = user.getAll(async (item, filters) => {
-        console.log("Loading users", item, filters);
+        console.log("Loading users", filters);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return allUsers.filter((user) => {
           if (filters.gender !== undefined && user.gender !== filters.gender) {
@@ -133,15 +133,8 @@
           return true;
         });
       });
-      const loadFilteredUsersAction = loadUsersAction.withParams(
-        filtersSignal,
-        (filters) => {
-          return {
-            gender: filters.gender,
-            department: filters.department,
-          };
-        },
-      );
+      const loadFilteredUsersAction =
+        loadUsersAction.fromParamsSignal(filtersSignal);
 
       // Template d'action pour charger un utilisateur individuel
       const loadUserActionTemplate = user.get(async ({ id }) => {
