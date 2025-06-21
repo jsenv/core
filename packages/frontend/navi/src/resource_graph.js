@@ -16,7 +16,10 @@ export const getItemAction = (item, actionTemplate) => {
   return action;
 };
 
-export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
+export const resource = (
+  name,
+  { sourceStore, store, idKey = "id", uniqueKeys = [] } = {},
+) => {
   const resourceInstance = {
     isResource: true,
     name,
@@ -24,7 +27,46 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
   };
 
   if (!store) {
-    store = arraySignalStore([], idKey, { name: `${name} store` });
+    const setupCallbackSet = new Set();
+    const addItemSetup = (callback) => {
+      setupCallbackSet.add(callback);
+    };
+    resourceInstance.addItemSetup = addItemSetup;
+
+    const itemPrototype = {
+      [Symbol.toStringTag]: name,
+      toString: () => {
+        let string = `${name}`;
+        for (const uniqueKey of uniqueKeys) {
+          const value = this[uniqueKey];
+          if (value !== undefined) {
+            string += `[${uniqueKey}=${value}]`;
+            return string;
+          }
+        }
+        const id = this[idKey];
+        if (id) {
+          string += `[${idKey}=${id}]`;
+        }
+        return string;
+      },
+    };
+
+    store = arraySignalStore([], idKey, {
+      name: `${name} store`,
+      createItem: () => {
+        const item = Object.create(itemPrototype);
+        Object.defineProperty(item, itemActionMapSymbol, {
+          enumerable: true,
+          writable: true,
+          value: new Map(),
+        });
+        for (const setupCallback of setupCallbackSet) {
+          setupCallback(item);
+        }
+        return item;
+      },
+    });
     const useArray = () => {
       return store.arraySignal.value;
     };
@@ -36,23 +78,13 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
       useArray,
       useById,
     });
-    store.addSetup((item) => {
-      if (debug) {
-        console.log(`setup ${item[idKey]}[itemActionMapSymbol]`);
-      }
-      Object.defineProperty(item, itemActionMapSymbol, {
-        enumerable: true,
-        writable: true,
-        value: new Map(),
-      });
-    });
     Object.assign(resourceInstance, { store });
   }
 
   const methodsForStore = createMethodsForStore({
     sourceStore: sourceStore || store,
     targetStore: store,
-    resource: resourceInstance,
+    resourceInstance,
   });
   Object.assign(resourceInstance, methodsForStore);
 
@@ -79,7 +111,7 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
     };
     const one = (childResource, propertyName) => {
       const childIdKey = childResource.idKey;
-      store.addSetup((item) => {
+      resourceInstance.addItemSetup((item) => {
         let childProps = item[propertyName];
         if (debug) {
           console.log(
@@ -158,7 +190,7 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
         return true;
       };
       const childItemArrayMap = new Map();
-      store.addSetup((item) => {
+      resourceInstance.addItemSetup((item) => {
         const childItemArray = [];
         childItemArray.add = addToCollection.bind(item);
         childItemArray.remove = removeFromCollection.bind(item);
@@ -216,9 +248,9 @@ export const resource = (name, { sourceStore, store, idKey = "id" } = {}) => {
 const createMethodsForStore = ({
   sourceStore,
   targetStore = sourceStore,
-  resource,
+  resourceInstance,
 }) => {
-  const { name } = resource;
+  const { name } = resourceInstance;
   const targetStoreMethodEffects = {
     getAll: (propsArray) => {
       // ici en fait il faut override en quelque sorte
@@ -276,7 +308,7 @@ const createMethodsForStore = ({
         },
       );
 
-      sourceStore.addSetup((item) => {
+      resourceInstance.addItemSetup((item) => {
         const itemGetAction = getActionTemplate.instantiate(item);
         item[itemActionMapSymbol].set(getActionTemplate, itemGetAction);
       });
@@ -318,7 +350,7 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      sourceStore.addSetup((item) => {
+      resourceInstance.addItemSetup((item) => {
         const itemPutAction = putActionTemplate.instantiate(item);
         item[itemActionMapSymbol].set(itemPutAction, putActionTemplate);
       });
@@ -335,7 +367,7 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      sourceStore.addSetup((item) => {
+      resourceInstance.addItemSetup((item) => {
         const itemPatchAction = patchActionTemplate.instantiate(item);
         item[itemActionMapSymbol].set(itemPatchAction, patchActionTemplate);
       });
@@ -352,7 +384,7 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      sourceStore.addSetup((item) => {
+      resourceInstance.addItemSetup((item) => {
         const itemDeleteAction = deleteActionTemplate.instantiate(item);
         item[itemActionMapSymbol].set(itemDeleteAction, deleteActionTemplate);
       });

@@ -1,13 +1,18 @@
 import { computed, effect, signal } from "@preact/signals";
 
-export const arraySignalStore = (initialArray = [], idKey = "id", { name }) => {
-  const setupCallbackSet = new Set();
+export const arraySignalStore = (
+  initialArray = [],
+  idKey = "id",
+  {
+    name,
+    createItem = () => {
+      return {};
+    },
+  },
+) => {
   const propertyAccessorMap = new Map();
   const store = {
     name,
-    addSetup: (setupCallback) => {
-      setupCallbackSet.add(setupCallback);
-    },
     defineGetSet: (propertyName, { get, set }) => {
       propertyAccessorMap.set(propertyName, {
         get,
@@ -20,12 +25,10 @@ export const arraySignalStore = (initialArray = [], idKey = "id", { name }) => {
     if (props === null || typeof props !== "object") {
       return props;
     }
-    const item = {
-      ...props,
-    };
-    for (const setupCallback of setupCallbackSet) {
-      setupCallback(item);
-    }
+
+    const item = createItem();
+    Object.assign(item, props);
+
     for (const [propertyName, { get, set }] of propertyAccessorMap) {
       Object.defineProperty(item, propertyName, {
         get: () => get(item),
