@@ -120,11 +120,11 @@ export const arraySignalStore = (initialArray = [], idKey = "id", { name }) => {
       let index = 0;
       while (index < array.length) {
         const existingItem = array[index];
-        arrayUpdated.push(existingItem);
         const id = existingItem[idKey];
         existingEntryMap.set(id, {
           existingItem,
           existingItemIndex: index,
+          processed: false,
         });
         index++;
       }
@@ -133,18 +133,26 @@ export const arraySignalStore = (initialArray = [], idKey = "id", { name }) => {
         const id = props[idKey];
         const existingEntry = existingEntryMap.get(id);
         if (existingEntry) {
-          const { existingItem, existingItemIndex } = existingEntry;
+          const { existingItem } = existingEntry;
           const itemWithPropsOrItem = assign(existingItem, props);
           if (itemWithPropsOrItem !== existingItem) {
-            hasUpdate = hasUpdate || true;
-            arrayUpdated[existingItemIndex] = itemWithPropsOrItem;
+            hasUpdate = true;
           }
+          arrayUpdated.push(itemWithPropsOrItem);
+          existingEntry.processed = true;
         } else {
           hasNew = true;
           const item = createItemFromProps(props);
           arrayUpdated.push(item);
         }
       }
+
+      for (const [, existingEntry] of existingEntryMap) {
+        if (!existingEntry.processed) {
+          arrayUpdated.push(existingEntry.existingItem);
+        }
+      }
+
       if (hasNew || hasUpdate) {
         arraySignal.value = arrayUpdated;
         return arrayUpdated;
