@@ -52,10 +52,12 @@
         }
       });
 
-      const activeUserActionSignal =
-        loadUserActionTemplate.actionSignalFromItemSignal(activeUserSignal, {
+      const activeUserActionSignal = loadUserActionTemplate.actionSignal(
+        activeUserSignal,
+        {
           autoload: true,
-        });
+        },
+      );
 
       loadUsersAction.load();
 

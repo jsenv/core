@@ -117,10 +117,8 @@
       });
 
       // Action pour charger tous les utilisateurs avec filtres
-      const loadUsersAction = user.getAll(async () => {
-        const filters = filtersSignal.peek();
-        console.log("Loading users with filters:", filters);
-        // Simuler un délai réseau
+      const loadUsersAction = user.getAll(async (item, filters) => {
+        console.log("Loading users", item, filters);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return allUsers.filter((user) => {
           if (filters.gender !== undefined && user.gender !== filters.gender) {
@@ -135,8 +133,15 @@
           return true;
         });
       });
-      // Charger la liste initiale
-      loadUsersAction.load();
+      const loadFilteredUsersAction = loadUsersAction.withParams(
+        filtersSignal,
+        (filters) => {
+          return {
+            gender: filters.genrer,
+            department: filters.department,
+          };
+        },
+      );
 
       // Template d'action pour charger un utilisateur individuel
       const loadUserActionTemplate = user.get(async ({ id }) => {
@@ -151,17 +156,10 @@
         };
       });
 
-      // Recharger quand les filtres changent
-      effect(() => {
-        // eslint-disable-next-line no-unused-expressions
-        filtersSignal.value;
-        loadUsersAction.reload();
-      });
-
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const { data: serverUsers = [], pending: loadingUsers } =
-          useActionStatus(loadUsersAction);
+          useActionStatus(loadFilteredUsersAction);
 
         const [newUserName, setNewUserName] = useState("");
         const [newUserGender, setNewUserGender] = useState("male");

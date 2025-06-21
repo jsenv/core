@@ -38,7 +38,6 @@
  */
 
 import { batch, computed, effect, signal } from "@preact/signals";
-import { compareTwoJsValues } from "./compare_two_js_values.js";
 import { createWeakCacheMap } from "./weak_cache_map.js";
 
 let debug = true;
@@ -246,7 +245,7 @@ export const updateActions = ({
       onActionToLoadOrPreload(actionToPreload, true);
     }
     for (const actionToLoad of loadSet) {
-      if (!actionToLoad.active && actionToLoad.loadingState !== IDLE) {
+      if (!actionToLoad.loadRequested && actionToLoad.loadingState !== IDLE) {
         // was preloaded but is not requested to load
         // -> can move to load requested state no matter the loading state
         toPromoteSet.add(actionToLoad);
@@ -414,27 +413,20 @@ export const createActionTemplate = (
     let data = initialData;
     const dataSignal = signal(initialData);
 
-    const boundActionWeakRefMap = new Map();
-    const withParams = (newParams) => {
-      const combinedParams =
-        instanceParams === initialParamsDefault
-          ? newParams
-          : { ...instanceParams, ...newParams };
-      for (const [paramsCandidate, weakRef] of boundActionWeakRefMap) {
-        const existingAction = weakRef.deref();
-        if (!existingAction) {
-          boundActionWeakRefMap.delete(paramsCandidate);
-          continue;
-        }
-        if (compareTwoJsValues(paramsCandidate, combinedParams)) {
-          return existingAction;
-        }
-      }
-      const boundAction = instantiate(item, {
-        instanceParams: combinedParams,
+    const withParams = (newParamsSignal, newParamsMapper) => {
+      const boundAction = instantiate(item);
+      effect(() => {
+        let newParams = newParamsSignal.value;
+        newParams = newParamsMapper(newParams);
+        const combinedParams =
+          instanceParams === initialParamsDefault
+            ? newParams
+            : { ...instanceParams, ...newParams };
+        const boundActionPrivateProperties =
+          getActionPrivateProperties(boundAction);
+        boundActionPrivateProperties.paramsSignal.value = combinedParams;
+        boundAction.reload();
       });
-      const weakRef = new WeakRef(boundAction);
-      boundActionWeakRefMap.set(combinedParams, weakRef);
       return boundAction;
     };
 
@@ -464,7 +456,6 @@ export const createActionTemplate = (
       loadRequested,
       error,
       data,
-      preloadRequested: false,
       preload,
       load,
       reload,
@@ -736,7 +727,7 @@ export const createActionTemplate = (
   };
   actionTemplate.instantiate = memoizedInstantiate;
 
-  const actionSignalFromItemSignal = (itemSignal, { autoload } = {}) => {
+  const actionSignal = (itemSignal, { autoload } = {}) => {
     return computed(() => {
       const item = itemSignal.value;
       const action = memoizedInstantiate(item);
@@ -746,7 +737,7 @@ export const createActionTemplate = (
       return action;
     });
   };
-  actionTemplate.actionSignalFromItemSignal = actionSignalFromItemSignal;
+  actionTemplate.actionSignal = actionSignal;
   actionTemplate.isTemplate = true;
 
   return actionTemplate;
