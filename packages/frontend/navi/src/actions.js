@@ -400,7 +400,7 @@ export const createActionTemplate = (
     keepOldData = false,
   } = {},
 ) => {
-  const instantiate = (
+  const _instantiate = (
     item,
     { instanceName = name, instanceParams = initialParams } = {},
   ) => {
@@ -417,12 +417,9 @@ export const createActionTemplate = (
     const errorSignal = signal(error);
     let data = initialData;
     const dataSignal = signal(initialData);
-    if (!computedDataSignal) {
-      computedDataSignal = dataSignal;
-    }
 
     const fromParamsSignal = (newParamsSignal) => {
-      const boundAction = instantiate(item);
+      const boundAction = _instantiate(item);
       effect(() => {
         const newParams = newParamsSignal.value;
         const combinedParams =
@@ -468,7 +465,7 @@ export const createActionTemplate = (
       reload,
       unload,
       fromParamsSignal,
-      toString: () => name,
+      toString: () => instanceName,
     };
     Object.preventExtensions(action);
     effects: {
@@ -650,7 +647,7 @@ export const createActionTemplate = (
         loadingStateSignal,
         loadRequestedSignal,
         dataSignal,
-        computedDataSignal,
+        computedDataSignal: computedDataSignal || dataSignal,
         errorSignal,
 
         performLoad,
@@ -692,7 +689,7 @@ export const createActionTemplate = (
     }
     const isObject = item && typeof item === "object";
     if (!isObject) {
-      const action = instantiate(item, options);
+      const action = _instantiate(item, options);
       actionItemWeakMap.set(item, action);
       return action;
     }
@@ -727,7 +724,7 @@ export const createActionTemplate = (
         configurable: false,
       });
     }
-    const action = instantiate(item, options);
+    const action = _instantiate(item, options);
     actionItemWeakMap.set(item, action);
     actionItemIdentityWeakMap.set(itemIdentity, action);
     return action;
@@ -745,7 +742,7 @@ export const createActionTemplate = (
 
   const fromItemSignal = (itemSignal) => {
     const item = itemSignal.peek();
-    const actionForItem = instantiate(item);
+    const actionForItem = memoizedInstantiate(item);
     getActionPrivateProperties(actionForItem).itemSignal = itemSignal;
     return actionForItem;
   };
@@ -771,9 +768,7 @@ export const createActionProxy = (action, itemSignal) => {
     return (...args) => {
       const actionForItem = getActionForItem();
       if (!actionForItem) {
-        throw new Error(
-          `Cannot call "${action.name}" on action proxy because item is not set.`,
-        );
+        return undefined;
       }
       return actionForItem[method](...args);
     };
@@ -828,6 +823,12 @@ export const createActionProxy = (action, itemSignal) => {
   effect(() => {
     const item = itemSignal.value;
     actionProxy.item = item;
+  });
+  effect(() => {
+    const actionForItem = getActionForItem();
+    actionProxy.name = actionForItem
+      ? `[[Proxy]] ${actionForItem.name}`
+      : `[[Proxy]] ${action.name}`;
   });
 
   const proxyPrivateProperties = {

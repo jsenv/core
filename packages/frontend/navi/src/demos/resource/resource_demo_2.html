@@ -57,7 +57,7 @@
         loadUserActionTemplate,
         activeUserSignal,
       );
-
+      activeUserAction.load();
       loadUsersAction.load();
 
       // eslint-disable-next-line no-unused-vars
@@ -143,7 +143,7 @@
             <ActionStatus action={damUserAction} />
             <ActionStatus action={sebUserAction} />
             <ActionStatus action={johnUserAction} />
-            <ActionStatus action={activeUserAction} name="get user: active" />
+            <ActionStatus action={activeUserAction} />
 
             <ActionRenderer action={activeUserAction}>
               {{
