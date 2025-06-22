@@ -49,6 +49,82 @@ export const ABORTED = { id: "aborted" };
 export const FAILED = { id: "failed" };
 export const LOADED = { id: "loaded" };
 
+/**
+ * Registry that prevents preloaded actions from being garbage collected.
+ *
+ * When an action is preloaded, it might not have any active references yet
+ * (e.g., the component that will use it hasn't loaded yet due to dynamic imports).
+ * This registry keeps a reference to preloaded actions for a configurable duration
+ * to ensure they remain available when needed.
+ *
+ * Actions are automatically unprotected when:
+ * - The protection duration expires (default: 5 minutes)
+ * - The action is explicitly unloaded via .unload()
+ */
+const preloadedProtectionRegistry = (() => {
+  const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
+  const PROTECTION_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
+
+  const unprotect = (action) => {
+    const protection = protectedActionMap.get(action);
+    if (protection) {
+      clearTimeout(protection.timeoutId);
+      protectedActionMap.delete(action);
+      if (debug) {
+        const elapsed = Date.now() - protection.timestamp;
+        console.debug(`"${action}": GC protection removed after ${elapsed}ms`);
+      }
+    }
+  };
+
+  return {
+    protect(action) {
+      // Si déjà protégée, étendre la protection
+      if (protectedActionMap.has(action)) {
+        const existing = protectedActionMap.get(action);
+        clearTimeout(existing.timeoutId);
+      }
+
+      const timestamp = Date.now();
+      const timeoutId = setTimeout(() => {
+        unprotect(action);
+        if (debug) {
+          console.debug(
+            `"${action}": preload protection expired after ${PROTECTION_DURATION}ms`,
+          );
+        }
+      }, PROTECTION_DURATION);
+
+      protectedActionMap.set(action, { timeoutId, timestamp });
+
+      if (debug) {
+        console.debug(
+          `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
+        );
+      }
+    },
+
+    unprotect,
+
+    isProtected(action) {
+      return protectedActionMap.has(action);
+    },
+
+    // Pour debugging
+    getProtectedActions() {
+      return Array.from(protectedActionMap.keys());
+    },
+
+    // Nettoyage manuel si nécessaire
+    clear() {
+      for (const [, protection] of protectedActionMap) {
+        clearTimeout(protection.timeoutId);
+      }
+      protectedActionMap.clear();
+    },
+  };
+})();
+
 // intermediate function representing the fact we'll use navigation.navigate update action and get a signal
 export const requestActionsUpdates = ({
   preloadSet,
@@ -549,6 +625,11 @@ export const createActionTemplate = (
           // reason,
           isPreload,
         } = loadParams;
+
+        if (isPreload) {
+          preloadedProtectionRegistry.protect(action);
+        }
+
         const abortController = new AbortController();
         const abortSignal = abortController.signal;
         const abort = (reason) => {
@@ -648,10 +729,14 @@ export const createActionTemplate = (
         } else if (debug) {
           console.log(`"${action}": unload route (reason: ${reason})`);
         }
+
+        preloadedProtectionRegistry.unprotect(action);
+
         if (sideEffectCleanup) {
           sideEffectCleanup(reason);
           sideEffectCleanup = undefined;
         }
+
         actionPromiseMap.delete(action);
         batch(() => {
           errorSignal.value = null;
