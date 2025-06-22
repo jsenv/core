@@ -706,7 +706,8 @@ export const createActionProxy = (action, paramsOrSignalMap, options = {}) => {
     const staticParams = {};
     const signalMap = {};
 
-    for (const key of Object.keys(paramsOrSignalMap)) {
+    const keyArray = Object.keys(paramsOrSignalMap);
+    for (const key of keyArray) {
       const value = paramsOrSignalMap[key];
       if (isSignal(value)) {
         signalMap.set(key, value);
@@ -720,9 +721,14 @@ export const createActionProxy = (action, paramsOrSignalMap, options = {}) => {
     }
 
     const paramsSignal = computed(() => {
-      const params = { ...staticParams };
-      for (const [key, signal] of signalMap) {
-        params[key] = signal.value;
+      const params = {};
+      for (const key of keyArray) {
+        const signalForThisKey = signalMap.get(key);
+        if (signalForThisKey) {
+          params[key] = signalForThisKey.value;
+        } else {
+          params[key] = staticParams[key];
+        }
       }
       return params;
     });
