@@ -133,14 +133,7 @@
           return true;
         });
       });
-      const loadFilteredUsersAction = loadUsersAction.bindParamsSignal(
-        filtersSignal,
-        {
-          onChange: () => {
-            loadFilteredUsersAction.reload();
-          },
-        },
-      );
+      const loadFilteredUsersAction = loadUsersAction.bindParams(filtersSignal);
       loadFilteredUsersAction.load();
 
       // Template d'action pour charger un utilisateur individuel

@@ -775,7 +775,7 @@ const isSignal = (value) => {
 const createActionProxyFromSignal = (
   action,
   paramsSignal,
-  { onChange } = {},
+  { reloadOnChange = true, onChange } = {},
 ) => {
   const actionTemplate = action.isTemplate ? action : action.template;
 
@@ -845,8 +845,13 @@ const createActionProxyFromSignal = (
     actionProxy.params = params;
     if (isFirstEffect) {
       isFirstEffect = false;
-    } else if (onChange) {
-      onChange(params, paramsPrevious);
+    } else {
+      if (reloadOnChange) {
+        actionProxy.reload();
+      }
+      if (onChange) {
+        onChange(params, paramsPrevious);
+      }
     }
     paramsPrevious = params;
   });
