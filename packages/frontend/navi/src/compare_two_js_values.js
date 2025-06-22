@@ -1,3 +1,48 @@
+/**
+ * Deep equality comparison for JavaScript values with cycle detection and identity optimization.
+ *
+ * This function performs a comprehensive deep comparison between two JavaScript values,
+ * handling all primitive types, objects, arrays, and edge cases that standard equality
+ * operators miss.
+ *
+ * Key features:
+ * - **Deep comparison**: Recursively compares nested objects and arrays
+ * - **Cycle detection**: Prevents infinite loops with circular references
+ * - **Identity optimization**: Uses SYMBOL_IDENTITY for fast comparison of objects with same identity
+ * - **Edge case handling**: Properly handles NaN, null, undefined, 0, false comparisons
+ * - **Type safety**: Ensures both values have same type before deep comparison
+ *
+ * Performance optimizations:
+ * - Early exit for reference equality (a === b)
+ * - Identity symbol check for objects (avoids deep comparison when possible)
+ * - Efficient array length check before element-by-element comparison
+ *
+ * Use cases:
+ * - Memoization cache key comparison ({ id: 1 } should equal { id: 1 })
+ * - React/Preact dependency comparison for effects and memos
+ * - State change detection in signals and stores
+ * - Action parameter comparison for avoiding duplicate requests
+ *
+ * Examples:
+ * ```js
+ * compareTwoJsValues({ id: 1 }, { id: 1 }) // true
+ * compareTwoJsValues([1, 2, 3], [1, 2, 3]) // true
+ * compareTwoJsValues(NaN, NaN) // true (unlike === which gives false)
+ * compareTwoJsValues({ a: { b: 1 } }, { a: { b: 1 } }) // true
+ *
+ * // Identity optimization
+ * const obj1 = { id: 1 };
+ * const obj2 = { id: 1 };
+ * obj1[SYMBOL_IDENTITY] = obj2[SYMBOL_IDENTITY] = Symbol('same');
+ * compareTwoJsValues(obj1, obj2) // true (fast path, no deep comparison)
+ * ```
+ *
+ * @param {any} a - First value to compare
+ * @param {any} b - Second value to compare
+ * @param {Set} seenSet - Internal cycle detection set (automatically managed)
+ * @returns {boolean} true if values are deeply equal, false otherwise
+ */
+
 export const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
 
 export const compareTwoJsValues = (a, b, seenSet = new Set()) => {
