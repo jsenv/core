@@ -61,7 +61,7 @@ export const compareTwoJsValues = (a, b, seenSet = new Set()) => {
   // compare objects
   const aIdentity = a[SYMBOL_IDENTITY];
   const bIdentity = b[SYMBOL_IDENTITY];
-  if (aIdentity === bIdentity) {
+  if (aIdentity === bIdentity && SYMBOL_IDENTITY in a && SYMBOL_IDENTITY in b) {
     return true;
   }
   const aKeys = Object.keys(a);

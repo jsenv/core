@@ -550,7 +550,8 @@ export const createActionTemplate = (
           }
         });
 
-        const returnValue = sideEffect(params);
+        const args = [params, loadParams];
+        const returnValue = sideEffect(...args);
         if (typeof returnValue === "function") {
           sideEffectCleanup = returnValue;
         }
@@ -577,11 +578,9 @@ export const createActionTemplate = (
           });
         };
 
-        const secondParam = loadParams;
-
         try {
           const thenableArray = [];
-          const callbackResult = callback(params, secondParam);
+          const callbackResult = callback(...args);
           if (callbackResult && typeof callbackResult.then === "function") {
             thenableArray.push(callbackResult);
             callbackResult.then((value) => {
@@ -592,12 +591,11 @@ export const createActionTemplate = (
           }
           const renderLoadedAsync = ui.renderLoadedAsync;
           if (renderLoadedAsync) {
-            const renderLoadedPromise = renderLoadedAsync(
-              params,
-              secondParam,
-            ).then((renderLoaded) => {
-              ui.renderLoaded = () => renderLoaded;
-            });
+            const renderLoadedPromise = renderLoadedAsync(...args).then(
+              (renderLoaded) => {
+                ui.renderLoaded = () => renderLoaded;
+              },
+            );
             thenableArray.push(renderLoadedPromise);
           }
           if (thenableArray.length === 0) {
