@@ -75,7 +75,7 @@
           setIsOpen(open);
           if (open) {
             action.load();
-            localStorage.setItem(storageKey);
+            localStorage.setItem(storageKey, "1");
           } else {
             localStorage.removeItem(storageKey);
           }

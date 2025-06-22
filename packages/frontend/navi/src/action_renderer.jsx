@@ -1,5 +1,5 @@
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
-import { useActionStatus } from "./actions.js";
+import { getActionPrivateProperties, useActionStatus } from "./actions.js";
 
 const renderOtherwiseDefault = () => null;
 const renderLoadingDefault = () => null;
@@ -47,8 +47,17 @@ export const ActionRenderer = ({ action, children }) => {
   if (error) {
     return renderError(error, "action_error");
   }
-  const renderLoadedSafe =
-    renderLoaded || action.ui.renderLoaded || renderLoadedDefault;
+  let renderLoadedSafe;
+  if (renderLoaded) {
+    renderLoadedSafe = renderLoaded;
+  } else {
+    const { ui } = getActionPrivateProperties(action);
+    if (ui.renderLoaded) {
+      renderLoadedSafe = ui.renderLoaded;
+    } else {
+      renderLoadedSafe = renderLoadedDefault;
+    }
+  }
   if (pending) {
     if (action.canDisplayOldData && data !== undefined) {
       return renderLoadedSafe(data);
