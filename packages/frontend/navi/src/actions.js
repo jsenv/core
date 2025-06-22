@@ -364,26 +364,26 @@ const getActionPrivateProperties = (action) => {
   return actionPrivateProperties;
 };
 
-// const itemAsHumanString = (item) => {
-//   if (!item) {
-//     return String(item);
-//   }
-//   const toString = item.toString;
-//   if (toString !== Object.prototype.toString) {
-//     return item.toString();
-//   }
-//   if (Object.hasOwn(item, "name")) {
-//     return item.name;
-//   }
-//   if (Object.hasOwn(item, "id")) {
-//     return item.id;
-//   }
-//   const toStringTag = item[Symbol.toStringTag];
-//   if (toStringTag) {
-//     return toStringTag;
-//   }
-//   return toString(item);
-// };
+const itemAsHumanString = (item) => {
+  if (!item) {
+    return String(item);
+  }
+  const toString = item.toString;
+  if (toString !== Object.prototype.toString) {
+    return item.toString();
+  }
+  if (Object.hasOwn(item, "name")) {
+    return item.name;
+  }
+  if (Object.hasOwn(item, "id")) {
+    return item.id;
+  }
+  const toStringTag = item[Symbol.toStringTag];
+  if (toStringTag) {
+    return toStringTag;
+  }
+  return toString(item);
+};
 
 export const createActionTemplate = (
   callback,
@@ -401,8 +401,15 @@ export const createActionTemplate = (
   } = {},
 ) => {
   const _instantiate = (instanceParams = initialParams) => {
-    const instanceName = generateActionName(name, instanceParams);
-    let params = instanceParams;
+    let item;
+    let params;
+    if (instanceParams && typeof instanceParams === "object") {
+      ({ item, ...params } = instanceParams);
+    } else {
+      item = undefined;
+      params = instanceParams;
+    }
+    const instanceName = generateActionName(name, item, instanceParams);
     const paramsSignal = signal(params);
 
     let loadRequested = initialLoadRequested;
@@ -445,6 +452,7 @@ export const createActionTemplate = (
     };
 
     const action = {
+      template: actionTemplate,
       name: instanceName,
       params,
       loadingState,
@@ -471,10 +479,6 @@ export const createActionTemplate = (
           }
         });
       };
-      actionWeakEffect((actionRef) => {
-        params = paramsSignal.value;
-        actionRef.params = params;
-      });
       actionWeakEffect((actionRef) => {
         loadRequested = loadRequestedSignal.value;
         actionRef.loadRequested = loadRequested;
@@ -642,11 +646,11 @@ export const createActionTemplate = (
     return action;
   };
 
-  const generateActionName = (name, params) => {
+  const generateActionName = (name, item, params) => {
     let actionName = name;
-    // if (item) {
-    //   actionName += `: ${itemAsHumanString(item)}`;
-    // }
+    if (item) {
+      actionName += `: ${itemAsHumanString(item)}`;
+    }
     if (params !== initialParamsDefault) {
       actionName += generateParamsSuffix(params);
     }
@@ -689,10 +693,10 @@ export const createActionTemplate = (
     isTemplate: true,
     name,
     initialParams,
-    initialData,
     initialLoadingState,
     initialLoadRequested,
     initialError,
+    initialData,
     instantiate: memoizedInstantiate,
   };
 
@@ -704,12 +708,14 @@ export const createAction = (callback, options) => {
 };
 
 export const createActionProxy = (action, paramsSignal) => {
+  const actionTemplate = action.isTemplate ? action : action.template;
+
   const getActionForParams = () => {
     const params = paramsSignal.value;
     if (!params) {
       return null;
     }
-    return action.instantiate(params);
+    return actionTemplate.instantiate(params);
   };
   const proxyMethod = (method) => {
     return (...args) => {
@@ -722,23 +728,19 @@ export const createActionProxy = (action, paramsSignal) => {
   };
 
   const actionProxy = {
-    name: `Proxy on ${action.name}`,
-    item: action.item,
-    params: action.params,
-    loadingState: action.loadingState,
-    loadRequested: action.loadRequested,
-    error: action.error,
-    data: action.data,
+    isProxy: true,
+    name: `Proxy on ${actionTemplate.name}`,
+    params: actionTemplate.initialParams,
+    loadRequested: actionTemplate.initialLoadRequested,
+    loadingState: actionTemplate.initialLoadingState,
+    error: actionTemplate.initialError,
+    data: actionTemplate.initialData,
     preload: proxyMethod("preload"),
     load: proxyMethod("load"),
     reload: proxyMethod("reload"),
     unload: proxyMethod("unload"),
-    toString: () => `Proxy on ${action.name}`,
+    toString: () => `Proxy on ${actionTemplate.name}`,
   };
-
-  const initialValues = action.isTemplate
-    ? action
-    : getActionPrivateProperties(action);
 
   const proxySignal = (
     signalPropertyName,
@@ -751,7 +753,7 @@ export const createActionProxy = (action, paramsSignal) => {
         if (!propertyName) {
           return undefined;
         }
-        const initialValue = initialValues[initialValuePrivatePropertyName];
+        const initialValue = actionTemplate[initialValuePrivatePropertyName];
         actionProxy[propertyName] = initialValue;
         return initialValue;
       }
@@ -775,15 +777,15 @@ export const createActionProxy = (action, paramsSignal) => {
     const actionForParams = getActionForParams();
     actionProxy.name = actionForParams
       ? `[[Proxy]] ${actionForParams.name}`
-      : `[[Proxy]] ${action.name}`;
+      : `[[Proxy]] ${actionTemplate.name}`;
   });
 
   const proxyPrivateProperties = {
-    initialLoadRequested: action.loadRequested,
-    initialLoadingState: action.loadingState,
-    initialParams: action.params,
-    initialData: action.data,
-    initialError: action.error,
+    initialLoadRequested: actionProxy.loadRequested,
+    initialLoadingState: actionProxy.loadingState,
+    initialParams: actionProxy.params,
+    initialError: actionProxy.error,
+    initialData: actionProxy.data,
 
     paramsSignal,
     loadRequestedSignal: proxySignal(
@@ -822,7 +824,7 @@ export const createActionProxy = (action, paramsSignal) => {
         getActionPrivateProperties(actionForParams);
       return actionForParamsPrivateProperties.performUnload(...args);
     },
-    ui: action.ui,
+    ui: actionTemplate.ui,
   };
   actionPrivatePropertiesWeakMap.set(actionProxy, proxyPrivateProperties);
 
