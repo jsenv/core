@@ -17,6 +17,7 @@
       import { useState, useEffect } from "preact/hooks";
       import {
         createActionTemplate,
+        useActionStatus,
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
       } from "@jsenv/navi";
@@ -101,6 +102,8 @@
         const { isOpen: friendsOpen, handleToggle: handleFriendsToggle } =
           useToggleableAction(friendsAction, `user_${userId}_friends_open`);
 
+        const { data: friends } = useActionStatus(friendsAction);
+
         const { isOpen: settingsOpen, handleToggle: handleSettingsToggle } =
           useToggleableAction(settingsAction, `user_${userId}_settings_open`);
 
@@ -149,8 +152,7 @@
                   fontWeight: "bold",
                 }}
               >
-                👥 Friends{" "}
-                {friendsAction.data ? `(${friendsAction.data.length})` : ""}
+                👥 Friends {friends ? `(${friends.length})` : ""}
               </summary>
               <div style={{ padding: "12px", borderLeft: "3px solid #ff9800" }}>
                 <ActionRenderer action={friendsAction}>
