@@ -691,7 +691,63 @@ export const createAction = (callback, options) => {
   return createActionTemplate(callback, options).instantiate();
 };
 
-export const createActionProxy = (action, paramsSignal, { onChange } = {}) => {
+export const createActionProxy = (action, paramsOrSignalMap, options = {}) => {
+  const actionTemplate = action.isTemplate ? action : action.template;
+
+  if (isSignal(paramsOrSignalMap)) {
+    return createActionProxyFromSignal(
+      actionTemplate,
+      paramsOrSignalMap,
+      options,
+    );
+  }
+
+  if (paramsOrSignalMap && typeof paramsOrSignalMap === "object") {
+    const staticParams = {};
+    const signalMap = {};
+
+    for (const key of Object.keys(paramsOrSignalMap)) {
+      const value = paramsOrSignalMap[key];
+      if (isSignal(value)) {
+        signalMap.set(key, value);
+      } else {
+        staticParams[key] = value;
+      }
+    }
+
+    if (signalMap.size === 0) {
+      return actionTemplate.instantiate(paramsOrSignalMap);
+    }
+
+    const paramsSignal = computed(() => {
+      const params = { ...staticParams };
+      for (const [key, signal] of signalMap) {
+        params[key] = signal.value;
+      }
+      return params;
+    });
+    return createActionProxyFromSignal(actionTemplate, paramsSignal, options);
+  }
+
+  // Valeur primitive
+  const paramsSignal = signal(paramsOrSignalMap);
+  return createActionProxyFromSignal(actionTemplate, paramsSignal, options);
+};
+const isSignal = (value) => {
+  return (
+    value &&
+    typeof value === "object" &&
+    "value" in value &&
+    typeof value.peek === "function" &&
+    typeof value.subscribe === "function"
+  );
+};
+
+const createActionProxyFromSignal = (
+  action,
+  paramsSignal,
+  { onChange } = {},
+) => {
   const actionTemplate = action.isTemplate ? action : action.template;
 
   const getActionForParams = () => {
@@ -760,7 +816,7 @@ export const createActionProxy = (action, paramsSignal, { onChange } = {}) => {
     actionProxy.params = params;
     if (isFirstEffect) {
       isFirstEffect = false;
-    } else {
+    } else if (onChange) {
       onChange(params, paramsPrevious);
     }
     paramsPrevious = params;

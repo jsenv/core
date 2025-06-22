@@ -17,7 +17,7 @@
        */
 
       import { render } from "preact";
-      import { effect } from "@preact/signals";
+      import { effect, signal } from "@preact/signals";
       import {
         useActionStatus,
         resource,
@@ -41,22 +41,21 @@
         return { name, greeting: `Hello ${name}` };
       });
 
-      const [activeUserSignal, setActiveUser] = user.useItemSignal(
+      const activeUsernameSignal = signal(
         localStorage.getItem("active_user_name"),
       );
       effect(() => {
-        const activeUser = activeUserSignal.value;
-        if (activeUser) {
-          localStorage.setItem("active_user_name", activeUser.name);
+        const activeUsername = activeUsernameSignal.value;
+        if (activeUsername) {
+          localStorage.setItem("active_user_name", activeUsername);
         } else {
           localStorage.removeItem("active_user_name");
         }
       });
 
-      const activeUserAction = createActionProxy(
-        loadUserActionTemplate,
-        activeUserSignal,
-      );
+      const activeUserAction = createActionProxy(loadUserActionTemplate, {
+        name: activeUsernameSignal,
+      });
       activeUserAction.load();
       loadUsersAction.load();
 
@@ -73,7 +72,7 @@
           <div>
             <button
               onClick={() => {
-                setActiveUser(dam);
+                activeUsernameSignal.value = dam.name;
                 damUserAction.reload();
               }}
             >
@@ -96,7 +95,7 @@
             <br />
             <button
               onClick={() => {
-                setActiveUser(seb);
+                activeUsernameSignal.value = seb.name;
                 sebUserAction.reload();
               }}
             >
@@ -119,7 +118,7 @@
             <br />
             <button
               onClick={() => {
-                setActiveUser(john);
+                activeUsernameSignal.value = john.name;
                 johnUserAction.reload();
               }}
             >
