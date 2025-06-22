@@ -457,16 +457,39 @@ export const createActionTemplate = (
         unloadSet: new Set([action]),
       });
 
-    const bindParamsSignal = (newParamsSignal, options) => {
+    const bindParams = (newParamsOrSignal, options) => {
       if (instanceParams === initialParamsDefault) {
-        return createActionProxy(action, newParamsSignal, options);
+        return createActionProxy(action, newParamsOrSignal, options);
       }
-      const combinedParamsSignal = computed(() => {
-        const newParams = newParamsSignal.value;
-        const combinedParams = { ...instanceParams, ...newParams };
-        return combinedParams;
-      });
-      return createActionProxy(action, combinedParamsSignal, options);
+
+      if (isSignal(newParamsOrSignal)) {
+        const combinedParamsSignal = computed(() => {
+          const newParams = newParamsOrSignal.value;
+
+          if (newParams === null || typeof newParams !== "object") {
+            return newParams;
+          }
+
+          if (instanceParams === null || typeof instanceParams !== "object") {
+            return newParams;
+          }
+
+          return { ...instanceParams, ...newParams };
+        });
+        return createActionProxy(action, combinedParamsSignal, options);
+      }
+
+      if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
+        if (instanceParams === null || typeof instanceParams !== "object") {
+          // Params existants primitifs -> remplacés par l'objet
+          return createActionProxy(action, newParamsOrSignal, options);
+        }
+        const combinedParams = { ...instanceParams, ...newParamsOrSignal };
+        return createActionProxy(action, combinedParams, options);
+      }
+
+      // Primitive
+      return createActionProxy(action, newParamsOrSignal, options);
     };
 
     const action = {
@@ -481,7 +504,7 @@ export const createActionTemplate = (
       load,
       reload,
       unload,
-      bindParamsSignal,
+      bindParams,
       toString: () => instanceName,
     };
     Object.preventExtensions(action);
@@ -691,24 +714,24 @@ export const createAction = (callback, options) => {
   return createActionTemplate(callback, options).instantiate();
 };
 
-export const createActionProxy = (action, paramsOrSignalMap, options = {}) => {
+export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {
   const actionTemplate = action.isTemplate ? action : action.template;
 
-  if (isSignal(paramsOrSignalMap)) {
+  if (isSignal(paramsMapOrSignal)) {
     return createActionProxyFromSignal(
       actionTemplate,
-      paramsOrSignalMap,
+      paramsMapOrSignal,
       options,
     );
   }
 
-  if (paramsOrSignalMap && typeof paramsOrSignalMap === "object") {
+  if (paramsMapOrSignal && typeof paramsMapOrSignal === "object") {
     const staticParams = {};
     const signalMap = new Map();
 
-    const keyArray = Object.keys(paramsOrSignalMap);
+    const keyArray = Object.keys(paramsMapOrSignal);
     for (const key of keyArray) {
-      const value = paramsOrSignalMap[key];
+      const value = paramsMapOrSignal[key];
       if (isSignal(value)) {
         signalMap.set(key, value);
       } else {
@@ -717,7 +740,7 @@ export const createActionProxy = (action, paramsOrSignalMap, options = {}) => {
     }
 
     if (signalMap.size === 0) {
-      return actionTemplate.instantiate(paramsOrSignalMap);
+      return actionTemplate.instantiate(paramsMapOrSignal);
     }
 
     const paramsSignal = computed(() => {
@@ -736,7 +759,7 @@ export const createActionProxy = (action, paramsOrSignalMap, options = {}) => {
   }
 
   // Valeur primitive
-  const paramsSignal = signal(paramsOrSignalMap);
+  const paramsSignal = signal(paramsMapOrSignal);
   return createActionProxyFromSignal(actionTemplate, paramsSignal, options);
 };
 const isSignal = (value) => {
