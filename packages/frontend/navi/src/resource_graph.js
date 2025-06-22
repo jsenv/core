@@ -258,13 +258,13 @@ const createMethodsForStore = ({
   targetStore = sourceStore,
   resourceInstance,
 }) => {
-  const { name } = resourceInstance;
+  const { idKey, name } = resourceInstance;
 
   const idArraySignal = signal([]);
   const targetStoreMethodEffects = {
     getAll: (propsArray) => {
       const itemArray = targetStore.upsert(propsArray);
-      const idArray = itemArray.map((item) => item[resourceInstance.idKey]);
+      const idArray = itemArray.map((item) => item[idKey]);
       idArraySignal.value = idArray;
       return itemArray;
     },
@@ -280,6 +280,15 @@ const createMethodsForStore = ({
     delete: (itemIdOrItemIdArray) => {
       return targetStore.drop(itemIdOrItemIdArray);
     },
+  };
+
+  const autoInstantiateActionOnItem = (actionTemplate) => {
+    resourceInstance.addItemSetup((item) => {
+      const itemAction = actionTemplate.instantiate({
+        [idKey]: item[idKey],
+      });
+      item[itemActionMapSymbol].set(actionTemplate, itemAction);
+    });
   };
 
   return {
@@ -321,12 +330,7 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-
-      resourceInstance.addItemSetup((item) => {
-        const itemGetAction = getActionTemplate.instantiate({ item });
-        item[itemActionMapSymbol].set(getActionTemplate, itemGetAction);
-      });
-
+      autoInstantiateActionOnItem(getActionTemplate);
       // store.registerPropertyLifecycle(resource.activeItemSignal, key, {
       //   changed: () => {
       //     // updateMatchingActionParams(getActionTemplate, { [key]: value });
@@ -348,7 +352,6 @@ const createMethodsForStore = ({
       //     reloadActions({ reason: `${value} reinserted` });
       //   },
       // });
-
       return getActionTemplate;
     },
     put: (callback, options) => {
@@ -364,10 +367,7 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      resourceInstance.addItemSetup((item) => {
-        const itemPutAction = putActionTemplate.instantiate({ item });
-        item[itemActionMapSymbol].set(itemPutAction, putActionTemplate);
-      });
+      autoInstantiateActionOnItem(putActionTemplate);
       return putActionTemplate;
     },
     patch: (callback, options) => {
@@ -381,10 +381,7 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      resourceInstance.addItemSetup((item) => {
-        const itemPatchAction = patchActionTemplate.instantiate({ item });
-        item[itemActionMapSymbol].set(itemPatchAction, patchActionTemplate);
-      });
+      autoInstantiateActionOnItem(patchActionTemplate);
       return patchActionTemplate;
     },
     delete: (callback, options) => {
@@ -398,10 +395,7 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      resourceInstance.addItemSetup((item) => {
-        const itemDeleteAction = deleteActionTemplate.instantiate({ item });
-        item[itemActionMapSymbol].set(itemDeleteAction, deleteActionTemplate);
-      });
+      autoInstantiateActionOnItem(deleteActionTemplate);
       return deleteActionTemplate;
     },
   };

@@ -704,7 +704,7 @@ export const createActionProxy = (action, paramsOrSignalMap, options = {}) => {
 
   if (paramsOrSignalMap && typeof paramsOrSignalMap === "object") {
     const staticParams = {};
-    const signalMap = {};
+    const signalMap = new Map();
 
     const keyArray = Object.keys(paramsOrSignalMap);
     for (const key of keyArray) {
