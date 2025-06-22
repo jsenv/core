@@ -1,40 +1,185 @@
-/*
- * certaines actions ne devrait pas rester dans activationRegistry, je vois pas l'interet
- * genre tout ce qui est PUT/DELETE/POST/PATCH c'est du volatile
- * (quoiqu'on pourrait imaginer une UI qui affiche le résulat d'un POST et le user choisi
- * ce qu'il fait ensuite, dans ce cas action.active doit rester true ainsi que sa data)
+/**
+ * # Actions System - Declarative Resource Management for Frontend Applications
  *
- * mais on peut surement obtenir cela puisque si personne ne sinteresse a l'action est est garbage collect
- * donc en fait on est good
- * -> si aucune UI ne se branche sur ces actions elle reste brievement dans la mémoire de l'appli
- * -> si une UI se branche, elle y reste jusqu'à ce que l'utilisateur quitte la page
+ * This module provides a comprehensive system for managing asynchronous resources (API calls, data fetching)
+ * in a declarative, signal-based architecture. It's designed for complex frontend applications that need
+ * fine-grained control over loading states, caching, and resource lifecycle management.
  *
+ * ## Core Concepts
  *
- * En fait les actions ne devraint pas avoir de notion de "active" je crois...
- * Le truc c'est que si je suis sur la page
+ * ### 🔧 **Action Templates**
+ * Factory functions that define how to load resources. Templates are pure and reusable.
+ * ```js
+ * const getUserTemplate = createActionTemplate(async ({ userId }) => {
+ *   const response = await fetch(`/api/users/${userId}`);
+ *   return response.json();
+ * });
+ * ```
  *
- * - users/:userId
+ * ### 🎯 **Action Instances**
+ * Stateful objects created from templates with specific parameters. Each unique parameter set
+ * gets its own cached instance (automatic memoization).
+ * ```js
+ * const userAction = getUserTemplate.instantiate({ userId: 123 });
+ * const status = useActionStatus(userAction); // { pending, data, error, ... }
+ * ```
  *
- *   pour savoir qui est actif je peux regarder l'url
- *   -> donc c'est bien sur le template qu'on dit qui est actif
- *   je peux faire const currentUserGetAction = userGetActionTemplate.withParams({ userId }) et
- *   la on se moque si on est actif ou pas
- *   lorsqu'on reçoit une action on peut
- *   const currentUserId = currentUserIdSignal.value
- *   const active = currentUserGetAction.params.userId === currentUserId;
+ * ### 🔄 **Action Proxies**
+ * Dynamic actions that react to signal changes, automatically reloading when parameters change.
+ * ```js
+ * const userProxy = createActionProxy(getUserTemplate, {
+ *   userId: userIdSignal,     // Signal - reactive
+ *   includeProfile: true      // Static - not reactive
+ * });
+ * // Automatically reloads when userIdSignal changes
+ * ```
  *
- *  le souci du coup c'est le action renderer qui ne marche plus du coup
- *   puisqu'une action n'a plus le concept de "actif"
+ * ## Loading States & Lifecycle
  *
- *   tout ça c'est parce que je veux pas que les actions getUser puisse etre unload
- *   ou considérer inactif lorsqu'on passe sur une page qui mettons affiche plusieurs users
- *   et la le concept de current user ne s'applique plus mais on veut pouvoir utiliser l'action
- *   getUser qui existe deja
+ * ### 📊 **State Management**
+ * Each action has a well-defined state machine:
+ * - `IDLE` → `LOADING` → `LOADED` (success)
+ * - `IDLE` → `LOADING` → `FAILED` (error)
+ * - `IDLE` → `LOADING` → `ABORTED` (cancelled)
  *
- *   on pourrait avoir un concept d'action active ou non par contre ....
+ * ### ⚡ **Load Types**
+ * - **`.load()`** - Load with user intent (sets `loadRequested: true`)
+ * - **`.preload()`** - Background loading (sets `loadRequested: false`)
+ * - **`.reload()`** - Force reload even if already loaded
+ * - **`.unload()`** - Cancel loading and reset state
  *
- *   genre on bind un action template a un activeSignal et cette action par contre
- *   la elle a le concept de "active"
+ * ### 🛡️ **Preload Protection**
+ * Preloaded actions are protected from garbage collection for 5 minutes to ensure
+ * they remain available for components that may load later (e.g., via dynamic imports).
+ *
+ * ## Key Features
+ *
+ * ### 🧠 **Intelligent Memoization**
+ * - Actions with identical parameters share the same instance
+ * - Uses deep equality comparison with `compareTwoJsValues`
+ * - Supports `SYMBOL_IDENTITY` for fast recognition of "conceptually same" objects
+ * - Memory-efficient with automatic garbage collection
+ *
+ * ### 🔗 **Parameter Binding & Composition**
+ * ```js
+ * const baseAction = getUserTemplate.instantiate({ userId: 123 });
+ * const enrichedAction = baseAction.bindParams({ includeProfile: true });
+ * // Result: { userId: 123, includeProfile: true }
+ *
+ * // Supports objects, primitives, and signals
+ * const dynamicAction = baseAction.bindParams(filtersSignal);
+ * ```
+ *
+ * ### 🎮 **Concurrent Loading Control**
+ * - Prevents duplicate requests for same resource
+ * - Smart request deduplication and racing condition handling
+ * - Coordinated loading/unloading of multiple actions via `updateActions()`
+ *
+ * ### 🔧 **Side Effects & Cleanup**
+ * ```js
+ * const actionTemplate = createActionTemplate(callback, {
+ *   sideEffect: (params, loadParams) => {
+ *     // Setup logic (analytics, subscriptions, etc.)
+ *     return () => {
+ *       // Cleanup logic - called on unload/abort
+ *     };
+ *   }
+ * });
+ * ```
+ *
+ * ## Usage Patterns
+ *
+ * ### 🏗️ **Basic Resource Loading**
+ * ```js
+ * const getUserAction = createActionTemplate(async ({ userId }) => {
+ *   return await api.getUser(userId);
+ * });
+ *
+ * // In component
+ * const userAction = getUserAction.instantiate({ userId: 123 });
+ * const { pending, data, error } = useActionStatus(userAction);
+ *
+ * useEffect(() => {
+ *   userAction.load();
+ * }, []);
+ * ```
+ *
+ * ### 🔄 **Reactive Data Loading**
+ * ```js
+ * const searchProxy = createActionProxy(searchTemplate, {
+ *   query: searchSignal,
+ *   filters: filtersSignal
+ * });
+ * // Automatically reloads when signals change
+ * ```
+ *
+ * ### 📋 **Master-Detail Pattern**
+ * ```js
+ * const usersAction = getUsersTemplate.instantiate();
+ * const selectedUser = signal(null);
+ *
+ * const userDetailsProxy = createActionProxy(getUserTemplate, {
+ *   userId: computed(() => selectedUser.value?.id)
+ * });
+ * ```
+ *
+ * ### 🏃 **Progressive Loading**
+ * ```js
+ * // Preload on hover, load on click
+ * <button
+ *   onMouseEnter={() => action.preload()}
+ *   onClick={() => action.load()}
+ * >
+ *   Load User
+ * </button>
+ * ```
+ *
+ * ## Advanced Features
+ *
+ * ### 🎭 **Custom Data Transformation**
+ * ```js
+ * const actionTemplate = createActionTemplate(fetchUser, {
+ *   computedDataSignal: computed(() => {
+ *     const rawData = dataSignal.value;
+ *     return rawData ? transformUser(rawData) : null;
+ *   })
+ * });
+ * ```
+ *
+ * ### 🎨 **Async Rendering Support**
+ * ```js
+ * const actionTemplate = createActionTemplate(fetchData, {
+ *   renderLoadedAsync: async () => {
+ *     const { UserComponent } = await import('./UserComponent.js');
+ *     return (user) => <UserComponent user={user} />;
+ *   }
+ * });
+ * ```
+ *
+ * ### 🛠️ **Debugging & Observability**
+ * Built-in debug mode with detailed logging of state transitions, loading coordination,
+ * and memory management. Enable with `debug = true`.
+ *
+ * ## Integration Points
+ *
+ * - **Signals**: Built on @preact/signals for reactive state management
+ * - **Navigation**: Integrates with navigation systems for route-based loading
+ * - **Components**: Use `useActionStatus()` hook for component integration
+ * - **Memory Management**: Automatic cleanup with WeakMap-based private properties
+ *
+ * ## Performance Characteristics
+ *
+ * - **Memory Efficient**: Weak references prevent memory leaks
+ * - **Request Deduplication**: Identical requests are automatically merged
+ * - **Minimal Re-renders**: Signal-based updates only trigger when data actually changes
+ * - **Lazy Loading**: Actions only created when needed, with intelligent memoization
+ *
+ * This system is particularly well-suited for:
+ * - SPAs with complex data fetching requirements
+ * - Applications needing fine-grained loading state control
+ * - Systems requiring request coordination and deduplication
+ * - Progressive loading and preloading scenarios
+ * - Master-detail interfaces with dynamic parameter binding
  */
 
 import { batch, computed, effect, signal } from "@preact/signals";
@@ -639,6 +784,9 @@ export const createActionTemplate = (
           loadingStateSignal.value = ABORTED;
           abortController.abort(reason);
           actionAbortMap.delete(action);
+          if (isPreload) {
+            preloadedProtectionRegistry.unprotect(action);
+          }
         };
         const onabort = () => {
           abort(signal.reason);
@@ -673,6 +821,9 @@ export const createActionTemplate = (
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
           if (abortSignal.aborted && e === abortSignal.reason) {
+            if (isPreload) {
+              preloadedProtectionRegistry.unprotect(action);
+            }
             loadingStateSignal.value = ABORTED;
             return;
           }
