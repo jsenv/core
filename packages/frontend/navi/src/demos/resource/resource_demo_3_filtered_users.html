@@ -117,7 +117,7 @@
       });
 
       // Action pour charger tous les utilisateurs avec filtres
-      const loadUsersAction = user.getAll(async (item, filters) => {
+      const loadUsersAction = user.getAll(async (filters) => {
         console.log("Loading users", filters);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return allUsers.filter((user) => {
@@ -133,8 +133,15 @@
           return true;
         });
       });
-      const loadFilteredUsersAction =
-        loadUsersAction.bindParamsSignal(filtersSignal);
+      const loadFilteredUsersAction = loadUsersAction.bindParamsSignal(
+        filtersSignal,
+        {
+          onChange: () => {
+            loadFilteredUsersAction.reload();
+          },
+        },
+      );
+      loadFilteredUsersAction.load();
 
       // Template d'action pour charger un utilisateur individuel
       const loadUserActionTemplate = user.get(async ({ id }) => {

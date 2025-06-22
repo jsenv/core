@@ -298,7 +298,7 @@ const createMethodsForStore = ({
           return itemArray;
         },
         {
-          name: `getAll ${name}`,
+          name: `${name}.getAll`,
           data: [],
           computedDataSignal: computed(() => {
             const idArray = idArraySignal.value;
@@ -317,7 +317,7 @@ const createMethodsForStore = ({
           return item;
         },
         {
-          name: `get ${name}`,
+          name: `${name}.get`,
           ...options,
         },
       );
@@ -360,7 +360,7 @@ const createMethodsForStore = ({
           return itemOrItemArray;
         },
         {
-          name: `put ${name}`,
+          name: `${name}.put`,
           ...options,
         },
       );
@@ -377,7 +377,7 @@ const createMethodsForStore = ({
           return targetStoreMethodEffects.patch(propsOrPropsArray);
         },
         {
-          name: `patch ${name}`,
+          name: `${name}.patch`,
           ...options,
         },
       );
@@ -394,7 +394,7 @@ const createMethodsForStore = ({
           return targetStoreMethodEffects.delete(itemIdOrItemIdArray);
         },
         {
-          name: `delete ${name}`,
+          name: `${name}.delete`,
           ...options,
         },
       );

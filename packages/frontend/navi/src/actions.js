@@ -38,6 +38,7 @@
  */
 
 import { batch, computed, effect, signal } from "@preact/signals";
+import { stringifyForDisplay } from "./actions_helpers.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
 
 let debug = true;
@@ -408,7 +409,25 @@ export const createActionTemplate = (
       item = undefined;
       params = instanceParams;
     }
-    const instanceName = generateActionName(name, item, instanceParams);
+
+    let instanceName = name;
+    const args = [];
+    if (item) {
+      args.push(itemAsHumanString(item));
+    }
+    if (params === null || typeof params !== "object") {
+      args.push(params);
+    } else {
+      const keys = Object.keys(params);
+      if (keys.length === 0) {
+      } else {
+        args.push(stringifyForDisplay(params));
+      }
+    }
+    if (args.length) {
+      instanceName = `${name}(${args.join(", ")})`;
+    }
+
     const paramsSignal = signal(params);
 
     let loadRequested = initialLoadRequested;
@@ -438,16 +457,16 @@ export const createActionTemplate = (
         unloadSet: new Set([action]),
       });
 
-    const bindParamsSignal = (newParamsSignal) => {
+    const bindParamsSignal = (newParamsSignal, options) => {
       if (instanceParams === initialParamsDefault) {
-        return createActionProxy(action, newParamsSignal);
+        return createActionProxy(action, newParamsSignal, options);
       }
       const combinedParamsSignal = computed(() => {
         const newParams = newParamsSignal.value;
         const combinedParams = { ...instanceParams, ...newParams };
         return combinedParams;
       });
-      return createActionProxy(action, combinedParamsSignal);
+      return createActionProxy(action, combinedParamsSignal, options);
     };
 
     const action = {
@@ -645,27 +664,6 @@ export const createActionTemplate = (
     return action;
   };
 
-  const generateActionName = (name, item, params) => {
-    let actionName = name;
-    if (item) {
-      actionName += `: ${itemAsHumanString(item)}`;
-    }
-    if (params !== initialParamsDefault) {
-      actionName += generateParamsSuffix(params);
-    }
-    return actionName;
-  };
-  const generateParamsSuffix = (params) => {
-    if (params === null || typeof params !== "object") {
-      return `, ${params}`;
-    }
-    const keys = Object.keys(params);
-    if (keys.length === 0) {
-      return "";
-    }
-    return `, { ${JSON.stringify(params)} }`;
-  };
-
   const actionParamsWeakMap = createJsValueWeakMap();
   const memoizedInstantiate = (params, options) => {
     const actionForParams = actionParamsWeakMap.get(params);
@@ -695,7 +693,7 @@ export const createAction = (callback, options) => {
   return createActionTemplate(callback, options).instantiate();
 };
 
-export const createActionProxy = (action, paramsSignal) => {
+export const createActionProxy = (action, paramsSignal, { onChange } = {}) => {
   const actionTemplate = action.isTemplate ? action : action.template;
 
   const getActionForParams = () => {
@@ -757,9 +755,17 @@ export const createActionProxy = (action, paramsSignal) => {
     });
     return signalProxy;
   };
+  let paramsPrevious = paramsSignal.peek();
+  let isFirstEffect = true;
   effect(() => {
     const params = paramsSignal.value;
     actionProxy.params = params;
+    if (isFirstEffect) {
+      isFirstEffect = false;
+    } else {
+      onChange(params, paramsPrevious);
+    }
+    paramsPrevious = params;
   });
   effect(() => {
     const actionForParams = getActionForParams();
