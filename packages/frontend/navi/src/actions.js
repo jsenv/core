@@ -38,6 +38,7 @@
  */
 
 import { batch, computed, effect, signal } from "@preact/signals";
+import { compareTwoJsValues } from "./compare_two_js_values.js";
 import { createWeakCacheMap } from "./weak_cache_map.js";
 
 let debug = true;
@@ -363,28 +364,27 @@ const getActionPrivateProperties = (action) => {
   return actionPrivateProperties;
 };
 
-const itemAsHumanString = (item) => {
-  if (!item) {
-    return String(item);
-  }
-  const toString = item.toString;
-  if (toString !== Object.prototype.toString) {
-    return item.toString();
-  }
-  if (Object.hasOwn(item, "name")) {
-    return item.name;
-  }
-  if (Object.hasOwn(item, "id")) {
-    return item.id;
-  }
-  const toStringTag = item[Symbol.toStringTag];
-  if (toStringTag) {
-    return toStringTag;
-  }
-  return toString(item);
-};
+// const itemAsHumanString = (item) => {
+//   if (!item) {
+//     return String(item);
+//   }
+//   const toString = item.toString;
+//   if (toString !== Object.prototype.toString) {
+//     return item.toString();
+//   }
+//   if (Object.hasOwn(item, "name")) {
+//     return item.name;
+//   }
+//   if (Object.hasOwn(item, "id")) {
+//     return item.id;
+//   }
+//   const toStringTag = item[Symbol.toStringTag];
+//   if (toStringTag) {
+//     return toStringTag;
+//   }
+//   return toString(item);
+// };
 
-const ITEM_IDENTITY_SYMBOL = Symbol("item_identity");
 export const createActionTemplate = (
   callback,
   {
@@ -400,12 +400,8 @@ export const createActionTemplate = (
     keepOldData = false,
   } = {},
 ) => {
-  const _instantiate = (
-    item,
-    { instanceName = name, instanceParams = initialParams } = {},
-  ) => {
-    instanceName = generateActionName(instanceName, item, instanceParams);
-    const itemSignal = signal(item);
+  const _instantiate = (instanceParams = initialParams) => {
+    const instanceName = generateActionName(name, instanceParams);
     let params = instanceParams;
     const paramsSignal = signal(params);
 
@@ -417,22 +413,6 @@ export const createActionTemplate = (
     const errorSignal = signal(error);
     let data = initialData;
     const dataSignal = signal(initialData);
-
-    const fromParamsSignal = (newParamsSignal) => {
-      const boundAction = _instantiate(item);
-      effect(() => {
-        const newParams = newParamsSignal.value;
-        const combinedParams =
-          instanceParams === initialParamsDefault
-            ? newParams
-            : { ...instanceParams, ...newParams };
-        const boundActionPrivateProperties =
-          getActionPrivateProperties(boundAction);
-        boundActionPrivateProperties.paramsSignal.value = combinedParams;
-        boundAction.reload();
-      });
-      return boundAction;
-    };
 
     const preload = () => {
       return requestActionsUpdates({
@@ -452,9 +432,20 @@ export const createActionTemplate = (
         unloadSet: new Set([action]),
       });
 
+    const bindParamsSignal = (newParamsSignal) => {
+      if (instanceParams === initialParamsDefault) {
+        return createActionProxy(action, newParamsSignal);
+      }
+      const combinedParamsSignal = computed(() => {
+        const newParams = newParamsSignal.value;
+        const combinedParams = { ...instanceParams, ...newParams };
+        return combinedParams;
+      });
+      return createActionProxy(action, combinedParamsSignal);
+    };
+
     const action = {
       name: instanceName,
-      item,
       params,
       loadingState,
       loadRequested,
@@ -464,7 +455,7 @@ export const createActionTemplate = (
       load,
       reload,
       unload,
-      fromParamsSignal,
+      bindParamsSignal,
       toString: () => instanceName,
     };
     Object.preventExtensions(action);
@@ -480,10 +471,6 @@ export const createActionTemplate = (
           }
         });
       };
-      actionWeakEffect((actionRef) => {
-        item = itemSignal.value;
-        actionRef.item = item;
-      });
       actionWeakEffect((actionRef) => {
         params = paramsSignal.value;
         actionRef.params = params;
@@ -568,14 +555,11 @@ export const createActionTemplate = (
           });
         };
 
-        const secondParam =
-          params === initialParamsDefault
-            ? loadParams
-            : { ...loadParams, ...paramsSignal.peek() };
+        const secondParam = loadParams;
 
         try {
           const thenableArray = [];
-          const callbackResult = callback(item, secondParam);
+          const callbackResult = callback(params, secondParam);
           if (callbackResult && typeof callbackResult.then === "function") {
             thenableArray.push(callbackResult);
             callbackResult.then((value) => {
@@ -587,7 +571,7 @@ export const createActionTemplate = (
           const renderLoadedAsync = ui.renderLoadedAsync;
           if (renderLoadedAsync) {
             const renderLoadedPromise = renderLoadedAsync(
-              item,
+              params,
               secondParam,
             ).then((renderLoaded) => {
               ui.renderLoaded = () => renderLoaded;
@@ -642,7 +626,6 @@ export const createActionTemplate = (
         initialData,
         initialError,
 
-        itemSignal,
         paramsSignal,
         loadingStateSignal,
         loadRequestedSignal,
@@ -659,11 +642,11 @@ export const createActionTemplate = (
     return action;
   };
 
-  const generateActionName = (name, item, params) => {
+  const generateActionName = (name, params) => {
     let actionName = name;
-    if (item) {
-      actionName += `: ${itemAsHumanString(item)}`;
-    }
+    // if (item) {
+    //   actionName += `: ${itemAsHumanString(item)}`;
+    // }
     if (params !== initialParamsDefault) {
       actionName += generateParamsSuffix(params);
     }
@@ -680,74 +663,38 @@ export const createActionTemplate = (
     return `, { ${JSON.stringify(params)} }`;
   };
 
-  const actionItemWeakMap = createWeakCacheMap();
-  const actionItemIdentityWeakMap = new WeakMap();
-  const memoizedInstantiate = (item, options) => {
-    const actionForItem = actionItemWeakMap.get(item);
-    if (actionForItem) {
-      return actionForItem;
+  const actionParamsWeakMap = createWeakCacheMap();
+  const memoizedInstantiate = (params, options) => {
+    const actionForParams = actionParamsWeakMap.get(params);
+    if (actionForParams) {
+      return actionForParams;
     }
-    const isObject = item && typeof item === "object";
+    const isObject = params && typeof params === "object";
     if (!isObject) {
-      const action = _instantiate(item, options);
-      actionItemWeakMap.set(item, action);
+      const action = _instantiate(params, options);
+      actionParamsWeakMap.set(params, action);
       return action;
     }
-    let itemIdentity;
-    if (Object.hasOwn(item, ITEM_IDENTITY_SYMBOL)) {
-      itemIdentity = item[ITEM_IDENTITY_SYMBOL];
-      const actionForItemIdentity = actionItemIdentityWeakMap.get(itemIdentity);
-      if (actionForItemIdentity) {
-        const actionPrivateProperties = getActionPrivateProperties(
-          actionForItemIdentity,
-        );
-        actionPrivateProperties.itemSignal.value = item;
-        return actionForItemIdentity;
+    for (const [paramsCandidate, actionCandidate] of actionParamsWeakMap) {
+      if (compareTwoJsValues(paramsCandidate, params)) {
+        return actionCandidate;
       }
-    } else {
-      // we would not need this if we rely on item id
-      // but at action are better decouple by not knowing what is newParams
-      // and not force the presence of an id on the object
-      // instead we prefer to set a symbol that will be forward even when params are modified
-      // because array_signal_store.js uses Object.getOwnPropertyDescriptors which copy symbols
-      // as a result an item can be recognized and we return the same action for the "same" item
-      // an other approach would be to keep the object identity in array_signal_store.js
-      // but that means using a Proxy to transform all object properties into signals
-      // so that later on preact can detect changes
-      // it's simpler and more robust to actually change the object identity when it changes
-      // (because I'm not sure what would happen if the preact component was trying to read a non existing property for instance)
-      itemIdentity = Symbol(`${itemAsHumanString(item)}`);
-      Object.defineProperty(item, ITEM_IDENTITY_SYMBOL, {
-        value: itemIdentity,
-        writable: false,
-        enumerable: false,
-        configurable: false,
-      });
     }
-    const action = _instantiate(item, options);
-    actionItemWeakMap.set(item, action);
-    actionItemIdentityWeakMap.set(itemIdentity, action);
+    const action = _instantiate(params, options);
+    actionParamsWeakMap.set(params, action);
     return action;
   };
 
   const actionTemplate = {
+    isTemplate: true,
     name,
     initialParams,
     initialData,
     initialLoadingState,
     initialLoadRequested,
     initialError,
+    instantiate: memoizedInstantiate,
   };
-  actionTemplate.instantiate = memoizedInstantiate;
-
-  const fromItemSignal = (itemSignal) => {
-    const item = itemSignal.peek();
-    const actionForItem = memoizedInstantiate(item);
-    getActionPrivateProperties(actionForItem).itemSignal = itemSignal;
-    return actionForItem;
-  };
-  actionTemplate.fromItemSignal = fromItemSignal;
-  actionTemplate.isTemplate = true;
 
   return actionTemplate;
 };
@@ -756,21 +703,21 @@ export const createAction = (callback, options) => {
   return createActionTemplate(callback, options).instantiate();
 };
 
-export const createActionProxy = (action, itemSignal) => {
-  const getActionForItem = () => {
-    const item = itemSignal.value;
-    if (!item) {
+export const createActionProxy = (action, paramsSignal) => {
+  const getActionForParams = () => {
+    const params = paramsSignal.value;
+    if (!params) {
       return null;
     }
-    return action.instantiate(item);
+    return action.instantiate(params);
   };
   const proxyMethod = (method) => {
     return (...args) => {
-      const actionForItem = getActionForItem();
-      if (!actionForItem) {
+      const actionForParams = getActionForParams();
+      if (!actionForParams) {
         return undefined;
       }
-      return actionForItem[method](...args);
+      return actionForParams[method](...args);
     };
   };
 
@@ -799,8 +746,8 @@ export const createActionProxy = (action, itemSignal) => {
     initialValuePrivatePropertyName,
   ) => {
     const signalProxy = computed(() => {
-      const actionForItem = getActionForItem();
-      if (!actionForItem) {
+      const actionForParams = getActionForParams();
+      if (!actionForParams) {
         if (!propertyName) {
           return undefined;
         }
@@ -808,11 +755,11 @@ export const createActionProxy = (action, itemSignal) => {
         actionProxy[propertyName] = initialValue;
         return initialValue;
       }
-      const actionForItemPrivateProperties =
-        getActionPrivateProperties(actionForItem);
-      const actionForItemSignal =
-        actionForItemPrivateProperties[signalPropertyName];
-      const value = actionForItemSignal.value;
+      const actionForParamsPrivateProperties =
+        getActionPrivateProperties(actionForParams);
+      const actionForParamsSignal =
+        actionForParamsPrivateProperties[signalPropertyName];
+      const value = actionForParamsSignal.value;
       if (propertyName) {
         actionProxy[propertyName] = value;
       }
@@ -821,13 +768,13 @@ export const createActionProxy = (action, itemSignal) => {
     return signalProxy;
   };
   effect(() => {
-    const item = itemSignal.value;
-    actionProxy.item = item;
+    const params = paramsSignal.value;
+    actionProxy.params = params;
   });
   effect(() => {
-    const actionForItem = getActionForItem();
-    actionProxy.name = actionForItem
-      ? `[[Proxy]] ${actionForItem.name}`
+    const actionForParams = getActionForParams();
+    actionProxy.name = actionForParams
+      ? `[[Proxy]] ${actionForParams.name}`
       : `[[Proxy]] ${action.name}`;
   });
 
@@ -838,8 +785,7 @@ export const createActionProxy = (action, itemSignal) => {
     initialData: action.data,
     initialError: action.error,
 
-    itemSignal,
-    paramsSignal: proxySignal("paramsSignal", "params", "initialParams"),
+    paramsSignal,
     loadRequestedSignal: proxySignal(
       "loadRequestedSignal",
       "loadRequested",
@@ -855,26 +801,26 @@ export const createActionProxy = (action, itemSignal) => {
     computedDataSignal: proxySignal("computedDataSignal"),
 
     performLoad: (...args) => {
-      const actionForItem = getActionForItem();
-      if (!actionForItem) {
+      const actionForParams = getActionForParams();
+      if (!actionForParams) {
         throw new Error(
-          `Cannot perform load on action proxy "${actionProxy.name}" because item is not set.`,
+          `Cannot perform load on action proxy "${actionProxy.name}" because params are not set.`,
         );
       }
-      const actionPrivatePropertiesForItem =
-        getActionPrivateProperties(actionForItem);
-      return actionPrivatePropertiesForItem.performLoad(...args);
+      const actionForParamsPrivateProperties =
+        getActionPrivateProperties(actionForParams);
+      return actionForParamsPrivateProperties.performLoad(...args);
     },
     performUnload: (...args) => {
-      const actionForItem = getActionForItem();
-      if (!actionForItem) {
+      const actionForParams = getActionForParams();
+      if (!actionForParams) {
         throw new Error(
-          `Cannot perform unload on action proxy "${actionProxy.name}" because item is not set.`,
+          `Cannot perform unload on action proxy "${actionProxy.name}" because params are not set.`,
         );
       }
-      const actionPrivatePropertiesForItem =
-        getActionPrivateProperties(actionForItem);
-      return actionPrivatePropertiesForItem.performUnload(...args);
+      const actionForParamsPrivateProperties =
+        getActionPrivateProperties(actionForParams);
+      return actionForParamsPrivateProperties.performUnload(...args);
     },
     ui: action.ui,
   };
@@ -891,7 +837,6 @@ export const useActionStatus = (action) => {
   }
 
   const {
-    itemSignal,
     paramsSignal,
     loadingStateSignal,
     loadRequestedSignal,
@@ -899,7 +844,6 @@ export const useActionStatus = (action) => {
     computedDataSignal,
   } = getActionPrivateProperties(action);
 
-  const item = itemSignal.value;
   const params = paramsSignal.value;
   const loadRequested = loadRequestedSignal.value;
   const loadingState = loadingStateSignal.value;
@@ -912,7 +856,6 @@ export const useActionStatus = (action) => {
 
   return {
     active: true,
-    item,
     params,
     idle,
     error,

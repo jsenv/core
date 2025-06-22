@@ -1,3 +1,5 @@
+export const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
+
 export const compareTwoJsValues = (a, b, seenSet = new Set()) => {
   if (a === b) {
     return true;
@@ -57,6 +59,11 @@ export const compareTwoJsValues = (a, b, seenSet = new Set()) => {
     return true;
   }
   // compare objects
+  const aIdentity = a[SYMBOL_IDENTITY];
+  const bIdentity = b[SYMBOL_IDENTITY];
+  if (aIdentity === bIdentity) {
+    return true;
+  }
   const aKeys = Object.keys(a);
   const bKeys = Object.keys(b);
   if (aKeys.length !== bKeys.length) {

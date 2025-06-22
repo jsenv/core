@@ -1,6 +1,7 @@
 import { computed, signal } from "@preact/signals";
 import { createAction, createActionTemplate } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
+import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 
 const itemActionMapSymbol = Symbol("item_action_map");
 
@@ -18,7 +19,7 @@ export const getItemAction = (item, actionTemplate) => {
 
 export const resource = (
   name,
-  { sourceStore, store, idKey = "id", uniqueKeys = [] } = {},
+  { sourceStore, store, idKey = "id", mutableIdKey } = {},
 ) => {
   const resourceInstance = {
     isResource: true,
@@ -37,10 +38,10 @@ export const resource = (
       [Symbol.toStringTag]: name,
       toString() {
         let string = `${name}`;
-        for (const uniqueKey of uniqueKeys) {
-          const value = this[uniqueKey];
-          if (value !== undefined) {
-            string += `[${uniqueKey}=${value}]`;
+        if (mutableIdKey) {
+          const mutableId = this[mutableIdKey];
+          if (mutableId !== undefined) {
+            string += `[${mutableIdKey}=${mutableId}]`;
             return string;
           }
         }
@@ -62,6 +63,12 @@ export const resource = (
           value: new Map(),
         });
         Object.assign(item, props);
+        Object.defineProperty(item, SYMBOL_IDENTITY, {
+          value: item[idKey],
+          writable: false,
+          enumerable: false,
+          configurable: false,
+        });
         for (const setupCallback of setupCallbackSet) {
           setupCallback(item);
         }
@@ -116,7 +123,7 @@ export const resource = (
         let childProps = item[propertyName];
         if (debug) {
           console.log(
-            `setup ${item[idKey]}.${propertyName} one-to-one with "${childResource.name}" item (current value: ${childProps ? childProps[childIdKey] : "null"})`,
+            `setup ${item[idKey]}.${propertyName} one-to-one with "${childResource[childIdKey]}" item (current value: ${childProps ? childProps[childIdKey] : "null"})`,
           );
         }
         const signal = computed(() => {
@@ -316,7 +323,7 @@ const createMethodsForStore = ({
       );
 
       resourceInstance.addItemSetup((item) => {
-        const itemGetAction = getActionTemplate.instantiate(item);
+        const itemGetAction = getActionTemplate.instantiate({ item });
         item[itemActionMapSymbol].set(getActionTemplate, itemGetAction);
       });
 
@@ -358,7 +365,7 @@ const createMethodsForStore = ({
         },
       );
       resourceInstance.addItemSetup((item) => {
-        const itemPutAction = putActionTemplate.instantiate(item);
+        const itemPutAction = putActionTemplate.instantiate({ item });
         item[itemActionMapSymbol].set(itemPutAction, putActionTemplate);
       });
       return putActionTemplate;
@@ -375,7 +382,7 @@ const createMethodsForStore = ({
         },
       );
       resourceInstance.addItemSetup((item) => {
-        const itemPatchAction = patchActionTemplate.instantiate(item);
+        const itemPatchAction = patchActionTemplate.instantiate({ item });
         item[itemActionMapSymbol].set(itemPatchAction, patchActionTemplate);
       });
       return patchActionTemplate;
@@ -392,7 +399,7 @@ const createMethodsForStore = ({
         },
       );
       resourceInstance.addItemSetup((item) => {
-        const itemDeleteAction = deleteActionTemplate.instantiate(item);
+        const itemDeleteAction = deleteActionTemplate.instantiate({ item });
         item[itemActionMapSymbol].set(itemDeleteAction, deleteActionTemplate);
       });
       return deleteActionTemplate;

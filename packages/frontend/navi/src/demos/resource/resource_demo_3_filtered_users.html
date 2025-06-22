@@ -134,7 +134,7 @@
         });
       });
       const loadFilteredUsersAction =
-        loadUsersAction.fromParamsSignal(filtersSignal);
+        loadUsersAction.bindParamsSignal(filtersSignal);
 
       // Template d'action pour charger un utilisateur individuel
       const loadUserActionTemplate = user.get(async ({ id }) => {
