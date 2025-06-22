@@ -38,8 +38,7 @@
  */
 
 import { batch, computed, effect, signal } from "@preact/signals";
-import { compareTwoJsValues } from "./compare_two_js_values.js";
-import { createWeakCacheMap } from "./weak_cache_map.js";
+import { createJsValueWeakMap } from "./js_value_weak_map.js";
 
 let debug = true;
 
@@ -667,22 +666,11 @@ export const createActionTemplate = (
     return `, { ${JSON.stringify(params)} }`;
   };
 
-  const actionParamsWeakMap = createWeakCacheMap();
+  const actionParamsWeakMap = createJsValueWeakMap();
   const memoizedInstantiate = (params, options) => {
     const actionForParams = actionParamsWeakMap.get(params);
     if (actionForParams) {
       return actionForParams;
-    }
-    const isObject = params && typeof params === "object";
-    if (!isObject) {
-      const action = _instantiate(params, options);
-      actionParamsWeakMap.set(params, action);
-      return action;
-    }
-    for (const [paramsCandidate, actionCandidate] of actionParamsWeakMap) {
-      if (compareTwoJsValues(paramsCandidate, params)) {
-        return actionCandidate;
-      }
     }
     const action = _instantiate(params, options);
     actionParamsWeakMap.set(params, action);
