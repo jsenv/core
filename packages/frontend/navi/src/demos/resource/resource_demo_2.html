@@ -53,9 +53,17 @@
         }
       });
 
-      const activeUserAction = createActionProxy(loadUserActionTemplate, {
-        name: activeUsernameSignal,
-      });
+      const activeUserAction = createActionProxy(
+        loadUserActionTemplate,
+        {
+          name: activeUsernameSignal,
+        },
+        {
+          onChange: () => {
+            activeUserAction.reload();
+          },
+        },
+      );
       activeUserAction.load();
       loadUsersAction.load();
 
@@ -73,7 +81,6 @@
             <button
               onClick={() => {
                 activeUsernameSignal.value = dam.name;
-                damUserAction.reload();
               }}
             >
               Load dam
@@ -96,7 +103,6 @@
             <button
               onClick={() => {
                 activeUsernameSignal.value = seb.name;
-                sebUserAction.reload();
               }}
             >
               Load seb
@@ -119,7 +125,6 @@
             <button
               onClick={() => {
                 activeUsernameSignal.value = john.name;
-                johnUserAction.reload();
               }}
             >
               Load john
