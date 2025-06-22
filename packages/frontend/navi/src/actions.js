@@ -354,13 +354,15 @@ const activationRegistry = (() => {
       for (const [id, weakRef] of idToActionMap) {
         const action = weakRef.deref();
         if (action) {
-          if (action.loadingState === LOADING) {
+          const privateProps = getActionPrivateProperties(action);
+          const loadingState = privateProps.loadingStateSignal.peek();
+          if (loadingState === LOADING) {
             loadingSet.add(action);
-          } else if (action.loadingState === LOADED) {
+          } else if (loadingState === LOADED) {
             loadedSet.add(action);
           } else {
             throw new Error(
-              `An action in the activation registry should be LOADING or LOADED, but got "${action.loadingState.id}" for action "${action.name}"`,
+              `An action in the activation registry should be LOADING or LOADED, but got "${loadingState.id}" for action "${action}"`,
             );
           }
         } else {

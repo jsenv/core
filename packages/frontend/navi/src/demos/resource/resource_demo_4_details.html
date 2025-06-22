@@ -89,7 +89,7 @@
           }
         }, []);
 
-        return { isOpen, handleToggle };
+        return [isOpen, handleToggle];
       };
 
       // Composant principal
@@ -99,13 +99,17 @@
         const friendsAction = getUserFriendsTemplate.instantiate({ userId });
         const settingsAction = getUserSettingsTemplate.instantiate({ userId });
 
-        const { isOpen: friendsOpen, handleToggle: handleFriendsToggle } =
-          useToggleableAction(friendsAction, `user_${userId}_friends_open`);
+        const [friendsOpen, handleFriendsToggle] = useToggleableAction(
+          friendsAction,
+          `user_${userId}_friends_open`,
+        );
 
         const { data: friends } = useActionStatus(friendsAction);
 
-        const { isOpen: settingsOpen, handleToggle: handleSettingsToggle } =
-          useToggleableAction(settingsAction, `user_${userId}_settings_open`);
+        const [settingsOpen, handleSettingsToggle] = useToggleableAction(
+          settingsAction,
+          `user_${userId}_settings_open`,
+        );
 
         // Charger les données de base de l'utilisateur
         useEffect(() => {
