@@ -38,7 +38,6 @@
         await new Promise((resolve) => {
           const timeout = setTimeout(resolve, 1200);
           signal.addEventListener("abort", () => {
-            debugger;
             clearTimeout(timeout);
           });
         });

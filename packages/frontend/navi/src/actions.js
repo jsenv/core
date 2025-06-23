@@ -776,11 +776,7 @@ export const createActionTemplate = (
       };
       let sideEffectCleanup;
       const performLoad = (loadParams) => {
-        const {
-          signal,
-          // reason,
-          isPreload,
-        } = loadParams;
+        const { signal, reason, isPreload } = loadParams;
 
         if (isPreload) {
           preloadedProtectionRegistry.protect(action);
@@ -813,7 +809,7 @@ export const createActionTemplate = (
           }
         });
 
-        const args = [params, loadParams];
+        const args = [params, { signal: abortSignal, reason, isPreload }];
         const returnValue = sideEffect(...args);
         if (typeof returnValue === "function") {
           sideEffectCleanup = returnValue;
