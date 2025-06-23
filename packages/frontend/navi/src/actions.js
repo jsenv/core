@@ -679,6 +679,14 @@ export const createActionTemplate = (
       requestActionsUpdates({
         unloadSet: new Set([action]),
       });
+    const abort = () => {
+      if (loadingState !== LOADING) {
+        return undefined;
+      }
+      return requestActionsUpdates({
+        unloadSet: new Set([action]),
+      });
+    };
 
     const bindParams = (newParamsOrSignal, options) => {
       if (instanceParams === initialParamsDefault) {
@@ -727,6 +735,7 @@ export const createActionTemplate = (
       load,
       reload,
       unload,
+      abort,
       bindParams,
       toString: () => instanceName,
     };
