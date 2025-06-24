@@ -264,7 +264,8 @@ const createMethodsForStore = ({
           data: [],
           computedDataSignal: computed(() => {
             const idArray = idArraySignal.value;
-            return targetStore.selectAll(idArray);
+            const itemArray = targetStore.selectAll(idArray);
+            return itemArray;
           }),
           ...options,
         },

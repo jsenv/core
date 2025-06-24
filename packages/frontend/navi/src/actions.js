@@ -911,7 +911,17 @@ const createActionProxyFromSignal = (
     let actionTargetPrevious = null;
     let isFirstEffect = true;
     const changeCleanupCallbackSet = new Set();
-    effect(() => {
+    const actionWeakRef = new WeakRef(action);
+    const proxyWeakRef = new WeakRef(actionProxy);
+
+    const dispose = effect(() => {
+      const actionRef = actionWeakRef.deref();
+      const proxyRef = proxyWeakRef.deref();
+      if (!actionRef || !proxyRef) {
+        dispose();
+        return;
+      }
+
       actionTargetPrevious = actionTarget;
       const params = paramsSignal.value;
       if (params) {
@@ -944,7 +954,7 @@ const createActionProxyFromSignal = (
 
   if (reloadOnChange) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (actionTargetPrevious.loadRequested) {
+      if (actionTargetPrevious && actionTargetPrevious.loadRequested) {
         actionTarget.reload();
       }
     });
