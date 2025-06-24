@@ -621,7 +621,11 @@ export const createAction = (
   // Cache des actions enfants basé sur les paramètres
   const childActionsWeakMap = createJsValueWeakMap();
 
-  const createChildAction = (childParams, options = {}) => {
+  const createChildAction = (
+    childParams,
+    options = {},
+    isRootAction = false,
+  ) => {
     // Vérifier si on a déjà une action pour ces paramètres
     const existingChild = childActionsWeakMap.get(childParams);
     if (existingChild) {
@@ -630,18 +634,22 @@ export const createAction = (
 
     let params = childParams;
     let instanceName = name;
-    const args = [];
-    if (params === null || typeof params !== "object") {
-      args.push(params);
-    } else {
-      const keys = Object.keys(params);
-      if (keys.length === 0) {
+
+    // ✅ NOUVEAU : Action racine garde le nom de base
+    if (!isRootAction) {
+      const args = [];
+      if (params === null || typeof params !== "object") {
+        args.push(params);
       } else {
-        args.push(stringifyForDisplay(params));
+        const keys = Object.keys(params);
+        if (keys.length === 0) {
+        } else {
+          args.push(stringifyForDisplay(params));
+        }
       }
-    }
-    if (args.length) {
-      instanceName = `${name}(${args.join(", ")})`;
+      if (args.length) {
+        instanceName = `${name}(${args.join(", ")})`;
+      }
     }
 
     const paramsSignal = signal(params);
@@ -655,6 +663,7 @@ export const createAction = (
     let data = initialData;
     const dataSignal = signal(initialData);
 
+    // ✅ NOUVEAU : Méthodes de chargement utilisables sur toutes les actions
     const preload = () => {
       return requestActionsUpdates({
         preloadSet: new Set([childAction]),
@@ -681,7 +690,11 @@ export const createAction = (
       });
     };
 
-    // ✅ NOUVEAU : bindParams sur une action crée une action enfant
+    // ✅ Déclaration forward pour pouvoir y faire référence
+    let childAction;
+    let rootAction;
+
+    // ✅ bindParams sur une action crée une action enfant
     const bindParams = (newParamsOrSignal, options) => {
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
@@ -702,19 +715,22 @@ export const createAction = (
 
       if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
         if (params === null || typeof params !== "object") {
-          return childAction.bindParams(newParamsOrSignal, options);
+          return createChildAction(newParamsOrSignal, options);
         }
         const combinedParams = { ...params, ...newParamsOrSignal };
-        return childAction.bindParams(combinedParams, options);
+        return createChildAction(combinedParams, options);
       }
 
       // Primitive
-      return childAction.bindParams(newParamsOrSignal, options);
+      return createChildAction(newParamsOrSignal, options);
     };
 
-    const childAction = {
-      rootAction: rootAction || childAction,
-      parentAction: parentAction || null,
+    childAction = {
+      // ✅ Référence vers l'action racine et parent
+      get rootAction() {
+        return rootAction || childAction;
+      },
+      parentAction: isRootAction ? null : rootAction || childAction,
       name: instanceName,
       params,
       loadingState,
@@ -783,7 +799,7 @@ export const createAction = (
           loadingStateSignal.value = ABORTED;
           abortController.abort(abortReason);
           actionAbortMap.delete(childAction);
-          if (isPreload) {
+          if (isPreload && signal.aborted) {
             preloadedProtectionRegistry.unprotect(childAction);
           }
           if (debug) {
@@ -826,6 +842,10 @@ export const createAction = (
           actionAbortMap.delete(childAction);
           actionPromiseMap.delete(childAction);
           if (abortSignal.aborted && e === abortSignal.reason) {
+            loadingStateSignal.value = ABORTED;
+            if (isPreload && signal.aborted) {
+              preloadedProtectionRegistry.unprotect(childAction);
+            }
             return;
           }
           batch(() => {
@@ -848,10 +868,7 @@ export const createAction = (
           } else {
             loadResult = callbackResult;
           }
-          if (
-            ui.renderLoadedAsync &&
-            !ui.renderLoaded // already done
-          ) {
+          if (ui.renderLoadedAsync && !ui.renderLoaded) {
             const renderLoadedPromise = ui
               .renderLoadedAsync(...args)
               .then((renderLoaded) => {
@@ -932,39 +949,8 @@ export const createAction = (
     return childAction;
   };
 
-  // ✅ L'action racine est créée avec les paramètres par défaut
-  const rootAction = createChildAction(initialParams);
-
-  // ✅ NOUVEAU : bindParams sur l'action racine
-  rootAction.bindParams = (newParamsOrSignal, options) => {
-    if (isSignal(newParamsOrSignal)) {
-      const combinedParamsSignal = computed(() => {
-        const newParams = newParamsOrSignal.value;
-
-        if (newParams === null || typeof newParams !== "object") {
-          return newParams;
-        }
-
-        if (initialParams === null || typeof initialParams !== "object") {
-          return newParams;
-        }
-
-        return { ...initialParams, ...newParams };
-      });
-      return createActionProxy(rootAction, combinedParamsSignal, options);
-    }
-
-    if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
-      if (initialParams === null || typeof initialParams !== "object") {
-        return createChildAction(newParamsOrSignal, options);
-      }
-      const combinedParams = { ...initialParams, ...newParamsOrSignal };
-      return createChildAction(combinedParams, options);
-    }
-
-    // Primitive
-    return createChildAction(newParamsOrSignal, options);
-  };
+  // ✅ L'action racine est créée avec les paramètres par défaut ET peut être chargée
+  const rootAction = createChildAction(initialParams, {}, true);
 
   return rootAction;
 };
