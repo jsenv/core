@@ -132,7 +132,8 @@
       const loadFilteredUsersAction = loadUsersAction.bindParams(filtersSignal);
       loadFilteredUsersAction.load();
 
-      const renameUserAction = user.put(({ id, name }) => {
+      const renameUserAction = user.put(async ({ id, name }) => {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         return { id, name };
       });
 
@@ -275,11 +276,11 @@
                   <UserItem
                     key={user}
                     user={user}
-                    onUpdateName={(name) => {
+                    onUpdateName={async (name) => {
                       const renameToAction = renameAction.bindParams({
                         name,
                       });
-                      renameToAction.load();
+                      await renameToAction.load();
                     }}
                   />
                 );
@@ -342,8 +343,8 @@
         const [editingName, setEditingName] = useState(false);
         const [newName, setNewName] = useState(user.name);
 
-        const handleNameUpdate = () => {
-          onUpdateName(newName);
+        const handleNameUpdate = async () => {
+          await onUpdateName(newName);
           setEditingName(false);
         };
 
