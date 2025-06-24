@@ -58,9 +58,19 @@ export const arraySignalStore = (
   effect(() => {
     const idSet = idSetSignal.value;
     const previousIdSet = previousIdSetSignal.peek();
-    previousIdSetSignal.value = new Set(idSet);
-    for (const idChangeCallback of idChangeCallbackSet) {
-      idChangeCallback(idSet, previousIdSet);
+    const setCopy = new Set();
+    let modified = false;
+    for (const id of idSet) {
+      if (!previousIdSet.has(id)) {
+        modified = true;
+      }
+      setCopy.add(id);
+    }
+    previousIdSetSignal.value = setCopy;
+    if (modified) {
+      for (const idChangeCallback of idChangeCallbackSet) {
+        idChangeCallback(idSet, previousIdSet);
+      }
     }
   });
 
