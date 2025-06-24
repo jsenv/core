@@ -3,7 +3,6 @@ import {
   getActionPrivateProperties,
   setActionPrivateProperties,
 } from "./action_private_properties.js";
-import { createActionProxy } from "./action_proxy.js";
 import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
 
@@ -416,74 +415,39 @@ ${lines.join("\n")}`);
 
 const initialParamsDefault = {};
 
-export const createAction = (
-  callback,
-  {
-    name = callback.name || "anonymous",
-    params: initialParams = initialParamsDefault,
-    loadRequested: initialLoadRequested = false,
-    loadingState: initialLoadingState = IDLE,
-    error: initialError = null,
-    data: initialData,
-    computedDataSignal,
-    renderLoadedAsync,
-    sideEffect = () => {},
-    keepOldData = false,
-  } = {},
-) => {
-  // Cache des actions enfants basé sur les paramètres
-  const childActionsWeakMap = createJsValueWeakMap();
+export const createAction = (callback, rootOptions) => {
+  let rootAction;
 
-  const createChildAction = (
-    childParams,
-    options = {},
-    isRootAction = false,
+  const createActionCore = (
+    {
+      name = callback.name || "anonymous",
+      params = initialParamsDefault,
+      loadRequested = false,
+      loadingState = IDLE,
+      error = null,
+      data,
+      computedDataSignal,
+      renderLoadedAsync,
+      sideEffect = () => {},
+      keepOldData = false,
+    },
+    { parentAction } = {},
   ) => {
-    // Vérifier si on a déjà une action pour ces paramètres
-    const existingChild = childActionsWeakMap.get(childParams);
-    if (existingChild) {
-      return existingChild;
-    }
-
-    let params = childParams;
-    let instanceName = name;
-
-    if (!isRootAction) {
-      const args = [];
-      if (params === null || typeof params !== "object") {
-        args.push(params);
-      } else {
-        const keys = Object.keys(params);
-        if (keys.length === 0) {
-        } else {
-          args.push(stringifyForDisplay(params));
-        }
-      }
-      if (args.length) {
-        instanceName = `${name}(${args.join(", ")})`;
-      }
-    }
-
+    const initialData = data;
     const paramsSignal = signal(params);
-
-    let loadRequested = initialLoadRequested;
     const loadRequestedSignal = signal(loadRequested);
-    let loadingState = initialLoadingState;
     const loadingStateSignal = signal(loadingState);
-    let error = initialError;
     const errorSignal = signal(error);
-    let data = initialData;
     const dataSignal = signal(initialData);
 
-    // ✅ NOUVEAU : Méthodes de chargement utilisables sur toutes les actions
     const preload = () => {
       return requestActionsUpdates({
-        preloadSet: new Set([childAction]),
+        preloadSet: new Set([action]),
       });
     };
     const load = (options) =>
       requestActionsUpdates({
-        loadSet: new Set([childAction]),
+        loadSet: new Set([action]),
         ...options,
       });
     const reload = (options) => {
@@ -491,22 +455,21 @@ export const createAction = (
     };
     const unload = () =>
       requestActionsUpdates({
-        unloadSet: new Set([childAction]),
+        unloadSet: new Set([action]),
       });
     const abort = () => {
       if (loadingState !== LOADING) {
         return undefined;
       }
       return requestActionsUpdates({
-        unloadSet: new Set([childAction]),
+        unloadSet: new Set([action]),
       });
     };
 
-    // ✅ Déclaration forward pour pouvoir y faire référence
-    let childAction;
-    let rootAction;
+    let action;
 
-    const bindParams = (newParamsOrSignal, options = {}) => {
+    const childActionWeakMap = createJsValueWeakMap();
+    const _bindParams = (newParamsOrSignal, options = {}) => {
       // ✅ CAS 1: Signal direct -> proxy
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
@@ -523,7 +486,7 @@ export const createAction = (
           return { ...params, ...newParams };
         });
         return createActionProxyFromSignal(
-          childAction,
+          action,
           combinedParamsSignal,
           options,
         );
@@ -550,7 +513,10 @@ export const createAction = (
             return createChildAction(newParamsOrSignal, options);
           }
           const combinedParams = { ...params, ...newParamsOrSignal };
-          return createChildAction(combinedParams, options);
+          return createChildAction({
+            params: combinedParams,
+            ...options,
+          });
         }
 
         // Combiner avec les params existants pour les valeurs statiques
@@ -566,20 +532,55 @@ export const createAction = (
           }
           return params;
         });
-        return createActionProxyFromSignal(childAction, paramsSignal, options);
+        return createActionProxyFromSignal(action, paramsSignal, options);
       }
 
       // ✅ CAS 3: Primitive -> action enfant
-      return createChildAction(newParamsOrSignal, options);
+      return createChildAction({
+        params: newParamsOrSignal,
+        ...options,
+      });
+    };
+    const bindParams = (newParamsOrSignal, options) => {
+      const existingChildAction = childActionWeakMap.get(newParamsOrSignal);
+      if (existingChildAction) {
+        return existingChildAction;
+      }
+      const childAction = _bindParams(newParamsOrSignal, options);
+      childActionWeakMap.set(newParamsOrSignal, childAction);
+      return childAction;
     };
 
-    childAction = {
-      // ✅ Référence vers l'action racine et parent
-      get rootAction() {
-        return rootAction || childAction;
-      },
-      parentAction: isRootAction ? null : rootAction || childAction,
-      name: instanceName,
+    const createChildAction = (childOptions) => {
+      const childParams = childOptions.params;
+      const args = [];
+      if (childParams === null || typeof childParams !== "object") {
+        args.push(childParams);
+      } else {
+        const keys = Object.keys(childParams);
+        if (keys.length === 0) {
+        } else {
+          args.push(stringifyForDisplay(childParams));
+        }
+      }
+      const childName = args.length ? `${name}(${args.join(", ")})` : name;
+      const childAction = createActionCore(
+        {
+          ...rootOptions,
+          name: childName,
+          ...childOptions,
+        },
+        {
+          parentAction: action,
+        },
+      );
+      return childAction;
+    };
+
+    action = {
+      rootAction,
+      parentAction,
+      name,
       params,
       loadingState,
       loadRequested,
@@ -591,13 +592,13 @@ export const createAction = (
       unload,
       abort,
       bindParams,
-      toString: () => instanceName,
+      toString: () => name,
     };
-    Object.preventExtensions(childAction);
+    Object.preventExtensions(action);
 
     // Effects pour synchroniser les propriétés
     effects: {
-      const actionWeakRef = new WeakRef(childAction);
+      const actionWeakRef = new WeakRef(action);
       const actionWeakEffect = (callback) => {
         const dispose = effect(() => {
           const actionRef = actionWeakRef.deref();
@@ -630,7 +631,7 @@ export const createAction = (
     private_properties: {
       const ui = {
         renderLoaded: null,
-        renderLoadedAsync: renderLoadedAsync || options.renderLoadedAsync,
+        renderLoadedAsync,
       };
       let sideEffectCleanup;
 
@@ -638,7 +639,7 @@ export const createAction = (
         const { signal, reason, isPreload } = loadParams;
 
         if (isPreload) {
-          preloadedProtectionRegistry.protect(childAction);
+          preloadedProtectionRegistry.protect(action);
         }
 
         const abortController = new AbortController();
@@ -646,19 +647,19 @@ export const createAction = (
         const abort = (abortReason) => {
           loadingStateSignal.value = ABORTED;
           abortController.abort(abortReason);
-          actionAbortMap.delete(childAction);
+          actionAbortMap.delete(action);
           if (isPreload && signal.aborted) {
-            preloadedProtectionRegistry.unprotect(childAction);
+            preloadedProtectionRegistry.unprotect(action);
           }
           if (debug) {
-            console.log(`"${childAction}": aborted (reason: ${abortReason})`);
+            console.log(`"${action}": aborted (reason: ${abortReason})`);
           }
         };
         const onabort = () => {
           abort(signal.reason);
         };
         signal.addEventListener("abort", onabort);
-        actionAbortMap.set(childAction, abort);
+        actionAbortMap.set(action, abort);
 
         batch(() => {
           errorSignal.value = null;
@@ -678,21 +679,21 @@ export const createAction = (
         const onLoadEnd = () => {
           dataSignal.value = loadResult;
           loadingStateSignal.value = LOADED;
-          actionAbortMap.delete(childAction);
-          actionPromiseMap.delete(childAction);
+          actionAbortMap.delete(action);
+          actionPromiseMap.delete(action);
           if (debug) {
-            console.log(`"${childAction}": loaded (reason: ${reason})`);
+            console.log(`"${action}": loaded (reason: ${reason})`);
           }
         };
         const onLoadError = (e) => {
           console.error(e);
           signal.removeEventListener("abort", onabort);
-          actionAbortMap.delete(childAction);
-          actionPromiseMap.delete(childAction);
+          actionAbortMap.delete(action);
+          actionPromiseMap.delete(action);
           if (abortSignal.aborted && e === abortSignal.reason) {
             loadingStateSignal.value = ABORTED;
             if (isPreload && signal.aborted) {
-              preloadedProtectionRegistry.unprotect(childAction);
+              preloadedProtectionRegistry.unprotect(action);
             }
             return;
           }
@@ -701,7 +702,7 @@ export const createAction = (
             loadingStateSignal.value = FAILED;
           });
           if (debug) {
-            console.log(`"${childAction}": failed (error: ${e})`);
+            console.log(`"${action}": failed (error: ${e})`);
           }
         };
 
@@ -743,24 +744,24 @@ export const createAction = (
       };
 
       const performUnload = (reason) => {
-        const abort = actionAbortMap.get(childAction);
+        const abort = actionAbortMap.get(action);
         if (abort) {
           if (debug) {
-            console.log(`"${childAction}": aborting (reason: ${reason})`);
+            console.log(`"${action}": aborting (reason: ${reason})`);
           }
           abort(reason);
         } else if (debug) {
-          console.log(`"${childAction}": unloading (reason: ${reason})`);
+          console.log(`"${action}": unloading (reason: ${reason})`);
         }
 
-        preloadedProtectionRegistry.unprotect(childAction);
+        preloadedProtectionRegistry.unprotect(action);
 
         if (sideEffectCleanup) {
           sideEffectCleanup(reason);
           sideEffectCleanup = undefined;
         }
 
-        actionPromiseMap.delete(childAction);
+        actionPromiseMap.delete(action);
         batch(() => {
           errorSignal.value = null;
           if (!keepOldData) {
@@ -772,11 +773,7 @@ export const createAction = (
       };
 
       const privateProperties = {
-        initialLoadRequested,
-        initialLoadingState,
-        initialParams: childParams,
         initialData,
-        initialError,
 
         paramsSignal,
         loadingStateSignal,
@@ -789,17 +786,13 @@ export const createAction = (
         performUnload,
         ui,
       };
-      setActionPrivateProperties(childAction, privateProperties);
+      setActionPrivateProperties(action, privateProperties);
     }
 
-    // Cache l'action enfant
-    childActionsWeakMap.set(childParams, childAction);
-    return childAction;
+    return action;
   };
 
-  // ✅ L'action racine est créée avec les paramètres par défaut ET peut être chargée
-  const rootAction = createChildAction(initialParams, {}, true);
-
+  rootAction = createActionCore(rootOptions);
   return rootAction;
 };
 
