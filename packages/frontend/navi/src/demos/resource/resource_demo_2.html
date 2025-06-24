@@ -22,7 +22,6 @@
         useActionStatus,
         resource,
         getItemAction,
-        createActionProxy,
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
       } from "@jsenv/navi";
@@ -53,7 +52,7 @@
         }
       });
 
-      const activeUserAction = createActionProxy(loadUserAction, {
+      const activeUserAction = loadUserAction.bindParams({
         name: activeUsernameSignal,
       });
       if (activeUsernameSignal.peek()) {

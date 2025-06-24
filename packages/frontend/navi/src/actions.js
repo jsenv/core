@@ -506,8 +506,8 @@ export const createAction = (
     let childAction;
     let rootAction;
 
-    // ✅ bindParams sur une action crée une action enfant
-    const bindParams = (newParamsOrSignal, options) => {
+    const bindParams = (newParamsOrSignal, options = {}) => {
+      // ✅ CAS 1: Signal direct -> proxy
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
           const newParams = newParamsOrSignal.value;
@@ -522,18 +522,54 @@ export const createAction = (
 
           return { ...params, ...newParams };
         });
-        return createActionProxy(childAction, combinedParamsSignal, options);
+        return createActionProxyFromSignal(
+          childAction,
+          combinedParamsSignal,
+          options,
+        );
       }
 
+      // ✅ CAS 2: Objet -> vérifier s'il contient des signals
       if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
-        if (params === null || typeof params !== "object") {
-          return createChildAction(newParamsOrSignal, options);
+        const staticParams = {};
+        const signalMap = new Map();
+
+        const keyArray = Object.keys(newParamsOrSignal);
+        for (const key of keyArray) {
+          const value = newParamsOrSignal[key];
+          if (isSignal(value)) {
+            signalMap.set(key, value);
+          } else {
+            staticParams[key] = value;
+          }
         }
-        const combinedParams = { ...params, ...newParamsOrSignal };
-        return createChildAction(combinedParams, options);
+
+        if (signalMap.size === 0) {
+          // Pas de signals, merge statique normal
+          if (params === null || typeof params !== "object") {
+            return createChildAction(newParamsOrSignal, options);
+          }
+          const combinedParams = { ...params, ...newParamsOrSignal };
+          return createChildAction(combinedParams, options);
+        }
+
+        // Combiner avec les params existants pour les valeurs statiques
+        const paramsSignal = computed(() => {
+          const params = {};
+          for (const key of keyArray) {
+            const signalForThisKey = signalMap.get(key);
+            if (signalForThisKey) {
+              params[key] = signalForThisKey.value;
+            } else {
+              params[key] = staticParams[key];
+            }
+          }
+          return params;
+        });
+        return createActionProxyFromSignal(childAction, paramsSignal, options);
       }
 
-      // Primitive
+      // ✅ CAS 3: Primitive -> action enfant
       return createChildAction(newParamsOrSignal, options);
     };
 
@@ -795,6 +831,148 @@ export const useActionStatus = (action) => {
     preloaded,
     data,
   };
+};
+
+const createActionProxyFromSignal = (
+  action,
+  paramsSignal,
+  { reloadOnChange = true, onChange } = {},
+) => {
+  const actionTargetChangeCallbackSet = new Set();
+  const onActionTargetChange = (callback) => {
+    actionTargetChangeCallbackSet.add(callback);
+  };
+  let actionTarget = null;
+  let currentAction = action;
+  let currentActionPrivateProperties;
+
+  const proxyMethod = (method) => {
+    return (...args) => currentAction[method](...args);
+  };
+  const actionProxy = {
+    isProxy: true,
+    name: undefined,
+    params: undefined,
+    loadRequested: undefined,
+    loadingState: undefined,
+    error: undefined,
+    data: undefined,
+    preload: proxyMethod("preload"),
+    load: proxyMethod("load"),
+    reload: proxyMethod("reload"),
+    unload: proxyMethod("unload"),
+    toString: () => actionProxy.name,
+  };
+  onActionTargetChange((actionTarget) => {
+    const currentAction = actionTarget || action;
+    actionProxy.name = `[Proxy] ${currentAction.name}`;
+    actionProxy.params = currentAction.params;
+    actionProxy.loadRequested = currentAction.loadRequested;
+    actionProxy.loadingState = currentAction.loadingState;
+    actionProxy.error = currentAction.error;
+    actionProxy.data = currentAction.data;
+  });
+
+  const proxyPrivateSignal = (signalPropertyName, propertyName) => {
+    const signalProxy = signal();
+    onActionTargetChange(() => {
+      if (debug) {
+        console.debug(
+          `listening "${signalPropertyName}" on "${currentAction}"`,
+        );
+      }
+      const dispose = effect(() => {
+        const currentActionSignal =
+          currentActionPrivateProperties[signalPropertyName];
+        const currentActionSignalValue = currentActionSignal.value;
+        if (debug) {
+          console.debug(
+            `"${signalPropertyName}" value is "${currentActionSignalValue}"`,
+          );
+        }
+        signalProxy.value = currentActionSignalValue;
+        if (propertyName) {
+          actionProxy[propertyName] = currentActionSignalValue;
+        }
+      });
+      return dispose;
+    });
+    return signalProxy;
+  };
+  const proxyPrivateMethod = (method) => {
+    return (...args) => currentActionPrivateProperties[method](...args);
+  };
+  const proxyPrivateProperties = {
+    paramsSignal,
+    loadRequestedSignal: proxyPrivateSignal(
+      "loadRequestedSignal",
+      "loadRequested",
+    ),
+    loadingStateSignal: proxyPrivateSignal(
+      "loadingStateSignal",
+      "loadingState",
+    ),
+    errorSignal: proxyPrivateSignal("errorSignal", "error"),
+    dataSignal: proxyPrivateSignal("dataSignal", "data"),
+    computedDataSignal: proxyPrivateSignal("computedDataSignal"),
+    performLoad: proxyPrivateMethod("performLoad"),
+    performUnload: proxyPrivateMethod("performUnload"),
+    ui: undefined,
+  };
+  onActionTargetChange(() => {
+    proxyPrivateProperties.ui = currentAction.ui;
+  });
+  setActionPrivateProperties(actionProxy, proxyPrivateProperties);
+
+  {
+    let actionTargetPrevious = null;
+    let isFirstEffect = true;
+    const changeCleanupCallbackSet = new Set();
+    effect(() => {
+      actionTargetPrevious = actionTarget;
+      const params = paramsSignal.value;
+      if (params) {
+        actionTarget = action.bindParams(params);
+        currentAction = actionTarget;
+        currentActionPrivateProperties =
+          getActionPrivateProperties(actionTarget);
+      } else {
+        actionTarget = null;
+        currentAction = action;
+        currentActionPrivateProperties = getActionPrivateProperties(action);
+      }
+
+      if (isFirstEffect) {
+        isFirstEffect = false;
+      }
+      for (const changeCleanupCallback of changeCleanupCallbackSet) {
+        changeCleanupCallback();
+      }
+      changeCleanupCallbackSet.clear();
+      for (const callback of actionTargetChangeCallbackSet) {
+        const returnValue = callback(actionTarget, actionTargetPrevious);
+        if (typeof returnValue === "function") {
+          changeCleanupCallbackSet.add(returnValue);
+        }
+      }
+      actionTargetPrevious = actionTarget;
+    });
+  }
+
+  if (reloadOnChange) {
+    onActionTargetChange((actionTarget, actionTargetPrevious) => {
+      if (actionTargetPrevious.loadRequested) {
+        actionTarget.reload();
+      }
+    });
+  }
+  if (onChange) {
+    onActionTargetChange((actionTarget, actionTargetPrevious) => {
+      onChange(actionTarget, actionTargetPrevious);
+    });
+  }
+
+  return actionProxy;
 };
 
 if (import.meta.hot) {
