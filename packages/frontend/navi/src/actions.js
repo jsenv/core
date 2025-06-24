@@ -869,20 +869,10 @@ const createActionProxyFromSignal = (
   const proxyPrivateSignal = (signalPropertyName, propertyName) => {
     const signalProxy = signal();
     onActionTargetChange(() => {
-      if (debug) {
-        console.debug(
-          `listening "${signalPropertyName}" on "${currentAction}"`,
-        );
-      }
       const dispose = effect(() => {
         const currentActionSignal =
           currentActionPrivateProperties[signalPropertyName];
         const currentActionSignalValue = currentActionSignal.value;
-        if (debug) {
-          console.debug(
-            `"${signalPropertyName}" value is "${currentActionSignalValue}"`,
-          );
-        }
         signalProxy.value = currentActionSignalValue;
         if (propertyName) {
           actionProxy[propertyName] = currentActionSignalValue;

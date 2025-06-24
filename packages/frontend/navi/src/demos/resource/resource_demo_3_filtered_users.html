@@ -106,7 +106,7 @@
           department: "Marketing",
         },
       ];
-      const user = resource("user", { idKey: "id" });
+      const user = resource("user", { idKey: "id", mutableIdKey: "name" });
       const loadUsersAction = user.getAll(async (filters) => {
         console.log("Loading users", filters);
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -132,7 +132,7 @@
       loadFilteredUsersAction.load();
 
       const renameUserAction = user.put(async ({ id, name }) => {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 500));
         return { id, name };
       });
 
@@ -325,8 +325,7 @@
               <button onClick={createUser}>Create User</button>
             </div>
 
-            {/* Status des actions */}
-            <ActionStatus action={loadFilteredUsersAction} name="Load Users" />
+            <ActionStatus action={loadFilteredUsersAction} />
           </div>
         );
       };
@@ -336,11 +335,7 @@
         const userAction = loadUserAction.bindParams({
           id: user.id,
         });
-        const {
-          data: loadedUser,
-          pending,
-          loaded,
-        } = useActionStatus(userAction);
+        const { pending, loaded } = useActionStatus(userAction);
         const [editingName, setEditingName] = useState(false);
         const [newName, setNewName] = useState(user.name);
 
@@ -368,9 +363,8 @@
                     onClick={() => setEditingName(true)}
                     style={{ cursor: "pointer" }}
                   >
-                    {loadedUser?.name || user.name}
-                    {loadedUser?.loadedAt &&
-                      ` (loaded at ${loadedUser.loadedAt})`}
+                    {user.name}
+                    {user.loadedAt && ` (loaded at ${user.loadedAt})`}
                   </span>
                 )}
               </strong>
@@ -378,7 +372,7 @@
             </div>
 
             <div className="button-group">
-              <button onClick={() => userAction.load()}>Load</button>
+              <button onClick={() => userAction.reload()}>Reload</button>
               <button onClick={() => userAction.unload()}>Unload</button>
               <button onClick={() => userAction.preload()}>Preload</button>
               {pending && <span>Loading...</span>}

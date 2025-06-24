@@ -7,8 +7,14 @@ let debug = true;
 
 export const resource = (
   name,
-  { sourceStore, store, idKey = "id", mutableIdKey } = {},
+  { sourceStore, store, idKey, mutableIdKey } = {},
 ) => {
+  if (mutableIdKey && idKey === undefined) {
+    idKey = mutableIdKey;
+  } else if (idKey === undefined) {
+    idKey = "id";
+  }
+
   const resourceInstance = {
     isResource: true,
     name,
