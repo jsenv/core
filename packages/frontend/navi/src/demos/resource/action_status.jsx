@@ -5,7 +5,7 @@ export const ActionStatus = ({ action, name = action.name }) => {
   const { idle, preloaded, active, pending, params, error, aborted, data } =
     useActionStatus(action);
   return (
-    <fieldset style={{ width: "200px" }}>
+    <fieldset>
       <legend>{name}</legend>
 
       <div style="display: flex; flex-direction: column; gap: 5px;">
@@ -36,18 +36,13 @@ export const ActionStatus = ({ action, name = action.name }) => {
             <span>active: no</span>
           )}
         </div>
-        <div style="display: flex; align-items: center; gap: 5px;">
+        <div style="display: flex; gap: 5px;">
           <span>params: </span>
           <pre style="margin: 0">{stringifyForDisplay(params)}</pre>
         </div>
-        <div>
-          {data ? (
-            <span>
-              data: <strong>{stringifyForDisplay(data)}</strong>
-            </span>
-          ) : (
-            <span>data</span>
-          )}
+        <div style="display: flex; gap: 5px;">
+          <span>data: </span>
+          <pre style="margin: 0">{stringifyForDisplay(data)}</pre>
         </div>
       </div>
     </fieldset>
