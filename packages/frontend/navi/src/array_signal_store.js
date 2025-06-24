@@ -74,6 +74,69 @@ export const arraySignalStore = (
     }
   });
 
+  const propertyChangeCallbackSetMap = new Map();
+  const registerPropertyChangeCallback = (property, callback) => {
+    const set = propertyChangeCallbackSetMap.get(property);
+    if (set) {
+      set.add(callback);
+    } else {
+      propertyChangeCallbackSetMap.set(property, new Set([callback]));
+    }
+  };
+  const assign = (item, props) => {
+    let modified = false;
+    const itemWithProps = Object.create(
+      Object.getPrototypeOf(item),
+      Object.getOwnPropertyDescriptors(item),
+    );
+    for (const key of Object.keys(props)) {
+      const newValue = props[key];
+      if (key in item) {
+        const value = item[key];
+        if (newValue !== value) {
+          modified = true;
+          itemWithProps[key] = newValue;
+          const propertyChangeCallbackSet =
+            propertyChangeCallbackSetMap.get(key);
+          if (propertyChangeCallbackSet) {
+            for (const propertyChangeCallback of propertyChangeCallbackSet) {
+              propertyChangeCallback(newValue, value, false, key);
+            }
+          }
+        }
+      } else {
+        modified = true;
+        itemWithProps[key] = newValue;
+        const propertyChangeCallbackSet = propertyChangeCallbackSetMap.get(key);
+        if (propertyChangeCallbackSet) {
+          for (const propertyChangeCallback of propertyChangeCallbackSet) {
+            propertyChangeCallback(
+              newValue,
+              undefined,
+              // third arg says "new"
+              true,
+              key,
+            );
+          }
+        }
+      }
+    }
+    return modified ? itemWithProps : item;
+  };
+
+  const itemDropCallbackSet = new Set();
+  const registerItemDropCallback = (callback) => {
+    itemDropCallbackSet.add(callback);
+  };
+  const itemRematchCallbackSet = new Set();
+  const registerItemRematchingCallback = (match, rematchCallback) => {
+    // alors la il s'agit de voir lorsqu'un item match
+    itemRematchCallbackSet.add({
+      match,
+      rematchCallback,
+    });
+  };
+
   const select = (...args) => {
     const array = arraySignal.value;
     const idMap = idMapSignal.value;
@@ -232,17 +295,26 @@ export const arraySignalStore = (
       const arrayWithoutDroppedItems = [];
       let hasFound = false;
       const idToRemoveSet = new Set(data);
+      const triggerDropSet = new Set();
       for (const existingItem of array) {
         const existingItemId = existingItem[idKey];
         if (idToRemoveSet.has(existingItemId)) {
           hasFound = true;
           idToRemoveSet.delete(existingItemId);
+          triggerDropSet.add(() => {
+            for (const itemDropCallback of itemDropCallbackSet) {
+              itemDropCallback(existingItem);
+            }
+          });
         } else {
           arrayWithoutDroppedItems.push(existingItem);
         }
       }
       if (hasFound) {
         arraySignal.value = arrayWithoutDroppedItems;
+        for (const triggerDrop of triggerDropSet) {
+          triggerDrop();
+        }
         return arrayWithoutDroppedItems;
       }
       return array;
@@ -259,12 +331,14 @@ export const arraySignalStore = (
     const array = arraySignal.peek();
     const arrayWithoutItemToDrop = [];
     let found = false;
+    let itemDropped = null;
     for (const itemCandidate of array) {
       const itemCandidateValue =
         typeof property === "function"
           ? property(itemCandidate)
           : itemCandidate[property];
       if (itemCandidateValue === value) {
+        itemDropped = itemCandidate;
         found = true;
       } else {
         arrayWithoutItemToDrop.push(itemCandidate);
@@ -272,75 +346,12 @@ export const arraySignalStore = (
     }
     if (found) {
       arraySignal.value = arrayWithoutItemToDrop;
+      for (const itemDropCallback of itemDropCallbackSet) {
+        itemDropCallback(itemDropped);
+      }
       return arrayWithoutItemToDrop;
     }
     return array;
-  };
-
-  /**
-   * For example a signal like this:
-   * const currentItemSignal = computed(() => {
-   *    return arrayStore.select("name", "a");
-   * })
-   * Will return null when the item "a" is renamed
-   * But we still want to detect the rename or the deletion of such an item
-   * So we use a signal not reset when it becomes null + rely on item id to find it back in the array
-   */
-  const registerPropertyLifecycle = (
-    itemSignal,
-    property,
-    { changed, dropped, reinserted },
-  ) => {
-    let wasFound = false;
-    const NOT_FOUND = { label: "not_found" };
-    const idToTrackSignal = signal(null);
-    effect(() => {
-      const item = itemSignal.value;
-      if (item) {
-        idToTrackSignal.value = item[idKey];
-      } else if (idToTrackSignal.peek()) {
-        // not found, it was likely deleted
-        // but maybe it was renamed so we need
-        // the other effect to be sure
-      }
-    });
-    const valueSignal = computed(() => {
-      const idToTrack = idToTrackSignal.value;
-      const idMap = idMapSignal.value;
-      if (!idToTrack) {
-        return NOT_FOUND;
-      }
-      const item = idMap.get(idToTrack);
-      if (!item) {
-        return NOT_FOUND;
-      }
-      return typeof property === "function" ? property(item) : item[property];
-    });
-    const previousValueSignal = signal(valueSignal.peek());
-
-    return effect(() => {
-      const value = valueSignal.value;
-      const previousValue = previousValueSignal.peek();
-      previousValueSignal.value = value;
-
-      if (
-        value !== previousValue &&
-        previousValue !== NOT_FOUND &&
-        value !== NOT_FOUND
-      ) {
-        changed(value, previousValue);
-      } else if (previousValue === NOT_FOUND && value !== NOT_FOUND) {
-        if (wasFound) {
-          reinserted(value, previousValue);
-        }
-      } else if (previousValue !== NOT_FOUND && value === NOT_FOUND) {
-        dropped(previousValue);
-      }
-
-      if (value !== NOT_FOUND) {
-        wasFound = true;
-      }
-    });
   };
 
   Object.assign(store, {
@@ -350,29 +361,9 @@ export const arraySignalStore = (
     upsert,
     drop,
 
-    registerPropertyLifecycle,
+    registerPropertyChangeCallback,
+    registerItemDropCallback,
+    registerItemRematchingCallback,
   });
   return store;
-};
-
-export const assign = (item, props) => {
-  let modified = false;
-  const itemWithProps = Object.create(
-    Object.getPrototypeOf(item),
-    Object.getOwnPropertyDescriptors(item),
-  );
-  for (const key of Object.keys(props)) {
-    const newValue = props[key];
-    if (key in item) {
-      const value = item[key];
-      if (newValue !== value) {
-        modified = true;
-        itemWithProps[key] = newValue;
-      }
-    } else {
-      modified = true;
-      itemWithProps[key] = newValue;
-    }
-  }
-  return modified ? itemWithProps : item;
 };

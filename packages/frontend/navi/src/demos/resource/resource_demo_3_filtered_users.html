@@ -106,7 +106,17 @@
           department: "Marketing",
         },
       ];
-      const user = resource("user", { idKey: "id", mutableIdKey: "name" });
+      const user = resource("user", {
+        idKey: "id",
+        mutableIdKey: "name",
+        propertyMutationObservers: {
+          name: {
+            changed: () => {},
+            dropped: () => {},
+            reinserted: () => {},
+          },
+        },
+      });
       const loadUsersAction = user.getAll(async (filters) => {
         console.log("Loading users", filters);
         await new Promise((resolve) => setTimeout(resolve, 500));
