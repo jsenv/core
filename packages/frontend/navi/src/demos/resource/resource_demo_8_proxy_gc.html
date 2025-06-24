@@ -267,8 +267,14 @@
         console.log(
           `  Base Action: ✅ ALIVE (expected - persistent reference)`,
         );
-        console.log(`  Proxy: ${proxyAlive ? "❌ ALIVE" : "✅ GC'd"}`);
-        console.log(`  Component: ${componentAlive ? "❌ ALIVE" : "✅ GC'd"}`);
+        if (currentProxy) {
+          console.log(`  Proxy: ✅ ALIVE (expected - as it was not destroyed)`);
+        } else {
+          console.log(`  Proxy: ${proxyAlive ? "❌ ALIVE" : "✅ GC'd"}`);
+          console.log(
+            `  Component: ${componentAlive ? "❌ ALIVE" : "✅ GC'd"}`,
+          );
+        }
         console.log(
           `  Old targets: ${oldTargetsAliveCount}/${oldTargetWeakRefs.length} still alive`,
         );

@@ -547,7 +547,13 @@ export const createAction = (callback, rootOptions) => {
         ...options,
       });
     };
-    const bindParams = (newParamsOrSignal, options) => {
+    const bindParams = (newParamsOrSignal, options = {}) => {
+      // ✅ FIX: Don't cache proxy-internal bindParams calls
+      if (options._isProxyInternal) {
+        return _bindParams(newParamsOrSignal, options);
+      }
+
+      // ✅ Only cache user-facing bindParams calls
       const existingChildAction = childActionWeakMap.get(newParamsOrSignal);
       if (existingChildAction) {
         return existingChildAction;
@@ -934,11 +940,11 @@ const createActionProxyFromSignal = (
         return;
       }
 
-      // ✅ Use local variable to avoid keeping strong reference
       const previousTarget = actionTargetPrevious;
       const params = paramsSignal.value;
       if (params) {
-        actionTarget = actionRef.bindParams(params);
+        // ✅ FIX: Mark as proxy-internal to avoid caching
+        actionTarget = actionRef.bindParams(params, { _isProxyInternal: true });
         currentAction = actionTarget;
         currentActionPrivateProperties =
           getActionPrivateProperties(actionTarget);
@@ -961,7 +967,6 @@ const createActionProxyFromSignal = (
           changeCleanupCallbackSet.add(returnValue);
         }
       }
-      // ✅ Don't keep strong reference to previous target
       actionTargetPrevious = null;
     });
   }
