@@ -934,17 +934,18 @@ const createActionProxyFromSignal = (
         return;
       }
 
-      actionTargetPrevious = actionTarget;
+      // ✅ Use local variable to avoid keeping strong reference
+      const previousTarget = actionTargetPrevious;
       const params = paramsSignal.value;
       if (params) {
-        actionTarget = action.bindParams(params);
+        actionTarget = actionRef.bindParams(params);
         currentAction = actionTarget;
         currentActionPrivateProperties =
           getActionPrivateProperties(actionTarget);
       } else {
         actionTarget = null;
-        currentAction = action;
-        currentActionPrivateProperties = getActionPrivateProperties(action);
+        currentAction = actionRef;
+        currentActionPrivateProperties = getActionPrivateProperties(actionRef);
       }
 
       if (isFirstEffect) {
@@ -955,12 +956,13 @@ const createActionProxyFromSignal = (
       }
       changeCleanupCallbackSet.clear();
       for (const callback of actionTargetChangeCallbackSet) {
-        const returnValue = callback(actionTarget, actionTargetPrevious);
+        const returnValue = callback(actionTarget, previousTarget);
         if (typeof returnValue === "function") {
           changeCleanupCallbackSet.add(returnValue);
         }
       }
-      actionTargetPrevious = actionTarget;
+      // ✅ Don't keep strong reference to previous target
+      actionTargetPrevious = null;
     });
   }
 
