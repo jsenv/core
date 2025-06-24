@@ -38,7 +38,7 @@ export const ActionStatus = ({ action, name = action.name }) => {
         </div>
         <div style="display: flex; align-items: center; gap: 5px;">
           <span>params: </span>
-          <pre style="margin: 0">{JSON.stringify(params)}</pre>
+          <pre style="margin: 0">{stringifyForDisplay(params)}</pre>
         </div>
         <div>
           {data ? (

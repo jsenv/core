@@ -29,11 +29,11 @@ export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
 
   if (Array.isArray(value)) {
     if (value.length === 0) return "[]";
-    if (value.length > 3) {
+    if (value.length > MAX_ENTRIES) {
       const preview = value
-        .slice(0, 3)
+        .slice(0, MAX_ENTRIES)
         .map((v) => stringifyForDisplay(v, maxDepth, currentDepth + 1));
-      return `[${preview.join(", ")}, ...${value.length - 3} more]`;
+      return `[${preview.join(", ")}, ...${value.length - MAX_ENTRIES} more]`;
     }
     const items = value.map((v) =>
       stringifyForDisplay(v, maxDepth, currentDepth + 1),
@@ -64,14 +64,14 @@ export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
       }
     }
 
-    if (allEntries.length > 3) {
+    if (allEntries.length > MAX_ENTRIES) {
       const preview = allEntries
-        .slice(0, 3)
+        .slice(0, MAX_ENTRIES)
         .map(
           ([k, v]) =>
             `${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1)}`,
         );
-      return `{ ${preview.join(", ")}, ...${allEntries.length - 3} more }`;
+      return `{ ${preview.join(", ")}, ...${allEntries.length - MAX_ENTRIES} more }`;
     }
 
     const pairs = allEntries.map(
@@ -92,3 +92,5 @@ export const isSignal = (value) => {
     typeof value.subscribe === "function"
   );
 };
+
+const MAX_ENTRIES = 5;
