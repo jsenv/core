@@ -920,6 +920,7 @@ const createActionProxyFromSignal = (
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
 
   {
+    let actionTargetPrevious = null;
     let isFirstEffect = true;
     const changeCleanupCallbackSet = new Set();
     const actionWeakRef = new WeakRef(action);
@@ -933,11 +934,9 @@ const createActionProxyFromSignal = (
         return;
       }
 
-      const previousTarget = actionTarget;
+      const previousTarget = actionTargetPrevious;
       const params = paramsSignal.value;
       if (params) {
-        // ✅ FIX: Use normal bindParams to allow caching of proxy targets
-        // The GC issue will be solved by not holding strong reference to previousTarget
         actionTarget = actionRef.bindParams(params);
         currentAction = actionTarget;
         currentActionPrivateProperties =
@@ -961,6 +960,7 @@ const createActionProxyFromSignal = (
           changeCleanupCallbackSet.add(returnValue);
         }
       }
+      actionTargetPrevious = actionTarget; // ✅ Store for next time but this is the only reference
     });
   }
 
