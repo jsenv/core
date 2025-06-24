@@ -1,8 +1,8 @@
-import { computed, effect, signal } from "@preact/signals";
+import { computed, effect } from "@preact/signals";
 import {
   getActionPrivateProperties,
   setActionPrivateProperties,
-} from "./actions.js";
+} from "./action_private_properties.js";
 import { isSignal } from "./actions_helpers.js";
 
 export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {
@@ -43,68 +43,55 @@ export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {
     return createActionProxyFromSignal(action, paramsSignal, options);
   }
 
-  // Valeur primitive
-  const paramsSignal = signal(paramsMapOrSignal);
-  return createActionProxyFromSignal(action, paramsSignal, options);
+  return action.bindParams(paramsMapOrSignal);
 };
+
 const createActionProxyFromSignal = (
   action,
   paramsSignal,
   { reloadOnChange = true, onChange } = {},
 ) => {
-  const getActionForParams = () => {
-    const params = paramsSignal.value;
-    if (!params) {
-      return null;
-    }
-    return action.bindParams(params);
+  const actionTargetChangeCallbackSet = new Set();
+  const onActionTargetChange = (callback) => {
+    actionTargetChangeCallbackSet.add(callback);
   };
+  let actionTarget = null;
+  let currentAction = action;
+  let currentActionPrivateProperties;
 
   const proxyMethod = (method) => {
-    return (...args) => {
-      const actionForParams = getActionForParams();
-      if (!actionForParams) {
-        return undefined;
-      }
-      return actionForParams[method](...args);
-    };
+    return (...args) => currentAction[method](...args);
   };
-
   const actionProxy = {
     isProxy: true,
-    name: `Proxy on ${action.name}`,
-    params: action.initialParams,
-    loadRequested: action.initialLoadRequested,
-    loadingState: action.initialLoadingState,
-    error: action.initialError,
-    data: action.initialData,
+    name: undefined,
+    params: undefined,
+    loadRequested: undefined,
+    loadingState: undefined,
+    error: undefined,
+    data: undefined,
     preload: proxyMethod("preload"),
     load: proxyMethod("load"),
     reload: proxyMethod("reload"),
     unload: proxyMethod("unload"),
-    toString: () => `Proxy on ${action.name}`,
+    toString: undefined,
   };
+  onActionTargetChange((actionTarget) => {
+    const currentAction = actionTarget || action;
+    actionProxy.name = `[Proxy] ${currentAction.name}`;
+    actionProxy.params = currentAction.params;
+    actionProxy.loadRequested = currentAction.loadRequested;
+    actionProxy.loadingState = currentAction.loadingState;
+    actionProxy.error = currentAction.error;
+    actionProxy.data = currentAction.data;
+    actionProxy.toString = () => actionProxy.name;
+  });
 
-  const proxySignal = (
-    signalPropertyName,
-    propertyName,
-    initialValuePrivatePropertyName,
-  ) => {
+  const proxyPrivateSignal = (signalPropertyName, propertyName) => {
     const signalProxy = computed(() => {
-      const actionForParams = getActionForParams();
-      if (!actionForParams) {
-        if (!propertyName) {
-          return undefined;
-        }
-        const initialValue = action[initialValuePrivatePropertyName];
-        actionProxy[propertyName] = initialValue;
-        return initialValue;
-      }
-      const actionForParamsPrivateProperties =
-        getActionPrivateProperties(actionForParams);
-      const actionForParamsSignal =
-        actionForParamsPrivateProperties[signalPropertyName];
-      const value = actionForParamsSignal.value;
+      const currentActionSignal =
+        currentActionPrivateProperties[signalPropertyName];
+      const value = currentActionSignal.value;
       if (propertyName) {
         actionProxy[propertyName] = value;
       }
@@ -112,77 +99,72 @@ const createActionProxyFromSignal = (
     });
     return signalProxy;
   };
-  let paramsPrevious = paramsSignal.peek();
-  let isFirstEffect = true;
-  effect(() => {
-    const params = paramsSignal.value;
-    actionProxy.params = params;
-    if (isFirstEffect) {
-      isFirstEffect = false;
-    } else {
-      if (reloadOnChange) {
-        actionProxy.reload();
-      }
-      if (onChange) {
-        onChange(params, paramsPrevious);
-      }
-    }
-    paramsPrevious = params;
-  });
-  effect(() => {
-    const actionForParams = getActionForParams();
-    actionProxy.name = actionForParams
-      ? `[[Proxy]] ${actionForParams.name}`
-      : `[[Proxy]] ${action.name}`;
-  });
-
+  const proxyPrivateMethod = (method) => {
+    return (...args) => currentActionPrivateProperties[method](...args);
+  };
   const proxyPrivateProperties = {
-    initialLoadRequested: actionProxy.loadRequested,
-    initialLoadingState: actionProxy.loadingState,
-    initialParams: actionProxy.params,
-    initialError: actionProxy.error,
-    initialData: actionProxy.data,
-
     paramsSignal,
-    loadRequestedSignal: proxySignal(
+    loadRequestedSignal: proxyPrivateSignal(
       "loadRequestedSignal",
       "loadRequested",
-      "initialLoadRequested",
     ),
-    loadingStateSignal: proxySignal(
+    loadingStateSignal: proxyPrivateSignal(
       "loadingStateSignal",
       "loadingState",
-      "initialLoadingState",
     ),
-    errorSignal: proxySignal("errorSignal", "error", "initialError"),
-    dataSignal: proxySignal("dataSignal", "data", "initialData"),
-    computedDataSignal: proxySignal("computedDataSignal"),
-
-    performLoad: (...args) => {
-      const actionForParams = getActionForParams();
-      if (!actionForParams) {
-        throw new Error(
-          `Cannot perform load on action proxy "${actionProxy.name}" because params are not set.`,
-        );
-      }
-      const actionForParamsPrivateProperties =
-        getActionPrivateProperties(actionForParams);
-      return actionForParamsPrivateProperties.performLoad(...args);
-    },
-    performUnload: (...args) => {
-      const actionForParams = getActionForParams();
-      if (!actionForParams) {
-        throw new Error(
-          `Cannot perform unload on action proxy "${actionProxy.name}" because params are not set.`,
-        );
-      }
-      const actionForParamsPrivateProperties =
-        getActionPrivateProperties(actionForParams);
-      return actionForParamsPrivateProperties.performUnload(...args);
-    },
-    ui: action.ui,
+    errorSignal: proxyPrivateSignal("errorSignal", "error"),
+    dataSignal: proxyPrivateSignal("dataSignal", "data"),
+    computedDataSignal: proxyPrivateSignal("computedDataSignal"),
+    performLoad: proxyPrivateMethod("performLoad"),
+    performUnload: proxyPrivateMethod("performUnload"),
+    ui: undefined,
   };
+  onActionTargetChange(() => {
+    proxyPrivateProperties.ui = currentAction.ui;
+  });
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
+
+  {
+    let actionTargetPrevious = null;
+    let isFirstEffect = true;
+    effect(() => {
+      actionTargetPrevious = actionTarget;
+      const params = paramsSignal.value;
+      if (params) {
+        actionTarget = action.bindParams(params);
+        currentAction = actionTarget;
+        currentActionPrivateProperties =
+          getActionPrivateProperties(actionTarget);
+      } else {
+        actionTarget = null;
+        currentAction = action;
+        currentActionPrivateProperties = getActionPrivateProperties(action);
+      }
+
+      actionTargetPrevious = actionTarget;
+      if (isFirstEffect) {
+        isFirstEffect = false;
+      }
+      for (const callback of actionTargetChangeCallbackSet) {
+        callback(actionTarget, actionTargetPrevious);
+      }
+    });
+  }
+
+  if (reloadOnChange) {
+    onActionTargetChange((actionTarget, actionTargetPrevious) => {
+      if (actionTargetPrevious && actionTarget) {
+        actionTarget.reload();
+      }
+    });
+  }
+  if (onChange) {
+    onActionTargetChange((actionTarget, actionTargetPrevious) => {
+      if (actionTargetPrevious) {
+        onChange(actionTarget, actionTargetPrevious);
+      }
+    });
+  }
 
   return actionProxy;
 };

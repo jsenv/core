@@ -1,4 +1,9 @@
 import { batch, computed, effect, signal } from "@preact/signals";
+import {
+  getActionPrivateProperties,
+  setActionPrivateProperties,
+} from "./action_private_properties.js";
+import { createActionProxy } from "./action_proxy.js";
 import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
 
@@ -410,17 +415,6 @@ ${lines.join("\n")}`);
 };
 
 const initialParamsDefault = {};
-const actionPrivatePropertiesWeakMap = new WeakMap();
-export const getActionPrivateProperties = (action) => {
-  const actionPrivateProperties = actionPrivatePropertiesWeakMap.get(action);
-  if (!actionPrivateProperties) {
-    throw new Error(`Cannot find action private properties for "${action}"`);
-  }
-  return actionPrivateProperties;
-};
-export const setActionPrivateProperties = (action, properties) => {
-  actionPrivatePropertiesWeakMap.set(action, properties);
-};
 
 export const createAction = (
   callback,
