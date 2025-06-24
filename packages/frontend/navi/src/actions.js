@@ -868,8 +868,13 @@ const createActionProxyFromSignal = (
 
   const proxyPrivateSignal = (signalPropertyName, propertyName) => {
     const signalProxy = signal();
+    let dispose;
     onActionTargetChange(() => {
-      const dispose = effect(() => {
+      if (dispose) {
+        dispose();
+        dispose = undefined;
+      }
+      dispose = effect(() => {
         const currentActionSignal =
           currentActionPrivateProperties[signalPropertyName];
         const currentActionSignalValue = currentActionSignal.value;
@@ -954,7 +959,11 @@ const createActionProxyFromSignal = (
 
   if (reloadOnChange) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (actionTargetPrevious && actionTargetPrevious.loadRequested) {
+      if (
+        actionTarget &&
+        actionTargetPrevious &&
+        actionTargetPrevious.loadRequested
+      ) {
         actionTarget.reload();
       }
     });
