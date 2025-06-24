@@ -18,18 +18,11 @@ export const ActionRenderer = ({ action, children }) => {
   } = typeof children === "function" ? { loaded: children } : children || {};
   const { active, idle, pending, error, data } = useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
-  const [errorBoundary, resetError] = useErrorBoundary();
+  const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
 
   useLayoutEffect(() => {
-    if (error && !errorBoundary) {
-      action.reportError(error);
-    }
-  }, [error, errorBoundary, action]);
-
-  useLayoutEffect(() => {
-    // Réinitialiser l'erreur du boundary quand l'action change
-    resetError();
-  }, [action, resetError]);
+    resetErrorBoundary();
+  }, [action, pending, idle, resetErrorBoundary]);
 
   useLayoutEffect(() => {
     UIRenderedPromise.resolve();

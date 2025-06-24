@@ -349,7 +349,7 @@ const activationRegistry = (() => {
 
     getInfo() {
       const loadingSet = new Set();
-      const loadedSet = new Set();
+      const settledSet = new Set();
 
       for (const [id, weakRef] of idToActionMap) {
         const action = weakRef.deref();
@@ -358,11 +358,15 @@ const activationRegistry = (() => {
           const loadingState = privateProps.loadingStateSignal.peek();
           if (loadingState === LOADING) {
             loadingSet.add(action);
-          } else if (loadingState === LOADED) {
-            loadedSet.add(action);
+          } else if (
+            loadingState === LOADED ||
+            loadingState === FAILED ||
+            loadingState === ABORTED
+          ) {
+            settledSet.add(action);
           } else {
             throw new Error(
-              `An action in the activation registry should be LOADING or LOADED, but got "${loadingState.id}" for action "${action}"`,
+              `An action in the activation registry must be LOADING, ABORTED, FAILED or LOADED, found "${loadingState.id}" for action "${action}"`,
             );
           }
         } else {
@@ -371,7 +375,7 @@ const activationRegistry = (() => {
       }
       return {
         loadingSet,
-        loadedSet,
+        settledSet,
       };
     },
 
@@ -395,7 +399,7 @@ export const updateActions = ({
     signal = abortController.signal;
   }
 
-  const { loadingSet, loadedSet } = activationRegistry.getInfo();
+  const { loadingSet, settledSet } = activationRegistry.getInfo();
 
   if (debug) {
     console.group(`updateActions()`);
@@ -420,6 +424,8 @@ export const updateActions = ({
   const toLoadSet = new Set();
   const toPromoteSet = new Set();
   const staysLoadingSet = new Set();
+  const staysAbortedSet = new Set();
+  const staysFailedSet = new Set();
   const staysLoadedSet = new Set();
   list_to_unload: {
     for (const actionToUnload of unloadSet) {
@@ -495,9 +501,13 @@ export const updateActions = ({
         staysLoadingSet.add(actionLoading);
       }
     }
-    for (const actionLoaded of loadedSet) {
+    for (const actionLoaded of settledSet) {
       if (toUnloadSet.has(actionLoaded)) {
         // will be unloaded
+      } else if (actionLoaded.loadingState === ABORTED) {
+        staysAbortedSet.add(actionLoaded);
+      } else if (actionLoaded.loadingState === FAILED) {
+        staysFailedSet.add(actionLoaded);
       } else {
         staysLoadedSet.add(actionLoaded);
       }
@@ -519,6 +529,12 @@ export const updateActions = ({
         : []),
       ...(staysLoadingSet.size
         ? [`- stays loading: ${Array.from(staysLoadingSet).join(", ")}`]
+        : []),
+      ...(staysAbortedSet.size
+        ? [`- stays aborted: ${Array.from(staysAbortedSet).join(", ")}`]
+        : []),
+      ...(staysFailedSet.size
+        ? [`- stays failed: ${Array.from(staysFailedSet).join(", ")}`]
         : []),
       ...(staysLoadedSet.size
         ? [`- stays loaded: ${Array.from(staysLoadedSet).join(", ")}`]
@@ -623,7 +639,7 @@ export const createActionTemplate = (
     keepOldData = false,
   } = {},
 ) => {
-  const _instantiate = (instanceParams = initialParams) => {
+  const _instantiate = (instanceParams = initialParams, options = {}) => {
     let item;
     let params;
     if (instanceParams && typeof instanceParams === "object") {
@@ -772,7 +788,7 @@ export const createActionTemplate = (
     private_properties: {
       const ui = {
         renderLoaded: null,
-        renderLoadedAsync,
+        renderLoadedAsync: renderLoadedAsync || options.renderLoadedAsync,
       };
       let sideEffectCleanup;
       const performLoad = (loadParams) => {
@@ -784,15 +800,15 @@ export const createActionTemplate = (
 
         const abortController = new AbortController();
         const abortSignal = abortController.signal;
-        const abort = (reason) => {
-          if (debug) {
-            console.log(`"${action}": abort activation.`);
-          }
+        const abort = (abortReason) => {
           loadingStateSignal.value = ABORTED;
-          abortController.abort(reason);
+          abortController.abort(abortReason);
           actionAbortMap.delete(action);
           if (isPreload) {
             preloadedProtectionRegistry.unprotect(action);
+          }
+          if (debug) {
+            console.log(`"${action}": aborted (reason: ${abortReason})`);
           }
         };
         const onabort = () => {
@@ -821,6 +837,9 @@ export const createActionTemplate = (
           loadingStateSignal.value = LOADED;
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
+          if (debug) {
+            console.log(`"${action}": loaded (reason: ${reason})`);
+          }
         };
         const onLoadError = (e) => {
           console.error(e);
@@ -828,16 +847,15 @@ export const createActionTemplate = (
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
           if (abortSignal.aborted && e === abortSignal.reason) {
-            if (isPreload) {
-              preloadedProtectionRegistry.unprotect(action);
-            }
-            loadingStateSignal.value = ABORTED;
             return;
           }
           batch(() => {
             errorSignal.value = e;
             loadingStateSignal.value = FAILED;
           });
+          if (debug) {
+            console.log(`"${action}": failed (error: ${e})`);
+          }
         };
 
         try {
@@ -851,13 +869,15 @@ export const createActionTemplate = (
           } else {
             loadResult = callbackResult;
           }
-          const renderLoadedAsync = ui.renderLoadedAsync;
-          if (renderLoadedAsync) {
-            const renderLoadedPromise = renderLoadedAsync(...args).then(
-              (renderLoaded) => {
-                ui.renderLoaded = () => renderLoaded;
-              },
-            );
+          if (
+            ui.renderLoadedAsync &&
+            !ui.renderLoaded // already done
+          ) {
+            const renderLoadedPromise = ui
+              .renderLoadedAsync(...args)
+              .then((renderLoaded) => {
+                ui.renderLoaded = renderLoaded;
+              });
             thenableArray.push(renderLoadedPromise);
           }
           if (thenableArray.length === 0) {
@@ -885,7 +905,7 @@ export const createActionTemplate = (
           }
           abort(reason);
         } else if (debug) {
-          console.log(`"${action}": unload route (reason: ${reason})`);
+          console.log(`"${action}": unloading (reason: ${reason})`);
         }
 
         preloadedProtectionRegistry.unprotect(action);

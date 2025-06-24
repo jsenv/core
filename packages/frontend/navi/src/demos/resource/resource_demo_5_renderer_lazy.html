@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Action render lazy demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 400px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import {
+        resource,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
+      import { render } from "preact";
+
+      const page = resource("page", { idKey: "name" });
+      const loadPageActionTemplate = page.get(async ({ name }) => {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        return {
+          name,
+        };
+      });
+      const loadPageTotoAction = loadPageActionTemplate.instantiate(
+        {
+          name: "toto",
+        },
+        {
+          renderLoadedAsync: async () => {
+            // eslint-disable-next-line no-unused-vars
+            const { Toto } = await import("./toto.jsx");
+            return () => {
+              return <Toto />;
+            };
+          },
+        },
+      );
+      const loadPageTataAction = loadPageActionTemplate.instantiate(
+        {
+          name: "tata",
+        },
+        {
+          renderLoadedAsync: async () => {
+            // eslint-disable-next-line no-unused-vars
+            const { Tata } = await import("./tata.jsx");
+            return () => <Tata />;
+          },
+        },
+      );
+      const loadImportErrorPageAction = loadPageActionTemplate.instantiate(
+        {
+          name: "import_error",
+        },
+        {
+          renderLoadedAsync: async () => {
+            // eslint-disable-next-line import-x/no-unresolved
+            await import("./not_found.jsx");
+            return () => "here";
+          },
+        },
+      );
+      const activePageName = localStorage.getItem("active_page_name");
+      if (activePageName) {
+        loadPageActionTemplate.instaniate({ name: activePageName }).load();
+      }
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div>
+            <button
+              onClick={() => {
+                loadPageTotoAction.reload();
+              }}
+            >
+              Load dam
+            </button>
+            <button
+              onClick={() => {
+                loadPageTataAction.reload();
+              }}
+            >
+              Load seb
+            </button>
+            <button
+              onClick={() => {
+                loadImportErrorPageAction.reload();
+              }}
+            >
+              Load flore
+            </button>
+
+            <ActionRenderer action={loadPageTotoAction} />
+            <ActionRenderer action={loadPageTataAction} />
+            <ActionRenderer action={loadImportErrorPageAction} />
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
