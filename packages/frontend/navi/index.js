@@ -9,4 +9,4 @@ export {
   updateActions,
   useActionStatus,
 } from "./src/actions.js";
-export { getItemAction, resource } from "./src/resource_graph.js";
+export { resource } from "./src/resource_graph.js";

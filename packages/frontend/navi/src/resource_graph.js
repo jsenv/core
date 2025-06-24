@@ -3,19 +3,7 @@ import { createAction } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 
-const itemActionMapSymbol = Symbol("item_action_map");
-
 let debug = true;
-
-export const getItemAction = (item, parentAction) => {
-  const itemActionMap = item[itemActionMapSymbol];
-  if (!itemActionMap) {
-    console.error(item);
-    throw new Error(`itemActionMap is not defined on item`);
-  }
-  const action = itemActionMap.get(parentAction);
-  return action;
-};
 
 export const resource = (
   name,
@@ -57,11 +45,6 @@ export const resource = (
       name: `${name} store`,
       createItem: (props) => {
         const item = Object.create(itemPrototype);
-        Object.defineProperty(item, itemActionMapSymbol, {
-          enumerable: true,
-          writable: true,
-          value: new Map(),
-        });
         Object.assign(item, props);
         Object.defineProperty(item, SYMBOL_IDENTITY, {
           value: item[idKey],
@@ -231,25 +214,6 @@ export const resource = (
     });
   }
 
-  resourceInstance.useItemSignal = (initialValue) => {
-    const idSignal = signal(initialValue);
-    const itemSignal = computed(() => {
-      const id = idSignal.value;
-      if (!id) {
-        return null;
-      }
-      const item = store.upsert({ [idKey]: id });
-      return item;
-    });
-    return [
-      itemSignal,
-      (value) => {
-        const id = value && typeof value === "object" ? value[idKey] : value;
-        idSignal.value = id;
-      },
-    ];
-  };
-
   return resourceInstance;
 };
 
@@ -285,15 +249,6 @@ const createMethodsForStore = ({
     },
   };
 
-  const autoAssociateItemAction = (action) => {
-    resourceInstance.addItemSetup((item) => {
-      const itemAction = action.bindParams({
-        [idKey]: item[idKey],
-      });
-      item[itemActionMapSymbol].set(action, itemAction);
-    });
-  };
-
   return {
     getAll: (callback, options) => {
       const getAllAction = createAction(
@@ -318,7 +273,6 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      autoAssociateItemAction(getAction);
       // store.registerPropertyLifecycle(resource.activeItemSignal, key, {
       //   changed: () => {
       //     // updateMatchingActionParams(getActionTemplate, { [key]: value });
@@ -360,7 +314,6 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      autoAssociateItemAction(putAction);
       return putAction;
     },
     patch: (callback, options) => {
@@ -371,7 +324,6 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      autoAssociateItemAction(patchAction);
       return patchAction;
     },
     delete: (callback, options) => {
@@ -382,7 +334,6 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      autoAssociateItemAction(deleteAction);
       return deleteAction;
     },
   };

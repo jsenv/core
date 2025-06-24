@@ -60,7 +60,6 @@
       import {
         useActionStatus,
         resource,
-        getItemAction,
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
       } from "@jsenv/navi";
@@ -271,16 +270,16 @@
               </h3>
               <p>Count: {serverUsers.length}</p>
               {serverUsers.map((user) => {
-                const renameAction = getItemAction(user, renameUserAction);
                 return (
                   <UserItem
                     key={user}
                     user={user}
                     onUpdateName={async (name) => {
-                      const renameToAction = renameAction.bindParams({
+                      const renameAction = renameUserAction.bindParams({
+                        id: user.id,
                         name,
                       });
-                      await renameToAction.load();
+                      await renameAction.load();
                     }}
                   />
                 );
@@ -334,7 +333,9 @@
 
       // eslint-disable-next-line no-unused-vars
       const UserItem = ({ user, onUpdateName }) => {
-        const userAction = getItemAction(user, loadUserAction);
+        const userAction = loadUserAction.bindParams({
+          id: user.id,
+        });
         const {
           data: loadedUser,
           pending,
