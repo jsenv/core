@@ -128,14 +128,59 @@ export const arraySignalStore = (
   const registerItemDropCallback = (callback) => {
     itemDropCallbackSet.add(callback);
   };
-  const itemRematchCallbackSet = new Set();
-  const registerItemRematchingCallback = (match, rematchCallback) => {
-    // alors la il s'agit de voir lorsqu'un item match
-    itemRematchCallbackSet.add({
+
+  const itemMatchLifecycleSet = new Set();
+  const registerItemMatchLifecycle = (matchPredicate, { match, nomatch }) => {
+    const matchState = {
+      hasMatched: false,
+      hadMatchedBefore: false,
+    };
+    const itemMatchLifecycle = {
+      matchPredicate,
       match,
-      rematchCallback,
-    });
+      nomatch,
+      matchState,
+    };
+    itemMatchLifecycleSet.add(itemMatchLifecycle);
   };
+
+  effect(() => {
+    const array = arraySignal.value;
+
+    for (const {
+      matchPredicate,
+      match,
+      nomatch,
+      matchState,
+    } of itemMatchLifecycleSet) {
+      let currentlyHasMatch = false;
+
+      // Check if any item currently matches
+      for (const item of array) {
+        if (matchPredicate(item)) {
+          currentlyHasMatch = true;
+          break;
+        }
+      }
+
+      // Handle state transitions
+      if (currentlyHasMatch && !matchState.hasMatched) {
+        // New match found
+        matchState.hasMatched = true;
+        const isRematch = matchState.hadMatchedBefore;
+        if (match) {
+          match(isRematch);
+        }
+      } else if (!currentlyHasMatch && matchState.hasMatched) {
+        // No longer has match
+        matchState.hasMatched = false;
+        matchState.hadMatchedBefore = true;
+        if (nomatch) {
+          nomatch();
+        }
+      }
+    }
+  });
 
   const select = (...args) => {
     const array = arraySignal.value;
@@ -363,7 +408,7 @@ export const arraySignalStore = (
 
     registerPropertyChangeCallback,
     registerItemDropCallback,
-    registerItemRematchingCallback,
+    registerItemMatchLifecycle,
   });
   return store;
 };
