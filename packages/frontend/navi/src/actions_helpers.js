@@ -51,9 +51,11 @@ export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
   }
 
   if (typeof value === "object") {
-    if (isSignal(value)) {
+    const signalType = getSignalType(value);
+    if (signalType) {
       const signalValue = value.peek();
-      return `signal(${stringifyForDisplay(signalValue, maxDepth, currentDepth + 1)})`;
+      const prefix = signalType === "computed" ? "computed" : "signal";
+      return `${prefix}(${stringifyForDisplay(signalValue, maxDepth, currentDepth)})`;
     }
 
     const entries = Object.entries(value);
@@ -94,13 +96,24 @@ export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
 };
 
 export const isSignal = (value) => {
-  return (
-    value &&
-    typeof value === "object" &&
-    "value" in value &&
-    typeof value.peek === "function" &&
-    typeof value.subscribe === "function"
-  );
+  return getSignalType(value) !== null;
+};
+
+const BRAND_SYMBOL = Symbol.for("preact-signals");
+export const getSignalType = (value) => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  if (value.brand !== BRAND_SYMBOL) {
+    return null;
+  }
+
+  if (typeof value._fn === "function") {
+    return "computed";
+  }
+
+  return "signal";
 };
 
 const MAX_ENTRIES = 5;

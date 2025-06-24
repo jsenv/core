@@ -603,27 +603,6 @@ export const getActionPrivateProperties = (action) => {
   return actionPrivateProperties;
 };
 
-const itemAsHumanString = (item) => {
-  if (!item) {
-    return String(item);
-  }
-  const toString = item.toString;
-  if (toString !== Object.prototype.toString) {
-    return item.toString();
-  }
-  if (Object.hasOwn(item, "name")) {
-    return item.name;
-  }
-  if (Object.hasOwn(item, "id")) {
-    return item.id;
-  }
-  const toStringTag = item[Symbol.toStringTag];
-  if (toStringTag) {
-    return toStringTag;
-  }
-  return toString(item);
-};
-
 export const createActionTemplate = (
   callback,
   {
@@ -640,20 +619,9 @@ export const createActionTemplate = (
   } = {},
 ) => {
   const instantiate = (instanceParams = initialParams, options = {}) => {
-    let item;
-    let params;
-    if (instanceParams && typeof instanceParams === "object") {
-      ({ item, ...params } = instanceParams);
-    } else {
-      item = undefined;
-      params = instanceParams;
-    }
-
+    let params = instanceParams;
     let instanceName = name;
     const args = [];
-    if (item) {
-      args.push(itemAsHumanString(item));
-    }
     if (params === null || typeof params !== "object") {
       args.push(params);
     } else {
@@ -971,10 +939,6 @@ export const createActionTemplate = (
   };
 
   return actionTemplate;
-};
-
-export const createAction = (callback, options) => {
-  return createActionTemplate(callback, options).bindParams();
 };
 
 export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {

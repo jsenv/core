@@ -4,6 +4,7 @@ import { stringifyForDisplay } from "../../actions_helpers.js";
 export const ActionStatus = ({ action, name = action.name }) => {
   const { idle, preloaded, active, pending, params, error, aborted, data } =
     useActionStatus(action);
+
   return (
     <fieldset>
       <legend>{name}</legend>
