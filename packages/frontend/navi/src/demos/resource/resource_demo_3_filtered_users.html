@@ -288,6 +288,10 @@
                         name,
                       });
                       await renameAction.load();
+                      const harcodedUser = allUsers.find(
+                        (u) => u.id === user.id,
+                      );
+                      harcodedUser.name = name;
                     }}
                   />
                 );
