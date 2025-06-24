@@ -184,6 +184,14 @@
           <div>
             <h1>Users Management Demo</h1>
 
+            <button
+              onClick={() => {
+                loadFilteredUsersAction.reload();
+              }}
+            >
+              Reload
+            </button>
+
             <div className="filters">
               <h3>Filters</h3>
               <fieldset>

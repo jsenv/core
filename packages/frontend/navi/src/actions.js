@@ -173,24 +173,24 @@ const activationRegistry = (() => {
 
       for (const [id, weakRef] of idToActionMap) {
         const action = weakRef.deref();
-        if (action) {
-          const privateProps = getActionPrivateProperties(action);
-          const loadingState = privateProps.loadingStateSignal.peek();
-          if (loadingState === LOADING) {
-            loadingSet.add(action);
-          } else if (
-            loadingState === LOADED ||
-            loadingState === FAILED ||
-            loadingState === ABORTED
-          ) {
-            settledSet.add(action);
-          } else {
-            throw new Error(
-              `An action in the activation registry must be LOADING, ABORTED, FAILED or LOADED, found "${loadingState.id}" for action "${action}"`,
-            );
-          }
-        } else {
+        if (!action) {
           idToActionMap.delete(id);
+          continue;
+        }
+        const privateProps = getActionPrivateProperties(action);
+        const loadingState = privateProps.loadingStateSignal.peek();
+        if (loadingState === LOADING) {
+          loadingSet.add(action);
+        } else if (
+          loadingState === LOADED ||
+          loadingState === FAILED ||
+          loadingState === ABORTED
+        ) {
+          settledSet.add(action);
+        } else {
+          throw new Error(
+            `An action in the activation registry must be LOADING, ABORTED, FAILED or LOADED, found "${loadingState.id}" for action "${action}"`,
+          );
         }
       }
       return {
@@ -204,6 +204,12 @@ const activationRegistry = (() => {
     },
   };
 })();
+
+if (import.meta.dev) {
+  window.__actions__ = {
+    activationRegistry,
+  };
+}
 
 export const updateActions = ({
   signal,
@@ -679,6 +685,7 @@ export const createAction = (callback, rootOptions) => {
         const onLoadEnd = () => {
           dataSignal.value = loadResult;
           loadingStateSignal.value = LOADED;
+          preloadedProtectionRegistry.unprotect(action);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
           if (debug) {
