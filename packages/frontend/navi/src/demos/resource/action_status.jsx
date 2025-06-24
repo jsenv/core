@@ -1,4 +1,5 @@
 import { useActionStatus } from "@jsenv/navi";
+import { stringifyForDisplay } from "../../actions_helpers.js";
 
 export const ActionStatus = ({ action, name = action.name }) => {
   const { idle, preloaded, active, pending, params, error, aborted, data } =
@@ -42,7 +43,7 @@ export const ActionStatus = ({ action, name = action.name }) => {
         <div>
           {data ? (
             <span>
-              data: <strong>{JSON.stringify(data)}</strong>
+              data: <strong>{stringifyForDisplay(data)}</strong>
             </span>
           ) : (
             <span>data</span>

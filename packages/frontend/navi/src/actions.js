@@ -183,7 +183,7 @@
  */
 
 import { batch, computed, effect, signal } from "@preact/signals";
-import { stringifyForDisplay } from "./actions_helpers.js";
+import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
 
 let debug = true;
@@ -639,7 +639,7 @@ export const createActionTemplate = (
     keepOldData = false,
   } = {},
 ) => {
-  const _instantiate = (instanceParams = initialParams, options = {}) => {
+  const instantiate = (instanceParams = initialParams, options = {}) => {
     let item;
     let params;
     if (instanceParams && typeof instanceParams === "object") {
@@ -954,7 +954,7 @@ export const createActionTemplate = (
     if (actionForParams) {
       return actionForParams;
     }
-    const action = _instantiate(params, options);
+    const action = instantiate(params, options);
     actionParamsWeakMap.set(params, action);
     return action;
   };
@@ -967,14 +967,14 @@ export const createActionTemplate = (
     initialLoadRequested,
     initialError,
     initialData,
-    instantiate: memoizedInstantiate,
+    bindParams: memoizedInstantiate,
   };
 
   return actionTemplate;
 };
 
 export const createAction = (callback, options) => {
-  return createActionTemplate(callback, options).instantiate();
+  return createActionTemplate(callback, options).bindParams();
 };
 
 export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {
@@ -1003,7 +1003,7 @@ export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {
     }
 
     if (signalMap.size === 0) {
-      return actionTemplate.instantiate(paramsMapOrSignal);
+      return actionTemplate.bindParams(paramsMapOrSignal);
     }
 
     const paramsSignal = computed(() => {
@@ -1025,15 +1025,6 @@ export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {
   const paramsSignal = signal(paramsMapOrSignal);
   return createActionProxyFromSignal(actionTemplate, paramsSignal, options);
 };
-const isSignal = (value) => {
-  return (
-    value &&
-    typeof value === "object" &&
-    "value" in value &&
-    typeof value.peek === "function" &&
-    typeof value.subscribe === "function"
-  );
-};
 
 const createActionProxyFromSignal = (
   action,
@@ -1047,7 +1038,7 @@ const createActionProxyFromSignal = (
     if (!params) {
       return null;
     }
-    return actionTemplate.instantiate(params);
+    return actionTemplate.bindParams(params);
   };
   const proxyMethod = (method) => {
     return (...args) => {

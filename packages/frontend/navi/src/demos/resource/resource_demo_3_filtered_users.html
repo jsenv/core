@@ -107,17 +107,8 @@
           department: "Marketing",
         },
       ];
-
       const user = resource("user", { idKey: "id" });
-
-      // Signal pour les filtres
-      const filtersSignal = signal({
-        gender: undefined,
-        department: undefined,
-      });
-
-      // Action pour charger tous les utilisateurs avec filtres
-      const loadUsersAction = user.getAll(async (filters) => {
+      const loadUsersActionTemplate = user.getAll(async (filters) => {
         console.log("Loading users", filters);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return allUsers.filter((user) => {
@@ -133,10 +124,15 @@
           return true;
         });
       });
-      const loadFilteredUsersAction = loadUsersAction.bindParams(filtersSignal);
+      // Signal pour les filtres
+      const filtersSignal = signal({
+        gender: undefined,
+        department: undefined,
+      });
+      const loadFilteredUsersAction =
+        loadUsersActionTemplate.bindParams(filtersSignal);
       loadFilteredUsersAction.load();
 
-      // Template d'action pour charger un utilisateur individuel
       const loadUserActionTemplate = user.get(async ({ id }) => {
         await new Promise((resolve) => setTimeout(resolve, 300));
         const foundUser = allUsers.find((u) => u.id === id);
@@ -147,6 +143,10 @@
           ...foundUser,
           loadedAt: new Date().toLocaleTimeString(),
         };
+      });
+      const createUserActionTemplate = user.post(async (newUser) => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        return newUser;
       });
 
       // eslint-disable-next-line no-unused-vars
@@ -161,8 +161,9 @@
         const [newUserDept, setNewUserDept] = useState("Engineering");
 
         const createUser = () => {
-          if (!newUserName.trim()) return;
-
+          if (!newUserName.trim()) {
+            return;
+          }
           const newUser = {
             id: Math.max(...allUsers.map((u) => u.id)) + 1,
             name: newUserName,
@@ -170,14 +171,9 @@
             age: parseInt(newUserAge),
             department: newUserDept,
           };
-
-          allUsers.push(newUser);
-
-          // Charger directement le nouvel utilisateur
-          const newUserAction = getItemAction(newUser, loadUserActionTemplate);
-          newUserAction.load();
-
           setNewUserName("");
+          const createUserAction = createUserActionTemplate.bindParams(newUser);
+          createUserAction.load();
         };
 
         const updateUserName = (userId, newName) => {
@@ -332,7 +328,7 @@
             </div>
 
             {/* Status des actions */}
-            <ActionStatus action={loadUsersAction} name="Load Users" />
+            <ActionStatus action={loadFilteredUsersAction} name="Load Users" />
           </div>
         );
       };

@@ -1,5 +1,5 @@
 import { computed, signal } from "@preact/signals";
-import { createAction, createActionTemplate } from "./actions.js";
+import { createActionTemplate } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 
@@ -271,6 +271,9 @@ const createMethodsForStore = ({
     get: (props) => {
       return targetStore.upsert(props);
     },
+    post: (propsOrPropsArray) => {
+      return targetStore.upsert(propsOrPropsArray);
+    },
     put: (propsOrPropsArray) => {
       return targetStore.upsert(propsOrPropsArray);
     },
@@ -282,9 +285,9 @@ const createMethodsForStore = ({
     },
   };
 
-  const autoInstantiateActionOnItem = (actionTemplate) => {
+  const autoAssociateItemAction = (actionTemplate) => {
     resourceInstance.addItemSetup((item) => {
-      const itemAction = actionTemplate.instantiate({
+      const itemAction = actionTemplate.bindParams({
         [idKey]: item[idKey],
       });
       item[itemActionMapSymbol].set(actionTemplate, itemAction);
@@ -293,19 +296,8 @@ const createMethodsForStore = ({
 
   return {
     getAll: (callback, options) => {
-      const getAllAction = createAction(
-        (...args) => {
-          const callbackResult = callback(...args);
-          if (callbackResult && typeof callbackResult.then === "function") {
-            return callbackResult.then((propsArray) => {
-              const itemArray = targetStoreMethodEffects.getAll(propsArray);
-              return itemArray;
-            });
-          }
-          const propsArray = callbackResult;
-          const itemArray = targetStoreMethodEffects.getAll(propsArray);
-          return itemArray;
-        },
+      const getAllActionTemplate = createActionTemplate(
+        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.getAll),
         {
           name: `${name}.getAll`,
           data: [],
@@ -316,21 +308,17 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      return getAllAction;
+      return getAllActionTemplate;
     },
     get: (callback, options) => {
       const getActionTemplate = createActionTemplate(
-        async (...args) => {
-          const props = await callback(...args);
-          const item = targetStoreMethodEffects.get(props);
-          return item;
-        },
+        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.get),
         {
           name: `${name}.get`,
           ...options,
         },
       );
-      autoInstantiateActionOnItem(getActionTemplate);
+      autoAssociateItemAction(getActionTemplate);
       // store.registerPropertyLifecycle(resource.activeItemSignal, key, {
       //   changed: () => {
       //     // updateMatchingActionParams(getActionTemplate, { [key]: value });
@@ -354,49 +342,58 @@ const createMethodsForStore = ({
       // });
       return getActionTemplate;
     },
+    post: (callback, options) => {
+      const postActionTemplate = createActionTemplate(
+        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.post),
+        {
+          name: `${name}.post`,
+          ...options,
+        },
+      );
+      return postActionTemplate;
+    },
     put: (callback, options) => {
       const putActionTemplate = createActionTemplate(
-        async (params) => {
-          const propsOrPropsArray = await callback(params);
-          const itemOrItemArray =
-            targetStoreMethodEffects.put(propsOrPropsArray);
-          return itemOrItemArray;
-        },
+        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.put),
         {
           name: `${name}.put`,
           ...options,
         },
       );
-      autoInstantiateActionOnItem(putActionTemplate);
+      autoAssociateItemAction(putActionTemplate);
       return putActionTemplate;
     },
     patch: (callback, options) => {
       const patchActionTemplate = createActionTemplate(
-        async (params) => {
-          const propsOrPropsArray = await callback(params);
-          return targetStoreMethodEffects.patch(propsOrPropsArray);
-        },
+        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.patch),
         {
           name: `${name}.patch`,
           ...options,
         },
       );
-      autoInstantiateActionOnItem(patchActionTemplate);
+      autoAssociateItemAction(patchActionTemplate);
       return patchActionTemplate;
     },
     delete: (callback, options) => {
       const deleteActionTemplate = createActionTemplate(
-        async (params) => {
-          const itemIdOrItemIdArray = await callback(params);
-          return targetStoreMethodEffects.delete(itemIdOrItemIdArray);
-        },
+        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.delete),
         {
           name: `${name}.delete`,
           ...options,
         },
       );
-      autoInstantiateActionOnItem(deleteActionTemplate);
+      autoAssociateItemAction(deleteActionTemplate);
       return deleteActionTemplate;
     },
+  };
+};
+
+const mapCallbackMaybeAsyncResult = (callback, effect) => {
+  return (...args) => {
+    const result = callback(...args);
+    if (result && typeof result.then === "function") {
+      return result.then(effect);
+    }
+    return effect(result);
   };
 };

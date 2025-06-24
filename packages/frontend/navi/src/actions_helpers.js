@@ -5,15 +5,27 @@ export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
       : String(value);
   }
 
-  if (value === null) return "null";
-  if (value === undefined) return "undefined";
-  if (typeof value === "string") return `"${value}"`;
-  if (typeof value === "number" || typeof value === "boolean")
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (typeof value === "string") {
+    return `"${value}"`;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
-  if (typeof value === "function")
+  }
+  if (typeof value === "function") {
     return `[Function ${value.name || "anonymous"}]`;
-  if (value instanceof Date) return `Date(${value.toISOString()})`;
-  if (value instanceof RegExp) return value.toString();
+  }
+  if (value instanceof Date) {
+    return `Date(${value.toISOString()})`;
+  }
+  if (value instanceof RegExp) {
+    return value.toString();
+  }
 
   if (Array.isArray(value)) {
     if (value.length === 0) return "[]";
@@ -30,6 +42,11 @@ export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
   }
 
   if (typeof value === "object") {
+    if (isSignal(value)) {
+      const signalValue = value.peek();
+      return `signal(${stringifyForDisplay(signalValue, maxDepth, currentDepth + 1)})`;
+    }
+
     const entries = Object.entries(value);
     if (entries.length === 0) return "{}";
 
@@ -64,4 +81,14 @@ export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
   }
 
   return String(value);
+};
+
+export const isSignal = (value) => {
+  return (
+    value &&
+    typeof value === "object" &&
+    "value" in value &&
+    typeof value.peek === "function" &&
+    typeof value.subscribe === "function"
+  );
 };
