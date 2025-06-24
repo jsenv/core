@@ -108,7 +108,7 @@
         },
       ];
       const user = resource("user", { idKey: "id" });
-      const loadUsersActionTemplate = user.getAll(async (filters) => {
+      const loadUsersAction = user.getAll(async (filters) => {
         console.log("Loading users", filters);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return allUsers.filter((user) => {
@@ -129,11 +129,10 @@
         gender: undefined,
         department: undefined,
       });
-      const loadFilteredUsersAction =
-        loadUsersActionTemplate.bindParams(filtersSignal);
+      const loadFilteredUsersAction = loadUsersAction.bindParams(filtersSignal);
       loadFilteredUsersAction.load();
 
-      const loadUserActionTemplate = user.get(async ({ id }) => {
+      const loadUserAction = user.get(async ({ id }) => {
         await new Promise((resolve) => setTimeout(resolve, 300));
         const foundUser = allUsers.find((u) => u.id === id);
         if (!foundUser) {
@@ -184,7 +183,7 @@
             // Recharger l'utilisateur pour voir la mise à jour
             const userAction = getItemAction(
               allUsers[userIndex],
-              loadUserActionTemplate,
+              loadUserAction,
             );
             userAction.reload();
           }
@@ -335,7 +334,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const UserItem = ({ user, onUpdateName }) => {
-        const userAction = getItemAction(user, loadUserActionTemplate);
+        const userAction = getItemAction(user, loadUserAction);
         const {
           data: loadedUser,
           pending,
