@@ -132,6 +132,10 @@
       const loadFilteredUsersAction = loadUsersAction.bindParams(filtersSignal);
       loadFilteredUsersAction.load();
 
+      const renameUserAction = user.put(({ id, name }) => {
+        return { id, name };
+      });
+
       const loadUserAction = user.get(async ({ id }) => {
         await new Promise((resolve) => setTimeout(resolve, 300));
         const foundUser = allUsers.find((u) => u.id === id);
@@ -143,7 +147,7 @@
           loadedAt: new Date().toLocaleTimeString(),
         };
       });
-      const createUserActionTemplate = user.post(async (newUser) => {
+      const createUserAction = user.post(async (newUser) => {
         await new Promise((resolve) => setTimeout(resolve, 500));
         return newUser;
       });
@@ -171,22 +175,9 @@
             department: newUserDept,
           };
           setNewUserName("");
-          const createUserAction = createUserActionTemplate.bindParams(newUser);
-          createUserAction.load();
-        };
-
-        const updateUserName = (userId, newName) => {
-          const userIndex = allUsers.findIndex((u) => u.id === userId);
-          if (userIndex >= 0) {
-            allUsers[userIndex].name = newName;
-
-            // Recharger l'utilisateur pour voir la mise à jour
-            const userAction = getItemAction(
-              allUsers[userIndex],
-              loadUserAction,
-            );
-            userAction.reload();
-          }
+          allUsers.push(newUser);
+          const createUser = createUserAction.bindParams(newUser);
+          createUser.load();
         };
 
         return (
@@ -278,13 +269,21 @@
                 Filtered Users from Server {loadingUsers && "- Loading..."}
               </h3>
               <p>Count: {serverUsers.length}</p>
-              {serverUsers.map((user) => (
-                <UserItem
-                  key={user.id}
-                  user={user}
-                  onUpdateName={updateUserName}
-                />
-              ))}
+              {serverUsers.map((user) => {
+                const renameAction = getItemAction(user, renameUserAction);
+                return (
+                  <UserItem
+                    key={user}
+                    user={user}
+                    onUpdateName={(name) => {
+                      const renameToAction = renameAction.bindParams({
+                        name,
+                      });
+                      renameToAction.load();
+                    }}
+                  />
+                );
+              })}
             </div>
 
             {/* Création d'utilisateur */}
@@ -344,7 +343,7 @@
         const [newName, setNewName] = useState(user.name);
 
         const handleNameUpdate = () => {
-          onUpdateName(user.id, newName);
+          onUpdateName(newName);
           setEditingName(false);
         };
 
