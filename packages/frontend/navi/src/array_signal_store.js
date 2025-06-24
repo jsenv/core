@@ -89,6 +89,7 @@ export const arraySignalStore = (
       Object.getPrototypeOf(item),
       Object.getOwnPropertyDescriptors(item),
     );
+    const triggerPropertyChangeSet = new Set();
     for (const key of Object.keys(props)) {
       const newValue = props[key];
       if (key in item) {
@@ -99,9 +100,11 @@ export const arraySignalStore = (
           const propertyChangeCallbackSet =
             propertyChangeCallbackSetMap.get(key);
           if (propertyChangeCallbackSet) {
-            for (const propertyChangeCallback of propertyChangeCallbackSet) {
-              propertyChangeCallback(newValue, value, false, key);
-            }
+            triggerPropertyChangeSet.add(() => {
+              for (const propertyChangeCallback of propertyChangeCallbackSet) {
+                propertyChangeCallback(newValue, value, itemWithProps);
+              }
+            });
           }
         }
       } else {
@@ -109,17 +112,17 @@ export const arraySignalStore = (
         itemWithProps[key] = newValue;
         const propertyChangeCallbackSet = propertyChangeCallbackSetMap.get(key);
         if (propertyChangeCallbackSet) {
-          for (const propertyChangeCallback of propertyChangeCallbackSet) {
-            propertyChangeCallback(
-              newValue,
-              undefined,
-              // third arg says "new"
-              true,
-              key,
-            );
-          }
+          triggerPropertyChangeSet.add(() => {
+            for (const propertyChangeCallback of propertyChangeCallbackSet) {
+              propertyChangeCallback(newValue, undefined, itemWithProps);
+            }
+          });
         }
       }
+    }
+    // we call at the end so that itemWithProps is fully set
+    for (const triggerPropertyChange of triggerPropertyChangeSet) {
+      triggerPropertyChange();
     }
     return modified ? itemWithProps : item;
   };

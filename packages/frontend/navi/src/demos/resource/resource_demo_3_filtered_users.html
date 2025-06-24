@@ -109,14 +109,15 @@
       const user = resource("user", {
         idKey: "id",
         mutableIdKey: "name",
-        propertyMutationObservers: {
-          name: {
-            changed: () => {},
-            dropped: () => {},
-            reinserted: () => {},
-          },
-        },
       });
+      user.store.registerPropertyChangeCallback(
+        "name",
+        (value, oldValue, user) => {
+          console.log(
+            `user ${user.id} name changed from "${oldValue}" to "${value}"`,
+          );
+        },
+      );
       const loadUsersAction = user.getAll(async (filters) => {
         console.log("Loading users", filters);
         await new Promise((resolve) => setTimeout(resolve, 500));
