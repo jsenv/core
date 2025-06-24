@@ -1,5 +1,6 @@
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
-import { getActionPrivateProperties, useActionStatus } from "./actions.js";
+import { getActionPrivateProperties } from "./action_private_properties.js";
+import { useActionStatus } from "./actions.js";
 
 const renderOtherwiseDefault = () => null;
 const renderLoadingDefault = () => null;
