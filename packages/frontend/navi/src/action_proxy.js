@@ -1,9 +1,11 @@
-import { computed, effect } from "@preact/signals";
+import { computed, effect, signal } from "@preact/signals";
 import {
   getActionPrivateProperties,
   setActionPrivateProperties,
 } from "./action_private_properties.js";
 import { isSignal } from "./actions_helpers.js";
+
+let debug = false;
 
 export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {
   if (isSignal(paramsMapOrSignal)) {
@@ -74,7 +76,7 @@ const createActionProxyFromSignal = (
     load: proxyMethod("load"),
     reload: proxyMethod("reload"),
     unload: proxyMethod("unload"),
-    toString: undefined,
+    toString: () => actionProxy.name,
   };
   onActionTargetChange((actionTarget) => {
     const currentAction = actionTarget || action;
@@ -84,18 +86,31 @@ const createActionProxyFromSignal = (
     actionProxy.loadingState = currentAction.loadingState;
     actionProxy.error = currentAction.error;
     actionProxy.data = currentAction.data;
-    actionProxy.toString = () => actionProxy.name;
   });
 
   const proxyPrivateSignal = (signalPropertyName, propertyName) => {
-    const signalProxy = computed(() => {
-      const currentActionSignal =
-        currentActionPrivateProperties[signalPropertyName];
-      const value = currentActionSignal.value;
-      if (propertyName) {
-        actionProxy[propertyName] = value;
+    const signalProxy = signal();
+    onActionTargetChange(() => {
+      if (debug) {
+        console.debug(
+          `listening "${signalPropertyName}" on "${currentAction}"`,
+        );
       }
-      return value;
+      const dispose = effect(() => {
+        const currentActionSignal =
+          currentActionPrivateProperties[signalPropertyName];
+        const currentActionSignalValue = currentActionSignal.value;
+        if (debug) {
+          console.debug(
+            `"${signalPropertyName}" value is "${currentActionSignalValue}"`,
+          );
+        }
+        signalProxy.value = currentActionSignalValue;
+        if (propertyName) {
+          actionProxy[propertyName] = currentActionSignalValue;
+        }
+      });
+      return dispose;
     });
     return signalProxy;
   };
@@ -127,6 +142,7 @@ const createActionProxyFromSignal = (
   {
     let actionTargetPrevious = null;
     let isFirstEffect = true;
+    const changeCleanupCallbackSet = new Set();
     effect(() => {
       actionTargetPrevious = actionTarget;
       const params = paramsSignal.value;
@@ -145,24 +161,29 @@ const createActionProxyFromSignal = (
       if (isFirstEffect) {
         isFirstEffect = false;
       }
+      for (const changeCleanupCallback of changeCleanupCallbackSet) {
+        changeCleanupCallback();
+      }
+      changeCleanupCallbackSet.clear();
       for (const callback of actionTargetChangeCallbackSet) {
-        callback(actionTarget, actionTargetPrevious);
+        const returnValue = callback(actionTarget, actionTargetPrevious);
+        if (typeof returnValue === "function") {
+          changeCleanupCallbackSet.add(returnValue);
+        }
       }
     });
   }
 
   if (reloadOnChange) {
-    onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (actionTargetPrevious && actionTarget) {
+    onActionTargetChange((actionTarget) => {
+      if (currentAction.loadRequested) {
         actionTarget.reload();
       }
     });
   }
   if (onChange) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (actionTargetPrevious) {
-        onChange(actionTarget, actionTargetPrevious);
-      }
+      onChange(actionTarget, actionTargetPrevious);
     });
   }
 
