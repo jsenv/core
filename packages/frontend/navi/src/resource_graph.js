@@ -1,5 +1,5 @@
 import { computed, signal } from "@preact/signals";
-import { createActionTemplate } from "./actions.js";
+import { createAction } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 
@@ -7,13 +7,13 @@ const itemActionMapSymbol = Symbol("item_action_map");
 
 let debug = true;
 
-export const getItemAction = (item, actionTemplate) => {
+export const getItemAction = (item, parentAction) => {
   const itemActionMap = item[itemActionMapSymbol];
   if (!itemActionMap) {
     console.error(item);
     throw new Error(`itemActionMap is not defined on item`);
   }
-  const action = itemActionMap.get(actionTemplate);
+  const action = itemActionMap.get(parentAction);
   return action;
 };
 
@@ -285,18 +285,18 @@ const createMethodsForStore = ({
     },
   };
 
-  const autoAssociateItemAction = (actionTemplate) => {
+  const autoAssociateItemAction = (action) => {
     resourceInstance.addItemSetup((item) => {
-      const itemAction = actionTemplate.bindParams({
+      const itemAction = action.bindParams({
         [idKey]: item[idKey],
       });
-      item[itemActionMapSymbol].set(actionTemplate, itemAction);
+      item[itemActionMapSymbol].set(action, itemAction);
     });
   };
 
   return {
     getAll: (callback, options) => {
-      const getAllActionTemplate = createActionTemplate(
+      const getAllAction = createAction(
         mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.getAll),
         {
           name: `${name}.getAll`,
@@ -308,17 +308,17 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-      return getAllActionTemplate;
+      return getAllAction;
     },
     get: (callback, options) => {
-      const getActionTemplate = createActionTemplate(
+      const getAction = createAction(
         mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.get),
         {
           name: `${name}.get`,
           ...options,
         },
       );
-      autoAssociateItemAction(getActionTemplate);
+      autoAssociateItemAction(getAction);
       // store.registerPropertyLifecycle(resource.activeItemSignal, key, {
       //   changed: () => {
       //     // updateMatchingActionParams(getActionTemplate, { [key]: value });
@@ -340,50 +340,50 @@ const createMethodsForStore = ({
       //     reloadActions({ reason: `${value} reinserted` });
       //   },
       // });
-      return getActionTemplate;
+      return getAction;
     },
     post: (callback, options) => {
-      const postActionTemplate = createActionTemplate(
+      const postAction = createAction(
         mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.post),
         {
           name: `${name}.post`,
           ...options,
         },
       );
-      return postActionTemplate;
+      return postAction;
     },
     put: (callback, options) => {
-      const putActionTemplate = createActionTemplate(
+      const putAction = createAction(
         mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.put),
         {
           name: `${name}.put`,
           ...options,
         },
       );
-      autoAssociateItemAction(putActionTemplate);
-      return putActionTemplate;
+      autoAssociateItemAction(putAction);
+      return putAction;
     },
     patch: (callback, options) => {
-      const patchActionTemplate = createActionTemplate(
+      const patchAction = createAction(
         mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.patch),
         {
           name: `${name}.patch`,
           ...options,
         },
       );
-      autoAssociateItemAction(patchActionTemplate);
-      return patchActionTemplate;
+      autoAssociateItemAction(patchAction);
+      return patchAction;
     },
     delete: (callback, options) => {
-      const deleteActionTemplate = createActionTemplate(
+      const deleteAction = createAction(
         mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.delete),
         {
           name: `${name}.delete`,
           ...options,
         },
       );
-      autoAssociateItemAction(deleteActionTemplate);
-      return deleteActionTemplate;
+      autoAssociateItemAction(deleteAction);
+      return deleteAction;
     },
   };
 };
