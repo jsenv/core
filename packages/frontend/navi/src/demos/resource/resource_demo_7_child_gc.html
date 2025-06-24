@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demo - Child Action GC</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 400px"></div>
+    <div id="controls" style="margin-top: 20px">
+      <button id="createBtn">Create Child Action + UI</button>
+      <button id="destroyBtn" disabled>Destroy Child Action + UI</button>
+      <button id="gcBtn">Force GC + Check</button>
+    </div>
+    <div id="status" style="margin-top: 10px; font-family: monospace"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { createAction, useActionStatus } from "@jsenv/navi";
+
+      // Parent action created outside UI (persistent)
+      const parentAction = createAction(
+        (params) => {
+          return new Promise((resolve) => {
+            setTimeout(
+              () =>
+                resolve(
+                  `User ${params.userId} loaded at ${new Date().toLocaleTimeString()}`,
+                ),
+              1000,
+            );
+          });
+        },
+        { name: "loadUserAction" },
+      );
+
+      let currentChildAction = null;
+      let childActionWeakRef = null;
+      let componentWeakRef = null;
+
+      const updateStatus = () => {
+        const statusDiv = document.getElementById("status");
+        const childActionAlive = childActionWeakRef?.deref() !== undefined;
+        const componentAlive = componentWeakRef?.deref() !== undefined;
+
+        statusDiv.innerHTML = `
+          Parent Action: ✅ EXISTS (persistent)
+          Child Action alive: ${childActionAlive ? "✅ YES" : "❌ NO"}
+          Component alive: ${componentAlive ? "✅ YES" : "❌ NO"}
+          CurrentChildAction reference: ${currentChildAction ? "✅ EXISTS" : "❌ NULL"}
+        `;
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const UserProfile = ({ childAction }) => {
+        const { matching, data, pending } = useActionStatus(childAction);
+
+        return (
+          <div
+            style={{
+              border: "1px solid #ccc",
+              padding: "10px",
+              margin: "10px 0",
+            }}
+          >
+            <h3>User Profile Component</h3>
+            <p>Child Action Name: {childAction.name}</p>
+            <p>User ID: {childAction.params.userId}</p>
+            <details
+              open={matching}
+              onToggle={(e) => {
+                if (e.target.open) {
+                  childAction.load();
+                } else {
+                  childAction.unload();
+                }
+              }}
+            >
+              <summary>User Profile {pending ? "(loading...)" : ""}</summary>
+              <div>{data || "No data"}</div>
+            </details>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [showUserProfile] = useState(false);
+
+        return (
+          <div>
+            <h2>Child Action GC Test</h2>
+            <p>
+              Status:{" "}
+              {showUserProfile ? "Component mounted" : "Component unmounted"}
+            </p>
+            {showUserProfile && currentChildAction && (
+              <UserProfile childAction={currentChildAction} />
+            )}
+          </div>
+        );
+      };
+
+      // Fonctions de test
+      const createChildActionAndUI = () => {
+        console.log("🏗️ Creating child action and UI...");
+        console.log("Parent action:", parentAction.name);
+
+        // Créer l'action enfant via bindParams
+        currentChildAction = parentAction.bindParams({ userId: 42 });
+        console.log("Child action created:", currentChildAction.name);
+
+        // Créer les WeakRef pour le monitoring
+        childActionWeakRef = new WeakRef(currentChildAction);
+
+        // eslint-disable-next-line no-unused-vars
+        const AppWithState = () => {
+          const [showUserProfile] = useState(true);
+
+          // eslint-disable-next-line no-unused-vars
+          const UserProfileRef = ({ childAction }) => {
+            const component = <UserProfile childAction={childAction} />;
+            if (!componentWeakRef) {
+              componentWeakRef = new WeakRef(component);
+            }
+            return component;
+          };
+
+          return (
+            <div>
+              <h2>Child Action GC Test</h2>
+              <p>Status: Component mounted</p>
+              <p>Parent Action: {parentAction.name}</p>
+              <p>Child Action: {currentChildAction.name}</p>
+              {showUserProfile && currentChildAction && (
+                <UserProfileRef childAction={currentChildAction} />
+              )}
+            </div>
+          );
+        };
+
+        render(<AppWithState />, document.querySelector("#root"));
+
+        document.getElementById("createBtn").disabled = true;
+        document.getElementById("destroyBtn").disabled = false;
+
+        updateStatus();
+      };
+
+      const destroyChildActionAndUI = () => {
+        console.log("🗑️ Destroying child action and UI...");
+
+        // Démonter le composant
+        render(
+          <div>
+            <h2>Child Action GC Test</h2>
+            <p>Status: Component unmounted</p>
+            <p>Parent Action: {parentAction.name} (still exists)</p>
+          </div>,
+          document.querySelector("#root"),
+        );
+
+        // Supprimer la référence forte à l'action enfant
+        currentChildAction = null;
+
+        document.getElementById("createBtn").disabled = false;
+        document.getElementById("destroyBtn").disabled = true;
+
+        console.log(
+          "🧹 Child action reference cleared, should be eligible for GC",
+        );
+        console.log("Parent action still exists:", parentAction.name);
+        updateStatus();
+      };
+
+      const forceGCAndCheck = async () => {
+        console.log("🔄 Forcing GC...");
+
+        // Forcer le garbage collection (si disponible)
+        if (window.gc) {
+          window.gc();
+        } else {
+          // Fallback: créer de la pression mémoire
+          const arrays = [];
+          for (let i = 0; i < 100; i++) {
+            arrays.push(new Array(100000).fill(Math.random()));
+          }
+          // Laisser les arrays être collectées
+          arrays.length = 0;
+        }
+
+        // Attendre un peu pour que le GC ait le temps de s'exécuter
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        updateStatus();
+
+        // Vérifier le résultat
+        const childActionAlive = childActionWeakRef?.deref() !== undefined;
+        const componentAlive = componentWeakRef?.deref() !== undefined;
+
+        console.log("📊 GC Results:");
+        console.log(
+          `  Parent Action: ✅ ALIVE (expected - persistent reference)`,
+        );
+        console.log(
+          `  Child Action: ${childActionAlive ? "❌ ALIVE" : "✅ GC'd"}`,
+        );
+        console.log(`  Component: ${componentAlive ? "❌ ALIVE" : "✅ GC'd"}`);
+
+        if (!childActionAlive && !componentAlive) {
+          console.log(
+            "✅ SUCCESS: Child action and component were garbage collected!",
+          );
+          console.log("✅ Parent action correctly preserved");
+        } else {
+          console.log("❌ ISSUE: Some objects are still alive");
+          if (childActionAlive) console.log("  - Child action is still alive");
+          if (componentAlive) console.log("  - Component is still alive");
+        }
+      };
+
+      // Event listeners
+      document
+        .getElementById("createBtn")
+        .addEventListener("click", createChildActionAndUI);
+      document
+        .getElementById("destroyBtn")
+        .addEventListener("click", destroyChildActionAndUI);
+      document
+        .getElementById("gcBtn")
+        .addEventListener("click", forceGCAndCheck);
+
+      // Initial render
+      render(<App />, document.querySelector("#root"));
+      updateStatus();
+    </script>
+  </body>
+</html>
