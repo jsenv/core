@@ -157,7 +157,6 @@ const createActionProxyFromSignal = (
         currentActionPrivateProperties = getActionPrivateProperties(action);
       }
 
-      actionTargetPrevious = actionTarget;
       if (isFirstEffect) {
         isFirstEffect = false;
       }
@@ -171,12 +170,13 @@ const createActionProxyFromSignal = (
           changeCleanupCallbackSet.add(returnValue);
         }
       }
+      actionTargetPrevious = actionTarget;
     });
   }
 
   if (reloadOnChange) {
-    onActionTargetChange((actionTarget) => {
-      if (currentAction.loadRequested) {
+    onActionTargetChange((actionTarget, actionTargetPrevious) => {
+      if (actionTargetPrevious.loadRequested) {
         actionTarget.reload();
       }
     });

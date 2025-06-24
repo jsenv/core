@@ -37,7 +37,7 @@
         return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
       });
 
-      const loadUserActionTemplate = user.get(({ name }) => {
+      const loadUserAction = user.get(({ name }) => {
         return { name, greeting: `Hello ${name}` };
       });
 
@@ -53,7 +53,7 @@
         }
       });
 
-      const activeUserAction = createActionProxy(loadUserActionTemplate, {
+      const activeUserAction = createActionProxy(loadUserAction, {
         name: activeUsernameSignal,
       });
       if (activeUsernameSignal.peek()) {
@@ -66,9 +66,9 @@
         const { data: users } = useActionStatus(loadUsersAction);
 
         const [dam, seb, john] = users;
-        const damUserAction = getItemAction(dam, loadUserActionTemplate);
-        const sebUserAction = getItemAction(seb, loadUserActionTemplate);
-        const johnUserAction = getItemAction(john, loadUserActionTemplate);
+        const damUserAction = getItemAction(dam, loadUserAction);
+        const sebUserAction = getItemAction(seb, loadUserAction);
+        const johnUserAction = getItemAction(john, loadUserAction);
 
         return (
           <div>
