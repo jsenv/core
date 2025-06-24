@@ -16,7 +16,7 @@ export const ActionRenderer = ({ action, children }) => {
     error: renderError = renderErrorDefault,
     loaded: renderLoaded,
   } = typeof children === "function" ? { loaded: children } : children || {};
-  const { active, idle, pending, error, data } = useActionStatus(action);
+  const { idle, pending, error, data } = useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
 
@@ -31,7 +31,7 @@ export const ActionRenderer = ({ action, children }) => {
     };
   }, []);
 
-  if (!active || idle) {
+  if (idle) {
     return renderOtherwise(action);
   }
   if (errorBoundary) {

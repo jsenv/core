@@ -1140,12 +1140,6 @@ const createActionProxyFromSignal = (
 };
 
 export const useActionStatus = (action) => {
-  if (action.isTemplate) {
-    throw new Error(
-      `useActionStatus() cannot be used on an action template, only on an action.`,
-    );
-  }
-
   const {
     paramsSignal,
     loadingStateSignal,
@@ -1165,7 +1159,6 @@ export const useActionStatus = (action) => {
   const data = computedDataSignal.value;
 
   return {
-    active: true,
     params,
     idle,
     error,

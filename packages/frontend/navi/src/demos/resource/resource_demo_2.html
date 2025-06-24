@@ -53,18 +53,12 @@
         }
       });
 
-      const activeUserAction = createActionProxy(
-        loadUserActionTemplate,
-        {
-          name: activeUsernameSignal,
-        },
-        {
-          onChange: () => {
-            activeUserAction.reload();
-          },
-        },
-      );
-      activeUserAction.load();
+      const activeUserAction = createActionProxy(loadUserActionTemplate, {
+        name: activeUsernameSignal,
+      });
+      if (activeUsernameSignal.peek()) {
+        activeUserAction.load();
+      }
       loadUsersAction.load();
 
       // eslint-disable-next-line no-unused-vars
