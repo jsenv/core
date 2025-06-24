@@ -548,12 +548,6 @@ export const createAction = (callback, rootOptions) => {
       });
     };
     const bindParams = (newParamsOrSignal, options = {}) => {
-      // ✅ FIX: Don't cache proxy-internal bindParams calls
-      if (options._isProxyInternal) {
-        return _bindParams(newParamsOrSignal, options);
-      }
-
-      // ✅ Only cache user-facing bindParams calls
       const existingChildAction = childActionWeakMap.get(newParamsOrSignal);
       if (existingChildAction) {
         return existingChildAction;
@@ -921,12 +915,11 @@ const createActionProxyFromSignal = (
     ui: undefined,
   };
   onActionTargetChange(() => {
-    proxyPrivateProperties.ui = currentAction.ui;
+    proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
   });
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
 
   {
-    let actionTargetPrevious = null;
     let isFirstEffect = true;
     const changeCleanupCallbackSet = new Set();
     const actionWeakRef = new WeakRef(action);
@@ -940,11 +933,12 @@ const createActionProxyFromSignal = (
         return;
       }
 
-      const previousTarget = actionTargetPrevious;
+      const previousTarget = actionTarget;
       const params = paramsSignal.value;
       if (params) {
-        // ✅ FIX: Mark as proxy-internal to avoid caching
-        actionTarget = actionRef.bindParams(params, { _isProxyInternal: true });
+        // ✅ FIX: Use normal bindParams to allow caching of proxy targets
+        // The GC issue will be solved by not holding strong reference to previousTarget
+        actionTarget = actionRef.bindParams(params);
         currentAction = actionTarget;
         currentActionPrivateProperties =
           getActionPrivateProperties(actionTarget);
@@ -967,7 +961,6 @@ const createActionProxyFromSignal = (
           changeCleanupCallbackSet.add(returnValue);
         }
       }
-      actionTargetPrevious = null;
     });
   }
 
