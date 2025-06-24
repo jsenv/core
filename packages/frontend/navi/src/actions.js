@@ -603,7 +603,7 @@ export const getActionPrivateProperties = (action) => {
   return actionPrivateProperties;
 };
 
-export const createActionTemplate = (
+export const createAction = (
   callback,
   {
     name = callback.name || "anonymous",
@@ -618,8 +618,17 @@ export const createActionTemplate = (
     keepOldData = false,
   } = {},
 ) => {
-  const instantiate = (instanceParams = initialParams, options = {}) => {
-    let params = instanceParams;
+  // Cache des actions enfants basé sur les paramètres
+  const childActionsWeakMap = createJsValueWeakMap();
+
+  const createChildAction = (childParams, options = {}) => {
+    // Vérifier si on a déjà une action pour ces paramètres
+    const existingChild = childActionsWeakMap.get(childParams);
+    if (existingChild) {
+      return existingChild;
+    }
+
+    let params = childParams;
     let instanceName = name;
     const args = [];
     if (params === null || typeof params !== "object") {
@@ -648,12 +657,12 @@ export const createActionTemplate = (
 
     const preload = () => {
       return requestActionsUpdates({
-        preloadSet: new Set([action]),
+        preloadSet: new Set([childAction]),
       });
     };
     const load = (options) =>
       requestActionsUpdates({
-        loadSet: new Set([action]),
+        loadSet: new Set([childAction]),
         ...options,
       });
     const reload = (options) => {
@@ -661,22 +670,19 @@ export const createActionTemplate = (
     };
     const unload = () =>
       requestActionsUpdates({
-        unloadSet: new Set([action]),
+        unloadSet: new Set([childAction]),
       });
     const abort = () => {
       if (loadingState !== LOADING) {
         return undefined;
       }
       return requestActionsUpdates({
-        unloadSet: new Set([action]),
+        unloadSet: new Set([childAction]),
       });
     };
 
+    // ✅ NOUVEAU : bindParams sur une action crée une action enfant
     const bindParams = (newParamsOrSignal, options) => {
-      if (instanceParams === initialParamsDefault) {
-        return createActionProxy(action, newParamsOrSignal, options);
-      }
-
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
           const newParams = newParamsOrSignal.value;
@@ -685,30 +691,30 @@ export const createActionTemplate = (
             return newParams;
           }
 
-          if (instanceParams === null || typeof instanceParams !== "object") {
+          if (params === null || typeof params !== "object") {
             return newParams;
           }
 
-          return { ...instanceParams, ...newParams };
+          return { ...params, ...newParams };
         });
-        return createActionProxy(action, combinedParamsSignal, options);
+        return createActionProxy(childAction, combinedParamsSignal, options);
       }
 
       if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
-        if (instanceParams === null || typeof instanceParams !== "object") {
-          // Params existants primitifs -> remplacés par l'objet
-          return createActionProxy(action, newParamsOrSignal, options);
+        if (params === null || typeof params !== "object") {
+          return childAction.bindParams(newParamsOrSignal, options);
         }
-        const combinedParams = { ...instanceParams, ...newParamsOrSignal };
-        return createActionProxy(action, combinedParams, options);
+        const combinedParams = { ...params, ...newParamsOrSignal };
+        return childAction.bindParams(combinedParams, options);
       }
 
       // Primitive
-      return createActionProxy(action, newParamsOrSignal, options);
+      return childAction.bindParams(newParamsOrSignal, options);
     };
 
-    const action = {
-      template: actionTemplate,
+    const childAction = {
+      rootAction: rootAction || childAction,
+      parentAction: parentAction || null,
       name: instanceName,
       params,
       loadingState,
@@ -723,9 +729,11 @@ export const createActionTemplate = (
       bindParams,
       toString: () => instanceName,
     };
-    Object.preventExtensions(action);
+    Object.preventExtensions(childAction);
+
+    // Effects pour synchroniser les propriétés
     effects: {
-      const actionWeakRef = new WeakRef(action);
+      const actionWeakRef = new WeakRef(childAction);
       const actionWeakEffect = (callback) => {
         const dispose = effect(() => {
           const actionRef = actionWeakRef.deref();
@@ -753,17 +761,20 @@ export const createActionTemplate = (
         actionRef.data = data;
       });
     }
+
+    // Propriétés privées identiques
     private_properties: {
       const ui = {
         renderLoaded: null,
         renderLoadedAsync: renderLoadedAsync || options.renderLoadedAsync,
       };
       let sideEffectCleanup;
+
       const performLoad = (loadParams) => {
         const { signal, reason, isPreload } = loadParams;
 
         if (isPreload) {
-          preloadedProtectionRegistry.protect(action);
+          preloadedProtectionRegistry.protect(childAction);
         }
 
         const abortController = new AbortController();
@@ -771,19 +782,19 @@ export const createActionTemplate = (
         const abort = (abortReason) => {
           loadingStateSignal.value = ABORTED;
           abortController.abort(abortReason);
-          actionAbortMap.delete(action);
+          actionAbortMap.delete(childAction);
           if (isPreload) {
-            preloadedProtectionRegistry.unprotect(action);
+            preloadedProtectionRegistry.unprotect(childAction);
           }
           if (debug) {
-            console.log(`"${action}": aborted (reason: ${abortReason})`);
+            console.log(`"${childAction}": aborted (reason: ${abortReason})`);
           }
         };
         const onabort = () => {
           abort(signal.reason);
         };
         signal.addEventListener("abort", onabort);
-        actionAbortMap.set(action, abort);
+        actionAbortMap.set(childAction, abort);
 
         batch(() => {
           errorSignal.value = null;
@@ -803,17 +814,17 @@ export const createActionTemplate = (
         const onLoadEnd = () => {
           dataSignal.value = loadResult;
           loadingStateSignal.value = LOADED;
-          actionAbortMap.delete(action);
-          actionPromiseMap.delete(action);
+          actionAbortMap.delete(childAction);
+          actionPromiseMap.delete(childAction);
           if (debug) {
-            console.log(`"${action}": loaded (reason: ${reason})`);
+            console.log(`"${childAction}": loaded (reason: ${reason})`);
           }
         };
         const onLoadError = (e) => {
           console.error(e);
           signal.removeEventListener("abort", onabort);
-          actionAbortMap.delete(action);
-          actionPromiseMap.delete(action);
+          actionAbortMap.delete(childAction);
+          actionPromiseMap.delete(childAction);
           if (abortSignal.aborted && e === abortSignal.reason) {
             return;
           }
@@ -822,7 +833,7 @@ export const createActionTemplate = (
             loadingStateSignal.value = FAILED;
           });
           if (debug) {
-            console.log(`"${action}": failed (error: ${e})`);
+            console.log(`"${childAction}": failed (error: ${e})`);
           }
         };
 
@@ -865,25 +876,26 @@ export const createActionTemplate = (
         }
         return undefined;
       };
+
       const performUnload = (reason) => {
-        const abort = actionAbortMap.get(action);
+        const abort = actionAbortMap.get(childAction);
         if (abort) {
           if (debug) {
-            console.log(`"${action}": aborting (reason: ${reason})`);
+            console.log(`"${childAction}": aborting (reason: ${reason})`);
           }
           abort(reason);
         } else if (debug) {
-          console.log(`"${action}": unloading (reason: ${reason})`);
+          console.log(`"${childAction}": unloading (reason: ${reason})`);
         }
 
-        preloadedProtectionRegistry.unprotect(action);
+        preloadedProtectionRegistry.unprotect(childAction);
 
         if (sideEffectCleanup) {
           sideEffectCleanup(reason);
           sideEffectCleanup = undefined;
         }
 
-        actionPromiseMap.delete(action);
+        actionPromiseMap.delete(childAction);
         batch(() => {
           errorSignal.value = null;
           if (!keepOldData) {
@@ -893,10 +905,11 @@ export const createActionTemplate = (
           loadingStateSignal.value = IDLE;
         });
       };
+
       const privateProperties = {
         initialLoadRequested,
         initialLoadingState,
-        initialParams: instanceParams,
+        initialParams: childParams,
         initialData,
         initialError,
 
@@ -911,45 +924,55 @@ export const createActionTemplate = (
         performUnload,
         ui,
       };
-      actionPrivatePropertiesWeakMap.set(action, privateProperties);
+      actionPrivatePropertiesWeakMap.set(childAction, privateProperties);
     }
-    return action;
+
+    // Cache l'action enfant
+    childActionsWeakMap.set(childParams, childAction);
+    return childAction;
   };
 
-  const actionParamsWeakMap = createJsValueWeakMap();
-  const memoizedInstantiate = (params, options) => {
-    const actionForParams = actionParamsWeakMap.get(params);
-    if (actionForParams) {
-      return actionForParams;
+  // ✅ L'action racine est créée avec les paramètres par défaut
+  const rootAction = createChildAction(initialParams);
+
+  // ✅ NOUVEAU : bindParams sur l'action racine
+  rootAction.bindParams = (newParamsOrSignal, options) => {
+    if (isSignal(newParamsOrSignal)) {
+      const combinedParamsSignal = computed(() => {
+        const newParams = newParamsOrSignal.value;
+
+        if (newParams === null || typeof newParams !== "object") {
+          return newParams;
+        }
+
+        if (initialParams === null || typeof initialParams !== "object") {
+          return newParams;
+        }
+
+        return { ...initialParams, ...newParams };
+      });
+      return createActionProxy(rootAction, combinedParamsSignal, options);
     }
-    const action = instantiate(params, options);
-    actionParamsWeakMap.set(params, action);
-    return action;
+
+    if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
+      if (initialParams === null || typeof initialParams !== "object") {
+        return createChildAction(newParamsOrSignal, options);
+      }
+      const combinedParams = { ...initialParams, ...newParamsOrSignal };
+      return createChildAction(combinedParams, options);
+    }
+
+    // Primitive
+    return createChildAction(newParamsOrSignal, options);
   };
 
-  const actionTemplate = {
-    isTemplate: true,
-    name,
-    initialParams,
-    initialLoadingState,
-    initialLoadRequested,
-    initialError,
-    initialData,
-    bindParams: memoizedInstantiate,
-  };
-
-  return actionTemplate;
+  return rootAction;
 };
 
+// ✅ MISE À JOUR : createActionProxy adapté
 export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {
-  const actionTemplate = action.isTemplate ? action : action.template;
-
   if (isSignal(paramsMapOrSignal)) {
-    return createActionProxyFromSignal(
-      actionTemplate,
-      paramsMapOrSignal,
-      options,
-    );
+    return createActionProxyFromSignal(action, paramsMapOrSignal, options);
   }
 
   if (paramsMapOrSignal && typeof paramsMapOrSignal === "object") {
@@ -967,7 +990,7 @@ export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {
     }
 
     if (signalMap.size === 0) {
-      return actionTemplate.bindParams(paramsMapOrSignal);
+      return action.bindParams(paramsMapOrSignal);
     }
 
     const paramsSignal = computed(() => {
@@ -982,12 +1005,12 @@ export const createActionProxy = (action, paramsMapOrSignal, options = {}) => {
       }
       return params;
     });
-    return createActionProxyFromSignal(actionTemplate, paramsSignal, options);
+    return createActionProxyFromSignal(action, paramsSignal, options);
   }
 
   // Valeur primitive
   const paramsSignal = signal(paramsMapOrSignal);
-  return createActionProxyFromSignal(actionTemplate, paramsSignal, options);
+  return createActionProxyFromSignal(action, paramsSignal, options);
 };
 
 const createActionProxyFromSignal = (
@@ -995,15 +1018,14 @@ const createActionProxyFromSignal = (
   paramsSignal,
   { reloadOnChange = true, onChange } = {},
 ) => {
-  const actionTemplate = action.isTemplate ? action : action.template;
-
   const getActionForParams = () => {
     const params = paramsSignal.value;
     if (!params) {
       return null;
     }
-    return actionTemplate.bindParams(params);
+    return action.bindParams(params);
   };
+
   const proxyMethod = (method) => {
     return (...args) => {
       const actionForParams = getActionForParams();
@@ -1016,17 +1038,17 @@ const createActionProxyFromSignal = (
 
   const actionProxy = {
     isProxy: true,
-    name: `Proxy on ${actionTemplate.name}`,
-    params: actionTemplate.initialParams,
-    loadRequested: actionTemplate.initialLoadRequested,
-    loadingState: actionTemplate.initialLoadingState,
-    error: actionTemplate.initialError,
-    data: actionTemplate.initialData,
+    name: `Proxy on ${action.name}`,
+    params: action.initialParams,
+    loadRequested: action.initialLoadRequested,
+    loadingState: action.initialLoadingState,
+    error: action.initialError,
+    data: action.initialData,
     preload: proxyMethod("preload"),
     load: proxyMethod("load"),
     reload: proxyMethod("reload"),
     unload: proxyMethod("unload"),
-    toString: () => `Proxy on ${actionTemplate.name}`,
+    toString: () => `Proxy on ${action.name}`,
   };
 
   const proxySignal = (
@@ -1040,7 +1062,7 @@ const createActionProxyFromSignal = (
         if (!propertyName) {
           return undefined;
         }
-        const initialValue = actionTemplate[initialValuePrivatePropertyName];
+        const initialValue = action[initialValuePrivatePropertyName];
         actionProxy[propertyName] = initialValue;
         return initialValue;
       }
@@ -1077,7 +1099,7 @@ const createActionProxyFromSignal = (
     const actionForParams = getActionForParams();
     actionProxy.name = actionForParams
       ? `[[Proxy]] ${actionForParams.name}`
-      : `[[Proxy]] ${actionTemplate.name}`;
+      : `[[Proxy]] ${action.name}`;
   });
 
   const proxyPrivateProperties = {
@@ -1124,7 +1146,7 @@ const createActionProxyFromSignal = (
         getActionPrivateProperties(actionForParams);
       return actionForParamsPrivateProperties.performUnload(...args);
     },
-    ui: actionTemplate.ui,
+    ui: action.ui,
   };
   actionPrivatePropertiesWeakMap.set(actionProxy, proxyPrivateProperties);
 
