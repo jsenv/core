@@ -4,13 +4,13 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Demo - Child Action GC</title>
+    <title>Demo - Proxy Target GC</title>
   </head>
   <body>
     <div id="root" style="position: relative; width: 400px"></div>
     <div id="controls" style="margin-top: 20px">
-      <button id="createBtn">Create Child Action + UI</button>
-      <button id="destroyBtn" disabled>Destroy Child Action + UI</button>
+      <button id="createBtn">Create Proxy + UI</button>
+      <button id="destroyBtn" disabled>Destroy Proxy + UI</button>
       <button id="gcBtn">Force GC + Check</button>
     </div>
     <div id="status" style="margin-top: 10px; font-family: monospace"></div>
@@ -19,43 +19,68 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { createAction, useActionStatus } from "@jsenv/navi";
+      import { signal } from "@preact/signals";
 
-      // Parent action created outside UI (persistent)
-      const parentAction = createAction(
+      // Base action created outside UI (persistent)
+      const baseAction = createAction(
         (params) => {
           return new Promise((resolve) => {
             setTimeout(
               () =>
                 resolve(
-                  `User ${params.userId} loaded at ${new Date().toLocaleTimeString()}`,
+                  `Page ${params.page} loaded at ${new Date().toLocaleTimeString()}`,
                 ),
-              1000,
+              800,
             );
           });
         },
-        { name: "loadUserAction" },
+        { name: "loadPageAction" },
       );
 
-      let currentChildAction = null;
-      let childActionWeakRef = null;
+      let currentProxy = null;
+      let proxyWeakRef = null;
       let componentWeakRef = null;
+      let pageSignal = null;
+      let oldTargetWeakRefs = [];
 
       const updateStatus = () => {
         const statusDiv = document.getElementById("status");
-        const childActionAlive = childActionWeakRef?.deref() !== undefined;
+        const proxyAlive = proxyWeakRef?.deref() !== undefined;
         const componentAlive = componentWeakRef?.deref() !== undefined;
+        const oldTargetsAlive = oldTargetWeakRefs.map(
+          (ref) => ref.deref() !== undefined,
+        );
+        const oldTargetsAliveCount = oldTargetsAlive.filter(Boolean).length;
 
         statusDiv.innerHTML = `
-          Parent Action: ✅ EXISTS (persistent)
-          Child Action alive: ${childActionAlive ? "✅ YES" : "❌ NO"}
+          Base Action: ✅ EXISTS (persistent)
+          Proxy alive: ${proxyAlive ? "✅ YES" : "❌ NO"}
           Component alive: ${componentAlive ? "✅ YES" : "❌ NO"}
-          CurrentChildAction reference: ${currentChildAction ? "✅ EXISTS" : "❌ NULL"}
+          CurrentProxy reference: ${currentProxy ? "✅ EXISTS" : "❌ NULL"}
+          Old targets alive: ${oldTargetsAliveCount}/${oldTargetWeakRefs.length}
         `;
       };
 
       // eslint-disable-next-line no-unused-vars
-      const UserProfile = ({ childAction }) => {
-        const { matching, data, pending } = useActionStatus(childAction);
+      const PageLoader = ({ proxyAction, pageSignal }) => {
+        const [currentPage, setCurrentPage] = useState(1);
+        const { matching, data, pending } = useActionStatus(proxyAction);
+
+        const changePage = (newPage) => {
+          // Before changing, create a direct reference to the current target
+          // to track if it gets GC'd when we change the signal
+          const currentTarget = baseAction.bindParams({ page: currentPage });
+          oldTargetWeakRefs.push(new WeakRef(currentTarget));
+
+          console.log(`📄 Changing from page ${currentPage} to ${newPage}`);
+          console.log(`📄 Old target created: ${currentTarget.name}`);
+          console.log(
+            `📄 Total old targets tracked: ${oldTargetWeakRefs.length}`,
+          );
+
+          setCurrentPage(newPage);
+          pageSignal.value = { page: newPage };
+        };
 
         return (
           <div
@@ -65,63 +90,92 @@
               margin: "10px 0",
             }}
           >
-            <h3>User Profile Component</h3>
-            <p>Child Action Name: {childAction.name}</p>
-            <p>User ID: {childAction.params.userId}</p>
+            <h3>Page Loader Component</h3>
+            <p>Proxy Name: {proxyAction.name}</p>
+            <p>Current Page: {currentPage}</p>
+            <div style={{ margin: "10px 0" }}>
+              <button
+                onClick={() => changePage(1)}
+                disabled={currentPage === 1}
+              >
+                Page 1
+              </button>
+              <button
+                onClick={() => changePage(2)}
+                disabled={currentPage === 2}
+              >
+                Page 2
+              </button>
+              <button
+                onClick={() => changePage(3)}
+                disabled={currentPage === 3}
+              >
+                Page 3
+              </button>
+            </div>
             <details
               open={matching}
               onToggle={(e) => {
                 if (e.target.open) {
-                  childAction.load();
+                  proxyAction.load();
                 } else {
-                  childAction.unload();
+                  proxyAction.unload();
                 }
               }}
             >
-              <summary>User Profile {pending ? "(loading...)" : ""}</summary>
+              <summary>Page Content {pending ? "(loading...)" : ""}</summary>
               <div>{data || "No data"}</div>
             </details>
+            <div style={{ marginTop: "10px", fontSize: "12px", color: "#666" }}>
+              Old targets tracked: {oldTargetWeakRefs.length}
+            </div>
           </div>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const [showUserProfile] = useState(false);
+        const [showPageLoader] = useState(false);
 
         return (
           <div>
-            <h2>Child Action GC Test</h2>
+            <h2>Proxy Target GC Test</h2>
             <p>
               Status:{" "}
-              {showUserProfile ? "Component mounted" : "Component unmounted"}
+              {showPageLoader ? "Component mounted" : "Component unmounted"}
             </p>
-            {showUserProfile && currentChildAction && (
-              <UserProfile childAction={currentChildAction} />
+            {showPageLoader && currentProxy && pageSignal && (
+              <PageLoader proxyAction={currentProxy} pageSignal={pageSignal} />
             )}
           </div>
         );
       };
 
       // Fonctions de test
-      const createChildActionAndUI = () => {
-        console.log("🏗️ Creating child action and UI...");
-        console.log("Parent action:", parentAction.name);
+      const createProxyAndUI = () => {
+        console.log("🏗️ Creating proxy and UI...");
+        console.log("Base action:", baseAction.name);
 
-        // Créer l'action enfant via bindParams
-        currentChildAction = parentAction.bindParams({ userId: 42 });
-        console.log("Child action created:", currentChildAction.name);
+        // Créer le signal pour les paramètres
+        pageSignal = signal({ page: 1 });
+
+        // Créer le proxy via bindParams avec le signal
+        currentProxy = baseAction.bindParams(pageSignal);
+        console.log("Proxy created:", currentProxy.name);
 
         // Créer les WeakRef pour le monitoring
-        childActionWeakRef = new WeakRef(currentChildAction);
+        proxyWeakRef = new WeakRef(currentProxy);
+        oldTargetWeakRefs = []; // Reset old targets tracking
 
         // eslint-disable-next-line no-unused-vars
         const AppWithState = () => {
-          const [showUserProfile] = useState(true);
+          const [showPageLoader] = useState(true);
 
           // eslint-disable-next-line no-unused-vars
-          const UserProfileRef = ({ childAction }) => {
-            const component = <UserProfile childAction={childAction} />;
+          const PageLoaderRef = ({ proxyAction, pageSignal }) => {
+            const component = (
+              <PageLoader proxyAction={proxyAction} pageSignal={pageSignal} />
+            );
             if (!componentWeakRef) {
               componentWeakRef = new WeakRef(component);
             }
@@ -130,12 +184,15 @@
 
           return (
             <div>
-              <h2>Child Action GC Test</h2>
+              <h2>Proxy Target GC Test</h2>
               <p>Status: Component mounted</p>
-              <p>Parent Action: {parentAction.name}</p>
-              <p>Child Action: {currentChildAction.name}</p>
-              {showUserProfile && currentChildAction && (
-                <UserProfileRef childAction={currentChildAction} />
+              <p>Base Action: {baseAction.name}</p>
+              <p>Proxy Action: {currentProxy.name}</p>
+              {showPageLoader && currentProxy && pageSignal && (
+                <PageLoaderRef
+                  proxyAction={currentProxy}
+                  pageSignal={pageSignal}
+                />
               )}
             </div>
           );
@@ -149,29 +206,31 @@
         updateStatus();
       };
 
-      const destroyChildActionAndUI = () => {
-        console.log("🗑️ Destroying child action and UI...");
+      const destroyProxyAndUI = () => {
+        console.log("🗑️ Destroying proxy and UI...");
 
         // Démonter le composant
         render(
           <div>
-            <h2>Child Action GC Test</h2>
+            <h2>Proxy Target GC Test</h2>
             <p>Status: Component unmounted</p>
-            <p>Parent Action: {parentAction.name} (still exists)</p>
+            <p>Base Action: {baseAction.name} (still exists)</p>
           </div>,
           document.querySelector("#root"),
         );
 
-        // Supprimer la référence forte à l'action enfant
-        currentChildAction = null;
+        // Supprimer les références fortes
+        currentProxy = null;
+        pageSignal = null;
 
         document.getElementById("createBtn").disabled = false;
         document.getElementById("destroyBtn").disabled = true;
 
         console.log(
-          "🧹 Child action reference cleared, should be eligible for GC",
+          "🧹 Proxy and signal references cleared, should be eligible for GC",
         );
-        console.log("Parent action still exists:", parentAction.name);
+        console.log("Base action still exists:", baseAction.name);
+        console.log(`Old targets to be checked: ${oldTargetWeakRefs.length}`);
         updateStatus();
       };
 
@@ -197,37 +256,51 @@
         updateStatus();
 
         // Vérifier le résultat
-        const childActionAlive = childActionWeakRef?.deref() !== undefined;
+        const proxyAlive = proxyWeakRef?.deref() !== undefined;
         const componentAlive = componentWeakRef?.deref() !== undefined;
+        const oldTargetsAlive = oldTargetWeakRefs.map(
+          (ref) => ref.deref() !== undefined,
+        );
+        const oldTargetsAliveCount = oldTargetsAlive.filter(Boolean).length;
 
         console.log("📊 GC Results:");
         console.log(
-          `  Parent Action: ✅ ALIVE (expected - persistent reference)`,
+          `  Base Action: ✅ ALIVE (expected - persistent reference)`,
         );
-        console.log(
-          `  Child Action: ${childActionAlive ? "❌ ALIVE" : "✅ GC'd"}`,
-        );
+        console.log(`  Proxy: ${proxyAlive ? "❌ ALIVE" : "✅ GC'd"}`);
         console.log(`  Component: ${componentAlive ? "❌ ALIVE" : "✅ GC'd"}`);
+        console.log(
+          `  Old targets: ${oldTargetsAliveCount}/${oldTargetWeakRefs.length} still alive`,
+        );
 
-        if (!childActionAlive && !componentAlive) {
+        if (oldTargetsAliveCount === 0) {
           console.log(
-            "✅ SUCCESS: Child action and component were garbage collected!",
+            "✅ SUCCESS: All old proxy targets were garbage collected!",
           );
-          console.log("✅ Parent action correctly preserved");
         } else {
-          console.log("❌ ISSUE: Some objects are still alive");
-          if (childActionAlive) console.log("  - Child action is still alive");
-          if (componentAlive) console.log("  - Component is still alive");
+          console.log("❌ ISSUE: Some old proxy targets are still alive");
+          oldTargetsAlive.forEach((alive, index) => {
+            if (alive) {
+              console.log(`  - Old target ${index + 1} is still alive`);
+            }
+          });
+        }
+
+        if (!proxyAlive && !componentAlive && oldTargetsAliveCount === 0) {
+          console.log(
+            "🎉 PERFECT: Proxy, component, and old targets all GC'd!",
+          );
+          console.log("✅ Base action correctly preserved");
         }
       };
 
       // Event listeners
       document
         .getElementById("createBtn")
-        .addEventListener("click", createChildActionAndUI);
+        .addEventListener("click", createProxyAndUI);
       document
         .getElementById("destroyBtn")
-        .addEventListener("click", destroyChildActionAndUI);
+        .addEventListener("click", destroyProxyAndUI);
       document
         .getElementById("gcBtn")
         .addEventListener("click", forceGCAndCheck);
