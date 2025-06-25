@@ -24,8 +24,8 @@
       import { localStorageSignal } from "../../local_storage_signal.js";
 
       const tables = [
-        { id: 1, name: "table_1", owner: 1 },
-        { id: 2, name: "table_2", owner: 2 },
+        { id: 1, name: "table_1", owner: { id: 1 } },
+        { id: 2, name: "table_2", owner: { id: 2 } },
       ];
       const users = [
         { id: 1, name: "User 1" },
@@ -85,7 +85,7 @@
             <ActionStatus action={currentTableAction} />
 
             <ActionRenderer action={currentTableAction}>
-              {(table) => <Table table={table} />}}
+              {(table) => <Table table={table} />}
             </ActionRenderer>
           </div>
         );

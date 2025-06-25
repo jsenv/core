@@ -2,7 +2,7 @@ import { useActionStatus } from "@jsenv/navi";
 import { stringifyForDisplay } from "../../actions_helpers.js";
 
 export const ActionStatus = ({ action, name = action.name }) => {
-  const { idle, preloaded, active, pending, params, error, aborted, data } =
+  const { idle, preloaded, pending, params, error, aborted, data } =
     useActionStatus(action);
 
   return (
@@ -27,15 +27,6 @@ export const ActionStatus = ({ action, name = action.name }) => {
                         : "loaded"}
             </strong>
           </span>
-        </div>
-        <div>
-          {active ? (
-            <span>
-              active: <strong>yes</strong>
-            </span>
-          ) : (
-            <span>active: no</span>
-          )}
         </div>
         <div style="display: flex; gap: 5px;">
           <span>params: </span>
