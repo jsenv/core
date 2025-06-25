@@ -611,10 +611,18 @@ export const createAction = (callback, rootOptions) => {
     };
 
     // ✅ Implement matchAllSelfOrDescendant
-    const matchAllSelfOrDescendant = (predicate) => {
+    const matchAllSelfOrDescendant = (predicate, { includeProxies } = {}) => {
       const matches = [];
 
       const traverse = (currentAction) => {
+        if (action.isProxy && !includeProxies) {
+          // proxy action should be ignored because the underlying action will be found anyway
+          // and if we check the proxy action we'll end up with duplicates
+          // (loading the proxy would load the action it proxies)
+          // and as they are 2 different objects they would be added to the set
+          return;
+        }
+
         if (predicate(currentAction)) {
           matches.push(currentAction);
         }
