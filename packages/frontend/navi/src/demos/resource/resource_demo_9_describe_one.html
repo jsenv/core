@@ -124,11 +124,6 @@
           setIsEditing(false);
         };
 
-        const getTableOwner = getTableOwnerAction.bindParams({
-          name: table.name,
-          ownerId: table.owner.id,
-        });
-
         const inputRef = useRef();
         useEffect(() => {
           if (isEditing) {

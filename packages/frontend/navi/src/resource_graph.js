@@ -273,17 +273,7 @@ const createMethodsForStore = ({
 }) => {
   const { idKey, name } = resourceInstance;
 
-  const idArraySignal = signal([]);
   const targetStoreMethodEffects = {
-    getAll: (propsArray) => {
-      const itemArray = targetStore.upsert(propsArray);
-      const idArray = itemArray.map((item) => item[idKey]);
-      idArraySignal.value = idArray;
-      return itemArray;
-    },
-    get: (props) => {
-      return targetStore.upsert(props);
-    },
     post: (propsOrPropsArray) => {
       return targetStore.upsert(propsOrPropsArray);
     },
@@ -301,49 +291,51 @@ const createMethodsForStore = ({
   return {
     getAll: (callback, options) => {
       const getAllAction = createAction(
-        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.getAll),
+        mapCallbackMaybeAsyncResult(callback, (propsArray) => {
+          const itemArray = targetStore.upsert(propsArray);
+          const idArray = itemArray.map((item) => item[idKey]);
+          return idArray;
+        }),
         {
           name: `${name}.getAll`,
           data: [],
-          computedDataSignal: computed(() => {
-            const idArray = idArraySignal.value;
+          compute: (idArray) => {
             const itemArray = targetStore.selectAll(idArray);
             return itemArray;
-          }),
+          },
           ...options,
         },
       );
       return getAllAction;
     },
     get: (callback, options) => {
+      if (sourceStore === targetStore) {
+        const getAction = createAction(
+          mapCallbackMaybeAsyncResult(callback, (props) => {
+            const item = targetStore.upsert(props);
+            return item;
+          }),
+          {
+            name: `${name}.get`,
+            ...options,
+          },
+        );
+        return getAction;
+      }
       const getAction = createAction(
-        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.get),
+        mapCallbackMaybeAsyncResult(callback, (props) => {
+          const item = targetStore.upsert(props);
+          const id = item[idKey];
+          return id;
+        }),
         {
           name: `${name}.get`,
+          compute: (id) => {
+            return targetStore.select(id);
+          },
           ...options,
         },
       );
-      // store.registerPropertyLifecycle(resource.activeItemSignal, key, {
-      //   changed: () => {
-      //     // updateMatchingActionParams(getActionTemplate, { [key]: value });
-      //   },
-      //   dropped: (value) => {
-      //     reloadActions({ reason: `${value} dropped` });
-      //   },
-      //   reinserted: (value) => {
-      //     // this will reload all actions already matching which works but
-      //     // - most of the time only "getAction" is impacted, any other action could stay as is
-      //     // - we already have the data, reloading the action will refetch the backend which is unnecessary
-      //     // we could just eventual action error (which is cause by 404 likely)
-      //     // to actually let the data be displayed
-      //     // because they are available, but in reality the action has no data
-      //     // because the fetch failed
-      //     // so conceptually reloading is fine,
-      //     // the only thing that bothers me a little is that it reloads all other actions
-      //     //  but thing is it might have impact on other actions so let's keep as is for now
-      //     reloadActions({ reason: `${value} reinserted` });
-      //   },
-      // });
       return getAction;
     },
     post: (callback, options) => {

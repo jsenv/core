@@ -432,7 +432,7 @@ export const createAction = (callback, rootOptions) => {
       loadingState = IDLE,
       error = null,
       data,
-      computedDataSignal,
+      compute,
       renderLoadedAsync,
       sideEffect = () => {},
       keepOldData = false,
@@ -445,6 +445,12 @@ export const createAction = (callback, rootOptions) => {
     const loadingStateSignal = signal(loadingState);
     const errorSignal = signal(error);
     const dataSignal = signal(initialData);
+    const computedDataSignal = computed
+      ? computed(() => {
+          const data = dataSignal.value;
+          return compute(data);
+        })
+      : dataSignal;
 
     const preload = () => {
       return requestActionsUpdates({
@@ -786,7 +792,7 @@ export const createAction = (callback, rootOptions) => {
         loadingStateSignal,
         loadRequestedSignal,
         dataSignal,
-        computedDataSignal: computedDataSignal || dataSignal,
+        computedDataSignal,
         errorSignal,
 
         performLoad,
