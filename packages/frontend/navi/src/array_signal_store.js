@@ -83,49 +83,6 @@ export const arraySignalStore = (
       propertyChangeCallbackSetMap.set(property, new Set([callback]));
     }
   };
-  const assign = (item, props) => {
-    let modified = false;
-    const itemWithProps = Object.create(
-      Object.getPrototypeOf(item),
-      Object.getOwnPropertyDescriptors(item),
-    );
-    const triggerPropertyChangeSet = new Set();
-    for (const key of Object.keys(props)) {
-      const newValue = props[key];
-      if (key in item) {
-        const value = item[key];
-        if (newValue !== value) {
-          modified = true;
-          itemWithProps[key] = newValue;
-          const propertyChangeCallbackSet =
-            propertyChangeCallbackSetMap.get(key);
-          if (propertyChangeCallbackSet) {
-            triggerPropertyChangeSet.add(() => {
-              for (const propertyChangeCallback of propertyChangeCallbackSet) {
-                propertyChangeCallback(newValue, value, itemWithProps);
-              }
-            });
-          }
-        }
-      } else {
-        modified = true;
-        itemWithProps[key] = newValue;
-        const propertyChangeCallbackSet = propertyChangeCallbackSetMap.get(key);
-        if (propertyChangeCallbackSet) {
-          triggerPropertyChangeSet.add(() => {
-            for (const propertyChangeCallback of propertyChangeCallbackSet) {
-              propertyChangeCallback(newValue, undefined, itemWithProps);
-            }
-          });
-        }
-      }
-    }
-    // we call at the end so that itemWithProps is fully set
-    for (const triggerPropertyChange of triggerPropertyChangeSet) {
-      triggerPropertyChange();
-    }
-    return modified ? itemWithProps : item;
-  };
 
   const itemDropCallbackSet = new Set();
   const registerItemDropCallback = (callback) => {
@@ -224,6 +181,54 @@ export const arraySignalStore = (
     return result;
   };
   const upsert = (...args) => {
+    const triggerPropertyChangeSet = new Set();
+    const triggerPropertyChanges = () => {
+      // we call at the end so that itemWithProps and arraySignal.value was set too
+      for (const triggerPropertyChange of triggerPropertyChangeSet) {
+        triggerPropertyChange();
+      }
+    };
+
+    const assign = (item, props) => {
+      let modified = false;
+      const itemWithProps = Object.create(
+        Object.getPrototypeOf(item),
+        Object.getOwnPropertyDescriptors(item),
+      );
+      for (const key of Object.keys(props)) {
+        const newValue = props[key];
+        if (key in item) {
+          const value = item[key];
+          if (newValue !== value) {
+            modified = true;
+            itemWithProps[key] = newValue;
+            const propertyChangeCallbackSet =
+              propertyChangeCallbackSetMap.get(key);
+            if (propertyChangeCallbackSet) {
+              triggerPropertyChangeSet.add(() => {
+                for (const propertyChangeCallback of propertyChangeCallbackSet) {
+                  propertyChangeCallback(newValue, value, itemWithProps);
+                }
+              });
+            }
+          }
+        } else {
+          modified = true;
+          itemWithProps[key] = newValue;
+          const propertyChangeCallbackSet =
+            propertyChangeCallbackSetMap.get(key);
+          if (propertyChangeCallbackSet) {
+            triggerPropertyChangeSet.add(() => {
+              for (const propertyChangeCallback of propertyChangeCallbackSet) {
+                propertyChangeCallback(newValue, undefined, itemWithProps);
+              }
+            });
+          }
+        }
+      }
+      return modified ? itemWithProps : item;
+    };
+
     const array = arraySignal.peek();
     if (args.length === 1 && Array.isArray(args[0])) {
       const propsArray = args[0];
@@ -281,6 +286,7 @@ export const arraySignalStore = (
 
       if (hasNew || hasUpdate) {
         arraySignal.value = arraySomeUpdated;
+        triggerPropertyChanges();
         return arrayWithOnlyAffectedItems;
       }
       return arrayWithOnlyAffectedItems;
@@ -335,21 +341,29 @@ export const arraySignalStore = (
     }
     if (updatedItem) {
       arraySignal.value = arraySomeUpdated;
+      triggerPropertyChanges();
       return updatedItem;
     }
     const item = createItemFromProps(props);
     arraySomeUpdated.push(item);
     arraySignal.value = arraySomeUpdated;
+    triggerPropertyChanges();
     return item;
   };
   const drop = (...args) => {
     if (args.length === 1 && Array.isArray(args[0])) {
+      const triggerDropSet = new Set();
+      const triggerItemDrops = () => {
+        for (const triggerDrop of triggerDropSet) {
+          triggerDrop();
+        }
+      };
+
       const data = args[0];
       const array = arraySignal.peek();
       const arrayWithoutDroppedItems = [];
       let hasFound = false;
       const idToRemoveSet = new Set(data);
-      const triggerDropSet = new Set();
       for (const existingItem of array) {
         const existingItemId = existingItem[idKey];
         if (idToRemoveSet.has(existingItemId)) {
@@ -366,9 +380,7 @@ export const arraySignalStore = (
       }
       if (hasFound) {
         arraySignal.value = arrayWithoutDroppedItems;
-        for (const triggerDrop of triggerDropSet) {
-          triggerDrop();
-        }
+        triggerItemDrops();
         return arrayWithoutDroppedItems;
       }
       return array;
