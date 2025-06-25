@@ -364,13 +364,13 @@ const createMethodsForStore = ({
     if (getManyAutoreload || getAutoreload) {
       const predicate =
         getManyAutoreload && getAutoreload
-          ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb !== "GET"
+          ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
           : getManyAutoreload
             ? (httpActionCandidate) =>
-                httpActionCandidate.meta.httpVerb !== "GET" &&
+                httpActionCandidate.meta.httpVerb === "GET" &&
                 httpActionCandidate.meta.httpMany === true
             : (httpActionCandidate) =>
-                httpActionCandidate.meta.httpVerb !== "GET" &&
+                httpActionCandidate.meta.httpVerb === "GET" &&
                 !httpActionCandidate.meta.httpMany;
       const toReloadSet =
         httpActionRegistry.findAliveActionsMatching(predicate);
@@ -389,7 +389,7 @@ const createMethodsForStore = ({
           return itemId;
         }),
         {
-          meta: { httpVerb: "GET", httpMany: false }, // ✅ Add httpMany flag
+          meta: { httpVerb: "GET", httpMany: false },
           name: `${name}.get`,
           compute: (itemId) => targetStore.select(itemId),
           ...options,
@@ -478,7 +478,7 @@ const createMethodsForStore = ({
           return idArray;
         }),
         {
-          meta: { httpVerb: "GET", httpMany: true }, // ✅ Add httpMany flag
+          meta: { httpVerb: "GET", httpMany: true },
           name: `${name}.getMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
