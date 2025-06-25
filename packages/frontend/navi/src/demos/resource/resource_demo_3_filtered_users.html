@@ -118,7 +118,7 @@
           );
         },
       );
-      const loadUsersAction = user.getAll(async (filters) => {
+      const loadManyUserAction = user.getMany(async (filters) => {
         console.log("Loading users", filters);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return allUsers.filter((user) => {
@@ -139,8 +139,9 @@
         gender: undefined,
         department: undefined,
       });
-      const loadFilteredUsersAction = loadUsersAction.bindParams(filtersSignal);
-      loadFilteredUsersAction.load();
+      const loadManyFilteredUserAction =
+        loadManyUserAction.bindParams(filtersSignal);
+      loadManyFilteredUserAction.load();
 
       const renameUserAction = user.put(async ({ id, name }) => {
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -166,7 +167,7 @@
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const { data: serverUsers, pending: loadingUsers } = useActionStatus(
-          loadFilteredUsersAction,
+          loadManyFilteredUserAction,
         );
 
         const [newUserName, setNewUserName] = useState("");
@@ -197,7 +198,7 @@
 
             <button
               onClick={() => {
-                loadFilteredUsersAction.reload();
+                loadManyFilteredUserAction.reload();
               }}
             >
               Reload
@@ -348,7 +349,7 @@
               <button onClick={createUser}>Create User</button>
             </div>
 
-            <ActionStatus action={loadFilteredUsersAction} />
+            <ActionStatus action={loadManyFilteredUserAction} />
           </div>
         );
       };

@@ -1,5 +1,5 @@
 import { computed, signal } from "@preact/signals";
-import { createAction } from "./actions.js";
+import { createAction, reloadActions } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 
@@ -273,6 +273,34 @@ const createMethodsForStore = ({
 }) => {
   const { idKey, name } = resourceInstance;
 
+  const getManyActionWeakRefSet = new Set();
+  const getManyActionRegistry = new FinalizationRegistry(() => {
+    for (const weakRef of getManyActionWeakRefSet) {
+      if (weakRef.deref() === undefined) {
+        getManyActionWeakRefSet.delete(weakRef);
+      }
+    }
+  });
+
+  const findActiveGetManyActionsToReload = () => {
+    const toReloadSet = new Set();
+
+    for (const weakRef of getManyActionWeakRefSet) {
+      const getManyAction = weakRef.deref();
+      if (!getManyAction) {
+        getManyActionWeakRefSet.delete(weakRef);
+        continue;
+      }
+      const allInstances = getManyAction.matchAllSelfOrDescendant(
+        (action) => action.loadRequested,
+      );
+      for (const instance of allInstances) {
+        toReloadSet.add(instance);
+      }
+    }
+    return toReloadSet;
+  };
+
   return {
     get: (callback, options) => {
       const getAction = createAction(
@@ -289,10 +317,15 @@ const createMethodsForStore = ({
       );
       return getAction;
     },
+
     post: (callback, options) => {
       const postAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (props) => {
           const item = targetStore.upsert(props);
+          const toReloadSet = findActiveGetManyActionsToReload();
+          reloadActions(toReloadSet, {
+            reason: `${name}.post action triggered`,
+          });
           const itemId = item[idKey];
           return itemId;
         }),
@@ -363,12 +396,22 @@ const createMethodsForStore = ({
           ...options,
         },
       );
+
+      const weakRef = new WeakRef(getManyAction);
+      getManyActionWeakRefSet.add(weakRef);
+      getManyActionRegistry.register(getManyAction);
+
       return getManyAction;
     },
+
     postMany: (callback, options) => {
       const postManyAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (propsArray) => {
           const itemArray = targetStore.upsert(propsArray);
+          const toReloadSet = findActiveGetManyActionsToReload();
+          reloadActions(toReloadSet, {
+            reason: `${name}.postMany action triggered`,
+          });
           const idArray = itemArray.map((item) => item[idKey]);
           return idArray;
         }),

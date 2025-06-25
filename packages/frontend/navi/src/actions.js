@@ -480,6 +480,13 @@ export const createAction = (callback, rootOptions) => {
 
     let action;
 
+    // ✅ Track child actions with WeakRef to avoid preventing GC
+    const childActionWeakRefSet = new Set();
+    const childActionRegistry = new FinalizationRegistry(() => {
+      // ✅ Just clean up all dead WeakRefs when any child is GC'd
+      cleanupDeadWeakRefs();
+    });
+
     const childActionWeakMap = createJsValueWeakMap();
     const _bindParams = (newParamsOrSignal, options = {}) => {
       // ✅ CAS 1: Signal direct -> proxy
@@ -560,6 +567,11 @@ export const createAction = (callback, rootOptions) => {
       }
       const childAction = _bindParams(newParamsOrSignal, options);
       childActionWeakMap.set(newParamsOrSignal, childAction);
+
+      const childWeakRef = new WeakRef(childAction);
+      childActionWeakRefSet.add(childWeakRef);
+      childActionRegistry.register(childAction);
+
       return childAction;
     };
 
@@ -586,7 +598,54 @@ export const createAction = (callback, rootOptions) => {
           parentAction: action,
         },
       );
+
+      const childWeakRef = new WeakRef(childAction);
+      childActionWeakRefSet.add(childWeakRef);
+      childActionRegistry.register(childAction);
+
       return childAction;
+    };
+
+    // ✅ Clean up dead WeakRefs helper
+    const cleanupDeadWeakRefs = () => {
+      for (const weakRef of childActionWeakRefSet) {
+        if (weakRef.deref() === undefined) {
+          childActionWeakRefSet.delete(weakRef);
+        }
+      }
+    };
+
+    // ✅ Implement matchAllSelfOrDescendant
+    const matchAllSelfOrDescendant = (predicate) => {
+      const matches = [];
+
+      const traverse = (currentAction) => {
+        if (predicate(currentAction)) {
+          matches.push(currentAction);
+        }
+
+        // Get child actions from the current action
+        const currentActionPrivateProps =
+          getActionPrivateProperties(currentAction);
+        if (
+          currentActionPrivateProps &&
+          currentActionPrivateProps.childActionWeakRefSet
+        ) {
+          // Clean up dead refs first
+          currentActionPrivateProps.cleanupDeadWeakRefs();
+
+          // Traverse live child actions
+          for (const childWeakRef of currentActionPrivateProps.childActionWeakRefSet) {
+            const childAction = childWeakRef.deref();
+            if (childAction) {
+              traverse(childAction);
+            }
+          }
+        }
+      };
+
+      traverse(action);
+      return matches;
     };
 
     action = {
@@ -604,6 +663,7 @@ export const createAction = (callback, rootOptions) => {
       unload,
       abort,
       bindParams,
+      matchAllSelfOrDescendant, // ✅ Add the new method
       toString: () => name,
     };
     Object.preventExtensions(action);
@@ -639,7 +699,7 @@ export const createAction = (callback, rootOptions) => {
       });
     }
 
-    // Propriétés privées identiques
+    // Propriétés privées
     private_properties: {
       const ui = {
         renderLoaded: null,
@@ -798,6 +858,9 @@ export const createAction = (callback, rootOptions) => {
         performLoad,
         performUnload,
         ui,
+
+        childActionWeakRefSet,
+        cleanupDeadWeakRefs,
       };
       setActionPrivateProperties(action, privateProperties);
     }
