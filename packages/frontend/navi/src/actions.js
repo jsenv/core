@@ -918,8 +918,11 @@ const createActionProxyFromSignal = (
     load: proxyMethod("load"),
     reload: proxyMethod("reload"),
     unload: proxyMethod("unload"),
+    matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
     toString: () => actionProxy.name,
   };
+  Object.preventExtensions(actionProxy);
+
   onActionTargetChange((actionTarget) => {
     const currentAction = actionTarget || action;
     actionProxy.name = `[Proxy] ${currentAction.name}`;
@@ -969,8 +972,14 @@ const createActionProxyFromSignal = (
     computedDataSignal: proxyPrivateSignal("computedDataSignal"),
     performLoad: proxyPrivateMethod("performLoad"),
     performUnload: proxyPrivateMethod("performUnload"),
-    ui: undefined,
+    get ui() {
+      return currentActionPrivateProperties.ui;
+    },
+    get childActionWeakRefSet() {
+      return currentActionPrivateProperties.childActionWeakRefSet;
+    },
   };
+
   onActionTargetChange(() => {
     proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
   });
