@@ -17,6 +17,11 @@ export const ActionRenderer = ({ action, children }) => {
     error: renderError = renderErrorDefault,
     loaded: renderLoaded,
   } = typeof children === "function" ? { loaded: children } : children || {};
+  if (!action) {
+    throw new Error(
+      "ActionRenderer requires an action to render, but none was provided.",
+    );
+  }
   const { idle, pending, error, data } = useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetErrorBoundary] = useErrorBoundary();

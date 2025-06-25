@@ -7,14 +7,13 @@
     <title>Resource demo describe one</title>
   </head>
   <body>
-    <div id="root" style="position: relative; width: 200px"></div>
+    <div id="root" style="position: relative; width: 400px"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import {
         resource,
         useActionStatus,
-        getItemAction,
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
       } from "@jsenv/navi";
@@ -22,46 +21,53 @@
         // eslint-disable-next-line no-unused-vars
         ActionStatus,
       } from "./action_status.jsx";
+      import { localStorageSignal } from "../../local_storage_signal.js";
+
+      const tables = [
+        { id: 1, name: "table_1", owner: 1 },
+        { id: 2, name: "table_2", owner: 2 },
+      ];
+      const users = [
+        { id: 1, name: "User 1" },
+        { id: 2, name: "User 2" },
+      ];
 
       const user = resource("user");
       const table = resource("table");
       const { owner: tableOwner } = table.describe({
         owner: user,
       });
-      const getTableTemplate = table.get(
-        ({ name, owner }) => {
-          return { id: name, name, owner };
-        },
-        {
-          oneActiveActionAtATime: true,
-        },
-      );
-      const getTableOwnerTemplate = tableOwner.get(async (table) => {
-        console.log("start loading table owner for", table);
+      const getTableAction = table.get(({ name }) => {
+        return tables.find((table) => table.name === name) || null;
+      });
+      const getTableOwnerAction = tableOwner.get(async ({ name, ownerId }) => {
+        console.log("start loading table owner for", name, ownerId);
         // await new Promise((resolve) => setTimeout(resolve, 1000));
         debugger;
-        return { id: table.owner, name: table.owner };
+        return users.find((user) => user.id === ownerId) || null;
       });
+      const currentTableNameSignal = localStorageSignal("current_table_name");
+      const currentTableAction = getTableAction.bindParams({
+        name: currentTableNameSignal,
+      });
+      if (currentTableNameSignal.value) {
+        currentTableAction.load();
+      }
 
-      const getTable1Action = getTableTemplate.withParams({
+      const getTable1Action = getTableAction.bindParams({
         name: "table_1",
-        owner: "user_1",
       });
-      const getTable2Action = getTableTemplate.withParams({
+      const getTable2Action = getTableAction.bindParams({
         name: "table_2",
-        owner: "user_2",
       });
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        // const { data: table1 } = useActionStatus(getTable1Action);
-        // const { data: table2 } = useActionStatus(getTable2Action);
-        const { data: table } = useActionStatus(getTableTemplate);
-
         return (
           <div>
             <button
               onClick={() => {
+                currentTableNameSignal.value = "table_1";
                 getTable1Action.reload();
               }}
             >
@@ -69,22 +75,28 @@
             </button>
             <button
               onClick={() => {
+                currentTableNameSignal.value = "table_2";
                 getTable2Action.reload();
               }}
             >
               Reload table2
             </button>
 
-            <ActionStatus action={getTableTemplate} />
+            <ActionStatus action={currentTableAction} />
 
-            <div>Table: {table && <Table table={table} />}</div>
+            <ActionRenderer action={currentTableAction}>
+              {(table) => <Table table={table} />}}
+            </ActionRenderer>
           </div>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
       const Table = ({ table }) => {
-        const getTableOwner = getItemAction(table, getTableOwnerTemplate);
+        const getTableOwner = getTableOwnerAction.bindParams({
+          name: table.name,
+          ownerId: table.owner,
+        });
         const { active } = useActionStatus(getTableOwner);
 
         return (
@@ -96,19 +108,17 @@
                 if (e.target.open) {
                   getTableOwner.reload();
                 } else {
-                  // getTableOwner.unload(user);
+                  getTableOwner.abort();
                 }
               }}
             >
               <summary>owner</summary>
               <ActionRenderer action={getTableOwner}>
-                {{
-                  loaded: (owner) => (
-                    <span>
-                      owner: <strong>{owner.name}</strong>
-                    </span>
-                  ),
-                }}
+                {(owner) => (
+                  <span>
+                    owner: <strong>{owner.name}</strong>
+                  </span>
+                )}
               </ActionRenderer>
             </details>
           </>

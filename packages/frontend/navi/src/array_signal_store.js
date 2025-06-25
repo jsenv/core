@@ -293,8 +293,14 @@ export const arraySignalStore = (
     let props;
     if (args.length === 1) {
       property = idKey;
-      value = args[0][idKey];
-      props = args[0];
+      const firstArg = args[0];
+      if (!firstArg || typeof firstArg !== "object") {
+        throw new TypeError(
+          `Expected an object as first argument, got ${firstArg}`,
+        );
+      }
+      value = firstArg[idKey];
+      props = firstArg;
     } else if (args.length === 2) {
       property = idKey;
       value = args[0];
