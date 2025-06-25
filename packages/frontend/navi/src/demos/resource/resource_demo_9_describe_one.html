@@ -50,9 +50,9 @@
         return users;
       });
       const renameUserAction = user.put(({ name, newName }) => {
-        let user = users.find((u) => u.name === name);
-        const id = user.id;
-        user.name = newName;
+        let userToUpdate = users.find((u) => u.name === name);
+        const id = userToUpdate.id;
+        userToUpdate.name = newName;
         return { id, name: newName };
       });
       const getTableOwnerAction = tableOwner.get(async ({ name, ownerId }) => {
@@ -226,7 +226,7 @@
               open={active}
               onToggle={(e) => {
                 if (e.target.open) {
-                  getTableOwner.reload();
+                  getTableOwner.load();
                 } else {
                   getTableOwner.abort();
                 }
