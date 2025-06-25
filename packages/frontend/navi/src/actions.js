@@ -480,11 +480,13 @@ export const createAction = (callback, rootOptions) => {
 
     let action;
 
-    // ✅ Track child actions with WeakRef to avoid preventing GC
     const childActionWeakRefSet = new Set();
     const childActionRegistry = new FinalizationRegistry(() => {
-      // ✅ Just clean up all dead WeakRefs when any child is GC'd
-      cleanupDeadWeakRefs();
+      for (const weakRef of childActionWeakRefSet) {
+        if (weakRef.deref() === undefined) {
+          childActionWeakRefSet.delete(weakRef);
+        }
+      }
     });
 
     const childActionWeakMap = createJsValueWeakMap();
@@ -606,15 +608,6 @@ export const createAction = (callback, rootOptions) => {
       return childAction;
     };
 
-    // ✅ Clean up dead WeakRefs helper
-    const cleanupDeadWeakRefs = () => {
-      for (const weakRef of childActionWeakRefSet) {
-        if (weakRef.deref() === undefined) {
-          childActionWeakRefSet.delete(weakRef);
-        }
-      }
-    };
-
     // ✅ Implement matchAllSelfOrDescendant
     const matchAllSelfOrDescendant = (predicate) => {
       const matches = [];
@@ -627,20 +620,16 @@ export const createAction = (callback, rootOptions) => {
         // Get child actions from the current action
         const currentActionPrivateProps =
           getActionPrivateProperties(currentAction);
-        if (
-          currentActionPrivateProps &&
-          currentActionPrivateProps.childActionWeakRefSet
-        ) {
-          // Clean up dead refs first
-          currentActionPrivateProps.cleanupDeadWeakRefs();
-
-          // Traverse live child actions
-          for (const childWeakRef of currentActionPrivateProps.childActionWeakRefSet) {
-            const childAction = childWeakRef.deref();
-            if (childAction) {
-              traverse(childAction);
-            }
+        const childActionWeakRefSet =
+          currentActionPrivateProps.childActionWeakRefSet;
+        // Traverse live child actions
+        for (const childWeakRef of childActionWeakRefSet) {
+          const childAction = childWeakRef.deref();
+          if (!childAction) {
+            childActionWeakRefSet.delete(childWeakRef);
+            continue;
           }
+          traverse(childAction);
         }
       };
 
@@ -860,7 +849,6 @@ export const createAction = (callback, rootOptions) => {
         ui,
 
         childActionWeakRefSet,
-        cleanupDeadWeakRefs,
       };
       setActionPrivateProperties(action, privateProperties);
     }
