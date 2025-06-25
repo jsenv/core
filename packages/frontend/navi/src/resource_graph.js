@@ -331,9 +331,12 @@ const createMethodsForStore = ({
   };
 
   const triggerAfterEffects = (action) => {
-    const getManyAutoreload = shouldAutoreloadGetMany(action);
-    const getAutoreload = shouldAutoreloadGet(action);
-    if (getManyAutoreload || getAutoreload) {
+    autoreload: {
+      const getManyAutoreload = shouldAutoreloadGetMany(action);
+      const getAutoreload = shouldAutoreloadGet(action);
+      if (!getManyAutoreload && !getAutoreload) {
+        break autoreload;
+      }
       const predicate =
         getManyAutoreload && getAutoreload
           ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
@@ -372,7 +375,6 @@ const createMethodsForStore = ({
 
       return getAction;
     },
-
     post: (callback, options) => {
       const postAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (props) => {
