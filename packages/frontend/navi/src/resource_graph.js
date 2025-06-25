@@ -106,39 +106,59 @@ export const resource = (
       }
       return info;
     };
+    const primitiveCanBeId = (value) => {
+      const type = typeof value;
+      if (type === "string" || type === "number" || type === "symbol") {
+        return true;
+      }
+      return false;
+    };
+
     const one = (childResource, propertyName) => {
       const childIdKey = childResource.idKey;
       resourceInstance.addItemSetup((item) => {
-        let childProps = item[propertyName];
-        if (debug) {
-          console.log(
-            `setup ${item[idKey]}.${propertyName} one-to-one with "${childResource[childIdKey]}" item (current value: ${childProps ? childProps[childIdKey] : "null"})`,
-          );
-        }
-        const signal = computed(() => {
-          const childItemId = childProps ? childProps[childIdKey] : null;
+        let childItemId;
+        const updateChildItemId = (value) => {
+          if (value !== null && typeof value === "object") {
+            const childItem = childResource.store.upsert(value);
+            childItemId = childItem[childIdKey];
+            return;
+          }
+          if (primitiveCanBeId(value)) {
+            const childItemProps = { [childIdKey]: value };
+            const childItem = childResource.store.upsert(childItemProps);
+            childItemId = childItem[childIdKey];
+            return;
+          }
+          childItemId = undefined;
+        };
+        updateChildItemId(item[propertyName]);
+
+        const childItemSignal = computed(() => {
           const childItem = childResource.store.select(childItemId);
           return childItem;
         });
+        if (debug) {
+          console.log(
+            `setup ${item}.${propertyName} one-to-one with "${childResource.name}" (current value: ${childItemSignal.peek()})`,
+          );
+        }
 
         Object.defineProperty(item, propertyName, {
           get: () => {
-            const childItem = signal.value;
+            const childItem = childItemSignal.value;
             if (debug) {
-              console.log(
-                `return ${childItem ? childItem[childIdKey] : "null"} for ${item[idKey]}.${propertyName}`,
-              );
+              console.log(`return ${childItem} for ${item}.${propertyName}`);
             }
             return childItem;
           },
           set: (value) => {
+            updateChildItemId(value);
             if (debug) {
-              console.log(
-                `update ${item[idKey]}.${propertyName} from ${childProps ? childProps[childIdKey] : "null"} to ${value ? value[idKey] : "null"}`,
+              console.debug(
+                `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
               );
             }
-            childProps = value;
-            childResource.store.upsert(childProps);
           },
         });
       });

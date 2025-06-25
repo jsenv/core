@@ -32,8 +32,8 @@
         { id: 2, name: "User 2" },
       ];
 
-      const user = resource("user");
-      const table = resource("table");
+      const user = resource("user", { mutableIdKey: "name" });
+      const table = resource("table", { idKey: "id", mutableIdKey: "name" });
       const { owner: tableOwner } = table.describe({
         owner: user,
       });
