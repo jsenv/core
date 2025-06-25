@@ -320,7 +320,11 @@ const createMethodsForStore = ({
         }
         // Find all instances of this action (including bound params versions)
         const allInstances = httpAction.matchAllSelfOrDescendant(
-          (action) => action.loadRequested,
+          (action) =>
+            action.loadRequested &&
+            // proxy action should be ignored because the underlying action will be found anyway
+            // and if we check the proxy action we'll end up with duplicates
+            !action.isProxy,
         );
         for (const instance of allInstances) {
           matchingActionSet.add(instance);
