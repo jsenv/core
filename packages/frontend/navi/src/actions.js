@@ -420,6 +420,7 @@ ${lines.join("\n")}`);
 };
 
 const initialParamsDefault = {};
+const metaDefault = {};
 
 export const createAction = (callback, rootOptions) => {
   let rootAction;
@@ -436,6 +437,7 @@ export const createAction = (callback, rootOptions) => {
       renderLoadedAsync,
       sideEffect = () => {},
       keepOldData = false,
+      meta = metaDefault,
     },
     { parentAction } = {},
   ) => {
@@ -654,6 +656,7 @@ export const createAction = (callback, rootOptions) => {
       bindParams,
       matchAllSelfOrDescendant, // ✅ Add the new method
       toString: () => name,
+      meta,
     };
     Object.preventExtensions(action);
 
@@ -972,16 +975,12 @@ const createActionProxyFromSignal = (
     computedDataSignal: proxyPrivateSignal("computedDataSignal"),
     performLoad: proxyPrivateMethod("performLoad"),
     performUnload: proxyPrivateMethod("performUnload"),
-    get ui() {
-      return currentActionPrivateProperties.ui;
-    },
-    get childActionWeakRefSet() {
-      return currentActionPrivateProperties.childActionWeakRefSet;
-    },
   };
 
   onActionTargetChange(() => {
     proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
+    proxyPrivateProperties.childActionWeakRefSet =
+      currentActionPrivateProperties.childActionWeakRefSet;
   });
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
 

@@ -7,7 +7,14 @@ let debug = true;
 
 export const resource = (
   name,
-  { sourceStore, store, idKey, mutableIdKey } = {},
+  {
+    sourceStore,
+    store,
+    idKey,
+    mutableIdKey,
+    autoreloadGetManyAfter = ["post", "delete"],
+    autoreloadGetAfter = false,
+  } = {},
 ) => {
   if (mutableIdKey && idKey === undefined) {
     idKey = mutableIdKey;
@@ -82,6 +89,8 @@ export const resource = (
     sourceStore: sourceStore || store,
     targetStore: store,
     resourceInstance,
+    autoreloadGetManyAfter,
+    autoreloadGetAfter,
   });
   Object.assign(resourceInstance, methodsForStore);
 
@@ -270,8 +279,43 @@ const createMethodsForStore = ({
   sourceStore,
   targetStore = sourceStore,
   resourceInstance,
+  autoreloadGetManyAfter,
+  autoreloadGetAfter,
 }) => {
   const { idKey, name } = resourceInstance;
+
+  const shouldAutoreloadGetMany = autoreloadGetManyAfter
+    ? (action) => {
+        const { httpVerb } = action.meta;
+        if (httpVerb === "GET") {
+          return false;
+        }
+        if (
+          autoreloadGetManyAfter === "*" ||
+          autoreloadGetManyAfter.includes("*") ||
+          autoreloadGetManyAfter.includes(httpVerb)
+        ) {
+          return true;
+        }
+        return false;
+      }
+    : () => false;
+  const shouldAutoreloadGet = autoreloadGetAfter
+    ? (action) => {
+        const { httpVerb } = action.meta;
+        if (httpVerb === "GET") {
+          return false;
+        }
+        if (
+          autoreloadGetAfter === "*" ||
+          autoreloadGetAfter.includes("*") ||
+          autoreloadGetAfter.includes(httpVerb)
+        ) {
+          return true;
+        }
+        return false;
+      }
+    : () => false;
 
   const getManyActionWeakRefSet = new Set();
   const getManyActionRegistry = new FinalizationRegistry(() => {
@@ -281,7 +325,6 @@ const createMethodsForStore = ({
       }
     }
   });
-
   const findActiveGetManyActionsToReload = () => {
     const toReloadSet = new Set();
 
@@ -300,6 +343,20 @@ const createMethodsForStore = ({
     }
     return toReloadSet;
   };
+  const triggerAfterEffects = (action) => {
+    if (shouldAutoreloadGetMany(action)) {
+      const toReloadSet = findActiveGetManyActionsToReload();
+      reloadActions(toReloadSet, {
+        reason: `${action} triggered`,
+      });
+    }
+    if (shouldAutoreloadGet(action)) {
+      const toReloadSet = findActiveGetActionsToReload();
+      reloadActions(toReloadSet, {
+        reason: `${action} triggered`,
+      });
+    }
+  };
 
   return {
     get: (callback, options) => {
@@ -310,6 +367,7 @@ const createMethodsForStore = ({
           return itemId;
         }),
         {
+          meta: { httpVerb: "GET" },
           name: `${name}.get`,
           compute: (itemId) => targetStore.select(itemId),
           ...options,
@@ -322,14 +380,12 @@ const createMethodsForStore = ({
       const postAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (props) => {
           const item = targetStore.upsert(props);
-          const toReloadSet = findActiveGetManyActionsToReload();
-          reloadActions(toReloadSet, {
-            reason: `${name}.post action triggered`,
-          });
+          triggerAfterEffects(postAction);
           const itemId = item[idKey];
           return itemId;
         }),
         {
+          meta: { httpVerb: "POST" },
           name: `${name}.post`,
           compute: (idOrIdArray) => targetStore.select(idOrIdArray),
           ...options,
@@ -341,10 +397,12 @@ const createMethodsForStore = ({
       const putAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (props) => {
           const item = targetStore.upsert(props);
+          triggerAfterEffects(putAction);
           const itemId = item[idKey];
           return itemId;
         }),
         {
+          meta: { httpVerb: "PUT" },
           name: `${name}.put`,
           compute: (idOrIdArray) => targetStore.select(idOrIdArray),
           ...options,
@@ -356,10 +414,12 @@ const createMethodsForStore = ({
       const patchAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (props) => {
           const item = targetStore.upsert(props);
+          triggerAfterEffects(patchAction);
           const itemId = item[idKey];
           return itemId;
         }),
         {
+          meta: { httpVerb: "PATCH" },
           name: `${name}.patch`,
           compute: (idOrIdArray) => targetStore.select(idOrIdArray),
           ...options,
@@ -371,9 +431,11 @@ const createMethodsForStore = ({
       const deleteAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (id) => {
           targetStore.drop(id);
+          triggerAfterEffects(deleteAction);
           return id;
         }),
         {
+          meta: { httpVerb: "DELETE" },
           name: `${name}.delete`,
           compute: (id) => targetStore.select(id),
           ...options,
@@ -386,10 +448,12 @@ const createMethodsForStore = ({
       const getManyAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (propsArray) => {
           const itemArray = targetStore.upsert(propsArray);
+          triggerAfterEffects(getManyAction);
           const idArray = itemArray.map((item) => item[idKey]);
           return idArray;
         }),
         {
+          meta: { httpVerb: "GET" },
           name: `${name}.getMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
@@ -408,14 +472,12 @@ const createMethodsForStore = ({
       const postManyAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (propsArray) => {
           const itemArray = targetStore.upsert(propsArray);
-          const toReloadSet = findActiveGetManyActionsToReload();
-          reloadActions(toReloadSet, {
-            reason: `${name}.postMany action triggered`,
-          });
+          triggerAfterEffects(postManyAction);
           const idArray = itemArray.map((item) => item[idKey]);
           return idArray;
         }),
         {
+          meta: { httpVerb: "POST" },
           name: `${name}.postMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
@@ -428,10 +490,12 @@ const createMethodsForStore = ({
       const putManyAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (propsArray) => {
           const itemArray = targetStore.upsert(propsArray);
+          triggerAfterEffects(putManyAction);
           const idArray = itemArray.map((item) => item[idKey]);
           return idArray;
         }),
         {
+          meta: { httpVerb: "PUT" },
           name: `${name}.putMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
@@ -444,10 +508,12 @@ const createMethodsForStore = ({
       const patchManyAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (propsArray) => {
           const itemArray = targetStore.upsert(propsArray);
+          triggerAfterEffects(patchManyAction);
           const idArray = itemArray.map((item) => item[idKey]);
           return idArray;
         }),
         {
+          meta: { httpVerb: "PATCH" },
           name: `${name}.patchMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
@@ -460,9 +526,11 @@ const createMethodsForStore = ({
       const deleteManyAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (idArray) => {
           targetStore.drop(idArray);
+          triggerAfterEffects(deleteManyAction);
           return idArray;
         }),
         {
+          meta: { httpVerb: "DELETE" },
           name: `${name}.deleteMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
