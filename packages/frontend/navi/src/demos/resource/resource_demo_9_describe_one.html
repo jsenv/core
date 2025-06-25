@@ -11,7 +11,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useState, useEffect, useRef } from "preact/hooks";
       import {
         resource,
         useActionStatus,
@@ -48,6 +48,12 @@
       });
       const getAllUsersAction = user.getAll(() => {
         return users;
+      });
+      const renameUserAction = user.put(({ name, newName }) => {
+        let user = users.find((u) => u.name === name);
+        const id = user.id;
+        user.name = newName;
+        return { id, name: newName };
       });
       const getTableOwnerAction = tableOwner.get(async ({ name, ownerId }) => {
         console.log("start loading table owner for", name, ownerId);
@@ -123,6 +129,14 @@
           ownerId: table.owner,
         });
 
+        const inputRef = useRef();
+        useEffect(() => {
+          if (isEditing) {
+            inputRef.current.focus();
+            inputRef.current.select();
+          }
+        }, [isEditing]);
+
         return (
           <div
             style={{
@@ -139,6 +153,7 @@
               {isEditing ? (
                 <>
                   <input
+                    ref={inputRef}
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     style={{ flex: 1 }}
@@ -261,8 +276,10 @@
         const [isEditing, setIsEditing] = useState(false);
         const [editName, setEditName] = useState(user.name);
 
-        const handleSave = () => {
-          user.name = editName;
+        const handleSave = async () => {
+          await renameUserAction
+            .bindParams({ name: user.name, newName: editName })
+            .load();
           setIsEditing(false);
         };
 
@@ -270,6 +287,14 @@
           setEditName(user.name);
           setIsEditing(false);
         };
+
+        const inputRef = useRef();
+        useEffect(() => {
+          if (isEditing) {
+            inputRef.current.focus();
+            inputRef.current.select();
+          }
+        }, [isEditing]);
 
         // Compter combien de tables appartiennent à cet utilisateur
         const userTables = tables.filter((table) => table.owner === user.id);
@@ -287,6 +312,7 @@
               {isEditing ? (
                 <>
                   <input
+                    ref={inputRef}
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     style={{ flex: 1 }}
