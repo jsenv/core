@@ -273,66 +273,17 @@ const createMethodsForStore = ({
 }) => {
   const { idKey, name } = resourceInstance;
 
-  const targetStoreMethodEffects = {
-    post: (propsOrPropsArray) => {
-      return targetStore.upsert(propsOrPropsArray);
-    },
-    put: (propsOrPropsArray) => {
-      return targetStore.upsert(propsOrPropsArray);
-    },
-    patch: (propsOrPropsArray) => {
-      return targetStore.upsert(propsOrPropsArray);
-    },
-    delete: (itemIdOrItemIdArray) => {
-      return targetStore.drop(itemIdOrItemIdArray);
-    },
-  };
-
   return {
-    getAll: (callback, options) => {
-      const getAllAction = createAction(
-        mapCallbackMaybeAsyncResult(callback, (propsArray) => {
-          const itemArray = targetStore.upsert(propsArray);
-          const idArray = itemArray.map((item) => item[idKey]);
-          return idArray;
-        }),
-        {
-          name: `${name}.getAll`,
-          data: [],
-          compute: (idArray) => {
-            const itemArray = targetStore.selectAll(idArray);
-            return itemArray;
-          },
-          ...options,
-        },
-      );
-      return getAllAction;
-    },
     get: (callback, options) => {
-      if (sourceStore === targetStore) {
-        const getAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (props) => {
-            const item = targetStore.upsert(props);
-            return item;
-          }),
-          {
-            name: `${name}.get`,
-            ...options,
-          },
-        );
-        return getAction;
-      }
       const getAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (props) => {
           const item = targetStore.upsert(props);
-          const id = item[idKey];
-          return id;
+          const itemId = item[idKey];
+          return itemId;
         }),
         {
           name: `${name}.get`,
-          compute: (id) => {
-            return targetStore.select(id);
-          },
+          compute: (itemId) => targetStore.select(itemId),
           ...options,
         },
       );
@@ -340,9 +291,14 @@ const createMethodsForStore = ({
     },
     post: (callback, options) => {
       const postAction = createAction(
-        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.post),
+        mapCallbackMaybeAsyncResult(callback, (props) => {
+          const item = targetStore.upsert(props);
+          const itemId = item[idKey];
+          return itemId;
+        }),
         {
           name: `${name}.post`,
+          compute: (idOrIdArray) => targetStore.select(idOrIdArray),
           ...options,
         },
       );
@@ -350,9 +306,14 @@ const createMethodsForStore = ({
     },
     put: (callback, options) => {
       const putAction = createAction(
-        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.put),
+        mapCallbackMaybeAsyncResult(callback, (props) => {
+          const item = targetStore.upsert(props);
+          const itemId = item[idKey];
+          return itemId;
+        }),
         {
           name: `${name}.put`,
+          compute: (idOrIdArray) => targetStore.select(idOrIdArray),
           ...options,
         },
       );
@@ -360,9 +321,14 @@ const createMethodsForStore = ({
     },
     patch: (callback, options) => {
       const patchAction = createAction(
-        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.patch),
+        mapCallbackMaybeAsyncResult(callback, (props) => {
+          const item = targetStore.upsert(props);
+          const itemId = item[idKey];
+          return itemId;
+        }),
         {
           name: `${name}.patch`,
+          compute: (idOrIdArray) => targetStore.select(idOrIdArray),
           ...options,
         },
       );
@@ -370,13 +336,97 @@ const createMethodsForStore = ({
     },
     delete: (callback, options) => {
       const deleteAction = createAction(
-        mapCallbackMaybeAsyncResult(callback, targetStoreMethodEffects.delete),
+        mapCallbackMaybeAsyncResult(callback, (id) => {
+          targetStore.drop(id);
+          return id;
+        }),
         {
           name: `${name}.delete`,
+          compute: (id) => targetStore.select(id),
           ...options,
         },
       );
       return deleteAction;
+    },
+
+    getMany: (callback, options) => {
+      const getManyAction = createAction(
+        mapCallbackMaybeAsyncResult(callback, (propsArray) => {
+          const itemArray = targetStore.upsert(propsArray);
+          const idArray = itemArray.map((item) => item[idKey]);
+          return idArray;
+        }),
+        {
+          name: `${name}.getMany`,
+          data: [],
+          compute: (idArray) => targetStore.selectAll(idArray),
+          ...options,
+        },
+      );
+      return getManyAction;
+    },
+    postMany: (callback, options) => {
+      const postManyAction = createAction(
+        mapCallbackMaybeAsyncResult(callback, (propsArray) => {
+          const itemArray = targetStore.upsert(propsArray);
+          const idArray = itemArray.map((item) => item[idKey]);
+          return idArray;
+        }),
+        {
+          name: `${name}.postMany`,
+          data: [],
+          compute: (idArray) => targetStore.selectAll(idArray),
+          ...options,
+        },
+      );
+      return postManyAction;
+    },
+    putMany: (callback, options) => {
+      const putManyAction = createAction(
+        mapCallbackMaybeAsyncResult(callback, (propsArray) => {
+          const itemArray = targetStore.upsert(propsArray);
+          const idArray = itemArray.map((item) => item[idKey]);
+          return idArray;
+        }),
+        {
+          name: `${name}.putMany`,
+          data: [],
+          compute: (idArray) => targetStore.selectAll(idArray),
+          ...options,
+        },
+      );
+      return putManyAction;
+    },
+    patchMany: (callback, options) => {
+      const patchManyAction = createAction(
+        mapCallbackMaybeAsyncResult(callback, (propsArray) => {
+          const itemArray = targetStore.upsert(propsArray);
+          const idArray = itemArray.map((item) => item[idKey]);
+          return idArray;
+        }),
+        {
+          name: `${name}.patchMany`,
+          data: [],
+          compute: (idArray) => targetStore.selectAll(idArray),
+          ...options,
+        },
+      );
+      return patchManyAction;
+    },
+    deleteMany: (callback, options) => {
+      const deleteManyAction = createAction(
+        mapCallbackMaybeAsyncResult(callback, (idArray) => {
+          targetStore.drop(idArray);
+          return idArray;
+        }),
+        {
+          name: `${name}.deleteMany`,
+          data: [],
+          compute: (idArray) => targetStore.selectAll(idArray),
+          ...options,
+        },
+      );
+      return deleteManyAction;
     },
   };
 };

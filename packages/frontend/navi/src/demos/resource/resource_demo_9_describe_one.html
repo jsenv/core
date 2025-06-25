@@ -43,10 +43,10 @@
       const getTableAction = table.get(({ name }) => {
         return tables.find((table) => table.name === name) || null;
       });
-      const getAllTablesAction = table.getAll(() => {
+      const getManyTableAction = table.getMany(() => {
         return tables;
       });
-      const getAllUsersAction = user.getAll(() => {
+      const getManyUserAction = user.getMany(() => {
         return users;
       });
       const renameUserAction = user.put(({ name, newName }) => {
@@ -55,8 +55,7 @@
         userToUpdate.name = newName;
         return { id, name: newName };
       });
-      const getTableOwnerAction = tableOwner.get(async ({ name, ownerId }) => {
-        console.log("start loading table owner for", name, ownerId);
+      const getTableOwnerAction = tableOwner.get(async ({ ownerId }) => {
         const owner = users.find((user) => user.id === ownerId) || null;
         return owner;
       });
@@ -71,8 +70,8 @@
       }
 
       // Load initial data
-      getAllTablesAction.load();
-      getAllUsersAction.load();
+      getManyTableAction.load();
+      getManyUserAction.load();
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -97,7 +96,7 @@
       // eslint-disable-next-line no-unused-vars
       const TablesList = () => {
         return (
-          <ActionRenderer action={getAllTablesAction}>
+          <ActionRenderer action={getManyTableAction}>
             {(tables) => (
               <div>
                 {tables.map((table) => (
@@ -199,7 +198,6 @@
       // eslint-disable-next-line no-unused-vars
       const TableDetails = ({ table }) => {
         const getTableOwner = getTableOwnerAction.bindParams({
-          name: table.name,
           ownerId: table.owner.id,
         });
         const { active } = useActionStatus(getTableOwner);
@@ -246,7 +244,7 @@
       // eslint-disable-next-line no-unused-vars
       const UsersList = () => {
         return (
-          <ActionRenderer action={getAllUsersAction}>
+          <ActionRenderer action={getManyUserAction}>
             {(users) => (
               <div>
                 {users.map((user) => (

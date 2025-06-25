@@ -445,7 +445,7 @@ export const createAction = (callback, rootOptions) => {
     const loadingStateSignal = signal(loadingState);
     const errorSignal = signal(error);
     const dataSignal = signal(initialData);
-    const computedDataSignal = computed
+    const computedDataSignal = compute
       ? computed(() => {
           const data = dataSignal.value;
           return compute(data);
