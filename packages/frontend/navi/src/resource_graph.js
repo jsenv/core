@@ -12,7 +12,7 @@ export const resource = (
     store,
     idKey,
     mutableIdKey,
-    autoreloadGetManyAfter = ["post", "delete"],
+    autoreloadGetManyAfter = ["POST", "DELETE"],
     autoreloadGetAfter = false,
   } = {},
 ) => {
@@ -284,38 +284,10 @@ const createMethodsForStore = ({
 }) => {
   const { idKey, name } = resourceInstance;
 
-  const shouldAutoreloadGetMany = autoreloadGetManyAfter
-    ? (action) => {
-        const { httpVerb } = action.meta;
-        if (httpVerb === "GET") {
-          return false;
-        }
-        if (
-          autoreloadGetManyAfter === "*" ||
-          autoreloadGetManyAfter.includes("*") ||
-          autoreloadGetManyAfter.includes(httpVerb)
-        ) {
-          return true;
-        }
-        return false;
-      }
-    : () => false;
-  const shouldAutoreloadGet = autoreloadGetAfter
-    ? (action) => {
-        const { httpVerb } = action.meta;
-        if (httpVerb === "GET") {
-          return false;
-        }
-        if (
-          autoreloadGetAfter === "*" ||
-          autoreloadGetAfter.includes("*") ||
-          autoreloadGetAfter.includes(httpVerb)
-        ) {
-          return true;
-        }
-        return false;
-      }
-    : () => false;
+  const shouldAutoreloadGetMany = createShouldAutoreloadAfter(
+    autoreloadGetManyAfter,
+  );
+  const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
 
   const httpActionWeakRefSet = new Set();
   const httpActionFinalizationRegistry = new FinalizationRegistry(() => {
@@ -490,7 +462,6 @@ const createMethodsForStore = ({
 
       return getManyAction;
     },
-
     postMany: (callback, options) => {
       const postManyAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (propsArray) => {
@@ -562,6 +533,34 @@ const createMethodsForStore = ({
       );
       return deleteManyAction;
     },
+  };
+};
+
+const createHttpVerbPredicate = (httpVerbCondition) => {
+  if (httpVerbCondition === "*") {
+    return () => true;
+  }
+  if (Array.isArray(httpVerbCondition)) {
+    const httpVerbSet = new Set();
+    for (const v of httpVerbCondition) {
+      httpVerbSet.add(v.toUpperCase());
+      if (v === "*") {
+        httpVerbSet.clear();
+        return () => true;
+      }
+    }
+    return (httpVerb) => httpVerbSet.has(httpVerb.toUpperCase());
+  }
+  return () => false;
+};
+const createShouldAutoreloadAfter = (autoreloadAfter) => {
+  const httpVerbPredicate = createHttpVerbPredicate(autoreloadAfter);
+  return (action) => {
+    const { httpVerb } = action.meta;
+    if (httpVerb === "GET") {
+      return false;
+    }
+    return httpVerbPredicate(httpVerb);
   };
 };
 
