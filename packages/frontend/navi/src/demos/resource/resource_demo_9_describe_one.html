@@ -7,10 +7,11 @@
     <title>Resource demo describe one</title>
   </head>
   <body>
-    <div id="root" style="position: relative; width: 400px"></div>
+    <div id="root" style="position: relative; width: 600px"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         resource,
         useActionStatus,
@@ -37,15 +38,24 @@
       const { owner: tableOwner } = table.describe({
         owner: user,
       });
+
+      // Actions pour récupérer les données
       const getTableAction = table.get(({ name }) => {
         return tables.find((table) => table.name === name) || null;
       });
+      const getAllTablesAction = table.getAll(() => {
+        return tables;
+      });
+      const getAllUsersAction = user.getAll(() => {
+        return users;
+      });
       const getTableOwnerAction = tableOwner.get(async ({ name, ownerId }) => {
         console.log("start loading table owner for", name, ownerId);
-        // await new Promise((resolve) => setTimeout(resolve, 1000));
         const owner = users.find((user) => user.id === ownerId) || null;
         return owner;
       });
+
+      // Signal pour la table courante
       const currentTableNameSignal = localStorageSignal("current_table_name");
       const currentTableAction = getTableAction.bindParams({
         name: currentTableNameSignal,
@@ -54,45 +64,138 @@
         currentTableAction.load();
       }
 
-      const getTable1Action = getTableAction.bindParams({
-        name: "table_1",
-      });
-      const getTable2Action = getTableAction.bindParams({
-        name: "table_2",
-      });
+      // Load initial data
+      getAllTablesAction.load();
+      getAllUsersAction.load();
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
+          <div style={{ display: "flex", gap: "20px" }}>
+            <div style={{ flex: 1 }}>
+              <h2>Tables</h2>
+              <TablesList />
+
+              <h2>Current Table</h2>
+              <CurrentTable />
+            </div>
+
+            <div style={{ flex: 1 }}>
+              <h2>Users</h2>
+              <UsersList />
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TablesList = () => {
+        return (
+          <ActionRenderer action={getAllTablesAction}>
+            {(tables) => (
+              <div>
+                {tables.map((table) => (
+                  <TableItem key={table.id} table={table} />
+                ))}
+              </div>
+            )}
+          </ActionRenderer>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TableItem = ({ table }) => {
+        const [isEditing, setIsEditing] = useState(false);
+        const [editName, setEditName] = useState(table.name);
+
+        const handleSave = () => {
+          table.name = editName;
+          setIsEditing(false);
+        };
+
+        const handleCancel = () => {
+          setEditName(table.name);
+          setIsEditing(false);
+        };
+
+        const getTableOwner = getTableOwnerAction.bindParams({
+          name: table.name,
+          ownerId: table.owner,
+        });
+
+        return (
+          <div
+            style={{
+              border: "1px solid #ccc",
+              padding: "10px",
+              margin: "5px 0",
+              backgroundColor:
+                currentTableNameSignal.value === table.name
+                  ? "#e6f3ff"
+                  : "white",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {isEditing ? (
+                <>
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <button onClick={handleSave}>Save</button>
+                  <button onClick={handleCancel}>Cancel</button>
+                </>
+              ) : (
+                <>
+                  <strong style={{ flex: 1 }}>{table.name}</strong>
+                  <button onClick={() => setIsEditing(true)}>Rename</button>
+                  <button
+                    onClick={() => {
+                      currentTableNameSignal.value = table.name;
+                      currentTableAction.reload();
+                    }}
+                    disabled={currentTableNameSignal.value === table.name}
+                  >
+                    Select
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div style={{ marginTop: "10px", fontSize: "12px", color: "#666" }}>
+              Owner:
+              <ActionRenderer action={getTableOwner}>
+                {(owner) => (
+                  <span>
+                    {" "}
+                    <strong>{owner.name}</strong>
+                  </span>
+                )}
+              </ActionRenderer>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CurrentTable = () => {
+        if (!currentTableNameSignal.value) {
+          return <p>No table selected</p>;
+        }
+
+        return (
           <div>
-            <button
-              onClick={() => {
-                currentTableNameSignal.value = "table_1";
-                getTable1Action.reload();
-              }}
-            >
-              Reload table1
-            </button>
-            <button
-              onClick={() => {
-                currentTableNameSignal.value = "table_2";
-                getTable2Action.reload();
-              }}
-            >
-              Reload table2
-            </button>
-
             <ActionStatus action={currentTableAction} />
-
             <ActionRenderer action={currentTableAction}>
-              {(table) => <Table table={table} />}
+              {(table) => <TableDetails table={table} />}
             </ActionRenderer>
           </div>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
-      const Table = ({ table }) => {
+      const TableDetails = ({ table }) => {
         const getTableOwner = getTableOwnerAction.bindParams({
           name: table.name,
           ownerId: table.owner,
@@ -100,8 +203,10 @@
         const { active } = useActionStatus(getTableOwner);
 
         return (
-          <>
-            {table.name}
+          <div style={{ border: "2px solid #007acc", padding: "15px" }}>
+            <h3>{table.name}</h3>
+            <p>ID: {table.id}</p>
+
             <details
               open={active}
               onToggle={(e) => {
@@ -112,16 +217,98 @@
                 }
               }}
             >
-              <summary>owner</summary>
+              <summary>Owner Details</summary>
               <ActionRenderer action={getTableOwner}>
                 {(owner) => (
-                  <span>
-                    owner: <strong>{owner.name}</strong>
-                  </span>
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      padding: "10px",
+                      backgroundColor: "#f0f0f0",
+                    }}
+                  >
+                    <p>
+                      <strong>Owner:</strong> {owner.name}
+                    </p>
+                    <p>
+                      <strong>Owner ID:</strong> {owner.id}
+                    </p>
+                  </div>
                 )}
               </ActionRenderer>
             </details>
-          </>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const UsersList = () => {
+        return (
+          <ActionRenderer action={getAllUsersAction}>
+            {(users) => (
+              <div>
+                {users.map((user) => (
+                  <UserItem key={user.id} user={user} />
+                ))}
+              </div>
+            )}
+          </ActionRenderer>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const UserItem = ({ user }) => {
+        const [isEditing, setIsEditing] = useState(false);
+        const [editName, setEditName] = useState(user.name);
+
+        const handleSave = () => {
+          user.name = editName;
+          setIsEditing(false);
+        };
+
+        const handleCancel = () => {
+          setEditName(user.name);
+          setIsEditing(false);
+        };
+
+        // Compter combien de tables appartiennent à cet utilisateur
+        const userTables = tables.filter((table) => table.owner === user.id);
+
+        return (
+          <div
+            style={{
+              border: "1px solid #ccc",
+              padding: "10px",
+              margin: "5px 0",
+              backgroundColor: "#f9f9f9",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {isEditing ? (
+                <>
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <button onClick={handleSave}>Save</button>
+                  <button onClick={handleCancel}>Cancel</button>
+                </>
+              ) : (
+                <>
+                  <strong style={{ flex: 1 }}>{user.name}</strong>
+                  <button onClick={() => setIsEditing(true)}>Rename</button>
+                </>
+              )}
+            </div>
+
+            <div style={{ marginTop: "10px", fontSize: "12px", color: "#666" }}>
+              ID: {user.id} | Tables owned: {userTables.length}
+              {userTables.length > 0 && (
+                <span> ({userTables.map((t) => t.name).join(", ")})</span>
+              )}
+            </div>
+          </div>
         );
       };
 
