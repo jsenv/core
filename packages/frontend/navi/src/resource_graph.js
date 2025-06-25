@@ -317,41 +317,63 @@ const createMethodsForStore = ({
       }
     : () => false;
 
-  const getManyActionWeakRefSet = new Set();
-  const getManyActionRegistry = new FinalizationRegistry(() => {
-    for (const weakRef of getManyActionWeakRefSet) {
+  const httpActionWeakRefSet = new Set();
+  const httpActionFinalizationRegistry = new FinalizationRegistry(() => {
+    for (const weakRef of httpActionWeakRefSet) {
       if (weakRef.deref() === undefined) {
-        getManyActionWeakRefSet.delete(weakRef);
+        httpActionWeakRefSet.delete(weakRef);
       }
     }
   });
-  const findActiveGetManyActionsToReload = () => {
-    const toReloadSet = new Set();
 
-    for (const weakRef of getManyActionWeakRefSet) {
-      const getManyAction = weakRef.deref();
-      if (!getManyAction) {
-        getManyActionWeakRefSet.delete(weakRef);
-        continue;
+  const httpActionRegistry = {
+    register: (action) => {
+      const weakRef = new WeakRef(action);
+      httpActionWeakRefSet.add(weakRef);
+      httpActionFinalizationRegistry.register(action);
+    },
+
+    findAliveActionsMatching: (predicate) => {
+      const matchingActionSet = new Set();
+
+      for (const weakRef of httpActionWeakRefSet) {
+        const httpAction = weakRef.deref();
+        if (!httpAction) {
+          httpActionWeakRefSet.delete(weakRef);
+          continue;
+        }
+
+        if (!predicate(httpAction)) {
+          continue;
+        }
+        // Find all instances of this action (including bound params versions)
+        const allInstances = httpAction.matchAllSelfOrDescendant(
+          (action) => action.loadRequested,
+        );
+        for (const instance of allInstances) {
+          matchingActionSet.add(instance);
+        }
       }
-      const allInstances = getManyAction.matchAllSelfOrDescendant(
-        (action) => action.loadRequested,
-      );
-      for (const instance of allInstances) {
-        toReloadSet.add(instance);
-      }
-    }
-    return toReloadSet;
+      return matchingActionSet;
+    },
   };
+
   const triggerAfterEffects = (action) => {
-    if (shouldAutoreloadGetMany(action)) {
-      const toReloadSet = findActiveGetManyActionsToReload();
-      reloadActions(toReloadSet, {
-        reason: `${action} triggered`,
-      });
-    }
-    if (shouldAutoreloadGet(action)) {
-      const toReloadSet = findActiveGetActionsToReload();
+    const getManyAutoreload = shouldAutoreloadGetMany(action);
+    const getAutoreload = shouldAutoreloadGet(action);
+    if (getManyAutoreload || getAutoreload) {
+      const predicate =
+        getManyAutoreload && getAutoreload
+          ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb !== "GET"
+          : getManyAutoreload
+            ? (httpActionCandidate) =>
+                httpActionCandidate.meta.httpVerb !== "GET" &&
+                httpActionCandidate.meta.httpMany === true
+            : (httpActionCandidate) =>
+                httpActionCandidate.meta.httpVerb !== "GET" &&
+                !httpActionCandidate.meta.httpMany;
+      const toReloadSet =
+        httpActionRegistry.findAliveActionsMatching(predicate);
       reloadActions(toReloadSet, {
         reason: `${action} triggered`,
       });
@@ -367,12 +389,15 @@ const createMethodsForStore = ({
           return itemId;
         }),
         {
-          meta: { httpVerb: "GET" },
+          meta: { httpVerb: "GET", httpMany: false }, // ✅ Add httpMany flag
           name: `${name}.get`,
           compute: (itemId) => targetStore.select(itemId),
           ...options,
         },
       );
+
+      httpActionRegistry.register(getAction);
+
       return getAction;
     },
 
@@ -385,7 +410,7 @@ const createMethodsForStore = ({
           return itemId;
         }),
         {
-          meta: { httpVerb: "POST" },
+          meta: { httpVerb: "POST", httpMany: false },
           name: `${name}.post`,
           compute: (idOrIdArray) => targetStore.select(idOrIdArray),
           ...options,
@@ -402,7 +427,7 @@ const createMethodsForStore = ({
           return itemId;
         }),
         {
-          meta: { httpVerb: "PUT" },
+          meta: { httpVerb: "PUT", httpMany: false },
           name: `${name}.put`,
           compute: (idOrIdArray) => targetStore.select(idOrIdArray),
           ...options,
@@ -419,7 +444,7 @@ const createMethodsForStore = ({
           return itemId;
         }),
         {
-          meta: { httpVerb: "PATCH" },
+          meta: { httpVerb: "PATCH", httpMany: false },
           name: `${name}.patch`,
           compute: (idOrIdArray) => targetStore.select(idOrIdArray),
           ...options,
@@ -435,7 +460,7 @@ const createMethodsForStore = ({
           return id;
         }),
         {
-          meta: { httpVerb: "DELETE" },
+          meta: { httpVerb: "DELETE", httpMany: false },
           name: `${name}.delete`,
           compute: (id) => targetStore.select(id),
           ...options,
@@ -453,7 +478,7 @@ const createMethodsForStore = ({
           return idArray;
         }),
         {
-          meta: { httpVerb: "GET" },
+          meta: { httpVerb: "GET", httpMany: true }, // ✅ Add httpMany flag
           name: `${name}.getMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
@@ -461,9 +486,7 @@ const createMethodsForStore = ({
         },
       );
 
-      const weakRef = new WeakRef(getManyAction);
-      getManyActionWeakRefSet.add(weakRef);
-      getManyActionRegistry.register(getManyAction);
+      httpActionRegistry.register(getManyAction);
 
       return getManyAction;
     },
@@ -477,7 +500,7 @@ const createMethodsForStore = ({
           return idArray;
         }),
         {
-          meta: { httpVerb: "POST" },
+          meta: { httpVerb: "POST", httpMany: true },
           name: `${name}.postMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
@@ -495,7 +518,7 @@ const createMethodsForStore = ({
           return idArray;
         }),
         {
-          meta: { httpVerb: "PUT" },
+          meta: { httpVerb: "PUT", httpMany: true },
           name: `${name}.putMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
@@ -513,7 +536,7 @@ const createMethodsForStore = ({
           return idArray;
         }),
         {
-          meta: { httpVerb: "PATCH" },
+          meta: { httpVerb: "PATCH", httpMany: true },
           name: `${name}.patchMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
@@ -530,7 +553,7 @@ const createMethodsForStore = ({
           return idArray;
         }),
         {
-          meta: { httpVerb: "DELETE" },
+          meta: { httpVerb: "DELETE", httpMany: true },
           name: `${name}.deleteMany`,
           data: [],
           compute: (idArray) => targetStore.selectAll(idArray),
