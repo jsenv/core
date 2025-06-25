@@ -118,12 +118,15 @@ export const resource = (
       const childIdKey = childResource.idKey;
       resourceInstance.addItemSetup((item) => {
         let childItemId;
+        let preferItem = false;
         const updateChildItemId = (value) => {
           if (value !== null && typeof value === "object") {
+            preferItem = true;
             const childItem = childResource.store.upsert(value);
             childItemId = childItem[childIdKey];
             return;
           }
+          preferItem = false;
           if (primitiveCanBeId(value)) {
             const childItemProps = { [childIdKey]: value };
             const childItem = childResource.store.upsert(childItemProps);
@@ -139,7 +142,7 @@ export const resource = (
           return childItem;
         });
         if (debug) {
-          console.log(
+          console.debug(
             `setup ${item}.${propertyName} one-to-one with "${childResource.name}" (current value: ${childItemSignal.peek()})`,
           );
         }
@@ -147,17 +150,33 @@ export const resource = (
         Object.defineProperty(item, propertyName, {
           get: () => {
             const childItem = childItemSignal.value;
-            if (debug) {
-              console.log(`return ${childItem} for ${item}.${propertyName}`);
+            if (preferItem) {
+              if (debug) {
+                console.debug(
+                  `return ${childItem} for ${item}.${propertyName}`,
+                );
+              }
+              return childItem;
             }
-            return childItem;
+            if (debug) {
+              console.debug(
+                `return ${childItemId} for ${item}.${propertyName}`,
+              );
+            }
+            return childItemId;
           },
           set: (value) => {
             updateChildItemId(value);
             if (debug) {
-              console.debug(
-                `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
-              );
+              if (preferItem) {
+                console.debug(
+                  `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
+                );
+              } else {
+                console.debug(
+                  `${item}.${propertyName} updated to ${childItemId}`,
+                );
+              }
             }
           },
         });
