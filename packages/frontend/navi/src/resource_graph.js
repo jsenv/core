@@ -117,27 +117,30 @@ export const resource = (
     const one = (childResource, propertyName) => {
       const childIdKey = childResource.idKey;
       resourceInstance.addItemSetup((item) => {
-        let childItemId;
+        const childItemIdSignal = signal();
         let preferItem = false;
         const updateChildItemId = (value) => {
           if (value !== null && typeof value === "object") {
             preferItem = true;
             const childItem = childResource.store.upsert(value);
-            childItemId = childItem[childIdKey];
+            const childItemId = childItem[childIdKey];
+            childItemIdSignal.value = childItemId;
             return;
           }
           preferItem = false;
           if (primitiveCanBeId(value)) {
             const childItemProps = { [childIdKey]: value };
             const childItem = childResource.store.upsert(childItemProps);
-            childItemId = childItem[childIdKey];
+            const childItemId = childItem[childIdKey];
+            childItemIdSignal.value = childItemId;
             return;
           }
-          childItemId = undefined;
+          childItemIdSignal.value = undefined;
         };
         updateChildItemId(item[propertyName]);
 
         const childItemSignal = computed(() => {
+          const childItemId = childItemIdSignal.value;
           const childItem = childResource.store.select(childItemId);
           return childItem;
         });
@@ -158,6 +161,7 @@ export const resource = (
               }
               return childItem;
             }
+            const childItemId = childItemIdSignal.peek();
             if (debug) {
               console.debug(
                 `return ${childItemId} for ${item}.${propertyName}`,
@@ -174,7 +178,7 @@ export const resource = (
                 );
               } else {
                 console.debug(
-                  `${item}.${propertyName} updated to ${childItemId}`,
+                  `${item}.${propertyName} updated to ${childItemIdSignal.peek()}`,
                 );
               }
             }
