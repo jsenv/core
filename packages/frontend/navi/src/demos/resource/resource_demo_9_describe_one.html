@@ -25,8 +25,8 @@
       import { localStorageSignal } from "../../local_storage_signal.js";
 
       const tables = [
-        { id: 1, name: "table_1", owner: 1 },
-        { id: 2, name: "table_2", owner: 2 },
+        { id: 1, name: "table_1", owner: { id: 1 } },
+        { id: 2, name: "table_2", owner: { id: 2 } },
       ];
       const users = [
         { id: 1, name: "User 1" },
@@ -126,7 +126,7 @@
 
         const getTableOwner = getTableOwnerAction.bindParams({
           name: table.name,
-          ownerId: table.owner,
+          ownerId: table.owner.id,
         });
 
         const inputRef = useRef();
@@ -213,7 +213,7 @@
       const TableDetails = ({ table }) => {
         const getTableOwner = getTableOwnerAction.bindParams({
           name: table.name,
-          ownerId: table.owner,
+          ownerId: table.owner.id,
         });
         const { active } = useActionStatus(getTableOwner);
 
@@ -297,7 +297,7 @@
         }, [isEditing]);
 
         // Compter combien de tables appartiennent à cet utilisateur
-        const userTables = tables.filter((table) => table.owner === user.id);
+        const userTables = tables.filter((table) => table.owner.id === user.id);
 
         return (
           <div
