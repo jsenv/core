@@ -110,11 +110,9 @@ export const resource = (
       const childIdKey = childResource.idKey;
       resourceInstance.addItemSetup((item) => {
         const childItemIdSignal = signal();
-        let preferItem = false;
         const updateChildItemId = (value) => {
           const currentChildItemId = childItemIdSignal.peek();
           if (isProps(value)) {
-            preferItem = true;
             const childItem = childResource.store.upsert(value);
             const childItemId = childItem[childIdKey];
             if (currentChildItemId === childItemId) {
@@ -123,7 +121,6 @@ export const resource = (
             childItemIdSignal.value = childItemId;
             return true;
           }
-          preferItem = false;
           if (primitiveCanBeId(value)) {
             const childItemProps = { [childIdKey]: value };
             const childItem = childResource.store.upsert(childItemProps);
@@ -150,17 +147,17 @@ export const resource = (
         const childItemFacadeSignal = computed(() => {
           const childItem = childItemSignal.value;
           if (childItem) {
-            const itemCopy = Object.create(
+            const childItemCopy = Object.create(
               Object.getPrototypeOf(childItem),
               Object.getOwnPropertyDescriptors(childItem),
             );
-            Object.defineProperty(itemCopy, SYMBOL_OBJECT_SIGNAL, {
+            Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
               value: childItemSignal,
               writable: false,
               enumerable: false,
               configurable: false,
             });
-            return itemCopy;
+            return childItemCopy;
           }
           const nullItem = {
             [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
@@ -178,41 +175,20 @@ export const resource = (
         Object.defineProperty(item, propertyName, {
           get: () => {
             const childItemFacade = childItemFacadeSignal.value;
-            if (preferItem) {
-              if (debug) {
-                console.debug(
-                  `return ${childItemFacade} for ${item}.${propertyName}`,
-                );
-              }
-              return childItemFacade;
-            }
-            const childItemId = childItemIdSignal.peek();
-            if (debug) {
-              console.debug(
-                `return ${childItemId} for ${item}.${propertyName}`,
-              );
-            }
-            return childItemId;
+            return childItemFacade;
           },
           set: (value) => {
-            if (updateChildItemId(value)) {
-              if (debug) {
-                if (preferItem) {
-                  console.debug(
-                    `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
-                  );
-                } else {
-                  console.debug(
-                    `${item}.${propertyName} updated to ${childItemIdSignal.peek()}`,
-                  );
-                }
-              }
+            if (!updateChildItemId(value)) {
+              return;
+            }
+            if (debug) {
+              console.debug(
+                `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
+              );
             }
           },
         });
       });
-      // lorsqu'on call get sur ce sous objet
-      // il faut qu'on stocke sur celui-ci par contre
       return resource(`${name}.${propertyName}`, {
         sourceStore: store,
         store: childResource.store,
@@ -508,7 +484,7 @@ const createMethodsForStore = ({
               `${putAction} must return an object (that will be used to update "${name}" resource), received ${props}.`,
             );
           }
-          const item = targetStore.upsert(props);
+          const item = sourceStore.upsert(props);
           triggerAfterEffects(putAction);
           const itemId = item[idKey];
           return itemId;
@@ -525,7 +501,7 @@ const createMethodsForStore = ({
     patch: (callback, options) => {
       const patchAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (props) => {
-          const item = targetStore.upsert(props);
+          const item = sourceStore.upsert(props);
           triggerAfterEffects(patchAction);
           const itemId = item[idKey];
           return itemId;
