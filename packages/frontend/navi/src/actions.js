@@ -593,6 +593,7 @@ export const createAction = (callback, rootOptions = {}) => {
     };
 
     action = {
+      callback,
       rootAction,
       parentAction,
       name,
@@ -864,6 +865,7 @@ const createActionProxyFromSignal = (
   };
   const actionProxy = {
     isProxy: true,
+    callback: undefined,
     name: undefined,
     params: undefined,
     loadRequested: undefined,
@@ -883,6 +885,7 @@ const createActionProxyFromSignal = (
   onActionTargetChange((actionTarget) => {
     const currentAction = actionTarget || action;
     actionProxy.name = `[Proxy] ${currentAction.name}`;
+    actionProxy.callback = currentAction.callback;
     actionProxy.params = currentAction.params;
     actionProxy.loadRequested = currentAction.loadRequested;
     actionProxy.loadingState = currentAction.loadingState;
@@ -957,6 +960,9 @@ const createActionProxyFromSignal = (
       const params = paramsSignal.value;
       if (params) {
         actionTarget = actionRef.bindParams(params);
+        if (previousTarget === actionTarget) {
+          return;
+        }
         currentAction = actionTarget;
         currentActionPrivateProperties =
           getActionPrivateProperties(actionTarget);

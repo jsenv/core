@@ -35,6 +35,11 @@
       const USER = resource("user", {
         idKey: "id",
         mutableIdKey: "name",
+        get: ({ userId }) => {
+          const user = users.find((user) => user.id === userId);
+          // user.tables = tables.filter((table) => table.owner?.id === userId);
+          return user;
+        },
         getMany: () => users,
         put: ({ name, field, value }) => {
           let userToUpdate = users.find((u) => u.name === name);
@@ -63,7 +68,10 @@
         },
       });
       TABLE.rename = TABLE.put.bindParams({ field: "name" });
-      // const USER_TABLES = USER.many("tables", TABLE, {
+      // USER.many("tables", TABLE, {
+      //   get: ({ userId }) => {
+      //     return tables.filter((table) => table.owner?.id === userId);
+      //   },
       //   put: ({ userId, tableId }) => {
       //     const tableToAdd = tables.find((t) => t.id === tableId);
       //     return [userId, tableToAdd];
@@ -77,6 +85,8 @@
           if (!owner) {
             return null;
           }
+          debugger;
+          // return USER.get.callback({ userId: owner.id });
           const user = users.find((user) => user.id === owner.id) || null;
           return user;
         },

@@ -49,8 +49,8 @@ export const arraySignalStore = (
       }
       setCopy.add(id);
     }
-    previousIdSetSignal.value = setCopy;
     if (modified) {
+      previousIdSetSignal.value = setCopy;
       for (const idChangeCallback of idChangeCallbackSet) {
         idChangeCallback(idSet, previousIdSet);
       }
