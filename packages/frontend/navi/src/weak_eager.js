@@ -1,7 +1,7 @@
 let debug = false;
 
 const IDLE_TIMEOUT = 500;
-const EAGER = false;
+const EAGER = true;
 
 export const createIterableEagerWeakSet = (name) => {
   let cleanupScheduled = false;
@@ -32,6 +32,7 @@ export const createIterableEagerWeakSet = (name) => {
     if (objectWeakRefSet.size > 0) {
       scheduleNextCleanup();
     }
+    return { cleaned: cleanedCount, remaining: objectWeakRefSet.size };
   };
 
   const scheduleNextCleanup = () => {
@@ -143,14 +144,13 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
       if (debug) {
         console.debug(`🧹 ${name}: WeakRef is now dead`);
       }
-      return true;
     }
-    return false;
   };
 
   const performCleanup = () => {
     cleanupScheduled = false;
     idleCallbackId = null;
+    checkAndCleanup();
 
     // ✅ If still alive, schedule next check
     if (!isDead) {
@@ -200,14 +200,13 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
     },
 
     isDead() {
-      if (isDead) return true;
+      if (isDead) {
+        return true;
+      }
       checkAndCleanup();
-
-      // ✅ If not dead, schedule cleanup to check again later
       if (!isDead) {
         scheduleCleanup();
       }
-
       return isDead;
     },
 
@@ -217,7 +216,8 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
         idleCallbackId = null;
       }
       cleanupScheduled = false;
-      return checkAndCleanup();
+      checkAndCleanup();
+      return isDead;
     },
 
     schedule: scheduleCleanup,
