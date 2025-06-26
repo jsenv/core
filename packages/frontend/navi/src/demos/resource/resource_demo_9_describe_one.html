@@ -55,6 +55,21 @@
         userToUpdate.name = newName;
         return { id, name: newName };
       });
+
+      // ✅ NEW: Action to update table owner
+      const updateTableOwnerAction = table.put(({ tableId, newOwnerId }) => {
+        const tableToUpdate = tables.find((t) => t.id === tableId);
+        if (tableToUpdate) {
+          tableToUpdate.owner.id = newOwnerId;
+          return {
+            id: tableId,
+            name: tableToUpdate.name,
+            owner: { id: newOwnerId },
+          };
+        }
+        return null;
+      });
+
       const getTableOwnerAction = tableOwner.get(async ({ ownerId }) => {
         const owner = users.find((user) => user.id === ownerId) || null;
         return owner;
@@ -112,6 +127,9 @@
       const TableItem = ({ table }) => {
         const [isEditing, setIsEditing] = useState(false);
         const [editName, setEditName] = useState(table.name);
+        // ✅ NEW: State for editing owner
+        const [isEditingOwner, setIsEditingOwner] = useState(false);
+        const [editOwnerId, setEditOwnerId] = useState(table.owner.id);
 
         const handleSave = () => {
           table.name = editName;
@@ -123,6 +141,19 @@
           setIsEditing(false);
         };
 
+        // ✅ NEW: Handle owner update
+        const handleOwnerSave = async () => {
+          await updateTableOwnerAction
+            .bindParams({ tableId: table.id, newOwnerId: editOwnerId })
+            .load();
+          setIsEditingOwner(false);
+        };
+
+        const handleOwnerCancel = () => {
+          setEditOwnerId(table.owner.id);
+          setIsEditingOwner(false);
+        };
+
         const inputRef = useRef();
         useEffect(() => {
           if (isEditing) {
@@ -130,6 +161,9 @@
             inputRef.current.select();
           }
         }, [isEditing]);
+
+        // ✅ Get current owner name for display
+        const currentOwner = users.find((u) => u.id === table.owner.id);
 
         return (
           <div
@@ -172,8 +206,53 @@
               )}
             </div>
 
+            {/* ✅ NEW: Owner editing section */}
             <div style={{ marginTop: "10px", fontSize: "12px", color: "#666" }}>
-              Owner: {table.owner.name}
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              >
+                {isEditingOwner ? (
+                  <>
+                    <span>Owner:</span>
+                    <select
+                      value={editOwnerId}
+                      onChange={(e) => setEditOwnerId(parseInt(e.target.value))}
+                      style={{ fontSize: "12px" }}
+                    >
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleOwnerSave}
+                      style={{ fontSize: "10px", padding: "2px 6px" }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleOwnerCancel}
+                      style={{ fontSize: "10px", padding: "2px 6px" }}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span>Owner: {currentOwner?.name || "Unknown"}</span>
+                    <button
+                      onClick={() => {
+                        setEditOwnerId(table.owner.id);
+                        setIsEditingOwner(true);
+                      }}
+                      style={{ fontSize: "10px", padding: "2px 6px" }}
+                    >
+                      Change Owner
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         );
