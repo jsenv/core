@@ -3,7 +3,7 @@ import { createAction, reloadActions } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
-import { createWeakRegistry } from "./weak_registry.js";
+import { createWeakSetProactive } from "./weak_proactive.js";
 
 let debug = true;
 
@@ -318,10 +318,10 @@ const createMethodsForStore = ({
   );
   const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
 
-  const httpActionRegistry = createWeakRegistry("httpActionRegistry");
+  const httpActionWeakSet = createWeakSetProactive("httpActionRegistry");
   const findAliveActionsMatching = (predicate) => {
     const matchingActionSet = new Set();
-    for (const httpAction of httpActionRegistry) {
+    for (const httpAction of httpActionWeakSet) {
       if (!predicate(httpAction)) {
         continue;
       }
@@ -416,7 +416,7 @@ const createMethodsForStore = ({
         },
       );
       const actionTrace = `${getAction} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
-      httpActionRegistry.add(getAction);
+      httpActionWeakSet.add(getAction);
 
       return getAction;
     },
@@ -510,7 +510,7 @@ const createMethodsForStore = ({
         },
       );
 
-      httpActionRegistry.add(getManyAction);
+      httpActionWeakSet.add(getManyAction);
 
       return getManyAction;
     },

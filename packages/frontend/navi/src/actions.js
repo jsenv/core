@@ -6,7 +6,7 @@ import {
 import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
-import { createWeakRegistry } from "./weak_registry.js";
+import { createWeakSetProactive } from "./weak_proactive.js";
 
 let debug = false;
 
@@ -130,13 +130,13 @@ export const abortPendingActions = (
 
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
-const activationRegistry = createWeakRegistry("activationRegistry");
+const activationWeakSet = createWeakSetProactive("activation_weak_set");
 
 const getActivationInfo = () => {
   const loadingSet = new Set();
   const settledSet = new Set();
 
-  for (const action of activationRegistry) {
+  for (const action of activationWeakSet) {
     const privateProps = getActionPrivateProperties(action);
     const loadingState = privateProps.loadingStateSignal.peek();
 
@@ -150,7 +150,7 @@ const getActivationInfo = () => {
       settledSet.add(action);
     } else {
       throw new Error(
-        `An action in the activation registry must be LOADING, ABORTED, FAILED or LOADED, found "${loadingState.id}" for action "${action}"`,
+        `An action in the activation weak set must be LOADING, ABORTED, FAILED or LOADED, found "${loadingState.id}" for action "${action}"`,
       );
     }
   }
@@ -163,13 +163,13 @@ const getActivationInfo = () => {
 
 if (import.meta.dev) {
   window.__actions__ = {
-    activationRegistry,
+    activationWeakSet,
     getActivationInfo,
     cleanup: {
       activation: {
-        forceCleanup: () => activationRegistry.forceCleanup(),
-        schedule: () => activationRegistry.schedule(),
-        getStats: () => activationRegistry.getStats(),
+        forceCleanup: () => activationWeakSet.forceCleanup(),
+        schedule: () => activationWeakSet.schedule(),
+        getStats: () => activationWeakSet.getStats(),
       },
     },
   };
@@ -339,7 +339,7 @@ ${lines.join("\n")}`);
       const actionToUnloadPrivateProperties =
         getActionPrivateProperties(actionToUnload);
       actionToUnloadPrivateProperties.performUnload(reason);
-      activationRegistry.delete(actionToUnload);
+      activationWeakSet.delete(actionToUnload);
     }
   }
   perform_preloads_and_loads: {
@@ -352,7 +352,7 @@ ${lines.join("\n")}`);
         reason,
         isPreload,
       });
-      activationRegistry.add(actionToPreloadOrLoad);
+      activationWeakSet.add(actionToPreloadOrLoad);
 
       if (actionToPreloadOrLoad.loadingState === LOADED) {
         // sync actions are already done, no need to wait
@@ -445,8 +445,7 @@ export const createAction = (callback, rootOptions) => {
 
     let action;
 
-    const childActionRegistry = createWeakRegistry();
-
+    const childActionWeakSet = createWeakSetProactive();
     const childActionWeakMap = createJsValueWeakMap();
     const _bindParams = (newParamsOrSignal, options = {}) => {
       // ✅ CAS 1: Signal direct -> proxy
@@ -532,7 +531,7 @@ export const createAction = (callback, rootOptions) => {
       }
       const childAction = _bindParams(newParamsOrSignal, options);
       childActionWeakMap.set(newParamsOrSignal, childAction);
-      childActionRegistry.add(childAction);
+      childActionWeakSet.add(childAction);
 
       return childAction;
     };
@@ -583,9 +582,8 @@ export const createAction = (callback, rootOptions) => {
         // Get child actions from the current action
         const currentActionPrivateProps =
           getActionPrivateProperties(currentAction);
-        const childActionRegistry =
-          currentActionPrivateProps.childActionRegistry;
-        for (const childAction of childActionRegistry) {
+        const childActionWeakSet = currentActionPrivateProps.childActionWeakSet;
+        for (const childAction of childActionWeakSet) {
           traverse(childAction);
         }
       };
@@ -806,7 +804,7 @@ export const createAction = (callback, rootOptions) => {
         performUnload,
         ui,
 
-        childActionRegistry,
+        childActionWeakSet,
       };
       setActionPrivateProperties(action, privateProperties);
     }
@@ -935,8 +933,8 @@ const createActionProxyFromSignal = (
 
   onActionTargetChange(() => {
     proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
-    proxyPrivateProperties.childActionRegistry =
-      currentActionPrivateProperties.childActionRegistry;
+    proxyPrivateProperties.childActionWeakSet =
+      currentActionPrivateProperties.childActionWeakSet;
   });
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
 
