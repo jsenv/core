@@ -416,7 +416,7 @@ const createMethodsForStore = ({
         },
       );
       const actionTrace = `${getAction} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
-      httpActionRegistry.register(getAction);
+      httpActionRegistry.add(getAction);
 
       return getAction;
     },
@@ -510,7 +510,7 @@ const createMethodsForStore = ({
         },
       );
 
-      httpActionRegistry.register(getManyAction);
+      httpActionRegistry.add(getManyAction);
 
       return getManyAction;
     },

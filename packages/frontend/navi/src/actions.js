@@ -8,7 +8,7 @@ import { createJsValueWeakMap } from "./js_value_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 import { createWeakRegistry } from "./weak_registry.js";
 
-let debug = true;
+let debug = false;
 
 export const IDLE = { id: "idle" };
 export const LOADING = { id: "loading" };
