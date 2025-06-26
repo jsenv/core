@@ -97,7 +97,7 @@
       import { render } from "preact";
       import { useState, useEffect } from "preact/hooks";
       import {
-        resource,
+        createAction,
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
       } from "@jsenv/navi";
@@ -106,31 +106,38 @@
       const numbersStore = [];
       let nextId = 1;
 
-      // ✅ Create number resource
-      const number = resource("number");
+      const numberListAction = createAction(
+        () => {
+          return numbersStore;
+        },
+        { name: "list" },
+      );
 
-      // ✅ Actions
-      const getManyNumbersAction = number.getMany(() => {
-        console.log("Loading all numbers");
-        return [...numbersStore];
-      });
+      const postNumberAction = createAction(
+        ({ value }) => {
+          console.log(`Creating number: ${value}`);
+          const newNumber = { id: nextId++, value };
+          numbersStore.push(newNumber);
+          return newNumber;
+        },
+        {
+          name: "post",
+        },
+      );
 
-      const postNumberAction = number.post(({ value }) => {
-        console.log(`Creating number: ${value}`);
-        const newNumber = { id: nextId++, value };
-        numbersStore.push(newNumber);
-        return newNumber;
-      });
+      const deleteAllNumbersAction = createAction(
+        () => {
+          console.log("Deleting all numbers");
+          numbersStore.length = 0;
+          const deletedIds = numbersStore.map((num) => num.id);
+          return deletedIds;
+        },
+        {
+          name: "delete",
+        },
+      );
 
-      const deleteAllNumbersAction = number.deleteMany(() => {
-        console.log("Deleting all numbers");
-        numbersStore.length = 0;
-        const deletedIds = numbersStore.map((num) => num.id);
-        return deletedIds;
-      });
-
-      // ✅ Load initial data
-      getManyNumbersAction.load();
+      numberListAction.reload();
 
       // ✅ Helper function to get registry stats
       const getRegistryStats = () => {
@@ -141,7 +148,7 @@
         let total = 0;
         for (const action of new Set([...loadingSet, ...settledSet])) {
           total++;
-          if (action.name && action.name.includes("number.post")) {
+          if (action.name && action.name.includes("post")) {
             alivePostActions++;
           }
         }
@@ -218,7 +225,7 @@
         }, []);
 
         return (
-          <ActionRenderer action={getManyNumbersAction}>
+          <ActionRenderer action={numberListAction}>
             {(numbers) => (
               <>
                 {numbers.map((num) => (
@@ -237,16 +244,7 @@
         .getElementById("addNumber")
         .addEventListener("click", async () => {
           const randomValue = Math.floor(Math.random() * 1000);
-
-          // ✅ Create a temporary POST action that should be GC'd
-          const tempPostAction = number.post(({ value }) => {
-            console.log(`Creating number: ${value}`);
-            const newNumber = { id: nextId++, value };
-            numbersStore.push(newNumber);
-            return newNumber;
-          });
-
-          await tempPostAction.bindParams({ value: randomValue }).load();
+          await postNumberAction.bindParams({ value: randomValue }).reload();
         });
 
       document
@@ -268,7 +266,6 @@
         updateStats,
         numbersStore,
         actions: {
-          getManyNumbersAction,
           postNumberAction,
           deleteAllNumbersAction,
         },

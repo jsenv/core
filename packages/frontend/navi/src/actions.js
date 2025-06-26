@@ -388,7 +388,7 @@ ${lines.join("\n")}`);
 const initialParamsDefault = {};
 const metaDefault = {};
 
-export const createAction = (callback, rootOptions) => {
+export const createAction = (callback, rootOptions = {}) => {
   let rootAction;
 
   const createActionCore = (
