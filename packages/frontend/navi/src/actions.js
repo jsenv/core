@@ -6,7 +6,10 @@ import {
 import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
-import { createIterableEagerWeakSet } from "./weak_eager.js";
+import {
+  createEagerWeakRef,
+  createIterableEagerWeakSet,
+} from "./weak_eager.js";
 
 let debug = false;
 
@@ -615,15 +618,15 @@ export const createAction = (callback, rootOptions) => {
 
     // Effects pour synchroniser les propriétés
     effects: {
-      const actionWeakRef = new WeakRef(action);
+      const actionWeakRef = createEagerWeakRef(action);
       const actionWeakEffect = (callback) => {
         const dispose = effect(() => {
           const actionRef = actionWeakRef.deref();
-          if (actionRef) {
-            callback(actionRef);
-          } else {
+          if (!actionRef) {
             dispose();
+            return;
           }
+          callback(actionRef);
         });
       };
       actionWeakEffect((actionRef) => {
@@ -942,8 +945,8 @@ const createActionProxyFromSignal = (
     let actionTargetPrevious = null;
     let isFirstEffect = true;
     const changeCleanupCallbackSet = new Set();
-    const actionWeakRef = new WeakRef(action);
-    const proxyWeakRef = new WeakRef(actionProxy);
+    const actionWeakRef = createEagerWeakRef(action);
+    const proxyWeakRef = createEagerWeakRef(actionProxy);
 
     const dispose = effect(() => {
       const actionRef = actionWeakRef.deref();
