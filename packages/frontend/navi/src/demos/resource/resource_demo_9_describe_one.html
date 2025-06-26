@@ -74,14 +74,14 @@
         get: ({ userId }) => {
           return tables.filter((table) => table.owner?.id === userId);
         },
-        put: ({ userId, tableId }) => {
+        post: ({ userId, tableId }) => {
           const tableToAdd = tables.find((t) => t.id === tableId);
           return [userId, tableToAdd];
         },
         delete: ({ userId, tableId }) => {
           return [userId, tableId];
         },
-        putMany: ({ userId, tableIds }) => {
+        postMany: ({ userId, tableIds }) => {
           const tablesToAdd = tables.filter((t) => tableIds.includes(t.id));
           return [userId, tablesToAdd];
         },
