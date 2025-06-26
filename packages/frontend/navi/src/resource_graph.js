@@ -3,6 +3,7 @@ import { createAction, reloadActions } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
+import { createWeakRegistry } from "./weak_registry.js";
 
 let debug = true;
 
@@ -317,45 +318,22 @@ const createMethodsForStore = ({
   );
   const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
 
-  const httpActionWeakRefSet = new Set();
-  const httpActionFinalizationRegistry = new FinalizationRegistry(() => {
-    for (const weakRef of httpActionWeakRefSet) {
-      if (weakRef.deref() === undefined) {
-        httpActionWeakRefSet.delete(weakRef);
+  const httpActionRegistry = createWeakRegistry("httpActionRegistry");
+  const findAliveActionsMatching = (predicate) => {
+    const matchingActionSet = new Set();
+    for (const httpAction of httpActionRegistry) {
+      if (!predicate(httpAction)) {
+        continue;
+      }
+      // Find all instances of this action (including bound params versions)
+      const allInstances = httpAction.matchAllSelfOrDescendant(
+        (action) => action.loadRequested,
+      );
+      for (const instance of allInstances) {
+        matchingActionSet.add(instance);
       }
     }
-  });
-
-  const httpActionRegistry = {
-    register: (action) => {
-      const weakRef = new WeakRef(action);
-      httpActionWeakRefSet.add(weakRef);
-      httpActionFinalizationRegistry.register(action);
-    },
-
-    findAliveActionsMatching: (predicate) => {
-      const matchingActionSet = new Set();
-
-      for (const weakRef of httpActionWeakRefSet) {
-        const httpAction = weakRef.deref();
-        if (!httpAction) {
-          httpActionWeakRefSet.delete(weakRef);
-          continue;
-        }
-
-        if (!predicate(httpAction)) {
-          continue;
-        }
-        // Find all instances of this action (including bound params versions)
-        const allInstances = httpAction.matchAllSelfOrDescendant(
-          (action) => action.loadRequested,
-        );
-        for (const instance of allInstances) {
-          matchingActionSet.add(instance);
-        }
-      }
-      return matchingActionSet;
-    },
+    return matchingActionSet;
   };
 
   const triggerAfterEffects = (action) => {
@@ -375,8 +353,7 @@ const createMethodsForStore = ({
             : (httpActionCandidate) =>
                 httpActionCandidate.meta.httpVerb === "GET" &&
                 !httpActionCandidate.meta.httpMany;
-      const toReloadSet =
-        httpActionRegistry.findAliveActionsMatching(predicate);
+      const toReloadSet = findAliveActionsMatching(predicate);
       reloadActions(toReloadSet, {
         reason: `${action} triggered`,
       });

@@ -135,7 +135,7 @@
       // ✅ Helper function to get registry stats
       const getRegistryStats = () => {
         const { loadingSet, settledSet } =
-          window.__actions__.activationRegistry.getInfo();
+          window.__actions__.getActivationInfo();
         let alivePostActions = 0;
 
         let total = 0;
@@ -146,9 +146,14 @@
           }
         }
 
+        // ✅ Get activation registry stats
+        const activationStats =
+          window.__actions__.activationRegistry.getStats();
+
         return {
           total,
           alivePostActions,
+          activation: activationStats,
         };
       };
 
