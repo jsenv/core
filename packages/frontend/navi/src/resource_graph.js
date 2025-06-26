@@ -7,15 +7,258 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
 let debug = true;
 
+const createHttpHandlerForRootResource = ({
+  name,
+  idKey,
+  store,
+  autoreloadGetManyAfter = ["POST", "DELETE"],
+  autoreloadGetAfter = false,
+}) => {
+  const httpActionWeakSet = createIterableWeakSet();
+  const shouldAutoreloadGetMany = createShouldAutoreloadAfter(
+    autoreloadGetManyAfter,
+  );
+  const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
+  const findAliveActionsMatching = (predicate) => {
+    const matchingActionSet = new Set();
+    for (const httpAction of httpActionWeakSet) {
+      if (!predicate(httpAction)) {
+        continue;
+      }
+      // Find all instances of this action (including bound params versions)
+      const allInstances = httpAction.matchAllSelfOrDescendant(
+        (action) => action.loadRequested,
+      );
+      for (const instance of allInstances) {
+        matchingActionSet.add(instance);
+      }
+    }
+    return matchingActionSet;
+  };
+  const onStoreAffected = (httpAction) => {
+    autoreload: {
+      const getManyAutoreload = shouldAutoreloadGetMany(httpAction);
+      const getAutoreload = shouldAutoreloadGet(httpAction);
+      if (!getManyAutoreload && !getAutoreload) {
+        break autoreload;
+      }
+      const predicate =
+        getManyAutoreload && getAutoreload
+          ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
+          : getManyAutoreload
+            ? (httpActionCandidate) =>
+                httpActionCandidate.meta.httpVerb === "GET" &&
+                httpActionCandidate.meta.httpMany === true
+            : (httpActionCandidate) =>
+                httpActionCandidate.meta.httpVerb === "GET" &&
+                !httpActionCandidate.meta.httpMany;
+      const toReloadSet = findAliveActionsMatching(predicate);
+      reloadActions(toReloadSet, {
+        reason: `${httpAction} triggered`,
+      });
+    }
+  };
+
+  const getCallerInfo = () => {
+    const originalPrepareStackTrace = Error.prepareStackTrace;
+    try {
+      Error.prepareStackTrace = (_, stack) => stack;
+
+      const error = new Error();
+      const stack = error.stack;
+
+      if (stack && stack.length > 2) {
+        // stack[0] = getCallerInfo function
+        // stack[1] = the method calling getCallerInfo (get, post, etc.)
+        // stack[2] = actual caller (user code)
+        const callerFrame = stack[2];
+
+        return {
+          file: callerFrame.getFileName(),
+          line: callerFrame.getLineNumber(),
+          column: callerFrame.getColumnNumber(),
+          function: callerFrame.getFunctionName() || "<anonymous>",
+          raw: callerFrame.toString(),
+        };
+      }
+
+      return { raw: "unknown" };
+    } finally {
+      // ✅ Always restore original prepareStackTrace
+      Error.prepareStackTrace = originalPrepareStackTrace;
+    }
+  };
+
+  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+    const applyDataEffect =
+      httpVerb === "DELETE"
+        ? (itemId) => {
+            store.drop(itemId);
+            onStoreAffected(httpActionAffectingOneItem);
+            return itemId;
+          }
+        : (data) => {
+            const item = store.upsert(data);
+            onStoreAffected(httpActionAffectingOneItem);
+            const itemId = item[idKey];
+            return itemId;
+          };
+
+    const callerInfo = getCallerInfo();
+    const actionTrace = `${name}.${httpVerb} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
+    const httpActionAffectingOneItem = createAction(
+      mapCallbackMaybeAsyncResult(callback),
+      (data) => {
+        if (httpVerb === "DELETE") {
+          if (isProps(data)) {
+            throw new TypeError(
+              `${actionTrace} must return an object (that will be used to drop "${name}" resource), received ${data}.`,
+            );
+          }
+          if (!primitiveCanBeId(data)) {
+            throw new TypeError(
+              `${actionTrace} must return an id (that will be used to drop "${name}" resource), received ${data}.`,
+            );
+          }
+          return applyDataEffect(data);
+        }
+        if (!isProps(data)) {
+          throw new TypeError(
+            `${actionTrace} must return an object (that will be used to upsert "${name}" resource), received ${data}.`,
+          );
+        }
+        return applyDataEffect(data);
+      },
+      {
+        meta: { httpVerb, httpMany: false },
+        name: `${name}.${httpVerb}`,
+        compute: (itemId) => store.select(itemId),
+        ...options,
+      },
+    );
+    httpActionWeakSet.add(httpActionAffectingOneItem);
+    return httpActionAffectingOneItem;
+  };
+  const GET = (callback, options) =>
+    createActionAffectingOneItem("GET", {
+      callback,
+      applyDataEffect: (data) => {
+        const item = store.upsert(data);
+        const itemId = item[idKey];
+        return itemId;
+      },
+      compute: (itemId) => store.select(itemId),
+      ...options,
+    });
+  const POST = (callback, options) =>
+    createActionAffectingOneItem("POST", {
+      callback,
+      applyDataEffect: (data) => {
+        const item = store.upsert(data);
+        const itemId = item[idKey];
+        return itemId;
+      },
+      compute: (itemId) => store.select(itemId),
+      ...options,
+    });
+  const PUT = (callback, options) =>
+    createActionAffectingOneItem("PUT", {
+      callback,
+      ...options,
+    });
+  const PATCH = (callback, options) =>
+    createActionAffectingOneItem("PATCH", {
+      callback,
+      ...options,
+    });
+  const DELETE = (callback, options) =>
+    createActionAffectingOneItem("DELETE", {
+      callback,
+      ...options,
+    });
+
+  const createActionAffectingManyItems = (
+    httpVerb,
+    { callback, ...options },
+  ) => {
+    const applyDataEffect =
+      httpVerb === "DELETE"
+        ? (idArray) => {
+            store.drop(idArray);
+            return idArray;
+          }
+        : (dataArray) => {
+            const itemArray = store.upsert(dataArray);
+            const idArray = itemArray.map((item) => item[idKey]);
+            return idArray;
+          };
+
+    const httpActionAffectingManyItems = createAction(
+      mapCallbackMaybeAsyncResult(callback, (dataArray) => {
+        return applyDataEffect(dataArray);
+      }),
+      {
+        meta: { httpVerb, httpMany: true },
+        name: `${name}.${httpVerb}[many]`,
+        data: [],
+        compute: (idArray) => store.selectAll(idArray),
+        ...options,
+      },
+    );
+    httpActionWeakSet.add(httpActionAffectingManyItems);
+    return httpActionAffectingManyItems;
+  };
+  const GET_MANY = (callback, options) =>
+    createActionAffectingManyItems("GET", { callback, ...options });
+  const POST_MANY = (callback, options) =>
+    createActionAffectingManyItems("POST", { callback, ...options });
+  const PUT_MANY = (callback, options) =>
+    createActionAffectingManyItems("PUT", { callback, ...options });
+  const PATCH_MANY = (callback, options) =>
+    createActionAffectingManyItems("PATCH", { callback, ...options });
+  const DELETE_MANY = (callback, options) =>
+    createActionAffectingManyItems("DELETE", { callback, ...options });
+
+  return {
+    GET,
+    POST,
+    PUT,
+    PATCH,
+    DELETE,
+    GET_MANY,
+    POST_MANY,
+    PUT_MANY,
+    PATCH_MANY,
+    DELETE_MANY,
+  };
+};
+
+const createHttpHandlerForSingleRelationship = ({
+  name,
+  idKey,
+  sourceStore,
+  targetStore,
+}) => {
+     // http method must return object with the following format:
+      // { [idKey]: 123, [propertyName]: { [childIdKey]: 456, ...childProps }}
+
+      putEffect: (props) => {
+        const item = store.upsert(props);
+        const childItemId = item[propertyName][childIdKey];
+        return childItemId;
+      },
+      putCompute: (childItemId) => childResource.store.select(childItemId),
+
+};
+
 export const resource = (
   name,
   {
-    sourceStore,
-    store,
     idKey,
     mutableIdKey,
-    autoreloadGetManyAfter = ["POST", "DELETE"],
-    autoreloadGetAfter = false,
+    autoreloadGetManyAfter,
+    autoreloadGetAfter,
+    httpHandler,
     ...rest
   } = {},
 ) => {
@@ -31,7 +274,7 @@ export const resource = (
     idKey,
   };
 
-  if (!store) {
+  if (!httpHandler) {
     const setupCallbackSet = new Set();
     const addItemSetup = (callback) => {
       setupCallbackSet.add(callback);
@@ -57,7 +300,7 @@ export const resource = (
       },
     };
 
-    store = arraySignalStore([], idKey, {
+    const store = arraySignalStore([], idKey, {
       name: `${name} store`,
       createItem: (props) => {
         const item = Object.create(itemPrototype);
@@ -84,532 +327,217 @@ export const resource = (
     Object.assign(resourceInstance, {
       useArray,
       useById,
+      store,
     });
-    Object.assign(resourceInstance, { store });
+
+    httpHandler = createHttpHandlerForRootResource({
+      name,
+      idKey,
+      store,
+      autoreloadGetManyAfter,
+      autoreloadGetAfter,
+    });
   }
 
-  const shouldAutoreloadGetMany = createShouldAutoreloadAfter(
-    autoreloadGetManyAfter,
-  );
-  const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
-
-  const httpActionWeakSet = createIterableWeakSet();
-  const findAliveActionsMatching = (predicate) => {
-    const matchingActionSet = new Set();
-    for (const httpAction of httpActionWeakSet) {
-      if (!predicate(httpAction)) {
-        continue;
-      }
-      // Find all instances of this action (including bound params versions)
-      const allInstances = httpAction.matchAllSelfOrDescendant(
-        (action) => action.loadRequested,
-      );
-      for (const instance of allInstances) {
-        matchingActionSet.add(instance);
-      }
+  for (const key of Object.keys(rest)) {
+    const method = httpHandler[key];
+    if (!method) {
+      continue;
     }
-    return matchingActionSet;
-  };
+    const action = method(rest[key]);
+    resourceInstance[key] = action;
+  }
 
-  const triggerAfterEffects = (action) => {
-    autoreload: {
-      const getManyAutoreload = shouldAutoreloadGetMany(action);
-      const getAutoreload = shouldAutoreloadGet(action);
-      if (!getManyAutoreload && !getAutoreload) {
-        break autoreload;
-      }
-      const predicate =
-        getManyAutoreload && getAutoreload
-          ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
-          : getManyAutoreload
-            ? (httpActionCandidate) =>
-                httpActionCandidate.meta.httpVerb === "GET" &&
-                httpActionCandidate.meta.httpMany === true
-            : (httpActionCandidate) =>
-                httpActionCandidate.meta.httpVerb === "GET" &&
-                !httpActionCandidate.meta.httpMany;
-      const toReloadSet = findAliveActionsMatching(predicate);
-      reloadActions(toReloadSet, {
-        reason: `${action} triggered`,
+  resourceInstance.one = (propertyName, childResource, options) => {
+    const childIdKey = childResource.idKey;
+    resourceInstance.addItemSetup((item) => {
+      const childItemIdSignal = signal();
+      const updateChildItemId = (value) => {
+        const currentChildItemId = childItemIdSignal.peek();
+        if (isProps(value)) {
+          const childItem = childResource.store.upsert(value);
+          const childItemId = childItem[childIdKey];
+          if (currentChildItemId === childItemId) {
+            return false;
+          }
+          childItemIdSignal.value = childItemId;
+          return true;
+        }
+        if (primitiveCanBeId(value)) {
+          const childItemProps = { [childIdKey]: value };
+          const childItem = childResource.store.upsert(childItemProps);
+          const childItemId = childItem[childIdKey];
+          if (currentChildItemId === childItemId) {
+            return false;
+          }
+          childItemIdSignal.value = childItemId;
+          return true;
+        }
+        if (currentChildItemId === undefined) {
+          return false;
+        }
+        childItemIdSignal.value = undefined;
+        return true;
+      };
+      updateChildItemId(item[propertyName]);
+
+      const childItemSignal = computed(() => {
+        const childItemId = childItemIdSignal.value;
+        const childItem = childResource.store.select(childItemId);
+        return childItem;
       });
-    }
+      const childItemFacadeSignal = computed(() => {
+        const childItem = childItemSignal.value;
+        if (childItem) {
+          const childItemCopy = Object.create(
+            Object.getPrototypeOf(childItem),
+            Object.getOwnPropertyDescriptors(childItem),
+          );
+          Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
+            value: childItemSignal,
+            writable: false,
+            enumerable: false,
+            configurable: false,
+          });
+          return childItemCopy;
+        }
+        const nullItem = {
+          [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
+          valueOf: () => null,
+        };
+        return nullItem;
+      });
+
+      if (debug) {
+        console.debug(
+          `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
+        );
+      }
+
+      Object.defineProperty(item, propertyName, {
+        get: () => {
+          const childItemFacade = childItemFacadeSignal.value;
+          return childItemFacade;
+        },
+        set: (value) => {
+          if (!updateChildItemId(value)) {
+            return;
+          }
+          if (debug) {
+            console.debug(
+              `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
+            );
+          }
+        },
+      });
+    });
+    const httpHandlerForChildResource = createHttpHandlerForSingleRelationship({
+      name: `${name}.${propertyName}`,
+      idKey: childIdKey,
+      sourceStore: resourceInstance.store,
+      targetStore: childResource.store,
+    });
+    return resource(`${name}.${propertyName}`, {
+      idKey: childIdKey,
+      httpHandler: httpHandlerForChildResource,
+      ...options,
+    });
   };
+  resourceInstance.many = (propertyName, childResource, options) => {
+    const childIdKey = childResource.idKey;
 
-  http_methods: {
-    const { idKey, name } = resourceInstance;
+    resourceInstance.addItemSetup((item) => {
+      const childItemIdArraySignal = signal([]);
+      const updateChildItemIdArray = (valueArray) => {
+        const currentIdArray = childItemIdArraySignal.peek();
 
-    const getCallerInfo = () => {
-      const originalPrepareStackTrace = Error.prepareStackTrace;
-      try {
-        Error.prepareStackTrace = (_, stack) => stack;
-
-        const error = new Error();
-        const stack = error.stack;
-
-        if (stack && stack.length > 2) {
-          // stack[0] = getCallerInfo function
-          // stack[1] = the method calling getCallerInfo (get, post, etc.)
-          // stack[2] = actual caller (user code)
-          const callerFrame = stack[2];
-
-          return {
-            file: callerFrame.getFileName(),
-            line: callerFrame.getLineNumber(),
-            column: callerFrame.getColumnNumber(),
-            function: callerFrame.getFunctionName() || "<anonymous>",
-            raw: callerFrame.toString(),
-          };
+        if (!Array.isArray(valueArray)) {
+          if (currentIdArray.length === 0) {
+            return;
+          }
+          childItemIdArraySignal.value = [];
+          return;
         }
 
-        return { raw: "unknown" };
-      } finally {
-        // ✅ Always restore original prepareStackTrace
-        Error.prepareStackTrace = originalPrepareStackTrace;
-      }
-    };
-
-    sourceStore = sourceStore || store;
-    const targetStore = store;
-
-    const httpMethods = {
-      get: (callback, options) => {
-        const callerInfo = getCallerInfo();
-
-        const getAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (props) => {
-            if (!isProps(props)) {
-              if (targetStore !== sourceStore) {
-                return null;
-              }
-              throw new TypeError(
-                `${actionTrace} must return an object (that will be used to upsert "${name}" resource), received ${props}.`,
-              );
-            }
-            const item = targetStore.upsert(props);
-            const itemId = item[idKey];
-            return itemId;
-          }),
-          {
-            meta: { httpVerb: "GET", httpMany: false },
-            name: `${name}.get`,
-            compute: (itemId) => targetStore.select(itemId),
-            ...options,
-          },
-        );
-        const actionTrace = `${getAction} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
-        httpActionWeakSet.add(getAction);
-
-        return getAction;
-      },
-      post: (callback, options) => {
-        const postAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (props) => {
-            const item = targetStore.upsert(props);
-            triggerAfterEffects(postAction);
-            const itemId = item[idKey];
-            return itemId;
-          }),
-          {
-            meta: { httpVerb: "POST", httpMany: false },
-            name: `${name}.post`,
-            compute: (itemId) => targetStore.select(itemId),
-            ...options,
-          },
-        );
-        return postAction;
-      },
-      put: (callback, options) => {
-        const putAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (props) => {
-            if (!isProps(props)) {
-              throw new TypeError(
-                `${putAction} must return an object (that will be used to update "${name}" resource), received ${props}.`,
-              );
-            }
-            const item = sourceStore.upsert(props);
-            triggerAfterEffects(putAction);
-            const itemId = item[idKey];
-            return itemId;
-          }),
-          {
-            meta: { httpVerb: "PUT", httpMany: false },
-            name: `${name}.put`,
-            compute: (itemId) => targetStore.select(itemId),
-            ...options,
-          },
-        );
-        return putAction;
-      },
-      patch: (callback, options) => {
-        const patchAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (props) => {
-            const item = sourceStore.upsert(props);
-            triggerAfterEffects(patchAction);
-            const itemId = item[idKey];
-            return itemId;
-          }),
-          {
-            meta: { httpVerb: "PATCH", httpMany: false },
-            name: `${name}.patch`,
-            compute: (itemId) => targetStore.select(itemId),
-            ...options,
-          },
-        );
-        return patchAction;
-      },
-      delete: (callback, options) => {
-        const deleteAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (itemId) => {
-            targetStore.drop(itemId);
-            triggerAfterEffects(deleteAction);
-            return itemId;
-          }),
-          {
-            meta: { httpVerb: "DELETE", httpMany: false },
-            name: `${name}.delete`,
-            compute: (itemId) => targetStore.select(itemId),
-            ...options,
-          },
-        );
-        return deleteAction;
-      },
-
-      getMany: (callback, options) => {
-        const getManyAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (propsArray) => {
-            const itemArray = targetStore.upsert(propsArray);
-            triggerAfterEffects(getManyAction);
-            const idArray = itemArray.map((item) => item[idKey]);
-            return idArray;
-          }),
-          {
-            meta: { httpVerb: "GET", httpMany: true },
-            name: `${name}.getMany`,
-            data: [],
-            compute: (idArray) => targetStore.selectAll(idArray),
-            ...options,
-          },
-        );
-
-        httpActionWeakSet.add(getManyAction);
-
-        return getManyAction;
-      },
-      postMany: (callback, options) => {
-        const postManyAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (propsArray) => {
-            const itemArray = targetStore.upsert(propsArray);
-            triggerAfterEffects(postManyAction);
-            const idArray = itemArray.map((item) => item[idKey]);
-            return idArray;
-          }),
-          {
-            meta: { httpVerb: "POST", httpMany: true },
-            name: `${name}.postMany`,
-            data: [],
-            compute: (idArray) => targetStore.selectAll(idArray),
-            ...options,
-          },
-        );
-        return postManyAction;
-      },
-      putMany: (callback, options) => {
-        const putManyAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (propsArray) => {
-            const itemArray = targetStore.upsert(propsArray);
-            triggerAfterEffects(putManyAction);
-            const idArray = itemArray.map((item) => item[idKey]);
-            return idArray;
-          }),
-          {
-            meta: { httpVerb: "PUT", httpMany: true },
-            name: `${name}.putMany`,
-            data: [],
-            compute: (idArray) => targetStore.selectAll(idArray),
-            ...options,
-          },
-        );
-        return putManyAction;
-      },
-      patchMany: (callback, options) => {
-        const patchManyAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (propsArray) => {
-            const itemArray = targetStore.upsert(propsArray);
-            triggerAfterEffects(patchManyAction);
-            const idArray = itemArray.map((item) => item[idKey]);
-            return idArray;
-          }),
-          {
-            meta: { httpVerb: "PATCH", httpMany: true },
-            name: `${name}.patchMany`,
-            data: [],
-            compute: (idArray) => targetStore.selectAll(idArray),
-            ...options,
-          },
-        );
-        return patchManyAction;
-      },
-      deleteMany: (callback, options) => {
-        const deleteManyAction = createAction(
-          mapCallbackMaybeAsyncResult(callback, (idArray) => {
-            targetStore.drop(idArray);
-            triggerAfterEffects(deleteManyAction);
-            return idArray;
-          }),
-          {
-            meta: { httpVerb: "DELETE", httpMany: true },
-            name: `${name}.deleteMany`,
-            data: [],
-            compute: (idArray) => targetStore.selectAll(idArray),
-            ...options,
-          },
-        );
-        return deleteManyAction;
-      },
-    };
-
-    for (const key of Object.keys(rest)) {
-      const method = httpMethods[key];
-      if (!method) {
-        continue;
-      }
-      const action = method(rest[key]);
-      resourceInstance[key] = action;
-    }
-  }
-
-  {
-    resourceInstance.one = (propertyName, childResource, options) => {
-      const childIdKey = childResource.idKey;
-      resourceInstance.addItemSetup((item) => {
-        const childItemIdSignal = signal();
-        const updateChildItemId = (value) => {
-          const currentChildItemId = childItemIdSignal.peek();
+        let i = 0;
+        const idArray = [];
+        let modified = false;
+        while (i < valueArray.length) {
+          const value = valueArray[i];
+          const currentIdAtIndex = currentIdArray[idArray.length];
+          i++;
           if (isProps(value)) {
             const childItem = childResource.store.upsert(value);
             const childItemId = childItem[childIdKey];
-            if (currentChildItemId === childItemId) {
-              return false;
+            if (currentIdAtIndex !== childItemId) {
+              modified = true;
             }
-            childItemIdSignal.value = childItemId;
-            return true;
+            idArray.push(childItemId);
+            continue;
           }
           if (primitiveCanBeId(value)) {
             const childItemProps = { [childIdKey]: value };
             const childItem = childResource.store.upsert(childItemProps);
             const childItemId = childItem[childIdKey];
-            if (currentChildItemId === childItemId) {
-              return false;
+            if (currentIdAtIndex !== childItemId) {
+              modified = true;
             }
-            childItemIdSignal.value = childItemId;
-            return true;
+            idArray.push(childItemId);
+            continue;
           }
-          if (currentChildItemId === undefined) {
-            return false;
-          }
-          childItemIdSignal.value = undefined;
-          return true;
-        };
-        updateChildItemId(item[propertyName]);
+        }
+        if (modified || currentIdArray.length !== idArray.length) {
+          childItemIdArraySignal.value = idArray;
+        }
+      };
+      updateChildItemIdArray(item[propertyName]);
 
-        const childItemSignal = computed(() => {
-          const childItemId = childItemIdSignal.value;
-          const childItem = childResource.store.select(childItemId);
-          return childItem;
+      const childItemArraySignal = computed(() => {
+        const childItemIdArray = childItemIdArraySignal.value;
+        const childItemArray = childResource.store.selectAll(childItemIdArray);
+        Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
+          value: childItemArraySignal,
+          writable: false,
+          enumerable: false,
+          configurable: false,
         });
-        const childItemFacadeSignal = computed(() => {
-          const childItem = childItemSignal.value;
-          if (childItem) {
-            const childItemCopy = Object.create(
-              Object.getPrototypeOf(childItem),
-              Object.getOwnPropertyDescriptors(childItem),
+        return childItemArray;
+      });
+
+      if (debug) {
+        console.debug(
+          `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArraySignal.peek()})`,
+        );
+      }
+
+      Object.defineProperty(item, propertyName, {
+        get: () => {
+          const childItemArray = childItemArraySignal.value;
+          if (debug) {
+            console.debug(
+              `return ${childItemArray} for ${item}.${propertyName}`,
             );
-            Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
-              value: childItemSignal,
-              writable: false,
-              enumerable: false,
-              configurable: false,
-            });
-            return childItemCopy;
           }
-          const nullItem = {
-            [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
-            valueOf: () => null,
-          };
-          return nullItem;
-        });
-
-        if (debug) {
-          console.debug(
-            `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
-          );
-        }
-
-        Object.defineProperty(item, propertyName, {
-          get: () => {
-            const childItemFacade = childItemFacadeSignal.value;
-            return childItemFacade;
-          },
-          set: (value) => {
-            if (!updateChildItemId(value)) {
-              return;
-            }
-            if (debug) {
-              console.debug(
-                `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
-              );
-            }
-          },
-        });
-      });
-      return resource(`${name}.${propertyName}`, {
-        sourceStore: store,
-        store: childResource.store,
-        idKey: childIdKey,
-        ...options,
-      });
-    };
-    resourceInstance.many = (propertyName, childResource, options) => {
-      const childIdKey = childResource.idKey;
-
-      resourceInstance.addItemSetup((item) => {
-        const childItemIdArraySignal = signal([]);
-        const updateChildItemIdArray = (valueArray) => {
-          const currentIdArray = childItemIdArraySignal.peek();
-
-          if (!Array.isArray(valueArray)) {
-            if (currentIdArray.length === 0) {
-              return;
-            }
-            childItemIdArraySignal.value = [];
-            return;
-          }
-
-          let i = 0;
-          const idArray = [];
-          let modified = false;
-          while (i < valueArray.length) {
-            const value = valueArray[i];
-            const currentIdAtIndex = currentIdArray[idArray.length];
-            i++;
-            if (isProps(value)) {
-              const childItem = childResource.store.upsert(value);
-              const childItemId = childItem[childIdKey];
-              if (currentIdAtIndex !== childItemId) {
-                modified = true;
-              }
-              idArray.push(childItemId);
-              continue;
-            }
-            if (primitiveCanBeId(value)) {
-              const childItemProps = { [childIdKey]: value };
-              const childItem = childResource.store.upsert(childItemProps);
-              const childItemId = childItem[childIdKey];
-              if (currentIdAtIndex !== childItemId) {
-                modified = true;
-              }
-              idArray.push(childItemId);
-              continue;
-            }
-          }
-          if (modified || currentIdArray.length !== idArray.length) {
-            childItemIdArraySignal.value = idArray;
-          }
-        };
-        updateChildItemIdArray(item[propertyName]);
-
-        const childItemArraySignal = computed(() => {
-          const childItemIdArray = childItemIdArraySignal.value;
-          const childItemArray =
-            childResource.store.selectAll(childItemIdArray);
-          Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
-            value: childItemArraySignal,
-            writable: false,
-            enumerable: false,
-            configurable: false,
-          });
           return childItemArray;
-        });
-
-        if (debug) {
-          console.debug(
-            `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArraySignal.peek()})`,
-          );
-        }
-
-        Object.defineProperty(item, propertyName, {
-          get: () => {
-            const childItemArray = childItemArraySignal.value;
-            if (debug) {
-              console.debug(
-                `return ${childItemArray} for ${item}.${propertyName}`,
-              );
-            }
-            return childItemArray;
-          },
-          set: (value) => {
-            updateChildItemIdArray(value);
-            if (debug) {
-              console.debug(
-                `${item}.${propertyName} updated to ${childItemIdArraySignal.peek()}`,
-              );
-            }
-          },
-        });
+        },
+        set: (value) => {
+          updateChildItemIdArray(value);
+          if (debug) {
+            console.debug(
+              `${item}.${propertyName} updated to ${childItemIdArraySignal.peek()}`,
+            );
+          }
+        },
       });
+    });
 
-      // getMany -> retournes la liste des items dans cette collection?
-      // get -> retourne un item de cette collection
-      // put -> modifie un item a la collec par id
-      // patch -> update toutes la liste d'un coup (il faut passer tous les ids)
-      // delete -> supprime un item
-      // put many -> modified plusieurs item
-      // delete many -> supprime plusieurs item
-      // post -> ajoute dans la collect
-      // postMany -> ajoute plusieurs items dans la collec
-
-      // const addToCollection = (item, childProps) => {
-      //   const childItemArray = item[propertyName];
-      //   const childIdToAdd = childProps[childResource.idKey];
-      //   for (const existingChildItem of childItemArray) {
-      //     if (existingChildItem[childResource.idKey] === childIdToAdd) {
-      //       return existingChildItem;
-      //     }
-      //   }
-      //   const childItem = childResource.store.upsert(childProps);
-      //   const childItemArrayWithNewChild = [...childItemArray, childItem];
-      //   store.upsert(item, { [propertyName]: childItemArrayWithNewChild });
-      //   return childItem;
-      // };
-      // const removeFromCollection = (item, childProps) => {
-      //   const childItemArray = item[propertyName];
-      //   let childItemIndex = -1;
-      //   const childItemArrayWithoutThisOne = [];
-      //   const idToRemove = childProps[childIdKey];
-      //   let i = 0;
-      //   for (const childItem of childItemArray) {
-      //     if (childItem[childIdKey] === idToRemove) {
-      //       childItemIndex = i;
-      //     } else {
-      //       childItemArrayWithoutThisOne.push(childItem);
-      //     }
-      //     i++;
-      //   }
-      //   if (childItemIndex === -1) {
-      //     return false;
-      //   }
-      //   store.upsert(item, { [propertyName]: childItemArrayWithoutThisOne });
-      //   return true;
-      // };
-
-      return resource(`${name}.${propertyName}`, {
-        sourceStore: store,
-        store: childResource.store,
-        idKey: childIdKey,
-        ...options,
-      });
-    };
-  }
+    return resource(`${name}.${propertyName}`, {
+      store,
+      targetStore: childResource.store,
+      idKey: childIdKey,
+      ...options,
+    });
+  };
 
   return resourceInstance;
 };

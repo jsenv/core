@@ -74,27 +74,30 @@
         get: ({ userId }) => {
           return tables.filter((table) => table.owner?.id === userId);
         },
-        post: ({ userId, tableId }) => {
+        post: ({ tableId }) => {
           const tableToAdd = tables.find((t) => t.id === tableId);
-          return [userId, tableToAdd];
+          return tableToAdd;
         },
-        delete: ({ userId, tableId }) => {
-          return [userId, tableId];
+        delete: ({ tableId }) => {
+          return tableId;
         },
-        postMany: ({ userId, tableIds }) => {
+        postMany: ({ tableIds }) => {
           const tablesToAdd = tables.filter((t) => tableIds.includes(t.id));
-          return [userId, tablesToAdd];
+          return tablesToAdd;
         },
-        deleteMany: ({ userId, tableIds }) => {
-          return [userId, tableIds];
+        deleteMany: ({ tableIds }) => {
+          return tableIds;
         },
       });
       const TABLE_OWNER = TABLE.one("owner", USER, {
-        get: ({ owner }) => {
+        get: ({ tableId, owner }) => {
           if (!owner) {
             return null;
           }
-          return getUser({ userId: owner.id });
+          return {
+            id: tableId,
+            owner: getUser({ userId: owner.id }),
+          };
         },
         put: ({ tableId, newOwnerId }) => {
           const newOwner = users.find((u) => u.id === newOwnerId);
@@ -108,7 +111,10 @@
         delete: ({ tableId }) => {
           const tableToUpdate = tables.find((t) => t.id === tableId);
           tableToUpdate.owner = null;
-          return null;
+          return {
+            id: tableId,
+            owner: null,
+          };
         },
       });
 
@@ -332,6 +338,7 @@
       // eslint-disable-next-line no-unused-vars
       const TableDetails = ({ table }) => {
         const getTableOwner = TABLE_OWNER.get.bindParams({
+          tableId: table.id,
           owner: table.owner,
         });
         // const { idle } = useActionStatus(getTableOwner);
