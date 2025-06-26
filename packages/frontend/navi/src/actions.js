@@ -120,7 +120,7 @@ export const reloadActions = async (actionSet, { reason } = {}) => {
 export const abortPendingActions = (
   reason = "abortPendingActions was called",
 ) => {
-  const { loadingSet } = activationRegistry.getInfo();
+  const { loadingSet } = getActivationInfo(); // ✅ Use new function
   const unloadSet = loadingSet;
   return requestActionsUpdates({
     unloadSet,
@@ -130,86 +130,48 @@ export const abortPendingActions = (
 
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
-const activationRegistry = (() => {
-  const actionToIdMap = new WeakMap();
-  const idToActionMap = new Map();
-  let nextId = 1;
+const activationRegistry = createWeakRegistry("activationRegistry");
+
+const getActivationInfo = () => {
+  const loadingSet = new Set();
+  const settledSet = new Set();
+
+  for (const action of activationRegistry) {
+    const privateProps = getActionPrivateProperties(action);
+    const loadingState = privateProps.loadingStateSignal.peek();
+
+    if (loadingState === LOADING) {
+      loadingSet.add(action);
+    } else if (
+      loadingState === LOADED ||
+      loadingState === FAILED ||
+      loadingState === ABORTED
+    ) {
+      settledSet.add(action);
+    } else {
+      throw new Error(
+        `An action in the activation registry must be LOADING, ABORTED, FAILED or LOADED, found "${loadingState.id}" for action "${action}"`,
+      );
+    }
+  }
 
   return {
-    add(action) {
-      let id = actionToIdMap.get(action);
-      if (id === undefined) {
-        id = nextId++;
-        actionToIdMap.set(action, id);
-      }
-      idToActionMap.set(id, new WeakRef(action));
-    },
-
-    delete(action) {
-      const id = actionToIdMap.get(action);
-      if (id !== undefined) {
-        idToActionMap.delete(id);
-      }
-    },
-
-    has(action) {
-      const id = actionToIdMap.get(action);
-      if (id === undefined) {
-        return false;
-      }
-
-      const weakRef = idToActionMap.get(id);
-      const actionRef = weakRef?.deref();
-
-      if (!actionRef) {
-        idToActionMap.delete(id);
-        return false;
-      }
-
-      return true;
-    },
-
-    getInfo() {
-      const loadingSet = new Set();
-      const settledSet = new Set();
-
-      for (const [id, weakRef] of idToActionMap) {
-        const action = weakRef.deref();
-        if (!action) {
-          idToActionMap.delete(id);
-          continue;
-        }
-        const privateProps = getActionPrivateProperties(action);
-        const loadingState = privateProps.loadingStateSignal.peek();
-        if (loadingState === LOADING) {
-          loadingSet.add(action);
-        } else if (
-          loadingState === LOADED ||
-          loadingState === FAILED ||
-          loadingState === ABORTED
-        ) {
-          settledSet.add(action);
-        } else {
-          throw new Error(
-            `An action in the activation registry must be LOADING, ABORTED, FAILED or LOADED, found "${loadingState.id}" for action "${action}"`,
-          );
-        }
-      }
-      return {
-        loadingSet,
-        settledSet,
-      };
-    },
-
-    clear() {
-      idToActionMap.clear();
-    },
+    loadingSet,
+    settledSet,
   };
-})();
+};
 
 if (import.meta.dev) {
   window.__actions__ = {
     activationRegistry,
+    getActivationInfo,
+    cleanup: {
+      activation: {
+        forceCleanup: () => activationRegistry.forceCleanup(),
+        schedule: () => activationRegistry.schedule(),
+        getStats: () => activationRegistry.getStats(),
+      },
+    },
   };
 }
 
@@ -227,7 +189,7 @@ export const updateActions = ({
     signal = abortController.signal;
   }
 
-  const { loadingSet, settledSet } = activationRegistry.getInfo();
+  const { loadingSet, settledSet } = getActivationInfo();
 
   if (debug) {
     console.group(`updateActions()`);
@@ -391,10 +353,9 @@ ${lines.join("\n")}`);
         isPreload,
       });
       activationRegistry.add(actionToPreloadOrLoad);
-      if (
-        // sync actions are already done, no need to wait for activate promise
-        actionToPreloadOrLoad.loadingState === LOADED
-      ) {
+
+      if (actionToPreloadOrLoad.loadingState === LOADED) {
+        // sync actions are already done, no need to wait
       } else {
         actionPromiseMap.set(actionToPreloadOrLoad, loadPromise);
         thenableArray.push(loadPromise);
