@@ -28,7 +28,7 @@ export const createIterableEagerWeakSet = (name) => {
         `🧹 ${name}: cleaned up ${cleanedCount} dead references in that weak set`,
       );
     }
-    // Only schedule next cleanup if there are still refs and we cleaned something
+    // Only schedule next cleanup if there are still refs
     if (objectWeakRefSet.size > 0) {
       scheduleNextCleanup();
     }
@@ -133,14 +133,13 @@ export const createIterableEagerWeakSet = (name) => {
 export const createEagerWeakRef = (object, name = "weakRef") => {
   const weakRef = new WeakRef(object);
 
-  // ✅ Proactive cleanup scheduling (same pattern as weak_set)
   let cleanupScheduled = false;
   let idleCallbackId = null;
-  let isDeadRef = false;
+  let isDead = false;
 
   const checkAndCleanup = () => {
     if (weakRef.deref() === undefined) {
-      isDeadRef = true;
+      isDead = true;
       if (debug) {
         console.debug(`🧹 ${name}: WeakRef is now dead`);
       }
@@ -152,11 +151,15 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
   const performCleanup = () => {
     cleanupScheduled = false;
     idleCallbackId = null;
-    checkAndCleanup();
+
+    // ✅ If still alive, schedule next check
+    if (!isDead) {
+      scheduleCleanup();
+    }
   };
 
   const scheduleCleanup = () => {
-    if (cleanupScheduled || isDeadRef) {
+    if (cleanupScheduled || isDead) {
       return;
     }
     cleanupScheduled = true;
@@ -174,7 +177,6 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
     );
   };
 
-  // ✅ FinalizationRegistry that schedules proactive cleanup
   const finalizationRegistry = new FinalizationRegistry(() => {
     scheduleCleanup();
   });
@@ -187,10 +189,9 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
 
   return {
     deref() {
-      // ✅ Check if dead and mark it immediately
       const obj = weakRef.deref();
-      if (obj === undefined && !isDeadRef) {
-        isDeadRef = true;
+      if (obj === undefined && !isDead) {
+        isDead = true;
         if (debug) {
           console.debug(`🧹 ${name}: WeakRef became dead during deref()`);
         }
@@ -199,11 +200,17 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
     },
 
     isDead() {
-      if (isDeadRef) return true;
-      return checkAndCleanup();
+      if (isDead) return true;
+      checkAndCleanup();
+
+      // ✅ If not dead, schedule cleanup to check again later
+      if (!isDead) {
+        scheduleCleanup();
+      }
+
+      return isDead;
     },
 
-    // ✅ Force cleanup method for testing
     forceCleanup() {
       if (idleCallbackId !== null) {
         cancelIdleCallback(idleCallbackId);
@@ -213,14 +220,12 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
       return checkAndCleanup();
     },
 
-    // ✅ Schedule cleanup method
     schedule: scheduleCleanup,
 
-    // ✅ Debug info
     getStats() {
       return {
         name,
-        isDead: isDeadRef,
+        isDead,
         cleanupScheduled,
         gcStrategy: "proactive cleanup via requestIdleCallback",
       };
