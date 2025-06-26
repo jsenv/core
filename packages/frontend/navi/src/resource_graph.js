@@ -2,10 +2,9 @@ import { computed, signal } from "@preact/signals";
 import { createAction, reloadActions } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
+import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
 let debug = true;
-
-const ITEM_SIGNAL = Symbol.for("navi_item_signal");
 
 export const resource = (
   name,
@@ -63,14 +62,6 @@ export const resource = (
         Object.assign(item, props);
         Object.defineProperty(item, SYMBOL_IDENTITY, {
           value: item[idKey],
-          writable: false,
-          enumerable: false,
-          configurable: false,
-        });
-        const itemIdSignal = signal(item[idKey]);
-        const itemSignal = computed(() => store.select(itemIdSignal.value));
-        Object.defineProperty(item, ITEM_SIGNAL, {
-          value: itemSignal,
           writable: false,
           enumerable: false,
           configurable: false,
@@ -156,6 +147,28 @@ export const resource = (
           const childItem = childResource.store.select(childItemId);
           return childItem;
         });
+        const childItemFacadeSignal = computed(() => {
+          const childItem = childItemSignal.value;
+          if (childItem) {
+            const itemCopy = Object.create(
+              Object.getPrototypeOf(childItem),
+              Object.getOwnPropertyDescriptors(childItem),
+            );
+            Object.defineProperty(itemCopy, SYMBOL_OBJECT_SIGNAL, {
+              value: childItemSignal,
+              writable: false,
+              enumerable: false,
+              configurable: false,
+            });
+            return itemCopy;
+          }
+          const nullItem = {
+            [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
+            valueOf: () => null,
+          };
+          return nullItem;
+        });
+
         if (debug) {
           console.debug(
             `setup ${item}.${propertyName} one-to-one with "${childResource.name}" (current value: ${childItemSignal.peek()})`,
@@ -164,14 +177,14 @@ export const resource = (
 
         Object.defineProperty(item, propertyName, {
           get: () => {
-            const childItem = childItemSignal.value;
+            const childItemFacade = childItemFacadeSignal.value;
             if (preferItem) {
               if (debug) {
                 console.debug(
-                  `return ${childItem} for ${item}.${propertyName}`,
+                  `return ${childItemFacade} for ${item}.${propertyName}`,
                 );
               }
-              return childItem;
+              return childItemFacade;
             }
             const childItemId = childItemIdSignal.peek();
             if (debug) {

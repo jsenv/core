@@ -10,32 +10,15 @@ export const arraySignalStore = (
     },
   },
 ) => {
-  const propertyAccessorMap = new Map();
   const store = {
     name,
-    defineGetSet: (propertyName, { get, set }) => {
-      propertyAccessorMap.set(propertyName, {
-        get,
-        set,
-      });
-    },
   };
 
   const createItemFromProps = (props) => {
     if (props === null || typeof props !== "object") {
       return props;
     }
-
     const item = createItem(props);
-
-    for (const [propertyName, { get, set }] of propertyAccessorMap) {
-      Object.defineProperty(item, propertyName, {
-        get: () => get(item),
-        set: (value) => {
-          set(item, value);
-        },
-      });
-    }
     return item;
   };
 

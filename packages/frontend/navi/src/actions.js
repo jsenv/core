@@ -5,6 +5,7 @@ import {
 } from "./action_private_properties.js";
 import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
+import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
 let debug = true;
 
@@ -526,7 +527,12 @@ export const createAction = (callback, rootOptions) => {
           if (isSignal(value)) {
             signalMap.set(key, value);
           } else {
-            staticParams[key] = value;
+            const objectSignal = value ? value[SYMBOL_OBJECT_SIGNAL] : null;
+            if (objectSignal) {
+              signalMap.set(key, objectSignal);
+            } else {
+              staticParams[key] = value;
+            }
           }
         }
 

@@ -275,8 +275,6 @@
         const getTableOwner = getTableOwnerAction.bindParams({
           owner: table.owner,
         });
-        const [open, setOpen] = useState(false);
-
         // const { idle } = useActionStatus(getTableOwner);
 
         return (
@@ -285,13 +283,10 @@
             <p>ID: {table.id}</p>
 
             <details
-              open={open}
               onToggle={(e) => {
                 if (e.target.open) {
-                  setOpen(true);
                   getTableOwner.load();
                 } else {
-                  setOpen(false);
                   getTableOwner.abort();
                 }
               }}
