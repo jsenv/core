@@ -56,14 +56,15 @@ export const createIterableEagerWeakSet = (name) => {
   };
 
   const finalizationRegistry = new FinalizationRegistry(() => {
-    scheduleNextCleanup();
+    cancelIdleCallback(idleCallbackId);
+    performCleanup();
   });
 
   return {
     add: (object) => {
       const objectWeakRef = new WeakRef(object);
       objectWeakRefSet.add(objectWeakRef);
-      finalizationRegistry.register(object);
+      finalizationRegistry.register(object, undefined, objectWeakRef);
       if (EAGER) {
         scheduleNextCleanup();
       }
@@ -73,7 +74,7 @@ export const createIterableEagerWeakSet = (name) => {
       for (const weakRef of objectWeakRefSet) {
         if (weakRef.deref() === object) {
           objectWeakRefSet.delete(weakRef);
-          finalizationRegistry.unregister(object);
+          finalizationRegistry.unregister(weakRef);
           return true;
         }
       }
@@ -150,6 +151,9 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
   const performCleanup = () => {
     cleanupScheduled = false;
     idleCallbackId = null;
+    if (isDead) {
+      return;
+    }
     checkAndCleanup();
 
     // ✅ If still alive, schedule next check
@@ -178,7 +182,8 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
   };
 
   const finalizationRegistry = new FinalizationRegistry(() => {
-    scheduleCleanup();
+    isDead = true;
+    cancelIdleCallback(idleCallbackId);
   });
 
   finalizationRegistry.register(object);

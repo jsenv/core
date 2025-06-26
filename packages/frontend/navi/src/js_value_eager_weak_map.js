@@ -95,31 +95,15 @@ export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
   };
 
   // ✅ Two separate FinalizationRegistries for different cleanup scenarios
-  const valueCleanupRegistry = new FinalizationRegistry((keyWeakRef) => {
-    // Object value was GC'd, remove its entry from object cache
-    if (objectComparisonCache.has(keyWeakRef)) {
-      objectComparisonCache.delete(keyWeakRef);
-      if (debug) {
-        console.debug(`🧹 ${name}: Object value GC'd, removed cache entry`);
-      }
-    }
-    scheduleNextCleanup();
+  const valueCleanupRegistry = new FinalizationRegistry(() => {
+    cancelIdleCallback(idleCallbackId);
+    performCleanup();
   });
 
-  const primitiveValueCleanupRegistry = new FinalizationRegistry(
-    (primitiveKey) => {
-      // Primitive value was GC'd, remove its entry from primitive cache
-      if (primitiveCache.has(primitiveKey)) {
-        primitiveCache.delete(primitiveKey);
-        if (debug) {
-          console.debug(
-            `🧹 ${name}: Primitive value GC'd, removed cache entry`,
-          );
-        }
-      }
-      scheduleNextCleanup();
-    },
-  );
+  const primitiveValueCleanupRegistry = new FinalizationRegistry(() => {
+    cancelIdleCallback(idleCallbackId);
+    performCleanup();
+  });
 
   return {
     get(key) {
@@ -178,7 +162,7 @@ export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
         objectComparisonCache.set(keyWeakRef, valueWeakRef);
 
         // ✅ Register with correct heldValue
-        valueCleanupRegistry.register(value, keyWeakRef);
+        valueCleanupRegistry.register(value, undefined, keyWeakRef);
 
         scheduleNextCleanup();
       } else {
@@ -187,10 +171,45 @@ export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
         primitiveCache.set(key, valueWeakRef);
 
         // ✅ Register with correct heldValue for primitive cleanup
-        primitiveValueCleanupRegistry.register(value, key);
+        primitiveValueCleanupRegistry.register(value, undefined, key);
 
         scheduleNextCleanup();
       }
+    },
+
+    delete(key) {
+      const isObject = key && typeof key === "object";
+
+      if (isObject) {
+        // Remove from direct cache
+        const hadValue = objectDirectCache.delete(key);
+
+        // ✅ Remove from comparison cache and unregister
+        for (const [keyWeakRef, valueWeakRef] of objectComparisonCache) {
+          const cachedKey = keyWeakRef.deref();
+          if (cachedKey === key) {
+            const cachedValue = valueWeakRef.deref();
+            objectComparisonCache.delete(keyWeakRef);
+            if (cachedValue) {
+              valueCleanupRegistry.unregister(keyWeakRef);
+            }
+            break;
+          }
+        }
+
+        return hadValue;
+      }
+      // Handle primitive deletion
+      const valueWeakRef = primitiveCache.get(key);
+      if (valueWeakRef) {
+        const value = valueWeakRef.deref();
+        primitiveCache.delete(key);
+        if (value) {
+          primitiveValueCleanupRegistry.unregister(key);
+        }
+        return true;
+      }
+      return false;
     },
 
     // ✅ Enhanced force cleanup
