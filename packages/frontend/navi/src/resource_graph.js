@@ -236,7 +236,7 @@ const createHttpHandlerForRootResource = (
 };
 const createHttpHandlerForRelationshipToOneResource = (
   name,
-  { store, propertyName, childIdKey, childStore },
+  { idKey, store, propertyName, childIdKey, childStore },
 ) => {
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
     const applyDataEffect =
@@ -245,6 +245,7 @@ const createHttpHandlerForRelationshipToOneResource = (
             const item = store.select(itemId);
             const childItemId = item[propertyName][childIdKey];
             store.upsert({
+              [idKey]: itemId,
               [propertyName]: null,
             });
             return childItemId;
@@ -309,17 +310,33 @@ const createHttpHandlerForRelationshipToOneResource = (
 };
 const createHttpHandlerRelationshipToManyResource = (
   name,
-  { store, propertyName, childIdKey, childStore },
+  { idKey, store, propertyName, childIdKey, childStore },
 ) => {
   // one item AND many child items
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
     const applyDataEffect =
       httpVerb === "DELETE"
-        ? // not sure I actually need to update the array actually
-          // I can just drop the child item
-          // and thanks to signals item[propertyName] will actually not return
-          // the dropped child item as id won't be found anymore
-          (childItemId) => childItemId
+        ? ([itemId, childItemId]) => {
+            const item = store.select(itemId);
+            const childItemArray = item[propertyName];
+            const childItemArrayWithoutThisOne = [];
+            let found = false;
+            for (const childItemCandidate of childItemArray) {
+              const childItemCandidateId = childItemCandidate[childIdKey];
+              if (childItemCandidateId === childItemId) {
+                found = true;
+              } else {
+                childItemArrayWithoutThisOne.push(childItemCandidate);
+              }
+            }
+            if (found) {
+              store.upsert({
+                [idKey]: itemId,
+                [propertyName]: childItemArrayWithoutThisOne,
+              });
+            }
+            return childItemId;
+          }
         : (childData) => {
             const childItem = childStore.upsert(childData); // if the child item was used it will reload thanks to signals
             const childItemId = childItem[childIdKey];
@@ -348,7 +365,7 @@ const createHttpHandlerRelationshipToManyResource = (
   // inserer le childItem (ni meme s'il doit etre visible)
   // je pense que la bonne chose a faire est de reload
   // l'objet user.tables s'il en existe un
-  // TODO: find any GET action on the resource and reload it
+  // TODO: find any GET action on "user" and reload it
   const POST = (callback, options) =>
     createActionAffectingOneItem("POST", {
       callback,
@@ -374,24 +391,57 @@ const createHttpHandlerRelationshipToManyResource = (
     httpVerb,
     { callback, ...options },
   ) => {
-    const applyDataEffect = (data) => {
-      // callback must return object with the following format:
-      // {
-      //   [idKey]: 123,
-      //   [propertyName]: [
-      //      { [childIdKey]: 456, ...childProps },
-      //      { [childIdKey]: 789, ...childProps },
-      //      ...
-      //   ]
-      // }
-      // the array can be empty
-      const item = store.upsert(data);
-      const childItemArray = item[propertyName];
-      const childItemIdArray = childItemArray.map(
-        (childItem) => childItem[childIdKey],
-      );
-      return childItemIdArray;
-    };
+    const applyDataEffect =
+      httpVerb === "GET"
+        ? (data) => {
+            // callback must return object with the following format:
+            // {
+            //   [idKey]: 123,
+            //   [propertyName]: [
+            //      { [childIdKey]: 456, ...childProps },
+            //      { [childIdKey]: 789, ...childProps },
+            //      ...
+            //   ]
+            // }
+            // the array can be empty
+            const item = store.upsert(data);
+            const childItemArray = item[propertyName];
+            const childItemIdArray = childItemArray.map(
+              (childItem) => childItem[childIdKey],
+            );
+            return childItemIdArray;
+          }
+        : httpVerb === "DELETE"
+          ? ([itemId, childItemIdArray]) => {
+              const item = store.select(itemId);
+              const childItemArray = item[propertyName];
+              const childItemArrayWithoutThoose = [];
+              let someFound = false;
+              for (const childItemCandidate of childItemArray) {
+                const childItemCandidateId = childItemCandidate[childIdKey];
+                if (childItemIdArray.includes(childItemCandidateId)) {
+                  someFound = true;
+                } else {
+                  childItemArrayWithoutThoose.push(childItemCandidate);
+                }
+              }
+              if (someFound) {
+                store.upsert({
+                  [idKey]: itemId,
+                  [propertyName]: childItemArrayWithoutThoose,
+                });
+              }
+              return childItemIdArray;
+            }
+          : (childDataArray) => {
+              // hum ici aussi on voudra reload "user" pour POST
+              // les autres les signals se charge de reload si visible
+              const childItemArray = childStore.upsert(childDataArray);
+              const childItemIdArray = childItemArray.map(
+                (childItem) => childItem[childIdKey],
+              );
+              return childItemIdArray;
+            };
 
     const httpActionAffectingManyItem = createAction(
       mapCallbackMaybeAsyncResult(callback, (dataArray) => {
@@ -410,8 +460,27 @@ const createHttpHandlerRelationshipToManyResource = (
 
   const GET_MANY = (callback, options) =>
     createActionAffectingManyItems("GET", { callback, ...options });
+  const POST_MANY = (callback, options) =>
+    createActionAffectingManyItems("POST", { callback, ...options });
+  const PUT_MANY = (callback, options) =>
+    createActionAffectingManyItems("PUT", { callback, ...options });
+  const PATCH_MANY = (callback, options) =>
+    createActionAffectingManyItems("PATCH", { callback, ...options });
+  const DELETE_MANY = (callback, options) =>
+    createActionAffectingManyItems("DELETE", { callback, ...options });
 
-  return { GET, POST, PUT, PATCH, DELETE, GET_MANY };
+  return {
+    GET,
+    POST,
+    PUT,
+    PATCH,
+    DELETE,
+    GET_MANY,
+    POST_MANY,
+    PUT_MANY,
+    PATCH_MANY,
+    DELETE_MANY,
+  };
 };
 
 export const resource = (
@@ -596,6 +665,7 @@ export const resource = (
     });
     const httpHandlerForRelationshipToOneChild =
       createHttpHandlerForRelationshipToOneResource(childName, {
+        idKey,
         store: resourceInstance.store,
         propertyName,
         childIdKey,
@@ -696,6 +766,7 @@ export const resource = (
     });
     const httpHandleForChildManyResource =
       createHttpHandlerRelationshipToManyResource(childName, {
+        idKey,
         store: resourceInstance.store,
         propertyName,
         childIdKey,
