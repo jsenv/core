@@ -70,18 +70,25 @@
         },
       });
       TABLE.rename = TABLE.put.bindParams({ field: "name" });
-      // USER.many("tables", TABLE, {
-      //   get: ({ userId }) => {
-      //     return tables.filter((table) => table.owner?.id === userId);
-      //   },
-      //   put: ({ userId, tableId }) => {
-      //     const tableToAdd = tables.find((t) => t.id === tableId);
-      //     return [userId, tableToAdd];
-      //   },
-      //   delete: ({ userId, tableId }) => {
-      //     return [userId, tableId];
-      //   },
-      // });
+      USER.many("tables", TABLE, {
+        get: ({ userId }) => {
+          return tables.filter((table) => table.owner?.id === userId);
+        },
+        put: ({ userId, tableId }) => {
+          const tableToAdd = tables.find((t) => t.id === tableId);
+          return [userId, tableToAdd];
+        },
+        delete: ({ userId, tableId }) => {
+          return [userId, tableId];
+        },
+        putMany: ({ userId, tableIds }) => {
+          const tablesToAdd = tables.filter((t) => tableIds.includes(t.id));
+          return [userId, tablesToAdd];
+        },
+        deleteMany: ({ userId, tableIds }) => {
+          return [userId, tableIds];
+        },
+      });
       const TABLE_OWNER = TABLE.one("owner", USER, {
         get: ({ owner }) => {
           if (!owner) {
