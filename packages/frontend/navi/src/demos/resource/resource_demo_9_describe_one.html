@@ -58,16 +58,13 @@
 
       // ✅ NEW: Action to update table owner
       const updateTableOwnerAction = table.put(({ tableId, newOwnerId }) => {
+        const newOwner = users.find((u) => u.id === newOwnerId);
         const tableToUpdate = tables.find((t) => t.id === tableId);
-        if (tableToUpdate) {
-          tableToUpdate.owner.id = newOwnerId;
-          return {
-            id: tableId,
-            name: tableToUpdate.name,
-            owner: { id: newOwnerId },
-          };
-        }
-        return null;
+        tableToUpdate.owner = newOwner;
+        return {
+          id: tableId,
+          owner: newOwner,
+        };
       });
 
       const getTableOwnerAction = tableOwner.get(async ({ ownerId }) => {
@@ -145,7 +142,7 @@
         const handleOwnerSave = async () => {
           await updateTableOwnerAction
             .bindParams({ tableId: table.id, newOwnerId: editOwnerId })
-            .load();
+            .reload();
           setIsEditingOwner(false);
         };
 

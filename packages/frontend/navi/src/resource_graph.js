@@ -115,13 +115,6 @@ export const resource = (
       }
       return info;
     };
-    const primitiveCanBeId = (value) => {
-      const type = typeof value;
-      if (type === "string" || type === "number" || type === "symbol") {
-        return true;
-      }
-      return false;
-    };
 
     const one = (childResource, propertyName) => {
       const childIdKey = childResource.idKey;
@@ -129,7 +122,7 @@ export const resource = (
         const childItemIdSignal = signal();
         let preferItem = false;
         const updateChildItemId = (value) => {
-          if (value !== null && typeof value === "object") {
+          if (isProps(value)) {
             preferItem = true;
             const childItem = childResource.store.upsert(value);
             const childItemId = childItem[childIdKey];
@@ -275,6 +268,18 @@ export const resource = (
   return resourceInstance;
 };
 
+const isProps = (value) => {
+  return value !== null && typeof value === "object";
+};
+
+const primitiveCanBeId = (value) => {
+  const type = typeof value;
+  if (type === "string" || type === "number" || type === "symbol") {
+    return true;
+  }
+  return false;
+};
+
 const createMethodsForStore = ({
   sourceStore,
   targetStore = sourceStore,
@@ -395,6 +400,11 @@ const createMethodsForStore = ({
     put: (callback, options) => {
       const putAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (props) => {
+          if (!isProps(props)) {
+            throw new TypeError(
+              `${putAction} must return an object (that will be used to update the resource), received ${props}.`,
+            );
+          }
           const item = targetStore.upsert(props);
           triggerAfterEffects(putAction);
           const itemId = item[idKey];
