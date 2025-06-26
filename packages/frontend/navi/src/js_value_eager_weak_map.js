@@ -22,7 +22,8 @@ import { compareTwoJsValues } from "./compare_two_js_values.js";
 
 let debug = false;
 
-export const createJsValueWeakMap = (name = "jsValueWeakMap") => {
+const IDLE_TIMEOUT = 200;
+export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
   // Direct reference cache for objects (standard WeakMap behavior)
   const objectDirectCache = new WeakMap(); // object -> value
 
@@ -97,7 +98,7 @@ export const createJsValueWeakMap = (name = "jsValueWeakMap") => {
           scheduleNextCleanup();
         }
       },
-      { timeout: 2000 },
+      { timeout: IDLE_TIMEOUT },
     );
   };
 

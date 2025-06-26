@@ -4,7 +4,7 @@ import {
   setActionPrivateProperties,
 } from "./action_private_properties.js";
 import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
-import { createJsValueWeakMap } from "./js_value_weak_map.js";
+import { createJsValueEagerWeakMap } from "./js_value_eager_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 import {
   createEagerWeakRef,
@@ -449,7 +449,7 @@ export const createAction = (callback, rootOptions = {}) => {
     let action;
 
     const childActionWeakSet = createIterableEagerWeakSet("child_action");
-    const childActionWeakMap = createJsValueWeakMap();
+    const childActionWeakMap = createJsValueEagerWeakMap();
     const _bindParams = (newParamsOrSignal, options = {}) => {
       // ✅ CAS 1: Signal direct -> proxy
       if (isSignal(newParamsOrSignal)) {
@@ -942,7 +942,7 @@ const createActionProxyFromSignal = (
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
 
   {
-    let actionTargetPrevious = null;
+    let actionTargetPreviousWeakRef = null;
     let isFirstEffect = true;
     const changeCleanupCallbackSet = new Set();
     const actionWeakRef = createEagerWeakRef(action);
@@ -956,7 +956,7 @@ const createActionProxyFromSignal = (
         return;
       }
 
-      const previousTarget = actionTargetPrevious;
+      const previousTarget = actionTargetPreviousWeakRef?.deref(); // ✅ Dereference
       const params = paramsSignal.value;
       if (params) {
         actionTarget = actionRef.bindParams(params);
@@ -982,7 +982,9 @@ const createActionProxyFromSignal = (
           changeCleanupCallbackSet.add(returnValue);
         }
       }
-      actionTargetPrevious = actionTarget; // ✅ Store for next time but this is the only reference
+      actionTargetPreviousWeakRef = actionTarget
+        ? createEagerWeakRef(actionTarget)
+        : null;
     });
   }
 

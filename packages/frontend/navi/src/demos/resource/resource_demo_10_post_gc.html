@@ -108,7 +108,7 @@
           <span id="activationStats">-</span>
         </div>
         <div>
-          <strong>Child Action WeakMap:</strong> <span id="childStats">-</span>
+          <strong>Child Action WeakSet:</strong> <span id="childStats">-</span>
         </div>
       </div>
     </div>
@@ -227,9 +227,25 @@
         updateStats();
       }, 100);
 
+      const debugChildActionCache = () => {
+        const privateProps = getActionPrivateProperties(postNumberAction);
+        const childStats = privateProps.childActionWeakSet.getStats();
+
+        console.log("🔍 Child Action WeakMap Stats:", childStats);
+
+        // Force cleanup of the WeakMap
+        const cleanupStats = privateProps.childActionWeakSet.forceCleanup();
+        console.log("🧹 Child WeakMap cleanup result:", cleanupStats);
+
+        const statsAfter = privateProps.childActionWeakSet.getStats();
+        console.log("📊 Stats after cleanup:", statsAfter);
+      };
+
       // ✅ Enhanced GC function with force cleanup
       const forceGCAndCheck = async () => {
         console.log("🔄 Forcing cleanup and GC...");
+
+        debugChildActionCache();
 
         // ✅ Force cleanup of all weak sets/maps before GC
         let cleanupStats = {};
