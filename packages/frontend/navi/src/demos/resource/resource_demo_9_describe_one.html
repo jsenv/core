@@ -34,12 +34,22 @@
 
       const user = resource("user", { idKey: "id", mutableIdKey: "name" });
       const table = resource("table", { idKey: "id", mutableIdKey: "name" });
-      // user.describe({
-      //   tables: [table],
-      // });
+      const { tables: userTables } = user.describe({
+        tables: [table],
+      });
       const { owner: tableOwner } = table.describe({
         owner: user,
       });
+
+      const addTableToUserAction = userTables.put(({ userId, tableId }) => {
+        const tableToAdd = tables.find((t) => t.id === tableId);
+        return [userId, tableToAdd];
+      });
+      const removeTableFromUserAction = userTables.delete(
+        ({ userId, tableId }) => {
+          return [userId, tableId];
+        },
+      );
 
       // Actions pour récupérer les données
       const getTableAction = table.get(({ name }) => {

@@ -172,7 +172,7 @@ export const resource = (
 
         if (debug) {
           console.debug(
-            `setup ${item}.${propertyName} one-to-one with "${childResource.name}" (current value: ${childItemSignal.peek()})`,
+            `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
           );
         }
 
@@ -222,6 +222,92 @@ export const resource = (
     const many = (childResource, propertyName) => {
       const childIdKey = childResource.idKey;
 
+      resourceInstance.addItemSetup((item) => {
+        const childItemIdArraySignal = signal([]);
+        const updateChildItemIdArray = (valueArray) => {
+          const currentIdArray = childItemIdArraySignal.peek();
+
+          if (!Array.isArray(valueArray)) {
+            if (currentIdArray.length === 0) {
+              return;
+            }
+            childItemIdArraySignal.value = [];
+            return;
+          }
+
+          let i = 0;
+          const idArray = [];
+          let modified = false;
+          while (i < valueArray.length) {
+            const value = valueArray[i];
+            const currentIdAtIndex = currentIdArray[idArray.length];
+            i++;
+            if (isProps(value)) {
+              const childItem = childResource.store.upsert(value);
+              const childItemId = childItem[childIdKey];
+              if (currentIdAtIndex !== childItemId) {
+                modified = true;
+              }
+              idArray.push(childItemId);
+              continue;
+            }
+            if (primitiveCanBeId(value)) {
+              const childItemProps = { [childIdKey]: value };
+              const childItem = childResource.store.upsert(childItemProps);
+              const childItemId = childItem[childIdKey];
+              if (currentIdAtIndex !== childItemId) {
+                modified = true;
+              }
+              idArray.push(childItemId);
+              continue;
+            }
+          }
+          if (modified || currentIdArray.length !== idArray.length) {
+            childItemIdArraySignal.value = idArray;
+          }
+        };
+        updateChildItemIdArray(item[propertyName]);
+
+        const childItemArraySignal = computed(() => {
+          const childItemIdArray = childItemIdArraySignal.value;
+          const childItemArray =
+            childResource.store.selectAll(childItemIdArray);
+          Object.defineProperty(childItemArray, SYMBOL_OBJECT_SIGNAL, {
+            value: childItemArraySignal,
+            writable: false,
+            enumerable: false,
+            configurable: false,
+          });
+          return childItemArray;
+        });
+
+        if (debug) {
+          console.debug(
+            `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArraySignal.peek()})`,
+          );
+        }
+
+        Object.defineProperty(item, propertyName, {
+          get: () => {
+            const childItemArray = childItemArraySignal.value;
+            if (debug) {
+              console.debug(
+                `return ${childItemArray} for ${item}.${propertyName}`,
+              );
+            }
+            return childItemArray;
+          },
+          set: (value) => {
+            updateChildItemIdArray(value);
+            if (debug) {
+              console.debug(
+                `${item}.${propertyName} updated to ${childItemIdArraySignal.peek()}`,
+              );
+            }
+          },
+        });
+      });
+
       const addToCollection = (item, childProps) => {
         const childItemArray = item[propertyName];
         const childIdToAdd = childProps[childResource.idKey];
@@ -255,33 +341,15 @@ export const resource = (
         store.upsert(item, { [propertyName]: childItemArrayWithoutThisOne });
         return true;
       };
-      const childItemArrayMap = new Map();
-      resourceInstance.addItemSetup((item) => {
-        const childItemArray = [];
-        childItemArray.add = addToCollection.bind(item);
-        childItemArray.remove = removeFromCollection.bind(item);
-        childItemArrayMap.set(item, childItemArray);
-        item[propertyName] = childItemArray;
-      });
-      store.defineGetSet(propertyName, {
-        get: (item) => {
-          const childItemArray = childItemArrayMap.get(item);
-          const childIdArray = childItemArray.map(
-            (childItem) => childItem[childIdKey],
-          );
-          return childResource.store.selectAll(childIdArray);
-        },
-        set: (item, childPropsArray) => {
-          const childItemArray = childResource.store.upsert(childPropsArray);
-          store.upsert(item, { [propertyName]: childItemArray });
-          childItemArrayMap.set(item, childItemArray);
-          return childItemArray;
-        },
-      });
 
       return resource(`${name}.${propertyName}`, {
-        ownerResource: resourceInstance,
-        modelResource: childResource,
+        sourceStore: store,
+        store: childResource.store,
+        idKey: childIdKey,
+        putEffect: () => {},
+        deleteEffect: () => {},
+        putManyEffect: () => {},
+        deleteManyEffect: () => {},
       });
     };
     Object.assign(resourceInstance, {
