@@ -571,7 +571,7 @@ export const createAction = (callback, rootOptions) => {
       }
       const childAction = _bindParams(newParamsOrSignal, options);
       childActionWeakMap.set(newParamsOrSignal, childAction);
-      childActionRegistry.register(childAction);
+      childActionRegistry.add(childAction);
 
       return childAction;
     };
