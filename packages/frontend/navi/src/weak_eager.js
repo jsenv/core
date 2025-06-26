@@ -1,5 +1,7 @@
 let debug = false;
 
+const IDLE_TIMEOUT = 500;
+
 export const createIterableEagerWeakSet = (name) => {
   let cleanupScheduled = false;
   let idleCallbackId = null;
@@ -47,7 +49,7 @@ export const createIterableEagerWeakSet = (name) => {
           scheduleNextCleanup();
         }
       },
-      { timeout: 2000 },
+      { timeout: IDLE_TIMEOUT },
     );
   };
 
@@ -167,7 +169,7 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
             scheduleCleanup();
           }
         },
-        { timeout: 2000 },
+        { timeout: IDLE_TIMEOUT },
       );
     } else {
       idleCallbackId = setTimeout(performCleanup, 500);

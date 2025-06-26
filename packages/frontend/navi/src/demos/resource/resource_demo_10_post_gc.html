@@ -28,6 +28,18 @@
         border-radius: 4px;
       }
 
+      .stats div {
+        margin-bottom: 5px;
+      }
+
+      .stats .debug-info {
+        font-size: 12px;
+        color: #666;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #ccc;
+      }
+
       .numbers {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
@@ -89,6 +101,16 @@
         <strong>Total Actions in Registry:</strong>
         <span id="totalActionsCount">0</span>
       </div>
+      <!-- ✅ Add activation stats display -->
+      <div class="debug-info">
+        <div>
+          <strong>Activation WeakSet:</strong>
+          <span id="activationStats">-</span>
+        </div>
+        <div>
+          <strong>Child Action WeakMap:</strong> <span id="childStats">-</span>
+        </div>
+      </div>
     </div>
 
     <div id="numbers" class="numbers"></div>
@@ -101,6 +123,7 @@
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
       } from "@jsenv/navi";
+      import { getActionPrivateProperties } from "../../action_private_properties.js";
 
       // ✅ Test data store
       const numbersStore = [];
@@ -154,12 +177,29 @@
         }
 
         // ✅ Get activation registry stats
-        const activationStats = window.__actions__.activationWeakSet.getStats();
+        const activationStats =
+          window.__actions__.activationWeakSet?.getStats() || {
+            total: 0,
+            alive: 0,
+            dead: 0,
+          };
+
+        // ✅ Get child action stats
+        let childStats = { total: 0, alive: 0, dead: 0 };
+        try {
+          const privateProps = getActionPrivateProperties(postNumberAction);
+          if (privateProps?.childActionWeakMap?.getStats) {
+            childStats = privateProps.childActionWeakMap.getStats();
+          }
+        } catch (error) {
+          console.warn("Could not get child action stats:", error);
+        }
 
         return {
           total,
           alivePostActions,
           activation: activationStats,
+          child: childStats,
         };
       };
 
@@ -172,20 +212,60 @@
         document.getElementById("postActionsCount").textContent =
           stats.alivePostActions;
         document.getElementById("totalActionsCount").textContent = stats.total;
+
+        // ✅ Display activation stats
+        const activationStatsEl = document.getElementById("activationStats");
+        if (activationStatsEl) {
+          activationStatsEl.textContent = `Total: ${stats.activation.total}, Alive: ${stats.activation.alive}, Dead: ${stats.activation.dead}`;
+        }
+
+        // ✅ Display child stats
+        const childStatsEl = document.getElementById("childStats");
+        if (childStatsEl) {
+          if (stats.child.total > 0) {
+            childStatsEl.textContent = `Total: ${stats.child.total}, Alive: ${stats.child.alive}, Dead: ${stats.child.dead}`;
+          } else {
+            childStatsEl.textContent = "No cached child actions";
+          }
+        }
       };
+
       setInterval(() => {
         updateStats();
       }, 100);
 
-      // ✅ GC function from resource_demo_6_gc.html
+      // ✅ Enhanced GC function with force cleanup
       const forceGCAndCheck = async () => {
-        console.log("🔄 Forcing GC...");
+        console.log("🔄 Forcing cleanup and GC...");
 
-        // Forcer le garbage collection (si disponible)
+        // ✅ Force cleanup of all weak sets/maps before GC
+        let cleanupStats = {};
+
+        // Force activation cleanup
+        if (window.__actions__?.activationWeakSet?.forceCleanup) {
+          cleanupStats.activation =
+            window.__actions__.activationWeakSet.forceCleanup();
+          console.log("🧹 Activation cleanup:", cleanupStats.activation);
+        }
+
+        // Force child action cleanup
+        try {
+          const privateProps = getActionPrivateProperties(postNumberAction);
+          if (privateProps?.childActionWeakMap?.forceCleanup) {
+            cleanupStats.child = privateProps.childActionWeakMap.forceCleanup();
+            console.log("🧹 Child action cleanup:", cleanupStats.child);
+          }
+        } catch (error) {
+          console.warn("Could not force child action cleanup:", error);
+        }
+
+        // Force browser GC
         if (window.gc) {
           window.gc();
+          console.log("🗑️ Browser GC called");
         } else {
           // Fallback: créer de la pression mémoire
+          console.log("🗑️ Creating memory pressure...");
           const arrays = [];
           for (let i = 0; i < 100; i++) {
             arrays.push(new Array(100000).fill(Math.random()));
@@ -202,6 +282,13 @@
         // Vérifier le résultat
         const stats = getRegistryStats();
         const { alivePostActions } = stats;
+
+        console.log("📊 Final stats:", {
+          alivePostActions,
+          activation: stats.activation,
+          child: stats.child,
+          cleanup: cleanupStats,
+        });
 
         if (alivePostActions === 0) {
           console.log("✅ SUCCESS: All POST actions were garbage collected!");
@@ -269,11 +356,17 @@
           postNumberAction,
           deleteAllNumbersAction,
         },
+        // ✅ Add debug helper
+        debugReferences: () => {
+          const stats = getRegistryStats();
+          console.table(stats);
+          return stats;
+        },
       };
 
       console.log("🧪 GC Test loaded!");
       console.log(
-        "📊 Use window.testHelpers.getRegistryStats() to check action registry",
+        "📊 Use window.testHelpers.debugReferences() to check all registry stats",
       );
       console.log(
         "🗑️ Run Chrome with --js-flags='--expose-gc' to enable manual GC",
