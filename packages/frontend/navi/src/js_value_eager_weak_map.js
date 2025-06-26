@@ -94,18 +94,32 @@ export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
     );
   };
 
-  // ✅ FinalizationRegistry for VALUES only (not keys!)
-  // This ensures cleanup happens when values (actions) are GC'd
+  // ✅ Two separate FinalizationRegistries for different cleanup scenarios
   const valueCleanupRegistry = new FinalizationRegistry((keyWeakRef) => {
-    // Value was GC'd, remove its entry
+    // Object value was GC'd, remove its entry from object cache
     if (objectComparisonCache.has(keyWeakRef)) {
       objectComparisonCache.delete(keyWeakRef);
       if (debug) {
-        console.debug(`🧹 ${name}: Value GC'd, removed cache entry`);
+        console.debug(`🧹 ${name}: Object value GC'd, removed cache entry`);
       }
     }
     scheduleNextCleanup();
   });
+
+  const primitiveValueCleanupRegistry = new FinalizationRegistry(
+    (primitiveKey) => {
+      // Primitive value was GC'd, remove its entry from primitive cache
+      if (primitiveCache.has(primitiveKey)) {
+        primitiveCache.delete(primitiveKey);
+        if (debug) {
+          console.debug(
+            `🧹 ${name}: Primitive value GC'd, removed cache entry`,
+          );
+        }
+      }
+      scheduleNextCleanup();
+    },
+  );
 
   return {
     get(key) {
@@ -155,28 +169,25 @@ export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
       const isObject = key && typeof key === "object";
 
       if (isObject) {
-        // ✅ Store in direct cache for reference-based lookup
+        // Store in direct cache for reference-based lookup
         objectDirectCache.set(key, value);
 
-        // ✅ CRITICAL: Store BOTH key and value as WeakRef!
+        // Store BOTH key and value as WeakRef
         const keyWeakRef = new WeakRef(key);
         const valueWeakRef = new WeakRef(value);
         objectComparisonCache.set(keyWeakRef, valueWeakRef);
 
-        // ✅ Register ONLY the value for cleanup when it's GC'd
-        // This way, if the action (value) is GC'd, we remove the cache entry
-        // even if the parameter object (key) is still alive!
-        valueCleanupRegistry.register(value);
+        // ✅ Register with correct heldValue
+        valueCleanupRegistry.register(value, keyWeakRef);
 
-        // Schedule cleanup
         scheduleNextCleanup();
       } else {
         // Store primitive key with weak value reference
         const valueWeakRef = new WeakRef(value);
         primitiveCache.set(key, valueWeakRef);
 
-        // Register value for cleanup when GC'd
-        valueCleanupRegistry.register(value);
+        // ✅ Register with correct heldValue for primitive cleanup
+        primitiveValueCleanupRegistry.register(value, key);
 
         scheduleNextCleanup();
       }

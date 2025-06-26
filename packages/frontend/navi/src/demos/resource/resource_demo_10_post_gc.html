@@ -227,25 +227,9 @@
         updateStats();
       }, 100);
 
-      const debugChildActionCache = () => {
-        const privateProps = getActionPrivateProperties(postNumberAction);
-        const childStats = privateProps.childActionWeakSet.getStats();
-
-        console.log("🔍 Child Action WeakMap Stats:", childStats);
-
-        // Force cleanup of the WeakMap
-        const cleanupStats = privateProps.childActionWeakSet.forceCleanup();
-        console.log("🧹 Child WeakMap cleanup result:", cleanupStats);
-
-        const statsAfter = privateProps.childActionWeakSet.getStats();
-        console.log("📊 Stats after cleanup:", statsAfter);
-      };
-
       // ✅ Enhanced GC function with force cleanup
       const forceGCAndCheck = async () => {
         console.log("🔄 Forcing cleanup and GC...");
-
-        debugChildActionCache();
 
         // ✅ Force cleanup of all weak sets/maps before GC
         let cleanupStats = {};
@@ -254,18 +238,13 @@
         if (window.__actions__?.activationWeakSet?.forceCleanup) {
           cleanupStats.activation =
             window.__actions__.activationWeakSet.forceCleanup();
-          console.log("🧹 Activation cleanup:", cleanupStats.activation);
         }
 
         // Force child action cleanup
-        try {
-          const privateProps = getActionPrivateProperties(postNumberAction);
-          if (privateProps?.childActionWeakMap?.forceCleanup) {
-            cleanupStats.child = privateProps.childActionWeakMap.forceCleanup();
-            console.log("🧹 Child action cleanup:", cleanupStats.child);
-          }
-        } catch (error) {
-          console.warn("Could not force child action cleanup:", error);
+
+        const privateProps = getActionPrivateProperties(postNumberAction);
+        if (privateProps.childActionWeakSet.forceCleanup) {
+          cleanupStats.child = privateProps.childActionWeakSet.forceCleanup();
         }
 
         // Force browser GC
