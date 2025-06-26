@@ -24,22 +24,24 @@
       import { localStorageSignal } from "../../local_storage_signal.js";
 
       const tables = [
-        { id: 1, name: "table_1", owner: { id: 1 } },
-        { id: 2, name: "table_2", owner: { id: 2 } },
+        { id: 1, name: "table_1", owner: 1 },
+        { id: 2, name: "table_2", owner: 2 },
       ];
       const users = [
         { id: 1, name: "User 1" },
         { id: 2, name: "User 2" },
       ];
 
+      const getUser = ({ userId }) => {
+        const user = users.find((user) => user.id === userId);
+        user.tables = tables.filter((table) => table.owner?.id === userId);
+        return user;
+      };
+
       const USER = resource("user", {
         idKey: "id",
         mutableIdKey: "name",
-        get: ({ userId }) => {
-          const user = users.find((user) => user.id === userId);
-          // user.tables = tables.filter((table) => table.owner?.id === userId);
-          return user;
-        },
+        get: getUser,
         getMany: () => users,
         put: ({ name, field, value }) => {
           let userToUpdate = users.find((u) => u.name === name);
@@ -85,10 +87,7 @@
           if (!owner) {
             return null;
           }
-          debugger;
-          // return USER.get.callback({ userId: owner.id });
-          const user = users.find((user) => user.id === owner.id) || null;
-          return user;
+          return getUser({ userId: owner.id });
         },
         put: ({ tableId, newOwnerId }) => {
           const newOwner = users.find((u) => u.id === newOwnerId);
