@@ -5,6 +5,8 @@ import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 
 let debug = true;
 
+const ITEM_SIGNAL = Symbol.for("navi_item_signal");
+
 export const resource = (
   name,
   {
@@ -61,6 +63,14 @@ export const resource = (
         Object.assign(item, props);
         Object.defineProperty(item, SYMBOL_IDENTITY, {
           value: item[idKey],
+          writable: false,
+          enumerable: false,
+          configurable: false,
+        });
+        const itemIdSignal = signal(item[idKey]);
+        const itemSignal = computed(() => store.select(itemIdSignal.value));
+        Object.defineProperty(item, ITEM_SIGNAL, {
+          value: itemSignal,
           writable: false,
           enumerable: false,
           configurable: false,

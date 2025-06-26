@@ -602,11 +602,6 @@ export const createAction = (callback, rootOptions) => {
           parentAction: action,
         },
       );
-
-      const childWeakRef = new WeakRef(childAction);
-      childActionWeakRefSet.add(childWeakRef);
-      childActionRegistry.register(childAction);
-
       return childAction;
     };
 

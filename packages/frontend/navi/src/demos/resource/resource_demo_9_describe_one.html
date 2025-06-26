@@ -14,7 +14,6 @@
       import { useState, useEffect, useRef } from "preact/hooks";
       import {
         resource,
-        useActionStatus,
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
       } from "@jsenv/navi";
@@ -67,9 +66,9 @@
         };
       });
 
-      const getTableOwnerAction = tableOwner.get(async ({ ownerId }) => {
-        const owner = users.find((user) => user.id === ownerId) || null;
-        return owner;
+      const getTableOwnerAction = tableOwner.get(async ({ owner }) => {
+        const user = users.find((user) => user.id === owner.id) || null;
+        return user;
       });
 
       // Signal pour la table courante
@@ -274,9 +273,11 @@
       // eslint-disable-next-line no-unused-vars
       const TableDetails = ({ table }) => {
         const getTableOwner = getTableOwnerAction.bindParams({
-          ownerId: table.owner.id,
+          owner: table.owner,
         });
-        const { active } = useActionStatus(getTableOwner);
+        const [open, setOpen] = useState(false);
+
+        // const { idle } = useActionStatus(getTableOwner);
 
         return (
           <div style={{ border: "2px solid #007acc", padding: "15px" }}>
@@ -284,11 +285,13 @@
             <p>ID: {table.id}</p>
 
             <details
-              open={active}
+              open={open}
               onToggle={(e) => {
                 if (e.target.open) {
+                  setOpen(true);
                   getTableOwner.load();
                 } else {
+                  setOpen(false);
                   getTableOwner.abort();
                 }
               }}
