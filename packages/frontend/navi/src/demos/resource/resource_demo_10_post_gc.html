@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resource GC Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        max-width: 800px;
+      }
+
+      .controls {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #ccc;
+        background: #f9f9f9;
+        border-radius: 4px;
+      }
+
+      .stats {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #007acc;
+        background: #e6f3ff;
+        border-radius: 4px;
+      }
+
+      .numbers {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+      }
+
+      .number-item {
+        padding: 20px;
+        text-align: center;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: white;
+        font-size: 24px;
+        font-weight: bold;
+      }
+
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: #007acc;
+        color: white;
+      }
+
+      .danger {
+        background: #dc3545;
+        color: white;
+      }
+
+      .secondary {
+        background: #6c757d;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Resource Garbage Collection Test</h1>
+
+    <div class="controls">
+      <button class="primary" id="addNumber">Add Random Number</button>
+      <button class="secondary" id="forceGC">Force Garbage Collection</button>
+      <button class="danger" id="clearAll">Clear All Numbers</button>
+    </div>
+
+    <div class="stats">
+      <div>
+        <strong>Numbers Count:</strong> <span id="numbersCount">0</span>
+      </div>
+      <div>
+        <strong>Alive POST Actions:</strong>
+        <span id="postActionsCount">0</span>
+      </div>
+      <div>
+        <strong>Total Actions in Registry:</strong>
+        <span id="totalActionsCount">0</span>
+      </div>
+    </div>
+
+    <div id="numbers" class="numbers"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useEffect } from "preact/hooks";
+      import {
+        resource,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
+
+      // ✅ Test data store
+      const numbersStore = [];
+      let nextId = 1;
+
+      // ✅ Create number resource
+      const number = resource("number");
+
+      // ✅ Actions
+      const getManyNumbersAction = number.getMany(() => {
+        console.log("Loading all numbers");
+        return [...numbersStore];
+      });
+
+      const postNumberAction = number.post(({ value }) => {
+        console.log(`Creating number: ${value}`);
+        const newNumber = { id: nextId++, value };
+        numbersStore.push(newNumber);
+        return newNumber;
+      });
+
+      const deleteAllNumbersAction = number.deleteMany(() => {
+        console.log("Deleting all numbers");
+        numbersStore.length = 0;
+        const deletedIds = numbersStore.map((num) => num.id);
+        return deletedIds;
+      });
+
+      // ✅ Load initial data
+      getManyNumbersAction.load();
+
+      // ✅ Helper function to get registry stats
+      const getRegistryStats = () => {
+        const { loadingSet, settledSet } =
+          window.__actions__.activationRegistry.getInfo();
+        let alivePostActions = 0;
+
+        let total = 0;
+        for (const action of new Set([...loadingSet, ...settledSet])) {
+          total++;
+          if (action.name && action.name.includes("number.post")) {
+            alivePostActions++;
+          }
+        }
+
+        return {
+          total,
+          alivePostActions,
+        };
+      };
+
+      // ✅ Update stats periodically
+      const updateStats = () => {
+        const stats = getRegistryStats();
+
+        document.getElementById("numbersCount").textContent =
+          numbersStore.length;
+        document.getElementById("postActionsCount").textContent =
+          stats.alivePostActions;
+        document.getElementById("totalActionsCount").textContent = stats.total;
+      };
+      setInterval(() => {
+        updateStats();
+      }, 100);
+
+      // eslint-disable-next-line no-unused-vars
+      const TestApp = () => {
+        const [, forceUpdate] = useState({});
+
+        useEffect(() => {
+          const interval = setInterval(() => {
+            forceUpdate({});
+          }, 100);
+
+          return () => clearInterval(interval);
+        }, []);
+
+        return (
+          <ActionRenderer action={getManyNumbersAction}>
+            {(numbers) => (
+              <>
+                {numbers.map((num) => (
+                  <div key={num.id} className="number-item">
+                    {num.value}
+                  </div>
+                ))}
+              </>
+            )}
+          </ActionRenderer>
+        );
+      };
+
+      // ✅ Event listeners
+      document
+        .getElementById("addNumber")
+        .addEventListener("click", async () => {
+          const randomValue = Math.floor(Math.random() * 1000);
+
+          // ✅ Create a temporary POST action that should be GC'd
+          const tempPostAction = number.post(({ value }) => {
+            console.log(`Creating number: ${value}`);
+            const newNumber = { id: nextId++, value };
+            numbersStore.push(newNumber);
+            return newNumber;
+          });
+
+          await tempPostAction.bindParams({ value: randomValue }).load();
+        });
+
+      document.getElementById("forceGC").addEventListener("click", () => {
+        if (window.gc) {
+          console.log("Forcing garbage collection...");
+          window.gc();
+        } else {
+          console.log(
+            "Manual GC not available. Try running Chrome with --js-flags='--expose-gc'",
+          );
+          // eslint-disable-next-line no-alert
+          window.alert(
+            "Manual GC not available. Try running Chrome with --js-flags='--expose-gc'",
+          );
+        }
+      });
+
+      document
+        .getElementById("clearAll")
+        .addEventListener("click", async () => {
+          await deleteAllNumbersAction.load();
+        });
+
+      // ✅ Render the app
+      render(<TestApp />, document.getElementById("numbers"));
+
+      // ✅ Console helpers for manual testing
+      window.testHelpers = {
+        getRegistryStats,
+        updateStats,
+        numbersStore,
+        actions: {
+          getManyNumbersAction,
+          postNumberAction,
+          deleteAllNumbersAction,
+        },
+      };
+
+      console.log("🧪 GC Test loaded!");
+      console.log(
+        "📊 Use window.testHelpers.getRegistryStats() to check action registry",
+      );
+      console.log(
+        "🗑️ Run Chrome with --js-flags='--expose-gc' to enable manual GC",
+      );
+    </script>
+  </body>
+</html>
