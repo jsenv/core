@@ -387,6 +387,14 @@ const createMethodsForStore = ({
     get: (callback, options) => {
       const getAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (props) => {
+          if (!isProps(props)) {
+            if (targetStore !== sourceStore) {
+              return null;
+            }
+            throw new TypeError(
+              `${getAction} must return an object (that will be used to upsert "${name}" resource), received ${props}.`,
+            );
+          }
           const item = targetStore.upsert(props);
           const itemId = item[idKey];
           return itemId;
@@ -425,7 +433,7 @@ const createMethodsForStore = ({
         mapCallbackMaybeAsyncResult(callback, (props) => {
           if (!isProps(props)) {
             throw new TypeError(
-              `${putAction} must return an object (that will be used to update the resource), received ${props}.`,
+              `${putAction} must return an object (that will be used to update "${name}" resource), received ${props}.`,
             );
           }
           const item = targetStore.upsert(props);

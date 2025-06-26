@@ -930,6 +930,7 @@ const createActionProxyFromSignal = (
     load: proxyMethod("load"),
     reload: proxyMethod("reload"),
     unload: proxyMethod("unload"),
+    abort: proxyMethod("abort"),
     matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
     toString: () => actionProxy.name,
   };

@@ -65,8 +65,19 @@
           owner: newOwner,
         };
       });
+      const deleteTableOwnerAction = table.delete(({ tableId }) => {
+        const tableToUpdate = tables.find((t) => t.id === tableId);
+        tableToUpdate.owner = null;
+        return {
+          id: tableId,
+          owner: null,
+        };
+      });
 
       const getTableOwnerAction = tableOwner.get(async ({ owner }) => {
+        if (!owner) {
+          return null;
+        }
         const user = users.find((user) => user.id === owner.id) || null;
         return user;
       });
@@ -309,22 +320,27 @@
             >
               <summary>Owner Details</summary>
               <ActionRenderer action={getTableOwner}>
-                {(owner) => (
-                  <div
-                    style={{
-                      marginTop: "10px",
-                      padding: "10px",
-                      backgroundColor: "#f0f0f0",
-                    }}
-                  >
-                    <p>
-                      <strong>Owner:</strong> {owner.name}
-                    </p>
-                    <p>
-                      <strong>Owner ID:</strong> {owner.id}
-                    </p>
-                  </div>
-                )}
+                {(owner) => {
+                  if (!owner) {
+                    return <p>No owner assigned</p>;
+                  }
+                  return (
+                    <div
+                      style={{
+                        marginTop: "10px",
+                        padding: "10px",
+                        backgroundColor: "#f0f0f0",
+                      }}
+                    >
+                      <p>
+                        <strong>Owner:</strong> {owner.name}
+                      </p>
+                      <p>
+                        <strong>Owner ID:</strong> {owner.id}
+                      </p>
+                    </div>
+                  );
+                }}
               </ActionRenderer>
             </details>
           </div>
