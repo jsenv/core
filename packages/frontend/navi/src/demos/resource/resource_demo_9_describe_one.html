@@ -32,94 +32,84 @@
         { id: 2, name: "User 2" },
       ];
 
-      const user = resource("user", { idKey: "id", mutableIdKey: "name" });
-      const table = resource("table", { idKey: "id", mutableIdKey: "name" });
-      const { tables: userTables } = user.describe({
-        tables: [table],
-      });
-      const { owner: tableOwner } = table.describe({
-        owner: user,
-      });
-
-      const addTableToUserAction = userTables.put(({ userId, tableId }) => {
-        const tableToAdd = tables.find((t) => t.id === tableId);
-        return [userId, tableToAdd];
-      });
-      const removeTableFromUserAction = userTables.delete(
-        ({ userId, tableId }) => {
-          return [userId, tableId];
+      const USER = resource("user", {
+        idKey: "id",
+        mutableIdKey: "name",
+        getMany: () => users,
+        put: ({ name, field, value }) => {
+          let userToUpdate = users.find((u) => u.name === name);
+          const id = userToUpdate.id;
+          userToUpdate[field] = value;
+          return { id, [field]: value };
         },
-      );
-
-      // Actions pour récupérer les données
-      const getTableAction = table.get(({ name }) => {
-        const table = tables.find((table) => table.name === name);
-        if (!table) {
-          throw new Error(`Table with name "${name}" not found`);
-        }
-        return table;
       });
-      const getManyTableAction = table.getMany(() => {
-        return tables;
+      USER.rename = USER.put.bindParams({ field: "name" });
+      const TABLE = resource("table", {
+        idKey: "id",
+        mutableIdKey: "name",
+        get: ({ name }) => {
+          const table = tables.find((table) => table.name === name);
+          if (!table) {
+            throw new Error(`Table with name "${name}" not found`);
+          }
+          return table;
+        },
+        getMany: () => tables,
+        put: ({ name, field, value }) => {
+          let tableToUpdate = tables.find((t) => t.name === name);
+          const id = tableToUpdate.id;
+          tableToUpdate[field] = value;
+          return { id, [field]: value };
+        },
       });
-      const getManyUserAction = user.getMany(() => {
-        return users;
-      });
-      const renameTableAction = table.put(({ name, newName }) => {
-        let tableToUpdate = tables.find((t) => t.name === name);
-        const id = tableToUpdate.id;
-        tableToUpdate.name = newName;
-        return { id, name: newName };
-      });
-      const renameUserAction = user.put(({ name, newName }) => {
-        let userToUpdate = users.find((u) => u.name === name);
-        const id = userToUpdate.id;
-        userToUpdate.name = newName;
-        return { id, name: newName };
-      });
-
-      // ✅ NEW: Action to update table owner
-      const updateTableOwnerAction = table.put(({ tableId, newOwnerId }) => {
-        const newOwner = users.find((u) => u.id === newOwnerId);
-        const tableToUpdate = tables.find((t) => t.id === tableId);
-        tableToUpdate.owner = newOwner;
-        return {
-          id: tableId,
-          owner: newOwner,
-        };
-      });
-      const deleteTableOwnerAction = table.delete(({ tableId }) => {
-        const tableToUpdate = tables.find((t) => t.id === tableId);
-        tableToUpdate.owner = null;
-        return {
-          id: tableId,
-          owner: null,
-        };
-      });
-
-      const getTableOwnerAction = tableOwner.get(async ({ owner }) => {
-        if (!owner) {
+      TABLE.rename = TABLE.put.bindParams({ field: "name" });
+      // const USER_TABLES = USER.many("tables", TABLE, {
+      //   put: ({ userId, tableId }) => {
+      //     const tableToAdd = tables.find((t) => t.id === tableId);
+      //     return [userId, tableToAdd];
+      //   },
+      //   delete: ({ userId, tableId }) => {
+      //     return [userId, tableId];
+      //   },
+      // });
+      const TABLE_OWNER = TABLE.one("owner", USER, {
+        get: ({ owner }) => {
+          if (!owner) {
+            return null;
+          }
+          const user = users.find((user) => user.id === owner.id) || null;
+          return user;
+        },
+        put: ({ tableId, newOwnerId }) => {
+          const newOwner = users.find((u) => u.id === newOwnerId);
+          const tableToUpdate = tables.find((t) => t.id === tableId);
+          tableToUpdate.owner = newOwner;
+          return {
+            id: tableId,
+            owner: newOwner,
+          };
+        },
+        delete: ({ tableId }) => {
+          const tableToUpdate = tables.find((t) => t.id === tableId);
+          tableToUpdate.owner = null;
           return null;
-        }
-        const user = users.find((user) => user.id === owner.id) || null;
-        return user;
+        },
       });
 
       // Signal pour la table courante
       const currentTableNameSignal = localStorageSignal("current_table_name");
-      const currentTableAction = getTableAction.bindParams({
+      const currentTableAction = TABLE.get.bindParams({
         name: currentTableNameSignal,
       });
       if (currentTableNameSignal.value) {
         currentTableAction.load();
       }
-      table.store.registerPropertyChangeCallback("name", (tableName) => {
+      TABLE.store.registerPropertyChangeCallback("name", (tableName) => {
         currentTableNameSignal.value = tableName;
       });
 
-      // Load initial data
-      getManyTableAction.load();
-      getManyUserAction.load();
+      TABLE.getMany.load();
+      USER.getMany.load();
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -144,7 +134,7 @@
       // eslint-disable-next-line no-unused-vars
       const TablesList = () => {
         return (
-          <ActionRenderer action={getManyTableAction}>
+          <ActionRenderer action={TABLE.getMany}>
             {(tables) => (
               <div>
                 {tables.map((table) => (
@@ -165,9 +155,9 @@
         const [editOwnerId, setEditOwnerId] = useState(table.owner?.id);
 
         const handleSave = async () => {
-          await renameTableAction
-            .bindParams({ name: table.name, newName: editName })
-            .load();
+          await TABLE.rename
+            .bindParams({ name: table.name, value: editName })
+            .reload();
           setIsEditing(false);
         };
 
@@ -179,7 +169,7 @@
         // ✅ NEW: Handle owner update
         const handleOwnerSave = async () => {
           if (editOwnerId) {
-            await updateTableOwnerAction
+            await TABLE_OWNER.put
               .bindParams({
                 tableId: table.id,
                 newOwnerId: parseInt(editOwnerId),
@@ -188,9 +178,7 @@
             setIsEditingOwner(false);
             return;
           }
-          await deleteTableOwnerAction
-            .bindParams({ tableId: table.id })
-            .reload();
+          await TABLE_OWNER.delete.bindParams({ tableId: table.id }).reload();
           setIsEditingOwner(false);
         };
 
@@ -327,7 +315,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const TableDetails = ({ table }) => {
-        const getTableOwner = getTableOwnerAction.bindParams({
+        const getTableOwner = TABLE_OWNER.get.bindParams({
           owner: table.owner,
         });
         // const { idle } = useActionStatus(getTableOwner);
@@ -378,7 +366,7 @@
       // eslint-disable-next-line no-unused-vars
       const UsersList = () => {
         return (
-          <ActionRenderer action={getManyUserAction}>
+          <ActionRenderer action={USER.getMany}>
             {(users) => (
               <div>
                 {users.map((user) => (
@@ -396,8 +384,8 @@
         const [editName, setEditName] = useState(user.name);
 
         const handleSave = async () => {
-          await renameUserAction
-            .bindParams({ name: user.name, newName: editName })
+          await USER.rename
+            .bindParams({ name: user.name, value: editName })
             .load();
           setIsEditing(false);
         };

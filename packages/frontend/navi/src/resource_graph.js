@@ -16,6 +16,7 @@ export const resource = (
     mutableIdKey,
     autoreloadGetManyAfter = ["POST", "DELETE"],
     autoreloadGetAfter = false,
+    ...rest
   } = {},
 ) => {
   if (mutableIdKey && idKey === undefined) {
@@ -94,52 +95,50 @@ export const resource = (
     autoreloadGetManyAfter,
     autoreloadGetAfter,
   });
-  Object.assign(resourceInstance, methodsForStore);
+
+  for (const key of Object.keys(rest)) {
+    const method = methodsForStore[key];
+    if (!method) {
+      continue;
+    }
+    const action = method(rest[key]);
+    resourceInstance[key] = action;
+  }
 
   {
-    const describe = (description) => {
-      const info = {};
-      for (const key of Object.keys(description)) {
-        const value = description[key];
-        if (!value) {
-          continue;
-        }
-        if (value.isResource) {
-          const childResourceSingleton = one(value, key);
-          info[key] = childResourceSingleton;
-          continue;
-        }
-        if (Array.isArray(value) && value.length === 1 && value[0].isResource) {
-          const childResourceCollection = many(value[0], key);
-          info[key] = childResourceCollection;
-          continue;
-        }
-      }
-      return info;
-    };
-
-    const one = (childResource, propertyName) => {
+    resourceInstance.one = (propertyName, childResource, options) => {
       const childIdKey = childResource.idKey;
       resourceInstance.addItemSetup((item) => {
         const childItemIdSignal = signal();
         let preferItem = false;
         const updateChildItemId = (value) => {
+          const currentChildItemId = childItemIdSignal.peek();
           if (isProps(value)) {
             preferItem = true;
             const childItem = childResource.store.upsert(value);
             const childItemId = childItem[childIdKey];
+            if (currentChildItemId === childItemId) {
+              return false;
+            }
             childItemIdSignal.value = childItemId;
-            return;
+            return true;
           }
           preferItem = false;
           if (primitiveCanBeId(value)) {
             const childItemProps = { [childIdKey]: value };
             const childItem = childResource.store.upsert(childItemProps);
             const childItemId = childItem[childIdKey];
+            if (currentChildItemId === childItemId) {
+              return false;
+            }
             childItemIdSignal.value = childItemId;
-            return;
+            return true;
+          }
+          if (currentChildItemId === undefined) {
+            return false;
           }
           childItemIdSignal.value = undefined;
+          return true;
         };
         updateChildItemId(item[propertyName]);
 
@@ -196,16 +195,17 @@ export const resource = (
             return childItemId;
           },
           set: (value) => {
-            updateChildItemId(value);
-            if (debug) {
-              if (preferItem) {
-                console.debug(
-                  `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
-                );
-              } else {
-                console.debug(
-                  `${item}.${propertyName} updated to ${childItemIdSignal.peek()}`,
-                );
+            if (updateChildItemId(value)) {
+              if (debug) {
+                if (preferItem) {
+                  console.debug(
+                    `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
+                  );
+                } else {
+                  console.debug(
+                    `${item}.${propertyName} updated to ${childItemIdSignal.peek()}`,
+                  );
+                }
               }
             }
           },
@@ -217,9 +217,10 @@ export const resource = (
         sourceStore: store,
         store: childResource.store,
         idKey: childIdKey,
+        ...options,
       });
     };
-    const many = (childResource, propertyName) => {
+    resourceInstance.many = (propertyName, childResource, options) => {
       const childIdKey = childResource.idKey;
 
       resourceInstance.addItemSetup((item) => {
@@ -308,53 +309,47 @@ export const resource = (
         });
       });
 
-      const addToCollection = (item, childProps) => {
-        const childItemArray = item[propertyName];
-        const childIdToAdd = childProps[childResource.idKey];
-        for (const existingChildItem of childItemArray) {
-          if (existingChildItem[childResource.idKey] === childIdToAdd) {
-            return existingChildItem;
-          }
-        }
-        const childItem = childResource.store.upsert(childProps);
-        const childItemArrayWithNewChild = [...childItemArray, childItem];
-        store.upsert(item, { [propertyName]: childItemArrayWithNewChild });
-        return childItem;
-      };
-      const removeFromCollection = (item, childProps) => {
-        const childItemArray = item[propertyName];
-        let childItemIndex = -1;
-        const childItemArrayWithoutThisOne = [];
-        const idToRemove = childProps[childIdKey];
-        let i = 0;
-        for (const childItem of childItemArray) {
-          if (childItem[childIdKey] === idToRemove) {
-            childItemIndex = i;
-          } else {
-            childItemArrayWithoutThisOne.push(childItem);
-          }
-          i++;
-        }
-        if (childItemIndex === -1) {
-          return false;
-        }
-        store.upsert(item, { [propertyName]: childItemArrayWithoutThisOne });
-        return true;
-      };
+      // const addToCollection = (item, childProps) => {
+      //   const childItemArray = item[propertyName];
+      //   const childIdToAdd = childProps[childResource.idKey];
+      //   for (const existingChildItem of childItemArray) {
+      //     if (existingChildItem[childResource.idKey] === childIdToAdd) {
+      //       return existingChildItem;
+      //     }
+      //   }
+      //   const childItem = childResource.store.upsert(childProps);
+      //   const childItemArrayWithNewChild = [...childItemArray, childItem];
+      //   store.upsert(item, { [propertyName]: childItemArrayWithNewChild });
+      //   return childItem;
+      // };
+      // const removeFromCollection = (item, childProps) => {
+      //   const childItemArray = item[propertyName];
+      //   let childItemIndex = -1;
+      //   const childItemArrayWithoutThisOne = [];
+      //   const idToRemove = childProps[childIdKey];
+      //   let i = 0;
+      //   for (const childItem of childItemArray) {
+      //     if (childItem[childIdKey] === idToRemove) {
+      //       childItemIndex = i;
+      //     } else {
+      //       childItemArrayWithoutThisOne.push(childItem);
+      //     }
+      //     i++;
+      //   }
+      //   if (childItemIndex === -1) {
+      //     return false;
+      //   }
+      //   store.upsert(item, { [propertyName]: childItemArrayWithoutThisOne });
+      //   return true;
+      // };
 
       return resource(`${name}.${propertyName}`, {
         sourceStore: store,
         store: childResource.store,
         idKey: childIdKey,
-        putEffect: () => {},
-        deleteEffect: () => {},
-        putManyEffect: () => {},
-        deleteManyEffect: () => {},
+        ...options,
       });
     };
-    Object.assign(resourceInstance, {
-      describe,
-    });
   }
 
   return resourceInstance;
@@ -499,7 +494,7 @@ const createMethodsForStore = ({
         {
           meta: { httpVerb: "POST", httpMany: false },
           name: `${name}.post`,
-          compute: (idOrIdArray) => targetStore.select(idOrIdArray),
+          compute: (itemId) => targetStore.select(itemId),
           ...options,
         },
       );
@@ -521,7 +516,7 @@ const createMethodsForStore = ({
         {
           meta: { httpVerb: "PUT", httpMany: false },
           name: `${name}.put`,
-          compute: (idOrIdArray) => targetStore.select(idOrIdArray),
+          compute: (itemId) => targetStore.select(itemId),
           ...options,
         },
       );
@@ -538,7 +533,7 @@ const createMethodsForStore = ({
         {
           meta: { httpVerb: "PATCH", httpMany: false },
           name: `${name}.patch`,
-          compute: (idOrIdArray) => targetStore.select(idOrIdArray),
+          compute: (itemId) => targetStore.select(itemId),
           ...options,
         },
       );
@@ -546,15 +541,15 @@ const createMethodsForStore = ({
     },
     delete: (callback, options) => {
       const deleteAction = createAction(
-        mapCallbackMaybeAsyncResult(callback, (id) => {
-          targetStore.drop(id);
+        mapCallbackMaybeAsyncResult(callback, (itemId) => {
+          targetStore.drop(itemId);
           triggerAfterEffects(deleteAction);
-          return id;
+          return itemId;
         }),
         {
           meta: { httpVerb: "DELETE", httpMany: false },
           name: `${name}.delete`,
-          compute: (id) => targetStore.select(id),
+          compute: (itemId) => targetStore.select(itemId),
           ...options,
         },
       );
