@@ -983,7 +983,7 @@ const createActionProxyFromSignal = (
         }
       }
       actionTargetPreviousWeakRef = actionTarget
-        ? createEagerWeakRef(actionTarget)
+        ? new WeakRef(actionTarget)
         : null;
     });
   }
