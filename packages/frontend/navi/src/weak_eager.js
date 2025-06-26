@@ -1,6 +1,6 @@
 let debug = false;
 
-export const createIterableActiveWeakSet = (name) => {
+export const createIterableEagerWeakSet = (name) => {
   let cleanupScheduled = false;
   let idleCallbackId = null;
   const objectWeakRefSet = new Set();
@@ -21,7 +21,9 @@ export const createIterableActiveWeakSet = (name) => {
     idleCallbackId = null; // ✅ Clear the callback ID
     const cleanedCount = cleanup();
     if (debug && cleanedCount > 0) {
-      console.debug(`🧹 ${name}: cleaned up ${cleanedCount} dead references`);
+      console.debug(
+        `🧹 ${name}: cleaned up ${cleanedCount} dead references in that weak set`,
+      );
     }
     // Only schedule next cleanup if there are still refs and we cleaned something
     if (objectWeakRefSet.size > 0) {
@@ -123,7 +125,7 @@ export const createIterableActiveWeakSet = (name) => {
   };
 };
 
-export const createActiveWeakRef = (object, name = "weakRef") => {
+export const createEagerWeakRef = (object, name = "weakRef") => {
   const weakRef = new WeakRef(object);
 
   // ✅ Proactive cleanup scheduling (same pattern as weak_set)
