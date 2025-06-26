@@ -125,7 +125,7 @@
         const [editName, setEditName] = useState(table.name);
         // ✅ NEW: State for editing owner
         const [isEditingOwner, setIsEditingOwner] = useState(false);
-        const [editOwnerId, setEditOwnerId] = useState(table.owner.id);
+        const [editOwnerId, setEditOwnerId] = useState(table.owner?.id);
 
         const handleSave = () => {
           table.name = editName;
@@ -139,14 +139,24 @@
 
         // ✅ NEW: Handle owner update
         const handleOwnerSave = async () => {
-          await updateTableOwnerAction
-            .bindParams({ tableId: table.id, newOwnerId: editOwnerId })
+          if (editOwnerId) {
+            await updateTableOwnerAction
+              .bindParams({
+                tableId: table.id,
+                newOwnerId: parseInt(editOwnerId),
+              })
+              .reload();
+            setIsEditingOwner(false);
+            return;
+          }
+          await deleteTableOwnerAction
+            .bindParams({ tableId: table.id })
             .reload();
           setIsEditingOwner(false);
         };
 
         const handleOwnerCancel = () => {
-          setEditOwnerId(table.owner.id);
+          setEditOwnerId(table.owner?.id);
           setIsEditingOwner(false);
         };
 
@@ -159,7 +169,7 @@
         }, [isEditing]);
 
         // ✅ Get current owner name for display
-        const currentOwner = users.find((u) => u.id === table.owner.id);
+        const currentOwner = users.find((u) => u.id === table.owner?.id);
 
         return (
           <div
@@ -212,9 +222,15 @@
                     <span>Owner:</span>
                     <select
                       value={editOwnerId}
-                      onChange={(e) => setEditOwnerId(parseInt(e.target.value))}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setEditOwnerId(
+                          value === "" ? null : parseInt(e.target.value),
+                        );
+                      }}
                       style={{ fontSize: "12px" }}
                     >
+                      <option value=""></option>
                       {users.map((user) => (
                         <option key={user.id} value={user.id}>
                           {user.name}
@@ -239,7 +255,7 @@
                     <span>Owner: {currentOwner?.name || "Unknown"}</span>
                     <button
                       onClick={() => {
-                        setEditOwnerId(table.owner.id);
+                        setEditOwnerId(table.owner?.id);
                         setIsEditingOwner(true);
                       }}
                       style={{ fontSize: "10px", padding: "2px 6px" }}
