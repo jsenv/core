@@ -11,7 +11,7 @@
  * - Supports primitives AND objects as keys
  * - Allows finding objects by deep value comparison using compareTwoJsValues
  * - Maintains proper garbage collection for both keys and values
- * - Auto-cleans dead WeakRef entries via FinalizationRegistry
+ * - Auto-cleans dead WeakRef entries via proactive cleanup using requestIdleCallback
  *
  * Use cases:
  * - Memoization with object parameters that should match by content
@@ -20,7 +20,9 @@
  */
 import { compareTwoJsValues } from "./compare_two_js_values.js";
 
-export const createJsValueWeakMap = () => {
+let debug = false;
+
+export const createJsValueWeakMap = (name = "jsValueWeakMap") => {
   // Direct reference cache for objects (standard WeakMap behavior)
   const objectDirectCache = new WeakMap(); // object -> value
 
@@ -30,14 +32,81 @@ export const createJsValueWeakMap = () => {
   // Primitive keys cache (WeakMap doesn't support primitives)
   const primitiveCache = new Map(); // primitive -> WeakRef<value>
 
-  // Auto-cleanup for primitive entries when values are garbage collected
-  const primitiveCleanupRegistry = new FinalizationRegistry((primitiveKey) => {
-    primitiveCache.delete(primitiveKey);
-  });
+  // ✅ Proactive cleanup scheduling (same pattern as weak_registry)
+  let cleanupScheduled = false;
+  let idleCallbackId = null;
 
-  // Auto-cleanup for object comparison entries when keys OR values are garbage collected
-  const objectCleanupRegistry = new FinalizationRegistry((objectKeyWeakRef) => {
-    objectComparisonCache.delete(objectKeyWeakRef);
+  const cleanup = () => {
+    let objectCleaned = 0;
+    let primitiveCleaned = 0;
+
+    // Clean dead entries from object comparison cache
+    for (const [keyWeakRef, valueWeakRef] of objectComparisonCache) {
+      if (!keyWeakRef.deref() || !valueWeakRef.deref()) {
+        objectComparisonCache.delete(keyWeakRef);
+        objectCleaned++;
+      }
+    }
+
+    // Clean dead entries from primitive cache
+    for (const [key, valueWeakRef] of primitiveCache) {
+      if (!valueWeakRef.deref()) {
+        primitiveCache.delete(key);
+        primitiveCleaned++;
+      }
+    }
+
+    return {
+      objectCleaned,
+      primitiveCleaned,
+      total: objectCleaned + primitiveCleaned,
+    };
+  };
+
+  const performCleanup = () => {
+    cleanupScheduled = false;
+    idleCallbackId = null;
+    const cleanedStats = cleanup();
+
+    if (debug && cleanedStats.total > 0) {
+      console.debug(
+        `🧹 ${name}: cleaned up ${cleanedStats.objectCleaned} object entries, ${cleanedStats.primitiveCleaned} primitive entries`,
+      );
+    }
+
+    // Schedule next cleanup if there are still entries
+    if (objectComparisonCache.size > 0 || primitiveCache.size > 0) {
+      scheduleNextCleanup();
+    }
+
+    return cleanedStats;
+  };
+
+  const scheduleNextCleanup = () => {
+    if (cleanupScheduled) {
+      return;
+    }
+    cleanupScheduled = true;
+    idleCallbackId = requestIdleCallback(
+      (deadline) => {
+        if (deadline.timeRemaining() > 0 || deadline.didTimeout) {
+          performCleanup();
+        } else {
+          cleanupScheduled = false;
+          idleCallbackId = null;
+          scheduleNextCleanup();
+        }
+      },
+      { timeout: 2000 },
+    );
+  };
+
+  // ✅ FinalizationRegistry that schedules proactive cleanup
+  const primitiveCleanupRegistry = new FinalizationRegistry(() => {
+    scheduleNextCleanup();
+  });
+  const objectCleanupRegistry = new FinalizationRegistry(() => {
+    scheduleNextCleanup();
   });
 
   return {
@@ -51,13 +120,14 @@ export const createJsValueWeakMap = () => {
           return directResult;
         }
 
-        // ✅ Then try value-based comparison lookup
+        // ✅ Then try value-based comparison lookup with inline cleanup
         for (const [keyWeakRef, valueWeakRef] of objectComparisonCache) {
           const cachedKey = keyWeakRef.deref();
           const cachedValue = valueWeakRef.deref();
 
-          // Skip dead references (they'll be cleaned by FinalizationRegistry)
+          // Clean up dead references immediately during search
           if (!cachedKey || !cachedValue) {
+            objectComparisonCache.delete(keyWeakRef);
             continue;
           }
 
@@ -65,10 +135,11 @@ export const createJsValueWeakMap = () => {
             return cachedValue;
           }
         }
+
         return undefined;
       }
 
-      // ✅ Handle primitive keys
+      // ✅ Handle primitive keys with immediate cleanup
       const valueWeakRef = primitiveCache.get(key);
       if (valueWeakRef) {
         const value = valueWeakRef.deref();
@@ -94,47 +165,84 @@ export const createJsValueWeakMap = () => {
         objectComparisonCache.set(keyWeakRef, valueWeakRef);
 
         // ✅ Register both key and value for automatic cleanup
-        // When either key OR value is GC'd, remove the entry
         objectCleanupRegistry.register(key, keyWeakRef);
         objectCleanupRegistry.register(value, keyWeakRef);
+
+        // ✅ Schedule proactive cleanup
+        scheduleNextCleanup();
       } else {
         // ✅ Store primitive key with weak value reference
-        primitiveCache.set(key, new WeakRef(value));
+        const valueWeakRef = new WeakRef(value);
+        primitiveCache.set(key, valueWeakRef);
 
         // ✅ Register value for automatic cleanup when GC'd
         primitiveCleanupRegistry.register(value, key);
+
+        // ✅ Schedule proactive cleanup
+        scheduleNextCleanup();
       }
     },
 
-    // ✅ Manual cleanup for testing or performance optimization
-    cleanup() {
-      // Clean dead entries from object comparison cache
-      const deadObjectEntries = [];
+    // ✅ Force cleanup method (same as weak_registry)
+    forceCleanup: () => {
+      // Cancel any pending idle callback
+      if (idleCallbackId !== null) {
+        cancelIdleCallback(idleCallbackId);
+        idleCallbackId = null;
+      }
+      cleanupScheduled = false;
+      return performCleanup();
+    },
+
+    // ✅ Schedule cleanup method
+    schedule: scheduleNextCleanup,
+
+    // ✅ Enhanced debug information
+    getStats: () => {
+      let objectAlive = 0;
+      let objectDead = 0;
       for (const [keyWeakRef, valueWeakRef] of objectComparisonCache) {
-        if (!keyWeakRef.deref() || !valueWeakRef.deref()) {
-          deadObjectEntries.push(keyWeakRef);
+        if (keyWeakRef.deref() && valueWeakRef.deref()) {
+          objectAlive++;
+        } else {
+          objectDead++;
         }
       }
-      deadObjectEntries.forEach((ref) => objectComparisonCache.delete(ref));
 
-      // Clean dead entries from primitive cache
-      const deadPrimitiveKeys = [];
-      for (const [primitiveKey, valueWeakRef] of primitiveCache) {
-        if (!valueWeakRef.deref()) {
-          deadPrimitiveKeys.push(primitiveKey);
+      let primitiveAlive = 0;
+      let primitiveDead = 0;
+      for (const [, valueWeakRef] of primitiveCache) {
+        if (valueWeakRef.deref()) {
+          primitiveAlive++;
+        } else {
+          primitiveDead++;
         }
       }
-      deadPrimitiveKeys.forEach((key) => primitiveCache.delete(key));
-    },
 
-    // ✅ Debug information
-    get stats() {
       return {
         objectDirectCacheSize: "unknown (WeakMap)",
-        objectComparisonCacheSize: objectComparisonCache.size,
-        primitiveCacheSize: primitiveCache.size,
-        gcStrategy: "FinalizationRegistry + WeakRef",
+        objectComparison: {
+          total: objectComparisonCache.size,
+          alive: objectAlive,
+          dead: objectDead,
+        },
+        primitive: {
+          total: primitiveCache.size,
+          alive: primitiveAlive,
+          dead: primitiveDead,
+        },
+        gcStrategy: "proactive cleanup via requestIdleCallback",
+        cleanupScheduled,
       };
+    },
+
+    // ✅ Manual cleanup (for backwards compatibility)
+    cleanup() {
+      return this.forceCleanup();
+    },
+
+    get stats() {
+      return this.getStats();
     },
   };
 };
