@@ -166,6 +166,41 @@
         updateStats();
       }, 100);
 
+      // ✅ GC function from resource_demo_6_gc.html
+      const forceGCAndCheck = async () => {
+        console.log("🔄 Forcing GC...");
+
+        // Forcer le garbage collection (si disponible)
+        if (window.gc) {
+          window.gc();
+        } else {
+          // Fallback: créer de la pression mémoire
+          const arrays = [];
+          for (let i = 0; i < 100; i++) {
+            arrays.push(new Array(100000).fill(Math.random()));
+          }
+          // Laisser les arrays être collectées
+          arrays.length = 0;
+        }
+
+        // Attendre un peu pour que le GC ait le temps de s'exécuter
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        updateStats();
+
+        // Vérifier le résultat
+        const stats = getRegistryStats();
+        const { alivePostActions } = stats;
+
+        if (alivePostActions === 0) {
+          console.log("✅ SUCCESS: All POST actions were garbage collected!");
+        } else {
+          console.log(
+            `❌ ISSUE: ${alivePostActions} POST actions are still alive`,
+          );
+        }
+      };
+
       // eslint-disable-next-line no-unused-vars
       const TestApp = () => {
         const [, forceUpdate] = useState({});
@@ -210,25 +245,14 @@
           await tempPostAction.bindParams({ value: randomValue }).load();
         });
 
-      document.getElementById("forceGC").addEventListener("click", () => {
-        if (window.gc) {
-          console.log("Forcing garbage collection...");
-          window.gc();
-        } else {
-          console.log(
-            "Manual GC not available. Try running Chrome with --js-flags='--expose-gc'",
-          );
-          // eslint-disable-next-line no-alert
-          window.alert(
-            "Manual GC not available. Try running Chrome with --js-flags='--expose-gc'",
-          );
-        }
-      });
+      document
+        .getElementById("forceGC")
+        .addEventListener("click", forceGCAndCheck);
 
       document
         .getElementById("clearAll")
         .addEventListener("click", async () => {
-          await deleteAllNumbersAction.load();
+          await deleteAllNumbersAction.reload();
         });
 
       // ✅ Render the app
