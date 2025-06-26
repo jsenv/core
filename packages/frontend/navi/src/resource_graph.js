@@ -383,8 +383,40 @@ const createMethodsForStore = ({
     }
   };
 
+  const getCallerInfo = () => {
+    const originalPrepareStackTrace = Error.prepareStackTrace;
+    try {
+      Error.prepareStackTrace = (_, stack) => stack;
+
+      const error = new Error();
+      const stack = error.stack;
+
+      if (stack && stack.length > 2) {
+        // stack[0] = getCallerInfo function
+        // stack[1] = the method calling getCallerInfo (get, post, etc.)
+        // stack[2] = actual caller (user code)
+        const callerFrame = stack[2];
+
+        return {
+          file: callerFrame.getFileName(),
+          line: callerFrame.getLineNumber(),
+          column: callerFrame.getColumnNumber(),
+          function: callerFrame.getFunctionName() || "<anonymous>",
+          raw: callerFrame.toString(),
+        };
+      }
+
+      return { raw: "unknown" };
+    } finally {
+      // ✅ Always restore original prepareStackTrace
+      Error.prepareStackTrace = originalPrepareStackTrace;
+    }
+  };
+
   return {
     get: (callback, options) => {
+      const callerInfo = getCallerInfo();
+
       const getAction = createAction(
         mapCallbackMaybeAsyncResult(callback, (props) => {
           if (!isProps(props)) {
@@ -392,7 +424,7 @@ const createMethodsForStore = ({
               return null;
             }
             throw new TypeError(
-              `${getAction} must return an object (that will be used to upsert "${name}" resource), received ${props}.`,
+              `${actionTrace} must return an object (that will be used to upsert "${name}" resource), received ${props}.`,
             );
           }
           const item = targetStore.upsert(props);
@@ -406,7 +438,7 @@ const createMethodsForStore = ({
           ...options,
         },
       );
-
+      const actionTrace = `${getAction} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
       httpActionRegistry.register(getAction);
 
       return getAction;

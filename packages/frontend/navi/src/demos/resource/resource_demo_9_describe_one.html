@@ -34,19 +34,32 @@
 
       const user = resource("user", { idKey: "id", mutableIdKey: "name" });
       const table = resource("table", { idKey: "id", mutableIdKey: "name" });
+      // user.describe({
+      //   tables: [table],
+      // });
       const { owner: tableOwner } = table.describe({
         owner: user,
       });
 
       // Actions pour récupérer les données
       const getTableAction = table.get(({ name }) => {
-        return tables.find((table) => table.name === name) || null;
+        const table = tables.find((table) => table.name === name);
+        if (!table) {
+          throw new Error(`Table with name "${name}" not found`);
+        }
+        return table;
       });
       const getManyTableAction = table.getMany(() => {
         return tables;
       });
       const getManyUserAction = user.getMany(() => {
         return users;
+      });
+      const renameTableAction = table.put(({ name, newName }) => {
+        let tableToUpdate = tables.find((t) => t.name === name);
+        const id = tableToUpdate.id;
+        tableToUpdate.name = newName;
+        return { id, name: newName };
       });
       const renameUserAction = user.put(({ name, newName }) => {
         let userToUpdate = users.find((u) => u.name === name);
@@ -90,6 +103,9 @@
       if (currentTableNameSignal.value) {
         currentTableAction.load();
       }
+      table.store.registerPropertyChangeCallback("name", (tableName) => {
+        currentTableNameSignal.value = tableName;
+      });
 
       // Load initial data
       getManyTableAction.load();
@@ -138,8 +154,10 @@
         const [isEditingOwner, setIsEditingOwner] = useState(false);
         const [editOwnerId, setEditOwnerId] = useState(table.owner?.id);
 
-        const handleSave = () => {
-          table.name = editName;
+        const handleSave = async () => {
+          await renameTableAction
+            .bindParams({ name: table.name, newName: editName })
+            .load();
           setIsEditing(false);
         };
 
@@ -388,7 +406,7 @@
         }, [isEditing]);
 
         // Compter combien de tables appartiennent à cet utilisateur
-        const userTables = tables.filter((table) => table.owner.id === user.id);
+        const userTables = user.tables || [];
 
         return (
           <div
