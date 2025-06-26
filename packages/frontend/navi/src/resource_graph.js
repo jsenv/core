@@ -3,7 +3,7 @@ import { createAction, reloadActions } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
-import { createWeakSetProactive } from "./weak_proactive.js";
+import { createIterableActiveWeakSet } from "./weak_active.js";
 
 let debug = true;
 
@@ -318,7 +318,7 @@ const createMethodsForStore = ({
   );
   const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
 
-  const httpActionWeakSet = createWeakSetProactive("httpActionRegistry");
+  const httpActionWeakSet = createIterableActiveWeakSet("httpActionRegistry");
   const findAliveActionsMatching = (predicate) => {
     const matchingActionSet = new Set();
     for (const httpAction of httpActionWeakSet) {

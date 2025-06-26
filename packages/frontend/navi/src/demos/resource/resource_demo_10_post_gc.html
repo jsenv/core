@@ -147,8 +147,7 @@
         }
 
         // ✅ Get activation registry stats
-        const activationStats =
-          window.__actions__.activationRegistry.getStats();
+        const activationStats = window.__actions__.activationWeakSet.getStats();
 
         return {
           total,

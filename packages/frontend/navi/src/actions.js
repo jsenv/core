@@ -6,7 +6,7 @@ import {
 import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
-import { createWeakSetProactive } from "./weak_proactive.js";
+import { createIterableActiveWeakSet } from "./weak_active.js";
 
 let debug = false;
 
@@ -130,7 +130,7 @@ export const abortPendingActions = (
 
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
-const activationWeakSet = createWeakSetProactive("activation_weak_set");
+const activationWeakSet = createIterableActiveWeakSet("activation_weak_set");
 
 const getActivationInfo = () => {
   const loadingSet = new Set();
@@ -445,7 +445,7 @@ export const createAction = (callback, rootOptions) => {
 
     let action;
 
-    const childActionWeakSet = createWeakSetProactive();
+    const childActionWeakSet = createIterableActiveWeakSet();
     const childActionWeakMap = createJsValueWeakMap();
     const _bindParams = (newParamsOrSignal, options = {}) => {
       // ✅ CAS 1: Signal direct -> proxy
