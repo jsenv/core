@@ -1,6 +1,7 @@
 let debug = false;
 
 const IDLE_TIMEOUT = 500;
+const EAGER = false;
 
 export const createIterableEagerWeakSet = (name) => {
   let cleanupScheduled = false;
@@ -62,7 +63,9 @@ export const createIterableEagerWeakSet = (name) => {
       const objectWeakRef = new WeakRef(object);
       objectWeakRefSet.add(objectWeakRef);
       finalizationRegistry.register(object);
-      scheduleNextCleanup();
+      if (EAGER) {
+        scheduleNextCleanup();
+      }
     },
 
     delete: (object) => {
@@ -157,23 +160,18 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
       return;
     }
     cleanupScheduled = true;
-
-    if (typeof requestIdleCallback !== "undefined") {
-      idleCallbackId = requestIdleCallback(
-        (deadline) => {
-          if (deadline.timeRemaining() > 0 || deadline.didTimeout) {
-            performCleanup();
-          } else {
-            cleanupScheduled = false;
-            idleCallbackId = null;
-            scheduleCleanup();
-          }
-        },
-        { timeout: IDLE_TIMEOUT },
-      );
-    } else {
-      idleCallbackId = setTimeout(performCleanup, 500);
-    }
+    idleCallbackId = requestIdleCallback(
+      (deadline) => {
+        if (deadline.timeRemaining() > 0 || deadline.didTimeout) {
+          performCleanup();
+        } else {
+          cleanupScheduled = false;
+          idleCallbackId = null;
+          scheduleCleanup();
+        }
+      },
+      { timeout: IDLE_TIMEOUT },
+    );
   };
 
   // ✅ FinalizationRegistry that schedules proactive cleanup
@@ -182,6 +180,10 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
   });
 
   finalizationRegistry.register(object);
+
+  if (EAGER) {
+    scheduleCleanup();
+  }
 
   return {
     deref() {
@@ -204,11 +206,7 @@ export const createEagerWeakRef = (object, name = "weakRef") => {
     // ✅ Force cleanup method for testing
     forceCleanup() {
       if (idleCallbackId !== null) {
-        if (typeof cancelIdleCallback !== "undefined") {
-          cancelIdleCallback(idleCallbackId);
-        } else {
-          clearTimeout(idleCallbackId);
-        }
+        cancelIdleCallback(idleCallbackId);
         idleCallbackId = null;
       }
       cleanupScheduled = false;
