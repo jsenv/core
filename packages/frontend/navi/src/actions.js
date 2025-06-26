@@ -6,6 +6,7 @@ import {
 import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
+import { createWeakRegistry } from "./weak_registry.js";
 
 let debug = true;
 
@@ -483,14 +484,7 @@ export const createAction = (callback, rootOptions) => {
 
     let action;
 
-    const childActionWeakRefSet = new Set();
-    const childActionRegistry = new FinalizationRegistry(() => {
-      for (const weakRef of childActionWeakRefSet) {
-        if (weakRef.deref() === undefined) {
-          childActionWeakRefSet.delete(weakRef);
-        }
-      }
-    });
+    const childActionRegistry = createWeakRegistry();
 
     const childActionWeakMap = createJsValueWeakMap();
     const _bindParams = (newParamsOrSignal, options = {}) => {
@@ -577,9 +571,6 @@ export const createAction = (callback, rootOptions) => {
       }
       const childAction = _bindParams(newParamsOrSignal, options);
       childActionWeakMap.set(newParamsOrSignal, childAction);
-
-      const childWeakRef = new WeakRef(childAction);
-      childActionWeakRefSet.add(childWeakRef);
       childActionRegistry.register(childAction);
 
       return childAction;
@@ -631,15 +622,9 @@ export const createAction = (callback, rootOptions) => {
         // Get child actions from the current action
         const currentActionPrivateProps =
           getActionPrivateProperties(currentAction);
-        const childActionWeakRefSet =
-          currentActionPrivateProps.childActionWeakRefSet;
-        // Traverse live child actions
-        for (const childWeakRef of childActionWeakRefSet) {
-          const childAction = childWeakRef.deref();
-          if (!childAction) {
-            childActionWeakRefSet.delete(childWeakRef);
-            continue;
-          }
+        const childActionRegistry =
+          currentActionPrivateProps.childActionRegistry;
+        for (const childAction of childActionRegistry) {
           traverse(childAction);
         }
       };
@@ -860,7 +845,7 @@ export const createAction = (callback, rootOptions) => {
         performUnload,
         ui,
 
-        childActionWeakRefSet,
+        childActionRegistry,
       };
       setActionPrivateProperties(action, privateProperties);
     }
@@ -989,8 +974,8 @@ const createActionProxyFromSignal = (
 
   onActionTargetChange(() => {
     proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
-    proxyPrivateProperties.childActionWeakRefSet =
-      currentActionPrivateProperties.childActionWeakRefSet;
+    proxyPrivateProperties.childActionRegistry =
+      currentActionPrivateProperties.childActionRegistry;
   });
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
 
