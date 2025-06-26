@@ -7,13 +7,15 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
 let debug = true;
 
-const createHttpHandlerForRootResource = ({
+const createHttpHandlerForRootResource = (
   name,
-  idKey,
-  store,
-  autoreloadGetManyAfter = ["POST", "DELETE"],
-  autoreloadGetAfter = false,
-}) => {
+  {
+    idKey,
+    store,
+    autoreloadGetManyAfter = ["POST", "DELETE"],
+    autoreloadGetAfter = false,
+  },
+) => {
   const httpActionWeakSet = createIterableWeakSet();
   const shouldAutoreloadGetMany = createShouldAutoreloadAfter(
     autoreloadGetManyAfter,
@@ -232,23 +234,184 @@ const createHttpHandlerForRootResource = ({
     DELETE_MANY,
   };
 };
-
-const createHttpHandlerForSingleRelationship = ({
+const createHttpHandlerForRelationshipToOneResource = (
   name,
-  idKey,
-  sourceStore,
-  targetStore,
-}) => {
-     // http method must return object with the following format:
-      // { [idKey]: 123, [propertyName]: { [childIdKey]: 456, ...childProps }}
+  { store, propertyName, childIdKey, childStore },
+) => {
+  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+    const applyDataEffect =
+      httpVerb === "DELETE"
+        ? (itemId) => {
+            const item = store.select(itemId);
+            const childItemId = item[propertyName][childIdKey];
+            store.upsert({
+              [propertyName]: null,
+            });
+            return childItemId;
+          }
+        : // callback must return object with the following format:
+          // {
+          //   [idKey]: 123,
+          //   [propertyName]: {
+          //     [childIdKey]: 456, ...childProps
+          //   }
+          // }
+          // the following could happen too if there is no relationship
+          // {
+          //   [idKey]: 123,
+          //   [propertyName]: null
+          // }
+          (data) => {
+            const item = store.upsert(data);
+            const childItem = item[propertyName];
+            const childItemId = childItem ? childItem[childIdKey] : undefined;
+            return childItemId;
+          };
 
-      putEffect: (props) => {
-        const item = store.upsert(props);
-        const childItemId = item[propertyName][childIdKey];
-        return childItemId;
+    const httpActionAffectingOneItem = createAction(
+      mapCallbackMaybeAsyncResult(callback),
+      (data) => {
+        return applyDataEffect(data);
       },
-      putCompute: (childItemId) => childResource.store.select(childItemId),
+      {
+        meta: { httpVerb, httpMany: false },
+        name: `${name}.${httpVerb}`,
+        compute: (childItemId) => childStore.select(childItemId),
+        ...options,
+      },
+    );
+    return httpActionAffectingOneItem;
+  };
 
+  const GET = (callback, options) =>
+    createActionAffectingOneItem("GET", {
+      callback,
+      ...options,
+    });
+  const PUT = (callback, options) =>
+    createActionAffectingOneItem("PUT", {
+      callback,
+      ...options,
+    });
+  const DELETE = (callback, options) =>
+    createActionAffectingOneItem("DELETE", {
+      callback,
+      ...options,
+    });
+
+  // il n'y a pas de many puisque on cible une seule resource
+  // genre table.owner -> c'est un seul owner qu'on peut
+  // GET -> recup les infos de l'objet
+  // PUT -> mettre a jour l'owner de la table
+  // DELETE -> supprimer l'owner de la table
+
+  return { GET, PUT, DELETE };
+};
+const createHttpHandlerRelationshipToManyResource = (
+  name,
+  { store, propertyName, childIdKey, childStore },
+) => {
+  // one item AND many child items
+  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+    const applyDataEffect =
+      httpVerb === "DELETE"
+        ? // not sure I actually need to update the array actually
+          // I can just drop the child item
+          // and thanks to signals item[propertyName] will actually not return
+          // the dropped child item as id won't be found anymore
+          (childItemId) => childItemId
+        : (childData) => {
+            const childItem = childStore.upsert(childData); // if the child item was used it will reload thanks to signals
+            const childItemId = childItem[childIdKey];
+            return childItemId;
+          };
+
+    const httpActionAffectingOneItem = createAction(
+      mapCallbackMaybeAsyncResult(callback, (dataArray) => {
+        return applyDataEffect(dataArray);
+      }),
+      {
+        meta: { httpVerb, httpMany: false },
+        name: `${name}.${httpVerb}`,
+        compute: (childItemId) => childStore.select(childItemId),
+        ...options,
+      },
+    );
+    return httpActionAffectingOneItem;
+  };
+  const GET = (callback, options) =>
+    createActionAffectingOneItem("GET", {
+      callback,
+      ...options,
+    });
+  // le souci que je vois ici c'est que je n'ai pas la moindre idée d'ou
+  // inserer le childItem (ni meme s'il doit etre visible)
+  // je pense que la bonne chose a faire est de reload
+  // l'objet user.tables s'il en existe un
+  // TODO: find any GET action on the resource and reload it
+  const POST = (callback, options) =>
+    createActionAffectingOneItem("POST", {
+      callback,
+      ...options,
+    });
+  const PUT = (callback, options) =>
+    createActionAffectingOneItem("PUT", {
+      callback,
+      ...options,
+    });
+  const PATCH = (callback, options) =>
+    createActionAffectingOneItem("PATCH", {
+      callback,
+      ...options,
+    });
+  const DELETE = (callback, options) =>
+    createActionAffectingOneItem("DELETE", {
+      callback,
+      ...options,
+    });
+
+  const createActionAffectingManyItems = (
+    httpVerb,
+    { callback, ...options },
+  ) => {
+    const applyDataEffect = (data) => {
+      // callback must return object with the following format:
+      // {
+      //   [idKey]: 123,
+      //   [propertyName]: [
+      //      { [childIdKey]: 456, ...childProps },
+      //      { [childIdKey]: 789, ...childProps },
+      //      ...
+      //   ]
+      // }
+      // the array can be empty
+      const item = store.upsert(data);
+      const childItemArray = item[propertyName];
+      const childItemIdArray = childItemArray.map(
+        (childItem) => childItem[childIdKey],
+      );
+      return childItemIdArray;
+    };
+
+    const httpActionAffectingManyItem = createAction(
+      mapCallbackMaybeAsyncResult(callback, (dataArray) => {
+        return applyDataEffect(dataArray);
+      }),
+      {
+        meta: { httpVerb, httpMany: true },
+        name: `${name}.${httpVerb}[many]`,
+        data: [],
+        compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
+        ...options,
+      },
+    );
+    return httpActionAffectingManyItem;
+  };
+
+  const GET_MANY = (callback, options) =>
+    createActionAffectingManyItems("GET", { callback, ...options });
+
+  return { GET, POST, PUT, PATCH, DELETE, GET_MANY };
 };
 
 export const resource = (
@@ -330,8 +493,7 @@ export const resource = (
       store,
     });
 
-    httpHandler = createHttpHandlerForRootResource({
-      name,
+    httpHandler = createHttpHandlerForRootResource(name, {
       idKey,
       store,
       autoreloadGetManyAfter,
@@ -350,6 +512,7 @@ export const resource = (
 
   resourceInstance.one = (propertyName, childResource, options) => {
     const childIdKey = childResource.idKey;
+    const childName = `${name}.${propertyName}`;
     resourceInstance.addItemSetup((item) => {
       const childItemIdSignal = signal();
       const updateChildItemId = (value) => {
@@ -431,21 +594,22 @@ export const resource = (
         },
       });
     });
-    const httpHandlerForChildResource = createHttpHandlerForSingleRelationship({
-      name: `${name}.${propertyName}`,
+    const httpHandlerForRelationshipToOneChild =
+      createHttpHandlerForRelationshipToOneResource(childName, {
+        store: resourceInstance.store,
+        propertyName,
+        childIdKey,
+        childStore: childResource.store,
+      });
+    return resource(childName, {
       idKey: childIdKey,
-      sourceStore: resourceInstance.store,
-      targetStore: childResource.store,
-    });
-    return resource(`${name}.${propertyName}`, {
-      idKey: childIdKey,
-      httpHandler: httpHandlerForChildResource,
+      httpHandler: httpHandlerForRelationshipToOneChild,
       ...options,
     });
   };
   resourceInstance.many = (propertyName, childResource, options) => {
     const childIdKey = childResource.idKey;
-
+    const childName = `${name}.${propertyName}`;
     resourceInstance.addItemSetup((item) => {
       const childItemIdArraySignal = signal([]);
       const updateChildItemIdArray = (valueArray) => {
@@ -530,11 +694,16 @@ export const resource = (
         },
       });
     });
-
-    return resource(`${name}.${propertyName}`, {
-      store,
-      targetStore: childResource.store,
+    const httpHandleForChildManyResource =
+      createHttpHandlerRelationshipToManyResource(childName, {
+        store: resourceInstance.store,
+        propertyName,
+        childIdKey,
+        childStore: childResource.store,
+      });
+    return resource(childName, {
       idKey: childIdKey,
+      httpHandler: httpHandleForChildManyResource,
       ...options,
     });
   };
