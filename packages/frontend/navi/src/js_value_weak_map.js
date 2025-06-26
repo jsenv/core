@@ -9,10 +9,7 @@
  */
 import { compareTwoJsValues } from "./compare_two_js_values.js";
 
-let debug = false;
-
-const IDLE_TIMEOUT = 100;
-export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
+export const createJsValueWeakMap = () => {
   // Direct reference cache for objects (standard WeakMap behavior)
   const objectDirectCache = new WeakMap(); // object -> value
 
@@ -21,89 +18,6 @@ export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
 
   // Primitive keys cache (WeakMap doesn't support primitives)
   const primitiveCache = new Map(); // primitive -> WeakRef<value>
-
-  let cleanupScheduled = false;
-  let idleCallbackId = null;
-
-  const cleanup = () => {
-    let objectCleaned = 0;
-    let primitiveCleaned = 0;
-
-    // Clean dead entries from object comparison cache
-    for (const [keyWeakRef, valueWeakRef] of objectComparisonCache) {
-      const key = keyWeakRef.deref();
-      const value = valueWeakRef.deref();
-
-      // Remove if EITHER key OR value is dead
-      if (!key || !value) {
-        objectComparisonCache.delete(keyWeakRef);
-        objectCleaned++;
-      }
-    }
-
-    // Clean dead entries from primitive cache
-    for (const [primitiveKey, valueWeakRef] of primitiveCache) {
-      if (!valueWeakRef.deref()) {
-        primitiveCache.delete(primitiveKey);
-        primitiveCleaned++;
-      }
-    }
-
-    return {
-      objectCleaned,
-      primitiveCleaned,
-      total: objectCleaned + primitiveCleaned,
-    };
-  };
-
-  const performCleanup = () => {
-    cleanupScheduled = false;
-    idleCallbackId = null;
-    const cleanedStats = cleanup();
-
-    if (debug && cleanedStats.total > 0) {
-      console.debug(
-        `🧹 ${name}: cleaned up ${cleanedStats.objectCleaned} object entries, ${cleanedStats.primitiveCleaned} primitive entries`,
-      );
-    }
-
-    // Schedule next cleanup if there are still entries
-    if (objectComparisonCache.size > 0 || primitiveCache.size > 0) {
-      scheduleNextCleanup();
-    }
-
-    return cleanedStats;
-  };
-
-  const scheduleNextCleanup = () => {
-    if (cleanupScheduled) {
-      return;
-    }
-    cleanupScheduled = true;
-    idleCallbackId = requestIdleCallback(
-      (deadline) => {
-        if (deadline.timeRemaining() > 0 || deadline.didTimeout) {
-          performCleanup();
-        } else {
-          cleanupScheduled = false;
-          idleCallbackId = null;
-          scheduleNextCleanup();
-        }
-      },
-      { timeout: IDLE_TIMEOUT },
-    );
-  };
-
-  // ✅ Two separate FinalizationRegistries for different cleanup scenarios
-  const valueCleanupRegistry = new FinalizationRegistry(() => {
-    cancelIdleCallback(idleCallbackId);
-    performCleanup();
-  });
-
-  const primitiveValueCleanupRegistry = new FinalizationRegistry(() => {
-    cancelIdleCallback(idleCallbackId);
-    performCleanup();
-  });
 
   return {
     get(key) {
@@ -160,20 +74,10 @@ export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
         const keyWeakRef = new WeakRef(key);
         const valueWeakRef = new WeakRef(value);
         objectComparisonCache.set(keyWeakRef, valueWeakRef);
-
-        // ✅ Register with correct heldValue
-        valueCleanupRegistry.register(value, undefined, keyWeakRef);
-
-        scheduleNextCleanup();
       } else {
         // Store primitive key with weak value reference
         const valueWeakRef = new WeakRef(value);
         primitiveCache.set(key, valueWeakRef);
-
-        // ✅ Register with correct heldValue for primitive cleanup
-        primitiveValueCleanupRegistry.register(value, undefined, key);
-
-        scheduleNextCleanup();
       }
     },
 
@@ -185,14 +89,10 @@ export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
         const hadValue = objectDirectCache.delete(key);
 
         // ✅ Remove from comparison cache and unregister
-        for (const [keyWeakRef, valueWeakRef] of objectComparisonCache) {
+        for (const [keyWeakRef] of objectComparisonCache) {
           const cachedKey = keyWeakRef.deref();
           if (cachedKey === key) {
-            const cachedValue = valueWeakRef.deref();
             objectComparisonCache.delete(keyWeakRef);
-            if (cachedValue) {
-              valueCleanupRegistry.unregister(keyWeakRef);
-            }
             break;
           }
         }
@@ -202,27 +102,11 @@ export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
       // Handle primitive deletion
       const valueWeakRef = primitiveCache.get(key);
       if (valueWeakRef) {
-        const value = valueWeakRef.deref();
         primitiveCache.delete(key);
-        if (value) {
-          primitiveValueCleanupRegistry.unregister(key);
-        }
         return true;
       }
       return false;
     },
-
-    // ✅ Enhanced force cleanup
-    forceCleanup: () => {
-      if (idleCallbackId !== null) {
-        cancelIdleCallback(idleCallbackId);
-        idleCallbackId = null;
-      }
-      cleanupScheduled = false;
-      return performCleanup();
-    },
-
-    schedule: scheduleNextCleanup,
 
     // ✅ Enhanced debug information
     getStats: () => {
@@ -270,16 +154,7 @@ export const createJsValueEagerWeakMap = (name = "jsValueWeakMap") => {
           dead: primitiveDead,
         },
         gcStrategy: "value-driven cleanup (keys cannot keep values alive)",
-        cleanupScheduled,
       };
-    },
-
-    cleanup() {
-      return this.forceCleanup();
-    },
-
-    get stats() {
-      return this.getStats();
     },
   };
 };

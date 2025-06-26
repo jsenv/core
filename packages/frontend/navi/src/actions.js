@@ -4,12 +4,9 @@ import {
   setActionPrivateProperties,
 } from "./action_private_properties.js";
 import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
-import { createJsValueEagerWeakMap } from "./js_value_eager_weak_map.js";
+import { createIterableWeakSet } from "./iterable_weak_set.js";
+import { createJsValueWeakMap } from "./js_value_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
-import {
-  createEagerWeakRef,
-  createIterableEagerWeakSet,
-} from "./weak_eager.js";
 
 let debug = false;
 
@@ -133,7 +130,7 @@ export const abortPendingActions = (
 
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
-const activationWeakSet = createIterableEagerWeakSet("activation");
+const activationWeakSet = createIterableWeakSet("activation");
 
 const getActivationInfo = () => {
   const loadingSet = new Set();
@@ -448,8 +445,8 @@ export const createAction = (callback, rootOptions = {}) => {
 
     let action;
 
-    const childActionWeakSet = createIterableEagerWeakSet("child_action");
-    const childActionWeakMap = createJsValueEagerWeakMap();
+    const childActionWeakSet = createIterableWeakSet("child_action");
+    const childActionWeakMap = createJsValueWeakMap();
     const _bindParams = (newParamsOrSignal, options = {}) => {
       // ✅ CAS 1: Signal direct -> proxy
       if (isSignal(newParamsOrSignal)) {
@@ -618,7 +615,7 @@ export const createAction = (callback, rootOptions = {}) => {
 
     // Effects pour synchroniser les propriétés
     effects: {
-      const actionWeakRef = createEagerWeakRef(action);
+      const actionWeakRef = new WeakRef(action);
       const actionWeakEffect = (callback) => {
         const dispose = effect(() => {
           const actionRef = actionWeakRef.deref();
@@ -945,8 +942,8 @@ const createActionProxyFromSignal = (
     let actionTargetPreviousWeakRef = null;
     let isFirstEffect = true;
     const changeCleanupCallbackSet = new Set();
-    const actionWeakRef = createEagerWeakRef(action);
-    const proxyWeakRef = createEagerWeakRef(actionProxy);
+    const actionWeakRef = new WeakRef(action);
+    const proxyWeakRef = new WeakRef(actionProxy);
 
     const dispose = effect(() => {
       const actionRef = actionWeakRef.deref();

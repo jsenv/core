@@ -2,8 +2,8 @@ import { computed, signal } from "@preact/signals";
 import { createAction, reloadActions } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
+import { createIterableWeakSet } from "./iterable_weak_set.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
-import { createIterableEagerWeakSet } from "./weak_eager.js";
 
 let debug = true;
 
@@ -318,7 +318,7 @@ const createMethodsForStore = ({
   );
   const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
 
-  const httpActionWeakSet = createIterableEagerWeakSet("http_action_weak_set");
+  const httpActionWeakSet = createIterableWeakSet();
   const findAliveActionsMatching = (predicate) => {
     const matchingActionSet = new Set();
     for (const httpAction of httpActionWeakSet) {
