@@ -185,15 +185,8 @@
           };
 
         // ✅ Get child action stats
-        let childStats = { total: 0, alive: 0, dead: 0 };
-        try {
-          const privateProps = getActionPrivateProperties(postNumberAction);
-          if (privateProps?.childActionWeakMap?.getStats) {
-            childStats = privateProps.childActionWeakMap.getStats();
-          }
-        } catch (error) {
-          console.warn("Could not get child action stats:", error);
-        }
+        const privateProps = getActionPrivateProperties(postNumberAction);
+        const childStats = privateProps.childActionWeakSet.getStats();
 
         return {
           total,
