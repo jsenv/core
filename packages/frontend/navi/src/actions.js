@@ -344,6 +344,13 @@ ${lines.join("\n")}`);
   }
   perform_preloads_and_loads: {
     const onActionToLoadOrPreload = (actionToPreloadOrLoad, isPreload) => {
+      if (import.meta.dev && actionToPreloadOrLoad.isProxy) {
+        // maybe remove this check one the API is stable because
+        // nothing in the API should allow this to happen
+        throw new Error(
+          `Proxy should not be reach this point, use the underlying action instead`,
+        );
+      }
       const actionToLoadPrivateProperties = getActionPrivateProperties(
         actionToPreloadOrLoad,
       );
