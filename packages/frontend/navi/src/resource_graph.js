@@ -2,6 +2,7 @@ import { computed, signal } from "@preact/signals";
 import { createAction, reloadActions } from "./actions.js";
 import { arraySignalStore } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
+import { getCallerInfo } from "./get_caller_info.js";
 import { createIterableWeakSet } from "./iterable_weak_set.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
@@ -62,36 +63,6 @@ const createHttpHandlerForRootResource = (
       reloadActions(toReloadSet, {
         reason: `${httpAction} triggered`,
       });
-    }
-  };
-
-  const getCallerInfo = () => {
-    const originalPrepareStackTrace = Error.prepareStackTrace;
-    try {
-      Error.prepareStackTrace = (_, stack) => stack;
-
-      const error = new Error();
-      const stack = error.stack;
-
-      if (stack && stack.length > 2) {
-        // stack[0] = getCallerInfo function
-        // stack[1] = the method calling getCallerInfo (get, post, etc.)
-        // stack[2] = actual caller (user code)
-        const callerFrame = stack[2];
-
-        return {
-          file: callerFrame.getFileName(),
-          line: callerFrame.getLineNumber(),
-          column: callerFrame.getColumnNumber(),
-          function: callerFrame.getFunctionName() || "<anonymous>",
-          raw: callerFrame.toString(),
-        };
-      }
-
-      return { raw: "unknown" };
-    } finally {
-      // ✅ Always restore original prepareStackTrace
-      Error.prepareStackTrace = originalPrepareStackTrace;
     }
   };
 
@@ -315,6 +286,9 @@ const createHttpHandlerRelationshipToManyResource = (
   name,
   { idKey, store, propertyName, childIdKey, childStore },
 ) => {
+  // si si y'a un GET_MANY sur ce store -> reload le
+  // sinon y'a un GET sur le store originel -> reload
+
   // one item AND many child items
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
     const applyDataEffect =
