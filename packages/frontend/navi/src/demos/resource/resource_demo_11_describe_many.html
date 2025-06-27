@@ -256,9 +256,6 @@
             friendId: selectedFriendId,
           }).reload();
 
-          // Reload the friends list
-          userFriendsAction.reload();
-
           setSelectedFriendId("");
           setIsAddingFriend(false);
         };
@@ -268,9 +265,6 @@
             userId: user.id,
             friendId,
           }).reload();
-
-          // Reload the friends list
-          userFriendsAction.reload();
         };
 
         // Get available users to add as friends (excluding self and existing friends)

@@ -24,6 +24,46 @@ const findAliveActionsMatching = (httpActionWeakSet, predicate) => {
   }
   return matchingActionSet;
 };
+const initAutoreload = ({ autoreloadGetManyAfter, autoreloadGetAfter }) => {
+  const httpActionWeakSet = createIterableWeakSet();
+  const shouldAutoreloadGetMany = createShouldAutoreloadAfter(
+    autoreloadGetManyAfter,
+  );
+  const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
+
+  const onActionCreated = (httpAction) => {
+    httpActionWeakSet.add(httpAction);
+  };
+
+  const onActionDone = (httpAction) => {
+    const getManyAutoreload = shouldAutoreloadGetMany(httpAction);
+    const getAutoreload = shouldAutoreloadGet(httpAction);
+    if (!getManyAutoreload && !getAutoreload) {
+      return;
+    }
+
+    // if (httpAction.name === "user.friends.POST") {
+    //   debugger;
+    // }
+
+    const predicate =
+      getManyAutoreload && getAutoreload
+        ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
+        : getManyAutoreload
+          ? (httpActionCandidate) =>
+              httpActionCandidate.meta.httpVerb === "GET" &&
+              httpActionCandidate.meta.httpMany === true
+          : (httpActionCandidate) =>
+              httpActionCandidate.meta.httpVerb === "GET" &&
+              !httpActionCandidate.meta.httpMany;
+    const toReloadSet = findAliveActionsMatching(httpActionWeakSet, predicate);
+    reloadActions(toReloadSet, {
+      reason: `${httpAction} triggered`,
+    });
+  };
+
+  return { onActionCreated, onActionDone };
+};
 
 const createHttpHandlerForRootResource = (
   name,
@@ -34,54 +74,27 @@ const createHttpHandlerForRootResource = (
     autoreloadGetAfter = false,
   },
 ) => {
-  const httpActionWeakSet = createIterableWeakSet();
-  const shouldAutoreloadGetMany = createShouldAutoreloadAfter(
+  const autoreload = initAutoreload({
     autoreloadGetManyAfter,
-  );
-  const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
-  const onStoreAffected = (httpAction) => {
-    autoreload: {
-      const getManyAutoreload = shouldAutoreloadGetMany(httpAction);
-      const getAutoreload = shouldAutoreloadGet(httpAction);
-      if (!getManyAutoreload && !getAutoreload) {
-        break autoreload;
-      }
-      const predicate =
-        getManyAutoreload && getAutoreload
-          ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
-          : getManyAutoreload
-            ? (httpActionCandidate) =>
-                httpActionCandidate.meta.httpVerb === "GET" &&
-                httpActionCandidate.meta.httpMany === true
-            : (httpActionCandidate) =>
-                httpActionCandidate.meta.httpVerb === "GET" &&
-                !httpActionCandidate.meta.httpMany;
-      const toReloadSet = findAliveActionsMatching(
-        httpActionWeakSet,
-        predicate,
-      );
-      reloadActions(toReloadSet, {
-        reason: `${httpAction} triggered`,
-      });
-    }
-  };
+    autoreloadGetAfter,
+  });
 
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
     const applyDataEffect =
       httpVerb === "DELETE"
         ? (itemId) => {
             store.drop(itemId);
-            onStoreAffected(httpActionAffectingOneItem);
+            autoreload.onActionDone(httpActionAffectingOneItem);
             return itemId;
           }
         : (data) => {
             const item = store.upsert(data);
-            onStoreAffected(httpActionAffectingOneItem);
+            autoreload.onActionDone(httpActionAffectingOneItem);
             const itemId = item[idKey];
             return itemId;
           };
 
-    const callerInfo = getCallerInfo();
+    const callerInfo = getCallerInfo(createActionAffectingOneItem, 2);
     const actionTrace = `${name}.${httpVerb} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
     const httpActionAffectingOneItem = createAction(
       mapCallbackMaybeAsyncResult(callback, (data) => {
@@ -112,7 +125,7 @@ const createHttpHandlerForRootResource = (
         ...options,
       },
     );
-    httpActionWeakSet.add(httpActionAffectingOneItem);
+    autoreload.onActionCreated(httpActionAffectingOneItem);
     return httpActionAffectingOneItem;
   };
   const GET = (callback, options) =>
@@ -161,10 +174,12 @@ const createHttpHandlerForRootResource = (
       httpVerb === "DELETE"
         ? (idArray) => {
             store.drop(idArray);
+            autoreload.onActionDone(httpActionAffectingManyItems);
             return idArray;
           }
         : (dataArray) => {
             const itemArray = store.upsert(dataArray);
+            autoreload.onActionDone(httpActionAffectingManyItems);
             const idArray = itemArray.map((item) => item[idKey]);
             return idArray;
           };
@@ -181,7 +196,7 @@ const createHttpHandlerForRootResource = (
         ...options,
       },
     );
-    httpActionWeakSet.add(httpActionAffectingManyItems);
+    autoreload.onActionCreated(httpActionAffectingManyItems);
     return httpActionAffectingManyItems;
   };
   const GET_MANY = (callback, options) =>
@@ -196,7 +211,7 @@ const createHttpHandlerForRootResource = (
     createActionAffectingManyItems("DELETE", { callback, ...options });
 
   return {
-    httpActionWeakSet,
+    autoreload,
     GET,
     POST,
     PUT,
@@ -284,10 +299,23 @@ const createHttpHandlerForRelationshipToOneResource = (
 };
 const createHttpHandlerRelationshipToManyResource = (
   name,
-  { idKey, store, propertyName, childIdKey, childStore },
+  {
+    idKey,
+    store,
+    propertyName,
+    childIdKey,
+    childStore,
+    autoreloadGetManyAfter = ["POST", "DELETE"],
+    autoreloadGetAfter = false,
+  } = {},
 ) => {
-  // si si y'a un GET_MANY sur ce store -> reload le
-  // sinon y'a un GET sur le store originel -> reload
+  // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
+  // parce que le store originel peut retourner cette liste ou etre impacté
+  // pour l'instant on ignore
+  const autoreload = initAutoreload({
+    autoreloadGetManyAfter,
+    autoreloadGetAfter,
+  });
 
   // one item AND many child items
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
@@ -311,11 +339,13 @@ const createHttpHandlerRelationshipToManyResource = (
                 [idKey]: itemId,
                 [propertyName]: childItemArrayWithoutThisOne,
               });
+              autoreload.onActionDone(httpActionAffectingOneItem);
             }
             return childItemId;
           }
         : (childData) => {
             const childItem = childStore.upsert(childData); // if the child item was used it will reload thanks to signals
+            autoreload.onActionDone(httpActionAffectingOneItem);
             const childItemId = childItem[childIdKey];
             return childItemId;
           };
@@ -331,6 +361,7 @@ const createHttpHandlerRelationshipToManyResource = (
         ...options,
       },
     );
+    autoreload.onActionCreated(httpActionAffectingOneItem);
     return httpActionAffectingOneItem;
   };
   const GET = (callback, options) =>
@@ -382,6 +413,7 @@ const createHttpHandlerRelationshipToManyResource = (
             // }
             // the array can be empty
             const item = store.upsert(data);
+            autoreload.onActionDone(httpActionAffectingManyItem);
             const childItemArray = item[propertyName];
             const childItemIdArray = childItemArray.map(
               (childItem) => childItem[childIdKey],
@@ -407,6 +439,7 @@ const createHttpHandlerRelationshipToManyResource = (
                   [idKey]: itemId,
                   [propertyName]: childItemArrayWithoutThoose,
                 });
+                autoreload.onActionDone(httpActionAffectingManyItem);
               }
               return childItemIdArray;
             }
@@ -414,6 +447,7 @@ const createHttpHandlerRelationshipToManyResource = (
               // hum ici aussi on voudra reload "user" pour POST
               // les autres les signals se charge de reload si visible
               const childItemArray = childStore.upsert(childDataArray);
+              autoreload.onActionDone(httpActionAffectingManyItem);
               const childItemIdArray = childItemArray.map(
                 (childItem) => childItem[childIdKey],
               );
@@ -432,6 +466,7 @@ const createHttpHandlerRelationshipToManyResource = (
         ...options,
       },
     );
+    autoreload.onActionCreated(httpActionAffectingManyItem);
     return httpActionAffectingManyItem;
   };
 
