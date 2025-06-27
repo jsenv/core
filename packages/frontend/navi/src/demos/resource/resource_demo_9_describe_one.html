@@ -24,12 +24,12 @@
       import { localStorageSignal } from "../../local_storage_signal.js";
 
       const tables = [
-        { id: 1, name: "table_1", owner: 1 },
-        { id: 2, name: "table_2", owner: 2 },
+        { id: "table_1", name: "table_1", owner: "user_1" },
+        { id: "table_2", name: "table_2", owner: "user_2" },
       ];
       const users = [
-        { id: 1, name: "User 1" },
-        { id: 2, name: "User 2" },
+        { id: "user_1", name: "User 1" },
+        { id: "user_2", name: "User 2" },
       ];
 
       const getUser = ({ userId }) => {
@@ -194,7 +194,7 @@
           if (editOwnerId) {
             await TABLE_OWNER.PUT.bindParams({
               tableId: table.id,
-              newOwnerId: parseInt(editOwnerId),
+              newOwnerId: editOwnerId,
             }).reload();
             setIsEditingOwner(false);
             return;
@@ -272,9 +272,7 @@
                       value={editOwnerId}
                       onChange={(e) => {
                         const value = e.target.value;
-                        setEditOwnerId(
-                          value === "" ? null : parseInt(e.target.value),
-                        );
+                        setEditOwnerId(value === "" ? null : e.target.value);
                       }}
                       style={{ fontSize: "12px" }}
                     >

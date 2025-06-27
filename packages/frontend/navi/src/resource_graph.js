@@ -752,7 +752,7 @@ export const resource = (
           const childItemArray = childItemArraySignal.value;
           if (debug) {
             console.debug(
-              `return ${childItemArray} for ${item}.${propertyName}`,
+              `return ${childItemArray.length ? childItemArray.join(",") : "[]"} for ${item}.${propertyName}`,
             );
           }
           return childItemArray;
