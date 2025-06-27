@@ -742,8 +742,9 @@ export const resource = (
       });
 
       if (debug) {
+        const childItemArray = childItemArraySignal.peek();
         console.debug(
-          `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArraySignal.peek()})`,
+          `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArray.length ? childItemArray.join(",") : "[]"})`,
         );
       }
 
