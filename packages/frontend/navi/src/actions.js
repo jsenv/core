@@ -396,6 +396,7 @@ export const createAction = (callback, rootOptions = {}) => {
       loadingState = IDLE,
       error = null,
       data,
+      computedData,
       compute,
       renderLoadedAsync,
       sideEffect = () => {},
@@ -416,6 +417,12 @@ export const createAction = (callback, rootOptions = {}) => {
           return compute(data);
         })
       : dataSignal;
+    computedData =
+      computedData === undefined
+        ? compute
+          ? compute(data)
+          : data
+        : computedData;
 
     const preload = () => {
       return requestActionsUpdates({
@@ -602,6 +609,7 @@ export const createAction = (callback, rootOptions = {}) => {
       loadRequested,
       error,
       data,
+      computedData,
       preload,
       load,
       reload,
@@ -641,7 +649,9 @@ export const createAction = (callback, rootOptions = {}) => {
       });
       actionWeakEffect((actionRef) => {
         data = dataSignal.value;
+        computedData = computedDataSignal.value;
         actionRef.data = data;
+        actionRef.computedData = computedData;
       });
     }
 
@@ -872,6 +882,7 @@ const createActionProxyFromSignal = (
     loadingState: undefined,
     error: undefined,
     data: undefined,
+    computedData: undefined,
     preload: proxyMethod("preload"),
     load: proxyMethod("load"),
     reload: proxyMethod("reload"),
@@ -891,6 +902,7 @@ const createActionProxyFromSignal = (
     actionProxy.loadingState = currentAction.loadingState;
     actionProxy.error = currentAction.error;
     actionProxy.data = currentAction.data;
+    actionProxy.computedData = currentAction.computedData;
   });
 
   const proxyPrivateSignal = (signalPropertyName, propertyName) => {
