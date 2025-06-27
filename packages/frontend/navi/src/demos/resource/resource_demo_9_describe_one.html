@@ -41,56 +41,56 @@
       const USER = resource("user", {
         idKey: "id",
         mutableIdKey: "name",
-        get: getUser,
-        getMany: () => users,
-        put: ({ name, field, value }) => {
+        GET: getUser,
+        GET_MANY: () => users,
+        PUT: ({ name, field, value }) => {
           let userToUpdate = users.find((u) => u.name === name);
           const id = userToUpdate.id;
           userToUpdate[field] = value;
           return { id, [field]: value };
         },
       });
-      USER.rename = USER.put.bindParams({ field: "name" });
+      USER.RENAME = USER.PUT.bindParams({ field: "name" });
       const TABLE = resource("table", {
         idKey: "id",
         mutableIdKey: "name",
-        get: ({ name }) => {
+        GET: ({ name }) => {
           const table = tables.find((table) => table.name === name);
           if (!table) {
             throw new Error(`Table with name "${name}" not found`);
           }
           return table;
         },
-        getMany: () => tables,
-        put: ({ name, field, value }) => {
+        GET_MANY: () => tables,
+        PUT: ({ name, field, value }) => {
           let tableToUpdate = tables.find((t) => t.name === name);
           const id = tableToUpdate.id;
           tableToUpdate[field] = value;
           return { id, [field]: value };
         },
       });
-      TABLE.rename = TABLE.put.bindParams({ field: "name" });
+      TABLE.RENAME = TABLE.PUT.bindParams({ field: "name" });
       USER.many("tables", TABLE, {
-        get: ({ userId }) => {
+        GET: ({ userId }) => {
           return tables.filter((table) => table.owner?.id === userId);
         },
-        post: ({ tableId }) => {
+        POST: ({ tableId }) => {
           const tableToAdd = tables.find((t) => t.id === tableId);
           return tableToAdd;
         },
-        delete: ({ tableId }) => {
+        DELETE: ({ tableId }) => {
           return tableId;
         },
-        postMany: ({ tableIds }) => {
+        POST_MANY: ({ tableIds }) => {
           const tablesToAdd = tables.filter((t) => tableIds.includes(t.id));
           return tablesToAdd;
         },
-        deleteMany: ({ tableIds }) => {
+        DELETE_MANY: ({ tableIds }) => {
           return tableIds;
         },
       });
       const TABLE_OWNER = TABLE.one("owner", USER, {
-        get: ({ tableId, owner }) => {
+        GET: ({ tableId, owner }) => {
           if (!owner) {
             return null;
           }
@@ -99,7 +99,7 @@
             owner: getUser({ userId: owner.id }),
           };
         },
-        put: ({ tableId, newOwnerId }) => {
+        PUT: ({ tableId, newOwnerId }) => {
           const newOwner = users.find((u) => u.id === newOwnerId);
           const tableToUpdate = tables.find((t) => t.id === tableId);
           tableToUpdate.owner = newOwner;
@@ -108,7 +108,7 @@
             owner: newOwner,
           };
         },
-        delete: ({ tableId }) => {
+        DELETE: ({ tableId }) => {
           const tableToUpdate = tables.find((t) => t.id === tableId);
           tableToUpdate.owner = null;
           return {
@@ -120,7 +120,7 @@
 
       // Signal pour la table courante
       const currentTableNameSignal = localStorageSignal("current_table_name");
-      const currentTableAction = TABLE.get.bindParams({
+      const currentTableAction = TABLE.GET.bindParams({
         name: currentTableNameSignal,
       });
       if (currentTableNameSignal.value) {
@@ -130,8 +130,8 @@
         currentTableNameSignal.value = tableName;
       });
 
-      TABLE.getMany.load();
-      USER.getMany.load();
+      TABLE.GET_MANY.load();
+      USER.GET_MANY.load();
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -156,7 +156,7 @@
       // eslint-disable-next-line no-unused-vars
       const TablesList = () => {
         return (
-          <ActionRenderer action={TABLE.getMany}>
+          <ActionRenderer action={TABLE.GET_MANY}>
             {(tables) => (
               <div>
                 {tables.map((table) => (
@@ -177,9 +177,10 @@
         const [editOwnerId, setEditOwnerId] = useState(table.owner?.id);
 
         const handleSave = async () => {
-          await TABLE.rename
-            .bindParams({ name: table.name, value: editName })
-            .reload();
+          await TABLE.RENAME.bindParams({
+            name: table.name,
+            value: editName,
+          }).reload();
           setIsEditing(false);
         };
 
@@ -191,16 +192,14 @@
         // ✅ NEW: Handle owner update
         const handleOwnerSave = async () => {
           if (editOwnerId) {
-            await TABLE_OWNER.put
-              .bindParams({
-                tableId: table.id,
-                newOwnerId: parseInt(editOwnerId),
-              })
-              .reload();
+            await TABLE_OWNER.PUT.bindParams({
+              tableId: table.id,
+              newOwnerId: parseInt(editOwnerId),
+            }).reload();
             setIsEditingOwner(false);
             return;
           }
-          await TABLE_OWNER.delete.bindParams({ tableId: table.id }).reload();
+          await TABLE_OWNER.DELETE.bindParams({ tableId: table.id }).reload();
           setIsEditingOwner(false);
         };
 
@@ -337,7 +336,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const TableDetails = ({ table }) => {
-        const getTableOwner = TABLE_OWNER.get.bindParams({
+        const getTableOwner = TABLE_OWNER.GET.bindParams({
           tableId: table.id,
           owner: table.owner,
         });
@@ -389,7 +388,7 @@
       // eslint-disable-next-line no-unused-vars
       const UsersList = () => {
         return (
-          <ActionRenderer action={USER.getMany}>
+          <ActionRenderer action={USER.GET_MANY}>
             {(users) => (
               <div>
                 {users.map((user) => (
@@ -407,9 +406,10 @@
         const [editName, setEditName] = useState(user.name);
 
         const handleSave = async () => {
-          await USER.rename
-            .bindParams({ name: user.name, value: editName })
-            .load();
+          await USER.RENAME.bindParams({
+            name: user.name,
+            value: editName,
+          }).load();
           setIsEditing(false);
         };
 

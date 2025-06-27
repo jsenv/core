@@ -7,6 +7,23 @@ import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
 let debug = true;
 
+const findAliveActionsMatching = (httpActionWeakSet, predicate) => {
+  const matchingActionSet = new Set();
+  for (const httpAction of httpActionWeakSet) {
+    if (!predicate(httpAction)) {
+      continue;
+    }
+    // Find all instances of this action (including bound params versions)
+    const allInstances = httpAction.matchAllSelfOrDescendant(
+      (action) => action.loadRequested,
+    );
+    for (const instance of allInstances) {
+      matchingActionSet.add(instance);
+    }
+  }
+  return matchingActionSet;
+};
+
 const createHttpHandlerForRootResource = (
   name,
   {
@@ -21,22 +38,6 @@ const createHttpHandlerForRootResource = (
     autoreloadGetManyAfter,
   );
   const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
-  const findAliveActionsMatching = (predicate) => {
-    const matchingActionSet = new Set();
-    for (const httpAction of httpActionWeakSet) {
-      if (!predicate(httpAction)) {
-        continue;
-      }
-      // Find all instances of this action (including bound params versions)
-      const allInstances = httpAction.matchAllSelfOrDescendant(
-        (action) => action.loadRequested,
-      );
-      for (const instance of allInstances) {
-        matchingActionSet.add(instance);
-      }
-    }
-    return matchingActionSet;
-  };
   const onStoreAffected = (httpAction) => {
     autoreload: {
       const getManyAutoreload = shouldAutoreloadGetMany(httpAction);
@@ -54,7 +55,10 @@ const createHttpHandlerForRootResource = (
             : (httpActionCandidate) =>
                 httpActionCandidate.meta.httpVerb === "GET" &&
                 !httpActionCandidate.meta.httpMany;
-      const toReloadSet = findAliveActionsMatching(predicate);
+      const toReloadSet = findAliveActionsMatching(
+        httpActionWeakSet,
+        predicate,
+      );
       reloadActions(toReloadSet, {
         reason: `${httpAction} triggered`,
       });
@@ -109,8 +113,7 @@ const createHttpHandlerForRootResource = (
     const callerInfo = getCallerInfo();
     const actionTrace = `${name}.${httpVerb} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
     const httpActionAffectingOneItem = createAction(
-      mapCallbackMaybeAsyncResult(callback),
-      (data) => {
+      mapCallbackMaybeAsyncResult(callback, (data) => {
         if (httpVerb === "DELETE") {
           if (isProps(data)) {
             throw new TypeError(
@@ -130,7 +133,7 @@ const createHttpHandlerForRootResource = (
           );
         }
         return applyDataEffect(data);
-      },
+      }),
       {
         meta: { httpVerb, httpMany: false },
         name: `${name}.${httpVerb}`,
@@ -222,6 +225,7 @@ const createHttpHandlerForRootResource = (
     createActionAffectingManyItems("DELETE", { callback, ...options });
 
   return {
+    httpActionWeakSet,
     GET,
     POST,
     PUT,
@@ -270,10 +274,9 @@ const createHttpHandlerForRelationshipToOneResource = (
           };
 
     const httpActionAffectingOneItem = createAction(
-      mapCallbackMaybeAsyncResult(callback),
-      (data) => {
+      mapCallbackMaybeAsyncResult(callback, (data) => {
         return applyDataEffect(data);
-      },
+      }),
       {
         meta: { httpVerb, httpMany: false },
         name: `${name}.${httpVerb}`,
@@ -505,7 +508,6 @@ export const resource = (
     name,
     idKey,
   };
-
   if (!httpHandler) {
     const setupCallbackSet = new Set();
     const addItemSetup = (callback) => {
@@ -569,6 +571,7 @@ export const resource = (
       autoreloadGetAfter,
     });
   }
+  resourceInstance.httpHandler = httpHandler;
 
   for (const key of Object.keys(rest)) {
     const method = httpHandler[key];
