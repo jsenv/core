@@ -574,7 +574,7 @@ export const createAction = (callback, rootOptions = {}) => {
       const matches = [];
 
       const traverse = (currentAction) => {
-        if (action.isProxy && !includeProxies) {
+        if (currentAction.isProxy && !includeProxies) {
           // proxy action should be ignored because the underlying action will be found anyway
           // and if we check the proxy action we'll end up with duplicates
           // (loading the proxy would load the action it proxies)
