@@ -106,11 +106,59 @@
           department: "Marketing",
         },
       ];
-      const user = resource("user", {
+      const USER = resource("user", {
         idKey: "id",
         mutableIdKey: "name",
+        GET_MANY: async (filters) => {
+          console.log("Loading users", filters);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return allUsers.filter((user) => {
+            if (
+              filters.gender !== undefined &&
+              user.gender !== filters.gender
+            ) {
+              return false;
+            }
+            if (
+              filters.department !== undefined &&
+              user.department !== filters.department
+            ) {
+              return false;
+            }
+            return true;
+          });
+        },
+        GET: async ({ id }) => {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          const foundUser = allUsers.find((u) => u.id === id);
+          if (!foundUser) {
+            throw new Error(`User ${id} not found`);
+          }
+          return {
+            ...foundUser,
+            loadedAt: new Date().toLocaleTimeString(),
+          };
+        },
+        POST: async (newUser) => {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return newUser;
+        },
+        PUT: async ({ id, field, value }) => {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return { id, [field]: value };
+        },
       });
-      user.store.registerPropertyChangeCallback(
+      USER.RENAME = USER.PUT.bindParams({
+        field: "name",
+      });
+      // Signal pour les filtres
+      const filtersSignal = signal({
+        gender: undefined,
+        department: undefined,
+      });
+      USER.GET_MANY_FILTERED = USER.GET_MANY.bindParams(filtersSignal);
+      USER.GET_MANY_FILTERED.load();
+      USER.store.registerPropertyChangeCallback(
         "name",
         (value, oldValue, user) => {
           console.log(
@@ -118,56 +166,11 @@
           );
         },
       );
-      const loadManyUserAction = user.getMany(async (filters) => {
-        console.log("Loading users", filters);
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        return allUsers.filter((user) => {
-          if (filters.gender !== undefined && user.gender !== filters.gender) {
-            return false;
-          }
-          if (
-            filters.department !== undefined &&
-            user.department !== filters.department
-          ) {
-            return false;
-          }
-          return true;
-        });
-      });
-      // Signal pour les filtres
-      const filtersSignal = signal({
-        gender: undefined,
-        department: undefined,
-      });
-      const loadManyFilteredUserAction =
-        loadManyUserAction.bindParams(filtersSignal);
-      loadManyFilteredUserAction.load();
-
-      const renameUserAction = user.put(async ({ id, name }) => {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        return { id, name };
-      });
-
-      const loadUserAction = user.get(async ({ id }) => {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        const foundUser = allUsers.find((u) => u.id === id);
-        if (!foundUser) {
-          throw new Error(`User ${id} not found`);
-        }
-        return {
-          ...foundUser,
-          loadedAt: new Date().toLocaleTimeString(),
-        };
-      });
-      const createUserAction = user.post(async (newUser) => {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        return newUser;
-      });
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const { data: serverUsers, pending: loadingUsers } = useActionStatus(
-          loadManyFilteredUserAction,
+          USER.GET_MANY_FILTERED,
         );
 
         const [newUserName, setNewUserName] = useState("");
@@ -188,7 +191,7 @@
           };
           setNewUserName("");
           allUsers.push(newUser);
-          const createUser = createUserAction.bindParams(newUser);
+          const createUser = USER.POST.bindParams(newUser);
           createUser.load();
         };
 
@@ -198,7 +201,7 @@
 
             <button
               onClick={() => {
-                loadManyFilteredUserAction.reload();
+                USER.GET_MANY_FILTERED.reload();
               }}
             >
               Reload
@@ -295,9 +298,9 @@
                     key={user}
                     user={user}
                     onUpdateName={async (name) => {
-                      const renameAction = renameUserAction.bindParams({
+                      const renameAction = USER.RENAME.bindParams({
                         id: user.id,
-                        name,
+                        value: name,
                       });
                       await renameAction.load();
                       const harcodedUser = allUsers.find(
@@ -349,14 +352,14 @@
               <button onClick={createUser}>Create User</button>
             </div>
 
-            <ActionStatus action={loadManyFilteredUserAction} />
+            <ActionStatus action={USER.GET_MANY_FILTERED} />
           </div>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
       const UserItem = ({ user, onUpdateName }) => {
-        const userAction = loadUserAction.bindParams({
+        const userAction = USER.GET.bindParams({
           id: user.id,
         });
         const { pending, loaded } = useActionStatus(userAction);
