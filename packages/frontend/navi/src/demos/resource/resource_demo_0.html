@@ -17,41 +17,55 @@
        */
 
       import { render } from "preact";
-      import {
-        useActionStatus,
-        connectActionWithLocalStorageBoolean,
-        resource,
-      } from "@jsenv/navi";
+      import { signal, effect } from "@preact/signals";
+      import { useActionStatus, resource } from "@jsenv/navi";
 
-      const user = resource("user", { idKey: "name" });
-      const loadUsers = user.getAll(() => {
-        return [
-          {
-            name: "Alice",
-          },
-          {
-            name: "bob",
-          },
-          {
-            name: "Charlie",
-          },
-        ];
+      const USER = resource("user", {
+        idKey: "name",
+        GET_MANY: () => {
+          return [
+            {
+              name: "Alice",
+            },
+            {
+              name: "bob",
+            },
+            {
+              name: "Charlie",
+            },
+          ];
+        },
       });
-      connectActionWithLocalStorageBoolean(loadUsers, "load_users");
+      const openedSignal = signal(
+        localStorage.getItem("user_opened") === "true",
+      );
+      effect(() => {
+        const opened = openedSignal.value;
+        if (opened) {
+          localStorage.setItem("user_opened", "true");
+        } else {
+          localStorage.removeItem("user_opened");
+        }
+      });
+      if (openedSignal.peek()) {
+        USER.GET_MANY.preload();
+      }
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const { matching, data } = useActionStatus(loadUsers);
+        const { data } = useActionStatus(USER.GET_MANY);
 
         return (
           <div>
             <details
-              open={matching}
+              open={openedSignal.value}
               onToggle={(e) => {
                 if (e.target.open) {
-                  loadUsers.start();
+                  openedSignal.value = true;
+                  USER.GET_MANY.load();
                 } else {
-                  loadUsers.stop();
+                  openedSignal.value = false;
+                  USER.GET_MANY.abort();
                 }
               }}
             >
