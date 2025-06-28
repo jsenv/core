@@ -16,7 +16,7 @@
       import { render } from "preact";
       import { useState, useEffect } from "preact/hooks";
       import {
-        createActionTemplate,
+        createAction,
         useActionStatus,
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
@@ -31,7 +31,6 @@
           email: `user${userId}@example.com`,
         };
       };
-
       const fetchUserFriends = async ({ userId }, { signal }) => {
         console.log(`Fetching friends for user ${userId}`);
 
@@ -47,7 +46,6 @@
           { id: 3, name: "Carol Davis" },
         ];
       };
-
       const fetchUserSettings = async ({ userId }) => {
         console.log(`Fetching settings for user ${userId}`);
         await new Promise((resolve) => setTimeout(resolve, 600));
@@ -59,16 +57,22 @@
       };
 
       // Action templates
-      const getUserTemplate = createActionTemplate(fetchUser, {
-        name: "getUser",
+      const GET_USER = createAction(fetchUser, {
+        params: {
+          name: "getUser",
+        },
       });
 
-      const getUserFriendsTemplate = createActionTemplate(fetchUserFriends, {
-        name: "getUserFriends",
+      const GET_USER_FRIENDS = createAction(fetchUserFriends, {
+        params: {
+          name: "getUserFriends",
+        },
       });
 
-      const getUserSettingsTemplate = createActionTemplate(fetchUserSettings, {
-        name: "getUserSettings",
+      const GET_USER_SETTINGS = createAction(fetchUserSettings, {
+        params: {
+          name: "getUserSettings",
+        },
       });
 
       // Hook pour gérer l'état des details avec localStorage
@@ -102,25 +106,25 @@
       // Composant principal
       // eslint-disable-next-line no-unused-vars
       const UserProfile = ({ userId = 123 }) => {
-        const userAction = getUserTemplate.instantiate({ userId });
-        const friendsAction = getUserFriendsTemplate.instantiate({ userId });
-        const settingsAction = getUserSettingsTemplate.instantiate({ userId });
+        const getUser = GET_USER.bindParams({ userId });
+        const getUserFriends = GET_USER_FRIENDS.bindParams({ userId });
+        const getUserSettings = GET_USER_SETTINGS.bindParams({ userId });
 
         const [friendsOpen, handleFriendsToggle] = useToggleableAction(
-          friendsAction,
+          getUserFriends,
           `user_${userId}_friends_open`,
         );
 
-        const { data: friends } = useActionStatus(friendsAction);
+        const { data: friends } = useActionStatus(getUserFriends);
 
         const [settingsOpen, handleSettingsToggle] = useToggleableAction(
-          settingsAction,
+          getUserSettings,
           `user_${userId}_settings_open`,
         );
 
         // Charger les données de base de l'utilisateur
         useEffect(() => {
-          userAction.load();
+          getUser.load();
         }, []);
 
         return (
@@ -131,7 +135,7 @@
 
             {/* Données de base de l'utilisateur */}
             <div style={{ marginBottom: "20px" }}>
-              <ActionRenderer action={userAction}>
+              <ActionRenderer action={getUser}>
                 {(user) => (
                   <div
                     style={{
@@ -168,14 +172,14 @@
                 <span style="flex:1"></span>
                 <button
                   onClick={() => {
-                    friendsAction.reload();
+                    getUserFriends.reload();
                   }}
                 >
                   Refresh
                 </button>
               </summary>
               <div style={{ padding: "12px", borderLeft: "3px solid #ff9800" }}>
-                <ActionRenderer action={friendsAction}>
+                <ActionRenderer action={getUserFriends}>
                   {(friends) => (
                     <ul style={{ margin: 0, paddingLeft: "20px" }}>
                       {friends.map((friend) => (
@@ -207,7 +211,7 @@
                 ⚙️ Settings
               </summary>
               <div style={{ padding: "12px", borderLeft: "3px solid #9c27b0" }}>
-                <ActionRenderer action={settingsAction}>
+                <ActionRenderer action={getUserSettings}>
                   {(settings) => (
                     <div>
                       <div>
