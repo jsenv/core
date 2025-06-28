@@ -21,7 +21,6 @@
       import {
         useActionStatus,
         resource,
-        getItemAction,
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
       } from "@jsenv/navi";
@@ -30,14 +29,14 @@
         ActionStatus,
       } from "./action_status.jsx";
 
-      const user = resource("user", { idKey: "name" });
-      // const useActiveUser = user.useActiveItem;
-      const loadUsersAction = user.getAll(() => {
-        return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
-      });
-
-      const loadUserAction = user.get(({ name }) => {
-        return { name, greeting: `Hello ${name}` };
+      const USER = resource("user", {
+        idKey: "name",
+        GET_MANY: () => {
+          return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
+        },
+        GET: ({ name }) => {
+          return { name, greeting: `Hello ${name}` };
+        },
       });
 
       const activeUsernameSignal = signal(
@@ -52,28 +51,37 @@
         }
       });
 
-      const activeUserAction = loadUserAction.bindParams({
-        name: activeUsernameSignal,
-      });
+      USER.ACTIVE = {
+        GET: USER.GET.bindParams({
+          name: activeUsernameSignal,
+        }),
+      };
+
       if (activeUsernameSignal.peek()) {
-        activeUserAction.load();
+        USER.ACTIVE.GET.load();
       }
-      loadUsersAction.load();
+      USER.GET_MANY.load();
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const { data: users } = useActionStatus(loadUsersAction);
+        const { data: users } = useActionStatus(USER.GET_MANY);
 
         const [dam, seb, john] = users;
-        const damUserAction = getItemAction(dam, loadUserAction);
-        const sebUserAction = getItemAction(seb, loadUserAction);
-        const johnUserAction = getItemAction(john, loadUserAction);
+        const getDamAction = USER.GET.bindParams({
+          name: dam.name,
+        });
+        const getSebAction = USER.GET.bindParams({
+          name: seb.name,
+        });
+        const getJohnAction = USER.GET.bindParams({
+          name: john.name,
+        });
 
         return (
           <div>
             <button
               onClick={() => {
-                damUserAction.load();
+                getDamAction.load();
                 activeUsernameSignal.value = dam.name;
               }}
             >
@@ -81,14 +89,14 @@
             </button>
             <button
               onClick={() => {
-                damUserAction.unload();
+                getDamAction.unload();
               }}
             >
               Unload dam
             </button>
             <button
               onClick={() => {
-                damUserAction.preload();
+                getDamAction.preload();
               }}
             >
               Preload dam
@@ -96,7 +104,7 @@
             <br />
             <button
               onClick={() => {
-                sebUserAction.load();
+                getSebAction.load();
                 activeUsernameSignal.value = seb.name;
               }}
             >
@@ -104,14 +112,14 @@
             </button>
             <button
               onClick={() => {
-                sebUserAction.unload();
+                getSebAction.unload();
               }}
             >
               Unload seb
             </button>
             <button
               onClick={() => {
-                sebUserAction.preload();
+                getSebAction.preload();
               }}
             >
               Preload seb
@@ -119,7 +127,7 @@
             <br />
             <button
               onClick={() => {
-                johnUserAction.load();
+                getJohnAction.load();
                 activeUsernameSignal.value = john.name;
               }}
             >
@@ -127,25 +135,25 @@
             </button>
             <button
               onClick={() => {
-                johnUserAction.unload();
+                getJohnAction.unload();
               }}
             >
               Unload john
             </button>
             <button
               onClick={() => {
-                johnUserAction.preload();
+                getJohnAction.preload();
               }}
             >
               Preload john
             </button>
 
-            <ActionStatus action={damUserAction} />
-            <ActionStatus action={sebUserAction} />
-            <ActionStatus action={johnUserAction} />
-            <ActionStatus action={activeUserAction} />
+            <ActionStatus action={getDamAction} />
+            <ActionStatus action={getSebAction} />
+            <ActionStatus action={getJohnAction} />
+            <ActionStatus action={USER.ACTIVE.GET} />
 
-            <ActionRenderer action={activeUserAction}>
+            <ActionRenderer action={USER.ACTIVE.GET}>
               {{
                 loading: () => <div>Loading user...</div>,
                 error: (error) => <div>Error: {error.message}</div>,
