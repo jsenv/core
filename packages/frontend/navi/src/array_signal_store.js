@@ -242,6 +242,9 @@ export const arraySignalStore = (
       }
 
       for (const props of propsArray) {
+        if (Object.hasOwn(props, idKey)) {
+        }
+
         const id = props[idKey];
         const existingEntry = existingEntryMap.get(id);
         if (existingEntry) {

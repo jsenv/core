@@ -499,19 +499,16 @@ export const resource = (
   name,
   {
     idKey,
-    mutableIdKey,
+    mutableIdKeys = [],
     autoreloadGetManyAfter,
     autoreloadGetAfter,
     httpHandler,
     ...rest
   } = {},
 ) => {
-  if (mutableIdKey && idKey === undefined) {
-    idKey = mutableIdKey;
-  } else if (idKey === undefined) {
-    idKey = "id";
+  if (idKey === undefined) {
+    idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
   }
-
   const resourceInstance = {
     isResource: true,
     name,
@@ -528,11 +525,13 @@ export const resource = (
       [Symbol.toStringTag]: name,
       toString() {
         let string = `${name}`;
-        if (mutableIdKey) {
-          const mutableId = this[mutableIdKey];
-          if (mutableId !== undefined) {
-            string += `[${mutableIdKey}=${mutableId}]`;
-            return string;
+        if (mutableIdKeys.length) {
+          for (const mutableIdKey of mutableIdKeys) {
+            const mutableId = this[mutableIdKey];
+            if (mutableId !== undefined) {
+              string += `[${mutableIdKey}=${mutableId}]`;
+              return string;
+            }
           }
         }
         const id = this[idKey];
@@ -544,6 +543,7 @@ export const resource = (
     };
 
     const store = arraySignalStore([], idKey, {
+      mutableIdKeys,
       name: `${name} store`,
       createItem: (props) => {
         const item = Object.create(itemPrototype);

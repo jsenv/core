@@ -38,31 +38,6 @@ export const GET_ROLE_ROUTE = registerRoute(
 );
 connectStoreAndRoute(roleStore, GET_ROLE_ROUTE, "rolname");
 
-export const PUT_ROLE_ACTION = registerAction(
-  async ({ rolname, columnName, formData, signal }) => {
-    let value = formData.get(columnName);
-    if (columnName === "rolconnlimit") {
-      value = parseInt(value, 10);
-    }
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/${columnName}`,
-      {
-        signal,
-        method: "PUT",
-        headers: {
-          "accept": "application/json",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(value),
-      },
-    );
-    if (!response.ok) {
-      throw await errorFromResponse(response, "Failed to update role");
-    }
-    roleStore.upsert("rolname", rolname, { [columnName]: value });
-  },
-);
-
 export const POST_ROLE_ACTION = registerAction(
   async ({ signal, rolcanlogin, formData }) => {
     const rolname = formData.get("rolname");
