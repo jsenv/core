@@ -17,14 +17,16 @@
       } from "@jsenv/navi";
       import { render } from "preact";
 
-      const page = resource("page", { idKey: "name" });
-      const loadPageActionTemplate = page.get(async ({ name }) => {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        return {
-          name,
-        };
+      const PAGE = resource("page", {
+        idKey: "name",
+        GET: async ({ name }) => {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          return {
+            name,
+          };
+        },
       });
-      const loadPageTotoAction = loadPageActionTemplate.instantiate(
+      PAGE.GET_TOTO = PAGE.GET.bindParams(
         {
           name: "toto",
         },
@@ -38,7 +40,7 @@
           },
         },
       );
-      const loadPageTataAction = loadPageActionTemplate.instantiate(
+      PAGE.GET_TATA = PAGE.GET.bindParams(
         {
           name: "tata",
         },
@@ -50,7 +52,7 @@
           },
         },
       );
-      const loadImportErrorPageAction = loadPageActionTemplate.instantiate(
+      PAGE.GET_IMPORT_ERROR = PAGE.GET.bindParams(
         {
           name: "import_error",
         },
@@ -62,9 +64,10 @@
           },
         },
       );
+
       const activePageName = localStorage.getItem("active_page_name");
       if (activePageName) {
-        loadPageActionTemplate.instaniate({ name: activePageName }).load();
+        PAGE.GET.bindParams({ name: activePageName }).load();
       }
 
       // eslint-disable-next-line no-unused-vars
@@ -73,29 +76,35 @@
           <div>
             <button
               onClick={() => {
-                loadPageTotoAction.reload();
+                PAGE.GET_TOTO.reload();
               }}
             >
-              Load dam
+              TOTO
             </button>
             <button
               onClick={() => {
-                loadPageTataAction.reload();
+                PAGE.GET_TATA.reload();
               }}
             >
-              Load seb
+              TATA
             </button>
             <button
               onClick={() => {
-                loadImportErrorPageAction.reload();
+                PAGE.GET_IMPORT_ERROR.reload();
               }}
             >
-              Load flore
+              IMPORT_ERROR
             </button>
 
-            <ActionRenderer action={loadPageTotoAction} />
-            <ActionRenderer action={loadPageTataAction} />
-            <ActionRenderer action={loadImportErrorPageAction} />
+            <div>
+              TOTO: <ActionRenderer action={PAGE.GET_TOTO} />
+            </div>
+            <div>
+              TATA: <ActionRenderer action={PAGE.GET_TATA} />
+            </div>
+            <div>
+              IMPORT_ERROR: <ActionRenderer action={PAGE.GET_IMPORT_ERROR} />
+            </div>
           </div>
         );
       };
