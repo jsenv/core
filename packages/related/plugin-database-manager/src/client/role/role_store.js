@@ -21,6 +21,7 @@ export const ROLE = resource("role", {
     setActiveRoleDatabases(databases);
     setActiveRoleColumns(columns);
     setRoleMembers(role, members);
+    return role;
   },
   PUT: async ({ rolname, columnName, columnValue }, { signal }) => {
     if (columnName === "rolconnlimit") {

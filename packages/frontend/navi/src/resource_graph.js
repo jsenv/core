@@ -1,6 +1,6 @@
 import { computed, signal } from "@preact/signals";
 import { createAction, reloadActions } from "./actions.js";
-import { arraySignalStore } from "./array_signal_store.js";
+import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 import { getCallerInfo } from "./get_caller_info.js";
 import { createIterableWeakSet } from "./iterable_weak_set.js";
@@ -797,14 +797,6 @@ export const resource = (
 
 const isProps = (value) => {
   return value !== null && typeof value === "object";
-};
-
-const primitiveCanBeId = (value) => {
-  const type = typeof value;
-  if (type === "string" || type === "number" || type === "symbol") {
-    return true;
-  }
-  return false;
 };
 
 const createHttpVerbPredicate = (httpVerbCondition) => {

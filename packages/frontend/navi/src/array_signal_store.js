@@ -1,9 +1,18 @@
 import { computed, effect, signal } from "@preact/signals";
 
+export const primitiveCanBeId = (value) => {
+  const type = typeof value;
+  if (type === "string" || type === "number" || type === "symbol") {
+    return true;
+  }
+  return false;
+};
+
 export const arraySignalStore = (
   initialArray = [],
   idKey = "id",
   {
+    mutableIdKeys = [],
     name,
     createItem = (props) => {
       return { ...props };
@@ -87,6 +96,45 @@ export const arraySignalStore = (
     itemMatchLifecycleSet.add(itemMatchLifecycle);
   };
 
+  const readIdFromItemProps = (props, array) => {
+    let id;
+    if (Object.hasOwn(props, idKey)) {
+      id = props[idKey];
+      return id;
+    }
+    if (mutableIdKeys.length === 0) {
+      return undefined;
+    }
+
+    let mutableIdKey;
+    for (const mutableIdKeyCandidate of mutableIdKeys) {
+      if (Object.hasOwn(props, mutableIdKeyCandidate)) {
+        mutableIdKey = mutableIdKeyCandidate;
+        break;
+      }
+    }
+    if (!mutableIdKey) {
+      throw new Error(
+        `item properties must have one of the following keys:
+${[idKey, ...mutableIdKeys].join(", ")}`,
+      );
+    }
+    const mutableIdValue = props[mutableIdKey];
+    for (const itemCandidate of array) {
+      const mutableIdCandidate = itemCandidate[mutableIdKey];
+      if (mutableIdCandidate === mutableIdValue) {
+        id = itemCandidate[idKey];
+        break;
+      }
+    }
+    if (!id) {
+      throw new Error(
+        `None of the existing item uses ${mutableIdKey}: ${mutableIdValue}, so item properties must specify the "${idKey}" key.`,
+      );
+    }
+    return id;
+  };
+
   effect(() => {
     const array = arraySignal.value;
 
@@ -134,6 +182,9 @@ export const arraySignalStore = (
     if (args.length === 1) {
       property = idKey;
       value = args[0];
+      if (value !== null && typeof value === "object") {
+        value = readIdFromItemProps(value, array);
+      }
     } else if (args.length === 2) {
       property = args[0];
       value = args[1];
@@ -152,10 +203,15 @@ export const arraySignalStore = (
     }
     return null;
   };
-  const selectAll = (idArray) => {
+  const selectAll = (toMatchArray) => {
+    const array = arraySignal.value;
     const result = [];
     const idMap = idMapSignal.value;
-    for (const id of idArray) {
+    for (const toMatch of toMatchArray) {
+      const id =
+        toMatch !== null && typeof toMatch === "object"
+          ? readIdFromItemProps(toMatch, array)
+          : toMatch;
       const item = idMap.get(id);
       if (item) {
         result.push(item);
@@ -171,7 +227,6 @@ export const arraySignalStore = (
         triggerPropertyChange();
       }
     };
-
     const assign = (item, props) => {
       let modified = false;
       const itemWithProps = Object.create(
@@ -242,10 +297,7 @@ export const arraySignalStore = (
       }
 
       for (const props of propsArray) {
-        if (Object.hasOwn(props, idKey)) {
-        }
-
-        const id = props[idKey];
+        const id = readIdFromItemProps(props, array);
         const existingEntry = existingEntryMap.get(id);
         if (existingEntry) {
           const { existingItem } = existingEntry;
@@ -284,14 +336,14 @@ export const arraySignalStore = (
     let value;
     let props;
     if (args.length === 1) {
-      property = idKey;
       const firstArg = args[0];
+      property = idKey;
       if (!firstArg || typeof firstArg !== "object") {
         throw new TypeError(
           `Expected an object as first argument, got ${firstArg}`,
         );
       }
-      value = firstArg[idKey];
+      value = readIdFromItemProps(firstArg, array);
       props = firstArg;
     } else if (args.length === 2) {
       property = idKey;
@@ -337,6 +389,7 @@ export const arraySignalStore = (
     return item;
   };
   const drop = (...args) => {
+    const array = arraySignal.peek();
     if (args.length === 1 && Array.isArray(args[0])) {
       const triggerDropSet = new Set();
       const triggerItemDrops = () => {
@@ -345,11 +398,19 @@ export const arraySignalStore = (
         }
       };
 
-      const data = args[0];
-      const array = arraySignal.peek();
+      const firstArg = args[0];
       const arrayWithoutDroppedItems = [];
       let hasFound = false;
-      const idToRemoveSet = new Set(data);
+      const idToRemoveSet = new Set();
+      for (const value of firstArg) {
+        if (typeof value === "object" && value !== null) {
+          const id = readIdFromItemProps(value, array);
+          idToRemoveSet.add(id);
+        } else if (!primitiveCanBeId(value)) {
+          throw new TypeError(`id to drop must be an id, got ${value}`);
+        }
+        idToRemoveSet.add(value);
+      }
       for (const existingItem of array) {
         const existingItemId = existingItem[idKey];
         if (idToRemoveSet.has(existingItemId)) {
@@ -376,11 +437,15 @@ export const arraySignalStore = (
     if (args.length === 1) {
       property = idKey;
       value = args[0];
+      if (value !== null && typeof value === "object") {
+        value = readIdFromItemProps(value, array);
+      } else if (!primitiveCanBeId(value)) {
+        throw new TypeError(`id to drop must be an id, got ${value}`);
+      }
     } else {
       property = args[0];
       value = args[1];
     }
-    const array = arraySignal.peek();
     const arrayWithoutItemToDrop = [];
     let found = false;
     let itemDropped = null;
