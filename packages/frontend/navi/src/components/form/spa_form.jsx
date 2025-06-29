@@ -143,10 +143,10 @@ export const SPAForm = forwardRef(
             }
           }
           dispatchCustomEventOnFormAndFormElements("actionstart");
-          debugger;
           const actionParams = {}; // build it from formData
           const actionWithParams = action.bindParams(actionParams);
-          const { aborted, error } = await actionWithParams.reload();
+          const { aborted, error } =
+            await applyActionOnFormSubmission(actionWithParams);
 
           setTimeout(() => {
             submittingRef.current = false;
@@ -191,6 +191,19 @@ export const SPAForm = forwardRef(
   },
 );
 SPAForm.Button = SPAButton;
+
+const applyActionOnFormSubmission = async (action) => {
+  try {
+    await action.reload();
+    return { aborted: false, error: null };
+  } catch (e) {
+    if (e.name === "AbortError") {
+      return { aborted: true, error: null };
+    }
+    console.error(e);
+    return { aborted: false, error: e };
+  }
+};
 
 // const applyActionOnFormSubmission = canUseNavigation
 //   ? async ({ method, formData, action }) => {

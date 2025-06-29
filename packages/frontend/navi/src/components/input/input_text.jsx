@@ -62,7 +62,6 @@ export const InputText = forwardRef(
         }}
         // eslint-disable-next-line react/no-unknown-property
         onrequestsubmit={() => {
-          debugger;
           if (SPAFormContextValue) {
             SPAFormContextValue[1].current = action;
           }
