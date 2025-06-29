@@ -67,6 +67,7 @@ export const installInputCustomValidation = (input) => {
 
   const dispatchRequestSubmitCustomEvent = () => {
     const requestSubmitEvent = new CustomEvent("requestsubmit");
+    input.form.dispatchEvent(requestSubmitEvent);
     input.dispatchEvent(requestSubmitEvent);
   };
 
@@ -198,9 +199,15 @@ export const installInputCustomValidation = (input) => {
 
   report_on_enter_without_form: {
     const onkeydown = (e) => {
-      if (!input.form && e.key === "Enter" && !checkValidity()) {
-        reportValidity();
-        // no need to prevent anything here, Enter on input without form does nothing
+      if (!input.form) {
+        // when input has a form it is handled by "report_on_form_request_submit_by_click_or_enter"
+        return;
+      }
+      if (e.key === "Enter") {
+        if (!checkValidity()) {
+          reportValidity();
+          // no need to e.preventDefault(), enter on input without form has no specific behavior
+        }
       }
     };
     input.addEventListener("keydown", onkeydown);
@@ -224,12 +231,12 @@ export const installInputCustomValidation = (input) => {
       if (form !== input.form) {
         return;
       }
-      if (lastFailedValidityInfo && !checkValidity()) {
+      dispatchRequestSubmitCustomEvent();
+      if (!checkValidity()) {
         reportValidity();
         prevent();
         return;
       }
-      dispatchRequestSubmitCustomEvent();
     };
     requestSubmitCallbackSet.add(onRequestSubmit);
     cleanupCallbackSet.add(() => {
@@ -253,13 +260,15 @@ export const installInputCustomValidation = (input) => {
         // happens in an other form, or the input has no form
         return;
       }
-      if (
-        willSubmitFormOnClick(target) &&
-        lastFailedValidityInfo &&
-        !checkValidity()
-      ) {
+      if (!willSubmitFormOnClick(target)) {
+        // click won't request submit
+        return;
+      }
+      dispatchRequestSubmitCustomEvent();
+      if (!checkValidity()) {
         reportValidity();
         e.preventDefault();
+        return;
       }
     };
     window.addEventListener("click", onClick, { capture: true });
@@ -285,12 +294,12 @@ export const installInputCustomValidation = (input) => {
         // we'll catch it in the click handler
         return;
       }
+      dispatchRequestSubmitCustomEvent();
       if (!checkValidity()) {
         reportValidity();
         e.preventDefault();
         return;
       }
-      dispatchRequestSubmitCustomEvent();
     };
     window.addEventListener("keydown", onKeydown, { capture: true });
     cleanupCallbackSet.add(() => {

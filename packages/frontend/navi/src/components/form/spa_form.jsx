@@ -93,6 +93,15 @@ export const SPAForm = forwardRef(
       <form
         {...rest}
         ref={innerRef}
+        // eslint-disable-next-line react/no-unknown-property
+        onrequestsubmit={() => {
+          // Right now it's only on "input" that we clear
+          // customMessageMap (see input_custom_validation.js)
+          // as a result when the is a custom message
+          // it's only after interacting with the input that form can be re-submitted
+          // But it makes sense to let user re-submit the form any time he wants as he hits enter key for instance
+          removeFormErrorMessage();
+        }}
         onSubmit={async (submitEvent) => {
           submitEvent.preventDefault();
           if (submittingRef.current) {
