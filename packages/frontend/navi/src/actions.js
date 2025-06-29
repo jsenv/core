@@ -756,9 +756,12 @@ export const createAction = (callback, rootOptions = {}) => {
           const callbackResult = callback(...args);
           if (callbackResult && typeof callbackResult.then === "function") {
             thenableArray.push(callbackResult);
-            callbackResult.then((value) => {
-              loadResult = value;
-            });
+            callbackResult.then(
+              (value) => {
+                loadResult = value;
+              },
+              () => {},
+            );
           } else {
             loadResult = callbackResult;
           }
