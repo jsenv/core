@@ -1,6 +1,6 @@
 import { forwardRef } from "preact/compat";
+import { SPAForm } from "../form/spa_form.jsx";
 import { InputText } from "./input_text.jsx";
-import { SPAForm } from "./spa_form.jsx";
 
 export const SPAInputText = forwardRef(
   ({ method = "PUT", label, name, ...rest }, ref) => {

@@ -1,5 +1,10 @@
 import { resource } from "@jsenv/navi";
+import { signal } from "@preact/signals";
 import { errorFromResponse } from "../error_from_response.js";
+
+const canLoginCountSignal = signal(0);
+const groupCountSignal = signal(0);
+const withOwnershipCountSignal = signal(0);
 
 export const ROLE = resource("role", {
   idKey: "oid",
@@ -14,14 +19,15 @@ export const ROLE = resource("role", {
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to get role");
     }
-    const { data, meta } = await response.json();
-    const role = data;
-    const { databases, columns, members } = meta;
-    setActiveRole(role);
-    setActiveRoleDatabases(databases);
-    setActiveRoleColumns(columns);
-    setRoleMembers(role, members);
-    return role;
+    const {
+      data,
+      // { databases, columns, members }
+      meta,
+    } = await response.json();
+    return {
+      ...data,
+      ...meta,
+    };
   },
   POST: async ({ rolcanlogin, rolname }, { signal }) => {
     const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`, {
@@ -37,12 +43,11 @@ export const ROLE = resource("role", {
       throw await errorFromResponse(response, "Failed to create role");
     }
     const { data, meta } = await response.json();
-    const role = data;
     const { canLoginCount, groupCount, withOwnershipCount } = meta;
-    setRoleCanLoginCount(canLoginCount);
-    setRoleGroupCount(groupCount);
-    setRoleWithOwnershipCount(withOwnershipCount);
-    return role;
+    canLoginCountSignal.value = canLoginCount;
+    groupCountSignal.value = groupCount;
+    withOwnershipCountSignal.value = withOwnershipCount;
+    return data;
   },
   DELETE: async ({ rolname, signal }) => {
     const response = await fetch(
@@ -61,9 +66,9 @@ export const ROLE = resource("role", {
     }
     const { meta } = await response.json();
     const { canLoginCount, groupCount, withOwnershipCount } = meta;
-    setRoleCanLoginCount(canLoginCount);
-    setRoleGroupCount(groupCount);
-    setRoleWithOwnershipCount(withOwnershipCount);
+    canLoginCountSignal.value = canLoginCount;
+    groupCountSignal.value = groupCount;
+    withOwnershipCountSignal.value = withOwnershipCount;
     return { rolname };
   },
   PUT: async ({ rolname, columnName, columnValue }, { signal }) => {

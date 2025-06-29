@@ -1,6 +1,6 @@
 import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
-import { useDebounceTrue } from "../hooks/use_debounce_true.js";
+import { useDebounceTrue } from "../use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
 export const LoaderBackground = ({

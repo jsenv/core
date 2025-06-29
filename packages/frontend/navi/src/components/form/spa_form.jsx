@@ -23,9 +23,8 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { registerAction } from "../action/action.js";
-import { useResetErrorBoundary } from "../hooks/use_reset_error_boundary.js";
-import { canUseNavigation } from "../router.js";
+import { createAction } from "../../actions.js";
+import { useResetErrorBoundary } from "./use_reset_error_boundary.js";
 import { FormContext } from "./use_spa_form_status.js";
 
 const submit = HTMLFormElement.prototype.submit;
@@ -125,7 +124,7 @@ export const SPAForm = forwardRef(
           let action =
             formActionMapRef.current.get(submitEvent.submitter) || formAction;
           if (typeof action === "function") {
-            action = registerAction(action);
+            action = createAction(action);
           }
 
           formStatusSetter({
@@ -146,11 +145,10 @@ export const SPAForm = forwardRef(
             }
           }
           dispatchCustomEventOnFormAndFormElements("actionstart");
-          const { aborted, error } = await applyActionOnFormSubmission({
-            method: method.toUpperCase(),
-            formData,
-            action,
-          });
+          const actionParams = {}; // build it from formData
+          const actionWithParams = action.bind(actionParams);
+          const { aborted, error } = await action.reload(actionWithParams);
+
           setTimeout(() => {
             submittingRef.current = false;
           }, 0);
@@ -224,42 +222,42 @@ export const SPAButton = forwardRef(
 );
 SPAForm.Button = SPAButton;
 
-const applyActionOnFormSubmission = canUseNavigation
-  ? async ({ method, formData, action }) => {
-      // const error = action.errorSignal.peek();
-      // const aborted = action.executionStateSignal.peek() === ABORTED;
+// const applyActionOnFormSubmission = canUseNavigation
+//   ? async ({ method, formData, action }) => {
+//       // const error = action.errorSignal.peek();
+//       // const aborted = action.executionStateSignal.peek() === ABORTED;
 
-      // hum comment faire pour que chaque form ait son propre action status
-      // qui hérite du status de l'action qu'il s'apprete a call?
-      // je pense qu'il faut fork l'action
-      // sinon ça marche pas
+//       // hum comment faire pour que chaque form ait son propre action status
+//       // qui hérite du status de l'action qu'il s'apprete a call?
+//       // je pense qu'il faut fork l'action
+//       // sinon ça marche pas
 
-      // mais on veut potentiellement que l'action soit partagée entre plusieurs form
-      // et dans ce cas qu'on sache qu'une action d'un coté mette en pending in autre coté
+//       // mais on veut potentiellement que l'action soit partagée entre plusieurs form
+//       // et dans ce cas qu'on sache qu'une action d'un coté mette en pending in autre coté
 
-      try {
-        let actionResult;
-        await navigation.navigate(window.location.href, {
-          state: navigation.currentEntry.getState(), // action must preserve the current state of the page
-          history: "replace",
-          info: {
-            method,
-            formAction: action,
-            formActionCallback: (result) => {
-              actionResult = result;
-            },
-            formData,
-          },
-        }).finished;
-        return actionResult;
-      } catch (e) {
-        if (e.name === "AbortError") {
-          return { aborted: true, error: null };
-        }
-        console.error(e);
-        return { aborted: false, error: e };
-      }
-    }
-  : () => {
-      // TODO
-    };
+//       try {
+//         let actionResult;
+//         await navigation.navigate(window.location.href, {
+//           state: navigation.currentEntry.getState(), // action must preserve the current state of the page
+//           history: "replace",
+//           info: {
+//             method,
+//             formAction: action,
+//             formActionCallback: (result) => {
+//               actionResult = result;
+//             },
+//             formData,
+//           },
+//         }).finished;
+//         return actionResult;
+//       } catch (e) {
+//         if (e.name === "AbortError") {
+//           return { aborted: true, error: null };
+//         }
+//         console.error(e);
+//         return { aborted: false, error: e };
+//       }
+//     }
+//   : () => {
+//       // TODO
+//     };

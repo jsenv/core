@@ -1,12 +1,12 @@
 import { useConstraints } from "@jsenv/form";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
-import { useActionStatus } from "../action/action_hooks.js";
-import { useAutoFocus } from "../hooks/use_auto_focus.js";
-import { useNavState } from "../hooks/use_nav_state.js";
-import { LoaderBackground } from "./loader_background.jsx";
-import { useSPAFormStatus } from "./use_spa_form_status.js";
-import { useRequestSubmitOnChange } from "./user_request_submit_on_change.js";
+import { useActionStatus } from "../../actions.js";
+import { useSPAFormStatus } from "../form/use_spa_form_status.js";
+import { LoaderBackground } from "../loader/loader_background.jsx";
+import { useAutoFocus } from "../use_auto_focus.js";
+import { useNavState } from "../use_nav_state.js";
+import { useRequestSubmitOnChange } from "../user_request_submit_on_change.js";
 
 export const InputText = forwardRef(
   (
