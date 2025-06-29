@@ -16,6 +16,10 @@
         SPAInputText,
       } from "@jsenv/navi";
 
+      const action = async () => {
+        throw new Error("test");
+      };
+
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
@@ -25,10 +29,9 @@
                 <strong>Error</strong>
               </p>
               <SPAInputText
+                autocomplete="off"
                 name="test"
-                action={async () => {
-                  throw new Error("test");
-                }}
+                action={action}
                 label="Test"
                 style="color: blue"
               ></SPAInputText>

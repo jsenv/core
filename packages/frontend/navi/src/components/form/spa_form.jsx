@@ -195,7 +195,9 @@ SPAForm.Button = SPAButton;
 const applyActionOnFormSubmission = async (action) => {
   try {
     await action.reload();
-    return { aborted: false, error: null };
+    const aborted = action.aborted;
+    const error = action.error;
+    return { aborted, error };
   } catch (e) {
     if (e.name === "AbortError") {
       return { aborted: true, error: null };

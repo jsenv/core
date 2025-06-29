@@ -407,6 +407,7 @@ export const createAction = (callback, rootOptions = {}) => {
       params = initialParamsDefault,
       loadRequested = false,
       loadingState = IDLE,
+      aborted = false,
       error = null,
       data,
       computedData,
@@ -618,8 +619,9 @@ export const createAction = (callback, rootOptions = {}) => {
       parentAction,
       name,
       params,
-      loadingState,
       loadRequested,
+      loadingState,
+      aborted,
       error,
       data,
       computedData,
@@ -655,6 +657,8 @@ export const createAction = (callback, rootOptions = {}) => {
       actionWeakEffect((actionRef) => {
         loadingState = loadingStateSignal.value;
         actionRef.loadingState = loadingState;
+        aborted = loadingState === ABORTED;
+        actionRef.aborted = aborted;
       });
       actionWeakEffect((actionRef) => {
         error = errorSignal.value;
@@ -728,7 +732,6 @@ export const createAction = (callback, rootOptions = {}) => {
           }
         };
         const onLoadError = (e) => {
-          console.error(e);
           signal.removeEventListener("abort", onabort);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
@@ -898,6 +901,7 @@ const createActionProxyFromSignal = (
     params: undefined,
     loadRequested: undefined,
     loadingState: undefined,
+    aborted: undefined,
     error: undefined,
     data: undefined,
     computedData: undefined,
@@ -918,6 +922,7 @@ const createActionProxyFromSignal = (
     actionProxy.params = currentAction.params;
     actionProxy.loadRequested = currentAction.loadRequested;
     actionProxy.loadingState = currentAction.loadingState;
+    actionProxy.aborted = currentAction.aborted;
     actionProxy.error = currentAction.error;
     actionProxy.data = currentAction.data;
     actionProxy.computedData = currentAction.computedData;
