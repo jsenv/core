@@ -21,7 +21,7 @@ import { getBorderSizes, getScrollableParentSet } from "@jsenv/dom";
 export const openValidationMessage = (
   targetElement,
   innerHtml,
-  { level = "warning", onClose, debug = true } = {},
+  { level = "warning", onClose, debug = false } = {},
 ) => {
   let opened = true;
   const closeCallbackSet = new Set();
@@ -108,8 +108,14 @@ export const openValidationMessage = (
       }
       close("target_element_blur");
     };
-    targetElement.addEventListener("blur", onblur);
+    // we use setTimeout in case the validation message is opened during a "change" event
+    // (that will likely be followed by a "blur")
+    // otherwise the message is opened and immediately closed
+    const timeout = setTimeout(() => {
+      targetElement.addEventListener("blur", onblur);
+    });
     closeCallbackSet.add(() => {
+      clearTimeout(timeout);
       targetElement.removeEventListener("blur", onblur);
     });
   }
