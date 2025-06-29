@@ -16,16 +16,15 @@
 import { useInputValidationMessage } from "@jsenv/form";
 import { forwardRef } from "preact/compat";
 import {
-  useContext,
-  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
 } from "preact/hooks";
 import { createAction } from "../../actions.js";
+import { SPAButton } from "./spa_button.jsx";
 import { useResetErrorBoundary } from "./use_reset_error_boundary.js";
-import { FormContext } from "./use_spa_form_status.js";
+import { SPAFormContext } from "./use_spa_form_status.js";
 
 const submit = HTMLFormElement.prototype.submit;
 HTMLFormElement.prototype.submit = function (...args) {
@@ -77,7 +76,7 @@ export const SPAForm = forwardRef(
       method,
       action: formAction,
     });
-    const formActionMapRef = useRef(new Map());
+    const formActionRef = useRef();
     const submittingRef = useRef(false);
 
     const dispatchCustomEventOnFormAndFormElements = (type, options) => {
@@ -121,8 +120,7 @@ export const SPAForm = forwardRef(
           }
           removeFormErrorMessage();
           setError(null);
-          let action =
-            formActionMapRef.current.get(submitEvent.submitter) || formAction;
+          let action = formActionRef.current || formAction;
           if (typeof action === "function") {
             action = createAction(action);
           }
@@ -145,19 +143,21 @@ export const SPAForm = forwardRef(
             }
           }
           dispatchCustomEventOnFormAndFormElements("actionstart");
+          debugger;
           const actionParams = {}; // build it from formData
-          const actionWithParams = action.bind(actionParams);
-          const { aborted, error } = await action.reload(actionWithParams);
+          const actionWithParams = action.bindParams(actionParams);
+          const { aborted, error } = await actionWithParams.reload();
 
           setTimeout(() => {
             submittingRef.current = false;
           }, 0);
+          formActionRef.current = null;
           formStatusSetter({
             pending: false,
             aborted,
             error,
             method,
-            action,
+            action: formAction,
           });
           if (error) {
             if (
@@ -183,40 +183,10 @@ export const SPAForm = forwardRef(
         method={method === "get" ? "get" : "post"}
         data-method={method}
       >
-        <FormContext.Provider value={[formStatus, formActionMapRef]}>
+        <SPAFormContext.Provider value={[formStatus, formActionRef]}>
           {children}
-        </FormContext.Provider>
+        </SPAFormContext.Provider>
       </form>
-    );
-  },
-);
-
-export const SPAButton = forwardRef(
-  ({ formAction, children, disabled, ...props }, ref) => {
-    const innerRef = useRef();
-    const [formStatus, formActionMapRef] = useContext(FormContext);
-    useImperativeHandle(ref, () => innerRef.current);
-
-    useEffect(() => {
-      return () => {
-        formActionMapRef.current.delete(innerRef.current);
-      };
-    }, []);
-
-    return (
-      <button
-        ref={innerRef}
-        {...props}
-        onClick={(clickEvent) => {
-          formActionMapRef.current.set(innerRef.current, formAction);
-          if (props.onClick) {
-            props.onClick(clickEvent);
-          }
-        }}
-        disabled={formStatus.pending || disabled}
-      >
-        {children}
-      </button>
     );
   },
 );

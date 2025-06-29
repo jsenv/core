@@ -1,8 +1,8 @@
 import { useConstraints } from "@jsenv/form";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../actions.js";
-import { useSPAFormStatus } from "../form/use_spa_form_status.js";
+import { SPAFormContext } from "../form/use_spa_form_status.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
@@ -32,8 +32,10 @@ export const InputText = forwardRef(
   ) => {
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
-    const spaFormStatus = useSPAFormStatus();
-    action = action || spaFormStatus.action;
+    const SPAFormContextValue = useContext(SPAFormContext);
+    if (!action && SPAFormContextValue) {
+      action = SPAFormContextValue[0].action;
+    }
     const { pending } = useActionStatus(action);
     useAutoFocus(innerRef, autoFocus, autoSelect);
     useRequestSubmitOnChange(innerRef, {
@@ -57,6 +59,13 @@ export const InputText = forwardRef(
         onInput={(e) => {
           setNavStateValue(e.target.value);
           onInput?.(e);
+        }}
+        // eslint-disable-next-line react/no-unknown-property
+        onrequestsubmit={() => {
+          debugger;
+          if (SPAFormContextValue) {
+            SPAFormContextValue[1].current = action;
+          }
         }}
         // eslint-disable-next-line react/no-unknown-property
         oncancel={(event) => {

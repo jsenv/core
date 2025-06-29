@@ -65,6 +65,11 @@ export const installInputCustomValidation = (input) => {
     input.dispatchEvent(cancelEvent);
   };
 
+  const dispatchRequestSubmitCustomEvent = () => {
+    const requestSubmitEvent = new CustomEvent("requestsubmit");
+    input.dispatchEvent(requestSubmitEvent);
+  };
+
   let validationMessage;
   const openInputValidationMessage = () => {
     input.focus();
@@ -216,10 +221,15 @@ export const installInputCustomValidation = (input) => {
 
   report_on_form_request_submit_call: {
     const onRequestSubmit = (form, { prevent }) => {
-      if (form === input.form && lastFailedValidityInfo && !checkValidity()) {
+      if (form !== input.form) {
+        return;
+      }
+      if (lastFailedValidityInfo && !checkValidity()) {
         reportValidity();
         prevent();
+        return;
       }
+      dispatchRequestSubmitCustomEvent();
     };
     requestSubmitCallbackSet.add(onRequestSubmit);
     cleanupCallbackSet.add(() => {
@@ -227,7 +237,7 @@ export const installInputCustomValidation = (input) => {
     });
   }
 
-  report_on_form_request_submit_by_click: {
+  report_on_form_request_submit_by_click_or_enter: {
     const willSubmitFormOnClick = (element) => {
       return element.type === "submit" || element.type === "image";
     };
@@ -278,7 +288,9 @@ export const installInputCustomValidation = (input) => {
       if (!checkValidity()) {
         reportValidity();
         e.preventDefault();
+        return;
       }
+      dispatchRequestSubmitCustomEvent();
     };
     window.addEventListener("keydown", onKeydown, { capture: true });
     cleanupCallbackSet.add(() => {

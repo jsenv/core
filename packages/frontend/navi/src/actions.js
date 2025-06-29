@@ -392,7 +392,13 @@ ${lines.join("\n")}`);
 const initialParamsDefault = {};
 const metaDefault = {};
 
+const actionWeakMap = new WeakMap();
 export const createAction = (callback, rootOptions = {}) => {
+  const existing = actionWeakMap.get(callback);
+  if (existing) {
+    return existing;
+  }
+
   let rootAction;
 
   const createActionCore = (
@@ -831,10 +837,15 @@ export const createAction = (callback, rootOptions = {}) => {
   };
 
   rootAction = createActionCore(rootOptions);
+  actionWeakMap.set(callback, rootAction);
   return rootAction;
 };
 
 export const useActionStatus = (action) => {
+  if (typeof action === "function") {
+    action = createAction(action);
+  }
+
   const {
     paramsSignal,
     loadingStateSignal,
