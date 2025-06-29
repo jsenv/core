@@ -53,7 +53,12 @@ export const SPAForm = forwardRef(
     useImperativeHandle(ref, () => innerRef.current);
 
     const [addFormErrorMessage, removeFormErrorMessage] =
-      useInputValidationMessage(innerRef, "form_error", errorTarget);
+      useInputValidationMessage(innerRef, "form_error", errorTarget, {
+        // This error should not prevent from submission
+        // so whenever user tries to submit the form the error is cleared
+        // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
+        removeOnRequestSubmit: true,
+      });
 
     // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
     // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
@@ -93,15 +98,6 @@ export const SPAForm = forwardRef(
       <form
         {...rest}
         ref={innerRef}
-        // eslint-disable-next-line react/no-unknown-property
-        onrequestsubmit={() => {
-          // Right now it's only on "input" that we clear
-          // customMessageMap (see input_custom_validation.js)
-          // as a result when the is a custom message
-          // it's only after interacting with the input that form can be re-submitted
-          // But it makes sense to let user re-submit the form any time he wants as he hits enter key for instance
-          removeFormErrorMessage();
-        }}
         onSubmit={async (submitEvent) => {
           submitEvent.preventDefault();
           if (submittingRef.current) {

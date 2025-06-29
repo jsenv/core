@@ -65,10 +65,23 @@ export const installInputCustomValidation = (input) => {
     input.dispatchEvent(cancelEvent);
   };
 
-  const dispatchRequestSubmitCustomEvent = () => {
+  const handleRequestSubmit = (e) => {
+    for (const [key, customMessage] of customMessageMap) {
+      if (customMessage.removeOnRequestSubmit) {
+        customMessageMap.delete(key);
+      }
+    }
+
+    // "requestsubmit" custom event exists to to a chance for code to remove custom messages
+    // hence allowing form submission if nothing else prevents it
     const requestSubmitEvent = new CustomEvent("requestsubmit");
     input.form.dispatchEvent(requestSubmitEvent);
     input.dispatchEvent(requestSubmitEvent);
+
+    if (!checkValidity()) {
+      reportValidity();
+      e.preventDefault();
+    }
   };
 
   let validationMessage;
@@ -159,8 +172,12 @@ export const installInputCustomValidation = (input) => {
         return null;
       },
     });
-    const addCustomMessage = (key, message, { level = "error" } = {}) => {
-      customMessageMap.set(key, { message, level });
+    const addCustomMessage = (
+      key,
+      message,
+      { level = "error", removeOnRequestSubmit = false } = {},
+    ) => {
+      customMessageMap.set(key, { message, level, removeOnRequestSubmit });
       checkValidity();
       reportValidity();
       return () => {
@@ -227,16 +244,11 @@ export const installInputCustomValidation = (input) => {
   }
 
   report_on_form_request_submit_call: {
-    const onRequestSubmit = (form, { prevent }) => {
+    const onRequestSubmit = (form, e) => {
       if (form !== input.form) {
         return;
       }
-      dispatchRequestSubmitCustomEvent();
-      if (!checkValidity()) {
-        reportValidity();
-        prevent();
-        return;
-      }
+      handleRequestSubmit(e);
     };
     requestSubmitCallbackSet.add(onRequestSubmit);
     cleanupCallbackSet.add(() => {
@@ -264,12 +276,7 @@ export const installInputCustomValidation = (input) => {
         // click won't request submit
         return;
       }
-      dispatchRequestSubmitCustomEvent();
-      if (!checkValidity()) {
-        reportValidity();
-        e.preventDefault();
-        return;
-      }
+      handleRequestSubmit(e);
     };
     window.addEventListener("click", onClick, { capture: true });
     cleanupCallbackSet.add(() => {
@@ -294,12 +301,7 @@ export const installInputCustomValidation = (input) => {
         // we'll catch it in the click handler
         return;
       }
-      dispatchRequestSubmitCustomEvent();
-      if (!checkValidity()) {
-        reportValidity();
-        e.preventDefault();
-        return;
-      }
+      handleRequestSubmit(e);
     };
     window.addEventListener("keydown", onKeydown, { capture: true });
     cleanupCallbackSet.add(() => {
@@ -350,11 +352,11 @@ const requestSubmitCallbackSet = new Set();
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
 HTMLFormElement.prototype.requestSubmit = function (submitter) {
   let prevented = false;
-  const prevent = () => {
+  const preventDefault = () => {
     prevented = true;
   };
   for (const requestSubmitCallback of requestSubmitCallbackSet) {
-    requestSubmitCallback(this, { submitter, prevent });
+    requestSubmitCallback(this, { submitter, preventDefault });
   }
   if (prevented) {
     return;
