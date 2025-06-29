@@ -17,16 +17,20 @@ import { getBorderSizes, getScrollableParentSet } from "@jsenv/dom";
  * @param {boolean} options.scrollIntoView - Whether to scroll the target element into view
  * @returns {Function} - Function to hide and remove the validation message
  */
+
 export const openValidationMessage = (
   targetElement,
   innerHtml,
-  { level = "warning", onClose } = {},
+  { level = "warning", onClose, debug = true } = {},
 ) => {
   let opened = true;
   const closeCallbackSet = new Set();
-  const close = () => {
+  const close = (reason) => {
     if (!opened) {
       return;
+    }
+    if (debug) {
+      console.debug(`validation message closed (reason: ${reason})`);
     }
     opened = false;
     for (const closeCallback of closeCallbackSet) {
@@ -90,7 +94,7 @@ export const openValidationMessage = (
       if (targetElement.hasAttribute("data-validation-message-stay-on-focus")) {
         return;
       }
-      close();
+      close("target_element_focus");
     };
     targetElement.addEventListener("focus", onfocus);
     closeCallbackSet.add(() => {
@@ -102,7 +106,7 @@ export const openValidationMessage = (
       if (targetElement.hasAttribute("data-validation-message-stay-on-blur")) {
         return;
       }
-      close();
+      close("target_element_blur");
     };
     targetElement.addEventListener("blur", onblur);
     closeCallbackSet.add(() => {

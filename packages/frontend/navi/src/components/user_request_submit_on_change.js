@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useLayoutEffect } from "preact/hooks";
 
 // see https://github.com/preactjs/preact/issues/1034#issuecomment-2857877043
 export const useRequestSubmitOnChange = (

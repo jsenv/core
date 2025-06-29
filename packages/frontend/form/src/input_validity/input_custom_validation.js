@@ -88,7 +88,7 @@ export const installInputCustomValidation = (input) => {
   const openInputValidationMessage = () => {
     input.focus();
     const closeOnCleanup = () => {
-      validationMessage.close();
+      validationMessage.close("cleanup");
     };
     let message;
     let level;
@@ -144,7 +144,7 @@ export const installInputCustomValidation = (input) => {
   const reportValidity = () => {
     if (!lastFailedValidityInfo) {
       if (validationMessage) {
-        validationMessage.close();
+        validationMessage.close("becomes_valid");
       }
       return;
     }
@@ -204,7 +204,7 @@ export const installInputCustomValidation = (input) => {
     const oninput = () => {
       customMessageMap.clear();
       if (validationMessage) {
-        validationMessage.close();
+        validationMessage.close("input_event");
       }
       checkValidity();
     };
@@ -313,7 +313,7 @@ export const installInputCustomValidation = (input) => {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
         if (validationMessage) {
-          validationMessage.close();
+          validationMessage.close("escape_key");
         } else {
           dispatchCancelCustomEvent("escape_key");
         }
