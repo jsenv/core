@@ -22,7 +22,6 @@ import {
   useState,
 } from "preact/hooks";
 import { createAction } from "../../actions.js";
-import { SPAButton } from "./spa_button.jsx";
 import { useResetErrorBoundary } from "./use_reset_error_boundary.js";
 import { SPAFormContext } from "./use_spa_form_status.js";
 
@@ -195,7 +194,6 @@ export const SPAForm = forwardRef(
     );
   },
 );
-SPAForm.Button = SPAButton;
 
 const applyActionOnFormSubmission = async (action) => {
   try {
