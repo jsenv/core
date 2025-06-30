@@ -120,6 +120,26 @@ export const openValidationMessage = (
     });
   }
 
+  close_click_outside: {
+    // it's allowed to open this message on non focusable elements
+    // (like <span>)
+    // in that case we need something else than blur to decide when to close
+    if (document.activeElement !== targetElement) {
+      const onDocumentClick = (event) => {
+        if (
+          event.target !== jsenvValidationMessage &&
+          !jsenvValidationMessage.contains(event.target)
+        ) {
+          close("click_outside");
+        }
+      };
+      document.addEventListener("click", onDocumentClick);
+      closeCallbackSet.add(() => {
+        document.removeEventListener("click", onDocumentClick);
+      });
+    }
+  }
+
   const validationMessage = {
     jsenvValidationMessage,
     update,
