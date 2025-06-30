@@ -65,7 +65,12 @@ export const installCustomConstraintValidation = (element) => {
     element.dispatchEvent(cancelEvent);
   };
 
-  const handleRequestAction = (e) => {
+  const handleRequestExecute = (e, target) => {
+    for (const [key, customMessage] of customMessageMap) {
+      if (customMessage.removeOnRequestExecute) {
+        customMessageMap.delete(key);
+      }
+    }
     if (!checkValidity()) {
       e.preventDefault();
       reportValidity();
@@ -79,26 +84,11 @@ export const installCustomConstraintValidation = (element) => {
         reasonEvent: e,
       },
     });
-    element.dispatchEvent(executeCustomEvent);
+    target.dispatchEvent(executeCustomEvent);
   };
   const handleRequestSubmit = (e) => {
-    for (const [key, customMessage] of customMessageMap) {
-      if (customMessage.removeOnRequestSubmit) {
-        customMessageMap.delete(key);
-      }
-    }
     e.preventDefault(); // prevent "submit" event
-    if (!checkValidity()) {
-      e.preventDefault();
-      reportValidity();
-      return;
-    }
-    const formExecuteCustomEvent = new CustomEvent("execute", {
-      detail: {
-        reasonEvent: e,
-      },
-    });
-    element.form.dispatchEvent(formExecuteCustomEvent);
+    handleRequestExecute(e, element.form);
   };
 
   let validationMessage;
@@ -192,9 +182,9 @@ export const installCustomConstraintValidation = (element) => {
     const addCustomMessage = (
       key,
       message,
-      { level = "error", removeOnRequestSubmit = false } = {},
+      { level = "error", removeOnRequestExecute = false } = {},
     ) => {
-      customMessageMap.set(key, { message, level, removeOnRequestSubmit });
+      customMessageMap.set(key, { message, level, removeOnRequestExecute });
       checkValidity();
       reportValidity();
       return () => {
@@ -256,57 +246,89 @@ export const installCustomConstraintValidation = (element) => {
 
   request_by_click_or_enter: {
     const willSubmitFormOnClick = (element) => {
-      return element.type === "submit" || element.type === "image";
+      return (
+        element.type === "submit" ||
+        element.type === "image" ||
+        element.type === "reset" ||
+        element.type === "button"
+      );
+    };
+    const willTriggerClickOnEnter = (element) => {
+      return (
+        // Input buttons
+        (element.tagName === "INPUT" &&
+          (element.type === "submit" ||
+            element.type === "image" ||
+            element.type === "reset" ||
+            element.type === "button")) ||
+        // Button elements
+        element.tagName === "BUTTON" ||
+        // Links with href
+        (element.tagName === "A" && element.href) ||
+        // ARIA buttons
+        element.role === "button"
+      );
     };
 
-    const onClick = (e) => {
-      const target = e.target;
-      const form = target.form;
-      if (!form) {
-        handleRequestAction(e, "click");
-        // happens outside a <form>
-        return;
-      }
-      if (element.form !== form) {
-        // happens in an other <form>, or the input has no <form>
-        return;
-      }
-      if (!willSubmitFormOnClick(target)) {
-        // click won't request submit
-        return;
-      }
-      handleRequestSubmit(e);
-    };
-    window.addEventListener("click", onClick, { capture: true });
-    cleanupCallbackSet.add(() => {
-      window.removeEventListener("click", onClick, { capture: true });
-    });
+    by_click: {
+      const onClick = (e) => {
+        const target = e.target;
+        const form = target.form;
+        if (!form) {
+          // happens outside a <form>
+          if (element === target || element.contains(target)) {
+            handleRequestExecute(e, element);
+          }
+          return;
+        }
+        if (element.form !== form) {
+          // happens in an other <form>, or the input has no <form>
+          return;
+        }
+        if (!willSubmitFormOnClick(target)) {
+          // click won't request submit
+          return;
+        }
+        handleRequestSubmit(e);
+      };
+      window.addEventListener("click", onClick, { capture: true });
+      cleanupCallbackSet.add(() => {
+        window.removeEventListener("click", onClick, { capture: true });
+      });
+    }
 
-    const onKeydown = (e) => {
-      if (e.key !== "Enter") {
-        return;
-      }
-      const target = e.target;
-      const form = target.form;
-      if (!form) {
-        // happens outside a <form>
-        handleRequestAction(e, "enter");
-        return;
-      }
-      if (element.form !== form) {
-        // happens in an other <form>, or the element has no <form>
-        return;
-      }
-      if (willSubmitFormOnClick(target)) {
-        // we'll catch it in the click handler
-        return;
-      }
-      handleRequestSubmit(e);
-    };
-    window.addEventListener("keydown", onKeydown, { capture: true });
-    cleanupCallbackSet.add(() => {
-      window.removeEventListener("keydown", onClick, { capture: true });
-    });
+    by_enter: {
+      const onKeydown = (e) => {
+        if (e.key !== "Enter") {
+          return;
+        }
+        const target = e.target;
+        const form = target.form;
+        if (!form) {
+          // happens outside a <form>
+          if (willTriggerClickOnEnter(target)) {
+            return;
+          }
+          if (element === target || element.contains(target)) {
+            handleRequestExecute(e, element);
+          }
+          return;
+        }
+        if (element.form !== form) {
+          // happens in an other <form>, or the element has no <form>
+          return;
+        }
+        if (willSubmitFormOnClick(target)) {
+          // we'll catch it in the click handler
+          return;
+        }
+        handleRequestSubmit(e);
+      };
+      window.addEventListener("keydown", onKeydown, { capture: true });
+      cleanupCallbackSet.add(() => {
+        window.removeEventListener("keydown", onKeydown, { capture: true });
+      });
+    }
   }
 
   close_on_escape: {

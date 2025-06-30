@@ -45,34 +45,39 @@
         const [count, setCount] = useState(0);
 
         return (
-          <>
-            <button
-              onClick={() => {
-                setCount((count) => count + 1);
-              }}
-            >
-              Increment
-            </button>
-            <button
-              onClick={() => {
-                setCount((count) => count - 1);
-              }}
-            >
-              Decrement
-            </button>
-
-            <Button
-              action={async () => {
-                setTimeout(() => {
+          <div>
+            <span>
+              Count: {count}{" "}
+              <button
+                onClick={() => {
                   setCount((count) => count + 1);
-                }, 500);
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-                throw new Error(`test: ${count}`);
-              }}
-            >
-              Hello
-            </Button>
-          </>
+                }}
+              >
+                +
+              </button>
+              <button
+                onClick={() => {
+                  setCount((count) => count - 1);
+                }}
+              >
+                -
+              </button>
+            </span>
+
+            <div>
+              <Button
+                action={async () => {
+                  setTimeout(() => {
+                    setCount((count) => count + 1);
+                  }, 200);
+                  await new Promise((resolve) => setTimeout(resolve, 1_500));
+                  throw new Error(`test: ${count}`);
+                }}
+              >
+                Hello
+              </Button>
+            </div>
+          </div>
         );
       };
 
@@ -81,36 +86,39 @@
         const [count, setCount] = useState(0);
 
         return (
-          <>
-            <button
-              onClick={() => {
-                setCount((count) => count + 1);
-              }}
-            >
-              Increment
-            </button>
-            <button
-              onClick={() => {
-                setCount((count) => count - 1);
-              }}
-            >
-              Decrement
-            </button>
+          <div>
+            <span>
+              Count: {count}{" "}
+              <button
+                onClick={() => {
+                  setCount((count) => count + 1);
+                }}
+              >
+                +
+              </button>
+              <button
+                onClick={() => {
+                  setCount((count) => count - 1);
+                }}
+              >
+                -
+              </button>
+            </span>
 
             <Form>
               <Button
                 action={async () => {
                   setTimeout(() => {
                     setCount((count) => count + 1);
-                  }, 500);
-                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                  }, 200);
+                  await new Promise((resolve) => setTimeout(resolve, 1_500));
                   throw new Error(`test: ${count}`);
                 }}
               >
                 Hello
               </Button>
             </Form>
-          </>
+          </div>
         );
       };
 

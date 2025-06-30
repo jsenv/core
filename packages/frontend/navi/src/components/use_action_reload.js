@@ -7,14 +7,15 @@ export const useActionReload = (
   {
     errorEffect = "show_validation_message", // "show_validation_message" or "throw"
     errorTarget,
-    errorValidationMessageOptions,
   } = {},
 ) => {
   const [addErrorMessage, removeErrorMessage] = useValidationMessage(
     innerRef,
     "action_error",
     errorTarget,
-    errorValidationMessageOptions,
+    {
+      removeOnRequestExecute: true,
+    },
   );
 
   // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
