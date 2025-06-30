@@ -16,25 +16,44 @@
         InputText,
         // eslint-disable-next-line no-unused-vars
         Form,
+        createAction,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
-          <div style="display: flex; flex-direction: row; gap: 30px">
-            <div>
-              <p>
-                <strong>Outside form</strong>
-              </p>
-              <OutsideForm />
-            </div>
+          <>
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>Outside form</strong>
+                </p>
+                <OutsideForm />
+              </div>
 
-            <div>
-              <p>
-                <strong>Inside form</strong>
-              </p>
+              <div>
+                <p>
+                  <strong>Outside form with initial value</strong>
+                </p>
+                <OutsideFormWithInitialValue />
+              </div>
+
+              <div>
+                <p>
+                  <strong>Outside form using action</strong>
+                </p>
+                <OutsideFormUsingAction />
+              </div>
             </div>
-          </div>
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>Inside form</strong>
+                </p>
+                <InsideForm />
+              </div>
+            </div>
+          </>
         );
       };
 
@@ -50,6 +69,39 @@
                   throw new Error(`test: ${value}`);
                 }}
               />
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const OutsideFormWithInitialValue = () => {
+        return (
+          <div>
+            <div>
+              <InputText
+                requestExecuteOnChange
+                value="initial"
+                action={async (value) => {
+                  await new Promise((resolve) => setTimeout(resolve, 1_000));
+                  throw new Error(`test: ${value}`);
+                }}
+              />
+            </div>
+          </div>
+        );
+      };
+
+      const actionA = createAction(async (value) => {
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+        throw new Error(`test: ${value}`);
+      });
+      // eslint-disable-next-line no-unused-vars
+      const OutsideFormUsingAction = () => {
+        return (
+          <div>
+            <div>
+              <InputText requestExecuteOnChange action={actionA} />
             </div>
           </div>
         );
