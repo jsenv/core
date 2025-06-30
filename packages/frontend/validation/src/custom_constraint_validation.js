@@ -42,6 +42,8 @@ export const installCustomConstraintValidation = (element) => {
     registerConstraint: undefined,
     addCustomMessage: undefined,
     removeCustomMessage: undefined,
+    checkValidity: undefined,
+    reportValidity: undefined,
   };
 
   const cleanupCallbackSet = new Set();
@@ -99,6 +101,9 @@ export const installCustomConstraintValidation = (element) => {
   const handleRequestSubmit = (e, { submitter } = {}) => {
     const form = element.form;
     if (formValidationInProgress.has(form)) {
+      if (debug) {
+        console.debug(`form validation already in progress for`, form);
+      }
       return;
     }
     formValidationInProgress.add(form);
@@ -110,6 +115,7 @@ export const installCustomConstraintValidation = (element) => {
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
     let allValid = true;
     let firstInvalidElement = null;
+    let activeElementIsInvalid = false;
     const validationErrors = [];
     for (const formElement of form.elements) {
       const validationInterface = formElement.__validationInterface__;
@@ -120,21 +126,25 @@ export const installCustomConstraintValidation = (element) => {
       const isValid = validationInterface.checkValidity({
         isExecuteRequest: true,
       });
-      if (!isValid) {
-        if (!firstInvalidElement) {
-          firstInvalidElement = formElement;
-        }
-        validationInterface.reportValidity();
-        // TODO: collect the error?
+      if (isValid) {
+        continue;
       }
+      if (document.activeElement === formElement) {
+        activeElementIsInvalid = true;
+      }
+      allValid = false;
+      if (!firstInvalidElement) {
+        firstInvalidElement = formElement;
+      }
+      validationInterface.reportValidity({ skipFocus: true });
+      // TODO: collect the error?
     }
 
     // ✅ Nettoyer le flag de validation
     formValidationInProgress.delete(form);
 
     if (!allValid) {
-      // ✅ Focus sur le premier élément invalide
-      if (firstInvalidElement) {
+      if (!activeElementIsInvalid) {
         firstInvalidElement.focus();
       }
 
@@ -162,8 +172,10 @@ export const installCustomConstraintValidation = (element) => {
   };
 
   let validationMessage;
-  const openElementValidationMessage = () => {
-    element.focus();
+  const openElementValidationMessage = ({ skipFocus } = {}) => {
+    if (!skipFocus) {
+      element.focus();
+    }
     const closeOnCleanup = () => {
       validationMessage.close("cleanup");
     };
@@ -226,7 +238,7 @@ export const installCustomConstraintValidation = (element) => {
     }
     return !lastFailedValidityInfo;
   };
-  const reportValidity = () => {
+  const reportValidity = ({ skipFocus } = {}) => {
     if (!lastFailedValidityInfo) {
       if (validationMessage) {
         validationMessage.close("becomes_valid");
@@ -242,9 +254,11 @@ export const installCustomConstraintValidation = (element) => {
       }
       return;
     }
-    openElementValidationMessage();
+    openElementValidationMessage({ skipFocus });
     return;
   };
+  validationInterface.checkValidity = checkValidity;
+  validationInterface.reportValidity = reportValidity;
 
   const customMessageMap = new Map();
   custom_message: {
