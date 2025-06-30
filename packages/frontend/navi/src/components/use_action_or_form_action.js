@@ -13,23 +13,19 @@ export const useActionOrFormAction = (elementRef, action) => {
 
   useLayoutEffect(() => {
     const element = elementRef.current;
-    const oneventrequest = (event) => {
+    const onexecute = () => {
       if (isInsideForm) {
-        event.detail.effect = () => {
-          // if the request goes through, the <form> will be submitted with this action
-          formActionRef.current = action;
-        };
+        // if the request goes through, the <form> will be submitted with this action
+        formActionRef.current = action;
       } else if (action) {
-        event.detail.effect = () => {
-          // if the request goes through, the action is reloaded
-          reload(action);
-        };
+        // if the request goes through, the action is reloaded
+        reload(action);
       }
     };
 
-    element.addEventListener("event_request", oneventrequest);
+    element.addEventListener("execute", onexecute);
     return () => {
-      element.removeEventListener("event_request", oneventrequest);
+      element.removeEventListener("execute", onexecute);
     };
   }, [action, reload]);
 

@@ -65,33 +65,21 @@ export const installCustomConstraintValidation = (element) => {
     element.dispatchEvent(cancelEvent);
   };
 
-  const dispatchEventRequest = (eventCausingRequest, eventRequested) => {
-    // "requestsubmit" custom event exists to to a chance for code to remove custom messages
-    // hence allowing form submission if nothing else prevents it
-    const requestEvent = new CustomEvent("event_request", {
+  const handleRequestAction = (e) => {
+    if (!checkValidity()) {
+      e.preventDefault();
+      reportValidity();
+      return;
+    }
+    // once we have validated the action can occur
+    // we are dispatching a custom event that can be used
+    // to actually perform the action or to set form action before the submit event occurs
+    const executeCustomEvent = new CustomEvent("execute", {
       detail: {
-        eventCausingRequest,
-        eventRequested,
-        effect: null,
+        reasonEvent: e,
       },
     });
-    if (eventRequested === "submit") {
-      element.form.dispatchEvent(requestEvent);
-    }
-    element.dispatchEvent(requestEvent);
-    if (requestEvent.defaultPrevented) {
-      eventCausingRequest.preventDefault();
-    }
-    if (checkValidity()) {
-      requestEvent.detail.effect?.();
-      return true;
-    }
-    reportValidity();
-    return false;
-  };
-
-  const handleRequestAction = (e) => {
-    dispatchEventRequest(e, "action");
+    element.dispatchEvent(executeCustomEvent);
   };
   const handleRequestSubmit = (e) => {
     for (const [key, customMessage] of customMessageMap) {
@@ -99,7 +87,18 @@ export const installCustomConstraintValidation = (element) => {
         customMessageMap.delete(key);
       }
     }
-    dispatchEventRequest(e, "submit");
+    e.preventDefault(); // prevent "submit" event
+    if (!checkValidity()) {
+      e.preventDefault();
+      reportValidity();
+      return;
+    }
+    const formExecuteCustomEvent = new CustomEvent("execute", {
+      detail: {
+        reasonEvent: e,
+      },
+    });
+    element.form.dispatchEvent(formExecuteCustomEvent);
   };
 
   let validationMessage;

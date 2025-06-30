@@ -62,15 +62,20 @@ export const Form = forwardRef(
       action,
     });
     const formActionRef = useRef();
-    const submittingRef = useRef(false);
+    const executingRef = useRef(false);
 
     return (
       <form
         {...rest}
         ref={innerRef}
-        onSubmit={async (submitEvent) => {
+        method={method === "get" ? "get" : "post"}
+        data-method={method}
+        onSubmit={(submitEvent) => {
           submitEvent.preventDefault();
-          if (submittingRef.current) {
+        }}
+        // eslint-disable-next-line react/no-unknown-property
+        onexecute={async () => {
+          if (executingRef.current) {
             /**
              * Without this check, when user types in <input> then hit enter 2 http requests are sent
              * - First one is correct
@@ -89,7 +94,7 @@ export const Form = forwardRef(
              */
             return;
           }
-          submittingRef.current = true;
+          executingRef.current = true;
           const formAction = formActionRef.current || action;
           formStatusSetter({
             pending: true,
@@ -101,7 +106,7 @@ export const Form = forwardRef(
           const { aborted, error } = await reload(formAction);
           formActionRef.current = null;
           setTimeout(() => {
-            submittingRef.current = false;
+            executingRef.current = false;
           }, 0);
           formStatusSetter({
             pending: false,
@@ -111,8 +116,6 @@ export const Form = forwardRef(
             action: formAction,
           });
         }}
-        method={method === "get" ? "get" : "post"}
-        data-method={method}
       >
         <FormContext.Provider value={[formStatus, formActionRef]}>
           {children}

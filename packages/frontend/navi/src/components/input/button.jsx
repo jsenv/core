@@ -5,14 +5,20 @@ import { useActionOrFormAction } from "../use_action_or_form_action.js";
 
 export const Button = forwardRef(
   (
-    { action, children, disabled, constraints = [], confirmMessage, ...rest },
+    {
+      action,
+      children,
+      disabled,
+      constraints = [],
+      // confirmMessage, // TODO
+      ...rest
+    },
     ref,
   ) => {
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
-    useConstraints(innerRef, [...constraints, ...(confirmMessage ? [{}] : [])]);
-
+    useConstraints(innerRef, constraints);
     const [{ pending }] = useActionOrFormAction(innerRef, action);
 
     return (
