@@ -16,7 +16,7 @@
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useOnExecute } from "../use_action_or_form_action.js";
-import { useActionReload } from "../use_action_reload.js";
+import { useExecuteAction } from "../use_execute_action.js";
 import { FormContext } from "./use_form_status.js";
 
 const submit = HTMLFormElement.prototype.submit;
@@ -45,7 +45,7 @@ export const Form = forwardRef(
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
-    const reload = useActionReload(innerRef, {
+    const executeAction = useExecuteAction(innerRef, {
       errorEffect,
       errorTarget,
       errorValidationMessageOptions: {
@@ -100,7 +100,7 @@ export const Form = forwardRef(
         method,
         action: formAction,
       });
-      const { aborted, error } = await reload(formAction);
+      const { aborted, error } = await executeAction(formAction);
       formActionRef.current = null;
       setTimeout(() => {
         executingRef.current = false;

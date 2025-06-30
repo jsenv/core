@@ -2,7 +2,7 @@ import { useValidationMessage } from "@jsenv/validation";
 import { useCallback, useLayoutEffect, useState } from "preact/hooks";
 import { useResetErrorBoundary } from "./use_reset_error_boundary.js";
 
-export const useActionReload = (
+export const useExecuteAction = (
   innerRef,
   {
     errorEffect = "show_validation_message", // "show_validation_message" or "throw"
@@ -36,7 +36,7 @@ export const useActionReload = (
     element.dispatchEvent(customEvent);
   };
 
-  const reloadAction = useCallback((action) => {
+  const executeAction = useCallback((action) => {
     if (resetErrorBoundary) {
       resetErrorBoundary();
     }
@@ -77,7 +77,7 @@ export const useActionReload = (
     return result;
   }, []);
 
-  return reloadAction;
+  return executeAction;
 };
 
 const performAction = (action, { onError, onSuccess }) => {

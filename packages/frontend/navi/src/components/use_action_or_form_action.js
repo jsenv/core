@@ -2,13 +2,13 @@ import { useLayoutEffect } from "preact/hooks";
 import { useActionStatus } from "../actions.js";
 import { useFormActionRef, useIsInsideForm } from "./form/use_form_status.js";
 import { useAction } from "./use_action.js";
-import { useActionReload } from "./use_action_reload.js";
+import { useExecuteAction } from "./use_execute_action.js";
 
 export const useActionOrFormAction = (elementRef, action) => {
   action = useAction(action);
   const isInsideForm = useIsInsideForm();
   const formActionRef = useFormActionRef();
-  const reload = useActionReload(elementRef);
+  const executeAction = useExecuteAction(elementRef);
   const actionStatus = useActionStatus(action);
 
   useLayoutEffect(() => {
@@ -21,11 +21,11 @@ export const useActionOrFormAction = (elementRef, action) => {
     }
     if (action) {
       return addEventListener(element, "execute", () => {
-        reload(action);
+        executeAction(action);
       });
     }
     return null;
-  }, [isInsideForm, action, reload]);
+  }, [isInsideForm, action, executeAction]);
 
   return [actionStatus];
 };
