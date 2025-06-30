@@ -1,25 +1,22 @@
-import { useRef, useState } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 const none = {};
-export const useNavState = (id, defaultValue) => {
+export const useNavState = (id, initialValue) => {
   const navStateRef = useRef(none);
   if (navStateRef.current === none) {
     const navEntryState = navigation.currentEntry.getState();
     navStateRef.current =
-      navEntryState && id ? navEntryState[id] : defaultValue;
+      navEntryState && id ? navEntryState[id] : initialValue;
   }
 
-  const [value, setValue] = useState(navStateRef.current);
-
   return [
-    value,
+    navStateRef.current,
     (value) => {
       const currentValue = navStateRef.current;
       if (typeof value === "function") {
         value = value(currentValue);
       }
       navStateRef.current = value;
-      setValue(value);
       if (id) {
         const currentState = navigation.currentEntry.getState() || {};
         if (value === undefined) {

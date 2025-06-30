@@ -472,7 +472,7 @@ export const createAction = (callback, rootOptions = {}) => {
       // ✅ CAS 1: Signal direct -> proxy
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
-          const newParams = newParamsOrSignal.value;
+          const newParams = newParamsOrSignal.peek();
 
           if (newParams === null || typeof newParams !== "object") {
             return newParams;
@@ -860,14 +860,14 @@ export const useActionStatus = (action) => {
     };
   }
   const {
-    paramsSignal,
+    // paramsSignal,
     loadingStateSignal,
     loadRequestedSignal,
     errorSignal,
     computedDataSignal,
   } = getActionPrivateProperties(action);
 
-  const params = paramsSignal.value;
+  // const params = paramsSignal.value;
   const loadRequested = loadRequestedSignal.value;
   const loadingState = loadingStateSignal.value;
   const error = errorSignal.value;
@@ -878,7 +878,7 @@ export const useActionStatus = (action) => {
   const data = computedDataSignal.value;
 
   return {
-    params,
+    // params,
     idle,
     error,
     aborted,

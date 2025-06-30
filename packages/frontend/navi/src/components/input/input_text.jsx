@@ -16,7 +16,7 @@ export const InputText = forwardRef(
       action,
       label,
       defaultValue = "",
-      value,
+      value: initialValue,
       constraints = [],
       cancelOnBlurInvalid,
       pendingEffect = "loading",
@@ -30,31 +30,30 @@ export const InputText = forwardRef(
   ) => {
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
-
-    useConstraints(innerRef, constraints);
-    const actionParamsSignal = useSignal(
-      value === undefined ? defaultValue : value,
-    );
-    const [{ pending }] = useActionOrFormAction(
-      innerRef,
-      action,
-      actionParamsSignal,
-    );
     useAutoFocus(innerRef, autoFocus, autoSelect);
+    useConstraints(innerRef, constraints);
 
+    const valueAtStart =
+      initialValue === undefined || initialValue === "" ? "" : initialValue;
     const [navStateValue, setNavStateValue] = useNavState(id);
     defaultValue = defaultValue || navStateValue;
+
+    const value = initialValue === undefined ? defaultValue : initialValue;
+
+    const valueSignal = useSignal(value);
+    const [actionStatus] = useActionOrFormAction(innerRef, action, valueSignal);
+    const { pending } = actionStatus;
 
     const input = (
       <input
         {...rest}
         ref={innerRef}
         type="text"
-        value={value === undefined ? defaultValue : value}
+        value={value}
         disabled={disabled || pending}
         onInput={(e) => {
           setNavStateValue(e.target.value);
-          actionParamsSignal.value = e.target.value;
+          valueSignal.value = e.target.value;
           onInput?.(e);
         }}
         data-request-execute-on-change={requestExecuteOnChange ? "" : undefined}
@@ -63,19 +62,14 @@ export const InputText = forwardRef(
           if (event.detail === "blur_invalid" && !cancelOnBlurInvalid) {
             return;
           }
-          innerRef.current.value =
-            value === undefined || value === "" ? "" : value;
+          innerRef.current.value = valueAtStart;
           if (oncancel) {
             oncancel(event);
           }
         }}
         // eslint-disable-next-line react/no-unknown-property
-        onactionstart={() => {
+        onactionend={() => {
           setNavStateValue(undefined);
-        }}
-        // eslint-disable-next-line react/no-unknown-property
-        onactionerror={(e) => {
-          setNavStateValue(e.target.value);
         }}
       />
     );

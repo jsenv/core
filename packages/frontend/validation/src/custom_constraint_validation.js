@@ -34,6 +34,8 @@ import {
 } from "./constraints/native_constraints.js";
 import { openValidationMessage } from "./validation_message.js";
 
+let debug = false;
+
 export const installCustomConstraintValidation = (element) => {
   const validationInterface = {
     uninstall: undefined,
@@ -65,7 +67,13 @@ export const installCustomConstraintValidation = (element) => {
     element.dispatchEvent(cancelEvent);
   };
 
-  const handleRequestExecute = (e, { target, requester }) => {
+  const handleRequestExecute = (e, { target, requester = target }) => {
+    if (debug) {
+      console.debug(
+        `execute requested after "${e.type}" on ${requester.tagName}`,
+      );
+    }
+
     for (const [key, customMessage] of customMessageMap) {
       if (customMessage.removeOnRequestExecute) {
         customMessageMap.delete(key);

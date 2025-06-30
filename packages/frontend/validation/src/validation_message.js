@@ -21,7 +21,7 @@ import { getBorderSizes, getScrollableParentSet } from "@jsenv/dom";
 export const openValidationMessage = (
   targetElement,
   innerHtml,
-  { level = "warning", onClose, debug = true } = {},
+  { level = "warning", onClose, debug = false } = {},
 ) => {
   let opened = true;
   const closeCallbackSet = new Set();
