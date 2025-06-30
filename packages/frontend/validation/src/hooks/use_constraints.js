@@ -1,13 +1,13 @@
 import { useLayoutEffect } from "preact/hooks";
-import { useInputCustomValidationRef } from "./use_input_custom_validation_ref.js";
+import { useCustomValidationRef } from "./use_custom_validation_ref.js";
 
 export const useConstraints = (elementRef, constraints) => {
-  const inputCustomValidationRef = useInputCustomValidationRef(elementRef);
+  const customValidationRef = useCustomValidationRef(elementRef);
   useLayoutEffect(() => {
-    const inputCustomValidation = inputCustomValidationRef.current;
+    const customValidation = customValidationRef.current;
     const cleanupCallbackSet = new Set();
     for (const constraint of constraints) {
-      const unregister = inputCustomValidation.registerConstraint(constraint);
+      const unregister = customValidation.registerConstraint(constraint);
       cleanupCallbackSet.add(unregister);
     }
     return () => {

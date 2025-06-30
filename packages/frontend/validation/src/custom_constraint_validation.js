@@ -34,7 +34,7 @@ import {
 } from "./constraints/native_constraints.js";
 import { openValidationMessage } from "./validation_message.js";
 
-export const installInputCustomValidation = (input) => {
+export const installCustomConstraintValidation = (element) => {
   const validationInterface = {
     uninstall: undefined,
     registerConstraint: undefined,
@@ -54,15 +54,15 @@ export const installInputCustomValidation = (input) => {
   }
 
   expose_as_input_node_property: {
-    input.__validationInterface__ = validationInterface;
+    element.__validationInterface__ = validationInterface;
     cleanupCallbackSet.add(() => {
-      delete input.__validationInterface__;
+      delete element.__validationInterface__;
     });
   }
 
   const dispatchCancelCustomEvent = (reason) => {
     const cancelEvent = new CustomEvent("cancel", { detail: reason });
-    input.dispatchEvent(cancelEvent);
+    element.dispatchEvent(cancelEvent);
   };
 
   const handleRequestSubmit = (e) => {
@@ -75,8 +75,8 @@ export const installInputCustomValidation = (input) => {
     // "requestsubmit" custom event exists to to a chance for code to remove custom messages
     // hence allowing form submission if nothing else prevents it
     const requestSubmitEvent = new CustomEvent("requestsubmit");
-    input.form.dispatchEvent(requestSubmitEvent);
-    input.dispatchEvent(requestSubmitEvent);
+    element.form.dispatchEvent(requestSubmitEvent);
+    element.dispatchEvent(requestSubmitEvent);
 
     if (!checkValidity()) {
       reportValidity();
@@ -85,8 +85,8 @@ export const installInputCustomValidation = (input) => {
   };
 
   let validationMessage;
-  const openInputValidationMessage = () => {
-    input.focus();
+  const openElementValidationMessage = () => {
+    element.focus();
     const closeOnCleanup = () => {
       validationMessage.close("cleanup");
     };
@@ -98,7 +98,7 @@ export const installInputCustomValidation = (input) => {
       message = lastFailedValidityInfo.message;
       level = lastFailedValidityInfo.level;
     }
-    validationMessage = openValidationMessage(input, message, {
+    validationMessage = openValidationMessage(element, message, {
       level,
       onClose: () => {
         cleanupCallbackSet.delete(closeOnCleanup);
@@ -133,7 +133,7 @@ export const installInputCustomValidation = (input) => {
     validityInfoMap.clear();
     lastFailedValidityInfo = null;
     for (const constraint of constraintSet) {
-      const constraintValidityInfo = constraint.check(input);
+      const constraintValidityInfo = constraint.check(element);
       if (constraintValidityInfo) {
         validityInfoMap.set(constraint, constraintValidityInfo);
         lastFailedValidityInfo = constraintValidityInfo;
@@ -157,7 +157,7 @@ export const installInputCustomValidation = (input) => {
       }
       return;
     }
-    openInputValidationMessage();
+    openElementValidationMessage();
     return;
   };
 
@@ -208,16 +208,16 @@ export const installInputCustomValidation = (input) => {
       }
       checkValidity();
     };
-    input.addEventListener("input", oninput);
+    element.addEventListener("input", oninput);
     cleanupCallbackSet.add(() => {
-      input.removeEventListener("input", oninput);
+      element.removeEventListener("input", oninput);
     });
   }
 
   report_on_enter_without_form: {
     const onkeydown = (e) => {
-      if (!input.form) {
-        // when input has a form it is handled by "report_on_form_request_submit_by_click_or_enter"
+      if (!element.form) {
+        // when element has a form it is handled by "report_on_form_request_submit_by_click_or_enter"
         return;
       }
       if (e.key === "Enter") {
@@ -227,25 +227,25 @@ export const installInputCustomValidation = (input) => {
         }
       }
     };
-    input.addEventListener("keydown", onkeydown);
+    element.addEventListener("keydown", onkeydown);
     cleanupCallbackSet.add(() => {
-      input.removeEventListener("keydown", onkeydown);
+      element.removeEventListener("keydown", onkeydown);
     });
   }
 
-  report_on_input_report_validity_call: {
-    const nativeReportValidity = input.reportValidity;
-    input.reportValidity = () => {
+  report_on_report_validity_call: {
+    const nativeReportValidity = element.reportValidity;
+    element.reportValidity = () => {
       reportValidity();
     };
     cleanupCallbackSet.add(() => {
-      input.reportValidity = nativeReportValidity;
+      element.reportValidity = nativeReportValidity;
     });
   }
 
   report_on_form_request_submit_call: {
     const onRequestSubmit = (form, e) => {
-      if (form !== input.form) {
+      if (form !== element.form) {
         return;
       }
       handleRequestSubmit(e);
@@ -265,11 +265,11 @@ export const installInputCustomValidation = (input) => {
       const target = e.target;
       const form = target.form;
       if (!form) {
-        // happens outside a form
+        // happens outside a <form>
         return;
       }
-      if (input.form !== form) {
-        // happens in an other form, or the input has no form
+      if (element.form !== form) {
+        // happens in an other <form>, or the input has no <form>
         return;
       }
       if (!willSubmitFormOnClick(target)) {
@@ -290,11 +290,11 @@ export const installInputCustomValidation = (input) => {
       const target = e.target;
       const form = target.form;
       if (!form) {
-        // happens outside a form
+        // happens outside a <form>
         return;
       }
-      if (input.form !== form) {
-        // happens in an other form, or the input has no form
+      if (element.form !== form) {
+        // happens in an other <form>, or the element has no <form>
         return;
       }
       if (willSubmitFormOnClick(target)) {
@@ -319,15 +319,15 @@ export const installInputCustomValidation = (input) => {
         }
       }
     };
-    input.addEventListener("keydown", onkeydown);
+    element.addEventListener("keydown", onkeydown);
     cleanupCallbackSet.add(() => {
-      input.removeEventListener("keydown", onkeydown);
+      element.removeEventListener("keydown", onkeydown);
     });
   }
 
   cancel_on_blur: {
     const onblur = () => {
-      if (input.value === "") {
+      if (element.value === "") {
         dispatchCancelCustomEvent("blur_empty");
         return;
       }
@@ -337,9 +337,9 @@ export const installInputCustomValidation = (input) => {
         return;
       }
     };
-    input.addEventListener("blur", onblur);
+    element.addEventListener("blur", onblur);
     cleanupCallbackSet.add(() => {
-      input.removeEventListener("blur", onblur);
+      element.removeEventListener("blur", onblur);
     });
   }
 

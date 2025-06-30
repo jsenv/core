@@ -1,4 +1,4 @@
-import { useConstraints } from "@jsenv/form";
+import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../actions.js";

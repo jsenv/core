@@ -24,7 +24,7 @@
     "/src/"
   ],
   "devDependencies": {
-    "@jsenv/form": "0.0.1",
+    "@jsenv/validation": "0.0.1",
     "@preact/signals": "2.2.0",
     "preact": "10.26.9"
   },

@@ -1,4 +1,4 @@
-import { useInputValidationMessage } from "@jsenv/form";
+import { useValidationMessage } from "@jsenv/validation";
 import { useCallback, useLayoutEffect, useState } from "preact/hooks";
 import { useResetErrorBoundary } from "./use_reset_error_boundary.js";
 
@@ -10,7 +10,7 @@ export const useActionReload = (
     errorValidationMessageOptions,
   } = {},
 ) => {
-  const [addErrorMessage, removeErrorMessage] = useInputValidationMessage(
+  const [addErrorMessage, removeErrorMessage] = useValidationMessage(
     innerRef,
     "action_error",
     errorTarget,

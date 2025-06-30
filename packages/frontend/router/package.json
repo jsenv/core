@@ -24,9 +24,9 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/form": "0.0.1",
     "@jsenv/url-pattern": "0.0.1",
-    "@jsenv/utils": "2.3.1"
+    "@jsenv/utils": "2.3.1",
+    "@jsenv/validation": "0.0.1"
   },
   "devDependencies": {
     "@jsenv/filesystem": "../filesystem",
