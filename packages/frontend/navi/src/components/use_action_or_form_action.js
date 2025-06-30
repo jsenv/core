@@ -4,8 +4,12 @@ import { useFormActionRef, useIsInsideForm } from "./form/use_form_status.js";
 import { useAction } from "./use_action.js";
 import { useExecuteAction } from "./use_execute_action.js";
 
-export const useActionOrFormAction = (elementRef, action) => {
-  action = useAction(action);
+export const useActionOrFormAction = (
+  elementRef,
+  action,
+  actionParamsSignal,
+) => {
+  action = useAction(action, actionParamsSignal);
   const isInsideForm = useIsInsideForm();
   const formActionRef = useFormActionRef();
   const executeAction = useExecuteAction(elementRef);
@@ -15,7 +19,7 @@ export const useActionOrFormAction = (elementRef, action) => {
     const element = elementRef.current;
     if (isInsideForm) {
       return element.form.addEventListener("execute", () => {
-        // <form> will user this action
+        // <form> will use this action
         formActionRef.current = action;
       });
     }

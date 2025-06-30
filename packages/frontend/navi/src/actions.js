@@ -850,7 +850,7 @@ export const createAction = (callback, rootOptions = {}) => {
 export const useActionStatus = (action) => {
   if (!action) {
     return {
-      params: {},
+      params: undefined,
       idle: true,
       error: null,
       aborted: false,
@@ -1003,7 +1003,11 @@ const createActionProxyFromSignal = (
 
       const previousTarget = actionTargetPreviousWeakRef?.deref(); // ✅ Dereference
       const params = paramsSignal.value;
-      if (params) {
+      if (params === undefined) {
+        actionTarget = null;
+        currentAction = actionRef;
+        currentActionPrivateProperties = getActionPrivateProperties(actionRef);
+      } else {
         actionTarget = actionRef.bindParams(params);
         if (previousTarget === actionTarget) {
           return;
@@ -1011,10 +1015,6 @@ const createActionProxyFromSignal = (
         currentAction = actionTarget;
         currentActionPrivateProperties =
           getActionPrivateProperties(actionTarget);
-      } else {
-        actionTarget = null;
-        currentAction = actionRef;
-        currentActionPrivateProperties = getActionPrivateProperties(actionRef);
       }
 
       if (isFirstEffect) {

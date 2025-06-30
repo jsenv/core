@@ -1,4 +1,5 @@
 import { useConstraints } from "@jsenv/validation";
+import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { LoaderBackground } from "../loader/loader_background.jsx";
@@ -31,7 +32,14 @@ export const InputText = forwardRef(
     useImperativeHandle(ref, () => innerRef.current);
 
     useConstraints(innerRef, constraints);
-    const [{ pending }] = useActionOrFormAction(innerRef, action);
+    const actionParamsSignal = useSignal(
+      value === undefined ? defaultValue : value,
+    );
+    const [{ pending }] = useActionOrFormAction(
+      innerRef,
+      action,
+      actionParamsSignal,
+    );
     useAutoFocus(innerRef, autoFocus, autoSelect);
 
     const [navStateValue, setNavStateValue] = useNavState(id);
@@ -46,6 +54,7 @@ export const InputText = forwardRef(
         disabled={disabled || pending}
         onInput={(e) => {
           setNavStateValue(e.target.value);
+          actionParamsSignal.value = e.target.value;
           onInput?.(e);
         }}
         data-request-execute-on-change={requestExecuteOnChange ? "" : undefined}

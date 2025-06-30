@@ -11,7 +11,6 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
         InputText,
@@ -42,19 +41,14 @@
 
       // eslint-disable-next-line no-unused-vars
       const OutsideForm = () => {
-        const [count, setCount] = useState(0);
-
         return (
           <div>
             <div>
               <InputText
                 requestExecuteOnChange
-                action={async () => {
-                  setTimeout(() => {
-                    setCount((count) => count + 1);
-                  }, 200);
-                  await new Promise((resolve) => setTimeout(resolve, 1_500));
-                  throw new Error(`test: ${count}`);
+                action={async (value) => {
+                  await new Promise((resolve) => setTimeout(resolve, 1_000));
+                  throw new Error(`test: ${value}`);
                 }}
               />
             </div>
@@ -64,19 +58,14 @@
 
       // eslint-disable-next-line no-unused-vars
       const InsideForm = () => {
-        const [count, setCount] = useState(0);
-
         return (
           <div>
             <Form>
               <InputText
                 requestExecuteOnChange
-                action={async () => {
-                  setTimeout(() => {
-                    setCount((count) => count + 1);
-                  }, 200);
+                action={async (value) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_500));
-                  throw new Error(`test: ${count}`);
+                  throw new Error(`test: ${value}`);
                 }}
               />
             </Form>
