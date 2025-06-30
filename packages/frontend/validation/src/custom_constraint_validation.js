@@ -34,7 +34,7 @@ import {
 } from "./constraints/native_constraints.js";
 import { openValidationMessage } from "./validation_message.js";
 
-let debug = false;
+let debug = true;
 
 export const installCustomConstraintValidation = (element) => {
   const validationInterface = {
@@ -69,9 +69,7 @@ export const installCustomConstraintValidation = (element) => {
 
   const handleRequestExecute = (e, { target, requester = target }) => {
     if (debug) {
-      console.debug(
-        `execute requested after "${e.type}" on ${requester.tagName}`,
-      );
+      console.debug(`execute requested after "${e.type}" on`, requester);
     }
 
     for (const [key, customMessage] of customMessageMap) {
@@ -282,12 +280,12 @@ export const installCustomConstraintValidation = (element) => {
       );
     };
 
-    const willSubmitFormOnClick = (element) => {
+    const clickAffectsForm = (element) => {
       return (
         element.type === "submit" ||
         element.type === "image" ||
-        element.type === "reset" ||
-        element.type === "button"
+        element.type === "button" ||
+        element.type === "reset"
       );
     };
 
@@ -312,8 +310,13 @@ export const installCustomConstraintValidation = (element) => {
           // happens in an other <form>, or the input has no <form>
           return;
         }
-        if (!willSubmitFormOnClick(target)) {
-          // click won't request submit
+        if (!clickAffectsForm(target)) {
+          // click would not affect the <form>
+          // just ignore it
+          return;
+        }
+        if (target.type === "reset") {
+          // let the browser native reset occur
           return;
         }
         handleRequestSubmit(e, {
@@ -350,7 +353,7 @@ export const installCustomConstraintValidation = (element) => {
           // happens in an other <form>, or the element has no <form>
           return;
         }
-        if (willSubmitFormOnClick(target)) {
+        if (clickAffectsForm(target)) {
           // we'll catch it in the click handler
           return;
         }
