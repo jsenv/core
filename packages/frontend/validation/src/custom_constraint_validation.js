@@ -73,7 +73,6 @@ export const installCustomConstraintValidation = (element) => {
     }
 
     const elementReceivingEvents = target.form ? target.form : target;
-
     for (const [key, customMessage] of customMessageMap) {
       if (customMessage.removeOnRequestExecute) {
         customMessageMap.delete(key);
@@ -83,23 +82,16 @@ export const installCustomConstraintValidation = (element) => {
       e.preventDefault();
       reportValidity();
       const executePreventedCustomEvent = new CustomEvent("executeprevented", {
-        detail: {
-          reasonEvent: e,
-          requester,
-          lastFailedValidityInfo,
-        },
+        detail: { reasonEvent: e, requester, lastFailedValidityInfo },
       });
       elementReceivingEvents.dispatchEvent(executePreventedCustomEvent);
       return;
     }
     // once we have validated the action can occur
     // we are dispatching a custom event that can be used
-    // to actually perform the action or to set form action before the submit event occurs
+    // to actually perform the action or to set form action
     const executeCustomEvent = new CustomEvent("execute", {
-      detail: {
-        reasonEvent: e,
-        requester,
-      },
+      detail: { reasonEvent: e, requester },
     });
     if (debug) {
       console.debug(`execute dispatched after on`, elementReceivingEvents);
@@ -107,7 +99,6 @@ export const installCustomConstraintValidation = (element) => {
     elementReceivingEvents.dispatchEvent(executeCustomEvent);
   };
   const handleRequestSubmit = (e, { submitter } = {}) => {
-    e.preventDefault(); // prevent "submit" event
     handleRequestExecute(e, {
       target: element.form,
       requester: submitter,
@@ -259,6 +250,11 @@ export const installCustomConstraintValidation = (element) => {
       if (form !== element.form) {
         return;
       }
+
+      // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
+      // (not super important because our <form> listen the "execute" and do does preventDefault on "submit")
+      e.preventDefault();
+
       handleRequestSubmit(e);
     };
     requestSubmitCallbackSet.add(onRequestSubmit);
@@ -343,6 +339,10 @@ export const installCustomConstraintValidation = (element) => {
         }
         const effect = findEventTargetOrAncestor(e, getElementEffect, form);
         if (effect === "submit") {
+          // prevent "submit" event that would be dispatched by the browser after "click"
+          // (not super important because our <form> listen the "execute" and do does preventDefault on "submit")
+          e.preventDefault();
+
           handleRequestSubmit(e, {
             submitter: target,
           });
