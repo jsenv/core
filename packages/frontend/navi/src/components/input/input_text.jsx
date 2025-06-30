@@ -36,7 +36,7 @@ export const InputText = forwardRef(
     const valueAtStart =
       initialValue === undefined || initialValue === "" ? "" : initialValue;
     const [navStateValue, setNavStateValue] = useNavState(id);
-    defaultValue = defaultValue || navStateValue;
+    defaultValue = navStateValue === undefined ? defaultValue : navStateValue;
 
     const value = initialValue === undefined ? defaultValue : initialValue;
 
