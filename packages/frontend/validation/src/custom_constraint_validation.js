@@ -366,7 +366,7 @@ export const installCustomConstraintValidation = (element) => {
         return;
       }
       handleRequestExecute(changeEvent, {
-        target: element,
+        target: element.form ? element.form : element,
         requester: element,
       });
     };
