@@ -15,6 +15,7 @@
 
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useOnExecute } from "../use_action_or_form_action.js";
 import { useActionReload } from "../use_action_reload.js";
 import { FormContext } from "./use_form_status.js";
 
@@ -64,6 +65,55 @@ export const Form = forwardRef(
     const formActionRef = useRef();
     const executingRef = useRef(false);
 
+    // It's important to use useOnExecute which uses useLayoutEffect
+    // to register the event listener so that
+    // ```js
+    // formActionRef.current = action;
+    // ```
+    // is executed first (code declared in use_action_or_form_action#L19 )
+    useOnExecute(innerRef, async () => {
+      if (executingRef.current) {
+        /**
+         * Without this check, when user types in <input> then hit enter 2 http requests are sent
+         * - First one is correct
+         * - Second one is sent without any value
+         *
+         * This happens because in the following html structure
+         * <form>
+         *   <input name="value" type="text" onChange={() => form.requestSubmit()} />
+         * </form>
+         * The following happens after hitting "enter" key:
+         * 1. Browser trigger "change" event, form is submitted, an http request is sent
+         * 2. We do input.disabled = true;
+         * 3. Browser trigger "submit" event
+         * 4. new FormData(form).get("value") is empty because input.disabled is true
+         * -> We end up with the faulty http request that we don't want
+         */
+        return;
+      }
+      executingRef.current = true;
+      const formAction = formActionRef.current || action;
+      formStatusSetter({
+        pending: true,
+        aborted: false,
+        error: null,
+        method,
+        action: formAction,
+      });
+      const { aborted, error } = await reload(formAction);
+      formActionRef.current = null;
+      setTimeout(() => {
+        executingRef.current = false;
+      }, 0);
+      formStatusSetter({
+        pending: false,
+        aborted,
+        error,
+        method,
+        action: formAction,
+      });
+    });
+
     return (
       <form
         {...rest}
@@ -72,49 +122,6 @@ export const Form = forwardRef(
         data-method={method}
         onSubmit={(submitEvent) => {
           submitEvent.preventDefault();
-        }}
-        // eslint-disable-next-line react/no-unknown-property
-        onexecute={async () => {
-          if (executingRef.current) {
-            /**
-             * Without this check, when user types in <input> then hit enter 2 http requests are sent
-             * - First one is correct
-             * - Second one is sent without any value
-             *
-             * This happens because in the following html structure
-             * <form>
-             *   <input name="value" type="text" onChange={() => form.requestSubmit()} />
-             * </form>
-             * The following happens after hitting "enter" key:
-             * 1. Browser trigger "change" event, form is submitted, an http request is sent
-             * 2. We do input.disabled = true;
-             * 3. Browser trigger "submit" event
-             * 4. new FormData(form).get("value") is empty because input.disabled is true
-             * -> We end up with the faulty http request that we don't want
-             */
-            return;
-          }
-          executingRef.current = true;
-          const formAction = formActionRef.current || action;
-          formStatusSetter({
-            pending: true,
-            aborted: false,
-            error: null,
-            method,
-            action: formAction,
-          });
-          const { aborted, error } = await reload(formAction);
-          formActionRef.current = null;
-          setTimeout(() => {
-            executingRef.current = false;
-          }, 0);
-          formStatusSetter({
-            pending: false,
-            aborted,
-            error,
-            method,
-            action: formAction,
-          });
         }}
       >
         <FormContext.Provider value={[formStatus, formActionRef]}>

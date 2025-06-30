@@ -13,21 +13,34 @@ export const useActionOrFormAction = (elementRef, action) => {
 
   useLayoutEffect(() => {
     const element = elementRef.current;
-    const onexecute = () => {
-      if (isInsideForm) {
-        // if the request goes through, the <form> will be submitted with this action
+    if (isInsideForm) {
+      return element.form.addEventListener("execute", () => {
+        // <form> will user this action
         formActionRef.current = action;
-      } else if (action) {
-        // if the request goes through, the action is reloaded
+      });
+    }
+    if (action) {
+      return addEventListener(element, "execute", () => {
         reload(action);
-      }
-    };
-
-    element.addEventListener("execute", onexecute);
-    return () => {
-      element.removeEventListener("execute", onexecute);
-    };
-  }, [action, reload]);
+      });
+    }
+    return null;
+  }, [isInsideForm, action, reload]);
 
   return [actionStatus];
+};
+
+export const useOnExecute = (elementRef, callback) => {
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+
+    return addEventListener(element, "execute", callback);
+  }, [callback]);
+};
+
+const addEventListener = (element, eventName, listener) => {
+  element.addEventListener(eventName, listener);
+  return () => {
+    element.removeEventListener(eventName, listener);
+  };
 };
