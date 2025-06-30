@@ -13,17 +13,10 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { useInputValidationMessage } from "@jsenv/form";
 import { forwardRef } from "preact/compat";
-import {
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
-import { createAction } from "../../actions.js";
+import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useActionReload } from "../use_action_reload.js";
 import { FormContext } from "./use_form_status.js";
-import { useResetErrorBoundary } from "./use_reset_error_boundary.js";
 
 const submit = HTMLFormElement.prototype.submit;
 HTMLFormElement.prototype.submit = function (...args) {
@@ -38,60 +31,38 @@ HTMLFormElement.prototype.submit = function (...args) {
 export const Form = forwardRef(
   (
     {
-      action: formAction,
+      action,
       method = "get",
       errorEffect = "show_validation_message", // "show_validation_message" or "throw"
       errorTarget,
-      formDataMappings,
       children,
       ...rest
     },
     ref,
   ) => {
+    method = method.toLowerCase();
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
-    const [addFormErrorMessage, removeFormErrorMessage] =
-      useInputValidationMessage(innerRef, "form_error", errorTarget, {
-        // This error should not prevent from submission
+    const reload = useActionReload(innerRef, {
+      errorEffect,
+      errorTarget,
+      errorValidationMessageOptions: {
+        // This error should not prevent <form> submission
         // so whenever user tries to submit the form the error is cleared
         // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
         removeOnRequestSubmit: true,
-      });
-
-    // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
-    // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
-    // To change if https://github.com/preactjs/preact/issues/4754 lands
-    const [error, setError] = useState(null);
-    const resetErrorBoundary = useResetErrorBoundary();
-    useLayoutEffect(() => {
-      if (error) {
-        error.__handled__ = true; // prevent jsenv from displaying it
-        throw error;
-      }
-    }, [error]);
-
-    method = method.toLowerCase();
-
+      },
+    });
     const [formStatus, formStatusSetter] = useState({
       pending: false,
       aborted: false,
       error: null,
       method,
-      action: formAction,
+      action,
     });
     const formActionRef = useRef();
     const submittingRef = useRef(false);
-
-    const dispatchCustomEventOnFormAndFormElements = (type, options) => {
-      const form = innerRef.current;
-      const customEvent = new CustomEvent(type, options);
-      // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
-      for (const element of form.elements) {
-        element.dispatchEvent(customEvent);
-      }
-      form.dispatchEvent(customEvent);
-    };
 
     return (
       <form
@@ -119,43 +90,19 @@ export const Form = forwardRef(
             return;
           }
           submittingRef.current = true;
-          if (resetErrorBoundary) {
-            resetErrorBoundary();
-          }
-          removeFormErrorMessage();
-          setError(null);
-          let action = formActionRef.current || formAction;
-          if (typeof action === "function") {
-            action = createAction(action);
-          }
-
+          const formAction = formActionRef.current || action;
           formStatusSetter({
             pending: true,
             aborted: false,
             error: null,
             method,
-            action,
+            action: formAction,
           });
-          const formData = new FormData(submitEvent.currentTarget);
-          if (formDataMappings) {
-            for (const [key, mapping] of Object.entries(formDataMappings)) {
-              const value = formData.get(key);
-              if (value) {
-                const valueMapped = mapping(value);
-                formData.set(key, valueMapped);
-              }
-            }
-          }
-          dispatchCustomEventOnFormAndFormElements("actionstart");
-          const actionParams = {}; // build it with formData
-          const actionWithParams = action.bindParams(actionParams);
-          const { aborted, error } =
-            await applyActionOnFormSubmission(actionWithParams);
-
+          const { aborted, error } = await reload(formAction);
+          formActionRef.current = null;
           setTimeout(() => {
             submittingRef.current = false;
           }, 0);
-          formActionRef.current = null;
           formStatusSetter({
             pending: false,
             aborted,
@@ -163,26 +110,6 @@ export const Form = forwardRef(
             method,
             action: formAction,
           });
-          if (error) {
-            if (
-              // at this stage the action side effect might have remove the <form> from the DOM
-              innerRef.current
-            ) {
-              dispatchCustomEventOnFormAndFormElements("actionerror", {
-                detail: { error },
-              });
-            }
-            if (errorEffect === "show_validation_message") {
-              addFormErrorMessage(error);
-            } else {
-              setError(error);
-            }
-          } else if (
-            // at this stage the action side effect might have remove the <form> from the DOM
-            innerRef.current
-          ) {
-            dispatchCustomEventOnFormAndFormElements("actionend");
-          }
         }}
         method={method === "get" ? "get" : "post"}
         data-method={method}
@@ -195,57 +122,22 @@ export const Form = forwardRef(
   },
 );
 
-const applyActionOnFormSubmission = async (action) => {
-  try {
-    await action.reload();
-    const aborted = action.aborted;
-    const error = action.error;
-    return { aborted, error };
-  } catch (e) {
-    if (e.name === "AbortError") {
-      return { aborted: true, error: null };
-    }
-    console.error(e);
-    return { aborted: false, error: e };
-  }
-};
-
-// const applyActionOnFormSubmission = canUseNavigation
-//   ? async ({ method, formData, action }) => {
-//       // const error = action.errorSignal.peek();
-//       // const aborted = action.executionStateSignal.peek() === ABORTED;
-
-//       // hum comment faire pour que chaque form ait son propre action status
-//       // qui hérite du status de l'action qu'il s'apprete a call?
-//       // je pense qu'il faut fork l'action
-//       // sinon ça marche pas
-
-//       // mais on veut potentiellement que l'action soit partagée entre plusieurs form
-//       // et dans ce cas qu'on sache qu'une action d'un coté mette en pending in autre coté
-
-//       try {
-//         let actionResult;
-//         await navigation.navigate(window.location.href, {
-//           state: navigation.currentEntry.getState(), // action must preserve the current state of the page
-//           history: "replace",
-//           info: {
-//             method,
-//             formAction: action,
-//             formActionCallback: (result) => {
-//               actionResult = result;
-//             },
-//             formData,
-//           },
-//         }).finished;
-//         return actionResult;
-//       } catch (e) {
-//         if (e.name === "AbortError") {
-//           return { aborted: true, error: null };
-//         }
-//         console.error(e);
-//         return { aborted: false, error: e };
-//       }
+// const formData = new FormData(submitEvent.currentTarget);
+// if (formDataMappings) {
+//   for (const [key, mapping] of Object.entries(formDataMappings)) {
+//     const value = formData.get(key);
+//     if (value) {
+//       const valueMapped = mapping(value);
+//       formData.set(key, valueMapped);
 //     }
-//   : () => {
-//       // TODO
-//     };
+//   }
+// }
+// const dispatchCustomEventOnFormAndFormElements = (type, options) => {
+//   const form = innerRef.current;
+//   const customEvent = new CustomEvent(type, options);
+//   // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
+//   for (const element of form.elements) {
+//     element.dispatchEvent(customEvent);
+//   }
+//   form.dispatchEvent(customEvent);
+// };

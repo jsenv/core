@@ -848,10 +848,17 @@ export const createAction = (callback, rootOptions = {}) => {
 };
 
 export const useActionStatus = (action) => {
-  if (typeof action === "function") {
-    action = createAction(action);
+  if (!action) {
+    return {
+      params: {},
+      idle: true,
+      error: null,
+      aborted: false,
+      pending: false,
+      preloaded: false,
+      data: undefined,
+    };
   }
-
   const {
     paramsSignal,
     loadingStateSignal,
