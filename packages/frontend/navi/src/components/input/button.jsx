@@ -26,7 +26,7 @@ export const Button = forwardRef(
         ref={innerRef}
         data-validation-message-arrow-x="center"
         {...rest}
-        disabled={pending || disabled}
+        disabled={disabled || pending}
       >
         {children}
       </button>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SPA Input text demo</title>
+    <title>Input text demo</title>
   </head>
   <body>
     <div id="root" style="position: relative"></div>
@@ -21,28 +21,63 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const [count, setCount] = useState(0);
-
         return (
           <div style="display: flex; flex-direction: row; gap: 30px">
             <div>
               <p>
-                <strong>Error</strong>
+                <strong>Outside form</strong>
               </p>
-              <Form>
-                <InputText
-                  autocomplete="off"
-                  name="test"
-                  formMethod="put"
-                  action={() => {
-                    setCount((count) => count + 1);
-                    throw new Error(`test: ${count}`);
-                  }}
-                  label="Test"
-                  style="color: blue"
-                ></InputText>
-              </Form>
+              <OutsideForm />
             </div>
+
+            <div>
+              <p>
+                <strong>Inside form</strong>
+              </p>
+              <InsideForm />
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const OutsideForm = () => {
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <div>
+              <InputText
+                action={async () => {
+                  setTimeout(() => {
+                    setCount((count) => count + 1);
+                  }, 200);
+                  await new Promise((resolve) => setTimeout(resolve, 1_500));
+                  throw new Error(`test: ${count}`);
+                }}
+              />
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InsideForm = () => {
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <Form>
+              <InputText
+                action={async () => {
+                  setTimeout(() => {
+                    setCount((count) => count + 1);
+                  }, 200);
+                  await new Promise((resolve) => setTimeout(resolve, 1_500));
+                  throw new Error(`test: ${count}`);
+                }}
+              />
+            </Form>
           </div>
         );
       };

@@ -13,9 +13,7 @@ export const InputText = forwardRef(
       id,
       autoFocus,
       autoSelect,
-      required,
       action,
-      name,
       label,
       defaultValue = "",
       value,
@@ -35,14 +33,13 @@ export const InputText = forwardRef(
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
 
+    useConstraints(innerRef, constraints);
     const [{ pending }] = useActionOrFormAction(innerRef, action);
-
     useAutoFocus(innerRef, autoFocus, autoSelect);
     useRequestSubmitOnChange(innerRef, {
       requestSubmitOnChange,
       preventWhenValueMissing: true,
     });
-    useConstraints(innerRef, constraints);
 
     const [navStateValue, setNavStateValue] = useNavState(id);
     defaultValue = defaultValue || navStateValue;
@@ -52,10 +49,8 @@ export const InputText = forwardRef(
         {...rest}
         ref={innerRef}
         type="text"
-        name={name}
         value={value === undefined ? defaultValue : value}
         disabled={disabled || pending}
-        required={required}
         onInput={(e) => {
           setNavStateValue(e.target.value);
           onInput?.(e);

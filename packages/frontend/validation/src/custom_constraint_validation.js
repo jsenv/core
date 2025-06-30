@@ -249,15 +249,7 @@ export const installCustomConstraintValidation = (element) => {
   }
 
   request_by_click_or_enter: {
-    const willSubmitFormOnClick = (element) => {
-      return (
-        element.type === "submit" ||
-        element.type === "image" ||
-        element.type === "reset" ||
-        element.type === "button"
-      );
-    };
-    const willTriggerClickOnEnter = (element) => {
+    const clickHasAnEffect = (element) => {
       return (
         // Input buttons
         (element.tagName === "INPUT" &&
@@ -274,6 +266,15 @@ export const installCustomConstraintValidation = (element) => {
       );
     };
 
+    const willSubmitFormOnClick = (element) => {
+      return (
+        element.type === "submit" ||
+        element.type === "image" ||
+        element.type === "reset" ||
+        element.type === "button"
+      );
+    };
+
     by_click: {
       const onClick = (e) => {
         const target = e.target;
@@ -281,6 +282,9 @@ export const installCustomConstraintValidation = (element) => {
         if (!form) {
           // happens outside a <form>
           if (element === target || element.contains(target)) {
+            if (!clickHasAnEffect(target)) {
+              return;
+            }
             handleRequestExecute(e, {
               target: element,
               requester: target,
@@ -315,7 +319,7 @@ export const installCustomConstraintValidation = (element) => {
         const form = target.form;
         if (!form) {
           // happens outside a <form>
-          if (willTriggerClickOnEnter(target)) {
+          if (clickHasAnEffect(target)) {
             return;
           }
           if (element === target || element.contains(target)) {
