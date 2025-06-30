@@ -72,6 +72,8 @@ export const installCustomConstraintValidation = (element) => {
       console.debug(`execute requested after "${e.type}" on`, requester);
     }
 
+    const elementReceivingEvents = target.form ? target.form : target;
+
     for (const [key, customMessage] of customMessageMap) {
       if (customMessage.removeOnRequestExecute) {
         customMessageMap.delete(key);
@@ -87,7 +89,7 @@ export const installCustomConstraintValidation = (element) => {
           lastFailedValidityInfo,
         },
       });
-      target.dispatchEvent(executePreventedCustomEvent);
+      elementReceivingEvents.dispatchEvent(executePreventedCustomEvent);
       return;
     }
     // once we have validated the action can occur
@@ -99,7 +101,10 @@ export const installCustomConstraintValidation = (element) => {
         requester,
       },
     });
-    target.dispatchEvent(executeCustomEvent);
+    if (debug) {
+      console.debug(`execute dispatched after on`, elementReceivingEvents);
+    }
+    elementReceivingEvents.dispatchEvent(executeCustomEvent);
   };
   const handleRequestSubmit = (e, { submitter } = {}) => {
     e.preventDefault(); // prevent "submit" event
@@ -381,6 +386,7 @@ export const installCustomConstraintValidation = (element) => {
             target: element,
             submitter: target,
           });
+          return;
         }
         // "submit", "reset", null
       };
@@ -400,7 +406,7 @@ export const installCustomConstraintValidation = (element) => {
         return;
       }
       handleRequestExecute(changeEvent, {
-        target: element.form ? element.form : element,
+        target: element,
         requester: element,
       });
     };
