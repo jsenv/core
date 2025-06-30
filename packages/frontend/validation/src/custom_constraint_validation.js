@@ -73,12 +73,7 @@ export const installCustomConstraintValidation = (element) => {
     }
 
     const elementReceivingEvents = target.form ? target.form : target;
-    for (const [key, customMessage] of customMessageMap) {
-      if (customMessage.removeOnRequestExecute) {
-        customMessageMap.delete(key);
-      }
-    }
-    if (!checkValidity()) {
+    if (!checkValidity({ isExecuteRequest: true })) {
       e.preventDefault();
       reportValidity();
       const executePreventedCustomEvent = new CustomEvent("executeprevented", {
@@ -98,11 +93,72 @@ export const installCustomConstraintValidation = (element) => {
     }
     elementReceivingEvents.dispatchEvent(executeCustomEvent);
   };
+
+  const formValidationInProgress = new WeakSet();
+
   const handleRequestSubmit = (e, { submitter } = {}) => {
-    handleRequestExecute(e, {
-      target: element.form,
-      requester: submitter,
+    const form = element.form;
+    if (formValidationInProgress.has(form)) {
+      return;
+    }
+    formValidationInProgress.add(form);
+
+    if (debug) {
+      console.debug(`form validation requested by`, submitter);
+    }
+
+    // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
+    let allValid = true;
+    let firstInvalidElement = null;
+    const validationErrors = [];
+    for (const formElement of form.elements) {
+      const validationInterface = formElement.__validationInterface__;
+      if (!validationInterface) {
+        continue;
+      }
+      // Utiliser l'interface de validation personnalisée
+      const isValid = validationInterface.checkValidity({
+        isExecuteRequest: true,
+      });
+      if (!isValid) {
+        if (!firstInvalidElement) {
+          firstInvalidElement = formElement;
+        }
+        validationInterface.reportValidity();
+        // TODO: collect the error?
+      }
+    }
+
+    // ✅ Nettoyer le flag de validation
+    formValidationInProgress.delete(form);
+
+    if (!allValid) {
+      // ✅ Focus sur le premier élément invalide
+      if (firstInvalidElement) {
+        firstInvalidElement.focus();
+      }
+
+      // ✅ Dispatcher un événement avec TOUTES les erreurs
+      const executePreventedCustomEvent = new CustomEvent("executeprevented", {
+        detail: {
+          reasonEvent: e,
+          submitter,
+          validationErrors,
+          firstInvalidElement,
+        },
+      });
+      form.dispatchEvent(executePreventedCustomEvent);
+      return;
+    }
+
+    // ✅ Tout est valide - dispatcher execute
+    const executeCustomEvent = new CustomEvent("execute", {
+      detail: { reasonEvent: e, submitter },
     });
+    if (debug) {
+      console.debug(`execute dispatched on form after validation success`);
+    }
+    form.dispatchEvent(executeCustomEvent);
   };
 
   let validationMessage;
@@ -150,7 +206,15 @@ export const installCustomConstraintValidation = (element) => {
 
   let lastFailedValidityInfo = null;
   const validityInfoMap = new Map();
-  const checkValidity = () => {
+  const checkValidity = ({ isExecuteRequest } = {}) => {
+    if (isExecuteRequest && lastFailedValidityInfo) {
+      for (const [key, customMessage] of customMessageMap) {
+        if (customMessage.removeOnRequestExecute) {
+          customMessageMap.delete(key);
+        }
+      }
+    }
+
     validityInfoMap.clear();
     lastFailedValidityInfo = null;
     for (const constraint of constraintSet) {
