@@ -1,47 +1,30 @@
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
-import { useActionStatus } from "../../actions.js";
-import { useFormActionRef, useIsInsideForm } from "../form/use_form_status.js";
-import { useAction } from "../use_action.js";
-import { useActionReload } from "../use_action_reload.js";
+import { useActionOrFormAction } from "../use_action_or_form_action.js";
 
 export const Button = forwardRef(
   ({ action, children, disabled, confirmMessage, onClick, ...rest }, ref) => {
-    action = useAction(action);
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
-    const isInsideForm = useIsInsideForm();
-    const formActionRef = useFormActionRef();
-    const { pending } = useActionStatus(action);
-    const reload = useActionReload(innerRef);
+
+    const [{ pending }, performAction] = useActionOrFormAction(
+      innerRef,
+      action,
+      confirmMessage,
+    );
 
     return (
       <button
         ref={innerRef}
+        data-validation-message-arrow-x="center"
         {...rest}
+        disabled={pending || disabled}
         onClick={async (clickEvent) => {
           if (onClick) {
             onClick(clickEvent);
           }
-          if (confirmMessage) {
-            // eslint-disable-next-line no-alert
-            const confirmResult = window.confirm(confirmMessage);
-            if (!confirmResult) {
-              clickEvent.preventDefault();
-              return;
-            }
-          }
-          if (isInsideForm) {
-            formActionRef.current = action;
-            // let the form handle the submit
-            return;
-          }
-          if (action) {
-            // perform the action
-            await reload(action);
-          }
+          performAction(clickEvent);
         }}
-        disabled={pending || disabled}
       >
         {children}
       </button>
