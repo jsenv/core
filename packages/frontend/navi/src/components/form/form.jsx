@@ -22,8 +22,8 @@ import {
   useState,
 } from "preact/hooks";
 import { createAction } from "../../actions.js";
+import { FormContext } from "./use_form_status.js";
 import { useResetErrorBoundary } from "./use_reset_error_boundary.js";
-import { SPAFormContext } from "./use_spa_form_status.js";
 
 const submit = HTMLFormElement.prototype.submit;
 HTMLFormElement.prototype.submit = function (...args) {
@@ -35,7 +35,7 @@ HTMLFormElement.prototype.submit = function (...args) {
   return submit.apply(this, args);
 };
 
-export const SPAForm = forwardRef(
+export const Form = forwardRef(
   (
     {
       action: formAction,
@@ -187,9 +187,9 @@ export const SPAForm = forwardRef(
         method={method === "get" ? "get" : "post"}
         data-method={method}
       >
-        <SPAFormContext.Provider value={[formStatus, formActionRef]}>
+        <FormContext.Provider value={[formStatus, formActionRef]}>
           {children}
-        </SPAFormContext.Provider>
+        </FormContext.Provider>
       </form>
     );
   },

@@ -2,7 +2,7 @@ import { useConstraints } from "@jsenv/form";
 import { forwardRef } from "preact/compat";
 import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../actions.js";
-import { SPAFormContext } from "../form/use_spa_form_status.js";
+import { FormContext } from "../form/use_form_status.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
@@ -17,12 +17,15 @@ export const InputText = forwardRef(
       required,
       action,
       name,
+      label,
       defaultValue = "",
       value,
       constraints = [],
-      requestSubmitOnChange,
       cancelOnBlurInvalid,
-      formPendingEffect,
+      formMethod,
+      form = Boolean(formMethod),
+      formPendingEffect = "loading",
+      requestSubmitOnChange = form,
       oncancel,
       disabled,
       onInput,
@@ -30,11 +33,17 @@ export const InputText = forwardRef(
     },
     ref,
   ) => {
+    if (import.meta.dev && !name && form) {
+      console.warn(
+        "InputText: name is required for the input to work property with <form> submission.",
+      );
+    }
+
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
-    const SPAFormContextValue = useContext(SPAFormContext);
-    if (!action && SPAFormContextValue) {
-      action = SPAFormContextValue[0].action;
+    const formContextValue = useContext(FormContext);
+    if (!action && formContextValue) {
+      action = formContextValue[0].action;
     }
     const { pending } = useActionStatus(action);
     useAutoFocus(innerRef, autoFocus, autoSelect);
@@ -62,8 +71,8 @@ export const InputText = forwardRef(
         }}
         // eslint-disable-next-line react/no-unknown-property
         onrequestsubmit={() => {
-          if (SPAFormContextValue) {
-            SPAFormContextValue[1].current = action;
+          if (formContextValue) {
+            formContextValue[1].current = action;
           }
         }}
         // eslint-disable-next-line react/no-unknown-property
@@ -87,9 +96,21 @@ export const InputText = forwardRef(
         }}
       />
     );
+
+    const inputWithLabel = label ? (
+      <label>
+        {label}
+        {input}
+      </label>
+    ) : (
+      input
+    );
+
     if (formPendingEffect === "loading") {
-      return <LoaderBackground pending={pending}>{input}</LoaderBackground>;
+      return (
+        <LoaderBackground pending={pending}>{inputWithLabel}</LoaderBackground>
+      );
     }
-    return input;
+    return inputWithLabel;
   },
 );

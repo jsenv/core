@@ -11,4 +11,6 @@ export {
 } from "./src/actions.js";
 export { resource } from "./src/resource_graph.js";
 
-export { SPAInputText } from "./src/components/input/spa_input_text.jsx";
+export { Form } from "./src/components/form/form.jsx";
+export { useFormStatus } from "./src/components/form/use_form_status.js";
+export { InputText } from "./src/components/input/input_text.jsx";
