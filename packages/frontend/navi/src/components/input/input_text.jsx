@@ -1,8 +1,8 @@
 import { useConstraints } from "@jsenv/form";
 import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useRef } from "preact/hooks";
+import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../actions.js";
-import { FormContext } from "../form/use_form_status.js";
+import { useFormActionRef, useFormStatus } from "../form/use_form_status.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
@@ -33,7 +33,13 @@ export const InputText = forwardRef(
     },
     ref,
   ) => {
-    if (import.meta.dev && !name && form) {
+    const formStatus = useFormStatus();
+    const formActionRef = useFormActionRef();
+    if (!action) {
+      action = formStatus.action;
+    }
+    const { pending } = useActionStatus(action);
+    if (import.meta.dev && !name && formStatus.method) {
       console.warn(
         "InputText: name is required for the input to work property with <form> submission.",
       );
@@ -41,11 +47,6 @@ export const InputText = forwardRef(
 
     const innerRef = useRef(null);
     useImperativeHandle(ref, () => innerRef.current);
-    const formContextValue = useContext(FormContext);
-    if (!action && formContextValue) {
-      action = formContextValue[0].action;
-    }
-    const { pending } = useActionStatus(action);
     useAutoFocus(innerRef, autoFocus, autoSelect);
     useRequestSubmitOnChange(innerRef, {
       requestSubmitOnChange,
@@ -71,9 +72,7 @@ export const InputText = forwardRef(
         }}
         // eslint-disable-next-line react/no-unknown-property
         onrequestsubmit={() => {
-          if (formContextValue) {
-            formContextValue[1].current = action;
-          }
+          formActionRef.current = action;
         }}
         // eslint-disable-next-line react/no-unknown-property
         oncancel={(event) => {

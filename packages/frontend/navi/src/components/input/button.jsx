@@ -1,16 +1,18 @@
 import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useRef } from "preact/hooks";
-import { SPAFormContext } from "../form/use_spa_form_status.js";
+import { useImperativeHandle, useRef } from "preact/hooks";
+import { useActionStatus } from "../../actions.js";
+import { useFormActionRef, useFormStatus } from "../form/use_form_status.js";
 
 export const Button = forwardRef(
   ({ action, children, disabled, onClick, ...rest }, ref) => {
-    const innerRef = useRef();
-    const SPAFormContextValue = useContext(SPAFormContext);
-    const formStatus = SPAFormContextValue
-      ? SPAFormContextValue[0]
-      : { pending: false };
-    if (SPAFormContextValue) {
+    const formStatus = useFormStatus();
+    const formActionRef = useFormActionRef();
+    if (!action) {
+      action = formStatus.action;
     }
+    const { pending } = useActionStatus(action);
+
+    const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
     return (
@@ -18,14 +20,12 @@ export const Button = forwardRef(
         ref={innerRef}
         {...rest}
         onClick={(clickEvent) => {
-          if (SPAFormContextValue) {
-            SPAFormContextValue[1].current = action;
-          }
+          formActionRef.current = action;
           if (onClick) {
             onClick(clickEvent);
           }
         }}
-        disabled={formStatus.pending || disabled}
+        disabled={pending || disabled}
       >
         {children}
       </button>
