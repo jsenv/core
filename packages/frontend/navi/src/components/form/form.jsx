@@ -36,6 +36,8 @@ export const Form = forwardRef(
       action,
       method = "get",
       errorEffect = "show_validation_message", // "show_validation_message" or "throw"
+      onExecute,
+      onExecutePrevented,
       children,
       ...rest
     },
@@ -84,6 +86,13 @@ export const Form = forwardRef(
         return;
       }
       executingRef.current = true;
+      let resolveResultPromise;
+      if (onExecute) {
+        const resultPromise = new Promise((resolve) => {
+          resolveResultPromise = resolve;
+        });
+        onExecute({ resultPromise });
+      }
       const formAction = formActionRef.current || action;
       formStatusSetter({
         pending: true,
@@ -107,6 +116,9 @@ export const Form = forwardRef(
         method,
         action: formAction,
       });
+      if (resolveResultPromise) {
+        resolveResultPromise({ aborted, error });
+      }
     });
 
     return (
@@ -117,6 +129,10 @@ export const Form = forwardRef(
         data-method={method}
         onSubmit={(submitEvent) => {
           submitEvent.preventDefault();
+        }}
+        // eslint-disable-next-line react/no-unknown-property
+        onexecuteprevented={(executePreventedEvent) => {
+          onExecutePrevented?.(executePreventedEvent);
         }}
       >
         <FormContext.Provider value={[formStatus, formActionRef]}>

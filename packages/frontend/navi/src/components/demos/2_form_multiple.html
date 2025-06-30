@@ -72,20 +72,16 @@
         const [submitStatus, setSubmitStatus] = useState(null);
         const [validationErrors, setValidationErrors] = useState([]);
 
-        const handleFormExecute = async (event) => {
-          console.log("🎯 Form execute event:", event);
-          setSubmitStatus("success");
+        const handleFormExecute = async ({ resultPromise }) => {
+          console.log("🎯 Form execute event");
+          setSubmitStatus("executing...");
           setValidationErrors([]);
-
-          // Simuler une soumission réussie
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          setSubmitStatus(
-            "Form submitted successfully! All validations passed.",
-          );
+          await resultPromise;
+          setSubmitStatus("Form submitted successfully!");
         };
 
-        const handleFormCancel = (event) => {
-          console.log("❌ Form cancel event:", event);
+        const handleFormExecutePrevented = (event) => {
+          console.log("❌ Form execute prevented event:", event);
           const reason = event.detail;
 
           if (reason === "validation_failed") {
@@ -130,7 +126,7 @@
 
             <Form
               onExecute={handleFormExecute}
-              onCancel={handleFormCancel}
+              onExecutePrevented={handleFormExecutePrevented}
               action={() => {}}
             >
               {/* ✅ Champ requis */}
@@ -198,15 +194,7 @@
               {/* ✅ Bouton de soumission */}
               <div className="field">
                 <button type="submit">Valider le formulaire</button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSubmitStatus(null);
-                    setValidationErrors([]);
-                  }}
-                >
-                  Reset Status
-                </button>
+                <button type="reset">Reset Status</button>
               </div>
             </Form>
 
