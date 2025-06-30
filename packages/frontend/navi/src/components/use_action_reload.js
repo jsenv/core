@@ -35,7 +35,7 @@ export const useActionReload = (
     element.dispatchEvent(customEvent);
   };
 
-  const reloadAction = useCallback(async (action) => {
+  const reloadAction = useCallback((action) => {
     if (resetErrorBoundary) {
       resetErrorBoundary();
     }
@@ -45,48 +45,68 @@ export const useActionReload = (
     dispatchCustomEvent("actionstart", {
       bubbles: true,
     });
-    const { aborted, error } = await performAction(action);
-    if (error) {
-      if (
-        // at this stage the action side effect might have remove the <form> from the DOM
-        innerRef.current
-      ) {
-        dispatchCustomEvent("actionerror", {
-          bubbles: true,
-          detail: { error },
-        });
-      }
-      if (errorEffect === "show_validation_message") {
-        addErrorMessage(error);
-      } else {
-        setError(error);
-      }
-    } else if (
-      // at this stage the action side effect might have remove the <element> from the DOM
-      innerRef.current
-    ) {
-      dispatchCustomEvent("actionend", {
-        bubbles: true,
-      });
-    }
-    return { aborted, error };
+    const result = performAction(action, {
+      onError: (error) => {
+        if (
+          // at this stage the action side effect might have remove the <form> from the DOM
+          innerRef.current
+        ) {
+          dispatchCustomEvent("actionerror", {
+            bubbles: true,
+            detail: { error },
+          });
+        }
+        if (errorEffect === "show_validation_message") {
+          addErrorMessage(error);
+        } else {
+          setError(error);
+        }
+      },
+      onSuccess: () => {
+        if (
+          // at this stage the action side effect might have remove the <element> from the DOM
+          innerRef.current
+        ) {
+          dispatchCustomEvent("actionend", {
+            bubbles: true,
+          });
+        }
+      },
+    });
+    return result;
   }, []);
 
   return reloadAction;
 };
 
-const performAction = async (action) => {
-  try {
-    await action.reload();
+const performAction = (action, { onError, onSuccess }) => {
+  const onSettled = () => {
     const aborted = action.aborted;
     const error = action.error;
+    return onResult({ aborted, error });
+  };
+
+  const onResult = ({ aborted, error }) => {
+    if (error) {
+      onError(error);
+    } else {
+      onSuccess();
+    }
     return { aborted, error };
+  };
+
+  try {
+    const result = action.reload();
+    if (result && typeof result.then === "function") {
+      return result.then(onSettled, onSettled);
+    }
+    return onSettled();
   } catch (e) {
     if (e.name === "AbortError") {
-      return { aborted: true, error: null };
+      return onResult({ aborted: true, error: null });
     }
     console.error(e);
-    return { aborted: false, error: e };
+    return onResult({ aborted: false, error: e });
   }
 };
 // const applyActionOnFormSubmission = canUseNavigation
