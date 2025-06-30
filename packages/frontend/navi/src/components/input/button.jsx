@@ -11,7 +11,6 @@ export const Button = forwardRef(
       action = formStatus.action;
     }
     const { pending } = useActionStatus(action);
-
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
@@ -35,7 +34,7 @@ export const Button = forwardRef(
             onClick(clickEvent);
           }
         }}
-        disabled={pending || disabled}
+        disabled={pending || formStatus.pending || disabled}
       >
         {children}
       </button>

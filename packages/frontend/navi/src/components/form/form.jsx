@@ -147,7 +147,7 @@ export const Form = forwardRef(
             }
           }
           dispatchCustomEventOnFormAndFormElements("actionstart");
-          const actionParams = {}; // build it from formData
+          const actionParams = {}; // build it with formData
           const actionWithParams = action.bindParams(actionParams);
           const { aborted, error } =
             await applyActionOnFormSubmission(actionWithParams);
