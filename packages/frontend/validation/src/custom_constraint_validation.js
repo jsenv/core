@@ -36,6 +36,8 @@ import { openValidationMessage } from "./validation_message.js";
 
 let debug = true;
 
+const formValidationInProgressWeakSet = new WeakSet();
+
 export const installCustomConstraintValidation = (element) => {
   const validationInterface = {
     uninstall: undefined,
@@ -96,72 +98,45 @@ export const installCustomConstraintValidation = (element) => {
     elementReceivingEvents.dispatchEvent(executeCustomEvent);
   };
 
-  const formValidationInProgress = new WeakSet();
-
   const handleRequestSubmit = (e, { submitter } = {}) => {
     const form = element.form;
-    if (formValidationInProgress.has(form)) {
+    if (formValidationInProgressWeakSet.has(form)) {
       if (debug) {
         console.debug(`form validation already in progress for`, form);
       }
       return;
     }
-    formValidationInProgress.add(form);
+    formValidationInProgressWeakSet.add(form);
+    setTimeout(() => {
+      formValidationInProgressWeakSet.delete(form);
+    });
 
     if (debug) {
       console.debug(`form validation requested by`, submitter);
     }
-
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
-    let allValid = true;
-    let firstInvalidElement = null;
-    let activeElementIsInvalid = false;
-    const validationErrors = [];
     for (const formElement of form.elements) {
       const validationInterface = formElement.__validationInterface__;
       if (!validationInterface) {
         continue;
       }
-      // Utiliser l'interface de validation personnalisée
       const isValid = validationInterface.checkValidity({
         isExecuteRequest: true,
       });
       if (isValid) {
         continue;
       }
-      if (document.activeElement === formElement) {
-        activeElementIsInvalid = true;
-      }
-      allValid = false;
-      if (!firstInvalidElement) {
-        firstInvalidElement = formElement;
-      }
-      validationInterface.reportValidity({ skipFocus: true });
-      // TODO: collect the error?
-    }
-
-    // ✅ Nettoyer le flag de validation
-    formValidationInProgress.delete(form);
-
-    if (!allValid) {
-      if (!activeElementIsInvalid) {
-        firstInvalidElement.focus();
-      }
-
-      // ✅ Dispatcher un événement avec TOUTES les erreurs
+      validationInterface.reportValidity();
       const executePreventedCustomEvent = new CustomEvent("executeprevented", {
         detail: {
           reasonEvent: e,
           submitter,
-          validationErrors,
-          firstInvalidElement,
         },
       });
       form.dispatchEvent(executePreventedCustomEvent);
       return;
     }
 
-    // ✅ Tout est valide - dispatcher execute
     const executeCustomEvent = new CustomEvent("execute", {
       detail: { reasonEvent: e, submitter },
     });

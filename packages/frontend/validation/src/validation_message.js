@@ -103,23 +103,22 @@ export const openValidationMessage = (
   }
   close_on_target_blur: {
     // for multiple elements this hides element too quickly
-    break close_on_target_blur;
-    // const onblur = () => {
-    //   if (targetElement.hasAttribute("data-validation-message-stay-on-blur")) {
-    //     return;
-    //   }
-    //   close("target_element_blur");
-    // };
-    // // we use setTimeout in case the validation message is opened during a "change" event
-    // // (that will likely be followed by a "blur")
-    // // otherwise the message is opened and immediately closed
-    // const timeout = setTimeout(() => {
-    //   targetElement.addEventListener("blur", onblur);
-    // });
-    // closeCallbackSet.add(() => {
-    //   clearTimeout(timeout);
-    //   targetElement.removeEventListener("blur", onblur);
-    // });
+    const onblur = () => {
+      if (targetElement.hasAttribute("data-validation-message-stay-on-blur")) {
+        return;
+      }
+      close("target_element_blur");
+    };
+    // we use setTimeout in case the validation message is opened during a "change" event
+    // (that will likely be followed by a "blur")
+    // otherwise the message is opened and immediately closed
+    const timeout = setTimeout(() => {
+      targetElement.addEventListener("blur", onblur);
+    });
+    closeCallbackSet.add(() => {
+      clearTimeout(timeout);
+      targetElement.removeEventListener("blur", onblur);
+    });
   }
 
   close_click_outside: {
