@@ -101,7 +101,7 @@ export const installCustomConstraintValidation = (element) => {
     });
     target.dispatchEvent(executeCustomEvent);
   };
-  const handleRequestSubmit = (e, { submitter }) => {
+  const handleRequestSubmit = (e, { submitter } = {}) => {
     e.preventDefault(); // prevent "submit" event
     handleRequestExecute(e, {
       target: element.form,
@@ -254,7 +254,7 @@ export const installCustomConstraintValidation = (element) => {
       if (form !== element.form) {
         return;
       }
-      handleRequestSubmit(e, { submitter: null });
+      handleRequestSubmit(e);
     };
     requestSubmitCallbackSet.add(onRequestSubmit);
     cleanupCallbackSet.add(() => {
@@ -263,30 +263,49 @@ export const installCustomConstraintValidation = (element) => {
   }
 
   request_by_click_or_enter: {
-    const clickHasAnEffect = (element) => {
-      return (
-        // Input buttons
-        (element.tagName === "INPUT" &&
-          (element.type === "submit" ||
-            element.type === "image" ||
-            element.type === "reset" ||
-            element.type === "button")) ||
-        // Button elements
-        element.tagName === "BUTTON" ||
-        // Links with href
-        (element.tagName === "A" && element.href) ||
-        // ARIA buttons
-        element.role === "button"
+    const findEventTargetOrAncestor = (event, predicate, rootElement) => {
+      const target = event.target;
+      const result = predicate(target);
+      if (result) {
+        return result;
+      }
+      let parentElement = target.parentElement;
+      while (parentElement && parentElement !== rootElement) {
+        const parentResult = predicate(parentElement);
+        if (parentResult) {
+          return parentResult;
+        }
+        parentElement = parentElement.parentElement;
+      }
+      return null;
+    };
+    const formHasSubmitButton = (form) => {
+      return form.querySelector(
+        "button[type='submit'], input[type='submit'], input[type='image']",
       );
     };
-
-    const clickAffectsForm = (element) => {
-      return (
-        element.type === "submit" ||
-        element.type === "image" ||
-        element.type === "button" ||
-        element.type === "reset"
-      );
+    const getElementEffect = (element) => {
+      const isButton =
+        element.tagName === "BUTTON" || element.role === "button";
+      if (element.tagName === "INPUT" || isButton) {
+        if (element.type === "submit" || element.type === "image") {
+          return "submit";
+        }
+        if (element.type === "reset") {
+          return "reset";
+        }
+        if (isButton || element.type === "button") {
+          const form = element.form;
+          if (!form) {
+            return "activate";
+          }
+          if (formHasSubmitButton(form)) {
+            return "activate";
+          }
+          return "submit";
+        }
+      }
+      return null;
     };
 
     by_click: {
@@ -295,40 +314,41 @@ export const installCustomConstraintValidation = (element) => {
         const form = target.form;
         if (!form) {
           // happens outside a <form>
-          if (element === target || element.contains(target)) {
-            if (!clickHasAnEffect(target)) {
-              return;
-            }
+          if (target !== element && !element.contains(target)) {
+            // happens outside this element
+            return;
+          }
+          const effect = findEventTargetOrAncestor(
+            e,
+            getElementEffect,
+            element,
+          );
+          if (effect === "activate") {
             handleRequestExecute(e, {
               target: element,
               requester: target,
             });
           }
+          // "reset", null
           return;
         }
         if (element.form !== form) {
           // happens in an other <form>, or the input has no <form>
           return;
         }
-        if (!clickAffectsForm(target)) {
-          // click would not affect the <form>
-          // just ignore it
-          return;
+        const effect = findEventTargetOrAncestor(e, getElementEffect, form);
+        if (effect === "submit") {
+          handleRequestSubmit(e, {
+            submitter: target,
+          });
         }
-        if (target.type === "reset") {
-          // let the browser native reset occur
-          return;
-        }
-        handleRequestSubmit(e, {
-          submitter: target,
-        });
+        // "activate", "reset", null
       };
       window.addEventListener("click", onClick, { capture: true });
       cleanupCallbackSet.add(() => {
         window.removeEventListener("click", onClick, { capture: true });
       });
     }
-
     by_enter: {
       const onKeydown = (e) => {
         if (e.key !== "Enter") {
@@ -338,10 +358,12 @@ export const installCustomConstraintValidation = (element) => {
         const form = target.form;
         if (!form) {
           // happens outside a <form>
-          if (clickHasAnEffect(target)) {
+          if (target !== element && !element.contains(target)) {
+            // happens outside this element
             return;
           }
-          if (element === target || element.contains(target)) {
+          const effect = findEventTargetOrAncestor(e, getElementEffect, form);
+          if (effect === "activate") {
             handleRequestExecute(e, {
               target: element,
               requester: target,
@@ -353,13 +375,14 @@ export const installCustomConstraintValidation = (element) => {
           // happens in an other <form>, or the element has no <form>
           return;
         }
-        if (clickAffectsForm(target)) {
-          // we'll catch it in the click handler
-          return;
+        const effect = findEventTargetOrAncestor(e, getElementEffect, form);
+        if (effect === "activate") {
+          handleRequestExecute(e, {
+            target: element,
+            submitter: target,
+          });
         }
-        handleRequestSubmit(e, {
-          submitter: target,
-        });
+        // "submit", "reset", null
       };
       window.addEventListener("keydown", onKeydown, { capture: true });
       cleanupCallbackSet.add(() => {
@@ -368,7 +391,7 @@ export const installCustomConstraintValidation = (element) => {
     }
   }
 
-  request_on_change: {
+  request_on_change_according_to_data_attribute: {
     const onchange = (changeEvent) => {
       if (!element.hasAttribute("data-request-execute-on-change")) {
         return;
