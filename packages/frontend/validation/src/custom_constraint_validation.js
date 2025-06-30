@@ -82,6 +82,14 @@ export const installCustomConstraintValidation = (element) => {
     if (!checkValidity()) {
       e.preventDefault();
       reportValidity();
+      const executePreventedCustomEvent = new CustomEvent("executeprevented", {
+        detail: {
+          reasonEvent: e,
+          requester,
+          lastFailedValidityInfo,
+        },
+      });
+      target.dispatchEvent(executePreventedCustomEvent);
       return;
     }
     // once we have validated the action can occur

@@ -15,6 +15,7 @@
 
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useAction } from "../use_action.js";
 import { useOnExecute } from "../use_action_or_form_action.js";
 import { useExecuteAction } from "../use_execute_action.js";
 import { FormContext } from "./use_form_status.js";
@@ -44,6 +45,7 @@ export const Form = forwardRef(
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
+    action = useAction(action);
     const executeAction = useExecuteAction(innerRef, { errorEffect });
     const [formStatus, formStatusSetter] = useState({
       pending: false,
