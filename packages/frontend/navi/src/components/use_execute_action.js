@@ -1,23 +1,13 @@
-import { useValidationMessage } from "@jsenv/validation";
+import { addCustomMessage, removeCustomMessage } from "@jsenv/validation";
 import { useCallback, useLayoutEffect, useState } from "preact/hooks";
 import { useResetErrorBoundary } from "./use_reset_error_boundary.js";
 
 export const useExecuteAction = (
-  innerRef,
+  elementRef,
   {
     errorEffect = "show_validation_message", // "show_validation_message" or "throw"
-    errorTarget,
   } = {},
 ) => {
-  const [addErrorMessage, removeErrorMessage] = useValidationMessage(
-    innerRef,
-    "action_error",
-    errorTarget,
-    {
-      removeOnRequestExecute: true,
-    },
-  );
-
   // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
   // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
   // To change if https://github.com/preactjs/preact/issues/4754 lands
@@ -30,27 +20,38 @@ export const useExecuteAction = (
     }
   }, [error]);
 
-  const dispatchCustomEvent = (type, options) => {
-    const element = innerRef.current;
-    const customEvent = new CustomEvent(type, options);
-    element.dispatchEvent(customEvent);
-  };
+  const executeAction = useCallback((action, requester) => {
+    const dispatchCustomEvent = (type, options) => {
+      const element = elementRef.current;
+      const customEvent = new CustomEvent(type, options);
+      element.dispatchEvent(customEvent);
+    };
 
-  const executeAction = useCallback((action) => {
+    const validationMessageTarget = requester || elementRef.current;
+    const addErrorMessage = (error) => {
+      addCustomMessage(validationMessageTarget, "action_error", error, {
+        // This error should not prevent <form> submission
+        // so whenever user tries to submit the form the error is cleared
+        // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
+        removeOnRequestExecute: true,
+      });
+    };
+    const removeErrorMessage = () => {
+      removeCustomMessage(validationMessageTarget, "action_error");
+    };
+
     if (resetErrorBoundary) {
       resetErrorBoundary();
     }
     removeErrorMessage();
     setError(null);
 
-    dispatchCustomEvent("actionstart", {
-      bubbles: true,
-    });
+    dispatchCustomEvent("actionstart", { bubbles: true });
     const result = performAction(action, {
       onError: (error) => {
         if (
-          // at this stage the action side effect might have remove the <form> from the DOM
-          innerRef.current
+          // at this stage the action side effect might have remove the <element> from the DOM
+          elementRef.current
         ) {
           dispatchCustomEvent("actionerror", {
             bubbles: true,
@@ -66,11 +67,9 @@ export const useExecuteAction = (
       onSuccess: () => {
         if (
           // at this stage the action side effect might have remove the <element> from the DOM
-          innerRef.current
+          elementRef.current
         ) {
-          dispatchCustomEvent("actionend", {
-            bubbles: true,
-          });
+          dispatchCustomEvent("actionend", { bubbles: true });
         }
       },
     });

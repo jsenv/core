@@ -35,7 +35,6 @@ export const Form = forwardRef(
       action,
       method = "get",
       errorEffect = "show_validation_message", // "show_validation_message" or "throw"
-      errorTarget,
       children,
       ...rest
     },
@@ -45,16 +44,7 @@ export const Form = forwardRef(
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
-    const executeAction = useExecuteAction(innerRef, {
-      errorEffect,
-      errorTarget,
-      errorValidationMessageOptions: {
-        // This error should not prevent <form> submission
-        // so whenever user tries to submit the form the error is cleared
-        // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
-        removeOnRequestSubmit: true,
-      },
-    });
+    const executeAction = useExecuteAction(innerRef, { errorEffect });
     const [formStatus, formStatusSetter] = useState({
       pending: false,
       aborted: false,
@@ -71,7 +61,7 @@ export const Form = forwardRef(
     // formActionRef.current = action;
     // ```
     // is executed first (code declared in use_action_or_form_action#L19 )
-    useOnExecute(innerRef, async () => {
+    useOnExecute(innerRef, async (executeEvent) => {
       if (executingRef.current) {
         /**
          * Without this check, when user types in <input> then hit enter 2 http requests are sent
@@ -100,7 +90,10 @@ export const Form = forwardRef(
         method,
         action: formAction,
       });
-      const { aborted, error } = await executeAction(formAction);
+      const { aborted, error } = await executeAction(
+        formAction,
+        executeEvent.detail.requester,
+      );
       formActionRef.current = null;
       setTimeout(() => {
         executingRef.current = false;

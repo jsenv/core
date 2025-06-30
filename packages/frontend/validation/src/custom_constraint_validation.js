@@ -65,7 +65,7 @@ export const installCustomConstraintValidation = (element) => {
     element.dispatchEvent(cancelEvent);
   };
 
-  const handleRequestExecute = (e, target) => {
+  const handleRequestExecute = (e, { target, requester }) => {
     for (const [key, customMessage] of customMessageMap) {
       if (customMessage.removeOnRequestExecute) {
         customMessageMap.delete(key);
@@ -82,13 +82,17 @@ export const installCustomConstraintValidation = (element) => {
     const executeCustomEvent = new CustomEvent("execute", {
       detail: {
         reasonEvent: e,
+        requester,
       },
     });
     target.dispatchEvent(executeCustomEvent);
   };
-  const handleRequestSubmit = (e) => {
+  const handleRequestSubmit = (e, { submitter }) => {
     e.preventDefault(); // prevent "submit" event
-    handleRequestExecute(e, element.form);
+    handleRequestExecute(e, {
+      target: element.form,
+      requester: submitter,
+    });
   };
 
   let validationMessage;
@@ -236,7 +240,7 @@ export const installCustomConstraintValidation = (element) => {
       if (form !== element.form) {
         return;
       }
-      handleRequestSubmit(e);
+      handleRequestSubmit(e, { submitter: null });
     };
     requestSubmitCallbackSet.add(onRequestSubmit);
     cleanupCallbackSet.add(() => {
@@ -277,7 +281,10 @@ export const installCustomConstraintValidation = (element) => {
         if (!form) {
           // happens outside a <form>
           if (element === target || element.contains(target)) {
-            handleRequestExecute(e, element);
+            handleRequestExecute(e, {
+              target: element,
+              requester: target,
+            });
           }
           return;
         }
@@ -289,7 +296,9 @@ export const installCustomConstraintValidation = (element) => {
           // click won't request submit
           return;
         }
-        handleRequestSubmit(e);
+        handleRequestSubmit(e, {
+          submitter: target,
+        });
       };
       window.addEventListener("click", onClick, { capture: true });
       cleanupCallbackSet.add(() => {
@@ -310,7 +319,10 @@ export const installCustomConstraintValidation = (element) => {
             return;
           }
           if (element === target || element.contains(target)) {
-            handleRequestExecute(e, element);
+            handleRequestExecute(e, {
+              target: element,
+              requester: target,
+            });
           }
           return;
         }
@@ -322,7 +334,9 @@ export const installCustomConstraintValidation = (element) => {
           // we'll catch it in the click handler
           return;
         }
-        handleRequestSubmit(e);
+        handleRequestSubmit(e, {
+          submitter: target,
+        });
       };
       window.addEventListener("keydown", onKeydown, { capture: true });
       cleanupCallbackSet.add(() => {

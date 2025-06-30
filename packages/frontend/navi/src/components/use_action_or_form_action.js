@@ -33,7 +33,6 @@ export const useActionOrFormAction = (elementRef, action) => {
 export const useOnExecute = (elementRef, callback) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
-
     return addEventListener(element, "execute", callback);
   }, [callback]);
 };
