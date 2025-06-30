@@ -5,7 +5,6 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionOrFormAction } from "../use_action_or_form_action.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
-import { useRequestSubmitOnChange } from "../user_request_submit_on_change.js";
 
 export const InputText = forwardRef(
   (
@@ -19,10 +18,8 @@ export const InputText = forwardRef(
       value,
       constraints = [],
       cancelOnBlurInvalid,
-      formMethod,
-      form = Boolean(formMethod),
-      formPendingEffect = "loading",
-      requestSubmitOnChange = form,
+      pendingEffect = "loading",
+      requestExecuteOnChange,
       oncancel,
       disabled,
       onInput,
@@ -36,10 +33,6 @@ export const InputText = forwardRef(
     useConstraints(innerRef, constraints);
     const [{ pending }] = useActionOrFormAction(innerRef, action);
     useAutoFocus(innerRef, autoFocus, autoSelect);
-    useRequestSubmitOnChange(innerRef, {
-      requestSubmitOnChange,
-      preventWhenValueMissing: true,
-    });
 
     const [navStateValue, setNavStateValue] = useNavState(id);
     defaultValue = defaultValue || navStateValue;
@@ -55,6 +48,7 @@ export const InputText = forwardRef(
           setNavStateValue(e.target.value);
           onInput?.(e);
         }}
+        data-request-execute-on-change={requestExecuteOnChange ? "" : undefined}
         // eslint-disable-next-line react/no-unknown-property
         oncancel={(event) => {
           if (event.detail === "blur_invalid" && !cancelOnBlurInvalid) {
@@ -86,7 +80,7 @@ export const InputText = forwardRef(
       input
     );
 
-    if (formPendingEffect === "loading") {
+    if (pendingEffect === "loading") {
       return (
         <LoaderBackground pending={pending}>{inputWithLabel}</LoaderBackground>
       );

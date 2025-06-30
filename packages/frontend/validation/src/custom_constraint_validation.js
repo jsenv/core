@@ -349,6 +349,25 @@ export const installCustomConstraintValidation = (element) => {
     }
   }
 
+  request_on_change: {
+    const onchange = (changeEvent) => {
+      if (!element.hasAttribute("data-request-execute-on-change")) {
+        return;
+      }
+      if (element.validity?.valueMissing) {
+        return;
+      }
+      handleRequestExecute(changeEvent, {
+        target: element,
+        requester: element,
+      });
+    };
+    element.addEventListener("change", onchange);
+    cleanupCallbackSet.add(() => {
+      element.removeEventListener("change", onchange);
+    });
+  }
+
   close_on_escape: {
     const onkeydown = (e) => {
       if (e.key === "Escape") {
