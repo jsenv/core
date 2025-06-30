@@ -4,7 +4,7 @@ import { useActionStatus } from "../../actions.js";
 import { useFormActionRef, useFormStatus } from "../form/use_form_status.js";
 
 export const Button = forwardRef(
-  ({ action, children, disabled, onClick, ...rest }, ref) => {
+  ({ action, children, disabled, confirmMessage, onClick, ...rest }, ref) => {
     const formStatus = useFormStatus();
     const formActionRef = useFormActionRef();
     if (!action) {
@@ -20,7 +20,17 @@ export const Button = forwardRef(
         ref={innerRef}
         {...rest}
         onClick={(clickEvent) => {
+          if (confirmMessage) {
+            // eslint-disable-next-line no-alert
+            const confirmResult = window.confirm(confirmMessage);
+            if (!confirmResult) {
+              clickEvent.preventDefault();
+              return;
+            }
+          }
+
           formActionRef.current = action;
+
           if (onClick) {
             onClick(clickEvent);
           }

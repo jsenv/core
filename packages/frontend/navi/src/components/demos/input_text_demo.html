@@ -33,6 +33,7 @@
                 <InputText
                   autocomplete="off"
                   name="test"
+                  formMethod="put"
                   action={() => {
                     setCount((count) => count + 1);
                     throw new Error(`test: ${count}`);

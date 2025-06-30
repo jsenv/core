@@ -13,4 +13,5 @@ export { resource } from "./src/resource_graph.js";
 
 export { Form } from "./src/components/form/form.jsx";
 export { useFormStatus } from "./src/components/form/use_form_status.js";
+export { Button } from "./src/components/input/button.jsx";
 export { InputText } from "./src/components/input/input_text.jsx";
