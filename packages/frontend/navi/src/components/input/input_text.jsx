@@ -49,7 +49,7 @@ export const InputText = forwardRef(
         {...rest}
         ref={innerRef}
         type="text"
-        value={value}
+        value={valueSignal.value}
         disabled={disabled || pending}
         onInput={(e) => {
           setNavStateValue(e.target.value);

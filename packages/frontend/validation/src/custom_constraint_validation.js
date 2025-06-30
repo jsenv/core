@@ -370,9 +370,9 @@ export const installCustomConstraintValidation = (element) => {
         requester: element,
       });
     };
-    element.addEventListener("change", onchange);
+    const removeChange = addEventListener(element, "change", onchange);
     cleanupCallbackSet.add(() => {
-      element.removeEventListener("change", onchange);
+      removeChange();
     });
   }
 
@@ -429,4 +429,11 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
     return;
   }
   requestSubmit.call(this, submitter);
+};
+
+const addEventListener = (element, event, callback) => {
+  element.addEventListener(event, callback);
+  return () => {
+    element.removeEventListener(event, callback);
+  };
 };

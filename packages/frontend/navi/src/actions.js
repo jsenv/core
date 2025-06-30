@@ -472,7 +472,7 @@ export const createAction = (callback, rootOptions = {}) => {
       // ✅ CAS 1: Signal direct -> proxy
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
-          const newParams = newParamsOrSignal.peek();
+          const newParams = newParamsOrSignal.value;
 
           if (newParams === null || typeof newParams !== "object") {
             return newParams;
@@ -891,7 +891,7 @@ export const useActionStatus = (action) => {
 const createActionProxyFromSignal = (
   action,
   paramsSignal,
-  { reloadOnChange = true, onChange } = {},
+  { reloadOnChange = false, onChange } = {},
 ) => {
   const actionTargetChangeCallbackSet = new Set();
   const onActionTargetChange = (callback) => {
