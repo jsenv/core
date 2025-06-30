@@ -1,3 +1,4 @@
+export { CONFIRM_CONSTRAINT } from "./constraints/confirm_constraint.js";
 export { createUniqueValueConstraint } from "./constraints/create_unique_value_constraint.js";
 export { SINGLE_SPACE_CONSTRAINT } from "./constraints/single_space_constraint.js";
 export { installCustomConstraintValidation } from "./custom_constraint_validation.js";

@@ -53,7 +53,7 @@ export const installCustomConstraintValidation = (element) => {
     validationInterface.uninstall = uninstall;
   }
 
-  expose_as_input_node_property: {
+  expose_as_node_property: {
     element.__validationInterface__ = validationInterface;
     cleanupCallbackSet.add(() => {
       delete element.__validationInterface__;
@@ -65,23 +65,41 @@ export const installCustomConstraintValidation = (element) => {
     element.dispatchEvent(cancelEvent);
   };
 
+  const dispatchEventRequest = (eventCausingRequest, eventRequested) => {
+    // "requestsubmit" custom event exists to to a chance for code to remove custom messages
+    // hence allowing form submission if nothing else prevents it
+    const requestEvent = new CustomEvent("event_request", {
+      detail: {
+        eventCausingRequest,
+        eventRequested,
+        effect: null,
+      },
+    });
+    if (eventRequested === "submit") {
+      element.form.dispatchEvent(requestEvent);
+    }
+    element.dispatchEvent(requestEvent);
+    if (requestEvent.defaultPrevented) {
+      eventCausingRequest.preventDefault();
+    }
+    if (checkValidity()) {
+      requestEvent.detail.effect?.();
+      return true;
+    }
+    reportValidity();
+    return false;
+  };
+
+  const handleRequestAction = (e) => {
+    dispatchEventRequest(e, "action");
+  };
   const handleRequestSubmit = (e) => {
     for (const [key, customMessage] of customMessageMap) {
       if (customMessage.removeOnRequestSubmit) {
         customMessageMap.delete(key);
       }
     }
-
-    // "requestsubmit" custom event exists to to a chance for code to remove custom messages
-    // hence allowing form submission if nothing else prevents it
-    const requestSubmitEvent = new CustomEvent("requestsubmit");
-    element.form.dispatchEvent(requestSubmitEvent);
-    element.dispatchEvent(requestSubmitEvent);
-
-    if (!checkValidity()) {
-      reportValidity();
-      e.preventDefault();
-    }
+    dispatchEventRequest(e, "submit");
   };
 
   let validationMessage;
@@ -214,25 +232,6 @@ export const installCustomConstraintValidation = (element) => {
     });
   }
 
-  report_on_enter_without_form: {
-    const onkeydown = (e) => {
-      if (!element.form) {
-        // when element has a form it is handled by "report_on_form_request_submit_by_click_or_enter"
-        return;
-      }
-      if (e.key === "Enter") {
-        if (!checkValidity()) {
-          reportValidity();
-          // no need to e.preventDefault(), enter on input without form has no specific behavior
-        }
-      }
-    };
-    element.addEventListener("keydown", onkeydown);
-    cleanupCallbackSet.add(() => {
-      element.removeEventListener("keydown", onkeydown);
-    });
-  }
-
   report_on_report_validity_call: {
     const nativeReportValidity = element.reportValidity;
     element.reportValidity = () => {
@@ -243,7 +242,7 @@ export const installCustomConstraintValidation = (element) => {
     });
   }
 
-  report_on_form_request_submit_call: {
+  request_by_form_request_submit_call: {
     const onRequestSubmit = (form, e) => {
       if (form !== element.form) {
         return;
@@ -256,7 +255,7 @@ export const installCustomConstraintValidation = (element) => {
     });
   }
 
-  report_on_form_request_submit_by_click_or_enter: {
+  request_by_click_or_enter: {
     const willSubmitFormOnClick = (element) => {
       return element.type === "submit" || element.type === "image";
     };
@@ -265,6 +264,7 @@ export const installCustomConstraintValidation = (element) => {
       const target = e.target;
       const form = target.form;
       if (!form) {
+        handleRequestAction(e, "click");
         // happens outside a <form>
         return;
       }
@@ -291,6 +291,7 @@ export const installCustomConstraintValidation = (element) => {
       const form = target.form;
       if (!form) {
         // happens outside a <form>
+        handleRequestAction(e, "enter");
         return;
       }
       if (element.form !== form) {
