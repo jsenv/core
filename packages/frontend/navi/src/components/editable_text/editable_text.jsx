@@ -5,7 +5,8 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { SPAInputText } from "./spa_input_text.jsx";
+import { Form } from "../form/form.jsx";
+import { InputText } from "../input/input_text.jsx";
 
 export const useEditableController = () => {
   const [editable, editableSetter] = useState(false);
@@ -34,28 +35,32 @@ export const EditableText = forwardRef(
           {children || <span>{value}</span>}
         </div>
         {editable && (
-          <SPAInputText
-            {...rest}
-            ref={innerRef}
-            value={value}
-            autoFocus
-            autoSelect
-            required
+          <Form
             action={action}
-            requestSubmitOnChange
-            cancelOnBlurInvalid
-            oncancel={() => {
+            onActionEnd={() => {
               onEditEnd();
             }}
-            onactionend={() => {
-              onEditEnd();
-            }}
-            onBlur={(e) => {
-              if (e.target.value === value) {
+          >
+            <InputText
+              {...rest}
+              ref={innerRef}
+              value={value}
+              autoFocus
+              autoSelect
+              required
+              requestExecuteOnChange
+              cancelOnEscape
+              cancelOnBlurInvalid
+              onCancel={() => {
                 onEditEnd();
-              }
-            }}
-          />
+              }}
+              onBlur={(e) => {
+                if (e.target.value === value) {
+                  onEditEnd();
+                }
+              }}
+            />
+          </Form>
         )}
       </>
     );

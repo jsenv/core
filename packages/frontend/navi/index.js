@@ -9,6 +9,10 @@ export { useActionData } from "./src/use_action_data.js";
 export { useActionStatus } from "./src/use_action_status.js";
 
 export { Details } from "./src/components/details/details.jsx";
+export {
+  EditableText,
+  useEditableController,
+} from "./src/components/editable_text/editable_text.jsx";
 export { Form } from "./src/components/form/form.jsx";
 export { useFormActionStatus } from "./src/components/form/form_context.js";
 export { Button } from "./src/components/input/button.jsx";
