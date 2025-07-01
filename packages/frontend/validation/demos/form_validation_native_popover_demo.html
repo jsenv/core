@@ -115,6 +115,52 @@
         </div>
       </div>
 
+      <br />
+
+      <div style="display: flex; gap: 30px">
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <h3>min on week</h3>
+          <form action="javascript:void(0)">
+            <input
+              type="week"
+              min="2017-W3"
+              max="2017-W8"
+              value="2017-W5"
+              oninput="this.reportValidity()"
+              onchange="this.reportValidity()"
+            />
+          </form>
+        </div>
+
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <h3>min on date</h3>
+          <form action="javascript:void(0)">
+            <input
+              type="date"
+              id="date_min"
+              min="2018-01-01"
+              max="2018-05-05"
+              value="2019-12-31"
+              oninput="this.reportValidity()"
+            />
+          </form>
+        </div>
+
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <h3>min on time</h3>
+          <form action="javascript:void(0)">
+            <input
+              type="time"
+              id="time_min"
+              min="09:10"
+              max="18:00"
+              value="06:00"
+              oninput="this.reportValidity()"
+            />
+          </form>
+        </div>
+      </div>
+
       <!-- <div style="background: blue; height: 400px"></div> -->
     </div>
     <script type="module"></script>

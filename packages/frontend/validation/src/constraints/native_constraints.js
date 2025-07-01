@@ -4,8 +4,11 @@
 
 export const REQUIRED_CONSTRAINT = {
   name: "required",
-  check: (input) => {
-    if (input.required && !input.value) {
+  check: (element) => {
+    if (!element.required) {
+      return null;
+    }
+    if (!element.value) {
       return `Veuillez remplir ce champ.`;
     }
     return null;
@@ -141,32 +144,44 @@ export const MIN_CONSTRAINT = {
     if (element.tagName !== "INPUT") {
       return null;
     }
-    if (!INPUT_TYPE_SUPPORTING_MIN_SET.has(element.type)) {
+    if (element.type === "number") {
+      const min = element.min;
+      if (min === undefined) {
+        return null;
+      }
+      const valueAsNumber = element.valueAsNumber;
+      if (isNaN(valueAsNumber)) {
+        return null;
+      }
+      if (valueAsNumber < min) {
+        return `Doit être supérieur ou égal à <strong>${min}</strong>.`;
+      }
       return null;
     }
-    const min = element.min;
-    if (min === undefined) {
+    if (element.type === "time") {
+      const min = element.min;
+      if (min === undefined) {
+        return null;
+      }
+      const [minHours, minMinutes] = min.split(":").map(Number);
+      const value = element.value;
+      const [hours, minutes] = value.split(":").map(Number);
+      if (hours < minHours) {
+        return `Doit être <strong>${min}</strong> ou plus.`;
+      }
+      if (hours === minHours && minMinutes < minutes) {
+        return `Doit être <strong>${min}</strong> ou plus.`;
+      }
       return null;
     }
-    const valueAsNumber = element.valueAsNumber;
-    if (isNaN(valueAsNumber)) {
-      return null;
-    }
-    if (valueAsNumber < min) {
-      return `Doit être supérieur ou égal à <strong>${min}</strong>.`;
-    }
+    // "range"
+    // - user interface do not let user enter anything outside the boundaries
+    // - when setting value via js browser enforce boundaries too
+    // "date", "month", "week", "datetime-local"
+    // - same as "range"
     return null;
   },
 };
-const INPUT_TYPE_SUPPORTING_MIN_SET = new Set([
-  "range",
-  "number",
-  "date",
-  "month",
-  "week",
-  "datetime-local",
-  "time",
-]);
 
 export const MAX_CONSTRAINT = {
   name: "max",
@@ -174,11 +189,36 @@ export const MAX_CONSTRAINT = {
     if (element.tagName !== "INPUT") {
       return null;
     }
-    const type = element.type;
-    if (!INPUT_TYPE_SUPPORTING_MAX_SET.has(type)) {
+    if (element.type === "number") {
+      const max = element.min;
+      if (max === undefined) {
+        return null;
+      }
+      const valueAsNumber = element.valueAsNumber;
+      if (isNaN(valueAsNumber)) {
+        return null;
+      }
+      if (valueAsNumber < max) {
+        return `Doit être <strong>${max}</strong> ou moins.`;
+      }
+      return null;
+    }
+    if (element.type === "time") {
+      const max = element.min;
+      if (max === undefined) {
+        return null;
+      }
+      const [maxHours, maxMinutes] = max.split(":").map(Number);
+      const value = element.value;
+      const [hours, minutes] = value.split(":").map(Number);
+      if (hours > maxHours) {
+        return `Doit être <strong>${max}</strong> ou moins.`;
+      }
+      if (hours === maxHours && maxMinutes > minutes) {
+        return `Doit être <strong>${max}</strong> ou moins.`;
+      }
       return null;
     }
     return null;
   },
 };
-const INPUT_TYPE_SUPPORTING_MAX_SET = new Set(INPUT_TYPE_SUPPORTING_MIN_SET);
