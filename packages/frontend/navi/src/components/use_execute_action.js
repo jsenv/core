@@ -69,7 +69,7 @@ export const useExecuteAction = (
           }
           if (errorEffect === "show_validation_message") {
             addErrorMessage(error);
-          } else {
+          } else if (errorEffect === "throw") {
             setError(error);
           }
         },

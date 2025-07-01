@@ -57,7 +57,10 @@ export const Details = forwardRef(
 
     action = useAction(action);
     const { pending } = useActionStatus(action);
-    const executeAction = useExecuteAction(innerRef);
+    const executeAction = useExecuteAction(innerRef, {
+      // the error will be displayed by actionRenderer inside <details>
+      errorEffect: "none",
+    });
     const summaryRef = useRef();
 
     const [navStateValue, setNavStateValue] = useNavState(id, open);

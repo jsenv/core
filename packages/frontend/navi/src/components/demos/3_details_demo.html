@@ -93,6 +93,18 @@
                   }}
                 ></Details>
               </div>
+
+              <div>
+                <p>
+                  <strong>Throw sync</strong>
+                </p>
+                <Details
+                  id="test_3"
+                  action={() => {
+                    throw new Error("error");
+                  }}
+                ></Details>
+              </div>
             </div>
           </>
         );
