@@ -3,19 +3,42 @@ import { signal } from "@preact/signals";
 import { errorFromResponse } from "../error_from_response.js";
 
 const canLoginCountSignal = signal(0);
+export const useCanLoginCount = () => {
+  return canLoginCountSignal.value;
+};
 const groupCountSignal = signal(0);
+export const useGroupCountSignal = () => {
+  return groupCountSignal.value;
+};
 const withOwnershipCountSignal = signal(0);
+export const useWithOwnershipCountSignal = () => {
+  return withOwnershipCountSignal.value;
+};
 
 export const ROLE = resource("role", {
   idKey: "oid",
   mutableIdKeys: ["rolname"],
+  GET_MANY: async ({ canlogin }, { signal }) => {
+    const getManyRoleUrl = new URL(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`);
+    if (canlogin) {
+      getManyRoleUrl.searchParams.set("can_login", "");
+    }
+    const response = await fetch(getManyRoleUrl, { signal });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to get roles");
+    }
+    const {
+      data,
+      // { currentRole }
+      // meta,
+    } = await response.json();
+    return data;
+  },
   GET: async ({ rolname }, { signal }) => {
-    const response = await fetch(
+    const getRoleUrl = new URL(
       `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}`,
-      {
-        signal,
-      },
     );
+    const response = await fetch(getRoleUrl, { signal });
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to get role");
     }
@@ -97,7 +120,19 @@ export const ROLE = resource("role", {
   },
 });
 
-export const ROLE_MEMBERS = ROLE.may("members", ROLE, {
+ROLE.GET_MANY_CAN_LOGIN = ROLE.GET_MANY.bindParams({ canlogin: true });
+
+const currentRoleIdSignal = signal(window.DB_MANAGER_CONFIG.currentRole.oid);
+export const setCurrentRoleId = (id) => {
+  currentRoleIdSignal.value = id;
+};
+export const useCurrentRole = () => {
+  const currentRoleId = currentRoleIdSignal.value;
+  const currentRole = ROLE.store.select(currentRoleId);
+  return currentRole;
+};
+
+export const ROLE_MEMBERS = ROLE.many("members", ROLE, {
   POST: async ({ rolname, memberRolname }, { signal }) => {
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/members/${memberRolname}`,
@@ -133,3 +168,5 @@ export const ROLE_MEMBERS = ROLE.may("members", ROLE, {
     return [{ rolname }, { rolname: memberRolname }];
   },
 });
+
+ROLE.store.upsert(window.DB_MANAGER_CONFIG.currentRole);

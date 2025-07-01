@@ -5,12 +5,7 @@ import {
 } from "../../explorer/explorer_group.jsx";
 import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
-import {
-  DELETE_ROLE_ACTION,
-  POST_ROLE_ACTION,
-  PUT_ROLE_ACTION,
-} from "../role_routes.js";
-import { useRoleList } from "../role_signals.js";
+import { ROLE } from "../role_store.js";
 import { ROLE_CAN_LOGIN_LIST_DETAILS_ROUTE } from "./role_can_login_list_details_routes.js";
 import {
   useRoleCanLoginCount,
@@ -43,18 +38,18 @@ export const RoleCanLoginListDetails = (props) => {
       )}
       useItemList={useRoleList}
       useRenameItemAction={(role) =>
-        PUT_ROLE_ACTION.bindParams({
+        ROLE.PUT.bindParams({
           rolname: role.rolname,
           columnName: "rolname",
         })
       }
       useCreateItemAction={() =>
-        POST_ROLE_ACTION.bindParams({
+        ROLE.POST.bindParams({
           rolcanlogin: true,
         })
       }
       useDeleteItemAction={(role) =>
-        DELETE_ROLE_ACTION.bindParams({
+        ROLE.DELETE.bindParams({
           rolname: role.rolname,
         })
       }
