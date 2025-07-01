@@ -121,11 +121,9 @@ export const abortPendingActions = (
   reason = "abortPendingActions was called",
 ) => {
   const { loadingSet } = getActivationInfo(); // ✅ Use new function
-  const unloadSet = loadingSet;
-  return requestActionsUpdates({
-    unloadSet,
-    reason,
-  });
+  for (const loadingAction of loadingSet) {
+    loadingAction.abort(reason);
+  }
 };
 
 const actionAbortMap = new Map();
@@ -338,7 +336,7 @@ ${lines.join("\n")}`);
     for (const actionToUnload of toUnloadSet) {
       const actionToUnloadPrivateProperties =
         getActionPrivateProperties(actionToUnload);
-      actionToUnloadPrivateProperties.performUnload(reason);
+      actionToUnloadPrivateProperties.performUnload({ reason });
       activationWeakSet.delete(actionToUnload);
     }
   }
@@ -455,13 +453,19 @@ export const createAction = (callback, rootOptions = {}) => {
       requestActionsUpdates({
         unloadSet: new Set([action]),
       });
-    const abort = () => {
+    const abort = (reason) => {
       if (loadingState !== LOADING) {
-        return undefined;
+        return false;
       }
-      return requestActionsUpdates({
-        unloadSet: new Set([action]),
-      });
+      const actionAbort = actionAbortMap.get(action);
+      if (!actionAbort) {
+        return false;
+      }
+      if (debug) {
+        console.log(`"${action}": aborting (reason: ${reason})`);
+      }
+      actionAbort(reason);
+      return true;
     };
 
     let action;
@@ -791,14 +795,9 @@ export const createAction = (callback, rootOptions = {}) => {
         return undefined;
       };
 
-      const performUnload = (reason) => {
-        const abort = actionAbortMap.get(action);
-        if (abort) {
-          if (debug) {
-            console.log(`"${action}": aborting (reason: ${reason})`);
-          }
-          abort(reason);
-        } else if (debug) {
+      const performUnload = ({ reason }) => {
+        abort(reason);
+        if (debug) {
           console.log(`"${action}": unloading (reason: ${reason})`);
         }
 
