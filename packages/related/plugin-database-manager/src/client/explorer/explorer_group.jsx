@@ -2,7 +2,7 @@
  *
  */
 
-import { Route, valueInLocalStorage } from "@jsenv/router";
+import { Details, valueInLocalStorage } from "@jsenv/navi";
 import { effect, signal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import {
@@ -41,7 +41,7 @@ export const ExplorerGroup = forwardRef(
   (
     {
       controller,
-      detailsRoute,
+      detailsAction,
       idKey,
       nameKey,
       children,
@@ -86,9 +86,8 @@ export const ExplorerGroup = forwardRef(
             id={`${controller.id}_resize_handle`}
           ></div>
         )}
-        <Route.Details
+        <Details
           {...rest}
-          route={detailsRoute}
           ref={innerRef}
           id={controller.id}
           className="explorer_group"
@@ -104,23 +103,26 @@ export const ExplorerGroup = forwardRef(
           data-resize={resizable ? "vertical" : "none"}
           data-min-height="150"
           data-requested-height={heightSetting}
-          renderLoaded={() => (
-            <div className="explorer_group_content">
-              <ExplorerItemList
-                idKey={idKey}
-                nameKey={nameKey}
-                renderItem={renderItem}
-                useItemList={useItemList}
-                useRenameItemAction={useRenameItemAction}
-                useCreateItemAction={useCreateItemAction}
-                useDeleteItemAction={useDeleteItemAction}
-                isCreatingNew={isCreatingNew}
-                stopCreatingNew={stopCreatingNew}
-              >
-                {children}
-              </ExplorerItemList>
-            </div>
-          )}
+          action={detailsAction}
+          actionRenderer={() => {
+            return (
+              <div className="explorer_group_content">
+                <ExplorerItemList
+                  idKey={idKey}
+                  nameKey={nameKey}
+                  renderItem={renderItem}
+                  useItemList={useItemList}
+                  useRenameItemAction={useRenameItemAction}
+                  useCreateItemAction={useCreateItemAction}
+                  useDeleteItemAction={useDeleteItemAction}
+                  isCreatingNew={isCreatingNew}
+                  stopCreatingNew={stopCreatingNew}
+                >
+                  {children}
+                </ExplorerItemList>
+              </div>
+            );
+          }}
         >
           {labelChildren}
           {renderNewButtonChildren ? (
@@ -143,7 +145,7 @@ export const ExplorerGroup = forwardRef(
               </button>
             </>
           ) : null}
-        </Route.Details>
+        </Details>
       </>
     );
   },

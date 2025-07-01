@@ -15,3 +15,5 @@ export { Button } from "./src/components/input/button.jsx";
 export { InputText } from "./src/components/input/input_text.jsx";
 
 export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
+
+export { valueInLocalStorage } from "./src/value_in_local_storage.js";

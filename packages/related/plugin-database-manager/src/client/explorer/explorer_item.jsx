@@ -1,16 +1,15 @@
 import {
-  createUniqueValueConstraint,
-  SINGLE_SPACE_CONSTRAINT,
-} from "@jsenv/form";
-import {
   EditableText,
   SPAInputText,
   useEditableController,
 } from "@jsenv/router";
+import {
+  createUniqueValueConstraint,
+  SINGLE_SPACE_CONSTRAINT,
+} from "@jsenv/validation";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
 export const ExplorerItem = ({
-  nameKey,
   item,
   renderItem,
   useItemList,

@@ -3,7 +3,7 @@
  */
 
 import { getInnerWidth, getWidth, startResizeGesture } from "@jsenv/dom";
-import { valueInLocalStorage } from "@jsenv/router";
+import { valueInLocalStorage } from "@jsenv/navi";
 import { effect, signal } from "@preact/signals";
 import { useRef, useState } from "preact/hooks";
 
