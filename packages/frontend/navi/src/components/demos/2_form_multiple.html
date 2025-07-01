@@ -42,6 +42,26 @@
         margin: 0;
         padding-left: 20px;
       }
+      /* ✅ Styles for form params display */
+      .form-params {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+      .form-params h3 {
+        margin-top: 0;
+        color: #495057;
+      }
+      .form-params pre {
+        background-color: #e9ecef;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+        margin: 0;
+        font-size: 14px;
+      }
     </style>
   </head>
   <body>
@@ -71,6 +91,7 @@
       const MultiFieldValidationTest = () => {
         const [submitStatus, setSubmitStatus] = useState(null);
         const [validationErrors, setValidationErrors] = useState([]);
+        const [formParams, setFormParams] = useState(null); // ✅ New state for form params
 
         const handleFormExecutePrevented = (event) => {
           console.log("❌ Form execute prevented event:", event);
@@ -78,6 +99,7 @@
 
           if (reason === "validation_failed") {
             setSubmitStatus("error");
+            setFormParams(null); // ✅ Clear params on validation failure
 
             // Collecter toutes les erreurs de validation
             const form = event.target;
@@ -117,11 +139,20 @@
             </p>
 
             <Form
+              onReset={() => {
+                setSubmitStatus(null);
+                setValidationErrors([]);
+                setFormParams(null); // ✅ Clear params on reset
+              }}
               onExecutePrevented={handleFormExecutePrevented}
               action={async (params) => {
-                console.log("🎯 Form execute event");
+                console.log("🎯 Form execute event with params:", params);
+
+                // ✅ Store form params in state
+                setFormParams(params);
                 setSubmitStatus("executing...");
                 setValidationErrors([]);
+
                 await new Promise((resolve) => setTimeout(resolve, 1000));
                 setSubmitStatus("Form submitted successfully!");
               }}
@@ -157,6 +188,7 @@
                   id="phone-field"
                   name="phone"
                   pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}"
+                  pattern-validation-message="Doit respecter le format <strong>01-23-45-67-89</strong>."
                   placeholder="01-23-45-67-89"
                 />
               </div>
@@ -196,6 +228,14 @@
                 <button type="reset">Reset Status</button>
               </div>
             </Form>
+
+            {/* ✅ Affichage des paramètres du formulaire */}
+            {formParams && (
+              <div className="form-params">
+                <h3>📋 Paramètres du formulaire soumis :</h3>
+                <pre>{JSON.stringify(formParams, null, 2)}</pre>
+              </div>
+            )}
 
             {/* ✅ Affichage du statut */}
             {submitStatus && (
@@ -248,7 +288,7 @@
                 </li>
                 <li>
                   <strong>Test 4</strong> : Remplissez tout correctement → Doit
-                  permettre la soumission
+                  permettre la soumission et afficher les paramètres
                 </li>
               </ol>
             </div>

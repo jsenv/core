@@ -25,8 +25,14 @@ export const PATTERN_CONSTRAINT = {
 
     const value = input.value;
     if (!regex.test(value)) {
-      const title = input.title;
+      const patternValidationMessage = input.getAttribute(
+        "pattern-validation-message",
+      );
+      if (patternValidationMessage) {
+        return patternValidationMessage;
+      }
       let message = `Veuillez respecter le format requis.`;
+      const title = input.title;
       if (title) {
         message += `<br />${title}`;
       }
@@ -199,7 +205,7 @@ export const MAX_CONSTRAINT = {
       return null;
     }
     if (element.type === "number") {
-      const max = element.min;
+      const max = element.max;
       if (max === undefined) {
         return null;
       }
