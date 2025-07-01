@@ -1,4 +1,3 @@
-import { SPALink } from "@jsenv/router";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 import { CurrentSvg } from "../svg/icons.jsx";
 
@@ -19,7 +18,7 @@ import.meta.css = /* css */ `
 
 export const LinkWithIcon = ({ icon, isCurrent, children, ...rest }) => {
   return (
-    <SPALink className="link_with_icon" {...rest}>
+    <a className="link_with_icon" {...rest}>
       <FontSizedSvg>{icon}</FontSizedSvg>
       {isCurrent && (
         <FontSizedSvg>
@@ -27,6 +26,6 @@ export const LinkWithIcon = ({ icon, isCurrent, children, ...rest }) => {
         </FontSizedSvg>
       )}
       {children}
-    </SPALink>
+    </a>
   );
 };

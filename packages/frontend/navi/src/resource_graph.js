@@ -6,7 +6,7 @@ import { getCallerInfo } from "./get_caller_info.js";
 import { createIterableWeakSet } from "./iterable_weak_set.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
-let debug = true;
+let debug = false;
 
 const findAliveActionsMatching = (httpActionWeakSet, predicate) => {
   const matchingActionSet = new Set();
