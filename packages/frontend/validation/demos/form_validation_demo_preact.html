@@ -31,14 +31,14 @@ lorsqu'on zoom le comportement semble étrange
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useRef } from "preact/hooks";
-      import { useInputConstraint } from "./hooks/use_input_constraint.js";
-      import { useInputValidationMessage } from "./hooks/use_input_validation_message.js";
+      import { useConstraints } from "../src/hooks/use_constraints.js";
+      import { useValidationMessage } from "../src/hooks/use_validation_message.js";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const inputRef = useRef();
 
-        useInputConstraint(inputRef, (input) => {
+        useConstraints(inputRef, (input) => {
           const value = input.value;
           if (value.includes("a")) {
             return `Ce champ ne doit pas contenir la lettre "a".`;
@@ -46,7 +46,7 @@ lorsqu'on zoom le comportement semble étrange
           return null;
         });
 
-        const [addInputError, removeInputError] = useInputValidationMessage(
+        const [addInputError, removeInputError] = useValidationMessage(
           inputRef,
           "error",
         );

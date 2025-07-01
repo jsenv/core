@@ -46,9 +46,9 @@ export const InputText = forwardRef(
 
     const input = (
       <input
+        type="text"
         {...rest}
         ref={innerRef}
-        type="text"
         value={valueSignal.value}
         disabled={disabled || pending}
         onInput={(e) => {

@@ -65,6 +65,29 @@
         </div>
       </div>
 
+      <br />
+
+      <div style="display: flex; gap: 30px">
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <h3>minLength</h3>
+          <form action="javascript:void(0)">
+            <input type="text" minlength="5" oninput="this.reportValidity()" />
+          </form>
+        </div>
+
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <h3>maxLength</h3>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              id="max_length"
+              maxlength="5"
+              oninput="this.reportValidity()"
+            />
+          </form>
+        </div>
+      </div>
+
       <!-- <div style="background: blue; height: 400px"></div> -->
     </div>
     <script type="module"></script>

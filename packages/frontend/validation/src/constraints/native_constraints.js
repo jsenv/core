@@ -46,3 +46,69 @@ export const TYPE_EMAIL_CONSTRAINT = {
     return null;
   },
 };
+
+export const MIN_LENGTH_CONSTRAINT = {
+  name: "min_length",
+  check: (element) => {
+    if (element.tagName === "INPUT") {
+      if (!inputTypeSupportinghMinLengthSet.has(element.type)) {
+        return null;
+      }
+    } else if (element.tagName !== "TEXTAREA") {
+      return null;
+    }
+
+    const minLength = element.minLength;
+    if (!minLength) {
+      return null;
+    }
+
+    const value = element.value;
+    const valueLength = value.length;
+    if (valueLength === 0) {
+      return null;
+    }
+    if (value < valueLength) {
+      if (valueLength === 1) {
+        return `Ce champ doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`;
+      }
+      return `Ce champ doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`;
+    }
+    return null;
+  },
+};
+const inputTypeSupportinghMinLengthSet = new Set([
+  "text",
+  "search",
+  "url",
+  "tel",
+  "email",
+  "password",
+]);
+const inputTypeSupportingMaxLengthSet = new Set(
+  inputTypeSupportinghMinLengthSet,
+);
+export const MAX_LENGTH_CONSTRAINT = {
+  name: "max_length",
+  check: (element) => {
+    if (element.tagName === "INPUT") {
+      if (!inputTypeSupportingMaxLengthSet.has(element.type)) {
+        return null;
+      }
+    } else if (element.tagName !== "TEXTAREA") {
+      return null;
+    }
+
+    const maxLength = element.maxLength;
+    if (!maxLength) {
+      return null;
+    }
+
+    const value = element.value;
+    const valueLength = value.length;
+    if (valueLength > maxLength) {
+      return `Ce champ doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`;
+    }
+    return null;
+  },
+};
