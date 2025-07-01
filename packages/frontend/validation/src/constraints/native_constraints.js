@@ -66,7 +66,7 @@ export const MIN_LENGTH_CONSTRAINT = {
     }
 
     const minLength = element.minLength;
-    if (!minLength) {
+    if (minLength === -1) {
       return null;
     }
 
@@ -75,7 +75,7 @@ export const MIN_LENGTH_CONSTRAINT = {
     if (valueLength === 0) {
       return null;
     }
-    if (value < valueLength) {
+    if (valueLength < minLength) {
       if (valueLength === 1) {
         return `Ce champ doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`;
       }
@@ -105,7 +105,7 @@ export const MAX_LENGTH_CONSTRAINT = {
     }
 
     const maxLength = element.maxLength;
-    if (!maxLength) {
+    if (maxLength === -1) {
       return null;
     }
 
@@ -128,6 +128,9 @@ export const TYPE_NUMBER_CONSTRAINT = {
       return null;
     }
     if (element.type !== "number") {
+      return null;
+    }
+    if (element.value === "") {
       return null;
     }
     const value = element.valueAsNumber;
@@ -154,7 +157,13 @@ export const MIN_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber < min) {
-        return `Doit être supérieur ou égal à <strong>${min}</strong>.`;
+        const minValidationMessage = element.getAttribute(
+          "min-validation-message",
+        );
+        return (
+          minValidationMessage ||
+          `Doit être supérieur ou égal à <strong>${min}</strong>.`
+        );
       }
       return null;
     }
@@ -198,8 +207,13 @@ export const MAX_CONSTRAINT = {
       if (isNaN(valueAsNumber)) {
         return null;
       }
-      if (valueAsNumber < max) {
-        return `Doit être <strong>${max}</strong> ou moins.`;
+      if (valueAsNumber > max) {
+        const maxValidationMessage = element.getAttribute(
+          "max-validation-message",
+        );
+        return (
+          maxValidationMessage || `Doit être <strong>${max}</strong> ou plus.`
+        );
       }
       return null;
     }
