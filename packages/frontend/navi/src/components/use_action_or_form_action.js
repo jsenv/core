@@ -1,6 +1,10 @@
 import { useLayoutEffect } from "preact/hooks";
 import { useActionStatus } from "../actions.js";
-import { useFormActionRef, useIsInsideForm } from "./form/use_form_status.js";
+import {
+  useFormActionRef,
+  useFormActionStatus,
+  useIsInsideForm,
+} from "./form/form_context.js";
 import { useAction } from "./use_action.js";
 import { useExecuteAction } from "./use_execute_action.js";
 
@@ -14,6 +18,7 @@ export const useActionOrFormAction = (
   const formActionRef = useFormActionRef();
   const executeAction = useExecuteAction(elementRef);
   const actionStatus = useActionStatus(action);
+  const formActionStatus = useFormActionStatus();
 
   useLayoutEffect(() => {
     const element = elementRef.current;
@@ -31,7 +36,7 @@ export const useActionOrFormAction = (
     return null;
   }, [isInsideForm, action, executeAction]);
 
-  return [actionStatus];
+  return action ? actionStatus : formActionStatus;
 };
 
 export const useOnExecute = (elementRef, callback) => {

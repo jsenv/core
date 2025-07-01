@@ -14,7 +14,7 @@ export const useIsInsideForm = () => {
 };
 
 export const FormContext = createContext();
-export const useFormStatus = () => {
+export const useFormActionStatus = () => {
   const value = useContext(FormContext);
   if (!value) {
     return FORM_STATUS_WHEN_OUTSIDE_FORM;

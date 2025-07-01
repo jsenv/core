@@ -19,7 +19,7 @@ import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useAction } from "../use_action.js";
 import { useOnExecute } from "../use_action_or_form_action.js";
 import { useExecuteAction } from "../use_execute_action.js";
-import { FormContext } from "./use_form_status.js";
+import { FormContext } from "./form_context.js";
 
 const submit = HTMLFormElement.prototype.submit;
 HTMLFormElement.prototype.submit = function (...args) {
@@ -52,14 +52,8 @@ export const Form = forwardRef(
 
     action = useAction(action, paramsSignal);
     const executeAction = useExecuteAction(innerRef, { errorEffect });
-    const [formStatus, formStatusSetter] = useState({
-      pending: false,
-      aborted: false,
-      error: null,
-      method,
-      action,
-    });
     const formActionRef = useRef();
+    const [formAction, formActionSetter] = useState(action);
     const executingRef = useRef(false);
 
     // It's important to use useOnExecute which uses useLayoutEffect
@@ -109,35 +103,15 @@ export const Form = forwardRef(
       }
       paramsSignal.value = params;
 
-      let resolveResultPromise;
       if (onExecute) {
-        const resultPromise = new Promise((resolve) => {
-          resolveResultPromise = resolve;
-        });
-        onExecute({ resultPromise });
+        onExecute();
       }
       const formAction = formActionRef.current || action;
-      formStatusSetter({
-        pending: true,
-        aborted: false,
-        error: null,
-        method,
-        action: formAction,
-      });
-      const { aborted, error } = await executeAction(
-        formAction,
-        executeEvent.detail.requester,
-      );
-      formActionRef.current = null;
-      formStatusSetter({
-        pending: false,
-        aborted,
-        error,
-        method,
-        action: formAction,
-      });
-      if (resolveResultPromise) {
-        resolveResultPromise({ aborted, error });
+      formActionSetter(formAction);
+      try {
+        await executeAction(formAction, executeEvent.detail.requester);
+      } finally {
+        formActionRef.current = null;
       }
     });
 
@@ -155,7 +129,7 @@ export const Form = forwardRef(
           onExecutePrevented?.(executePreventedEvent);
         }}
       >
-        <FormContext.Provider value={[formStatus, formActionRef]}>
+        <FormContext.Provider value={[formAction, formActionRef]}>
           {children}
         </FormContext.Provider>
       </form>

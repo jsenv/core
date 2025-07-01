@@ -6,6 +6,7 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionOrFormAction } from "../use_action_or_form_action.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
+import { useOnFormReset } from "../use_on_form_reset.js";
 
 export const InputText = forwardRef(
   (
@@ -37,12 +38,14 @@ export const InputText = forwardRef(
       initialValue === undefined || initialValue === "" ? "" : initialValue;
     const [navStateValue, setNavStateValue] = useNavState(id);
     defaultValue = navStateValue === undefined ? defaultValue : navStateValue;
+    useOnFormReset(innerRef, () => {
+      setNavStateValue(undefined);
+    });
 
     const value = initialValue === undefined ? defaultValue : initialValue;
 
     const valueSignal = useSignal(value);
-    const [actionStatus] = useActionOrFormAction(innerRef, action, valueSignal);
-    const { pending } = actionStatus;
+    const { pending } = useActionOrFormAction(innerRef, action, valueSignal);
 
     const input = (
       <input

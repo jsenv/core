@@ -2,11 +2,13 @@ import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionOrFormAction } from "../use_action_or_form_action.js";
+import { useAutoFocus } from "../use_auto_focus.js";
 
 export const Button = forwardRef(
   (
     {
       action,
+      autoFocus,
       children,
       disabled,
       constraints = [],
@@ -17,9 +19,10 @@ export const Button = forwardRef(
   ) => {
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
-
+    useAutoFocus(innerRef, autoFocus);
     useConstraints(innerRef, constraints);
-    const [{ pending }] = useActionOrFormAction(innerRef, action);
+
+    const { pending } = useActionOrFormAction(innerRef, action);
 
     return (
       <button

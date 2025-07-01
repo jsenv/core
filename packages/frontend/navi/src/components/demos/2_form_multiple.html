@@ -152,8 +152,7 @@
                 setFormParams(params);
                 setSubmitStatus("executing...");
                 setValidationErrors([]);
-
-                await new Promise((resolve) => setTimeout(resolve, 1000));
+                await new Promise((resolve) => setTimeout(resolve, 2_000));
                 setSubmitStatus("Form submitted successfully!");
               }}
             >
