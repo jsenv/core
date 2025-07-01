@@ -1,19 +1,7 @@
 import { resource, useActionData } from "@jsenv/navi";
 import { signal } from "@preact/signals";
 import { errorFromResponse } from "../error_from_response.js";
-
-const roleCanLoginCountSignal = signal(0);
-export const useRoleCanLoginCount = () => {
-  return roleCanLoginCountSignal.value;
-};
-const roleGroupCountSignal = signal(0);
-export const useRoleGroupCountSignal = () => {
-  return roleGroupCountSignal.value;
-};
-const roleWithOwnershipCountSignal = signal(0);
-export const useRoleWithOwnershipCountSignal = () => {
-  return roleWithOwnershipCountSignal.value;
-};
+import { setRoleCounts } from "../explorer/explorer_store.js";
 
 export const ROLE = resource("role", {
   idKey: "oid",
@@ -29,13 +17,9 @@ export const ROLE = resource("role", {
     }
     const {
       data,
-      // { currentRole, roleCounts }
-      meta,
+      // { currentRole }
+      // meta,
     } = await response.json();
-    const { canLoginCount, groupCount, withOwnershipCount } = meta.roleCounts;
-    roleCanLoginCountSignal.value = canLoginCount;
-    roleGroupCountSignal.value = groupCount;
-    roleWithOwnershipCountSignal.value = withOwnershipCount;
     return data;
   },
   GET: async ({ rolname }, { signal }) => {
@@ -70,10 +54,8 @@ export const ROLE = resource("role", {
       throw await errorFromResponse(response, "Failed to create role");
     }
     const { data, meta } = await response.json();
-    const { canLoginCount, groupCount, withOwnershipCount } = meta;
-    roleCanLoginCountSignal.value = canLoginCount;
-    roleGroupCountSignal.value = groupCount;
-    roleWithOwnershipCountSignal.value = withOwnershipCount;
+    const { roleCounts } = meta;
+    setRoleCounts(roleCounts);
     return data;
   },
   DELETE: async ({ rolname, signal }) => {
@@ -92,10 +74,8 @@ export const ROLE = resource("role", {
       throw await errorFromResponse(response, `Failed to delete role`);
     }
     const { meta } = await response.json();
-    const { canLoginCount, groupCount, withOwnershipCount } = meta;
-    roleCanLoginCountSignal.value = canLoginCount;
-    roleGroupCountSignal.value = groupCount;
-    roleWithOwnershipCountSignal.value = withOwnershipCount;
+    const { roleCounts } = meta;
+    setRoleCounts(roleCounts);
     return { rolname };
   },
   PUT: async ({ rolname, columnName, columnValue }, { signal }) => {

@@ -26,6 +26,7 @@ import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 //   tablesDetailsController,
 // } from "../table/tables_details.jsx";
 import "./explorer.css" with { type: "css" };
+import "./explorer_store.js";
 
 export const Explorer = () => {
   const role = useCurrentRole();

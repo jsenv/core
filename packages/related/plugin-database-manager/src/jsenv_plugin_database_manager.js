@@ -228,7 +228,7 @@ export const jsenvPluginDatabaseManager = ({
           return {
             data: table,
             meta: {
-              ...(await countRoles(sql)),
+              roleCounts: await countRoles(sql),
             },
           };
         },
@@ -344,7 +344,6 @@ export const jsenvPluginDatabaseManager = ({
             role.object_count = role.table_count + role.database_count;
           }
 
-          const roleCounts = await countRoles(sql);
           const currentRoleResult = await sql`
             SELECT
               current_user
@@ -369,7 +368,6 @@ export const jsenvPluginDatabaseManager = ({
               data: owners,
               meta: {
                 currentRole,
-                roleCounts,
               },
             };
           }
@@ -377,7 +375,6 @@ export const jsenvPluginDatabaseManager = ({
             data: roles,
             meta: {
               currentRole,
-              roleCounts,
             },
           };
         },
@@ -400,7 +397,7 @@ export const jsenvPluginDatabaseManager = ({
           return {
             data: role,
             meta: {
-              ...(await countRoles(sql)),
+              roleCounts: await countRoles(sql),
             },
           };
         },
@@ -429,7 +426,7 @@ export const jsenvPluginDatabaseManager = ({
           return {
             data: null,
             meta: {
-              ...(await countRoles(sql)),
+              roleCounts: await countRoles(sql),
             },
           };
         },
