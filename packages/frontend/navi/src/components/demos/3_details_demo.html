@@ -25,7 +25,7 @@
             <div style="display: flex; flex-direction: row; gap: 30px">
               <div>
                 <p>
-                  <strong>Test</strong>
+                  <strong>Loaded sync</strong>
                 </p>
                 <Details
                   id="test"
@@ -33,6 +33,42 @@
                     return "Hello";
                   }}
                   actionRenderer={(message) => <span>{message}</span>}
+                ></Details>
+              </div>
+
+              <div>
+                <p>
+                  <strong>Loaded after 1s</strong>
+                </p>
+                <Details
+                  id="test"
+                  action={async (_, { signal }) => {
+                    await new Promise((resolve) => {
+                      const timeout = setTimeout(resolve, 1000);
+                      signal.addEventListener("abort", () => {
+                        clearTimeout(timeout);
+                      });
+                    });
+                    return "Hello";
+                  }}
+                  actionRenderer={{
+                    loading: (action) => {
+                      return (
+                        <span>
+                          Loading...
+                          <button
+                            onClick={() => {
+                              action.abort();
+                            }}
+                          >
+                            Abort
+                          </button>
+                        </span>
+                      );
+                    },
+                    aborted: () => <span style="color: red">Aborted</span>,
+                    loaded: (message) => <span>{message}</span>,
+                  }}
                 ></Details>
               </div>
             </div>

@@ -4,16 +4,18 @@ import { useActionStatus } from "./actions.js";
 
 const renderOtherwiseDefault = () => null;
 const renderLoadingDefault = () => null;
-const renderLoadedDefault = () => null;
+const renderAbortedDefault = () => null;
 const renderErrorDefault = (error) => {
   let routeErrorText = error && error.message ? error.message : error;
   return <p className="route_error">An error occured: {routeErrorText}</p>;
 };
+const renderLoadedDefault = () => null;
 
 export const ActionRenderer = ({ action, children }) => {
   const {
     otherwise: renderOtherwise = renderOtherwiseDefault,
     loading: renderLoading = renderLoadingDefault,
+    aborted: renderAborted = renderAbortedDefault,
     error: renderError = renderErrorDefault,
     loaded: renderLoaded,
   } = typeof children === "function" ? { loaded: children } : children || {};
@@ -22,7 +24,7 @@ export const ActionRenderer = ({ action, children }) => {
       "ActionRenderer requires an action to render, but none was provided.",
     );
   }
-  const { idle, pending, error, data } = useActionStatus(action);
+  const { idle, pending, aborted, error, data } = useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
 
@@ -46,6 +48,9 @@ export const ActionRenderer = ({ action, children }) => {
   if (error) {
     return renderError(error, "action_error");
   }
+  if (aborted) {
+    return renderAborted(action);
+  }
   let renderLoadedSafe;
   if (renderLoaded) {
     renderLoadedSafe = renderLoaded;
@@ -61,7 +66,7 @@ export const ActionRenderer = ({ action, children }) => {
     if (action.canDisplayOldData && data !== undefined) {
       return renderLoadedSafe(data);
     }
-    return renderLoading();
+    return renderLoading(action);
   }
 
   return renderLoadedSafe(data);

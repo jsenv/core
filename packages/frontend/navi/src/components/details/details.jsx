@@ -1,5 +1,5 @@
 import { forwardRef } from "preact/compat";
-import { useEffect, useImperativeHandle, useRef } from "preact/hooks";
+import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
 import { ActionRenderer } from "../../action_renderer.jsx";
 import { useActionStatus } from "../../actions.js";
 import { useAction } from "../use_action.js";
@@ -81,7 +81,7 @@ export const Details = forwardRef(
       mountedRef.current = true;
     }, []);
 
-    const innerOpen = open || navStateValue;
+    const [innerOpen, innerOpenSetter] = useState(open || navStateValue);
 
     return (
       <details
@@ -97,9 +97,11 @@ export const Details = forwardRef(
           }
           if (mountedRef.current) {
             if (toggleEvent.newState === "open") {
+              innerOpenSetter(true);
               setNavStateValue(true);
-              executeAction(action);
+              executeAction(action, { method: "load" });
             } else {
+              innerOpenSetter(false);
               setNavStateValue(undefined);
               action.abort();
             }
