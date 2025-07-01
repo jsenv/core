@@ -20,11 +20,12 @@ export const InputText = forwardRef(
       value: initialValue,
       constraints = [],
       cancelOnBlurInvalid,
+      cancelOnEscape,
       pendingEffect = "loading",
       requestExecuteOnChange,
-      oncancel,
       disabled,
       onInput,
+      onCancel,
       ...rest
     },
     ref,
@@ -65,9 +66,12 @@ export const InputText = forwardRef(
           if (event.detail === "blur_invalid" && !cancelOnBlurInvalid) {
             return;
           }
+          if (event.detail === "escape_key" && !cancelOnEscape) {
+            return;
+          }
           innerRef.current.value = valueAtStart;
-          if (oncancel) {
-            oncancel(event);
+          if (onCancel) {
+            onCancel(event);
           }
         }}
         // eslint-disable-next-line react/no-unknown-property

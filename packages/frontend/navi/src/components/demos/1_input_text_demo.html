@@ -52,6 +52,12 @@
                 </p>
                 <InsideForm />
               </div>
+              <div>
+                <p>
+                  <strong>Inside form with submit and reset</strong>
+                </p>
+                <InsideFormWithSubmitAndReset />
+              </div>
             </div>
           </>
         );
@@ -119,6 +125,25 @@
                   throw new Error(`test: ${value}`);
                 }}
               />
+            </Form>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InsideFormWithSubmitAndReset = () => {
+        return (
+          <div>
+            <Form>
+              <InputText
+                id="tototo"
+                action={async (value) => {
+                  await new Promise((resolve) => setTimeout(resolve, 1_500));
+                  throw new Error(`test: ${value}`);
+                }}
+              />
+              <button type="submit">Submit</button>
+              <button type="reset">Reset</button>
             </Form>
           </div>
         );
