@@ -11,6 +11,7 @@ export {
 } from "./src/actions.js";
 export { resource } from "./src/resource_graph.js";
 
+export { Details } from "./src/components/details/details.jsx";
 export { Form } from "./src/components/form/form.jsx";
 export { useFormActionStatus } from "./src/components/form/form_context.js";
 export { Button } from "./src/components/input/button.jsx";

@@ -20,66 +20,77 @@ export const useExecuteAction = (
     }
   }, [error]);
 
-  const executeAction = useCallback((action, requester) => {
-    const dispatchCustomEvent = (type, options) => {
-      const element = elementRef.current;
-      const customEvent = new CustomEvent(type, options);
-      element.dispatchEvent(customEvent);
-    };
+  const executeAction = useCallback(
+    (
+      action,
+      {
+        // "reload", "load"
+        method = "reload",
+        requester,
+      } = {},
+    ) => {
+      const dispatchCustomEvent = (type, options) => {
+        const element = elementRef.current;
+        const customEvent = new CustomEvent(type, options);
+        element.dispatchEvent(customEvent);
+      };
 
-    const validationMessageTarget = requester || elementRef.current;
-    const addErrorMessage = (error) => {
-      addCustomMessage(validationMessageTarget, "action_error", error, {
-        // This error should not prevent <form> submission
-        // so whenever user tries to submit the form the error is cleared
-        // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
-        removeOnRequestExecute: true,
+      const validationMessageTarget = requester || elementRef.current;
+      const addErrorMessage = (error) => {
+        addCustomMessage(validationMessageTarget, "action_error", error, {
+          // This error should not prevent <form> submission
+          // so whenever user tries to submit the form the error is cleared
+          // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
+          removeOnRequestExecute: true,
+        });
+      };
+      const removeErrorMessage = () => {
+        removeCustomMessage(validationMessageTarget, "action_error");
+      };
+
+      if (resetErrorBoundary) {
+        resetErrorBoundary();
+      }
+      removeErrorMessage();
+      setError(null);
+
+      dispatchCustomEvent("actionstart", { bubbles: true });
+      const result = performAction(action, {
+        method,
+        onError: (error) => {
+          if (
+            // at this stage the action side effect might have remove the <element> from the DOM
+            elementRef.current
+          ) {
+            dispatchCustomEvent("actionerror", {
+              bubbles: true,
+              detail: { error },
+            });
+          }
+          if (errorEffect === "show_validation_message") {
+            addErrorMessage(error);
+          } else {
+            setError(error);
+          }
+        },
+        onSuccess: () => {
+          if (
+            // at this stage the action side effect might have remove the <element> from the DOM
+            elementRef.current
+          ) {
+            dispatchCustomEvent("actionend", { bubbles: true });
+          }
+        },
       });
-    };
-    const removeErrorMessage = () => {
-      removeCustomMessage(validationMessageTarget, "action_error");
-    };
-
-    if (resetErrorBoundary) {
-      resetErrorBoundary();
-    }
-    removeErrorMessage();
-    setError(null);
-
-    dispatchCustomEvent("actionstart", { bubbles: true });
-    const result = performAction(action, {
-      onError: (error) => {
-        if (
-          // at this stage the action side effect might have remove the <element> from the DOM
-          elementRef.current
-        ) {
-          dispatchCustomEvent("actionerror", {
-            bubbles: true,
-            detail: { error },
-          });
-        }
-        if (errorEffect === "show_validation_message") {
-          addErrorMessage(error);
-        } else {
-          setError(error);
-        }
-      },
-      onSuccess: () => {
-        if (
-          // at this stage the action side effect might have remove the <element> from the DOM
-          elementRef.current
-        ) {
-          dispatchCustomEvent("actionend", { bubbles: true });
-        }
-      },
-    });
-    return result;
-  }, []);
+      return result;
+    },
+    [],
+  );
 
   return executeAction;
 };
 
-const performAction = (action, { onError, onSuccess }) => {
+const performAction = (action, { method, onError, onSuccess }) => {
   const onSettled = () => {
     const aborted = action.aborted;
     const error = action.error;
@@ -96,7 +107,7 @@ const performAction = (action, { onError, onSuccess }) => {
   };
 
   try {
-    const result = action.reload();
+    const result = action[method]();
     if (result && typeof result.then === "function") {
       return result.then(onSettled, onSettled);
     }

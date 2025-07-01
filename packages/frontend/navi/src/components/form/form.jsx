@@ -109,7 +109,9 @@ export const Form = forwardRef(
       const formAction = formActionRef.current || action;
       formActionSetter(formAction);
       try {
-        await executeAction(formAction, executeEvent.detail.requester);
+        await executeAction(formAction, {
+          requester: executeEvent.detail.requester,
+        });
       } finally {
         formActionRef.current = null;
       }
