@@ -1,3 +1,7 @@
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
+ */
+
 export const REQUIRED_CONSTRAINT = {
   name: "required",
   check: (input) => {
@@ -51,7 +55,7 @@ export const MIN_LENGTH_CONSTRAINT = {
   name: "min_length",
   check: (element) => {
     if (element.tagName === "INPUT") {
-      if (!inputTypeSupportinghMinLengthSet.has(element.type)) {
+      if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(element.type)) {
         return null;
       }
     } else if (element.tagName !== "TEXTAREA") {
@@ -77,7 +81,7 @@ export const MIN_LENGTH_CONSTRAINT = {
     return null;
   },
 };
-const inputTypeSupportinghMinLengthSet = new Set([
+const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
   "text",
   "search",
   "url",
@@ -85,14 +89,12 @@ const inputTypeSupportinghMinLengthSet = new Set([
   "email",
   "password",
 ]);
-const inputTypeSupportingMaxLengthSet = new Set(
-  inputTypeSupportinghMinLengthSet,
-);
+
 export const MAX_LENGTH_CONSTRAINT = {
   name: "max_length",
   check: (element) => {
     if (element.tagName === "INPUT") {
-      if (!inputTypeSupportingMaxLengthSet.has(element.type)) {
+      if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(element.type)) {
         return null;
       }
     } else if (element.tagName !== "TEXTAREA") {
@@ -112,3 +114,71 @@ export const MAX_LENGTH_CONSTRAINT = {
     return null;
   },
 };
+const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
+  INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET,
+);
+
+export const TYPE_NUMBER_CONSTRAINT = {
+  name: "type_number",
+  check: (element) => {
+    if (element.tagName !== "INPUT") {
+      return null;
+    }
+    if (element.type !== "number") {
+      return null;
+    }
+    const value = element.valueAsNumber;
+    if (isNaN(value)) {
+      return `Doit être un nombre.`;
+    }
+    return null;
+  },
+};
+
+export const MIN_CONSTRAINT = {
+  name: "min",
+  check: (element) => {
+    if (element.tagName !== "INPUT") {
+      return null;
+    }
+    if (!INPUT_TYPE_SUPPORTING_MIN_SET.has(element.type)) {
+      return null;
+    }
+    const min = element.min;
+    if (min === undefined) {
+      return null;
+    }
+    const valueAsNumber = element.valueAsNumber;
+    if (isNaN(valueAsNumber)) {
+      return null;
+    }
+    if (valueAsNumber < min) {
+      return `Doit être supérieur ou égal à <strong>${min}</strong>.`;
+    }
+    return null;
+  },
+};
+const INPUT_TYPE_SUPPORTING_MIN_SET = new Set([
+  "range",
+  "number",
+  "date",
+  "month",
+  "week",
+  "datetime-local",
+  "time",
+]);
+
+export const MAX_CONSTRAINT = {
+  name: "max",
+  check: (element) => {
+    if (element.tagName !== "INPUT") {
+      return null;
+    }
+    const type = element.type;
+    if (!INPUT_TYPE_SUPPORTING_MAX_SET.has(type)) {
+      return null;
+    }
+    return null;
+  },
+};
+const INPUT_TYPE_SUPPORTING_MAX_SET = new Set(INPUT_TYPE_SUPPORTING_MIN_SET);

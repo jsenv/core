@@ -28,11 +28,14 @@
  */
 
 import {
+  MAX_CONSTRAINT,
   MAX_LENGTH_CONSTRAINT,
+  MIN_CONSTRAINT,
   MIN_LENGTH_CONSTRAINT,
   PATTERN_CONSTRAINT,
   REQUIRED_CONSTRAINT,
   TYPE_EMAIL_CONSTRAINT,
+  TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/native_constraints.js";
 import { openValidationMessage } from "./validation_message.js";
 
@@ -178,8 +181,11 @@ export const installCustomConstraintValidation = (element) => {
   constraintSet.add(REQUIRED_CONSTRAINT);
   constraintSet.add(PATTERN_CONSTRAINT);
   constraintSet.add(TYPE_EMAIL_CONSTRAINT);
+  constraintSet.add(TYPE_NUMBER_CONSTRAINT);
   constraintSet.add(MIN_LENGTH_CONSTRAINT);
   constraintSet.add(MAX_LENGTH_CONSTRAINT);
+  constraintSet.add(MIN_CONSTRAINT);
+  constraintSet.add(MAX_CONSTRAINT);
   register_constraint: {
     validationInterface.registerConstraint = (constraint) => {
       if (typeof constraint === "function") {
