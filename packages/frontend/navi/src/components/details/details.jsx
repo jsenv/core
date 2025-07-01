@@ -60,7 +60,8 @@ export const Details = forwardRef(
     const executeAction = useExecuteAction(innerRef);
     const summaryRef = useRef();
 
-    const [navStateValue, setNavStateValue] = useNavState(id);
+    const [navStateValue, setNavStateValue] = useNavState(id, open);
+    const [innerOpen, innerOpenSetter] = useState(open || navStateValue);
 
     /**
      * Browser will dispatch "toggle" event even if we set open={true}
@@ -81,8 +82,6 @@ export const Details = forwardRef(
       mountedRef.current = true;
     }, []);
 
-    const [innerOpen, innerOpenSetter] = useState(open || navStateValue);
-
     return (
       <details
         {...props}
@@ -95,15 +94,19 @@ export const Details = forwardRef(
           if (onToggle) {
             onToggle(toggleEvent);
           }
+          const isOpen = toggleEvent.newState === "open";
+          if (isOpen) {
+            executeAction(action, { method: "load" });
+          } else {
+            action.abort();
+          }
           if (mountedRef.current) {
-            if (toggleEvent.newState === "open") {
+            if (isOpen) {
               innerOpenSetter(true);
               setNavStateValue(true);
-              executeAction(action, { method: "load" });
             } else {
               innerOpenSetter(false);
               setNavStateValue(undefined);
-              action.abort();
             }
           }
         }}
