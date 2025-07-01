@@ -43,10 +43,10 @@ export const ActionRenderer = ({ action, children }) => {
     return renderOtherwise(action);
   }
   if (errorBoundary) {
-    return renderError(errorBoundary, "ui_error");
+    return renderError(errorBoundary, "ui_error", action);
   }
   if (error) {
-    return renderError(error, "action_error");
+    return renderError(error, "action_error", action);
   }
   if (aborted) {
     return renderAborted(action);
@@ -64,12 +64,12 @@ export const ActionRenderer = ({ action, children }) => {
   }
   if (pending) {
     if (action.canDisplayOldData && data !== undefined) {
-      return renderLoadedSafe(data);
+      return renderLoadedSafe(data, action);
     }
     return renderLoading(action);
   }
 
-  return renderLoadedSafe(data);
+  return renderLoadedSafe(data, action);
 };
 
 const actionUIRenderedPromiseWeakMap = new WeakMap();

@@ -66,8 +66,30 @@
                         </span>
                       );
                     },
-                    aborted: () => <span style="color: red">Aborted</span>,
-                    loaded: (message) => <span>{message}</span>,
+                    aborted: (action) => (
+                      <>
+                        <span style="color: red">Aborted</span>
+                        <button
+                          onClick={() => {
+                            action.reload();
+                          }}
+                        >
+                          Reload
+                        </button>
+                      </>
+                    ),
+                    loaded: (message, action) => (
+                      <>
+                        <span>{message}</span>
+                        <button
+                          onClick={() => {
+                            action.reload();
+                          }}
+                        >
+                          Reload
+                        </button>
+                      </>
+                    ),
                   }}
                 ></Details>
               </div>
