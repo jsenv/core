@@ -13,6 +13,7 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
+import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useAction } from "../use_action.js";
@@ -47,7 +48,9 @@ export const Form = forwardRef(
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
-    action = useAction(action);
+    const paramsSignal = useSignal({});
+
+    action = useAction(action, paramsSignal);
     const executeAction = useExecuteAction(innerRef, { errorEffect });
     const [formStatus, formStatusSetter] = useState({
       pending: false,
@@ -86,6 +89,26 @@ export const Form = forwardRef(
         return;
       }
       executingRef.current = true;
+      setTimeout(() => {
+        executingRef.current = false;
+      }, 0);
+
+      const form = innerRef.current;
+      const formData = new FormData(form);
+      const params = {};
+      for (const [name, value] of formData) {
+        if (name in params) {
+          if (Array.isArray(params[name])) {
+            params[name].push(value);
+          } else {
+            params[name] = [params[name], value];
+          }
+        } else {
+          params[name] = value;
+        }
+      }
+      paramsSignal.value = params;
+
       let resolveResultPromise;
       if (onExecute) {
         const resultPromise = new Promise((resolve) => {
@@ -106,9 +129,6 @@ export const Form = forwardRef(
         executeEvent.detail.requester,
       );
       formActionRef.current = null;
-      setTimeout(() => {
-        executingRef.current = false;
-      }, 0);
       formStatusSetter({
         pending: false,
         aborted,
@@ -143,16 +163,6 @@ export const Form = forwardRef(
   },
 );
 
-// const formData = new FormData(submitEvent.currentTarget);
-// if (formDataMappings) {
-//   for (const [key, mapping] of Object.entries(formDataMappings)) {
-//     const value = formData.get(key);
-//     if (value) {
-//       const valueMapped = mapping(value);
-//       formData.set(key, valueMapped);
-//     }
-//   }
-// }
 // const dispatchCustomEventOnFormAndFormElements = (type, options) => {
 //   const form = innerRef.current;
 //   const customEvent = new CustomEvent(type, options);
