@@ -7,9 +7,17 @@ import {
 import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
 import { ROLE, useRoleArray, useRoleCanLoginArray } from "../role_store.js";
+import {
+  roleCanLoginListDetailsOnToggle,
+  roleCanLoginListDetailsOpenAtStart,
+} from "./role_can_login_list_details_state.js";
 
 export const roleCanLoginListDetailsController = createExplorerGroupController(
   "role_can_login_list",
+  {
+    detailsOpenAtStart: roleCanLoginListDetailsOpenAtStart,
+    detailsOnToggle: roleCanLoginListDetailsOnToggle,
+  },
 );
 
 export const RoleCanLoginListDetails = (props) => {

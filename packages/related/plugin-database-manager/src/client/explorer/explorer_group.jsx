@@ -14,7 +14,10 @@ import {
 } from "preact/hooks";
 import { ExplorerItemList } from "./explorer_item_list.jsx";
 
-export const createExplorerGroupController = (id) => {
+export const createExplorerGroupController = (
+  id,
+  { detailsOpenAtStart, detailsOnToggle },
+) => {
   const [restoreHeight, storeHeight] = valueInLocalStorage(
     `explorer_group_${id}_height`,
     {
@@ -34,7 +37,13 @@ export const createExplorerGroupController = (id) => {
     heightSettingSignal.value = width;
   };
 
-  return { id, useHeightSetting, setHeightSetting };
+  return {
+    id,
+    useHeightSetting,
+    setHeightSetting,
+    detailsOpenAtStart,
+    detailsOnToggle,
+  };
 };
 
 export const ExplorerGroup = forwardRef(
@@ -90,8 +99,10 @@ export const ExplorerGroup = forwardRef(
           {...rest}
           ref={innerRef}
           id={controller.id}
+          open={controller.detailsOpenAtStart}
           className="explorer_group"
           onToggle={(toggleEvent) => {
+            controller.detailsOnToggle(toggleEvent.newState === "open");
             if (toggleEvent.newState === "open") {
               if (onOpen) {
                 onOpen();

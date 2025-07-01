@@ -1,4 +1,4 @@
-import { valueInLocalStorage } from "@jsenv/router";
+import { valueInLocalStorage } from "@jsenv/navi";
 import { ROLE } from "../role_store.js";
 
 const [
@@ -9,13 +9,15 @@ const [
   type: "boolean",
 });
 
-if (readRoleCanLoginListDetailsOpened()) {
-  // et encore c'est seulement si on est sur la bonne page sinon c'est con
-  ROLE.GET_MANY_CAN_LOGIN.preload();
+export const roleCanLoginListDetailsOpenAtStart =
+  readRoleCanLoginListDetailsOpened();
+
+if (roleCanLoginListDetailsOpenAtStart) {
+  ROLE.GET_MANY_CAN_LOGIN.preload(); // et encore c'est seulement si on est sur la bonne page sinon c'est con
 }
 
-export const onRoleCanLoginListDetailsToggle = (opened) => {
-  if (opened) {
+export const roleCanLoginListDetailsOnToggle = (detailsOpen) => {
+  if (detailsOpen) {
     storeRoleCanLoginListDetailsOpened(true);
   } else {
     eraseRoleCanLoginListDetailsOpened();
