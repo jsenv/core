@@ -1,5 +1,6 @@
 import { initPositionSticky } from "@jsenv/dom";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { ErrorBoundaryContext } from "@jsenv/navi";
+import { useErrorBoundary, useLayoutEffect, useRef } from "preact/hooks";
 import { IconAndText } from "../components/icon_and_text.jsx";
 
 import.meta.css = /* css */ `
@@ -38,6 +39,28 @@ import.meta.css = /* css */ `
     margin-bottom: 20px;
   }
 `;
+
+export const Page = ({ children }) => {
+  const [error, resetError] = useErrorBoundary();
+
+  return (
+    <ErrorBoundaryContext.Provider value={resetError}>
+      {error && <ErrorDetails error={error} />}
+      {children}
+    </ErrorBoundaryContext.Provider>
+  );
+};
+
+const ErrorDetails = ({ error }) => {
+  return (
+    <details>
+      <summary>{error.message}</summary>
+      <pre>
+        <code>{error.stack}</code>
+      </pre>
+    </details>
+  );
+};
 
 export const PageHead = ({ children, actions = [] }) => {
   const headerRef = useRef(null);

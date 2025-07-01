@@ -1,18 +1,18 @@
-import { resource } from "@jsenv/navi";
+import { resource, useActionData } from "@jsenv/navi";
 import { signal } from "@preact/signals";
 import { errorFromResponse } from "../error_from_response.js";
 
-const canLoginCountSignal = signal(0);
-export const useCanLoginCount = () => {
-  return canLoginCountSignal.value;
+const roleCanLoginCountSignal = signal(0);
+export const useRoleCanLoginCount = () => {
+  return roleCanLoginCountSignal.value;
 };
-const groupCountSignal = signal(0);
-export const useGroupCountSignal = () => {
-  return groupCountSignal.value;
+const roleGroupCountSignal = signal(0);
+export const useRoleGroupCountSignal = () => {
+  return roleGroupCountSignal.value;
 };
-const withOwnershipCountSignal = signal(0);
-export const useWithOwnershipCountSignal = () => {
-  return withOwnershipCountSignal.value;
+const roleWithOwnershipCountSignal = signal(0);
+export const useRoleWithOwnershipCountSignal = () => {
+  return roleWithOwnershipCountSignal.value;
 };
 
 export const ROLE = resource("role", {
@@ -67,9 +67,9 @@ export const ROLE = resource("role", {
     }
     const { data, meta } = await response.json();
     const { canLoginCount, groupCount, withOwnershipCount } = meta;
-    canLoginCountSignal.value = canLoginCount;
-    groupCountSignal.value = groupCount;
-    withOwnershipCountSignal.value = withOwnershipCount;
+    roleCanLoginCountSignal.value = canLoginCount;
+    roleGroupCountSignal.value = groupCount;
+    roleWithOwnershipCountSignal.value = withOwnershipCount;
     return data;
   },
   DELETE: async ({ rolname, signal }) => {
@@ -89,9 +89,9 @@ export const ROLE = resource("role", {
     }
     const { meta } = await response.json();
     const { canLoginCount, groupCount, withOwnershipCount } = meta;
-    canLoginCountSignal.value = canLoginCount;
-    groupCountSignal.value = groupCount;
-    withOwnershipCountSignal.value = withOwnershipCount;
+    roleCanLoginCountSignal.value = canLoginCount;
+    roleGroupCountSignal.value = groupCount;
+    roleWithOwnershipCountSignal.value = withOwnershipCount;
     return { rolname };
   },
   PUT: async ({ rolname, columnName, columnValue }, { signal }) => {
@@ -120,7 +120,13 @@ export const ROLE = resource("role", {
   },
 });
 
+export const useRoleArray = ROLE.useArray;
+
 ROLE.GET_MANY_CAN_LOGIN = ROLE.GET_MANY.bindParams({ canlogin: true });
+export const useRoleCanLoginArray = () => {
+  const roleCanLoginArray = useActionData(ROLE.GET_MANY_CAN_LOGIN);
+  return roleCanLoginArray;
+};
 
 const currentRoleIdSignal = signal(window.DB_MANAGER_CONFIG.currentRole.oid);
 export const setCurrentRoleId = (id) => {

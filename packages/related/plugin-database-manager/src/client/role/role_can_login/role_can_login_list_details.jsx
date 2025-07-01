@@ -5,12 +5,12 @@ import {
 } from "../../explorer/explorer_group.jsx";
 import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
-import { ROLE } from "../role_store.js";
-import { ROLE_CAN_LOGIN_LIST_DETAILS_ROUTE } from "./role_can_login_list_details_routes.js";
 import {
+  ROLE,
+  useRoleArray,
+  useRoleCanLoginArray,
   useRoleCanLoginCount,
-  useRoleCanLoginList,
-} from "./role_can_login_signals.js";
+} from "../role_store.js";
 
 export const roleCanLoginListDetailsController = createExplorerGroupController(
   "role_can_login_list",
@@ -18,13 +18,13 @@ export const roleCanLoginListDetailsController = createExplorerGroupController(
 
 export const RoleCanLoginListDetails = (props) => {
   const roleCanLoginCount = useRoleCanLoginCount();
-  const roleCanLoginList = useRoleCanLoginList();
+  const roleCanLoginArray = useRoleCanLoginArray();
 
   return (
     <ExplorerGroup
       {...props}
       controller={roleCanLoginListDetailsController}
-      detailsRoute={ROLE_CAN_LOGIN_LIST_DETAILS_ROUTE}
+      detailsAction={ROLE.GET_MANY_CAN_LOGIN}
       idKey="oid"
       nameKey="rolname"
       labelChildren={
@@ -36,7 +36,7 @@ export const RoleCanLoginListDetails = (props) => {
           {children}
         </RoleLink>
       )}
-      useItemList={useRoleList}
+      useItemList={useRoleArray}
       useRenameItemAction={(role) =>
         ROLE.PUT.bindParams({
           rolname: role.rolname,
@@ -54,7 +54,7 @@ export const RoleCanLoginListDetails = (props) => {
         })
       }
     >
-      {roleCanLoginList}
+      {roleCanLoginArray}
     </ExplorerGroup>
   );
 };

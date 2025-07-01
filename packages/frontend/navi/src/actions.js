@@ -1,5 +1,12 @@
 import { batch, computed, effect, signal } from "@preact/signals";
 import {
+  ABORTED,
+  FAILED,
+  IDLE,
+  LOADED,
+  LOADING,
+} from "./action_loading_states.js";
+import {
   getActionPrivateProperties,
   setActionPrivateProperties,
 } from "./action_private_properties.js";
@@ -9,12 +16,6 @@ import { createJsValueWeakMap } from "./js_value_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
 let debug = false;
-
-export const IDLE = { id: "idle" };
-export const LOADING = { id: "loading" };
-export const ABORTED = { id: "aborted" };
-export const FAILED = { id: "failed" };
-export const LOADED = { id: "loaded" };
 
 /**
  * Registry that prevents preloaded actions from being garbage collected.
@@ -844,47 +845,6 @@ export const createAction = (callback, rootOptions = {}) => {
   rootAction = createActionCore(rootOptions);
   actionWeakMap.set(callback, rootAction);
   return rootAction;
-};
-
-export const useActionStatus = (action) => {
-  if (!action) {
-    return {
-      params: undefined,
-      idle: true,
-      error: null,
-      aborted: false,
-      pending: false,
-      preloaded: false,
-      data: undefined,
-    };
-  }
-  const {
-    paramsSignal,
-    loadingStateSignal,
-    loadRequestedSignal,
-    errorSignal,
-    computedDataSignal,
-  } = getActionPrivateProperties(action);
-
-  const params = paramsSignal.value;
-  const loadRequested = loadRequestedSignal.value;
-  const loadingState = loadingStateSignal.value;
-  const error = errorSignal.value;
-  const idle = loadingState === IDLE;
-  const pending = loadingState === LOADING;
-  const aborted = loadingState === ABORTED;
-  const preloaded = loadingState === LOADED && !loadRequested;
-  const data = computedDataSignal.value;
-
-  return {
-    params,
-    idle,
-    error,
-    aborted,
-    pending,
-    preloaded,
-    data,
-  };
 };
 
 const createActionProxyFromSignal = (

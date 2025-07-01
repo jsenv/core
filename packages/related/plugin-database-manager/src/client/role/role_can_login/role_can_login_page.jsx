@@ -1,39 +1,26 @@
-import {
-  ErrorBoundaryContext,
-  SPADeleteButton,
-  useRouteParam,
-} from "@jsenv/router";
-import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../../components/database_value.jsx";
-import { PageBody, PageHead } from "../../layout/page.jsx";
+import { Page, PageBody, PageHead } from "../../layout/page.jsx";
 import { RoleDatabaseList } from "../role_database_list.jsx";
 import { pickRoleIcon } from "../role_icons.jsx";
-import {
-  DELETE_ROLE_ACTION,
-  GET_ROLE_ROUTE,
-  PUT_ROLE_ACTION,
-} from "../role_routes.js";
-import { useActiveRoleColumns } from "../role_signals.js";
+import { ROLE } from "../role_store.js";
 
 export const RoleCanLoginPage = ({ role }) => {
-  const [error, resetError] = useErrorBoundary();
-  const rolname = useRouteParam(GET_ROLE_ROUTE, "rolname");
-  const deleteRoleAction = DELETE_ROLE_ACTION.bindParams({ rolname });
+  const rolname = "toto"; // TODO: read it from url useRouteParam(GET_ROLE_ROUTE, "rolname");
+  const deleteRoleAction = ROLE.DELETE.bindParams({ rolname });
   const RoleIcon = pickRoleIcon(role);
 
   return (
-    <ErrorBoundaryContext.Provider value={resetError}>
-      {error && <ErrorDetails error={error} />}
+    <Page>
       <PageHead
-        actions={[
-          {
-            component: (
-              <SPADeleteButton action={deleteRoleAction}>
-                Delete
-              </SPADeleteButton>
-            ),
-          },
-        ]}
+      // actions={[
+      //   {
+      //     component: (
+      //       <SPADeleteButton action={deleteRoleAction}>
+      //         Delete
+      //       </SPADeleteButton>
+      //     ),
+      //   },
+      // ]}
       >
         <PageHead.Label icon={<RoleIcon />} label={"Role Login:"}>
           {rolname}
@@ -49,23 +36,12 @@ export const RoleCanLoginPage = ({ role }) => {
           ROLE documentation
         </a>
       </PageBody>
-    </ErrorBoundaryContext.Provider>
-  );
-};
-
-const ErrorDetails = ({ error }) => {
-  return (
-    <details>
-      <summary>{error.message}</summary>
-      <pre>
-        <code>{error.stack}</code>
-      </pre>
-    </details>
+    </Page>
   );
 };
 
 const RoleFields = ({ role }) => {
-  const columns = useActiveRoleColumns();
+  const columns = []; // useActiveRoleColumns();
 
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
