@@ -39,7 +39,7 @@ export const ExplorerItemList = ({
             onCancel={() => {
               stopCreatingNew();
             }}
-            onSubmitEnd={() => {
+            onActionEnd={() => {
               stopCreatingNew();
             }}
           />

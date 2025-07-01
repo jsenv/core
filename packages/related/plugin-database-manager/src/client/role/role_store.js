@@ -29,9 +29,13 @@ export const ROLE = resource("role", {
     }
     const {
       data,
-      // { currentRole }
-      // meta,
+      // { currentRole, roleCounts }
+      meta,
     } = await response.json();
+    const { canLoginCount, groupCount, withOwnershipCount } = meta.roleCounts;
+    roleCanLoginCountSignal.value = canLoginCount;
+    roleGroupCountSignal.value = groupCount;
+    roleWithOwnershipCountSignal.value = withOwnershipCount;
     return data;
   },
   GET: async ({ rolname }, { signal }) => {

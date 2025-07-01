@@ -26,6 +26,9 @@ export const InputText = forwardRef(
       disabled,
       onInput,
       onCancel,
+      onActionStart,
+      onActionError,
+      onActionEnd,
       ...rest
     },
     ref,
@@ -75,8 +78,15 @@ export const InputText = forwardRef(
           }
         }}
         // eslint-disable-next-line react/no-unknown-property
+        onactionstart={onActionStart}
+        // eslint-disable-next-line react/no-unknown-property
+        onactionerror={onActionError}
+        // eslint-disable-next-line react/no-unknown-property
         onactionend={() => {
           setNavStateValue(undefined);
+          if (onActionEnd) {
+            onActionEnd();
+          }
         }}
       />
     );

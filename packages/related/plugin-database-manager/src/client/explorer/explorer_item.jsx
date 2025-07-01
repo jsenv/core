@@ -3,6 +3,7 @@
 //   SPAInputText,
 //   useEditableController,
 // } from "@jsenv/router";
+import { Form, InputText } from "@jsenv/navi";
 import {
   createUniqueValueConstraint,
   SINGLE_SPACE_CONSTRAINT,
@@ -10,7 +11,6 @@ import {
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
 const EditableText = () => null;
-const SPAInputText = () => null;
 
 export const ExplorerItem = ({
   nameKey,
@@ -107,9 +107,9 @@ export const ExplorerNewItem = ({
   useCreateItemAction,
   cancelOnBlurInvalid,
   onCancel,
-  onSubmitEnd,
+  onActionEnd,
 }) => {
-  const action = useCreateItemAction();
+  const createItemAction = useCreateItemAction();
   const itemList = useItemList();
   const valueSet = new Set();
   for (const item of itemList) {
@@ -125,17 +125,18 @@ export const ExplorerNewItem = ({
       <FontSizedSvg>
         <EnterNameIconSvg />
       </FontSizedSvg>
-      <SPAInputText
-        name={nameKey}
-        action={action}
-        autoFocus
-        required
-        requestSubmitOnChange
-        constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
-        cancelOnBlurInvalid={cancelOnBlurInvalid}
-        onCancel={onCancel}
-        onSubmitEnd={onSubmitEnd}
-      />
+      <Form action={createItemAction} onActionEnd={onActionEnd}>
+        <InputText
+          name={nameKey}
+          autoFocus
+          required
+          requestExecuteOnChange
+          constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
+          cancelOnEscape
+          cancelOnBlurInvalid={cancelOnBlurInvalid}
+          onCancel={onCancel}
+        />
+      </Form>
     </span>
   );
 };

@@ -23,10 +23,32 @@ export const useActionOrFormAction = (
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (isInsideForm) {
-      return element.form.addEventListener("execute", () => {
-        // <form> will use this action
-        formActionRef.current = action;
-      });
+      const removeExecuteListener = addEventListener(
+        element.form,
+        "execute",
+        () => {
+          // <form> will use this action
+          formActionRef.current = action;
+        },
+      );
+      const customEventCleanupSet = new Set();
+      const redispatchCustomEvent = (name) => {
+        const removeListener = addEventListener(element.form, name, (e) => {
+          element.dispatchEvent(e);
+        });
+        customEventCleanupSet.add(removeListener);
+      };
+
+      redispatchCustomEvent("actionstart");
+      redispatchCustomEvent("actionend");
+      redispatchCustomEvent("actionerror");
+
+      return () => {
+        removeExecuteListener();
+        for (const customEventCleanup of customEventCleanupSet) {
+          customEventCleanup();
+        }
+      };
     }
     if (action) {
       return addEventListener(element, "execute", () => {

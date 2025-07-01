@@ -35,15 +35,25 @@ export const Form = forwardRef(
   (
     {
       action,
-      method = "get",
+      method,
       errorEffect = "show_validation_message", // "show_validation_message" or "throw"
       onExecute,
       onExecutePrevented,
+      onActionStart,
+      onActionError,
+      onActionEnd,
       children,
       ...rest
     },
     ref,
   ) => {
+    if (method === undefined) {
+      if (action && action.meta.httpVerb) {
+        method = action.meta.httpVerb;
+      } else {
+        method = "get";
+      }
+    }
     method = method.toLowerCase();
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
@@ -127,9 +137,13 @@ export const Form = forwardRef(
           submitEvent.preventDefault();
         }}
         // eslint-disable-next-line react/no-unknown-property
-        onexecuteprevented={(executePreventedEvent) => {
-          onExecutePrevented?.(executePreventedEvent);
-        }}
+        onexecuteprevented={onExecutePrevented}
+        // eslint-disable-next-line react/no-unknown-property
+        onactionstart={onActionStart}
+        // eslint-disable-next-line react/no-unknown-property
+        onactionend={onActionEnd}
+        // eslint-disable-next-line react/no-unknown-property
+        onactionerror={onActionError}
       >
         <FormContext.Provider value={[formAction, formActionRef]}>
           {children}
