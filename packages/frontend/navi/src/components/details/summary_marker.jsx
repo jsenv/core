@@ -83,12 +83,16 @@ import.meta.css = /* css */ `
 export const SummaryMarker = ({ open, pending }) => {
   const showLoading = useDebounceTrue(pending, 300);
   const mountedRef = useRef(false);
+  const prevOpenRef = useRef(open); // ✅ Track previous open state
+
   useLayoutEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
     };
   }, []);
+  const shouldAnimate = mountedRef.current && prevOpenRef.current !== open;
+  prevOpenRef.current = open;
 
   return (
     <span className="summary_marker">
@@ -126,7 +130,7 @@ export const SummaryMarker = ({ open, pending }) => {
             className="arrow"
             fill="currentColor"
             data-animation-target={
-              mountedRef.current ? (open ? "down" : "right") : undefined
+              shouldAnimate ? (open ? "down" : "right") : undefined
             }
             d={open ? downArrowPath : rightArrowPath}
           />
