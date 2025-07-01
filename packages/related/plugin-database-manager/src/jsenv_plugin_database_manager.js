@@ -187,9 +187,11 @@ export const jsenvPluginDatabaseManager = ({
           const tableCount = await countRows(sql, "pg_tables");
           const roleCounts = await countRoles(sql);
           return Response.json({
-            databaseCount,
-            tableCount,
-            roleCounts,
+            data: {
+              databaseCount,
+              tableCount,
+              roleCounts,
+            },
           });
         },
       },

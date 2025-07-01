@@ -94,7 +94,7 @@ const createHttpHandlerForRootResource = (
             return itemId;
           };
 
-    const callerInfo = getCallerInfo(createActionAffectingOneItem, 2);
+    const callerInfo = getCallerInfo(createActionAffectingOneItem, 1);
     const actionTrace = `${name}.${httpVerb} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
     const httpActionAffectingOneItem = createAction(
       mapCallbackMaybeAsyncResult(callback, (data) => {

@@ -1,7 +1,7 @@
 import { resource, useActionData } from "@jsenv/navi";
 import { signal } from "@preact/signals";
+import { setRoleCounts } from "../database_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
-import { setRoleCounts } from "../explorer/explorer_store.js";
 
 export const ROLE = resource("role", {
   idKey: "oid",

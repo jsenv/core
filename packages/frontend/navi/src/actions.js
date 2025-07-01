@@ -719,7 +719,9 @@ export const createAction = (callback, rootOptions = {}) => {
           }
         });
 
-        const args = [params, { signal: abortSignal, reason, isPreload }];
+        const args = [];
+        args.push(params);
+        args.push({ signal: abortSignal, reason, isPreload });
         const returnValue = sideEffect(...args);
         if (typeof returnValue === "function") {
           sideEffectCleanup = returnValue;
@@ -757,6 +759,7 @@ export const createAction = (callback, rootOptions = {}) => {
         };
 
         try {
+          let gotError = false;
           const thenableArray = [];
           const callbackResult = callback(...args);
           if (callbackResult && typeof callbackResult.then === "function") {
@@ -765,31 +768,39 @@ export const createAction = (callback, rootOptions = {}) => {
               (value) => {
                 loadResult = value;
               },
-              () => {},
+              (e) => {
+                if (gotError) {
+                  return;
+                }
+                gotError = true;
+                onLoadError(e);
+              },
             );
           } else {
             loadResult = callbackResult;
           }
           if (ui.renderLoadedAsync && !ui.renderLoaded) {
-            const renderLoadedPromise = ui
-              .renderLoadedAsync(...args)
-              .then((renderLoaded) => {
+            const renderLoadedPromise = ui.renderLoadedAsync(...args).then(
+              (renderLoaded) => {
                 ui.renderLoaded = renderLoaded;
-              });
+              },
+              (e) => {
+                if (gotError) {
+                  return;
+                }
+                gotError = true;
+                onLoadError(e);
+              },
+            );
             thenableArray.push(renderLoadedPromise);
           }
           if (thenableArray.length === 0) {
             onLoadEnd();
             return undefined;
           }
-          return Promise.all(thenableArray).then(
-            () => {
-              onLoadEnd();
-            },
-            (e) => {
-              onLoadError(e);
-            },
-          );
+          return Promise.all(thenableArray).then(() => {
+            onLoadEnd();
+          });
         } catch (e) {
           onLoadError(e);
         }

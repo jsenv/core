@@ -1,9 +1,9 @@
 import { TextAndCount } from "../../components/text_and_count.jsx";
+import { useRoleCanLoginCount } from "../../database_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../../explorer/explorer_group.jsx";
-import { useRoleCanLoginCount } from "../../explorer/explorer_store.js";
 import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
 import { ROLE, useRoleArray, useRoleCanLoginArray } from "../role_store.js";
