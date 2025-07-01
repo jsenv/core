@@ -1,15 +1,19 @@
-import {
-  EditableText,
-  SPAInputText,
-  useEditableController,
-} from "@jsenv/router";
+// import {
+//   EditableText,
+//   SPAInputText,
+//   useEditableController,
+// } from "@jsenv/router";
 import {
   createUniqueValueConstraint,
   SINGLE_SPACE_CONSTRAINT,
 } from "@jsenv/validation";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
+const EditableText = () => null;
+const SPAInputText = () => null;
+
 export const ExplorerItem = ({
+  nameKey,
   item,
   renderItem,
   useItemList,
@@ -20,7 +24,7 @@ export const ExplorerItem = ({
   const deleteAction = useDeleteItemAction(item);
 
   const renameAction = useRenameItemAction(item);
-  const { editable, startEditing, stopEditing } = useEditableController();
+  const { editable, startEditing, stopEditing } = {}; // useEditableController();
 
   return renderItem(item, {
     deleteShortcutAction: deleteAction,

@@ -1,5 +1,5 @@
 import { useLayoutEffect } from "preact/hooks";
-import { useActionStatus } from "../actions.js";
+import { useActionStatus } from "../use_action_status.js";
 import {
   useFormActionRef,
   useFormActionStatus,

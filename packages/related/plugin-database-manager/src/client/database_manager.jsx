@@ -1,11 +1,10 @@
 // organize-imports-ignore
-import "./router.js"; // must be the first import (so that setBaseUrl is called for any other import)
 import { render } from "preact";
 
 import "./layout/layout.css" with { type: "css" };
 import "./database_manager.css" with { type: "css" };
 import { Aside } from "./layout/aside.jsx";
-import { Explorer } from "./explorer/explorer.jsx";
+// import { Explorer } from "./explorer/explorer.jsx";
 
 // import { DatabaseRoutes } from "./database/database_page.jsx";
 // import { RoleRoutes } from "./role/role_page.jsx";
@@ -14,9 +13,7 @@ import { Explorer } from "./explorer/explorer.jsx";
 const App = () => {
   return (
     <div id="app">
-      <Aside>
-        <Explorer />
-      </Aside>
+      <Aside>{/* <Explorer /> */}</Aside>
       {/* <main>
         <div className="main_body">
           <TableRoutes />
