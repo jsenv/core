@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resource demo describe many</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 600px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useEffect, useRef } from "preact/hooks";
+      import {
+        resource,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        ActionStatus,
+      } from "./action_status.jsx";
+      import { localStorageSignal } from "../../local_storage_signal.js";
+
+      // Mock data
+      const users = [
+        { id: "user_1", name: "Alice" },
+        { id: "user_2", name: "Bob" },
+        { id: "user_3", name: "Charlie" },
+        { id: "user_4", name: "Diana" },
+      ];
+
+      // Mock friendships data (userId -> array of friend userIds)
+      const friendships = {
+        user_1: ["user_2", "user_3"],
+        user_2: ["user_1"],
+        user_3: ["user_1", "user_4"],
+        user_4: ["user_3"],
+      };
+
+      const getUser = ({ userId }) => {
+        const user = users.find((user) => user.id === userId);
+        if (!user) {
+          throw new Error(`User with id "${userId}" not found`);
+        }
+        return user;
+      };
+
+      const USER = resource("user", {
+        idKey: "id",
+        mutableIdKey: "name",
+        GET: getUser,
+        GET_MANY: () => users,
+        PUT: ({ userId, field, value }) => {
+          let userToUpdate = users.find((u) => u.id === userId);
+          userToUpdate[field] = value;
+          return { id: userId, [field]: value };
+        },
+      });
+
+      // ✅ One-to-many relationship: User can have many friends
+      const USER_FRIENDS = USER.many("friends", USER, {
+        // GET - Retrieve all friends of a user
+        GET_MANY: ({ userId }) => {
+          const friendIds = friendships[userId] || [];
+          return {
+            id: userId,
+            friends: friendIds.map((friendId) =>
+              users.find((u) => u.id === friendId),
+            ),
+          };
+        },
+
+        // POST - Add a friend relationship
+        POST: ({ userId, friendId }) => {
+          if (!friendships[userId]) {
+            friendships[userId] = [];
+          }
+
+          // Add friend if not already added
+          if (!friendships[userId].includes(friendId)) {
+            friendships[userId].push(friendId);
+          }
+
+          // Return the added friend
+          return users.find((u) => u.id === friendId);
+        },
+
+        // DELETE - Remove a friend relationship
+        DELETE: ({ userId, friendId }) => {
+          if (friendships[userId]) {
+            friendships[userId] = friendships[userId].filter(
+              (id) => id !== friendId,
+            );
+          }
+          return [userId, friendId];
+        },
+      });
+
+      USER.RENAME = USER.PUT.bindParams({ field: "name" });
+
+      // Signal for current user
+      const currentUserIdSignal = localStorageSignal("current_user_id");
+      const currentUserAction = USER.GET.bindParams({
+        userId: currentUserIdSignal,
+      });
+      if (currentUserIdSignal.value) {
+        currentUserAction.load();
+      }
+
+      // Load initial data
+      USER.GET_MANY.load();
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div style={{ display: "flex", gap: "20px" }}>
+            <div style={{ flex: 1 }}>
+              <h2>Users</h2>
+              <UsersList />
+            </div>
+
+            <div style={{ flex: 1 }}>
+              <h2>Current User Friends</h2>
+              <CurrentUserFriends />
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const UsersList = () => {
+        return (
+          <ActionRenderer action={USER.GET_MANY}>
+            {(users) => (
+              <div>
+                {users.map((user) => (
+                  <UserItem key={user.id} user={user} />
+                ))}
+              </div>
+            )}
+          </ActionRenderer>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const UserItem = ({ user }) => {
+        const [isEditing, setIsEditing] = useState(false);
+        const [editName, setEditName] = useState(user.name);
+
+        const handleSave = async () => {
+          await USER.RENAME.bindParams({
+            userId: user.id,
+            value: editName,
+          }).reload();
+          setIsEditing(false);
+        };
+
+        const handleCancel = () => {
+          setEditName(user.name);
+          setIsEditing(false);
+        };
+
+        const inputRef = useRef();
+        useEffect(() => {
+          if (isEditing) {
+            inputRef.current.focus();
+            inputRef.current.select();
+          }
+        }, [isEditing]);
+
+        // Count friends
+        const friendCount = friendships[user.id]?.length || 0;
+
+        return (
+          <div
+            style={{
+              border: "1px solid #ccc",
+              padding: "10px",
+              margin: "5px 0",
+              backgroundColor:
+                currentUserIdSignal.value === user.id ? "#e6f3ff" : "white",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {isEditing ? (
+                <>
+                  <input
+                    ref={inputRef}
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <button onClick={handleSave}>Save</button>
+                  <button onClick={handleCancel}>Cancel</button>
+                </>
+              ) : (
+                <>
+                  <strong style={{ flex: 1 }}>{user.name}</strong>
+                  <button onClick={() => setIsEditing(true)}>Rename</button>
+                  <button
+                    onClick={() => {
+                      currentUserIdSignal.value = user.id;
+                      currentUserAction.reload();
+                    }}
+                    disabled={currentUserIdSignal.value === user.id}
+                  >
+                    Select
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div style={{ marginTop: "10px", fontSize: "12px", color: "#666" }}>
+              ID: {user.id} | Friends: {friendCount}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CurrentUserFriends = () => {
+        if (!currentUserIdSignal.value) {
+          return <p>No user selected</p>;
+        }
+
+        return (
+          <div>
+            <ActionStatus action={currentUserAction} />
+            <ActionRenderer action={currentUserAction}>
+              {(user) => <UserFriends user={user} />}
+            </ActionRenderer>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const UserFriends = ({ user }) => {
+        const [isAddingFriend, setIsAddingFriend] = useState(false);
+        const [selectedFriendId, setSelectedFriendId] = useState("");
+
+        const userFriendsAction = USER_FRIENDS.GET_MANY.bindParams({
+          userId: user.id,
+        });
+
+        useEffect(() => {
+          userFriendsAction.load();
+        }, [user.id]);
+
+        const handleAddFriend = async () => {
+          if (!selectedFriendId) return;
+
+          await USER_FRIENDS.POST.bindParams({
+            userId: user.id,
+            friendId: selectedFriendId,
+          }).reload();
+
+          setSelectedFriendId("");
+          setIsAddingFriend(false);
+        };
+
+        const handleRemoveFriend = async (friendId) => {
+          await USER_FRIENDS.DELETE.bindParams({
+            userId: user.id,
+            friendId,
+          }).reload();
+        };
+
+        // Get available users to add as friends (excluding self and existing friends)
+        const currentFriendIds = friendships[user.id] || [];
+        const availableUsers = users.filter(
+          (u) => u.id !== user.id && !currentFriendIds.includes(u.id),
+        );
+
+        return (
+          <div style={{ border: "2px solid #007acc", padding: "15px" }}>
+            <h3>{user.name}'s Friends</h3>
+
+            <div style={{ marginBottom: "15px" }}>
+              {isAddingFriend ? (
+                <div
+                  style={{ display: "flex", gap: "10px", alignItems: "center" }}
+                >
+                  <select
+                    value={selectedFriendId}
+                    onChange={(e) => setSelectedFriendId(e.target.value)}
+                  >
+                    <option value="">Select a friend to add...</option>
+                    {availableUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleAddFriend}
+                    disabled={!selectedFriendId}
+                  >
+                    Add
+                  </button>
+                  <button onClick={() => setIsAddingFriend(false)}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsAddingFriend(true)}
+                  disabled={availableUsers.length === 0}
+                >
+                  Add Friend
+                </button>
+              )}
+            </div>
+
+            <ActionRenderer action={userFriendsAction}>
+              {(friends) => (
+                <div>
+                  {friends.length === 0 ? (
+                    <p style={{ color: "#666" }}>No friends yet</p>
+                  ) : (
+                    friends.map((friend) => (
+                      <div
+                        key={friend.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "8px",
+                          margin: "5px 0",
+                          backgroundColor: "#f0f0f0",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        <span>{friend.name}</span>
+                        <button
+                          onClick={() => handleRemoveFriend(friend.id)}
+                          style={{
+                            background: "#ff4444",
+                            color: "white",
+                            border: "none",
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </ActionRenderer>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

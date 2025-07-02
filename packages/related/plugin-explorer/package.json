@@ -1,15 +1,13 @@
 {
   "name": "@jsenv/plugin-explorer",
-  "version": "1.0.72",
-  "license": "MIT",
+  "version": "1.0.73",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-explorer"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -25,15 +23,17 @@
     "/dist/",
     "/src/"
   ],
-  "sideEffects": false,
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.15.4"
+    "@jsenv/filesystem": "4.15.5"
   },
   "devDependencies": {
     "@jsenv/core": "../../../"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

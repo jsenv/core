@@ -17,7 +17,10 @@ import {
   determineSourcemapFileUrl,
 } from "./out_directory_url.js";
 import { createUrlGraph } from "./url_graph/url_graph.js";
-import { isPlaceholderInjection } from "./url_graph/url_info_injections.js";
+import {
+  INJECTIONS,
+  isPlaceholderInjection,
+} from "./url_graph/url_info_injections.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
 import { urlSpecifierEncoding } from "./url_graph/url_specifier_encoding.js";
 
@@ -104,6 +107,7 @@ export const createKitchen = ({
       isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
       isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
       isPlaceholderInjection,
+      INJECTIONS,
       getPluginMeta: null,
       sourcemaps,
       outDirectoryUrl,

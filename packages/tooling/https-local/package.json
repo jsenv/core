@@ -1,19 +1,13 @@
 {
   "name": "@jsenv/https-local",
-  "version": "3.2.33",
+  "version": "3.2.34",
   "description": "A programmatic way to generate locally trusted certificates",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/https-local"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "engines": {
-    "node": ">=20.0.0"
-  },
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -21,26 +15,26 @@
     },
     "./*": "./*"
   },
-  "bin": "./src/https_local_cli.mjs",
   "main": "./src/main.js",
+  "bin": "./src/https_local_cli.mjs",
   "files": [
     "/src/"
   ],
   "scripts": {
-    "performance": "node --expose-gc ./scripts/performance/performance.mjs  --local --log",
-    "test:start-node-server": "node ./scripts/certificate/start_node_server.mjs",
     "ca:install": "node ./scripts/certificate/install_ca.mjs",
     "ca:log-trust": "node ./scripts/certificate/log_root_certificate_trust.mjs",
     "ca:trust": "node ./scripts/certificate/trust_root_certificate.mjs",
-    "ca:untrust": "node ./scripts/certificate/untrust_root_certificate.mjs",
     "ca:uninstall": "node ./scripts/certificate/uninstall_certificate_authority.mjs",
+    "ca:untrust": "node ./scripts/certificate/untrust_root_certificate.mjs",
     "hosts:add-localhost-mappings": "node ./scripts/hosts/add_localhost_mappings.mjs",
+    "hosts:ensure-localhost-mappings": "node ./scripts/hosts/ensure_localhost_mappings.mjs",
     "hosts:remove-localhost-mappings": "node ./scripts/hosts/remove_localhost_mappings.mjs",
     "hosts:verify-localhost-mappings": "node ./scripts/hosts/verify_localhost_mappings.mjs",
-    "hosts:ensure-localhost-mappings": "node ./scripts/hosts/ensure_localhost_mappings.mjs"
+    "performance": "node --expose-gc ./scripts/performance/performance.mjs  --local --log",
+    "test:start-node-server": "node ./scripts/certificate/start_node_server.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.15.4",
+    "@jsenv/filesystem": "4.15.5",
     "@jsenv/humanize": "1.6.0",
     "@jsenv/urls": "2.9.0",
     "command-exists": "1.2.9",
@@ -53,5 +47,11 @@
     "@jsenv/https-local": "./",
     "@jsenv/performance-impact": "../performance-impact",
     "playwright": "1.52.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

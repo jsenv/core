@@ -1,4 +1,9 @@
 export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
+  if (event.defaultPrevented) {
+    // an other resize gesture has call preventDefault()
+    // or something wants to prevent mousedown effects
+    return null;
+  }
   if (event.button !== 0) {
     return null;
   }
@@ -43,12 +48,18 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
     yMove: 0,
     xChanged: false,
     yChanged: false,
+    isMouseUp: false,
   };
   let previousGestureInfo = null;
 
+  elementWithDataResizeHandle.setAttribute("data-active", "");
+  endCallbackSet.add(() => {
+    elementWithDataResizeHandle.removeAttribute("data-active");
+  });
   append_backdrop: {
     const backdrop = document.createElement("div");
     backdrop.style.position = "fixed";
+    backdrop.style.zIndex = "1";
     backdrop.style.inset = "0";
     backdrop.style.cursor =
       resizeDirection.x && resizeDirection.y
@@ -89,6 +100,7 @@ export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
     };
     const handleMouseUp = (e) => {
       e.preventDefault();
+      gestureInfo.isMouseUp = true;
       updateMousePosition(e);
       for (const endCallback of endCallbackSet) {
         endCallback();

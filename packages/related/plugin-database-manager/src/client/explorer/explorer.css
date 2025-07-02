@@ -13,6 +13,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+  padding-left: 6px;
 }
 .explorer_head h2 {
   margin-left: 24px;
@@ -29,28 +30,9 @@
   min-height: 0; /* Critical for scrolling */
   overflow: hidden;
 }
-.explorer_group {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-}
-.explorer_group[open] {
-  min-height: 150px;
-}
-/* When multiple details are open, distribute space evenly */
-/* one day this is going to be decided by js with ability to resize manually */
-.explorer_group[open] {
-  flex: 1;
-}
 .explorer_group > summary {
   flex-shrink: 0;
   cursor: pointer;
-  font-weight: 500;
-  display: flex;
-  flex-direction: column;
   user-select: none;
   font-size: 14px;
   border: 1px solid transparent;
@@ -63,26 +45,16 @@
   border-color: blue;
 }
 
-.summary_body {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  width: 100%;
-}
-
-.explorer_group .summary_marker {
-  transform: rotate(-90deg);
-}
-.explorer_group[open] .summary_marker {
-  transform: rotate(0deg);
-}
 .summary_action_icon {
-  display: none;
+  visibility: hidden;
+  pointer-events: none;
   padding: 0;
   border: 0;
+  background-color: transparent;
 }
 .explorer_group[open] .summary_action_icon {
-  display: block;
+  visibility: visible;
+  pointer-events: auto;
 }
 .summary_action_icon:hover {
   background: rgba(0, 0, 0, 0.1);
@@ -92,31 +64,30 @@
   flex: 1;
   gap: 0.2em;
   align-items: center;
-  padding-right: 0.5em;
+  padding-right: 10px;
 }
 
-.explorer_group + [data-resize-handle] {
+.explorer_group > summary .summary_label {
+  font-weight: 500;
+}
+
+.explorer_body > [data-resize-handle] {
   width: 100%;
   height: 5px;
-  min-height: 5px;
   margin-top: -2.5px;
   margin-bottom: -2.5px;
   position: relative;
-
   z-index: 2;
   cursor: ns-resize;
   display: flex;
   justify-content: center;
   align-items: center;
+  flex-shrink: 0;
 }
-.explorer_group + [data-resize-handle]:hover,
-.explorer_group[data-resizing] + [data-resize-handle] {
+.explorer_body > [data-resize-handle]:hover,
+.explorer_body > [data-resize-handle][data-active] {
   background-color: blue;
   opacity: 0.5;
-}
-.explorer_group + [data-resize-handle]:hover > *,
-.explorer_group[data-resizing] + [data-resize-handle] > * {
-  background-color: transparent;
 }
 
 .explorer_group_content {
@@ -128,19 +99,27 @@
   min-height: 0;
   scrollbar-width: thin;
 }
-.explorer_group_list {
+.explorer_group[data-size-animated] .explorer_group_content {
+  overflow-y: hidden;
+}
+
+.explorer_item_list {
   margin-top: 0;
   margin-bottom: 0;
-  padding-left: 24px;
+  padding-left: 16px;
 }
-.explorer_group_item {
+.explorer_item {
   display: flex;
 }
-.explorer_group_item_content {
+.explorer_item_content {
   align-items: center;
   white-space: nowrap;
   display: flex;
   gap: 0.3em;
   min-width: 0; /* https://css-tricks.com/flexbox-truncated-text/#aa-the-solution-is-min-width-0-on-the-flex-child */
   overflow: hidden;
+}
+
+.explorer_foot {
+  height: 10px;
 }

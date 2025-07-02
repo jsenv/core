@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Action demo 2</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 400px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      /**
+       * Ici on test une action ayant un param qui est lu dans le local storage
+       * On peut utiliser deux actions dérivées pour charger deux users différents
+       * on peut aussi savoir qui est l'utilisateur courant
+       */
+
+      import { render } from "preact";
+      import { effect, signal } from "@preact/signals";
+      import {
+        useActionStatus,
+        resource,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        ActionStatus,
+      } from "./action_status.jsx";
+
+      const USER = resource("user", {
+        idKey: "name",
+        GET_MANY: () => {
+          return [{ name: "dam" }, { name: "seb" }, { name: "john" }];
+        },
+        GET: ({ name }) => {
+          return { name, greeting: `Hello ${name}` };
+        },
+      });
+
+      const activeUsernameSignal = signal(
+        localStorage.getItem("active_user_name"),
+      );
+      effect(() => {
+        const activeUsername = activeUsernameSignal.value;
+        if (activeUsername) {
+          localStorage.setItem("active_user_name", activeUsername);
+        } else {
+          localStorage.removeItem("active_user_name");
+        }
+      });
+
+      USER.ACTIVE = {
+        GET: USER.GET.bindParams({
+          name: activeUsernameSignal,
+        }),
+      };
+
+      if (activeUsernameSignal.peek()) {
+        USER.ACTIVE.GET.load();
+      }
+      USER.GET_MANY.load();
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const { data: users } = useActionStatus(USER.GET_MANY);
+
+        const [dam, seb, john] = users;
+        const getDamAction = USER.GET.bindParams({
+          name: dam.name,
+        });
+        const getSebAction = USER.GET.bindParams({
+          name: seb.name,
+        });
+        const getJohnAction = USER.GET.bindParams({
+          name: john.name,
+        });
+
+        return (
+          <div>
+            <button
+              onClick={() => {
+                getDamAction.load();
+                activeUsernameSignal.value = dam.name;
+              }}
+            >
+              Load dam
+            </button>
+            <button
+              onClick={() => {
+                getDamAction.unload();
+              }}
+            >
+              Unload dam
+            </button>
+            <button
+              onClick={() => {
+                getDamAction.preload();
+              }}
+            >
+              Preload dam
+            </button>
+            <br />
+            <button
+              onClick={() => {
+                getSebAction.load();
+                activeUsernameSignal.value = seb.name;
+              }}
+            >
+              Load seb
+            </button>
+            <button
+              onClick={() => {
+                getSebAction.unload();
+              }}
+            >
+              Unload seb
+            </button>
+            <button
+              onClick={() => {
+                getSebAction.preload();
+              }}
+            >
+              Preload seb
+            </button>
+            <br />
+            <button
+              onClick={() => {
+                getJohnAction.load();
+                activeUsernameSignal.value = john.name;
+              }}
+            >
+              Load john
+            </button>
+            <button
+              onClick={() => {
+                getJohnAction.unload();
+              }}
+            >
+              Unload john
+            </button>
+            <button
+              onClick={() => {
+                getJohnAction.preload();
+              }}
+            >
+              Preload john
+            </button>
+
+            <ActionStatus action={getDamAction} />
+            <ActionStatus action={getSebAction} />
+            <ActionStatus action={getJohnAction} />
+            <ActionStatus action={USER.ACTIVE.GET} />
+
+            <ActionRenderer action={USER.ACTIVE.GET}>
+              {{
+                loading: () => <div>Loading user...</div>,
+                error: (error) => <div>Error: {error.message}</div>,
+                unloaded: () => <div>User not loaded</div>,
+                loaded: (user) => {
+                  return <div>{user.greeting}</div>;
+                },
+              }}
+            </ActionRenderer>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

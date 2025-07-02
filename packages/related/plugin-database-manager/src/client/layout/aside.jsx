@@ -2,11 +2,10 @@
 
  */
 
-import { useResizeStatus } from "@jsenv/dom";
-import "@jsenv/dom/resize";
-import { valueInLocalStorage } from "@jsenv/router";
+import { getInnerWidth, getWidth, startResizeGesture } from "@jsenv/dom";
+import { valueInLocalStorage } from "@jsenv/navi";
 import { effect, signal } from "@preact/signals";
-import { useRef } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 
 const [restoreAsideWidth, storeAsideWidth] = valueInLocalStorage(
   "aside_width",
@@ -29,9 +28,10 @@ export const setAsideWidth = (width) => {
 export const Aside = ({ children }) => {
   const asideRef = useRef(null);
   const widthSetting = useAsideWidth();
-  const { resizing, resizeWidth } = useResizeStatus(asideRef, {
-    as: "number",
-  });
+  const [resizeWidth, resizeWidthSetter] = useState(null);
+  const resizeWidthRef = useRef(resizeWidth);
+  resizeWidthRef.current = resizeWidth;
+  const resizing = resizeWidth !== null;
 
   return (
     <aside
@@ -42,9 +42,42 @@ export const Aside = ({ children }) => {
         // Disable transition during resize to make it responsive
         transition: resizing ? "none" : undefined,
       }}
-      // eslint-disable-next-line react/no-unknown-property
-      onresizeend={(e) => {
-        setAsideWidth(e.detail.width);
+      onMouseDown={(e) => {
+        let elementToResize;
+        let widthAtStart;
+        startResizeGesture(e, {
+          onStart: (gesture) => {
+            elementToResize = gesture.element;
+            widthAtStart = getWidth(elementToResize);
+          },
+          onMove: (gesture) => {
+            const xMove = gesture.xMove;
+            const newWidth = widthAtStart + xMove;
+            const minWidth =
+              // <aside> min-width
+              100;
+            if (newWidth < minWidth) {
+              resizeWidthSetter(minWidth);
+              return;
+            }
+            const availableWidth = getInnerWidth(elementToResize.parentElement);
+            const maxWidth =
+              availableWidth -
+              // <main> min-width
+              200;
+            if (newWidth > maxWidth) {
+              resizeWidthSetter(maxWidth);
+              return;
+            }
+            resizeWidthSetter(newWidth);
+          },
+          onEnd: () => {
+            const resizeWidth = resizeWidthRef.current;
+            if (resizeWidth) {
+              setAsideWidth(resizeWidth);
+            }
+          },
+        });
       }}
     >
       {children}

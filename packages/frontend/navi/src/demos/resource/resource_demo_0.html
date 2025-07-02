@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Action demo 0</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 200px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      /**
+       * Ici on teste juste que d'ouvrir le details
+       * charge l'action et que la donée est affichée
+       * Si on reload la page, le details est open et l'action est lancée
+       */
+
+      import { render } from "preact";
+      import { signal, effect } from "@preact/signals";
+      import { useActionStatus, resource } from "@jsenv/navi";
+
+      const USER = resource("user", {
+        idKey: "name",
+        GET_MANY: () => {
+          return [
+            {
+              name: "Alice",
+            },
+            {
+              name: "bob",
+            },
+            {
+              name: "Charlie",
+            },
+          ];
+        },
+      });
+      const openedSignal = signal(
+        localStorage.getItem("user_opened") === "true",
+      );
+      effect(() => {
+        const opened = openedSignal.value;
+        if (opened) {
+          localStorage.setItem("user_opened", "true");
+        } else {
+          localStorage.removeItem("user_opened");
+        }
+      });
+      if (openedSignal.peek()) {
+        USER.GET_MANY.preload();
+      }
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const { data } = useActionStatus(USER.GET_MANY);
+
+        return (
+          <div>
+            <details
+              open={openedSignal.value}
+              onToggle={(e) => {
+                if (e.target.open) {
+                  openedSignal.value = true;
+                  USER.GET_MANY.load();
+                } else {
+                  openedSignal.value = false;
+                  USER.GET_MANY.abort();
+                }
+              }}
+            >
+              <summary>Users</summary>
+              {data.map(({ name }) => {
+                return <span>{name}</span>;
+              })}
+            </details>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

@@ -8,7 +8,7 @@ export const getInnerHeight = (element) => {
   const height = getHeight(element);
   const verticalSpaceTakenByPaddings = paddingSizes.top + paddingSizes.bottom;
   const verticalSpaceTakenByBorders = borderSizes.top + borderSizes.bottom;
-  const availableHeight =
+  const innerHeight =
     height - verticalSpaceTakenByPaddings - verticalSpaceTakenByBorders;
-  return availableHeight;
+  return innerHeight;
 };

@@ -122,7 +122,7 @@ database_setup: {
   `;
   if (databases.length === 0) {
     console.log(`${setupIndent}${UNICODE.INFO} not found, creating it...`);
-    await sql.unsafe`CREATE DATABASE ${database} OWNER ${username}`;
+    await sql`CREATE DATABASE ${sql(database)} OWNER ${sql(username)}`;
     console.log(`${setupIndent}${UNICODE.OK} Database "${database}" created.`);
   } else {
     console.log(`${setupIndent}${UNICODE.OK} Database "${database}" found.`);

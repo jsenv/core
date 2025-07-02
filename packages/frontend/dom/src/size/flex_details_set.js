@@ -8,15 +8,22 @@ import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinHeight } from "./get_min_height.js";
+import { resolveCSSSize } from "./resolve_css_size.js";
 import { createSizeAnimationGroupController } from "./size_animation_group_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;
-const DEBUG = true;
+const DEBUG = false;
 
 export const initFlexDetailsSet = (
   container,
-  { onSizeChange, debug = DEBUG } = {},
+  {
+    onSizeChange,
+    onResizableDetailsChange,
+    onMouseResizeEnd,
+    onRequestedSizeChange,
+    debug = DEBUG,
+  } = {},
 ) => {
   const flexDetailsSet = {
     cleanup: null,
@@ -93,19 +100,28 @@ export const initFlexDetailsSet = (
         openedDetailsArray.push(details);
         canGrowSet.add(details);
         canShrinkSet.add(details);
-        const detailsContent = details.querySelector("summary + *");
-        const restoreSizeStyle = forceStyles(detailsContent, {
-          height: "auto",
-        });
-        const detailsContentHeight = getHeight(detailsContent);
-        restoreSizeStyle();
-        const detailsHeight = summaryHeight + detailsContentHeight;
+        const detailsContent = summary.nextElementSibling;
+        let detailsHeight;
+        if (detailsContent) {
+          const restoreSizeStyle = forceStyles(detailsContent, {
+            height: "auto",
+          });
+          const detailsContentHeight = getHeight(detailsContent);
+          restoreSizeStyle();
+          detailsHeight = summaryHeight + detailsContentHeight;
+        } else {
+          // empty details content like
+          // <details><summary>...</summary></details>
+          // or textual content like
+          // <details><summary>...</summary>textual content</details>
+          detailsHeight = size;
+        }
 
         if (details.hasAttribute("data-requested-height")) {
           const requestedHeightAttribute = details.getAttribute(
             "data-requested-height",
           );
-          requestedSize = parseFloat(requestedHeightAttribute, 10);
+          requestedSize = resolveCSSSize(requestedHeightAttribute);
           if (isNaN(requestedSize) || !isFinite(requestedSize)) {
             console.warn(
               `details ${details.id} has invalid data-requested-height attribute: ${requestedHeightAttribute}`,
@@ -153,12 +169,19 @@ export const initFlexDetailsSet = (
         continue;
       }
       if (isDetailsElement(child) && child.open) {
-        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
+        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(
+          child,
+          { animated: true },
+        );
         changeSet.add({
           element: child,
           target: allocatedSize,
-          sideEffect: (height, isFinished) => {
-            syncDetailsContentHeight(height, { isAnimation: !isFinished });
+          sideEffect: (height, { timing } = {}) => {
+            syncDetailsContentHeight(height, {
+              isAnimation: true,
+              isAnimationStart: timing === "start",
+              isAnimationEnd: timing === "end",
+            });
           },
         });
       } else {
@@ -414,9 +437,17 @@ export const initFlexDetailsSet = (
     return 0;
   };
 
-  const saveCurrentSizeAsRequestedSizes = () => {
+  const saveCurrentSizeAsRequestedSizes = ({
+    replaceExistingAttributes,
+  } = {}) => {
     for (const child of container.children) {
       if (canGrowSet.has(child) || canShrinkSet.has(child)) {
+        if (
+          child.hasAttribute("data-requested-height") &&
+          !replaceExistingAttributes
+        ) {
+          continue;
+        }
         const allocatedSpace = allocatedSpaceMap.get(child);
         child.setAttribute("data-requested-height", allocatedSpace);
       }
@@ -424,23 +455,71 @@ export const initFlexDetailsSet = (
   };
 
   const updateSpaceDistribution = (resizeDetails) => {
+    if (debug) {
+      console.group(`updateSpaceDistribution: ${resizeDetails.reason}`);
+    }
     prepareSpaceDistribution();
     distributeAvailableSpace(resizeDetails.reason);
     distributeRemainingSpace({
       childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
       childToShrinkFrom: lastChild,
     });
-    if (resizeDetails.reason === "initial_space_distribution") {
+    if (
+      resizeDetails.reason === "initial_space_distribution" ||
+      resizeDetails.reason === "content_change"
+    ) {
       spaceMap.clear(); // force to set size at start
     }
     applyAllocatedSpaces(resizeDetails);
     saveCurrentSizeAsRequestedSizes();
+    if (debug) {
+      console.groupEnd();
+    }
+  };
+
+  const resizableDetailsIdSet = new Set();
+  const updateResizableDetails = () => {
+    const currentResizableDetailsIdSet = new Set();
+    let hasPreviousOpen = false;
+    for (const child of container.children) {
+      if (!isDetailsElement(child)) {
+        continue;
+      }
+      if (!child.open) {
+        continue;
+      }
+      if (hasPreviousOpen) {
+        currentResizableDetailsIdSet.add(child.id);
+      }
+      if (!hasPreviousOpen && child.open) {
+        hasPreviousOpen = true;
+      }
+    }
+
+    let someNew;
+    let someOld;
+    for (const currentId of currentResizableDetailsIdSet) {
+      if (!resizableDetailsIdSet.has(currentId)) {
+        resizableDetailsIdSet.add(currentId);
+        someNew = true;
+      }
+    }
+    for (const id of resizableDetailsIdSet) {
+      if (!currentResizableDetailsIdSet.has(id)) {
+        resizableDetailsIdSet.delete(id);
+        someOld = true;
+      }
+    }
+    if (someNew || someOld) {
+      onResizableDetailsChange?.(resizableDetailsIdSet);
+    }
   };
 
   initial_size: {
     updateSpaceDistribution({
       reason: "initial_space_distribution",
     });
+    updateResizableDetails();
   }
 
   update_on_toggle: {
@@ -448,6 +527,9 @@ export const initFlexDetailsSet = (
       const reason = details.open
         ? `${details.id} just opened`
         : `${details.id} just closed`;
+      if (debug) {
+        console.group(`distributeSpaceAfterToggle: ${reason}`);
+      }
       prepareSpaceDistribution();
       distributeAvailableSpace(reason);
 
@@ -489,6 +571,9 @@ export const initFlexDetailsSet = (
           childToShrinkFrom: lastChild,
         });
       }
+      if (debug) {
+        console.groupEnd();
+      }
     };
 
     for (const child of container.children) {
@@ -502,6 +587,7 @@ export const initFlexDetailsSet = (
           reason: details.open ? "details_opened" : "details_closed",
           animated: true,
         });
+        updateResizableDetails();
       };
       if (details.open) {
         setTimeout(() => {
@@ -613,7 +699,7 @@ export const initFlexDetailsSet = (
         }
       };
 
-      const move = (yMove) => {
+      const move = (yMove, gesture) => {
         // if (isNaN(moveRequestedSize) || !isFinite(moveRequestedSize)) {
         //   console.warn(
         //     `requestResize called with invalid size: ${moveRequestedSize}`,
@@ -628,7 +714,7 @@ export const initFlexDetailsSet = (
         const moveDiff = -yMove;
         applyMoveDiffToSizes(moveDiff, reason);
         applyAllocatedSpaces({
-          reason: "mouse_resize",
+          reason: gesture.isMouseUp ? "mouse_resize_end" : "mouse_resize",
         });
         currentAllocatedSpaceMap = new Map(allocatedSpaceMap);
         allocatedSpaceMap = new Map(startAllocatedSpaceMap);
@@ -640,7 +726,14 @@ export const initFlexDetailsSet = (
       const end = () => {
         if (currentAllocatedSpaceMap) {
           allocatedSpaceMap = currentAllocatedSpaceMap;
-          saveCurrentSizeAsRequestedSizes();
+          saveCurrentSizeAsRequestedSizes({ replaceExistingAttributes: true });
+          if (onRequestedSizeChange) {
+            for (const [child, allocatedSpace] of allocatedSpaceMap) {
+              const size = spaceToSize(allocatedSpace, child);
+              onRequestedSizeChange(child, size);
+            }
+          }
+          onMouseResizeEnd?.();
         }
       };
 
@@ -656,7 +749,7 @@ export const initFlexDetailsSet = (
         },
         onMove: (gesture) => {
           const yMove = gesture.yMove;
-          move(yMove);
+          move(yMove, gesture);
         },
         onEnd: () => {
           end();
@@ -696,25 +789,75 @@ export const initFlexDetailsSet = (
     });
   }
 
+  update_on_content_change: {
+    // Track when the DOM structure changes inside the container
+    // This detects when:
+    // - Details elements are added/removed
+    // - The content inside details elements changes
+    const mutationObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          updateSpaceDistribution({
+            reason: "content_change",
+            animated: true,
+          });
+          return;
+        }
+        if (mutation.type === "characterData") {
+          updateSpaceDistribution({
+            reason: "content_change",
+            animated: true,
+          });
+          return;
+        }
+      }
+    });
+    mutationObserver.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    cleanupCallbackSet.add(() => {
+      mutationObserver.disconnect();
+    });
+  }
+
   return flexDetailsSet;
 };
 
 const prepareSyncDetailsContentHeight = (details) => {
-  const summary = details.querySelector("summary");
-  const summaryHeight = getHeight(summary);
-  const content = details.querySelector("summary + *");
-  content.style.height = "var(--content-height)";
-
   const getHeightCssValue = (height) => {
     return `${height}px`;
   };
 
+  const summary = details.querySelector("summary");
+  const summaryHeight = getHeight(summary);
   details.style.setProperty(
     "--summary-height",
     getHeightCssValue(summaryHeight),
   );
 
-  return (detailsHeight, { isAnimation } = {}) => {
+  const content = summary.nextElementSibling;
+  if (!content) {
+    return (detailsHeight) => {
+      details.style.setProperty(
+        "--details-height",
+        getHeightCssValue(detailsHeight),
+      );
+      details.style.setProperty(
+        "--content-height",
+        getHeightCssValue(detailsHeight - summaryHeight),
+      );
+    };
+  }
+  content.style.height = "var(--content-height)";
+
+  const contentComputedStyle = getComputedStyle(content);
+  const scrollbarMightTakeHorizontalSpace =
+    contentComputedStyle.overflowY === "auto" &&
+    contentComputedStyle.scrollbarGutter !== "stable";
+
+  return (detailsHeight, { isAnimation, isAnimationEnd } = {}) => {
     const contentHeight = detailsHeight - summaryHeight;
     details.style.setProperty(
       "--details-height",
@@ -725,22 +868,18 @@ const prepareSyncDetailsContentHeight = (details) => {
       getHeightCssValue(contentHeight),
     );
 
-    if (!isAnimation) {
-      const contentComputedStyle = getComputedStyle(content);
-      // Fix scrollbar induced overflow:
-      //
-      // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
-      // 2. we set height exactly to the natural height required to prevent overflow
-      //
-      // actual: browser keeps scrollbar displayed
-      // expected: scrollbar is hidden
-      //
-      // Solution: Temporarily prevent scrollbar to display
-      // force layout recalculation, then restore
-      if (
-        contentComputedStyle.overflowY === "auto" &&
-        contentComputedStyle.scrollbarGutter !== "stable"
-      ) {
+    if (!isAnimation || isAnimationEnd) {
+      if (scrollbarMightTakeHorizontalSpace) {
+        // Fix scrollbar induced overflow:
+        //
+        // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
+        // 2. we set height exactly to the natural height required to prevent overflow
+        //
+        // actual: browser keeps scrollbar displayed
+        // expected: scrollbar is hidden
+        //
+        // Solution: Temporarily prevent scrollbar to display
+        // force layout recalculation, then restore
         const restoreOverflow = forceStyles(content, {
           "overflow-y": "hidden",
         });

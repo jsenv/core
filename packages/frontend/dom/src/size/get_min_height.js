@@ -1,13 +1,14 @@
 import { getAvailableHeight } from "./get_available_height.js";
+import { resolveCSSSize } from "./resolve_css_size";
 
 export const getMinHeight = (element, availableHeight) => {
-  const minHeight = window.getComputedStyle(element).minHeight;
-  if (minHeight && minHeight.endsWith("%")) {
-    if (availableHeight === undefined) {
-      availableHeight = getAvailableHeight(element);
-    }
-    return (parseInt(minHeight) / 100) * availableHeight;
-  }
-  const minHeightAsNumber = parseInt(minHeight);
-  return isNaN(minHeightAsNumber) ? 0 : minHeightAsNumber;
+  const computedStyle = window.getComputedStyle(element);
+  const { minHeight, fontSize } = computedStyle;
+  return resolveCSSSize(minHeight, {
+    availableSize:
+      availableHeight === undefined
+        ? getAvailableHeight(element)
+        : availableHeight,
+    fontSize,
+  });
 };

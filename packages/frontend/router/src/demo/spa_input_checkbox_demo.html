@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SPA Input checkbox loading demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      // eslint-disable-next-line no-unused-vars
+      import { registerAction, SPAInputCheckbox } from "@jsenv/router";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div style="display: flex; flex-direction: row; gap: 30px">
+            <div>
+              <p>
+                <strong>Loading</strong>
+              </p>
+              <SPAInputCheckbox
+                action={async () => {
+                  await new Promise(() => {});
+                }}
+                label="Test"
+                style="color: blue"
+              ></SPAInputCheckbox>
+            </div>
+            <div>
+              <p>
+                <strong>Throw after 1s</strong>
+              </p>
+              <SPAInputCheckbox
+                action={async () => {
+                  await new Promise((resolve) => {
+                    setTimeout(resolve, 1000);
+                  });
+                  throw new Error("This is an error");
+                }}
+                label="Test"
+                style="color: blue"
+                // data-validation-message-stay-on-focus
+                // data-validation-message-stay-on-blur
+              ></SPAInputCheckbox>
+            </div>
+            <div>
+              <p>
+                <strong>2 checkboxes for the same action</strong>
+              </p>
+              <SPAInputCheckbox
+                action={updateUserCheckboxAction}
+                label="Test"
+                style="color: blue"
+              ></SPAInputCheckbox>
+              <SPAInputCheckbox
+                action={updateUserCheckboxAction}
+                label="Test"
+                style="color: blue"
+              ></SPAInputCheckbox>
+            </div>
+          </div>
+        );
+      };
+
+      const updateUserCheckboxAction = registerAction(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 2000);
+        });
+      }).bindParams({
+        name: "dam",
+      });
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

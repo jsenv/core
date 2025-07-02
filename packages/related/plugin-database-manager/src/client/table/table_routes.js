@@ -1,35 +1,100 @@
 import { registerAction, registerRoute } from "@jsenv/router";
-import { tableInfoSignal, tablePublicFilterSignal } from "./table_signals.js";
+import { connectStoreAndRoute } from "@jsenv/sigi";
+import { errorFromResponse } from "../error_from_response.js";
+import { roleStore } from "../role/role_store.js";
+import {
+  setActiveTable,
+  setActiveTableColumns,
+  setTableCount,
+} from "./table_signals.js";
+import { tableStore } from "./table_store.js";
 
-export const GET_TABLES_ROUTE = registerRoute("/tables", async ({ signal }) => {
-  const tablePublicFilter = tablePublicFilterSignal.value;
-  const response = await fetch(
-    `/.internal/database/api/tables?public=${tablePublicFilter}`,
-    { signal },
-  );
-  const tables = await response.json();
-  tableInfoSignal.value = tables;
-});
+export const GET_TABLE_ROUTE = registerRoute(
+  "/tables/:tablename",
+  async ({ params, signal }) => {
+    const tablename = params.tablename;
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}`,
+      {
+        signal,
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to get table");
+    }
+    const { data, meta } = await response.json();
+    const table = data;
+    const ownerRole = meta.ownerRole;
+    const columns = meta.columns;
+    setActiveTable(table);
+    setActiveTableColumns(columns);
+    roleStore.upsert(ownerRole);
+  },
+);
+connectStoreAndRoute(tableStore, GET_TABLE_ROUTE, "tablename");
 
-export const UPDATE_TABLE_ACTION = registerAction(
-  async ({ tableName, columnName, formData }) => {
-    const value = formData.get("value");
-    await fetch(`/.internal/database/api/tables/${tableName}/${columnName}`, {
-      method: "PUT",
+export const PUT_TABLE_ACTION = registerAction(
+  async ({ tablename, columnName, formData, signal }) => {
+    let value = formData.get(columnName);
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/${columnName}`,
+      {
+        signal,
+        method: "PUT",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(value),
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to update table");
+    }
+    tableStore.upsert("tablename", tablename, { [columnName]: value });
+  },
+);
+
+export const POST_TABLE_ACTION = registerAction(
+  async ({ signal, formData }) => {
+    const tablename = formData.get("tablename");
+    const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/tables`, {
+      signal,
+      method: "POST",
       headers: {
         "accept": "application/json",
         "content-type": "application/json",
       },
-      body: JSON.stringify(value),
+      body: JSON.stringify({ tablename }),
     });
-    const { data, ...rest } = tableInfoSignal.value;
-    const tableClient = data.find((table) => table.tablename === tableName);
-    if (tableClient) {
-      tableClient[columnName] = value;
-      tableInfoSignal.value = {
-        ...rest,
-        data: [...data],
-      };
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to create role");
     }
+    const { data, meta } = await response.json();
+    const table = data;
+    tableStore.upsert(table);
+    setTableCount(meta.count);
+  },
+);
+
+export const DELETE_TABLE_ACTION = registerAction(
+  async ({ tablename, signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}`,
+      {
+        signal,
+        method: "DELETE",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(response, `Failed to delete table`);
+    }
+    const { meta } = await response.json();
+    tableStore.drop("tablename", tablename);
+    setTableCount(meta.count);
   },
 );

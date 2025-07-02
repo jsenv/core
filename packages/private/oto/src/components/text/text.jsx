@@ -1,7 +1,10 @@
-import { getAvailableHeight, getAvailableWidth } from "@jsenv/dom";
+import {
+  getAvailableHeight,
+  getAvailableWidth,
+  resolveCSSSize,
+} from "@jsenv/dom";
 import { useResizeObserver } from "hooks/use_resize_observer.js";
 import { useStructuredMemo } from "hooks/use_structured_memo.js";
-import { resolveSize } from "oto/src/utils/size_resolver.js";
 import { render, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
@@ -131,7 +134,7 @@ const TextComponent = ({
       const textElement = textRef.current;
       const computedStyle = window.getComputedStyle(svgElement, null);
       const fontSizeReference = parseFloat(computedStyle.fontSize);
-      const fontSizeResolved = resolveSize(fontSize, {
+      const fontSizeResolved = resolveCSSSize(fontSize, {
         fontSize: fontSizeReference,
         autoIsRelativeToFont: true,
       });

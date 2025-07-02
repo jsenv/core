@@ -1,23 +1,18 @@
 {
   "name": "@jsenv/ast",
-  "version": "6.7.6",
+  "version": "6.7.7",
   "description": "Parse and transform HTML, CSS and JS",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/internal/ast"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "engines": {
-    "node": ">=16.14.0"
-  },
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -28,14 +23,13 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
   "dependencies": {
-    "@babel/parser": "7.27.1",
     "@babel/core": "7.27.1",
     "@babel/helper-module-imports": "7.27.1",
+    "@babel/parser": "7.27.1",
     "@jsenv/humanize": "1.6.0",
-    "@jsenv/utils": "2.3.1",
     "@jsenv/urls": "2.9.0",
+    "@jsenv/utils": "2.3.1",
     "acorn": "8.14.1",
     "acorn-import-attributes": "1.9.5",
     "acorn-walk": "8.3.4",
@@ -44,9 +38,15 @@
     "postcss-value-parser": "4.2.0"
   },
   "devDependencies": {
+    "@jsenv/assert": "../../indeppendent/tooling/assert",
     "@jsenv/ast": "./",
     "@jsenv/filesystem": "../../tooling/filesystem",
-    "@jsenv/snapshot": "../../tooling/snapshot",
-    "@jsenv/assert": "../../indeppendent/tooling/assert"
+    "@jsenv/snapshot": "../../tooling/snapshot"
+  },
+  "engines": {
+    "node": ">=16.14.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

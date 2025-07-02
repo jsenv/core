@@ -17,8 +17,8 @@ Unexpected token (4:15)
 base/client/main.html:9:27
 --- plugin name ---
 "jsenv:js_reference_analysis"
-    at async @jsenv/core/src/kitchen/kitchen.js:632:11
-    at async @jsenv/core/src/kitchen/kitchen.js:627:9
+    at async @jsenv/core/src/kitchen/kitchen.js:636:11
+    at async @jsenv/core/src/kitchen/kitchen.js:631:9
 ```
 
 ---

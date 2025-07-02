@@ -2,22 +2,17 @@
   "name": "@jsenv/abort",
   "version": "4.3.1",
   "description": "Help to write code compatible with abort signals",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/abort"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "engines": {
-    "node": ">=16.14.0"
-  },
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -28,9 +23,14 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
   "devDependencies": {
-    "@jsenv/assert": "../assert",
-    "@jsenv/abort": "./"
+    "@jsenv/abort": "./",
+    "@jsenv/assert": "../assert"
+  },
+  "engines": {
+    "node": ">=16.14.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

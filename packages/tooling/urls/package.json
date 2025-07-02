@@ -1,19 +1,17 @@
 {
   "name": "@jsenv/urls",
   "version": "2.9.0",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/urls"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -25,12 +23,14 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
   "dependencies": {
     "@jsenv/humanize": "1.6.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
     "@jsenv/urls": "../urls"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,7 +1,10 @@
 import { updateCanGoBack, updateCanGoForward } from "../back_and_forward.js";
 import { documentIsLoadingSignal } from "../document_loading.js";
-import { documentIsRoutingSignal } from "../document_routing.js";
-import { documentUrlSignal, updateDocumentUrl } from "../document_url.js";
+import {
+  documentIsRoutingSignal,
+  documentUrlSignal,
+  updateDocumentUrl,
+} from "../document_routing.js";
 
 updateCanGoBack(true);
 updateCanGoForward(true);

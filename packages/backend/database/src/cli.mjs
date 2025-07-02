@@ -44,54 +44,19 @@ Command:
     }
     throw new Error(`Unsupported operating system: ${platformName}`);
   },
-  start: () => {
-    const platformName = platform();
-    if (platformName === "darwin") {
-      console.log("Detected macOS. Starting PostgreSQL...");
-      execSync("brew services start postgresql", { stdio: "inherit" });
-      return;
-    }
-    if (platformName === "linux") {
-      console.log("Detected Linux. Starting PostgreSQL...");
-      execSync("sudo service postgresql start", { stdio: "inherit" });
-      return;
-    }
-    if (platformName === "win32") {
-      console.log("Detected Windows. Starting PostgreSQL...");
-      execSync('pg_ctl -D "C:\\Program Files\\PostgreSQL\\14\\data" start', {
-        stdio: "inherit",
-      });
-      return;
-    }
-    throw new Error(`Unsupported operating system: ${platformName}`);
+  start: async () => {
+    await import("./cli/start.js");
   },
-  stop: () => {
-    const platformName = platform();
-    if (platformName === "darwin") {
-      console.log("Detected macOS. Stopping PostgreSQL...");
-      execSync("brew services stop postgresql", { stdio: "inherit" });
-      return;
-    }
-    if (platformName === "linux") {
-      console.log("Detected Linux. Stopping PostgreSQL...");
-      execSync("sudo service postgresql stop", { stdio: "inherit" });
-      return;
-    }
-    if (platformName === "win32") {
-      console.log("Detected Windows. Stopping PostgreSQL...");
-      execSync('pg_ctl -D "C:\\Program Files\\PostgreSQL\\14\\data" stop', {
-        stdio: "inherit",
-      });
-      return;
-    }
-    throw new Error(`Unsupported operating system: ${platformName}`);
+  stop: async () => {
+    await import("./cli/stop.js");
   },
   setup: async () => {
     await import("./cli/setup.js");
   },
+  manage: async () => {
+    await import("./cli/manage.js");
+  },
 };
-
-await commands.setup();
 
 const { values, positionals } = parseArgs({ options, allowPositionals: true });
 if (values.help || positionals.length === 0) {

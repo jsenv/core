@@ -12,12 +12,11 @@ import {
   useRouteIsMatching,
 } from "./route_hooks.js";
 
-const RouteMatchingDefaultComponent = () => null;
-const RouteLoadingDefaultComponent = () => null;
-const RouteErrorDefaultComponent = ({ route }) => {
-  const { error } = route;
+const renderMatchingDefault = () => null;
+const renderLoadingDefault = () => null;
+const renderErrorDefault = ({ error }) => {
   let routeErrorText = error && error.message ? error.message : error;
-  return <p>An error occured: {routeErrorText}</p>;
+  return <p className="route_error">An error occured: {routeErrorText}</p>;
 };
 
 // TODO: if route is registered more than once on a given route we should throw
@@ -27,57 +26,50 @@ const RouteErrorDefaultComponent = ({ route }) => {
 // and it's relatively hard to finally realize it's because the route is declared twice
 export const Route = ({
   route,
-  // ideally each route is mutually exclusive, when this is not the case AND the two routes should not match at the same time
-  // then a route can give an array of routes preventing itself to match
-  routesPreventingThisOne,
-  always,
-  matching,
-  loading,
-  error,
-  loaded,
-  loadedAsync,
+  renderAlways,
+  renderMatching,
+  renderLoading,
+  renderError,
+  renderLoaded,
+  renderLoadedAsync,
 }) => {
   useLayoutEffect(() => {
     onRouterUILoaded();
   }, []);
-  if (loaded) {
+  if (renderLoaded) {
     return (
       <RouteWithLoadedSync
         route={route}
-        routesPreventingThisOne={routesPreventingThisOne}
-        matching={matching}
-        loading={loading}
-        error={error}
-        loaded={loaded}
+        renderMatching={renderMatching}
+        renderLoading={renderLoading}
+        renderError={renderError}
+        renderLoaded={renderLoaded}
       />
     );
   }
-  if (loadedAsync) {
+  if (renderLoadedAsync) {
     return (
       <RouteWithLoadedAsync
         route={route}
-        routesPreventingThisOne={routesPreventingThisOne}
-        matching={matching}
-        loading={loading}
-        error={error}
-        loadedAsync={loadedAsync}
+        renderMatching={renderMatching}
+        renderLoading={renderLoading}
+        renderError={renderError}
+        renderLoadedAsync={renderLoadedAsync}
       />
     );
   }
-  if (matching) {
+  if (renderMatching) {
     return (
       <RouteWithMatchingSync
         route={route}
-        routesPreventingThisOne={routesPreventingThisOne}
-        matching={matching}
-        loading={loading}
-        error={error}
+        renderMatching={renderMatching}
+        renderLoading={renderLoading}
+        renderError={renderError}
       />
     );
   }
-  if (always) {
-    const Always = always;
-    return <Always route={route}></Always>;
+  if (renderAlways) {
+    return renderAlways({ route });
   }
   // TODO: throw error explaining loaded, loadedAsync or matching is required
   return null;
@@ -86,48 +78,44 @@ export const Route = ({
 // cas le plus courant: le composant qu'on veut render est disponible
 const RouteWithLoadedSync = ({
   route,
-  routesPreventingThisOne,
-  matching,
-  error,
-  loading,
-  loaded,
+  renderMatching = renderMatchingDefault,
+  renderError = renderErrorDefault,
+  renderLoading = renderLoadingDefault,
+  renderLoaded,
 }) => {
   return (
     <RouteHandler
       route={route}
-      routesPreventingThisOne={routesPreventingThisOne}
-      RouteMatching={matching || RouteMatchingDefaultComponent}
-      RouteLoading={loading || RouteLoadingDefaultComponent}
-      RouteError={error || RouteErrorDefaultComponent}
-      RouteLoaded={loaded}
+      renderMatching={renderMatching}
+      renderLoading={renderLoading}
+      renderError={renderError}
+      renderLoaded={renderLoaded}
     />
   );
 };
 // cas du code splitting, on doit faire un import dynamique pour obtenir le composant qu'on veut render
 const RouteWithLoadedAsync = ({
   route,
-  routesPreventingThisOne,
-  matching,
-  error,
-  loading,
-  loadedAsync,
+  renderMatching = renderMatchingDefault,
+  renderError = renderErrorDefault,
+  renderLoading = renderLoadingDefault,
+  renderLoadedAsync,
 }) => {
-  const [RouteLoaded, RouteLoadedSetter] = useState();
+  const [renderLoaded, renderLoadedSetter] = useState();
   route.loadUI = async ({ signal }) => {
-    const loadedAsyncResult = await loadedAsync({ signal });
-    if (!loadedAsyncResult) {
-      throw new Error("loadedAsync did not return a component");
+    const renderLoadedAsyncResult = await renderLoadedAsync({ signal });
+    if (!renderLoadedAsyncResult) {
+      throw new Error("renderLoadedAsync did not return a function");
     }
-    RouteLoadedSetter(() => loadedAsyncResult);
+    renderLoadedSetter(() => renderLoaded);
   };
   return (
     <RouteHandler
       route={route}
-      routesPreventingThisOne={routesPreventingThisOne}
-      RouteMatching={matching || RouteMatchingDefaultComponent}
-      RouteLoading={loading || RouteLoadingDefaultComponent}
-      RouteError={error || RouteErrorDefaultComponent}
-      RouteLoaded={RouteLoaded}
+      renderMatching={renderMatching}
+      renderLoading={renderLoading}
+      renderError={renderError}
+      renderLoaded={renderLoaded}
     />
   );
 };
@@ -135,105 +123,106 @@ const RouteWithLoadedAsync = ({
 // la logique pendant que la route load (en omettant la prop "loading")
 const RouteWithMatchingSync = ({
   route,
-  routesPreventingThisOne,
-  matching,
-  loading,
-  error,
+  renderMatching,
+  renderLoading = renderMatching,
+  renderError = renderErrorDefault,
 }) => {
   return (
     <RouteHandler
       route={route}
-      routesPreventingThisOne={routesPreventingThisOne}
-      RouteMatching={matching}
-      RouteLoading={loading || matching}
-      RouteError={error || RouteErrorDefaultComponent}
-      RouteLoaded={matching}
+      renderMatching={renderMatching}
+      renderLoading={renderLoading}
+      renderError={renderError}
+      renderLoaded={renderMatching}
     />
   );
 };
 // TODO: un 4eme cas avec matchingAsync
 
+const routeWeakMap = new WeakMap();
+const useRouteUIRenderedPromise = (route) => {
+  const routeUIRenderedPromise = routeWeakMap.get(route);
+  if (routeUIRenderedPromise) {
+    return routeUIRenderedPromise;
+  }
+  let resolve;
+  const promise = new Promise((res) => {
+    resolve = res;
+  });
+  promise.resolve = resolve;
+  routeWeakMap.set(route, promise);
+  return promise;
+};
+
 const RouteHandler = ({
   route,
-  routesPreventingThisOne,
-  RouteMatching,
-  RouteLoading,
-  RouteError,
-  RouteLoaded,
+  renderMatching,
+  renderLoading,
+  renderError,
+  renderLoaded,
 }) => {
-  let routeIsMatching = useRouteIsMatching(route);
-  if (routesPreventingThisOne) {
-    for (const routePreventingThisOne of routesPreventingThisOne) {
-      const routePreventingThisOneIsMatching = useRouteIsMatching(
-        routePreventingThisOne,
-      );
-      if (routePreventingThisOneIsMatching) {
-        routeIsMatching = false;
-      }
-    }
-  }
-
+  const routeIsMatching = useRouteIsMatching(route);
   const routeIsLoading = useRouteIsLoading(route);
   const routeError = useRouteError(route);
   const routeIsLoaded = useRouteIsLoaded(route);
 
   const routeIsMatchingPreviousRef = useRef(false);
-  const routeBecomesMatching =
-    !routeIsMatchingPreviousRef.current && routeIsMatching;
   routeIsMatchingPreviousRef.current = routeIsMatching;
   const routeIsLoadedPreviousRef = useRef(false);
   const routeBecomesLoaded = !routeIsLoadedPreviousRef.current && routeIsLoaded;
   routeIsLoadedPreviousRef.current = routeIsLoaded;
-  const routeUIRenderedPromiseRef = useRef();
-
-  if (routeBecomesMatching) {
-    let resolve;
-    const promise = new Promise((res) => {
-      resolve = res;
-    });
-    routeUIRenderedPromiseRef.current = { promise, resolve };
-  }
+  const routeUIRenderedPromise = useRouteUIRenderedPromise(route);
+  const shouldDisplayOldData =
+    route.canDisplayOldData && route.dataSignal.peek() !== undefined;
 
   route.renderUI = () => {
-    return routeUIRenderedPromiseRef.current.promise;
+    return routeUIRenderedPromise;
   };
 
   if (!routeIsMatching) {
     return null;
   }
   if (routeError) {
-    return <RouteError route={route} />;
+    return renderError(route);
   }
-  if (routeIsLoading) {
-    return <RouteErrorBoundary route={route} Child={RouteLoading} />;
+  if (routeIsLoading && !shouldDisplayOldData) {
+    return <RouteErrorBoundary route={route} renderChild={renderLoading} />;
   }
   if (routeIsLoaded) {
     if (routeBecomesLoaded) {
-      const RouteLoadedOriginal = RouteLoaded;
-      // there is no better way to find the child node than wrapping in a <div>, erf
-      RouteLoaded = function RouteLoadedWrapper(props) {
+      const renderLoadedOriginal = renderLoaded;
+      // there is NO other way to find the child node than wrapping it a <div>, erf
+      // (and we'll need that for transition and stuff)
+      renderLoaded = function renderLoadedWrapper(route) {
         const ref = useRef();
         useLayoutEffect(() => {
           const routeNode = ref.current.firstChild;
-          routeUIRenderedPromiseRef.current.resolve(routeNode);
+          routeUIRenderedPromise.resolve(routeNode);
+          return () => {
+            // cleanup
+            routeWeakMap.delete(route);
+          };
         }, []);
         return (
-          <div ref={ref} style="display:inline">
-            <RouteLoadedOriginal {...props} />
+          <div ref={ref} style="display:block">
+            {renderLoadedOriginal(route)}
           </div>
         );
       };
     }
-    return <RouteErrorBoundary route={route} Child={RouteLoaded} />;
+    return <RouteErrorBoundary route={route} renderChild={renderLoaded} />;
   }
-  return <RouteErrorBoundary route={route} Child={RouteMatching} />;
+  if (shouldDisplayOldData) {
+    return <RouteErrorBoundary route={route} renderChild={renderLoaded} />;
+  }
+  return <RouteErrorBoundary route={route} renderChild={renderMatching} />;
 };
 
-const RouteErrorBoundary = ({ route, Child }) => {
+const RouteErrorBoundary = ({ route, renderChild }) => {
   const [error] = useErrorBoundary();
   if (error) {
     route.reportError(error);
     return null;
   }
-  return <Child route={route} />;
+  return renderChild(route);
 };

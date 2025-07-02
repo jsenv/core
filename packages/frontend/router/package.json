@@ -3,19 +3,17 @@
   "version": "0.0.9",
   "private": true,
   "description": "Url matching and routing",
-  "publishConfig": {
-    "access": "public"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/frontend/router"
   },
   "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/jsenv/core",
-    "directory": "packages/frontend/router"
-  },
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": "./index.js",
@@ -25,17 +23,19 @@
     "/index.js",
     "/src/"
   ],
-  "sideEffects": false,
   "dependencies": {
-    "@jsenv/utils": "2.3.1",
     "@jsenv/url-pattern": "0.0.1",
-    "@jsenv/form": "0.0.1"
+    "@jsenv/utils": "2.3.1",
+    "@jsenv/validation": "0.0.1"
   },
   "devDependencies": {
-    "preact": "10.26.5",
-    "@preact/signals": "2.0.4",
-    "@jsenv/snapshot": "../snapshot",
     "@jsenv/filesystem": "../filesystem",
-    "@jsenv/urls": "../urls"
+    "@jsenv/snapshot": "../snapshot",
+    "@jsenv/urls": "../urls",
+    "@preact/signals": "2.0.4",
+    "preact": "10.26.5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

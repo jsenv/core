@@ -1,71 +1,113 @@
-/**
- * each section should have its own scrollbar
- * right now it does not work, the content is not scrollable and gets hidden
- */
-
-import "@jsenv/dom/details_content_full_height";
-import "@jsenv/dom/resize";
-import { effect } from "@preact/signals";
-import { useCallback, useState } from "preact/hooks";
-import { setCurrentDatabase } from "../database/database_signals.js";
-import { databaseStore } from "../database/database_store.js";
-import { setCurrentRole } from "../role/role_signals.js";
-import { roleStore } from "../role/role_store.js";
+import { initFlexDetailsSet } from "@jsenv/dom";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
+// import { DatabaseSvg } from "../database/database_icons.jsx";
+// import { useCurrentDatabase } from "../database/database_signals.js";
+// import {
+//   DatabasesDetails,
+//   databasesDetailsController,
+// } from "../database/databases_details.jsx";
+import {
+  RoleCanLoginListDetails,
+  roleCanLoginListDetailsController,
+} from "../role/role_can_login/role_can_login_list_details.jsx";
+// import {
+//   RoleGroupListDetails,
+//   roleGroupListDetailsController,
+// } from "../role/role_group/role_group_list_details.jsx";
+import { pickRoleIcon } from "../role/role_icons.jsx";
+import { useCurrentRole } from "../role/role_store.js";
+// import {
+//   RoleWithOwnershipListDetails,
+//   roleWithOwnershipListDetailsController,
+// } from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
+import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
+// import {
+//   TablesDetails,
+//   tablesDetailsController,
+// } from "../table/tables_details.jsx";
 import "./explorer.css" with { type: "css" };
-import { ExplorerDatabases } from "./explorer_databases.jsx";
-import { ExplorerRoles } from "./explorer_roles.jsx";
-
-effect(async () => {
-  const response = await fetch(`/.internal/database/api/nav`);
-  const { currentRole, roles, currentDatabase, databases } =
-    await response.json();
-  setCurrentRole(currentRole);
-  setCurrentDatabase(currentDatabase);
-  databaseStore.upsert(databases);
-  roleStore.upsert(roles);
-});
+import "./explorer_store.js";
 
 export const Explorer = () => {
+  const role = useCurrentRole();
+  // const database = useCurrentDatabase();
+  const RoleIcon = pickRoleIcon(role);
+
   return (
     <nav className="explorer">
       <div className="explorer_head">
-        <h2>Explorer</h2>
+        <FontSizedSvg>
+          <RoleIcon />
+        </FontSizedSvg>
+        <select style="margin-top: 10px; margin-bottom: 10px; margin-left: 5px;">
+          <option selected>{role.rolname}</option>
+        </select>
+        <span style="width: 10px"></span>
+        {/* <FontSizedSvg>
+          <DatabaseSvg />
+        </FontSizedSvg>
+        <select style="margin-top: 10px; margin-bottom: 10px; margin-left: 5px;">
+          <option selected>{database.datname}</option>
+        </select> */}
       </div>
       <ExplorerBody />
+      <div className="explorer_foot"></div>
     </nav>
   );
 };
 
 const ExplorerBody = () => {
-  const [detailsOpenCount, setDetailsOpenCount] = useState(0);
-  const resizable = detailsOpenCount > 1;
-  const onOpen = useCallback(() => {
-    setDetailsOpenCount((count) => count + 1);
+  const flexDetailsSetRef = useRef();
+  const [resizableDetailsIdSet, setResizableDetailsIdSet] = useState(new Set());
+  useLayoutEffect(() => {
+    const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
+      onResizableDetailsChange: (resizableDetailsIdSet) => {
+        setResizableDetailsIdSet(new Set(resizableDetailsIdSet));
+      },
+      onRequestedSizeChange: (element, requestedHeight) => {
+        // if (element.id === tablesDetailsController.id) {
+        //   tablesDetailsController.setHeightSetting(requestedHeight);
+        // }
+        // if (element.id === databasesDetailsController.id) {
+        //   databasesDetailsController.setHeightSetting(requestedHeight);
+        // }
+        if (element.id === roleCanLoginListDetailsController.id) {
+          roleCanLoginListDetailsController.setHeightSetting(requestedHeight);
+        }
+        // if (element.id === roleGroupListDetailsController.id) {
+        //   roleGroupListDetailsController.setHeightSetting(requestedHeight);
+        // }
+        // if (element.id === roleWithOwnershipListDetailsController.id) {
+        //   roleWithOwnershipListDetailsController.setHeightSetting(
+        //     requestedHeight,
+        //   );
+        // }
+      },
+    });
+    return flexDetailsSet.cleanup;
   }, []);
-  const onClose = useCallback(() => {
-    setDetailsOpenCount((count) => count - 1);
-  }, []);
-
-  // first thing: I need to repartir la hauteur aux groupes ouvert
-  // si plus d'un groupe est ouvert alors on peut les resize
 
   return (
-    <div
-      className="explorer_body"
-      onToggle={(toggleEvent) => {
-        if (toggleEvent.newState === "open") {
-          setDetailsOpenCount((count) => count + 1);
-        } else {
-          setDetailsOpenCount((count) => count - 1);
-        }
-      }}
-    >
-      <ExplorerDatabases
-        onOpen={onOpen}
-        onClose={onClose}
-        resizable={resizable}
+    <div ref={flexDetailsSetRef} className="explorer_body">
+      {/* <TablesDetails
+        resizable={resizableDetailsIdSet.has(tablesDetailsController.id)}
       />
-      <ExplorerRoles onOpen={onOpen} onClose={onClose} resizable={false} />
+      <DatabasesDetails
+        resizable={resizableDetailsIdSet.has(databasesDetailsController.id)}
+      /> */}
+      <RoleCanLoginListDetails
+        resizable={resizableDetailsIdSet.has(
+          roleCanLoginListDetailsController.id,
+        )}
+      />
+      {/* <RoleGroupListDetails
+        resizable={resizableDetailsIdSet.has(roleGroupListDetailsController.id)}
+      />
+      <RoleWithOwnershipListDetails
+        resizable={resizableDetailsIdSet.has(
+          roleWithOwnershipListDetailsController.id,
+        )}
+      /> */}
     </div>
   );
 };

@@ -2134,6 +2134,9 @@ const INJECTIONS = {
     return { [injectionSymbol]: "global", value };
   },
   optional: (value) => {
+    if (value && value[injectionSymbol] === "optional") {
+      return value;
+    }
     return { [injectionSymbol]: "optional", value };
   },
 };
@@ -2949,6 +2952,7 @@ const createKitchen = ({
       isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
       isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
       isPlaceholderInjection,
+      INJECTIONS,
       getPluginMeta: null,
       sourcemaps,
       outDirectoryUrl,

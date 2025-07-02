@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Details loading demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 200px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      // eslint-disable-next-line no-unused-vars
+      import { Details } from "../components/details.jsx";
+      import { useState } from "preact/hooks";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [pending, setPending] = useState(false);
+
+        return (
+          <div>
+            <button
+              onClick={() => {
+                setPending(true);
+              }}
+            >
+              start loading
+            </button>
+            <button
+              onClick={() => {
+                setPending(false);
+              }}
+            >
+              stop loading
+            </button>
+
+            <Details pending={pending} open style="color: green">
+              <summary>
+                <span>Details</span>
+              </summary>
+              <div>Summary content</div>
+            </Details>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

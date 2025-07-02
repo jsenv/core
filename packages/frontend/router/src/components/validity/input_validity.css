@@ -1,9 +1,0 @@
-/**
- * When there is a custom error we want to keep the input red
- * to indicate the value displayed to the user is invalid
- * Otherwise user sees an input without the red border and might assume it's correct
- */
-input:invalid[data-validity-feedback] {
-  outline: -webkit-focus-ring-color auto 1px; /* force focus ring even when not focused */
-  outline-color: red;
-}

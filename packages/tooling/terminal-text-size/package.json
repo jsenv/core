@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/terminal-text-size",
   "version": "0.0.2",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -9,18 +10,17 @@
     },
     "./*": "./*"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "sideEffects": false,
   "dependencies": {
     "emoji-regex-xs": "2.0.1",
     "get-east-asian-width": "1.3.0",
     "strip-ansi": "7.1.0"
   },
   "devDependencies": {
-    "string-width": "7.2.0",
     "@jsenv/snapshot": "../snapshot",
-    "@jsenv/terminal-text-size": "./"
+    "@jsenv/terminal-text-size": "./",
+    "string-width": "7.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

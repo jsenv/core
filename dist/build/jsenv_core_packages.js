@@ -2517,7 +2517,10 @@ const comparePathnames = (leftPathame, rightPathname) => {
     const rightPart = rightPartArray[i];
     i++;
     // local comparison comes first
-    const comparison = leftPart.localeCompare(rightPart);
+    const comparison = leftPart.localeCompare(rightPart, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
     if (comparison !== 0) {
       return comparison;
     }

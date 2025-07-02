@@ -1,10 +1,11 @@
 import { registerAction, registerRoute } from "@jsenv/router";
 import { connectStoreAndRoute } from "@jsenv/sigi";
-import { roleStore } from "../role/role_store.js";
+import { errorFromResponse } from "../error_from_response.js";
 import {
   setActiveDatabase,
   setActiveDatabaseColumns,
   setActiveDatabaseOwnerRole,
+  setDatabaseCount,
 } from "./database_signals.js";
 import { databaseStore } from "./database_store.js";
 
@@ -13,53 +14,53 @@ export const GET_DATABASE_ROUTE = registerRoute(
   async ({ params, signal }) => {
     const datname = params.datname;
     const response = await fetch(
-      `/.internal/database/api/databases/${datname}`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}`,
       {
         signal,
       },
     );
     if (!response.ok) {
-      const error = await response.json();
-      const getError = new Error(`Failed to get database: ${error.message}`);
-      getError.stack = error.stack || error.message;
-      throw getError;
+      throw await errorFromResponse(response, `Failed to get database`);
     }
-    const { database, ownerRole, columns } = await response.json();
+    const { data, meta } = await response.json();
+    const database = data;
+    const { ownerRole, columns } = meta;
     setActiveDatabase(database);
     setActiveDatabaseColumns(columns);
     setActiveDatabaseOwnerRole(ownerRole);
   },
 );
 connectStoreAndRoute(databaseStore, GET_DATABASE_ROUTE, "datname");
+
 export const POST_DATABASE_ACTION = registerAction(
   async ({ signal, formData }) => {
     const datname = formData.get("datname");
-    const response = await fetch(`/.internal/database/api/databases`, {
-      signal,
-      method: "POST",
-      headers: {
-        "accept": "application/json",
-        "content-type": "application/json",
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases`,
+      {
+        signal,
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ datname }),
       },
-      body: JSON.stringify({ datname }),
-    });
+    );
     if (!response.ok) {
-      const error = await response.json();
-      const postError = new Error(
-        `Failed to create database: ${error.message}`,
-      );
-      postError.stack = error.stack || error.message;
-      throw postError;
+      throw await errorFromResponse(response, `Failed to create database`);
     }
-    const database = await response.json();
+    const { data, meta } = await response.json();
+    const database = data;
     databaseStore.upsert(database);
+    setDatabaseCount(meta.count);
   },
 );
 export const PUT_DATABASE_ACTION = registerAction(
   async ({ datname, columnName, formData, signal }) => {
     let value = formData.get(columnName);
     const response = await fetch(
-      `/.internal/database/api/databases/${datname}/${value}`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}/${value}`,
       {
         signal,
         method: "PUT",
@@ -71,18 +72,15 @@ export const PUT_DATABASE_ACTION = registerAction(
       },
     );
     if (!response.ok) {
-      const error = await response.json();
-      const putError = new Error(`Failed to update database: ${error.message}`);
-      putError.stack = error.stack || error.message;
-      throw putError;
+      throw await errorFromResponse(response, `Failed to update database`);
     }
-    roleStore.upsert("datname", datname, { [columnName]: value });
+    databaseStore.upsert("datname", datname, { [columnName]: value });
   },
 );
 export const DELETE_DATABASE_ACTION = registerAction(
   async ({ datname, signal }) => {
     const response = await fetch(
-      `/.internal/database/api/databases/${datname}`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/databases/${datname}`,
       {
         signal,
         method: "DELETE",
@@ -93,13 +91,10 @@ export const DELETE_DATABASE_ACTION = registerAction(
       },
     );
     if (!response.ok) {
-      const error = await response.json();
-      const deleteError = new Error(
-        `Failed to delete database: ${error.message}`,
-      );
-      deleteError.stack = error.stack || error.message;
-      throw deleteError;
+      throw await errorFromResponse(response, `Failed to delete database`);
     }
-    roleStore.drop("datname", datname);
+    const { meta } = await response.json();
+    databaseStore.drop("datname", datname);
+    setDatabaseCount(meta.count);
   },
 );

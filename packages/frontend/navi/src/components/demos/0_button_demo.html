@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Button demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        Button,
+        // eslint-disable-next-line no-unused-vars
+        Form,
+      } from "@jsenv/navi";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div style="display: flex; flex-direction: row; gap: 30px">
+            <div>
+              <p>
+                <strong>Outside form</strong>
+              </p>
+              <OutsideForm />
+            </div>
+
+            <div>
+              <p>
+                <strong>Inside form</strong>
+              </p>
+              <InsideForm />
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const OutsideForm = () => {
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <span>
+              Count: {count}{" "}
+              <button
+                onClick={() => {
+                  setCount((count) => count + 1);
+                }}
+              >
+                +
+              </button>
+              <button
+                onClick={() => {
+                  setCount((count) => count - 1);
+                }}
+              >
+                -
+              </button>
+            </span>
+
+            <div>
+              <Button
+                action={async () => {
+                  setTimeout(() => {
+                    setCount((count) => count + 1);
+                  }, 200);
+                  await new Promise((resolve) => setTimeout(resolve, 1_500));
+                  throw new Error(`test: ${count}`);
+                }}
+              >
+                Hello
+              </Button>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InsideForm = () => {
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <span>
+              Count: {count}{" "}
+              <button
+                onClick={() => {
+                  setCount((count) => count + 1);
+                }}
+              >
+                +
+              </button>
+              <button
+                onClick={() => {
+                  setCount((count) => count - 1);
+                }}
+              >
+                -
+              </button>
+            </span>
+
+            <Form>
+              <Button
+                action={async () => {
+                  setTimeout(() => {
+                    setCount((count) => count + 1);
+                  }, 200);
+                  await new Promise((resolve) => setTimeout(resolve, 1_500));
+                  throw new Error(`test: ${count}`);
+                }}
+              >
+                Hello
+              </Button>
+            </Form>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

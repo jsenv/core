@@ -11,12 +11,26 @@ export const connectStoreAndRoute = (store, route, key) => {
     return activeItem;
   });
 
-  store.propertyChangeEffect(activeItemSignal, key, (value) => {
-    route.replaceParams({
-      [key]: value,
-    });
-  });
-  store.deleteEffect(activeItemSignal, () => {
-    route.reload();
+  store.registerPropertyLifecycle(activeItemSignal, key, {
+    changed: (value) => {
+      route.replaceParams({
+        [key]: value,
+      });
+    },
+    dropped: () => {
+      route.reload();
+    },
+    reinserted: () => {
+      // this will reload all routes which works but
+      // - most of the time only "route" is impacted, any other route could stay as is
+      // - we already have the data, reloading the route will refetch the backend which is unnecessary
+      // we could just remove routing error (which is cause by 404 likely)
+      // to actually let the data be displayed
+      // because they are available, but in reality the route has no data
+      // because the fetch failed
+      // so conceptually reloading is fine,
+      // the only thing that bothers me a little is that it reloads all routes
+      route.reload();
+    },
   });
 };

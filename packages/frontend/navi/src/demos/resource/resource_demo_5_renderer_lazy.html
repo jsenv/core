@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Action render lazy demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 400px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import {
+        resource,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
+      import { render } from "preact";
+
+      const PAGE = resource("page", {
+        idKey: "name",
+        GET: async ({ name }) => {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          return {
+            name,
+          };
+        },
+      });
+      PAGE.GET_TOTO = PAGE.GET.bindParams(
+        {
+          name: "toto",
+        },
+        {
+          renderLoadedAsync: async () => {
+            // eslint-disable-next-line no-unused-vars
+            const { Toto } = await import("./toto.jsx");
+            return () => {
+              return <Toto />;
+            };
+          },
+        },
+      );
+      PAGE.GET_TATA = PAGE.GET.bindParams(
+        {
+          name: "tata",
+        },
+        {
+          renderLoadedAsync: async () => {
+            // eslint-disable-next-line no-unused-vars
+            const { Tata } = await import("./tata.jsx");
+            return () => <Tata />;
+          },
+        },
+      );
+      PAGE.GET_IMPORT_ERROR = PAGE.GET.bindParams(
+        {
+          name: "import_error",
+        },
+        {
+          renderLoadedAsync: async () => {
+            // eslint-disable-next-line import-x/no-unresolved
+            await import("./not_found.jsx");
+            return () => "here";
+          },
+        },
+      );
+
+      const activePageName = localStorage.getItem("active_page_name");
+      if (activePageName) {
+        PAGE.GET.bindParams({ name: activePageName }).load();
+      }
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div>
+            <button
+              onClick={() => {
+                PAGE.GET_TOTO.reload();
+              }}
+            >
+              TOTO
+            </button>
+            <button
+              onClick={() => {
+                PAGE.GET_TATA.reload();
+              }}
+            >
+              TATA
+            </button>
+            <button
+              onClick={() => {
+                PAGE.GET_IMPORT_ERROR.reload();
+              }}
+            >
+              IMPORT_ERROR
+            </button>
+
+            <div>
+              TOTO: <ActionRenderer action={PAGE.GET_TOTO} />
+            </div>
+            <div>
+              TATA: <ActionRenderer action={PAGE.GET_TATA} />
+            </div>
+            <div>
+              IMPORT_ERROR: <ActionRenderer action={PAGE.GET_IMPORT_ERROR} />
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

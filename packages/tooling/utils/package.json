@@ -1,21 +1,21 @@
 {
   "name": "@jsenv/utils",
   "version": "2.3.1",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/utils"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     "./*": "./*"
   },
-  "sideEffects": false,
   "devDependencies": {
     "@jsenv/assert": "../assert"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

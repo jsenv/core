@@ -1,5 +1,5 @@
 import {
-  SPACheckbox,
+  SPAInputCheckbox,
   SPAInputDateAndTime,
   SPAInputInteger,
   SPAInputText,
@@ -14,7 +14,7 @@ export const DatabaseValue = ({ column, ...rest }) => {
   }
   if (column.data_type === "boolean") {
     const { value, ...props } = rest;
-    return <SPACheckbox name={columnName} checked={value} {...props} />;
+    return <SPAInputCheckbox name={columnName} checked={value} {...props} />;
   }
   if (column.data_type === "timestamp with time zone") {
     const props = rest;
@@ -26,7 +26,14 @@ export const DatabaseValue = ({ column, ...rest }) => {
   }
   if (column.data_type === "name") {
     const props = rest;
-    return <SPAInputText required name={columnName} {...props} />;
+    return (
+      <SPAInputText
+        requestSubmitOnChange
+        required
+        name={columnName}
+        {...props}
+      />
+    );
   }
   if (column.data_type === "oid") {
     return (
@@ -37,7 +44,7 @@ export const DatabaseValue = ({ column, ...rest }) => {
     );
   }
   if (column.column_name === "rolpassword") {
-    return <SPAInputText name={columnName} {...rest} />;
+    return <SPAInputText requestSubmitOnChange name={columnName} {...rest} />;
   }
   if (column.column_name === "rolconfig") {
     // rolconfig something custom like client_min_messages

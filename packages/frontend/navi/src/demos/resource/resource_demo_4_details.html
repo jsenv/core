@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resource demo - Details with localStorage</title>
+  </head>
+  <body>
+    <div
+      id="root"
+      style="position: relative; width: 400px; padding: 20px"
+    ></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useEffect } from "preact/hooks";
+      import {
+        createAction,
+        useActionStatus,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
+
+      // Mock API calls
+      const fetchUser = async ({ userId }) => {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return {
+          id: userId,
+          name: `User ${userId}`,
+          email: `user${userId}@example.com`,
+        };
+      };
+      const fetchUserFriends = async ({ userId }, { signal }) => {
+        console.log(`Fetching friends for user ${userId}`);
+
+        await new Promise((resolve) => {
+          const timeout = setTimeout(resolve, 1200);
+          signal.addEventListener("abort", () => {
+            clearTimeout(timeout);
+          });
+        });
+        return [
+          { id: 1, name: "Alice Johnson" },
+          { id: 2, name: "Bob Smith" },
+          { id: 3, name: "Carol Davis" },
+        ];
+      };
+      const fetchUserSettings = async ({ userId }) => {
+        console.log(`Fetching settings for user ${userId}`);
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        return {
+          theme: "dark",
+          notifications: true,
+          privacy: "friends-only",
+        };
+      };
+
+      // Action templates
+      const GET_USER = createAction(fetchUser, {
+        params: {
+          name: "getUser",
+        },
+      });
+
+      const GET_USER_FRIENDS = createAction(fetchUserFriends, {
+        params: {
+          name: "getUserFriends",
+        },
+      });
+
+      const GET_USER_SETTINGS = createAction(fetchUserSettings, {
+        params: {
+          name: "getUserSettings",
+        },
+      });
+
+      // Hook pour gérer l'état des details avec localStorage
+      const useToggleableAction = (action, storageKey) => {
+        const [isOpen, setIsOpen] = useState(() => {
+          return localStorage.getItem(storageKey) !== null;
+        });
+
+        const handleToggle = (e) => {
+          const open = e.target.open;
+          setIsOpen(open);
+          if (open) {
+            action.load();
+            localStorage.setItem(storageKey, "1");
+          } else {
+            action.abort();
+            localStorage.removeItem(storageKey);
+          }
+        };
+
+        // Charger au montage si c'était ouvert
+        useEffect(() => {
+          if (isOpen) {
+            action.load();
+          }
+        }, []);
+
+        return [isOpen, handleToggle];
+      };
+
+      // Composant principal
+      // eslint-disable-next-line no-unused-vars
+      const UserProfile = ({ userId = 123 }) => {
+        const getUser = GET_USER.bindParams({ userId });
+        const getUserFriends = GET_USER_FRIENDS.bindParams({ userId });
+        const getUserSettings = GET_USER_SETTINGS.bindParams({ userId });
+
+        const [friendsOpen, handleFriendsToggle] = useToggleableAction(
+          getUserFriends,
+          `user_${userId}_friends_open`,
+        );
+
+        const { data: friends } = useActionStatus(getUserFriends);
+
+        const [settingsOpen, handleSettingsToggle] = useToggleableAction(
+          getUserSettings,
+          `user_${userId}_settings_open`,
+        );
+
+        // Charger les données de base de l'utilisateur
+        useEffect(() => {
+          getUser.load();
+        }, []);
+
+        return (
+          <div style={{ fontFamily: "system-ui", lineHeight: "1.5" }}>
+            <h2 style={{ margin: "0 0 20px 0", color: "#333" }}>
+              👤 User Profile
+            </h2>
+
+            {/* Données de base de l'utilisateur */}
+            <div style={{ marginBottom: "20px" }}>
+              <ActionRenderer action={getUser}>
+                {(user) => (
+                  <div
+                    style={{
+                      padding: "12px",
+                      backgroundColor: "#e3f2fd",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <strong>{user.name}</strong>
+                    <br />
+                    📧 {user.email}
+                  </div>
+                )}
+              </ActionRenderer>
+            </div>
+
+            {/* Details Friends */}
+            <details
+              open={friendsOpen}
+              onToggle={handleFriendsToggle}
+              style={{ marginBottom: "16px" }}
+            >
+              <summary
+                style={{
+                  cursor: "pointer",
+                  display: "flex",
+                  padding: "8px",
+                  backgroundColor: "#fff3e0",
+                  borderRadius: "4px",
+                  fontWeight: "bold",
+                }}
+              >
+                👥 Friends {friends ? `(${friends.length})` : ""}
+                <span style="flex:1"></span>
+                <button
+                  onClick={() => {
+                    getUserFriends.reload();
+                  }}
+                >
+                  Refresh
+                </button>
+              </summary>
+              <div style={{ padding: "12px", borderLeft: "3px solid #ff9800" }}>
+                <ActionRenderer action={getUserFriends}>
+                  {(friends) => (
+                    <ul style={{ margin: 0, paddingLeft: "20px" }}>
+                      {friends.map((friend) => (
+                        <li key={friend.id}>
+                          <strong>{friend.name}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </ActionRenderer>
+              </div>
+            </details>
+
+            {/* Details Settings */}
+            <details
+              open={settingsOpen}
+              onToggle={handleSettingsToggle}
+              style={{ marginBottom: "16px" }}
+            >
+              <summary
+                style={{
+                  cursor: "pointer",
+                  padding: "8px",
+                  backgroundColor: "#f3e5f5",
+                  borderRadius: "4px",
+                  fontWeight: "bold",
+                }}
+              >
+                ⚙️ Settings
+              </summary>
+              <div style={{ padding: "12px", borderLeft: "3px solid #9c27b0" }}>
+                <ActionRenderer action={getUserSettings}>
+                  {(settings) => (
+                    <div>
+                      <div>
+                        <strong>Theme:</strong> {settings.theme}
+                      </div>
+                      <div>
+                        <strong>Notifications:</strong>{" "}
+                        {settings.notifications ? "On" : "Off"}
+                      </div>
+                      <div>
+                        <strong>Privacy:</strong> {settings.privacy}
+                      </div>
+                    </div>
+                  )}
+                </ActionRenderer>
+              </div>
+            </details>
+
+            {/* Debug info */}
+            <div
+              style={{
+                marginTop: "20px",
+                padding: "12px",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "4px",
+                fontSize: "12px",
+                color: "#666",
+              }}
+            >
+              <strong>Debug Info:</strong>
+              <br />
+              Friends Details: {friendsOpen ? "Open" : "Closed"}
+              <br />
+              Settings Details: {settingsOpen ? "Open" : "Closed"}
+              <br />
+              localStorage: Check DevTools → Application → Local Storage
+            </div>
+
+            {/* Actions de test */}
+            <div style={{ marginTop: "16px" }}>
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.clear();
+                    window.location.reload();
+                  } catch (error) {
+                    console.warn("Failed to clear localStorage:", error);
+                  }
+                }}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#dc3545",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                🗑️ Clear localStorage & Reload
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // Render
+      render(<UserProfile userId={123} />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

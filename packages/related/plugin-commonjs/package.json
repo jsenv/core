@@ -1,15 +1,13 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.10.13",
-  "license": "MIT",
+  "version": "2.10.14",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-commonjs"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -20,12 +18,11 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
   "dependencies": {
-    "@jsenv/filesystem": "4.15.4",
+    "@jsenv/filesystem": "4.15.5",
     "@jsenv/humanize": "1.6.0",
+    "@jsenv/node-esm-resolution": "1.2.6",
     "@jsenv/url-meta": "8.5.7",
-    "@jsenv/node-esm-resolution": "1.2.5",
     "@jsenv/urls": "2.9.0",
     "@rollup/plugin-commonjs": "28.0.3",
     "@rollup/plugin-json": "6.1.0",
@@ -40,7 +37,10 @@
   },
   "devDependencies": {
     "@jsenv/assert": "../tooling/assert",
-    "playwright": "1.52.0",
-    "@jsenv/core": "../../"
+    "@jsenv/core": "../../",
+    "playwright": "1.52.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

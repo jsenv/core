@@ -1,4 +1,3 @@
-import { useAction } from "@jsenv/router";
 import { DatabaseValue } from "./database_value.jsx";
 import { Table } from "./table.jsx";
 
@@ -19,7 +18,7 @@ export const DatabaseTable = ({ columns, action, data }) => {
           <DatabaseValue
             tableName={tableName}
             column={column}
-            action={useAction(action, { tableName, columnName })}
+            action={action.bindParams({ tableName, columnName })}
             value={value}
           />
         );

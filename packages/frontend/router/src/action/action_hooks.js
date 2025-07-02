@@ -1,22 +1,19 @@
 import { useEffect } from "preact/hooks";
+import { registerAction } from "./action.js";
 import { ABORTED, EXECUTING } from "./action_status.js";
 
-export const useAction = (action, params = {}) => {
-  const actionWithParams = action.withParams(params);
+export const useActionStatus = (action) => {
+  if (typeof action === "function") {
+    action = registerAction(action);
+  }
 
-  // when no one is interested by this action anymore
-  // we can delete the usage of this param and eventually the route
   useEffect(() => {
-    actionWithParams.subscribe();
+    action.subscribe();
     return () => {
-      actionWithParams.unsubscribe();
+      action.unsubscribe();
     };
   }, []);
 
-  return actionWithParams;
-};
-
-export const useActionStatus = (action) => {
   // je peux pas faire ça:
   // puisque la route est partagé par les actions
   // il faut bel et bien que je mette cet action quelque part

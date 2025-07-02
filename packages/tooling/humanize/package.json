@@ -2,18 +2,15 @@
   "name": "@jsenv/humanize",
   "version": "1.6.0",
   "description": "Generate messages meant to read by humans",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/humanize"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "engines": {
-    "node": ">=16.8.0"
-  },
+  "license": "MIT",
+  "sideEffects": [
+    "./dist/node/jsenv_humanize_node_modules.js"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -32,9 +29,6 @@
     "/dist/",
     "/src/"
   ],
-  "sideEffects": [
-    "./dist/node/jsenv_humanize_node_modules.js"
-  ],
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
@@ -44,11 +38,17 @@
     "strip-ansi": "7.1.0"
   },
   "devDependencies": {
-    "is-unicode-supported": "2.1.0",
-    "supports-color": "10.0.0",
+    "@jsenv/assert": "../assert",
     "@jsenv/core": "../..",
     "@jsenv/snapshot": "../snapshot",
-    "@jsenv/assert": "../assert",
-    "@jsenv/terminal-text-size": "../terminal-text-size"
+    "@jsenv/terminal-text-size": "../terminal-text-size",
+    "is-unicode-supported": "2.1.0",
+    "supports-color": "10.0.0"
+  },
+  "engines": {
+    "node": ">=16.8.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

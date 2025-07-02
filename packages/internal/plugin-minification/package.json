@@ -1,15 +1,13 @@
 {
   "name": "@jsenv/plugin-minification",
   "version": "1.7.0",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/related/plugin-minification"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "license": "MIT",
+  "sideEffects": false,
   "type": "module",
   "exports": {
     ".": {
@@ -20,17 +18,19 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
   "dependencies": {
     "html-minifier": "4.0.0",
     "lightningcss": "1.29.3",
     "terser": "5.39.0"
   },
+  "devDependencies": {
+    "@jsenv/ast": "../ast",
+    "@jsenv/urls": "../../tooling/urls"
+  },
   "peerDependencies": {
     "@jsenv/core": "*"
   },
-  "devDependencies": {
-    "@jsenv/urls": "../../tooling/urls",
-    "@jsenv/ast": "../ast"
+  "publishConfig": {
+    "access": "public"
   }
 }

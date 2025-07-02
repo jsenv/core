@@ -1,13 +1,14 @@
 import { getAvailableWidth } from "./get_available_width.js";
+import { resolveCSSSize } from "./resolve_css_size";
 
 export const getMinWidth = (element, availableWidth) => {
-  const minWidth = window.getComputedStyle(element).minWidth;
-  if (minWidth && minWidth.endsWith("%")) {
-    if (availableWidth === undefined) {
-      availableWidth = getAvailableWidth(element);
-    }
-    return (parseInt(minWidth) / 100) * availableWidth;
-  }
-  const minWidthAsNumber = parseInt(minWidth);
-  return isNaN(minWidthAsNumber) ? 0 : minWidthAsNumber;
+  const computedStyle = window.getComputedStyle(element);
+  const { minWidth, fontSize } = computedStyle;
+  return resolveCSSSize(minWidth, {
+    availableSize:
+      availableWidth === undefined
+        ? getAvailableWidth(element)
+        : availableWidth,
+    fontSize,
+  });
 };

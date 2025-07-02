@@ -1,120 +1,17 @@
-import {
-  ErrorBoundaryContext,
-  Route,
-  SPADeleteButton,
-  SPALink,
-  useAction,
-  useRouteParam,
-  useRouteUrl,
-} from "@jsenv/router";
-import { useErrorBoundary } from "preact/hooks";
-import { DatabaseValue } from "../components/database_value.jsx";
-import { GET_DATABASE_ROUTE } from "../database/database_routes.js";
-import {
-  DELETE_ROLE_ACTION,
-  GET_ROLE_ROUTE,
-  PUT_ROLE_ACTION,
-} from "./role_routes.js";
-import {
-  useActiveRole,
-  useActiveRoleColumns,
-  useActiveRoleDatabases,
-} from "./role_signals.js";
+import { Route } from "@jsenv/router";
+import { RoleCanLoginPage } from "./role_can_login/role_can_login_page.jsx";
+import { RoleGroupPage } from "./role_group/role_group_page.jsx";
+import { GET_ROLE_ROUTE } from "./role_routes.js";
+import { useActiveRole } from "./role_signals.js";
 
 export const RoleRoutes = () => {
-  return <Route route={GET_ROLE_ROUTE} loaded={RolePage} />;
+  return <Route route={GET_ROLE_ROUTE} renderLoaded={() => <RolePage />} />;
 };
 
 const RolePage = () => {
-  const [error, resetError] = useErrorBoundary();
-  const rolname = useRouteParam(GET_ROLE_ROUTE, "rolname");
-  const deleteRoleAction = useAction(DELETE_ROLE_ACTION, { rolname });
   const role = useActiveRole();
-
-  return (
-    <ErrorBoundaryContext.Provider value={resetError}>
-      {error && <ErrorDetails error={error} />}
-      <h1>{rolname}</h1>
-      <RoleFields role={role} />
-      <RoleDatabases />
-      <SPADeleteButton action={deleteRoleAction}>Delete</SPADeleteButton>
-      <a
-        href="https://www.postgresql.org/docs/14/sql-alterrole.html"
-        target="_blank"
-      >
-        ALTER ROLE documentation
-      </a>
-    </ErrorBoundaryContext.Provider>
-  );
-};
-
-const ErrorDetails = ({ error }) => {
-  return (
-    <details>
-      <summary>{error.message}</summary>
-      <pre>
-        <code>{error.stack}</code>
-      </pre>
-    </details>
-  );
-};
-
-const RoleFields = ({ role }) => {
-  const columns = useActiveRoleColumns();
-
-  columns.sort((a, b) => {
-    return a.ordinal_position - b.ordinal_position;
-  });
-  const fields = columns.map((column) => {
-    const columnName = column.column_name;
-    const value = role ? role[columnName] : "";
-    return {
-      column,
-      value,
-    };
-  });
-
-  return (
-    <ul>
-      {fields.map(({ column, value }) => {
-        const columnName = column.column_name;
-        const action = useAction(PUT_ROLE_ACTION, {
-          rolname: role.rolname,
-          columnName,
-        });
-
-        return (
-          <li key={columnName}>
-            <DatabaseValue
-              label={<span>{columnName}:</span>}
-              column={column}
-              value={value}
-              action={action}
-            />
-          </li>
-        );
-      })}
-    </ul>
-  );
-};
-
-const RoleDatabases = () => {
-  const databases = useActiveRoleDatabases();
-
-  return (
-    <div>
-      <h2>Databases</h2>
-      <ul>
-        {databases.map((database) => {
-          const datname = database.datname;
-          const databaseRouteUrl = useRouteUrl(GET_DATABASE_ROUTE, { datname });
-          return (
-            <li key={datname}>
-              <SPALink href={databaseRouteUrl}>{datname}</SPALink>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
+  if (role.rolcanlogin) {
+    return <RoleCanLoginPage role={role} />;
+  }
+  return <RoleGroupPage role={role} />;
 };

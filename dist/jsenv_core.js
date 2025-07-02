@@ -7,6 +7,9 @@ const INJECTIONS = {
     return { [injectionSymbol]: "global", value };
   },
   optional: (value) => {
+    if (value && value[injectionSymbol] === "optional") {
+      return value;
+    }
     return { [injectionSymbol]: "optional", value };
   },
 };

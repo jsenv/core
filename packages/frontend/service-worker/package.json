@@ -2,22 +2,20 @@
   "name": "@jsenv/service-worker",
   "version": "1.0.3",
   "description": "Service worker that can be integrated with jsenv build",
-  "license": "MIT",
-  "author": {
-    "name": "dmail",
-    "email": "dmaillard06@gmail.com"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/frontend/service-worker"
   },
-  "engines": {
-    "node": ">=16.13.0"
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "sideEffects": [
+    "./tests/errors/project/dist/jsenv_service_worker_node_modules.js",
+    "./tests/update/project/dist/jsenv_service_worker_node_modules.js"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -29,19 +27,21 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": [
-    "./tests/errors/project/dist/jsenv_service_worker_node_modules.js",
-    "./tests/update/project/dist/jsenv_service_worker_node_modules.js"
-  ],
   "devDependencies": {
     "@jsenv/core": "../../../",
-    "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/fetch": "../../tooling/fetch",
     "@jsenv/filesystem": "../../tooling/filesystem",
-    "@jsenv/snapshot": "../../tooling/snapshot",
+    "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/humanize": "../../tooling/humanize",
     "@jsenv/pwa": "../pwa",
     "@jsenv/service-worker": "./",
+    "@jsenv/snapshot": "../../tooling/snapshot",
     "playwright": "1.52.0"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

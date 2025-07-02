@@ -62,8 +62,8 @@ const LinkWithDeleteShortcut = forwardRef(
       <a
         ref={innerRef}
         {...props}
-        // does not work because chrome does not set the <a> as document.activeElement when focused (WTF)
-        // https://github.com/reactjs/react-modal/issues/389
+        // TODO: consider an attribut like accesskey
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/accesskey
         onKeyDown={(e) => {
           if (e.metaKey && e.key === "Backspace") {
             // eslint-disable-next-line no-alert

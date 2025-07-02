@@ -15,12 +15,28 @@ export const endDocumentRouting = () => {
   }
   documentIsRoutingSignal.value = false;
 };
-
 export const routingWhile = async (fn, ...args) => {
   startDocumentRouting();
   try {
-    await fn(...args);
+    const result = await fn(...args);
+    return result;
   } finally {
     endDocumentRouting();
   }
+};
+
+export const documentUrlSignal = signal(window.location.href);
+export const updateDocumentUrl = (value) => {
+  documentUrlSignal.value = value;
+};
+export const useDocumentUrl = () => {
+  return documentUrlSignal.value;
+};
+
+export const documentStateSignal = signal(null);
+export const updateDocumentState = (value) => {
+  documentStateSignal.value = value;
+};
+export const useDocumentState = () => {
+  return documentStateSignal.value;
 };

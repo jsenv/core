@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demo - Proxy Target GC</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 400px"></div>
+    <div id="controls" style="margin-top: 20px">
+      <button id="createBtn">Create Proxy + UI</button>
+      <button id="destroyBtn" disabled>Destroy Proxy + UI</button>
+      <button id="gcBtn">Force GC + Check</button>
+    </div>
+    <div id="status" style="margin-top: 10px; font-family: monospace"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { createAction, useActionStatus } from "@jsenv/navi";
+      import { signal } from "@preact/signals";
+
+      // Base action created outside UI (persistent)
+      const baseAction = createAction(
+        (params) => {
+          return new Promise((resolve) => {
+            setTimeout(
+              () =>
+                resolve(
+                  `Page ${params.page} loaded at ${new Date().toLocaleTimeString()}`,
+                ),
+              800,
+            );
+          });
+        },
+        { name: "loadPageAction" },
+      );
+
+      let currentProxy = null;
+      let proxyWeakRef = null;
+      let componentWeakRef = null;
+      let pageSignal = null;
+      let oldTargetWeakRefs = [];
+
+      const updateStatus = () => {
+        const statusDiv = document.getElementById("status");
+        const proxyAlive = proxyWeakRef?.deref() !== undefined;
+        const componentAlive = componentWeakRef?.deref() !== undefined;
+        const oldTargetsAlive = oldTargetWeakRefs.map(
+          (ref) => ref.deref() !== undefined,
+        );
+        const oldTargetsAliveCount = oldTargetsAlive.filter(Boolean).length;
+
+        statusDiv.innerHTML = `
+          Base Action: ✅ EXISTS (persistent)
+          Proxy alive: ${proxyAlive ? "✅ YES" : "❌ NO"}
+          Component alive: ${componentAlive ? "✅ YES" : "❌ NO"}
+          CurrentProxy reference: ${currentProxy ? "✅ EXISTS" : "❌ NULL"}
+          Old targets alive: ${oldTargetsAliveCount}/${oldTargetWeakRefs.length}
+        `;
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const PageLoader = ({ proxyAction, pageSignal }) => {
+        const [currentPage, setCurrentPage] = useState(1);
+        const { matching, data, pending } = useActionStatus(proxyAction);
+
+        const changePage = (newPage) => {
+          // Before changing, create a direct reference to the current target
+          // to track if it gets GC'd when we change the signal
+          const currentTarget = baseAction.bindParams({ page: currentPage });
+          oldTargetWeakRefs.push(new WeakRef(currentTarget));
+
+          console.log(`📄 Changing from page ${currentPage} to ${newPage}`);
+          console.log(`📄 Old target created: ${currentTarget.name}`);
+          console.log(
+            `📄 Total old targets tracked: ${oldTargetWeakRefs.length}`,
+          );
+
+          setCurrentPage(newPage);
+          pageSignal.value = { page: newPage };
+        };
+
+        return (
+          <div
+            style={{
+              border: "1px solid #ccc",
+              padding: "10px",
+              margin: "10px 0",
+            }}
+          >
+            <h3>Page Loader Component</h3>
+            <p>Proxy Name: {proxyAction.name}</p>
+            <p>Current Page: {currentPage}</p>
+            <div style={{ margin: "10px 0" }}>
+              <button
+                onClick={() => changePage(1)}
+                disabled={currentPage === 1}
+              >
+                Page 1
+              </button>
+              <button
+                onClick={() => changePage(2)}
+                disabled={currentPage === 2}
+              >
+                Page 2
+              </button>
+              <button
+                onClick={() => changePage(3)}
+                disabled={currentPage === 3}
+              >
+                Page 3
+              </button>
+            </div>
+            <details
+              open={matching}
+              onToggle={(e) => {
+                if (e.target.open) {
+                  proxyAction.load();
+                } else {
+                  proxyAction.unload();
+                }
+              }}
+            >
+              <summary>Page Content {pending ? "(loading...)" : ""}</summary>
+              <div>{data || "No data"}</div>
+            </details>
+            <div style={{ marginTop: "10px", fontSize: "12px", color: "#666" }}>
+              Old targets tracked: {oldTargetWeakRefs.length}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [showPageLoader] = useState(false);
+
+        return (
+          <div>
+            <h2>Proxy Target GC Test</h2>
+            <p>
+              Status:{" "}
+              {showPageLoader ? "Component mounted" : "Component unmounted"}
+            </p>
+            {showPageLoader && currentProxy && pageSignal && (
+              <PageLoader proxyAction={currentProxy} pageSignal={pageSignal} />
+            )}
+          </div>
+        );
+      };
+
+      // Fonctions de test
+      const createProxyAndUI = () => {
+        console.log("🏗️ Creating proxy and UI...");
+        console.log("Base action:", baseAction.name);
+
+        // Créer le signal pour les paramètres
+        pageSignal = signal({ page: 1 });
+
+        // Créer le proxy via bindParams avec le signal
+        currentProxy = baseAction.bindParams(pageSignal);
+        console.log("Proxy created:", currentProxy.name);
+
+        // Créer les WeakRef pour le monitoring
+        proxyWeakRef = new WeakRef(currentProxy);
+        oldTargetWeakRefs = []; // Reset old targets tracking
+
+        // eslint-disable-next-line no-unused-vars
+        const AppWithState = () => {
+          const [showPageLoader] = useState(true);
+
+          // eslint-disable-next-line no-unused-vars
+          const PageLoaderRef = ({ proxyAction, pageSignal }) => {
+            const component = (
+              <PageLoader proxyAction={proxyAction} pageSignal={pageSignal} />
+            );
+            if (!componentWeakRef) {
+              componentWeakRef = new WeakRef(component);
+            }
+            return component;
+          };
+
+          return (
+            <div>
+              <h2>Proxy Target GC Test</h2>
+              <p>Status: Component mounted</p>
+              <p>Base Action: {baseAction.name}</p>
+              <p>Proxy Action: {currentProxy.name}</p>
+              {showPageLoader && currentProxy && pageSignal && (
+                <PageLoaderRef
+                  proxyAction={currentProxy}
+                  pageSignal={pageSignal}
+                />
+              )}
+            </div>
+          );
+        };
+
+        render(<AppWithState />, document.querySelector("#root"));
+
+        document.getElementById("createBtn").disabled = true;
+        document.getElementById("destroyBtn").disabled = false;
+
+        updateStatus();
+      };
+
+      const destroyProxyAndUI = () => {
+        console.log("🗑️ Destroying proxy and UI...");
+
+        // Démonter le composant
+        render(
+          <div>
+            <h2>Proxy Target GC Test</h2>
+            <p>Status: Component unmounted</p>
+            <p>Base Action: {baseAction.name} (still exists)</p>
+          </div>,
+          document.querySelector("#root"),
+        );
+
+        // Supprimer les références fortes
+        currentProxy = null;
+        pageSignal = null;
+
+        document.getElementById("createBtn").disabled = false;
+        document.getElementById("destroyBtn").disabled = true;
+
+        console.log(
+          "🧹 Proxy and signal references cleared, should be eligible for GC",
+        );
+        console.log("Base action still exists:", baseAction.name);
+        console.log(`Old targets to be checked: ${oldTargetWeakRefs.length}`);
+        updateStatus();
+      };
+
+      const forceGCAndCheck = async () => {
+        console.log("🔄 Forcing GC...");
+
+        // Forcer le garbage collection (si disponible)
+        if (window.gc) {
+          window.gc();
+        } else {
+          // Fallback: créer de la pression mémoire
+          const arrays = [];
+          for (let i = 0; i < 100; i++) {
+            arrays.push(new Array(100000).fill(Math.random()));
+          }
+          // Laisser les arrays être collectées
+          arrays.length = 0;
+        }
+
+        // Attendre un peu pour que le GC ait le temps de s'exécuter
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        updateStatus();
+
+        // Vérifier le résultat
+        const proxyAlive = proxyWeakRef?.deref() !== undefined;
+        const componentAlive = componentWeakRef?.deref() !== undefined;
+        const oldTargetsAlive = oldTargetWeakRefs.map(
+          (ref) => ref.deref() !== undefined,
+        );
+        const oldTargetsAliveCount = oldTargetsAlive.filter(Boolean).length;
+
+        console.log("📊 GC Results:");
+        console.log(
+          `  Base Action: ✅ ALIVE (expected - persistent reference)`,
+        );
+        if (currentProxy) {
+          console.log(`  Proxy: ✅ ALIVE (expected - as it was not destroyed)`);
+        } else {
+          console.log(`  Proxy: ${proxyAlive ? "❌ ALIVE" : "✅ GC'd"}`);
+          console.log(
+            `  Component: ${componentAlive ? "❌ ALIVE" : "✅ GC'd"}`,
+          );
+        }
+        console.log(
+          `  Old targets: ${oldTargetsAliveCount}/${oldTargetWeakRefs.length} still alive`,
+        );
+
+        if (oldTargetsAliveCount === 0) {
+          console.log(
+            "✅ SUCCESS: All old proxy targets were garbage collected!",
+          );
+        } else {
+          console.log("❌ ISSUE: Some old proxy targets are still alive");
+          oldTargetsAlive.forEach((alive, index) => {
+            if (alive) {
+              console.log(`  - Old target ${index + 1} is still alive`);
+            }
+          });
+        }
+
+        if (!proxyAlive && !componentAlive && oldTargetsAliveCount === 0) {
+          console.log(
+            "🎉 PERFECT: Proxy, component, and old targets all GC'd!",
+          );
+          console.log("✅ Base action correctly preserved");
+        }
+      };
+
+      // Event listeners
+      document
+        .getElementById("createBtn")
+        .addEventListener("click", createProxyAndUI);
+      document
+        .getElementById("destroyBtn")
+        .addEventListener("click", destroyProxyAndUI);
+      document
+        .getElementById("gcBtn")
+        .addEventListener("click", forceGCAndCheck);
+
+      // Initial render
+      render(<App />, document.querySelector("#root"));
+      updateStatus();
+    </script>
+  </body>
+</html>

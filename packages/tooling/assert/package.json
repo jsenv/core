@@ -2,22 +2,20 @@
   "name": "@jsenv/assert",
   "version": "4.5.3",
   "description": "One assertion to test everything",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
     "directory": "packages/tooling/assert"
   },
+  "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "publishConfig": {
-    "access": "public"
-  },
-  "engines": {
-    "node": ">=16.13.0"
-  },
+  "sideEffects": [
+    "./dist/browser/jsenv_assert_node_modules.js",
+    "./dist/node/jsenv_assert_node_modules.js"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -37,24 +35,26 @@
     "/dist/",
     "/src/"
   ],
-  "sideEffects": [
-    "./dist/browser/jsenv_assert_node_modules.js",
-    "./dist/node/jsenv_assert_node_modules.js"
-  ],
   "scripts": {
+    "build": "node ./scripts/build.mjs",
     "dev": "node ./scripts/start_dev_server.mjs",
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
-    "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@jsenv/humanize": "../humanize/",
-    "@jsenv/snapshot": "../snapshot",
-    "@jsenv/terminal-text-size": "../terminal-text-size/",
     "@jsenv/assert": "./",
     "@jsenv/core": "../../../",
+    "@jsenv/humanize": "../humanize/",
     "@jsenv/plugin-commonjs": "../../related/plugin-commonjs",
+    "@jsenv/snapshot": "../snapshot",
+    "@jsenv/terminal-text-size": "../terminal-text-size/",
     "graphemer": "1.4.0",
     "strip-ansi": "7.1.0"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

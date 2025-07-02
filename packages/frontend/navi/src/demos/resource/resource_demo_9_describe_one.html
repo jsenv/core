@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resource demo describe one</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative; width: 600px"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useEffect, useRef } from "preact/hooks";
+      import {
+        resource,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        ActionStatus,
+      } from "./action_status.jsx";
+      import { localStorageSignal } from "../../local_storage_signal.js";
+
+      const tables = [
+        { id: "table_1", name: "table_1", owner: "user_1" },
+        { id: "table_2", name: "table_2", owner: "user_2" },
+      ];
+      const users = [
+        { id: "user_1", name: "User 1" },
+        { id: "user_2", name: "User 2" },
+      ];
+
+      const getUser = ({ userId }) => {
+        const user = users.find((user) => user.id === userId);
+        user.tables = tables.filter((table) => table.owner?.id === userId);
+        return user;
+      };
+
+      const USER = resource("user", {
+        idKey: "id",
+        mutableIdKey: "name",
+        GET: getUser,
+        GET_MANY: () => users,
+        PUT: ({ name, field, value }) => {
+          let userToUpdate = users.find((u) => u.name === name);
+          const id = userToUpdate.id;
+          userToUpdate[field] = value;
+          return { id, [field]: value };
+        },
+      });
+      USER.RENAME = USER.PUT.bindParams({ field: "name" });
+      const TABLE = resource("table", {
+        idKey: "id",
+        mutableIdKey: "name",
+        GET: ({ name }) => {
+          const table = tables.find((table) => table.name === name);
+          if (!table) {
+            throw new Error(`Table with name "${name}" not found`);
+          }
+          return table;
+        },
+        GET_MANY: () => tables,
+        PUT: ({ name, field, value }) => {
+          let tableToUpdate = tables.find((t) => t.name === name);
+          const id = tableToUpdate.id;
+          tableToUpdate[field] = value;
+          return { id, [field]: value };
+        },
+      });
+      TABLE.RENAME = TABLE.PUT.bindParams({ field: "name" });
+      USER.many("tables", TABLE, {
+        GET: ({ userId }) => {
+          return tables.filter((table) => table.owner?.id === userId);
+        },
+        POST: ({ tableId }) => {
+          const tableToAdd = tables.find((t) => t.id === tableId);
+          return tableToAdd;
+        },
+        DELETE: ({ tableId }) => {
+          return tableId;
+        },
+        POST_MANY: ({ tableIds }) => {
+          const tablesToAdd = tables.filter((t) => tableIds.includes(t.id));
+          return tablesToAdd;
+        },
+        DELETE_MANY: ({ tableIds }) => {
+          return tableIds;
+        },
+      });
+      const TABLE_OWNER = TABLE.one("owner", USER, {
+        GET: ({ tableId, owner }) => {
+          if (!owner) {
+            return null;
+          }
+          return {
+            id: tableId,
+            owner: getUser({ userId: owner.id }),
+          };
+        },
+        PUT: ({ tableId, newOwnerId }) => {
+          const newOwner = users.find((u) => u.id === newOwnerId);
+          const tableToUpdate = tables.find((t) => t.id === tableId);
+          tableToUpdate.owner = newOwner;
+          return {
+            id: tableId,
+            owner: newOwner,
+          };
+        },
+        DELETE: ({ tableId }) => {
+          const tableToUpdate = tables.find((t) => t.id === tableId);
+          tableToUpdate.owner = null;
+          return {
+            id: tableId,
+            owner: null,
+          };
+        },
+      });
+
+      // Signal pour la table courante
+      const currentTableNameSignal = localStorageSignal("current_table_name");
+      const currentTableAction = TABLE.GET.bindParams({
+        name: currentTableNameSignal,
+      });
+      if (currentTableNameSignal.value) {
+        currentTableAction.load();
+      }
+      TABLE.store.registerPropertyChangeCallback("name", (tableName) => {
+        currentTableNameSignal.value = tableName;
+      });
+
+      TABLE.GET_MANY.load();
+      USER.GET_MANY.load();
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div style={{ display: "flex", gap: "20px" }}>
+            <div style={{ flex: 1 }}>
+              <h2>Tables</h2>
+              <TablesList />
+
+              <h2>Current Table</h2>
+              <CurrentTable />
+            </div>
+
+            <div style={{ flex: 1 }}>
+              <h2>Users</h2>
+              <UsersList />
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TablesList = () => {
+        return (
+          <ActionRenderer action={TABLE.GET_MANY}>
+            {(tables) => (
+              <div>
+                {tables.map((table) => (
+                  <TableItem key={table.id} table={table} />
+                ))}
+              </div>
+            )}
+          </ActionRenderer>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TableItem = ({ table }) => {
+        const [isEditing, setIsEditing] = useState(false);
+        const [editName, setEditName] = useState(table.name);
+        // ✅ NEW: State for editing owner
+        const [isEditingOwner, setIsEditingOwner] = useState(false);
+        const [editOwnerId, setEditOwnerId] = useState(table.owner?.id);
+
+        const handleSave = async () => {
+          await TABLE.RENAME.bindParams({
+            name: table.name,
+            value: editName,
+          }).reload();
+          setIsEditing(false);
+        };
+
+        const handleCancel = () => {
+          setEditName(table.name);
+          setIsEditing(false);
+        };
+
+        // ✅ NEW: Handle owner update
+        const handleOwnerSave = async () => {
+          if (editOwnerId) {
+            await TABLE_OWNER.PUT.bindParams({
+              tableId: table.id,
+              newOwnerId: editOwnerId,
+            }).reload();
+            setIsEditingOwner(false);
+            return;
+          }
+          await TABLE_OWNER.DELETE.bindParams({ tableId: table.id }).reload();
+          setIsEditingOwner(false);
+        };
+
+        const handleOwnerCancel = () => {
+          setEditOwnerId(table.owner?.id);
+          setIsEditingOwner(false);
+        };
+
+        const inputRef = useRef();
+        useEffect(() => {
+          if (isEditing) {
+            inputRef.current.focus();
+            inputRef.current.select();
+          }
+        }, [isEditing]);
+
+        // ✅ Get current owner name for display
+        const currentOwner = users.find((u) => u.id === table.owner?.id);
+
+        return (
+          <div
+            style={{
+              border: "1px solid #ccc",
+              padding: "10px",
+              margin: "5px 0",
+              backgroundColor:
+                currentTableNameSignal.value === table.name
+                  ? "#e6f3ff"
+                  : "white",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {isEditing ? (
+                <>
+                  <input
+                    ref={inputRef}
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <button onClick={handleSave}>Save</button>
+                  <button onClick={handleCancel}>Cancel</button>
+                </>
+              ) : (
+                <>
+                  <strong style={{ flex: 1 }}>{table.name}</strong>
+                  <button onClick={() => setIsEditing(true)}>Rename</button>
+                  <button
+                    onClick={() => {
+                      currentTableNameSignal.value = table.name;
+                      currentTableAction.reload();
+                    }}
+                    disabled={currentTableNameSignal.value === table.name}
+                  >
+                    Select
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* ✅ NEW: Owner editing section */}
+            <div style={{ marginTop: "10px", fontSize: "12px", color: "#666" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              >
+                {isEditingOwner ? (
+                  <>
+                    <span>Owner:</span>
+                    <select
+                      value={editOwnerId}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setEditOwnerId(value === "" ? null : e.target.value);
+                      }}
+                      style={{ fontSize: "12px" }}
+                    >
+                      <option value=""></option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleOwnerSave}
+                      style={{ fontSize: "10px", padding: "2px 6px" }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleOwnerCancel}
+                      style={{ fontSize: "10px", padding: "2px 6px" }}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span>Owner: {currentOwner?.name || "Unknown"}</span>
+                    <button
+                      onClick={() => {
+                        setEditOwnerId(table.owner?.id);
+                        setIsEditingOwner(true);
+                      }}
+                      style={{ fontSize: "10px", padding: "2px 6px" }}
+                    >
+                      Change Owner
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CurrentTable = () => {
+        if (!currentTableNameSignal.value) {
+          return <p>No table selected</p>;
+        }
+
+        return (
+          <div>
+            <ActionStatus action={currentTableAction} />
+            <ActionRenderer action={currentTableAction}>
+              {(table) => <TableDetails table={table} />}
+            </ActionRenderer>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TableDetails = ({ table }) => {
+        const getTableOwner = TABLE_OWNER.GET.bindParams({
+          tableId: table.id,
+          owner: table.owner,
+        });
+        // const { idle } = useActionStatus(getTableOwner);
+
+        return (
+          <div style={{ border: "2px solid #007acc", padding: "15px" }}>
+            <h3>{table.name}</h3>
+            <p>ID: {table.id}</p>
+
+            <details
+              onToggle={(e) => {
+                if (e.target.open) {
+                  getTableOwner.load();
+                } else {
+                  getTableOwner.abort();
+                }
+              }}
+            >
+              <summary>Owner Details</summary>
+              <ActionRenderer action={getTableOwner}>
+                {(owner) => {
+                  if (!owner) {
+                    return <p>No owner assigned</p>;
+                  }
+                  return (
+                    <div
+                      style={{
+                        marginTop: "10px",
+                        padding: "10px",
+                        backgroundColor: "#f0f0f0",
+                      }}
+                    >
+                      <p>
+                        <strong>Owner:</strong> {owner.name}
+                      </p>
+                      <p>
+                        <strong>Owner ID:</strong> {owner.id}
+                      </p>
+                    </div>
+                  );
+                }}
+              </ActionRenderer>
+            </details>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const UsersList = () => {
+        return (
+          <ActionRenderer action={USER.GET_MANY}>
+            {(users) => (
+              <div>
+                {users.map((user) => (
+                  <UserItem key={user.id} user={user} />
+                ))}
+              </div>
+            )}
+          </ActionRenderer>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const UserItem = ({ user }) => {
+        const [isEditing, setIsEditing] = useState(false);
+        const [editName, setEditName] = useState(user.name);
+
+        const handleSave = async () => {
+          await USER.RENAME.bindParams({
+            name: user.name,
+            value: editName,
+          }).load();
+          setIsEditing(false);
+        };
+
+        const handleCancel = () => {
+          setEditName(user.name);
+          setIsEditing(false);
+        };
+
+        const inputRef = useRef();
+        useEffect(() => {
+          if (isEditing) {
+            inputRef.current.focus();
+            inputRef.current.select();
+          }
+        }, [isEditing]);
+
+        // Compter combien de tables appartiennent à cet utilisateur
+        const userTables = user.tables || [];
+
+        return (
+          <div
+            style={{
+              border: "1px solid #ccc",
+              padding: "10px",
+              margin: "5px 0",
+              backgroundColor: "#f9f9f9",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {isEditing ? (
+                <>
+                  <input
+                    ref={inputRef}
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <button onClick={handleSave}>Save</button>
+                  <button onClick={handleCancel}>Cancel</button>
+                </>
+              ) : (
+                <>
+                  <strong style={{ flex: 1 }}>{user.name}</strong>
+                  <button onClick={() => setIsEditing(true)}>Rename</button>
+                </>
+              )}
+            </div>
+
+            <div style={{ marginTop: "10px", fontSize: "12px", color: "#666" }}>
+              ID: {user.id} | Tables owned: {userTables.length}
+              {userTables.length > 0 && (
+                <span> ({userTables.map((t) => t.name).join(", ")})</span>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

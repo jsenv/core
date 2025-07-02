@@ -2,14 +2,13 @@ import {
   ErrorBoundaryContext,
   Route,
   SPADeleteButton,
-  SPALink,
-  useAction,
   useRouteParam,
-  useRouteUrl,
 } from "@jsenv/router";
 import { useErrorBoundary } from "preact/hooks";
 import { DatabaseValue } from "../components/database_value.jsx";
-import { GET_ROLE_ROUTE } from "../role/role_routes.js";
+import { PageBody, PageHead } from "../layout/page.jsx";
+import { RoleLink } from "../role/role_link.jsx";
+import { DatabaseSvg } from "./database_icons.jsx";
 import {
   DELETE_DATABASE_ACTION,
   GET_DATABASE_ROUTE,
@@ -22,35 +21,63 @@ import {
 } from "./database_signals.js";
 
 export const DatabaseRoutes = () => {
-  return <Route route={GET_DATABASE_ROUTE} loaded={DatabasePage} />;
+  return (
+    <Route
+      route={GET_DATABASE_ROUTE}
+      renderLoaded={() => <DatabasePage />}
+      renderError={({ error }) => <DatabasePage routeError={error} />}
+    />
+  );
 };
 
-const DatabasePage = () => {
+const DatabasePage = ({ routeError }) => {
   const [error, resetError] = useErrorBoundary();
   const datname = useRouteParam(GET_DATABASE_ROUTE, "datname");
-  const deleteAction = useAction(DELETE_DATABASE_ACTION, { datname });
+  const deleteDatabaseAction = DELETE_DATABASE_ACTION.bindParams({ datname });
   const database = useActiveDatabase();
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
-      {error && <ErrorDetails error={error} />}
-      <h1>{datname}</h1>
-      <DatabaseFields database={database} />
-      <SPADeleteButton action={deleteAction}>Delete</SPADeleteButton>
-
-      <a
-        href="https://www.postgresql.org/docs/14/sql-alterdatabase.html"
-        target="_blank"
+      <PageHead
+        actions={[
+          {
+            component: (
+              <SPADeleteButton
+                action={deleteDatabaseAction}
+                disabled={error || routeError}
+              >
+                Delete
+              </SPADeleteButton>
+            ),
+          },
+        ]}
       >
-        ALTER DATABASE documentation
-      </a>
+        <PageHead.Label icon={<DatabaseSvg />} label={"Database:"}>
+          {datname}
+        </PageHead.Label>
+      </PageHead>
+      <PageBody>
+        {routeError ? (
+          <ErrorDetails error={routeError} />
+        ) : (
+          <>
+            <DatabaseFields database={database} />
+            <a
+              href="https://www.postgresql.org/docs/14/sql-alterdatabase.html"
+              target="_blank"
+            >
+              ALTER DATABASE documentation
+            </a>
+          </>
+        )}
+      </PageBody>
     </ErrorBoundaryContext.Provider>
   );
 };
 
 const ErrorDetails = ({ error }) => {
   return (
-    <details>
+    <details className="route_error">
       <summary>{error.message}</summary>
       <pre>
         <code>{error.stack}</code>
@@ -72,20 +99,18 @@ const DatabaseFields = ({ database }) => {
       {columns.map((column) => {
         const columnName = column.column_name;
         const value = database ? database[columnName] : "";
-        const action = useAction(PUT_DATABASE_ACTION, {
+        const action = PUT_DATABASE_ACTION.bindParams({
           datname: database.datname,
           columnName,
-        });
-        const roleRouteUrl = useRouteUrl(GET_ROLE_ROUTE, {
-          rolname: ownerRole.rolname,
         });
 
         if (columnName === "datdba") {
           // we will display this elswhere
           return (
-            <SPALink key={columnName} href={roleRouteUrl}>
-              {ownerRole.rolname}
-            </SPALink>
+            <li key={columnName}>
+              Owner:
+              <RoleLink role={ownerRole}>{ownerRole.rolname}</RoleLink>
+            </li>
           );
         }
         return (

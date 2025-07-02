@@ -1,39 +1,146 @@
-import { Route } from "@jsenv/router";
-import { DatabaseTable } from "../components/database_table.jsx";
-import { GET_TABLES_ROUTE, UPDATE_TABLE_ACTION } from "./table_routes.js";
-import { tableInfoSignal, tablePublicFilterSignal } from "./table_signals.js";
+/**
+ * ce qui me parait le mieux:
+ *
+ *
+ * c'est pas vraiment intéréssant de voir tout les base de données en vrai donc:
+ *
+ * -> on affiche la base de données courant + un moyen d'en changer
+ * -> on affiche les tables de la base de données courante
+ * -> un moyen de modifier la base de données courante "chaispascomment"
+ *
+ * - une icone gear en haut a droite fait apparaitre un menu de réglage dans le header
+ * qui permet de renommer la table et modifier ses params genre son owner etc
+ *
+ * - la page elle se concentre sur l'affiche du contenu de la table
+ * on commencera par les colones de la table elle-meme
+ * qu'on peut bouger, renommer, supprimer, modifier le type etc
+ *
+ *
+ */
+
+import {
+  ErrorBoundaryContext,
+  Route,
+  SPADeleteButton,
+  useRouteParam,
+} from "@jsenv/router";
+import { useErrorBoundary } from "preact/hooks";
+import { DatabaseValue } from "../components/database_value.jsx";
+import { PageBody, PageHead } from "../layout/page.jsx";
+import { RoleLink } from "../role/role_link.jsx";
+import { useRoleByName } from "../role/role_signals.js";
+import { TableSvg } from "./table_icons.jsx";
+import {
+  DELETE_TABLE_ACTION,
+  GET_TABLE_ROUTE,
+  PUT_TABLE_ACTION,
+} from "./table_routes.js";
+import { useActiveTableColumns, useTable } from "./table_signals.js";
 
 export const TableRoutes = () => {
-  return <Route route={GET_TABLES_ROUTE} loaded={TablePage} />;
+  return (
+    <Route
+      route={GET_TABLE_ROUTE}
+      renderLoaded={() => <TablePage />}
+      renderError={({ error }) => <TablePage routeError={error} />}
+    />
+  );
 };
 
-const TablePage = () => {
-  const tablePublicFilter = tablePublicFilterSignal.value;
-  const { columns, data } = tableInfoSignal.value;
+const TablePage = ({ routeError }) => {
+  const [error, resetError] = useErrorBoundary();
+  const tablename = useRouteParam(GET_TABLE_ROUTE, "tablename");
+  const deleteTableAction = DELETE_TABLE_ACTION.bindParams({ tablename });
+  const table = useTable(tablename);
 
   return (
-    <>
-      <DatabaseTable
-        column={columns}
-        data={data}
-        action={UPDATE_TABLE_ACTION}
-      />
-      <form>
-        <label>
-          <input
-            type="checkbox"
-            checked={tablePublicFilter}
-            onChange={(e) => {
-              if (e.target.checked) {
-                tablePublicFilterSignal.value = true;
-              } else {
-                tablePublicFilterSignal.value = false;
-              }
-            }}
-          ></input>
-          Public
-        </label>
-      </form>
-    </>
+    <ErrorBoundaryContext.Provider value={resetError}>
+      <PageHead
+        actions={[
+          {
+            component: (
+              <SPADeleteButton
+                action={deleteTableAction}
+                disabled={error || routeError}
+              >
+                Delete
+              </SPADeleteButton>
+            ),
+          },
+        ]}
+      >
+        <PageHead.Label icon={<TableSvg />} label={"Table:"}>
+          {tablename}
+        </PageHead.Label>
+      </PageHead>
+      <PageBody>
+        {routeError ? (
+          <ErrorDetails error={routeError} />
+        ) : (
+          <>
+            <TableFields table={table} />
+            <a
+              href="https://www.postgresql.org/docs/14/ddl-basics.html"
+              target="_blank"
+            >
+              TABLE documentation
+            </a>
+          </>
+        )}
+      </PageBody>
+    </ErrorBoundaryContext.Provider>
+  );
+};
+
+const ErrorDetails = ({ error }) => {
+  return (
+    <details className="route_error">
+      <summary>{error.message}</summary>
+      <pre style="white-space: pre-wrap;">
+        <code>{error.stack}</code>
+      </pre>
+    </details>
+  );
+};
+
+const TableFields = ({ table }) => {
+  const columns = useActiveTableColumns();
+  const ownerRolname = table.tableowner;
+  const ownerRole = useRoleByName(ownerRolname);
+
+  columns.sort((a, b) => {
+    return a.ordinal_position - b.ordinal_position;
+  });
+
+  return (
+    <ul>
+      {columns.map((column) => {
+        const columnName = column.column_name;
+        const value = table ? table[columnName] : "";
+        const action = PUT_TABLE_ACTION.bindParams({
+          tablename: table.tablename,
+          columnName,
+        });
+
+        if (columnName === "tableowner") {
+          return (
+            <li key={columnName}>
+              Owner:
+              <RoleLink role={ownerRole}>{ownerRole.rolname}</RoleLink>
+            </li>
+          );
+        }
+        return (
+          <li key={columnName}>
+            <DatabaseValue
+              label={<span>{columnName}:</span>}
+              column={column}
+              value={value}
+              action={action}
+            />
+          </li>
+        );
+      })}
+    </ul>
   );
 };
