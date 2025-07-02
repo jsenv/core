@@ -29,7 +29,10 @@
 
                 <div>
                   <InputRadio
-                    action={({ drone }) => {
+                    action={async ({ drone }) => {
+                      await new Promise((resolve) => {
+                        setTimeout(resolve, 1000);
+                      });
                       throw new Error(`Drone selected: ${drone}`);
                     }}
                     id="huey"
@@ -43,7 +46,10 @@
 
                 <div>
                   <InputRadio
-                    action={({ drone }) => {
+                    action={async ({ drone }) => {
+                      await new Promise((resolve) => {
+                        setTimeout(resolve, 1000);
+                      });
                       throw new Error(`Drone selected: ${drone}`);
                     }}
                     id="dewey"
@@ -56,7 +62,10 @@
 
                 <div>
                   <InputRadio
-                    action={({ drone }) => {
+                    action={async ({ drone }) => {
+                      await new Promise((resolve) => {
+                        setTimeout(resolve, 1000);
+                      });
                       throw new Error(`Drone selected: ${drone}`);
                     }}
                     id="louie"
