@@ -14,21 +14,22 @@ import.meta.css = /*css*/ `
   }
 `;
 
-export const InputCheckbox = forwardRef(
+export const InputRadio = forwardRef(
   (
     {
       id,
       name,
+      value,
       autoFocus,
       checked: initialChecked = false,
       constraints = [],
       action,
-      label,
+      children,
       disabled,
       pendingEffect = "loading",
       pendingTarget = "input", // "input" or "label"
       onCancel,
-      onInput,
+      onChange,
       onActionStart,
       onActionError,
       onActionEnd,
@@ -42,12 +43,13 @@ export const InputCheckbox = forwardRef(
     useConstraints(innerRef, constraints);
 
     const [navStateValue, setNavStateValue] = useNavState(id);
-    const checkedAtStart =
-      navStateValue === undefined ? initialChecked : navStateValue;
+    const checkedAtStart = initialChecked || navStateValue === value;
     const [checkedSignal, getParamSignalValue, setParamSignalValue] =
-      useActionSingleParamSignal(action, checkedAtStart, name);
+      useActionSingleParamSignal(action, value, name);
     useOnFormReset(innerRef, () => {
-      setNavStateValue(undefined);
+      if (checkedAtStart) {
+        setNavStateValue(value);
+      }
     });
     const { pending, error, aborted } = useActionOrFormAction(
       innerRef,
@@ -55,35 +57,35 @@ export const InputCheckbox = forwardRef(
       checkedSignal,
     );
 
-    const checkedFromSignal = getParamSignalValue();
-    const checked = error || aborted ? initialChecked : checkedFromSignal;
+    const valueChecked = getParamSignalValue();
+    const checked = error || aborted ? initialChecked : value === valueChecked;
 
-    let inputCheckbox = (
+    let inputRadio = (
       <input
         {...rest}
         ref={innerRef}
-        type="checkbox"
+        type="radio"
         id={id}
         name={name}
         data-validation-message-arrow-x="center"
         checked={checked}
         disabled={disabled || pending}
-        onInput={(e) => {
-          const checkboxIsChecked = e.target.checked;
-          if (checkedAtStart) {
-            setNavStateValue(checkboxIsChecked ? false : undefined);
-          } else {
-            setNavStateValue(checkboxIsChecked ? true : undefined);
+        onChange={(e) => {
+          const radioIsChecked = e.target.checked;
+          if (radioIsChecked) {
+            setNavStateValue(value);
+            setParamSignalValue(value);
           }
-          setParamSignalValue(checkboxIsChecked);
-          if (onInput) {
-            onInput(e);
+          if (onChange) {
+            onChange(e);
           }
         }}
         // eslint-disable-next-line react/no-unknown-property
         oncancel={(e) => {
-          e.target.checked = checked;
-          setNavStateValue(checkedAtStart);
+          e.target.checked = checkedAtStart;
+          if (checkedAtStart) {
+            setNavStateValue(value);
+          }
           if (onCancel) {
             onCancel();
           }
@@ -94,7 +96,9 @@ export const InputCheckbox = forwardRef(
         onactionerror={onActionError}
         // eslint-disable-next-line react/no-unknown-property
         onactionend={() => {
-          setNavStateValue(undefined);
+          if (checkedAtStart) {
+            setNavStateValue(value);
+          }
           if (onActionEnd) {
             onActionEnd();
           }
@@ -103,28 +107,28 @@ export const InputCheckbox = forwardRef(
     );
 
     if (pendingEffect === "loading" && pendingTarget === "input") {
-      inputCheckbox = (
-        <LoaderBackground pending={pending}>{inputCheckbox}</LoaderBackground>
+      inputRadio = (
+        <LoaderBackground pending={pending}>{inputRadio}</LoaderBackground>
       );
     }
 
-    let inputCheckboxWithLabel = label ? (
+    let inputRadioWithLabel = children ? (
       <label data-disabled={disabled || pending ? "" : undefined}>
-        {label}
-        {inputCheckbox}
+        {inputRadio}
+        {children}
       </label>
     ) : (
-      inputCheckbox
+      inputRadio
     );
 
     if (pendingEffect === "loading" && pendingTarget === "label") {
-      inputCheckboxWithLabel = (
+      inputRadioWithLabel = (
         <LoaderBackground pending={pending}>
-          {inputCheckboxWithLabel}
+          {inputRadioWithLabel}
         </LoaderBackground>
       );
     }
 
-    return inputCheckboxWithLabel;
+    return inputRadioWithLabel;
   },
 );
