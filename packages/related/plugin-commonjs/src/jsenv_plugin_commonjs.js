@@ -1,5 +1,8 @@
 // for reference this is how Node.js detect module format https://github.com/nodejs/node/blob/a446e3bdc96b0f263fd363ce89b9c739b066240f/lib/internal/modules/esm/get_format.js#L1
-import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution";
+import {
+  applyNodeEsmResolution,
+  defaultLookupPackageScope,
+} from "@jsenv/node-esm-resolution";
 import { URL_META } from "@jsenv/url-meta";
 import { injectQueryParams, urlToBasename, urlToExtension } from "@jsenv/urls";
 import { commonJsToJsModule } from "./cjs_to_esm.js";
@@ -49,7 +52,28 @@ export const jsenvPluginCommonJs = ({
             "/**/*.map": false,
           },
         },
-        rootDirectoryUrl,
+        (pattern) => {
+          if (isBareSpecifier(pattern)) {
+            try {
+              if (pattern.endsWith("/")) {
+                // avoid package path not exported
+                const { packageDirectoryUrl } = applyNodeEsmResolution({
+                  specifier: pattern.slice(0, -1),
+                  parentUrl: rootDirectoryUrl,
+                });
+                return packageDirectoryUrl;
+              }
+              const { url } = applyNodeEsmResolution({
+                specifier: pattern,
+                parentUrl: rootDirectoryUrl,
+              });
+              return url;
+            } catch {
+              return new URL(pattern, rootDirectoryUrl);
+            }
+          }
+          return new URL(pattern, rootDirectoryUrl);
+        },
       );
       nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
       if (compileCacheDirectoryUrl === undefined) {

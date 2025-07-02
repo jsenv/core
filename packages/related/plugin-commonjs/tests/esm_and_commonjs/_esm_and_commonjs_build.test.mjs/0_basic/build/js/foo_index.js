@@ -1,1 +1,1 @@
-console.log("cjs");
+module.exports="cjs";
