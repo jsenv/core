@@ -62,7 +62,9 @@ export const Input = forwardRef(
         onInput={(e) => {
           setNavStateValue(e.target.value);
           valueSignal.value = e.target.value;
-          onInput?.(e);
+          if (onInput) {
+            onInput(e);
+          }
         }}
         data-request-execute-on-change={requestExecuteOnChange ? "" : undefined}
         // eslint-disable-next-line react/no-unknown-property

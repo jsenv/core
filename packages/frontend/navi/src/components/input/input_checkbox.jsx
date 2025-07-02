@@ -21,6 +21,7 @@ export const InputCheckbox = forwardRef(
       disabled,
       pendingEffect = "loading",
       onCancel,
+      onInput,
       onActionStart,
       onActionError,
       onActionEnd,
@@ -36,12 +37,17 @@ export const InputCheckbox = forwardRef(
     const [navStateValue, setNavStateValue] = useNavState(id);
     const checkedAtStart =
       navStateValue === undefined ? initialChecked : navStateValue;
-    const checked = checkedAtStart;
     const checkedSignal = useSignal(checkedAtStart);
     useOnFormReset(innerRef, () => {
       setNavStateValue(undefined);
     });
     const { pending } = useActionOrFormAction(innerRef, action, checkedSignal);
+    const checkedRef = useRef(checkedAtStart);
+    const checked = checkedRef.current;
+
+    if (!pending) {
+      checkedRef.current = checkedAtStart;
+    }
 
     const inputCheckbox = (
       <input
@@ -53,16 +59,22 @@ export const InputCheckbox = forwardRef(
         data-validation-message-arrow-x="center"
         checked={checked}
         disabled={disabled || pending}
-        onChange={(e) => {
+        onInput={(e) => {
+          const checked = e.target.checked;
           if (checkedAtStart) {
-            setNavStateValue(e.target.checked ? false : undefined);
+            setNavStateValue(checked ? false : undefined);
           } else {
-            setNavStateValue(e.target.checked ? true : undefined);
+            setNavStateValue(checked ? true : undefined);
+          }
+          checkedRef.current = checked;
+          checkedSignal.value = checked;
+          if (onInput) {
+            onInput(e);
           }
         }}
         // eslint-disable-next-line react/no-unknown-property
-        oncancel={() => {
-          innerRef.current.checked = checked;
+        oncancel={(e) => {
+          e.target.checked = checked;
           setNavStateValue(checkedAtStart);
           if (onCancel) {
             onCancel();
@@ -71,7 +83,11 @@ export const InputCheckbox = forwardRef(
         // eslint-disable-next-line react/no-unknown-property
         onactionstart={onActionStart}
         // eslint-disable-next-line react/no-unknown-property
-        onactionerror={onActionError}
+        onactionerror={() => {
+          if (onActionError) {
+            onActionError();
+          }
+        }}
         // eslint-disable-next-line react/no-unknown-property
         onactionend={() => {
           setNavStateValue(undefined);
