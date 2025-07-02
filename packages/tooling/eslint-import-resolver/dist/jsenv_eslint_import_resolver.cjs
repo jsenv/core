@@ -11185,6 +11185,7 @@ const parseHtml = ({ html, url, storeOriginalPositions = true }) => {
       const htmlParseError = createParseError(
         `Unable to parse HTML; ${parse5Error.code}`,
         {
+          parseErrorSourceType: "html",
           reasonCode: parse5Error.code,
           url,
           line: parse5Error.startLine,
