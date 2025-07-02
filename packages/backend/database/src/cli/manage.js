@@ -21,7 +21,7 @@ await startDevServer({
       pathname: "/",
     }),
     jsenvPluginCommonJs({
-      include: { "/**/node_modules/react-table/": true },
+      include: { "react-table/": true },
     }),
   ],
 });
