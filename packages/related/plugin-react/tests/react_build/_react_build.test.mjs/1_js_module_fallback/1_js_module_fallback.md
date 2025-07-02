@@ -11,7 +11,7 @@ run({
 })
 ```
 
-# 1/2 write 21 files into "../../../../../"
+# 1/2 write 17 files into "../../../../../"
 
 see [./@jsenv/core/](./@jsenv/core/)
 

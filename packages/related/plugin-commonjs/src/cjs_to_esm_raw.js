@@ -7,7 +7,6 @@ export const commonJsToJsModuleRaw = async ({
   sourceFileUrl,
 
   browsers = true,
-  replaceGlobalObject = browsers,
   replaceGlobalFilename = browsers,
   replaceGlobalDirname = browsers,
   replaceProcessEnvNodeEnv = browsers,
@@ -63,7 +62,6 @@ export const commonJsToJsModuleRaw = async ({
       ...(replaceProcessEnvNodeEnv
         ? { "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv) }
         : {}),
-      ...(replaceGlobalObject ? { global: "globalThis" } : {}),
       ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
       ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
       ...replaceMap,
