@@ -28,7 +28,7 @@
     "database:setup": "npx @jsenv/database setup"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.15.4",
+    "@jsenv/filesystem": "4.15.5",
     "@jsenv/humanize": "1.6.0",
     "@jsenv/url-meta": "8.5.7",
     "@jsenv/urls": "2.9.0",
