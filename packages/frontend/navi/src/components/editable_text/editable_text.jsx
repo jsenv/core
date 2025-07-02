@@ -6,7 +6,7 @@ import {
   useState,
 } from "preact/hooks";
 import { Form } from "../form/form.jsx";
-import { InputText } from "../input/input_text.jsx";
+import { Input } from "../input/input.jsx";
 
 export const useEditableController = () => {
   const [editable, editableSetter] = useState(false);
@@ -41,7 +41,7 @@ export const EditableText = forwardRef(
               onEditEnd();
             }}
           >
-            <InputText
+            <Input
               {...rest}
               ref={innerRef}
               value={value}

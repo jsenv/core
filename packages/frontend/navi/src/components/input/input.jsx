@@ -8,9 +8,10 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
 
-export const InputText = forwardRef(
+export const Input = forwardRef(
   (
     {
+      type = "text",
       id,
       autoFocus,
       autoSelect,
@@ -53,8 +54,8 @@ export const InputText = forwardRef(
 
     const input = (
       <input
-        type="text"
         {...rest}
+        type={type}
         ref={innerRef}
         value={valueSignal.value}
         disabled={disabled || pending}
