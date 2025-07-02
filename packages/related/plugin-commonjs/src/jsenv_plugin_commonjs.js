@@ -46,10 +46,19 @@ export const jsenvPluginCommonJs = ({
   let associations;
   let nodeRuntimeEnabled;
 
+  const packageConditionsConfig = {};
+  const onIncludedUrl = (url) => {
+    packageConditionsConfig[url] = ["node"];
+  };
+
   return {
     name,
     appliesDuring: "*",
-    init: ({ rootDirectoryUrl, outDirectoryUrl, runtimeCompat }) => {
+    init: (kitchenContext) => {
+      const { rootDirectoryUrl, outDirectoryUrl, runtimeCompat } =
+        kitchenContext;
+      kitchenContext.packageConditionsConfig = packageConditionsConfig;
+
       associations = URL_META.resolveAssociations(
         {
           commonjs: {
@@ -58,29 +67,35 @@ export const jsenvPluginCommonJs = ({
           },
         },
         (pattern) => {
-          if (isBareSpecifier(pattern)) {
-            try {
-              if (!pattern.endsWith("/") && !pathnameToExtension(pattern)) {
-                pattern = `${pattern}/`;
-              }
-              if (pattern.endsWith("/")) {
-                // avoid package path not exported
-                const { packageDirectoryUrl } = applyNodeEsmResolution({
-                  specifier: pattern.slice(0, -1),
-                  parentUrl: rootDirectoryUrl,
-                });
-                return packageDirectoryUrl;
-              }
-              const { url } = applyNodeEsmResolution({
-                specifier: pattern,
+          if (!isBareSpecifier(pattern)) {
+            const url = new URL(pattern, rootDirectoryUrl);
+            onIncludedUrl(url);
+            return url;
+          }
+          try {
+            if (!pattern.endsWith("/") && !pathnameToExtension(pattern)) {
+              pattern = `${pattern}/`;
+            }
+            if (pattern.endsWith("/")) {
+              // avoid package path not exported
+              const { packageDirectoryUrl } = applyNodeEsmResolution({
+                specifier: pattern.slice(0, -1),
                 parentUrl: rootDirectoryUrl,
               });
-              return url;
-            } catch {
-              return new URL(pattern, rootDirectoryUrl);
+              onIncludedUrl(packageDirectoryUrl);
+              return packageDirectoryUrl;
             }
+            const { url } = applyNodeEsmResolution({
+              specifier: pattern,
+              parentUrl: rootDirectoryUrl,
+            });
+            onIncludedUrl(url);
+            return url;
+          } catch {
+            const url = new URL(pattern, rootDirectoryUrl);
+            onIncludedUrl(url);
+            return url;
           }
-          return new URL(pattern, rootDirectoryUrl);
         },
       );
       nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");

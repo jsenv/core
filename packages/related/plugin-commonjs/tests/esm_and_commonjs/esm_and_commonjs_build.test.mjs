@@ -20,9 +20,6 @@ const run = () => {
             },
           }),
         ],
-        packageConditionsConfig: {
-          "foo/": ["node"],
-        },
       },
     },
   });
