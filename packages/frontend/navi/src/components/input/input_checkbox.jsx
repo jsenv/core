@@ -49,16 +49,14 @@ export const InputCheckbox = forwardRef(
     useOnFormReset(innerRef, () => {
       setNavStateValue(undefined);
     });
-    const { pending } = useActionOrFormAction(innerRef, action, checkedSignal);
-    const pendingRef = useRef(pending);
-    if (pendingRef.current !== pending) {
-      if (!pending) {
-        setParamSignalValue(initialChecked);
-      }
-      pendingRef.current = pending;
-    }
+    const { pending, error, aborted } = useActionOrFormAction(
+      innerRef,
+      action,
+      checkedSignal,
+    );
 
-    const checked = getParamSignalValue();
+    const checkedFromSignal = getParamSignalValue();
+    const checked = error || aborted ? initialChecked : checkedFromSignal;
 
     let inputCheckbox = (
       <input
@@ -93,11 +91,7 @@ export const InputCheckbox = forwardRef(
         // eslint-disable-next-line react/no-unknown-property
         onactionstart={onActionStart}
         // eslint-disable-next-line react/no-unknown-property
-        onactionerror={() => {
-          if (onActionError) {
-            onActionError();
-          }
-        }}
+        onactionerror={onActionError}
         // eslint-disable-next-line react/no-unknown-property
         onactionend={() => {
           setNavStateValue(undefined);

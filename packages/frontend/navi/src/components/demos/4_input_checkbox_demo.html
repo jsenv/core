@@ -26,12 +26,12 @@
                 <strong>Loading</strong>
               </p>
               <InputCheckbox
+                name="loading"
                 action={async () => {
                   await new Promise(() => {});
                 }}
                 label="Test"
                 style="color: blue"
-                requestExecuteOnChange
               ></InputCheckbox>
             </div>
             <div>
@@ -39,15 +39,15 @@
                 <strong>Throw after 1s</strong>
               </p>
               <InputCheckbox
-                action={async () => {
+                name="test"
+                action={async ({ test }) => {
                   await new Promise((resolve) => {
                     setTimeout(resolve, 1000);
                   });
-                  throw new Error("This is an error");
+                  throw new Error(`This is an error, checked: ${test}`);
                 }}
                 label="Test"
                 style="color: blue"
-                requestExecuteOnChange
                 // data-validation-message-stay-on-focus
                 // data-validation-message-stay-on-blur
               ></InputCheckbox>
@@ -57,16 +57,16 @@
                 <strong>2 checkboxes for the same action</strong>
               </p>
               <InputCheckbox
+                name="update"
                 action={updateUserCheckboxAction}
                 label="Test"
                 style="color: blue"
-                requestExecuteOnChange
               ></InputCheckbox>
               <InputCheckbox
+                name="update"
                 action={updateUserCheckboxAction}
                 label="Test"
                 style="color: blue"
-                requestExecuteOnChange
               ></InputCheckbox>
             </div>
           </div>
