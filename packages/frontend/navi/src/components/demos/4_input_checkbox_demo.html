@@ -77,8 +77,6 @@
         await new Promise((resolve) => {
           setTimeout(resolve, 2000);
         });
-      }).bindParams({
-        name: "dam",
       });
 
       render(<App />, document.querySelector("#root"));

@@ -13,11 +13,11 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useAction } from "../use_action.js";
 import { useOnExecute } from "../use_action_or_form_action.js";
+import { useActionParamsSignal } from "../use_action_params_signal.js";
 import { useExecuteAction } from "../use_execute_action.js";
 import { FormContext } from "./form_context.js";
 
@@ -58,7 +58,7 @@ export const Form = forwardRef(
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
-    const paramsSignal = useSignal({});
+    const paramsSignal = useActionParamsSignal({});
 
     action = useAction(action, paramsSignal);
     const executeAction = useExecuteAction(innerRef, { errorEffect });

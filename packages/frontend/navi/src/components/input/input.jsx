@@ -1,9 +1,9 @@
 import { useConstraints } from "@jsenv/validation";
-import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionOrFormAction } from "../use_action_or_form_action.js";
+import { useActionParamsSignal } from "../use_action_params_signal.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
@@ -49,7 +49,7 @@ export const Input = forwardRef(
 
     const value = initialValue === undefined ? defaultValue : initialValue;
 
-    const valueSignal = useSignal(value);
+    const valueSignal = useActionParamsSignal(value);
     const { pending } = useActionOrFormAction(innerRef, action, valueSignal);
 
     const input = (
