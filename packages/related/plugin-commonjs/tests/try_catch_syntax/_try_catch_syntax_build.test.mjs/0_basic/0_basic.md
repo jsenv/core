@@ -4,7 +4,7 @@
 run()
 ```
 
-# 1/2 write 4 files into "./"
+# 1/2 write 3 files into "./"
 
 see [./](./)
 

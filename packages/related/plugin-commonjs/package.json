@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.11.0",
+  "version": "2.11.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -32,7 +32,6 @@
     "is-valid-identifier": "2.0.2",
     "resolve": "1.22.10",
     "rollup": "4.40.1",
-    "rollup-plugin-node-globals": "1.4.0",
     "rollup-plugin-polyfill-node": "0.13.0"
   },
   "devDependencies": {

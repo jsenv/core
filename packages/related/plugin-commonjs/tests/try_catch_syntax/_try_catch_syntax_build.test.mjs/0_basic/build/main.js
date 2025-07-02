@@ -1,1 +1,3 @@
-import "/js/index.js?v=65dc0746";
+import "/js/index.js?v=79a2e0e0";
+
+window.resolveResultPromise();

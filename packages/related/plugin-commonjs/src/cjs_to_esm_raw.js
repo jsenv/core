@@ -11,8 +11,6 @@ export const commonJsToJsModuleRaw = async ({
   replaceGlobalFilename = browsers,
   replaceGlobalDirname = browsers,
   replaceProcessEnvNodeEnv = browsers,
-  replaceProcess = browsers,
-  replaceBuffer = browsers,
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceMap = {},
   convertBuiltinsToBrowser = browsers,
@@ -82,10 +80,6 @@ export const commonJsToJsModuleRaw = async ({
     requireReturnsDefault: "auto",
   });
 
-  const { default: createNodeGlobalRollupPlugin } = await import(
-    "rollup-plugin-node-globals"
-  );
-
   const commonJsNamedExportsRollupPlugin = rollupPluginCommonJsNamedExports({
     logger,
   });
@@ -111,17 +105,6 @@ export const commonJsToJsModuleRaw = async ({
       replaceRollupPlugin,
       commonJsRollupPlugin,
       commonJsNamedExportsRollupPlugin,
-      ...(replaceProcess || replaceBuffer
-        ? [
-            createNodeGlobalRollupPlugin({
-              global: false, // handled by replaceMap
-              dirname: false, // handled by replaceMap
-              filename: false, // handled by replaceMap
-              process: replaceProcess,
-              buffer: replaceBuffer,
-            }),
-          ]
-        : []),
       ...(convertBuiltinsToBrowser
         ? [
             rollupPluginNodePolyfills({
