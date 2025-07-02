@@ -734,7 +734,7 @@ const mainLegacyResolvers = {
     };
   },
   node: ({ packageJson, conditions }) => {
-    if (conditions.includes("import")) {
+    if (conditions.includes("import") && !conditions.includes("require")) {
       if (typeof packageJson.module === "string") {
         return { type: "field:module", isMain: true, path: packageJson.module };
       }
