@@ -48,6 +48,10 @@ export const jsenvPluginCommonJs = ({
 
   const packageConditionsConfig = {};
   const onIncludedUrl = (url) => {
+    url = String(url);
+    if (url.endsWith(".map")) {
+      return;
+    }
     packageConditionsConfig[url] = ["node", "import", "require"];
   };
 

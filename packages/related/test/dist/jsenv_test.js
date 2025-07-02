@@ -4578,6 +4578,7 @@ const mainLegacyResolvers = {
     return null;
   },
 };
+mainLegacyResolvers.require = mainLegacyResolvers.node;
 
 const comparePatternKeys = (keyA, keyB) => {
   if (!keyA.endsWith("/") && !keyA.includes("*")) {
