@@ -8,6 +8,8 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
 
+let debug = true;
+
 export const InputCheckbox = forwardRef(
   (
     {
@@ -42,12 +44,29 @@ export const InputCheckbox = forwardRef(
       setNavStateValue(undefined);
     });
     const { pending } = useActionOrFormAction(innerRef, action, checkedSignal);
-    const checkedRef = useRef(checkedAtStart);
-    const checked = checkedRef.current;
-
-    if (!pending) {
+    const checkedRef = useRef();
+    if (checkedRef.current === undefined) {
+      if (debug) {
+        console.debug(
+          `checkedRef.current = ${checkedRef.current} after initial render`,
+        );
+      }
       checkedRef.current = checkedAtStart;
     }
+    const pendingRef = useRef(pending);
+    if (pendingRef.current !== pending) {
+      if (!pending) {
+        checkedRef.current = initialChecked;
+        if (debug) {
+          console.debug(
+            `checkedRef.current = ${checkedRef.current} after "pending" becomes false`,
+          );
+        }
+      }
+      pendingRef.current = pending;
+    }
+
+    const checked = checkedRef.current;
 
     const inputCheckbox = (
       <input
@@ -60,14 +79,19 @@ export const InputCheckbox = forwardRef(
         checked={checked}
         disabled={disabled || pending}
         onInput={(e) => {
-          const checked = e.target.checked;
+          const inputIsChecked = e.target.checked;
           if (checkedAtStart) {
-            setNavStateValue(checked ? false : undefined);
+            setNavStateValue(inputIsChecked ? false : undefined);
           } else {
-            setNavStateValue(checked ? true : undefined);
+            setNavStateValue(inputIsChecked ? true : undefined);
           }
-          checkedRef.current = checked;
-          checkedSignal.value = checked;
+          checkedRef.current = inputIsChecked;
+          if (debug) {
+            console.debug(
+              `checkedRef.current = ${checkedRef.current} after "input" event`,
+            );
+          }
+          checkedSignal.value = inputIsChecked;
           if (onInput) {
             onInput(e);
           }
