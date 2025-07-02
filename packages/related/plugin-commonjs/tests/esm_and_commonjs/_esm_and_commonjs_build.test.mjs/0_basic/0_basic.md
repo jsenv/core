@@ -4,9 +4,9 @@
 run()
 ```
 
-# 1/2 write 2 files into "./build/"
+# 1/2 write 3 files into "./"
 
-see [./build/](./build/)
+see [./](./)
 
 # 2/2 resolve
 
