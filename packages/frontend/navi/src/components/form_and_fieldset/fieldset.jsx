@@ -1,9 +1,9 @@
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useAction } from "../use_action.js";
-import { useActionParamsSignal } from "../use_action_params_signal.js";
 import { useExecuteAction } from "../use_execute_action.js";
 import { ActionContext } from "./action_context.js";
+import { useFormDataParamsSignal } from "./use_form_data_params_signal.js";
 
 export const Fieldset = forwardRef(
   (
@@ -23,7 +23,7 @@ export const Fieldset = forwardRef(
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
-    const paramsSignal = useActionParamsSignal({});
+    const [paramsSignal, setParamsSignalValue] = useFormDataParamsSignal();
 
     action = useAction(action, paramsSignal);
     const executeAction = useExecuteAction(innerRef, { errorEffect });
@@ -35,21 +35,8 @@ export const Fieldset = forwardRef(
         // eslint-disable-next-line react/no-unknown-property
         onexecute={async (executeEvent) => {
           const fieldset = executeEvent.target;
-          // do the form data stuff
-          const params = {};
-          for (const [name, value] of fieldset.elements) {
-            if (name in params) {
-              if (Array.isArray(params[name])) {
-                params[name].push(value);
-              } else {
-                params[name] = [params[name], value];
-              }
-            } else {
-              params[name] = value;
-            }
-          }
-          paramsSignal.value = params;
-
+          const formData = createFieldsetFormData(fieldset);
+          setParamsSignalValue(formData);
           if (onExecute) {
             onExecute();
           }
@@ -73,3 +60,56 @@ export const Fieldset = forwardRef(
     );
   },
 );
+
+const createFieldsetFormData = (fieldset) => {
+  const formData = new FormData();
+
+  const formElements = fieldset.querySelectorAll(
+    "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button[name]:not([disabled])",
+  );
+
+  for (const element of formElements) {
+    const name = element.name;
+    if (!name) continue;
+
+    const value = getElementValue(element);
+    if (value === undefined) continue; // Skip unchecked checkboxes/radios
+
+    // Handle multiple values and files
+    if (element.type === "file" && element.files) {
+      // Add all files for file inputs
+      for (const file of element.files) {
+        formData.append(name, file);
+      }
+    } else if (Array.isArray(value)) {
+      // Handle select multiple
+      value.forEach((v) => formData.append(name, v));
+    } else {
+      // Regular values
+      formData.append(name, value);
+    }
+  }
+
+  return formData;
+};
+
+const getElementValue = (element) => {
+  const { type, tagName } = element;
+
+  if (tagName === "SELECT") {
+    if (element.multiple) {
+      return Array.from(element.selectedOptions, (option) => option.value);
+    }
+    return element.value;
+  }
+
+  if (type === "checkbox" || type === "radio") {
+    return element.checked ? element.value : undefined;
+  }
+
+  if (type === "file") {
+    return element.files; // Return FileList for special handling
+  }
+
+  return element.value;
+};

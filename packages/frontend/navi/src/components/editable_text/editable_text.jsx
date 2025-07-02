@@ -5,7 +5,6 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { Form } from "../form/form.jsx";
 import { Input } from "../input/input.jsx";
 
 export const useEditableController = () => {
@@ -35,32 +34,29 @@ export const EditableText = forwardRef(
           {children || <span>{value}</span>}
         </div>
         {editable && (
-          <Form
+          <Input
+            {...rest}
             action={action}
             onActionEnd={() => {
               onEditEnd();
             }}
-          >
-            <Input
-              {...rest}
-              ref={innerRef}
-              value={value}
-              autoFocus
-              autoSelect
-              required
-              requestExecuteOnChange
-              cancelOnEscape
-              cancelOnBlurInvalid
-              onCancel={() => {
+            ref={innerRef}
+            value={value}
+            autoFocus
+            autoSelect
+            required
+            requestExecuteOnChange
+            cancelOnEscape
+            cancelOnBlurInvalid
+            onCancel={() => {
+              onEditEnd();
+            }}
+            onBlur={(e) => {
+              if (e.target.value === value) {
                 onEditEnd();
-              }}
-              onBlur={(e) => {
-                if (e.target.value === value) {
-                  onEditEnd();
-                }
-              }}
-            />
-          </Form>
+              }
+            }}
+          />
         )}
       </>
     );

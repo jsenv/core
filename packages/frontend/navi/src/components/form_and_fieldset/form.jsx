@@ -16,9 +16,9 @@
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useAction } from "../use_action.js";
-import { useActionParamsSignal } from "../use_action_params_signal.js";
 import { useExecuteAction } from "../use_execute_action.js";
 import { ActionContext } from "./action_context.js";
+import { useFormDataParamsSignal } from "./use_form_data_params_signal.js";
 
 const submit = HTMLFormElement.prototype.submit;
 HTMLFormElement.prototype.submit = function (...args) {
@@ -57,7 +57,7 @@ export const Form = forwardRef(
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
-    const paramsSignal = useActionParamsSignal({});
+    const [paramsSignal, setParamsSignalValue] = useFormDataParamsSignal();
 
     action = useAction(action, paramsSignal);
     const executeAction = useExecuteAction(innerRef, { errorEffect });
@@ -100,19 +100,7 @@ export const Form = forwardRef(
 
           const form = innerRef.current;
           const formData = new FormData(form);
-          const params = {};
-          for (const [name, value] of formData) {
-            if (name in params) {
-              if (Array.isArray(params[name])) {
-                params[name].push(value);
-              } else {
-                params[name] = [params[name], value];
-              }
-            } else {
-              params[name] = value;
-            }
-          }
-          paramsSignal.value = params;
+          setParamsSignalValue(formData);
 
           if (onExecute) {
             onExecute();

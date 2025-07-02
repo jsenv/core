@@ -1,7 +1,7 @@
 import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
-import { useActionOrFormAction } from "../use_action_or_form_action.js";
+import { useActionOrParentActionStatus } from "../use_action_or_parent_action_status.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 export const Button = forwardRef(
@@ -22,7 +22,7 @@ export const Button = forwardRef(
     useAutoFocus(innerRef, autoFocus);
     useConstraints(innerRef, constraints);
 
-    const { pending } = useActionOrFormAction(innerRef, action);
+    const { pending } = useActionOrParentActionStatus(innerRef, action);
 
     return (
       <button
