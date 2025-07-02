@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.10.14",
+  "version": "2.11.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
