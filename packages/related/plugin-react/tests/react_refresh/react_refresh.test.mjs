@@ -8,11 +8,8 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
-const countLabelClientFileUrl = new URL(
-  "./client/count_label.jsx",
-  import.meta.url,
-);
-
+let debug = false;
+const countLabelClientFileUrl = import.meta.resolve("./client/count_label.jsx");
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: import.meta.resolve("./client/"),
@@ -23,9 +20,7 @@ const devServer = await startDevServer({
   },
   port: 0,
 });
-const browser = await chromium.launch({
-  headless: true,
-});
+const browser = await chromium.launch({ headless: !debug });
 try {
   const page = await browser.newPage({ ignoreHTTPSErrors: true });
   await page.goto(`${devServer.origin}/main.html`);
@@ -65,7 +60,7 @@ try {
     assert({ actual, expect });
   }
   writeFileSync(
-    countLabelClientFileUrl,
+    new URL(countLabelClientFileUrl),
     readFileSync(new URL("./fixtures/count_label_1.jsx", import.meta.url)),
   );
   await new Promise((resolve) => setTimeout(resolve, 1_000));
@@ -89,9 +84,11 @@ try {
     assert({ actual, expect });
   }
 } finally {
-  browser.close();
+  if (!debug) {
+    browser.close();
+  }
   writeFileSync(
-    countLabelClientFileUrl,
+    new URL(countLabelClientFileUrl),
     readFileSync(new URL("./fixtures/count_label_0.jsx", import.meta.url)),
   );
 }
