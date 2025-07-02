@@ -59,26 +59,43 @@ export const createNodeEsmResolver = ({
     const webResolutionFallback =
       ownerUrlInfo.type !== "js_module" ||
       reference.type === "sourcemap_comment";
+
+    const resolveNodeEsmFallbackOnWeb = createResolverWithFallbackOnError(
+      applyNodeEsmResolution,
+      ({ specifier, parentUrl }) => {
+        const url = new URL(specifier, parentUrl).href;
+        return { url };
+      },
+    );
+    const DELEGATE_TO_WEB_RESOLUTION_PLUGIN = {};
+    const resolveNodeEsmFallbackNullToDelegateToWebPlugin =
+      createResolverWithFallbackOnError(
+        applyNodeEsmResolution,
+
+        () => DELEGATE_TO_WEB_RESOLUTION_PLUGIN,
+      );
+
     const conditions = buildPackageConditions(specifier, parentUrl, {
       webResolutionFallback,
+      resolver: webResolutionFallback
+        ? resolveNodeEsmFallbackOnWeb
+        : applyNodeEsmResolution,
     });
-    let resolution;
-    const nodeEsmResolutionParams = {
+    const resolver = webResolutionFallback
+      ? resolveNodeEsmFallbackNullToDelegateToWebPlugin
+      : applyNodeEsmResolution;
+
+    const result = resolver({
       conditions,
       parentUrl,
       specifier,
       preservesSymlink,
-    };
-    if (webResolutionFallback) {
-      try {
-        resolution = applyNodeEsmResolution(nodeEsmResolutionParams);
-      } catch {
-        return null; // delegate to web_resolution plugin
-      }
-    } else {
-      resolution = applyNodeEsmResolution(nodeEsmResolutionParams);
+    });
+    if (result === DELEGATE_TO_WEB_RESOLUTION_PLUGIN) {
+      return null;
     }
-    const { url, type, isMain, packageDirectoryUrl } = resolution;
+
+    const { url, type, isMain, packageDirectoryUrl } = result;
     // try to give a more meaningful filename after build
     if (isMain && packageDirectoryUrl) {
       const basename = urlToBasename(url);
@@ -166,10 +183,8 @@ const createBuildPackageConditions = (
       }
       try {
         if (key.endsWith("/")) {
-          // avoid package path not exported
-
           const { packageDirectoryUrl } = applyNodeEsmResolution({
-            specifier: key.slice(0, -1),
+            specifier: key.slice(0, -1), // avoid package path not exported
             parentUrl: rootDirectoryUrl,
           });
           const url = packageDirectoryUrl;
@@ -192,10 +207,10 @@ const createBuildPackageConditions = (
       },
       rootDirectoryUrl,
     );
-    resolveConditionsFromSpecifier = (specifier, importer) => {
+    resolveConditionsFromSpecifier = (specifier, importer, { resolver }) => {
       let associatedValue;
       if (isBareSpecifier(specifier)) {
-        const { url } = applyNodeEsmResolution({
+        const { url } = resolver({
           specifier,
           parentUrl: importer,
         });
@@ -218,26 +233,12 @@ const createBuildPackageConditions = (
   from_context: {
     const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
     // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-    const devResolver = (specifier, importer, { webResolutionFallback }) => {
+    const devResolver = (specifier, importer, { resolver }) => {
       if (isBareSpecifier(specifier)) {
-        let url;
-        if (webResolutionFallback) {
-          try {
-            const resolution = applyNodeEsmResolution({
-              specifier,
-              parentUrl: importer,
-            });
-            url = resolution.url;
-          } catch {
-            url = new URL(specifier, importer).href;
-          }
-        } else {
-          const resolution = applyNodeEsmResolution({
-            specifier,
-            parentUrl: importer,
-          });
-          url = resolution.url;
-        }
+        const { url } = resolver({
+          specifier,
+          parentUrl: importer,
+        });
         return !url.includes("/node_modules/");
       }
       return !importer.includes("/node_modules/");
@@ -319,9 +320,9 @@ const createBuildPackageConditions = (
               return new URL(pattern, rootDirectoryUrl);
             },
           );
-          customResolver = (specifier, importer) => {
+          customResolver = (specifier, importer, { resolver }) => {
             if (isBareSpecifier(specifier)) {
-              const { url } = applyNodeEsmResolution({
+              const { url } = resolver({
                 specifier,
                 parentUrl: importer,
               });
@@ -435,6 +436,16 @@ const addRelationshipWithPackageJson = ({
       String(packageJsonContentAsBuffer),
     );
   }
+};
+
+const createResolverWithFallbackOnError = (mainResolver, fallbackResolver) => {
+  return (params) => {
+    try {
+      return mainResolver(params);
+    } catch {
+      return fallbackResolver(params);
+    }
+  };
 };
 
 const isBareSpecifier = (specifier) => {
