@@ -19,11 +19,12 @@
         createAction,
       } from "@jsenv/navi";
 
-      const sharedAction = createAction(async () => {
+      const sharedAction = createAction(async ({ greeting, name }) => {
         await new Promise((resolve) => {
           setTimeout(resolve, 2000);
         });
-      });
+        throw new Error(`${greeting} ${name}`);
+      }).bindParams({ greeting: "hello" });
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -71,16 +72,16 @@
                   <strong>2 input for the same action</strong>
                 </p>
                 <Input
+                  name="name"
                   action={sharedAction}
                   label="Test"
                   style="color: blue"
-                  requestExecuteOnChange
                 ></Input>
                 <Input
+                  name="name"
                   action={sharedAction}
                   label="Test"
                   style="color: blue"
-                  requestExecuteOnChange
                 ></Input>
               </div>
             </div>
@@ -95,10 +96,10 @@
             <div>
               <Input
                 id="outside_form"
-                requestExecuteOnChange
-                action={async (value) => {
+                name="outsideForm"
+                action={async ({ outsideForm }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(`test: ${value}`);
+                  throw new Error(`test: ${outsideForm}`);
                 }}
               />
             </div>
@@ -112,11 +113,11 @@
           <div>
             <div>
               <Input
-                requestExecuteOnChange
+                name="outsideFormWithInitialValue"
                 value="initial"
-                action={async (value) => {
+                action={async ({ outsideFormWithInitialValue }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(`test: ${value}`);
+                  throw new Error(`test: ${outsideFormWithInitialValue}`);
                 }}
               />
             </div>
@@ -124,16 +125,16 @@
         );
       };
 
-      const actionA = createAction(async (value) => {
+      const actionA = createAction(async ({ outsideFormUsingAction }) => {
         await new Promise((resolve) => setTimeout(resolve, 1_000));
-        throw new Error(`test: ${value}`);
+        throw new Error(`test: ${outsideFormUsingAction}`);
       });
       // eslint-disable-next-line no-unused-vars
       const OutsideFormUsingAction = () => {
         return (
           <div>
             <div>
-              <Input requestExecuteOnChange action={actionA} />
+              <Input name="outsideFormUsingAction" action={actionA} />
             </div>
           </div>
         );
@@ -145,10 +146,10 @@
           <div>
             <Form>
               <Input
-                requestExecuteOnChange
-                action={async (value) => {
+                name="insideForm"
+                action={async ({ insideForm }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_500));
-                  throw new Error(`test: ${value}`);
+                  throw new Error(`test: ${insideForm}`);
                 }}
               />
             </Form>
@@ -163,9 +164,10 @@
             <Form>
               <Input
                 id="tototo"
-                action={async (value) => {
+                name="insideFormWithSubmitAndReset"
+                action={async ({ insideFormWithSubmitAndReset }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_500));
-                  throw new Error(`test: ${value}`);
+                  throw new Error(`test: ${insideFormWithSubmitAndReset}`);
                 }}
               />
               <button type="submit">Submit</button>

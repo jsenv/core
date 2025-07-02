@@ -460,12 +460,15 @@ export const installCustomConstraintValidation = (element) => {
     }
   }
 
-  request_on_change_according_to_data_attribute: {
+  request_on_change_when_outside_form: {
     const onchange = (changeEvent) => {
-      if (!element.hasAttribute("data-request-execute-on-change")) {
+      // if (!element.hasAttribute("data-request-execute-on-change")) {
+      //   return;
+      // }
+      if (element.validity?.valueMissing) {
         return;
       }
-      if (element.validity?.valueMissing) {
+      if (element.form) {
         return;
       }
       handleRequestExecute(changeEvent, {

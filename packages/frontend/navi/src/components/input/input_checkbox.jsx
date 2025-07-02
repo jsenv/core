@@ -3,7 +3,7 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionOrFormAction } from "../use_action_or_form_action.js";
-import { useActionParamsSignal } from "../use_action_params_signal.js";
+import { useActionSingleParamSignal } from "../use_action_params_signal.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
@@ -18,10 +18,10 @@ export const InputCheckbox = forwardRef(
   (
     {
       id,
+      name,
       autoFocus,
       checked: initialChecked = false,
       constraints = [],
-      requestExecuteOnChange,
       action,
       label,
       disabled,
@@ -44,7 +44,8 @@ export const InputCheckbox = forwardRef(
     const [navStateValue, setNavStateValue] = useNavState(id);
     const checkedAtStart =
       navStateValue === undefined ? initialChecked : navStateValue;
-    const checkedSignal = useActionParamsSignal(action, checkedAtStart);
+    const [checkedSignal, getParamSignalValue, setParamSignalValue] =
+      useActionSingleParamSignal(action, checkedAtStart, name);
     useOnFormReset(innerRef, () => {
       setNavStateValue(undefined);
     });
@@ -52,12 +53,12 @@ export const InputCheckbox = forwardRef(
     const pendingRef = useRef(pending);
     if (pendingRef.current !== pending) {
       if (!pending) {
-        checkedSignal.value = initialChecked;
+        setParamSignalValue(initialChecked);
       }
       pendingRef.current = pending;
     }
 
-    const checked = checkedSignal.value;
+    const checked = getParamSignalValue();
 
     let inputCheckbox = (
       <input
@@ -65,7 +66,7 @@ export const InputCheckbox = forwardRef(
         ref={innerRef}
         type="checkbox"
         id={id}
-        data-request-execute-on-change={requestExecuteOnChange ? "" : undefined}
+        name={name}
         data-validation-message-arrow-x="center"
         checked={checked}
         disabled={disabled || pending}
@@ -76,7 +77,7 @@ export const InputCheckbox = forwardRef(
           } else {
             setNavStateValue(inputIsChecked ? true : undefined);
           }
-          checkedSignal.value = inputIsChecked;
+          setParamSignalValue(inputIsChecked);
           if (onInput) {
             onInput(e);
           }

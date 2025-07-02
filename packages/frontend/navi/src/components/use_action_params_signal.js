@@ -3,31 +3,39 @@ import { signal, useSignal } from "@preact/signals";
 let debug = false;
 
 const sharedSignalCache = new WeakMap();
-export const useActionParamsSignal = (action, initialValue) => {
+export const useActionParamsSignal = (action, initialParams) => {
   if (!action) {
-    return useSignal(initialValue);
+    return useSignal(initialParams);
   }
 
   const existingSignal = sharedSignalCache.get(action);
   if (existingSignal) {
-    if (debug && existingSignal.peek() !== initialValue) {
-      console.warn(
-        `⚠️ params signal for ${action} exists with different value!`,
-        `\nExisting: ${existingSignal.peek()}`,
-        `\nRequested: ${initialValue}`,
-        `\nUsing existing value.`,
-      );
-    }
     return existingSignal;
   }
 
-  const paramsSignal = signal(initialValue);
+  const paramsSignal = signal(initialParams);
   sharedSignalCache.set(action, paramsSignal);
   if (debug) {
     console.debug(
-      `Created params signal for ${action} with value:`,
-      initialValue,
+      `Created params signal for ${action} with params:`,
+      initialParams,
     );
   }
   return paramsSignal;
+};
+
+export const useActionSingleParamSignal = (action, initialValue, name) => {
+  if (!name) {
+    throw new Error("name is required for useActionSingleParamSignal");
+  }
+  const paramsSignal = useActionParamsSignal(action, {
+    [name]: initialValue,
+  });
+  return [
+    paramsSignal,
+    () => paramsSignal.value[name],
+    (value) => {
+      paramsSignal.value = { [name]: value };
+    },
+  ];
 };

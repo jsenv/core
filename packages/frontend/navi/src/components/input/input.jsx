@@ -3,7 +3,7 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionOrFormAction } from "../use_action_or_form_action.js";
-import { useActionParamsSignal } from "../use_action_params_signal.js";
+import { useActionSingleParamSignal } from "../use_action_params_signal.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
@@ -13,6 +13,7 @@ export const Input = forwardRef(
     {
       type = "text",
       id,
+      name,
       autoFocus,
       autoSelect,
       action,
@@ -22,7 +23,7 @@ export const Input = forwardRef(
       cancelOnBlurInvalid,
       cancelOnEscape,
       pendingEffect = "loading",
-      requestExecuteOnChange,
+      pendingTarget = "input", // "input" or "label"
       disabled,
       onInput,
       onCancel,
@@ -48,11 +49,12 @@ export const Input = forwardRef(
           ? ""
           : navStateValue
         : initialValue;
-    const valueSignal = useActionParamsSignal(action, valueAtStart);
-    const { pending } = useActionOrFormAction(innerRef, action, valueSignal);
-    const value = valueSignal.value;
+    const [paramSignal, getParamSignalValue, setParamSignalValue] =
+      useActionSingleParamSignal(action, valueAtStart, name);
+    const { pending } = useActionOrFormAction(innerRef, action, paramSignal);
+    const value = getParamSignalValue();
 
-    const input = (
+    let input = (
       <input
         {...rest}
         type={type}
@@ -61,12 +63,11 @@ export const Input = forwardRef(
         disabled={disabled || pending}
         onInput={(e) => {
           setNavStateValue(e.target.value);
-          valueSignal.value = e.target.value;
+          setParamSignalValue(e.target.value);
           if (onInput) {
             onInput(e);
           }
         }}
-        data-request-execute-on-change={requestExecuteOnChange ? "" : undefined}
         // eslint-disable-next-line react/no-unknown-property
         oncancel={(event) => {
           if (event.detail === "blur_invalid" && !cancelOnBlurInvalid) {
@@ -94,7 +95,11 @@ export const Input = forwardRef(
       />
     );
 
-    const inputWithLabel = label ? (
+    if (pendingEffect === "loading" && pendingTarget === "input") {
+      input = <LoaderBackground pending={pending}>{input}</LoaderBackground>;
+    }
+
+    let inputWithLabel = label ? (
       <label>
         {label}
         {input}
@@ -103,8 +108,8 @@ export const Input = forwardRef(
       input
     );
 
-    if (pendingEffect === "loading") {
-      return (
+    if (pendingEffect === "loading" && pendingTarget === "label") {
+      inputWithLabel = (
         <LoaderBackground pending={pending}>{inputWithLabel}</LoaderBackground>
       );
     }

@@ -34,7 +34,10 @@ export const useActionOrFormAction = (
       const customEventCleanupSet = new Set();
       const redispatchCustomEvent = (name) => {
         const removeListener = addEventListener(element.form, name, (e) => {
-          element.dispatchEvent(e);
+          const customEventCopy = new CustomEvent(name, {
+            detail: e.detail,
+          });
+          element.dispatchEvent(customEventCopy);
         });
         customEventCleanupSet.add(removeListener);
       };
