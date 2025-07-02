@@ -17,8 +17,7 @@ export const Input = forwardRef(
       autoSelect,
       action,
       label,
-      defaultValue = "",
-      value: initialValue,
+      value: initialValue = "",
       constraints = [],
       cancelOnBlurInvalid,
       cancelOnEscape,
@@ -39,25 +38,26 @@ export const Input = forwardRef(
     useAutoFocus(innerRef, autoFocus, autoSelect);
     useConstraints(innerRef, constraints);
 
-    const valueAtStart =
-      initialValue === undefined || initialValue === "" ? "" : initialValue;
     const [navStateValue, setNavStateValue] = useNavState(id);
-    defaultValue = navStateValue === undefined ? defaultValue : navStateValue;
     useOnFormReset(innerRef, () => {
       setNavStateValue(undefined);
     });
-
-    const value = initialValue === undefined ? defaultValue : initialValue;
-
-    const valueSignal = useActionParamsSignal(value);
+    const valueAtStart =
+      initialValue === undefined || initialValue === ""
+        ? navStateValue === undefined
+          ? ""
+          : navStateValue
+        : initialValue;
+    const valueSignal = useActionParamsSignal(action, valueAtStart);
     const { pending } = useActionOrFormAction(innerRef, action, valueSignal);
+    const value = valueSignal.value;
 
     const input = (
       <input
         {...rest}
         type={type}
         ref={innerRef}
-        value={valueSignal.value}
+        value={value}
         disabled={disabled || pending}
         onInput={(e) => {
           setNavStateValue(e.target.value);

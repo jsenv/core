@@ -13,11 +13,17 @@
       import { render } from "preact";
       import {
         // eslint-disable-next-line no-unused-vars
-        InputText,
+        Input,
         // eslint-disable-next-line no-unused-vars
         Form,
         createAction,
       } from "@jsenv/navi";
+
+      const sharedAction = createAction(async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 2000);
+        });
+      });
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -59,6 +65,25 @@
                 <InsideFormWithSubmitAndReset />
               </div>
             </div>
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>2 input for the same action</strong>
+                </p>
+                <Input
+                  action={sharedAction}
+                  label="Test"
+                  style="color: blue"
+                  requestExecuteOnChange
+                ></Input>
+                <Input
+                  action={sharedAction}
+                  label="Test"
+                  style="color: blue"
+                  requestExecuteOnChange
+                ></Input>
+              </div>
+            </div>
           </>
         );
       };
@@ -68,7 +93,8 @@
         return (
           <div>
             <div>
-              <InputText
+              <Input
+                id="outside_form"
                 requestExecuteOnChange
                 action={async (value) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
@@ -85,7 +111,7 @@
         return (
           <div>
             <div>
-              <InputText
+              <Input
                 requestExecuteOnChange
                 value="initial"
                 action={async (value) => {
@@ -107,7 +133,7 @@
         return (
           <div>
             <div>
-              <InputText requestExecuteOnChange action={actionA} />
+              <Input requestExecuteOnChange action={actionA} />
             </div>
           </div>
         );
@@ -118,7 +144,7 @@
         return (
           <div>
             <Form>
-              <InputText
+              <Input
                 requestExecuteOnChange
                 action={async (value) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_500));
@@ -135,7 +161,7 @@
         return (
           <div>
             <Form>
-              <InputText
+              <Input
                 id="tototo"
                 action={async (value) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_500));
