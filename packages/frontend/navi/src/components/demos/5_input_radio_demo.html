@@ -13,8 +13,32 @@
       import { render } from "preact";
       import {
         // eslint-disable-next-line no-unused-vars
+        Fieldset,
+        // eslint-disable-next-line no-unused-vars
         InputRadio,
       } from "@jsenv/navi";
+
+      const inputRadioAction = async ({ drone }) => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 1000);
+        });
+        throw new Error(`Drone selected: ${drone}`);
+      };
+
+      // hummm pour les input radios je crois qu'on devrait
+      // mettre l'action sur un parent
+      // soit sur un form
+      // soit sur un fieldset
+      // le fieldset servira a définir l'action des input radios eux
+      // ne feront rien de spécial (il passeront en disabled certes)
+      // et le checked sera géré par qui?
+      // donc ptet rename actionOrFormAction en actionOrInheritedAction
+      // mais pour un form on pourrait vouloir un fieldset dans un form
+      // dans ce cas il ne faudrais pas que le fieldset fasse quoique ce soit n'est ce pas?
+      // bah on voudrais quand meme le useNavState
+
+      // donc le fieldset s'il la une action fera des trucs, sinon c'est le form qui recup
+      // et le fieldset gere le fait qu'il sait quel champ est checked?
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -24,58 +48,27 @@
               <p>
                 <strong>Loading</strong>
               </p>
-              <fieldset>
+              <Fieldset name="toto" action={inputRadioAction}>
                 <legend>Select a maintenance drone:</legend>
 
                 <div>
-                  <InputRadio
-                    action={async ({ drone }) => {
-                      await new Promise((resolve) => {
-                        setTimeout(resolve, 1000);
-                      });
-                      throw new Error(`Drone selected: ${drone}`);
-                    }}
-                    id="huey"
-                    name="drone"
-                    value="huey"
-                    checked
-                  >
+                  <InputRadio id="drone" name="drone" value="huey" checked>
                     Huey
                   </InputRadio>
                 </div>
 
                 <div>
-                  <InputRadio
-                    action={async ({ drone }) => {
-                      await new Promise((resolve) => {
-                        setTimeout(resolve, 1000);
-                      });
-                      throw new Error(`Drone selected: ${drone}`);
-                    }}
-                    id="dewey"
-                    name="drone"
-                    value="dewey"
-                  >
+                  <InputRadio id="drone" name="drone" value="dewey">
                     Dewey
                   </InputRadio>
                 </div>
 
                 <div>
-                  <InputRadio
-                    action={async ({ drone }) => {
-                      await new Promise((resolve) => {
-                        setTimeout(resolve, 1000);
-                      });
-                      throw new Error(`Drone selected: ${drone}`);
-                    }}
-                    id="louie"
-                    name="drone"
-                    value="louie"
-                  >
+                  <InputRadio id="drone" name="drone" value="louie">
                     Louie
                   </InputRadio>
                 </div>
-              </fieldset>
+              </Fieldset>
             </div>
             <div>
               <p>

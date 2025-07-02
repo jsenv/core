@@ -2,10 +2,10 @@ import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useActionOrFormAction } from "../use_action_or_form_action.js";
+import { useActionOrParentActionStatus } from "../use_action_or_parent_action_status.js";
 import { useActionSingleParamSignal } from "../use_action_params_signal.js";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { useNavState } from "../use_nav_state.js";
+// import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
 
 import.meta.css = /*css*/ `
@@ -42,23 +42,34 @@ export const InputRadio = forwardRef(
     useAutoFocus(innerRef, autoFocus);
     useConstraints(innerRef, constraints);
 
-    const [navStateValue, setNavStateValue] = useNavState(id);
-    const checkedAtStart = initialChecked || navStateValue === value;
+    // const [navStateValue, setNavStateValue] = useNavState(id);
+    const checkedAtStart = initialChecked; // || navStateValue === value;
     const [checkedSignal, getParamSignalValue, setParamSignalValue] =
-      useActionSingleParamSignal(action, value, name);
+      useActionSingleParamSignal(
+        action,
+        checkedAtStart ? value : undefined,
+        name,
+      );
     useOnFormReset(innerRef, () => {
       if (checkedAtStart) {
-        setNavStateValue(value);
+        // setNavStateValue(value);
       }
     });
-    const { pending, error, aborted } = useActionOrFormAction(
+    const { pending } = useActionOrParentActionStatus(
       innerRef,
       action,
       checkedSignal,
     );
 
     const valueChecked = getParamSignalValue();
-    const checked = error || aborted ? initialChecked : value === valueChecked;
+    // le souci avec ça c'est que ca va changer la valeur de qui est check
+    // (ca remet celle du haut)
+    // qui du coup n'est pas en erreur
+    // valueChecked vaut le 2eme radio
+    // error vaut null jusqu'a ce quon re-render et la magiquement le second se check
+    // alors qu'on voudrait le premier
+    // en fait on voudrait le premier check mais l'action courante doit rester le second
+    const checked = value === valueChecked;
 
     let inputRadio = (
       <input
@@ -73,7 +84,7 @@ export const InputRadio = forwardRef(
         onChange={(e) => {
           const radioIsChecked = e.target.checked;
           if (radioIsChecked) {
-            setNavStateValue(value);
+            // setNavStateValue(value);
             setParamSignalValue(value);
           }
           if (onChange) {
@@ -84,7 +95,7 @@ export const InputRadio = forwardRef(
         oncancel={(e) => {
           e.target.checked = checkedAtStart;
           if (checkedAtStart) {
-            setNavStateValue(value);
+            // setNavStateValue(value);
           }
           if (onCancel) {
             onCancel();
@@ -93,16 +104,15 @@ export const InputRadio = forwardRef(
         // eslint-disable-next-line react/no-unknown-property
         onactionstart={onActionStart}
         // eslint-disable-next-line react/no-unknown-property
-        onactionerror={onActionError}
-        // eslint-disable-next-line react/no-unknown-property
-        onactionend={() => {
-          if (checkedAtStart) {
-            setNavStateValue(value);
+        onactionerror={() => {
+          if (initialChecked) {
+            debugger;
+            setParamSignalValue(value);
           }
-          if (onActionEnd) {
-            onActionEnd();
-          }
+          onActionError?.();
         }}
+        // eslint-disable-next-line react/no-unknown-property
+        onactionend={onActionEnd}
       />
     );
 

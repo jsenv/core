@@ -14,12 +14,11 @@
  */
 
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useImperativeHandle, useRef } from "preact/hooks";
 import { useAction } from "../use_action.js";
-import { useOnExecute } from "../use_action_or_form_action.js";
 import { useActionParamsSignal } from "../use_action_params_signal.js";
 import { useExecuteAction } from "../use_execute_action.js";
-import { FormContext } from "./form_context.js";
+import { ActionContext } from "./action_context.js";
 
 const submit = HTMLFormElement.prototype.submit;
 HTMLFormElement.prototype.submit = function (...args) {
@@ -62,70 +61,7 @@ export const Form = forwardRef(
 
     action = useAction(action, paramsSignal);
     const executeAction = useExecuteAction(innerRef, { errorEffect });
-    const formActionRef = useRef();
-    const [formAction, formActionSetter] = useState(action);
     const executingRef = useRef(false);
-
-    // It's important to use useOnExecute which uses useLayoutEffect
-    // to register the event listener so that
-    // ```js
-    // formActionRef.current = action;
-    // ```
-    // is executed first (code declared in use_action_or_form_action#L19 )
-    useOnExecute(innerRef, async (executeEvent) => {
-      if (executingRef.current) {
-        /**
-         * Without this check, when user types in <input> then hit enter 2 http requests are sent
-         * - First one is correct
-         * - Second one is sent without any value
-         *
-         * This happens because in the following html structure
-         * <form>
-         *   <input name="value" type="text" onChange={() => form.requestSubmit()} />
-         * </form>
-         * The following happens after hitting "enter" key:
-         * 1. Browser trigger "change" event, form is submitted, an http request is sent
-         * 2. We do input.disabled = true;
-         * 3. Browser trigger "submit" event
-         * 4. new FormData(form).get("value") is empty because input.disabled is true
-         * -> We end up with the faulty http request that we don't want
-         */
-        return;
-      }
-      executingRef.current = true;
-      setTimeout(() => {
-        executingRef.current = false;
-      }, 0);
-
-      const form = innerRef.current;
-      const formData = new FormData(form);
-      const params = {};
-      for (const [name, value] of formData) {
-        if (name in params) {
-          if (Array.isArray(params[name])) {
-            params[name].push(value);
-          } else {
-            params[name] = [params[name], value];
-          }
-        } else {
-          params[name] = value;
-        }
-      }
-      paramsSignal.value = params;
-
-      if (onExecute) {
-        onExecute();
-      }
-      const formAction = formActionRef.current || action;
-      formActionSetter(formAction);
-      try {
-        await executeAction(formAction, {
-          requester: executeEvent.detail.requester,
-        });
-      } finally {
-        formActionRef.current = null;
-      }
-    });
 
     return (
       <form
@@ -137,6 +73,55 @@ export const Form = forwardRef(
           submitEvent.preventDefault();
         }}
         // eslint-disable-next-line react/no-unknown-property
+        onexecute={async (executeEvent) => {
+          if (executingRef.current) {
+            /**
+             * Without this check, when user types in <input> then hit enter 2 http requests are sent
+             * - First one is correct
+             * - Second one is sent without any value
+             *
+             * This happens because in the following html structure
+             * <form>
+             *   <input name="value" type="text" onChange={() => form.requestSubmit()} />
+             * </form>
+             * The following happens after hitting "enter" key:
+             * 1. Browser trigger "change" event, form is submitted, an http request is sent
+             * 2. We do input.disabled = true;
+             * 3. Browser trigger "submit" event
+             * 4. new FormData(form).get("value") is empty because input.disabled is true
+             * -> We end up with the faulty http request that we don't want
+             */
+            return;
+          }
+          executingRef.current = true;
+          setTimeout(() => {
+            executingRef.current = false;
+          }, 0);
+
+          const form = innerRef.current;
+          const formData = new FormData(form);
+          const params = {};
+          for (const [name, value] of formData) {
+            if (name in params) {
+              if (Array.isArray(params[name])) {
+                params[name].push(value);
+              } else {
+                params[name] = [params[name], value];
+              }
+            } else {
+              params[name] = value;
+            }
+          }
+          paramsSignal.value = params;
+
+          if (onExecute) {
+            onExecute();
+          }
+          await executeAction(action, {
+            requester: executeEvent.detail.requester,
+          });
+        }}
+        // eslint-disable-next-line react/no-unknown-property
         onexecuteprevented={onExecutePrevented}
         // eslint-disable-next-line react/no-unknown-property
         onactionstart={onActionStart}
@@ -145,9 +130,9 @@ export const Form = forwardRef(
         // eslint-disable-next-line react/no-unknown-property
         onactionerror={onActionError}
       >
-        <FormContext.Provider value={[formAction, formActionRef]}>
+        <ActionContext.Provider value={action}>
           {children}
-        </FormContext.Provider>
+        </ActionContext.Provider>
       </form>
     );
   },

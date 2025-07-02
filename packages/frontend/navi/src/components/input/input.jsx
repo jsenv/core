@@ -2,7 +2,7 @@ import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useActionOrFormAction } from "../use_action_or_form_action.js";
+import { useActionOrParentActionStatus } from "../use_action_or_parent_action_status.js";
 import { useActionSingleParamSignal } from "../use_action_params_signal.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
@@ -51,7 +51,11 @@ export const Input = forwardRef(
         : initialValue;
     const [paramSignal, getParamSignalValue, setParamSignalValue] =
       useActionSingleParamSignal(action, valueAtStart, name);
-    const { pending } = useActionOrFormAction(innerRef, action, paramSignal);
+    const { pending } = useActionOrParentActionStatus(
+      innerRef,
+      action,
+      paramSignal,
+    );
     const value = getParamSignalValue();
 
     let input = (
