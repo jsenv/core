@@ -16,7 +16,7 @@ const run = () => {
         plugins: [
           jsenvPluginCommonJs({
             include: {
-              "file:///**/node_modules/foo/": true,
+              foo: true,
             },
           }),
         ],

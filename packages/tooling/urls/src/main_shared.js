@@ -49,3 +49,4 @@ export { resolveUrl } from "./shared/resolve_url.js";
 export { resolveDirectoryUrl } from "./shared/resolve_directory_url.js";
 export { urlIsOrIsInsideOf } from "./shared/url_is_or_is_inside_of.js";
 export { yieldAncestorUrls } from "./shared/yield_ancestor_urls.js";
+export { pathnameToExtension } from "./shared/pathname_to_extension.js";

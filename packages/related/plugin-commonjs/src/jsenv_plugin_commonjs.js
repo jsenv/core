@@ -4,7 +4,12 @@ import {
   defaultLookupPackageScope,
 } from "@jsenv/node-esm-resolution";
 import { URL_META } from "@jsenv/url-meta";
-import { injectQueryParams, urlToBasename, urlToExtension } from "@jsenv/urls";
+import {
+  injectQueryParams,
+  pathnameToExtension,
+  urlToBasename,
+  urlToExtension,
+} from "@jsenv/urls";
 import { commonJsToJsModule } from "./cjs_to_esm.js";
 
 const compileCacheDirectoryUrlDefault = new URL("../.cache/", import.meta.url);
@@ -55,6 +60,9 @@ export const jsenvPluginCommonJs = ({
         (pattern) => {
           if (isBareSpecifier(pattern)) {
             try {
+              if (!pattern.endsWith("/") && !pathnameToExtension(pattern)) {
+                pattern = `${pattern}/`;
+              }
               if (pattern.endsWith("/")) {
                 // avoid package path not exported
                 const { packageDirectoryUrl } = applyNodeEsmResolution({
