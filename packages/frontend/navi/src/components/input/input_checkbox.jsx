@@ -10,6 +10,12 @@ import { useOnFormReset } from "../use_on_form_reset.js";
 
 let debug = true;
 
+import.meta.css = /*css*/ `
+  label[data-disabled] {
+    opacity: 0.5;
+  }
+`;
+
 export const InputCheckbox = forwardRef(
   (
     {
@@ -22,6 +28,7 @@ export const InputCheckbox = forwardRef(
       label,
       disabled,
       pendingEffect = "loading",
+      pendingTarget = "input", // "input" or "label"
       onCancel,
       onInput,
       onActionStart,
@@ -68,7 +75,7 @@ export const InputCheckbox = forwardRef(
 
     const checked = checkedRef.current;
 
-    const inputCheckbox = (
+    let inputCheckbox = (
       <input
         {...rest}
         ref={innerRef}
@@ -122,8 +129,14 @@ export const InputCheckbox = forwardRef(
       />
     );
 
-    const inputCheckboxWithLabel = label ? (
-      <label>
+    if (pendingEffect === "loading" && pendingTarget === "input") {
+      inputCheckbox = (
+        <LoaderBackground pending={pending}>{inputCheckbox}</LoaderBackground>
+      );
+    }
+
+    let inputCheckboxWithLabel = label ? (
+      <label data-disabled={disabled || pending ? "" : undefined}>
         {label}
         {inputCheckbox}
       </label>
@@ -131,13 +144,14 @@ export const InputCheckbox = forwardRef(
       inputCheckbox
     );
 
-    if (pendingEffect === "loading") {
-      return (
+    if (pendingEffect === "loading" && pendingTarget === "label") {
+      inputCheckboxWithLabel = (
         <LoaderBackground pending={pending}>
           {inputCheckboxWithLabel}
         </LoaderBackground>
       );
     }
+
     return inputCheckboxWithLabel;
   },
 );
