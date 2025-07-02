@@ -8,8 +8,6 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
 
-let debug = true;
-
 import.meta.css = /*css*/ `
   label[data-disabled] {
     opacity: 0.5;
@@ -51,29 +49,15 @@ export const InputCheckbox = forwardRef(
       setNavStateValue(undefined);
     });
     const { pending } = useActionOrFormAction(innerRef, action, checkedSignal);
-    const checkedRef = useRef();
-    if (checkedRef.current === undefined) {
-      if (debug) {
-        console.debug(
-          `checkedRef.current = ${checkedRef.current} after initial render`,
-        );
-      }
-      checkedRef.current = checkedAtStart;
-    }
     const pendingRef = useRef(pending);
     if (pendingRef.current !== pending) {
       if (!pending) {
-        checkedRef.current = initialChecked;
-        if (debug) {
-          console.debug(
-            `checkedRef.current = ${checkedRef.current} after "pending" becomes false`,
-          );
-        }
+        checkedSignal.value = initialChecked;
       }
       pendingRef.current = pending;
     }
 
-    const checked = checkedRef.current;
+    const checked = checkedSignal.value;
 
     let inputCheckbox = (
       <input
@@ -91,12 +75,6 @@ export const InputCheckbox = forwardRef(
             setNavStateValue(inputIsChecked ? false : undefined);
           } else {
             setNavStateValue(inputIsChecked ? true : undefined);
-          }
-          checkedRef.current = inputIsChecked;
-          if (debug) {
-            console.debug(
-              `checkedRef.current = ${checkedRef.current} after "input" event`,
-            );
           }
           checkedSignal.value = inputIsChecked;
           if (onInput) {
