@@ -48,7 +48,7 @@ export const jsenvPluginCommonJs = ({
 
   const packageConditionsConfig = {};
   const onIncludedUrl = (url) => {
-    packageConditionsConfig[url] = ["node"];
+    packageConditionsConfig[url] = ["node", "import", "require"];
   };
 
   return {

@@ -37,10 +37,10 @@ await build({
       plugins: [
         jsenvPluginCommonJs({
           include: {
-            "file:///**/node_modules/ws/": true,
-            "file:///**/node_modules/once/": true,
-            "file:///**/node_modules/dezalgo/": true,
-            "file:///**/node_modules/@paralleldrive/cuid2/": true,
+            "ws/": true,
+            "once/": true,
+            "dezalgo/": true,
+            "@paralleldrive/cuid2/": true,
           },
         }),
       ],
