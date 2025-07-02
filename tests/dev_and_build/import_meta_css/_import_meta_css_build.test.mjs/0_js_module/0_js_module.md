@@ -6,9 +6,9 @@ run({
 })
 ```
 
-# 1/2 write 3 files into "../../../"
+# 1/2 write 2 files into "./build/"
 
-see [./@jsenv/core/](./@jsenv/core/)
+see [./build/](./build/)
 
 # 2/2 resolve
 

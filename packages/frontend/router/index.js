@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Route } from "./src/route/route.jsx";
 import { RouteDetails } from "./src/route/route_details.jsx";
 
