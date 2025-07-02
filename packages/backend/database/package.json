@@ -28,10 +28,10 @@
     "database:setup": "npx @jsenv/database setup"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.15.5",
+    "@jsenv/filesystem": "4.15.6",
     "@jsenv/humanize": "1.6.0",
     "@jsenv/url-meta": "8.5.7",
-    "@jsenv/urls": "2.9.0",
+    "@jsenv/urls": "2.9.1",
     "dotenv": "16.5.0",
     "postgres": "3.4.5"
   },

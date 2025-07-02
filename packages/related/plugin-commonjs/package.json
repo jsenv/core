@@ -19,11 +19,11 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.5",
+    "@jsenv/filesystem": "4.15.6",
     "@jsenv/humanize": "1.6.0",
-    "@jsenv/node-esm-resolution": "1.2.6",
+    "@jsenv/node-esm-resolution": "1.2.7",
     "@jsenv/url-meta": "8.5.7",
-    "@jsenv/urls": "2.9.0",
+    "@jsenv/urls": "2.9.1",
     "@rollup/plugin-commonjs": "28.0.3",
     "@rollup/plugin-json": "6.1.0",
     "@rollup/plugin-node-resolve": "16.0.1",
