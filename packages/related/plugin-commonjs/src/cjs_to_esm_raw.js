@@ -7,12 +7,9 @@ export const commonJsToJsModuleRaw = async ({
   sourceFileUrl,
 
   browsers = true,
-  replaceGlobalObject = browsers,
   replaceGlobalFilename = browsers,
   replaceGlobalDirname = browsers,
   replaceProcessEnvNodeEnv = browsers,
-  replaceProcess = browsers,
-  replaceBuffer = browsers,
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceMap = {},
   convertBuiltinsToBrowser = browsers,
@@ -65,7 +62,6 @@ export const commonJsToJsModuleRaw = async ({
       ...(replaceProcessEnvNodeEnv
         ? { "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv) }
         : {}),
-      ...(replaceGlobalObject ? { global: "globalThis" } : {}),
       ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
       ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),
       ...replaceMap,
@@ -81,10 +77,6 @@ export const commonJsToJsModuleRaw = async ({
     // requireReturnsDefault: "namespace",
     requireReturnsDefault: "auto",
   });
-
-  const { default: createNodeGlobalRollupPlugin } = await import(
-    "rollup-plugin-node-globals"
-  );
 
   const commonJsNamedExportsRollupPlugin = rollupPluginCommonJsNamedExports({
     logger,
@@ -111,17 +103,6 @@ export const commonJsToJsModuleRaw = async ({
       replaceRollupPlugin,
       commonJsRollupPlugin,
       commonJsNamedExportsRollupPlugin,
-      ...(replaceProcess || replaceBuffer
-        ? [
-            createNodeGlobalRollupPlugin({
-              global: false, // handled by replaceMap
-              dirname: false, // handled by replaceMap
-              filename: false, // handled by replaceMap
-              process: replaceProcess,
-              buffer: replaceBuffer,
-            }),
-          ]
-        : []),
       ...(convertBuiltinsToBrowser
         ? [
             rollupPluginNodePolyfills({

@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <link rel="modulepreload" href="./app.jsx" />
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <div id="app"></div>
+    <script type="module">
+      import("./boot.js");
+    </script>
+  </body>
+</html>

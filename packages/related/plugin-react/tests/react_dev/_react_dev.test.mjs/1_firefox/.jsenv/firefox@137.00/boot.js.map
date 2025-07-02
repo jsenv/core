@@ -1,0 +1,11 @@
+{
+  "version": 3,
+  "sources": [
+    "base/client/boot.js"
+  ],
+  "sourcesContent": [
+    "import(\"./app.jsx\");\n"
+  ],
+  "names": [],
+  "mappings": "AAAA,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,UAAW,CAAC;"
+}
