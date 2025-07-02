@@ -21,11 +21,13 @@ export const createNodeEsmResolver = ({
   runtimeCompat,
   rootDirectoryUrl,
   packageConditions = {},
+  packageConditionsConfig,
   preservesSymlink,
 }) => {
   const buildPackageConditions = createBuildPackageConditions(
     packageConditions,
     {
+      packageConditionsConfig,
       rootDirectoryUrl,
       runtimeCompat,
     },
@@ -140,147 +142,248 @@ export const createNodeEsmResolver = ({
 
 const createBuildPackageConditions = (
   packageConditions,
-  { rootDirectoryUrl, runtimeCompat },
+  { packageConditionsConfig, rootDirectoryUrl, runtimeCompat },
 ) => {
-  const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
-  // https://nodejs.org/api/esm.html#resolver-algorithm-specification
-  const processArgConditions = readCustomConditionsFromProcessArgs();
-  const devResolver = (specifier, importer, { webResolutionFallback }) => {
-    if (isBareSpecifier(specifier)) {
-      let url;
-      if (webResolutionFallback) {
-        try {
+  let resolveConditionsFromSpecifier = () => null;
+  let resolveConditionsFromContext = () => [];
+  from_specifier: {
+    if (!packageConditionsConfig) {
+      break from_specifier;
+    }
+    const keys = Object.keys(packageConditionsConfig);
+    if (keys.length === 0) {
+      break from_specifier;
+    }
+
+    const associationsRaw = {};
+    for (const key of keys) {
+      const associatedValue = packageConditionsConfig[key];
+
+      if (!isBareSpecifier(key)) {
+        const url = new URL(key, rootDirectoryUrl);
+        associationsRaw[url] = associatedValue;
+        continue;
+      }
+      try {
+        if (key.endsWith("/")) {
+          // avoid package path not exported
+
+          const { packageDirectoryUrl } = applyNodeEsmResolution({
+            specifier: key.slice(0, -1),
+            parentUrl: rootDirectoryUrl,
+          });
+          const url = packageDirectoryUrl;
+          associationsRaw[url] = associatedValue;
+          continue;
+        }
+        const { url } = applyNodeEsmResolution({
+          specifier: key,
+          parentUrl: rootDirectoryUrl,
+        });
+        associationsRaw[url] = associatedValue;
+      } catch {
+        const url = new URL(key, rootDirectoryUrl);
+        associationsRaw[url] = associatedValue;
+      }
+    }
+    const associations = URL_META.resolveAssociations(
+      {
+        conditions: associationsRaw,
+      },
+      rootDirectoryUrl,
+    );
+    resolveConditionsFromSpecifier = (specifier, importer) => {
+      let associatedValue;
+      if (isBareSpecifier(specifier)) {
+        const { url } = applyNodeEsmResolution({
+          specifier,
+          parentUrl: importer,
+        });
+        associatedValue = URL_META.applyAssociations({ url, associations });
+      } else {
+        associatedValue = URL_META.applyAssociations({
+          url: importer,
+          associations,
+        });
+      }
+      if (!associatedValue) {
+        return undefined;
+      }
+      if (associatedValue.conditions) {
+        return associatedValue.conditions;
+      }
+      return undefined;
+    };
+  }
+  from_context: {
+    const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+    // https://nodejs.org/api/esm.html#resolver-algorithm-specification
+    const devResolver = (specifier, importer, { webResolutionFallback }) => {
+      if (isBareSpecifier(specifier)) {
+        let url;
+        if (webResolutionFallback) {
+          try {
+            const resolution = applyNodeEsmResolution({
+              specifier,
+              parentUrl: importer,
+            });
+            url = resolution.url;
+          } catch {
+            url = new URL(specifier, importer).href;
+          }
+        } else {
           const resolution = applyNodeEsmResolution({
             specifier,
             parentUrl: importer,
           });
           url = resolution.url;
-        } catch {
-          url = new URL(specifier, importer).href;
         }
-      } else {
-        const resolution = applyNodeEsmResolution({
-          specifier,
-          parentUrl: importer,
-        });
-        url = resolution.url;
+        return !url.includes("/node_modules/");
       }
-      return !url.includes("/node_modules/");
-    }
-    return !importer.includes("/node_modules/");
-  };
+      return !importer.includes("/node_modules/");
+    };
 
-  const conditionDefaultResolvers = {
-    "dev:*": devResolver,
-    "development": devResolver,
-    "node": nodeRuntimeEnabled,
-    "browser": !nodeRuntimeEnabled,
-    "import": true,
-  };
-  const conditionResolvers = {
-    ...conditionDefaultResolvers,
-  };
+    const conditionDefaultResolvers = {
+      "dev:*": devResolver,
+      "development": devResolver,
+      "node": nodeRuntimeEnabled,
+      "browser": !nodeRuntimeEnabled,
+      "import": true,
+    };
+    const conditionResolvers = {
+      ...conditionDefaultResolvers,
+    };
 
-  let wildcardToRemoveSet = new Set();
-  const addCustomResolver = (condition, customResolver) => {
-    for (const conditionCandidate of Object.keys(conditionDefaultResolvers)) {
-      if (conditionCandidate.includes("*")) {
-        const conditionRegex = new RegExp(
-          `^${conditionCandidate.replace(/\*/g, "(.*)")}$`,
-        );
-        if (conditionRegex.test(condition)) {
-          const existingResolver =
-            conditionDefaultResolvers[conditionCandidate];
-          wildcardToRemoveSet.add(conditionCandidate);
-          conditionResolvers[condition] = combineTwoPackageConditionResolvers(
-            existingResolver,
-            customResolver,
+    let wildcardToRemoveSet = new Set();
+    const addCustomResolver = (condition, customResolver) => {
+      for (const conditionCandidate of Object.keys(conditionDefaultResolvers)) {
+        if (conditionCandidate.includes("*")) {
+          const conditionRegex = new RegExp(
+            `^${conditionCandidate.replace(/\*/g, "(.*)")}$`,
           );
-          return;
+          if (conditionRegex.test(condition)) {
+            const existingResolver =
+              conditionDefaultResolvers[conditionCandidate];
+            wildcardToRemoveSet.add(conditionCandidate);
+            conditionResolvers[condition] = combineTwoPackageConditionResolvers(
+              existingResolver,
+              customResolver,
+            );
+            return;
+          }
         }
       }
+      const existingResolver = conditionDefaultResolvers[condition];
+      if (existingResolver) {
+        conditionResolvers[condition] = combineTwoPackageConditionResolvers(
+          existingResolver,
+          customResolver,
+        );
+        return;
+      }
+      conditionResolvers[condition] = customResolver;
+    };
+    custom_resolvers_from_process_args: {
+      const processArgConditions = readCustomConditionsFromProcessArgs();
+      for (const processArgCondition of processArgConditions) {
+        addCustomResolver(processArgCondition, true);
+      }
     }
-    const existingResolver = conditionDefaultResolvers[condition];
-    if (existingResolver) {
-      conditionResolvers[condition] = combineTwoPackageConditionResolvers(
-        existingResolver,
-        customResolver,
-      );
-      return;
-    }
-    conditionResolvers[condition] = customResolver;
-  };
-
-  for (const processArgCondition of processArgConditions) {
-    addCustomResolver(processArgCondition, true);
-  }
-  for (const customCondition of Object.keys(packageConditions)) {
-    const value = packageConditions[customCondition];
-    let customResolver;
-    if (typeof value === "object") {
-      const associations = URL_META.resolveAssociations(
-        { applies: value },
-        (pattern) => {
-          if (isBareSpecifier(pattern)) {
-            try {
-              if (pattern.endsWith("/")) {
-                // avoid package path not exported
-                const { packageDirectoryUrl } = applyNodeEsmResolution({
-                  specifier: pattern.slice(0, -1),
-                  parentUrl: rootDirectoryUrl,
-                });
-                return packageDirectoryUrl;
+    custom_resolvers_from_package_conditions: {
+      for (const key of Object.keys(packageConditions)) {
+        const value = packageConditions[key];
+        let customResolver;
+        if (typeof value === "object") {
+          const associations = URL_META.resolveAssociations(
+            { applies: value },
+            (pattern) => {
+              if (isBareSpecifier(pattern)) {
+                try {
+                  if (pattern.endsWith("/")) {
+                    // avoid package path not exported
+                    const { packageDirectoryUrl } = applyNodeEsmResolution({
+                      specifier: pattern.slice(0, -1),
+                      parentUrl: rootDirectoryUrl,
+                    });
+                    return packageDirectoryUrl;
+                  }
+                  const { url } = applyNodeEsmResolution({
+                    specifier: pattern,
+                    parentUrl: rootDirectoryUrl,
+                  });
+                  return url;
+                } catch {
+                  return new URL(pattern, rootDirectoryUrl);
+                }
               }
-              const { url } = applyNodeEsmResolution({
-                specifier: pattern,
-                parentUrl: rootDirectoryUrl,
-              });
-              return url;
-            } catch {
               return new URL(pattern, rootDirectoryUrl);
+            },
+          );
+          customResolver = (specifier, importer) => {
+            if (isBareSpecifier(specifier)) {
+              const { url } = applyNodeEsmResolution({
+                specifier,
+                parentUrl: importer,
+              });
+              const { applies } = URL_META.applyAssociations({
+                url,
+                associations,
+              });
+              return applies;
             }
-          }
-          return new URL(pattern, rootDirectoryUrl);
-        },
-      );
-      customResolver = (specifier, importer) => {
-        if (isBareSpecifier(specifier)) {
-          const { url } = applyNodeEsmResolution({
-            specifier,
-            parentUrl: importer,
-          });
-          const { applies } = URL_META.applyAssociations({ url, associations });
-          return applies;
+            const { applies } = URL_META.applyAssociations({
+              url: importer,
+              associations,
+            });
+            return applies;
+          };
+        } else if (typeof value === "function") {
+          customResolver = value;
+        } else {
+          customResolver = value;
         }
-        return URL_META.applyAssociations({ url: importer, associations })
-          .applies;
-      };
-    } else if (typeof value === "function") {
-      customResolver = value;
-    } else {
-      customResolver = value;
+        addCustomResolver(key, customResolver);
+      }
     }
-    addCustomResolver(customCondition, customResolver);
-  }
+    for (const wildcardToRemove of wildcardToRemoveSet) {
+      delete conditionResolvers[wildcardToRemove];
+    }
 
-  for (const wildcardToRemove of wildcardToRemoveSet) {
-    delete conditionResolvers[wildcardToRemove];
-  }
-
-  const conditionCandidateArray = Object.keys(conditionResolvers);
-  return (specifier, importer, params) => {
-    const conditions = [];
-    for (const conditionCandidate of conditionCandidateArray) {
-      const conditionResolver = conditionResolvers[conditionCandidate];
-      if (typeof conditionResolver === "function") {
-        if (conditionResolver(specifier, importer, params)) {
+    const conditionCandidateArray = Object.keys(conditionResolvers);
+    resolveConditionsFromContext = (specifier, importer, params) => {
+      const conditions = [];
+      for (const conditionCandidate of conditionCandidateArray) {
+        const conditionResolver = conditionResolvers[conditionCandidate];
+        if (typeof conditionResolver === "function") {
+          if (conditionResolver(specifier, importer, params)) {
+            conditions.push(conditionCandidate);
+          }
+        } else if (conditionResolver) {
           conditions.push(conditionCandidate);
         }
-      } else if (conditionResolver) {
-        conditions.push(conditionCandidate);
       }
+      return conditions;
+    };
+  }
+
+  return (specifier, importer, params) => {
+    const conditionsForThisSpecifier = resolveConditionsFromSpecifier(
+      specifier,
+      importer,
+      params,
+    );
+    if (conditionsForThisSpecifier) {
+      return conditionsForThisSpecifier;
     }
-    return conditions;
+    const conditionsFromContext = resolveConditionsFromContext(
+      specifier,
+      importer,
+      params,
+    );
+    if (conditionsFromContext) {
+      return conditionsFromContext;
+    }
+    return [];
   };
 };
 

@@ -1,1 +1,1 @@
-import"/js/foo_index.js?v=aeec8883";
+import"/js/foo_index.js?v=1d91edaf";

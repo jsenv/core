@@ -1,1 +1,1 @@
-console.log("esm");
+console.log("cjs");
