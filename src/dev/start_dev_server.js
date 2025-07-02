@@ -86,6 +86,8 @@ export const startDevServer = async ({
   plugins = [],
   referenceAnalysis = {},
   nodeEsmResolution,
+  packageConditions,
+  packageConditionsConfig,
   supervisor = true,
   magicExtensions,
   magicDirectoryIndex,
@@ -260,6 +262,8 @@ export const startDevServer = async ({
 
         referenceAnalysis,
         nodeEsmResolution,
+        packageConditions,
+        packageConditionsConfig,
         magicExtensions,
         magicDirectoryIndex,
         directoryListing,
