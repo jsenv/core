@@ -1,7 +1,15 @@
 // for reference this is how Node.js detect module format https://github.com/nodejs/node/blob/a446e3bdc96b0f263fd363ce89b9c739b066240f/lib/internal/modules/esm/get_format.js#L1
-import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution";
+import {
+  applyNodeEsmResolution,
+  defaultLookupPackageScope,
+} from "@jsenv/node-esm-resolution";
 import { URL_META } from "@jsenv/url-meta";
-import { injectQueryParams, urlToBasename, urlToExtension } from "@jsenv/urls";
+import {
+  injectQueryParams,
+  pathnameToExtension,
+  urlToBasename,
+  urlToExtension,
+} from "@jsenv/urls";
 import { commonJsToJsModule } from "./cjs_to_esm.js";
 
 const compileCacheDirectoryUrlDefault = new URL("../.cache/", import.meta.url);
@@ -38,10 +46,23 @@ export const jsenvPluginCommonJs = ({
   let associations;
   let nodeRuntimeEnabled;
 
+  const packageConditionsConfig = {};
+  const onIncludedUrl = (url) => {
+    url = String(url);
+    if (url.endsWith(".map")) {
+      return;
+    }
+    packageConditionsConfig[url] = ["node", "import", "require"];
+  };
+
   return {
     name,
     appliesDuring: "*",
-    init: ({ rootDirectoryUrl, outDirectoryUrl, runtimeCompat }) => {
+    init: (kitchenContext) => {
+      const { rootDirectoryUrl, outDirectoryUrl, runtimeCompat } =
+        kitchenContext;
+      kitchenContext.packageConditionsConfig = packageConditionsConfig;
+
       associations = URL_META.resolveAssociations(
         {
           commonjs: {
@@ -49,7 +70,37 @@ export const jsenvPluginCommonJs = ({
             "/**/*.map": false,
           },
         },
-        rootDirectoryUrl,
+        (pattern) => {
+          if (!isBareSpecifier(pattern)) {
+            const url = new URL(pattern, rootDirectoryUrl);
+            onIncludedUrl(url);
+            return url;
+          }
+          try {
+            if (!pattern.endsWith("/") && !pathnameToExtension(pattern)) {
+              pattern = `${pattern}/`;
+            }
+            if (pattern.endsWith("/")) {
+              // avoid package path not exported
+              const { packageDirectoryUrl } = applyNodeEsmResolution({
+                specifier: pattern.slice(0, -1),
+                parentUrl: rootDirectoryUrl,
+              });
+              onIncludedUrl(packageDirectoryUrl);
+              return packageDirectoryUrl;
+            }
+            const { url } = applyNodeEsmResolution({
+              specifier: pattern,
+              parentUrl: rootDirectoryUrl,
+            });
+            onIncludedUrl(url);
+            return url;
+          } catch {
+            const url = new URL(pattern, rootDirectoryUrl);
+            onIncludedUrl(url);
+            return url;
+          }
+        },
       );
       nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
       if (compileCacheDirectoryUrl === undefined) {

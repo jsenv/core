@@ -1,0 +1,1 @@
+function e(e){return e&&e.__esModule&&Object.prototype.hasOwnProperty.call(e,"default")?e.default:e}var t,a;var r=e(a?t:(a=1,t="cjs"));export{r as default};

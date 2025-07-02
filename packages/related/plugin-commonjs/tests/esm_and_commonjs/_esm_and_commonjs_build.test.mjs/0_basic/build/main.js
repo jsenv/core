@@ -1,0 +1,1 @@
+import"/js/foo_index.js?v=4b0559e6";

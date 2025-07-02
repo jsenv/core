@@ -4776,7 +4776,7 @@ const mainLegacyResolvers = {
     };
   },
   node: ({ packageJson, conditions }) => {
-    if (conditions.includes("import")) {
+    if (conditions.includes("import") && !conditions.includes("require")) {
       if (typeof packageJson.module === "string") {
         return { type: "field:module", isMain: true, path: packageJson.module };
       }
@@ -4790,6 +4790,7 @@ const mainLegacyResolvers = {
     return null;
   },
 };
+mainLegacyResolvers.require = mainLegacyResolvers.node;
 
 const comparePatternKeys = (keyA, keyB) => {
   if (!keyA.endsWith("/") && !keyA.includes("*")) {
