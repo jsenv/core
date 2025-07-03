@@ -115,7 +115,7 @@ export const installCustomConstraintValidation = (element) => {
           continue;
         }
         const isValid = validationInterface.checkValidity({
-          isExecuteRequest: true,
+          fromRequestAction: true,
         });
         if (isValid) {
           continue;
@@ -132,7 +132,11 @@ export const installCustomConstraintValidation = (element) => {
         detail: { reasonEvent: e, requester },
       });
       if (debug) {
-        console.debug(`execute dispatched on form after validation success`);
+        console.debug(
+          `"action" dispatched on`,
+          target,
+          `after validation success`,
+        );
       }
       target.dispatchEvent(actionCustomEvent);
       return;
@@ -149,7 +153,7 @@ export const installCustomConstraintValidation = (element) => {
         elementReceivingEvents = target;
       }
     }
-    if (!checkValidity({ isExecuteRequest: true })) {
+    if (!checkValidity({ fromRequestAction: true })) {
       e.preventDefault();
       reportValidity();
       const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
@@ -222,10 +226,10 @@ export const installCustomConstraintValidation = (element) => {
 
   let lastFailedValidityInfo = null;
   const validityInfoMap = new Map();
-  const checkValidity = ({ isExecuteRequest } = {}) => {
-    if (isExecuteRequest && lastFailedValidityInfo) {
+  const checkValidity = ({ fromRequestAction } = {}) => {
+    if (fromRequestAction && lastFailedValidityInfo) {
       for (const [key, customMessage] of customMessageMap) {
-        if (customMessage.removeOnRequestExecute) {
+        if (customMessage.removeOnRequestAction) {
           customMessageMap.delete(key);
         }
       }
@@ -278,9 +282,9 @@ export const installCustomConstraintValidation = (element) => {
     const addCustomMessage = (
       key,
       message,
-      { level = "error", removeOnRequestExecute = false } = {},
+      { level = "error", removeOnRequestAction = false } = {},
     ) => {
-      customMessageMap.set(key, { message, level, removeOnRequestExecute });
+      customMessageMap.set(key, { message, level, removeOnRequestAction });
       checkValidity();
       reportValidity();
       return () => {
@@ -334,7 +338,7 @@ export const installCustomConstraintValidation = (element) => {
       }
 
       // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
-      // (not super important because our <form> listen the "execute" and do does preventDefault on "submit")
+      // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
       e.preventDefault();
       handleRequestAction(e, { target: form });
     };
@@ -441,7 +445,7 @@ export const installCustomConstraintValidation = (element) => {
         const effect = findEventTargetOrAncestor(e, getElementEffect, form);
         if (effect === "submit") {
           // prevent "submit" event that would be dispatched by the browser after "click"
-          // (not super important because our <form> listen the "execute" and do does preventDefault on "submit")
+          // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
           e.preventDefault();
 
           handleRequestAction(e, {

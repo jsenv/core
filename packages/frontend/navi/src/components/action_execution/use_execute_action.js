@@ -41,7 +41,7 @@ export const useExecuteAction = (
           // This error should not prevent <form> submission
           // so whenever user tries to submit the form the error is cleared
           // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
-          removeOnRequestExecute: true,
+          removeOnRequestAction: true,
         });
       };
       const removeErrorMessage = () => {
@@ -54,18 +54,14 @@ export const useExecuteAction = (
       removeErrorMessage();
       setError(null);
 
-      dispatchCustomEvent("actionstart", { bubbles: true });
+      dispatchCustomEvent("actionstart");
       const result = performAction(action, {
         method,
         onError: (error) => {
           if (
-            // at this stage the action side effect might have remove the <element> from the DOM
-            elementRef.current
+            elementRef.current // at this stage the action side effect might have remove the <element> from the DOM
           ) {
-            dispatchCustomEvent("actionerror", {
-              bubbles: true,
-              detail: { error },
-            });
+            dispatchCustomEvent("actionerror", { detail: { error } });
           }
           if (errorEffect === "show_validation_message") {
             addErrorMessage(error);
@@ -75,10 +71,9 @@ export const useExecuteAction = (
         },
         onSuccess: () => {
           if (
-            // at this stage the action side effect might have remove the <element> from the DOM
-            elementRef.current
+            elementRef.current // at this stage the action side effect might have remove the <element> from the DOM
           ) {
-            dispatchCustomEvent("actionend", { bubbles: true });
+            dispatchCustomEvent("actionend");
           }
         },
       });

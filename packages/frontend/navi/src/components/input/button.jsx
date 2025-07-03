@@ -29,7 +29,6 @@ const SimpleButton = forwardRef((props, ref) => {
 const ActionButton = forwardRef((props, ref) => {
   const {
     action,
-    parentAction,
     autoFocus,
     constraints = [],
     disabled,
@@ -48,8 +47,7 @@ const ActionButton = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  const boundAction = useAction(action);
-  const effectiveAction = boundAction || parentAction;
+  const [effectiveAction] = useAction(action);
   const { pending } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
