@@ -7,6 +7,6 @@ export const useParentAction = () => {
   if (!value) {
     return null;
   }
-  const parentAction = value;
+  const [parentAction] = value;
   return parentAction;
 };

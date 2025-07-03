@@ -892,6 +892,7 @@ const createActionProxyFromSignal = (
     abort: proxyMethod("abort"),
     matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
     toString: () => actionProxy.name,
+    meta: {},
   };
   Object.preventExtensions(actionProxy);
 

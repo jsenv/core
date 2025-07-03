@@ -1,8 +1,3 @@
-- faire input checkbox avec la nouvelle methode
-  il faut que si la checkbox est dans un form/fieldset
-  elle mette a jour les params du parent
-  pas seulement lors que requestAction mais a chaque change
-
 - mettre javascript:void(${action}) dans le form (juste pour le style et le debug)
 
 - lorsqu'on clique un boutton ayant une action + parent action

@@ -11,7 +11,11 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { createAction } from "@jsenv/navi";
+      import {
+        createAction,
+        // eslint-disable-next-line no-unused-vars
+        Form,
+      } from "@jsenv/navi";
       import {
         // eslint-disable-next-line no-unused-vars
         InputCheckbox,
@@ -20,58 +24,84 @@
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
-          <div style="display: flex; flex-direction: row; gap: 30px">
-            <div>
-              <p>
-                <strong>Loading</strong>
-              </p>
-              <InputCheckbox
-                name="loading"
-                action={async () => {
-                  await new Promise(() => {});
-                }}
-                style="color: blue"
-              >
-                Test
-              </InputCheckbox>
+          <div>
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>Loading</strong>
+                </p>
+                <InputCheckbox
+                  name="loading"
+                  action={async () => {
+                    await new Promise(() => {});
+                  }}
+                  style="color: blue"
+                >
+                  Test
+                </InputCheckbox>
+              </div>
+              <div>
+                <p>
+                  <strong>Throw after 1s</strong>
+                </p>
+                <InputCheckbox
+                  name="test"
+                  action={async ({ test }) => {
+                    await new Promise((resolve) => {
+                      setTimeout(resolve, 1000);
+                    });
+                    throw new Error(`This is an error, checked: ${test}`);
+                  }}
+                  style="color: blue"
+                  // data-validation-message-stay-on-focus
+                  // data-validation-message-stay-on-blur
+                >
+                  Test
+                </InputCheckbox>
+              </div>
+              <div>
+                <p>
+                  <strong>2 checkboxes for the same action</strong>
+                </p>
+                <InputCheckbox
+                  name="update"
+                  action={updateUserCheckboxAction}
+                  style="color: blue"
+                >
+                  Test
+                </InputCheckbox>
+                <InputCheckbox
+                  name="update"
+                  action={updateUserCheckboxAction}
+                  style="color: blue"
+                >
+                  Test
+                </InputCheckbox>
+              </div>
             </div>
-            <div>
-              <p>
-                <strong>Throw after 1s</strong>
-              </p>
-              <InputCheckbox
-                name="test"
-                action={async ({ test }) => {
-                  await new Promise((resolve) => {
-                    setTimeout(resolve, 1000);
-                  });
-                  throw new Error(`This is an error, checked: ${test}`);
-                }}
-                style="color: blue"
-                // data-validation-message-stay-on-focus
-                // data-validation-message-stay-on-blur
-              >
-                Test
-              </InputCheckbox>
-            </div>
-            <div>
-              <p>
-                <strong>2 checkboxes for the same action</strong>
-              </p>
-              <InputCheckbox
-                name="update"
-                action={updateUserCheckboxAction}
-                style="color: blue"
-              >
-                Test
-              </InputCheckbox>
-              <InputCheckbox
-                name="update"
-                action={updateUserCheckboxAction}
-                style="color: blue"
-              >
-                Test
-              </InputCheckbox>
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>Inside form</strong>
+                </p>
+                <Form
+                  action={async ({ name, insideForm }) => {
+                    await new Promise((resolve) => {
+                      setTimeout(resolve, 600);
+                    });
+                    // eslint-disable-next-line no-alert
+                    window.alert(
+                      `params: { name: ${name}, insideForm: ${insideForm} }`,
+                    );
+                  }}
+                >
+                  <input type="hidden" name="name" value="dam" />
+                  <InputCheckbox name="insideForm" style="color: blue">
+                    Test
+                  </InputCheckbox>
+                  <button type="submit">Submit</button>
+                </Form>
+              </div>
             </div>
           </div>
         );

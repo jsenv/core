@@ -2,7 +2,7 @@ import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { useActionSingleParamSignal } from "../action_execution/use_action_params_signal.js";
+import { useAction } from "../action_execution/use_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 // import { useNavState } from "../use_nav_state.js";
@@ -43,23 +43,19 @@ export const InputRadio = forwardRef(
     useConstraints(innerRef, constraints);
 
     // const [navStateValue, setNavStateValue] = useNavState(id);
-    const checkedAtStart = initialChecked; // || navStateValue === value;
-    const [checkedSignal, getParamSignalValue, setParamSignalValue] =
-      useActionSingleParamSignal(
-        action,
-        checkedAtStart ? value : undefined,
-        name,
-      );
     useOnFormReset(innerRef, () => {
       if (checkedAtStart) {
         // setNavStateValue(value);
       }
     });
-    const { pending } = useActionOrParentActionStatus(
-      innerRef,
+    const checkedAtStart = initialChecked; // || navStateValue === value;
+    const [boundAction, getParamSignalValue, setParamSignalValue] = useAction(
       action,
-      checkedSignal,
+      checkedAtStart ? value : undefined,
+      name,
     );
+
+    const { pending } = useActionStatus(action);
 
     const valueChecked = getParamSignalValue();
     // le souci avec ça c'est que ca va changer la valeur de qui est check
@@ -106,7 +102,6 @@ export const InputRadio = forwardRef(
         // eslint-disable-next-line react/no-unknown-property
         onactionerror={() => {
           if (initialChecked) {
-            debugger;
             setParamSignalValue(value);
           }
           onActionError?.();

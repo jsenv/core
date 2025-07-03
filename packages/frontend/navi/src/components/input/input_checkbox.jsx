@@ -4,7 +4,6 @@ import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
-import { useActionSingleParamSignal } from "../action_execution/use_action_params_signal.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
@@ -61,7 +60,6 @@ const ActionInputCheckbox = forwardRef(
       checked: initialChecked = false,
       constraints = [],
       action,
-      parentAction,
       disabled,
       onCancel,
       onInput,
@@ -88,16 +86,17 @@ const ActionInputCheckbox = forwardRef(
     const checkedAtStart =
       navStateValue === undefined ? initialChecked : navStateValue;
 
-    const [checkedParamsSignal, getParamSignalValue, setParamSignalValue] =
-      useActionSingleParamSignal(action, checkedAtStart, name);
-    const boundAction = useAction(action, checkedParamsSignal);
-    const effectiveAction = boundAction || parentAction;
+    const [effectiveAction, getChecked, setChecked] = useAction(
+      action,
+      name,
+      checkedAtStart,
+    );
     const { pending, error, aborted } = useActionStatus(effectiveAction);
     const executeAction = useExecuteAction(innerRef, {
       errorEffect: actionErrorEffect,
     });
 
-    const checkedFromSignal = getParamSignalValue();
+    const checkedFromSignal = getChecked();
     const checked = error || aborted ? initialChecked : checkedFromSignal;
 
     let inputCheckbox = (
@@ -125,7 +124,7 @@ const ActionInputCheckbox = forwardRef(
           } else {
             setNavStateValue(checkboxIsChecked ? true : undefined);
           }
-          setParamSignalValue(checkboxIsChecked);
+          setChecked(checkboxIsChecked);
           if (onInput) {
             onInput(e);
           }

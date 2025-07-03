@@ -3,7 +3,7 @@ import { useImperativeHandle, useRef } from "preact/hooks";
 import { ActionContext } from "./action_execution/action_context.js";
 import { useAction } from "./action_execution/use_action.js";
 import { useExecuteAction } from "./action_execution/use_execute_action.js";
-import { useFormDataParamsSignal } from "./action_execution/use_form_data_params_signal.js";
+import { formDataToObject } from "./form_data.js";
 
 export const Fieldset = forwardRef(
   (
@@ -23,9 +23,7 @@ export const Fieldset = forwardRef(
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
-    const [paramsSignal, setParamsSignalValue] = useFormDataParamsSignal();
-
-    action = useAction(action, paramsSignal);
+    const [boundAction, , setParams] = useAction(action);
     const executeAction = useExecuteAction(innerRef, { errorEffect });
 
     return (
@@ -36,7 +34,7 @@ export const Fieldset = forwardRef(
         onexecute={async (executeEvent) => {
           const fieldset = executeEvent.target;
           const formData = createFieldsetFormData(fieldset);
-          setParamsSignalValue(formData);
+          setParams(formDataToObject(formData));
           if (onExecute) {
             onExecute();
           }

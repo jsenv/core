@@ -1,7 +1,84 @@
+import { signal } from "@preact/signals";
 import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
+import { useParentAction } from "./action_context.js";
 
-export const useAction = (action, actionParamsSignal) => {
+export const useAction = (action, name, value) => {
+  const parentBoundAction = useParentAction();
+  if (parentBoundAction) {
+    const parentActionParamsSignal = parentBoundAction.meta.paramsSignal;
+    const parentActionUpdateParams = parentBoundAction.meta.updateParams;
+    const getValue = () =>
+      name
+        ? () => parentActionParamsSignal.value[name]
+        : () => parentActionParamsSignal.value;
+    const setValue = name
+      ? (value) => parentActionUpdateParams({ name: value })
+      : parentActionUpdateParams;
+    if (name) {
+      setValue(value);
+    }
+
+    return [parentBoundAction, getValue, setValue];
+  }
+
+  const [paramsSignal, updateParams] = useActionParamsSignal(action, {});
+  const boundAction = useBoundAction(action, paramsSignal);
+  boundAction.meta.paramsSignal = paramsSignal;
+  boundAction.meta.updateParams = updateParams;
+
+  const getValue = name
+    ? () => paramsSignal.value[name]
+    : () => paramsSignal.value;
+  const setValue = name
+    ? (value) => updateParams({ [name]: value })
+    : updateParams;
+
+  return [boundAction, getValue, setValue];
+};
+
+let debug = false;
+const sharedSignalCache = new WeakMap();
+const useActionParamsSignal = (action, initialParams = {}) => {
+  const fromCache = sharedSignalCache.get(action);
+  if (fromCache) {
+    return fromCache;
+  }
+
+  const paramsSignal = signal(initialParams);
+  const updateParams = (object) => {
+    const currentParams = paramsSignal.peek();
+    const paramsCopy = { ...currentParams };
+    let modified = false;
+    for (const key of Object.keys(object)) {
+      const value = object[key];
+      const currentValue = currentParams[key];
+      if (key in currentParams) {
+        if (value !== currentValue) {
+          modified = true;
+          paramsCopy[key] = value;
+        }
+      } else {
+        modified = true;
+        paramsCopy[key] = value;
+      }
+    }
+    if (modified) {
+      paramsSignal.value = paramsCopy;
+    }
+  };
+  const result = [paramsSignal, updateParams];
+  sharedSignalCache.set(action, result);
+  if (debug) {
+    console.debug(
+      `Created params signal for ${action} with params:`,
+      initialParams,
+    );
+  }
+  return result;
+};
+
+const useBoundAction = (action, actionParamsSignal) => {
   const actionRef = useRef();
   const actionCallbackRef = useRef();
 
