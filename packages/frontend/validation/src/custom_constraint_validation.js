@@ -255,6 +255,13 @@ export const installCustomConstraintValidation = (element) => {
         lastFailedValidityInfo = constraintValidityInfo;
       }
     }
+
+    if (!lastFailedValidityInfo && validationMessage) {
+      if (validationMessage) {
+        validationMessage.close("becomes_valid");
+      }
+    }
+
     return !lastFailedValidityInfo;
   };
   const reportValidity = ({ skipFocus } = {}) => {
