@@ -18,6 +18,149 @@ import { getBorderSizes, getScrollableParentSet } from "@jsenv/dom";
  * @returns {Function} - Function to hide and remove the validation message
  */
 
+import.meta.css = /*css*/ `
+.validation_message {
+  display: block;
+  overflow: visible;
+  height: auto;
+  position: fixed;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.validation_message_border {
+  position: absolute;
+  pointer-events: none;
+  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+}
+
+.validation_message_body_wrapper {
+  border-style: solid;
+  border-color: transparent;
+  position: relative;
+}
+
+.validation_message_body {
+  padding: 8px; 
+  position: relative;
+  max-width: 47vw;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.validation_message_icon {
+  display: flex;
+  align-self: flex-start;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.validation_message_exclamation_svg {
+  width: 16px;
+  height: 12px;
+  color: white;
+}
+
+.validation_message[data-level="warning"] .validation_message_icon { 
+  background-color: #ff9800;
+}
+.validation_message[data-level="error"] .validation_message_icon { 
+  background-color: #f44336;
+}
+
+.validation_message_content {
+  align-self: center;
+}
+
+.validation_message_border svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.border_path {
+  fill: var(--border-color);
+}
+
+.background_path {  
+  fill: var(--background-color);
+}
+
+.validation_message_close_button_column {
+  display: flex;
+  height: 22px;
+}
+.validation_message_close_button {
+  border: none;
+  background: none;
+  padding: 0;
+  width: 1em;
+  height: 1em;
+  font-size: inherit;
+  cursor: pointer;
+  border-radius: 0.2em;
+  align-self: center;
+}
+.validation_message_close_button:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+.close_svg {
+  width: 100%;
+  height: 100%;
+}
+`;
+
+// HTML template for the validation message
+const validationMessageTemplate = /* html */ `
+  <div
+    class="validation_message"
+    role="alert"
+    aria-live="assertive"
+  >
+    <div class="validation_message_body_wrapper">
+      <div class="validation_message_border"></div>
+      <div class="validation_message_body">
+        <div class="validation_message_icon">
+          <svg
+            class="validation_message_exclamation_svg"
+            viewBox="0 0 125 300"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fill="currentColor"
+              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
+            />
+          </svg>
+        </div>
+        <div class="validation_message_content">Default message</div>
+        <div class="validation_message_close_button_column">
+          <button class="validation_message_close_button">
+            <svg
+              class="close_svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
 export const openValidationMessage = (
   targetElement,
   innerHtml,
@@ -44,6 +187,11 @@ export const openValidationMessage = (
   const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
     ".validation_message_content",
   );
+  const jsenvValidationMessageCloseButton =
+    jsenvValidationMessage.querySelector(".validation_message_close_button");
+  jsenvValidationMessageCloseButton.onclick = () => {
+    close("click_close_button");
+  };
 
   const update = (newInnerHTML, { level = "warning" } = {}) => {
     const borderColor = level === "warning" ? "grey" : "red";
@@ -91,54 +239,20 @@ export const openValidationMessage = (
   }
   close_on_target_focus: {
     const onfocus = () => {
+      if (level === "error") {
+        // error messages must be explicitely closed by the user
+        return;
+      }
       if (targetElement.hasAttribute("data-validation-message-stay-on-focus")) {
         return;
       }
+
       close("target_element_focus");
     };
     targetElement.addEventListener("focus", onfocus);
     closeCallbackSet.add(() => {
       targetElement.removeEventListener("focus", onfocus);
     });
-  }
-  close_on_target_blur: {
-    // for multiple elements this hides element too quickly
-    const onblur = () => {
-      if (targetElement.hasAttribute("data-validation-message-stay-on-blur")) {
-        return;
-      }
-      close("target_element_blur");
-    };
-    // we use setTimeout in case the validation message is opened during a "change" event
-    // (that will likely be followed by a "blur")
-    // otherwise the message is opened and immediately closed
-    const timeout = setTimeout(() => {
-      targetElement.addEventListener("blur", onblur);
-    });
-    closeCallbackSet.add(() => {
-      clearTimeout(timeout);
-      targetElement.removeEventListener("blur", onblur);
-    });
-  }
-
-  close_click_outside: {
-    // it's allowed to open this message on non focusable elements
-    // (like <span>)
-    // in that case we need something else than blur to decide when to close
-    if (document.activeElement !== targetElement) {
-      const onDocumentClick = (event) => {
-        if (
-          event.target !== jsenvValidationMessage &&
-          !jsenvValidationMessage.contains(event.target)
-        ) {
-          close("click_outside");
-        }
-      };
-      document.addEventListener("click", onDocumentClick);
-      closeCallbackSet.add(() => {
-        document.removeEventListener("click", onDocumentClick);
-      });
-    }
   }
 
   const validationMessage = {
@@ -148,109 +262,6 @@ export const openValidationMessage = (
   };
   return validationMessage;
 };
-
-import.meta.css = /*css*/ `
-.validation_message {
-  display: block;
-  overflow: visible;
-  height: auto;
-  position: fixed;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 0.2s ease-in-out;
-  pointer-events: none; 
-}
-
-.validation_message_border {
-  position: absolute;
-  pointer-events: none;
-  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
-}
-
-.validation_message_body_wrapper {
-  border-style: solid;
-  border-color: transparent;
-  position: relative;
-}
-
-.validation_message_body {
-  padding: 8px; 
-  position: relative;
-  max-width: 47vw;
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-}
-
-.validation_message_icon {
-  display: flex;
-  align-self: flex-start;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 2px;
-}
-
-.validation_message_exclamation_svg {
-  width: 16px;
-  height: 12px;
-  color: white;
-}
-
-.validation_message[data-level="warning"] .validation_message_icon { 
-  background-color: #ff9800;
-}
-.validation_message[data-level="error"] .validation_message_icon { 
-  background-color: #f44336;
-}
-
-.validation_message_content {
-  align-self: center;
-}
-
-.validation_message_border svg {
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-}
-
-.border_path {
-  fill: var(--border-color);
-}
-
-.background_path {  
-  fill: var(--background-color);
-}
-`;
-
-// HTML template for the validation message
-const validationMessageTemplate = /* html */ `
-  <div
-    class="validation_message"
-    role="alert"
-    aria-live="assertive"
-  >
-    <div class="validation_message_body_wrapper">
-      <div class="validation_message_border"></div>
-      <div class="validation_message_body">
-        <div class="validation_message_icon">
-          <svg
-            class="validation_message_exclamation_svg"
-            viewBox="0 0 125 300"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              fill="currentColor"
-              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-            />
-          </svg>
-        </div>
-        <div class="validation_message_content">Default message</div>
-      </div>
-    </div>
-  </div>
-`;
 
 // Configuration parameters for validation message appearance
 const ARROW_WIDTH = 16;
