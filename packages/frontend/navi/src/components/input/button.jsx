@@ -4,6 +4,7 @@ import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { useParentAction } from "../action_execution/action_context.js";
 import { useAction } from "../action_execution/use_action.js";
+import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 export const Button = forwardRef((props, ref) => {
@@ -14,6 +15,11 @@ export const Button = forwardRef((props, ref) => {
     disabled,
     children,
     onClick,
+    actionErrorEffect = "show_validation_message", // "show_validation_message" or "throw"
+    onActionPrevented,
+    onActionStart,
+    onActionError,
+    onActionEnd,
     ...rest
   } = props;
 
@@ -27,6 +33,9 @@ export const Button = forwardRef((props, ref) => {
   const { pending } = effectiveAction
     ? useActionStatus(effectiveAction)
     : { pending: false };
+  const executeAction = useExecuteAction(innerRef, {
+    errorEffect: actionErrorEffect,
+  });
 
   return (
     <button
@@ -40,6 +49,22 @@ export const Button = forwardRef((props, ref) => {
         }
         onClick?.(event);
       }}
+      // eslint-disable-next-line react/no-unknown-property
+      onaction={(actionEvent) => {
+        if (action) {
+          executeAction(effectiveAction, {
+            requester: actionEvent.detail.requester,
+          });
+        }
+      }}
+      // eslint-disable-next-line react/no-unknown-property
+      onactionprevented={onActionPrevented}
+      // eslint-disable-next-line react/no-unknown-property
+      onactionstart={onActionStart}
+      // eslint-disable-next-line react/no-unknown-property
+      onactionerror={onActionError}
+      // eslint-disable-next-line react/no-unknown-property
+      onactionend={onActionEnd}
     >
       {children}
     </button>
