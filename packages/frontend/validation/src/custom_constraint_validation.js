@@ -41,7 +41,7 @@ import { openValidationMessage } from "./validation_message.js";
 
 let debug = false;
 
-const formValidationInProgressWeakSet = new WeakSet();
+const validationInProgressWeakSet = new WeakSet();
 
 export const installCustomConstraintValidation = (element) => {
   const validationInterface = {
@@ -76,9 +76,66 @@ export const installCustomConstraintValidation = (element) => {
     element.dispatchEvent(cancelEvent);
   };
 
-  const handleRequestExecute = (e, { target, requester = target }) => {
+  element.requestAction = () => {
+    handleRequestAction(new Event("requestaction", { cancelable: true }), {
+      target: element,
+    });
+  };
+
+  const handleRequestAction = (e, { target, requester = target }) => {
     if (debug) {
-      console.debug(`execute requested after "${e.type}" on`, requester);
+      console.debug(`action requested by`, requester, `(event: "${e.type}")`);
+    }
+
+    const isForm = target.tagName === "FORM";
+    const isFieldset = target.tagName === "FIELDSET";
+
+    if (isForm || isFieldset) {
+      if (validationInProgressWeakSet.has(target)) {
+        if (debug) {
+          console.debug(`validation already in progress for`, target);
+        }
+        return;
+      }
+      validationInProgressWeakSet.add(target);
+      setTimeout(() => {
+        validationInProgressWeakSet.delete(target);
+      });
+
+      const formElements = isForm
+        ? // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
+          target.elements
+        : target.querySelectorAll(
+            "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button[name]:not([disabled])",
+          );
+
+      for (const formElement of formElements) {
+        const validationInterface = formElement.__validationInterface__;
+        if (!validationInterface) {
+          continue;
+        }
+        const isValid = validationInterface.checkValidity({
+          isExecuteRequest: true,
+        });
+        if (isValid) {
+          continue;
+        }
+        validationInterface.reportValidity();
+        const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
+          detail: { reasonEvent: e, requester },
+        });
+        target.dispatchEvent(actionPreventedCustomEvent);
+        return;
+      }
+
+      const actionCustomEvent = new CustomEvent("action", {
+        detail: { reasonEvent: e, requester },
+      });
+      if (debug) {
+        console.debug(`execute dispatched on form after validation success`);
+      }
+      target.dispatchEvent(actionCustomEvent);
+      return;
     }
 
     let elementReceivingEvents;
@@ -95,70 +152,22 @@ export const installCustomConstraintValidation = (element) => {
     if (!checkValidity({ isExecuteRequest: true })) {
       e.preventDefault();
       reportValidity();
-      const executePreventedCustomEvent = new CustomEvent("executeprevented", {
+      const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
         detail: { reasonEvent: e, requester, lastFailedValidityInfo },
       });
-      elementReceivingEvents.dispatchEvent(executePreventedCustomEvent);
+      elementReceivingEvents.dispatchEvent(actionPreventedCustomEvent);
       return;
     }
     // once we have validated the action can occur
     // we are dispatching a custom event that can be used
     // to actually perform the action or to set form action
-    const executeCustomEvent = new CustomEvent("execute", {
+    const actionCustomEvent = new CustomEvent("action", {
       detail: { reasonEvent: e, requester },
     });
     if (debug) {
-      console.debug(`execute dispatched after on`, elementReceivingEvents);
+      console.debug(`action dispatched on`, elementReceivingEvents);
     }
-    elementReceivingEvents.dispatchEvent(executeCustomEvent);
-  };
-
-  const handleRequestSubmit = (e, { submitter } = {}) => {
-    const form = element.form;
-    if (formValidationInProgressWeakSet.has(form)) {
-      if (debug) {
-        console.debug(`form validation already in progress for`, form);
-      }
-      return;
-    }
-    formValidationInProgressWeakSet.add(form);
-    setTimeout(() => {
-      formValidationInProgressWeakSet.delete(form);
-    });
-
-    if (debug) {
-      console.debug(`form validation requested by`, submitter);
-    }
-    // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
-    for (const formElement of form.elements) {
-      const validationInterface = formElement.__validationInterface__;
-      if (!validationInterface) {
-        continue;
-      }
-      const isValid = validationInterface.checkValidity({
-        isExecuteRequest: true,
-      });
-      if (isValid) {
-        continue;
-      }
-      validationInterface.reportValidity();
-      const executePreventedCustomEvent = new CustomEvent("executeprevented", {
-        detail: {
-          reasonEvent: e,
-          submitter,
-        },
-      });
-      form.dispatchEvent(executePreventedCustomEvent);
-      return;
-    }
-
-    const executeCustomEvent = new CustomEvent("execute", {
-      detail: { reasonEvent: e, submitter },
-    });
-    if (debug) {
-      console.debug(`execute dispatched on form after validation success`);
-    }
-    form.dispatchEvent(executeCustomEvent);
+    elementReceivingEvents.dispatchEvent(actionCustomEvent);
   };
 
   let validationMessage;
@@ -327,12 +336,31 @@ export const installCustomConstraintValidation = (element) => {
       // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
       // (not super important because our <form> listen the "execute" and do does preventDefault on "submit")
       e.preventDefault();
-
-      handleRequestSubmit(e);
+      handleRequestAction(e, { target: form });
     };
     requestSubmitCallbackSet.add(onRequestSubmit);
     cleanupCallbackSet.add(() => {
       requestSubmitCallbackSet.delete(onRequestSubmit);
+    });
+  }
+
+  execute_on_form_submit: {
+    const form = element.form;
+    if (!form) {
+      break execute_on_form_submit;
+    }
+    const removeListener = addEventListener(form, "submit", (e) => {
+      e.preventDefault();
+      const actionCustomEvent = new CustomEvent("action", {
+        detail: { reasonEvent: e, requester: form },
+      });
+      if (debug) {
+        console.debug(`action dispatched on`, form);
+      }
+      form.dispatchEvent(actionCustomEvent);
+    });
+    cleanupCallbackSet.add(() => {
+      removeListener();
     });
   }
 
@@ -398,7 +426,7 @@ export const installCustomConstraintValidation = (element) => {
             element,
           );
           if (effect === "activate") {
-            handleRequestExecute(e, {
+            handleRequestAction(e, {
               target: element,
               requester: target,
             });
@@ -416,13 +444,14 @@ export const installCustomConstraintValidation = (element) => {
           // (not super important because our <form> listen the "execute" and do does preventDefault on "submit")
           e.preventDefault();
 
-          handleRequestSubmit(e, {
-            submitter: target,
+          handleRequestAction(e, {
+            target: form,
+            requester: target,
           });
         }
         // "activate", "reset", null
       };
-      window.addEventListener("click", onClick, { capture: true });
+      // window.addEventListener("click", onClick, { capture: true });
       cleanupCallbackSet.add(() => {
         window.removeEventListener("click", onClick, { capture: true });
       });
@@ -442,7 +471,7 @@ export const installCustomConstraintValidation = (element) => {
           }
           const effect = findEventTargetOrAncestor(e, getElementEffect, form);
           if (effect === "activate") {
-            handleRequestExecute(e, {
+            handleRequestAction(e, {
               target: element,
               requester: target,
             });
@@ -455,7 +484,7 @@ export const installCustomConstraintValidation = (element) => {
         }
         const effect = findEventTargetOrAncestor(e, getElementEffect, form);
         if (effect === "activate") {
-          handleRequestExecute(e, {
+          handleRequestAction(e, {
             target: element,
             submitter: target,
           });
@@ -463,7 +492,7 @@ export const installCustomConstraintValidation = (element) => {
         }
         // "submit", "reset", null
       };
-      window.addEventListener("keydown", onKeydown, { capture: true });
+      // window.addEventListener("keydown", onKeydown, { capture: true });
       cleanupCallbackSet.add(() => {
         window.removeEventListener("keydown", onKeydown, { capture: true });
       });
@@ -471,25 +500,26 @@ export const installCustomConstraintValidation = (element) => {
   }
 
   request_on_change_when_outside_form: {
-    const onchange = (changeEvent) => {
-      // if (!element.hasAttribute("data-request-execute-on-change")) {
-      //   return;
-      // }
-      if (element.validity?.valueMissing) {
-        return;
-      }
-      if (element.form) {
-        return;
-      }
-      handleRequestExecute(changeEvent, {
-        target: element,
-        requester: element,
-      });
-    };
-    const removeChange = addEventListener(element, "change", onchange);
-    cleanupCallbackSet.add(() => {
-      removeChange();
-    });
+    break request_on_change_when_outside_form;
+    // const onchange = (changeEvent) => {
+    //   // if (!element.hasAttribute("data-request-execute-on-change")) {
+    //   //   return;
+    //   // }
+    //   if (element.validity?.valueMissing) {
+    //     return;
+    //   }
+    //   if (element.form) {
+    //     return;
+    //   }
+    //   handleRequestAction(changeEvent, {
+    //     target: element,
+    //     requester: element,
+    //   });
+    // };
+    // const removeChange = addEventListener(element, "change", onchange);
+    // cleanupCallbackSet.add(() => {
+    //   removeChange();
+    // });
   }
 
   close_on_escape: {
@@ -546,6 +576,16 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
   }
   requestSubmit.call(this, submitter);
 };
+
+// const submit = HTMLFormElement.prototype.submit;
+// HTMLFormElement.prototype.submit = function (...args) {
+//   const form = this;
+//   if (form.hasAttribute("data-method")) {
+//     console.warn("You must use form.requestSubmit() instead of form.submit()");
+//     return form.requestSubmit();
+//   }
+//   return submit.apply(this, args);
+// };
 
 const addEventListener = (element, event, callback) => {
   element.addEventListener(event, callback);

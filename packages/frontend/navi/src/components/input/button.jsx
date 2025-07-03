@@ -22,6 +22,7 @@ export const Button = forwardRef(
         </ButtonWithOwnAction>
       );
     }
+
     const parentAction = useParentAction();
     if (parentAction) {
       return (

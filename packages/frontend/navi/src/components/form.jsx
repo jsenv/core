@@ -15,20 +15,10 @@
 
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
-import { useAction } from "../use_action.js";
-import { useExecuteAction } from "../use_execute_action.js";
-import { ActionContext } from "./action_context.js";
-import { useFormDataParamsSignal } from "./use_form_data_params_signal.js";
-
-const submit = HTMLFormElement.prototype.submit;
-HTMLFormElement.prototype.submit = function (...args) {
-  const form = this;
-  if (form.hasAttribute("data-method")) {
-    console.warn("You must use form.requestSubmit() instead of form.submit()");
-    return form.requestSubmit();
-  }
-  return submit.apply(this, args);
-};
+import { ActionContext } from "./action_execution/action_context.js";
+import { useAction } from "./action_execution/use_action.js";
+import { useExecuteAction } from "./action_execution/use_execute_action.js";
+import { useFormDataParamsSignal } from "./action_execution/use_form_data_params_signal.js";
 
 export const Form = forwardRef(
   (
@@ -36,8 +26,7 @@ export const Form = forwardRef(
       action,
       method,
       errorEffect = "show_validation_message", // "show_validation_message" or "throw"
-      onExecute,
-      onExecutePrevented,
+      onActionPrevented,
       onActionStart,
       onActionError,
       onActionEnd,
@@ -68,12 +57,8 @@ export const Form = forwardRef(
         {...rest}
         ref={innerRef}
         method={method === "get" ? "get" : "post"}
-        data-method={method}
-        onSubmit={(submitEvent) => {
-          submitEvent.preventDefault();
-        }}
         // eslint-disable-next-line react/no-unknown-property
-        onexecute={async (executeEvent) => {
+        onaction={async (actionEvent) => {
           if (executingRef.current) {
             /**
              * Without this check, when user types in <input> then hit enter 2 http requests are sent
@@ -102,15 +87,12 @@ export const Form = forwardRef(
           const formData = new FormData(form);
           setParamsSignalValue(formData);
 
-          if (onExecute) {
-            onExecute();
-          }
           await executeAction(action, {
-            requester: executeEvent.detail.requester,
+            requester: actionEvent.detail.requester,
           });
         }}
         // eslint-disable-next-line react/no-unknown-property
-        onexecuteprevented={onExecutePrevented}
+        onactionprevented={onActionPrevented}
         // eslint-disable-next-line react/no-unknown-property
         onactionstart={onActionStart}
         // eslint-disable-next-line react/no-unknown-property
