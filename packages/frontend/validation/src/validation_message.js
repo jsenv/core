@@ -233,12 +233,12 @@ export const openValidationMessage = (
     }
   });
 
-  const stopFollowingPosition = followPosition(
+  const positionFollower = followPosition(
     jsenvValidationMessage,
     targetElement,
   );
   closeCallbackSet.add(() => {
-    stopFollowingPosition();
+    positionFollower.stop();
   });
 
   if (onClose) {
@@ -266,7 +266,12 @@ export const openValidationMessage = (
     jsenvValidationMessage,
     update,
     close,
+    updatePosition: positionFollower.updatePosition,
   };
+  targetElement.jsenvValidationMessage = validationMessage;
+  closeCallbackSet.add(() => {
+    delete targetElement.jsenvValidationMessage;
+  });
   return validationMessage;
 };
 
@@ -666,6 +671,52 @@ const followPosition = (validationMessage, targetElement) => {
     });
   }
 
+  const positionCheck = {};
+  update_on_target_position_change: {
+    let lastBoundingRect = null;
+    let positionCheckInterval = null;
+    const startPositionChecking = () => {
+      if (positionCheckInterval) return;
+      positionCheckInterval = setInterval(checkPosition, 100); // Check every 100ms
+    };
+
+    const stopPositionChecking = () => {
+      if (positionCheckInterval) {
+        clearInterval(positionCheckInterval);
+        positionCheckInterval = null;
+      }
+    };
+
+    const checkPosition = () => {
+      const currentRect = targetElement.getBoundingClientRect();
+      const positionChanged =
+        !lastBoundingRect ||
+        Math.abs(lastBoundingRect.left - currentRect.left) > 0.5 ||
+        Math.abs(lastBoundingRect.top - currentRect.top) > 0.5 ||
+        Math.abs(lastBoundingRect.width - currentRect.width) > 0.5 ||
+        Math.abs(lastBoundingRect.height - currentRect.height) > 0.5;
+
+      if (positionChanged) {
+        lastBoundingRect = {
+          left: currentRect.left,
+          top: currentRect.top,
+          width: currentRect.width,
+          height: currentRect.height,
+        };
+        schedulePositionUpdate();
+      }
+    };
+
+    Object.assign(positionCheck, {
+      start: startPositionChecking,
+      stop: stopPositionChecking,
+    });
+
+    cleanupCallbackSet.add(() => {
+      stopPositionChecking();
+    });
+  }
+
   // Show/hide validation message based on target element visibility
   update_on_target_visibility_change: {
     const options = {
@@ -678,8 +729,10 @@ const followPosition = (validationMessage, targetElement) => {
       if (entry.isIntersecting) {
         validationMessage.style.opacity = 1;
         schedulePositionUpdate();
+        positionCheck.start();
       } else {
         validationMessage.style.opacity = 0;
+        positionCheck.stop();
       }
     }, options);
     intersectionObserver.observe(targetElement);
@@ -718,5 +771,16 @@ const followPosition = (validationMessage, targetElement) => {
     });
   }
 
-  return stop;
+  update_on_window_resize: {
+    const handleResize = () => {
+      schedulePositionUpdate();
+    };
+
+    window.addEventListener("resize", handleResize);
+    cleanupCallbackSet.add(() => {
+      window.removeEventListener("resize", handleResize);
+    });
+  }
+
+  return { updatePosition, stop };
 };
