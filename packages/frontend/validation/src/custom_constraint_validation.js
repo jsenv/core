@@ -76,13 +76,20 @@ export const installCustomConstraintValidation = (element) => {
     element.dispatchEvent(cancelEvent);
   };
 
-  element.requestAction = () => {
-    handleRequestAction(new Event("requestaction", { cancelable: true }), {
+  element.requestAction = (event, { ignoreForm } = {}) => {
+    if (!event) {
+      event = new CustomEvent("requestaction", { cancelable: true });
+    }
+    handleRequestAction(event, {
       target: element,
+      ignoreForm,
     });
   };
 
-  const handleRequestAction = (e, { target, requester = target }) => {
+  const handleRequestAction = (
+    e,
+    { target, requester = target, ignoreForm = false },
+  ) => {
     if (debug) {
       console.debug(`action requested by`, requester, `(event: "${e.type}")`);
     }
@@ -129,7 +136,7 @@ export const installCustomConstraintValidation = (element) => {
       }
 
       const actionCustomEvent = new CustomEvent("action", {
-        detail: { reasonEvent: e, requester },
+        detail: { cause: e, requester },
       });
       if (debug) {
         console.debug(
@@ -144,7 +151,11 @@ export const installCustomConstraintValidation = (element) => {
 
     let elementReceivingEvents;
     if (target.form) {
-      elementReceivingEvents = target.form;
+      if (ignoreForm) {
+        elementReceivingEvents = target;
+      } else {
+        elementReceivingEvents = target.form;
+      }
     } else {
       const fieldset = target.closest("fieldset");
       if (fieldset) {
@@ -157,7 +168,7 @@ export const installCustomConstraintValidation = (element) => {
       e.preventDefault();
       reportValidity();
       const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-        detail: { reasonEvent: e, requester, lastFailedValidityInfo },
+        detail: { cause: e, requester, lastFailedValidityInfo },
       });
       elementReceivingEvents.dispatchEvent(actionPreventedCustomEvent);
       return;
@@ -166,7 +177,7 @@ export const installCustomConstraintValidation = (element) => {
     // we are dispatching a custom event that can be used
     // to actually perform the action or to set form action
     const actionCustomEvent = new CustomEvent("action", {
-      detail: { reasonEvent: e, requester },
+      detail: { cause: e, requester },
     });
     if (debug) {
       console.debug(`action dispatched on`, elementReceivingEvents);
@@ -356,7 +367,7 @@ export const installCustomConstraintValidation = (element) => {
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
       const actionCustomEvent = new CustomEvent("action", {
-        detail: { reasonEvent: e, requester: form },
+        detail: { cause: e, requester: form },
       });
       if (debug) {
         console.debug(`action dispatched on`, form);

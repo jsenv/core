@@ -61,7 +61,7 @@ const ActionButton = forwardRef((props, ref) => {
       disabled={disabled || pending}
       onClick={(event) => {
         if (action) {
-          event.target.requestAction();
+          event.target.requestAction(event, { ignoreForm: true });
         }
         onClick?.(event);
       }}
@@ -70,6 +70,7 @@ const ActionButton = forwardRef((props, ref) => {
       // eslint-disable-next-line react/no-unknown-property
       onaction={(actionEvent) => {
         if (action) {
+          actionEvent.detail.cause.preventDefault(); // prevent submit by click
           executeAction(effectiveAction, {
             requester: actionEvent.target,
           });

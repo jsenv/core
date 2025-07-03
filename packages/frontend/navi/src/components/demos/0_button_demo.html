@@ -107,18 +107,25 @@
               </button>
             </span>
 
-            <Form>
+            <Form
+              action={({ name }) => {
+                // eslint-disable-next-line no-alert
+                window.alert(`form action called { name: ${name} }`);
+              }}
+            >
+              <input type="hidden" name="name" value="dam" />
               <Button
-                action={async () => {
+                action={async ({ name }) => {
                   setTimeout(() => {
                     setCount((count) => count + 1);
                   }, 200);
                   await new Promise((resolve) => setTimeout(resolve, 1_500));
-                  throw new Error(`test: ${count}`);
+                  throw new Error(`test: { count: ${count}, name: ${name} }`);
                 }}
               >
                 Hello
               </Button>
+              <button type="submit">Submit</button>
             </Form>
           </div>
         );

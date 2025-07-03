@@ -129,7 +129,7 @@ const ActionInputCheckbox = forwardRef(
             onInput(e);
           }
           if (action) {
-            e.target.requestAction();
+            e.target.requestAction(e);
           }
         }}
         // eslint-disable-next-line react/no-unknown-property
