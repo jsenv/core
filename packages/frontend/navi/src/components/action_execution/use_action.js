@@ -5,6 +5,9 @@ export const useAction = (action, actionParamsSignal) => {
   const actionRef = useRef();
   const actionCallbackRef = useRef();
 
+  if (!action) {
+    return null;
+  }
   if (typeof action === "function") {
     let actionInstance = actionRef.current;
     if (!actionInstance) {
@@ -18,9 +21,6 @@ export const useAction = (action, actionParamsSignal) => {
     }
     actionCallbackRef.current = action;
     return actionInstance;
-  }
-  if (!action) {
-    return null;
   }
   if (actionParamsSignal) {
     return action.bindParams(actionParamsSignal);

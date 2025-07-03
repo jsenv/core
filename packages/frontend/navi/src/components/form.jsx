@@ -48,7 +48,7 @@ export const Form = forwardRef(
 
     const [paramsSignal, setParamsSignalValue] = useFormDataParamsSignal();
 
-    action = useAction(action, paramsSignal);
+    const boundAction = useAction(action, paramsSignal);
     const executeAction = useExecuteAction(innerRef, { errorEffect });
     const executingRef = useRef(false);
 
@@ -58,7 +58,7 @@ export const Form = forwardRef(
         ref={innerRef}
         method={method === "get" ? "get" : "post"}
         // eslint-disable-next-line react/no-unknown-property
-        onaction={async (actionEvent) => {
+        onaction={(actionEvent) => {
           if (executingRef.current) {
             /**
              * Without this check, when user types in <input> then hit enter 2 http requests are sent
@@ -87,7 +87,7 @@ export const Form = forwardRef(
           const formData = new FormData(form);
           setParamsSignalValue(formData);
 
-          await executeAction(action, {
+          executeAction(boundAction, {
             requester: actionEvent.detail.requester,
           });
         }}
@@ -100,7 +100,7 @@ export const Form = forwardRef(
         // eslint-disable-next-line react/no-unknown-property
         onactionerror={onActionError}
       >
-        <ActionContext.Provider value={action}>
+        <ActionContext.Provider value={boundAction}>
           {children}
         </ActionContext.Provider>
       </form>
