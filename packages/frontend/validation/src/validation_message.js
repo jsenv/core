@@ -45,7 +45,6 @@ import.meta.css = /*css*/ `
   padding: 8px; 
   position: relative;
   max-width: 47vw;
-  min-width: 200px;
   display: flex;
   flex-direction: row;
   gap: 10px;
@@ -77,6 +76,7 @@ import.meta.css = /*css*/ `
 
 .validation_message_content {
   align-self: center;
+  word-break: break-word;  
 }
 
 .validation_message_border svg {
