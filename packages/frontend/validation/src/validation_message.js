@@ -45,6 +45,7 @@ import.meta.css = /*css*/ `
   padding: 8px; 
   position: relative;
   max-width: 47vw;
+  min-width: 200px;
   display: flex;
   flex-direction: row;
   gap: 10px;
