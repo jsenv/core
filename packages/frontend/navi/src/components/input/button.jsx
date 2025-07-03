@@ -11,86 +11,80 @@ export const Button = forwardRef((props, ref) => {
   return renderActionComponent(props, ref, ActionButton, SimpleButton);
 });
 
-const SimpleButton = forwardRef(
-  (
-    { autoFocus, constraints = [], disabled, children, onClick, ...rest },
-    ref,
-  ) => {
-    const innerRef = useRef();
-    useImperativeHandle(ref, () => innerRef.current);
-    useAutoFocus(innerRef, autoFocus);
-    useConstraints(innerRef, constraints);
+const SimpleButton = forwardRef((props, ref) => {
+  const { autoFocus, constraints = [], children, ...rest } = props;
 
-    return (
-      <button ref={innerRef} {...rest} disabled={disabled} onClick={onClick}>
-        {children}
-      </button>
-    );
-  },
-);
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  useAutoFocus(innerRef, autoFocus);
+  useConstraints(innerRef, constraints);
 
-const ActionButton = forwardRef(
-  (
-    {
-      action,
-      parentAction,
-      autoFocus,
-      constraints = [],
-      disabled,
-      children,
-      onClick,
-      actionErrorEffect = "show_validation_message",
-      onActionPrevented,
-      onActionStart,
-      onActionError,
-      onActionEnd,
-      ...rest
-    },
-    ref,
-  ) => {
-    const innerRef = useRef();
-    useImperativeHandle(ref, () => innerRef.current);
-    useAutoFocus(innerRef, autoFocus);
-    useConstraints(innerRef, constraints);
+  return (
+    <button ref={innerRef} {...rest}>
+      {children}
+    </button>
+  );
+});
 
-    const boundAction = useAction(action);
-    const effectiveAction = boundAction || parentAction;
-    const { pending } = useActionStatus(effectiveAction);
-    const executeAction = useExecuteAction(innerRef, {
-      errorEffect: actionErrorEffect,
-    });
+const ActionButton = forwardRef((props, ref) => {
+  const {
+    action,
+    parentAction,
+    autoFocus,
+    constraints = [],
+    disabled,
+    children,
+    onClick,
+    actionErrorEffect,
+    onActionPrevented,
+    onActionStart,
+    onActionError,
+    onActionEnd,
+    ...rest
+  } = props;
 
-    return (
-      <button
-        ref={innerRef}
-        data-validation-message-arrow-x="center"
-        {...rest}
-        disabled={disabled || pending}
-        onClick={(event) => {
-          if (action) {
-            event.target.requestAction();
-          }
-          onClick?.(event);
-        }}
-        // eslint-disable-next-line react/no-unknown-property
-        onaction={(actionEvent) => {
-          if (action) {
-            executeAction(effectiveAction, {
-              requester: actionEvent.detail.requester,
-            });
-          }
-        }}
-        // eslint-disable-next-line react/no-unknown-property
-        onactionprevented={onActionPrevented}
-        // eslint-disable-next-line react/no-unknown-property
-        onactionstart={onActionStart}
-        // eslint-disable-next-line react/no-unknown-property
-        onactionerror={onActionError}
-        // eslint-disable-next-line react/no-unknown-property
-        onactionend={onActionEnd}
-      >
-        {children}
-      </button>
-    );
-  },
-);
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  useAutoFocus(innerRef, autoFocus);
+  useConstraints(innerRef, constraints);
+
+  const boundAction = useAction(action);
+  const effectiveAction = boundAction || parentAction;
+  const { pending } = useActionStatus(effectiveAction);
+  const executeAction = useExecuteAction(innerRef, {
+    errorEffect: actionErrorEffect,
+  });
+
+  return (
+    <button
+      ref={innerRef}
+      data-validation-message-arrow-x="center"
+      {...rest}
+      disabled={disabled || pending}
+      onClick={(event) => {
+        if (action) {
+          event.target.requestAction();
+        }
+        onClick?.(event);
+      }}
+      // eslint-disable-next-line react/no-unknown-property
+      onactionprevented={onActionPrevented}
+      // eslint-disable-next-line react/no-unknown-property
+      onaction={(actionEvent) => {
+        if (action) {
+          executeAction(effectiveAction, {
+            requester: actionEvent.target,
+          });
+        }
+      }}
+      // eslint-disable-next-line react/no-unknown-property
+      onactionstart={onActionStart}
+      // eslint-disable-next-line react/no-unknown-property
+      onactionerror={onActionError}
+      // eslint-disable-next-line react/no-unknown-property
+      onactionend={onActionEnd}
+    >
+      {children}
+    </button>
+  );
+});

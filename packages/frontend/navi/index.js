@@ -13,8 +13,8 @@ export {
   EditableText,
   useEditableController,
 } from "./src/components/editable_text/editable_text.jsx";
-export { Fieldset } from "./src/components/form_and_fieldset/fieldset.jsx";
-export { Form } from "./src/components/form_and_fieldset/form.jsx";
+export { Fieldset } from "./src/components/fieldset.jsx";
+export { Form } from "./src/components/form.jsx";
 export { Button } from "./src/components/input/button.jsx";
 export { Input } from "./src/components/input/input.jsx";
 export { InputCheckbox } from "./src/components/input/input_checkbox.jsx";

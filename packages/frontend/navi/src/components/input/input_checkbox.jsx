@@ -5,6 +5,7 @@ import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useActionSingleParamSignal } from "../action_execution/use_action_params_signal.js";
+import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
@@ -25,6 +26,32 @@ export const InputCheckbox = forwardRef((props, ref) => {
   );
 });
 
+const SimpleInputCheckbox = forwardRef((props, ref) => {
+  const { autoFocus, constraints = [], children, ...rest } = props;
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  useAutoFocus(innerRef, autoFocus);
+  useConstraints(innerRef, constraints);
+
+  let input = (
+    <input ref={innerRef} type="checkbox" {...rest}>
+      {children}
+    </input>
+  );
+
+  if (children) {
+    input = (
+      <label>
+        {children}
+        {input}
+      </label>
+    );
+  }
+
+  return input;
+});
+
 const ActionInputCheckbox = forwardRef(
   (
     {
@@ -35,15 +62,16 @@ const ActionInputCheckbox = forwardRef(
       constraints = [],
       action,
       parentAction,
-      label,
       disabled,
-      pendingEffect = "loading",
-      pendingTarget = "input", // "input" or "label"
       onCancel,
       onInput,
+      actionPendingEffect = "loading",
+      actionErrorEffect,
+      onActionPrevented,
       onActionStart,
       onActionError,
       onActionEnd,
+      children,
       ...rest
     },
     ref,
@@ -64,8 +92,10 @@ const ActionInputCheckbox = forwardRef(
       useActionSingleParamSignal(action, checkedAtStart, name);
     const boundAction = useAction(action, checkedParamsSignal);
     const effectiveAction = boundAction || parentAction;
-
     const { pending, error, aborted } = useActionStatus(effectiveAction);
+    const executeAction = useExecuteAction(innerRef, {
+      errorEffect: actionErrorEffect,
+    });
 
     const checkedFromSignal = getParamSignalValue();
     const checked = error || aborted ? initialChecked : checkedFromSignal;
@@ -80,6 +110,14 @@ const ActionInputCheckbox = forwardRef(
         data-validation-message-arrow-x="center"
         checked={checked}
         disabled={disabled || pending}
+        // eslint-disable-next-line react/no-unknown-property
+        oncancel={(e) => {
+          e.target.checked = checked;
+          setNavStateValue(checkedAtStart);
+          if (onCancel) {
+            onCancel();
+          }
+        }}
         onInput={(e) => {
           const checkboxIsChecked = e.target.checked;
           if (checkedAtStart) {
@@ -91,13 +129,18 @@ const ActionInputCheckbox = forwardRef(
           if (onInput) {
             onInput(e);
           }
+          if (action) {
+            e.target.requestAction();
+          }
         }}
         // eslint-disable-next-line react/no-unknown-property
-        oncancel={(e) => {
-          e.target.checked = checked;
-          setNavStateValue(checkedAtStart);
-          if (onCancel) {
-            onCancel();
+        onactionprevented={onActionPrevented}
+        // eslint-disable-next-line react/no-unknown-property
+        onaction={(actionEvent) => {
+          if (action) {
+            executeAction(effectiveAction, {
+              requester: actionEvent.target,
+            });
           }
         }}
         // eslint-disable-next-line react/no-unknown-property
@@ -107,38 +150,26 @@ const ActionInputCheckbox = forwardRef(
         // eslint-disable-next-line react/no-unknown-property
         onactionend={() => {
           setNavStateValue(undefined);
-          if (onActionEnd) {
-            onActionEnd();
-          }
+          onActionEnd?.();
         }}
       />
     );
 
-    if (pendingEffect === "loading" && pendingTarget === "input") {
+    if (actionPendingEffect === "loading") {
       inputCheckbox = (
         <LoaderBackground pending={pending}>{inputCheckbox}</LoaderBackground>
       );
     }
 
-    let inputCheckboxWithLabel = label ? (
+    let inputCheckboxWithLabel = children ? (
       <label data-disabled={disabled || pending ? "" : undefined}>
-        {label}
+        {children}
         {inputCheckbox}
       </label>
     ) : (
       inputCheckbox
     );
 
-    if (pendingEffect === "loading" && pendingTarget === "label") {
-      inputCheckboxWithLabel = (
-        <LoaderBackground pending={pending}>
-          {inputCheckboxWithLabel}
-        </LoaderBackground>
-      );
-    }
-
     return inputCheckboxWithLabel;
   },
 );
-
-const SimpleInputCheckbox = forwardRef((props, ref) => {});

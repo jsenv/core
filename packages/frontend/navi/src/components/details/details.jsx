@@ -2,8 +2,8 @@ import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
 import { ActionRenderer } from "../../action_renderer.jsx";
 import { useActionStatus } from "../../use_action_status.js";
-import { useAction } from "../use_action.js";
-import { useExecuteAction } from "../use_execute_action.js";
+import { useAction } from "../action_execution/use_action.js";
+import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useNavState } from "../use_nav_state.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 

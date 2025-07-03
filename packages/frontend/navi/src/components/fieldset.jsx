@@ -1,9 +1,9 @@
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
-import { useAction } from "../use_action.js";
-import { useExecuteAction } from "../use_execute_action.js";
-import { ActionContext } from "./action_context.js";
-import { useFormDataParamsSignal } from "./use_form_data_params_signal.js";
+import { ActionContext } from "./action_execution/action_context.js";
+import { useAction } from "./action_execution/use_action.js";
+import { useExecuteAction } from "./action_execution/use_execute_action.js";
+import { useFormDataParamsSignal } from "./action_execution/use_form_data_params_signal.js";
 
 export const Fieldset = forwardRef(
   (
