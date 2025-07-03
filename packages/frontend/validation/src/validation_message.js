@@ -164,8 +164,15 @@ const validationMessageTemplate = /* html */ `
 export const openValidationMessage = (
   targetElement,
   innerHtml,
-  { level = "warning", onClose, debug = false } = {},
+  { level = "warning", onClose, debug = true } = {},
 ) => {
+  if (debug) {
+    console.debug("open validation message on", targetElement, {
+      message: innerHtml,
+      level,
+    });
+  }
+
   let opened = true;
   const closeCallbackSet = new Set();
   const close = (reason) => {

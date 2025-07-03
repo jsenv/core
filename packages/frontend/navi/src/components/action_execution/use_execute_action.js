@@ -81,9 +81,10 @@ export const useExecuteAction = (
       dispatchCustomEvent("actionstart");
       const result = performAction(action, {
         method,
+        onAbort: () => {},
         onError: (error) => {
           if (
-            elementRef.current // at this stage the action side effect might have remove the <element> from the DOM
+            elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
           ) {
             dispatchCustomEvent("actionerror", { detail: { error } });
           }
@@ -95,7 +96,7 @@ export const useExecuteAction = (
         },
         onSuccess: () => {
           if (
-            elementRef.current // at this stage the action side effect might have remove the <element> from the DOM
+            elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
           ) {
             dispatchCustomEvent("actionend");
           }
@@ -109,7 +110,7 @@ export const useExecuteAction = (
   return executeAction;
 };
 
-const performAction = (action, { method, onError, onSuccess }) => {
+const performAction = (action, { method, onAbort, onError, onSuccess }) => {
   const onSettled = () => {
     const aborted = action.aborted;
     const error = action.error;
@@ -117,7 +118,9 @@ const performAction = (action, { method, onError, onSuccess }) => {
   };
 
   const onResult = ({ aborted, error }) => {
-    if (error) {
+    if (aborted) {
+      onAbort();
+    } else if (error) {
       onError(error);
     } else {
       onSuccess();
