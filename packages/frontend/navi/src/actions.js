@@ -353,18 +353,18 @@ ${lines.join("\n")}`);
       const actionToLoadPrivateProperties = getActionPrivateProperties(
         actionToPreloadOrLoad,
       );
-      const loadPromise = actionToLoadPrivateProperties.performLoad({
+      const performLoadResult = actionToLoadPrivateProperties.performLoad({
         signal,
         reason,
         isPreload,
       });
       activationWeakSet.add(actionToPreloadOrLoad);
 
-      if (actionToPreloadOrLoad.loadingState === LOADED) {
-        // sync actions are already done, no need to wait
+      if (performLoadResult && typeof performLoadResult.then === "function") {
+        actionPromiseMap.set(actionToPreloadOrLoad, performLoadResult);
+        thenableArray.push(performLoadResult);
       } else {
-        actionPromiseMap.set(actionToPreloadOrLoad, loadPromise);
-        thenableArray.push(loadPromise);
+        // sync actions are already done, no need to wait
       }
     };
     for (const actionToPreload of toPreloadSet) {
@@ -728,6 +728,8 @@ export const createAction = (callback, rootOptions = {}) => {
         }
 
         let loadResult;
+        let rejected = false;
+        let rejectedValue;
         const onLoadEnd = () => {
           dataSignal.value = loadResult;
           loadingStateSignal.value = LOADED;
@@ -749,32 +751,29 @@ export const createAction = (callback, rootOptions = {}) => {
             }
             return;
           }
+          if (debug) {
+            console.log(`"${action}": failed (error: ${e})`);
+          }
           batch(() => {
             errorSignal.value = e;
             loadingStateSignal.value = FAILED;
           });
-          if (debug) {
-            console.log(`"${action}": failed (error: ${e})`);
-          }
         };
 
         try {
-          let gotError = false;
           const thenableArray = [];
           const callbackResult = callback(...args);
           if (callbackResult && typeof callbackResult.then === "function") {
-            thenableArray.push(callbackResult);
-            callbackResult.then(
-              (value) => {
-                loadResult = value;
-              },
-              (e) => {
-                if (gotError) {
-                  return;
-                }
-                gotError = true;
-                onLoadError(e);
-              },
+            thenableArray.push(
+              callbackResult.then(
+                (value) => {
+                  loadResult = value;
+                },
+                (e) => {
+                  rejected = true;
+                  rejectedValue = e;
+                },
+              ),
             );
           } else {
             loadResult = callbackResult;
@@ -785,11 +784,10 @@ export const createAction = (callback, rootOptions = {}) => {
                 ui.renderLoaded = renderLoaded;
               },
               (e) => {
-                if (gotError) {
-                  return;
+                if (!rejected) {
+                  rejected = true;
+                  rejectedValue = e;
                 }
-                gotError = true;
-                onLoadError(e);
               },
             );
             thenableArray.push(renderLoadedPromise);
@@ -799,12 +797,16 @@ export const createAction = (callback, rootOptions = {}) => {
             return undefined;
           }
           return Promise.all(thenableArray).then(() => {
-            onLoadEnd();
+            if (rejected) {
+              onLoadError(rejectedValue);
+            } else {
+              onLoadEnd();
+            }
           });
         } catch (e) {
           onLoadError(e);
+          return undefined;
         }
-        return undefined;
       };
 
       const performUnload = ({ reason }) => {

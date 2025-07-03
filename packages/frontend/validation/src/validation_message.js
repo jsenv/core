@@ -164,7 +164,7 @@ const validationMessageTemplate = /* html */ `
 export const openValidationMessage = (
   targetElement,
   innerHtml,
-  { level = "warning", onClose, debug = true } = {},
+  { level = "warning", onClose, debug = false } = {},
 ) => {
   if (debug) {
     console.debug("open validation message on", targetElement, {
