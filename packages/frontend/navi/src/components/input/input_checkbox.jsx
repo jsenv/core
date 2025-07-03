@@ -86,11 +86,10 @@ const ActionInputCheckbox = forwardRef(
     const checkedAtStart =
       navStateValue === undefined ? initialChecked : navStateValue;
 
-    const [effectiveAction, getChecked, setChecked] = useAction(
-      action,
+    const [effectiveAction, getChecked, setChecked] = useAction(action, {
       name,
-      checkedAtStart ? "on" : undefined,
-    );
+      value: checkedAtStart ? "on" : undefined,
+    });
     const { pending, error, aborted } = useActionStatus(effectiveAction);
     const executeAction = useExecuteAction(innerRef, {
       errorEffect: actionErrorEffect,

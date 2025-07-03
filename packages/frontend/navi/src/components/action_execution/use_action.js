@@ -3,10 +3,10 @@ import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
 import { useParentAction } from "./action_context.js";
 
-export const useAction = (action, name, value) => {
+export const useAction = (action, { name, value, preferSelf } = {}) => {
   const mountedRef = useRef(false);
   const parentBoundAction = useParentAction();
-  if (parentBoundAction) {
+  if (parentBoundAction && !preferSelf) {
     const parentActionParamsSignal = parentBoundAction.meta.paramsSignal;
     const parentActionUpdateParams = parentBoundAction.meta.updateParams;
     const getValue = name

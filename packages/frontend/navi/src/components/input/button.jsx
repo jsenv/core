@@ -47,7 +47,7 @@ const ActionButton = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  const [effectiveAction] = useAction(action);
+  const [effectiveAction] = useAction(action, { preferSelf: true });
   const { pending } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,

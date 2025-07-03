@@ -51,8 +51,7 @@ export const InputRadio = forwardRef(
     const checkedAtStart = initialChecked; // || navStateValue === value;
     const [boundAction, getParamSignalValue, setParamSignalValue] = useAction(
       action,
-      checkedAtStart ? value : undefined,
-      name,
+      { name, value: checkedAtStart ? value : undefined },
     );
 
     const { pending } = useActionStatus(action);
