@@ -1,6 +1,6 @@
 import { useLayoutEffect } from "preact/hooks";
-import { useActionStatus } from "../use_action_status.js";
-import { useParentAction } from "./form_and_fieldset/action_context.js";
+import { useActionStatus } from "../../use_action_status.js";
+import { useParentAction } from "./action_context.js";
 import { useAction } from "./use_action.js";
 import { useExecuteAction } from "./use_execute_action.js";
 
@@ -55,18 +55,4 @@ export const useActionOrParentActionStatus = (
   }, [parentAction, action, executeAction]);
 
   return action ? actionStatus : parentActionStatus;
-};
-
-export const useOnExecute = (elementRef, callback) => {
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    return addEventListener(element, "execute", callback);
-  }, [callback]);
-};
-
-const addEventListener = (element, eventName, listener) => {
-  element.addEventListener(eventName, listener);
-  return () => {
-    element.removeEventListener(eventName, listener);
-  };
 };

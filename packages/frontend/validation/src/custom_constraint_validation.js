@@ -81,7 +81,17 @@ export const installCustomConstraintValidation = (element) => {
       console.debug(`execute requested after "${e.type}" on`, requester);
     }
 
-    const elementReceivingEvents = target.form ? target.form : target;
+    let elementReceivingEvents;
+    if (target.form) {
+      elementReceivingEvents = target.form;
+    } else {
+      const fieldset = target.closest("fieldset");
+      if (fieldset) {
+        elementReceivingEvents = fieldset;
+      } else {
+        elementReceivingEvents = target;
+      }
+    }
     if (!checkValidity({ isExecuteRequest: true })) {
       e.preventDefault();
       reportValidity();

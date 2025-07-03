@@ -1,4 +1,4 @@
-import { useActionParamsSignal } from "../use_action_params_signal.js";
+import { useActionParamsSignal } from "./use_action_params_signal.js";
 
 export const useFormDataParamsSignal = (initialParams = {}) => {
   const paramsSignal = useActionParamsSignal(initialParams);

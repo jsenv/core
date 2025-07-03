@@ -1,5 +1,5 @@
 import { useRef } from "preact/hooks";
-import { createAction } from "../actions.js";
+import { createAction } from "../../actions.js";
 
 export const useAction = (action, actionParamsSignal) => {
   const actionRef = useRef();
