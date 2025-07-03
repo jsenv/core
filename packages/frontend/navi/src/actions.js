@@ -874,10 +874,13 @@ const createActionProxyFromSignal = (
   const proxyMethod = (method) => {
     return (...args) => currentAction[method](...args);
   };
+  const nameSignal = signal();
   const actionProxy = {
     isProxy: true,
     callback: undefined,
-    name: undefined,
+    get name() {
+      return nameSignal.value;
+    },
     params: undefined,
     loadRequested: undefined,
     loadingState: undefined,
@@ -898,7 +901,7 @@ const createActionProxyFromSignal = (
 
   onActionTargetChange((actionTarget) => {
     const currentAction = actionTarget || action;
-    actionProxy.name = `[Proxy] ${currentAction.name}`;
+    nameSignal.value = `[Proxy] ${currentAction.name}`;
     actionProxy.callback = currentAction.callback;
     actionProxy.params = currentAction.params;
     actionProxy.loadRequested = currentAction.loadRequested;

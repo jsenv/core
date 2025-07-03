@@ -11,4 +11,5 @@ export const formDataToObject = (formData) => {
       params[name] = value;
     }
   }
+  return params;
 };

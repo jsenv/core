@@ -52,6 +52,7 @@ export const Form = forwardRef((props, ref) => {
   return (
     <form
       {...rest}
+      action={`javascript:void(${boundAction.name})`}
       ref={innerRef}
       method={method === "get" ? "get" : "post"}
       // eslint-disable-next-line react/no-unknown-property
