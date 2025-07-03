@@ -102,7 +102,12 @@ export const requestActionsUpdates = ({
   reason,
 }) => {
   const signal = new AbortController().signal;
-  return updateActions({
+  const [
+    requestedResult,
+    // allDoneResult is the thing we'll return the the navigation api
+    // so that it waits for every actions to consider things are done
+    // allResult
+  ] = updateActions({
     signal,
     preloadSet,
     loadSet,
@@ -110,6 +115,7 @@ export const requestActionsUpdates = ({
     isReload,
     reason,
   });
+  return requestedResult;
 };
 export const reloadActions = async (actionSet, { reason } = {}) => {
   return requestActionsUpdates({
@@ -273,7 +279,8 @@ export const updateActions = ({
       onActionToLoadOrPreload(actionToLoad, false);
     }
   }
-  const thenableArray = [];
+  const allThenableArray = [];
+  const requestedThenableArray = [];
   list_stays_loading_and_stays_loaded: {
     for (const actionLoading of loadingSet) {
       if (toUnloadSet.has(actionLoading)) {
@@ -286,7 +293,7 @@ export const updateActions = ({
       } else {
         // an action that was loading and not affected by this update
         const actionPromise = actionPromiseMap.get(actionLoading);
-        thenableArray.push(actionPromise);
+        allThenableArray.push(actionPromise);
         staysLoadingSet.add(actionLoading);
       }
     }
@@ -362,7 +369,8 @@ ${lines.join("\n")}`);
 
       if (performLoadResult && typeof performLoadResult.then === "function") {
         actionPromiseMap.set(actionToPreloadOrLoad, performLoadResult);
-        thenableArray.push(performLoadResult);
+        requestedThenableArray.push(performLoadResult);
+        allThenableArray.push(performLoadResult);
       } else {
         // sync actions are already done, no need to wait
       }
@@ -382,10 +390,14 @@ ${lines.join("\n")}`);
   if (debug) {
     console.groupEnd();
   }
-  if (thenableArray.length) {
-    return Promise.all(thenableArray);
-  }
-  return null;
+
+  const requestedResult = requestedThenableArray.length
+    ? Promise.all(requestedThenableArray)
+    : null;
+  const allResult = allThenableArray.length
+    ? Promise.all(allThenableArray)
+    : null;
+  return [requestedResult, allResult];
 };
 
 const initialParamsDefault = {};
