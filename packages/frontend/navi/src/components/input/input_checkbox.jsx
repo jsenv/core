@@ -1,9 +1,11 @@
 import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
+import { useActionStatus } from "../../use_action_status.js";
+import { renderActionComponent } from "../action_execution/render_action_component.jsx";
+import { useAction } from "../action_execution/use_action.js";
+import { useActionSingleParamSignal } from "../action_execution/use_action_params_signal.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useActionOrParentActionStatus } from "../use_action_or_parent_action_status.js";
-import { useActionSingleParamSignal } from "../use_action_params_signal.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
@@ -14,7 +16,16 @@ import.meta.css = /*css*/ `
   }
 `;
 
-export const InputCheckbox = forwardRef(
+export const InputCheckbox = forwardRef((props, ref) => {
+  return renderActionComponent(
+    props,
+    ref,
+    ActionInputCheckbox,
+    SimpleInputCheckbox,
+  );
+});
+
+const ActionInputCheckbox = forwardRef(
   (
     {
       id,
@@ -23,6 +34,7 @@ export const InputCheckbox = forwardRef(
       checked: initialChecked = false,
       constraints = [],
       action,
+      parentAction,
       label,
       disabled,
       pendingEffect = "loading",
@@ -42,18 +54,18 @@ export const InputCheckbox = forwardRef(
     useConstraints(innerRef, constraints);
 
     const [navStateValue, setNavStateValue] = useNavState(id);
-    const checkedAtStart =
-      navStateValue === undefined ? initialChecked : navStateValue;
-    const [checkedSignal, getParamSignalValue, setParamSignalValue] =
-      useActionSingleParamSignal(action, checkedAtStart, name);
     useOnFormReset(innerRef, () => {
       setNavStateValue(undefined);
     });
-    const { pending, error, aborted } = useActionOrParentActionStatus(
-      innerRef,
-      action,
-      checkedSignal,
-    );
+    const checkedAtStart =
+      navStateValue === undefined ? initialChecked : navStateValue;
+
+    const [checkedParamsSignal, getParamSignalValue, setParamSignalValue] =
+      useActionSingleParamSignal(action, checkedAtStart, name);
+    const boundAction = useAction(action, checkedParamsSignal);
+    const effectiveAction = boundAction || parentAction;
+
+    const { pending, error, aborted } = useActionStatus(effectiveAction);
 
     const checkedFromSignal = getParamSignalValue();
     const checked = error || aborted ? initialChecked : checkedFromSignal;
@@ -128,3 +140,5 @@ export const InputCheckbox = forwardRef(
     return inputCheckboxWithLabel;
   },
 );
+
+const SimpleInputCheckbox = forwardRef((props, ref) => {});

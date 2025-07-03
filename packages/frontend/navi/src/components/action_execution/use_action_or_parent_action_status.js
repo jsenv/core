@@ -4,11 +4,7 @@ import { useParentAction } from "./action_context.js";
 import { useAction } from "./use_action.js";
 import { useExecuteAction } from "./use_execute_action.js";
 
-export const useActionOrParentActionStatus = (
-  elementRef,
-  action,
-  actionParamsSignal,
-) => {
+export const useActionWithParams = (elementRef, action, actionParamsSignal) => {
   action = useAction(action, actionParamsSignal);
   const parentAction = useParentAction();
   const executeAction = useExecuteAction(elementRef);

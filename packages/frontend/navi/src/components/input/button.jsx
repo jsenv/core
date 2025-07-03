@@ -2,21 +2,13 @@ import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { useParentAction } from "../action_execution/action_context.js";
+import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 export const Button = forwardRef((props, ref) => {
-  const { action } = props;
-  const parentAction = useParentAction();
-  const hasActionProps = action || parentAction;
-
-  if (hasActionProps) {
-    return <ActionButton {...props} parentAction={parentAction} ref={ref} />;
-  }
-
-  return <SimpleButton {...props} ref={ref} />;
+  return renderActionComponent(props, ref, ActionButton, SimpleButton);
 });
 
 const SimpleButton = forwardRef(
@@ -63,9 +55,7 @@ const ActionButton = forwardRef(
 
     const boundAction = useAction(action);
     const effectiveAction = boundAction || parentAction;
-    const { pending } = effectiveAction
-      ? useActionStatus(effectiveAction)
-      : { pending: false };
+    const { pending } = useActionStatus(effectiveAction);
     const executeAction = useExecuteAction(innerRef, {
       errorEffect: actionErrorEffect,
     });
