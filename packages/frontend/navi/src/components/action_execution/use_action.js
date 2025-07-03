@@ -42,10 +42,16 @@ export const useAction = (action, { name, value, preferSelf } = {}) => {
     ? (value) => updateParams({ [name]: value })
     : updateParams;
 
+  if (!mountedRef.current) {
+    mountedRef.current = true;
+    if (name) {
+      setValue(value);
+    }
+  }
   return [boundAction, getValue, setValue];
 };
 
-let debug = true;
+let debug = false;
 const sharedSignalCache = new WeakMap();
 const useActionParamsSignal = (action, initialParams = {}) => {
   const fromCache = sharedSignalCache.get(action);

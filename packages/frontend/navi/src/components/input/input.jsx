@@ -1,6 +1,6 @@
 import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
@@ -73,6 +73,7 @@ const ActionInput = forwardRef((props, ref) => {
   useOnFormReset(innerRef, () => {
     setNavStateValue(undefined);
   });
+
   const valueAtStart =
     initialValue === undefined || initialValue === ""
       ? navStateValue === undefined
@@ -89,6 +90,20 @@ const ActionInput = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
   const value = getValue();
+
+  // we must use a custom event listener because preact bind onChange to onInput for compat with react
+  useLayoutEffect(() => {
+    const input = innerRef.current;
+    const onChange = (e) => {
+      if (action) {
+        e.target.requestAction(e);
+      }
+    };
+    input.addEventListener("change", onChange);
+    return () => {
+      input.removeEventListener("change", onChange);
+    };
+  }, [action]);
 
   let input = (
     <input
@@ -117,9 +132,6 @@ const ActionInput = forwardRef((props, ref) => {
         setNavStateValue(inputValue);
         setValue(inputValue);
         onInput?.(e);
-        if (action) {
-          e.target.requestAction(e);
-        }
       }}
       // eslint-disable-next-line react/no-unknown-property
       onactionprevented={onActionPrevented}
