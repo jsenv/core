@@ -30,9 +30,10 @@
                 action={async () => {
                   await new Promise(() => {});
                 }}
-                label="Test"
                 style="color: blue"
-              ></InputCheckbox>
+              >
+                Test
+              </InputCheckbox>
             </div>
             <div>
               <p>
@@ -46,11 +47,12 @@
                   });
                   throw new Error(`This is an error, checked: ${test}`);
                 }}
-                label="Test"
                 style="color: blue"
                 // data-validation-message-stay-on-focus
                 // data-validation-message-stay-on-blur
-              ></InputCheckbox>
+              >
+                Test
+              </InputCheckbox>
             </div>
             <div>
               <p>
@@ -59,15 +61,17 @@
               <InputCheckbox
                 name="update"
                 action={updateUserCheckboxAction}
-                label="Test"
                 style="color: blue"
-              ></InputCheckbox>
+              >
+                Test
+              </InputCheckbox>
               <InputCheckbox
                 name="update"
                 action={updateUserCheckboxAction}
-                label="Test"
                 style="color: blue"
-              ></InputCheckbox>
+              >
+                Test
+              </InputCheckbox>
             </div>
           </div>
         );
