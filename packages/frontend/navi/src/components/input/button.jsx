@@ -47,7 +47,6 @@ const ActionButton = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  // TODO: comment récup les params de l'action parent (si elle existe)
   const [effectiveAction] = useAction(action, { preferSelf: true });
   const { pending } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -62,7 +61,7 @@ const ActionButton = forwardRef((props, ref) => {
       disabled={disabled || pending}
       onClick={(event) => {
         if (action) {
-          event.target.requestAction(event, { ignoreForm: true });
+          event.target.requestAction(event, { action: effectiveAction });
         }
         onClick?.(event);
       }}

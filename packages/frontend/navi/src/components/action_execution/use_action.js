@@ -6,7 +6,7 @@ import { useParentAction } from "./action_context.js";
 export const useAction = (action, { name, value, preferSelf } = {}) => {
   const mountedRef = useRef(false);
   const parentBoundAction = useParentAction();
-  if (parentBoundAction && !preferSelf) {
+  if (parentBoundAction) {
     const parentActionParamsSignal = parentBoundAction.meta.paramsSignal;
     const parentActionUpdateParams = parentBoundAction.meta.updateParams;
     const getValue = name
@@ -15,6 +15,12 @@ export const useAction = (action, { name, value, preferSelf } = {}) => {
     const setValue = name
       ? (value) => parentActionUpdateParams({ [name]: value })
       : parentActionUpdateParams;
+
+    if (preferSelf) {
+      const boundAction = useBoundAction(action, parentActionParamsSignal);
+      return [boundAction, getValue, setValue];
+    }
+
     if (!mountedRef.current) {
       mountedRef.current = true;
       if (name) {

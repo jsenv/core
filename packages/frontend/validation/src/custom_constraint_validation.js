@@ -76,20 +76,17 @@ export const installCustomConstraintValidation = (element) => {
     element.dispatchEvent(cancelEvent);
   };
 
-  element.requestAction = (event, { ignoreForm } = {}) => {
+  element.requestAction = (event, { action } = {}) => {
     if (!event) {
       event = new CustomEvent("requestaction", { cancelable: true });
     }
     handleRequestAction(event, {
       target: element,
-      ignoreForm,
+      action,
     });
   };
 
-  const handleRequestAction = (
-    e,
-    { target, requester = target, ignoreForm = false },
-  ) => {
+  const handleRequestAction = (e, { target, requester = target, action }) => {
     if (debug) {
       console.debug(`action requested by`, requester, `(event: "${e.type}")`);
     }
@@ -151,11 +148,7 @@ export const installCustomConstraintValidation = (element) => {
 
     let elementReceivingEvents;
     if (target.form) {
-      if (ignoreForm) {
-        elementReceivingEvents = target;
-      } else {
-        elementReceivingEvents = target.form;
-      }
+      elementReceivingEvents = target.form;
     } else {
       const fieldset = target.closest("fieldset");
       if (fieldset) {
@@ -168,7 +161,7 @@ export const installCustomConstraintValidation = (element) => {
       e.preventDefault();
       reportValidity();
       const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-        detail: { cause: e, requester, lastFailedValidityInfo },
+        detail: { cause: e, requester, lastFailedValidityInfo, action },
       });
       elementReceivingEvents.dispatchEvent(actionPreventedCustomEvent);
       return;
@@ -177,7 +170,7 @@ export const installCustomConstraintValidation = (element) => {
     // we are dispatching a custom event that can be used
     // to actually perform the action or to set form action
     const actionCustomEvent = new CustomEvent("action", {
-      detail: { cause: e, requester },
+      detail: { cause: e, requester, action },
     });
     if (debug) {
       console.debug(`action dispatched on`, elementReceivingEvents);

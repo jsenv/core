@@ -110,7 +110,7 @@
             <Form
               action={({ name }) => {
                 // eslint-disable-next-line no-alert
-                window.alert(`form action called { name: ${name} }`);
+                window.alert(`form action: { name: ${name} }`);
               }}
             >
               <input type="hidden" name="name" value="dam" />
@@ -119,8 +119,10 @@
                   setTimeout(() => {
                     setCount((count) => count + 1);
                   }, 200);
-                  await new Promise((resolve) => setTimeout(resolve, 1_500));
-                  throw new Error(`test: { count: ${count}, name: ${name} }`);
+                  await new Promise((resolve) => setTimeout(resolve, 1_000));
+                  throw new Error(
+                    `button action: { count: ${count}, name: ${name} }`,
+                  );
                 }}
               >
                 Hello
