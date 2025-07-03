@@ -4,21 +4,23 @@ import { createAction } from "../../actions.js";
 import { useParentAction } from "./action_context.js";
 
 export const useAction = (action, name, value) => {
+  const mountedRef = useRef(false);
   const parentBoundAction = useParentAction();
   if (parentBoundAction) {
     const parentActionParamsSignal = parentBoundAction.meta.paramsSignal;
     const parentActionUpdateParams = parentBoundAction.meta.updateParams;
-    const getValue = () =>
-      name
-        ? () => parentActionParamsSignal.value[name]
-        : () => parentActionParamsSignal.value;
+    const getValue = name
+      ? () => parentActionParamsSignal.value[name]
+      : () => parentActionParamsSignal.value;
     const setValue = name
-      ? (value) => parentActionUpdateParams({ name: value })
+      ? (value) => parentActionUpdateParams({ [name]: value })
       : parentActionUpdateParams;
-    if (name) {
-      setValue(value);
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      if (name) {
+        setValue(value);
+      }
     }
-
     return [parentBoundAction, getValue, setValue];
   }
 
@@ -37,7 +39,7 @@ export const useAction = (action, name, value) => {
   return [boundAction, getValue, setValue];
 };
 
-let debug = false;
+let debug = true;
 const sharedSignalCache = new WeakMap();
 const useActionParamsSignal = (action, initialParams = {}) => {
   const fromCache = sharedSignalCache.get(action);
@@ -53,7 +55,7 @@ const useActionParamsSignal = (action, initialParams = {}) => {
     for (const key of Object.keys(object)) {
       const value = object[key];
       const currentValue = currentParams[key];
-      if (key in currentParams) {
+      if (Object.hasOwn(currentParams, key)) {
         if (value !== currentValue) {
           modified = true;
           paramsCopy[key] = value;
@@ -64,7 +66,23 @@ const useActionParamsSignal = (action, initialParams = {}) => {
       }
     }
     if (modified) {
+      if (debug) {
+        console.debug(
+          `Updating params for action ${action} with new params:`,
+          object,
+          `result:`,
+          paramsCopy,
+        );
+      }
       paramsSignal.value = paramsCopy;
+    } else if (debug) {
+      console.debug(
+        `No change in params for action ${action}, not updating.`,
+        `current params:`,
+        currentParams,
+        `new params:`,
+        object,
+      );
     }
   };
   const result = [paramsSignal, updateParams];

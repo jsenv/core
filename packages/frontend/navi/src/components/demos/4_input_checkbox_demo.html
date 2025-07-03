@@ -102,6 +102,29 @@
                   <button type="submit">Submit</button>
                 </Form>
               </div>
+
+              <div>
+                <p>
+                  <strong>Inside form + checked at start</strong>
+                </p>
+                <Form
+                  action={async ({ name, insideForm }) => {
+                    await new Promise((resolve) => {
+                      setTimeout(resolve, 600);
+                    });
+                    // eslint-disable-next-line no-alert
+                    window.alert(
+                      `params: { name: ${name}, insideForm: ${insideForm} }`,
+                    );
+                  }}
+                >
+                  <input type="hidden" name="name" value="dam" />
+                  <InputCheckbox name="insideForm" style="color: blue" checked>
+                    Test
+                  </InputCheckbox>
+                  <button type="submit">Submit</button>
+                </Form>
+              </div>
             </div>
           </div>
         );
