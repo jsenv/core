@@ -126,6 +126,49 @@
                 </Form>
               </div>
             </div>
+
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>
+                    3 checkbox throwing after 1.5s (click quickly to display
+                    many messages)
+                  </strong>
+                </p>
+                <InputCheckbox
+                  name="a"
+                  style="color: blue"
+                  action={async () => {
+                    await new Promise((resolve) => setTimeout(resolve, 1_500));
+                    throw new Error(`error checking a`);
+                  }}
+                >
+                  A
+                </InputCheckbox>
+                <br />
+                <InputCheckbox
+                  name="b"
+                  style="color: green"
+                  action={async () => {
+                    await new Promise((resolve) => setTimeout(resolve, 1_500));
+                    throw new Error(`error checking b`);
+                  }}
+                >
+                  B
+                </InputCheckbox>
+                <br />
+                <InputCheckbox
+                  name="c"
+                  style="color: yellow"
+                  action={async () => {
+                    await new Promise((resolve) => setTimeout(resolve, 1_500));
+                    throw new Error(`error checking c`);
+                  }}
+                >
+                  C
+                </InputCheckbox>
+              </div>
+            </div>
           </div>
         );
       };

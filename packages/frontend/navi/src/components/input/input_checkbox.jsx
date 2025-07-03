@@ -108,6 +108,9 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
       disabled={disabled || pending}
       // eslint-disable-next-line react/no-unknown-property
       oncancel={(e) => {
+        if (e.detail === "blur_invalid") {
+          return;
+        }
         e.target.checked = checked;
         setNavStateValue(checkedAtStart);
         if (onCancel) {
