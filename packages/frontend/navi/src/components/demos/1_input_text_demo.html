@@ -161,15 +161,13 @@
       const InsideFormWithSubmitAndReset = () => {
         return (
           <div>
-            <Form>
-              <Input
-                id="tototo"
-                name="insideFormWithSubmitAndReset"
-                action={async ({ insideFormWithSubmitAndReset }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_500));
-                  throw new Error(`test: ${insideFormWithSubmitAndReset}`);
-                }}
-              />
+            <Form
+              action={async ({ insideFormWithSubmitAndReset }) => {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                throw new Error(`test: ${insideFormWithSubmitAndReset}`);
+              }}
+            >
+              <Input id="tototo" name="insideFormWithSubmitAndReset" />
               <button type="submit">Submit</button>
               <button type="reset">Reset</button>
             </Form>

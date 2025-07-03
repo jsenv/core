@@ -1,5 +1,5 @@
 import { addCustomMessage, removeCustomMessage } from "@jsenv/validation";
-import { useCallback, useLayoutEffect, useState } from "preact/hooks";
+import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 
 export const useExecuteAction = (
@@ -20,6 +20,41 @@ export const useExecuteAction = (
     }
   }, [error]);
 
+  const validationMessageTargetRef = useRef(null);
+  const addErrorMessage = (error) => {
+    const validationMessageTarget = validationMessageTargetRef.current;
+    addCustomMessage(validationMessageTarget, "action_error", error, {
+      // This error should not prevent <form> submission
+      // so whenever user tries to submit the form the error is cleared
+      // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
+      removeOnRequestAction: true,
+    });
+  };
+  const removeErrorMessage = () => {
+    const validationMessageTarget = validationMessageTargetRef.current;
+    if (validationMessageTarget) {
+      removeCustomMessage(validationMessageTarget, "action_error");
+    }
+  };
+
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+    const form = element.tagName === "FORM" ? element : element.form;
+    if (!form) {
+      return null;
+    }
+    const onReset = () => {
+      removeErrorMessage();
+    };
+    form.addEventListener("reset", onReset);
+    return () => {
+      form.removeEventListener("reset", onReset);
+    };
+  });
+
   const executeAction = useCallback(
     (
       action,
@@ -34,25 +69,14 @@ export const useExecuteAction = (
         const customEvent = new CustomEvent(type, options);
         element.dispatchEvent(customEvent);
       };
-
-      const validationMessageTarget = requester || elementRef.current;
-      const addErrorMessage = (error) => {
-        addCustomMessage(validationMessageTarget, "action_error", error, {
-          // This error should not prevent <form> submission
-          // so whenever user tries to submit the form the error is cleared
-          // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
-          removeOnRequestAction: true,
-        });
-      };
-      const removeErrorMessage = () => {
-        removeCustomMessage(validationMessageTarget, "action_error");
-      };
-
       if (resetErrorBoundary) {
         resetErrorBoundary();
       }
       removeErrorMessage();
       setError(null);
+
+      const validationMessageTarget = requester || elementRef.current;
+      validationMessageTargetRef.current = validationMessageTarget;
 
       dispatchCustomEvent("actionstart");
       const result = performAction(action, {
