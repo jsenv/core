@@ -1,5 +1,5 @@
 import.meta.css = /*css*/ `
-.checkbox_icon {
+.custom_checkbox {
   display: inline-flex;
   width: 11px;
   height: 11px;
@@ -9,20 +9,29 @@ import.meta.css = /*css*/ `
   transition: all 0.15s ease;
 }
 
-.checkbox_icon:hover {
+.custom_checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.custom_checkbox:hover {
   border-color: #9ca3af;
 }
 
-.checkbox_icon[data-checked] {
+.custom_checkbox[data-checked] {
   background: #3b82f6;
   border-color: #3b82f6;
 }
-.checkbox_icon[data-checked]:hover {
+.custom_checkbox[data-checked]:hover {
   background: #1d4ed8;
   border-color: #1d4ed8;
 }
 
-.checkbox_icon svg {
+.custom_checkbox svg {
   width: 100%;
   height: 100%;
   opacity: 0;
@@ -30,28 +39,33 @@ import.meta.css = /*css*/ `
   transition: all 0.15s ease;
 }
 
-.checkbox_icon[data-checked] svg {
+.custom_checkbox[data-checked] svg {
   opacity: 1;
   transform: scale(1);
 }
 
-.checkbox_icon svg path {
+.custom_checkbox svg path {
 
 }
 
-.checkbox_icon[data-loading] {
+.custom_checkbox[data-loading] {
  
 }
 `;
 
-export const CheckboxIcon = ({ checked = false, loading = false }) => {
+export const CustomCheckbox = ({
+  checked = false,
+  loading = false,
+  children,
+}) => {
   return (
     <div
-      className="checkbox_icon"
+      className="custom_checkbox"
       data-validation-message-arrow-x="center"
       data-checked={checked ? "" : undefined}
       data-loading={loading ? "" : undefined}
     >
+      {children}
       <svg viewBox="0 0 12 12" aria-hidden="true">
         <path
           d="M10.5 2L4.5 9L1.5 5.5"

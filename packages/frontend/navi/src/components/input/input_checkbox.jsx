@@ -9,19 +9,7 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
-import { CheckboxIcon } from "./checkbox_icon.jsx";
-
-import.meta.css = /*css*/ `
-input[type="checkbox"][data-visually-hidden] {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-}
-`;
+import { CustomCheckbox } from "./custom_checkbox.jsx";
 
 export const InputCheckbox = forwardRef((props, ref) => {
   return renderActionComponent(
@@ -43,7 +31,7 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
   const [innerChecked, setInnerChecked] = useState(checked);
 
   const inputCheckbox = (
-    <>
+    <CustomCheckbox checked={innerChecked} loading={loading}>
       <input
         data-visually-hidden
         ref={innerRef}
@@ -53,8 +41,7 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
         }}
         {...rest}
       />
-      <CheckboxIcon checked={innerChecked} loading={loading} />
-    </>
+    </CustomCheckbox>
   );
 
   return (
@@ -176,10 +163,9 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
 
   const innerLoading = loading || pending;
   inputCheckbox = (
-    <>
+    <CustomCheckbox checked={checked} loading={innerLoading}>
       {inputCheckbox}
-      <CheckboxIcon checked={checked} loading={innerLoading} />
-    </>
+    </CustomCheckbox>
   );
 
   if (actionPendingEffect === "loading") {
