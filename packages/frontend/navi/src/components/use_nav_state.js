@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "preact/hooks";
 
 const idUsageMap = new Map();
-const useNavStateWithWarnings = (id, initialValue) => {
+const useNavStateWithWarnings = (id, initialValue, options) => {
   const idRef = useRef(undefined);
   if (import.meta.dev && idRef.current !== id) {
     const oldId = idRef.current;
@@ -29,16 +29,35 @@ Consider using unique IDs for each component instance.`,
     };
   }, [id]);
 
-  return useNavStateWithoutWarnings(id, initialValue);
+  return useNavStateWithoutWarnings(id, initialValue, options);
 };
 
 const NONE = {};
-const useNavStateWithoutWarnings = (id, initialValue) => {
+const NO_OP = () => {};
+const useNavStateWithoutWarnings = (id, initialValue, { debug } = {}) => {
   const navStateRef = useRef(NONE);
+  if (!id) {
+    return [navStateRef.current, NO_OP];
+  }
+
   if (navStateRef.current === NONE) {
     const navEntryState = navigation.currentEntry.getState();
-    navStateRef.current =
-      navEntryState && id ? navEntryState[id] : initialValue;
+    const valueFromNavState = navEntryState ? navEntryState[id] : undefined;
+    if (valueFromNavState === undefined) {
+      navStateRef.current = initialValue;
+      if (initialValue !== undefined) {
+        console.debug(
+          `useNavState(${id}) initial value is ${initialValue} (from initialValue passed in as argument)`,
+        );
+      }
+    } else {
+      navStateRef.current = valueFromNavState;
+      if (debug) {
+        console.debug(
+          `useNavState(${id}) initial value is ${initialValue} (from nav state)`,
+        );
+      }
+    }
   }
 
   return [
@@ -48,17 +67,20 @@ const useNavStateWithoutWarnings = (id, initialValue) => {
       if (typeof value === "function") {
         value = value(currentValue);
       }
-      if (id) {
-        const currentState = navigation.currentEntry.getState() || {};
-        if (value === undefined) {
-          delete currentState[id];
-        } else {
-          currentState[id] = value;
-        }
-        navigation.updateCurrentEntry({
-          state: currentState,
-        });
+      if (debug) {
+        console.debug(
+          `useNavState(${id}) set ${value} (previous was ${currentValue})`,
+        );
       }
+      const currentState = navigation.currentEntry.getState() || {};
+      if (value === undefined) {
+        delete currentState[id];
+      } else {
+        currentState[id] = value;
+      }
+      navigation.updateCurrentEntry({
+        state: currentState,
+      });
     },
   ];
 };

@@ -173,7 +173,7 @@ export const CheckboxList = forwardRef((props, ref) => {
         checkbox = (
           <>
             {checkbox}
-            <CheckboxIcon checked={checked} pending={innerLoading} />
+            <CheckboxIcon checked={checked} loading={innerLoading} />
           </>
         );
 

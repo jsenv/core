@@ -3,7 +3,7 @@ import.meta.css = /*css*/ `
   display: inline-flex;
   width: 10.5px;
   height: 10.5px;
-  margin: 3px 3px 3px 4px;
+  margin: 3px 3px 3px 3px;
   border: 1.5px solid #6b7280;
   border-radius: 2px;
   transition: all 0.15s ease;
@@ -38,14 +38,18 @@ import.meta.css = /*css*/ `
 .checkbox_icon svg path {
 
 }
+
+.checkbox_icon[data-loading] {
+ 
+}
 `;
 
-export const CheckboxIcon = ({ checked = false, pending = false }) => {
+export const CheckboxIcon = ({ checked = false, loading = false }) => {
   return (
     <div
       className="checkbox_icon"
       data-checked={checked ? "" : undefined}
-      data-pending={pending ? "" : undefined}
+      data-loading={loading ? "" : undefined}
     >
       <svg viewBox="0 0 12 12" aria-hidden="true">
         <path

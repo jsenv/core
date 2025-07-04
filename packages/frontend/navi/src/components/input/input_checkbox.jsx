@@ -1,6 +1,6 @@
-import { useConstraints } from "@jsenv/validation";
+import { dispatchRequestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
@@ -9,6 +9,19 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
+import { CheckboxIcon } from "./checkbox_icon.jsx";
+
+import.meta.css = /*css*/ `
+input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+`;
 
 export const InputCheckbox = forwardRef((props, ref) => {
   return renderActionComponent(
@@ -20,14 +33,30 @@ export const InputCheckbox = forwardRef((props, ref) => {
 });
 
 const SimpleInputCheckbox = forwardRef((props, ref) => {
-  const { autoFocus, constraints = [], ...rest } = props;
+  const { autoFocus, constraints = [], checked, loading, ...rest } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  return <input ref={innerRef} {...rest} />;
+  const [innerChecked, setInnerChecked] = useState(checked);
+
+  const inputCheckbox = (
+    <>
+      <input
+        ref={innerRef}
+        checked={innerChecked}
+        onChange={(e) => {
+          setInnerChecked(e.target.checked);
+        }}
+        {...rest}
+      />
+      <CheckboxIcon checked={innerChecked} loading={loading} />
+    </>
+  );
+
+  return <LoaderBackground pending={loading}>{inputCheckbox}</LoaderBackground>;
 });
 
 const ActionInputCheckbox = forwardRef((props, ref) => {
@@ -40,6 +69,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     constraints = [],
     action,
     disabled,
+    loading,
     onCancel,
     onInput,
     actionPendingEffect = "loading",
@@ -56,12 +86,15 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  const [navStateValue, setNavStateValue] = useNavState(id);
-  useOnFormReset(innerRef, () => {
-    setNavStateValue(undefined);
+  const [navStateValue, setNavStateValue] = useNavState(id, undefined, {
+    debug: true,
   });
   const checkedAtStart =
     navStateValue === undefined ? initialChecked : navStateValue;
+  useOnFormReset(innerRef, () => {
+    setNavStateValue(navStateValue);
+    setChecked(checkedAtStart);
+  });
 
   const [effectiveAction, getChecked, setChecked] = useAction(action, {
     name,
@@ -72,19 +105,10 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
 
-  // s'il a sa propre action on pourrait quand meme vouloir une structure
-  // on pars du principe qu'il est solo
-  // mais dans le cas d'un form on ne sait pas en vrai
-  // hummmmm
-  // je pense qu'il faut parser le dom pour savoir
-  // on regarde s'il est dans un form
-  // sinon dans un fieldset
-  // et on regarde si dans cet element il y en a d'autre avec le meme nom
-
   const checkedFromSignal = getChecked();
   const checked = error || aborted ? initialChecked : checkedFromSignal;
 
-  const inputCheckbox = (
+  let inputCheckbox = (
     <input
       {...rest}
       ref={innerRef}
@@ -116,7 +140,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
         setChecked(checkboxIsChecked ? value : undefined);
         onInput?.(e);
         if (action) {
-          e.target.requestAction(e);
+          dispatchRequestAction(e.target);
         }
       }}
       // eslint-disable-next-line react/no-unknown-property
@@ -141,9 +165,19 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     />
   );
 
+  const innerLoading = loading || pending;
+  inputCheckbox = (
+    <>
+      {inputCheckbox}
+      <CheckboxIcon checked={checked} loading={innerLoading} />
+    </>
+  );
+
   if (actionPendingEffect === "loading") {
     return (
-      <LoaderBackground pending={pending}>{inputCheckbox}</LoaderBackground>
+      <LoaderBackground pending={innerLoading}>
+        {inputCheckbox}
+      </LoaderBackground>
     );
   }
   return inputCheckbox;

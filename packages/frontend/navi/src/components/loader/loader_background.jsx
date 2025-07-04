@@ -7,6 +7,7 @@ export const LoaderBackground = ({
   pending,
   containerRef,
   color,
+  inset,
   children,
 }) => {
   if (containerRef) {
@@ -19,6 +20,7 @@ export const LoaderBackground = ({
         container={container}
         pending={pending}
         color={color}
+        inset={inset}
       >
         {children}
       </LoaderBackgroundWithPortal>,
@@ -27,7 +29,7 @@ export const LoaderBackground = ({
   }
 
   return (
-    <LoaderBackgroundWithWrapper pending={pending} color={color}>
+    <LoaderBackgroundWithWrapper pending={pending} color={color} inset={inset}>
       {children}
     </LoaderBackgroundWithWrapper>
   );
@@ -37,6 +39,7 @@ const LoaderBackgroundWithPortal = ({
   container,
   pending,
   color,
+  inset,
   children,
 }) => {
   const shouldShowSpinner = useDebounceTrue(pending, 300);
@@ -56,10 +59,10 @@ const LoaderBackgroundWithPortal = ({
       <div
         style={{
           position: "absolute",
-          top: `${paddingTop}px`,
-          bottom: 0,
-          left: 0,
-          right: 0,
+          top: `${inset + paddingTop}px`,
+          bottom: `${inset}px`,
+          left: `${inset}px`,
+          right: `${inset}px`,
         }}
       >
         {shouldShowSpinner && <RectangleLoading color={color} />}
@@ -69,29 +72,40 @@ const LoaderBackgroundWithPortal = ({
   );
 };
 
-const LoaderBackgroundWithWrapper = ({ pending, color, children }) => {
+const LoaderBackgroundWithWrapper = ({ pending, color, inset, children }) => {
   const shouldShowSpinner = useDebounceTrue(pending, 300);
   const containerRef = useRef(null);
+  const [borderColor, setBorderColor] = useState();
   const [detectedColor, setDetectedColor] = useState();
+  const [borderTopWidth, setBorderTopWidth] = useState(0);
 
   useLayoutEffect(() => {
-    if (color) {
-      return;
-    }
     const container = containerRef.current;
     const lastElementChild = container.lastElementChild;
-    if (lastElementChild) {
-      const computedStyle = window.getComputedStyle(lastElementChild);
-      const computedStyleColor = computedStyle.color;
-      setDetectedColor(computedStyleColor);
+    if (!lastElementChild) {
+      return;
     }
-  }, [color, ...(Array.isArray(children) ? children : [children])]);
+    const computedStyle = window.getComputedStyle(lastElementChild);
+    const computedStyleBorderTopWidth = parseFloat(
+      computedStyle.borderTopWidth,
+    );
+    setBorderTopWidth(computedStyleBorderTopWidth);
+    const computedStyleBorderColor = computedStyle.borderColor;
+    setBorderColor(computedStyleBorderColor);
+    const computedStyleColor = computedStyle.color;
+    setDetectedColor(computedStyleColor);
+  }, [...(Array.isArray(children) ? children : [children])]);
 
   return (
     <div ref={containerRef} style="display:inline-flex; position: relative;">
       {shouldShowSpinner && (
-        <div style="position: absolute; inset: 0">
-          <RectangleLoading color={color || detectedColor} />
+        <div
+          style={{
+            position: "absolute",
+            inset: `${inset || borderTopWidth}px`,
+          }}
+        >
+          <RectangleLoading color={color || borderColor || detectedColor} />
         </div>
       )}
       {children}

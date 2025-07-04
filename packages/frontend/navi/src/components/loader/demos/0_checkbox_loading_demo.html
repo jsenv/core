@@ -11,13 +11,16 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
-        CheckboxList,
+        Input,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
+        const [loading, setLoading] = useState(true);
+
         return (
           <div style="display: flex; flex-direction: row; gap: 30px">
             <div>
@@ -25,14 +28,19 @@
                 <strong>Checkbox loading</strong>
               </p>
 
-              <CheckboxList
-                name="colors"
-                options={[
-                  { renderLabel: () => "Red", value: "red" },
-                  { renderLabel: () => "Blue", value: "blue" },
-                  { renderLabel: () => "Green", value: "green" },
-                ]}
-              />
+              <Input id="test" type="checkbox" name="colors" loading={loading}>
+                Coucou
+              </Input>
+
+              <button>
+                <span
+                  onClick={() => {
+                    setLoading(!loading);
+                  }}
+                >
+                  Toggle loading
+                </span>
+              </button>
             </div>
           </div>
         );
