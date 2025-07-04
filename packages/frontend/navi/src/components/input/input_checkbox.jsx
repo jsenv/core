@@ -6,9 +6,9 @@ import { renderActionComponent } from "../action_execution/render_action_compone
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
+import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
-import { useOnFormReset } from "../use_on_form_reset.js";
 import { CustomCheckbox } from "./custom_checkbox.jsx";
 
 export const InputCheckbox = forwardRef((props, ref) => {
@@ -86,10 +86,6 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   });
   const checkedAtStart =
     navStateValue === undefined ? initialChecked : navStateValue;
-  useOnFormReset(innerRef, () => {
-    setNavStateValue(navStateValue);
-    setChecked(checkedAtStart);
-  });
 
   const [effectiveAction, getChecked, setChecked] = useAction(action, {
     name,
@@ -103,6 +99,33 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   const checkedFromSignal = getChecked();
   const checked = error || aborted ? initialChecked : checkedFromSignal;
 
+  useActionEvents(innerRef, {
+    onReset: (e) => {
+      if (e.detail === "blur_invalid") {
+        return;
+      }
+      setNavStateValue(undefined);
+      setChecked(checkedAtStart);
+      if (onCancel) {
+        onCancel();
+      }
+    },
+    onPrevented: onActionPrevented,
+    onAction: (e) => {
+      if (action) {
+        executeAction(effectiveAction, {
+          requester: e.detail.requester,
+        });
+      }
+    },
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: () => {
+      setNavStateValue(undefined);
+      onActionEnd?.();
+    },
+  });
+
   let inputCheckbox = (
     <input
       {...rest}
@@ -114,17 +137,6 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
       checked={checked}
       disabled={disabled || pending}
       data-validation-message-arrow-x="center"
-      // eslint-disable-next-line react/no-unknown-property
-      oncancel={(e) => {
-        if (e.detail === "blur_invalid") {
-          return;
-        }
-        e.target.checked = checked;
-        setNavStateValue(undefined);
-        if (onCancel) {
-          onCancel();
-        }
-      }}
       onInput={(e) => {
         const checkboxIsChecked = e.target.checked;
         if (checkedAtStart) {
@@ -137,25 +149,6 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
         if (action) {
           dispatchRequestAction(e.target);
         }
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionprevented={onActionPrevented}
-      // eslint-disable-next-line react/no-unknown-property
-      onaction={(actionEvent) => {
-        if (action) {
-          executeAction(effectiveAction, {
-            requester: actionEvent.detail.requester,
-          });
-        }
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionstart={onActionStart}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionerror={onActionError}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionend={() => {
-        setNavStateValue(undefined);
-        onActionEnd?.();
       }}
     />
   );

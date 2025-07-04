@@ -21,6 +21,7 @@ import { renderActionComponent } from "./action_execution/render_action_componen
 import { useAction } from "./action_execution/use_action.js";
 import { useExecuteAction } from "./action_execution/use_execute_action.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
+import { useActionEvents } from "./use_action_events.js";
 
 export const Form = forwardRef((props, ref) => {
   return renderActionComponent(props, ref, ActionForm, SimpleForm);
@@ -65,6 +66,48 @@ const ActionForm = forwardRef((props, ref) => {
   }
   method = method.toLowerCase();
 
+  useActionEvents(innerRef, {
+    onPrevented: onActionPrevented,
+
+    onAction: (actionEvent) => {
+      if (executingRef.current) {
+        /**
+         * Without this check, when user types in <input> then hit enter 2 http requests are sent
+         * - First one is correct
+         * - Second one is sent without any value
+         *
+         * This happens because in the following html structure
+         * <form>
+         *   <input name="value" type="text" onChange={() => form.requestSubmit()} />
+         * </form>
+         * The following happens after hitting "enter" key:
+         * 1. Browser trigger "change" event, form is submitted, an http request is sent
+         * 2. We do input.disabled = true;
+         * 3. Browser trigger "submit" event
+         * 4. new FormData(form).get("value") is empty because input.disabled is true
+         * -> We end up with the faulty http request that we don't want
+         */
+        return;
+      }
+      executingRef.current = true;
+      setTimeout(() => {
+        executingRef.current = false;
+      }, 0);
+
+      const form = innerRef.current;
+      const formElementValues = collectFormElementValues(form);
+      setParams(formElementValues);
+
+      const actionToExecute = actionEvent.detail.action || boundAction;
+      executeAction(actionToExecute, {
+        requester: actionEvent.detail.requester,
+      });
+    },
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: onActionEnd,
+  });
+
   return (
     <form
       {...rest}
@@ -78,49 +121,6 @@ const ActionForm = forwardRef((props, ref) => {
         e.preventDefault();
         dispatchRequestAction(e.target, e);
       }}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionprevented={onActionPrevented}
-      // eslint-disable-next-line react/no-unknown-property
-      onaction={(actionEvent) => {
-        if (executingRef.current) {
-          /**
-           * Without this check, when user types in <input> then hit enter 2 http requests are sent
-           * - First one is correct
-           * - Second one is sent without any value
-           *
-           * This happens because in the following html structure
-           * <form>
-           *   <input name="value" type="text" onChange={() => form.requestSubmit()} />
-           * </form>
-           * The following happens after hitting "enter" key:
-           * 1. Browser trigger "change" event, form is submitted, an http request is sent
-           * 2. We do input.disabled = true;
-           * 3. Browser trigger "submit" event
-           * 4. new FormData(form).get("value") is empty because input.disabled is true
-           * -> We end up with the faulty http request that we don't want
-           */
-          return;
-        }
-        executingRef.current = true;
-        setTimeout(() => {
-          executingRef.current = false;
-        }, 0);
-
-        const form = innerRef.current;
-        const formElementValues = collectFormElementValues(form);
-        setParams(formElementValues);
-
-        const actionToExecute = actionEvent.detail.action || boundAction;
-        executeAction(actionToExecute, {
-          requester: actionEvent.detail.requester,
-        });
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionstart={onActionStart}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionerror={onActionError}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionend={onActionEnd}
     >
       <ActionContext.Provider value={[boundAction]}>
         {children}
