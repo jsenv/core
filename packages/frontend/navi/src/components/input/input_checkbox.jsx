@@ -34,6 +34,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   const {
     id,
     name,
+    value = "on",
     autoFocus,
     checked: initialChecked = false,
     constraints = [],
@@ -64,12 +65,21 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
 
   const [effectiveAction, getChecked, setChecked] = useAction(action, {
     name,
-    value: checkedAtStart ? "on" : undefined,
+    value: checkedAtStart ? value : undefined,
   });
   const { pending, error, aborted } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
+
+  // s'il a sa propre action on pourrait quand meme vouloir une structure
+  // on pars du principe qu'il est solo
+  // mais dans le cas d'un form on ne sait pas en vrai
+  // hummmmm
+  // je pense qu'il faut parser le dom pour savoir
+  // on regarde s'il est dans un form
+  // sinon dans un fieldset
+  // et on regarde si dans cet element il y en a d'autre avec le meme nom
 
   const checkedFromSignal = getChecked();
   const checked = error || aborted ? initialChecked : checkedFromSignal;
@@ -81,6 +91,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
       type="checkbox"
       id={id}
       name={name}
+      value={value}
       data-validation-message-arrow-x="center"
       checked={checked}
       disabled={disabled || pending}
@@ -102,7 +113,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
         } else {
           setNavStateValue(checkboxIsChecked ? true : undefined);
         }
-        setChecked(checkboxIsChecked ? "on" : undefined);
+        setChecked(checkboxIsChecked ? value : undefined);
         onInput?.(e);
         if (action) {
           e.target.requestAction(e);

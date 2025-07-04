@@ -7,7 +7,7 @@ import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-// import { useNavState } from "../use_nav_state.js";
+import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
 
 export const InputRadio = forwardRef((props, ref) => {
@@ -57,13 +57,13 @@ const ActionInputRadio = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  // const [navStateValue, setNavStateValue] = useNavState(id);
+  const [navStateValue, setNavStateValue] = useNavState(id);
   useOnFormReset(innerRef, () => {
     if (checkedAtStart) {
-      // setNavStateValue(value);
+      setNavStateValue(value);
     }
   });
-  const checkedAtStart = initialChecked; // || navStateValue === value;
+  const checkedAtStart = initialChecked || navStateValue === value;
   const [effectiveAction, getCheckedValue, setCheckedValue] = useAction(
     action,
     {
@@ -93,7 +93,7 @@ const ActionInputRadio = forwardRef((props, ref) => {
       onChange={(e) => {
         const radioIsChecked = e.target.checked;
         if (radioIsChecked) {
-          // setNavStateValue(value);
+          setNavStateValue(value);
           setCheckedValue(value);
           if (!e.target.form) {
             e.target.requestAction(e);
@@ -107,7 +107,7 @@ const ActionInputRadio = forwardRef((props, ref) => {
       oncancel={(e) => {
         e.target.checked = checkedAtStart;
         if (checkedAtStart) {
-          // setNavStateValue(value);
+          setNavStateValue(value);
         }
         if (onCancel) {
           onCancel();
@@ -129,7 +129,7 @@ const ActionInputRadio = forwardRef((props, ref) => {
       onactionerror={onActionError}
       // eslint-disable-next-line react/no-unknown-property
       onactionend={() => {
-        // setNavStateValue(undefined);
+        setNavStateValue(undefined);
         onActionEnd?.();
       }}
     />

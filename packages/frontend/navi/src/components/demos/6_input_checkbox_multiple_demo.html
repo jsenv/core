@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Input checkbox multiple demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        Fieldset,
+        // eslint-disable-next-line no-unused-vars
+        Input,
+      } from "@jsenv/navi";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div style="display: flex; flex-direction: row; gap: 30px">
+            <div>
+              <p>
+                <strong>Fieldset + throw after 1s</strong>
+              </p>
+              <Fieldset
+                action={async ({ colors }) => {
+                  await new Promise((resolve) => setTimeout(resolve, 1_000));
+                  throw new Error(`Colors selected: ${colors}`);
+                }}
+              >
+                <legend>Select your favorite colors:</legend>
+
+                <div>
+                  <Input type="checkbox" name="colors" value="red">
+                    Red
+                  </Input>
+                </div>
+
+                <div>
+                  <Input type="checkbox" name="colors" value="green">
+                    Green
+                  </Input>
+                </div>
+
+                <div>
+                  <Input type="checkbox" name="colors" value="blue">
+                    Blur
+                  </Input>
+                </div>
+              </Fieldset>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
