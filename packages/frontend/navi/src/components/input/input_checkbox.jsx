@@ -58,7 +58,11 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
   );
 
   return (
-    <LoaderBackground pending={loading} spacingLeft={0.5}>
+    <LoaderBackground
+      pending={loading}
+      // input has margin-left:4px and margin-right: 3px. To ensure it's centered we move it by 0.5px
+      spacingLeft={0.5}
+    >
       {inputCheckbox}
     </LoaderBackground>
   );
@@ -181,7 +185,11 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
 
   if (actionPendingEffect === "loading") {
     return (
-      <LoaderBackground pending={innerLoading} spacingLeft={0.5}>
+      <LoaderBackground
+        pending={innerLoading}
+        // input has margin-left:4px and margin-right: 3px. To ensure it's centered we move it by 0.5px
+        spacingLeft={0.5}
+      >
         {inputCheckbox}
       </LoaderBackground>
     );
