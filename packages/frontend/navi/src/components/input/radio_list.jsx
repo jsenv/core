@@ -6,15 +6,14 @@ import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useNavState } from "../use_nav_state.js";
-import { useOnFormReset } from "../use_on_form_reset.js";
 
 import.meta.css = /*css*/ `
-.checkbox_list {
+.radio_list {
     display: flex;
     flex-direction: column;
 }`;
 
-export const CheckboxList = forwardRef((props, ref) => {
+export const RadioList = forwardRef((props, ref) => {
   const {
     id,
     name,
@@ -33,62 +32,36 @@ export const CheckboxList = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navStateValue, setNavStateValue] = useNavState(id);
-  useOnFormReset(innerRef, () => {
-    setNavStateValue(undefined);
-  });
-  const checkedValueArrayAtStart = [];
+  let checkedValueAtStart;
   for (const option of options) {
-    if (option.checked || navStateValue?.includes(option.value)) {
-      checkedValueArrayAtStart.push(option.value);
+    if (option.checked) {
+      checkedValueAtStart = option.value;
     }
   }
+  if (checkedValueAtStart === undefined && navStateValue !== undefined) {
+    checkedValueAtStart = navStateValue;
+  }
 
-  const [effectiveAction, getCheckedValueArray, setCheckedValueArray] =
-    useAction(action, {
+  const [effectiveAction, getCheckedValue, setCheckedValue] = useAction(
+    action,
+    {
       name,
-      value: checkedValueArrayAtStart,
-    });
+      value: checkedValueAtStart,
+    },
+  );
   const { pending, error, aborted } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
   const actionRequesterRef = useRef();
 
-  const checkedValueArrayFromSignal = getCheckedValueArray();
-  const checkedValueArray =
-    error || aborted ? checkedValueArrayAtStart : checkedValueArrayFromSignal;
-
-  const addToCheckedValues = (valueToAdd) => {
-    const checkedValueArrayWithThisValue = [];
-    for (const checkedValue of checkedValueArray) {
-      if (checkedValue === valueToAdd) {
-        return;
-      }
-      checkedValueArrayWithThisValue.push(checkedValue);
-    }
-    checkedValueArrayWithThisValue.push(valueToAdd);
-    setCheckedValueArray(checkedValueArrayWithThisValue);
-  };
-  const removeFromCheckedValues = (valueToRemove) => {
-    const checkedValueArrayWithoutThisValue = [];
-    let found = false;
-    for (const checkedValue of checkedValueArray) {
-      if (checkedValue === valueToRemove) {
-        found = true;
-        continue;
-      }
-      checkedValueArrayWithoutThisValue.push(checkedValue);
-    }
-    if (!found) {
-      return;
-    }
-    setCheckedValueArray(checkedValueArrayWithoutThisValue);
-  };
+  const checkedValueFromSignal = getCheckedValue();
+  const checkedValue =
+    error || aborted ? checkedValueAtStart : checkedValueFromSignal;
 
   return (
     <div
-      className="checkbox_list"
-      data-checkbox-list
+      className="radio_list"
       ref={innerRef}
       {...rest} // eslint-disable-next-line react/no-unknown-property
       onactionprevented={onActionPrevented}
@@ -112,44 +85,44 @@ export const CheckboxList = forwardRef((props, ref) => {
     >
       {options.map((option) => {
         const { value, disabled } = option;
-        const checked = checkedValueArray.includes(value);
-        const checkboxRef = useRef(null);
+        const checked = checkedValue === value;
+        const radioRef = useRef(null);
 
-        let checkbox = (
+        let radio = (
           <input
-            ref={checkboxRef}
-            type="checkbox"
+            ref={radioRef}
+            type="radio"
             name={name}
             value={value}
             checked={checked}
             disabled={disabled || pending}
             onChange={(event) => {
-              const checkbox = event.target;
-              const checkboxIsChecked = checkbox.checked;
-              if (checkboxIsChecked) {
-                addToCheckedValues(value);
+              const radio = event.target;
+              const radioIsChecked = radio.checked;
+              if (radioIsChecked) {
+                setCheckedValue(value);
               } else {
-                removeFromCheckedValues(value);
+                // if nothing else is checked we should reset
               }
-              if (!checkbox.form) {
-                const checkboxListContainer = innerRef.current;
-                actionRequesterRef.current = checkbox;
-                dispatchRequestAction(checkboxListContainer, event);
+              if (!radio.form) {
+                actionRequesterRef.current = radio;
+                const radioListContainer = innerRef.current;
+                dispatchRequestAction(radioListContainer, event);
               }
             }}
           />
         );
 
         if (actionPendingEffect === "loading") {
-          checkbox = (
+          radio = (
             <LoaderBackground
               pending={
                 pending &&
                 actionRequesterRef.current &&
-                actionRequesterRef.current === checkboxRef.current
+                actionRequesterRef.current === radioRef.current
               }
             >
-              {checkbox}
+              {radio}
             </LoaderBackground>
           );
         }
@@ -159,7 +132,7 @@ export const CheckboxList = forwardRef((props, ref) => {
             key={value}
             data-disabled={disabled || pending ? "" : undefined}
           >
-            {checkbox}
+            {radio}
             {option.renderLabel(option)}
           </label>
         );
