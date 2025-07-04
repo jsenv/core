@@ -84,9 +84,11 @@
                 <Input
                   type="radio"
                   name="test"
+                  value="coucou"
+                  id="throw"
                   action={async ({ test }) => {
                     await new Promise((resolve) => {
-                      setTimeout(resolve, 1000);
+                      setTimeout(resolve, 1_000);
                     });
                     throw new Error(`This is an error, checked: ${test}`);
                   }}

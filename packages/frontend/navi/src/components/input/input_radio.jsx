@@ -29,7 +29,7 @@ const ActionInputRadio = forwardRef((props, ref) => {
   const {
     id,
     name,
-    value,
+    value = "",
     autoFocus,
     checked: initialChecked = false,
     constraints = [],
@@ -65,7 +65,7 @@ const ActionInputRadio = forwardRef((props, ref) => {
       value: checkedAtStart ? value : undefined,
     },
   );
-  useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
   const { pending, error, aborted } = useActionStatus(effectiveAction);
@@ -87,6 +87,7 @@ const ActionInputRadio = forwardRef((props, ref) => {
         const radioIsChecked = e.target.checked;
         if (radioIsChecked) {
           // setNavStateValue(value);
+          debugger;
           setCheckedValue(value);
           if (!e.target.form) {
             e.target.requestAction(e);
@@ -108,6 +109,14 @@ const ActionInputRadio = forwardRef((props, ref) => {
       }}
       // eslint-disable-next-line react/no-unknown-property
       onactionprevented={onActionPrevented}
+      // eslint-disable-next-line react/no-unknown-property
+      onaction={(actionEvent) => {
+        if (action) {
+          executeAction(effectiveAction, {
+            requester: actionEvent.target,
+          });
+        }
+      }}
       // eslint-disable-next-line react/no-unknown-property
       onactionstart={onActionStart}
       // eslint-disable-next-line react/no-unknown-property
