@@ -58,13 +58,10 @@ const ActionInputRadio = forwardRef((props, ref) => {
     }
   });
   const checkedAtStart = initialChecked; // || navStateValue === value;
-  const [effectiveAction, getCheckedValue, setCheckedValue] = useAction(
-    action,
-    {
-      name,
-      value: checkedAtStart ? value : undefined,
-    },
-  );
+  const [, getCheckedValue, setCheckedValue] = useAction(action, {
+    name,
+    value: checkedAtStart ? value : undefined,
+  });
   useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -95,7 +92,9 @@ const ActionInputRadio = forwardRef((props, ref) => {
         if (radioIsChecked) {
           // setNavStateValue(value);
           setCheckedValue(value);
-          e.target.requestAction(e);
+          if (!e.target.form) {
+            e.target.requestAction(e);
+          }
         }
         if (onChange) {
           onChange(e);

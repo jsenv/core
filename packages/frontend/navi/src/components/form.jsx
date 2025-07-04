@@ -33,7 +33,7 @@ const ActionForm = forwardRef((props, ref) => {
   let {
     action,
     method,
-    errorEffect = "show_validation_message", // "show_validation_message" or "throw"
+    actionErrorEffect = "show_validation_message", // "show_validation_message" or "throw"
     onActionPrevented,
     onActionStart,
     onActionError,
@@ -46,7 +46,9 @@ const ActionForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [boundAction, , setParams] = useAction(action);
-  const executeAction = useExecuteAction(innerRef, { errorEffect });
+  const executeAction = useExecuteAction(innerRef, {
+    errorEffect: actionErrorEffect,
+  });
   const executingRef = useRef(false);
 
   if (method === undefined) {

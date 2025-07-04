@@ -25,11 +25,9 @@ export const PATTERN_CONSTRAINT = {
 
     const value = input.value;
     if (!regex.test(value)) {
-      const patternValidationMessage = input.getAttribute(
-        "pattern-validation-message",
-      );
-      if (patternValidationMessage) {
-        return patternValidationMessage;
+      const patternMessage = input.getAttribute("data-pattern-message");
+      if (patternMessage) {
+        return patternMessage;
       }
       let message = `Veuillez respecter le format requis.`;
       const title = input.title;
@@ -163,12 +161,9 @@ export const MIN_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber < min) {
-        const minValidationMessage = element.getAttribute(
-          "min-validation-message",
-        );
+        const minMessage = element.getAttribute("data-min-message");
         return (
-          minValidationMessage ||
-          `Doit être supérieur ou égal à <strong>${min}</strong>.`
+          minMessage || `Doit être supérieur ou égal à <strong>${min}</strong>.`
         );
       }
       return null;
@@ -214,12 +209,8 @@ export const MAX_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber > max) {
-        const maxValidationMessage = element.getAttribute(
-          "max-validation-message",
-        );
-        return (
-          maxValidationMessage || `Doit être <strong>${max}</strong> ou plus.`
-        );
+        const maxMessage = element.getAttribute("data-max-message");
+        return maxMessage || `Doit être <strong>${max}</strong> ou plus.`;
       }
       return null;
     }
