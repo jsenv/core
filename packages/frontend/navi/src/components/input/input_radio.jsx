@@ -46,6 +46,12 @@ const ActionInputRadio = forwardRef((props, ref) => {
     ...rest
   } = props;
 
+  if (import.meta.dev && value === "") {
+    console.warn(
+      `InputRadio: value is an empty string, this is probably not what you want`,
+    );
+  }
+
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   useAutoFocus(innerRef, autoFocus);
@@ -80,6 +86,7 @@ const ActionInputRadio = forwardRef((props, ref) => {
       type="radio"
       id={id}
       name={name}
+      value={value}
       data-validation-message-arrow-x="center"
       checked={checked}
       disabled={disabled || pending}
@@ -87,7 +94,6 @@ const ActionInputRadio = forwardRef((props, ref) => {
         const radioIsChecked = e.target.checked;
         if (radioIsChecked) {
           // setNavStateValue(value);
-          debugger;
           setCheckedValue(value);
           if (!e.target.form) {
             e.target.requestAction(e);
@@ -130,7 +136,11 @@ const ActionInputRadio = forwardRef((props, ref) => {
   );
 
   if (actionPendingEffect === "loading") {
-    return <LoaderBackground pending={pending}>{inputRadio}</LoaderBackground>;
+    return (
+      <LoaderBackground pending={pending && checked}>
+        {inputRadio}
+      </LoaderBackground>
+    );
   }
   return inputRadio;
 });

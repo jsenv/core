@@ -23,7 +23,7 @@ export const useAction = (action, { name, value, preferSelf } = {}) => {
 
     if (!mountedRef.current) {
       mountedRef.current = true;
-      if (name) {
+      if (name && value !== undefined) {
         setValue(value);
       }
     }
@@ -44,7 +44,7 @@ export const useAction = (action, { name, value, preferSelf } = {}) => {
 
   if (!mountedRef.current) {
     mountedRef.current = true;
-    if (name) {
+    if (name && value !== undefined) {
       setValue(value);
     }
   }

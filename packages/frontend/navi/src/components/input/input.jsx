@@ -10,7 +10,11 @@ import.meta.css = /*css*/ `
 `;
 
 export const Input = forwardRef((props, ref) => {
-  const { type, children } = props;
+  const {
+    type,
+    children,
+    labelPosition = type === "radio" || type === "checkbox" ? "right" : "left",
+  } = props;
 
   let input;
 
@@ -23,10 +27,19 @@ export const Input = forwardRef((props, ref) => {
   }
 
   if (children) {
+    if (labelPosition === "left") {
+      return (
+        <label>
+          {children}
+          {input}
+        </label>
+      );
+    }
+
     return (
       <label>
-        {children}
         {input}
+        {children}
       </label>
     );
   }

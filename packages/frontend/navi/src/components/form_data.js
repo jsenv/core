@@ -23,10 +23,14 @@ export const createFieldsetFormData = (fieldset) => {
 
   for (const element of formElements) {
     const name = element.name;
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
 
     const value = getElementValue(element);
-    if (value === undefined) continue; // Skip unchecked checkboxes/radios
+    if (value === undefined) {
+      continue; // Skip unchecked checkboxes/radios
+    }
 
     // Handle multiple values and files
     if (element.type === "file" && element.files) {

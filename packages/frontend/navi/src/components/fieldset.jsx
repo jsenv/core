@@ -43,9 +43,10 @@ const ActionFieldset = forwardRef((props, ref) => {
       onactionprevented={onActionPrevented}
       // eslint-disable-next-line react/no-unknown-property
       onaction={async (actionEvent) => {
-        const fieldset = actionEvent.current;
+        const fieldset = actionEvent.target;
         const formData = createFieldsetFormData(fieldset);
-        setParams(formDataToObject(formData));
+        const params = formDataToObject(formData);
+        setParams(params);
 
         const actionToExecute = actionEvent.detail.action || boundAction;
         executeAction(actionToExecute, {
