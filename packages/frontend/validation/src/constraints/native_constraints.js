@@ -21,9 +21,11 @@ export const PATTERN_CONSTRAINT = {
     if (!pattern) {
       return null;
     }
-    const regex = new RegExp(pattern);
-
     const value = input.value;
+    if (!value) {
+      return null;
+    }
+    const regex = new RegExp(pattern);
     if (!regex.test(value)) {
       const patternMessage = input.getAttribute("data-pattern-message");
       if (patternMessage) {
@@ -45,14 +47,18 @@ const emailregex =
 export const TYPE_EMAIL_CONSTRAINT = {
   name: "type_email",
   check: (input) => {
-    if (input.type === "email") {
-      const value = input.value;
-      if (!value.includes("@")) {
-        return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
-      }
-      if (!emailregex.test(input.value)) {
-        return `Veuillez saisir une adresse e-mail valide.`;
-      }
+    if (input.type !== "email") {
+      return null;
+    }
+    const value = input.value;
+    if (!value) {
+      return null;
+    }
+    if (!value.includes("@")) {
+      return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
+    }
+    if (!emailregex.test(value)) {
+      return `Veuillez saisir une adresse e-mail valide.`;
     }
     return null;
   },
