@@ -125,7 +125,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
           return;
         }
         e.target.checked = checked;
-        setNavStateValue(checkedAtStart);
+        setNavStateValue(undefined);
         if (onCancel) {
           onCancel();
         }
@@ -149,7 +149,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
       onaction={(actionEvent) => {
         if (action) {
           executeAction(effectiveAction, {
-            requester: actionEvent.target,
+            requester: actionEvent.detail.requester,
           });
         }
       }}

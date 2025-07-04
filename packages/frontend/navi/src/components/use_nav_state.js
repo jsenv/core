@@ -32,15 +32,15 @@ Consider using unique IDs for each component instance.`,
   return useNavStateWithoutWarnings(id, initialValue, options);
 };
 
-const NONE = {};
+const NOT_SET = {};
 const NO_OP = () => {};
 const useNavStateWithoutWarnings = (id, initialValue, { debug } = {}) => {
-  const navStateRef = useRef(NONE);
+  const navStateRef = useRef(NOT_SET);
   if (!id) {
     return [navStateRef.current, NO_OP];
   }
 
-  if (navStateRef.current === NONE) {
+  if (navStateRef.current === NOT_SET) {
     const navEntryState = navigation.currentEntry.getState();
     const valueFromNavState = navEntryState ? navEntryState[id] : undefined;
     if (valueFromNavState === undefined) {

@@ -3,6 +3,8 @@ import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
 import { useParentAction } from "./action_context.js";
 
+let debug = true;
+
 export const useAction = (action, { name, value, preferSelf } = {}) => {
   const mountedRef = useRef(false);
   const parentBoundAction = useParentAction();
@@ -35,23 +37,35 @@ export const useAction = (action, { name, value, preferSelf } = {}) => {
   boundAction.meta.paramsSignal = paramsSignal;
   boundAction.meta.updateParams = updateParams;
 
+  const boundActionPrevious = useRef(null);
+  boundActionPrevious.current = boundAction;
+
   const getValue = name
     ? () => paramsSignal.value[name]
     : () => paramsSignal.value;
   const setValue = name
-    ? (value) => updateParams({ [name]: value })
+    ? (value) => {
+        if (debug) {
+          console.debug(
+            `useAction(${name}) set value to ${value} (old value is ${getValue()} )`,
+          );
+        }
+        return updateParams({ [name]: value });
+      }
     : updateParams;
 
   if (!mountedRef.current) {
     mountedRef.current = true;
     if (name && value !== undefined) {
+      if (debug) {
+        console.debug(`useAction(${name}) initial value: ${value}`);
+      }
       setValue(value);
     }
   }
   return [boundAction, getValue, setValue];
 };
 
-let debug = false;
 const sharedSignalCache = new WeakMap();
 const useActionParamsSignal = (action, initialParams = {}) => {
   const fromCache = sharedSignalCache.get(action);

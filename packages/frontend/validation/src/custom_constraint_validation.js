@@ -39,7 +39,7 @@ import {
 } from "./constraints/native_constraints.js";
 import { openValidationMessage } from "./validation_message.js";
 
-let debug = true;
+let debug = false;
 
 const validationInProgressWeakSet = new WeakSet();
 
