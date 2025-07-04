@@ -36,8 +36,8 @@ export const useCustomValidationRef = (elementRef, targetSelector) => {
     } else {
       target = element;
     }
-    const unsubscribe = subscribe(target);
-    const validationInterface = target.__validationInterface__;
+    const unsubscribe = subscribe(element, target);
+    const validationInterface = element.__validationInterface__;
     customValidationRef.current = validationInterface;
     return () => {
       unsubscribe();
@@ -48,12 +48,12 @@ export const useCustomValidationRef = (elementRef, targetSelector) => {
 };
 
 const subscribeCountWeakMap = new WeakMap();
-const subscribe = (element) => {
+const subscribe = (element, target) => {
   if (element.__validationInterface__) {
     let subscribeCount = subscribeCountWeakMap.get(element);
     subscribeCountWeakMap.set(element, subscribeCount + 1);
   } else {
-    installCustomConstraintValidation(element);
+    installCustomConstraintValidation(element, target);
     subscribeCountWeakMap.set(element, 1);
   }
   return () => {

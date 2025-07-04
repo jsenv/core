@@ -126,7 +126,6 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
       id={id}
       name={name}
       value={value}
-      data-validation-message-arrow-x="center"
       checked={checked}
       disabled={disabled || pending}
       // eslint-disable-next-line react/no-unknown-property

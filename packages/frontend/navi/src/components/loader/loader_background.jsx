@@ -126,7 +126,7 @@ const LoaderBackgroundWithWrapper = ({
     setBorderTopWidth(newBorderTopWidth);
     setBorderColor(newBorderColor);
     setDetectedColor(newDetectedColor);
-  }, []);
+  }, [pending]);
 
   useLayoutEffect(() => {
     updateStyles();

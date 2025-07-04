@@ -1,8 +1,11 @@
 import { useLayoutEffect } from "preact/hooks";
 import { useCustomValidationRef } from "./use_custom_validation_ref.js";
 
-export const useConstraints = (elementRef, constraints) => {
-  const customValidationRef = useCustomValidationRef(elementRef);
+export const useConstraints = (elementRef, constraints, targetSelector) => {
+  const customValidationRef = useCustomValidationRef(
+    elementRef,
+    targetSelector,
+  );
   useLayoutEffect(() => {
     const customValidation = customValidationRef.current;
     const cleanupCallbackSet = new Set();

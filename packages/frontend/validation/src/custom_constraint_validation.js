@@ -63,7 +63,10 @@ export const dispatchRequestAction = (
   );
 };
 
-export const installCustomConstraintValidation = (element) => {
+export const installCustomConstraintValidation = (
+  element,
+  elementReceivingValidationMessage = element,
+) => {
   const validationInterface = {
     uninstall: undefined,
     registerConstraint: undefined,
@@ -202,13 +205,17 @@ export const installCustomConstraintValidation = (element) => {
       message = lastFailedValidityInfo.message;
       level = lastFailedValidityInfo.level;
     }
-    validationMessage = openValidationMessage(element, message, {
-      level,
-      onClose: () => {
-        cleanupCallbackSet.delete(closeOnCleanup);
-        validationMessage = null;
+    validationMessage = openValidationMessage(
+      elementReceivingValidationMessage,
+      message,
+      {
+        level,
+        onClose: () => {
+          cleanupCallbackSet.delete(closeOnCleanup);
+          validationMessage = null;
+        },
       },
-    });
+    );
     cleanupCallbackSet.add(closeOnCleanup);
   };
 

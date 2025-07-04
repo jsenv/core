@@ -48,6 +48,7 @@ export const CheckboxIcon = ({ checked = false, loading = false }) => {
   return (
     <div
       className="checkbox_icon"
+      data-validation-message-arrow-x="center"
       data-checked={checked ? "" : undefined}
       data-loading={loading ? "" : undefined}
     >
