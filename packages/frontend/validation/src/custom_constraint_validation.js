@@ -39,7 +39,7 @@ import {
 } from "./constraints/native_constraints.js";
 import { openValidationMessage } from "./validation_message.js";
 
-let debug = false;
+let debug = true;
 
 const validationInProgressWeakSet = new WeakSet();
 
@@ -147,11 +147,7 @@ export const installCustomConstraintValidation = (element) => {
         detail: { cause: e, requester },
       });
       if (debug) {
-        console.debug(
-          `"action" dispatched on`,
-          target,
-          `after validation success`,
-        );
+        console.debug(`element is valid -> dispatch "action" on`, target);
       }
       target.dispatchEvent(actionCustomEvent);
       return;
@@ -184,7 +180,7 @@ export const installCustomConstraintValidation = (element) => {
       detail: { cause: e, requester, action },
     });
     if (debug) {
-      console.debug(`action dispatched on`, elementReceivingEvents);
+      console.debug(`"action" dispatched on`, elementReceivingEvents);
     }
     elementReceivingEvents.dispatchEvent(actionCustomEvent);
   };
@@ -386,7 +382,7 @@ export const installCustomConstraintValidation = (element) => {
         detail: { cause: e, requester: form },
       });
       if (debug) {
-        console.debug(`action dispatched on`, form);
+        console.debug(`"submit" called -> dispatch "action" on`, form);
       }
       form.dispatchEvent(actionCustomEvent);
     });
