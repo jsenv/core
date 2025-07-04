@@ -19,6 +19,7 @@ export { Button } from "./src/components/input/button.jsx";
 export { Input } from "./src/components/input/input.jsx";
 export { InputCheckbox } from "./src/components/input/input_checkbox.jsx";
 export { InputRadio } from "./src/components/input/input_radio.jsx";
+export { InputText } from "./src/components/input/input_text.jsx";
 
 export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
 
