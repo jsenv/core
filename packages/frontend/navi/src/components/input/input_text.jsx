@@ -6,10 +6,10 @@ import { renderActionComponent } from "../action_execution/render_action_compone
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
+import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnChange } from "../use_on_change.js";
-import { useOnFormReset } from "../use_on_form_reset.js";
 
 export const InputText = forwardRef((props, ref) => {
   return renderActionComponent(props, ref, ActionInputText, SimpleInputText);
@@ -61,10 +61,6 @@ const ActionInputText = forwardRef((props, ref) => {
         ? ""
         : navStateValue
       : initialValue;
-  useOnFormReset(innerRef, () => {
-    setNavStateValue(undefined);
-    setValue(valueAtStart);
-  });
 
   const [effectiveAction, getValue, setValue] = useAction(action, {
     name,
@@ -84,6 +80,35 @@ const ActionInputText = forwardRef((props, ref) => {
     }
   });
 
+  useActionEvents(innerRef, {
+    onCancel: (e, reason) => {
+      if (reason === "blur_invalid" && !cancelOnBlurInvalid) {
+        return;
+      }
+      if (reason === "escape_key" && !cancelOnEscape) {
+        return;
+      }
+      setNavStateValue(undefined);
+      setValue(valueAtStart);
+      innerRef.current.value = valueAtStart;
+      onCancel?.(e, reason);
+    },
+    onPrevented: onActionPrevented,
+    onAction: (e) => {
+      if (action) {
+        executeAction(effectiveAction, {
+          requester: e.detail.requester,
+        });
+      }
+    },
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: () => {
+      setNavStateValue(undefined);
+      onActionEnd?.();
+    },
+  });
+
   const inputText = (
     <input
       {...rest}
@@ -92,43 +117,11 @@ const ActionInputText = forwardRef((props, ref) => {
       name={name}
       value={value}
       disabled={disabled || pending}
-      // eslint-disable-next-line react/no-unknown-property
-      oncancel={(event) => {
-        if (event.detail === "blur_invalid" && !cancelOnBlurInvalid) {
-          return;
-        }
-        if (event.detail === "escape_key" && !cancelOnEscape) {
-          return;
-        }
-        innerRef.current.value = valueAtStart;
-        if (onCancel) {
-          onCancel(event);
-        }
-      }}
       onInput={(e) => {
         const inputValue = e.target.value;
         setNavStateValue(inputValue);
         setValue(inputValue);
         onInput?.(e);
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionprevented={onActionPrevented}
-      // eslint-disable-next-line react/no-unknown-property
-      onaction={(actionEvent) => {
-        if (action) {
-          executeAction(effectiveAction, {
-            requester: actionEvent.details.requester,
-          });
-        }
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionstart={onActionStart}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionerror={onActionError}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionend={() => {
-        setNavStateValue(undefined);
-        onActionEnd?.();
       }}
     />
   );

@@ -100,15 +100,13 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   const checked = error || aborted ? initialChecked : checkedFromSignal;
 
   useActionEvents(innerRef, {
-    onReset: (e) => {
-      if (e.detail === "blur_invalid") {
+    onCancel: (e, reason) => {
+      if (reason === "blur_invalid") {
         return;
       }
       setNavStateValue(undefined);
       setChecked(checkedAtStart);
-      if (onCancel) {
-        onCancel();
-      }
+      onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
     onAction: (e) => {

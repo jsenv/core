@@ -2,13 +2,26 @@ import { useLayoutEffect } from "preact/hooks";
 
 export const useActionEvents = (
   elementRef,
-  { onReset, onPrevented, onAction, onStart, onError, onEnd },
+  {
+    /**
+     * @param {Event} e - L'événement original
+     * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
+     */
+    onCancel,
+    onPrevented,
+    onAction,
+    onStart,
+    onError,
+    onEnd,
+  },
 ) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
     const isForm = element.tagName === "FORM";
     const eventsToListenOnForm = {
-      reset: onReset,
+      reset: (e) => {
+        onCancel?.(e, "form_reset");
+      },
       actionprevented: onPrevented,
       action: onAction,
       actionstart: onStart,
@@ -16,7 +29,9 @@ export const useActionEvents = (
       actionend: onEnd,
     };
     const eventsToListenOnElement = {
-      cancel: onReset,
+      cancel: (e) => {
+        onCancel?.(e, e.detail);
+      },
       actionprevented: onPrevented,
       action: onAction,
       actionstart: onStart,
@@ -42,7 +57,7 @@ export const useActionEvents = (
     }
 
     return listenEvents(element, eventsToListenOnElement);
-  }, [onReset, onPrevented, onAction, onStart, onError, onEnd]);
+  }, [onCancel, onPrevented, onAction, onStart, onError, onEnd]);
 };
 
 const listenEvents = (element, events) => {

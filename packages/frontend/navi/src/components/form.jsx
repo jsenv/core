@@ -68,7 +68,6 @@ const ActionForm = forwardRef((props, ref) => {
 
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
-
     onAction: (actionEvent) => {
       if (executingRef.current) {
         /**
