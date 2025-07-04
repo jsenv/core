@@ -64,11 +64,12 @@
                 <legend>Select your favorite colors:</legend>
 
                 <CheckboxList
+                  id="form_alert_1"
                   name="colors"
                   options={[
-                    { renderLabel: () => "Red", value: "red" },
-                    { renderLabel: () => "Blue", value: "blue" },
-                    { renderLabel: () => "Green", value: "green" },
+                    { renderLabel: () => "Red", id: "red", value: "red" },
+                    { renderLabel: () => "Blue", id: "blue", value: "blue" },
+                    { renderLabel: () => "Green", id: "green", value: "green" },
                   ]}
                 />
 

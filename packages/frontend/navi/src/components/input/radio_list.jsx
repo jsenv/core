@@ -98,22 +98,25 @@ export const RadioList = forwardRef((props, ref) => {
         const checked = checkedValue === value;
         const radioRef = useRef(null);
 
-        const onCheck = (event) => {
+        const handleChange = (event) => {
           const radio = event.target;
-          setCheckedValue(value);
-          if (!radio.form) {
+          const radioIsChecked = radio.checked;
+          if (radioIsChecked) {
+            setCheckedValue(value);
+            if (radio.form) {
+              return;
+            }
             actionRequesterRef.current = radio;
             const radioListContainer = innerRef.current;
             dispatchRequestAction(radioListContainer, event);
+            return;
           }
-        };
-        const onUncheck = (event) => {
+
           // checking if other radio are unchecked is rather useless
           // in case of browser "change" event as browser always uncheck one in favor of an other
           // the only way to uncheck without having something else checked is to do it programmatically (or via form reset button)
           // so we could theorically skip this check and assume no other radio is checked
           // HOWEVER let's be robust
-          const radio = event.target;
           const closestContainer =
             radio.form ||
             radio.closest(".radio_list") ||
@@ -132,14 +135,17 @@ export const RadioList = forwardRef((props, ref) => {
               break;
             }
           }
-          if (!otherRadioChecked) {
-            setCheckedValue(undefined);
-            if (!radio.form) {
-              actionRequesterRef.current = radio;
-              const radioListContainer = innerRef.current;
-              dispatchRequestAction(radioListContainer, event);
-            }
+          if (otherRadioChecked) {
+            // so in theory we never reach this point
+            return;
           }
+          setCheckedValue(undefined);
+          if (radio.form) {
+            return;
+          }
+          actionRequesterRef.current = radio;
+          const radioListContainer = innerRef.current;
+          dispatchRequestAction(radioListContainer, event);
         };
 
         let radio = (
@@ -151,25 +157,9 @@ export const RadioList = forwardRef((props, ref) => {
             value={value}
             checked={checked}
             disabled={disabled || pending}
-            onChange={(event) => {
-              const radio = event.target;
-              const radioIsChecked = radio.checked;
-              if (radioIsChecked) {
-                onCheck(event);
-              } else {
-                onUncheck(event);
-              }
-            }}
+            onChange={handleChange}
             // eslint-disable-next-line react/no-unknown-property
-            onprogrammaticchange={(event) => {
-              const radio = event.target;
-              const radioIsChecked = radio.checked;
-              if (radioIsChecked) {
-                onCheck(event);
-              } else {
-                onUncheck(event);
-              }
-            }}
+            onprogrammaticchange={handleChange}
           />
         );
 

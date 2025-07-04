@@ -117,6 +117,24 @@ export const CheckboxList = forwardRef((props, ref) => {
         const checked = checkedValueArray.includes(value);
         const checkboxRef = useRef(null);
 
+        const handleChange = (event) => {
+          const checkbox = event.target;
+          const checkboxIsChecked = checkbox.checked;
+          if (checkboxIsChecked) {
+            addToCheckedValues(value);
+          } else {
+            removeFromCheckedValues(value);
+          }
+
+          if (checkbox.form) {
+            // let the submit button handle the request action
+            return;
+          }
+          const checkboxListContainer = innerRef.current;
+          actionRequesterRef.current = checkbox;
+          dispatchRequestAction(checkboxListContainer, event);
+        };
+
         let checkbox = (
           <input
             ref={checkboxRef}
@@ -126,20 +144,9 @@ export const CheckboxList = forwardRef((props, ref) => {
             value={value}
             checked={checked}
             disabled={disabled || pending}
-            onChange={(event) => {
-              const checkbox = event.target;
-              const checkboxIsChecked = checkbox.checked;
-              if (checkboxIsChecked) {
-                addToCheckedValues(value);
-              } else {
-                removeFromCheckedValues(value);
-              }
-              if (!checkbox.form) {
-                const checkboxListContainer = innerRef.current;
-                actionRequesterRef.current = checkbox;
-                dispatchRequestAction(checkboxListContainer, event);
-              }
-            }}
+            onChange={handleChange}
+            // eslint-disable-next-line react/no-unknown-property
+            onprogrammaticchange={handleChange}
           />
         );
 
