@@ -31,7 +31,7 @@ export const CheckboxList = forwardRef((props, ref) => {
   const {
     id,
     name,
-    action,
+    action = () => {},
     options,
     actionPendingEffect = "loading",
     actionErrorEffect,
@@ -39,6 +39,7 @@ export const CheckboxList = forwardRef((props, ref) => {
     onActionStart,
     onActionError,
     onActionEnd,
+    loading,
     ...rest
   } = props;
 
@@ -66,6 +67,7 @@ export const CheckboxList = forwardRef((props, ref) => {
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
+
   const actionRequesterRef = useRef();
 
   const checkedValueArrayFromSignal = getCheckedValueArray();
@@ -162,15 +164,22 @@ export const CheckboxList = forwardRef((props, ref) => {
           />
         );
 
+        const innerLoading =
+          loading ||
+          (pending &&
+            actionRequesterRef.current &&
+            actionRequesterRef.current === checkboxRef.current);
+
+        checkbox = (
+          <>
+            {checkbox}
+            <CheckboxIcon checked={checked} pending={innerLoading} />
+          </>
+        );
+
         if (actionPendingEffect === "loading") {
           checkbox = (
-            <LoaderBackground
-              pending={
-                pending &&
-                actionRequesterRef.current &&
-                actionRequesterRef.current === checkboxRef.current
-              }
-            >
+            <LoaderBackground pending={innerLoading}>
               {checkbox}
             </LoaderBackground>
           );
@@ -182,7 +191,6 @@ export const CheckboxList = forwardRef((props, ref) => {
             data-disabled={disabled || pending ? "" : undefined}
           >
             {checkbox}
-            <CheckboxIcon checked={checked} />
             {renderLabel(option)}
           </label>
         );

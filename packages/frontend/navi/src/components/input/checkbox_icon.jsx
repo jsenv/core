@@ -40,9 +40,13 @@ import.meta.css = /*css*/ `
 }
 `;
 
-export const CheckboxIcon = ({ checked = false }) => {
+export const CheckboxIcon = ({ checked = false, pending = false }) => {
   return (
-    <div className="checkbox_icon" data-checked={checked ? "" : undefined}>
+    <div
+      className="checkbox_icon"
+      data-checked={checked ? "" : undefined}
+      data-pending={pending ? "" : undefined}
+    >
       <svg viewBox="0 0 12 12" aria-hidden="true">
         <path
           d="M10.5 2L4.5 9L1.5 5.5"
