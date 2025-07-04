@@ -8,12 +8,24 @@ import "../checked_programmatic_change.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
+import { CheckboxIcon } from "./checkbox_icon.jsx";
 
 import.meta.css = /*css*/ `
 .checkbox_list {
     display: flex;
     flex-direction: column;
-}`;
+}
+
+.checkbox_list input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+`;
 
 export const CheckboxList = forwardRef((props, ref) => {
   const {
@@ -170,6 +182,7 @@ export const CheckboxList = forwardRef((props, ref) => {
             data-disabled={disabled || pending ? "" : undefined}
           >
             {checkbox}
+            <CheckboxIcon checked={checked} />
             {renderLabel(option)}
           </label>
         );
