@@ -33,7 +33,6 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
   const inputCheckbox = (
     <CustomCheckbox checked={innerChecked} loading={loading}>
       <input
-        data-visually-hidden
         ref={innerRef}
         checked={innerChecked}
         onChange={(e) => {
@@ -107,7 +106,6 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   let inputCheckbox = (
     <input
       {...rest}
-      data-visually-hidden
       ref={innerRef}
       type="checkbox"
       id={id}
@@ -115,6 +113,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
       value={value}
       checked={checked}
       disabled={disabled || pending}
+      data-validation-message-arrow-x="center"
       // eslint-disable-next-line react/no-unknown-property
       oncancel={(e) => {
         if (e.detail === "blur_invalid") {

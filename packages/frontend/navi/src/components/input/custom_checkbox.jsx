@@ -61,7 +61,6 @@ export const CustomCheckbox = ({
   return (
     <div
       className="custom_checkbox"
-      data-validation-message-arrow-x="center"
       data-checked={checked ? "" : undefined}
       data-loading={loading ? "" : undefined}
     >
