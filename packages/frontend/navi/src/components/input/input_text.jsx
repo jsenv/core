@@ -1,6 +1,6 @@
 import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
+import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
@@ -8,6 +8,7 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
+import { useOnChange } from "../use_on_change.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
 
 export const InputText = forwardRef((props, ref) => {
@@ -75,19 +76,11 @@ const ActionInputText = forwardRef((props, ref) => {
   });
   const value = getValue();
 
-  // we must use a custom event listener because preact bind onChange to onInput for compat with react
-  useLayoutEffect(() => {
-    const input = innerRef.current;
-    const onChange = (e) => {
-      if (action) {
-        e.target.requestAction(e);
-      }
-    };
-    input.addEventListener("change", onChange);
-    return () => {
-      input.removeEventListener("change", onChange);
-    };
-  }, [action]);
+  useOnChange(innerRef, (e) => {
+    if (action) {
+      e.target.requestAction(e);
+    }
+  });
 
   let input = (
     <input
