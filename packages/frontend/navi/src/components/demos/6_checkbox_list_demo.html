@@ -15,7 +15,7 @@
         // eslint-disable-next-line no-unused-vars
         Fieldset,
         // eslint-disable-next-line no-unused-vars
-        Input,
+        CheckboxList,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
@@ -34,23 +34,14 @@
               >
                 <legend>Select your favorite colors:</legend>
 
-                <div>
-                  <Input type="checkbox" name="colors" value="red">
-                    Red
-                  </Input>
-                </div>
-
-                <div>
-                  <Input type="checkbox" name="colors" value="green">
-                    Green
-                  </Input>
-                </div>
-
-                <div>
-                  <Input type="checkbox" name="colors" value="blue">
-                    Blur
-                  </Input>
-                </div>
+                <CheckboxList
+                  name="colors"
+                  options={[
+                    { renderLabel: () => "Red", value: "red" },
+                    { renderLabel: () => "Blue", value: "blue" },
+                    { renderLabel: () => "Green", value: "green" },
+                  ]}
+                />
               </Fieldset>
             </div>
           </div>

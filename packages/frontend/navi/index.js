@@ -16,6 +16,7 @@ export {
 export { Fieldset } from "./src/components/fieldset.jsx";
 export { Form } from "./src/components/form.jsx";
 export { Button } from "./src/components/input/button.jsx";
+export { CheckboxList } from "./src/components/input/checkbox_list.jsx";
 export { Input } from "./src/components/input/input.jsx";
 
 export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";

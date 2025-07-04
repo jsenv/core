@@ -43,6 +43,22 @@ let debug = false;
 
 const validationInProgressWeakSet = new WeakSet();
 
+export const dispatchRequestAction = (element, event, { action } = {}) => {
+  let validationInterface = element.__validationInterface__;
+  if (!validationInterface) {
+    validationInterface = installCustomConstraintValidation(element);
+  }
+
+  if (!event) {
+    event = new CustomEvent("requestaction", { cancelable: true });
+  }
+
+  return validationInterface.requestAction(event, {
+    target: element,
+    action,
+  });
+};
+
 export const installCustomConstraintValidation = (element) => {
   const validationInterface = {
     uninstall: undefined,
@@ -51,6 +67,7 @@ export const installCustomConstraintValidation = (element) => {
     removeCustomMessage: undefined,
     checkValidity: undefined,
     reportValidity: undefined,
+    requestAction: undefined,
   };
 
   const cleanupCallbackSet = new Set();
@@ -76,17 +93,7 @@ export const installCustomConstraintValidation = (element) => {
     element.dispatchEvent(cancelEvent);
   };
 
-  element.requestAction = (event, { action } = {}) => {
-    if (!event) {
-      event = new CustomEvent("requestaction", { cancelable: true });
-    }
-    handleRequestAction(event, {
-      target: element,
-      action,
-    });
-  };
-
-  const handleRequestAction = (e, { target, requester = target, action }) => {
+  const requestAction = (e, { target, requester = target, action }) => {
     if (debug) {
       console.debug(`action requested by`, requester, `(event: "${e.type}")`);
     }
@@ -177,6 +184,7 @@ export const installCustomConstraintValidation = (element) => {
     }
     elementReceivingEvents.dispatchEvent(actionCustomEvent);
   };
+  validationInterface.requestAction = requestAction;
 
   let validationMessage;
   const openElementValidationMessage = ({ skipFocus } = {}) => {
@@ -351,7 +359,7 @@ export const installCustomConstraintValidation = (element) => {
       // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
       // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
       e.preventDefault();
-      handleRequestAction(e, { target: form });
+      requestAction(e, { target: form });
     };
     requestSubmitCallbackSet.add(onRequestSubmit);
     cleanupCallbackSet.add(() => {
@@ -441,7 +449,7 @@ export const installCustomConstraintValidation = (element) => {
             element,
           );
           if (effect === "activate") {
-            handleRequestAction(e, {
+            requestAction(e, {
               target: element,
               requester: target,
             });
@@ -459,7 +467,7 @@ export const installCustomConstraintValidation = (element) => {
           // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
           e.preventDefault();
 
-          handleRequestAction(e, {
+          requestAction(e, {
             target: form,
             requester: target,
           });
@@ -486,7 +494,7 @@ export const installCustomConstraintValidation = (element) => {
           }
           const effect = findEventTargetOrAncestor(e, getElementEffect, form);
           if (effect === "activate") {
-            handleRequestAction(e, {
+            requestAction(e, {
               target: element,
               requester: target,
             });
@@ -499,7 +507,7 @@ export const installCustomConstraintValidation = (element) => {
         }
         const effect = findEventTargetOrAncestor(e, getElementEffect, form);
         if (effect === "activate") {
-          handleRequestAction(e, {
+          requestAction(e, {
             target: element,
             submitter: target,
           });
