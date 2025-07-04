@@ -354,16 +354,20 @@ export const installCustomConstraintValidation = (element) => {
     });
   }
 
-  request_by_form_request_submit_call: {
+  dispatch_request_submit_call_on_form: {
     const onRequestSubmit = (form, e) => {
-      if (form !== element.form) {
+      if (form !== element.form && form !== element) {
         return;
       }
 
-      // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
-      // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
-      e.preventDefault();
-      requestAction(e, { target: form });
+      const requestSubmitCustomEvent = new CustomEvent("requestsubmit", {
+        cancelable: true,
+        detail: { cause: e },
+      });
+      form.dispatchEvent(requestSubmitCustomEvent);
+      if (requestSubmitCustomEvent.defaultPrevented) {
+        e.preventDefault();
+      }
     };
     requestSubmitCallbackSet.add(onRequestSubmit);
     cleanupCallbackSet.add(() => {
@@ -372,7 +376,7 @@ export const installCustomConstraintValidation = (element) => {
   }
 
   execute_on_form_submit: {
-    const form = element.form;
+    const form = element.form || element.tagName === "FORM" ? element : null;
     if (!form) {
       break execute_on_form_submit;
     }
@@ -389,164 +393,6 @@ export const installCustomConstraintValidation = (element) => {
     cleanupCallbackSet.add(() => {
       removeListener();
     });
-  }
-
-  request_by_click_or_enter: {
-    const findEventTargetOrAncestor = (event, predicate, rootElement) => {
-      const target = event.target;
-      const result = predicate(target);
-      if (result) {
-        return result;
-      }
-      let parentElement = target.parentElement;
-      while (parentElement && parentElement !== rootElement) {
-        const parentResult = predicate(parentElement);
-        if (parentResult) {
-          return parentResult;
-        }
-        parentElement = parentElement.parentElement;
-      }
-      return null;
-    };
-    const formHasSubmitButton = (form) => {
-      return form.querySelector(
-        "button[type='submit'], input[type='submit'], input[type='image']",
-      );
-    };
-    const getElementEffect = (element) => {
-      const isButton =
-        element.tagName === "BUTTON" || element.role === "button";
-      if (element.tagName === "INPUT" || isButton) {
-        if (element.type === "submit" || element.type === "image") {
-          return "submit";
-        }
-        if (element.type === "reset") {
-          return "reset";
-        }
-        if (isButton || element.type === "button") {
-          const form = element.form;
-          if (!form) {
-            return "activate";
-          }
-          if (formHasSubmitButton(form)) {
-            return "activate";
-          }
-          return "submit";
-        }
-      }
-      return null;
-    };
-
-    by_click: {
-      const onClick = (e) => {
-        const target = e.target;
-        const form = target.form;
-        if (!form) {
-          // happens outside a <form>
-          if (target !== element && !element.contains(target)) {
-            // happens outside this element
-            return;
-          }
-          const effect = findEventTargetOrAncestor(
-            e,
-            getElementEffect,
-            element,
-          );
-          if (effect === "activate") {
-            requestAction(e, {
-              target: element,
-              requester: target,
-            });
-          }
-          // "reset", null
-          return;
-        }
-        if (element.form !== form) {
-          // happens in an other <form>, or the input has no <form>
-          return;
-        }
-        const effect = findEventTargetOrAncestor(e, getElementEffect, form);
-        if (effect === "submit") {
-          // prevent "submit" event that would be dispatched by the browser after "click"
-          // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
-          e.preventDefault();
-
-          requestAction(e, {
-            target: form,
-            requester: target,
-          });
-        }
-        // "activate", "reset", null
-      };
-      // window.addEventListener("click", onClick, { capture: true });
-      cleanupCallbackSet.add(() => {
-        window.removeEventListener("click", onClick, { capture: true });
-      });
-    }
-    by_enter: {
-      const onKeydown = (e) => {
-        if (e.key !== "Enter") {
-          return;
-        }
-        const target = e.target;
-        const form = target.form;
-        if (!form) {
-          // happens outside a <form>
-          if (target !== element && !element.contains(target)) {
-            // happens outside this element
-            return;
-          }
-          const effect = findEventTargetOrAncestor(e, getElementEffect, form);
-          if (effect === "activate") {
-            requestAction(e, {
-              target: element,
-              requester: target,
-            });
-          }
-          return;
-        }
-        if (element.form !== form) {
-          // happens in an other <form>, or the element has no <form>
-          return;
-        }
-        const effect = findEventTargetOrAncestor(e, getElementEffect, form);
-        if (effect === "activate") {
-          requestAction(e, {
-            target: element,
-            submitter: target,
-          });
-          return;
-        }
-        // "submit", "reset", null
-      };
-      // window.addEventListener("keydown", onKeydown, { capture: true });
-      cleanupCallbackSet.add(() => {
-        window.removeEventListener("keydown", onKeydown, { capture: true });
-      });
-    }
-  }
-
-  request_on_change_when_outside_form: {
-    break request_on_change_when_outside_form;
-    // const onchange = (changeEvent) => {
-    //   // if (!element.hasAttribute("data-request-execute-on-change")) {
-    //   //   return;
-    //   // }
-    //   if (element.validity?.valueMissing) {
-    //     return;
-    //   }
-    //   if (element.form) {
-    //     return;
-    //   }
-    //   handleRequestAction(changeEvent, {
-    //     target: element,
-    //     requester: element,
-    //   });
-    // };
-    // const removeChange = addEventListener(element, "change", onchange);
-    // cleanupCallbackSet.add(() => {
-    //   removeChange();
-    // });
   }
 
   close_on_escape: {

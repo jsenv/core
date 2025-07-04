@@ -13,6 +13,7 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
+import { dispatchRequestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { ActionContext } from "./action_execution/action_context.js";
@@ -44,6 +45,10 @@ const ActionForm = forwardRef((props, ref) => {
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+  // instantiation validation to:
+  // - receive "requestsubmit" custom event ensure submit is prevented
+  // (and also execute action without validation if form.submit() is ever called)
+  useConstraints(innerRef, []);
 
   const [boundAction, , setParams] = useAction(action);
   const executeAction = useExecuteAction(innerRef, {
@@ -63,9 +68,16 @@ const ActionForm = forwardRef((props, ref) => {
   return (
     <form
       {...rest}
-      action={`javascript:void(${boundAction.name})`}
+      action={`javascript:void(\`${boundAction.name}\`)`}
       ref={innerRef}
       method={method === "get" ? "get" : "post"}
+      // eslint-disable-next-line react/no-unknown-property
+      onrequestsubmit={(e) => {
+        // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
+        // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
+        e.preventDefault();
+        dispatchRequestAction(e.target, e);
+      }}
       // eslint-disable-next-line react/no-unknown-property
       onactionprevented={onActionPrevented}
       // eslint-disable-next-line react/no-unknown-property

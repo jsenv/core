@@ -5,10 +5,8 @@ import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-
-// si c'est le type submit, j'aimerais que si c'est celui aui déclenche l'action c'est lui qui est pending
-// et pas autre chose
 
 export const Button = forwardRef((props, ref) => {
   return renderActionComponent(props, ref, ActionButton, SimpleButton);
@@ -37,6 +35,7 @@ const ActionButton = forwardRef((props, ref) => {
     disabled,
     children,
     onClick,
+    actionPendingEffect = "loading",
     actionErrorEffect,
     onActionPrevented,
     onActionStart,
@@ -56,7 +55,7 @@ const ActionButton = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
 
-  return (
+  const button = (
     <button
       ref={innerRef}
       data-validation-message-arrow-x="center"
@@ -75,7 +74,7 @@ const ActionButton = forwardRef((props, ref) => {
         if (action) {
           actionEvent.detail.cause.preventDefault(); // prevent submit by click
           executeAction(effectiveAction, {
-            requester: actionEvent.target,
+            requester: actionEvent.details.requester,
           });
         }
       }}
@@ -89,4 +88,11 @@ const ActionButton = forwardRef((props, ref) => {
       {children}
     </button>
   );
+
+  if (actionPendingEffect === "loading") {
+    // seulement si c'est le requester / un type submit dans un form
+    return <LoaderBackground pending={pending}>{button}</LoaderBackground>;
+  }
+
+  return button;
 });
