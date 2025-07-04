@@ -4,7 +4,7 @@ import { ActionContext } from "./action_execution/action_context.js";
 import { renderActionComponent } from "./action_execution/render_action_component.jsx";
 import { useAction } from "./action_execution/use_action.js";
 import { useExecuteAction } from "./action_execution/use_execute_action.js";
-import { createFieldsetFormData, formDataToObject } from "./form_data.js";
+import { collectFormElementValues } from "./collect_form_element_values.js";
 
 export const Fieldset = forwardRef((props, ref) => {
   return renderActionComponent(props, ref, ActionFieldset, SimpleFieldset);
@@ -44,8 +44,7 @@ const ActionFieldset = forwardRef((props, ref) => {
       // eslint-disable-next-line react/no-unknown-property
       onaction={async (actionEvent) => {
         const fieldset = actionEvent.target;
-        const formData = createFieldsetFormData(fieldset);
-        const params = formDataToObject(formData);
+        const params = collectFormElementValues(fieldset);
         setParams(params);
 
         const actionToExecute = actionEvent.detail.action || boundAction;

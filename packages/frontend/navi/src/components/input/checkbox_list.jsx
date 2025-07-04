@@ -12,6 +12,7 @@ import.meta.css = /*css*/ `
     display: flex;
     flex-direction: column;
 }`;
+// TODO: ideally if there is no action nor parent action we should have a simplified version of this component
 
 export const CheckboxList = forwardRef((props, ref) => {
   const {
@@ -48,13 +49,13 @@ export const CheckboxList = forwardRef((props, ref) => {
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
+  const actionRequesterRef = useRef();
 
   const checkedValueArrayFromSignal = getCheckedValueArray();
   const checkedValueArray =
     error || aborted ? checkedValueArrayAtStart : checkedValueArrayFromSignal;
 
   const addToCheckedValues = (valueToAdd) => {
-    const checkedValueArray = getCheckedValueArray();
     const checkedValueArrayWithThisValue = [];
     for (const checkedValue of checkedValueArray) {
       if (checkedValue === valueToAdd) {
@@ -66,7 +67,6 @@ export const CheckboxList = forwardRef((props, ref) => {
     setCheckedValueArray(checkedValueArrayWithThisValue);
   };
   const removeFromCheckedValues = (valueToRemove) => {
-    const checkedValueArray = getCheckedValueArray();
     const checkedValueArrayWithoutThisValue = [];
     let found = false;
     for (const checkedValue of checkedValueArray) {
@@ -85,15 +85,16 @@ export const CheckboxList = forwardRef((props, ref) => {
   return (
     <div
       className="checkbox_list"
+      data-checkbox-list
       ref={innerRef}
       {...rest} // eslint-disable-next-line react/no-unknown-property
       onactionprevented={onActionPrevented}
       // eslint-disable-next-line react/no-unknown-property
       onaction={(actionEvent) => {
-        if (action) {
-          executeAction(effectiveAction, {
-            requester: actionEvent.target,
-          });
+        if (!actionEvent.target.form) {
+          const requester = actionEvent.detail.requester;
+          actionRequesterRef.current = requester;
+          executeAction(effectiveAction, { requester });
         }
       }}
       // eslint-disable-next-line react/no-unknown-property
@@ -109,9 +110,11 @@ export const CheckboxList = forwardRef((props, ref) => {
       {options.map((option) => {
         const { value, disabled } = option;
         const checked = checkedValueArray.includes(value);
+        const checkboxRef = useRef(null);
 
         let checkbox = (
           <input
+            ref={checkboxRef}
             type="checkbox"
             name={name}
             value={value}
@@ -127,6 +130,7 @@ export const CheckboxList = forwardRef((props, ref) => {
               }
               if (!checkbox.form) {
                 const checkboxListContainer = innerRef.current;
+                actionRequesterRef.current = checkbox;
                 dispatchRequestAction(checkboxListContainer, event);
               }
             }}
@@ -135,12 +139,23 @@ export const CheckboxList = forwardRef((props, ref) => {
 
         if (actionPendingEffect === "loading") {
           checkbox = (
-            <LoaderBackground pending={pending}>{checkbox}</LoaderBackground>
+            <LoaderBackground
+              pending={
+                pending &&
+                actionRequesterRef.current &&
+                actionRequesterRef.current === checkboxRef.current
+              }
+            >
+              {checkbox}
+            </LoaderBackground>
           );
         }
 
         return (
-          <label key={value}>
+          <label
+            key={value}
+            data-disabled={disabled || pending ? "" : undefined}
+          >
             {checkbox}
             {option.renderLabel(option)}
           </label>

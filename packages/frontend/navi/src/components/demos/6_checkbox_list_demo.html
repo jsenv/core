@@ -13,6 +13,8 @@
       import { render } from "preact";
       import {
         // eslint-disable-next-line no-unused-vars
+        Form,
+        // eslint-disable-next-line no-unused-vars
         Fieldset,
         // eslint-disable-next-line no-unused-vars
         CheckboxList,
@@ -29,7 +31,7 @@
               <Fieldset
                 action={async ({ colors }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(`Colors selected: ${colors}`);
+                  throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
                 }}
               >
                 <legend>Select your favorite colors:</legend>
@@ -43,6 +45,33 @@
                   ]}
                 />
               </Fieldset>
+            </div>
+
+            <div>
+              <p>
+                <strong>Form + throw after 1s</strong>
+              </p>
+              <Form
+                action={async ({ colors }) => {
+                  await new Promise((resolve) => setTimeout(resolve, 1_000));
+                  console.log(colors);
+                  throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
+                }}
+              >
+                <legend>Select your favorite colors:</legend>
+
+                <CheckboxList
+                  name="colors"
+                  options={[
+                    { renderLabel: () => "Red", value: "red" },
+                    { renderLabel: () => "Blue", value: "blue" },
+                    { renderLabel: () => "Green", value: "green" },
+                  ]}
+                />
+
+                <button type="submit">Submit</button>
+                <button type="reset">Reset</button>
+              </Form>
             </div>
           </div>
         );

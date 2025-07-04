@@ -7,6 +7,9 @@ import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 
+// si c'est le type submit, j'aimerais que si c'est celui aui déclenche l'action c'est lui qui est pending
+// et pas autre chose
+
 export const Button = forwardRef((props, ref) => {
   return renderActionComponent(props, ref, ActionButton, SimpleButton);
 });

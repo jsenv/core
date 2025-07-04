@@ -43,20 +43,24 @@ let debug = false;
 
 const validationInProgressWeakSet = new WeakSet();
 
-export const dispatchRequestAction = (element, event, { action } = {}) => {
+export const dispatchRequestAction = (
+  element,
+  event,
+  { requester, action } = {},
+) => {
   let validationInterface = element.__validationInterface__;
   if (!validationInterface) {
     validationInterface = installCustomConstraintValidation(element);
   }
 
-  if (!event) {
-    event = new CustomEvent("requestaction", { cancelable: true });
-  }
-
-  return validationInterface.requestAction(event, {
-    target: element,
-    action,
-  });
+  return validationInterface.requestAction(
+    event || new CustomEvent("requestaction", { cancelable: true }),
+    {
+      target: element,
+      requester: requester || event ? event.target : element,
+      action,
+    },
+  );
 };
 
 export const installCustomConstraintValidation = (element) => {
