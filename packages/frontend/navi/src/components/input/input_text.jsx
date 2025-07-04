@@ -15,28 +15,14 @@ export const InputText = forwardRef((props, ref) => {
 });
 
 const SimpleInputText = forwardRef((props, ref) => {
-  const { autoFocus, constraints = [], children, ...rest } = props;
+  const { autoFocus, constraints = [], ...rest } = props;
+
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  let input = (
-    <input ref={innerRef} {...rest}>
-      {children}
-    </input>
-  );
-
-  if (children) {
-    input = (
-      <label>
-        {children}
-        {input}
-      </label>
-    );
-  }
-
-  return input;
+  return <input ref={innerRef} {...rest} />;
 });
 
 const ActionInputText = forwardRef((props, ref) => {
@@ -59,7 +45,6 @@ const ActionInputText = forwardRef((props, ref) => {
     onActionStart,
     onActionError,
     onActionEnd,
-    children,
     ...rest
   } = props;
 
@@ -155,17 +140,8 @@ const ActionInputText = forwardRef((props, ref) => {
   );
 
   if (actionPendingEffect === "loading") {
-    input = <LoaderBackground pending={pending}>{input}</LoaderBackground>;
+    return <LoaderBackground pending={pending}>{input}</LoaderBackground>;
   }
 
-  let inputWithLabel = children ? (
-    <label data-disabled={disabled || pending ? "" : undefined}>
-      {children}
-      {input}
-    </label>
-  ) : (
-    input
-  );
-
-  return inputWithLabel;
+  return input;
 });

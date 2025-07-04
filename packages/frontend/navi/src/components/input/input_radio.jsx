@@ -77,7 +77,7 @@ const ActionInputRadio = forwardRef((props, ref) => {
   // en fait on voudrait le premier check mais l'action courante doit rester le second
   const checked = value === valueChecked;
 
-  let inputRadio = (
+  const inputRadio = (
     <input
       {...rest}
       ref={innerRef}
@@ -96,9 +96,9 @@ const ActionInputRadio = forwardRef((props, ref) => {
             e.target.requestAction(e);
           }
         }
-        if (onChange) {
-          onChange(e);
-        }
+        // si jamais on uncheck programatiquement il faudrait aussi idéalement
+        // pas sur qu'on puisse detecté que rien n'est check, mais si on peut se serai tplus robuste
+        onChange?.(e);
       }}
       // eslint-disable-next-line react/no-unknown-property
       oncancel={(e) => {
@@ -115,11 +115,11 @@ const ActionInputRadio = forwardRef((props, ref) => {
       // eslint-disable-next-line react/no-unknown-property
       onactionstart={onActionStart}
       // eslint-disable-next-line react/no-unknown-property
-      onactionerror={() => {
+      onactionerror={(e) => {
         if (initialChecked) {
           setCheckedValue(value);
         }
-        onActionError?.();
+        onActionError?.(e.detail.error);
       }}
       // eslint-disable-next-line react/no-unknown-property
       onactionend={onActionEnd}
@@ -127,9 +127,7 @@ const ActionInputRadio = forwardRef((props, ref) => {
   );
 
   if (actionPendingEffect === "loading") {
-    inputRadio = (
-      <LoaderBackground pending={pending}>{inputRadio}</LoaderBackground>
-    );
+    return <LoaderBackground pending={pending}>{inputRadio}</LoaderBackground>;
   }
   return inputRadio;
 });

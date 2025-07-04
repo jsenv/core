@@ -74,7 +74,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   const checkedFromSignal = getChecked();
   const checked = error || aborted ? initialChecked : checkedFromSignal;
 
-  let inputCheckbox = (
+  const inputCheckbox = (
     <input
       {...rest}
       ref={innerRef}
@@ -131,10 +131,9 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   );
 
   if (actionPendingEffect === "loading") {
-    inputCheckbox = (
+    return (
       <LoaderBackground pending={pending}>{inputCheckbox}</LoaderBackground>
     );
   }
-
   return inputCheckbox;
 });

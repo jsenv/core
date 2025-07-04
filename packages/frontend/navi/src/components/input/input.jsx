@@ -23,7 +23,7 @@ export const Input = forwardRef((props, ref) => {
   }
 
   if (children) {
-    input = (
+    return (
       <label>
         {children}
         {input}
