@@ -82,7 +82,7 @@ const ActionInputText = forwardRef((props, ref) => {
     }
   });
 
-  let input = (
+  const inputText = (
     <input
       {...rest}
       ref={innerRef}
@@ -133,8 +133,8 @@ const ActionInputText = forwardRef((props, ref) => {
   );
 
   if (actionPendingEffect === "loading") {
-    return <LoaderBackground pending={pending}>{input}</LoaderBackground>;
+    return <LoaderBackground pending={pending}>{inputText}</LoaderBackground>;
   }
 
-  return input;
+  return inputText;
 });

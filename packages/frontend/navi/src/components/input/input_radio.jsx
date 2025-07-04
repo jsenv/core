@@ -22,7 +22,7 @@ const SimpleInputRadio = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  return <input ref={innerRef} {...rest}></input>;
+  return <input ref={innerRef} {...rest} />;
 });
 
 const ActionInputRadio = forwardRef((props, ref) => {
@@ -58,24 +58,20 @@ const ActionInputRadio = forwardRef((props, ref) => {
     }
   });
   const checkedAtStart = initialChecked; // || navStateValue === value;
-  const [, getCheckedValue, setCheckedValue] = useAction(action, {
-    name,
-    value: checkedAtStart ? value : undefined,
-  });
+  const [effectiveAction, getCheckedValue, setCheckedValue] = useAction(
+    action,
+    {
+      name,
+      value: checkedAtStart ? value : undefined,
+    },
+  );
   useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const { pending } = useActionStatus(action);
+  const { pending, error, aborted } = useActionStatus(effectiveAction);
 
   const valueChecked = getCheckedValue();
-  // le souci avec ça c'est que ca va changer la valeur de qui est check
-  // (ca remet celle du haut)
-  // qui du coup n'est pas en erreur
-  // valueChecked vaut le 2eme radio
-  // error vaut null jusqu'a ce quon re-render et la magiquement le second se check
-  // alors qu'on voudrait le premier
-  // en fait on voudrait le premier check mais l'action courante doit rester le second
-  const checked = value === valueChecked;
+  const checked = error || aborted ? initialChecked : value === valueChecked;
 
   const inputRadio = (
     <input
@@ -115,14 +111,12 @@ const ActionInputRadio = forwardRef((props, ref) => {
       // eslint-disable-next-line react/no-unknown-property
       onactionstart={onActionStart}
       // eslint-disable-next-line react/no-unknown-property
-      onactionerror={(e) => {
-        if (initialChecked) {
-          setCheckedValue(value);
-        }
-        onActionError?.(e.detail.error);
-      }}
+      onactionerror={onActionError}
       // eslint-disable-next-line react/no-unknown-property
-      onactionend={onActionEnd}
+      onactionend={() => {
+        // setNavStateValue(undefined);
+        onActionEnd?.();
+      }}
     />
   );
 

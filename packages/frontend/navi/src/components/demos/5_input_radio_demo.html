@@ -80,21 +80,23 @@
               <p>
                 <strong>Throw after 1s</strong>
               </p>
-              <Input
-                type="radio"
-                name="test"
-                action={async ({ test }) => {
-                  await new Promise((resolve) => {
-                    setTimeout(resolve, 1000);
-                  });
-                  throw new Error(`This is an error, checked: ${test}`);
-                }}
-                style="color: blue"
-                // data-validation-message-stay-on-focus
-                // data-validation-message-stay-on-blur
-              >
-                Test
-              </Input>
+              <div>
+                <Input
+                  type="radio"
+                  name="test"
+                  action={async ({ test }) => {
+                    await new Promise((resolve) => {
+                      setTimeout(resolve, 1000);
+                    });
+                    throw new Error(`This is an error, checked: ${test}`);
+                  }}
+                  style="color: blue"
+                  // data-validation-message-stay-on-focus
+                  // data-validation-message-stay-on-blur
+                >
+                  Test
+                </Input>
+              </div>
             </div>
           </div>
         );
