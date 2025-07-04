@@ -10,12 +10,6 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
 
-import.meta.css = /*css*/ `
-  label[data-disabled] {
-    opacity: 0.5;
-  }
-`;
-
 export const InputCheckbox = forwardRef((props, ref) => {
   return renderActionComponent(
     props,
@@ -26,29 +20,14 @@ export const InputCheckbox = forwardRef((props, ref) => {
 });
 
 const SimpleInputCheckbox = forwardRef((props, ref) => {
-  const { autoFocus, constraints = [], children, ...rest } = props;
+  const { autoFocus, constraints = [], ...rest } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  let input = (
-    <input ref={innerRef} type="checkbox" {...rest}>
-      {children}
-    </input>
-  );
-
-  if (children) {
-    input = (
-      <label>
-        {children}
-        {input}
-      </label>
-    );
-  }
-
-  return input;
+  return <input ref={innerRef} {...rest} />;
 });
 
 const ActionInputCheckbox = forwardRef((props, ref) => {
@@ -68,7 +47,6 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     onActionStart,
     onActionError,
     onActionEnd,
-    children,
     ...rest
   } = props;
 
@@ -158,14 +136,5 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     );
   }
 
-  let inputCheckboxWithLabel = children ? (
-    <label data-disabled={disabled || pending ? "" : undefined}>
-      {children}
-      {inputCheckbox}
-    </label>
-  ) : (
-    inputCheckbox
-  );
-
-  return inputCheckboxWithLabel;
+  return inputCheckbox;
 });

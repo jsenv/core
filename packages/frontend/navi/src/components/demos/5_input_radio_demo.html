@@ -15,7 +15,7 @@
         // eslint-disable-next-line no-unused-vars
         Fieldset,
         // eslint-disable-next-line no-unused-vars
-        InputRadio,
+        Input,
       } from "@jsenv/navi";
 
       const inputRadioAction = async ({ drone }) => {
@@ -52,21 +52,27 @@
                 <legend>Select a maintenance drone:</legend>
 
                 <div>
-                  <InputRadio id="drone" name="drone" value="huey" checked>
+                  <Input
+                    type="radio"
+                    id="drone"
+                    name="drone"
+                    value="huey"
+                    checked
+                  >
                     Huey
-                  </InputRadio>
+                  </Input>
                 </div>
 
                 <div>
-                  <InputRadio id="drone" name="drone" value="dewey">
+                  <Input type="radio" id="drone" name="drone" value="dewey">
                     Dewey
-                  </InputRadio>
+                  </Input>
                 </div>
 
                 <div>
-                  <InputRadio id="drone" name="drone" value="louie">
+                  <Input type="radio" id="drone" name="drone" value="louie">
                     Louie
-                  </InputRadio>
+                  </Input>
                 </div>
               </Fieldset>
             </div>
@@ -74,7 +80,8 @@
               <p>
                 <strong>Throw after 1s</strong>
               </p>
-              <InputRadio
+              <Input
+                type="radio"
                 name="test"
                 action={async ({ test }) => {
                   await new Promise((resolve) => {
@@ -87,7 +94,7 @@
                 // data-validation-message-stay-on-blur
               >
                 Test
-              </InputRadio>
+              </Input>
             </div>
           </div>
         );
