@@ -86,7 +86,6 @@ const ActionInputText = forwardRef((props, ref) => {
     <input
       {...rest}
       ref={innerRef}
-      type="text"
       id={id}
       name={name}
       value={value}

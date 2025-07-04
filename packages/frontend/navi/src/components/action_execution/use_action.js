@@ -3,7 +3,7 @@ import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
 import { useParentAction } from "./action_context.js";
 
-let debug = true;
+let debug = false;
 let componentIdCounter = 0;
 
 export const useAction = (action, { name, value, preferSelf } = {}) => {
