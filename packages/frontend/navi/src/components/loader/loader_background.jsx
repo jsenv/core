@@ -1,5 +1,5 @@
 import { createPortal } from "preact/compat";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useDebounceTrue } from "../use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
@@ -79,21 +79,32 @@ const LoaderBackgroundWithWrapper = ({ pending, color, inset, children }) => {
   const [detectedColor, setDetectedColor] = useState();
   const [borderTopWidth, setBorderTopWidth] = useState(0);
 
-  useLayoutEffect(() => {
+  const updateStyles = useCallback(() => {
     const container = containerRef.current;
-    const lastElementChild = container.lastElementChild;
+    const lastElementChild = container?.lastElementChild;
     if (!lastElementChild) {
       return;
     }
+    if (!pending) {
+      return;
+    }
+
     const computedStyle = window.getComputedStyle(lastElementChild);
-    const computedStyleBorderTopWidth = parseFloat(
-      computedStyle.borderTopWidth,
-    );
-    setBorderTopWidth(computedStyleBorderTopWidth);
-    const computedStyleBorderColor = computedStyle.borderColor;
-    setBorderColor(computedStyleBorderColor);
-    const computedStyleColor = computedStyle.color;
-    setDetectedColor(computedStyleColor);
+    const newBorderTopWidth = parseFloat(computedStyle.borderTopWidth);
+    const newBorderColor = computedStyle.borderColor;
+    const newDetectedColor = computedStyle.color;
+
+    setBorderTopWidth(newBorderTopWidth);
+    setBorderColor(newBorderColor);
+    setDetectedColor(newDetectedColor);
+  }, []);
+
+  useLayoutEffect(() => {
+    updateStyles();
+    const interval = setInterval(updateStyles, 100);
+    return () => {
+      clearInterval(interval);
+    };
   }, [...(Array.isArray(children) ? children : [children])]);
 
   return (
