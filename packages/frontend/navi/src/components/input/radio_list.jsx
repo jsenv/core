@@ -48,7 +48,7 @@ export const RadioList = forwardRef((props, ref) => {
     checkedValueAtStart = navStateValue;
   }
   useOnFormReset(innerRef, () => {
-    setNavStateValue(navStateValue);
+    setNavStateValue(undefined);
     setCheckedValue(checkedValueAtStart);
   });
 

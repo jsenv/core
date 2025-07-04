@@ -1,4 +1,4 @@
-import { useConstraints } from "@jsenv/validation";
+import { dispatchRequestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
@@ -55,16 +55,16 @@ const ActionInputText = forwardRef((props, ref) => {
   useConstraints(innerRef, constraints);
 
   const [navStateValue, setNavStateValue] = useNavState(id);
-  useOnFormReset(innerRef, () => {
-    setNavStateValue(undefined);
-  });
-
   const valueAtStart =
     initialValue === undefined || initialValue === ""
       ? navStateValue === undefined
         ? ""
         : navStateValue
       : initialValue;
+  useOnFormReset(innerRef, () => {
+    setNavStateValue(undefined);
+    setValue(valueAtStart);
+  });
 
   const [effectiveAction, getValue, setValue] = useAction(action, {
     name,
@@ -75,10 +75,12 @@ const ActionInputText = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
   const value = getValue();
+  const actionRequesterRef = useRef();
 
   useOnChange(innerRef, (e) => {
     if (action) {
-      e.target.requestAction(e);
+      actionRequesterRef.current = e.target;
+      dispatchRequestAction(e.target);
     }
   });
 
@@ -115,7 +117,7 @@ const ActionInputText = forwardRef((props, ref) => {
       onaction={(actionEvent) => {
         if (action) {
           executeAction(effectiveAction, {
-            requester: actionEvent.target,
+            requester: actionEvent.details.requester,
           });
         }
       }}
@@ -132,7 +134,13 @@ const ActionInputText = forwardRef((props, ref) => {
   );
 
   if (actionPendingEffect === "loading") {
-    return <LoaderBackground pending={pending}>{inputText}</LoaderBackground>;
+    return (
+      <LoaderBackground
+        pending={pending && actionRequesterRef.current === innerRef.current}
+      >
+        {inputText}
+      </LoaderBackground>
+    );
   }
 
   return inputText;

@@ -103,7 +103,6 @@ const ActionButton = forwardRef((props, ref) => {
       onaction={(actionEvent) => {
         if (action) {
           const requester = actionEvent.details.requester;
-          console.log("set requester to", requester);
           actionRequesterRef.current = requester;
           executeAction(effectiveAction, {
             requester,
@@ -124,9 +123,6 @@ const ActionButton = forwardRef((props, ref) => {
   if (actionPendingEffect === "loading") {
     // seulement si c'est le requester / un type submit dans un form
     const actionRequester = actionRequesterRef.current;
-    if (pending) {
-      console.log(actionRequester);
-    }
     return (
       <LoaderBackground
         pending={pending && actionRequester === innerRef.current}

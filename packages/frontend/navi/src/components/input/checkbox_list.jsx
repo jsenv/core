@@ -44,7 +44,7 @@ export const CheckboxList = forwardRef((props, ref) => {
     }
   }
   useOnFormReset(innerRef, () => {
-    setNavStateValue(navStateValue);
+    setNavStateValue(undefined);
     setCheckedValueArray(checkedValueArrayAtStart);
   });
 
