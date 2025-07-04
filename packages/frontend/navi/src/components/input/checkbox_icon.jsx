@@ -1,10 +1,10 @@
 import.meta.css = /*css*/ `
 .checkbox_icon {
   display: inline-flex;
-  width: 10.5px;
-  height: 10.5px;
-  margin: 3px 3px 3px 3px;
-  border: 1.5px solid #6b7280;
+  width: 11px;
+  height: 11px;
+  margin: 3px 3px 3px 4px;
+  border: 1px solid #6b7280;
   border-radius: 2px;
   transition: all 0.15s ease;
 }

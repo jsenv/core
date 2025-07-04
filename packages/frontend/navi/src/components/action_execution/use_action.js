@@ -32,7 +32,11 @@ export const useAction = (action, { name, value, preferSelf } = {}) => {
     return [parentBoundAction, getValue, setValue];
   }
 
-  const [paramsSignal, updateParams] = useActionParamsSignal(action, {});
+  const componentId = useRef({
+    toString: () => `component_action_id`,
+  });
+  const cacheKey = typeof action === "function" ? componentId.current : action;
+  const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
   const boundAction = useBoundAction(action, paramsSignal);
   boundAction.meta.paramsSignal = paramsSignal;
   boundAction.meta.updateParams = updateParams;
@@ -67,8 +71,9 @@ export const useAction = (action, { name, value, preferSelf } = {}) => {
 };
 
 const sharedSignalCache = new WeakMap();
-const useActionParamsSignal = (action, initialParams = {}) => {
-  const fromCache = sharedSignalCache.get(action);
+const useActionParamsSignal = (cacheKey, initialParams = {}) => {
+  // ✅ cacheKey peut être componentId (Symbol) ou action (objet)
+  const fromCache = sharedSignalCache.get(cacheKey);
   if (fromCache) {
     return fromCache;
   }
@@ -94,7 +99,7 @@ const useActionParamsSignal = (action, initialParams = {}) => {
     if (modified) {
       if (debug) {
         console.debug(
-          `Updating params for action ${action} with new params:`,
+          `Updating params for ${cacheKey} with new params:`,
           object,
           `result:`,
           paramsCopy,
@@ -103,7 +108,7 @@ const useActionParamsSignal = (action, initialParams = {}) => {
       paramsSignal.value = paramsCopy;
     } else if (debug) {
       console.debug(
-        `No change in params for action ${action}, not updating.`,
+        `No change in params for ${cacheKey}, not updating.`,
         `current params:`,
         currentParams,
         `new params:`,
@@ -112,10 +117,10 @@ const useActionParamsSignal = (action, initialParams = {}) => {
     }
   };
   const result = [paramsSignal, updateParams];
-  sharedSignalCache.set(action, result);
+  sharedSignalCache.set(cacheKey, result);
   if (debug) {
     console.debug(
-      `Created params signal for ${action} with params:`,
+      `Created params signal for ${cacheKey} with params:`,
       initialParams,
     );
   }

@@ -22,31 +22,39 @@
         const [loading, setLoading] = useState(true);
 
         return (
-          <div style="display: flex; flex-direction: row; gap: 30px">
-            <div>
-              <p>
-                <strong>Checkbox loading</strong>
-              </p>
+          <div>
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>Checkbox loading</strong>
+                </p>
 
-              <Input
-                id="test"
-                action={() => {}}
-                type="checkbox"
-                name="colors"
-                loading={loading}
-              >
-                Coucou
-              </Input>
-
-              <button>
-                <span
-                  onClick={() => {
-                    setLoading(!loading);
-                  }}
+                <Input
+                  id="test"
+                  action={() => {}}
+                  type="checkbox"
+                  name="colors"
+                  loading={loading}
                 >
-                  Toggle loading
-                </span>
-              </button>
+                  Coucou
+                </Input>
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoading(!loading);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+              </div>
+            </div>
+            <div>
+              <label>
+                <input type="checkbox" name="colors" checked />
+                Coucou
+              </label>
             </div>
           </div>
         );

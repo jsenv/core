@@ -16,7 +16,7 @@ import.meta.css = /*css*/ `
     flex-direction: column;
 }
 
-.checkbox_list input[type="checkbox"] {
+.checkbox_list input[type="checkbox"][data-visually-hidden] {
   position: absolute;
   opacity: 0;
   width: 0;
@@ -152,6 +152,7 @@ export const CheckboxList = forwardRef((props, ref) => {
         let checkbox = (
           <input
             ref={checkboxRef}
+            data-visually-hidden
             type="checkbox"
             id={id}
             name={name}
@@ -179,7 +180,7 @@ export const CheckboxList = forwardRef((props, ref) => {
 
         if (actionPendingEffect === "loading") {
           checkbox = (
-            <LoaderBackground pending={innerLoading}>
+            <LoaderBackground pending={innerLoading} spacingLeft={0.5}>
               {checkbox}
             </LoaderBackground>
           );

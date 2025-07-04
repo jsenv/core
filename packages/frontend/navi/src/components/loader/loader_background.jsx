@@ -8,6 +8,10 @@ export const LoaderBackground = ({
   containerRef,
   color,
   inset,
+  spacingTop = 0,
+  spacingLeft = 0,
+  spacingBottom = 0,
+  spacingRight = 0,
   children,
 }) => {
   if (containerRef) {
@@ -21,6 +25,10 @@ export const LoaderBackground = ({
         pending={pending}
         color={color}
         inset={inset}
+        spacingTop={spacingTop}
+        spacingLeft={spacingLeft}
+        spacingBottom={spacingBottom}
+        spacingRight={spacingRight}
       >
         {children}
       </LoaderBackgroundWithPortal>,
@@ -29,7 +37,15 @@ export const LoaderBackground = ({
   }
 
   return (
-    <LoaderBackgroundWithWrapper pending={pending} color={color} inset={inset}>
+    <LoaderBackgroundWithWrapper
+      pending={pending}
+      color={color}
+      inset={inset}
+      spacingTop={spacingTop}
+      spacingLeft={spacingLeft}
+      spacingBottom={spacingBottom}
+      spacingRight={spacingRight}
+    >
       {children}
     </LoaderBackgroundWithWrapper>
   );
@@ -40,6 +56,10 @@ const LoaderBackgroundWithPortal = ({
   pending,
   color,
   inset,
+  spacingTop,
+  spacingLeft,
+  spacingBottom,
+  spacingRight,
   children,
 }) => {
   const shouldShowSpinner = useDebounceTrue(pending, 300);
@@ -59,10 +79,10 @@ const LoaderBackgroundWithPortal = ({
       <div
         style={{
           position: "absolute",
-          top: `${inset + paddingTop}px`,
-          bottom: `${inset}px`,
-          left: `${inset}px`,
-          right: `${inset}px`,
+          top: `${inset + paddingTop + spacingTop}px`,
+          bottom: `${inset + spacingBottom}px`,
+          left: `${inset + spacingLeft}px`,
+          right: `${inset + spacingRight}px`,
         }}
       >
         {shouldShowSpinner && <RectangleLoading color={color} />}
@@ -72,7 +92,16 @@ const LoaderBackgroundWithPortal = ({
   );
 };
 
-const LoaderBackgroundWithWrapper = ({ pending, color, inset, children }) => {
+const LoaderBackgroundWithWrapper = ({
+  pending,
+  color,
+  spacingTop,
+  spacingLeft,
+  spacingBottom,
+  spacingRight,
+  inset,
+  children,
+}) => {
   const shouldShowSpinner = useDebounceTrue(pending, 300);
   const containerRef = useRef(null);
   const [borderColor, setBorderColor] = useState();
@@ -107,13 +136,18 @@ const LoaderBackgroundWithWrapper = ({ pending, color, inset, children }) => {
     };
   }, [...(Array.isArray(children) ? children : [children])]);
 
+  inset = inset || borderTopWidth;
+
   return (
     <div ref={containerRef} style="display:inline-flex; position: relative;">
       {shouldShowSpinner && (
         <div
           style={{
             position: "absolute",
-            inset: `${inset || borderTopWidth}px`,
+            top: `${inset + spacingTop}px`,
+            left: `${inset + spacingLeft}px`,
+            bottom: `${inset + spacingBottom}px`,
+            right: `${inset + spacingRight}px`,
           }}
         >
           <RectangleLoading color={color || borderColor || detectedColor} />

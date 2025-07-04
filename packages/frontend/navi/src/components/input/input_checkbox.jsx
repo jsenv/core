@@ -12,7 +12,7 @@ import { useOnFormReset } from "../use_on_form_reset.js";
 import { CheckboxIcon } from "./checkbox_icon.jsx";
 
 import.meta.css = /*css*/ `
-input[type="checkbox"] {
+input[type="checkbox"][data-visually-hidden] {
   position: absolute;
   opacity: 0;
   width: 0;
@@ -45,6 +45,7 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
   const inputCheckbox = (
     <>
       <input
+        data-visually-hidden
         ref={innerRef}
         checked={innerChecked}
         onChange={(e) => {
@@ -56,7 +57,11 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
     </>
   );
 
-  return <LoaderBackground pending={loading}>{inputCheckbox}</LoaderBackground>;
+  return (
+    <LoaderBackground pending={loading} spacingLeft={0.5}>
+      {inputCheckbox}
+    </LoaderBackground>
+  );
 });
 
 const ActionInputCheckbox = forwardRef((props, ref) => {
@@ -111,6 +116,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   let inputCheckbox = (
     <input
       {...rest}
+      data-visually-hidden
       ref={innerRef}
       type="checkbox"
       id={id}
@@ -175,7 +181,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
 
   if (actionPendingEffect === "loading") {
     return (
-      <LoaderBackground pending={innerLoading}>
+      <LoaderBackground pending={innerLoading} spacingLeft={0.5}>
         {inputCheckbox}
       </LoaderBackground>
     );
