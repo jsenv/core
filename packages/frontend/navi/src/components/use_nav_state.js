@@ -37,7 +37,7 @@ const NO_OP = () => {};
 const useNavStateWithoutWarnings = (id, initialValue, { debug } = {}) => {
   const navStateRef = useRef(NOT_SET);
   if (!id) {
-    return [navStateRef.current, NO_OP];
+    return [undefined, NO_OP];
   }
 
   if (navStateRef.current === NOT_SET) {

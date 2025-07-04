@@ -4,6 +4,7 @@ import { createAction } from "../../actions.js";
 import { useParentAction } from "./action_context.js";
 
 let debug = true;
+let componentIdCounter = 0;
 
 export const useAction = (action, { name, value, preferSelf } = {}) => {
   const mountedRef = useRef(false);
@@ -33,8 +34,15 @@ export const useAction = (action, { name, value, preferSelf } = {}) => {
   }
 
   const componentId = useRef({
-    toString: () => `component_action_id`,
+    toString: () => `component_action_id_${componentId.current.id}`,
   });
+  if (!componentId.current.id) {
+    componentId.current.id = ++componentIdCounter;
+    if (debug) {
+      console.debug(`🆔 Created new componentId: ${componentId.current.id}`);
+    }
+  }
+
   const cacheKey = typeof action === "function" ? componentId.current : action;
   const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
   const boundAction = useBoundAction(action, paramsSignal);
@@ -60,7 +68,7 @@ export const useAction = (action, { name, value, preferSelf } = {}) => {
 
   if (!mountedRef.current) {
     mountedRef.current = true;
-    if (name && value !== undefined) {
+    if (name) {
       if (debug) {
         console.debug(`useAction(${name}) initial value: ${value}`);
       }
