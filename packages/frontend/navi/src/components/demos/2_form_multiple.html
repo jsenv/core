@@ -72,9 +72,11 @@
       import { useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
-        InputText,
+        Input,
         // eslint-disable-next-line no-unused-vars
         Form,
+        // eslint-disable-next-line no-unused-vars
+        Button,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
@@ -159,7 +161,7 @@
               {/* ✅ Champ requis */}
               <div className="field">
                 <label htmlFor="required-field">Nom (obligatoire) :</label>
-                <InputText
+                <Input
                   id="required-field"
                   name="name"
                   required
@@ -170,7 +172,7 @@
               {/* ✅ Champ email avec validation type */}
               <div className="field">
                 <label htmlFor="email-field">Email (format email) :</label>
-                <InputText
+                <Input
                   id="email-field"
                   name="email"
                   type="email"
@@ -183,7 +185,7 @@
                 <label htmlFor="phone-field">
                   Téléphone (format: 01-23-45-67-89) :
                 </label>
-                <InputText
+                <Input
                   id="phone-field"
                   name="phone"
                   pattern="[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}"
@@ -197,7 +199,7 @@
                 <label htmlFor="password-field">
                   Mot de passe (min 8 caractères) :
                 </label>
-                <InputText
+                <Input
                   id="password-field"
                   name="password"
                   type="password"
@@ -209,7 +211,7 @@
               {/* ✅ Champ avec contrainte personnalisée */}
               <div className="field">
                 <label htmlFor="age-field">Âge (18-99 ans) :</label>
-                <InputText
+                <Input
                   id="age-field"
                   name="age"
                   type="number"
@@ -223,8 +225,8 @@
 
               {/* ✅ Bouton de soumission */}
               <div className="field">
-                <button type="submit">Valider le formulaire</button>
-                <button type="reset">Reset Status</button>
+                <Button type="submit">Valider le formulaire</Button>
+                <Button type="reset">Reset Status</Button>
               </div>
             </Form>
 
