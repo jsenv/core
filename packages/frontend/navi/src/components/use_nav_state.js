@@ -48,7 +48,6 @@ const useNavStateWithoutWarnings = (id, initialValue) => {
       if (typeof value === "function") {
         value = value(currentValue);
       }
-      navStateRef.current = value;
       if (id) {
         const currentState = navigation.currentEntry.getState() || {};
         if (value === undefined) {

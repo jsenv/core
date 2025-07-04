@@ -4,6 +4,7 @@ import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import "../checked_programmatic_change.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
@@ -33,15 +34,16 @@ export const CheckboxList = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navStateValue, setNavStateValue] = useNavState(id);
-  useOnFormReset(innerRef, () => {
-    setNavStateValue(undefined);
-  });
   const checkedValueArrayAtStart = [];
   for (const option of options) {
     if (option.checked || navStateValue?.includes(option.value)) {
       checkedValueArrayAtStart.push(option.value);
     }
   }
+  useOnFormReset(innerRef, () => {
+    setNavStateValue(navStateValue);
+    setCheckedValueArray(checkedValueArrayAtStart);
+  });
 
   const [effectiveAction, getCheckedValueArray, setCheckedValueArray] =
     useAction(action, {
@@ -106,12 +108,12 @@ export const CheckboxList = forwardRef((props, ref) => {
       onactionerror={onActionError}
       // eslint-disable-next-line react/no-unknown-property
       onactionend={() => {
-        setNavStateValue(undefined);
+        setNavStateValue(undefined); // the action is completed the nav state is no longer needed
         onActionEnd?.();
       }}
     >
       {options.map((option) => {
-        const { value, disabled } = option;
+        const { id, value, disabled, renderLabel } = option;
         const checked = checkedValueArray.includes(value);
         const checkboxRef = useRef(null);
 
@@ -119,6 +121,7 @@ export const CheckboxList = forwardRef((props, ref) => {
           <input
             ref={checkboxRef}
             type="checkbox"
+            id={id}
             name={name}
             value={value}
             checked={checked}
@@ -160,7 +163,7 @@ export const CheckboxList = forwardRef((props, ref) => {
             data-disabled={disabled || pending ? "" : undefined}
           >
             {checkbox}
-            {option.renderLabel(option)}
+            {renderLabel(option)}
           </label>
         );
       })}

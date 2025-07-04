@@ -31,16 +31,16 @@
                 <strong>Fieldset + alert after 1s</strong>
               </p>
               <Fieldset
-                action={async ({ colors }) => {
+                action={async ({ color }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
                   // eslint-disable-next-line no-alert
-                  window.alert(`Colors selected: ${JSON.stringify(colors)}`);
+                  window.alert(`Color selected: ${JSON.stringify(color)}`);
                 }}
               >
                 <legend>Select your favorite color:</legend>
 
                 <RadioList
-                  name="colors"
+                  name="color"
                   options={[
                     { renderLabel: () => "Red", value: "red" },
                     { renderLabel: () => "Blue", value: "blue" },
@@ -55,20 +55,21 @@
                 <strong>Form + alert after 1s</strong>
               </p>
               <Form
-                action={async ({ colors }) => {
+                action={async ({ color }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
                   // eslint-disable-next-line no-alert
-                  window.alert(`Colors selected: ${JSON.stringify(colors)}`);
+                  window.alert(`Color selected: ${JSON.stringify(color)}`);
                 }}
               >
                 <legend>Select your favorite color:</legend>
 
                 <RadioList
+                  id="color_form_alert"
                   name="color"
                   options={[
-                    { renderLabel: () => "Red", value: "red" },
-                    { renderLabel: () => "Blue", value: "blue" },
-                    { renderLabel: () => "Green", value: "green" },
+                    { renderLabel: () => "Red", id: "red", value: "red" },
+                    { renderLabel: () => "Blue", id: "blue", value: "blue" },
+                    { renderLabel: () => "Green", id: "green", value: "green" },
                   ]}
                 />
 
@@ -82,9 +83,9 @@
                 <strong>Form + throw after 1s</strong>
               </p>
               <Form
-                action={async ({ colors }) => {
+                action={async ({ color }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
+                  throw new Error(`Color selected: ${JSON.stringify(color)}`);
                 }}
               >
                 <legend>Select your favorite color:</legend>

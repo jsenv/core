@@ -23,6 +23,9 @@
     "/index.js",
     "/src/"
   ],
+  "dependencies": {
+    "@jsenv/dom": "0.0.1"
+  },
   "devDependencies": {
     "@jsenv/validation": "0.0.1",
     "@preact/signals": "2.2.0",
