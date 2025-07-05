@@ -1,8 +1,6 @@
-- radio list, input radio a refaire avec la nouvelle maniere
-
-  - on instancie le simple dans le with action
-  - l'ordre de renderActionComponent change
-  -
+- enter sur input text-> submit meme si pas de changement
+  (attention parce que enter trigger change on dirait
+  donc il faudra éviter les doublons de request action)
 
 - le loading state pour un bouton
 

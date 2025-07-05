@@ -13,6 +13,8 @@
       import { render } from "preact";
       import {
         // eslint-disable-next-line no-unused-vars
+        Field,
+        // eslint-disable-next-line no-unused-vars
         Input,
         // eslint-disable-next-line no-unused-vars
         Form,
@@ -36,16 +38,21 @@
                   <strong>Outside form</strong>
                 </p>
                 <div>
-                  <Input
-                    id="outside_form"
-                    name="outsideForm"
-                    action={async ({ outsideForm }) => {
-                      await new Promise((resolve) =>
-                        setTimeout(resolve, 1_000),
-                      );
-                      throw new Error(`test: ${outsideForm}`);
-                    }}
-                  />
+                  <Field
+                    label="Test"
+                    input={
+                      <Input
+                        id="outside_form"
+                        name="outsideForm"
+                        action={async ({ outsideForm }) => {
+                          await new Promise((resolve) =>
+                            setTimeout(resolve, 1_000),
+                          );
+                          throw new Error(`test: ${outsideForm}`);
+                        }}
+                      />
+                    }
+                  ></Field>
                 </div>
               </div>
 
