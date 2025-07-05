@@ -5,6 +5,7 @@ import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import "../checked_programmatic_change.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
@@ -21,7 +22,16 @@ export const InputCheckbox = forwardRef((props, ref) => {
 });
 
 const SimpleInputCheckbox = forwardRef((props, ref) => {
-  const { autoFocus, constraints = [], checked, loading, ...rest } = props;
+  const {
+    autoFocus,
+    constraints = [],
+    children: value,
+    checked,
+    loading,
+    onChange,
+    onProgrammaticChange,
+    ...rest
+  } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -35,9 +45,13 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
       <input
         ref={innerRef}
         checked={innerChecked}
+        value={value}
         onChange={(e) => {
           setInnerChecked(e.target.checked);
+          onChange?.(e);
         }}
+        // eslint-disable-next-line react/no-unknown-property
+        onprogrammaticchange={onProgrammaticChange}
         {...rest}
       />
     </CustomCheckbox>
@@ -58,7 +72,6 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   const {
     id,
     name,
-    value = "on",
     autoFocus,
     checked: initialChecked = false,
     constraints = [],
@@ -73,6 +86,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     onActionStart,
     onActionError,
     onActionEnd,
+    children: value = "on",
     ...rest
   } = props;
 
@@ -161,7 +175,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   if (actionPendingEffect === "loading") {
     return (
       <LoaderBackground
-        pending={innerLoading}
+        loading={innerLoading}
         // input has margin-left:4px and margin-right: 3px. To ensure it's centered we move it by 0.5px
         spacingLeft={0.5}
       >

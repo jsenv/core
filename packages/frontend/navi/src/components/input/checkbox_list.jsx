@@ -4,11 +4,10 @@ import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import "../checked_programmatic_change.js";
-import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useNavState } from "../use_nav_state.js";
 import { useOnFormReset } from "../use_on_form_reset.js";
-import { CustomCheckbox } from "./custom_checkbox.jsx";
+import { Field } from "./field.jsx";
+import { InputCheckbox } from "./input_checkbox.jsx";
 
 import.meta.css = /*css*/ `
 .checkbox_list {
@@ -22,7 +21,8 @@ export const CheckboxList = forwardRef((props, ref) => {
     id,
     name,
     action = () => {},
-    options,
+    label,
+    children,
     actionPendingEffect = "loading",
     actionErrorEffect,
     onActionPrevented,
@@ -38,9 +38,9 @@ export const CheckboxList = forwardRef((props, ref) => {
 
   const [navStateValue, setNavStateValue] = useNavState(id);
   const checkedValueArrayAtStart = [];
-  for (const option of options) {
-    if (option.checked || navStateValue?.includes(option.value)) {
-      checkedValueArrayAtStart.push(option.value);
+  for (const child of children) {
+    if (child.checked || navStateValue?.includes(child.value)) {
+      checkedValueArrayAtStart.push(child.value);
     }
   }
   useOnFormReset(innerRef, () => {
@@ -92,7 +92,7 @@ export const CheckboxList = forwardRef((props, ref) => {
   };
 
   return (
-    <div
+    <fieldset
       className="checkbox_list"
       data-checkbox-list
       ref={innerRef}
@@ -116,8 +116,9 @@ export const CheckboxList = forwardRef((props, ref) => {
         onActionEnd?.();
       }}
     >
-      {options.map((option) => {
-        const { id, value, disabled, renderLabel } = option;
+      {label ? <legend>{label}</legend> : null}
+      {children.map((child) => {
+        const { id, value, disabled, label } = child;
         const checked = checkedValueArray.includes(value);
         const checkboxRef = useRef(null);
 
@@ -139,56 +140,40 @@ export const CheckboxList = forwardRef((props, ref) => {
           dispatchRequestAction(checkboxListContainer, event);
         };
 
-        let checkbox = (
-          <input
+        const innerLoading =
+          actionPendingEffect === "loading" &&
+          (loading ||
+            (pending &&
+              actionRequesterRef.current &&
+              actionRequesterRef.current === checkboxRef.current));
+
+        const innerDisabled = disabled || pending;
+
+        const checkbox = (
+          <InputCheckbox
             ref={checkboxRef}
-            data-visually-hidden
             type="checkbox"
             id={id}
             name={name}
-            value={value}
             checked={checked}
-            disabled={disabled || pending}
+            disabled={innerDisabled}
+            loading={innerLoading}
             onChange={handleChange}
-            // eslint-disable-next-line react/no-unknown-property
-            onprogrammaticchange={handleChange}
-          />
+            onProgrammaticChange={handleChange}
+          >
+            {value}
+          </InputCheckbox>
         );
-
-        const innerLoading =
-          loading ||
-          (pending &&
-            actionRequesterRef.current &&
-            actionRequesterRef.current === checkboxRef.current);
-
-        checkbox = (
-          <CustomCheckbox checked={checked} loading={innerLoading}>
-            {checkbox}
-          </CustomCheckbox>
-        );
-
-        if (actionPendingEffect === "loading") {
-          checkbox = (
-            <LoaderBackground
-              pending={innerLoading}
-              // input has margin-left:4px and margin-right: 3px. To ensure it's centered we move it by 0.5px
-              spacingLeft={0.5}
-            >
-              {checkbox}
-            </LoaderBackground>
-          );
-        }
 
         return (
-          <label
+          <Field
             key={value}
-            data-disabled={disabled || pending ? "" : undefined}
-          >
-            {checkbox}
-            {renderLabel(option)}
-          </label>
+            disabled={innerDisabled}
+            label={label}
+            input={checkbox}
+          />
         );
       })}
-    </div>
+    </fieldset>
   );
 });

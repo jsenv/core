@@ -28,26 +28,23 @@
           <div style="display: flex; flex-direction: row; gap: 30px">
             <div>
               <p>
-                <strong>Fieldset + alert after 1s</strong>
+                <strong>Action + alert after 1s</strong>
               </p>
-              <Fieldset
+              <CheckboxList
+                name="colors"
+                label="Select your favorite colors:"
                 action={async ({ colors }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
                   // eslint-disable-next-line no-alert
                   window.alert(`Colors selected: ${JSON.stringify(colors)}`);
                 }}
               >
-                <legend>Select your favorite colors:</legend>
-
-                <CheckboxList
-                  name="colors"
-                  options={[
-                    { renderLabel: () => "Red", value: "red" },
-                    { renderLabel: () => "Blue", value: "blue" },
-                    { renderLabel: () => "Green", value: "green" },
-                  ]}
-                />
-              </Fieldset>
+                {[
+                  { label: "Red", value: "red" },
+                  { label: "Blue", value: "blue" },
+                  { label: "Green", value: "green" },
+                ]}
+              </CheckboxList>
             </div>
 
             <div>
@@ -61,17 +58,17 @@
                   window.alert(`Colors selected: ${JSON.stringify(colors)}`);
                 }}
               >
-                <legend>Select your favorite colors:</legend>
-
                 <CheckboxList
                   id="form_alert_1"
                   name="colors"
-                  options={[
-                    { renderLabel: () => "Red", id: "red", value: "red" },
-                    { renderLabel: () => "Blue", id: "blue", value: "blue" },
-                    { renderLabel: () => "Green", id: "green", value: "green" },
+                  label="Select your favorite colors:"
+                >
+                  {[
+                    { label: "Red", id: "red", value: "red" },
+                    { label: "Blue", id: "blue", value: "blue" },
+                    { label: "Green", id: "green", value: "green" },
                   ]}
-                />
+                </CheckboxList>
 
                 <Button type="submit">Submit</Button>
                 <Button type="reset">Reset</Button>
@@ -88,23 +85,20 @@
                   throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
                 }}
               >
-                <legend>Select your favorite colors:</legend>
-
                 <CheckboxList
+                  label="Select your favorite colors:"
                   name="colors"
-                  options={[
-                    { renderLabel: () => "Red", value: "red" },
-                    { renderLabel: () => "Blue", value: "blue" },
-                    { renderLabel: () => "Green", value: "green" },
+                >
+                  {[
+                    { label: "Red", value: "red" },
+                    { label: "Blue", value: "blue" },
+                    { label: "Green", value: "green" },
                   ]}
-                />
-
+                </CheckboxList>
                 <Button type="submit">Submit</Button>
                 <Button type="reset">Reset</Button>
               </Form>
             </div>
-
-            <input type="checkbox" checked />
           </div>
         );
       };

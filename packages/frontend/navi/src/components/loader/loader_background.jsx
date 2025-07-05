@@ -4,7 +4,7 @@ import { useDebounceTrue } from "../use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
 export const LoaderBackground = ({
-  pending,
+  loading,
   containerRef,
   color,
   inset,
@@ -22,7 +22,7 @@ export const LoaderBackground = ({
     return createPortal(
       <LoaderBackgroundWithPortal
         container={container}
-        pending={pending}
+        loading={loading}
         color={color}
         inset={inset}
         spacingTop={spacingTop}
@@ -38,7 +38,7 @@ export const LoaderBackground = ({
 
   return (
     <LoaderBackgroundWithWrapper
-      pending={pending}
+      loading={loading}
       color={color}
       inset={inset}
       spacingTop={spacingTop}
@@ -53,7 +53,7 @@ export const LoaderBackground = ({
 
 const LoaderBackgroundWithPortal = ({
   container,
-  pending,
+  loading,
   color,
   inset,
   spacingTop,
@@ -62,7 +62,7 @@ const LoaderBackgroundWithPortal = ({
   spacingRight,
   children,
 }) => {
-  const shouldShowSpinner = useDebounceTrue(pending, 300);
+  const shouldShowSpinner = useDebounceTrue(loading, 300);
 
   if (!shouldShowSpinner) {
     return children;
@@ -93,7 +93,7 @@ const LoaderBackgroundWithPortal = ({
 };
 
 const LoaderBackgroundWithWrapper = ({
-  pending,
+  loading,
   color,
   spacingTop,
   spacingLeft,
@@ -102,7 +102,7 @@ const LoaderBackgroundWithWrapper = ({
   inset,
   children,
 }) => {
-  const shouldShowSpinner = useDebounceTrue(pending, 300);
+  const shouldShowSpinner = useDebounceTrue(loading, 300);
   const containerRef = useRef(null);
   const [borderColor, setBorderColor] = useState();
   const [detectedColor, setDetectedColor] = useState();
@@ -114,7 +114,7 @@ const LoaderBackgroundWithWrapper = ({
     if (!lastElementChild) {
       return;
     }
-    if (!pending) {
+    if (!loading) {
       return;
     }
 
@@ -126,7 +126,7 @@ const LoaderBackgroundWithWrapper = ({
     setBorderTopWidth(newBorderTopWidth);
     setBorderColor(newBorderColor);
     setDetectedColor(newDetectedColor);
-  }, [pending]);
+  }, [loading]);
 
   useLayoutEffect(() => {
     updateStyles();
