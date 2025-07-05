@@ -37,16 +37,13 @@
                   window.alert(`Color selected: ${JSON.stringify(color)}`);
                 }}
               >
-                <legend>Select your favorite color:</legend>
-
-                <RadioList
-                  name="color"
-                  options={[
-                    { renderLabel: () => "Red", value: "red" },
-                    { renderLabel: () => "Blue", value: "blue" },
-                    { renderLabel: () => "Green", value: "green" },
+                <RadioList name="color" label="Select your favorite color:">
+                  {[
+                    { label: "Red", value: "red" },
+                    { label: "Blue", value: "blue" },
+                    { label: "Green", value: "green" },
                   ]}
-                />
+                </RadioList>
               </Fieldset>
             </div>
 
@@ -61,17 +58,17 @@
                   window.alert(`Color selected: ${JSON.stringify(color)}`);
                 }}
               >
-                <legend>Select your favorite color:</legend>
-
                 <RadioList
                   id="color_form_alert"
+                  label="Select your favorite color:"
                   name="color"
-                  options={[
-                    { renderLabel: () => "Red", id: "red", value: "red" },
-                    { renderLabel: () => "Blue", id: "blue", value: "blue" },
-                    { renderLabel: () => "Green", id: "green", value: "green" },
+                >
+                  {[
+                    { label: "Red", id: "red", value: "red" },
+                    { label: "Blue", id: "blue", value: "blue" },
+                    { label: "Green", id: "green", value: "green" },
                   ]}
-                />
+                </RadioList>
 
                 <Button type="submit">Submit</Button>
                 <Button type="reset">Reset</Button>
@@ -88,16 +85,13 @@
                   throw new Error(`Color selected: ${JSON.stringify(color)}`);
                 }}
               >
-                <legend>Select your favorite color:</legend>
-
-                <RadioList
-                  name="color"
-                  options={[
-                    { renderLabel: () => "Red", value: "red" },
-                    { renderLabel: () => "Blue", value: "blue" },
-                    { renderLabel: () => "Green", value: "green" },
+                <RadioList name="color" label="Select your favorite color:">
+                  {[
+                    { label: "Red", value: "red" },
+                    { label: "Blue", value: "blue" },
+                    { label: "Green", value: "green" },
                   ]}
-                />
+                </RadioList>
 
                 <Button type="submit">Submit</Button>
                 <Button type="reset">Reset</Button>

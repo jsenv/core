@@ -29,7 +29,6 @@ export const CheckboxList = forwardRef((props, ref) => {
     onActionStart,
     onActionError,
     onActionEnd,
-    loading,
     ...rest
   } = props;
 
@@ -116,27 +115,9 @@ export const CheckboxList = forwardRef((props, ref) => {
     >
       {label ? <legend>{label}</legend> : null}
       {children.map((child) => {
-        const { id, value, disabled, label } = child;
+        const { id, value, disabled, label, loading } = child;
         const checked = checkedValueArray.includes(value);
         const checkboxRef = useRef(null);
-
-        const handleChange = (event) => {
-          const checkbox = event.target;
-          const checkboxIsChecked = checkbox.checked;
-          if (checkboxIsChecked) {
-            addToCheckedValues(value);
-          } else {
-            removeFromCheckedValues(value);
-          }
-
-          if (checkbox.form) {
-            // let the submit button handle the request action
-            return;
-          }
-          const checkboxListContainer = innerRef.current;
-          actionRequesterRef.current = checkbox;
-          dispatchRequestAction(checkboxListContainer, event);
-        };
 
         const innerLoading =
           loading ||
@@ -151,14 +132,28 @@ export const CheckboxList = forwardRef((props, ref) => {
             // it's already done here
             ignoreParentAction
             ref={checkboxRef}
-            type="checkbox"
             id={id}
             name={name}
             checked={checked}
             disabled={innerDisabled}
             loading={innerLoading}
-            onChange={handleChange}
-            onProgrammaticChange={handleChange}
+            onChange={(event) => {
+              const checkbox = event.target;
+              const checkboxIsChecked = checkbox.checked;
+              if (checkboxIsChecked) {
+                addToCheckedValues(value);
+              } else {
+                removeFromCheckedValues(value);
+              }
+
+              if (checkbox.form) {
+                // let the submit button handle the request action
+                return;
+              }
+              const checkboxListContainer = innerRef.current;
+              actionRequesterRef.current = checkbox;
+              dispatchRequestAction(checkboxListContainer, event);
+            }}
           >
             {value}
           </InputCheckbox>
