@@ -35,21 +35,46 @@
                 <p>
                   <strong>Outside form</strong>
                 </p>
-                <OutsideForm />
+                <div>
+                  <Input
+                    id="outside_form"
+                    name="outsideForm"
+                    action={async ({ outsideForm }) => {
+                      await new Promise((resolve) =>
+                        setTimeout(resolve, 1_000),
+                      );
+                      throw new Error(`test: ${outsideForm}`);
+                    }}
+                  />
+                </div>
               </div>
 
               <div>
                 <p>
                   <strong>Outside form with initial value</strong>
                 </p>
-                <OutsideFormWithInitialValue />
+
+                <div>
+                  <Input
+                    name="outsideFormWithInitialValue"
+                    value="initial"
+                    action={async ({ outsideFormWithInitialValue }) => {
+                      await new Promise((resolve) =>
+                        setTimeout(resolve, 1_000),
+                      );
+                      throw new Error(`test: ${outsideFormWithInitialValue}`);
+                    }}
+                  />
+                </div>
               </div>
 
               <div>
                 <p>
                   <strong>Outside form using action</strong>
                 </p>
-                <OutsideFormUsingAction />
+                <div>
+                  <Input name="outsideFormUsingAction" action={actionA} />
+                </div>
               </div>
             </div>
             <div style="display: flex; flex-direction: row; gap: 30px">
@@ -57,13 +82,36 @@
                 <p>
                   <strong>Inside form</strong>
                 </p>
-                <InsideForm />
+                <div>
+                  <Form>
+                    <Input
+                      name="insideForm"
+                      action={async ({ insideForm }) => {
+                        await new Promise((resolve) =>
+                          setTimeout(resolve, 1_500),
+                        );
+                        throw new Error(`test: ${insideForm}`);
+                      }}
+                    />
+                  </Form>
+                </div>
               </div>
               <div>
                 <p>
                   <strong>Inside form with submit and reset</strong>
                 </p>
-                <InsideFormWithSubmitAndReset />
+                <div>
+                  <Form
+                    action={async ({ insideFormWithSubmitAndReset }) => {
+                      await new Promise((resolve) => setTimeout(resolve, 500));
+                      throw new Error(`test: ${insideFormWithSubmitAndReset}`);
+                    }}
+                  >
+                    <Input id="tototo" name="insideFormWithSubmitAndReset" />
+                    <button type="submit">Submit</button>
+                    <button type="reset">Reset</button>
+                  </Form>
+                </div>
               </div>
             </div>
             <div style="display: flex; flex-direction: row; gap: 30px">
@@ -89,91 +137,10 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const OutsideForm = () => {
-        return (
-          <div>
-            <div>
-              <Input
-                id="outside_form"
-                name="outsideForm"
-                action={async ({ outsideForm }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(`test: ${outsideForm}`);
-                }}
-              />
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const OutsideFormWithInitialValue = () => {
-        return (
-          <div>
-            <div>
-              <Input
-                name="outsideFormWithInitialValue"
-                value="initial"
-                action={async ({ outsideFormWithInitialValue }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(`test: ${outsideFormWithInitialValue}`);
-                }}
-              />
-            </div>
-          </div>
-        );
-      };
-
       const actionA = createAction(async ({ outsideFormUsingAction }) => {
         await new Promise((resolve) => setTimeout(resolve, 1_000));
         throw new Error(`test: ${outsideFormUsingAction}`);
       });
-      // eslint-disable-next-line no-unused-vars
-      const OutsideFormUsingAction = () => {
-        return (
-          <div>
-            <div>
-              <Input name="outsideFormUsingAction" action={actionA} />
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const InsideForm = () => {
-        return (
-          <div>
-            <Form>
-              <Input
-                name="insideForm"
-                action={async ({ insideForm }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_500));
-                  throw new Error(`test: ${insideForm}`);
-                }}
-              />
-            </Form>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const InsideFormWithSubmitAndReset = () => {
-        return (
-          <div>
-            <Form
-              action={async ({ insideFormWithSubmitAndReset }) => {
-                await new Promise((resolve) => setTimeout(resolve, 500));
-                throw new Error(`test: ${insideFormWithSubmitAndReset}`);
-              }}
-            >
-              <Input id="tototo" name="insideFormWithSubmitAndReset" />
-              <button type="submit">Submit</button>
-              <button type="reset">Reset</button>
-            </Form>
-          </div>
-        );
-      };
 
       render(<App />, document.querySelector("#root"));
     </script>
