@@ -1,28 +1,76 @@
-import { useConstraints } from "@jsenv/validation";
+import { dispatchRequestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import "../checked_programmatic_change.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
+import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
-import { useOnFormReset } from "../use_on_form_reset.js";
 
 export const InputRadio = forwardRef((props, ref) => {
-  return renderActionComponent(props, ref, ActionInputRadio, SimpleInputRadio);
+  return renderActionComponent(props, ref, SimpleInputRadio, ActionInputRadio);
 });
 
+const CustomRadio = ({ children }) => {
+  // TODO
+  return <>{children}</>;
+};
+
 const SimpleInputRadio = forwardRef((props, ref) => {
-  const { autoFocus, constraints = [], ...rest } = props;
+  const {
+    autoFocus,
+    constraints = [],
+    loading,
+    checked,
+    onChange,
+    appeareance = "custom", // "custom" or "default"
+    ...rest
+  } = props;
 
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  return <input ref={innerRef} {...rest} />;
+  const [innerChecked, setInnerChecked] = useState(checked);
+  const checkedRef = useRef(checked);
+  if (checkedRef.current !== checked) {
+    setInnerChecked(checked);
+    checkedRef.current = checked;
+  }
+
+  const handleChange = (e) => {
+    setInnerChecked(e.target.checked);
+    onChange?.(e);
+  };
+
+  const inputRadio = (
+    <input
+      ref={innerRef}
+      checked={innerChecked}
+      onChange={handleChange}
+      // eslint-disable-next-line react/no-unknown-property
+      onprogrammaticchange={handleChange}
+      {...rest}
+    />
+  );
+  const inputRadioDisplayed =
+    appeareance === "custom" ? (
+      <CustomRadio checked={innerChecked} loading={loading}>
+        {inputRadio}
+      </CustomRadio>
+    ) : (
+      inputRadio
+    );
+  const inputRadioWithLoader = (
+    <LoaderBackground loading={loading}>{inputRadioDisplayed}</LoaderBackground>
+  );
+
+  return inputRadioWithLoader;
 });
 
 const ActionInputRadio = forwardRef((props, ref) => {
@@ -30,14 +78,11 @@ const ActionInputRadio = forwardRef((props, ref) => {
     id,
     name,
     value = "",
-    autoFocus,
     checked: initialChecked = false,
-    constraints = [],
     action,
     disabled,
     onCancel,
     onChange,
-    actionPendingEffect = "loading",
     actionErrorEffect,
     onActionPrevented,
     onActionStart,
@@ -54,15 +99,8 @@ const ActionInputRadio = forwardRef((props, ref) => {
 
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
 
   const [navStateValue, setNavStateValue] = useNavState(id);
-  useOnFormReset(innerRef, () => {
-    if (checkedAtStart) {
-      setNavStateValue(value);
-    }
-  });
   const checkedAtStart = initialChecked || navStateValue === value;
   const [effectiveAction, getCheckedValue, setCheckedValue] = useAction(
     action,
@@ -79,8 +117,37 @@ const ActionInputRadio = forwardRef((props, ref) => {
   const valueChecked = getCheckedValue();
   const checked = error || aborted ? initialChecked : value === valueChecked;
 
-  const inputRadio = (
-    <input
+  useActionEvents(innerRef, {
+    onCancel: (e, reason) => {
+      if (reason === "blur_invalid") {
+        return;
+      }
+      if (checked) {
+        setNavStateValue(value);
+      }
+      if (checkedAtStart) {
+        setCheckedValue(value);
+      }
+      onCancel?.(e);
+    },
+    onPrevented: onActionPrevented,
+    onAction: (e) => {
+      if (action) {
+        executeAction(effectiveAction, {
+          requester: e.detail.requester,
+        });
+      }
+    },
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: () => {
+      setNavStateValue(undefined);
+      onActionEnd?.();
+    },
+  });
+
+  return (
+    <SimpleInputRadio
       {...rest}
       ref={innerRef}
       type="radio"
@@ -96,51 +163,11 @@ const ActionInputRadio = forwardRef((props, ref) => {
           setNavStateValue(value);
           setCheckedValue(value);
           if (!e.target.form) {
-            e.target.requestAction(e);
+            dispatchRequestAction(e.target, e);
           }
         }
-        // si jamais on uncheck programatiquement il faudrait aussi idéalement
-        // pas sur qu'on puisse detecté que rien n'est check, mais si on peut se serai tplus robuste
         onChange?.(e);
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      oncancel={(e) => {
-        e.target.checked = checkedAtStart;
-        if (checkedAtStart) {
-          setNavStateValue(value);
-        }
-        if (onCancel) {
-          onCancel();
-        }
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionprevented={onActionPrevented}
-      // eslint-disable-next-line react/no-unknown-property
-      onaction={(actionEvent) => {
-        if (action) {
-          executeAction(effectiveAction, {
-            requester: actionEvent.target,
-          });
-        }
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionstart={onActionStart}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionerror={onActionError}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionend={() => {
-        setNavStateValue(undefined);
-        onActionEnd?.();
       }}
     />
   );
-
-  if (actionPendingEffect === "loading") {
-    return (
-      <LoaderBackground pending={pending && checked}>
-        {inputRadio}
-      </LoaderBackground>
-    );
-  }
-  return inputRadio;
 });

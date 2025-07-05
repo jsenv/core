@@ -25,11 +25,10 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
   const {
     autoFocus,
     constraints = [],
-    children: value = "on",
+    value = "on",
     checked,
     loading,
     onChange,
-    onProgrammaticChange,
     appeareance = "custom", // "custom" or "default"
     ...rest
   } = props;
@@ -46,17 +45,19 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
     checkedRef.current = checked;
   }
 
+  const handleChange = (e) => {
+    setInnerChecked(e.target.checked);
+    onChange?.(e);
+  };
+
   const inputCheckbox = (
     <input
       ref={innerRef}
       checked={innerChecked}
       value={value}
-      onChange={(e) => {
-        setInnerChecked(e.target.checked);
-        onChange?.(e);
-      }}
+      onChange={handleChange}
       // eslint-disable-next-line react/no-unknown-property
-      onprogrammaticchange={onProgrammaticChange}
+      onprogrammaticchange={handleChange}
       {...rest}
     />
   );
@@ -99,16 +100,14 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     onActionStart,
     onActionError,
     onActionEnd,
-    children: value = "on",
+    value = "on",
     ...rest
   } = props;
 
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue] = useNavState(id, undefined, {
-    debug: true,
-  });
+  const [navStateValue, setNavStateValue] = useNavState(id);
   const checkedAtStart =
     navStateValue === undefined ? initialChecked : navStateValue;
 
@@ -156,11 +155,12 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
       type="checkbox"
       id={id}
       name={name}
+      value={value}
       checked={checked}
       disabled={disabled || pending}
       loading={loading || pending}
       data-validation-message-arrow-x="center"
-      onInput={(e) => {
+      onChange={(e) => {
         const checkboxIsChecked = e.target.checked;
         if (checkedAtStart) {
           setNavStateValue(checkboxIsChecked ? false : undefined);
@@ -170,11 +170,9 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
         setChecked(checkboxIsChecked ? value : undefined);
         onInput?.(e);
         if (action) {
-          dispatchRequestAction(e.target);
+          dispatchRequestAction(e.target, e);
         }
       }}
-    >
-      {value}
-    </SimpleInputCheckbox>
+    />
   );
 });

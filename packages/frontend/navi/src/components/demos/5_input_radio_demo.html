@@ -13,6 +13,10 @@
       import { render } from "preact";
       import {
         // eslint-disable-next-line no-unused-vars
+        Form,
+        // eslint-disable-next-line no-unused-vars
+        Field,
+        // eslint-disable-next-line no-unused-vars
         Fieldset,
         // eslint-disable-next-line no-unused-vars
         Input,
@@ -26,33 +30,58 @@
               <p>
                 <strong>Fieldset + throw after 1s</strong>
               </p>
-              <Fieldset
-                name="toto"
+              <Form
                 action={async ({ drone }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
                   throw new Error(`Drone selected: ${drone}`);
                 }}
               >
-                <legend>Select a maintenance drone:</legend>
+                <fieldset name="toto">
+                  <legend>Select a maintenance drone:</legend>
 
-                <div>
-                  <Input type="radio" id="drone" name="drone" value="huey">
-                    Huey
-                  </Input>
-                </div>
+                  <div>
+                    <Field
+                      input={
+                        <Input
+                          type="radio"
+                          id="drone"
+                          name="drone"
+                          value="huey"
+                        />
+                      }
+                      label="Huey"
+                    />
+                  </div>
 
-                <div>
-                  <Input type="radio" id="drone" name="drone" value="dewey">
-                    Dewey
-                  </Input>
-                </div>
+                  <div>
+                    <Field
+                      input={
+                        <Input
+                          type="radio"
+                          id="drone"
+                          name="drone"
+                          value="dewey"
+                        />
+                      }
+                      label="Dewey"
+                    />
+                  </div>
 
-                <div>
-                  <Input type="radio" id="drone" name="drone" value="louie">
-                    Louie
-                  </Input>
-                </div>
-              </Fieldset>
+                  <div>
+                    <Field
+                      input={
+                        <Input
+                          type="radio"
+                          id="drone"
+                          name="drone"
+                          value="louie"
+                        />
+                      }
+                      label="Louie"
+                    />
+                  </div>
+                </fieldset>
+              </Form>
             </div>
             <div>
               <p>

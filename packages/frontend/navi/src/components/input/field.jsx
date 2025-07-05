@@ -4,11 +4,18 @@ import.meta.css = /*css*/ `
   }
 `;
 
-export const Field = ({ label, input, disabled, ...rest }) => {
+export const Field = (props) => {
+  const { label, input, disabled, ...rest } = props;
+  const keys = Object.keys(props);
+  const labelIndex = keys.indexOf("label");
+  const inputIndex = keys.indexOf("input");
+  const labelBeforeInput = labelIndex < inputIndex;
+
+  const children = labelBeforeInput ? [label, input] : [input, label];
+
   return (
     <label data-disabled={disabled ? "" : undefined} {...rest}>
-      {label}
-      {input}
+      {children}
     </label>
   );
 };
