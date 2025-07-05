@@ -37,6 +37,7 @@ import.meta.css = /*css*/ `
   opacity: 0;
   transform: scale(0.5);
   transition: all 0.15s ease;
+  pointer-events: none;
 }
 
 .custom_checkbox[data-checked] svg {

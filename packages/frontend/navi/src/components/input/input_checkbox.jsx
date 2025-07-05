@@ -25,11 +25,12 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
   const {
     autoFocus,
     constraints = [],
-    children: value,
+    children: value = "on",
     checked,
     loading,
     onChange,
     onProgrammaticChange,
+    appeareance = "custom", // "custom" or "default"
     ...rest
   } = props;
 
@@ -55,33 +56,34 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
     />
   );
 
-  const customInnputCheckbox = (
-    <CustomCheckbox checked={innerChecked} loading={loading}>
-      {inputCheckbox}
-    </CustomCheckbox>
-  );
+  const inputCheckboxDisplayed =
+    appeareance === "custom" ? (
+      <CustomCheckbox checked={innerChecked} loading={loading}>
+        {inputCheckbox}
+      </CustomCheckbox>
+    ) : (
+      inputCheckbox
+    );
 
-  const customInputCheckboxWithLoader = (
+  const inputCheckboxWithLoader = (
     <LoaderBackground
       loading={loading}
       // 0.5px ensure loader background is centered on the checkbox
       // ( custom input has margin-left:4px and margin-right: 3px)
       spacingLeft={0.5}
     >
-      {customInnputCheckbox}
+      {inputCheckboxDisplayed}
     </LoaderBackground>
   );
 
-  return customInputCheckboxWithLoader;
+  return inputCheckboxWithLoader;
 });
 
 const ActionInputCheckbox = forwardRef((props, ref) => {
   const {
     id,
     name,
-    autoFocus,
     checked: initialChecked = false,
-    constraints = [],
     action,
     disabled,
     loading,
@@ -98,8 +100,6 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
 
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
 
   const [navStateValue, setNavStateValue] = useNavState(id, undefined, {
     debug: true,
@@ -144,16 +144,16 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     },
   });
 
-  const inputCheckbox = (
-    <input
+  return (
+    <SimpleInputCheckbox
       {...rest}
       ref={innerRef}
       type="checkbox"
       id={id}
       name={name}
-      value={value}
       checked={checked}
       disabled={disabled || pending}
+      loading={loading || pending}
       data-validation-message-arrow-x="center"
       onInput={(e) => {
         const checkboxIsChecked = e.target.checked;
@@ -168,25 +168,8 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
           dispatchRequestAction(e.target);
         }
       }}
-    />
-  );
-
-  const innerLoading = loading || pending;
-  const customInputCheckbox = (
-    <CustomCheckbox checked={checked} loading={innerLoading}>
-      {inputCheckbox}
-    </CustomCheckbox>
-  );
-
-  const customInputCheckboxWithLoader = (
-    <LoaderBackground
-      loading={innerLoading}
-      // 0.5px ensure loader background is centered on the checkbox
-      // ( custom input has margin-left:4px and margin-right: 3px)
-      spacingLeft={0.5}
     >
-      {customInputCheckbox}
-    </LoaderBackground>
+      {value}
+    </SimpleInputCheckbox>
   );
-  return customInputCheckboxWithLoader;
 });

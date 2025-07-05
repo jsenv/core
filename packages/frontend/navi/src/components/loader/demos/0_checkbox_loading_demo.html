@@ -19,19 +19,19 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const [loading, setLoading] = useState(true);
+        const [loading, setLoading] = useState(false);
+        const [loadingB, setLoadingB] = useState(false);
 
         return (
           <div>
             <div style="display: flex; flex-direction: row; gap: 30px">
               <div>
                 <p>
-                  <strong>Checkbox loading</strong>
+                  <strong>Checkbox loading (no action)</strong>
                 </p>
 
                 <Input
                   id="test"
-                  action={() => {}}
                   type="checkbox"
                   name="colors"
                   loading={loading}
@@ -43,6 +43,32 @@
                   <span
                     onClick={() => {
                       setLoading(!loading);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+              </div>
+
+              <div>
+                <p>
+                  <strong>Checkbox loading (action)</strong>
+                </p>
+
+                <Input
+                  id="test"
+                  action={() => {}}
+                  type="checkbox"
+                  name="colors"
+                  loading={loadingB}
+                >
+                  Coucou
+                </Input>
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingB(!loadingB);
                     }}
                   >
                     Toggle
