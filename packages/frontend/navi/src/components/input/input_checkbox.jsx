@@ -41,31 +41,38 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
   const [innerChecked, setInnerChecked] = useState(checked);
 
   const inputCheckbox = (
+    <input
+      ref={innerRef}
+      checked={innerChecked}
+      value={value}
+      onChange={(e) => {
+        setInnerChecked(e.target.checked);
+        onChange?.(e);
+      }}
+      // eslint-disable-next-line react/no-unknown-property
+      onprogrammaticchange={onProgrammaticChange}
+      {...rest}
+    />
+  );
+
+  const customInnputCheckbox = (
     <CustomCheckbox checked={innerChecked} loading={loading}>
-      <input
-        ref={innerRef}
-        checked={innerChecked}
-        value={value}
-        onChange={(e) => {
-          setInnerChecked(e.target.checked);
-          onChange?.(e);
-        }}
-        // eslint-disable-next-line react/no-unknown-property
-        onprogrammaticchange={onProgrammaticChange}
-        {...rest}
-      />
+      {inputCheckbox}
     </CustomCheckbox>
   );
 
-  return (
+  const customInputCheckboxWithLoader = (
     <LoaderBackground
-      pending={loading}
-      // input has margin-left:4px and margin-right: 3px. To ensure it's centered we move it by 0.5px
+      loading={loading}
+      // 0.5px ensure loader background is centered on the checkbox
+      // ( custom input has margin-left:4px and margin-right: 3px)
       spacingLeft={0.5}
     >
-      {inputCheckbox}
+      {customInnputCheckbox}
     </LoaderBackground>
   );
+
+  return customInputCheckboxWithLoader;
 });
 
 const ActionInputCheckbox = forwardRef((props, ref) => {
@@ -80,7 +87,6 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     loading,
     onCancel,
     onInput,
-    actionPendingEffect = "loading",
     actionErrorEffect,
     onActionPrevented,
     onActionStart,
@@ -172,16 +178,13 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     </CustomCheckbox>
   );
 
-  if (actionPendingEffect === "loading") {
-    return (
-      <LoaderBackground
-        loading={innerLoading}
-        // input has margin-left:4px and margin-right: 3px. To ensure it's centered we move it by 0.5px
-        spacingLeft={0.5}
-      >
-        {inputCheckbox}
-      </LoaderBackground>
-    );
-  }
-  return inputCheckbox;
+  return (
+    <LoaderBackground
+      loading={innerLoading}
+      // input has margin-left:4px and margin-right: 3px. To ensure it's centered we move it by 0.5px
+      spacingLeft={0.5}
+    >
+      {inputCheckbox}
+    </LoaderBackground>
+  );
 });
