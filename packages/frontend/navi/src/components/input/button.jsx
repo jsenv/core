@@ -9,7 +9,7 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 export const Button = forwardRef((props, ref) => {
-  return renderActionComponent(props, ref, ActionButton, SimpleButton);
+  return renderActionComponent(props, ref, SimpleButton, ActionButton);
 });
 
 const SimpleButton = forwardRef((props, ref) => {

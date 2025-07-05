@@ -4,8 +4,8 @@ import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { useActionEvents } from "../use_action_events.js";
 import { useNavState } from "../use_nav_state.js";
-import { useOnFormReset } from "../use_on_form_reset.js";
 import { Field } from "./field.jsx";
 import { InputCheckbox } from "./input_checkbox.jsx";
 
@@ -25,6 +25,7 @@ export const CheckboxList = forwardRef((props, ref) => {
     children,
     actionPendingEffect = "loading",
     actionErrorEffect,
+    onCancel,
     onActionPrevented,
     onActionStart,
     onActionError,
@@ -43,10 +44,6 @@ export const CheckboxList = forwardRef((props, ref) => {
       checkedValueArrayAtStart.push(child.value);
     }
   }
-  useOnFormReset(innerRef, () => {
-    setNavStateValue(undefined);
-    setCheckedValueArray(checkedValueArrayAtStart);
-  });
 
   const [effectiveAction, getCheckedValueArray, setCheckedValueArray] =
     useAction(action, {
@@ -58,12 +55,9 @@ export const CheckboxList = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
 
-  const actionRequesterRef = useRef();
-
   const checkedValueArrayFromSignal = getCheckedValueArray();
   const checkedValueArray =
     error || aborted ? checkedValueArrayAtStart : checkedValueArrayFromSignal;
-
   const addToCheckedValues = (valueToAdd) => {
     const checkedValueArrayWithThisValue = [];
     for (const checkedValue of checkedValueArray) {
@@ -91,30 +85,35 @@ export const CheckboxList = forwardRef((props, ref) => {
     setCheckedValueArray(checkedValueArrayWithoutThisValue);
   };
 
+  const actionRequesterRef = useRef();
+  useActionEvents(innerRef, {
+    onCancel: (e, reason) => {
+      setNavStateValue(undefined);
+      setCheckedValueArray(checkedValueArrayAtStart);
+      onCancel?.(e, reason);
+    },
+    onPrevented: onActionPrevented,
+    onAction: (actionEvent) => {
+      if (!actionEvent.target.form && action) {
+        const requester = actionEvent.detail.requester;
+        actionRequesterRef.current = requester;
+        executeAction(effectiveAction, { requester });
+      }
+    },
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: () => {
+      setNavStateValue(undefined);
+      onActionEnd?.();
+    },
+  });
+
   return (
     <fieldset
       className="checkbox_list"
       data-checkbox-list
       ref={innerRef}
-      {...rest} // eslint-disable-next-line react/no-unknown-property
-      onactionprevented={onActionPrevented}
-      // eslint-disable-next-line react/no-unknown-property
-      onaction={(actionEvent) => {
-        if (!actionEvent.target.form) {
-          const requester = actionEvent.detail.requester;
-          actionRequesterRef.current = requester;
-          executeAction(effectiveAction, { requester });
-        }
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionstart={onActionStart}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionerror={onActionError}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionend={() => {
-        setNavStateValue(undefined); // the action is completed the nav state is no longer needed
-        onActionEnd?.();
-      }}
+      {...rest}
     >
       {label ? <legend>{label}</legend> : null}
       {children.map((child) => {
@@ -151,6 +150,7 @@ export const CheckboxList = forwardRef((props, ref) => {
 
         const checkbox = (
           <InputCheckbox
+            ignoreParentAction
             ref={checkboxRef}
             type="checkbox"
             id={id}

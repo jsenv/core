@@ -16,8 +16,8 @@ export const InputCheckbox = forwardRef((props, ref) => {
   return renderActionComponent(
     props,
     ref,
-    ActionInputCheckbox,
     SimpleInputCheckbox,
+    ActionInputCheckbox,
   );
 });
 
@@ -144,7 +144,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     },
   });
 
-  let inputCheckbox = (
+  const inputCheckbox = (
     <input
       {...rest}
       ref={innerRef}
@@ -172,19 +172,21 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   );
 
   const innerLoading = loading || pending;
-  inputCheckbox = (
+  const customInputCheckbox = (
     <CustomCheckbox checked={checked} loading={innerLoading}>
       {inputCheckbox}
     </CustomCheckbox>
   );
 
-  return (
+  const customInputCheckboxWithLoader = (
     <LoaderBackground
       loading={innerLoading}
-      // input has margin-left:4px and margin-right: 3px. To ensure it's centered we move it by 0.5px
+      // 0.5px ensure loader background is centered on the checkbox
+      // ( custom input has margin-left:4px and margin-right: 3px)
       spacingLeft={0.5}
     >
-      {inputCheckbox}
+      {customInputCheckbox}
     </LoaderBackground>
   );
+  return customInputCheckboxWithLoader;
 });
