@@ -13,9 +13,6 @@ import.meta.css = /*css*/ `
 .radio_list {
     display: flex;
     flex-direction: column;
-    padding: 0;
-    margin: 0;
-    border: none;
 }`;
 
 export const RadioList = forwardRef((props, ref) => {
@@ -171,8 +168,8 @@ export const RadioList = forwardRef((props, ref) => {
           <Field
             key={value}
             disabled={innerDisabled}
-            label={label}
             input={radio}
+            label={label}
           />
         );
       })}

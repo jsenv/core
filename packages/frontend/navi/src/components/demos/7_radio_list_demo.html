@@ -28,23 +28,24 @@
           <div style="display: flex; flex-direction: row; gap: 30px">
             <div>
               <p>
-                <strong>Fieldset + alert after 1s</strong>
+                <strong>No form + alert after 1s</strong>
               </p>
-              <Fieldset
+
+              <RadioList
                 action={async ({ color }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
                   // eslint-disable-next-line no-alert
                   window.alert(`Color selected: ${JSON.stringify(color)}`);
                 }}
+                name="color"
+                label="Select your favorite color:"
               >
-                <RadioList name="color" label="Select your favorite color:">
-                  {[
-                    { label: "Red", value: "red" },
-                    { label: "Blue", value: "blue" },
-                    { label: "Green", value: "green" },
-                  ]}
-                </RadioList>
-              </Fieldset>
+                {[
+                  { label: "Red", value: "red" },
+                  { label: "Blue", value: "blue" },
+                  { label: "Green", value: "green" },
+                ]}
+              </RadioList>
             </div>
 
             <div>

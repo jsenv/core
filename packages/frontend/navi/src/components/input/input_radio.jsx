@@ -51,6 +51,7 @@ const SimpleInputRadio = forwardRef((props, ref) => {
   const inputRadio = (
     <input
       ref={innerRef}
+      type="radio"
       checked={innerChecked}
       onChange={handleChange}
       // eslint-disable-next-line react/no-unknown-property
@@ -150,7 +151,6 @@ const ActionInputRadio = forwardRef((props, ref) => {
     <SimpleInputRadio
       {...rest}
       ref={innerRef}
-      type="radio"
       id={id}
       name={name}
       value={value}

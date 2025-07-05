@@ -5,9 +5,10 @@ import { renderActionComponent } from "./action_execution/render_action_componen
 import { useAction } from "./action_execution/use_action.js";
 import { useExecuteAction } from "./action_execution/use_execute_action.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
+import { useActionEvents } from "./use_action_events.js";
 
 export const Fieldset = forwardRef((props, ref) => {
-  return renderActionComponent(props, ref, ActionFieldset, SimpleFieldset);
+  return renderActionComponent(props, ref, SimpleFieldset, ActionFieldset);
 });
 
 const SimpleFieldset = forwardRef((props, ref) => {
@@ -34,34 +35,32 @@ const ActionFieldset = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
 
+  useActionEvents(innerRef, {
+    onPrevented: onActionPrevented,
+    onAction: (actionEvent) => {
+      const fieldset = actionEvent.target;
+      const params = collectFormElementValues(fieldset);
+      setParams(params);
+
+      const actionToExecute = actionEvent.detail.action || boundAction;
+      executeAction(actionToExecute, {
+        requester: actionEvent.detail.requester,
+      });
+    },
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: onActionEnd,
+  });
+
   return (
-    <fieldset
+    <SimpleFieldset
       {...rest}
       ref={innerRef}
-      action={`javascript:void(${boundAction.name})`}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionprevented={onActionPrevented}
-      // eslint-disable-next-line react/no-unknown-property
-      onaction={async (actionEvent) => {
-        const fieldset = actionEvent.target;
-        const params = collectFormElementValues(fieldset);
-        setParams(params);
-
-        const actionToExecute = actionEvent.detail.action || boundAction;
-        executeAction(actionToExecute, {
-          requester: actionEvent.detail.requester,
-        });
-      }}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionstart={onActionStart}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionerror={onActionError}
-      // eslint-disable-next-line react/no-unknown-property
-      onactionend={onActionEnd}
+      action={`javascript:void(\`${boundAction.name}\`)`}
     >
       <ActionContext.Provider value={[boundAction]}>
         {children}
       </ActionContext.Provider>
-    </fieldset>
+    </SimpleFieldset>
   );
 });
