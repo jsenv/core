@@ -65,9 +65,7 @@ const ActionButton = forwardRef((props, ref) => {
       if (action) {
         const requester = actionEvent.detail.requester;
         actionRequesterRef.current = requester;
-        executeAction(effectiveAction, {
-          requester,
-        });
+        executeAction(effectiveAction, { requester });
       }
     },
     onStart: onActionStart,
@@ -94,24 +92,25 @@ const ActionButton = forwardRef((props, ref) => {
           dispatchRequestAction(buttonElement, event, {
             action: effectiveAction,
           });
-        }
-        const { form } = buttonElement;
-        if (form) {
-          let wouldSubmitForm = type === "submit" || type === "image";
-          if (!wouldSubmitForm) {
-            const formSubmitButton = form.querySelector(
-              "button[type='submit'], input[type='submit'], input[type='image']",
-            );
-            if (!formSubmitButton) {
-              wouldSubmitForm = true;
+        } else {
+          const { form } = buttonElement;
+          if (form) {
+            let wouldSubmitForm = type === "submit" || type === "image";
+            if (!wouldSubmitForm) {
+              const formSubmitButton = form.querySelector(
+                "button[type='submit'], input[type='submit'], input[type='image']",
+              );
+              if (!formSubmitButton) {
+                wouldSubmitForm = true;
+              }
             }
-          }
-          if (wouldSubmitForm) {
-            // prevent default behavior that would submit the form
-            // we want to go through the action execution process (with validation and all)
-            event.preventDefault();
-            actionRequesterRef.current = buttonElement;
-            dispatchRequestAction(form, event, { action: effectiveAction });
+            if (wouldSubmitForm) {
+              // prevent default behavior that would submit the form
+              // we want to go through the action execution process (with validation and all)
+              event.preventDefault();
+              actionRequesterRef.current = buttonElement;
+              dispatchRequestAction(form, event, { action: effectiveAction });
+            }
           }
         }
         onClick?.(event);

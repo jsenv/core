@@ -94,7 +94,7 @@ export const CheckboxList = forwardRef((props, ref) => {
     },
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
-      if (!actionEvent.target.form && action) {
+      if (action && !innerRef.current.form) {
         const requester = actionEvent.detail.requester;
         actionRequesterRef.current = requester;
         executeAction(effectiveAction, { requester });
