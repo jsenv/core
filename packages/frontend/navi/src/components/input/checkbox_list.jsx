@@ -150,6 +150,9 @@ export const CheckboxList = forwardRef((props, ref) => {
 
         const checkbox = (
           <InputCheckbox
+            // ignoreParentAction: each checkbox is controller by this checkbox list
+            // we don't want the checkbox to try to update the parent action
+            // it's already done here
             ignoreParentAction
             ref={checkboxRef}
             type="checkbox"

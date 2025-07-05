@@ -40,6 +40,11 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
   useConstraints(innerRef, constraints);
 
   const [innerChecked, setInnerChecked] = useState(checked);
+  const checkedRef = useRef(checked);
+  if (checkedRef.current !== checked) {
+    setInnerChecked(checked);
+    checkedRef.current = checked;
+  }
 
   const inputCheckbox = (
     <input
