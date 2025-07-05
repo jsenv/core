@@ -1,3 +1,20 @@
+/**
+ * Input component for all textual input types.
+ *
+ * Supports:
+ * - text (default)
+ * - password
+ * - email
+ * - url
+ * - search
+ * - tel
+ * - etc.
+ *
+ * For non-textual inputs, use specialized components:
+ * - InputCheckbox for type="checkbox"
+ * - InputRadio for type="radio"
+ */
+
 import { dispatchRequestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
@@ -11,11 +28,16 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnChange } from "../use_on_change.js";
 
-export const InputText = forwardRef((props, ref) => {
-  return renderActionComponent(props, ref, ActionInputText, SimpleInputText);
+export const InputTextual = forwardRef((props, ref) => {
+  return renderActionComponent(
+    props,
+    ref,
+    SimpleInputTextual,
+    ActionInputTextual,
+  );
 });
 
-const SimpleInputText = forwardRef((props, ref) => {
+const SimpleInputTextual = forwardRef((props, ref) => {
   const { autoFocus, constraints = [], ...rest } = props;
 
   const innerRef = useRef();
@@ -26,7 +48,7 @@ const SimpleInputText = forwardRef((props, ref) => {
   return <input ref={innerRef} {...rest} />;
 });
 
-const ActionInputText = forwardRef((props, ref) => {
+const ActionInputTextual = forwardRef((props, ref) => {
   const {
     id,
     name,

@@ -23,7 +23,6 @@ export const CheckboxList = forwardRef((props, ref) => {
     action = () => {},
     label,
     children,
-    actionPendingEffect = "loading",
     actionErrorEffect,
     onCancel,
     onActionPrevented,
@@ -140,14 +139,11 @@ export const CheckboxList = forwardRef((props, ref) => {
         };
 
         const innerLoading =
-          actionPendingEffect === "loading" &&
-          (loading ||
-            (pending &&
-              actionRequesterRef.current &&
-              actionRequesterRef.current === checkboxRef.current));
-
+          loading ||
+          (pending &&
+            actionRequesterRef.current &&
+            actionRequesterRef.current === checkboxRef.current);
         const innerDisabled = disabled || pending;
-
         const checkbox = (
           <InputCheckbox
             // ignoreParentAction: each checkbox is controller by this checkbox list
