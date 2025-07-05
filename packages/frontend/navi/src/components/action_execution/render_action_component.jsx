@@ -11,15 +11,15 @@ export const renderActionComponent = (
   const hasActionProps = action || parentAction;
 
   if (!hasActionProps || ignoreParentAction) {
-    return <ComponentWithoutAction {...props} ref={ref} />;
+    return <ComponentWithoutAction ref={ref} {...props} />;
   }
 
   return (
     <ComponentWithAction
+      ref={ref}
       {...props}
       parentAction={parentAction}
       action={action}
-      ref={ref}
     />
   );
 };

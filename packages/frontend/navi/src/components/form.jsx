@@ -24,7 +24,7 @@ import { collectFormElementValues } from "./collect_form_element_values.js";
 import { useActionEvents } from "./use_action_events.js";
 
 export const Form = forwardRef((props, ref) => {
-  return renderActionComponent(props, ref, ActionForm, SimpleForm);
+  return renderActionComponent(props, ref, SimpleForm, ActionForm);
 });
 
 const SimpleForm = forwardRef((props, ref) => {
