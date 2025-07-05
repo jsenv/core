@@ -153,7 +153,9 @@ export const RadioList = forwardRef((props, ref) => {
                 // so in theory we never reach this point
                 return;
               }
-              setCheckedValue(undefined);
+              if (checkedValue === value) {
+                setCheckedValue(undefined);
+              }
               if (radio.form) {
                 return;
               }

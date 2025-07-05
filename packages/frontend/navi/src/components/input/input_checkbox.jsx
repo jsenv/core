@@ -53,6 +53,7 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
   const inputCheckbox = (
     <input
       ref={innerRef}
+      type="checkbox"
       checked={innerChecked}
       value={value}
       onChange={handleChange}
@@ -152,7 +153,6 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
     <SimpleInputCheckbox
       {...rest}
       ref={innerRef}
-      type="checkbox"
       id={id}
       name={name}
       value={value}

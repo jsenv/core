@@ -134,6 +134,7 @@ export const CheckboxList = forwardRef((props, ref) => {
             ref={checkboxRef}
             id={id}
             name={name}
+            value={value}
             checked={checked}
             disabled={innerDisabled}
             loading={innerLoading}
@@ -154,17 +155,15 @@ export const CheckboxList = forwardRef((props, ref) => {
               actionRequesterRef.current = checkbox;
               dispatchRequestAction(checkboxListContainer, event);
             }}
-          >
-            {value}
-          </InputCheckbox>
+          />
         );
 
         return (
           <Field
             key={value}
             disabled={innerDisabled}
-            label={label}
             input={checkbox}
+            label={label}
           />
         );
       })}
