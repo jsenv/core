@@ -29,9 +29,9 @@ export const Field = (props) => {
       const input = label.querySelector("input");
       if (!input) {
         setInputDisabled(false);
-        return;
+      } else {
+        setInputDisabled(input.disabled);
       }
-      setInputDisabled(input.disabled);
       animationFrame = requestAnimationFrame(updateInputDisabled);
     };
     updateInputDisabled();

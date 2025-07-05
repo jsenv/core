@@ -1,5 +1,5 @@
 import { createPortal } from "preact/compat";
-import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useDebounceTrue } from "../use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
@@ -108,33 +108,30 @@ const LoaderBackgroundWithWrapper = ({
   const [detectedColor, setDetectedColor] = useState();
   const [borderTopWidth, setBorderTopWidth] = useState(0);
 
-  const updateStyles = useCallback(() => {
-    const container = containerRef.current;
-    const lastElementChild = container?.lastElementChild;
-    if (!lastElementChild) {
-      return;
-    }
-    if (!loading) {
-      return;
-    }
-
-    const computedStyle = window.getComputedStyle(lastElementChild);
-    const newBorderTopWidth = parseFloat(computedStyle.borderTopWidth);
-    const newBorderColor = computedStyle.borderColor;
-    const newDetectedColor = computedStyle.color;
-
-    setBorderTopWidth(newBorderTopWidth);
-    setBorderColor(newBorderColor);
-    setDetectedColor(newDetectedColor);
-  }, [loading]);
-
   useLayoutEffect(() => {
-    updateStyles();
-    const interval = setInterval(updateStyles, 100);
-    return () => {
-      clearInterval(interval);
+    let animationFrame;
+    const updateStyles = () => {
+      const container = containerRef.current;
+      const lastElementChild = container?.lastElementChild;
+      if (lastElementChild && !loading) {
+        const computedStyle = window.getComputedStyle(lastElementChild);
+        const newBorderTopWidth = parseFloat(computedStyle.borderTopWidth);
+        const newBorderColor = computedStyle.borderColor;
+        const newDetectedColor = computedStyle.color;
+
+        setBorderTopWidth(newBorderTopWidth);
+        setBorderColor(newBorderColor);
+        setDetectedColor(newDetectedColor);
+      }
+      // updateStyles is very cheap so we run it every frame
+      animationFrame = requestAnimationFrame(updateStyles);
     };
-  }, [...(Array.isArray(children) ? children : [children])]);
+    updateStyles();
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [loading]);
 
   inset = inset || borderTopWidth;
 
