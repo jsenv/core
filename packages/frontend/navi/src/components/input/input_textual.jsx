@@ -38,30 +38,29 @@ export const InputTextual = forwardRef((props, ref) => {
 });
 
 const SimpleInputTextual = forwardRef((props, ref) => {
-  const { autoFocus, constraints = [], ...rest } = props;
+  const { autoFocus, autoSelect, constraints = [], loading, ...rest } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  useAutoFocus(innerRef, autoFocus);
+  useAutoFocus(innerRef, autoFocus, autoSelect);
   useConstraints(innerRef, constraints);
 
-  return <input ref={innerRef} {...rest} />;
+  const inputTextual = <input ref={innerRef} {...rest} />;
+
+  return <LoaderBackground loading={loading}>{inputTextual}</LoaderBackground>;
 });
 
 const ActionInputTextual = forwardRef((props, ref) => {
   const {
     id,
     name,
-    autoFocus,
-    autoSelect,
     action,
     value: initialValue = "",
-    constraints = [],
     cancelOnBlurInvalid,
     cancelOnEscape,
-    actionPendingEffect = "loading",
     actionErrorEffect,
     disabled,
+    loading,
     onInput,
     onCancel,
     onActionPrevented,
@@ -73,8 +72,6 @@ const ActionInputTextual = forwardRef((props, ref) => {
 
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  useAutoFocus(innerRef, autoFocus, autoSelect);
-  useConstraints(innerRef, constraints);
 
   const [navStateValue, setNavStateValue] = useNavState(id);
   const valueAtStart =
@@ -112,7 +109,6 @@ const ActionInputTextual = forwardRef((props, ref) => {
       }
       setNavStateValue(undefined);
       setValue(valueAtStart);
-      innerRef.current.value = valueAtStart;
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -131,14 +127,19 @@ const ActionInputTextual = forwardRef((props, ref) => {
     },
   });
 
-  const inputText = (
-    <input
+  const innerDisabled = disabled || pending;
+  const innerLoading =
+    loading || (pending && actionRequesterRef.current === innerRef.current);
+
+  return (
+    <SimpleInputTextual
       {...rest}
       ref={innerRef}
       id={id}
       name={name}
       value={value}
-      disabled={disabled || pending}
+      disabled={innerDisabled}
+      loading={innerLoading}
       onInput={(e) => {
         const inputValue = e.target.value;
         setNavStateValue(inputValue);
@@ -147,16 +148,4 @@ const ActionInputTextual = forwardRef((props, ref) => {
       }}
     />
   );
-
-  if (actionPendingEffect === "loading") {
-    return (
-      <LoaderBackground
-        pending={pending && actionRequesterRef.current === innerRef.current}
-      >
-        {inputText}
-      </LoaderBackground>
-    );
-  }
-
-  return inputText;
 });
