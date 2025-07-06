@@ -9,28 +9,37 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 
+/**
+ * We have to re-define the CSS of button because getComputedStyle(button).borderColor returns
+ * rgb(0, 0, 0) while being visually grey in chrome
+ * So we redefine chrome styles so that loader can keep up with the actual color visible to the user
+ *
+ */
 import.meta.css = /*css*/ `
-button.custom {
-  border-radius: 4px; /* ✅ Border radius Chrome */
-  border: 1px solid light-dark(#a0a0a0, #909090); /* ✅ Effet 3D automatique */
+[name="element_with_loader_wrapper"] button {
+  border-radius: 2px; 
+  border-width: 2px;
+  border-style: solid;
+  border-color: light-dark(#767676, #8e8e93);
 }
 
-button.custom:hover:not(:disabled) {
-  border: 1px solid light-dark(#909090, #808080);
+[name="element_with_loader_wrapper"] button:hover:not(:disabled) {
+  border-color: light-dark(#505050, #7e7e83);
+  background: light-dark(#e6e6e6, #2a2a2c);
 }
 
-button.custom:focus:not(:disabled) {
-  border: 1px solid light-dark(#3b82f6, #60a5fa);
-  outline: 2px solid light-dark(#3b82f650, #60a5fa50);
-  outline-offset: -1px;
+[name="element_with_loader_wrapper"] button:focus-visible:not(:disabled) {
+  border-color: light-dark(#1d4ed8, #3b82f6);
+  border-width: 2px;
+  outline:none;
 }
 
-button.custom:active:not(:disabled) {
-  border: 1px solid light-dark(#808080, #707070); /* ✅ Effet enfoncé */
+[name="element_with_loader_wrapper"] button:active:not(:disabled) {
+  border-color: light-dark(#808080, #707070);
 }
 
-button.custom:disabled {
-  border: 1px solid light-dark(#a0a0a050, #90909050);
+[name="element_with_loader_wrapper"] button:disabled {
+  border-color: light-dark(#a0a0a050, #90909050);
 }
 `;
 export const Button = forwardRef((props, ref) => {
@@ -38,14 +47,7 @@ export const Button = forwardRef((props, ref) => {
 });
 
 const SimpleButton = forwardRef((props, ref) => {
-  const {
-    autoFocus,
-    constraints = [],
-    appeareance = "custom", // "custom" or "default"
-    loading,
-    children,
-    ...rest
-  } = props;
+  const { autoFocus, constraints = [], loading, children, ...rest } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -54,11 +56,7 @@ const SimpleButton = forwardRef((props, ref) => {
 
   return (
     <LoaderBackground loading={loading}>
-      <button
-        ref={innerRef}
-        className={appeareance === "custom" ? "custom" : ""}
-        {...rest}
-      >
+      <button ref={innerRef} {...rest}>
         {children}
       </button>
     </LoaderBackground>
