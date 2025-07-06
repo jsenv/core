@@ -138,9 +138,15 @@ const LoaderBackgroundWithWrapper = ({
   inset = inset || borderTopWidth;
 
   return (
-    <div ref={containerRef} style="display:inline-flex; position: relative;">
+    <div
+      name="element_with_loader_wrapper"
+      ref={containerRef}
+      data-loader-visible={shouldShowSpinner ? "" : undefined}
+      style="display:inline-flex; position: relative;"
+    >
       {shouldShowSpinner && (
         <div
+          name="loading_rectangle_wrapper"
           style={{
             position: "absolute",
             top: `${inset + spacingTop}px`,

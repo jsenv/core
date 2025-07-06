@@ -58,6 +58,7 @@ export const RectangleLoading = ({ color = "currentColor", radius = 0 }) => {
 
   return (
     <div
+      name="rectangle_loading"
       ref={containerRef}
       style="width: 100%; height: 100%; position: relative;"
     >
@@ -73,7 +74,14 @@ export const RectangleLoading = ({ color = "currentColor", radius = 0 }) => {
   );
 };
 
-const RectangleLoadingSvg = ({ width, height, color, radius }) => {
+const RectangleLoadingSvg = ({
+  width,
+  height,
+  color,
+  radius,
+  trailColor = "rgba(0,0,0,0.05)",
+  // trailColor = "transparent",
+}) => {
   // Calculate stroke width and margins based on container size
   const strokeWidth = Math.max(1, Math.min(width, height) * 0.01);
   const margin = Math.max(2, Math.min(width, height) * 0.03);
@@ -123,7 +131,7 @@ const RectangleLoadingSvg = ({ width, height, color, radius }) => {
         width={drawableWidth}
         height={drawableHeight}
         fill="none"
-        stroke="rgba(0,0,0,0.05)"
+        stroke={trailColor}
         strokeWidth={strokeWidth}
         rx={actualRadius}
       />
@@ -135,7 +143,6 @@ const RectangleLoadingSvg = ({ width, height, color, radius }) => {
         stroke={color}
         strokeWidth={strokeWidth * 2}
         strokeLinecap="round"
-        opacity="0.8"
         strokeDasharray={`${pathLength * 0.25} ${pathLength * 0.75}`}
         pathLength={pathLength}
       >
@@ -150,7 +157,7 @@ const RectangleLoadingSvg = ({ width, height, color, radius }) => {
       </path>
 
       {/* Leading dot that follows the path */}
-      <circle r={strokeWidth * 1.75} opacity="0.8" fill={color}>
+      <circle r={strokeWidth * 1.75} fill={color}>
         <animateMotion
           path={rectPath}
           dur="1.8s"

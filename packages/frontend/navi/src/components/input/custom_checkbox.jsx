@@ -63,7 +63,8 @@ import.meta.css = /*css*/ `
   stroke: #EEEEEE; 
 }
 
-.custom_checkbox[data-loading], .custom_checkbox[data-checked][data-loading]  {
+[data-loader-visible] .custom_checkbox[data-loading] {
+  transition-property: background, transform, opacity, box-shadow; /* ✅ Exclut border-color */
   border-color: transparent;
 }
 `;
