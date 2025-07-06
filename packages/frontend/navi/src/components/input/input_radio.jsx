@@ -1,4 +1,4 @@
-import { dispatchRequestAction, useConstraints } from "@jsenv/validation";
+import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
@@ -162,8 +162,8 @@ const ActionInputRadio = forwardRef((props, ref) => {
         if (radioIsChecked) {
           setNavStateValue(value);
           setCheckedValue(value);
-          if (!e.target.form) {
-            dispatchRequestAction(e.target, e);
+          if (!e.target.form && action) {
+            requestAction(e);
           }
         }
         onChange?.(e);

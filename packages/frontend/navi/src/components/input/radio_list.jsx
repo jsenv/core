@@ -1,4 +1,4 @@
-import { dispatchRequestAction } from "@jsenv/validation";
+import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
@@ -122,7 +122,7 @@ export const RadioList = forwardRef((props, ref) => {
                 }
                 actionRequesterRef.current = radio;
                 const radioListContainer = innerRef.current;
-                dispatchRequestAction(radioListContainer, event);
+                requestAction(event, { target: radioListContainer });
                 return;
               }
 
@@ -161,7 +161,7 @@ export const RadioList = forwardRef((props, ref) => {
               }
               actionRequesterRef.current = radio;
               const radioListContainer = innerRef.current;
-              dispatchRequestAction(radioListContainer, event);
+              requestAction(event, { target: radioListContainer });
             }}
           />
         );

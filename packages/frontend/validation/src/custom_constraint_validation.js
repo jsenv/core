@@ -43,24 +43,100 @@ let debug = false;
 
 const validationInProgressWeakSet = new WeakSet();
 
-export const dispatchRequestAction = (
-  element,
+export const requestAction = (
   event,
-  { requester, action } = {},
+  { target = event.target, requester = target, action } = {},
 ) => {
-  let validationInterface = element.__validationInterface__;
+  let validationInterface = target.__validationInterface__;
   if (!validationInterface) {
-    validationInterface = installCustomConstraintValidation(element);
+    validationInterface = installCustomConstraintValidation(target);
   }
 
-  return validationInterface.requestAction(
-    event || new CustomEvent("requestaction", { cancelable: true }),
-    {
-      target: element,
-      requester: requester || event ? event.target : element,
-      action,
-    },
-  );
+  if (debug) {
+    console.debug(`action requested by`, requester, `(event: "${event.type}")`);
+  }
+
+  const isForm = target.tagName === "FORM";
+  const isFieldset = target.tagName === "FIELDSET";
+
+  if (isForm || isFieldset) {
+    if (validationInProgressWeakSet.has(target)) {
+      if (debug) {
+        console.debug(`validation already in progress for`, target);
+      }
+      return;
+    }
+    validationInProgressWeakSet.add(target);
+    setTimeout(() => {
+      validationInProgressWeakSet.delete(target);
+    });
+
+    const formElements = isForm
+      ? // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
+        target.elements
+      : target.querySelectorAll(
+          "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button[name]:not([disabled])",
+        );
+
+    for (const formElement of formElements) {
+      const validationInterface = formElement.__validationInterface__;
+      if (!validationInterface) {
+        continue;
+      }
+      const isValid = validationInterface.checkValidity({
+        fromRequestAction: true,
+      });
+      if (isValid) {
+        continue;
+      }
+      validationInterface.reportValidity();
+      const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
+        detail: { reasonEvent: event, requester },
+      });
+      target.dispatchEvent(actionPreventedCustomEvent);
+      return;
+    }
+
+    const actionCustomEvent = new CustomEvent("action", {
+      detail: { cause: event, requester },
+    });
+    if (debug) {
+      console.debug(`element is valid -> dispatch "action" on`, target);
+    }
+    target.dispatchEvent(actionCustomEvent);
+    return;
+  }
+
+  let elementReceivingEvents;
+  if (target.form) {
+    elementReceivingEvents = target.form;
+  } else {
+    const fieldset = target.closest("fieldset");
+    if (fieldset) {
+      elementReceivingEvents = fieldset;
+    } else {
+      elementReceivingEvents = target;
+    }
+  }
+  if (!validationInterface.checkValidity({ fromRequestAction: true })) {
+    event.preventDefault();
+    validationInterface.reportValidity();
+    const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
+      detail: { cause: event, requester, action },
+    });
+    elementReceivingEvents.dispatchEvent(actionPreventedCustomEvent);
+    return;
+  }
+  // once we have validated the action can occur
+  // we are dispatching a custom event that can be used
+  // to actually perform the action or to set form action
+  const actionCustomEvent = new CustomEvent("action", {
+    detail: { cause: event, requester, action },
+  });
+  if (debug) {
+    console.debug(`"action" dispatched on`, elementReceivingEvents);
+  }
+  elementReceivingEvents.dispatchEvent(actionCustomEvent);
 };
 
 export const installCustomConstraintValidation = (
@@ -74,7 +150,6 @@ export const installCustomConstraintValidation = (
     removeCustomMessage: undefined,
     checkValidity: undefined,
     reportValidity: undefined,
-    requestAction: undefined,
   };
 
   const cleanupCallbackSet = new Set();
@@ -99,95 +174,6 @@ export const installCustomConstraintValidation = (
     const cancelEvent = new CustomEvent("cancel", { detail: reason });
     element.dispatchEvent(cancelEvent);
   };
-
-  const requestAction = (e, { target, requester = target, action }) => {
-    if (debug) {
-      console.debug(`action requested by`, requester, `(event: "${e.type}")`);
-    }
-
-    const isForm = target.tagName === "FORM";
-    const isFieldset = target.tagName === "FIELDSET";
-
-    if (isForm || isFieldset) {
-      if (validationInProgressWeakSet.has(target)) {
-        if (debug) {
-          console.debug(`validation already in progress for`, target);
-        }
-        return;
-      }
-      validationInProgressWeakSet.add(target);
-      setTimeout(() => {
-        validationInProgressWeakSet.delete(target);
-      });
-
-      const formElements = isForm
-        ? // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
-          target.elements
-        : target.querySelectorAll(
-            "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button[name]:not([disabled])",
-          );
-
-      for (const formElement of formElements) {
-        const validationInterface = formElement.__validationInterface__;
-        if (!validationInterface) {
-          continue;
-        }
-        const isValid = validationInterface.checkValidity({
-          fromRequestAction: true,
-        });
-        if (isValid) {
-          continue;
-        }
-        validationInterface.reportValidity();
-        const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-          detail: { reasonEvent: e, requester },
-        });
-        target.dispatchEvent(actionPreventedCustomEvent);
-        return;
-      }
-
-      const actionCustomEvent = new CustomEvent("action", {
-        detail: { cause: e, requester },
-      });
-      if (debug) {
-        console.debug(`element is valid -> dispatch "action" on`, target);
-      }
-      target.dispatchEvent(actionCustomEvent);
-      return;
-    }
-
-    let elementReceivingEvents;
-    if (target.form) {
-      elementReceivingEvents = target.form;
-    } else {
-      const fieldset = target.closest("fieldset");
-      if (fieldset) {
-        elementReceivingEvents = fieldset;
-      } else {
-        elementReceivingEvents = target;
-      }
-    }
-    if (!checkValidity({ fromRequestAction: true })) {
-      e.preventDefault();
-      reportValidity();
-      const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-        detail: { cause: e, requester, lastFailedValidityInfo, action },
-      });
-      elementReceivingEvents.dispatchEvent(actionPreventedCustomEvent);
-      return;
-    }
-    // once we have validated the action can occur
-    // we are dispatching a custom event that can be used
-    // to actually perform the action or to set form action
-    const actionCustomEvent = new CustomEvent("action", {
-      detail: { cause: e, requester, action },
-    });
-    if (debug) {
-      console.debug(`"action" dispatched on`, elementReceivingEvents);
-    }
-    elementReceivingEvents.dispatchEvent(actionCustomEvent);
-  };
-  validationInterface.requestAction = requestAction;
 
   let validationMessage;
   const openElementValidationMessage = ({ skipFocus } = {}) => {

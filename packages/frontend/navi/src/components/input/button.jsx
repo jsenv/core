@@ -1,4 +1,4 @@
-import { dispatchRequestAction, useConstraints } from "@jsenv/validation";
+import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
@@ -89,7 +89,7 @@ const ActionButton = forwardRef((props, ref) => {
         const buttonElement = event.target;
         if (action) {
           event.preventDefault();
-          dispatchRequestAction(buttonElement, event, {
+          requestAction(event, {
             action: effectiveAction,
           });
         } else {
@@ -109,7 +109,10 @@ const ActionButton = forwardRef((props, ref) => {
               // we want to go through the action execution process (with validation and all)
               event.preventDefault();
               actionRequesterRef.current = buttonElement;
-              dispatchRequestAction(form, event, { action: effectiveAction });
+              requestAction(event, {
+                target: form,
+                action: effectiveAction,
+              });
             }
           }
         }

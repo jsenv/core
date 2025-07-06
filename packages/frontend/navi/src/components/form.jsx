@@ -13,7 +13,7 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { dispatchRequestAction, useConstraints } from "@jsenv/validation";
+import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { ActionContext } from "./action_execution/action_context.js";
@@ -118,7 +118,7 @@ const ActionForm = forwardRef((props, ref) => {
         // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
         // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
         e.preventDefault();
-        dispatchRequestAction(e.target, e);
+        requestAction(e);
       }}
     >
       <ActionContext.Provider value={[boundAction]}>

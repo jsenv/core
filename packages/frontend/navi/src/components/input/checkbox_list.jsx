@@ -1,4 +1,4 @@
-import { dispatchRequestAction } from "@jsenv/validation";
+import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
@@ -153,7 +153,7 @@ export const CheckboxList = forwardRef((props, ref) => {
               }
               const checkboxListContainer = innerRef.current;
               actionRequesterRef.current = checkbox;
-              dispatchRequestAction(checkboxListContainer, event);
+              requestAction(event, { target: checkboxListContainer });
             }}
           />
         );

@@ -69,7 +69,8 @@
                       await new Promise((resolve) =>
                         setTimeout(resolve, 1_000),
                       );
-                      throw new Error(`test: ${outsideFormWithInitialValue}`);
+                      // eslint-disable-next-line no-alert
+                      window.alert(`test: ${outsideFormWithInitialValue}`);
                     }}
                   />
                 </div>

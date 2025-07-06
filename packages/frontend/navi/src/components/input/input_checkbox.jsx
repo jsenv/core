@@ -1,4 +1,4 @@
-import { dispatchRequestAction, useConstraints } from "@jsenv/validation";
+import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
@@ -170,7 +170,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
         setChecked(checkboxIsChecked ? value : undefined);
         onInput?.(e);
         if (action) {
-          dispatchRequestAction(e.target, e);
+          requestAction(e);
         }
       }}
     />

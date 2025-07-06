@@ -15,7 +15,7 @@
  * - InputRadio for type="radio"
  */
 
-import { dispatchRequestAction, useConstraints } from "@jsenv/validation";
+import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
@@ -95,7 +95,7 @@ const ActionInputTextual = forwardRef((props, ref) => {
   useOnChange(innerRef, (e) => {
     if (action) {
       actionRequesterRef.current = e.target;
-      dispatchRequestAction(e.target);
+      requestAction(e);
     }
   });
 
@@ -145,6 +145,21 @@ const ActionInputTextual = forwardRef((props, ref) => {
         setNavStateValue(inputValue);
         setValue(inputValue);
         onInput?.(e);
+      }}
+      onKeyDown={(e) => {
+        if (!action) {
+          return;
+        }
+        if (e.key !== "Enter") {
+          return;
+        }
+        const input = e.target;
+        if (input.form) {
+          return;
+        }
+        e.preventDefault();
+        actionRequesterRef.current = input;
+        requestAction(e);
       }}
     />
   );
