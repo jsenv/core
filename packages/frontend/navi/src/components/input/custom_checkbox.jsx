@@ -46,33 +46,43 @@ import.meta.css = /*css*/ `
 }
 
 .custom_checkbox svg path {
-
+  stroke: white;
 }
 
+.custom_checkbox[data-disabled] {
+  background-color: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
+  color: light-dark(rgb(84, 84, 84), rgb(170, 170, 170));
+  border-color: rgba(118, 118, 118, 0.3);
+
+}
+.custom_checkbox[data-disabled][data-checked] {
+  background: #f1f3f4; 
+  border-color: #dadce0;
+}
 .custom_checkbox[data-loading] {
  
+}
+.custom_checkbox[data-disabled][data-checked] svg path {
+  stroke: #80868b; /* Checkmark gris au lieu de blanc */
 }
 `;
 
 export const CustomCheckbox = ({
   checked = false,
+  disabled = false,
   loading = false,
   children,
 }) => {
   return (
     <div
       className="custom_checkbox"
+      data-disabled={disabled ? "" : undefined}
       data-checked={checked ? "" : undefined}
       data-loading={loading ? "" : undefined}
     >
       {children}
       <svg viewBox="0 0 12 12" aria-hidden="true">
-        <path
-          d="M10.5 2L4.5 9L1.5 5.5"
-          fill="none"
-          stroke="white"
-          strokeWidth="2"
-        />
+        <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
       </svg>
     </div>
   );

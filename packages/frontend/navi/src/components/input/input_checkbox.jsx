@@ -27,6 +27,7 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
     constraints = [],
     value = "on",
     checked,
+    disabled,
     loading,
     onChange,
     appeareance = "custom", // "custom" or "default"
@@ -54,8 +55,9 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
     <input
       ref={innerRef}
       type="checkbox"
-      checked={innerChecked}
       value={value}
+      checked={innerChecked}
+      disabled={disabled}
       onChange={handleChange}
       // eslint-disable-next-line react/no-unknown-property
       onprogrammaticchange={handleChange}
@@ -65,7 +67,11 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
 
   const inputCheckboxDisplayed =
     appeareance === "custom" ? (
-      <CustomCheckbox checked={innerChecked} loading={loading}>
+      <CustomCheckbox
+        checked={innerChecked}
+        disabled={disabled}
+        loading={loading}
+      >
         {inputCheckbox}
       </CustomCheckbox>
     ) : (

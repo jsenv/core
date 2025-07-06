@@ -24,13 +24,14 @@
         const [loading, setLoading] = useState(false);
         const [loadingB, setLoadingB] = useState(false);
         const [loadingC, setLoadingC] = useState(false);
+        const [loadingD, setLoadingD] = useState(false);
 
         return (
           <div>
             <div style="display: flex; flex-direction: row; gap: 30px">
               <div>
                 <p>
-                  <strong>Checkbox loading (no action)</strong>
+                  <strong>Loading</strong>
                 </p>
 
                 <Field
@@ -54,11 +55,18 @@
                     Toggle
                   </span>
                 </button>
+
+                <div>
+                  <label>
+                    <input type="checkbox" name="colors" checked />
+                    Coucou
+                  </label>
+                </div>
               </div>
 
               <div>
                 <p>
-                  <strong>Checkbox loading (action)</strong>
+                  <strong>Loading with action</strong>
                 </p>
 
                 <Field
@@ -87,7 +95,7 @@
 
               <div>
                 <p>
-                  <strong>Checkbox loading and disabled</strong>
+                  <strong>Disabled</strong>
                 </p>
 
                 <Field
@@ -100,25 +108,62 @@
                       loading={loadingC}
                     />
                   }
+                  label="C"
+                />
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingC(!loadingC);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input type="checkbox" name="colors" disabled />C
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <p>
+                  <strong>Disabled checked</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input
+                      id="test"
+                      disabled
+                      checked
+                      type="checkbox"
+                      name="colors"
+                      loading={loadingD}
+                    />
+                  }
                   label="Coucou"
                 />
 
                 <button>
                   <span
                     onClick={() => {
-                      setLoadingB(!loadingB);
+                      setLoadingD(!loadingD);
                     }}
                   >
                     Toggle
                   </span>
                 </button>
+
+                <div>
+                  <label>
+                    <input type="checkbox" name="colors" disabled checked />
+                    Coucou
+                  </label>
+                </div>
               </div>
-            </div>
-            <div>
-              <label>
-                <input type="checkbox" name="colors" checked />
-                Coucou
-              </label>
             </div>
           </div>
         );
