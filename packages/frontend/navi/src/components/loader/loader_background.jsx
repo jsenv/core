@@ -191,16 +191,16 @@ const LoaderBackgroundWithWrapper = ({
   }, [targetSelector]);
 
   spacingTop += inset;
-  spacingTop -= borderTopWidth * 2;
+  spacingTop -= borderTopWidth;
   spacingTop += marginTop;
   spacingLeft += inset;
-  spacingLeft -= borderLeftWidth * 2;
+  spacingLeft -= borderLeftWidth;
   spacingLeft += marginLeft;
   spacingRight += inset;
-  spacingRight -= borderRightWidth * 2;
+  spacingRight -= borderRightWidth;
   spacingRight += marginRight;
   spacingBottom += inset;
-  spacingBottom -= borderBottomWidth * 2;
+  spacingBottom -= borderBottomWidth;
   spacingBottom += marginBottom;
   if (targetSelector) {
     // oversimplification that actually works

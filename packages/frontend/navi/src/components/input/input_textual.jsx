@@ -70,6 +70,10 @@ const ActionInputTextual = forwardRef((props, ref) => {
     ...rest
   } = props;
 
+  if (import.meta.dev && action && !name) {
+    console.warn(`InputTextual with action requires a name prop to be set.`);
+  }
+
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 

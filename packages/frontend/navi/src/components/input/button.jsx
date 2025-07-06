@@ -17,12 +17,14 @@ import { useAutoFocus } from "../use_auto_focus.js";
  */
 import.meta.css = /*css*/ `
 [name="element_with_loader_wrapper"] button {
+  --button-border-width: 1px;
+
   border-radius: 2px; 
-  border-width: 2px;
+  border-width: calc(var(--button-border-width) + 1px);
   border-style: solid;
   border-color: transparent;
-  outline: 1px solid light-dark(#767676, #8e8e93);
-  outline-offset: -1px;
+  outline: var(--button-border-width) solid light-dark(#767676, #8e8e93);
+  outline-offset: calc(-1 * var(--button-border-width));
 }
 
 [name="element_with_loader_wrapper"] button:hover:not(:disabled) {
@@ -31,9 +33,8 @@ import.meta.css = /*css*/ `
 }
 
 [name="element_with_loader_wrapper"] button:focus-visible:not(:disabled) {
-  border-width: 2px;
-  outline-width: 2px;
-  outline-offset: -2px;
+  outline-width: calc(var(--button-border-width) + 1px);
+  outline-offset:calc(-1 * (var(--button-border-width) + 1px));
   outline-color: light-dark(#1d4ed8, #3b82f6);
 }
 
@@ -56,6 +57,7 @@ const SimpleButton = forwardRef((props, ref) => {
     disabled,
     loading,
     children,
+    borderWidth = 1,
     ...rest
   } = props;
 
@@ -69,7 +71,7 @@ const SimpleButton = forwardRef((props, ref) => {
       loading={loading}
       // 1px for outline offset, 0.5 for whatever reason to match radius
       // ( I think it's the diff betwen border with and outline width)
-      inset={1.5}
+      inset={0.5}
       color={
         disabled
           ? loading
@@ -77,6 +79,7 @@ const SimpleButton = forwardRef((props, ref) => {
             : undefined
           : undefined
       }
+      style={{ "--button-border-width": `${borderWidth}px` }}
     >
       <button ref={innerRef} disabled={disabled} {...rest}>
         {children}

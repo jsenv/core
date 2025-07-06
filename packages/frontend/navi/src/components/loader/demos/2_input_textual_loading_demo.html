@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Button loading demo</title>
+    <title>Input textual loading demo</title>
   </head>
   <body>
     <div id="root" style="position: relative"></div>
@@ -14,7 +14,7 @@
       import { useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
-        Button,
+        Input,
         // eslint-disable-next-line no-unused-vars
         Field,
       } from "@jsenv/navi";
@@ -32,70 +32,52 @@
                 <p>
                   <strong>Loading</strong>
                 </p>
-                <Button loading={loading}>Toggle</Button>
-                <br />
-                <button
-                  onClick={() => {
-                    setLoading(!loading);
-                  }}
-                >
-                  Toggle
-                </button>
-              </div>
 
-              <div>
-                <p>
-                  <strong>Loading with action</strong>
-                </p>
-                <Button loading={loadingB} action={() => {}}>
-                  B
-                </Button>
-                <br /> <br />
-                <button
-                  onClick={() => {
-                    setLoadingB(!loadingB);
-                  }}
-                >
-                  Toggle
-                </button>
-              </div>
+                <Field
+                  input={<Input loading={loading} />}
+                  label="Coucou"
+                ></Field>
 
-              <div>
-                <p>
-                  <strong>Disabled</strong>
-                </p>
-                <Button loading={loadingC} disabled>
-                  C
-                </Button>
-                <br /> <br />
                 <button>
                   <span
                     onClick={() => {
-                      setLoadingC(!loadingC);
+                      setLoading(!loading);
                     }}
                   >
                     Toggle
                   </span>
                 </button>
+
+                <div>
+                  <label>
+                    <input />
+                    Coucou
+                  </label>
+                </div>
               </div>
             </div>
 
-            <div style="display: flex; flex-direction: row; gap: 30px">
+            <div>
               <div>
                 <p>
-                  <strong>Large button (anim speed shoud be consistent)</strong>
+                  <strong>Loading with action</strong>
                 </p>
-                <Button loading={loading}>
-                  This button is quite large but loader speed should be same as
-                  small buttons
-                </Button>
-                <br />
-                <button
-                  onClick={() => {
-                    setLoading(!loading);
-                  }}
-                >
-                  Toggle
+
+                <Field
+                  input={
+                    <Input name="toto" action={() => {}} loading={loadingB} />
+                  }
+                  label="Coucou"
+                ></Field>
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingB(!loadingB);
+                    }}
+                  >
+                    Toggle
+                  </span>
                 </button>
               </div>
             </div>
@@ -103,12 +85,14 @@
             <div>
               <div>
                 <p>
-                  <strong>Big borders</strong>
+                  <strong>Disabled</strong>
                 </p>
-                <Button loading={loadingC} borderWidth={10}>
-                  C
-                </Button>
-                <br /> <br />
+
+                <Field
+                  input={<Input disabled loading={loadingC} />}
+                  label="C"
+                />
+
                 <button>
                   <span
                     onClick={() => {
@@ -118,6 +102,12 @@
                     Toggle
                   </span>
                 </button>
+
+                <div>
+                  <label>
+                    <input disabled />C
+                  </label>
+                </div>
               </div>
             </div>
           </div>
