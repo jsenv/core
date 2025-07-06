@@ -77,19 +77,18 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
       inputCheckbox
     );
 
+  const loaderColor = loading
+    ? innerChecked
+      ? CUSTOM_CHECKBOX_COLORS.borders.checked
+      : CUSTOM_CHECKBOX_COLORS.borders.default
+    : undefined;
   const inputCheckboxWithLoader = (
     <LoaderBackground
       loading={loading}
       // We are disabling inputs while loading so their colors become grayish
       // But they are disabled because we are loading so in that case we want
       // the loader to keep the color the element would have if it was not disabled
-      color={
-        loading
-          ? checked
-            ? CUSTOM_CHECKBOX_COLORS.borders.checked
-            : CUSTOM_CHECKBOX_COLORS.borders.default
-          : undefined
-      }
+      color={loaderColor}
       {...(appeareance === "custom" && {
         targetSelector: ".custom_checkbox",
       })}
@@ -145,7 +144,7 @@ import.meta.css = /*css*/ `
   border-radius: 2px;
   transition: all 0.15s ease;
   box-sizing: border-box;
-    display: inline-flex;
+  display: inline-flex;
 }
 .custom_checkbox svg {
   width: 100%;
