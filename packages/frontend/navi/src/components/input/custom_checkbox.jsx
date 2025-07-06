@@ -1,10 +1,31 @@
+export const CUSTOM_CHECKBOX_COLORS = {
+  borders: {
+    default: "#6b7280",
+    hover: "#9ca3af",
+    disabled: "rgba(118, 118, 118, 0.3)",
+    checked: "#3b82f6",
+    checkedAndHover: "#1d4ed8",
+    disabledAndChecked: "#D3D3D3",
+  },
+  background: {
+    checked: "#3b82f6",
+    checkedAndHover: "#1d4ed8",
+    disabled: "light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3))",
+    disabledAndChecked: "#D3D3D3",
+  },
+  checkmark: {
+    default: "white",
+    disabled: "#EEEEEE",
+  },
+};
+
 import.meta.css = /*css*/ `
 .custom_checkbox {
   display: inline-flex;
   width: 11px;
   height: 11px;
   margin: 3px 3px 3px 4px;
-  border: 1px solid #6b7280;
+  border: 1px solid ${CUSTOM_CHECKBOX_COLORS.borders.default};
   border-radius: 2px;
   transition: all 0.15s ease;
 }
@@ -19,16 +40,16 @@ import.meta.css = /*css*/ `
 }
 
 .custom_checkbox:hover {
-  border-color: #9ca3af;
+  border-color: ${CUSTOM_CHECKBOX_COLORS.borders.hover};
 }
 
 .custom_checkbox[data-checked] {
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: ${CUSTOM_CHECKBOX_COLORS.background.checked};
+  border-color:${CUSTOM_CHECKBOX_COLORS.borders.checked};
 }
 .custom_checkbox[data-checked]:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: ${CUSTOM_CHECKBOX_COLORS.background.checkedAndHover};
+  border-color:${CUSTOM_CHECKBOX_COLORS.borders.checkedAndHover};
 }
 
 .custom_checkbox svg {
@@ -46,21 +67,20 @@ import.meta.css = /*css*/ `
 }
 
 .custom_checkbox svg path {
-  stroke: white;
+  stroke: ${CUSTOM_CHECKBOX_COLORS.checkmark.default};
 }
 
 .custom_checkbox[data-disabled] {
-  background-color: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
-  color: light-dark(rgb(84, 84, 84), rgb(170, 170, 170));
-  border-color: rgba(118, 118, 118, 0.3);
+  background-color: ${CUSTOM_CHECKBOX_COLORS.background.disabled};
+  border-color: ${CUSTOM_CHECKBOX_COLORS.borders.disabled};
 
 }
 .custom_checkbox[data-disabled][data-checked] {
-  background: #D3D3D3; 
-  border-color: #D3D3D3;
+  background: ${CUSTOM_CHECKBOX_COLORS.background.disabledAndChecked}; 
+  border-color: ${CUSTOM_CHECKBOX_COLORS.borders.disabledAndChecked};
 }
 .custom_checkbox[data-disabled][data-checked] svg path {
-  stroke: #EEEEEE; 
+  stroke: ${CUSTOM_CHECKBOX_COLORS.checkmark.disabled}; 
 }
 
 /* [data-loader-visible] .custom_checkbox[data-loading],

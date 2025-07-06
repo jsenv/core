@@ -10,7 +10,7 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
-import { CustomCheckbox } from "./custom_checkbox.jsx";
+import { CUSTOM_CHECKBOX_COLORS, CustomCheckbox } from "./custom_checkbox.jsx";
 
 export const InputCheckbox = forwardRef((props, ref) => {
   return renderActionComponent(
@@ -84,6 +84,13 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
       // 0.5px ensure loader background is centered on the checkbox
       // ( custom input has margin-left:4px and margin-right: 3px)
       spacingLeft={0.5}
+      color={
+        loading
+          ? checked
+            ? CUSTOM_CHECKBOX_COLORS.borders.checked
+            : CUSTOM_CHECKBOX_COLORS.borders.default
+          : undefined
+      }
     >
       {inputCheckboxDisplayed}
     </LoaderBackground>
