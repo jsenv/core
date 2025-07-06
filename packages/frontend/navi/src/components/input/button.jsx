@@ -50,7 +50,14 @@ export const Button = forwardRef((props, ref) => {
 });
 
 const SimpleButton = forwardRef((props, ref) => {
-  const { autoFocus, constraints = [], loading, children, ...rest } = props;
+  const {
+    autoFocus,
+    constraints = [],
+    disabled,
+    loading,
+    children,
+    ...rest
+  } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -63,8 +70,15 @@ const SimpleButton = forwardRef((props, ref) => {
       // 1px for outline offset, 0.5 for whatever reason to match radius
       // ( I think it's the diff betwen border with and outline width)
       inset={1.5}
+      color={
+        disabled
+          ? loading
+            ? "light-dark(#767676, #8e8e93)"
+            : undefined
+          : undefined
+      }
     >
-      <button ref={innerRef} {...rest}>
+      <button ref={innerRef} disabled={disabled} {...rest}>
         {children}
       </button>
     </LoaderBackground>
@@ -76,6 +90,7 @@ const ActionButton = forwardRef((props, ref) => {
     type,
     action,
     disabled,
+    loading,
     children,
     onClick,
     actionErrorEffect,
@@ -116,7 +131,9 @@ const ActionButton = forwardRef((props, ref) => {
 
   // seulement si c'est le requester / un type submit dans un form
   const actionRequester = actionRequesterRef.current;
-  const innerLoading = pending && actionRequester === innerRef.current;
+  const innerLoading =
+    loading || (pending && actionRequester === innerRef.current);
+  const innerDisabled = disabled || pending;
 
   return (
     <SimpleButton
@@ -125,7 +142,7 @@ const ActionButton = forwardRef((props, ref) => {
       {...rest}
       type={type}
       loading={innerLoading}
-      disabled={disabled || pending}
+      disabled={innerDisabled}
       onClick={(event) => {
         const buttonElement = event.target;
         if (action) {
