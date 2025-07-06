@@ -113,14 +113,16 @@ const LoaderBackgroundWithWrapper = ({
     const updateStyles = () => {
       const container = containerRef.current;
       const lastElementChild = container?.lastElementChild;
-      if (lastElementChild && !loading) {
+      if (lastElementChild) {
         const computedStyle = window.getComputedStyle(lastElementChild);
         const newBorderTopWidth = parseFloat(computedStyle.borderTopWidth);
         const newBorderColor = computedStyle.borderColor;
         const newDetectedColor = computedStyle.color;
 
         setBorderTopWidth(newBorderTopWidth);
-        setBorderColor(newBorderColor);
+        if (newBorderColor !== "rgba(0, 0, 0, 0)") {
+          setBorderColor(newBorderColor);
+        }
         setDetectedColor(newDetectedColor);
       }
       // updateStyles is very cheap so we run it every frame
@@ -131,7 +133,7 @@ const LoaderBackgroundWithWrapper = ({
     return () => {
       cancelAnimationFrame(animationFrame);
     };
-  }, [loading]);
+  }, []);
 
   inset = inset || borderTopWidth;
 

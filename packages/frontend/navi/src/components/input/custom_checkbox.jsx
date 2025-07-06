@@ -56,14 +56,15 @@ import.meta.css = /*css*/ `
 
 }
 .custom_checkbox[data-disabled][data-checked] {
-  background: #f1f3f4; 
-  border-color: #dadce0;
-}
-.custom_checkbox[data-loading] {
- 
+  background: #D3D3D3; 
+  border-color: #D3D3D3;
 }
 .custom_checkbox[data-disabled][data-checked] svg path {
-  stroke: #80868b; /* Checkmark gris au lieu de blanc */
+  stroke: #EEEEEE; 
+}
+
+.custom_checkbox[data-loading], .custom_checkbox[data-checked][data-loading]  {
+  border-color: transparent;
 }
 `;
 
