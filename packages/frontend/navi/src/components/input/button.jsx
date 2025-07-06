@@ -11,29 +11,28 @@ import { useAutoFocus } from "../use_auto_focus.js";
 
 import.meta.css = /*css*/ `
 button.custom {
-  border-color: light-dark(#767676, #8e8e93);
+  border-radius: 4px; /* ✅ Border radius Chrome */
+  border: 1px solid light-dark(#a0a0a0, #909090); /* ✅ Effet 3D automatique */
 }
 
 button.custom:hover:not(:disabled) {
-  border-color: light-dark(#666666, #9e9ea3);
+  border: 1px solid light-dark(#909090, #808080);
 }
 
 button.custom:focus:not(:disabled) {
-  border-color: light-dark(#3b82f6, #60a5fa);
+  border: 1px solid light-dark(#3b82f6, #60a5fa);
   outline: 2px solid light-dark(#3b82f650, #60a5fa50);
   outline-offset: -1px;
 }
 
 button.custom:active:not(:disabled) {
-  border-color: light-dark(#555555, #78787d);
+  border: 1px solid light-dark(#808080, #707070); /* ✅ Effet enfoncé */
 }
 
 button.custom:disabled {
-  border-color: light-dark(#76767650, #8e8e9350);
-  cursor: not-allowed;
+  border: 1px solid light-dark(#a0a0a050, #90909050);
 }
 `;
-
 export const Button = forwardRef((props, ref) => {
   return renderActionComponent(props, ref, SimpleButton, ActionButton);
 });
