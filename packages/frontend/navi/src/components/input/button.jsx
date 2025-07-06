@@ -20,26 +20,29 @@ import.meta.css = /*css*/ `
   border-radius: 2px; 
   border-width: 2px;
   border-style: solid;
-  border-color: light-dark(#767676, #8e8e93);
+  border-color: transparent;
+  outline: 1px solid light-dark(#767676, #8e8e93);
+  outline-offset: -1px;
 }
 
 [name="element_with_loader_wrapper"] button:hover:not(:disabled) {
-  border-color: light-dark(#505050, #7e7e83);
+  outline-color: light-dark(#505050, #7e7e83);
   background: light-dark(#e6e6e6, #2a2a2c);
 }
 
 [name="element_with_loader_wrapper"] button:focus-visible:not(:disabled) {
-  border-color: light-dark(#1d4ed8, #3b82f6);
   border-width: 2px;
-  outline:none;
+  outline-width: 2px;
+  outline-offset: -2px;
+  outline-color: light-dark(#1d4ed8, #3b82f6);
 }
 
 [name="element_with_loader_wrapper"] button:active:not(:disabled) {
-  border-color: light-dark(#808080, #707070);
+  outline-color: light-dark(#808080, #707070);
 }
 
 [name="element_with_loader_wrapper"] button:disabled {
-  border-color: light-dark(#a0a0a050, #90909050);
+  outline-color: light-dark(#a0a0a050, #90909050);
 }
 `;
 export const Button = forwardRef((props, ref) => {
