@@ -38,16 +38,30 @@ export const InputTextual = forwardRef((props, ref) => {
 });
 
 const SimpleInputTextual = forwardRef((props, ref) => {
-  const { autoFocus, autoSelect, constraints = [], loading, ...rest } = props;
+  const {
+    autoFocus,
+    autoSelect,
+    constraints = [],
+    disabled,
+    loading,
+    ...rest
+  } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   useAutoFocus(innerRef, autoFocus, autoSelect);
   useConstraints(innerRef, constraints);
 
-  const inputTextual = <input ref={innerRef} {...rest} />;
+  const inputTextual = <input ref={innerRef} disabled={disabled} {...rest} />;
 
-  return <LoaderBackground loading={loading}>{inputTextual}</LoaderBackground>;
+  return (
+    <LoaderBackground
+      loading={loading}
+      color={disabled && loading ? "rgb(118, 118, 118)" : undefined}
+    >
+      {inputTextual}
+    </LoaderBackground>
+  );
 });
 
 const ActionInputTextual = forwardRef((props, ref) => {

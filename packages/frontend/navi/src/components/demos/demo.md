@@ -1,5 +1,3 @@
-- loading des input textual
-
 - input radio
 
 - retester editable text c'est un gros morceau

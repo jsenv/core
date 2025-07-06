@@ -77,11 +77,12 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
       inputCheckbox
     );
 
-  const loaderColor = loading
-    ? innerChecked
-      ? CUSTOM_CHECKBOX_COLORS.borders.checked
-      : CUSTOM_CHECKBOX_COLORS.borders.default
-    : undefined;
+  const loaderColor =
+    disabled && loading
+      ? innerChecked
+        ? CUSTOM_CHECKBOX_COLORS.borders.checked
+        : CUSTOM_CHECKBOX_COLORS.borders.default
+      : undefined;
   const inputCheckboxWithLoader = (
     <LoaderBackground
       loading={loading}

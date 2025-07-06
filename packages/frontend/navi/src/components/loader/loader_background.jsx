@@ -121,7 +121,7 @@ const LoaderBackgroundWithWrapper = ({
   const [paddingRight, setPaddingRight] = useState(0);
   const [paddingBottom, setPaddingBottom] = useState(0);
 
-  const [currentColor, setCurrentColor] = useState();
+  const [currentColor, setCurrentColor] = useState(color);
 
   useLayoutEffect(() => {
     let animationFrame;
@@ -199,7 +199,7 @@ const LoaderBackgroundWithWrapper = ({
     return () => {
       cancelAnimationFrame(animationFrame);
     };
-  }, [targetSelector]);
+  }, [color, targetSelector]);
 
   spacingTop += inset;
   spacingTop -= borderTopWidth;
