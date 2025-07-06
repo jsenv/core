@@ -109,6 +109,9 @@ const CUSTOM_CHECKBOX_COLORS = {
     checkedAndHover: "#1d4ed8",
     disabledAndChecked: "#D3D3D3",
   },
+  outline: {
+    default: "light-dark(#1d4ed8, #3b82f6)",
+  },
   background: {
     checked: "#3b82f6",
     checkedAndHover: "#1d4ed8",
@@ -123,8 +126,6 @@ const CUSTOM_CHECKBOX_COLORS = {
 import.meta.css = /*css*/ `
 .custom_checkbox_wrapper {
   display: inline-flex;
-  padding: 3px 3px 3px 4px;
-  border-radius: 2px;
   box-sizing: content-box;
 }
 
@@ -145,6 +146,7 @@ import.meta.css = /*css*/ `
   transition: all 0.15s ease;
   box-sizing: border-box;
   display: inline-flex;
+  margin: 3px 3px 3px 4px;
 }
 .custom_checkbox svg {
   width: 100%;
@@ -183,6 +185,11 @@ import.meta.css = /*css*/ `
 }
 .custom_checkbox_wrapper input[type="checkbox"][disabled]:checked .custom_checkbox svg path {
   stroke: ${CUSTOM_CHECKBOX_COLORS.checkmark.disabled}; 
+}
+.custom_checkbox_wrapper input[type="checkbox"]:focus-visible + .custom_checkbox {
+  outline: 2px solid ${CUSTOM_CHECKBOX_COLORS.outline.default};
+  outline-offset: 1px;
+
 }
 
 /* [data-loader-visible] .custom_checkbox[data-loading],

@@ -149,13 +149,11 @@ const LoaderBackgroundWithWrapper = ({
         const newOutlineColor = targetComputedStyle.outlineColor;
         const newBorderColor = targetComputedStyle.borderColor;
         const newDetectedColor = targetComputedStyle.color;
-        const newMarginTop = parseFloat(containedComputedStyle.marginTop) || 0;
+        const newMarginTop = parseFloat(targetComputedStyle.marginTop) || 0;
         const newMarginBottom =
-          parseFloat(containedComputedStyle.marginBottom) || 0;
-        const newMarginLeft =
-          parseFloat(containedComputedStyle.marginLeft) || 0;
-        const newMarginRight =
-          parseFloat(containedComputedStyle.marginRight) || 0;
+          parseFloat(targetComputedStyle.marginBottom) || 0;
+        const newMarginLeft = parseFloat(targetComputedStyle.marginLeft) || 0;
+        const newMarginRight = parseFloat(targetComputedStyle.marginRight) || 0;
 
         const paddingTop = parseFloat(containedComputedStyle.paddingTop) || 0;
         const paddingLeft = parseFloat(containedComputedStyle.paddingLeft) || 0;
