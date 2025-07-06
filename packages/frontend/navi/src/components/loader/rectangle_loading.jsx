@@ -100,8 +100,18 @@ const RectangleLoadingSvg = ({
     2 * (drawableWidth + drawableHeight) +
     (actualRadius > 0 ? 2 * Math.PI * actualRadius : 0);
 
-  // ✅ Fixed animation duration - same for all sizes
-  const animationDuration = 2.5; // seconds - always the same
+  // ✅ Fixed segment size in pixels
+  const maxSegmentSize = 25; // pixels
+  const segmentLength = Math.min(maxSegmentSize, pathLength * 0.25);
+  const gapLength = pathLength - segmentLength;
+
+  // ✅ Vitesse constante en pixels par seconde
+  const pixelsPerSecond = 80;
+  const animationDuration = Math.max(1.5, pathLength / pixelsPerSecond);
+
+  // ✅ Calculate correct offset based on actual segment size
+  const segmentRatio = segmentLength / pathLength;
+  const circleOffset = -animationDuration * segmentRatio;
 
   const rectPath = `
       M ${margin + actualRadius},${margin}
@@ -144,7 +154,7 @@ const RectangleLoadingSvg = ({
         stroke={color}
         strokeWidth={strokeWidth * 2}
         strokeLinecap="round"
-        strokeDasharray={`${pathLength * 0.25} ${pathLength * 0.75}`}
+        strokeDasharray={`${segmentLength} ${gapLength}`}
         pathLength={pathLength}
       >
         <animate
@@ -164,7 +174,7 @@ const RectangleLoadingSvg = ({
           dur={`${animationDuration}s`}
           repeatCount="indefinite"
           rotate="auto"
-          begin={`-${animationDuration * 0.25}s`}
+          begin={`${circleOffset}s`}
         />
       </circle>
     </svg>

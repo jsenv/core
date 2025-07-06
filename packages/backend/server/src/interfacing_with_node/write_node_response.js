@@ -186,7 +186,7 @@ const writeHead = (
   if (statusText === undefined) {
     statusText = statusTextFromStatus(status);
   } else {
-    statusText = statusText.replace(/\n/g, "");
+    statusText = statusText.replace(/\n/g, "").replaceAll("✅", "");
   }
   if (responseIsServerHttp2Stream) {
     nodeHeaders = {
