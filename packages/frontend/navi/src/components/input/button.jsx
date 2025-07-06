@@ -69,7 +69,11 @@ const SimpleButton = forwardRef((props, ref) => {
   return (
     <LoaderBackground
       loading={loading}
-      inset={borderWidth}
+      inset={
+        borderWidth -
+        // -1 is the outline offset thing
+        1
+      }
       color={
         disabled
           ? loading

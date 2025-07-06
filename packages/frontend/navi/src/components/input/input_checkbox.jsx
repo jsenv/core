@@ -89,6 +89,7 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
       // But they are disabled because we are loading so in that case we want
       // the loader to keep the color the element would have if it was not disabled
       color={loaderColor}
+      inset={-1}
       {...(appeareance === "custom" && {
         targetSelector: ".custom_checkbox",
       })}
