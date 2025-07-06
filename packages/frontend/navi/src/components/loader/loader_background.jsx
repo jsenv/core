@@ -211,6 +211,12 @@ const LoaderBackgroundWithWrapper = ({
     spacingBottom += paddingBottom;
   }
 
+  const RECTANGLE_SIZE = 1;
+  spacingTop -= RECTANGLE_SIZE / 2;
+  spacingLeft -= RECTANGLE_SIZE / 2;
+  spacingRight -= RECTANGLE_SIZE / 2;
+  spacingBottom -= RECTANGLE_SIZE / 2;
+
   const borderOrOutlineColor =
     borderColor === "rgba(0, 0, 0, 0)" ? outlineColor : borderColor;
 

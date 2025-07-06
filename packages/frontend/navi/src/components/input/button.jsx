@@ -69,9 +69,7 @@ const SimpleButton = forwardRef((props, ref) => {
   return (
     <LoaderBackground
       loading={loading}
-      // 1px for outline offset, 0.5 for whatever reason to match radius
-      // ( I think it's the diff betwen border with and outline width)
-      inset={borderWidth - 0.5}
+      inset={borderWidth}
       color={
         disabled
           ? loading
