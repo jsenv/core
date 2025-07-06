@@ -92,11 +92,17 @@ const ActionInputTextual = forwardRef((props, ref) => {
   const value = getValue();
   const actionRequesterRef = useRef();
 
+  const preventNextChangeRef = useRef(false);
   useOnChange(innerRef, (e) => {
-    if (action) {
-      actionRequesterRef.current = e.target;
-      requestAction(e);
+    if (!action) {
+      return;
     }
+    if (preventNextChangeRef.current) {
+      preventNextChangeRef.current = false;
+      return;
+    }
+    actionRequesterRef.current = e.target;
+    requestAction(e);
   });
 
   useActionEvents(innerRef, {
@@ -159,6 +165,15 @@ const ActionInputTextual = forwardRef((props, ref) => {
         }
         e.preventDefault();
         actionRequesterRef.current = input;
+        /**
+         * Browser trigger a "change" event right after the enter is pressed
+         * if the input value has changed.
+         * We need to prevent the next change event otherwise we would request action twice
+         */
+        preventNextChangeRef.current = true;
+        setTimeout(() => {
+          preventNextChangeRef.current = false;
+        });
         requestAction(e);
       }}
     />
