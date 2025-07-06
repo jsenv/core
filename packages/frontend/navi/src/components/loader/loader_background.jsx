@@ -217,8 +217,10 @@ const LoaderBackgroundWithWrapper = ({
   spacingRight += RECTANGLE_SIZE / 2;
   spacingBottom += RECTANGLE_SIZE / 2;
 
-  const borderOrOutlineColor =
-    borderColor === "rgba(0, 0, 0, 0)" ? outlineColor : borderColor;
+  const outlineOrBorderColor =
+    outlineColor && outlineColor !== "rgba(0, 0, 0, 0)"
+      ? outlineColor
+      : borderColor;
 
   return (
     <div
@@ -240,7 +242,7 @@ const LoaderBackgroundWithWrapper = ({
           }}
         >
           <RectangleLoading
-            color={color || borderOrOutlineColor || detectedColor}
+            color={color || outlineOrBorderColor || detectedColor}
             radius={borderRadius}
           />
         </div>
