@@ -15,12 +15,15 @@
       import {
         // eslint-disable-next-line no-unused-vars
         Input,
+        // eslint-disable-next-line no-unused-vars
+        Field,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const [loading, setLoading] = useState(false);
         const [loadingB, setLoadingB] = useState(false);
+        const [loadingC, setLoadingC] = useState(false);
 
         return (
           <div>
@@ -30,14 +33,17 @@
                   <strong>Checkbox loading (no action)</strong>
                 </p>
 
-                <Input
-                  id="test"
-                  type="checkbox"
-                  name="colors"
-                  loading={loading}
-                >
-                  Coucou
-                </Input>
+                <Field
+                  input={
+                    <Input
+                      id="test"
+                      type="checkbox"
+                      name="colors"
+                      loading={loading}
+                    />
+                  }
+                  label="Coucou"
+                ></Field>
 
                 <button>
                   <span
@@ -55,15 +61,47 @@
                   <strong>Checkbox loading (action)</strong>
                 </p>
 
-                <Input
-                  id="test"
-                  action={() => {}}
-                  type="checkbox"
-                  name="colors"
-                  loading={loadingB}
-                >
-                  Coucou
-                </Input>
+                <Field
+                  input={
+                    <Input
+                      id="test"
+                      action={() => {}}
+                      type="checkbox"
+                      name="colors"
+                      loading={loadingB}
+                    />
+                  }
+                  label="Coucou"
+                ></Field>
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingB(!loadingB);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+              </div>
+
+              <div>
+                <p>
+                  <strong>Checkbox loading and disabled</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input
+                      id="test"
+                      disabled
+                      type="checkbox"
+                      name="colors"
+                      loading={loadingC}
+                    />
+                  }
+                  label="Coucou"
+                />
 
                 <button>
                   <span
