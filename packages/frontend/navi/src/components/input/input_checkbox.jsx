@@ -81,9 +81,6 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
   const inputCheckboxWithLoader = (
     <LoaderBackground
       loading={loading}
-      // 0.5px ensure loader background is centered on the checkbox
-      // ( custom input has margin-left:4px and margin-right: 3px)
-      spacingLeft={0.5}
       // We are disabling inputs while loading so their colors become grayish
       // But they are disabled because we are loading so in that case we want
       // the loader to keep the color the element would have if it was not disabled

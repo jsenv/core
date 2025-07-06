@@ -7,7 +7,7 @@ export const LoaderBackground = ({
   loading,
   containerRef,
   color,
-  inset,
+  inset = 0,
   spacingTop = 0,
   spacingLeft = 0,
   spacingBottom = 0,
@@ -108,6 +108,13 @@ const LoaderBackgroundWithWrapper = ({
   const [borderRadius, setBorderRadius] = useState(0);
   const [detectedColor, setDetectedColor] = useState();
   const [borderTopWidth, setBorderTopWidth] = useState(0);
+  const [borderLeftWidth, setBorderLeftWidth] = useState(0);
+  const [borderRightWidth, setBorderRightWidth] = useState(0);
+  const [borderBottomWidth, setBorderBottomWidth] = useState(0);
+  const [marginTop, setMarginTop] = useState(0);
+  const [marginBottom, setMarginBottom] = useState(0);
+  const [marginLeft, setMarginLeft] = useState(0);
+  const [marginRight, setMarginRight] = useState(0);
 
   useLayoutEffect(() => {
     let animationFrame;
@@ -117,16 +124,32 @@ const LoaderBackgroundWithWrapper = ({
       if (lastElementChild) {
         const computedStyle = window.getComputedStyle(lastElementChild);
         const newBorderTopWidth = parseFloat(computedStyle.borderTopWidth);
+        const newBorderLeftWidth = parseFloat(computedStyle.borderLeftWidth);
+        const newBorderRightWidth = parseFloat(computedStyle.borderRightWidth);
+        const newBorderBottomWidth = parseFloat(
+          computedStyle.borderBottomWidth,
+        );
         const newBorderRadius = parseFloat(computedStyle.borderRadius);
         const newBorderColor = computedStyle.borderColor;
         const newDetectedColor = computedStyle.color;
+        const newMarginTop = parseFloat(computedStyle.marginTop);
+        const newMarginBottom = parseFloat(computedStyle.marginBottom);
+        const newMarginLeft = parseFloat(computedStyle.marginLeft);
+        const newMarginRight = parseFloat(computedStyle.marginRight);
 
         setBorderTopWidth(newBorderTopWidth);
+        setBorderLeftWidth(newBorderLeftWidth);
+        setBorderRightWidth(newBorderRightWidth);
+        setBorderBottomWidth(newBorderBottomWidth);
         if (newBorderColor !== "rgba(0, 0, 0, 0)") {
           setBorderColor(newBorderColor);
         }
         setBorderRadius(newBorderRadius);
         setDetectedColor(newDetectedColor);
+        setMarginTop(newMarginTop);
+        setMarginBottom(newMarginBottom);
+        setMarginLeft(newMarginLeft);
+        setMarginRight(newMarginRight);
       }
       // updateStyles is very cheap so we run it every frame
       animationFrame = requestAnimationFrame(updateStyles);
@@ -138,7 +161,21 @@ const LoaderBackgroundWithWrapper = ({
     };
   }, []);
 
-  inset = inset || borderTopWidth;
+  spacingTop += inset;
+  spacingTop -= borderTopWidth * 2;
+  spacingTop += marginTop;
+
+  spacingLeft += inset;
+  spacingLeft -= borderLeftWidth * 2;
+  spacingLeft += marginLeft;
+
+  spacingRight += inset;
+  spacingRight -= borderRightWidth * 2;
+  spacingRight += marginRight;
+
+  spacingBottom += inset;
+  spacingBottom -= borderBottomWidth * 2;
+  spacingBottom += marginBottom;
 
   return (
     <div
@@ -151,11 +188,12 @@ const LoaderBackgroundWithWrapper = ({
         <div
           name="loading_rectangle_wrapper"
           style={{
+            pointerEvents: "none",
             position: "absolute",
-            top: `${inset + spacingTop}px`,
-            left: `${inset + spacingLeft}px`,
-            bottom: `${inset + spacingBottom}px`,
-            right: `${inset + spacingRight}px`,
+            top: `${spacingTop}px`,
+            left: `${spacingLeft}px`,
+            bottom: `${spacingBottom}px`,
+            right: `${spacingRight}px`,
           }}
         >
           <RectangleLoading

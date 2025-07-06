@@ -1,7 +1,3 @@
-- enter sur input text-> submit meme si pas de changement
-  (attention parce que enter trigger change on dirait
-  donc il faudra éviter les doublons de request action)
-
 - le loading state pour un bouton
 
 (le loader doit encadrer le bouton nickel chrome, donc surement lire padding ou un truc du genre)
