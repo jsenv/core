@@ -58,7 +58,12 @@ const SimpleButton = forwardRef((props, ref) => {
   useConstraints(innerRef, constraints);
 
   return (
-    <LoaderBackground loading={loading}>
+    <LoaderBackground
+      loading={loading}
+      // 1px for outline offset, 0.5 for whatever reason to match radius
+      // ( I think it's the diff betwen border with and outline width)
+      inset={1.5}
+    >
       <button ref={innerRef} {...rest}>
         {children}
       </button>

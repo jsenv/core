@@ -105,6 +105,7 @@ const LoaderBackgroundWithWrapper = ({
   const shouldShowSpinner = useDebounceTrue(loading, 300);
   const containerRef = useRef(null);
   const [borderColor, setBorderColor] = useState();
+  const [outlineColor, setOutlineColor] = useState();
   const [borderRadius, setBorderRadius] = useState(0);
   const [detectedColor, setDetectedColor] = useState();
   const [borderTopWidth, setBorderTopWidth] = useState(0);
@@ -130,6 +131,7 @@ const LoaderBackgroundWithWrapper = ({
           computedStyle.borderBottomWidth,
         );
         const newBorderRadius = parseFloat(computedStyle.borderRadius);
+        const newOutlineColor = computedStyle.outlineColor;
         const newBorderColor = computedStyle.borderColor;
         const newDetectedColor = computedStyle.color;
         const newMarginTop = parseFloat(computedStyle.marginTop);
@@ -137,15 +139,15 @@ const LoaderBackgroundWithWrapper = ({
         const newMarginLeft = parseFloat(computedStyle.marginLeft);
         const newMarginRight = parseFloat(computedStyle.marginRight);
 
+        setBorderColor(newBorderColor);
+        setOutlineColor(newOutlineColor);
+        setDetectedColor(newDetectedColor);
+
         setBorderTopWidth(newBorderTopWidth);
         setBorderLeftWidth(newBorderLeftWidth);
         setBorderRightWidth(newBorderRightWidth);
         setBorderBottomWidth(newBorderBottomWidth);
-        if (newBorderColor !== "rgba(0, 0, 0, 0)") {
-          setBorderColor(newBorderColor);
-        }
         setBorderRadius(newBorderRadius);
-        setDetectedColor(newDetectedColor);
         setMarginTop(newMarginTop);
         setMarginBottom(newMarginBottom);
         setMarginLeft(newMarginLeft);
@@ -177,6 +179,9 @@ const LoaderBackgroundWithWrapper = ({
   spacingBottom -= borderBottomWidth * 2;
   spacingBottom += marginBottom;
 
+  const borderOrOutlineColor =
+    borderColor === "rgba(0, 0, 0, 0)" ? outlineColor : borderColor;
+
   return (
     <div
       name="element_with_loader_wrapper"
@@ -197,7 +202,7 @@ const LoaderBackgroundWithWrapper = ({
           }}
         >
           <RectangleLoading
-            color={color || borderColor || detectedColor}
+            color={color || borderOrOutlineColor || detectedColor}
             radius={borderRadius}
           />
         </div>
