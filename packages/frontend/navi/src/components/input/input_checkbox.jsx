@@ -90,6 +90,13 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
             : CUSTOM_CHECKBOX_COLORS.borders.default
           : undefined
       }
+      {...(appeareance === "custom" && {
+        targetSelector: ".custom_checkbox",
+        spacingLeft: 3,
+        spacingRight: 3,
+        spacingTop: 3,
+        spacingBottom: 3,
+      })}
     >
       {inputCheckboxDisplayed}
     </LoaderBackground>
@@ -118,19 +125,15 @@ const CUSTOM_CHECKBOX_COLORS = {
     disabled: "#EEEEEE",
   },
 };
-
 import.meta.css = /*css*/ `
-.custom_checkbox {
+.custom_checkbox_wrapper {
   display: inline-flex;
-  width: 11px;
-  height: 11px;
-  margin: 3px 3px 3px 4px;
-  border: 1px solid ${CUSTOM_CHECKBOX_COLORS.borders.default};
+  padding: 3px 3px 3px 4px;
   border-radius: 2px;
-  transition: all 0.15s ease;
+  box-sizing: content-box;
 }
 
-.custom_checkbox input[type="checkbox"] {
+.custom_checkbox_wrapper input[type="checkbox"] {
   position: absolute;
   opacity: 0;
   inset: 0;
@@ -139,19 +142,14 @@ import.meta.css = /*css*/ `
   border: none;
 }
 
-.custom_checkbox:hover {
-  border-color: ${CUSTOM_CHECKBOX_COLORS.borders.hover};
+.custom_checkbox {
+  width: 13px;
+  height: 13px;
+  border: 1px solid ${CUSTOM_CHECKBOX_COLORS.borders.default};
+  border-radius: 2px;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
 }
-
-.custom_checkbox[data-checked] {
-  background: ${CUSTOM_CHECKBOX_COLORS.background.checked};
-  border-color:${CUSTOM_CHECKBOX_COLORS.borders.checked};
-}
-.custom_checkbox[data-checked]:hover {
-  background: ${CUSTOM_CHECKBOX_COLORS.background.checkedAndHover};
-  border-color:${CUSTOM_CHECKBOX_COLORS.borders.checkedAndHover};
-}
-
 .custom_checkbox svg {
   width: 100%;
   height: 100%;
@@ -160,26 +158,34 @@ import.meta.css = /*css*/ `
   transition: all 0.15s ease;
   pointer-events: none;
 }
-
-.custom_checkbox[data-checked] svg {
-  opacity: 1;
-  transform: scale(1);
-}
-
 .custom_checkbox svg path {
   stroke: ${CUSTOM_CHECKBOX_COLORS.checkmark.default};
 }
 
-.custom_checkbox[data-disabled] {
+.custom_checkbox_wrapper:hover .custom_checkbox {
+  border-color: ${CUSTOM_CHECKBOX_COLORS.borders.hover};
+}
+.custom_checkbox_wrapper:hover input[type="checkbox"]:checked + .custom_checkbox {
+  background: ${CUSTOM_CHECKBOX_COLORS.background.checkedAndHover};
+  border-color:${CUSTOM_CHECKBOX_COLORS.borders.checkedAndHover};
+}
+.custom_checkbox_wrapper input[type="checkbox"]:checked + .custom_checkbox {
+  background: ${CUSTOM_CHECKBOX_COLORS.background.checked};
+  border-color:${CUSTOM_CHECKBOX_COLORS.borders.checked};
+}
+.custom_checkbox_wrapper input[type="checkbox"]:checked + .custom_checkbox svg {
+  opacity: 1;
+  transform: scale(1);
+}
+.custom_checkbox_wrapper input[type="checkbox"][disabled] + .custom_checkbox {
   background-color: ${CUSTOM_CHECKBOX_COLORS.background.disabled};
   border-color: ${CUSTOM_CHECKBOX_COLORS.borders.disabled};
-
 }
-.custom_checkbox[data-disabled][data-checked] {
-  background: ${CUSTOM_CHECKBOX_COLORS.background.disabledAndChecked}; 
+.custom_checkbox_wrapper input[type="checkbox"][disabled]:checked + .custom_checkbox {
+   background: ${CUSTOM_CHECKBOX_COLORS.background.disabledAndChecked}; 
   border-color: ${CUSTOM_CHECKBOX_COLORS.borders.disabledAndChecked};
 }
-.custom_checkbox[data-disabled][data-checked] svg path {
+.custom_checkbox_wrapper input[type="checkbox"][disabled]:checked .custom_checkbox svg path {
   stroke: ${CUSTOM_CHECKBOX_COLORS.checkmark.disabled}; 
 }
 
@@ -198,15 +204,17 @@ const CustomCheckbox = ({
 }) => {
   return (
     <div
-      className="custom_checkbox"
+      className="custom_checkbox_wrapper"
       data-disabled={disabled ? "" : undefined}
       data-checked={checked ? "" : undefined}
       data-loading={loading ? "" : undefined}
     >
       {children}
-      <svg viewBox="0 0 12 12" aria-hidden="true">
-        <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
-      </svg>
+      <div className="custom_checkbox">
+        <svg viewBox="0 0 12 12" aria-hidden="true">
+          <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
+        </svg>
+      </div>
     </div>
   );
 };

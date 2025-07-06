@@ -6,6 +6,7 @@ import { RectangleLoading } from "./rectangle_loading.jsx";
 export const LoaderBackground = ({
   loading,
   containerRef,
+  targetSelector,
   color,
   inset = 0,
   spacingTop = 0,
@@ -38,6 +39,7 @@ export const LoaderBackground = ({
 
   return (
     <LoaderBackgroundWithWrapper
+      targetSelector={targetSelector}
       loading={loading}
       color={color}
       inset={inset}
@@ -94,6 +96,7 @@ const LoaderBackgroundWithPortal = ({
 
 const LoaderBackgroundWithWrapper = ({
   loading,
+  targetSelector,
   color,
   spacingTop,
   spacingLeft,
@@ -121,9 +124,11 @@ const LoaderBackgroundWithWrapper = ({
     let animationFrame;
     const updateStyles = () => {
       const container = containerRef.current;
-      const lastElementChild = container?.lastElementChild;
-      if (lastElementChild) {
-        const computedStyle = window.getComputedStyle(lastElementChild);
+      const target = targetSelector
+        ? container.querySelector(targetSelector)
+        : container.lastElementChild;
+      if (target) {
+        const computedStyle = window.getComputedStyle(target);
         const newBorderTopWidth = parseFloat(computedStyle.borderTopWidth);
         const newBorderLeftWidth = parseFloat(computedStyle.borderLeftWidth);
         const newBorderRightWidth = parseFloat(computedStyle.borderRightWidth);
@@ -161,7 +166,7 @@ const LoaderBackgroundWithWrapper = ({
     return () => {
       cancelAnimationFrame(animationFrame);
     };
-  }, []);
+  }, [targetSelector]);
 
   spacingTop += inset;
   spacingTop -= borderTopWidth * 2;
