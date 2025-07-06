@@ -63,10 +63,11 @@ import.meta.css = /*css*/ `
   stroke: #EEEEEE; 
 }
 
-[data-loader-visible] .custom_checkbox[data-loading] {
-  transition-property: background, transform, opacity, box-shadow; /* ✅ Exclut border-color */
-  border-color: transparent;
-}
+/* [data-loader-visible] .custom_checkbox[data-loading],
+[data-loader-visible] .custom_checkbox[data-loading][data-checked]  {
+  transition-property: background, transform, opacity, box-shadow;
+  border-color: rgba(0, 0, 0, 0.5);
+} */
 `;
 
 export const CustomCheckbox = ({

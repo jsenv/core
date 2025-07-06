@@ -105,6 +105,7 @@ const LoaderBackgroundWithWrapper = ({
   const shouldShowSpinner = useDebounceTrue(loading, 300);
   const containerRef = useRef(null);
   const [borderColor, setBorderColor] = useState();
+  const [borderRadius, setBorderRadius] = useState(0);
   const [detectedColor, setDetectedColor] = useState();
   const [borderTopWidth, setBorderTopWidth] = useState(0);
 
@@ -116,6 +117,7 @@ const LoaderBackgroundWithWrapper = ({
       if (lastElementChild) {
         const computedStyle = window.getComputedStyle(lastElementChild);
         const newBorderTopWidth = parseFloat(computedStyle.borderTopWidth);
+        const newBorderRadius = parseFloat(computedStyle.borderRadius);
         const newBorderColor = computedStyle.borderColor;
         const newDetectedColor = computedStyle.color;
 
@@ -123,6 +125,7 @@ const LoaderBackgroundWithWrapper = ({
         if (newBorderColor !== "rgba(0, 0, 0, 0)") {
           setBorderColor(newBorderColor);
         }
+        setBorderRadius(newBorderRadius);
         setDetectedColor(newDetectedColor);
       }
       // updateStyles is very cheap so we run it every frame
@@ -155,7 +158,10 @@ const LoaderBackgroundWithWrapper = ({
             right: `${inset + spacingRight}px`,
           }}
         >
-          <RectangleLoading color={color || borderColor || detectedColor} />
+          <RectangleLoading
+            color={color || borderColor || detectedColor}
+            radius={borderRadius}
+          />
         </div>
       )}
       {children}

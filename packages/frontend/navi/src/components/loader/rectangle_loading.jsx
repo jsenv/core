@@ -79,8 +79,8 @@ const RectangleLoadingSvg = ({
   height,
   color,
   radius,
-  trailColor = "rgba(0,0,0,0.05)",
-  // trailColor = "transparent",
+  // trailColor = "rgba(0,0,0,0.05)",
+  trailColor = "transparent",
 }) => {
   // Calculate stroke width and margins based on container size
   const strokeWidth = Math.max(1, Math.min(width, height) * 0.01);
