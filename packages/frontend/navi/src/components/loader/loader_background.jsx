@@ -107,10 +107,7 @@ const LoaderBackgroundWithWrapper = ({
 }) => {
   const shouldShowSpinner = useDebounceTrue(loading, 300);
   const containerRef = useRef(null);
-  const [borderColor, setBorderColor] = useState();
-  const [outlineColor, setOutlineColor] = useState();
   const [borderRadius, setBorderRadius] = useState(0);
-  const [detectedColor, setDetectedColor] = useState();
   const [borderTopWidth, setBorderTopWidth] = useState(0);
   const [borderLeftWidth, setBorderLeftWidth] = useState(0);
   const [borderRightWidth, setBorderRightWidth] = useState(0);
@@ -123,6 +120,8 @@ const LoaderBackgroundWithWrapper = ({
   const [paddingLeft, setPaddingLeft] = useState(0);
   const [paddingRight, setPaddingRight] = useState(0);
   const [paddingBottom, setPaddingBottom] = useState(0);
+
+  const [currentColor, setCurrentColor] = useState();
 
   useLayoutEffect(() => {
     let animationFrame;
@@ -162,10 +161,6 @@ const LoaderBackgroundWithWrapper = ({
         const paddingBottom =
           parseFloat(containedComputedStyle.paddingBottom) || 0;
 
-        setBorderColor(newBorderColor);
-        setOutlineColor(newOutlineColor);
-        setDetectedColor(newDetectedColor);
-
         setBorderTopWidth(newBorderTopWidth);
         setBorderLeftWidth(newBorderLeftWidth);
         setBorderRightWidth(newBorderRightWidth);
@@ -179,7 +174,23 @@ const LoaderBackgroundWithWrapper = ({
         setPaddingLeft(paddingLeft);
         setPaddingRight(paddingRight);
         setPaddingBottom(paddingBottom);
+
+        if (color) {
+          setCurrentColor(color);
+        } else if (
+          newOutlineColor &&
+          newOutlineColor !== "rgba(0, 0, 0, 0)" &&
+          (document.activeElement === containedElement ||
+            newBorderColor === "rgba(0, 0, 0, 0)")
+        ) {
+          setCurrentColor(newOutlineColor);
+        } else if (newBorderColor && newBorderColor !== "rgba(0, 0, 0, 0)") {
+          setCurrentColor(newBorderColor);
+        } else {
+          setCurrentColor(newDetectedColor);
+        }
       }
+
       // updateStyles is very cheap so we run it every frame
       animationFrame = requestAnimationFrame(updateStyles);
     };
@@ -217,11 +228,6 @@ const LoaderBackgroundWithWrapper = ({
   spacingRight += RECTANGLE_SIZE / 2;
   spacingBottom += RECTANGLE_SIZE / 2;
 
-  const outlineOrBorderColor =
-    outlineColor && outlineColor !== "rgba(0, 0, 0, 0)"
-      ? outlineColor
-      : borderColor;
-
   return (
     <div
       name="element_with_loader_wrapper"
@@ -241,10 +247,7 @@ const LoaderBackgroundWithWrapper = ({
             right: `${spacingRight}px`,
           }}
         >
-          <RectangleLoading
-            color={color || outlineOrBorderColor || detectedColor}
-            radius={borderRadius}
-          />
+          <RectangleLoading color={currentColor} radius={borderRadius} />
         </div>
       )}
       {children}
