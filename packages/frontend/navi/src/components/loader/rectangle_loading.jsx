@@ -16,6 +16,7 @@
  */
 
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useNetworkSpeed } from "./network_speed.js";
 
 export const RectangleLoading = ({ color = "currentColor", radius = 0 }) => {
   const containerRef = useRef(null);
@@ -100,13 +101,20 @@ const RectangleLoadingSvg = ({
     2 * (drawableWidth + drawableHeight) +
     (actualRadius > 0 ? 2 * Math.PI * actualRadius : 0);
 
-  // ✅ Fixed segment size in pixels
-  const maxSegmentSize = 25; // pixels
+  // Fixed segment size in pixels
+  const maxSegmentSize = 40;
   const segmentLength = Math.min(maxSegmentSize, pathLength * 0.25);
   const gapLength = pathLength - segmentLength;
 
-  // ✅ Vitesse constante en pixels par seconde
-  const pixelsPerSecond = 80;
+  // Vitesse constante en pixels par seconde
+  const networkSpeed = useNetworkSpeed();
+  const pixelsPerSecond =
+    {
+      "slow-2g": 40,
+      "2g": 60,
+      "3g": 80,
+      "4g": 120,
+    }[networkSpeed] || 80;
   const animationDuration = Math.max(1.5, pathLength / pixelsPerSecond);
 
   // ✅ Calculate correct offset based on actual segment size
