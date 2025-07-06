@@ -119,30 +119,50 @@ const LoaderBackgroundWithWrapper = ({
   const [marginBottom, setMarginBottom] = useState(0);
   const [marginLeft, setMarginLeft] = useState(0);
   const [marginRight, setMarginRight] = useState(0);
+  const [paddingTop, setPaddingTop] = useState(0);
+  const [paddingLeft, setPaddingLeft] = useState(0);
+  const [paddingRight, setPaddingRight] = useState(0);
+  const [paddingBottom, setPaddingBottom] = useState(0);
 
   useLayoutEffect(() => {
     let animationFrame;
     const updateStyles = () => {
       const container = containerRef.current;
+      const containedElement = container.lastElementChild;
       const target = targetSelector
         ? container.querySelector(targetSelector)
-        : container.lastElementChild;
+        : containedElement;
       if (target) {
-        const computedStyle = window.getComputedStyle(target);
-        const newBorderTopWidth = parseFloat(computedStyle.borderTopWidth);
-        const newBorderLeftWidth = parseFloat(computedStyle.borderLeftWidth);
-        const newBorderRightWidth = parseFloat(computedStyle.borderRightWidth);
-        const newBorderBottomWidth = parseFloat(
-          computedStyle.borderBottomWidth,
-        );
-        const newBorderRadius = parseFloat(computedStyle.borderRadius);
-        const newOutlineColor = computedStyle.outlineColor;
-        const newBorderColor = computedStyle.borderColor;
-        const newDetectedColor = computedStyle.color;
-        const newMarginTop = parseFloat(computedStyle.marginTop);
-        const newMarginBottom = parseFloat(computedStyle.marginBottom);
-        const newMarginLeft = parseFloat(computedStyle.marginLeft);
-        const newMarginRight = parseFloat(computedStyle.marginRight);
+        const containedComputedStyle =
+          window.getComputedStyle(containedElement);
+        const targetComputedStyle = window.getComputedStyle(target);
+        const newBorderTopWidth =
+          parseFloat(targetComputedStyle.borderTopWidth) || 0;
+        const newBorderLeftWidth =
+          parseFloat(targetComputedStyle.borderLeftWidth) || 0;
+        const newBorderRightWidth =
+          parseFloat(targetComputedStyle.borderRightWidth) || 0;
+        const newBorderBottomWidth =
+          parseFloat(targetComputedStyle.borderBottomWidth) || 0;
+        const newBorderRadius =
+          parseFloat(targetComputedStyle.borderRadius) || 0;
+        const newOutlineColor = targetComputedStyle.outlineColor;
+        const newBorderColor = targetComputedStyle.borderColor;
+        const newDetectedColor = targetComputedStyle.color;
+        const newMarginTop = parseFloat(containedComputedStyle.marginTop) || 0;
+        const newMarginBottom =
+          parseFloat(containedComputedStyle.marginBottom) || 0;
+        const newMarginLeft =
+          parseFloat(containedComputedStyle.marginLeft) || 0;
+        const newMarginRight =
+          parseFloat(containedComputedStyle.marginRight) || 0;
+
+        const paddingTop = parseFloat(containedComputedStyle.paddingTop) || 0;
+        const paddingLeft = parseFloat(containedComputedStyle.paddingLeft) || 0;
+        const paddingRight =
+          parseFloat(containedComputedStyle.paddingRight) || 0;
+        const paddingBottom =
+          parseFloat(containedComputedStyle.paddingBottom) || 0;
 
         setBorderColor(newBorderColor);
         setOutlineColor(newOutlineColor);
@@ -157,6 +177,10 @@ const LoaderBackgroundWithWrapper = ({
         setMarginBottom(newMarginBottom);
         setMarginLeft(newMarginLeft);
         setMarginRight(newMarginRight);
+        setPaddingTop(paddingTop);
+        setPaddingLeft(paddingLeft);
+        setPaddingRight(paddingRight);
+        setPaddingBottom(paddingBottom);
       }
       // updateStyles is very cheap so we run it every frame
       animationFrame = requestAnimationFrame(updateStyles);
@@ -171,18 +195,23 @@ const LoaderBackgroundWithWrapper = ({
   spacingTop += inset;
   spacingTop -= borderTopWidth * 2;
   spacingTop += marginTop;
-
   spacingLeft += inset;
   spacingLeft -= borderLeftWidth * 2;
   spacingLeft += marginLeft;
-
   spacingRight += inset;
   spacingRight -= borderRightWidth * 2;
   spacingRight += marginRight;
-
   spacingBottom += inset;
   spacingBottom -= borderBottomWidth * 2;
   spacingBottom += marginBottom;
+  if (targetSelector) {
+    // oversimplification that actually works
+    // (simplified because it assumes the targeted element is a direct child of the contained element which may have padding)
+    spacingTop += paddingTop;
+    spacingLeft += paddingLeft;
+    spacingRight += paddingRight;
+    spacingBottom += paddingBottom;
+  }
 
   const borderOrOutlineColor =
     borderColor === "rgba(0, 0, 0, 0)" ? outlineColor : borderColor;

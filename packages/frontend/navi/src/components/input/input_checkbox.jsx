@@ -92,10 +92,6 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
       }
       {...(appeareance === "custom" && {
         targetSelector: ".custom_checkbox",
-        spacingLeft: 3,
-        spacingRight: 3,
-        spacingTop: 3,
-        spacingBottom: 3,
       })}
     >
       {inputCheckboxDisplayed}
@@ -149,6 +145,7 @@ import.meta.css = /*css*/ `
   border-radius: 2px;
   transition: all 0.15s ease;
   box-sizing: border-box;
+    display: inline-flex;
 }
 .custom_checkbox svg {
   width: 100%;
