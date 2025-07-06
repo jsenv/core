@@ -79,6 +79,26 @@
                 </button>
               </div>
             </div>
+
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>Large button (anim speed shoud be consistent)</strong>
+                </p>
+                <Button loading={loading}>
+                  This button is quite large but loader speed should be same as
+                  small buttons
+                </Button>
+                <br />
+                <button
+                  onClick={() => {
+                    setLoading(!loading);
+                  }}
+                >
+                  Toggle
+                </button>
+              </div>
+            </div>
           </div>
         );
       };

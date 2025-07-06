@@ -79,7 +79,6 @@ const RectangleLoadingSvg = ({
   height,
   color,
   radius,
-  // trailColor = "rgba(0,0,0,0.05)",
   trailColor = "transparent",
 }) => {
   // Calculate stroke width and margins based on container size
@@ -90,18 +89,20 @@ const RectangleLoadingSvg = ({
   const drawableWidth = width - margin * 2;
   const drawableHeight = height - margin * 2;
 
-  // Calculate corner radius - use the provided radius or a size-based default
+  // Calculate corner radius
   const actualRadius = Math.min(
     radius || Math.min(drawableWidth, drawableHeight) * 0.05,
-    Math.min(drawableWidth, drawableHeight) * 0.25, // Cap at 1/4 of the smaller dimension
+    Math.min(drawableWidth, drawableHeight) * 0.25,
   );
 
-  // Calculate the perimeter of the rectangle for dash animation
+  // Calculate the perimeter of the rectangle
   const pathLength =
     2 * (drawableWidth + drawableHeight) +
     (actualRadius > 0 ? 2 * Math.PI * actualRadius : 0);
 
-  // Starting at top-left corner + radius
+  // ✅ Fixed animation duration - same for all sizes
+  const animationDuration = 2.5; // seconds - always the same
+
   const rectPath = `
       M ${margin + actualRadius},${margin}
       L ${margin + drawableWidth - actualRadius},${margin}
@@ -150,7 +151,7 @@ const RectangleLoadingSvg = ({
           attributeName="stroke-dashoffset"
           from={pathLength}
           to="0"
-          dur="1.8s"
+          dur={`${animationDuration}s`}
           repeatCount="indefinite"
           begin="0s"
         />
@@ -160,10 +161,10 @@ const RectangleLoadingSvg = ({
       <circle r={strokeWidth * 1.75} fill={color}>
         <animateMotion
           path={rectPath}
-          dur="1.8s"
+          dur={`${animationDuration}s`}
           repeatCount="indefinite"
           rotate="auto"
-          begin="-0.45s"
+          begin={`-${animationDuration * 0.25}s`}
         />
       </circle>
     </svg>
