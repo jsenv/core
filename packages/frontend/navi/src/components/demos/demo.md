@@ -1,9 +1,6 @@
-- le loading state pour un bouton
+- loading des input textual
 
-(le loader doit encadrer le bouton nickel chrome, donc surement lire padding ou un truc du genre)
-le bouton devra aussi effacer son border avec transparent pour privilégier le loader
-
-- pareil pour le loading des inputs
+- input radio
 
 - retester editable text c'est un gros morceau
 
