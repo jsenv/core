@@ -9,12 +9,44 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 
+import.meta.css = /*css*/ `
+button.custom {
+  border-color: light-dark(#767676, #8e8e93);
+}
+
+button.custom:hover:not(:disabled) {
+  border-color: light-dark(#666666, #9e9ea3);
+}
+
+button.custom:focus:not(:disabled) {
+  border-color: light-dark(#3b82f6, #60a5fa);
+  outline: 2px solid light-dark(#3b82f650, #60a5fa50);
+  outline-offset: -1px;
+}
+
+button.custom:active:not(:disabled) {
+  border-color: light-dark(#555555, #78787d);
+}
+
+button.custom:disabled {
+  border-color: light-dark(#76767650, #8e8e9350);
+  cursor: not-allowed;
+}
+`;
+
 export const Button = forwardRef((props, ref) => {
   return renderActionComponent(props, ref, SimpleButton, ActionButton);
 });
 
 const SimpleButton = forwardRef((props, ref) => {
-  const { autoFocus, constraints = [], loading, children, ...rest } = props;
+  const {
+    autoFocus,
+    constraints = [],
+    appeareance = "custom", // "custom" or "default"
+    loading,
+    children,
+    ...rest
+  } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -23,7 +55,11 @@ const SimpleButton = forwardRef((props, ref) => {
 
   return (
     <LoaderBackground loading={loading}>
-      <button ref={innerRef} {...rest}>
+      <button
+        ref={innerRef}
+        className={appeareance === "custom" ? "custom" : ""}
+        {...rest}
+      >
         {children}
       </button>
     </LoaderBackground>
