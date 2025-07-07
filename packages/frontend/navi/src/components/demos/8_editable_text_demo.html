@@ -86,10 +86,9 @@
               editable={editable}
               onEditEnd={stopEditing}
               name="test"
-              action={async ({ formData }) => {
-                const value = formData.get("test");
+              action={async ({ test }) => {
                 await new Promise((resolve) => setTimeout(resolve, 1000));
-                setValue(value);
+                setValue(test);
               }}
               value={value}
               constraints={[SINGLE_SPACE_CONSTRAINT]}
@@ -151,8 +150,8 @@
               editable={editable}
               onEditEnd={stopEditing}
               name="test"
-              action={async ({ formData }) => {
-                setValue(formData.get("test"));
+              action={async ({ test }) => {
+                setValue(test);
               }}
               value={value}
               constraints={[SINGLE_SPACE_CONSTRAINT]}
