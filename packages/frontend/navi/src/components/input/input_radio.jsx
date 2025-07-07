@@ -24,8 +24,9 @@ const SimpleInputRadio = forwardRef((props, ref) => {
   const {
     autoFocus,
     constraints = [],
-    loading,
     checked,
+    disabled,
+    loading,
     onChange,
     appeareance = "custom", // "custom" or "default"
     ...rest
@@ -53,6 +54,7 @@ const SimpleInputRadio = forwardRef((props, ref) => {
       ref={innerRef}
       type="radio"
       checked={innerChecked}
+      disabled={disabled}
       onChange={handleChange}
       // eslint-disable-next-line react/no-unknown-property
       onprogrammaticchange={handleChange}
