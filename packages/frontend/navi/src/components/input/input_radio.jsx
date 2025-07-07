@@ -201,7 +201,7 @@ const SimpleInputRadio = forwardRef((props, ref) => {
       loading={loading}
       color={loaderColor}
       targetSelector={appeareance === "custom" ? ".custom_radio" : ""}
-      inset={1}
+      inset={-1}
     >
       {inputRadioDisplayed}
     </LoaderBackground>

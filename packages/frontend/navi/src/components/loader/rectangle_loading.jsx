@@ -94,16 +94,52 @@ const RectangleLoadingSvg = ({
   const drawableWidth = width - margin * 2;
   const drawableHeight = height - margin * 2;
 
-  // Calculate corner radius
+  // ✅ Check if this should be a circle
+  const maxPossibleRadius = Math.min(drawableWidth, drawableHeight) / 2;
   const actualRadius = Math.min(
     radius || Math.min(drawableWidth, drawableHeight) * 0.05,
-    Math.min(drawableWidth, drawableHeight) * 0.25,
+    maxPossibleRadius, // ✅ Limité au radius maximum possible
   );
 
-  // Calculate the perimeter of the rectangle
-  const pathLength =
-    2 * (drawableWidth + drawableHeight) +
-    (actualRadius > 0 ? 2 * Math.PI * actualRadius : 0);
+  // ✅ Determine if we're dealing with a circle
+  const isCircle = actualRadius >= maxPossibleRadius * 0.95; // 95% = virtually a circle
+
+  let pathLength;
+  let rectPath;
+
+  if (isCircle) {
+    // ✅ Circle: perimeter = 2πr
+    pathLength = 2 * Math.PI * actualRadius;
+
+    // ✅ Circle path centered in the drawable area
+    const centerX = margin + drawableWidth / 2;
+    const centerY = margin + drawableHeight / 2;
+
+    rectPath = `
+      M ${centerX + actualRadius},${centerY}
+      A ${actualRadius},${actualRadius} 0 1 1 ${centerX - actualRadius},${centerY}
+      A ${actualRadius},${actualRadius} 0 1 1 ${centerX + actualRadius},${centerY}
+    `;
+  } else {
+    // ✅ Rectangle: calculate perimeter properly
+    const straightEdges =
+      2 * (drawableWidth - 2 * actualRadius) +
+      2 * (drawableHeight - 2 * actualRadius);
+    const cornerArcs = actualRadius > 0 ? 2 * Math.PI * actualRadius : 0;
+    pathLength = straightEdges + cornerArcs;
+
+    rectPath = `
+      M ${margin + actualRadius},${margin}
+      L ${margin + drawableWidth - actualRadius},${margin}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth},${margin + actualRadius}
+      L ${margin + drawableWidth},${margin + drawableHeight - actualRadius}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth - actualRadius},${margin + drawableHeight}
+      L ${margin + actualRadius},${margin + drawableHeight}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin},${margin + drawableHeight - actualRadius}
+      L ${margin},${margin + actualRadius}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin + actualRadius},${margin}
+    `;
+  }
 
   // Fixed segment size in pixels
   const maxSegmentSize = 40;
@@ -125,18 +161,6 @@ const RectangleLoadingSvg = ({
   const segmentRatio = segmentLength / pathLength;
   const circleOffset = -animationDuration * segmentRatio;
 
-  const rectPath = `
-      M ${margin + actualRadius},${margin}
-      L ${margin + drawableWidth - actualRadius},${margin}
-      A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth},${margin + actualRadius}
-      L ${margin + drawableWidth},${margin + drawableHeight - actualRadius}
-      A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth - actualRadius},${margin + drawableHeight}
-      L ${margin + actualRadius},${margin + drawableHeight}
-      A ${actualRadius},${actualRadius} 0 0 1 ${margin},${margin + drawableHeight - actualRadius}
-      L ${margin},${margin + actualRadius}
-      A ${actualRadius},${actualRadius} 0 0 1 ${margin + actualRadius},${margin}
-    `;
-
   return (
     <svg
       width="100%"
@@ -147,17 +171,28 @@ const RectangleLoadingSvg = ({
       xmlns="http://www.w3.org/2000/svg"
       shape-rendering="geometricPrecision"
     >
-      {/* Base rectangle outline */}
-      <rect
-        x={margin}
-        y={margin}
-        width={drawableWidth}
-        height={drawableHeight}
-        fill="none"
-        stroke={trailColor}
-        strokeWidth={strokeWidth}
-        rx={actualRadius}
-      />
+      {/* Base outline - circle ou rectangle */}
+      {isCircle ? (
+        <circle
+          cx={margin + drawableWidth / 2}
+          cy={margin + drawableHeight / 2}
+          r={actualRadius}
+          fill="none"
+          stroke={trailColor}
+          strokeWidth={strokeWidth}
+        />
+      ) : (
+        <rect
+          x={margin}
+          y={margin}
+          width={drawableWidth}
+          height={drawableHeight}
+          fill="none"
+          stroke={trailColor}
+          strokeWidth={strokeWidth}
+          rx={actualRadius}
+        />
+      )}
 
       {/* Progress segment that grows and moves */}
       <path
