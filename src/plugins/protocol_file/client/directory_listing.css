@@ -133,9 +133,9 @@ a.nav_item_text {
   width: 100%;
 }
 .directory_content_item_text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: inline-flex;
+  flex-grow: 1;
+  align-items: center;
 }
 .directory_content_item:last-child {
   border-bottom: none;

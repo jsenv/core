@@ -217,7 +217,7 @@ const DirectoryContentItem = ({ url, isDirectory, isMainFile, children }) => {
           />
         </span>
         <span className="directory_content_item_text">
-          {children}
+          <Overflow>{children}</Overflow>
           {isDirectory ? (
             <>
               <span style="flex:1"></span>
