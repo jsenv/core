@@ -66,13 +66,7 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
 
   const inputCheckboxDisplayed =
     appeareance === "custom" ? (
-      <CustomCheckbox
-        checked={innerChecked}
-        disabled={disabled}
-        loading={loading}
-      >
-        {inputCheckbox}
-      </CustomCheckbox>
+      <CustomCheckbox>{inputCheckbox}</CustomCheckbox>
     ) : (
       inputCheckbox
     );
@@ -91,9 +85,7 @@ const SimpleInputCheckbox = forwardRef((props, ref) => {
       // the loader to keep the color the element would have if it was not disabled
       color={loaderColor}
       inset={-1}
-      {...(appeareance === "custom" && {
-        targetSelector: ".custom_checkbox",
-      })}
+      targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
     >
       {inputCheckboxDisplayed}
     </LoaderBackground>
@@ -200,20 +192,9 @@ import.meta.css = /*css*/ `
   border-color: rgba(0, 0, 0, 0.5);
 } */
 `;
-
-const CustomCheckbox = ({
-  checked = false,
-  disabled = false,
-  loading = false,
-  children,
-}) => {
+const CustomCheckbox = ({ children }) => {
   return (
-    <div
-      className="custom_checkbox_wrapper"
-      data-disabled={disabled ? "" : undefined}
-      data-checked={checked ? "" : undefined}
-      data-loading={loading ? "" : undefined}
-    >
+    <div className="custom_checkbox_wrapper">
       {children}
       <div className="custom_checkbox">
         <svg viewBox="0 0 12 12" aria-hidden="true">

@@ -15,9 +15,107 @@ export const InputRadio = forwardRef((props, ref) => {
   return renderActionComponent(props, ref, SimpleInputRadio, ActionInputRadio);
 });
 
+const CUSTOM_RADIO_COLORS = {
+  borders: {
+    default: "#6b7280",
+    hover: "#9ca3af",
+    disabled: "rgba(118, 118, 118, 0.3)",
+    checked: "#3b82f6",
+    checkedAndHover: "#1d4ed8",
+    disabledAndChecked: "#D3D3D3",
+  },
+  outline: {
+    default: "light-dark(#1d4ed8, #3b82f6)",
+  },
+  background: {
+    checked: "#3b82f6",
+    checkedAndHover: "#1d4ed8",
+    disabled: "light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3))",
+    disabledAndChecked: "#D3D3D3",
+  },
+  checkmark: {
+    default: "white",
+    disabled: "#EEEEEE",
+  },
+};
+import.meta.css = /*css*/ `
+.custom_radio_wrapper {
+  display: inline-flex;
+  box-sizing: content-box;
+}
+
+.custom_radio_wrapper input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.custom_radio {
+  width: 13px;
+  height: 13px;
+  border: 1px solid ${CUSTOM_RADIO_COLORS.borders.default};
+  border-radius: 2px;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  display: inline-flex;
+  margin: 3px 3px 3px 4px;
+}
+.custom_radio svg {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.15s ease;
+  pointer-events: none;
+}
+.custom_radio svg path {
+  stroke: ${CUSTOM_RADIO_COLORS.checkmark.default};
+}
+
+.custom_radio_wrapper:hover .custom_radio {
+  border-color: ${CUSTOM_RADIO_COLORS.borders.hover};
+}
+.custom_radio_wrapper:hover input[type="radio"]:checked + .custom_radio {
+  background: ${CUSTOM_RADIO_COLORS.background.checkedAndHover};
+  border-color:${CUSTOM_RADIO_COLORS.borders.checkedAndHover};
+}
+.custom_radio_wrapper input[type="radio"]:checked + .custom_radio {
+  background: ${CUSTOM_RADIO_COLORS.background.checked};
+  border-color:${CUSTOM_RADIO_COLORS.borders.checked};
+}
+.custom_radio_wrapper input[type="radio"]:checked + .custom_radio svg {
+  opacity: 1;
+  transform: scale(1);
+}
+.custom_radio_wrapper input[type="radio"][disabled] + .custom_radio {
+  background-color: ${CUSTOM_RADIO_COLORS.background.disabled};
+  border-color: ${CUSTOM_RADIO_COLORS.borders.disabled};
+}
+.custom_radio_wrapper input[type="radio"][disabled]:checked + .custom_radio {
+   background: ${CUSTOM_RADIO_COLORS.background.disabledAndChecked}; 
+  border-color: ${CUSTOM_RADIO_COLORS.borders.disabledAndChecked};
+}
+.custom_radio_wrapper input[type="radio"][disabled]:checked .custom_radio svg path {
+  stroke: ${CUSTOM_RADIO_COLORS.checkmark.disabled}; 
+}
+.custom_radio_wrapper input[type="radio"]:focus-visible + .custom_radio {
+  outline: 2px solid ${CUSTOM_RADIO_COLORS.outline.default};
+  outline-offset: 1px;
+
+}
+`;
 const CustomRadio = ({ children }) => {
-  // TODO
-  return <>{children}</>;
+  return (
+    <div className="custom_radio_wrapper">
+      {children}
+      <div className="custom_radio">
+        <svg viewBox="0 0 12 12" aria-hidden="true"></svg>
+      </div>
+    </div>
+  );
 };
 
 const SimpleInputRadio = forwardRef((props, ref) => {
@@ -69,8 +167,21 @@ const SimpleInputRadio = forwardRef((props, ref) => {
     ) : (
       inputRadio
     );
+
+  const loaderColor =
+    disabled && loading
+      ? innerChecked
+        ? CUSTOM_RADIO_COLORS.borders.checked
+        : CUSTOM_RADIO_COLORS.borders.default
+      : undefined;
   const inputRadioWithLoader = (
-    <LoaderBackground loading={loading}>{inputRadioDisplayed}</LoaderBackground>
+    <LoaderBackground
+      loading={loading}
+      color={loaderColor}
+      targetSelector={appeareance === "custom" ? ".custom_radio" : ""}
+    >
+      {inputRadioDisplayed}
+    </LoaderBackground>
   );
 
   return inputRadioWithLoader;
