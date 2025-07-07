@@ -125,8 +125,17 @@ const ActionInputTextual = forwardRef((props, ref) => {
 
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
-      if (reason === "blur_invalid" && !cancelOnBlurInvalid) {
-        return;
+      if (reason.startsWith("blur_invalid")) {
+        if (!cancelOnBlurInvalid) {
+          return;
+        }
+        if (
+          // error prevent cancellation until the user closes it (or something closes it)
+          e.detail.failedConstraintInfo.level === "error" &&
+          e.detail.failedConstraintInfo.reportStatus !== "closed"
+        ) {
+          return;
+        }
       }
       if (reason === "escape_key" && !cancelOnEscape) {
         return;

@@ -120,6 +120,7 @@
               onEditEnd={stopEditing}
               name="test"
               action={async () => {
+                await new Promise((resolve) => setTimeout(resolve, 100));
                 throw new Error("error example");
               }}
               value={value}

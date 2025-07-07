@@ -170,8 +170,8 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  const dispatchCancelCustomEvent = (reason) => {
-    const cancelEvent = new CustomEvent("cancel", { detail: reason });
+  const dispatchCancelCustomEvent = (options) => {
+    const cancelEvent = new CustomEvent("cancel", options);
     element.dispatchEvent(cancelEvent);
   };
 
@@ -185,8 +185,8 @@ export const installCustomConstraintValidation = (
     };
     let message;
     let level;
-    message = lastFailedValidityInfo.message;
-    level = lastFailedValidityInfo.level;
+    message = lastFailedConstraintInfo.message;
+    level = lastFailedConstraintInfo.level;
     validationMessage = openValidationMessage(
       elementReceivingValidationMessage,
       message,
@@ -195,9 +195,16 @@ export const installCustomConstraintValidation = (
         onClose: () => {
           cleanupCallbackSet.delete(closeOnCleanup);
           validationMessage = null;
+          if (lastFailedConstraintInfo) {
+            lastFailedConstraintInfo.reportStatus = "closed";
+          }
+          if (!skipFocus) {
+            element.focus();
+          }
         },
       },
     );
+    lastFailedConstraintInfo.reportStatus = "reported";
     cleanupCallbackSet.add(closeOnCleanup);
   };
 
@@ -225,10 +232,10 @@ export const installCustomConstraintValidation = (
     };
   }
 
-  let lastFailedValidityInfo = null;
+  let lastFailedConstraintInfo = null;
   const validityInfoMap = new Map();
   const checkValidity = ({ fromRequestAction } = {}) => {
-    if (fromRequestAction && lastFailedValidityInfo) {
+    if (fromRequestAction && lastFailedConstraintInfo) {
       for (const [key, customMessage] of customMessageMap) {
         if (customMessage.removeOnRequestAction) {
           customMessageMap.delete(key);
@@ -237,7 +244,7 @@ export const installCustomConstraintValidation = (
     }
 
     validityInfoMap.clear();
-    lastFailedValidityInfo = null;
+    lastFailedConstraintInfo = null;
     for (const constraint of constraintSet) {
       const constraintValidityInfo = constraint.check(element);
       if (constraintValidityInfo) {
@@ -247,29 +254,30 @@ export const installCustomConstraintValidation = (
           ...(typeof constraintValidityInfo === "string"
             ? { message: constraintValidityInfo }
             : constraintValidityInfo),
+          reportStatus: "not_reported",
         };
         validityInfoMap.set(constraint, failedValidityInfo);
-        lastFailedValidityInfo = failedValidityInfo;
+        lastFailedConstraintInfo = failedValidityInfo;
       }
     }
 
-    if (!lastFailedValidityInfo && validationMessage) {
+    if (!lastFailedConstraintInfo && validationMessage) {
       if (validationMessage) {
         validationMessage.close("becomes_valid");
       }
     }
 
-    return !lastFailedValidityInfo;
+    return !lastFailedConstraintInfo;
   };
   const reportValidity = ({ skipFocus } = {}) => {
-    if (!lastFailedValidityInfo) {
+    if (!lastFailedConstraintInfo) {
       if (validationMessage) {
         validationMessage.close("becomes_valid");
       }
       return;
     }
     if (validationMessage) {
-      const { message, level } = lastFailedValidityInfo;
+      const { message, level } = lastFailedConstraintInfo;
       validationMessage.update(message, { level });
       return;
     }
@@ -389,7 +397,7 @@ export const installCustomConstraintValidation = (
         if (validationMessage) {
           validationMessage.close("escape_key");
         } else {
-          dispatchCancelCustomEvent("escape_key");
+          dispatchCancelCustomEvent({ detail: { reason: "escape_key" } });
         }
       }
     };
@@ -402,14 +410,17 @@ export const installCustomConstraintValidation = (
   cancel_on_blur: {
     const onblur = () => {
       if (element.value === "") {
-        dispatchCancelCustomEvent("blur_empty");
+        dispatchCancelCustomEvent({ detail: { reason: "blur_empty" } });
         return;
       }
-      // if we have error, we cancel too
-      if (lastFailedValidityInfo) {
-        dispatchCancelCustomEvent(
-          `blur_invalid:${lastFailedValidityInfo.name}`,
-        );
+      // if we have failed constraint, we cancel too
+      if (lastFailedConstraintInfo) {
+        dispatchCancelCustomEvent({
+          detail: {
+            reason: "blur_invalid",
+            failedConstraintInfo: lastFailedConstraintInfo,
+          },
+        });
         return;
       }
     };

@@ -30,7 +30,7 @@ export const useActionEvents = (
     };
     const eventsToListenOnElement = {
       cancel: (e) => {
-        onCancel?.(e, e.detail);
+        onCancel?.(e, e.detail.reason);
       },
       actionprevented: onPrevented,
       action: onAction,
