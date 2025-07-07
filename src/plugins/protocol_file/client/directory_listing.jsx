@@ -185,7 +185,7 @@ const DirectoryContent = ({ items }) => {
             isDirectory={directoryItem.url.endsWith("/")}
             isMainFile={directoryItem.isMainFile}
           >
-            {directoryItem.urlRelativeToCurrentDirectory}
+            {decodeURI(directoryItem.urlRelativeToCurrentDirectory)}
           </DirectoryContentItem>
         );
       })}
