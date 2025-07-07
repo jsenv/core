@@ -20,7 +20,7 @@ const CUSTOM_RADIO_COLORS = {
     default: "#6b7280",
     hover: "#9ca3af",
     disabled: "rgba(118, 118, 118, 0.3)",
-    checked: "#1d4ed8",
+    checked: "#3b82f6",
     checkedAndHover: "#1a56db",
     disabledAndChecked: "#D3D3D3",
   },
@@ -30,12 +30,11 @@ const CUSTOM_RADIO_COLORS = {
   background: {
     default: "white",
     disabled: "light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3))",
-    disabledAndChecked: "#D3D3D3",
   },
   checkmark: {
-    default: "todo",
+    default: "#3b82f6",
     hover: "#1d4ed8",
-    disabled: "#EEEEEE",
+    disabled: "#D3D3D3",
   },
 };
 
@@ -114,7 +113,6 @@ import.meta.css = /*css*/ `
 }
 
 .custom_radio_wrapper input[type="radio"][disabled]:checked + .custom_radio {
-  background: ${CUSTOM_RADIO_COLORS.background.disabledAndChecked};
   border-color: ${CUSTOM_RADIO_COLORS.borders.disabledAndChecked};
 }
 
@@ -135,7 +133,7 @@ const CustomRadio = ({ children }) => {
       {children}
       <div className="custom_radio">
         <svg viewBox="0 0 12 12" aria-hidden="true">
-          <circle cx="6" cy="6" r="4.5" />
+          <circle cx="6" cy="6" r="4.25" />
         </svg>
       </div>
     </div>
@@ -203,6 +201,7 @@ const SimpleInputRadio = forwardRef((props, ref) => {
       loading={loading}
       color={loaderColor}
       targetSelector={appeareance === "custom" ? ".custom_radio" : ""}
+      inset={1}
     >
       {inputRadioDisplayed}
     </LoaderBackground>
