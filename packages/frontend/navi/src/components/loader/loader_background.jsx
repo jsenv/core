@@ -222,11 +222,18 @@ const LoaderBackgroundWithWrapper = ({
     spacingBottom += paddingBottom;
   }
 
-  const RECTANGLE_SIZE = 2;
-  spacingTop += RECTANGLE_SIZE / 4;
-  spacingLeft += RECTANGLE_SIZE / 4;
-  spacingRight += RECTANGLE_SIZE / 4;
-  spacingBottom += RECTANGLE_SIZE / 4;
+  const maxBorderWidth = Math.max(
+    borderTopWidth,
+    borderLeftWidth,
+    borderRightWidth,
+    borderBottomWidth,
+  );
+  const size = Math.max(2, maxBorderWidth / 2);
+
+  spacingTop += size / 4;
+  spacingLeft += size / 4;
+  spacingRight += size / 4;
+  spacingBottom += size / 4;
 
   return (
     <div
@@ -247,7 +254,11 @@ const LoaderBackgroundWithWrapper = ({
             right: `${spacingRight}px`,
           }}
         >
-          <RectangleLoading color={currentColor} radius={borderRadius} />
+          <RectangleLoading
+            color={currentColor}
+            radius={borderRadius}
+            size={size}
+          />
         </div>
       )}
       {children}
