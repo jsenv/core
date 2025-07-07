@@ -24,7 +24,11 @@ export const useEditableController = () => {
 };
 
 export const EditableText = forwardRef(
-  ({ children, editable, value, onEditEnd, ...rest }, ref) => {
+  ({ children, action, editable, value, onEditEnd, ...rest }, ref) => {
+    if (import.meta.DEV && !action) {
+      console.warn(`EditableText requires an action prop`);
+    }
+
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
@@ -44,6 +48,7 @@ export const EditableText = forwardRef(
                 onEditEnd();
               }
             }}
+            action={action}
             onActionEnd={() => {
               onEditEnd();
             }}

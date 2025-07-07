@@ -185,12 +185,8 @@ export const installCustomConstraintValidation = (
     };
     let message;
     let level;
-    if (typeof lastFailedValidityInfo === "string") {
-      message = lastFailedValidityInfo;
-    } else {
-      message = lastFailedValidityInfo.message;
-      level = lastFailedValidityInfo.level;
-    }
+    message = lastFailedValidityInfo.message;
+    level = lastFailedValidityInfo.level;
     validationMessage = openValidationMessage(
       elementReceivingValidationMessage,
       message,
@@ -245,8 +241,15 @@ export const installCustomConstraintValidation = (
     for (const constraint of constraintSet) {
       const constraintValidityInfo = constraint.check(element);
       if (constraintValidityInfo) {
-        validityInfoMap.set(constraint, constraintValidityInfo);
-        lastFailedValidityInfo = constraintValidityInfo;
+        const failedValidityInfo = {
+          name: constraint.name,
+          constraint,
+          ...(typeof constraintValidityInfo === "string"
+            ? { message: constraintValidityInfo }
+            : constraintValidityInfo),
+        };
+        validityInfoMap.set(constraint, failedValidityInfo);
+        lastFailedValidityInfo = failedValidityInfo;
       }
     }
 
@@ -266,12 +269,8 @@ export const installCustomConstraintValidation = (
       return;
     }
     if (validationMessage) {
-      if (typeof lastFailedValidityInfo === "string") {
-        validationMessage.update(lastFailedValidityInfo);
-      } else {
-        const { message, level } = lastFailedValidityInfo;
-        validationMessage.update(message, { level });
-      }
+      const { message, level } = lastFailedValidityInfo;
+      validationMessage.update(message, { level });
       return;
     }
     openElementValidationMessage({ skipFocus });
@@ -408,7 +407,9 @@ export const installCustomConstraintValidation = (
       }
       // if we have error, we cancel too
       if (lastFailedValidityInfo) {
-        dispatchCancelCustomEvent("blur_invalid");
+        dispatchCancelCustomEvent(
+          `blur_invalid:${lastFailedValidityInfo.name}`,
+        );
         return;
       }
     };
