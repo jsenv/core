@@ -11,12 +11,12 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { SINGLE_SPACE_CONSTRAINT } from "@jsenv/form";
+      import { SINGLE_SPACE_CONSTRAINT } from "@jsenv/validation";
       import {
         useEditableController,
         // eslint-disable-next-line no-unused-vars
         EditableText,
-      } from "@jsenv/router";
+      } from "@jsenv/navi";
       import { useState } from "preact/hooks";
 
       // eslint-disable-next-line no-unused-vars
@@ -91,7 +91,7 @@
               }}
               value={value}
               constraints={[SINGLE_SPACE_CONSTRAINT]}
-            ></EditableText>
+            />
           </div>
         );
       };
@@ -122,7 +122,7 @@
               }}
               value={value}
               constraints={[SINGLE_SPACE_CONSTRAINT]}
-            ></EditableText>
+            />
           </div>
         );
       };

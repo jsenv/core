@@ -24,7 +24,7 @@ export const useEditableController = () => {
 };
 
 export const EditableText = forwardRef(
-  ({ action, children, editable, value, onEditEnd, ...rest }, ref) => {
+  ({ children, editable, value, onEditEnd, ...rest }, ref) => {
     const innerRef = useRef();
     useImperativeHandle(ref, () => innerRef.current);
 
@@ -36,18 +36,6 @@ export const EditableText = forwardRef(
         {editable && (
           <Input
             {...rest}
-            action={action}
-            onActionEnd={() => {
-              onEditEnd();
-            }}
-            ref={innerRef}
-            value={value}
-            autoFocus
-            autoSelect
-            required
-            requestExecuteOnChange
-            cancelOnEscape
-            cancelOnBlurInvalid
             onCancel={() => {
               onEditEnd();
             }}
@@ -56,6 +44,16 @@ export const EditableText = forwardRef(
                 onEditEnd();
               }
             }}
+            onActionEnd={() => {
+              onEditEnd();
+            }}
+            ref={innerRef}
+            value={value}
+            autoFocus
+            autoSelect
+            required
+            cancelOnEscape
+            cancelOnBlurInvalid
           />
         )}
       </>
