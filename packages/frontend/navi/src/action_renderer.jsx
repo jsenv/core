@@ -1,13 +1,39 @@
+/**
+ * TODO: when switching from one state to another we should preserve the dimensions to prevent layout shift
+ * the exact way to do this is not yet clear but I suspect something as follow:
+ *
+ *
+ * While content is loading we don't know (except if we are given an size)
+ * When reloading the content will be gone, we should keep a placeholder taking the same space
+ * When there is an error the error should take the same space as the content
+ * but be displayed on top
+ * (If error is bigger it can take more space? I guess so, maybe an overflow would be better to prevent layout shit again)
+ *
+ * And once we know the new content size ideally we could have some sort of transition
+ * (like an height transition from current height to new height)
+ *
+ */
+
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
 import { getActionPrivateProperties } from "./action_private_properties.js";
 import { useActionStatus } from "./use_action_status.js";
+
+import.meta.css = /* css */ `
+  .action_error {
+    padding: 20px;
+    background: #fdd;
+    border: 1px solid red;
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+`;
 
 const renderOtherwiseDefault = () => null;
 const renderLoadingDefault = () => null;
 const renderAbortedDefault = () => null;
 const renderErrorDefault = (error) => {
   let routeErrorText = error && error.message ? error.message : error;
-  return <p className="route_error">An error occured: {routeErrorText}</p>;
+  return <p className="action_error">An error occured: {routeErrorText}</p>;
 };
 const renderLoadedDefault = () => null;
 
