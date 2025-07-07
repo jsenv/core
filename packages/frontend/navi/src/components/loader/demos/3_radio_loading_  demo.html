@@ -35,7 +35,9 @@
                 </p>
 
                 <Field
-                  input={<Input type="radio" name="colors" loading={loading} />}
+                  input={
+                    <Input type="radio" name="loading" loading={loading} />
+                  }
                   label="Coucou"
                 ></Field>
 
@@ -51,7 +53,7 @@
 
                 <div>
                   <label>
-                    <input type="radio" name="colors" checked />
+                    <input type="radio" name="loading_native" />
                     Coucou
                   </label>
                 </div>
@@ -69,7 +71,7 @@
                     <Input
                       action={() => {}}
                       type="radio"
-                      name="colors"
+                      name="loading_with_action"
                       loading={loadingB}
                     />
                   }
@@ -99,7 +101,7 @@
                     <Input
                       disabled
                       type="radio"
-                      name="colors"
+                      name="disabled"
                       loading={loadingC}
                     />
                   }
@@ -118,7 +120,7 @@
 
                 <div>
                   <label>
-                    <input type="radio" name="colors" disabled />C
+                    <input type="radio" name="disabled_native" disabled />C
                   </label>
                 </div>
               </div>
@@ -136,7 +138,7 @@
                       disabled
                       checked
                       type="radio"
-                      name="colors"
+                      name="disabled_checked"
                       loading={loadingD}
                     />
                   }
@@ -155,7 +157,12 @@
 
                 <div>
                   <label>
-                    <input type="radio" name="colors" disabled checked />
+                    <input
+                      type="radio"
+                      name="disabled_checked_native"
+                      disabled
+                      checked
+                    />
                     Coucou
                   </label>
                 </div>
