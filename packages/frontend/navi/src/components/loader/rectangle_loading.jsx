@@ -18,7 +18,11 @@
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useNetworkSpeed } from "./network_speed.js";
 
-export const RectangleLoading = ({ color = "currentColor", radius = 0 }) => {
+export const RectangleLoading = ({
+  color = "currentColor",
+  radius = 0,
+  size = 2,
+}) => {
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -69,6 +73,7 @@ export const RectangleLoading = ({ color = "currentColor", radius = 0 }) => {
           color={color}
           width={dimensions.width}
           height={dimensions.height}
+          strokeWidth={size}
         />
       )}
     </div>
@@ -81,9 +86,8 @@ const RectangleLoadingSvg = ({
   color,
   radius,
   trailColor = "transparent",
+  strokeWidth,
 }) => {
-  // Calculate stroke width and margins based on container size
-  const strokeWidth = Math.max(1, Math.min(width, height) * 0.01);
   const margin = Math.max(2, Math.min(width, height) * 0.03);
 
   // Calculate the drawable area
@@ -160,7 +164,7 @@ const RectangleLoadingSvg = ({
         d={rectPath}
         fill="none"
         stroke={color}
-        strokeWidth={strokeWidth * 2}
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeDasharray={`${segmentLength} ${gapLength}`}
         pathLength={pathLength}
@@ -176,7 +180,7 @@ const RectangleLoadingSvg = ({
       </path>
 
       {/* Leading dot that follows the path */}
-      <circle r={strokeWidth * 1.75} fill={color}>
+      <circle r={strokeWidth} fill={color}>
         <animateMotion
           path={rectPath}
           dur={`${animationDuration}s`}

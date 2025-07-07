@@ -222,11 +222,11 @@ const LoaderBackgroundWithWrapper = ({
     spacingBottom += paddingBottom;
   }
 
-  const RECTANGLE_SIZE = 1;
-  spacingTop += RECTANGLE_SIZE / 2;
-  spacingLeft += RECTANGLE_SIZE / 2;
-  spacingRight += RECTANGLE_SIZE / 2;
-  spacingBottom += RECTANGLE_SIZE / 2;
+  const RECTANGLE_SIZE = 2;
+  spacingTop += RECTANGLE_SIZE / 4;
+  spacingLeft += RECTANGLE_SIZE / 4;
+  spacingRight += RECTANGLE_SIZE / 4;
+  spacingBottom += RECTANGLE_SIZE / 4;
 
   return (
     <div
