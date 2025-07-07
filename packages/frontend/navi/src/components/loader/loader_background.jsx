@@ -1,3 +1,4 @@
+import { resolveCSSSize } from "@jsenv/dom";
 import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useDebounceTrue } from "../use_debounce_true.js";
@@ -132,34 +133,47 @@ const LoaderBackgroundWithWrapper = ({
         ? container.querySelector(targetSelector)
         : containedElement;
       if (target) {
+        const { width, height } = target.getBoundingClientRect();
+
         const containedComputedStyle =
           window.getComputedStyle(containedElement);
         const targetComputedStyle = window.getComputedStyle(target);
-        const newBorderTopWidth =
-          parseFloat(targetComputedStyle.borderTopWidth) || 0;
-        const newBorderLeftWidth =
-          parseFloat(targetComputedStyle.borderLeftWidth) || 0;
-        const newBorderRightWidth =
-          parseFloat(targetComputedStyle.borderRightWidth) || 0;
-        const newBorderBottomWidth =
-          parseFloat(targetComputedStyle.borderBottomWidth) || 0;
-        const newBorderRadius =
-          parseFloat(targetComputedStyle.borderRadius) || 0;
+        const newBorderTopWidth = resolveCSSSize(
+          targetComputedStyle.borderTopWidth,
+        );
+        const newBorderLeftWidth = resolveCSSSize(
+          targetComputedStyle.borderLeftWidth,
+        );
+        const newBorderRightWidth = resolveCSSSize(
+          targetComputedStyle.borderRightWidth,
+        );
+        const newBorderBottomWidth = resolveCSSSize(
+          targetComputedStyle.borderBottomWidth,
+        );
+        const newBorderRadius = resolveCSSSize(
+          targetComputedStyle.borderRadius,
+          {
+            availableSize: Math.min(width, height),
+          },
+        );
         const newOutlineColor = targetComputedStyle.outlineColor;
         const newBorderColor = targetComputedStyle.borderColor;
         const newDetectedColor = targetComputedStyle.color;
-        const newMarginTop = parseFloat(targetComputedStyle.marginTop) || 0;
-        const newMarginBottom =
-          parseFloat(targetComputedStyle.marginBottom) || 0;
-        const newMarginLeft = parseFloat(targetComputedStyle.marginLeft) || 0;
-        const newMarginRight = parseFloat(targetComputedStyle.marginRight) || 0;
+        const newMarginTop = resolveCSSSize(targetComputedStyle.marginTop);
+        const newMarginBottom = resolveCSSSize(
+          targetComputedStyle.marginBottom,
+        );
+        const newMarginLeft = resolveCSSSize(targetComputedStyle.marginLeft);
+        const newMarginRight = resolveCSSSize(targetComputedStyle.marginRight);
 
-        const paddingTop = parseFloat(containedComputedStyle.paddingTop) || 0;
-        const paddingLeft = parseFloat(containedComputedStyle.paddingLeft) || 0;
-        const paddingRight =
-          parseFloat(containedComputedStyle.paddingRight) || 0;
-        const paddingBottom =
-          parseFloat(containedComputedStyle.paddingBottom) || 0;
+        const paddingTop = resolveCSSSize(containedComputedStyle.paddingTop);
+        const paddingLeft = resolveCSSSize(containedComputedStyle.paddingLeft);
+        const paddingRight = resolveCSSSize(
+          containedComputedStyle.paddingRight,
+        );
+        const paddingBottom = resolveCSSSize(
+          containedComputedStyle.paddingBottom,
+        );
 
         setBorderTopWidth(newBorderTopWidth);
         setBorderLeftWidth(newBorderLeftWidth);
