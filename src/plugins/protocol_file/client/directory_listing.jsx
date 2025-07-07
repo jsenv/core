@@ -63,11 +63,13 @@ const ErrorMessage = () => {
   errorText = (
     <>
       <strong>File not found:</strong>&nbsp;
-      <code>
-        <span className="file_path_good">{filePathExisting}</span>
-        <span className="file_path_bad">{filePathNotFound}</span>
-      </code>{" "}
-      does not exist on the server.
+      <Overflow>
+        <code>
+          <span className="file_path_good">{filePathExisting}</span>
+          <span className="file_path_bad">{filePathNotFound}</span>
+        </code>{" "}
+        does not exist on the server.
+      </Overflow>
     </>
   );
   errorSuggestion = (
@@ -86,6 +88,19 @@ const ErrorMessage = () => {
       >
         {errorSuggestion}
       </p>
+    </div>
+  );
+};
+
+const Overflow = ({ children, afterContent }) => {
+  return (
+    <div style="display: flex; flex-wrap: wrap; overflow: hidden; width: 100%; box-sizing: border-box; white-space: nowrap; text-overflow: ellipsis;">
+      <div style="display: flex; flex-grow: 1; width: 0;">
+        <div style="overflow: hidden; max-width: 100%; text-overflow: ellipsis;">
+          {children}
+        </div>
+        {afterContent}
+      </div>
     </div>
   );
 };
@@ -201,15 +216,17 @@ const DirectoryContentItem = ({ url, isDirectory, isMainFile, children }) => {
             }
           />
         </span>
-        {children}
-        {isDirectory ? (
-          <>
-            <span style="flex:1"></span>
-            <span className="directory_content_item_arrow">
-              <RightArrowSvg />
-            </span>
-          </>
-        ) : null}
+        <span className="directory_content_item_text">
+          {children}
+          {isDirectory ? (
+            <>
+              <span style="flex:1"></span>
+              <span className="directory_content_item_arrow">
+                <RightArrowSvg />
+              </span>
+            </>
+          ) : null}
+        </span>
       </a>
     </li>
   );
