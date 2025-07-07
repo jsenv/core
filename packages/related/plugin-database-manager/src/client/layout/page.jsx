@@ -30,7 +30,7 @@ import.meta.css = /* css */ `
     padding-bottom: 20px;
   }
 
-  .route_error {
+  .page_error {
     padding: 20px;
     background: #fdd;
     border: 1px solid red;
@@ -45,20 +45,23 @@ export const Page = ({ children }) => {
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
-      {error && <ErrorDetails error={error} />}
+      {error && <PageError error={error} />}
       {children}
     </ErrorBoundaryContext.Provider>
   );
 };
 
-const ErrorDetails = ({ error }) => {
+const PageError = ({ error }) => {
   return (
-    <details>
-      <summary>{error.message}</summary>
-      <pre>
-        <code>{error.stack}</code>
-      </pre>
-    </details>
+    <div className="page_error">
+      An error occured: {error.message}
+      <details>
+        <summary>More info</summary>
+        <pre>
+          <code>{error.stack}</code>
+        </pre>
+      </details>
+    </div>
   );
 };
 
