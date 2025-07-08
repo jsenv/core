@@ -315,9 +315,9 @@ export const updateActions = ({
       let message = "";
       message += `- ${prefix}:`;
       for (const action of actionSet) {
-        message += "\n  - ";
+        message += "\n";
         message += prefixFirstAndIndentRemainingLines(String(action), {
-          indentSize: `  - `.length,
+          prefix: "  -",
         });
       }
       return message;
