@@ -2,7 +2,7 @@ import { addCustomMessage, removeCustomMessage } from "@jsenv/validation";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 
-let debug = true;
+let debug = false;
 
 export const useExecuteAction = (
   elementRef,

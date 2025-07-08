@@ -127,15 +127,12 @@ const ActionButton = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
 
-  const actionRequesterRef = useRef();
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
       if (!action || actionEvent.detail.meta.isSubmit) {
         return;
       }
-      const requester = actionEvent.detail.requester;
-      actionRequesterRef.current = requester;
       executeAction(actionEvent);
     },
     onStart: onActionStart,
@@ -172,7 +169,6 @@ const ActionButton = forwardRef((props, ref) => {
     // prevent default behavior that would submit the form
     // we want to go through the action execution process (with validation and all)
     event.preventDefault();
-    actionRequesterRef.current = event.target;
     requestAction(effectiveAction, {
       event,
       target: form,
@@ -181,10 +177,7 @@ const ActionButton = forwardRef((props, ref) => {
     });
   };
 
-  // seulement si c'est le requester / un type submit dans un form
-  const actionRequester = actionRequesterRef.current;
-  const innerLoading =
-    loading || (pending && actionRequester === innerRef.current);
+  const innerLoading = loading || pending;
 
   return (
     <SimpleButton
