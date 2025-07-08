@@ -9,9 +9,16 @@ import.meta.css = /* css */ `
   }
 
   /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
-  .navi_link[data-has-shortcuts]:focus {
+  .navi_link[data-has-shortcuts]:focus,
+  .navi_link[data-has-shortcuts]:focus-visible {
     outline: 2px solid #1d4ed8;
+    outline-offset: 1px;
     border-radius: 1px;
+  }
+
+  .navi_link[disabled] {
+    opacity: 0.5;
+    pointer-events: none;
   }
 `;
 
@@ -22,6 +29,7 @@ export const Link = forwardRef((props, ref) => {
     shortcuts = [],
     onKeyDown,
     className = "",
+    disabled,
     ...rest
   } = props;
 
@@ -39,7 +47,7 @@ export const Link = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       className={["navi_link", ...className.split(" ")].join(" ")}
-      disabled={pending}
+      disabled={disabled || pending}
       data-has-shortcuts={shortcuts.length > 0 ? "" : undefined}
       onKeyDown={(e) => {
         onKeyDownForShortcuts(e);
