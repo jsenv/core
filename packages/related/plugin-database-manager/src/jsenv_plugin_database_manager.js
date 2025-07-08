@@ -932,8 +932,21 @@ const createRESTRoutes = (resource, endpoints) => {
         endpoint: `PUT ${endpointResource}`,
         declarationSource: import.meta.url,
         fetch: async (request) => {
-          const body = await handler(request);
-          return Response.json(body);
+          try {
+            const body = await handler(request);
+            return Response.json(body);
+          } catch (e) {
+            if (
+              e.name === "SyntaxError" &&
+              e.message === "Unexpected end of JSON input"
+            ) {
+              return new Response(null, {
+                status: 400,
+                statusText: "Invalid JSON input",
+              });
+            }
+            throw e;
+          }
         },
       };
       routes.push(putRoute);
