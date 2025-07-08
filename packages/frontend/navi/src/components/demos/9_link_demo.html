@@ -20,7 +20,15 @@
       const App = () => {
         return (
           <div>
-            <Link href="#">A</Link>
+            <Link
+              href="#"
+              onEnterKeyDown={(e) => {
+                console.log("Enter key pressed on link A");
+                e.target.focus({ focusVisible: true });
+              }}
+            >
+              A
+            </Link>
             <br />
             <Link href="#">B</Link>
             <br />
