@@ -27,7 +27,7 @@ export const useAutoFocus = (
         // we restore focus to the element that was focused before
         // the input was focused
         if (document.body.contains(activeElement)) {
-          activeElement.focus({ focusVisible: autoFocusVisible });
+          activeElement.focus();
         }
       }
     };

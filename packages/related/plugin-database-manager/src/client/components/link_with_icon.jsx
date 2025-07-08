@@ -18,7 +18,7 @@ import.meta.css = /* css */ `
 
 export const LinkWithIcon = ({ icon, isCurrent, children, ...rest }) => {
   return (
-    <a className="link_with_icon" {...rest}>
+    <Link className="link_with_icon" {...rest}>
       <FontSizedSvg>{icon}</FontSizedSvg>
       {isCurrent && (
         <FontSizedSvg>
@@ -26,6 +26,10 @@ export const LinkWithIcon = ({ icon, isCurrent, children, ...rest }) => {
         </FontSizedSvg>
       )}
       {children}
-    </a>
+    </Link>
   );
+};
+
+const Link = ({ children, ...rest }) => {
+  return <a {...rest}>{children}</a>;
 };

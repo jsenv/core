@@ -20,6 +20,7 @@ export { CheckboxList } from "./src/components/input/checkbox_list.jsx";
 export { Field } from "./src/components/input/field.jsx";
 export { Input } from "./src/components/input/input.jsx";
 export { RadioList } from "./src/components/input/radio_list.jsx";
+export { Link } from "./src/components/link/link.jsx";
 
 export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
 
