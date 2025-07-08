@@ -49,7 +49,7 @@ const SimpleLink = forwardRef((props, ref) => {
 
   return (
     <a
-      ref={ref}
+      ref={innerRef}
       {...rest}
       className={["navi_link", ...className.split(" ")].join(" ")}
       aria-busy={loading}
