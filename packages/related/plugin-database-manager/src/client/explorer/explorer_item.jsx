@@ -10,7 +10,7 @@ export const ExplorerItem = ({
   nameKey,
   item,
   renderItem,
-  useItemList,
+  useItemArrayInStore,
   useRenameItemAction = () => undefined,
   useDeleteItemAction = () => undefined,
 }) => {
@@ -34,7 +34,7 @@ export const ExplorerItem = ({
       <RenameInputOrName
         nameKey={nameKey}
         item={item}
-        useItemList={useItemList}
+        useItemArrayInStore={useItemArrayInStore}
         renameAction={renameAction}
         editable={editable}
         stopEditing={stopEditing}
@@ -48,15 +48,15 @@ export const ExplorerItem = ({
 const RenameInputOrName = ({
   nameKey,
   item,
-  useItemList,
+  useItemArrayInStore,
   renameAction,
   editable,
   stopEditing,
 }) => {
   const itemName = item[nameKey];
-  const itemList = useItemList();
+  const itemArrayInStore = useItemArrayInStore();
   const otherValueSet = new Set();
-  for (const itemCandidate of itemList) {
+  for (const itemCandidate of itemArrayInStore) {
     if (itemCandidate === item) {
       continue;
     }
@@ -83,16 +83,16 @@ const RenameInputOrName = ({
 
 export const ExplorerNewItem = ({
   nameKey,
-  useItemList,
+  useItemArrayInStore,
   useCreateItemAction,
   cancelOnBlurInvalid,
   onCancel,
   onActionEnd,
 }) => {
   const createItemAction = useCreateItemAction();
-  const itemList = useItemList();
+  const itemArrayInStore = useItemArrayInStore();
   const valueSet = new Set();
-  for (const item of itemList) {
+  for (const item of itemArrayInStore) {
     valueSet.add(item[nameKey]);
   }
   const uniqueNameConstraint = createUniqueValueConstraint(

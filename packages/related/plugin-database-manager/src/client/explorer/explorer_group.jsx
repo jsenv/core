@@ -46,118 +46,113 @@ export const createExplorerGroupController = (
   };
 };
 
-export const ExplorerGroup = forwardRef(
-  (
-    {
-      controller,
-      detailsAction,
-      idKey,
-      nameKey,
-      children,
-      labelChildren,
-      renderNewButtonChildren,
-      renderItem,
-      useItemList,
-      useRenameItemAction,
-      useCreateItemAction,
-      useDeleteItemAction,
-      onOpen,
-      onClose,
-      resizable,
-      ...rest
-    },
-    ref,
-  ) => {
-    const innerRef = useRef();
-    useImperativeHandle(ref, () => innerRef.current);
+export const ExplorerGroup = forwardRef((props, ref) => {
+  const {
+    controller,
+    detailsAction,
+    idKey,
+    nameKey,
+    labelChildren,
+    renderNewButtonChildren,
+    renderItem,
+    useItemArrayInStore,
+    useRenameItemAction,
+    useCreateItemAction,
+    useDeleteItemAction,
+    onOpen,
+    onClose,
+    resizable,
+    ...rest
+  } = props;
 
-    useLayoutEffect(() => {
-      setTimeout(() => {
-        innerRef.current.setAttribute("data-details-toggle-animation", "");
-      });
-    }, []);
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
 
-    const [isCreatingNew, setIsCreatingNew] = useState(false);
-    const startCreatingNew = useCallback(() => {
-      setIsCreatingNew(true);
-    }, [setIsCreatingNew]);
-    const stopCreatingNew = useCallback(() => {
-      setIsCreatingNew(false);
-    }, [setIsCreatingNew]);
+  useLayoutEffect(() => {
+    setTimeout(() => {
+      innerRef.current.setAttribute("data-details-toggle-animation", "");
+    });
+  }, []);
 
-    const heightSetting = controller.useHeightSetting();
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const startCreatingNew = useCallback(() => {
+    setIsCreatingNew(true);
+  }, [setIsCreatingNew]);
+  const stopCreatingNew = useCallback(() => {
+    setIsCreatingNew(false);
+  }, [setIsCreatingNew]);
 
-    return (
-      <>
-        {resizable && (
-          <div
-            data-resize-handle={controller.id}
-            id={`${controller.id}_resize_handle`}
-          ></div>
-        )}
-        <Details
-          {...rest}
-          ref={innerRef}
-          id={controller.id}
-          open={controller.detailsOpenAtStart}
-          className="explorer_group"
-          onToggle={(toggleEvent) => {
-            controller.detailsOnToggle(toggleEvent.newState === "open");
-            if (toggleEvent.newState === "open") {
-              if (onOpen) {
-                onOpen();
-              }
-            } else if (onClose) {
-              onClose();
+  const heightSetting = controller.useHeightSetting();
+
+  return (
+    <>
+      {resizable && (
+        <div
+          data-resize-handle={controller.id}
+          id={`${controller.id}_resize_handle`}
+        ></div>
+      )}
+      <Details
+        {...rest}
+        ref={innerRef}
+        id={controller.id}
+        open={controller.detailsOpenAtStart}
+        className="explorer_group"
+        onToggle={(toggleEvent) => {
+          controller.detailsOnToggle(toggleEvent.newState === "open");
+          if (toggleEvent.newState === "open") {
+            if (onOpen) {
+              onOpen();
             }
-          }}
-          data-resize={resizable ? "vertical" : "none"}
-          data-min-height="150"
-          data-requested-height={heightSetting}
-          action={detailsAction}
-          actionRenderer={() => {
-            return (
-              <div className="explorer_group_content">
-                <ExplorerItemList
-                  idKey={idKey}
-                  nameKey={nameKey}
-                  renderItem={renderItem}
-                  useItemList={useItemList}
-                  useRenameItemAction={useRenameItemAction}
-                  useCreateItemAction={useCreateItemAction}
-                  useDeleteItemAction={useDeleteItemAction}
-                  isCreatingNew={isCreatingNew}
-                  stopCreatingNew={stopCreatingNew}
-                >
-                  {children}
-                </ExplorerItemList>
-              </div>
-            );
-          }}
-        >
-          {labelChildren}
-          {renderNewButtonChildren ? (
-            <>
-              <span style="display: flex; flex: 1"></span>
-              <button
-                className="summary_action_icon"
-                style="width: 22px; height: 22px; cursor: pointer;"
-                onMouseDown={(e) => {
-                  // ensure when input is focused it stays focused
-                  // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
-                  e.preventDefault();
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  startCreatingNew();
-                }}
-              >
-                {renderNewButtonChildren()}
-              </button>
-            </>
-          ) : null}
-        </Details>
-      </>
-    );
-  },
-);
+          } else if (onClose) {
+            onClose();
+          }
+        }}
+        data-resize={resizable ? "vertical" : "none"}
+        data-min-height="150"
+        data-requested-height={heightSetting}
+        action={detailsAction}
+        actionRenderer={(itemArray) => {
+          return (
+            <div className="explorer_group_content">
+              <ExplorerItemList
+                idKey={idKey}
+                nameKey={nameKey}
+                itemArray={itemArray}
+                renderItem={renderItem}
+                useItemArrayInStore={useItemArrayInStore}
+                useRenameItemAction={useRenameItemAction}
+                useCreateItemAction={useCreateItemAction}
+                useDeleteItemAction={useDeleteItemAction}
+                isCreatingNew={isCreatingNew}
+                stopCreatingNew={stopCreatingNew}
+              />
+            </div>
+          );
+        }}
+      >
+        {labelChildren}
+        {renderNewButtonChildren ? (
+          <>
+            <span style="display: flex; flex: 1"></span>
+            <button
+              className="summary_action_icon"
+              style="width: 22px; height: 22px; cursor: pointer;"
+              onMouseDown={(e) => {
+                // ensure when input is focused it stays focused
+                // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
+                e.preventDefault();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                startCreatingNew();
+              }}
+            >
+              {renderNewButtonChildren()}
+            </button>
+          </>
+        ) : null}
+      </Details>
+    </>
+  );
+});

@@ -3,18 +3,18 @@ import { ExplorerItem, ExplorerNewItem } from "./explorer_item.jsx";
 export const ExplorerItemList = ({
   idKey,
   nameKey,
+  itemArray,
   renderItem,
-  useItemList,
+  useItemArrayInStore,
   useRenameItemAction,
   useDeleteItemAction,
   isCreatingNew,
   useCreateItemAction,
   stopCreatingNew,
-  children,
 }) => {
   return (
     <ul className="explorer_item_list">
-      {children.map((item) => {
+      {itemArray.map((item) => {
         return (
           <li className="explorer_item" key={item[idKey]}>
             <ExplorerItem
@@ -22,7 +22,7 @@ export const ExplorerItemList = ({
               nameKey={nameKey}
               item={item}
               renderItem={renderItem}
-              useItemList={useItemList}
+              useItemArrayInStore={useItemArrayInStore}
               useRenameItemAction={useRenameItemAction}
               useDeleteItemAction={useDeleteItemAction}
             />
@@ -33,7 +33,7 @@ export const ExplorerItemList = ({
         <li className="explorer_item">
           <ExplorerNewItem
             nameKey={nameKey}
-            useItemList={useItemList}
+            useItemArrayInStore={useItemArrayInStore}
             useCreateItemAction={useCreateItemAction}
             cancelOnBlurInvalid
             onCancel={() => {

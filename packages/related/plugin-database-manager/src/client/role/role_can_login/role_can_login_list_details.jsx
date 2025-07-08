@@ -40,7 +40,7 @@ export const RoleCanLoginListDetails = (props) => {
           {children}
         </RoleLink>
       )}
-      useItemList={useRoleArray}
+      useItemArrayInStore={useRoleArray}
       useRenameItemAction={(role) => {
         const renameAction = ROLE.PUT.bindParams({
           rolname: role.rolname,
