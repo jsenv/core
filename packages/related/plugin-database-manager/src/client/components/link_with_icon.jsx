@@ -1,3 +1,4 @@
+import { Link } from "@jsenv/navi";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 import { CurrentSvg } from "../svg/icons.jsx";
 
@@ -28,8 +29,4 @@ export const LinkWithIcon = ({ icon, isCurrent, children, ...rest }) => {
       {children}
     </Link>
   );
-};
-
-const Link = ({ children, ...rest }) => {
-  return <a {...rest}>{children}</a>;
 };

@@ -21,15 +21,21 @@ export const ExplorerItem = ({
   const { editable, startEditing, stopEditing } = useEditableController();
 
   return renderItem(item, {
-    deleteShortcutAction: deleteAction,
-    deleteShortcutConfirmContent: `Are you sure you want to delete "${itemName}"?`,
-    onKeydown: (e) => {
-      if (e.key === "Enter" && !editable && renameAction) {
-        e.preventDefault();
-        e.stopPropagation();
-        startEditing(e);
-      }
-    },
+    shortcuts: [
+      {
+        key: "Enter",
+        action: startEditing,
+        description: "Edit item name",
+        enabled: !editable,
+      },
+      {
+        key: "Backspace",
+        needsMetaKey: true,
+        action: deleteAction,
+        description: `Delete "${itemName}"`,
+        confirm: `Are you sure you want to delete "${itemName}"?`,
+      },
+    ],
     children: renameAction ? (
       <RenameInputOrName
         nameKey={nameKey}

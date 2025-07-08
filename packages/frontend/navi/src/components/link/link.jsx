@@ -1,3 +1,5 @@
+import { useKeyboardShortcuts } from "../use_keyboard_shortcuts.js";
+
 import.meta.css = /* css */ `
   .navi_link {
   }
@@ -5,21 +7,19 @@ import.meta.css = /* css */ `
 
 export const Link = ({
   children,
-  onEnterKeyDown,
+  shortcuts = [],
   onKeyDown,
   className = "",
   ...rest
 }) => {
+  const onKeyDownForShortcuts = useKeyboardShortcuts(shortcuts);
+
   return (
     <a
       {...rest}
       className={["navi_link", ...className.split(" ")].join(" ")}
       onKeyDown={(e) => {
-        if (e.key === "Enter" && onEnterKeyDown) {
-          e.preventDefault();
-          e.stopPropagation();
-          onEnterKeyDown(e);
-        }
+        onKeyDownForShortcuts(e);
         onKeyDown?.(e);
       }}
     >
