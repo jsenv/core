@@ -339,7 +339,16 @@ export const jsenvPluginDatabaseManager = ({
                   pg_roles.rolname
               ) database_count_result ON pg_roles.rolname = database_count_result.database_owner ${whereClause ||
             sql``}
+            ORDER BY
+              pg_roles.oid ASC
           `;
+          // I prefer order by "pg_roles.oid" over "pg_roles.rolname"
+          // because it gives an important information:
+          // the role created first has the lowest oid and is likely more important to see
+          // either because it's old so it's important or it's old so it should be deleted
+          // it does not help to find role by name which would be nice
+          // but it helps to see role creation order which matters a lot
+          // especially considering it's a database manager human that uses this
           for (const role of roles) {
             role.table_count = parseInt(role.table_count) || 0;
             role.database_count = parseInt(role.database_count) || 0;

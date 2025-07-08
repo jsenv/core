@@ -5,6 +5,20 @@ import { useParentAction } from "./action_context.js";
 
 let debug = false;
 let componentIdCounter = 0;
+const useComponentId = () => {
+  const componentIdRef = useRef(null);
+  if (!componentIdRef.current) {
+    const id = ++componentIdCounter;
+    componentIdRef.current = {
+      id,
+      toString: () => `component_action_id_${id}`,
+    };
+    if (debug) {
+      console.debug(`🆔 Created new componentId: ${id}`);
+    }
+  }
+  return componentIdRef.current.id;
+};
 
 // used by <form> to have their own action bound to many parameters
 // any form element within the <form> will update these params
@@ -12,16 +26,8 @@ let componentIdCounter = 0;
 // (could also be used by <fieldset> but I think fieldset are not going to be used this way and
 // we will reserve this behavior to <form>)
 export const useActionBoundToManyParams = (action) => {
-  const componentId = useRef({
-    toString: () => `component_action_id_${componentId.current.id}`,
-  });
-  if (!componentId.current.id) {
-    componentId.current.id = ++componentIdCounter;
-    if (debug) {
-      console.debug(`🆔 Created new componentId: ${componentId.current.id}`);
-    }
-  }
-  const cacheKey = typeof action === "function" ? componentId.current : action;
+  const componentId = useComponentId();
+  const cacheKey = typeof action === "function" ? componentId : action;
   const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
   const boundAction = useBoundAction(action, paramsSignal);
 
@@ -36,16 +42,8 @@ export const useActionBoundToManyParams = (action) => {
 export const useActionBoundToOneParam = (action, name, value) => {
   const parentBoundAction = useParentAction();
   const mountedRef = useRef(false);
-  const componentId = useRef({
-    toString: () => `component_action_id_${componentId.current.id}`,
-  });
-  if (!componentId.current.id) {
-    componentId.current.id = ++componentIdCounter;
-    if (debug) {
-      console.debug(`🆔 Created new componentId: ${componentId.current.id}`);
-    }
-  }
-  const cacheKey = typeof action === "function" ? componentId.current : action;
+  const componentId = useComponentId();
+  const cacheKey = typeof action === "function" ? componentId : action;
   const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
   const boundAction = useBoundAction(action, paramsSignal);
   boundAction.meta.paramsSignal = paramsSignal;
@@ -64,7 +62,7 @@ export const useActionBoundToOneParam = (action, name, value) => {
     }
     return [parentBoundAction, getValue, setValue];
   }
-  const getValue = paramsSignal.value[name];
+  const getValue = () => paramsSignal.value[name];
   const setValue = (value) => {
     if (debug) {
       console.debug(
