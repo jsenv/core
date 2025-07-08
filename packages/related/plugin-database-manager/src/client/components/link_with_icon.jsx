@@ -9,7 +9,6 @@ import.meta.css = /* css */ `
     min-width: 0;
     display: inline-flex;
     flex-grow: 1;
-    overflow: hidden;
   }
 
   .link_with_icon[data-active] {
