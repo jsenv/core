@@ -53,15 +53,17 @@ const ErrorMessage = () => {
   errorText = u(k, {
     children: [u("strong", {
       children: "File not found:"
-    }), "\xA0", u("code", {
-      children: [u("span", {
-        className: "file_path_good",
-        children: filePathExisting
-      }), u("span", {
-        className: "file_path_bad",
-        children: filePathNotFound
-      })]
-    }), " ", "does not exist on the server."]
+    }), "\xA0", u(Overflow, {
+      children: [u("code", {
+        children: [u("span", {
+          className: "file_path_good",
+          children: filePathExisting
+        }), u("span", {
+          className: "file_path_bad",
+          children: filePathNotFound
+        })]
+      }), " ", "does not exist on the server."]
+    })]
   });
   errorSuggestion = u(k, {
     children: [u("span", {
@@ -82,6 +84,21 @@ const ErrorMessage = () => {
       style: "font-size: 0.8em; margin-top: 10px;",
       children: errorSuggestion
     })]
+  });
+};
+const Overflow = ({
+  children,
+  afterContent
+}) => {
+  return u("div", {
+    style: "display: flex; flex-wrap: wrap; overflow: hidden; width: 100%; box-sizing: border-box; white-space: nowrap; text-overflow: ellipsis;",
+    children: u("div", {
+      style: "display: flex; flex-grow: 1; width: 0;",
+      children: [u("div", {
+        style: "overflow: hidden; max-width: 100%; text-overflow: ellipsis;",
+        children: children
+      }), afterContent]
+    })
   });
 };
 const Breadcrumb = ({
@@ -163,7 +180,7 @@ const DirectoryContent = ({
         url: directoryItem.urlRelativeToServer,
         isDirectory: directoryItem.url.endsWith("/"),
         isMainFile: directoryItem.isMainFile,
-        children: directoryItem.urlRelativeToCurrentDirectory
+        children: decodeURI(directoryItem.urlRelativeToCurrentDirectory)
       }, directoryItem.url);
     })
   });
@@ -189,14 +206,19 @@ const DirectoryContentItem = ({
         children: u(Icon, {
           url: isMainFile ? homeIconUrl : isDirectory ? directoryIconUrl : fileIconUrl
         })
-      }), children, isDirectory ? u(k, {
-        children: [u("span", {
-          style: "flex:1"
-        }), u("span", {
-          className: "directory_content_item_arrow",
-          children: u(RightArrowSvg, {})
-        })]
-      }) : null]
+      }), u("span", {
+        className: "directory_content_item_text",
+        children: [u(Overflow, {
+          children: children
+        }), isDirectory ? u(k, {
+          children: [u("span", {
+            style: "flex:1"
+          }), u("span", {
+            className: "directory_content_item_arrow",
+            children: u(RightArrowSvg, {})
+          })]
+        }) : null]
+      })]
     })
   });
 };

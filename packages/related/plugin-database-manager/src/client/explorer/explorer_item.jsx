@@ -1,9 +1,4 @@
-import {
-  EditableText,
-  Form,
-  InputText,
-  useEditableController,
-} from "@jsenv/navi";
+import { EditableText, Form, Input, useEditableController } from "@jsenv/navi";
 import {
   createUniqueValueConstraint,
   SINGLE_SPACE_CONSTRAINT,
