@@ -3,7 +3,7 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
-import { useAction } from "../action_execution/use_action.js";
+import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import "../checked_programmatic_change.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
@@ -231,10 +231,11 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
   const checkedAtStart =
     navStateValue === undefined ? initialChecked : navStateValue;
 
-  const [effectiveAction, getChecked, setChecked] = useAction(action, {
+  const [effectiveAction, getChecked, setChecked] = useActionBoundToOneParam(
+    action,
     name,
-    value: checkedAtStart ? value : undefined,
-  });
+    checkedAtStart ? value : undefined,
+  );
   const { pending, error, aborted } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,

@@ -2,7 +2,7 @@ import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { useAction } from "../action_execution/use_action.js";
+import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
 import { useNavState } from "../use_nav_state.js";
@@ -44,10 +44,7 @@ export const CheckboxList = forwardRef((props, ref) => {
   }
 
   const [effectiveAction, getCheckedValueArray, setCheckedValueArray] =
-    useAction(action, {
-      name,
-      value: checkedValueArrayAtStart,
-    });
+    useActionBoundToOneParam(action, name, checkedValueArrayAtStart);
   const { pending, error, aborted } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,

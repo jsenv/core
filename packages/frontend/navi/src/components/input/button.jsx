@@ -3,7 +3,7 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
-import { useAction } from "../action_execution/use_action.js";
+import { useActionBoundToParentParams } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
@@ -109,15 +109,18 @@ const ActionButton = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
+  const hasEffectOnForm =
+    type === "submit" || type === "reset" || type === "image";
+  if (import.meta.dev && hasEffectOnForm && action) {
+    console.warn(
+      "Button with type submit/reset/image should not have their own action",
+    );
+  }
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const hasEffectOnForm =
-    type === "submit" || type === "reset" || type === "image";
-  const [effectiveAction] = useAction(action, {
-    preferSelf: !hasEffectOnForm,
-  });
+  const effectiveAction = useActionBoundToParentParams(action);
   const { pending } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,

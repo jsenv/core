@@ -135,7 +135,7 @@ export const ActionDetails = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [effectiveAction] = useAction(action);
+  const effectiveAction = useAction(action);
   const { pending } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
     // the error will be displayed by actionRenderer inside <details>

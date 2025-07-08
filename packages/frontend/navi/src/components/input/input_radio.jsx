@@ -3,7 +3,7 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
-import { useAction } from "../action_execution/use_action.js";
+import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import "../checked_programmatic_change.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
@@ -239,13 +239,8 @@ const ActionInputRadio = forwardRef((props, ref) => {
 
   const [navStateValue, setNavStateValue] = useNavState(id);
   const checkedAtStart = initialChecked || navStateValue === value;
-  const [effectiveAction, getCheckedValue, setCheckedValue] = useAction(
-    action,
-    {
-      name,
-      value: checkedAtStart ? value : undefined,
-    },
-  );
+  const [effectiveAction, getCheckedValue, setCheckedValue] =
+    useActionBoundToOneParam(action, name, checkedAtStart ? value : undefined);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });

@@ -20,7 +20,7 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
-import { useAction } from "../action_execution/use_action.js";
+import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
@@ -99,10 +99,11 @@ const ActionInputTextual = forwardRef((props, ref) => {
         : navStateValue
       : initialValue;
 
-  const [effectiveAction, getValue, setValue] = useAction(action, {
+  const [effectiveAction, getValue, setValue] = useActionBoundToOneParam(
+    action,
     name,
-    value: valueAtStart,
-  });
+    valueAtStart,
+  );
   const { pending } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,

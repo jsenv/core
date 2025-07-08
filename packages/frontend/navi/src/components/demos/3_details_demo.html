@@ -12,6 +12,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import {
+        createAction,
         // eslint-disable-next-line no-unused-vars
         Details,
         // eslint-disable-next-line no-unused-vars
@@ -129,9 +130,38 @@
                 Custom summary
               </Details>
             </div>
+
+            <div>
+              <p>
+                <strong>Action preloaded</strong>
+              </p>
+
+              <Details
+                id="bound"
+                action={rootAction}
+                actionRenderer={(content) => content}
+              >
+                Action using bind params
+              </Details>
+            </div>
           </>
         );
       };
+
+      const rootAction = createAction(
+        async ({ name = "default name" }) => {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 500);
+          });
+          return name;
+        },
+        { name: "load user" },
+      );
+      window.rootAction = rootAction;
+      // const boundAction = rootAction.bindParams({
+      //   name: "dam",
+      // });
+      rootAction.preload();
 
       render(<App />, document.querySelector("#root"));
     </script>

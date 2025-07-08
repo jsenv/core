@@ -30,7 +30,9 @@ const ActionFieldset = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [boundAction, , setParams] = useAction(action);
+  const [boundAction, , setParams] = useAction(action, {
+    formElementCollection: true,
+  });
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });

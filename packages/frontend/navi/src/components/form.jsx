@@ -18,7 +18,7 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { ActionContext } from "./action_execution/action_context.js";
 import { renderActionComponent } from "./action_execution/render_action_component.jsx";
-import { useAction } from "./action_execution/use_action.js";
+import { useActionBoundToManyParams } from "./action_execution/use_action.js";
 import { useExecuteAction } from "./action_execution/use_execute_action.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import { useActionEvents } from "./use_action_events.js";
@@ -51,7 +51,7 @@ const ActionForm = forwardRef((props, ref) => {
   // (and also execute action without validation if form.submit() is ever called)
   useConstraints(innerRef, []);
 
-  const [boundAction, , setParams] = useAction(action);
+  const [boundAction, , setParams] = useActionBoundToManyParams(action);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
