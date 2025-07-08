@@ -32,11 +32,6 @@ import.meta.css = /*css*/ `
   background: light-dark(#e6e6e6, #2a2a2c);
 }
 
-[name="element_with_loader_wrapper"] button:focus-visible {
-  outline-width: calc(var(--button-border-width) + 1px);
-  outline-offset: calc(-1 * (var(--button-border-width) + 1px));
-  outline-color: light-dark(#1d4ed8, #3b82f6);
-}
 
 [name="element_with_loader_wrapper"] button:active {
   outline-color: light-dark(#808080, #707070);
@@ -46,6 +41,12 @@ import.meta.css = /*css*/ `
   outline-color: light-dark(#a0a0a0, #909090);
   background: light-dark(rgba(240, 240, 240, 0.6), rgba(26, 26, 26, 0.6)); 
   color: light-dark(rgba(107, 114, 128, 0.6), rgba(156, 163, 175, 0.6)); 
+}
+
+[name="element_with_loader_wrapper"] button:focus-visible {
+  outline-width: calc(var(--button-border-width) + 1px);
+  outline-offset: calc(-1 * (var(--button-border-width) + 1px));
+  outline-color: light-dark(#1d4ed8, #3b82f6);
 }
 
 [name="element_with_loader_wrapper"] button:disabled {
