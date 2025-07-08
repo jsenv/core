@@ -16,7 +16,7 @@ import { createIterableWeakSet } from "./iterable_weak_set.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
-let debug = true;
+let debug = false;
 
 /**
  * Registry that prevents preloaded actions from being garbage collected.

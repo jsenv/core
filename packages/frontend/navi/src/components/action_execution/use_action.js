@@ -93,7 +93,7 @@ export const useActionBoundToParentParams = (action) => {
 
   if (parentBoundAction) {
     const parentActionParamsSignal = parentBoundAction.meta.paramsSignal;
-    const actionBoundToParentParams = action.bindParams(
+    const actionBoundToParentParams = boundAction.bindParams(
       parentActionParamsSignal,
     );
     if (action) {
