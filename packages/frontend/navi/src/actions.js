@@ -762,6 +762,7 @@ export const createAction = (callback, rootOptions = {}) => {
           }
         };
         const onLoadError = (e) => {
+          console.error(e);
           signal.removeEventListener("abort", onabort);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);

@@ -89,8 +89,8 @@ const createHttpHandlerForRootResource = (
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
     const applyDataEffect =
       httpVerb === "DELETE"
-        ? (itemId) => {
-            store.drop(itemId);
+        ? (itemIdOrItemProps) => {
+            const itemId = store.drop(itemIdOrItemProps);
             autoreload.onActionDone(httpActionAffectingOneItem);
             return itemId;
           }
@@ -115,14 +115,9 @@ const createHttpHandlerForRootResource = (
     const httpActionAffectingOneItem = createAction(
       mapCallbackMaybeAsyncResult(callback, (data) => {
         if (httpVerb === "DELETE") {
-          if (isProps(data)) {
+          if (!isProps(data) && !primitiveCanBeId(data)) {
             throw new TypeError(
               `${actionTrace} must return an object (that will be used to drop "${name}" resource), received ${data}.`,
-            );
-          }
-          if (!primitiveCanBeId(data)) {
-            throw new TypeError(
-              `${actionTrace} must return an id (that will be used to drop "${name}" resource), received ${data}.`,
             );
           }
           return applyDataEffect(data);

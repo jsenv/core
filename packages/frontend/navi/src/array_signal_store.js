@@ -432,29 +432,29 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
       }
       return array;
     }
-    let property;
-    let value;
+    let propertyToMatch;
+    let valueToMatch;
     if (args.length === 1) {
-      property = idKey;
-      value = args[0];
-      if (value !== null && typeof value === "object") {
-        value = readIdFromItemProps(value, array);
-      } else if (!primitiveCanBeId(value)) {
-        throw new TypeError(`id to drop must be an id, got ${value}`);
+      propertyToMatch = idKey;
+      valueToMatch = args[0];
+      if (valueToMatch !== null && typeof valueToMatch === "object") {
+        valueToMatch = readIdFromItemProps(valueToMatch, array);
+      } else if (!primitiveCanBeId(valueToMatch)) {
+        throw new TypeError(`id to drop must be an id, got ${valueToMatch}`);
       }
     } else {
-      property = args[0];
-      value = args[1];
+      propertyToMatch = args[0];
+      valueToMatch = args[1];
     }
     const arrayWithoutItemToDrop = [];
     let found = false;
     let itemDropped = null;
     for (const itemCandidate of array) {
       const itemCandidateValue =
-        typeof property === "function"
-          ? property(itemCandidate)
-          : itemCandidate[property];
-      if (itemCandidateValue === value) {
+        typeof propertyToMatch === "function"
+          ? propertyToMatch(itemCandidate)
+          : itemCandidate[propertyToMatch];
+      if (itemCandidateValue === valueToMatch) {
         itemDropped = itemCandidate;
         found = true;
       } else {
