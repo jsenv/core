@@ -254,7 +254,6 @@ export const openValidationMessage = (
       if (targetElement.hasAttribute("data-validation-message-stay-on-focus")) {
         return;
       }
-
       close("target_element_focus");
     };
     targetElement.addEventListener("focus", onfocus);
