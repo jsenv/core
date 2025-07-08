@@ -116,9 +116,6 @@
               <input type="hidden" name="name" value="dam" />
               <Button
                 action={async ({ name }) => {
-                  setTimeout(() => {
-                    setCount((count) => count + 1);
-                  }, 200);
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
                   throw new Error(
                     `button action: { count: ${count}, name: ${name} }`,
@@ -127,7 +124,7 @@
               >
                 Hello
               </Button>
-              <button type="submit">Submit</button>
+              <Button type="submit">Submit</Button>
             </Form>
           </div>
         );

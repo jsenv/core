@@ -117,6 +117,7 @@ export const RadioList = forwardRef((props, ref) => {
                 requestAction(effectiveAction, {
                   event,
                   target: radioListContainer,
+                  requester: radio,
                 });
                 return;
               }
@@ -157,6 +158,7 @@ export const RadioList = forwardRef((props, ref) => {
               const radioListContainer = innerRef.current;
               requestAction(effectiveAction, event, {
                 target: radioListContainer,
+                requester: radio,
               });
             }}
           />

@@ -150,6 +150,7 @@ export const CheckboxList = forwardRef((props, ref) => {
               requestAction(effectiveAction, {
                 event,
                 target: checkboxListContainer,
+                requester: checkbox,
               });
             }}
           />

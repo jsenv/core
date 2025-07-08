@@ -202,7 +202,9 @@ const ActionInputTextual = forwardRef((props, ref) => {
         setTimeout(() => {
           preventNextChangeRef.current = false;
         });
-        requestAction(effectiveAction, e);
+        requestAction(effectiveAction, {
+          event: e,
+        });
       }}
     />
   );
