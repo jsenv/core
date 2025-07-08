@@ -143,6 +143,41 @@ const ActionButton = forwardRef((props, ref) => {
   const innerLoading =
     loading || (pending && actionRequester === innerRef.current);
 
+  const handleClick = (event) => {
+    const buttonElement = event.target;
+    const { form } = buttonElement;
+    if (action || !form) {
+      // custom action -> request it
+      // no form but a parent action -> request it
+      event.preventDefault();
+      requestAction(effectiveAction, { event });
+      return;
+    }
+    if (!form) {
+      // no form nor own action -> nothing to do
+      return;
+    }
+    let wouldSubmitForm = type === "submit" || type === "image";
+    if (!wouldSubmitForm) {
+      const formSubmitButton = form.querySelector(
+        "button[type='submit'], input[type='submit'], input[type='image']",
+      );
+      if (!formSubmitButton) {
+        wouldSubmitForm = true;
+      }
+    }
+    if (!wouldSubmitForm) {
+      return;
+    }
+    // prevent default behavior that would submit the form
+    // we want to go through the action execution process (with validation and all)
+    event.preventDefault();
+    requestAction(effectiveAction, {
+      event,
+      target: form,
+    });
+  };
+
   return (
     <SimpleButton
       ref={innerRef}
@@ -150,33 +185,7 @@ const ActionButton = forwardRef((props, ref) => {
       type={type}
       loading={innerLoading}
       onClick={(event) => {
-        const buttonElement = event.target;
-        if (action) {
-          event.preventDefault();
-          requestAction(effectiveAction, { event });
-        } else {
-          const { form } = buttonElement;
-          if (form) {
-            let wouldSubmitForm = type === "submit" || type === "image";
-            if (!wouldSubmitForm) {
-              const formSubmitButton = form.querySelector(
-                "button[type='submit'], input[type='submit'], input[type='image']",
-              );
-              if (!formSubmitButton) {
-                wouldSubmitForm = true;
-              }
-            }
-            if (wouldSubmitForm) {
-              // prevent default behavior that would submit the form
-              // we want to go through the action execution process (with validation and all)
-              event.preventDefault();
-              requestAction(effectiveAction, {
-                event,
-                target: form,
-              });
-            }
-          }
-        }
+        handleClick(event);
         onClick?.(event);
       }}
     >

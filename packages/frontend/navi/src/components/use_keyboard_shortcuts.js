@@ -13,11 +13,6 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
   }
 
   const onKeyDown = useCallback((event) => {
-    const target = event.target;
-    if (target.getAttribute("aria-busy") === "true") {
-      // if the target is busy, we do not want to trigger any shortcut
-      return;
-    }
     let shortcutFound;
     for (const shortcutCandidate of shortcutsRef.current) {
       const { enabled = true, needsMetaKey = false, key } = shortcutCandidate;
