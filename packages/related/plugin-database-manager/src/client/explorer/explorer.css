@@ -107,6 +107,7 @@
   margin-top: 0;
   margin-bottom: 0;
   padding-left: 16px;
+  padding-top: 2px; /* let space for item outline (2px by default) */
 }
 .explorer_item {
   display: flex;
