@@ -6,18 +6,12 @@ import { useParentAction } from "./action_context.js";
 let debug = false;
 let componentIdCounter = 0;
 
-// used by <form> (could also be used by <fieldset> but I think fieldset are not going to be used this way)
-// to have their own action bound to many parameters
+// used by <form> to have their own action bound to many parameters
+// any form element within the <form> will update these params
+// these params are also assigned just before executing the action to ensure they are in sync
+// (could also be used by <fieldset> but I think fieldset are not going to be used this way and
+// we will reserve this behavior to <form>)
 export const useActionBoundToManyParams = (action) => {
-  const parentBoundAction = useParentAction();
-  if (parentBoundAction) {
-    const parentActionParamsSignal = parentBoundAction.meta.paramsSignal;
-    const parentActionUpdateParams = parentBoundAction.meta.updateParams;
-    const getValue = parentActionParamsSignal.value;
-    const setValue = parentActionUpdateParams;
-    return [parentBoundAction, getValue, setValue];
-  }
-
   const componentId = useRef({
     toString: () => `component_action_id_${componentId.current.id}`,
   });
@@ -27,10 +21,10 @@ export const useActionBoundToManyParams = (action) => {
       console.debug(`🆔 Created new componentId: ${componentId.current.id}`);
     }
   }
-
   const cacheKey = typeof action === "function" ? componentId.current : action;
   const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
   const boundAction = useBoundAction(action, paramsSignal);
+
   boundAction.meta.paramsSignal = paramsSignal;
   boundAction.meta.updateParams = updateParams;
   const getValue = paramsSignal.value;
@@ -38,16 +32,30 @@ export const useActionBoundToManyParams = (action) => {
   return [boundAction, getValue, setValue];
 };
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
-// when inside a <form> the action will update the form action params
+// when inside a <form> the form params are updated when the form element single param is updated
 export const useActionBoundToOneParam = (action, name, value) => {
-  const mountedRef = useRef(false);
   const parentBoundAction = useParentAction();
+  const mountedRef = useRef(false);
+  const componentId = useRef({
+    toString: () => `component_action_id_${componentId.current.id}`,
+  });
+  if (!componentId.current.id) {
+    componentId.current.id = ++componentIdCounter;
+    if (debug) {
+      console.debug(`🆔 Created new componentId: ${componentId.current.id}`);
+    }
+  }
+  const cacheKey = typeof action === "function" ? componentId.current : action;
+  const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
+  const boundAction = useBoundAction(action, paramsSignal);
+  boundAction.meta.paramsSignal = paramsSignal;
+  boundAction.meta.updateParams = updateParams;
+
   if (parentBoundAction) {
     const parentActionParamsSignal = parentBoundAction.meta.paramsSignal;
     const parentActionUpdateParams = parentBoundAction.meta.updateParams;
     const getValue = () => parentActionParamsSignal.value[name];
     const setValue = (value) => parentActionUpdateParams({ [name]: value });
-
     if (!mountedRef.current) {
       mountedRef.current = true;
       if (name && value !== undefined) {
@@ -56,23 +64,6 @@ export const useActionBoundToOneParam = (action, name, value) => {
     }
     return [parentBoundAction, getValue, setValue];
   }
-
-  const componentId = useRef({
-    toString: () => `component_action_id_${componentId.current.id}`,
-  });
-  if (!componentId.current.id) {
-    componentId.current.id = ++componentIdCounter;
-    if (debug) {
-      console.debug(`🆔 Created new componentId: ${componentId.current.id}`);
-    }
-  }
-
-  const cacheKey = typeof action === "function" ? componentId.current : action;
-  const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
-  const boundAction = useBoundAction(action, paramsSignal);
-  boundAction.meta.paramsSignal = paramsSignal;
-  boundAction.meta.updateParams = updateParams;
-
   const getValue = paramsSignal.value[name];
   const setValue = (value) => {
     if (debug) {
@@ -82,7 +73,6 @@ export const useActionBoundToOneParam = (action, name, value) => {
     }
     return updateParams({ [name]: value });
   };
-
   if (!mountedRef.current) {
     mountedRef.current = true;
     if (name) {
@@ -94,16 +84,16 @@ export const useActionBoundToOneParam = (action, name, value) => {
   }
   return [boundAction, getValue, setValue];
 };
-// used by <button> to have different their own action still bound to elements in the <form> (if any)
-// as a result button action can acces the form values
+// used by <button> to have their own action still bound to parent action params (if any)
+// as a result when inside a <form> a <button> action receives the form elements values
+// when outside <form> button action receives no param
 export const useActionBoundToParentParams = (action) => {
   const parentBoundAction = useParentAction();
   const boundAction = useBoundAction(action);
+
   if (parentBoundAction) {
     const parentActionParamsSignal = parentBoundAction.meta.paramsSignal;
-
-    const actionBoundToParentParams = useBoundAction(
-      action,
+    const actionBoundToParentParams = action.bindParams(
       parentActionParamsSignal,
     );
     if (action) {
@@ -117,6 +107,7 @@ export const useActionBoundToParentParams = (action) => {
 export const useAction = (action) => {
   const parentBoundAction = useParentAction();
   const boundAction = useBoundAction(action);
+
   return parentBoundAction || boundAction;
 };
 
