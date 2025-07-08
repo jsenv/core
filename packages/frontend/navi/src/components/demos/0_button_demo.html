@@ -120,16 +120,15 @@
 
             <Form
               action={async ({ name }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000000));
-                // eslint-disable-next-line no-alert
-                window.alert(`form action: { name: ${name} }`);
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                console.log(`form action: { count: ${count}, name: ${name} }`);
               }}
               {...props}
             >
               <input type="hidden" name="name" value="dam" />
               <Button
                 action={async ({ name }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000000));
+                  await new Promise((resolve) => setTimeout(resolve, 1_000));
                   throw new Error(
                     `button action: { count: ${count}, name: ${name} }`,
                   );

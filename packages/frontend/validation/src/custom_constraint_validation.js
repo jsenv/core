@@ -149,13 +149,21 @@ export const requestAction = (
 export const closeValidationMessage = (element, reason) => {
   const validationInterface = element.__validationInterface__;
   if (!validationInterface) {
-    return;
+    return false;
   }
   const { validationMessage } = validationInterface;
   if (!validationMessage) {
-    return;
+    return false;
   }
-  validationMessage.close(reason);
+  return validationMessage.close(reason);
+};
+
+export const checkValidity = (element) => {
+  const validationInterface = element.__validationInterface__;
+  if (!validationInterface) {
+    return false;
+  }
+  return validationInterface.checkValidity();
 };
 
 export const installCustomConstraintValidation = (
@@ -361,6 +369,24 @@ export const installCustomConstraintValidation = (
     element.addEventListener("input", oninput);
     cleanupCallbackSet.add(() => {
       element.removeEventListener("input", oninput);
+    });
+  }
+
+  check_on_actionend: {
+    // this ensure we re-check validity (and remove message no longer relevant)
+    // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
+    const onactionend = () => {
+      checkValidity();
+    };
+    element.addEventListener("actionend", onactionend);
+    if (element.form) {
+      element.form.addEventListener("actionend", onactionend);
+      cleanupCallbackSet.add(() => {
+        element.form.removeEventListener("actionend", onactionend);
+      });
+    }
+    cleanupCallbackSet.add(() => {
+      element.removeEventListener("actionend", onactionend);
     });
   }
 
