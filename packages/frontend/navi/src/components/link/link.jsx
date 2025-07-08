@@ -30,6 +30,7 @@ export const Link = forwardRef((props, ref) => {
     onKeyDown,
     className = "",
     disabled,
+    loading,
     ...rest
   } = props;
 
@@ -48,6 +49,7 @@ export const Link = forwardRef((props, ref) => {
       {...rest}
       className={["navi_link", ...className.split(" ")].join(" ")}
       disabled={disabled || pending}
+      loading={loading || pending}
       data-has-shortcuts={shortcuts.length > 0 ? "" : undefined}
       onKeyDown={(e) => {
         onKeyDownForShortcuts(e);
