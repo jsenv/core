@@ -67,6 +67,9 @@ import.meta.css = /*css*/ `
   color: white;
 }
 
+.validation_message[data-level="info"] .validation_message_icon { 
+  background-color: #2196f3;
+}
 .validation_message[data-level="warning"] .validation_message_icon { 
   background-color: #ff9800;
 }
@@ -202,7 +205,8 @@ export const openValidationMessage = (
   };
 
   const update = (newInnerHTML, { level = "warning" } = {}) => {
-    const borderColor = level === "warning" ? "grey" : "red";
+    const borderColor =
+      level === "info" ? "blue" : level === "warning" ? "grey" : "red";
     const backgroundColor = "white";
 
     jsenvValidationMessage.style.setProperty("--border-color", borderColor);

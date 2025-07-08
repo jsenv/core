@@ -152,13 +152,11 @@ const ActionButton = forwardRef((props, ref) => {
       onClick={(event) => {
         const buttonElement = event.target;
         if (action) {
-          if (buttonElement.getAttribute("aria-busy") !== "true") {
-            event.preventDefault();
-            requestAction(effectiveAction, { event });
-          }
+          event.preventDefault();
+          requestAction(effectiveAction, { event });
         } else {
           const { form } = buttonElement;
-          if (form && buttonElement.getAttribute("aria-busy") !== "true") {
+          if (form) {
             let wouldSubmitForm = type === "submit" || type === "image";
             if (!wouldSubmitForm) {
               const formSubmitButton = form.querySelector(
