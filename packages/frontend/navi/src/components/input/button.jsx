@@ -2,7 +2,6 @@ import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { useParentAction } from "../action_execution/action_context.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useActionBoundToParentParams } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
@@ -122,10 +121,8 @@ const ActionButton = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const parentAction = useParentAction();
   const effectiveAction = useActionBoundToParentParams(action);
   const { pending } = useActionStatus(effectiveAction);
-  const { pending: formIsPending } = useActionStatus(parentAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -194,7 +191,7 @@ const ActionButton = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       type={type}
-      busy={busy || formIsPending || innerLoading}
+      busy={busy || innerLoading}
       loading={innerLoading}
       onClick={(event) => {
         handleClick(event);

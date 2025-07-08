@@ -77,27 +77,22 @@ export const requestAction = (
   }
 
   const isForm = target.tagName === "FORM";
-  const isFieldset = target.tagName === "FIELDSET";
+  const formToValidate = isForm ? target : target.form;
 
-  if (isForm || isFieldset) {
-    if (validationInProgressWeakSet.has(target)) {
+  if (formToValidate) {
+    if (validationInProgressWeakSet.has(formToValidate)) {
       if (debug) {
-        console.debug(`validation already in progress for`, target);
+        console.debug(`validation already in progress for`, formToValidate);
       }
       return;
     }
-    validationInProgressWeakSet.add(target);
+    validationInProgressWeakSet.add(formToValidate);
     setTimeout(() => {
-      validationInProgressWeakSet.delete(target);
+      validationInProgressWeakSet.delete(formToValidate);
     });
 
-    const formElements = isForm
-      ? // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
-        target.elements
-      : target.querySelectorAll(
-          "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button[name]:not([disabled])",
-        );
-
+    // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
+    const formElements = formToValidate.elements;
     for (const formElement of formElements) {
       const validationInterface = formElement.__validationInterface__;
       if (!validationInterface) {
@@ -127,17 +122,7 @@ export const requestAction = (
     return;
   }
 
-  let elementReceivingEvents;
-  if (target.form) {
-    elementReceivingEvents = target.form;
-  } else {
-    const fieldset = target.closest("fieldset");
-    if (fieldset) {
-      elementReceivingEvents = fieldset;
-    } else {
-      elementReceivingEvents = target;
-    }
-  }
+  const elementReceivingEvents = target;
   if (!validationInterface.checkValidity({ fromRequestAction: true })) {
     if (event) {
       event.preventDefault();

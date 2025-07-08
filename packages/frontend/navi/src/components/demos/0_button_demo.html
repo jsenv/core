@@ -24,19 +24,30 @@
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
-          <div style="display: flex; flex-direction: row; gap: 30px">
-            <div>
-              <p>
-                <strong>Outside form</strong>
-              </p>
-              <OutsideForm />
+          <div>
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>Outside form</strong>
+                </p>
+                <OutsideForm />
+              </div>
             </div>
 
-            <div>
-              <p>
-                <strong>Inside form</strong>
-              </p>
-              <InsideForm />
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>Inside form</strong>
+                </p>
+                <InsideForm />
+              </div>
+
+              <div>
+                <p>
+                  <strong>Inside form (allow concurrent)</strong>
+                </p>
+                <InsideForm data-allow-concurrent-actions />
+              </div>
             </div>
           </div>
         );
@@ -84,7 +95,7 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const InsideForm = () => {
+      const InsideForm = (props) => {
         const [count, setCount] = useState(0);
 
         return (
@@ -109,16 +120,16 @@
 
             <Form
               action={async ({ name }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                await new Promise((resolve) => setTimeout(resolve, 1_000000));
                 // eslint-disable-next-line no-alert
                 window.alert(`form action: { name: ${name} }`);
               }}
-              data-allow-concurrent-actions
+              {...props}
             >
               <input type="hidden" name="name" value="dam" />
               <Button
                 action={async ({ name }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000));
+                  await new Promise((resolve) => setTimeout(resolve, 1_000000));
                   throw new Error(
                     `button action: { count: ${count}, name: ${name} }`,
                   );
