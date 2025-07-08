@@ -470,8 +470,32 @@ const inspectBigInt = value => {
   return "".concat(value, "n");
 };
 
+const prefixFirstAndIndentRemainingLines = (text, {
+  prefix,
+  indentation,
+  trimLines,
+  trimLastLine
+}) => {
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  if (indentation === undefined) {
+    if (prefix) {
+      indentation = "  "; // prefix + space
+    } else {
+      indentation = "";
+    }
+  }
+  let result = prefix ? "".concat(prefix, " ").concat(firstLine) : firstLine;
+  let i = 0;
+  while (i < lines.length) {
+    const line = trimLines ? lines[i].trim() : lines[i];
+    i++;
+    result += line.length ? "\n".concat(indentation).concat(line) : trimLastLine && i === lines.length ? "" : "\n";
+  }
+  return result;
+};
 const preNewLineAndIndentation = (value, {
-  depth,
+  depth = 0,
   indentUsingTab,
   indentSize
 }) => {
@@ -505,7 +529,7 @@ const newLineAndIndent = ({
   return "\n" + " ".repeat(count * size);
 };
 const wrapNewLineAndIndentation = (value, {
-  depth,
+  depth = 0,
   indentUsingTab,
   indentSize
 }) => {
@@ -1401,4 +1425,4 @@ const escapeHtml = string => {
   return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 };
 
-export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, distributePercentages, errorToHTML, errorToMarkdown, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol };
+export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, distributePercentages, errorToHTML, errorToMarkdown, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, preNewLineAndIndentation, prefixFirstAndIndentRemainingLines, wrapNewLineAndIndentation };

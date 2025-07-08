@@ -24,7 +24,8 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/dom": "0.0.1"
+    "@jsenv/dom": "0.0.1",
+    "@jsenv/humanize": "1.6.0"
   },
   "devDependencies": {
     "@jsenv/validation": "0.0.1",

@@ -1,3 +1,4 @@
+import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { batch, computed, effect, signal } from "@preact/signals";
 import {
   ABORTED,
@@ -15,7 +16,7 @@ import { createIterableWeakSet } from "./iterable_weak_set.js";
 import { createJsValueWeakMap } from "./js_value_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
-let debug = false;
+let debug = true;
 
 /**
  * Registry that prevents preloaded actions from being garbage collected.
@@ -310,30 +311,38 @@ export const updateActions = ({
     }
   }
   if (debug) {
+    const formatActionSet = (prefix, actionSet) => {
+      let message = "";
+      message += `- ${prefix}:`;
+      for (const action of actionSet) {
+        message += "\n  - ";
+        message += prefixFirstAndIndentRemainingLines(String(action), {
+          indentSize: `  - `.length,
+        });
+      }
+      return message;
+    };
+
     const lines = [
-      ...(toUnloadSet.size
-        ? [`- to unload: ${Array.from(toUnloadSet).join(", ")}`]
-        : []),
+      ...(toUnloadSet.size ? [formatActionSet("to unload", toUnloadSet)] : []),
       ...(toPreloadSet.size
-        ? [`- to preload: ${Array.from(toPreloadSet).join(", ")}`]
+        ? [formatActionSet("to preload", toPreloadSet)]
         : []),
       ...(toPromoteSet.size
-        ? [`- to promote: ${Array.from(toPromoteSet).join(", ")}`]
+        ? [formatActionSet("to promote", toPromoteSet)]
         : []),
-      ...(toLoadSet.size
-        ? [`- to load: ${Array.from(toLoadSet).join(", ")}`]
-        : []),
+      ...(toLoadSet.size ? [formatActionSet("to load", toLoadSet)] : []),
       ...(staysLoadingSet.size
-        ? [`- stays loading: ${Array.from(staysLoadingSet).join(", ")}`]
+        ? [formatActionSet("stays loading", staysLoadingSet)]
         : []),
       ...(staysAbortedSet.size
-        ? [`- stays aborted: ${Array.from(staysAbortedSet).join(", ")}`]
+        ? [formatActionSet("stays aborted", staysAbortedSet)]
         : []),
       ...(staysFailedSet.size
-        ? [`- stays failed: ${Array.from(staysFailedSet).join(", ")}`]
+        ? [formatActionSet("stays failed", staysFailedSet)]
         : []),
       ...(staysLoadedSet.size
-        ? [`- stays loaded: ${Array.from(staysLoadedSet).join(", ")}`]
+        ? [formatActionSet("stays loaded", staysLoadedSet)]
         : []),
     ];
     console.debug(`situation before updating actions:

@@ -16,6 +16,12 @@ export { errorToMarkdown } from "./error/error_to_markdown.js";
 export { errorToHTML } from "./error/error_to_html.js";
 export { formatError } from "./error/format_error.js";
 
+export {
+  prefixFirstAndIndentRemainingLines,
+  preNewLineAndIndentation,
+  wrapNewLineAndIndentation,
+} from "./utils/indentation.js";
+
 // node only
 export { renderSection, renderBigSection } from "./log/section.js";
 export { renderDetails } from "./log/details.js";
