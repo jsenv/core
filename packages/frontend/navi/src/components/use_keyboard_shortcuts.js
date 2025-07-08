@@ -1,8 +1,8 @@
+import { requestAction } from "@jsenv/validation";
 import { useCallback, useRef, useState } from "preact/hooks";
 import { useAction } from "./action_execution/use_action.js";
-import { useExecuteAction } from "./action_execution/use_execute_action.js";
 
-export const useKeyboardShortcuts = (elementRef, shortcuts = []) => {
+export const useKeyboardShortcuts = (shortcuts = []) => {
   const shortcutsRef = useRef(shortcuts);
   shortcutsRef.current = shortcuts;
 
@@ -49,10 +49,7 @@ export const useKeyboardShortcuts = (elementRef, shortcuts = []) => {
     }
 
     setAction(action);
-    executeAction(action, {
-      requester: event.target,
-      event,
-    });
+    requestAction(action, { event });
   }, []);
 
   return [action, onKeyDown];

@@ -2,6 +2,7 @@ import { closeValidationMessage, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
+import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
@@ -26,15 +27,48 @@ import.meta.css = /* css */ `
 `;
 
 export const Link = forwardRef((props, ref) => {
+  return renderActionComponent(props, ref, SimpleLink, ActionLink);
+});
+
+const SimpleLink = forwardRef((props, ref) => {
   const {
-    children,
-    onClick,
-    shortcuts = [],
-    onKeyDown,
     className = "",
     loading,
+    children,
     autoFocus,
     constraints = [],
+    onClick,
+    ...rest
+  } = props;
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  useAutoFocus(innerRef, autoFocus);
+  useConstraints(innerRef, constraints);
+
+  return (
+    <a
+      ref={ref}
+      {...rest}
+      className={["navi_link", ...className.split(" ")].join(" ")}
+      aria-busy={loading}
+      onClick={(e) => {
+        closeValidationMessage(e.target, "click");
+        onClick?.(e);
+      }}
+    >
+      {children}
+    </a>
+  );
+});
+
+const ActionLink = forwardRef((props, ref) => {
+  const {
+    children,
+    shortcuts = [],
+    onKeyDown,
+    loading,
     onActionPrevented,
     onActionStart,
     onActionError,
@@ -44,13 +78,8 @@ export const Link = forwardRef((props, ref) => {
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
 
-  const [action, onKeyDownForShortcuts] = useKeyboardShortcuts(
-    innerRef,
-    shortcuts,
-  );
+  const [action, onKeyDownForShortcuts] = useKeyboardShortcuts(shortcuts);
   const { pending } = useActionStatus(action);
   const innerLoading = Boolean(loading || pending);
   const executeAction = useExecuteAction(innerRef);
@@ -63,22 +92,17 @@ export const Link = forwardRef((props, ref) => {
   });
 
   return (
-    <a
+    <SimpleLink
       ref={innerRef}
       {...rest}
-      className={["navi_link", ...className.split(" ")].join(" ")}
-      aria-busy={innerLoading}
+      loading={innerLoading}
       data-has-shortcuts={shortcuts.length > 0 ? "" : undefined}
       onKeyDown={(e) => {
         onKeyDownForShortcuts(e);
         onKeyDown?.(e);
       }}
-      onClick={(e) => {
-        closeValidationMessage(e.target, "click");
-        onClick?.(e);
-      }}
     >
       {children}
-    </a>
+    </SimpleLink>
   );
 });
