@@ -36,7 +36,7 @@ export const RoleCanLoginListDetails = (props) => {
       }
       renderNewButtonChildren={() => <RoleCanLoginWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
-        <RoleLink role={role} {...props}>
+        <RoleLink draggable={false} role={role} {...props}>
           {children}
         </RoleLink>
       )}
