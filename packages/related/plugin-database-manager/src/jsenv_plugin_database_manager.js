@@ -879,6 +879,25 @@ export const jsenvPluginDatabaseManager = ({
           });
         },
       },
+      {
+        name: "uncaught_json_parse_error_handler",
+        handleError: (e) => {
+          // we assume the error originates from client here
+          // but if some JSON.parse fails on the server application code unrelated to the client
+          // we would also return 400 while it should be 500
+          // ideally every JSON.parse related to the client should be catched
+          if (
+            e.name === "SyntaxError" &&
+            e.message === "Unexpected end of JSON input"
+          ) {
+            return new Response(null, {
+              status: 400,
+              statusText: "Invalid JSON input",
+            });
+          }
+          return null;
+        },
+      },
     ],
   };
 };
@@ -932,21 +951,8 @@ const createRESTRoutes = (resource, endpoints) => {
         endpoint: `PUT ${endpointResource}`,
         declarationSource: import.meta.url,
         fetch: async (request) => {
-          try {
-            const body = await handler(request);
-            return Response.json(body);
-          } catch (e) {
-            if (
-              e.name === "SyntaxError" &&
-              e.message === "Unexpected end of JSON input"
-            ) {
-              return new Response(null, {
-                status: 400,
-                statusText: "Invalid JSON input",
-              });
-            }
-            throw e;
-          }
+          const body = await handler(request);
+          return Response.json(body);
         },
       };
       routes.push(putRoute);

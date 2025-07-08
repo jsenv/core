@@ -41,12 +41,14 @@ export const RoleCanLoginListDetails = (props) => {
         </RoleLink>
       )}
       useItemList={useRoleArray}
-      useRenameItemAction={(role) =>
-        ROLE.PUT.bindParams({
+      useRenameItemAction={(role) => {
+        const renameAction = ROLE.PUT.bindParams({
           rolname: role.rolname,
           columnName: "rolname",
-        })
-      }
+        });
+        renameAction.meta.valueParamName = "columnValue";
+        return renameAction;
+      }}
       useCreateItemAction={() =>
         ROLE.POST.bindParams({
           rolcanlogin: true,

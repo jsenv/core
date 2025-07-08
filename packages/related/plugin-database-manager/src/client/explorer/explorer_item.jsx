@@ -69,7 +69,7 @@ const RenameInputOrName = ({
 
   return (
     <EditableText
-      name={nameKey}
+      name={renameAction.meta.valueParamName}
       action={renameAction}
       editable={editable}
       onEditEnd={stopEditing}

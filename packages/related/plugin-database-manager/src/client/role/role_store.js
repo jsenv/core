@@ -79,9 +79,6 @@ export const ROLE = resource("role", {
     return { rolname };
   },
   PUT: async ({ rolname, columnName, columnValue }, { signal }) => {
-    if (columnName === "rolconnlimit") {
-      columnValue = parseInt(columnValue, 10);
-    }
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/${columnName}`,
       {
