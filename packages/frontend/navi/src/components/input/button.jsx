@@ -2,6 +2,7 @@ import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
+import { useParentAction } from "../action_execution/action_context.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useActionBoundToParentParams } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
@@ -62,6 +63,7 @@ const SimpleButton = forwardRef((props, ref) => {
     autoFocus,
     constraints = [],
     loading,
+    busy = loading,
     children,
     borderWidth = 1,
     ...rest
@@ -84,7 +86,7 @@ const SimpleButton = forwardRef((props, ref) => {
       <button
         ref={innerRef}
         data-validation-message-arrow-x="center"
-        aria-busy={Boolean(loading)}
+        aria-busy={busy}
         style={{ "--button-border-width": `${borderWidth}px` }}
         {...rest}
       >
@@ -98,6 +100,7 @@ const ActionButton = forwardRef((props, ref) => {
   const {
     type,
     action,
+    busy,
     loading,
     children,
     onClick,
@@ -119,8 +122,10 @@ const ActionButton = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
+  const parentAction = useParentAction();
   const effectiveAction = useActionBoundToParentParams(action);
   const { pending } = useActionStatus(effectiveAction);
+  const { pending: formIsPending } = useActionStatus(parentAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -129,6 +134,9 @@ const ActionButton = forwardRef((props, ref) => {
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
+      if (!action || actionEvent.detail.meta.isSubmit) {
+        return;
+      }
       const requester = actionEvent.detail.requester;
       actionRequesterRef.current = requester;
       executeAction(actionEvent);
@@ -137,11 +145,6 @@ const ActionButton = forwardRef((props, ref) => {
     onError: onActionError,
     onEnd: onActionEnd,
   });
-
-  // seulement si c'est le requester / un type submit dans un form
-  const actionRequester = actionRequesterRef.current;
-  const innerLoading =
-    loading || (pending && actionRequester === innerRef.current);
 
   const handleClick = (event) => {
     const buttonElement = event.target;
@@ -172,18 +175,26 @@ const ActionButton = forwardRef((props, ref) => {
     // prevent default behavior that would submit the form
     // we want to go through the action execution process (with validation and all)
     event.preventDefault();
+    actionRequesterRef.current = event.target;
     requestAction(effectiveAction, {
       event,
       target: form,
       requester: event.target,
+      meta: { isSubmit: true },
     });
   };
+
+  // seulement si c'est le requester / un type submit dans un form
+  const actionRequester = actionRequesterRef.current;
+  const innerLoading =
+    loading || (pending && actionRequester === innerRef.current);
 
   return (
     <SimpleButton
       ref={innerRef}
       {...rest}
       type={type}
+      busy={busy || formIsPending || innerLoading}
       loading={innerLoading}
       onClick={(event) => {
         handleClick(event);

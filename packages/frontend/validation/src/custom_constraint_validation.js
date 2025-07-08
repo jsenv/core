@@ -38,7 +38,7 @@ import {
   TYPE_EMAIL_CONSTRAINT,
   TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/native_constraints.js";
-import { NOT_LOADING_CONSTRAINT } from "./constraints/not_loading_constraint.js";
+import { NOT_BUSY_CONSTRAINT } from "./constraints/not_busy_constraint.js";
 import { openValidationMessage } from "./validation_message.js";
 
 let debug = false;
@@ -47,7 +47,13 @@ const validationInProgressWeakSet = new WeakSet();
 
 export const requestAction = (
   action,
-  { event, target = event.target, requester = target, method = "reload" } = {},
+  {
+    event,
+    target = event.target,
+    requester = target,
+    method = "reload",
+    meta = {},
+  } = {},
 ) => {
   let validationInterface = target.__validationInterface__;
   if (!validationInterface) {
@@ -59,6 +65,7 @@ export const requestAction = (
     method,
     event,
     requester,
+    meta,
   };
 
   if (debug) {
@@ -253,7 +260,7 @@ export const installCustomConstraintValidation = (
   constraintSet.add(MAX_LENGTH_CONSTRAINT);
   constraintSet.add(MIN_CONSTRAINT);
   constraintSet.add(MAX_CONSTRAINT);
-  constraintSet.add(NOT_LOADING_CONSTRAINT);
+  constraintSet.add(NOT_BUSY_CONSTRAINT);
   register_constraint: {
     validationInterface.registerConstraint = (constraint) => {
       if (typeof constraint === "function") {
@@ -271,7 +278,8 @@ export const installCustomConstraintValidation = (
 
   let lastFailedConstraintInfo = null;
   const validityInfoMap = new Map();
-  const checkValidity = ({ fromRequestAction } = {}) => {
+  const checkValidity = (params = {}) => {
+    const { fromRequestAction } = params;
     if (fromRequestAction && lastFailedConstraintInfo) {
       for (const [key, customMessage] of customMessageMap) {
         if (customMessage.removeOnRequestAction) {
@@ -283,7 +291,7 @@ export const installCustomConstraintValidation = (
     validityInfoMap.clear();
     lastFailedConstraintInfo = null;
     for (const constraint of constraintSet) {
-      const constraintValidityInfo = constraint.check(element);
+      const constraintValidityInfo = constraint.check(element, params);
       if (constraintValidityInfo) {
         const failedValidityInfo = {
           name: constraint.name,

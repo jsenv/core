@@ -22,7 +22,7 @@ export const renderActionComponent = (
     <ComponentWithAction
       ref={ref}
       {...props}
-      parentAction={parentAction}
+      // parentAction={parentAction}
       action={action}
     />
   );

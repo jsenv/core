@@ -108,10 +108,12 @@
             </span>
 
             <Form
-              action={({ name }) => {
+              action={async ({ name }) => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
                 // eslint-disable-next-line no-alert
                 window.alert(`form action: { name: ${name} }`);
               }}
+              data-allow-concurrent-actions
             >
               <input type="hidden" name="name" value="dam" />
               <Button
