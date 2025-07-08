@@ -172,6 +172,7 @@ export const openValidationMessage = (
     level = "warning",
     onClose,
     closeOnClickOutside = level === "info",
+    canClickThrough = level === "info",
     debug = false,
   } = {},
 ) => {
@@ -213,13 +214,20 @@ export const openValidationMessage = (
 
   const update = (
     newInnerHTML,
-    { level = "warning", closeOnClickOutside } = {},
+    {
+      level = "warning",
+      closeOnClickOutside = level === "info",
+      canClickThrough = level === "info",
+    } = {},
   ) => {
     _closeOnClickOutside = closeOnClickOutside;
     const borderColor =
       level === "info" ? "blue" : level === "warning" ? "grey" : "red";
     const backgroundColor = "white";
 
+    jsenvValidationMessage.style.pointerEvents = canClickThrough
+      ? "none"
+      : "auto";
     jsenvValidationMessage.style.setProperty("--border-color", borderColor);
     jsenvValidationMessage.style.setProperty(
       "--background-color",
@@ -231,6 +239,10 @@ export const openValidationMessage = (
   update(innerHtml, { level });
 
   jsenvValidationMessage.style.opacity = "0";
+
+  jsenvValidationMessage.style.pointerEvents = canClickThrough
+    ? "none"
+    : "auto";
 
   // Connect validation message with target element for accessibility
   const validationMessageId = `validation_message-${Date.now()}`;
@@ -284,14 +296,12 @@ export const openValidationMessage = (
       }
 
       const clickTarget = event.target;
-
       if (
-        clickTarget === validationMessage ||
-        validationMessage.contains(clickTarget)
+        clickTarget === jsenvValidationMessage ||
+        jsenvValidationMessage.contains(clickTarget)
       ) {
         return;
       }
-
       if (
         clickTarget === targetElement ||
         targetElement.contains(clickTarget)
