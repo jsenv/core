@@ -130,7 +130,10 @@ const ActionButton = forwardRef((props, ref) => {
       if (action) {
         const requester = actionEvent.detail.requester;
         actionRequesterRef.current = requester;
-        executeAction(effectiveAction, { requester });
+        executeAction(effectiveAction, {
+          requester,
+          event: actionEvent.detail.reasonEvent,
+        });
       }
     },
     onStart: onActionStart,

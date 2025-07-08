@@ -2,6 +2,8 @@ import { addCustomMessage, removeCustomMessage } from "@jsenv/validation";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 
+let debug = true;
+
 export const useExecuteAction = (
   elementRef,
   {
@@ -61,9 +63,18 @@ export const useExecuteAction = (
       {
         // "reload", "load"
         method = "reload",
+        event,
         requester,
       } = {},
     ) => {
+      if (debug) {
+        console.debug(
+          "executing action, requested by",
+          requester,
+          `(event: ${event?.type})`,
+        );
+      }
+
       const dispatchCustomEvent = (type, options) => {
         const element = elementRef.current;
         const customEvent = new CustomEvent(type, options);

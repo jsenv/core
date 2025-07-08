@@ -151,6 +151,7 @@ export const ActionDetails = forwardRef((props, ref) => {
         if (isOpen) {
           executeAction(effectiveAction, {
             requester: toggleEvent.target,
+            event: toggleEvent,
             method: "load",
           });
         } else {

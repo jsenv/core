@@ -45,6 +45,7 @@ const ActionFieldset = forwardRef((props, ref) => {
       const actionToExecute = actionEvent.detail.action || boundAction;
       executeAction(actionToExecute, {
         requester: actionEvent.detail.requester,
+        event: actionEvent.detail.reasonEvent,
       });
     },
     onStart: onActionStart,

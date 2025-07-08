@@ -149,6 +149,7 @@ const ActionInputTextual = forwardRef((props, ref) => {
       if (action) {
         executeAction(effectiveAction, {
           requester: e.detail.requester,
+          event: e.detail.reasonEvent,
         });
       }
     },
