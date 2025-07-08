@@ -8,10 +8,11 @@ export const renderActionComponent = (
 ) => {
   const { action, ignoreParentAction, shortcuts } = props;
   const parentAction = useParentAction();
-  const hasActionProps =
-    action || ignoreParentAction
-      ? false
-      : parentAction || (shortcuts && shortcuts.length > 0);
+  const hasActionProps = Boolean(
+    action ||
+      (ignoreParentAction ? false : parentAction) ||
+      (shortcuts && shortcuts.length > 0),
+  );
 
   if (!hasActionProps) {
     return <ComponentWithoutAction ref={ref} {...props} />;

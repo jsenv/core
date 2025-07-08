@@ -27,18 +27,18 @@ import.meta.css = /*css*/ `
   outline-offset: calc(-1 * var(--button-border-width));
 }
 
-[name="element_with_loader_wrapper"] button:hover:not(:disabled) {
+[name="element_with_loader_wrapper"] button:hover {
   outline-color: light-dark(#505050, #7e7e83);
   background: light-dark(#e6e6e6, #2a2a2c);
 }
 
-[name="element_with_loader_wrapper"] button:focus-visible:not(:disabled) {
+[name="element_with_loader_wrapper"] button:focus-visible {
   outline-width: calc(var(--button-border-width) + 1px);
-  outline-offset:calc(-1 * (var(--button-border-width) + 1px));
+  outline-offset: calc(-1 * (var(--button-border-width) + 1px));
   outline-color: light-dark(#1d4ed8, #3b82f6);
 }
 
-[name="element_with_loader_wrapper"] button:active:not(:disabled) {
+[name="element_with_loader_wrapper"] button:active {
   outline-color: light-dark(#808080, #707070);
 }
 
@@ -54,7 +54,6 @@ const SimpleButton = forwardRef((props, ref) => {
   const {
     autoFocus,
     constraints = [],
-    disabled,
     loading,
     children,
     borderWidth = 1,
@@ -74,17 +73,11 @@ const SimpleButton = forwardRef((props, ref) => {
         // -1 is the outline offset thing
         1
       }
-      color={
-        disabled
-          ? loading
-            ? "light-dark(#767676, #8e8e93)"
-            : undefined
-          : undefined
-      }
     >
       <button
         ref={innerRef}
-        disabled={disabled}
+        data-validation-message-arrow-x="center"
+        aria-busy={Boolean(loading)}
         style={{ "--button-border-width": `${borderWidth}px` }}
         {...rest}
       >
@@ -98,7 +91,6 @@ const ActionButton = forwardRef((props, ref) => {
   const {
     type,
     action,
-    disabled,
     loading,
     children,
     onClick,
@@ -143,24 +135,24 @@ const ActionButton = forwardRef((props, ref) => {
   const actionRequester = actionRequesterRef.current;
   const innerLoading =
     loading || (pending && actionRequester === innerRef.current);
-  const innerDisabled = disabled || pending;
 
   return (
     <SimpleButton
       ref={innerRef}
-      data-validation-message-arrow-x="center"
       {...rest}
       type={type}
       loading={innerLoading}
-      disabled={innerDisabled}
       onClick={(event) => {
         const buttonElement = event.target;
+        debugger;
         if (action) {
-          event.preventDefault();
-          requestAction(effectiveAction, { event });
+          if (buttonElement.getAttribute("aria-busy") !== "true") {
+            event.preventDefault();
+            requestAction(effectiveAction, { event });
+          }
         } else {
           const { form } = buttonElement;
-          if (form) {
+          if (form && buttonElement.getAttribute("aria-busy") !== "true") {
             let wouldSubmitForm = type === "submit" || type === "image";
             if (!wouldSubmitForm) {
               const formSubmitButton = form.querySelector(
@@ -174,7 +166,6 @@ const ActionButton = forwardRef((props, ref) => {
               // prevent default behavior that would submit the form
               // we want to go through the action execution process (with validation and all)
               event.preventDefault();
-              actionRequesterRef.current = buttonElement;
               requestAction(effectiveAction, {
                 event,
                 target: form,

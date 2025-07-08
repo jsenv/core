@@ -20,8 +20,12 @@ import.meta.css = /* css */ `
     border-radius: 1px;
   }
 
-  .navi_link[aria-busy="true"] {
+  .navi_link[aria-busy="true"],
+  .navi_link[inert] {
     opacity: 0.5;
+  }
+
+  .navi_link[inert] {
     pointer-events: none;
   }
 `;
@@ -34,6 +38,7 @@ const SimpleLink = forwardRef((props, ref) => {
   const {
     className = "",
     loading,
+    disabled,
     children,
     autoFocus,
     constraints = [],
@@ -53,6 +58,7 @@ const SimpleLink = forwardRef((props, ref) => {
       {...rest}
       className={["navi_link", ...className.split(" ")].join(" ")}
       aria-busy={loading}
+      inert={disabled}
       onClick={(e) => {
         closeValidationMessage(e.target, "click");
         onClick?.(e);
