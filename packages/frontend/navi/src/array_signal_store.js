@@ -428,9 +428,9 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
       if (hasFound) {
         arraySignal.value = arrayWithoutDroppedItems;
         triggerItemDrops();
-        return arrayWithoutDroppedItems;
+        return Array.from(idToRemoveSet);
       }
-      return array;
+      return [];
     }
     let propertyToMatch;
     let valueToMatch;
@@ -466,9 +466,9 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
       for (const itemDropCallback of itemDropCallbackSet) {
         itemDropCallback(itemDropped);
       }
-      return arrayWithoutItemToDrop;
+      return itemDropped[idKey];
     }
-    return array;
+    return null;
   };
 
   Object.assign(store, {
