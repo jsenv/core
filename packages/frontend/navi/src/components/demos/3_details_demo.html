@@ -42,55 +42,13 @@
                 </p>
                 <Details
                   id="test_2"
-                  action={async (_, { signal }) => {
+                  action={async () => {
                     await new Promise((resolve) => {
-                      const timeout = setTimeout(resolve, 1000);
-                      signal.addEventListener("abort", () => {
-                        clearTimeout(timeout);
-                      });
+                      setTimeout(resolve, 1000);
                     });
                     return "Hello";
                   }}
-                  actionRenderer={{
-                    loading: (action) => {
-                      return (
-                        <span>
-                          Loading...
-                          <button
-                            onClick={() => {
-                              action.abort();
-                            }}
-                          >
-                            Abort
-                          </button>
-                        </span>
-                      );
-                    },
-                    aborted: (action) => (
-                      <>
-                        <span style="color: red">Aborted</span>
-                        <button
-                          onClick={() => {
-                            action.reload();
-                          }}
-                        >
-                          Reload
-                        </button>
-                      </>
-                    ),
-                    loaded: (message, action) => (
-                      <>
-                        <span>{message}</span>
-                        <button
-                          onClick={() => {
-                            action.reload();
-                          }}
-                        >
-                          Reload
-                        </button>
-                      </>
-                    ),
-                  }}
+                  actionRenderer={(content) => content}
                 >
                   Custom summary
                 </Details>
@@ -110,6 +68,66 @@
                   <span style="font-weight: bold">mixed summary</span>
                 </Details>
               </div>
+            </div>
+
+            <div>
+              <p>
+                <strong>Full control (abort, reload)</strong>
+              </p>
+              <Details
+                id="test_2"
+                action={async (_, { signal }) => {
+                  await new Promise((resolve) => {
+                    const timeout = setTimeout(resolve, 1000);
+                    signal.addEventListener("abort", () => {
+                      clearTimeout(timeout);
+                    });
+                  });
+                  return "Hello";
+                }}
+                actionRenderer={{
+                  loading: (action) => {
+                    return (
+                      <span>
+                        Loading...
+                        <button
+                          onClick={() => {
+                            action.abort();
+                          }}
+                        >
+                          Abort
+                        </button>
+                      </span>
+                    );
+                  },
+                  aborted: (action) => (
+                    <>
+                      <span style="color: red">Aborted</span>
+                      <button
+                        onClick={() => {
+                          action.reload();
+                        }}
+                      >
+                        Reload
+                      </button>
+                    </>
+                  ),
+                  loaded: (message, action) => (
+                    <>
+                      <span>{message}</span>
+                      <button
+                        onClick={() => {
+                          action.reload();
+                        }}
+                      >
+                        Reload
+                      </button>
+                    </>
+                  ),
+                }}
+              >
+                Custom summary
+              </Details>
             </div>
           </>
         );

@@ -70,7 +70,7 @@ const createHttpHandlerForRootResource = (
   {
     idKey,
     store,
-    autoreloadGetManyAfter = ["POST", "DELETE"],
+    autoreloadGetManyAfter = ["POST", "DELETE", "PUT"],
     autoreloadGetAfter = false,
   },
 ) => {
