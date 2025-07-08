@@ -89,14 +89,9 @@ export const CheckboxList = forwardRef((props, ref) => {
     },
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
-      if (action && !innerRef.current.form) {
-        const requester = actionEvent.detail.requester;
-        actionRequesterRef.current = requester;
-        executeAction(effectiveAction, {
-          requester,
-          event: actionEvent.detail.reasonEvent,
-        });
-      }
+      const requester = actionEvent.detail.requester;
+      actionRequesterRef.current = requester;
+      executeAction(actionEvent);
     },
     onStart: onActionStart,
     onError: onActionError,
@@ -152,8 +147,10 @@ export const CheckboxList = forwardRef((props, ref) => {
                 return;
               }
               const checkboxListContainer = innerRef.current;
-              actionRequesterRef.current = checkbox;
-              requestAction(event, { target: checkboxListContainer });
+              requestAction(effectiveAction, {
+                event,
+                target: checkboxListContainer,
+              });
             }}
           />
         );

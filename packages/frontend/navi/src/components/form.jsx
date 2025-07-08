@@ -119,7 +119,7 @@ const ActionForm = forwardRef((props, ref) => {
         // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
         // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
         e.preventDefault();
-        requestAction(e);
+        requestAction(boundAction, { event: e });
       }}
     >
       <ActionContext.Provider value={[boundAction]}>

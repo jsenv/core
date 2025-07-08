@@ -66,14 +66,9 @@ export const RadioList = forwardRef((props, ref) => {
     },
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
-      if (action && !innerRef.current.form) {
-        const requester = actionEvent.detail.requester;
-        actionRequesterRef.current = requester;
-        executeAction(effectiveAction, {
-          requester,
-          event: actionEvent.detail.reasonEvent,
-        });
-      }
+      const requester = actionEvent.detail.requester;
+      actionRequesterRef.current = requester;
+      executeAction(actionEvent);
     },
     onStart: onActionStart,
     onError: onActionError,
@@ -118,9 +113,11 @@ export const RadioList = forwardRef((props, ref) => {
                 if (radio.form) {
                   return;
                 }
-                actionRequesterRef.current = radio;
                 const radioListContainer = innerRef.current;
-                requestAction(event, { target: radioListContainer });
+                requestAction(effectiveAction, {
+                  event,
+                  target: radioListContainer,
+                });
                 return;
               }
 
@@ -157,9 +154,10 @@ export const RadioList = forwardRef((props, ref) => {
               if (radio.form) {
                 return;
               }
-              actionRequesterRef.current = radio;
               const radioListContainer = innerRef.current;
-              requestAction(event, { target: radioListContainer });
+              requestAction(effectiveAction, event, {
+                target: radioListContainer,
+              });
             }}
           />
         );

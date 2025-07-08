@@ -32,11 +32,13 @@ import {
   MAX_LENGTH_CONSTRAINT,
   MIN_CONSTRAINT,
   MIN_LENGTH_CONSTRAINT,
+  NOT_DISABLED_CONSTRAINT,
   PATTERN_CONSTRAINT,
   REQUIRED_CONSTRAINT,
   TYPE_EMAIL_CONSTRAINT,
   TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/native_constraints.js";
+import { NOT_LOADING_CONSTRAINT } from "./constraints/not_loading_constraint.js";
 import { openValidationMessage } from "./validation_message.js";
 
 let debug = false;
@@ -44,16 +46,26 @@ let debug = false;
 const validationInProgressWeakSet = new WeakSet();
 
 export const requestAction = (
-  event,
-  { target = event.target, requester = target, action } = {},
+  action,
+  { event, target = event.target, requester = target } = {},
 ) => {
   let validationInterface = target.__validationInterface__;
   if (!validationInterface) {
     validationInterface = installCustomConstraintValidation(target);
   }
 
+  const customEventDetail = {
+    action,
+    event,
+    requester,
+  };
+
   if (debug) {
-    console.debug(`action requested by`, requester, `(event: "${event.type}")`);
+    console.debug(
+      `action requested by`,
+      requester,
+      `(event: "${event?.type}")`,
+    );
   }
 
   const isForm = target.tagName === "FORM";
@@ -91,14 +103,14 @@ export const requestAction = (
       }
       validationInterface.reportValidity();
       const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-        detail: { reasonEvent: event, requester },
+        detail: customEventDetail,
       });
       target.dispatchEvent(actionPreventedCustomEvent);
       return;
     }
 
     const actionCustomEvent = new CustomEvent("action", {
-      detail: { cause: event, requester },
+      detail: customEventDetail,
     });
     if (debug) {
       console.debug(`element is valid -> dispatch "action" on`, target);
@@ -119,10 +131,12 @@ export const requestAction = (
     }
   }
   if (!validationInterface.checkValidity({ fromRequestAction: true })) {
-    event.preventDefault();
+    if (event) {
+      event.preventDefault();
+    }
     validationInterface.reportValidity();
     const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-      detail: { cause: event, requester, action },
+      detail: customEventDetail,
     });
     elementReceivingEvents.dispatchEvent(actionPreventedCustomEvent);
     return;
@@ -131,7 +145,7 @@ export const requestAction = (
   // we are dispatching a custom event that can be used
   // to actually perform the action or to set form action
   const actionCustomEvent = new CustomEvent("action", {
-    detail: { cause: event, requester, action },
+    detail: customEventDetail,
   });
   if (debug) {
     console.debug(`"action" dispatched on`, elementReceivingEvents);
@@ -229,6 +243,7 @@ export const installCustomConstraintValidation = (
   };
 
   const constraintSet = new Set();
+  constraintSet.add(NOT_DISABLED_CONSTRAINT);
   constraintSet.add(REQUIRED_CONSTRAINT);
   constraintSet.add(PATTERN_CONSTRAINT);
   constraintSet.add(TYPE_EMAIL_CONSTRAINT);
@@ -237,6 +252,7 @@ export const installCustomConstraintValidation = (
   constraintSet.add(MAX_LENGTH_CONSTRAINT);
   constraintSet.add(MIN_CONSTRAINT);
   constraintSet.add(MAX_CONSTRAINT);
+  constraintSet.add(NOT_LOADING_CONSTRAINT);
   register_constraint: {
     validationInterface.registerConstraint = (constraint) => {
       if (typeof constraint === "function") {

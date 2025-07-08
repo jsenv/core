@@ -59,14 +59,14 @@ export const useExecuteAction = (
 
   const executeAction = useCallback(
     (
-      action,
+      actionEvent,
       {
         // "reload", "load"
         method = "reload",
-        event,
-        requester,
       } = {},
     ) => {
+      const { action, requester, event } = actionEvent.detail;
+
       if (debug) {
         console.debug(
           "executing action, requested by",

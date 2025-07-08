@@ -6,7 +6,6 @@ export const useKeyboardShortcuts = (elementRef, shortcuts = []) => {
   const shortcutsRef = useRef(shortcuts);
   shortcutsRef.current = shortcuts;
 
-  const executeAction = useExecuteAction(elementRef);
   const [action, setAction] = useState(null);
 
   for (const shortcut of shortcuts) {

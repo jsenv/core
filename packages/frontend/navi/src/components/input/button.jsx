@@ -130,14 +130,9 @@ const ActionButton = forwardRef((props, ref) => {
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
-      if (action) {
-        const requester = actionEvent.detail.requester;
-        actionRequesterRef.current = requester;
-        executeAction(effectiveAction, {
-          requester,
-          event: actionEvent.detail.reasonEvent,
-        });
-      }
+      const requester = actionEvent.detail.requester;
+      actionRequesterRef.current = requester;
+      executeAction(actionEvent);
     },
     onStart: onActionStart,
     onError: onActionError,
@@ -162,9 +157,7 @@ const ActionButton = forwardRef((props, ref) => {
         const buttonElement = event.target;
         if (action) {
           event.preventDefault();
-          requestAction(event, {
-            action: effectiveAction,
-          });
+          requestAction(effectiveAction, { event });
         } else {
           const { form } = buttonElement;
           if (form) {
@@ -182,9 +175,9 @@ const ActionButton = forwardRef((props, ref) => {
               // we want to go through the action execution process (with validation and all)
               event.preventDefault();
               actionRequesterRef.current = buttonElement;
-              requestAction(event, {
+              requestAction(effectiveAction, {
+                event,
                 target: form,
-                action: effectiveAction,
               });
             }
           }

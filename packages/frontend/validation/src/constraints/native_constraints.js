@@ -2,6 +2,18 @@
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
 
+// this constraint is not really a native constraint and browser just not let this happen at all
+// in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
+export const NOT_DISABLED_CONSTRAINT = {
+  name: "not_disabled",
+  check: (element) => {
+    if (element.disabled) {
+      return `Ce champ est désactivé.`;
+    }
+    return null;
+  },
+};
+
 export const REQUIRED_CONSTRAINT = {
   name: "required",
   check: (element) => {

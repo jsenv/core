@@ -125,7 +125,9 @@ const ActionInputTextual = forwardRef((props, ref) => {
       return;
     }
     actionRequesterRef.current = e.target;
-    requestAction(e);
+    requestAction(effectiveAction, {
+      event: e,
+    });
   });
 
   useActionEvents(innerRef, {
@@ -150,14 +152,7 @@ const ActionInputTextual = forwardRef((props, ref) => {
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
-    onAction: (e) => {
-      if (action) {
-        executeAction(effectiveAction, {
-          requester: e.detail.requester,
-          event: e.detail.reasonEvent,
-        });
-      }
-    },
+    onAction: executeAction,
     onStart: onActionStart,
     onError: onActionError,
     onEnd: (e) => {
@@ -207,7 +202,7 @@ const ActionInputTextual = forwardRef((props, ref) => {
         setTimeout(() => {
           preventNextChangeRef.current = false;
         });
-        requestAction(e);
+        requestAction(effectiveAction, e);
       }}
     />
   );

@@ -17,7 +17,6 @@ export const useActionEvents = (
 ) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
-    const isForm = element.tagName === "FORM";
     const eventsToListenOnForm = {
       reset: (e) => {
         onCancel?.(e, "form_reset");
@@ -39,6 +38,7 @@ export const useActionEvents = (
       actionend: onEnd,
     };
 
+    const isForm = element.tagName === "FORM";
     if (isForm) {
       return listenEvents(element, eventsToListenOnForm);
     }

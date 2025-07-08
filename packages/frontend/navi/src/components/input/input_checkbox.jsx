@@ -254,14 +254,7 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
-    onAction: (e) => {
-      if (action) {
-        executeAction(effectiveAction, {
-          requester: e.detail.requester,
-          event: e.detail.reasonEvent,
-        });
-      }
-    },
+    onAction: executeAction,
     onStart: onActionStart,
     onError: onActionError,
     onEnd: () => {
@@ -290,8 +283,10 @@ const ActionInputCheckbox = forwardRef((props, ref) => {
         }
         setChecked(checkboxIsChecked ? value : undefined);
         onInput?.(e);
-        if (action) {
-          requestAction(e);
+        if (!e.target.form && action) {
+          requestAction(effectiveAction, {
+            event: e,
+          });
         }
       }}
     />

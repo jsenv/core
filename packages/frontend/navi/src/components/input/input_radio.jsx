@@ -263,14 +263,7 @@ const ActionInputRadio = forwardRef((props, ref) => {
       onCancel?.(e);
     },
     onPrevented: onActionPrevented,
-    onAction: (e) => {
-      if (action) {
-        executeAction(effectiveAction, {
-          requester: e.detail.requester,
-          event: e.detail.reasonEvent,
-        });
-      }
-    },
+    onAction: executeAction,
     onStart: onActionStart,
     onError: onActionError,
     onEnd: () => {
@@ -295,7 +288,9 @@ const ActionInputRadio = forwardRef((props, ref) => {
           setNavStateValue(value);
           setCheckedValue(value);
           if (!e.target.form && action) {
-            requestAction(e);
+            requestAction(effectiveAction, {
+              event: e,
+            });
           }
         }
         onChange?.(e);
