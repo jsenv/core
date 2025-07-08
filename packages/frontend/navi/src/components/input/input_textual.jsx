@@ -40,6 +40,7 @@ export const InputTextual = forwardRef((props, ref) => {
 const SimpleInputTextual = forwardRef((props, ref) => {
   const {
     autoFocus,
+    autoFocusVisible,
     autoSelect,
     constraints = [],
     disabled,
@@ -49,7 +50,10 @@ const SimpleInputTextual = forwardRef((props, ref) => {
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  useAutoFocus(innerRef, autoFocus, autoSelect);
+  useAutoFocus(innerRef, autoFocus, {
+    autoFocusVisible,
+    autoSelect,
+  });
   useConstraints(innerRef, constraints);
 
   const inputTextual = <input ref={innerRef} disabled={disabled} {...rest} />;

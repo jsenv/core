@@ -6,7 +6,7 @@ export const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
     const error = new Error();
     const stack = error.stack;
 
-    if (!stack || stack.length === 0) {
+    if (!stack || stack.length === 0 || !Array.isArray(stack)) {
       return { raw: "unknown" };
     }
 

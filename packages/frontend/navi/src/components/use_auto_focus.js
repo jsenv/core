@@ -3,14 +3,18 @@
 
 import { useEffect, useLayoutEffect } from "preact/hooks";
 
-export const useAutoFocus = (focusableElementRef, autoFocus, autoSelect) => {
+export const useAutoFocus = (
+  focusableElementRef,
+  autoFocus,
+  { autoFocusVisible, autoSelect } = {},
+) => {
   useLayoutEffect(() => {
     if (!autoFocus) {
       return null;
     }
     const activeElement = document.activeElement;
     const focusableElement = focusableElementRef.current;
-    focusableElement.focus();
+    focusableElement.focus({ focusVisible: autoFocusVisible });
     if (autoSelect) {
       focusableElement.select();
     }
@@ -23,11 +27,11 @@ export const useAutoFocus = (focusableElementRef, autoFocus, autoSelect) => {
         // we restore focus to the element that was focused before
         // the input was focused
         if (document.body.contains(activeElement)) {
-          activeElement.focus();
+          activeElement.focus({ focusVisible: autoFocusVisible });
         }
       }
     };
-  }, [autoFocus]);
+  }, []);
   useEffect(() => {
     if (autoFocus) {
       const focusableElement = focusableElementRef.current;

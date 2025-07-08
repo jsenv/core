@@ -8,12 +8,14 @@ import {
 import { Input } from "../input/input.jsx";
 
 export const useEditableController = () => {
-  const [editable, editableSetter] = useState(false);
-  const startEditing = useCallback(() => {
-    editableSetter(true);
+  const [editable, editableSetter] = useState(null);
+  const startEditing = useCallback(({ focusVisible } = {}) => {
+    editableSetter({
+      focusVisible,
+    });
   }, []);
   const stopEditing = useCallback(() => {
-    editableSetter(false);
+    editableSetter(null);
   }, []);
 
   const prevEditableRef = useRef(editable);
@@ -57,6 +59,7 @@ export const EditableText = forwardRef(
             ref={innerRef}
             value={value}
             autoFocus
+            autoFocusVisible
             autoSelect
             required
             cancelOnEscape

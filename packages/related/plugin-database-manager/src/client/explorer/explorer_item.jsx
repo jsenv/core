@@ -27,7 +27,7 @@ export const ExplorerItem = ({
       if (e.key === "Enter" && !editable && renameAction) {
         e.preventDefault();
         e.stopPropagation();
-        startEditing();
+        startEditing(e);
       }
     },
     children: renameAction ? (

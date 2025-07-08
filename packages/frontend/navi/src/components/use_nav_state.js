@@ -34,56 +34,65 @@ Consider using unique IDs for each component instance.`,
 
 const NOT_SET = {};
 const NO_OP = () => {};
-const useNavStateWithoutWarnings = (id, initialValue, { debug } = {}) => {
-  const navStateRef = useRef(NOT_SET);
-  if (!id) {
-    return [undefined, NO_OP];
-  }
+const useNavStateWithoutWarnings =
+  typeof navigation === "undefined"
+    ? () => {
+        return [undefined, NO_OP];
+      }
+    : (id, initialValue, { debug } = {}) => {
+        const navStateRef = useRef(NOT_SET);
 
-  if (navStateRef.current === NOT_SET) {
-    const navEntryState = navigation.currentEntry.getState();
-    const valueFromNavState = navEntryState ? navEntryState[id] : undefined;
-    if (valueFromNavState === undefined) {
-      navStateRef.current = initialValue;
-      if (initialValue !== undefined) {
-        console.debug(
-          `useNavState(${id}) initial value is ${initialValue} (from initialValue passed in as argument)`,
-        );
-      }
-    } else {
-      navStateRef.current = valueFromNavState;
-      if (debug) {
-        console.debug(
-          `useNavState(${id}) initial value is ${initialValue} (from nav state)`,
-        );
-      }
-    }
-  }
+        if (!id) {
+          return [undefined, NO_OP];
+        }
 
-  return [
-    navStateRef.current,
-    (value) => {
-      const currentValue = navStateRef.current;
-      if (typeof value === "function") {
-        value = value(currentValue);
-      }
-      if (debug) {
-        console.debug(
-          `useNavState(${id}) set ${value} (previous was ${currentValue})`,
-        );
-      }
-      const currentState = navigation.currentEntry.getState() || {};
-      if (value === undefined) {
-        delete currentState[id];
-      } else {
-        currentState[id] = value;
-      }
-      navigation.updateCurrentEntry({
-        state: currentState,
-      });
-    },
-  ];
-};
+        if (navStateRef.current === NOT_SET) {
+          const navEntryState = navigation.currentEntry.getState();
+          const valueFromNavState = navEntryState
+            ? navEntryState[id]
+            : undefined;
+          if (valueFromNavState === undefined) {
+            navStateRef.current = initialValue;
+            if (initialValue !== undefined) {
+              console.debug(
+                `useNavState(${id}) initial value is ${initialValue} (from initialValue passed in as argument)`,
+              );
+            }
+          } else {
+            navStateRef.current = valueFromNavState;
+            if (debug) {
+              console.debug(
+                `useNavState(${id}) initial value is ${initialValue} (from nav state)`,
+              );
+            }
+          }
+        }
+
+        return [
+          navStateRef.current,
+          (value) => {
+            const currentValue = navStateRef.current;
+            if (typeof value === "function") {
+              value = value(currentValue);
+            }
+            if (debug) {
+              console.debug(
+                `useNavState(${id}) set ${value} (previous was ${currentValue})`,
+              );
+            }
+
+            const currentState = navigation.currentEntry.getState() || {};
+            if (value === undefined) {
+              delete currentState[id];
+            } else {
+              currentState[id] = value;
+            }
+            navigation.updateCurrentEntry({
+              state: currentState,
+            });
+          },
+        ];
+      };
 
 export const useNavState = import.meta.dev
   ? useNavStateWithWarnings
