@@ -181,6 +181,9 @@ const ActionButton = forwardRef((props, ref) => {
 
   return (
     <SimpleButton
+      action={
+        action ? `javascript:void(\`${effectiveAction.name}\`)` : undefined
+      }
       ref={innerRef}
       {...rest}
       type={type}

@@ -14,6 +14,10 @@
       import { useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
+        Input,
+      } from "@jsenv/navi";
+      import {
+        // eslint-disable-next-line no-unused-vars
         Button,
       } from "../input/button.jsx";
       import {
@@ -125,10 +129,10 @@
               }}
               {...props}
             >
-              <input type="hidden" name="name" value="dam" />
+              <Input type="hidden" name="name" value="dam" />
               <Button
                 action={async ({ name }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000000));
+                  await new Promise((resolve) => setTimeout(resolve, 1_000));
                   throw new Error(
                     `button action: { count: ${count}, name: ${name} }`,
                   );

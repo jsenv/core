@@ -43,7 +43,6 @@ const SimpleInputTextual = forwardRef((props, ref) => {
     autoFocusVisible,
     autoSelect,
     constraints = [],
-    disabled,
     loading,
     ...rest
   } = props;
@@ -56,16 +55,9 @@ const SimpleInputTextual = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
-  const inputTextual = <input ref={innerRef} disabled={disabled} {...rest} />;
+  const inputTextual = <input ref={innerRef} {...rest} />;
 
-  return (
-    <LoaderBackground
-      loading={loading}
-      color={disabled && loading ? "rgb(118, 118, 118)" : undefined}
-    >
-      {inputTextual}
-    </LoaderBackground>
-  );
+  return <LoaderBackground loading={loading}>{inputTextual}</LoaderBackground>;
 });
 
 const ActionInputTextual = forwardRef((props, ref) => {
@@ -77,7 +69,6 @@ const ActionInputTextual = forwardRef((props, ref) => {
     cancelOnBlurInvalid,
     cancelOnEscape,
     actionErrorEffect,
-    disabled,
     loading,
     onInput,
     onCancel,
@@ -161,7 +152,6 @@ const ActionInputTextual = forwardRef((props, ref) => {
     },
   });
 
-  const innerDisabled = disabled || pending;
   const innerLoading =
     loading || (pending && actionRequesterRef.current === innerRef.current);
 
@@ -172,7 +162,6 @@ const ActionInputTextual = forwardRef((props, ref) => {
       id={id}
       name={name}
       value={value}
-      disabled={innerDisabled}
       loading={innerLoading}
       onInput={(e) => {
         const inputValue = e.target.value;

@@ -47,8 +47,6 @@ export const useActionBoundToOneParam = (action, name, value) => {
   const cacheKey = typeof action === "function" ? componentId : action;
   const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
   const boundAction = useBoundAction(action, paramsSignal);
-  boundAction.meta.paramsSignal = paramsSignal;
-  boundAction.meta.updateParams = updateParams;
 
   if (parentBoundAction) {
     const parentActionParamsSignal = parentBoundAction.meta.paramsSignal;

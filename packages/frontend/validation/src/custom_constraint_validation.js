@@ -179,6 +179,10 @@ export const installCustomConstraintValidation = (
   element,
   elementReceivingValidationMessage = element,
 ) => {
+  if (element.tagName === "INPUT" && element.type === "hidden") {
+    elementReceivingValidationMessage = element.form || document.body;
+  }
+
   const validationInterface = {
     uninstall: undefined,
     registerConstraint: undefined,
