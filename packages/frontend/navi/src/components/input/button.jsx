@@ -42,6 +42,12 @@ import.meta.css = /*css*/ `
   outline-color: light-dark(#808080, #707070);
 }
 
+[name="element_with_loader_wrapper"] button[aria-busy="true"] {
+  outline-color: light-dark(#a0a0a0, #909090);
+  background: light-dark(rgba(240, 240, 240, 0.6), rgba(26, 26, 26, 0.6)); 
+  color: light-dark(rgba(107, 114, 128, 0.6), rgba(156, 163, 175, 0.6)); 
+}
+
 [name="element_with_loader_wrapper"] button:disabled {
   outline-color: light-dark(#a0a0a050, #90909050);
 }
@@ -144,7 +150,6 @@ const ActionButton = forwardRef((props, ref) => {
       loading={innerLoading}
       onClick={(event) => {
         const buttonElement = event.target;
-        debugger;
         if (action) {
           if (buttonElement.getAttribute("aria-busy") !== "true") {
             event.preventDefault();
