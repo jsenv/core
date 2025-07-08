@@ -332,37 +332,37 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     let existingItem = null;
     let updatedItem = null;
     const arraySomeUpdated = [];
-    let property;
-    let value;
+    let propertyToMatch;
+    let valueToMatch;
     let props;
     if (args.length === 1) {
       const firstArg = args[0];
-      property = idKey;
+      propertyToMatch = idKey;
       if (!firstArg || typeof firstArg !== "object") {
         throw new TypeError(
           `Expected an object as first argument, got ${firstArg}`,
         );
       }
-      value = readIdFromItemProps(firstArg, array);
+      valueToMatch = readIdFromItemProps(firstArg, array);
       props = firstArg;
     } else if (args.length === 2) {
-      property = idKey;
-      value = args[0];
-      if (typeof value === "object") {
-        value = value[idKey];
+      propertyToMatch = idKey;
+      valueToMatch = args[0];
+      if (typeof valueToMatch === "object") {
+        valueToMatch = valueToMatch[idKey];
       }
       props = args[1];
     } else if (args.length === 3) {
-      property = args[0];
-      value = args[1];
+      propertyToMatch = args[0];
+      valueToMatch = args[1];
       props = args[2];
     }
     for (const itemCandidate of array) {
       const itemCandidateValue =
-        typeof property === "function"
-          ? property(itemCandidate)
-          : itemCandidate[property];
-      if (itemCandidateValue === value) {
+        typeof propertyToMatch === "function"
+          ? propertyToMatch(itemCandidate)
+          : itemCandidate[propertyToMatch];
+      if (itemCandidateValue === valueToMatch) {
         const itemWithPropsOrItem = assign(itemCandidate, props);
         if (itemWithPropsOrItem === itemCandidate) {
           existingItem = itemCandidate;

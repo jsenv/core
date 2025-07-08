@@ -88,7 +88,16 @@ const createHttpHandlerForRootResource = (
             return itemId;
           }
         : (data) => {
-            const item = store.upsert(data);
+            let item;
+            if (Array.isArray(data)) {
+              // the callback is returning something like [property, value, props]
+              // this is to support a case like:
+              // store.upsert("name", "currentName", { name: "newName" })
+              // where we want to update the name property of an existing item
+              item = store.upsert(...data);
+            } else {
+              item = store.upsert(data);
+            }
             autoreload.onActionDone(httpActionAffectingOneItem);
             const itemId = item[idKey];
             return itemId;

@@ -94,10 +94,7 @@ export const ROLE = resource("role", {
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to update role");
     }
-    return {
-      rolname,
-      [columnName]: columnValue,
-    };
+    return ["rolname", rolname, { [columnName]: columnValue }];
   },
 });
 
