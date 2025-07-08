@@ -57,66 +57,57 @@ export const useExecuteAction = (
     };
   });
 
-  const executeAction = useCallback(
-    (
-      actionEvent,
-      {
-        // "reload", "load"
-        method = "reload",
-      } = {},
-    ) => {
-      const { action, requester, event } = actionEvent.detail;
+  const executeAction = useCallback((actionEvent) => {
+    const { action, requester, event, method } = actionEvent.detail;
 
-      if (debug) {
-        console.debug(
-          "executing action, requested by",
-          requester,
-          `(event: ${event?.type})`,
-        );
-      }
+    if (debug) {
+      console.debug(
+        "executing action, requested by",
+        requester,
+        `(event: ${event?.type})`,
+      );
+    }
 
-      const dispatchCustomEvent = (type, options) => {
-        const element = elementRef.current;
-        const customEvent = new CustomEvent(type, options);
-        element.dispatchEvent(customEvent);
-      };
-      if (resetErrorBoundary) {
-        resetErrorBoundary();
-      }
-      removeErrorMessage();
-      setError(null);
+    const dispatchCustomEvent = (type, options) => {
+      const element = elementRef.current;
+      const customEvent = new CustomEvent(type, options);
+      element.dispatchEvent(customEvent);
+    };
+    if (resetErrorBoundary) {
+      resetErrorBoundary();
+    }
+    removeErrorMessage();
+    setError(null);
 
-      const validationMessageTarget = requester || elementRef.current;
-      validationMessageTargetRef.current = validationMessageTarget;
+    const validationMessageTarget = requester || elementRef.current;
+    validationMessageTargetRef.current = validationMessageTarget;
 
-      dispatchCustomEvent("actionstart");
-      const result = performAction(action, {
-        method,
-        onAbort: () => {},
-        onError: (error) => {
-          if (
-            elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
-          ) {
-            dispatchCustomEvent("actionerror", { detail: { error } });
-          }
-          if (errorEffect === "show_validation_message") {
-            addErrorMessage(error);
-          } else if (errorEffect === "throw") {
-            setError(error);
-          }
-        },
-        onSuccess: () => {
-          if (
-            elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
-          ) {
-            dispatchCustomEvent("actionend");
-          }
-        },
-      });
-      return result;
-    },
-    [],
-  );
+    dispatchCustomEvent("actionstart");
+    const result = performAction(action, {
+      method,
+      onAbort: () => {},
+      onError: (error) => {
+        if (
+          elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
+        ) {
+          dispatchCustomEvent("actionerror", { detail: { error } });
+        }
+        if (errorEffect === "show_validation_message") {
+          addErrorMessage(error);
+        } else if (errorEffect === "throw") {
+          setError(error);
+        }
+      },
+      onSuccess: () => {
+        if (
+          elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
+        ) {
+          dispatchCustomEvent("actionend");
+        }
+      },
+    });
+    return result;
+  }, []);
 
   return executeAction;
 };

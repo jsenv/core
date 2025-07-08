@@ -1,3 +1,4 @@
+import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
 import { ActionRenderer } from "../../action_renderer.jsx";
@@ -5,6 +6,7 @@ import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { useActionEvents } from "../use_action_events.js";
 import { useNavState } from "../use_nav_state.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
@@ -127,8 +129,12 @@ export const ActionDetails = forwardRef((props, ref) => {
     action,
     actionRenderer,
     children = "Summary",
-    onToggle,
     loading,
+    onToggle,
+    onActionPrevented,
+    onActionStart,
+    onActionError,
+    onActionEnd,
     ...rest
   } = props;
 
@@ -141,6 +147,13 @@ export const ActionDetails = forwardRef((props, ref) => {
     // the error will be displayed by actionRenderer inside <details>
     errorEffect: "none",
   });
+  useActionEvents(innerRef, {
+    onPrevented: onActionPrevented,
+    onAction: executeAction,
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: onActionEnd,
+  });
 
   return (
     <SimpleDetails
@@ -149,8 +162,7 @@ export const ActionDetails = forwardRef((props, ref) => {
       onToggle={(toggleEvent) => {
         const isOpen = toggleEvent.newState === "open";
         if (isOpen) {
-          executeAction(effectiveAction, {
-            requester: toggleEvent.target,
+          requestAction(effectiveAction, {
             event: toggleEvent,
             method: "load",
           });

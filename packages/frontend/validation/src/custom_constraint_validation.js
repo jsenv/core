@@ -47,7 +47,7 @@ const validationInProgressWeakSet = new WeakSet();
 
 export const requestAction = (
   action,
-  { event, target = event.target, requester = target } = {},
+  { event, target = event.target, requester = target, method = "reload" } = {},
 ) => {
   let validationInterface = target.__validationInterface__;
   if (!validationInterface) {
@@ -56,6 +56,7 @@ export const requestAction = (
 
   const customEventDetail = {
     action,
+    method,
     event,
     requester,
   };

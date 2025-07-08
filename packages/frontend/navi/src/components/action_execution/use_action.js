@@ -1,6 +1,7 @@
 import { signal } from "@preact/signals";
 import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
+import { createJsValueWeakMap } from "../../js_value_weak_map.js";
 import { useParentAction } from "./action_context.js";
 
 let debug = false;
@@ -109,7 +110,7 @@ export const useAction = (action) => {
   return parentBoundAction || boundAction;
 };
 
-const sharedSignalCache = new WeakMap();
+const sharedSignalCache = createJsValueWeakMap(); // because keys can be integer or action object
 const useActionParamsSignal = (cacheKey, initialParams = {}) => {
   // ✅ cacheKey peut être componentId (Symbol) ou action (objet)
   const fromCache = sharedSignalCache.get(cacheKey);

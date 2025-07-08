@@ -44,11 +44,7 @@ const ActionFieldset = forwardRef((props, ref) => {
       const params = collectFormElementValues(fieldset);
       setParams(params);
 
-      const actionToExecute = actionEvent.detail.action || boundAction;
-      executeAction(actionToExecute, {
-        requester: actionEvent.detail.requester,
-        event: actionEvent.detail.reasonEvent,
-      });
+      executeAction(actionEvent);
     },
     onStart: onActionStart,
     onError: onActionError,

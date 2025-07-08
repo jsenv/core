@@ -97,11 +97,7 @@ const ActionForm = forwardRef((props, ref) => {
       const formElementValues = collectFormElementValues(form);
       setParams(formElementValues);
 
-      const actionToExecute = actionEvent.detail.action || boundAction;
-      executeAction(actionToExecute, {
-        requester: actionEvent.detail.requester,
-        event: actionEvent.detail.reasonEvent,
-      });
+      executeAction(actionEvent);
     },
     onStart: onActionStart,
     onError: onActionError,
