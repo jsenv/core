@@ -33,7 +33,7 @@ export const ExplorerItem = ({
         needsMetaKey: true,
         action: deleteAction,
         description: `Delete "${itemName}"`,
-        confirm: `Are you sure you want to delete "${itemName}"?`,
+        confirmMessage: `Are you sure you want to delete "${itemName}"?`,
       },
     ],
     children: renameAction ? (

@@ -23,8 +23,6 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
         return;
       }
 
-      debugger;
-
       event.preventDefault();
       event.stopPropagation();
       const { confirmMessage, action } = shortcutFound;

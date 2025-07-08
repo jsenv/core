@@ -57,8 +57,15 @@ const initAutoreload = ({ autoreloadGetManyAfter, autoreloadGetAfter }) => {
               httpActionCandidate.meta.httpVerb === "GET" &&
               !httpActionCandidate.meta.httpMany;
     const toReloadSet = findAliveActionsMatching(httpActionWeakSet, predicate);
-    reloadActions(toReloadSet, {
-      reason: `${httpAction} triggered`,
+    // setTimeout otherwise the action done side effects could not yet run
+    // (for instance when creating an item, we want to listen to actionend first
+    // then we want to perform the reload)
+    // ideally we would put this reload after dispacthing actionend
+    // and we could as a result remove the setTimeout
+    setTimeout(() => {
+      reloadActions(toReloadSet, {
+        reason: `${httpAction} triggered`,
+      });
     });
   };
 

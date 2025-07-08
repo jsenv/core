@@ -160,9 +160,9 @@ const ActionInputTextual = forwardRef((props, ref) => {
     },
     onStart: onActionStart,
     onError: onActionError,
-    onEnd: () => {
+    onEnd: (e) => {
       setNavStateValue(undefined);
-      onActionEnd?.();
+      onActionEnd?.(e);
     },
   });
 
