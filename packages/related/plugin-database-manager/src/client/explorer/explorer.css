@@ -106,11 +106,18 @@
 .explorer_item_list {
   margin-top: 0;
   margin-bottom: 0;
-  padding-left: 16px;
-  padding-top: 2px; /* let space for item outline (2px by default) */
+  padding-left: 2px;
+  padding-top: 3px; /* let space for item outline (2px by default) */
 }
 .explorer_item {
   display: flex;
+}
+.explorer_item > * {
+  padding-left: 16px;
+}
+.explorer_item > a:focus {
+  outline: 2px solid #1d4ed8;
+  border-radius: 1px;
 }
 .explorer_item input {
   font-size: 16px;

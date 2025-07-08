@@ -20,80 +20,6 @@ export const InputCheckbox = forwardRef((props, ref) => {
   );
 });
 
-const SimpleInputCheckbox = forwardRef((props, ref) => {
-  const {
-    autoFocus,
-    constraints = [],
-    value = "on",
-    checked,
-    disabled,
-    loading,
-    onChange,
-    appeareance = "custom", // "custom" or "default"
-    ...rest
-  } = props;
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
-
-  const [innerChecked, setInnerChecked] = useState(checked);
-  const checkedRef = useRef(checked);
-  if (checkedRef.current !== checked) {
-    setInnerChecked(checked);
-    checkedRef.current = checked;
-  }
-
-  const handleChange = (e) => {
-    setInnerChecked(e.target.checked);
-    onChange?.(e);
-  };
-
-  const inputCheckbox = (
-    <input
-      ref={innerRef}
-      type="checkbox"
-      value={value}
-      checked={innerChecked}
-      disabled={disabled}
-      onChange={handleChange}
-      // eslint-disable-next-line react/no-unknown-property
-      onprogrammaticchange={handleChange}
-      {...rest}
-    />
-  );
-
-  const inputCheckboxDisplayed =
-    appeareance === "custom" ? (
-      <CustomCheckbox>{inputCheckbox}</CustomCheckbox>
-    ) : (
-      inputCheckbox
-    );
-
-  const loaderColor =
-    disabled && loading
-      ? innerChecked
-        ? CUSTOM_CHECKBOX_COLORS.borders.checked
-        : CUSTOM_CHECKBOX_COLORS.borders.default
-      : undefined;
-  const inputCheckboxWithLoader = (
-    <LoaderBackground
-      loading={loading}
-      // We are disabling inputs while loading so their colors become grayish
-      // But they are disabled because we are loading so in that case we want
-      // the loader to keep the color the element would have if it was not disabled
-      color={loaderColor}
-      inset={-1}
-      targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
-    >
-      {inputCheckboxDisplayed}
-    </LoaderBackground>
-  );
-
-  return inputCheckboxWithLoader;
-});
-
 const CUSTOM_CHECKBOX_COLORS = {
   borders: {
     default: "#6b7280",
@@ -204,6 +130,80 @@ const CustomCheckbox = ({ children }) => {
     </div>
   );
 };
+
+const SimpleInputCheckbox = forwardRef((props, ref) => {
+  const {
+    autoFocus,
+    constraints = [],
+    value = "on",
+    checked,
+    disabled,
+    loading,
+    onChange,
+    appeareance = "custom", // "custom" or "default"
+    ...rest
+  } = props;
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  useAutoFocus(innerRef, autoFocus);
+  useConstraints(innerRef, constraints);
+
+  const [innerChecked, setInnerChecked] = useState(checked);
+  const checkedRef = useRef(checked);
+  if (checkedRef.current !== checked) {
+    setInnerChecked(checked);
+    checkedRef.current = checked;
+  }
+
+  const handleChange = (e) => {
+    setInnerChecked(e.target.checked);
+    onChange?.(e);
+  };
+
+  const inputCheckbox = (
+    <input
+      ref={innerRef}
+      type="checkbox"
+      value={value}
+      checked={innerChecked}
+      disabled={disabled}
+      onChange={handleChange}
+      // eslint-disable-next-line react/no-unknown-property
+      onprogrammaticchange={handleChange}
+      {...rest}
+    />
+  );
+
+  const inputCheckboxDisplayed =
+    appeareance === "custom" ? (
+      <CustomCheckbox>{inputCheckbox}</CustomCheckbox>
+    ) : (
+      inputCheckbox
+    );
+
+  const loaderColor =
+    disabled && loading
+      ? innerChecked
+        ? CUSTOM_CHECKBOX_COLORS.borders.checked
+        : CUSTOM_CHECKBOX_COLORS.borders.default
+      : undefined;
+  const inputCheckboxWithLoader = (
+    <LoaderBackground
+      loading={loading}
+      // We are disabling inputs while loading so their colors become grayish
+      // But they are disabled because we are loading so in that case we want
+      // the loader to keep the color the element would have if it was not disabled
+      color={loaderColor}
+      inset={-1}
+      targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
+    >
+      {inputCheckboxDisplayed}
+    </LoaderBackground>
+  );
+
+  return inputCheckboxWithLoader;
+});
 
 const ActionInputCheckbox = forwardRef((props, ref) => {
   const {
