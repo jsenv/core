@@ -3,7 +3,7 @@ export const errorFromResponse = async (response, message) => {
   let serverMessage =
     typeof serverErrorInfo === "string"
       ? serverErrorInfo
-      : serverErrorInfo.message;
+      : serverErrorInfo.message || serverErrorInfo.stack;
   let errorMessage = message ? `${message}: ${serverMessage}` : serverMessage;
   const error = new Error(errorMessage);
   if (serverErrorInfo && typeof serverErrorInfo === "object") {
