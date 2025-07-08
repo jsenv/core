@@ -37,7 +37,6 @@ export default [
       "**/_*test_manual.*/",
       "experiments/",
       "**/frontend/router/src/",
-      "**/related/plugin-database-manager/src/",
     ],
   },
 ];

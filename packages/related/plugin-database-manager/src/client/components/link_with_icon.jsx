@@ -8,6 +8,7 @@ import.meta.css = /* css */ `
     gap: 0.3em;
     min-width: 0;
     display: inline-flex;
+    flex-grow: 1;
     overflow: hidden;
   }
 

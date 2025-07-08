@@ -1,8 +1,9 @@
-import { EditableText, Form, Input, useEditableController } from "@jsenv/navi";
+import { EditableText, Input, useEditableController } from "@jsenv/navi";
 import {
   createUniqueValueConstraint,
   SINGLE_SPACE_CONSTRAINT,
 } from "@jsenv/validation";
+import { Overflow } from "../layout/overflow.jsx";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
 export const ExplorerItem = ({
@@ -39,14 +40,7 @@ export const ExplorerItem = ({
         stopEditing={stopEditing}
       />
     ) : (
-      <span
-        style={{
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {itemName}
-      </span>
+      <Overflow>{itemName}</Overflow>
     ),
   });
 };
@@ -82,14 +76,7 @@ const RenameInputOrName = ({
       value={itemName}
       constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
     >
-      <span
-        style={{
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {itemName}
-      </span>
+      <Overflow>{itemName}</Overflow>
     </EditableText>
   );
 };
@@ -118,18 +105,18 @@ export const ExplorerNewItem = ({
       <FontSizedSvg>
         <EnterNameIconSvg />
       </FontSizedSvg>
-      <Form action={createItemAction} onActionEnd={onActionEnd}>
-        <InputText
-          name={nameKey}
-          autoFocus
-          required
-          requestExecuteOnChange
-          constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
-          cancelOnEscape
-          cancelOnBlurInvalid={cancelOnBlurInvalid}
-          onCancel={onCancel}
-        />
-      </Form>
+
+      <Input
+        name={nameKey}
+        action={createItemAction}
+        cancelOnEscape
+        cancelOnBlurInvalid={cancelOnBlurInvalid}
+        onCancel={onCancel}
+        onActionEnd={onActionEnd}
+        autoFocus
+        required
+        constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
+      />
     </span>
   );
 };

@@ -34,7 +34,9 @@ export const EditableText = forwardRef(
 
     return (
       <>
-        <div style={{ display: editable ? "none" : "inline-flex" }}>
+        <div
+          style={{ display: editable ? "none" : "inline-flex", flexGrow: 1 }}
+        >
           {children || <span>{value}</span>}
         </div>
         {editable && (
