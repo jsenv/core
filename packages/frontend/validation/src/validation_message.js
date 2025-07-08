@@ -168,8 +168,15 @@ const validationMessageTemplate = /* html */ `
 export const openValidationMessage = (
   targetElement,
   innerHtml,
-  { level = "warning", onClose, debug = false } = {},
+  {
+    level = "warning",
+    onClose,
+    closeOnClickOutside = level === "info",
+    debug = false,
+  } = {},
 ) => {
+  let _closeOnClickOutside = closeOnClickOutside;
+
   if (debug) {
     console.debug("open validation message on", targetElement, {
       message: innerHtml,
@@ -204,7 +211,11 @@ export const openValidationMessage = (
     close("click_close_button");
   };
 
-  const update = (newInnerHTML, { level = "warning" } = {}) => {
+  const update = (
+    newInnerHTML,
+    { level = "warning", closeOnClickOutside } = {},
+  ) => {
+    _closeOnClickOutside = closeOnClickOutside;
     const borderColor =
       level === "info" ? "blue" : level === "warning" ? "grey" : "red";
     const backgroundColor = "white";
@@ -263,6 +274,35 @@ export const openValidationMessage = (
     targetElement.addEventListener("focus", onfocus);
     closeCallbackSet.add(() => {
       targetElement.removeEventListener("focus", onfocus);
+    });
+  }
+
+  close_on_click_outside: {
+    const handleClickOutside = (event) => {
+      if (!_closeOnClickOutside) {
+        return;
+      }
+
+      const clickTarget = event.target;
+
+      if (
+        clickTarget === validationMessage ||
+        validationMessage.contains(clickTarget)
+      ) {
+        return;
+      }
+
+      if (
+        clickTarget === targetElement ||
+        targetElement.contains(clickTarget)
+      ) {
+        return;
+      }
+      close("click_outside");
+    };
+    document.addEventListener("click", handleClickOutside, true);
+    closeCallbackSet.add(() => {
+      document.removeEventListener("click", handleClickOutside, true);
     });
   }
 

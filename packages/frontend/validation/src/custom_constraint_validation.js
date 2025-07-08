@@ -91,6 +91,10 @@ export const requestAction = (
       validationInProgressWeakSet.delete(formToValidate);
     });
 
+    const allowConcurrentActions = formToValidate.hasAttribute(
+      "data-allow-concurrent-actions",
+    );
+
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
     const formElements = formToValidate.elements;
     for (const formElement of formElements) {
@@ -98,8 +102,13 @@ export const requestAction = (
       if (!validationInterface) {
         continue;
       }
+
       const isValid = validationInterface.checkValidity({
         fromRequestAction: true,
+        skipBusy:
+          formElement.tagName === "BUTTON" &&
+          formElement !== requester &&
+          allowConcurrentActions,
       });
       if (isValid) {
         continue;
@@ -210,15 +219,12 @@ export const installCustomConstraintValidation = (
     const closeOnCleanup = () => {
       closeElementValidationMessage("cleanup");
     };
-    let message;
-    let level;
-    message = lastFailedConstraintInfo.message;
-    level = lastFailedConstraintInfo.level;
     validationInterface.validationMessage = openValidationMessage(
       elementReceivingValidationMessage,
-      message,
+      lastFailedConstraintInfo.message,
       {
-        level,
+        level: lastFailedConstraintInfo.level,
+        closeOnClickOutside: lastFailedConstraintInfo.closeOnClickOutside,
         onClose: () => {
           cleanupCallbackSet.delete(closeOnCleanup);
           validationInterface.validationMessage = null;
@@ -311,8 +317,11 @@ export const installCustomConstraintValidation = (
       return;
     }
     if (validationInterface.validationMessage) {
-      const { message, level } = lastFailedConstraintInfo;
-      validationInterface.validationMessage.update(message, { level });
+      const { message, level, closeOnClickOutside } = lastFailedConstraintInfo;
+      validationInterface.validationMessage.update(message, {
+        level,
+        closeOnClickOutside,
+      });
       return;
     }
     openElementValidationMessage({ skipFocus });
