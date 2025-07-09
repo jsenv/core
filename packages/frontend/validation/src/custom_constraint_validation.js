@@ -210,35 +210,6 @@ export const installCustomConstraintValidation = (
     element.dispatchEvent(cancelEvent);
   };
 
-  const openElementValidationMessage = ({ skipFocus } = {}) => {
-    if (!skipFocus) {
-      element.focus();
-    }
-    const closeOnCleanup = () => {
-      closeElementValidationMessage("cleanup");
-    };
-    validationInterface.validationMessage = openValidationMessage(
-      elementReceivingValidationMessage,
-      lastFailedConstraintInfo.message,
-      {
-        level: lastFailedConstraintInfo.level,
-        closeOnClickOutside: lastFailedConstraintInfo.closeOnClickOutside,
-        onClose: () => {
-          cleanupCallbackSet.delete(closeOnCleanup);
-          validationInterface.validationMessage = null;
-          if (lastFailedConstraintInfo) {
-            lastFailedConstraintInfo.reportStatus = "closed";
-          }
-          if (!skipFocus) {
-            element.focus();
-          }
-        },
-      },
-    );
-    lastFailedConstraintInfo.reportStatus = "reported";
-    cleanupCallbackSet.add(closeOnCleanup);
-  };
-
   const closeElementValidationMessage = (reason) => {
     if (validationInterface.validationMessage) {
       validationInterface.validationMessage.close(reason);
@@ -273,11 +244,11 @@ export const installCustomConstraintValidation = (
     };
   }
 
-  let lastFailedConstraintInfo = null;
+  let failedConstraintInfo = null;
   const validityInfoMap = new Map();
   const checkValidity = (params = {}) => {
     const { fromRequestAction } = params;
-    if (fromRequestAction && lastFailedConstraintInfo) {
+    if (fromRequestAction && failedConstraintInfo) {
       for (const [key, customMessage] of customMessageMap) {
         if (customMessage.removeOnRequestAction) {
           customMessageMap.delete(key);
@@ -286,11 +257,11 @@ export const installCustomConstraintValidation = (
     }
 
     validityInfoMap.clear();
-    lastFailedConstraintInfo = null;
+    failedConstraintInfo = null;
     for (const constraint of constraintSet) {
       const constraintValidityInfo = constraint.check(element, params);
       if (constraintValidityInfo) {
-        const failedValidityInfo = {
+        failedConstraintInfo = {
           name: constraint.name,
           constraint,
           ...(typeof constraintValidityInfo === "string"
@@ -298,32 +269,59 @@ export const installCustomConstraintValidation = (
             : constraintValidityInfo),
           reportStatus: "not_reported",
         };
-        validityInfoMap.set(constraint, failedValidityInfo);
-        lastFailedConstraintInfo = failedValidityInfo;
+        validityInfoMap.set(constraint, failedConstraintInfo);
       }
     }
 
-    if (!lastFailedConstraintInfo) {
+    if (!failedConstraintInfo) {
       closeElementValidationMessage("becomes_valid");
     }
 
-    return !lastFailedConstraintInfo;
+    return !failedConstraintInfo;
   };
   const reportValidity = ({ skipFocus } = {}) => {
-    if (!lastFailedConstraintInfo) {
+    if (!failedConstraintInfo) {
       closeElementValidationMessage("becomes_valid");
       return;
     }
+    if (failedConstraintInfo.silent) {
+      closeElementValidationMessage("invalid_silent");
+      return;
+    }
     if (validationInterface.validationMessage) {
-      const { message, level, closeOnClickOutside } = lastFailedConstraintInfo;
+      const { message, level, closeOnClickOutside } = failedConstraintInfo;
       validationInterface.validationMessage.update(message, {
         level,
         closeOnClickOutside,
       });
       return;
     }
-    openElementValidationMessage({ skipFocus });
-    return;
+    if (!skipFocus) {
+      element.focus();
+    }
+    const closeOnCleanup = () => {
+      closeElementValidationMessage("cleanup");
+    };
+    validationInterface.validationMessage = openValidationMessage(
+      elementReceivingValidationMessage,
+      failedConstraintInfo.message,
+      {
+        level: failedConstraintInfo.level,
+        closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
+        onClose: () => {
+          cleanupCallbackSet.delete(closeOnCleanup);
+          validationInterface.validationMessage = null;
+          if (failedConstraintInfo) {
+            failedConstraintInfo.reportStatus = "closed";
+          }
+          if (!skipFocus) {
+            element.focus();
+          }
+        },
+      },
+    );
+    failedConstraintInfo.reportStatus = "reported";
+    cleanupCallbackSet.add(closeOnCleanup);
   };
   validationInterface.checkValidity = checkValidity;
   validationInterface.reportValidity = reportValidity;
@@ -469,11 +467,11 @@ export const installCustomConstraintValidation = (
         return;
       }
       // if we have failed constraint, we cancel too
-      if (lastFailedConstraintInfo) {
+      if (failedConstraintInfo) {
         dispatchCancelCustomEvent({
           detail: {
             reason: "blur_invalid",
-            failedConstraintInfo: lastFailedConstraintInfo,
+            failedConstraintInfo,
           },
         });
         return;
