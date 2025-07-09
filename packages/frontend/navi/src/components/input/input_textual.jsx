@@ -29,16 +29,44 @@ import { useNavState } from "../use_nav_state.js";
 import { useOnChange } from "../use_on_change.js";
 
 import.meta.css = /* css */ `
-  input {
+  input[data-custom] {
+    --button-border-width: 1px;
+    --button-outline-width: 1px;
+
+    border-radius: 2px;
+    border-width: calc(
+      var(--button-border-width) + var(--button-outline-width)
+    );
     border-style: solid;
+    border-color: transparent;
+    outline: var(--button-border-width) solid light-dark(#767676, #8e8e93);
+    outline-offset: calc(-1 * (var(--button-border-width)));
   }
 
-  input[readonly] {
+  input[data-custom]:active {
+    outline-color: light-dark(#808080, #707070);
+  }
+
+  input[data-custom][data-readonly] {
+    outline-color: light-dark(#d1d5db, #4b5563);
     background: light-dark(#f3f4f6, #2d3748);
     color: light-dark(#374151, #cbd5e0);
-    border-color: light-dark(#d1d5db, #4b5563);
-    filter: grayscale(20%);
-    border-radius: 2px;
+  }
+
+  input[data-custom]:focus-visible {
+    outline-width: calc(
+      var(--button-border-width) + var(--button-outline-width)
+    );
+    outline-offset: calc(
+      -1 * (var(--button-border-width) + var(--button-outline-width))
+    );
+    outline-color: light-dark(#355fcc, #3b82f6);
+  }
+
+  input[data-custom]:disabled {
+    outline-color: light-dark(#a0a0a050, #90909050);
+    background-color: rgb(239, 239, 239);
+    color: light-dark(rgba(16, 16, 16, 0.3), rgba(255, 255, 255, 0.3));
   }
 `;
 
@@ -58,6 +86,7 @@ const SimpleInputTextual = forwardRef((props, ref) => {
     autoSelect,
     constraints = [],
     loading,
+    appearance = "custom",
     readonly = loading,
     ...rest
   } = props;
@@ -70,7 +99,14 @@ const SimpleInputTextual = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
-  const inputTextual = <input ref={innerRef} readOnly={readonly} {...rest} />;
+  const inputTextual = (
+    <input
+      ref={innerRef}
+      data-custom={appearance === "custom" ? "" : undefined}
+      readOnly={readonly}
+      {...rest}
+    />
+  );
 
   return <LoaderBackground loading={loading}>{inputTextual}</LoaderBackground>;
 });

@@ -39,7 +39,6 @@ import.meta.css = /* css */ `
     outline-color: light-dark(#808080, #707070);
   }
 
-  button[data-readonly],
   button[data-custom][data-readonly] {
     outline-color: light-dark(#d1d5db, #4b5563);
     background: light-dark(#f3f4f6, #2d3748);
@@ -58,7 +57,7 @@ import.meta.css = /* css */ `
     outline-offset: calc(
       -1 * (var(--button-border-width) + var(--button-outline-width))
     );
-    outline-color: light-dark(#1d4ed8, #3b82f6);
+    outline-color: light-dark(#355fcc, #3b82f6);
   }
 
   button[data-custom]:disabled,
