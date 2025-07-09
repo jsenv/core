@@ -1,3 +1,4 @@
+import { resolveCSSSize } from "@jsenv/dom";
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
@@ -47,19 +48,20 @@ import.meta.css = /* css */ `
 
   button[data-custom] > .shadow {
     position: absolute;
-    inset: -1.5px;
+    inset: calc(
+      -1 * (var(--button-border-width) + var(--button-outline-width))
+    );
     pointer-events: none;
+    border-radius: inherit;
+  }
+
+  button[data-custom]:active > .shadow {
     box-shadow:
       inset 0 3px 6px rgba(0, 0, 0, 0.2),
       inset 0 1px 2px rgba(0, 0, 0, 0.3),
       inset 0 0 0 1px rgba(0, 0, 0, 0.1),
       inset 2px 0 4px rgba(0, 0, 0, 0.1),
       inset -2px 0 4px rgba(0, 0, 0, 0.1);
-    display: none;
-  }
-
-  button[data-custom]:active > .shadow {
-    display: block;
   }
 
   button[data-custom][data-readonly] {
@@ -104,7 +106,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     readonly,
     children,
     appearance = "custom",
-    borderWidth = 1,
+    style = {},
     ...rest
   } = props;
 
@@ -112,6 +114,10 @@ const ButtonBasic = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
+
+  let { borderWidth = 1, outlineWidth = 1 } = style;
+  borderWidth = resolveCSSSize(borderWidth);
+  outlineWidth = resolveCSSSize(outlineWidth);
 
   return (
     <LoaderBackground
@@ -124,15 +130,17 @@ const ButtonBasic = forwardRef((props, ref) => {
     >
       <button
         ref={innerRef}
+        {...rest}
         data-custom={appearance === "custom" ? "" : undefined}
         data-validation-message-arrow-x="center"
         data-readonly={readonly || loading ? "" : undefined}
         aria-busy={loading}
         style={{
+          ...style,
           "--button-border-width": `${borderWidth}px`,
+          "--button-outline-width": `${outlineWidth}px`,
           "position": "relative",
         }}
-        {...rest}
       >
         {children}
         <div className="shadow"></div>
