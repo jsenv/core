@@ -16,7 +16,7 @@ import { useAutoFocus } from "../use_auto_focus.js";
  *
  */
 import.meta.css = /*css*/ `
-[name="element_with_loader_wrapper"] button {
+button[data-custom] {
   --button-border-width: 1px;
 
   border-radius: 2px; 
@@ -27,29 +27,29 @@ import.meta.css = /*css*/ `
   outline-offset: calc(-1 * var(--button-border-width));
 }
 
-[name="element_with_loader_wrapper"] button:hover {
+button[data-custom]:active {
+  outline-color: light-dark(#808080, #707070);
+}
+
+button[data-readonly], button[data-custom][data-readonly] {
+  outline-color: light-dark(#d1d5db, #4b5563); 
+  background: light-dark(#f3f4f6, #2d3748); 
+  color: light-dark(#374151, #cbd5e0);
+  filter: grayscale(20%);
+}
+
+button[data-custom]:hover {
   outline-color: light-dark(#505050, #7e7e83);
   background: light-dark(#e6e6e6, #2a2a2c);
 }
 
-
-[name="element_with_loader_wrapper"] button:active {
-  outline-color: light-dark(#808080, #707070);
-}
-
-[name="element_with_loader_wrapper"] button[aria-busy="true"] {
-  outline-color: light-dark(#a0a0a0, #909090);
-  background: light-dark(rgba(240, 240, 240, 0.6), rgba(26, 26, 26, 0.6)); 
-  color: light-dark(rgba(107, 114, 128, 0.6), rgba(156, 163, 175, 0.6)); 
-}
-
-[name="element_with_loader_wrapper"] button:focus-visible {
+button[data-custom]:focus-visible {
   outline-width: calc(var(--button-border-width) + 1px);
   outline-offset: calc(-1 * (var(--button-border-width) + 1px));
   outline-color: light-dark(#1d4ed8, #3b82f6);
 }
 
-[name="element_with_loader_wrapper"] button:disabled {
+button[data-custom]:disabled {
   outline-color: light-dark(#a0a0a050, #90909050);
   background-color: rgb(239, 239, 239);
 }
@@ -62,9 +62,10 @@ const SimpleButton = forwardRef((props, ref) => {
   const {
     autoFocus,
     constraints = [],
-    readonly,
     loading,
+    readonly = loading,
     children,
+    appearance = "custom",
     borderWidth = 1,
     ...rest
   } = props;
@@ -85,8 +86,9 @@ const SimpleButton = forwardRef((props, ref) => {
     >
       <button
         ref={innerRef}
+        data-custom={appearance === "custom" ? "" : undefined}
         data-validation-message-arrow-x="center"
-        data-readonly={readonly}
+        data-readonly={readonly ? "" : undefined}
         aria-busy={loading}
         style={{ "--button-border-width": `${borderWidth}px` }}
         {...rest}
@@ -101,7 +103,6 @@ const ActionButton = forwardRef((props, ref) => {
   const {
     type,
     action,
-    readonly,
     loading,
     children,
     onClick,
@@ -189,7 +190,6 @@ const ActionButton = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       type={type}
-      readonly={readonly || innerLoading}
       loading={innerLoading}
       onClick={(event) => {
         handleClick(event);
