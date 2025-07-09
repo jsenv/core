@@ -62,11 +62,7 @@ export const RectangleLoading = ({
   }, []);
 
   return (
-    <div
-      name="rectangle_loading"
-      ref={containerRef}
-      style="width: 100%; height: 100%; position: relative;"
-    >
+    <div name="rectangle_loading" ref={containerRef}>
       {dimensions.width > 0 && dimensions.height > 0 && (
         <RectangleLoadingSvg
           radius={radius}

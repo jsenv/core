@@ -4,6 +4,25 @@ import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useDebounceTrue } from "../use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
+import.meta.css = /* css */ `
+  [name="element_with_loader_wrapper"] {
+    display: inline-flex;
+    position: relative;
+  }
+
+  [name="loading_rectangle_wrapper"] {
+    pointer-events: none;
+    position: absolute;
+    z-index: 1;
+  }
+
+  [name="rectangle_loading"] {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+`;
+
 export const LoaderBackground = ({
   loading,
   containerRef,
@@ -254,14 +273,11 @@ const LoaderBackgroundWithWrapper = ({
       name="element_with_loader_wrapper"
       ref={containerRef}
       data-loader-visible={shouldShowSpinner ? "" : undefined}
-      style="display:inline-flex; position: relative;"
     >
       {shouldShowSpinner && (
         <div
           name="loading_rectangle_wrapper"
           style={{
-            pointerEvents: "none",
-            position: "absolute",
             top: `${spacingTop}px`,
             left: `${spacingLeft}px`,
             bottom: `${spacingBottom}px`,
