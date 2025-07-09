@@ -160,10 +160,13 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   });
   const value = getValue();
 
-  const preventNextChangeRef = useRef(false);
+  const valueAtEnterRef = useRef(null);
   useOnChange(innerRef, (e) => {
-    if (preventNextChangeRef.current) {
-      preventNextChangeRef.current = false;
+    if (
+      valueAtEnterRef.current !== null &&
+      e.target.value === valueAtEnterRef.current
+    ) {
+      valueAtEnterRef.current = null;
       return;
     }
     requestAction(boundAction, { event: e });
@@ -209,6 +212,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       value={value}
       loading={loading || pending}
       onInput={(e) => {
+        valueAtEnterRef.current = null;
         const inputValue = e.target.value;
         setNavStateValue(inputValue);
         setValue(inputValue);
@@ -224,10 +228,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          * if the input value has changed.
          * We need to prevent the next change event otherwise we would request action twice
          */
-        preventNextChangeRef.current = true;
-        setTimeout(() => {
-          preventNextChangeRef.current = false;
-        });
+        valueAtEnterRef.current = e.target.value;
         requestAction(boundAction, { event: e });
       }}
     />
