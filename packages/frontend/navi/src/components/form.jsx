@@ -54,6 +54,7 @@ const FormWithAction = forwardRef((props, ref) => {
 
   const [boundAction, , setParams] = useFormActionBoundToManyParams(action);
   const [formActionRequester, setFormActionRequester] = useState(null);
+  const [formIsReadonly, setFormIsReadonly] = useState(false);
   const [formIsBusy, setFormIsBusy] = useState(false);
   const [formError, setFormError] = useState(null);
   const executeAction = useExecuteAction(innerRef, {
@@ -103,6 +104,7 @@ const FormWithAction = forwardRef((props, ref) => {
 
       setFormActionRequester(actionEvent.detail.requester);
       setFormIsBusy(true);
+      setFormIsReadonly(!formAllowConcurrentActions);
       setFormError(null);
       executeAction(actionEvent);
     },
@@ -111,10 +113,12 @@ const FormWithAction = forwardRef((props, ref) => {
     },
     onError: (e) => {
       setFormIsBusy(false);
+      setFormIsReadonly(false);
       onActionError?.(e);
     },
     onEnd: (e) => {
       setFormIsBusy(false);
+      setFormIsReadonly(false);
       onActionEnd?.(e);
     },
   });
@@ -138,6 +142,7 @@ const FormWithAction = forwardRef((props, ref) => {
           formAllowConcurrentActions,
           formAction: boundAction,
           formActionRequester,
+          formIsReadonly,
           formIsBusy,
           formError,
         }}

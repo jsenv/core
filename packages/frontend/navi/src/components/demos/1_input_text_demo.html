@@ -91,16 +91,15 @@
                   <strong>Inside form</strong>
                 </p>
                 <div>
-                  <Form>
-                    <Input
-                      name="insideForm"
-                      action={async ({ insideForm }) => {
-                        await new Promise((resolve) =>
-                          setTimeout(resolve, 1_500),
-                        );
-                        throw new Error(`test: ${insideForm}`);
-                      }}
-                    />
+                  <Form
+                    action={async ({ insideForm }) => {
+                      await new Promise((resolve) =>
+                        setTimeout(resolve, 1_500),
+                      );
+                      throw new Error(`test: ${insideForm}`);
+                    }}
+                  >
+                    <Input name="insideForm" />
                   </Form>
                 </div>
               </div>

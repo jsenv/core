@@ -244,7 +244,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const { formIsBusy, formAllowConcurrentActions } = formContext;
+  const { formIsReadonly } = formContext;
   const actionBoundToForm = useActionBoundToFormParams(action);
   const { pending } = useActionStatus(actionBoundToForm);
   const executeAction = useExecuteAction(innerRef, {
@@ -275,7 +275,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       {...rest}
       type={type}
       loading={loading || pending}
-      readonly={readonly || formAllowConcurrentActions ? false : formIsBusy}
+      readonly={readonly || formIsReadonly}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
@@ -288,7 +288,8 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
 
 const ButtonInsideForm = forwardRef((props, ref) => {
   const { type, loading, readonly, onClick, children, ...rest } = props;
-  const { formAction, formIsBusy, formActionRequester } = useFormContext();
+  const { formAction, formIsBusy, formIsReadonly, formActionRequester } =
+    useFormContext();
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -328,7 +329,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       loading={
         loading || (formIsBusy && formActionRequester === innerRef.current)
       }
-      readonly={readonly || formIsBusy}
+      readonly={readonly || formIsReadonly}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);

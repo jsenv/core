@@ -242,7 +242,9 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
     name,
     value: initialValue = "",
     loading,
+    readonly,
     onInput,
+    onKeyDown,
     ...rest
   } = props;
 
@@ -257,7 +259,8 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
         : navStateValue
       : initialValue;
 
-  const { formAction, formIsBusy, formActionRequester } = formContext;
+  const { formAction, formIsBusy, formIsReadonly, formActionRequester } =
+    formContext;
   const [getValue, setValue] = useOneFormParam(name, valueAtStart);
   const value = getValue();
 
@@ -271,6 +274,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       loading={
         loading || (formIsBusy && formActionRequester === innerRef.current)
       }
+      readonly={readonly || formIsReadonly}
       onInput={(e) => {
         const inputValue = e.target.value;
         setNavStateValue(inputValue);
@@ -278,11 +282,11 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
         onInput?.(e);
       }}
       onKeyDown={(e) => {
-        if (e.key !== "Enter") {
-          return;
+        if (e.key === "Enter") {
+          e.preventDefault();
+          requestAction(formAction, { event: e });
         }
-        e.preventDefault();
-        requestAction(formAction, { event: e });
+        onKeyDown?.(e);
       }}
     />
   );
