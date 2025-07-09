@@ -163,8 +163,8 @@
               min="5"
               name="count"
               value={count}
-              action={({ count }) => {
-                setCount(count);
+              onInput={(e) => {
+                setCount(e.target.valueAsNumber);
               }}
             />
 
