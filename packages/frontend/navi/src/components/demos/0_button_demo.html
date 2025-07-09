@@ -57,6 +57,8 @@
         );
       };
 
+      const TIME_TO_WAIT = 10_000;
+
       // eslint-disable-next-line no-unused-vars
       const OutsideForm = () => {
         const [count, setCount] = useState(0);
@@ -87,7 +89,9 @@
                   setTimeout(() => {
                     setCount((count) => count + 1);
                   }, 200);
-                  await new Promise((resolve) => setTimeout(resolve, 1_500));
+                  await new Promise((resolve) =>
+                    setTimeout(resolve, TIME_TO_WAIT),
+                  );
                   throw new Error(`test: ${count}`);
                 }}
               >
@@ -124,7 +128,9 @@
 
             <Form
               action={async ({ name }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                await new Promise((resolve) =>
+                  setTimeout(resolve, TIME_TO_WAIT),
+                );
                 console.log(`form action: { count: ${count}, name: ${name} }`);
               }}
               {...props}
@@ -132,7 +138,9 @@
               <Input type="hidden" name="name" value="dam" />
               <Button
                 action={async ({ name }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000));
+                  await new Promise((resolve) =>
+                    setTimeout(resolve, TIME_TO_WAIT),
+                  );
                   throw new Error(
                     `button action: { count: ${count}, name: ${name} }`,
                   );

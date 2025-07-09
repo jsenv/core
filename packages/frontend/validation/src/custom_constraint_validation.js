@@ -38,7 +38,7 @@ import {
   TYPE_EMAIL_CONSTRAINT,
   TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/native_constraints.js";
-import { NOT_BUSY_CONSTRAINT } from "./constraints/not_busy_constraint.js";
+import { NOT_READONLY_CONSTRAINT } from "./constraints/not_readonly_constraint.js";
 import { openValidationMessage } from "./validation_message.js";
 
 let debug = false;
@@ -263,7 +263,7 @@ export const installCustomConstraintValidation = (
   constraintSet.add(MAX_LENGTH_CONSTRAINT);
   constraintSet.add(MIN_CONSTRAINT);
   constraintSet.add(MAX_CONSTRAINT);
-  constraintSet.add(NOT_BUSY_CONSTRAINT);
+  constraintSet.add(NOT_READONLY_CONSTRAINT);
   register_constraint: {
     validationInterface.registerConstraint = (constraint) => {
       if (typeof constraint === "function") {

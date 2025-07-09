@@ -47,7 +47,7 @@ import.meta.css = /* css */ `
     outline-color: light-dark(#808080, #707070);
   }
 
-  input[data-custom][data-readonly] {
+  input[data-custom][readonly] {
     outline-color: light-dark(#d1d5db, #4b5563);
     background: light-dark(#f3f4f6, #2d3748);
     color: light-dark(#374151, #cbd5e0);
