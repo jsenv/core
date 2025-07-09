@@ -4,6 +4,7 @@
  * Supports:
  * - text (default)
  * - password
+ * - hidden
  * - email
  * - url
  * - search

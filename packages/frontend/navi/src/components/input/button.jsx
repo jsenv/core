@@ -3,7 +3,6 @@ import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { useFormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useAction,
@@ -270,7 +269,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
 
   return (
     <ButtonBasic
-      action={`javascript:void(\`${actionBoundToForm.name}\`)`}
+      data-action={actionBoundToForm.name}
       ref={innerRef}
       {...rest}
       type={type}
@@ -287,9 +286,10 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
 });
 
 const ButtonInsideForm = forwardRef((props, ref) => {
-  const { type, loading, readonly, onClick, children, ...rest } = props;
+  const { formContext, type, loading, readonly, onClick, children, ...rest } =
+    props;
   const { formAction, formIsBusy, formIsReadonly, formActionRequester } =
-    useFormContext();
+    formContext;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);

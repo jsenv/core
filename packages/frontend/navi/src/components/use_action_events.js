@@ -17,16 +17,6 @@ export const useActionEvents = (
 ) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
-    const eventsToListenOnForm = {
-      reset: (e) => {
-        onCancel?.(e, "form_reset");
-      },
-      actionprevented: onPrevented,
-      action: onAction,
-      actionstart: onStart,
-      actionerror: onError,
-      actionend: onEnd,
-    };
     const eventsToListenOnElement = {
       cancel: (e) => {
         onCancel?.(e, e.detail.reason);
@@ -37,24 +27,6 @@ export const useActionEvents = (
       actionerror: onError,
       actionend: onEnd,
     };
-
-    const isForm = element.tagName === "FORM";
-    if (isForm) {
-      return listenEvents(element, eventsToListenOnForm);
-    }
-
-    const form = element.form;
-    if (form) {
-      const removeFormEvents = listenEvents(form, eventsToListenOnForm);
-      const removeElementEvents = listenEvents(
-        element,
-        eventsToListenOnElement,
-      );
-      return () => {
-        removeFormEvents();
-        removeElementEvents();
-      };
-    }
 
     return listenEvents(element, eventsToListenOnElement);
   }, [onCancel, onPrevented, onAction, onStart, onError, onEnd]);

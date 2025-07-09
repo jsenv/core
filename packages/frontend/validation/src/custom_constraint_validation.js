@@ -433,12 +433,18 @@ export const installCustomConstraintValidation = (
     }
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
-      const actionCustomEvent = new CustomEvent("action", {
-        detail: { cause: e, requester: form },
-      });
       if (debug) {
         console.debug(`"submit" called -> dispatch "action" on`, form);
       }
+      const actionCustomEvent = new CustomEvent("action", {
+        detail: {
+          action: null,
+          event: e,
+          method: "reload",
+          requester: form,
+          meta: {},
+        },
+      });
       form.dispatchEvent(actionCustomEvent);
     });
     cleanupCallbackSet.add(() => {

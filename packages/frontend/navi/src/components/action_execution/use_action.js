@@ -59,10 +59,9 @@ export const useOneFormParam = (name, value) => {
 // when outside <form> button action receives no param
 export const useActionBoundToFormParams = (action) => {
   const { formAction } = useFormContext();
-  const boundAction = useBoundAction(action);
-
   const formActionParamsSignal = formAction.meta.paramsSignal;
-  const actionBoundToFormParams = boundAction.bindParams(
+  const actionBoundToFormParams = useBoundAction(
+    action,
     formActionParamsSignal,
   );
   return actionBoundToFormParams;

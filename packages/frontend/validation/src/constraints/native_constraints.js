@@ -170,18 +170,23 @@ export const MIN_CONSTRAINT = {
       return null;
     }
     if (element.type === "number") {
-      const min = element.min;
-      if (min === undefined) {
+      const minString = element.min;
+      if (minString === "") {
+        return null;
+      }
+      const minNumber = parseFloat(minString);
+      if (isNaN(minNumber)) {
         return null;
       }
       const valueAsNumber = element.valueAsNumber;
       if (isNaN(valueAsNumber)) {
         return null;
       }
-      if (valueAsNumber < min) {
+      if (valueAsNumber < minNumber) {
         const minMessage = element.getAttribute("data-min-message");
         return (
-          minMessage || `Doit être supérieur ou égal à <strong>${min}</strong>.`
+          minMessage ||
+          `Doit être supérieur ou égal à <strong>${minString}</strong>.`
         );
       }
       return null;
@@ -218,17 +223,21 @@ export const MAX_CONSTRAINT = {
       return null;
     }
     if (element.type === "number") {
-      const max = element.max;
-      if (max === undefined) {
+      const maxString = element.max;
+      if (maxString === "") {
+        return null;
+      }
+      const maxNumber = parseFloat(maxString);
+      if (isNaN(maxNumber)) {
         return null;
       }
       const valueAsNumber = element.valueAsNumber;
       if (isNaN(valueAsNumber)) {
         return null;
       }
-      if (valueAsNumber > max) {
+      if (valueAsNumber > maxNumber) {
         const maxMessage = element.getAttribute("data-max-message");
-        return maxMessage || `Doit être <strong>${max}</strong> ou plus.`;
+        return maxMessage || `Doit être <strong>${maxString}</strong> ou plus.`;
       }
       return null;
     }
