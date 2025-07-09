@@ -45,6 +45,23 @@ import.meta.css = /* css */ `
     transform: scale(0.9);
   }
 
+  button[data-custom] > .shadow {
+    position: absolute;
+    inset: -1.5px;
+    pointer-events: none;
+    box-shadow:
+      inset 0 3px 6px rgba(0, 0, 0, 0.2),
+      inset 0 1px 2px rgba(0, 0, 0, 0.3),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+      inset 2px 0 4px rgba(0, 0, 0, 0.1),
+      inset -2px 0 4px rgba(0, 0, 0, 0.1);
+    display: none;
+  }
+
+  button[data-custom]:active > .shadow {
+    display: block;
+  }
+
   button[data-custom][data-readonly] {
     outline-color: light-dark(#d1d5db, #4b5563);
     background: light-dark(#f3f4f6, #2d3748);
@@ -118,88 +135,11 @@ const ButtonBasic = forwardRef((props, ref) => {
         {...rest}
       >
         {children}
-        <div
-          style={{
-            position: "absolute",
-            inset: "-1.5px",
-            pointerEvents: "none",
-            borderRadius: "inherit",
-          }}
-        >
-          <SVGPressedEffect />
-        </div>
+        <div className="shadow"></div>
       </button>
     </LoaderBackground>
   );
 });
-
-const SVGPressedEffect = () => {
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      width="100%"
-      height="100%"
-    >
-      <defs>
-        {/* ✅ Vrai effet d'ombre interne */}
-        <filter id="inset-shadow" x="-50%" y="-50%" width="200%" height="200%">
-          {/* Créer un masque inversé */}
-          <feFlood floodColor="white" result="white" />
-          <feComposite
-            in="SourceGraphic"
-            in2="white"
-            operator="xor"
-            result="inverse"
-          />
-
-          {/* Appliquer l'ombre sur le masque inversé */}
-          <feGaussianBlur in="inverse" stdDeviation="3" result="blur" />
-          <feOffset in="blur" dx="0" dy="2" result="offset" />
-          <feFlood floodColor="rgba(0,0,0,0.6)" result="shadow-color" />
-          <feComposite
-            in="shadow-color"
-            in2="offset"
-            operator="in"
-            result="shadow"
-          />
-
-          {/* Garder seulement l'ombre à l'intérieur */}
-          <feComposite
-            in="shadow"
-            in2="SourceGraphic"
-            operator="in"
-            result="inner-shadow"
-          />
-
-          {/* Combiner avec le contenu original */}
-          <feMerge>
-            <feMergeNode in="SourceGraphic" />
-            <feMergeNode in="inner-shadow" />
-          </feMerge>
-        </filter>
-
-        {/* ✅ Gradient pour assombrir le centre */}
-        <radialGradient id="pressed-gradient" cx="50%" cy="30%" r="80%">
-          <stop offset="0%" stopColor="rgba(0,0,0,0.1)" />
-          <stop offset="60%" stopColor="rgba(0,0,0,0.2)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.3)" />
-        </radialGradient>
-      </defs>
-
-      {/* ✅ Rectangle avec effet enfoncé */}
-      <rect
-        x="0"
-        y="0"
-        width="100"
-        height="100"
-        fill="url(#pressed-gradient)"
-        filter="url(#inset-shadow)"
-        rx="2"
-      />
-    </svg>
-  );
-};
 
 const ActionButton = forwardRef((props, ref) => {
   const {
