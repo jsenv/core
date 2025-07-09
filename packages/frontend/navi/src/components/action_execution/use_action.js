@@ -1,8 +1,8 @@
 import { signal } from "@preact/signals";
-import { useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
 import { createJsValueWeakMap } from "../../js_value_weak_map.js";
-import { useParentAction } from "./action_context.js";
+import { ActionContext } from "./action_context.js";
 
 let debug = false;
 let componentIdCounter = 0;
@@ -19,6 +19,15 @@ const useComponentId = () => {
     }
   }
   return componentIdRef.current.id;
+};
+
+export const useParentAction = () => {
+  const value = useContext(ActionContext);
+  if (!value) {
+    return null;
+  }
+  const [parentAction] = value;
+  return parentAction;
 };
 
 // used by <form> to have their own action bound to many parameters

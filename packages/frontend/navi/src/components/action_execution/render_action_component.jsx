@@ -1,4 +1,4 @@
-import { useParentAction } from "./action_context.js";
+import { useParentAction } from "./use_action.js";
 
 export const renderActionComponent = (
   props,

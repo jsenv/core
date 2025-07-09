@@ -302,12 +302,12 @@ export const openValidationMessage = (
       ) {
         return;
       }
-      if (
-        clickTarget === targetElement ||
-        targetElement.contains(clickTarget)
-      ) {
-        return;
-      }
+      // if (
+      //   clickTarget === targetElement ||
+      //   targetElement.contains(clickTarget)
+      // ) {
+      //   return;
+      // }
       close("click_outside");
     };
     document.addEventListener("click", handleClickOutside, true);

@@ -22,7 +22,10 @@ export const NOT_READONLY_CONSTRAINT = {
       };
     }
     return {
-      message: `Cet élément est en lecture seule et ne peut pas être modifié.`,
+      message:
+        element.tagName === "BUTTON"
+          ? `Cet action n'est pas disponible pour l'instant.`
+          : `Cet élément est en lecture seule et ne peut pas être modifié.`,
       level: "info",
     };
   },

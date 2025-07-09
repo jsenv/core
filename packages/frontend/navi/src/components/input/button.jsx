@@ -3,7 +3,10 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionComponent } from "../action_execution/render_action_component.jsx";
-import { useActionBoundToParentParams } from "../action_execution/use_action.js";
+import {
+  useActionBoundToParentParams,
+  useParentAction,
+} from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
@@ -76,7 +79,7 @@ const SimpleButton = forwardRef((props, ref) => {
     autoFocus,
     constraints = [],
     loading,
-    readonly = loading,
+    readonly,
     children,
     appearance = "custom",
     borderWidth = 1,
@@ -101,7 +104,7 @@ const SimpleButton = forwardRef((props, ref) => {
         ref={innerRef}
         data-custom={appearance === "custom" ? "" : undefined}
         data-validation-message-arrow-x="center"
-        data-readonly={readonly ? "" : undefined}
+        data-readonly={readonly || loading ? "" : undefined}
         aria-busy={loading}
         style={{ "--button-border-width": `${borderWidth}px` }}
         {...rest}
@@ -117,6 +120,7 @@ const ActionButton = forwardRef((props, ref) => {
     type,
     action,
     loading,
+    readonly,
     children,
     onClick,
     actionErrorEffect,
@@ -137,6 +141,8 @@ const ActionButton = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
+  const parentAction = useParentAction();
+  const { pending: formIsPending } = useActionStatus(parentAction);
   const effectiveAction = useActionBoundToParentParams(action);
   const { pending } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -204,6 +210,7 @@ const ActionButton = forwardRef((props, ref) => {
       {...rest}
       type={type}
       loading={innerLoading}
+      readonly={readonly || formIsPending}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
