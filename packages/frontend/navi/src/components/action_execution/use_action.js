@@ -1,8 +1,7 @@
 import { signal } from "@preact/signals";
-import { useContext, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
 import { createJsValueWeakMap } from "../../js_value_weak_map.js";
-import { ActionContext } from "./action_context.js";
 
 let debug = false;
 let componentIdCounter = 0;
@@ -19,24 +18,6 @@ const useComponentId = () => {
     }
   }
   return componentIdRef.current.id;
-};
-
-export const useParentAction = () => {
-  const value = useContext(ActionContext);
-  if (!value) {
-    return null;
-  }
-  const [parentAction] = value;
-  return parentAction;
-};
-
-export const useParentAllowConcurrentActions = () => {
-  const value = useContext(ActionContext);
-  if (!value) {
-    return undefined;
-  }
-  const [, { allowConcurrentActions }] = value;
-  return allowConcurrentActions;
 };
 
 // used by <form> to have their own action bound to many parameters

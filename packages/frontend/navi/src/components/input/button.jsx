@@ -3,11 +3,11 @@ import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { renderActionComponent } from "../action_execution/render_action_component.jsx";
+import { useFormContext } from "../action_execution/form_context.js";
+import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
+  useAction,
   useActionBoundToParentParams,
-  useParentAction,
-  useParentAllowConcurrentActions,
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
@@ -98,7 +98,14 @@ import.meta.css = /* css */ `
   }
 `;
 export const Button = forwardRef((props, ref) => {
-  return renderActionComponent(props, ref, ButtonBasic, ActionButton);
+  return renderActionableComponent(
+    props,
+    ref,
+    ButtonBasic,
+    ButtonWithAction,
+    ButtonInsideForm,
+    ButtonWithActionInsideForm,
+  );
 });
 
 const ButtonBasic = forwardRef((props, ref) => {
@@ -158,7 +165,59 @@ const ButtonBasic = forwardRef((props, ref) => {
   );
 });
 
-const ActionButton = forwardRef((props, ref) => {
+const ButtonWithAction = forwardRef((props, ref) => {
+  const {
+    action,
+    loading,
+    children,
+    onClick,
+    actionErrorEffect,
+    onActionPrevented,
+    onActionStart,
+    onActionError,
+    onActionEnd,
+    ...rest
+  } = props;
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  const boundAction = useAction(action);
+  const { pending } = useActionStatus(boundAction);
+  const executeAction = useExecuteAction(innerRef, {
+    errorEffect: actionErrorEffect,
+  });
+
+  useActionEvents(innerRef, {
+    onPrevented: onActionPrevented,
+    onAction: executeAction,
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: onActionEnd,
+  });
+
+  const handleClick = (event) => {
+    event.preventDefault();
+    requestAction(boundAction, { event });
+  };
+
+  return (
+    <ButtonBasic
+      action={`javascript:void(\`${boundAction.name}\`)`}
+      ref={innerRef}
+      {...rest}
+      loading={loading || pending}
+      onClick={(event) => {
+        handleClick(event);
+        onClick?.(event);
+      }}
+    >
+      {children}
+    </ButtonBasic>
+  );
+});
+
+const ButtonWithActionInsideForm = forwardRef((props, ref) => {
   const {
     type,
     action,
@@ -175,8 +234,8 @@ const ActionButton = forwardRef((props, ref) => {
   } = props;
   const hasEffectOnForm =
     type === "submit" || type === "reset" || type === "image";
-  if (import.meta.dev && hasEffectOnForm && action) {
-    console.warn(
+  if (import.meta.dev && hasEffectOnForm) {
+    throw new Error(
       "Button with type submit/reset/image should not have their own action",
     );
   }
@@ -184,54 +243,64 @@ const ActionButton = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const parentAction = useParentAction();
-  const parentAllowConcurrentActions = useParentAllowConcurrentActions();
-  const { pending: formIsPending } = useActionStatus(parentAction);
-  const effectiveAction = useActionBoundToParentParams(action);
-  const { pending } = useActionStatus(effectiveAction);
+  const formContext = useFormContext();
+  const { pending: formIsPending, allowConcurrentActions } = formContext || {};
+  const boundAction = useActionBoundToParentParams(action);
+  const { pending } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
 
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
-    onAction: (actionEvent) => {
-      if (!action || actionEvent.detail.meta.isSubmit) {
-        return;
-      }
-      executeAction(actionEvent);
-    },
+    onAction: executeAction,
     onStart: onActionStart,
     onError: onActionError,
     onEnd: onActionEnd,
   });
 
   const handleClick = (event) => {
+    event.preventDefault();
+    requestAction(boundAction, { event });
+  };
+
+  return (
+    <ButtonBasic
+      action={`javascript:void(\`${boundAction.name}\`)`}
+      ref={innerRef}
+      {...rest}
+      type={type}
+      loading={loading || pending}
+      readonly={allowConcurrentActions ? readonly : readonly || formIsPending}
+      onClick={(event) => {
+        handleClick(event);
+        onClick?.(event);
+      }}
+    >
+      {children}
+    </ButtonBasic>
+  );
+});
+
+const ButtonInsideForm = forwardRef((props, ref) => {
+  const { type, loading, readonly, onClick, children, ...rest } = props;
+  const { formAction, formIsBusy, formActionRequester } = useFormContext();
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  const wouldSubmitFormByType = type === "submit" || type === "image";
+
+  const handleClick = (event) => {
     const buttonElement = event.target;
     const { form } = buttonElement;
-    if (action || !form) {
-      // custom action -> request it
-      // no form but a parent action -> request it
-      event.preventDefault();
-      requestAction(effectiveAction, { event });
-
-      // if there is a form we should indicate to other elements that form is busy (it's not really busy but it is)
-      // everything should become readonly (except other buttons when data-allow-concurrent-actions is set)
-
-      return;
-    }
-    if (!form) {
-      // no form nor own action -> nothing to do
-      return;
-    }
-    let wouldSubmitForm = type === "submit" || type === "image";
+    let wouldSubmitForm = wouldSubmitFormByType;
     if (!wouldSubmitForm) {
       const formSubmitButton = form.querySelector(
         "button[type='submit'], input[type='submit'], input[type='image']",
       );
-      if (!formSubmitButton) {
-        wouldSubmitForm = true;
-      }
+      const wouldSubmitFormBecauseSingleButton = !formSubmitButton;
+      wouldSubmitForm = wouldSubmitFormBecauseSingleButton;
     }
     if (!wouldSubmitForm) {
       return;
@@ -239,28 +308,23 @@ const ActionButton = forwardRef((props, ref) => {
     // prevent default behavior that would submit the form
     // we want to go through the action execution process (with validation and all)
     event.preventDefault();
-    requestAction(effectiveAction, {
+    requestAction(formAction, {
       event,
       target: form,
-      requester: event.target,
+      requester: buttonElement,
       meta: { isSubmit: true },
     });
   };
 
-  const innerLoading = loading || pending;
-
   return (
     <ButtonBasic
-      action={
-        action ? `javascript:void(\`${effectiveAction.name}\`)` : undefined
-      }
       ref={innerRef}
       {...rest}
       type={type}
-      loading={innerLoading}
-      readonly={
-        parentAllowConcurrentActions ? readonly : readonly || formIsPending
+      loading={
+        loading || (formIsBusy && formActionRequester === innerRef.current)
       }
+      readonly={readonly || formIsBusy}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
