@@ -6,6 +6,7 @@ import { renderActionComponent } from "../action_execution/render_action_compone
 import {
   useActionBoundToParentParams,
   useParentAction,
+  useParentAllowConcurrentActions,
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
@@ -142,6 +143,7 @@ const ActionButton = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const parentAction = useParentAction();
+  const parentAllowConcurrentActions = useParentAllowConcurrentActions();
   const { pending: formIsPending } = useActionStatus(parentAction);
   const effectiveAction = useActionBoundToParentParams(action);
   const { pending } = useActionStatus(effectiveAction);
@@ -210,7 +212,9 @@ const ActionButton = forwardRef((props, ref) => {
       {...rest}
       type={type}
       loading={innerLoading}
-      readonly={readonly || formIsPending}
+      readonly={
+        parentAllowConcurrentActions ? readonly : readonly || formIsPending
+      }
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);

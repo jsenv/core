@@ -105,7 +105,7 @@ export const requestAction = (
 
       const isValid = validationInterface.checkValidity({
         fromRequestAction: true,
-        skipBusy:
+        skipReadonly:
           formElement.tagName === "BUTTON" &&
           formElement !== requester &&
           allowConcurrentActions,

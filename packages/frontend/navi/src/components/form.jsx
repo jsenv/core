@@ -104,6 +104,11 @@ const ActionForm = forwardRef((props, ref) => {
     onEnd: onActionEnd,
   });
 
+  const allowConcurrentActions = Object.hasOwn(
+    rest,
+    "data-allow-concurrent-actions",
+  );
+
   return (
     <form
       {...rest}
@@ -118,7 +123,7 @@ const ActionForm = forwardRef((props, ref) => {
         requestAction(boundAction, { event: e });
       }}
     >
-      <ActionContext.Provider value={[boundAction]}>
+      <ActionContext.Provider value={[boundAction, { allowConcurrentActions }]}>
         {children}
       </ActionContext.Provider>
     </form>

@@ -30,6 +30,15 @@ export const useParentAction = () => {
   return parentAction;
 };
 
+export const useParentAllowConcurrentActions = () => {
+  const value = useContext(ActionContext);
+  if (!value) {
+    return undefined;
+  }
+  const [, { allowConcurrentActions }] = value;
+  return allowConcurrentActions;
+};
+
 // used by <form> to have their own action bound to many parameters
 // any form element within the <form> will update these params
 // these params are also assigned just before executing the action to ensure they are in sync
