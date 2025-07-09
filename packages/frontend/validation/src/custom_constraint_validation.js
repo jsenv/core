@@ -91,10 +91,6 @@ export const requestAction = (
       validationInProgressWeakSet.delete(formToValidate);
     });
 
-    const allowConcurrentActions = formToValidate.hasAttribute(
-      "data-allow-concurrent-actions",
-    );
-
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
     const formElements = formToValidate.elements;
     for (const formElement of formElements) {
@@ -106,9 +102,7 @@ export const requestAction = (
       const isValid = validationInterface.checkValidity({
         fromRequestAction: true,
         skipReadonly:
-          formElement.tagName === "BUTTON" &&
-          formElement !== requester &&
-          allowConcurrentActions,
+          formElement.tagName === "BUTTON" && formElement !== requester,
       });
       if (isValid) {
         continue;
