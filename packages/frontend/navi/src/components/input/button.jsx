@@ -34,7 +34,9 @@ import.meta.css = /* css */ `
     border-color: transparent;
     outline: var(--button-border-width) solid var(--button-border-color);
     outline-offset: calc(-1 * (var(--button-border-width)));
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 0.15s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-property: transform;
   }
 
   button[data-custom]:hover {
