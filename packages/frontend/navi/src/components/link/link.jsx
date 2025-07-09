@@ -2,7 +2,7 @@ import { closeValidationMessage, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { renderActionComponent } from "../action_execution/render_action_component.jsx";
+import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
@@ -31,7 +31,7 @@ import.meta.css = /* css */ `
 `;
 
 export const Link = forwardRef((props, ref) => {
-  return renderActionComponent(props, ref, SimpleLink, ActionLink);
+  return renderActionableComponent(props, ref, SimpleLink, ActionLink);
 });
 
 const SimpleLink = forwardRef((props, ref) => {

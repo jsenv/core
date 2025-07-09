@@ -2,7 +2,7 @@ import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { renderActionComponent } from "../action_execution/render_action_component.jsx";
+import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import "../checked_programmatic_change.js";
@@ -12,7 +12,7 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 
 export const InputCheckbox = forwardRef((props, ref) => {
-  return renderActionComponent(
+  return renderActionableComponent(
     props,
     ref,
     SimpleInputCheckbox,
