@@ -1,16 +1,20 @@
 import { signal } from "@preact/signals";
 import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
-import { createJsValueWeakMap } from "../../js_value_weak_map.js";
 import { useFormContext } from "./form_context.js";
 
 let debug = false;
 let componentIdCounter = 0;
-const useComponentId = () => {
-  const componentIdRef = useRef(null);
-  if (!componentIdRef.current) {
+const useComponentWeakMapKey = () => {
+  const componentKeyRef = useRef(null);
+  // It's very important to use an object here as componentId and not just in integer
+  // because this key will be used as a key in a WeakMap
+  // and if we pass an integer the browser allows itself to garbage collect it
+  // but not if it's an object as the useRef above keeps referencing it
+  // this is a subtle different and might be the reason why WeakMap does not accept primitive as keys
+  if (!componentKeyRef.current) {
     const id = ++componentIdCounter;
-    componentIdRef.current = {
+    componentKeyRef.current = {
       id,
       toString: () => `component_action_id_${id}`,
     };
@@ -18,7 +22,7 @@ const useComponentId = () => {
       console.debug(`🆔 Created new componentId: ${id}`);
     }
   }
-  return componentIdRef.current.id;
+  return componentKeyRef.current;
 };
 
 // used by <form> to have their own action bound to many parameters
@@ -27,9 +31,11 @@ const useComponentId = () => {
 // (could also be used by <fieldset> but I think fieldset are not going to be used this way and
 // we will reserve this behavior to <form>)
 export const useFormActionBoundToManyParams = (action) => {
-  const componentId = useComponentId();
-  const cacheKey = typeof action === "function" ? componentId : action;
-  const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
+  const componentWeakMapKey = useComponentWeakMapKey();
+  const [paramsSignal, updateParams] = useActionParamsSignal(
+    componentWeakMapKey,
+    {},
+  );
   const boundAction = useBoundAction(action, paramsSignal);
 
   boundAction.meta.paramsSignal = paramsSignal;
@@ -71,9 +77,11 @@ export const useActionBoundToFormParams = (action) => {
 // when inside a <form> the form params are updated when the form element single param is updated
 export const useActionBoundToOneParam = (action, name, value) => {
   const mountedRef = useRef(false);
-  const componentId = useComponentId();
-  const cacheKey = typeof action === "function" ? componentId : action;
-  const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
+  const componentWeakMapKey = useComponentWeakMapKey();
+  const [paramsSignal, updateParams] = useActionParamsSignal(
+    componentWeakMapKey,
+    {},
+  );
   const boundAction = useBoundAction(action, paramsSignal);
   const getValue = () => paramsSignal.value[name];
   const setValue = (value) => {
@@ -100,7 +108,7 @@ export const useAction = (action) => {
   return useBoundAction(action);
 };
 
-const sharedSignalCache = createJsValueWeakMap(); // because keys can be integer or action object
+const sharedSignalCache = new WeakMap();
 const useActionParamsSignal = (cacheKey, initialParams = {}) => {
   // ✅ cacheKey peut être componentId (Symbol) ou action (objet)
   const fromCache = sharedSignalCache.get(cacheKey);

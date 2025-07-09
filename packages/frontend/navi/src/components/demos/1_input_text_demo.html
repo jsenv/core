@@ -11,6 +11,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
         Field,
@@ -144,7 +145,36 @@
                 ></Input>
               </div>
             </div>
+            <div>
+              <p>
+                <strong>Input number with action updating state</strong>
+              </p>
+
+              <InputNumberWithActionUpdatingState />
+            </div>
           </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputNumberWithActionUpdatingState = () => {
+        const [value, setValue] = useState(1);
+
+        return (
+          <div>
+            value: {value}
+            <br />
+            <Input
+              type="number"
+              value={value}
+              name="test"
+              action={({ test }) => {
+                console.log("action executed with", test);
+
+                setValue(test);
+              }}
+            />
+          </div>
         );
       };
 

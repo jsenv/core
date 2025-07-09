@@ -121,6 +121,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     id,
     name,
     action,
+    type,
     value: initialValue = "",
     cancelOnBlurInvalid,
     cancelOnEscape,
@@ -208,13 +209,16 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     <InputTextualBasic
       {...rest}
       ref={innerRef}
+      type={type}
       id={id}
       name={name}
       value={value}
       loading={loading || pending}
       onInput={(e) => {
         valueAtEnterRef.current = null;
-        const inputValue = e.target.value;
+        const inputValue =
+          type === "number" ? e.target.valueAsNumber : e.target.value;
+        console.log({ inputValue });
         setNavStateValue(inputValue);
         setValue(inputValue);
         onInput?.(e);
