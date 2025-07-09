@@ -283,8 +283,17 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
+          const inputElement = e.target;
+          const { form } = inputElement;
+          const formSubmitButton = form.querySelector(
+            "button[type='submit'], input[type='submit'], input[type='image']",
+          );
           e.preventDefault();
-          requestAction(formAction, { event: e });
+          requestAction(formAction, {
+            event: e,
+            target: form,
+            requester: formSubmitButton ? formSubmitButton : inputElement,
+          });
         }
         onKeyDown?.(e);
       }}
