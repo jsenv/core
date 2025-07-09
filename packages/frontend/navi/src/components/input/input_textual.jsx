@@ -19,8 +19,11 @@ import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { renderActionComponent } from "../action_execution/render_action_component.jsx";
-import { useActionBoundToOneParam } from "../action_execution/use_action.js";
+import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
+import {
+  useActionBoundToOneParam,
+  useOneFormParam,
+} from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
@@ -71,15 +74,16 @@ import.meta.css = /* css */ `
 `;
 
 export const InputTextual = forwardRef((props, ref) => {
-  return renderActionComponent(
+  return renderActionableComponent(
     props,
     ref,
-    SimpleInputTextual,
-    ActionInputTextual,
+    InputTextualBasic,
+    InputTextualWithAction,
+    InputTextualInsideForm,
   );
 });
 
-const SimpleInputTextual = forwardRef((props, ref) => {
+const InputTextualBasic = forwardRef((props, ref) => {
   const {
     autoFocus,
     autoFocusVisible,
@@ -111,7 +115,7 @@ const SimpleInputTextual = forwardRef((props, ref) => {
   return <LoaderBackground loading={loading}>{inputTextual}</LoaderBackground>;
 });
 
-const ActionInputTextual = forwardRef((props, ref) => {
+const InputTextualWithAction = forwardRef((props, ref) => {
   const {
     id,
     name,
@@ -145,31 +149,24 @@ const ActionInputTextual = forwardRef((props, ref) => {
         : navStateValue
       : initialValue;
 
-  const [effectiveAction, getValue, setValue] = useActionBoundToOneParam(
+  const [boundAction, getValue, setValue] = useActionBoundToOneParam(
     action,
     name,
     valueAtStart,
   );
-  const { pending } = useActionStatus(effectiveAction);
+  const { pending } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
   const value = getValue();
-  const actionRequesterRef = useRef();
 
   const preventNextChangeRef = useRef(false);
   useOnChange(innerRef, (e) => {
-    if (!action) {
-      return;
-    }
     if (preventNextChangeRef.current) {
       preventNextChangeRef.current = false;
       return;
     }
-    actionRequesterRef.current = e.target;
-    requestAction(effectiveAction, {
-      event: e,
-    });
+    requestAction(boundAction, { event: e });
   });
 
   useActionEvents(innerRef, {
@@ -203,17 +200,14 @@ const ActionInputTextual = forwardRef((props, ref) => {
     },
   });
 
-  const innerLoading =
-    loading || (pending && actionRequesterRef.current === innerRef.current);
-
   return (
-    <SimpleInputTextual
+    <InputTextualBasic
       {...rest}
       ref={innerRef}
       id={id}
       name={name}
       value={value}
-      loading={innerLoading}
+      loading={loading || pending}
       onInput={(e) => {
         const inputValue = e.target.value;
         setNavStateValue(inputValue);
@@ -221,18 +215,10 @@ const ActionInputTextual = forwardRef((props, ref) => {
         onInput?.(e);
       }}
       onKeyDown={(e) => {
-        if (!action) {
-          return;
-        }
         if (e.key !== "Enter") {
           return;
         }
-        const input = e.target;
-        if (input.form) {
-          return;
-        }
         e.preventDefault();
-        actionRequesterRef.current = input;
         /**
          * Browser trigger a "change" event right after the enter is pressed
          * if the input value has changed.
@@ -242,9 +228,60 @@ const ActionInputTextual = forwardRef((props, ref) => {
         setTimeout(() => {
           preventNextChangeRef.current = false;
         });
-        requestAction(effectiveAction, {
-          event: e,
-        });
+        requestAction(boundAction, { event: e });
+      }}
+    />
+  );
+});
+
+const InputTextualInsideForm = forwardRef((props, ref) => {
+  const {
+    formContext,
+    id,
+    name,
+    value: initialValue = "",
+    loading,
+    onInput,
+    ...rest
+  } = props;
+
+  const innerRef = useRef(null);
+  useImperativeHandle(ref, () => innerRef.current);
+
+  const [navStateValue, setNavStateValue] = useNavState(id);
+  const valueAtStart =
+    initialValue === undefined || initialValue === ""
+      ? navStateValue === undefined
+        ? ""
+        : navStateValue
+      : initialValue;
+
+  const { formAction, formIsBusy, formActionRequester } = formContext;
+  const [getValue, setValue] = useOneFormParam(name, valueAtStart);
+  const value = getValue();
+
+  return (
+    <InputTextualBasic
+      {...rest}
+      ref={innerRef}
+      id={id}
+      name={name}
+      value={value}
+      loading={
+        loading || (formIsBusy && formActionRequester === innerRef.current)
+      }
+      onInput={(e) => {
+        const inputValue = e.target.value;
+        setNavStateValue(inputValue);
+        setValue(inputValue);
+        onInput?.(e);
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter") {
+          return;
+        }
+        e.preventDefault();
+        requestAction(formAction, { event: e });
       }}
     />
   );

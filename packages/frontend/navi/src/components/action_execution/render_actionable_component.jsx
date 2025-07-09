@@ -14,13 +14,21 @@ export const renderActionableComponent = (
 
   if (hasActionProps) {
     if (ComponentWithActionInsideForm && formContext) {
-      return <ComponentWithActionInsideForm ref={ref} {...props} />;
+      return (
+        <ComponentWithActionInsideForm
+          formContext={formContext}
+          ref={ref}
+          {...props}
+        />
+      );
     }
     return <ComponentWithAction ref={ref} {...props} />;
   }
 
   if (formContext) {
-    return <ComponentInsideForm ref={ref} {...props} />;
+    return (
+      <ComponentInsideForm formContext={formContext} ref={ref} {...props} />
+    );
   }
 
   return <ComponentBasic ref={ref} {...props} />;

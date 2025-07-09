@@ -7,7 +7,7 @@ import { useFormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useAction,
-  useActionBoundToParentParams,
+  useActionBoundToFormParams,
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
@@ -219,6 +219,7 @@ const ButtonWithAction = forwardRef((props, ref) => {
 
 const ButtonWithActionInsideForm = forwardRef((props, ref) => {
   const {
+    formContext,
     type,
     action,
     loading,
@@ -243,10 +244,9 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const formContext = useFormContext();
-  const { formIsPending, formAllowConcurrentActions } = formContext || {};
-  const boundAction = useActionBoundToParentParams(action);
-  const { pending } = useActionStatus(boundAction);
+  const { formIsPending, formAllowConcurrentActions } = formContext;
+  const actionBoundToForm = useActionBoundToFormParams(action);
+  const { pending } = useActionStatus(actionBoundToForm);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -261,12 +261,12 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
 
   const handleClick = (event) => {
     event.preventDefault();
-    requestAction(boundAction, { event });
+    requestAction(actionBoundToForm, { event });
   };
 
   return (
     <ButtonBasic
-      action={`javascript:void(\`${boundAction.name}\`)`}
+      action={`javascript:void(\`${actionBoundToForm.name}\`)`}
       ref={innerRef}
       {...rest}
       type={type}
