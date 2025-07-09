@@ -38,12 +38,12 @@ import.meta.css = /* css */ `
   }
 
   button[data-custom]:hover {
-    outline-color: light-dark(#505050, #7e7e83);
+    outline-color: color-mix(in srgb, var(--button-border-color) 70%, black);
     background: light-dark(#e6e6e6, #2a2a2c);
   }
 
   button[data-custom]:active {
-    outline-color: light-dark(#808080, #707070);
+    outline-color: color-mix(in srgb, var(--button-border-color) 90%, black);
     transform: scale(0.9);
   }
 
@@ -120,6 +120,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     borderWidth = 1,
     outlineWidth = 1,
     borderColor = "light-dark(#767676, #8e8e93)",
+    ...restStyle
   } = style;
   borderWidth = resolveCSSSize(borderWidth);
   outlineWidth = resolveCSSSize(outlineWidth);
@@ -141,7 +142,7 @@ const ButtonBasic = forwardRef((props, ref) => {
         data-readonly={readonly || loading ? "" : undefined}
         aria-busy={loading}
         style={{
-          ...style,
+          ...restStyle,
           "--button-border-width": `${borderWidth}px`,
           "--button-outline-width": `${outlineWidth}px`,
           "--button-border-color": borderColor,
