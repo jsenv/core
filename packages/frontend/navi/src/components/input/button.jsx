@@ -295,6 +295,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const wouldSubmitFormByType = type === "submit" || type === "image";
+  const innerReadonly = readonly || formIsReadonly;
 
   const handleClick = (event) => {
     const buttonElement = event.target;
@@ -308,6 +309,9 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       wouldSubmitForm = wouldSubmitFormBecauseSingleButton;
     }
     if (!wouldSubmitForm) {
+      if (innerReadonly) {
+        event.preventDefault();
+      }
       return;
     }
     // prevent default behavior that would submit the form
@@ -329,7 +333,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       loading={
         loading || (formIsBusy && formActionRequester === innerRef.current)
       }
-      readonly={readonly || formIsReadonly}
+      readonly={innerReadonly}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
