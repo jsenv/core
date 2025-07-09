@@ -24,6 +24,7 @@
         const [loading, setLoading] = useState(false);
         const [loadingB, setLoadingB] = useState(false);
         const [loadingC, setLoadingC] = useState(false);
+        const [loadingD, setLoadingD] = useState(false);
 
         return (
           <div>
@@ -60,7 +61,7 @@
             <div>
               <div>
                 <p>
-                  <strong>Loading with action</strong>
+                  <strong>Loading (action)</strong>
                 </p>
 
                 <Field
@@ -85,12 +86,13 @@
             <div>
               <div>
                 <p>
-                  <strong>Disabled</strong>
+                  <strong>Readonly</strong>
                 </p>
 
                 <Field
-                  input={<Input disabled loading={loadingC} />}
+                  input={<Input readonly loading={loadingC} />}
                   label="C"
+                  readonly
                 />
 
                 <button>
@@ -105,7 +107,36 @@
 
                 <div>
                   <label>
-                    <input disabled />C
+                    <input readonly />C
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div>
+                <p>
+                  <strong>Disabled</strong>
+                </p>
+
+                <Field
+                  input={<Input disabled loading={loadingD} />}
+                  label="D"
+                />
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingD(!loadingD);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input disabled />D
                   </label>
                 </div>
               </div>

@@ -44,6 +44,7 @@ const SimpleInputTextual = forwardRef((props, ref) => {
     autoSelect,
     constraints = [],
     loading,
+    readonly = loading,
     ...rest
   } = props;
 
@@ -55,7 +56,7 @@ const SimpleInputTextual = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
-  const inputTextual = <input ref={innerRef} {...rest} />;
+  const inputTextual = <input ref={innerRef} readOnly={readonly} {...rest} />;
 
   return <LoaderBackground loading={loading}>{inputTextual}</LoaderBackground>;
 });

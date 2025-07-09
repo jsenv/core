@@ -51,6 +51,7 @@ import.meta.css = /*css*/ `
 
 [name="element_with_loader_wrapper"] button:disabled {
   outline-color: light-dark(#a0a0a050, #90909050);
+  background-color: rgb(239, 239, 239);
 }
 `;
 export const Button = forwardRef((props, ref) => {
@@ -61,8 +62,8 @@ const SimpleButton = forwardRef((props, ref) => {
   const {
     autoFocus,
     constraints = [],
+    readonly,
     loading,
-    busy = loading,
     children,
     borderWidth = 1,
     ...rest
@@ -85,7 +86,8 @@ const SimpleButton = forwardRef((props, ref) => {
       <button
         ref={innerRef}
         data-validation-message-arrow-x="center"
-        aria-busy={busy}
+        data-readonly={readonly}
+        aria-busy={loading}
         style={{ "--button-border-width": `${borderWidth}px` }}
         {...rest}
       >
@@ -99,7 +101,7 @@ const ActionButton = forwardRef((props, ref) => {
   const {
     type,
     action,
-    busy,
+    readonly,
     loading,
     children,
     onClick,
@@ -187,7 +189,7 @@ const ActionButton = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       type={type}
-      busy={busy || innerLoading}
+      readonly={readonly || innerLoading}
       loading={innerLoading}
       onClick={(event) => {
         handleClick(event);
