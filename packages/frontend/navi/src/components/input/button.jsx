@@ -23,6 +23,7 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import.meta.css = /* css */ `
   button[data-custom] {
     --button-border-width: 1px;
+    --button-border-color: light-dark(#767676, #8e8e93);
     --button-outline-width: 1px;
 
     border-radius: 2px;
@@ -31,7 +32,7 @@ import.meta.css = /* css */ `
     );
     border-style: solid;
     border-color: transparent;
-    outline: var(--button-border-width) solid light-dark(#767676, #8e8e93);
+    outline: var(--button-border-width) solid var(--button-border-color);
     outline-offset: calc(-1 * (var(--button-border-width)));
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -115,7 +116,11 @@ const ButtonBasic = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  let { borderWidth = 1, outlineWidth = 1 } = style;
+  let {
+    borderWidth = 1,
+    outlineWidth = 1,
+    borderColor = "light-dark(#767676, #8e8e93)",
+  } = style;
   borderWidth = resolveCSSSize(borderWidth);
   outlineWidth = resolveCSSSize(outlineWidth);
 
@@ -139,6 +144,7 @@ const ButtonBasic = forwardRef((props, ref) => {
           ...style,
           "--button-border-width": `${borderWidth}px`,
           "--button-outline-width": `${outlineWidth}px`,
+          "--button-border-color": borderColor,
           "position": "relative",
         }}
       >
