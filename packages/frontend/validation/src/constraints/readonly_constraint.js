@@ -1,5 +1,5 @@
-export const NOT_READONLY_CONSTRAINT = {
-  name: "not_readonly",
+export const READONLY_CONSTRAINT = {
+  name: "readonly",
   check: (element, { skipReadonly }) => {
     if (skipReadonly) {
       return null;

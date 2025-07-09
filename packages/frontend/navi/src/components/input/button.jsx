@@ -244,7 +244,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const { formIsPending, formAllowConcurrentActions } = formContext;
+  const { formIsBusy, formAllowConcurrentActions } = formContext;
   const actionBoundToForm = useActionBoundToFormParams(action);
   const { pending } = useActionStatus(actionBoundToForm);
   const executeAction = useExecuteAction(innerRef, {
@@ -261,6 +261,10 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
 
   const handleClick = (event) => {
     event.preventDefault();
+    // lorsque cette action s'éxecute elle doit mettre le form en mode busy
+    // je vois pas encore comment je vais faire ca mais a priori
+    // on va juste le faire "manuellement"
+    // en utilisnt un truc du formContext
     requestAction(actionBoundToForm, { event });
   };
 
@@ -271,7 +275,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       {...rest}
       type={type}
       loading={loading || pending}
-      readonly={readonly || formAllowConcurrentActions ? false : formIsPending}
+      readonly={readonly || formAllowConcurrentActions ? false : formIsBusy}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
