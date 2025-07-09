@@ -43,10 +43,6 @@ import.meta.css = /* css */ `
   button[data-custom]:active {
     outline-color: light-dark(#808080, #707070);
     transform: scale(0.9);
-    box-shadow:
-      inset 0 2px 4px light-dark(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4)),
-      inset 0 0 0 1px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3)),
-      0 1px 2px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2));
   }
 
   button[data-custom][data-readonly] {
@@ -115,14 +111,59 @@ const ButtonBasic = forwardRef((props, ref) => {
         data-validation-message-arrow-x="center"
         data-readonly={readonly || loading ? "" : undefined}
         aria-busy={loading}
-        style={{ "--button-border-width": `${borderWidth}px` }}
+        style={{
+          "--button-border-width": `${borderWidth}px`,
+          "position": "relative",
+        }}
         {...rest}
       >
         {children}
+        <div
+          style={{
+            position: "absolute",
+            inset: "-1.5px",
+            pointerEvents: "none",
+            borderRadius: "inherit",
+          }}
+        >
+          <SVGPressedEffect />
+        </div>
       </button>
     </LoaderBackground>
   );
 });
+
+const SVGPressedEffect = () => {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      width="100%"
+      height="100%"
+    >
+      <defs>
+        <filter id="pressed-effect">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="1" />
+          <feOffset dx="0" dy="1" result="offset" />
+          <feFlood floodColor="rgba(0,0,0,0.3)" />
+          <feComposite in2="offset" operator="in" />
+          <feMerge>
+            <feMergeNode />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <rect
+        x="0"
+        y="0"
+        width="100"
+        height="100"
+        fill="rgba(0,0,0,0.15)"
+        filter="url(#pressed-effect)"
+      />
+    </svg>
+  );
+};
 
 const ActionButton = forwardRef((props, ref) => {
   const {
