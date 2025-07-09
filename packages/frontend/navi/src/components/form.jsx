@@ -15,26 +15,27 @@
 
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
-import { ActionContext } from "./action_execution/action_context.js";
-import { renderActionComponent } from "./action_execution/render_action_component.jsx";
+import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { FormContext } from "./action_execution/form_context.js";
+import { renderActionableComponent } from "./action_execution/render_actionable_component.jsx";
 import { useActionBoundToManyParams } from "./action_execution/use_action.js";
 import { useExecuteAction } from "./action_execution/use_execute_action.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import { useActionEvents } from "./use_action_events.js";
 
 export const Form = forwardRef((props, ref) => {
-  return renderActionComponent(props, ref, SimpleForm, ActionForm);
+  return renderActionableComponent(props, ref, FormBasic, FormWithAction);
 });
 
-const SimpleForm = forwardRef((props, ref) => {
+const FormBasic = forwardRef((props, ref) => {
   return <form ref={ref} {...props} />;
 });
 
-const ActionForm = forwardRef((props, ref) => {
+const FormWithAction = forwardRef((props, ref) => {
   let {
     action,
     method,
+    allowConcurrentActions: formAllowConcurrentActions = false,
     actionErrorEffect = "show_validation_message", // "show_validation_message" or "throw"
     onActionPrevented,
     onActionStart,
@@ -52,6 +53,9 @@ const ActionForm = forwardRef((props, ref) => {
   useConstraints(innerRef, []);
 
   const [boundAction, , setParams] = useActionBoundToManyParams(action);
+  const [formActionRequester, setFormActionRequester] = useState(null);
+  const [formIsBusy, setFormIsBusy] = useState(false);
+  const [formError, setFormError] = useState(null);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -97,17 +101,23 @@ const ActionForm = forwardRef((props, ref) => {
       const formElementValues = collectFormElementValues(form);
       setParams(formElementValues);
 
+      setFormActionRequester(actionEvent.detail.requester);
+      setFormIsBusy(true);
+      setFormError(null);
       executeAction(actionEvent);
     },
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd,
+    onStart: (e) => {
+      onActionStart?.(e);
+    },
+    onError: (e) => {
+      setFormIsBusy(false);
+      onActionError?.(e);
+    },
+    onEnd: (e) => {
+      setFormIsBusy(false);
+      onActionEnd?.(e);
+    },
   });
-
-  const allowConcurrentActions = Object.hasOwn(
-    rest,
-    "data-allow-concurrent-actions",
-  );
 
   return (
     <form
@@ -123,9 +133,17 @@ const ActionForm = forwardRef((props, ref) => {
         requestAction(boundAction, { event: e });
       }}
     >
-      <ActionContext.Provider value={[boundAction, { allowConcurrentActions }]}>
+      <FormContext.Provider
+        value={{
+          formAllowConcurrentActions,
+          formAction: boundAction,
+          formActionRequester,
+          formIsBusy,
+          formError,
+        }}
+      >
         {children}
-      </ActionContext.Provider>
+      </FormContext.Provider>
     </form>
   );
 });

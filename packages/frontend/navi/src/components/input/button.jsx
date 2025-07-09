@@ -244,7 +244,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const formContext = useFormContext();
-  const { pending: formIsPending, allowConcurrentActions } = formContext || {};
+  const { formIsPending, formAllowConcurrentActions } = formContext || {};
   const boundAction = useActionBoundToParentParams(action);
   const { pending } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -271,7 +271,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       {...rest}
       type={type}
       loading={loading || pending}
-      readonly={allowConcurrentActions ? readonly : readonly || formIsPending}
+      readonly={readonly || formAllowConcurrentActions ? false : formIsPending}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
