@@ -18,13 +18,16 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import.meta.css = /* css */ `
   button[data-custom] {
     --button-border-width: 1px;
+    --button-outline-width: 1px;
 
     border-radius: 2px;
-    border-width: calc(var(--button-border-width) + 1px);
+    border-width: calc(
+      var(--button-border-width) + var(--button-outline-width)
+    );
     border-style: solid;
     border-color: transparent;
     outline: var(--button-border-width) solid light-dark(#767676, #8e8e93);
-    outline-offset: calc(-1 * var(--button-border-width));
+    outline-offset: calc(-1 * (var(--button-border-width)));
   }
 
   button[data-custom]:hover {
@@ -49,8 +52,12 @@ import.meta.css = /* css */ `
   }
 
   button[data-custom]:focus-visible {
-    outline-width: calc(var(--button-border-width) + 1px);
-    outline-offset: calc(-1 * (var(--button-border-width) + 1px));
+    outline-width: calc(
+      var(--button-border-width) + var(--button-outline-width)
+    );
+    outline-offset: calc(
+      -1 * (var(--button-border-width) + var(--button-outline-width))
+    );
     outline-color: light-dark(#1d4ed8, #3b82f6);
   }
 
@@ -58,6 +65,7 @@ import.meta.css = /* css */ `
   button[data-custom]:disabled:hover {
     outline-color: light-dark(#a0a0a050, #90909050);
     background-color: rgb(239, 239, 239);
+    color: light-dark(rgba(16, 16, 16, 0.3), rgba(255, 255, 255, 0.3));
   }
 `;
 export const Button = forwardRef((props, ref) => {

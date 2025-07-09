@@ -28,6 +28,20 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 import { useOnChange } from "../use_on_change.js";
 
+import.meta.css = /* css */ `
+  input {
+    border-style: solid;
+  }
+
+  input[readonly] {
+    background: light-dark(#f3f4f6, #2d3748);
+    color: light-dark(#374151, #cbd5e0);
+    border-color: light-dark(#d1d5db, #4b5563);
+    filter: grayscale(20%);
+    border-radius: 2px;
+  }
+`;
+
 export const InputTextual = forwardRef((props, ref) => {
   return renderActionComponent(
     props,
