@@ -32,6 +32,7 @@ import.meta.css = /* css */ `
     border-color: transparent;
     outline: var(--button-border-width) solid light-dark(#767676, #8e8e93);
     outline-offset: calc(-1 * (var(--button-border-width)));
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   button[data-custom]:hover {
@@ -41,6 +42,11 @@ import.meta.css = /* css */ `
 
   button[data-custom]:active {
     outline-color: light-dark(#808080, #707070);
+    transform: scale(0.9);
+    box-shadow:
+      inset 0 2px 4px light-dark(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4)),
+      inset 0 0 0 1px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3)),
+      0 1px 2px light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2));
   }
 
   button[data-custom][data-readonly] {
@@ -69,13 +75,15 @@ import.meta.css = /* css */ `
     outline-color: light-dark(#a0a0a050, #90909050);
     background-color: rgb(239, 239, 239);
     color: light-dark(rgba(16, 16, 16, 0.3), rgba(255, 255, 255, 0.3));
+    transform: none;
+    box-shadow: none;
   }
 `;
 export const Button = forwardRef((props, ref) => {
-  return renderActionComponent(props, ref, SimpleButton, ActionButton);
+  return renderActionComponent(props, ref, ButtonBasic, ActionButton);
 });
 
-const SimpleButton = forwardRef((props, ref) => {
+const ButtonBasic = forwardRef((props, ref) => {
   const {
     autoFocus,
     constraints = [],
@@ -172,6 +180,10 @@ const ActionButton = forwardRef((props, ref) => {
       // no form but a parent action -> request it
       event.preventDefault();
       requestAction(effectiveAction, { event });
+
+      // if there is a form we should indicate to other elements that form is busy (it's not really busy but it is)
+      // everything should become readonly (except other buttons when data-allow-concurrent-actions is set)
+
       return;
     }
     if (!form) {
@@ -204,7 +216,7 @@ const ActionButton = forwardRef((props, ref) => {
   const innerLoading = loading || pending;
 
   return (
-    <SimpleButton
+    <ButtonBasic
       action={
         action ? `javascript:void(\`${effectiveAction.name}\`)` : undefined
       }
@@ -221,6 +233,6 @@ const ActionButton = forwardRef((props, ref) => {
       }}
     >
       {children}
-    </SimpleButton>
+    </ButtonBasic>
   );
 });
