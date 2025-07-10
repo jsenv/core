@@ -140,7 +140,7 @@ export const useActionBoundToOneArrayParam = (action, name, value) => {
     return valueArray.includes(valueToCheck);
   };
 
-  return [boundAction, add, remove, isInArray, resetValue];
+  return [boundAction, getValue, add, remove, isInArray, resetValue];
 };
 
 // used by <details> to just call their action

@@ -1,26 +1,155 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { useActionBoundToOneParam } from "../action_execution/use_action.js";
+import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
+import { useActionBoundToOneArrayParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
 import { useNavState } from "../use_nav_state.js";
 import { Field } from "./field.jsx";
 import { InputCheckbox } from "./input_checkbox.jsx";
 
-import.meta.css = /*css*/ `
-.checkbox_list {
+import.meta.css = /* css */ `
+  .checkbox_list {
     display: flex;
     flex-direction: column;
-}
+  }
 `;
 
 export const CheckboxList = forwardRef((props, ref) => {
+  return renderActionableComponent(
+    props,
+    ref,
+    CheckboxListBasic,
+    CheckboxListWithAction,
+    CheckboxListInsideForm,
+  );
+});
+
+const CheckboxListControlled = forwardRef((props, ref) => {
+  const {
+    name,
+    value,
+    label,
+    loading,
+    disabled,
+    readOnly,
+    children,
+    onChange,
+    ...rest
+  } = props;
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  return (
+    <fieldset className="checkbox_list" ref={innerRef} {...rest}>
+      {label ? <legend>{label}</legend> : null}
+      {children.map((child) => {
+        const {
+          label: childLabel,
+          readOnly: childReadOnly,
+          disabled: childDisabled,
+          loading: childLoading,
+          onChange: childOnChange,
+          value: childValue,
+          ...childRest
+        } = child;
+
+        const checkbox = (
+          <InputCheckbox
+            {...childRest}
+            // ignoreForm: each input is controller by this list
+            // we don't want the input to try to update the form because it's already done here
+            ignoreForm
+            name={name}
+            value={childValue}
+            checked={childValue === value}
+            readOnly={readOnly || childReadOnly}
+            disabled={disabled || childDisabled}
+            loading={loading || childLoading}
+            onChange={(event) => {
+              onChange(event);
+              childOnChange?.(event);
+            }}
+          />
+        );
+
+        return <Field key={childValue} input={checkbox} label={childLabel} />;
+      })}
+    </fieldset>
+  );
+});
+
+const CheckboxListBasic = forwardRef((props, ref) => {
+  const { value: initialValue, id, children, ...rest } = props;
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  const [navStateValue, setNavStateValue] = useNavState(id);
+  const valueAtStart =
+    initialValue === undefined ? navStateValue || [] : initialValue;
+  const [checkedValueArray, setCheckedValueArray] = useState(valueAtStart);
+
+  const add = (valueToAdd) => {
+    setCheckedValueArray((checkedValueArray) => {
+      const valueArrayWithThisValue = [];
+      let found = false;
+      for (const checkedValue of checkedValueArray) {
+        if (checkedValue === valueToAdd) {
+          found = true;
+          continue;
+        }
+        valueArrayWithThisValue.push(checkedValue);
+      }
+      return found ? valueArrayWithThisValue : checkedValueArray;
+    });
+  };
+  const remove = (valueToRemove) => {
+    setCheckedValueArray((checkedValueArray) => {
+      const valueArrayWithoutThisValue = [];
+      let found = false;
+      for (const checkedValue of checkedValueArray) {
+        if (checkedValue === valueToRemove) {
+          found = true;
+          continue;
+        }
+        valueArrayWithoutThisValue.push(checkedValue);
+      }
+      return found ? valueArrayWithoutThisValue : checkedValueArray;
+    });
+  };
+
+  return (
+    <CheckboxListControlled
+      ref={innerRef}
+      value={checkedValueArray}
+      onChange={(event) => {
+        const checkbox = event.target;
+        const checkboxIsChecked = checkbox.checked;
+        const checkboxValue = checkbox.value;
+        if (checkboxIsChecked) {
+          add(checkboxValue);
+        } else {
+          remove(checkboxValue);
+        }
+        setNavStateValue(checkedValueArray);
+      }}
+      {...rest}
+    >
+      {children}
+    </CheckboxListControlled>
+  );
+});
+
+const CheckboxListWithAction = forwardRef((props, ref) => {
   const {
     id,
     name,
-    action = () => {},
+    value: initialValue,
+    action,
     label,
     children,
     actionErrorEffect,
@@ -36,118 +165,77 @@ export const CheckboxList = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue] = useNavState(id);
-  const checkedValueArrayAtStart = [];
-  for (const child of children) {
-    if (child.checked || navStateValue?.includes(child.value)) {
-      checkedValueArrayAtStart.push(child.value);
-    }
-  }
+  const [navStateValue, setNavStateValue, resetNavState] = useNavState(id);
+  const valueAtStart =
+    initialValue === undefined ? navStateValue || [] : initialValue;
 
   const [
     boundAction,
+    getCheckedValueArray,
     addToCheckedValues,
     removeFromCheckedValues,
-    isChecked,
     resetCheckedValueArray,
-  ] = useActionBoundToOneParam(action, name, checkedValueArrayAtStart);
+  ] = useActionBoundToOneArrayParam(action, name, valueAtStart);
   const { pending } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-
   const actionRequesterRef = useRef();
+
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
-      setNavStateValue(undefined);
+      resetNavState();
       resetCheckedValueArray();
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
-      const requester = actionEvent.detail.requester;
-      actionRequesterRef.current = requester;
+      actionRequesterRef.current = actionEvent.detail.requester;
       executeAction(actionEvent);
     },
     onStart: onActionStart,
-    onAbort: (e) => {
-      resetCheckedValueArray();
-      onActionAbort?.(e);
-    },
-    onError: (e) => {
-      resetCheckedValueArray();
-      onActionError?.(e);
-    },
+    onAbort: onActionAbort,
+    onError: onActionError,
     onEnd: (e) => {
-      setNavStateValue(undefined);
+      resetNavState();
       onActionEnd?.(e);
     },
   });
 
   return (
-    <fieldset
-      className="checkbox_list"
-      data-checkbox-list
-      ref={innerRef}
+    <CheckboxListControlled
       {...rest}
+      ref={innerRef}
+      onChange={(event) => {
+        const checkbox = event.target;
+        const checkboxIsChecked = checkbox.checked;
+        const checkboxValue = checkbox.value;
+        if (checkboxIsChecked) {
+          addToCheckedValues(checkboxValue);
+        } else {
+          removeFromCheckedValues(checkboxValue);
+        }
+        setNavStateValue();
+        const checkboxListContainer = innerRef.current;
+        requestAction(boundAction, {
+          event,
+          target: checkboxListContainer,
+          requester: checkbox,
+        });
+      }}
     >
-      {label ? <legend>{label}</legend> : null}
       {children.map((child) => {
-        const { id, value, disabled, label, loading } = child;
-        const checked = isChecked(value);
-        const checkboxRef = useRef(null);
-
-        const innerLoading =
-          loading ||
-          (pending &&
-            actionRequesterRef.current &&
-            actionRequesterRef.current === checkboxRef.current);
-        const innerDisabled = disabled || pending;
-        const checkbox = (
-          <InputCheckbox
-            // ignoreParentAction: each checkbox is controller by this checkbox list
-            // we don't want the checkbox to try to update the parent action
-            // it's already done here
-            ignoreParentAction
-            ref={checkboxRef}
-            id={id}
-            name={name}
-            value={value}
-            checked={checked}
-            disabled={innerDisabled}
-            loading={innerLoading}
-            onChange={(event) => {
-              const checkbox = event.target;
-              const checkboxIsChecked = checkbox.checked;
-              if (checkboxIsChecked) {
-                addToCheckedValues(value);
-              } else {
-                removeFromCheckedValues(value);
-              }
-
-              if (checkbox.form) {
-                // let the submit button handle the request action
-                return;
-              }
-              const checkboxListContainer = innerRef.current;
-              requestAction(boundAction, {
-                event,
-                target: checkboxListContainer,
-                requester: checkbox,
-              });
-            }}
-          />
-        );
-
-        return (
-          <Field
-            key={value}
-            disabled={innerDisabled}
-            input={checkbox}
-            label={label}
-          />
-        );
+        const childRef = useRef();
+        return {
+          ...child,
+          loading:
+            child.loading ||
+            (pending && actionRequesterRef.current === childRef.current),
+          readOnly: child.readOnly || pending,
+        };
       })}
-    </fieldset>
+    </CheckboxListControlled>
   );
 });
+
+const CheckboxListInsideForm = () => {};

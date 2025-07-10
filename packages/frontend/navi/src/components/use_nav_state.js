@@ -37,13 +37,13 @@ const NO_OP = () => {};
 const useNavStateWithoutWarnings =
   typeof navigation === "undefined"
     ? () => {
-        return [undefined, NO_OP];
+        return [undefined, NO_OP, NO_OP];
       }
     : (id, initialValue, { debug } = {}) => {
         const navStateRef = useRef(NOT_SET);
 
         if (!id) {
-          return [undefined, NO_OP];
+          return [undefined, NO_OP, NO_OP];
         }
 
         if (navStateRef.current === NOT_SET) {
@@ -68,28 +68,33 @@ const useNavStateWithoutWarnings =
           }
         }
 
+        const set = (value) => {
+          const currentValue = navStateRef.current;
+          if (typeof value === "function") {
+            value = value(currentValue);
+          }
+          if (debug) {
+            console.debug(
+              `useNavState(${id}) set ${value} (previous was ${currentValue})`,
+            );
+          }
+
+          const currentState = navigation.currentEntry.getState() || {};
+          if (value === undefined) {
+            delete currentState[id];
+          } else {
+            currentState[id] = value;
+          }
+          navigation.updateCurrentEntry({
+            state: currentState,
+          });
+        };
+
         return [
           navStateRef.current,
-          (value) => {
-            const currentValue = navStateRef.current;
-            if (typeof value === "function") {
-              value = value(currentValue);
-            }
-            if (debug) {
-              console.debug(
-                `useNavState(${id}) set ${value} (previous was ${currentValue})`,
-              );
-            }
-
-            const currentState = navigation.currentEntry.getState() || {};
-            if (value === undefined) {
-              delete currentState[id];
-            } else {
-              currentState[id] = value;
-            }
-            navigation.updateCurrentEntry({
-              state: currentState,
-            });
+          set,
+          () => {
+            set(undefined);
           },
         ];
       };

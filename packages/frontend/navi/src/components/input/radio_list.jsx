@@ -136,10 +136,10 @@ const RadioListWithAction = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue] = useNavState(id);
+  const [navStateValue, setNavStateValue, resetNavState] = useNavState(id);
   const valueAtStart =
     initialValue === undefined ? navStateValue : initialValue;
-  const [boundAction, getCheckedValue, setCheckedValue] =
+  const [boundAction, getCheckedValue, setCheckedValue, resetCheckedValue] =
     useActionBoundToOneParam(action, name, valueAtStart);
   const { pending, aborted, error } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -152,8 +152,8 @@ const RadioListWithAction = forwardRef((props, ref) => {
 
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
-      setNavStateValue(undefined);
-      setCheckedValue(valueAtStart);
+      resetNavState();
+      resetCheckedValue();
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -164,7 +164,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
     onStart: onActionStart,
     onError: onActionError,
     onEnd: () => {
-      setNavStateValue(undefined);
+      resetNavState();
       onActionEnd?.();
     },
   });
