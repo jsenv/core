@@ -20,7 +20,7 @@ import.meta.css = /* css */ `
     border-radius: 1px;
   }
 
-  .navi_link[aria-busy="true"],
+  .navi_link[data-readonly],
   .navi_link[inert] {
     opacity: 0.5;
   }
@@ -31,13 +31,14 @@ import.meta.css = /* css */ `
 `;
 
 export const Link = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, SimpleLink, ActionLink);
+  return renderActionableComponent(props, ref, LinkBasic, LinkWithAction);
 });
 
-const SimpleLink = forwardRef((props, ref) => {
+const LinkBasic = forwardRef((props, ref) => {
   const {
     className = "",
     loading,
+    readOnly,
     disabled,
     children,
     autoFocus,
@@ -54,13 +55,18 @@ const SimpleLink = forwardRef((props, ref) => {
 
   return (
     <a
-      ref={innerRef}
       {...rest}
+      ref={innerRef}
       className={["navi_link", ...className.split(" ")].join(" ")}
       aria-busy={loading}
       inert={disabled}
+      data-readonly={readOnly ? "" : undefined}
       onClick={(e) => {
         closeValidationMessage(e.target, "click");
+        if (readOnly) {
+          e.preventDefault();
+          return;
+        }
         onClick?.(e);
       }}
     >
@@ -69,7 +75,7 @@ const SimpleLink = forwardRef((props, ref) => {
   );
 });
 
-const ActionLink = forwardRef((props, ref) => {
+const LinkWithAction = forwardRef((props, ref) => {
   const {
     children,
     shortcuts = [],
@@ -77,6 +83,7 @@ const ActionLink = forwardRef((props, ref) => {
     loading,
     onActionPrevented,
     onActionStart,
+    onActionAbort,
     onActionError,
     onActionEnd,
     ...rest
@@ -91,14 +98,15 @@ const ActionLink = forwardRef((props, ref) => {
   const executeAction = useExecuteAction(innerRef);
   useActionEvents(innerRef, {
     onAction: executeAction,
-    onActionPrevented,
-    onActionStart,
-    onActionError,
-    onActionEnd,
+    onPrevented: onActionPrevented,
+    onAbort: onActionAbort,
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: onActionEnd,
   });
 
   return (
-    <SimpleLink
+    <LinkBasic
       ref={innerRef}
       {...rest}
       loading={innerLoading}
@@ -109,6 +117,6 @@ const ActionLink = forwardRef((props, ref) => {
       }}
     >
       {children}
-    </SimpleLink>
+    </LinkBasic>
   );
 });
