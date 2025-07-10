@@ -49,7 +49,12 @@ const CheckboxListControlled = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   return (
-    <fieldset className="checkbox_list" ref={innerRef} {...rest}>
+    <fieldset
+      {...rest}
+      className="checkbox_list"
+      ref={innerRef}
+      data-checkbox-list
+    >
       {label ? <legend>{label}</legend> : null}
       {children.map((child) => {
         const {
@@ -240,7 +245,7 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
 
   const [navStateValue, setNavStateValue] = useNavState(id);
   const valueAtStart =
-    initialValue === undefined ? navStateValue : initialValue;
+    initialValue === undefined ? navStateValue || [] : initialValue;
   const [getValueArray, addValue, removeValue] = useOneFormArrayParam(
     name,
     valueAtStart,
