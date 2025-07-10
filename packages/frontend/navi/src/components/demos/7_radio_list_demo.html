@@ -29,7 +29,11 @@
                 <strong>No action </strong>
               </p>
 
-              <RadioList name="color" label="Select your favorite color:">
+              <RadioList
+                id="no_action"
+                name="color"
+                label="Select your favorite color:"
+              >
                 {[
                   { label: "Red", value: "red" },
                   { label: "Blue", value: "blue" },
@@ -40,16 +44,16 @@
 
             <div>
               <p>
-                <strong>action alert after 1s</strong>
+                <strong>action log after 1s</strong>
               </p>
 
               <RadioList
+                id="action_alert"
                 name="color"
                 label="Select your favorite color:"
                 action={async ({ color }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  // eslint-disable-next-line no-alert
-                  window.alert(`Color selected: ${JSON.stringify(color)}`);
+                  console.log(`Color selected: ${JSON.stringify(color)}`);
                 }}
               >
                 {[

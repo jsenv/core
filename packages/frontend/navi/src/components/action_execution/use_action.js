@@ -3,7 +3,7 @@ import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
 import { useFormContext } from "./form_context.js";
 
-let debug = true;
+let debug = false;
 let componentActionIdCounter = 0;
 const useComponentActionCacheKey = () => {
   const componentActionCacheKeyRef = useRef(null);

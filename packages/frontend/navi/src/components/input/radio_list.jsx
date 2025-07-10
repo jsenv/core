@@ -150,6 +150,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
       onChange={(event) => {
         const radio = event.target;
         setCheckedValue(radio.value);
+        setNavStateValue(radio.value);
         const radioListContainer = innerRef.current;
         requestAction(boundAction, {
           event,
