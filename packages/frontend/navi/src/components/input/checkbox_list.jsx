@@ -1,7 +1,8 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useEffect, useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
+import { useStateArray } from "../../use_state_array.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneArrayParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
@@ -91,51 +92,25 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   const [navStateValue, setNavStateValue] = useNavState(id);
   const valueAtStart =
     initialValue === undefined ? navStateValue || [] : initialValue;
-  const [checkedValueArray, setCheckedValueArray] = useState(valueAtStart);
+  const [valueArray, addValue, removeValue] = useStateArray(valueAtStart);
 
-  const add = (valueToAdd) => {
-    setCheckedValueArray((checkedValueArray) => {
-      const valueArrayWithThisValue = [];
-      let found = false;
-      for (const checkedValue of checkedValueArray) {
-        if (checkedValue === valueToAdd) {
-          found = true;
-          continue;
-        }
-        valueArrayWithThisValue.push(checkedValue);
-      }
-      return found ? valueArrayWithThisValue : checkedValueArray;
-    });
-  };
-  const remove = (valueToRemove) => {
-    setCheckedValueArray((checkedValueArray) => {
-      const valueArrayWithoutThisValue = [];
-      let found = false;
-      for (const checkedValue of checkedValueArray) {
-        if (checkedValue === valueToRemove) {
-          found = true;
-          continue;
-        }
-        valueArrayWithoutThisValue.push(checkedValue);
-      }
-      return found ? valueArrayWithoutThisValue : checkedValueArray;
-    });
-  };
+  useEffect(() => {
+    setNavStateValue(valueArray);
+  }, [valueArray]);
 
   return (
     <CheckboxListControlled
       ref={innerRef}
-      value={checkedValueArray}
+      value={valueArray}
       onChange={(event) => {
         const checkbox = event.target;
         const checkboxIsChecked = checkbox.checked;
         const checkboxValue = checkbox.value;
         if (checkboxIsChecked) {
-          add(checkboxValue);
+          addValue(checkboxValue);
         } else {
-          remove(checkboxValue);
+          removeValue(checkboxValue);
         }
-        setNavStateValue(checkedValueArray);
       }}
       {...rest}
     >
@@ -177,6 +152,9 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   const actionRequesterRef = useRef();
 
   const valueArrayInAction = getValueArray();
+  useEffect(() => {
+    setNavStateValue(valueArrayInAction);
+  }, [valueArrayInAction]);
   const valueArray = aborted || error ? valueAtStart : valueArrayInAction;
 
   useActionEvents(innerRef, {
@@ -214,7 +192,6 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
         } else {
           removeValue(checkboxValue, valueArray);
         }
-        setNavStateValue();
         const checkboxListContainer = innerRef.current;
         requestAction(boundAction, {
           event,

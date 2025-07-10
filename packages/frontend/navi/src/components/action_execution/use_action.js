@@ -1,6 +1,7 @@
 import { signal } from "@preact/signals";
 import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
+import { addIntoArray, removeFromArray } from "../../array_add_remove.js";
 import { useFormContext } from "./form_context.js";
 
 let debug = false;
@@ -110,30 +111,11 @@ export const useActionBoundToOneArrayParam = (action, name, value) => {
     useActionBoundToOneParam(action, name, value);
 
   const add = (valueToAdd, valueArray = getValue()) => {
-    const valueArrayWithThisValue = [];
-    for (const value of valueArray) {
-      if (value === valueToAdd) {
-        return;
-      }
-      valueArrayWithThisValue.push(value);
-    }
-    valueArrayWithThisValue.push(valueToAdd);
-    setValue(valueArrayWithThisValue);
+    setValue(addIntoArray(valueArray, valueToAdd));
   };
+
   const remove = (valueToRemove, valueArray = getValue()) => {
-    const valueArrayWithoutThisValue = [];
-    let found = false;
-    for (const value of valueArray) {
-      if (value === valueToRemove) {
-        found = true;
-        continue;
-      }
-      valueArrayWithoutThisValue.push(value);
-    }
-    if (!found) {
-      return;
-    }
-    setValue(valueArrayWithoutThisValue);
+    setValue(removeFromArray(valueArray, valueToRemove));
   };
 
   return [boundAction, getValue, add, remove, resetValue];
