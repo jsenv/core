@@ -352,7 +352,7 @@ const InputRadioInsideForm = forwardRef((props, ref) => {
     navStateValue === undefined ? initialChecked : navStateValue === value;
   const [getCheckedValue, setCheckedValue] = useOneFormParam(
     name,
-    checkedAtStart,
+    checkedAtStart ? value : undefined,
   );
   const checkedInFormAction = getCheckedValue() === value;
   const checked =

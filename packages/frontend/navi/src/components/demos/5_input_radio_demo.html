@@ -70,17 +70,17 @@
                 <strong>Form + prechecked + throw after 1s</strong>
               </p>
               <Form
-                action={async ({ drone }) => {
+                action={async ({ drone_2 }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(`Drone selected: ${drone}`);
+                  throw new Error(`Drone selected: ${drone_2}`);
                 }}
               >
-                <fieldset name="toto">
+                <fieldset name="drone_2">
                   <legend>Select a maintenance drone:</legend>
 
                   <div>
                     <Field
-                      input={<Input type="radio" name="drone" value="huey" />}
+                      input={<Input type="radio" name="drone_2" value="huey" />}
                       label="Huey"
                     />
                   </div>
@@ -91,7 +91,7 @@
                         <Input
                           checked
                           type="radio"
-                          name="drone"
+                          name="drone_2"
                           value="dewey"
                         />
                       }
@@ -101,7 +101,9 @@
 
                   <div>
                     <Field
-                      input={<Input type="radio" name="drone" value="louie" />}
+                      input={
+                        <Input type="radio" name="drone_2" value="louie" />
+                      }
                       label="Louie"
                     />
                   </div>
