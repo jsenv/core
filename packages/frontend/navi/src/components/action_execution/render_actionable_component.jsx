@@ -8,12 +8,13 @@ export const renderActionableComponent = (
   ComponentInsideForm,
   ComponentWithActionInsideForm,
 ) => {
-  const { action, shortcuts } = props;
+  const { action, shortcuts, ignoreForm } = props;
   const formContext = useFormContext();
   const hasActionProps = Boolean(action || (shortcuts && shortcuts.length > 0));
+  const considerInsideForm = ignoreForm ? false : Boolean(formContext);
 
   if (hasActionProps) {
-    if (ComponentWithActionInsideForm && formContext) {
+    if (considerInsideForm && ComponentWithActionInsideForm) {
       return (
         <ComponentWithActionInsideForm
           formContext={formContext}
@@ -25,7 +26,7 @@ export const renderActionableComponent = (
     return <ComponentWithAction ref={ref} {...props} />;
   }
 
-  if (formContext) {
+  if (considerInsideForm) {
     return (
       <ComponentInsideForm formContext={formContext} ref={ref} {...props} />
     );
