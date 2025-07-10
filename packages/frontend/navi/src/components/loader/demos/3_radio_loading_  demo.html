@@ -25,6 +25,8 @@
         const [loadingB, setLoadingB] = useState(false);
         const [loadingC, setLoadingC] = useState(false);
         const [loadingD, setLoadingD] = useState(false);
+        const [loadingE, setLoadingE] = useState(false);
+        const [loadingF, setLoadingF] = useState(false);
 
         return (
           <div>
@@ -88,22 +90,29 @@
                     Toggle
                   </span>
                 </button>
+
+                <div>
+                  <label>
+                    <input type="radio" name="loading_native" />
+                    Coucou
+                  </label>
+                </div>
               </div>
             </div>
 
             <div>
               <div>
                 <p>
-                  <strong>Disabled</strong>
+                  <strong>Read only</strong>
                 </p>
 
                 <Field
                   input={
                     <Input
-                      disabled
+                      readOnly
                       type="radio"
-                      name="disabled"
-                      loading={loadingC}
+                      name="readonly"
+                      loading={loadingE}
                     />
                   }
                   label="C"
@@ -121,7 +130,80 @@
 
                 <div>
                   <label>
-                    <input type="radio" name="disabled_native" disabled />C
+                    <input type="radio" name="readonly_native" readonly />C
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div>
+                <p>
+                  <strong>Read only + checked</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input
+                      readOnly
+                      checked
+                      type="radio"
+                      name="readonly_checked"
+                      loading={loadingD}
+                    />
+                  }
+                  label="D"
+                />
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingD(!loadingD);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input type="radio" name="readonly_native" readonly />D
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div>
+                <p>
+                  <strong>Disabled</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input
+                      disabled
+                      type="radio"
+                      name="disabled"
+                      loading={loadingE}
+                    />
+                  }
+                  label="E"
+                />
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingE(!loadingE);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input type="radio" name="disabled_native" disabled />E
                   </label>
                 </div>
               </div>
@@ -140,16 +222,16 @@
                       checked
                       type="radio"
                       name="disabled_checked"
-                      loading={loadingD}
+                      loading={loadingF}
                     />
                   }
-                  label="Coucou"
+                  label="F"
                 />
 
                 <button>
                   <span
                     onClick={() => {
-                      setLoadingD(!loadingD);
+                      setLoadingF(!loadingF);
                     }}
                   >
                     Toggle
@@ -164,7 +246,7 @@
                       disabled
                       checked
                     />
-                    Coucou
+                    F
                   </label>
                 </div>
               </div>

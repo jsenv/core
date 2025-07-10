@@ -42,7 +42,7 @@ import.meta.css = /* css */ `
     box-sizing: content-box;
   }
 
-  .custom_radio_wrapper input[type="radio"] {
+  .custom_radio_wrapper input {
     position: absolute;
     opacity: 0;
     inset: 0;
@@ -88,42 +88,56 @@ import.meta.css = /* css */ `
     fill: ${CUSTOM_RADIO_COLORS.checkmark.hover};
   }
 
-  .custom_radio_wrapper:hover input[type="radio"]:checked + .custom_radio {
+  .custom_radio_wrapper:hover input:checked + .custom_radio {
     background: ${CUSTOM_RADIO_COLORS.background.checkedAndHover};
     border-color: ${CUSTOM_RADIO_COLORS.borders.checkedAndHover};
   }
 
   /* État checked */
-  .custom_radio_wrapper input[type="radio"]:checked + .custom_radio {
+  .custom_radio_wrapper input:checked + .custom_radio {
     background: ${CUSTOM_RADIO_COLORS.background.checked};
     border-color: ${CUSTOM_RADIO_COLORS.borders.checked};
   }
 
-  .custom_radio_wrapper input[type="radio"]:checked + .custom_radio svg {
+  .custom_radio_wrapper input:checked + .custom_radio svg {
     opacity: 1;
     transform: scale(1);
   }
 
   /* États disabled */
-  .custom_radio_wrapper input[type="radio"][disabled] + .custom_radio {
+  .custom_radio_wrapper input[disabled] + .custom_radio {
     background-color: ${CUSTOM_RADIO_COLORS.background.disabled};
     border-color: ${CUSTOM_RADIO_COLORS.borders.disabled};
   }
 
-  .custom_radio_wrapper input[type="radio"][disabled]:checked + .custom_radio {
+  .custom_radio_wrapper input[disabled]:checked + .custom_radio {
     border-color: ${CUSTOM_RADIO_COLORS.borders.disabledAndChecked};
   }
 
   .custom_radio_wrapper
-    input[type="radio"][disabled]:checked
+    input[disabled]:checked
     + .custom_radio
-    svg
-    circle {
+    .custom_radio_marker {
     fill: ${CUSTOM_RADIO_COLORS.checkmark.disabled};
   }
 
+  .custom_radio_wrapper input[data-readonly] + .custom_radio {
+    border-style: dashed;
+    background: light-dark(#f3f4f6, #2d3748);
+  }
+  .custom_radio_wrapper input[data-readonly]:checked + .custom_radio {
+    border-style: dashed;
+    border-color: #3b82f6;
+  }
+  .custom_radio_wrapper:hover input[data-readonly] + .custom_radio {
+    border-color: #6b7280;
+  }
+  .custom_radio_wrapper:hover input[data-readonly]:checked + .custom_radio {
+    border-color: #3b82f6;
+  }
+
   /* Focus state avec outline */
-  .custom_radio_wrapper input[type="radio"]:focus-visible + .custom_radio {
+  .custom_radio_wrapper input:focus-visible + .custom_radio {
     outline: 2px solid ${CUSTOM_RADIO_COLORS.outline.default};
     outline-offset: 1px;
   }
@@ -294,6 +308,7 @@ const InputRadioWithAction = forwardRef((props, ref) => {
       name={name}
       value={value}
       checked={checked}
+      loading={innerLoading}
       readOnly={readOnly || innerLoading}
       onChange={(e) => {
         const radioIsChecked = e.target.checked;
