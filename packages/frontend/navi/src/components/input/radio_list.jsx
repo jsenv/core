@@ -101,7 +101,12 @@ const RadioListBasic = forwardRef((props, ref) => {
       ref={innerRef}
       value={value}
       onChange={(event) => {
-        const value = event.target.value;
+        const radio = event.target;
+        const radioIsChecked = radio.checked;
+        if (!radioIsChecked) {
+          return;
+        }
+        const value = radio.value;
         setValue(value);
         setNavStateValue(value);
       }}
@@ -133,7 +138,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
 
   const [navStateValue, setNavStateValue] = useNavState(id);
   const valueAtStart =
-    navStateValue === undefined ? initialValue : navStateValue;
+    initialValue === undefined ? navStateValue : initialValue;
   const [boundAction, getCheckedValue, setCheckedValue] =
     useActionBoundToOneParam(action, name, valueAtStart);
   const { pending, aborted, error } = useActionStatus(boundAction);
@@ -167,11 +172,17 @@ const RadioListWithAction = forwardRef((props, ref) => {
   return (
     <RadioListControlled
       ref={innerRef}
+      name={name}
       value={value}
       onChange={(event) => {
         const radio = event.target;
-        setCheckedValue(radio.value);
-        setNavStateValue(radio.value);
+        const radioIsChecked = radio.checked;
+        if (!radioIsChecked) {
+          return;
+        }
+        const value = radio.value;
+        setCheckedValue(value);
+        setNavStateValue(value);
         const radioListContainer = innerRef.current;
         requestAction(boundAction, {
           event,
@@ -213,7 +224,7 @@ const RadioListInsideForm = forwardRef((props, ref) => {
 
   const [navStateValue, setNavStateValue] = useNavState(id);
   const valueAtStart =
-    navStateValue === undefined ? initialValue : navStateValue;
+    initialValue === undefined ? navStateValue : initialValue;
   const [getCheckedValue, setCheckedValue] = useOneFormParam(
     name,
     valueAtStart,
@@ -226,12 +237,18 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   return (
     <RadioListControlled
       ref={innerRef}
+      name={name}
       value={value}
       readOnly={readOnly || formIsReadOnly}
       onChange={(event) => {
         const radio = event.target;
-        setCheckedValue(radio.value);
-        setNavStateValue(radio.value);
+        const radioIsChecked = radio.checked;
+        if (!radioIsChecked) {
+          return;
+        }
+        const value = radio.value;
+        setCheckedValue(value);
+        setNavStateValue(value);
       }}
       {...rest}
     >

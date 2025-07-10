@@ -20,7 +20,7 @@ export const Field = (props) => {
   const innerReadOnly = readOnly || inputReadOnly;
   const labelRef = useRef();
   useLayoutEffect(() => {
-    if (!readOnly) {
+    if (readOnly) {
       return null;
     }
     let animationFrame;
