@@ -330,13 +330,19 @@ const InputRadioInsideForm = forwardRef((props, ref) => {
     formContext,
     id,
     name,
-    value = "on",
+    value = "",
     checked: initialChecked,
     readOnly,
     onChange,
     ...rest
   } = props;
   const { formIsReadOnly } = formContext;
+
+  if (import.meta.dev && value === "") {
+    console.warn(
+      `InputRadio: value is an empty string, this is probably not what you want`,
+    );
+  }
 
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
@@ -356,6 +362,7 @@ const InputRadioInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       id={id}
       name={name}
+      value={value}
       checked={checked}
       readOnly={readOnly || formIsReadOnly}
       onChange={(e) => {

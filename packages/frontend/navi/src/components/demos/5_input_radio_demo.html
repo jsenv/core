@@ -41,42 +41,21 @@
 
                   <div>
                     <Field
-                      input={
-                        <Input
-                          type="radio"
-                          id="drone"
-                          name="drone"
-                          value="huey"
-                        />
-                      }
+                      input={<Input type="radio" name="drone" value="huey" />}
                       label="Huey"
                     />
                   </div>
 
                   <div>
                     <Field
-                      input={
-                        <Input
-                          type="radio"
-                          id="drone"
-                          name="drone"
-                          value="dewey"
-                        />
-                      }
+                      input={<Input type="radio" name="drone" value="dewey" />}
                       label="Dewey"
                     />
                   </div>
 
                   <div>
                     <Field
-                      input={
-                        <Input
-                          type="radio"
-                          id="drone"
-                          name="drone"
-                          value="louie"
-                        />
-                      }
+                      input={<Input type="radio" name="drone" value="louie" />}
                       label="Louie"
                     />
                   </div>
@@ -94,10 +73,9 @@
                   type="radio"
                   name="test"
                   value="coucou"
-                  id="throw"
                   action={async ({ test }) => {
                     await new Promise((resolve) => {
-                      setTimeout(resolve, 1_000);
+                      setTimeout(resolve, 3_000);
                     });
                     throw new Error(`This is an error, checked: ${test}`);
                   }}
