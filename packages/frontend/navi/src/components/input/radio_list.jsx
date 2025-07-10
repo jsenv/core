@@ -1,6 +1,6 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { useRefArray } from "../../use_ref_array.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -96,6 +96,9 @@ const RadioListBasic = forwardRef((props, ref) => {
   const valueAtStart =
     navStateValue === undefined ? initialValue : navStateValue;
   const [value, setValue] = useState(valueAtStart);
+  useEffect(() => {
+    setNavStateValue(value);
+  }, [value]);
 
   return (
     <RadioListControlled
@@ -109,7 +112,6 @@ const RadioListBasic = forwardRef((props, ref) => {
         }
         const value = radio.value;
         setValue(value);
-        setNavStateValue(value);
       }}
       {...rest}
     >
@@ -150,6 +152,9 @@ const RadioListWithAction = forwardRef((props, ref) => {
 
   const valueInAction = getCheckedValue();
   const value = aborted || error ? valueAtStart : valueInAction;
+  useEffect(() => {
+    setNavStateValue(value);
+  }, [valueInAction]);
 
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
@@ -185,7 +190,6 @@ const RadioListWithAction = forwardRef((props, ref) => {
         }
         const value = radio.value;
         setCheckedValue(value);
-        setNavStateValue(value);
         const radioListContainer = innerRef.current;
         requestAction(boundAction, {
           event,
@@ -236,6 +240,9 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   const valueInAction = getCheckedValue();
   const value =
     formActionAborted || formActionError ? valueAtStart : valueInAction;
+  useEffect(() => {
+    setNavStateValue(valueInAction);
+  }, [valueInAction]);
 
   return (
     <RadioListControlled
@@ -251,7 +258,6 @@ const RadioListInsideForm = forwardRef((props, ref) => {
         }
         const value = radio.value;
         setCheckedValue(value);
-        setNavStateValue(value);
       }}
       {...rest}
     >

@@ -5,7 +5,10 @@ import { useActionStatus } from "../../use_action_status.js";
 import { useRefArray } from "../../use_ref_array.js";
 import { useStateArray } from "../../use_state_array.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useActionBoundToOneArrayParam } from "../action_execution/use_action.js";
+import {
+  useActionBoundToOneArrayParam,
+  useOneFormArrayParam,
+} from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
 import { useNavState } from "../use_nav_state.js";
@@ -72,7 +75,7 @@ const CheckboxListControlled = forwardRef((props, ref) => {
             disabled={disabled || childDisabled}
             loading={loading || childLoading}
             onChange={(event) => {
-              onChange(event);
+              onChange(event, child);
               childOnChange?.(event);
             }}
           />
@@ -220,4 +223,55 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   );
 });
 
-const CheckboxListInsideForm = () => {};
+const CheckboxListInsideForm = forwardRef((props, ref) => {
+  const {
+    formContext,
+    id,
+    name,
+    readOnly,
+    value: initialValue,
+    children,
+    ...rest
+  } = props;
+  const { formActionAborted, formActionError, formIsReadOnly } = formContext;
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  const [navStateValue, setNavStateValue] = useNavState(id);
+  const valueAtStart =
+    initialValue === undefined ? navStateValue : initialValue;
+  const [getValueArray, addValue, removeValue] = useOneFormArrayParam(
+    name,
+    valueAtStart,
+  );
+
+  const valueArrayInAction = getValueArray();
+  const valueArray =
+    formActionAborted || formActionError ? valueAtStart : valueArrayInAction;
+  useEffect(() => {
+    setNavStateValue(valueArrayInAction);
+  }, [valueArrayInAction]);
+
+  return (
+    <CheckboxListControlled
+      ref={innerRef}
+      name={name}
+      value={valueArray}
+      readOnly={readOnly || formIsReadOnly}
+      onChange={(event) => {
+        const checkbox = event.target;
+        const checkboxIsChecked = checkbox.checked;
+        const checkboxValue = checkbox.value;
+        if (checkboxIsChecked) {
+          addValue(checkboxValue, valueArray);
+        } else {
+          removeValue(checkboxValue, valueArray);
+        }
+      }}
+      {...rest}
+    >
+      {children}
+    </CheckboxListControlled>
+  );
+});

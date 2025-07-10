@@ -120,6 +120,16 @@ export const useActionBoundToOneArrayParam = (action, name, value) => {
 
   return [boundAction, getValue, add, remove, resetValue];
 };
+export const useOneFormArrayParam = (name, value) => {
+  const [getValue, setValue] = useOneFormParam(name, value);
+  const add = (valueToAdd, valueArray = getValue()) => {
+    setValue(addIntoArray(valueArray, valueToAdd));
+  };
+  const remove = (valueToRemove, valueArray = getValue()) => {
+    setValue(removeFromArray(valueArray, valueToRemove));
+  };
+  return [getValue, add, remove];
+};
 
 // used by <details> to just call their action
 export const useAction = (action, paramsSignal) => {
