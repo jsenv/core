@@ -205,11 +205,14 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     >
       {children.map((child, i) => {
         const childRef = childRefArray[i];
+        const loading =
+          child.loading ||
+          (pending && actionRequesterRef.current === childRef.current);
+
         return {
           ...child,
-          loading:
-            child.loading ||
-            (pending && actionRequesterRef.current === childRef.current),
+          ref: childRef,
+          loading,
           readOnly: child.readOnly || pending,
         };
       })}
