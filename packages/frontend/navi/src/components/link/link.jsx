@@ -80,6 +80,7 @@ const LinkWithAction = forwardRef((props, ref) => {
     children,
     shortcuts = [],
     onKeyDown,
+    readOnly,
     loading,
     onActionPrevented,
     onActionStart,
@@ -110,6 +111,8 @@ const LinkWithAction = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       loading={innerLoading}
+      readOnly={readOnly || pending}
+      data-readonly-silent={pending && !readOnly ? "" : undefined}
       data-has-shortcuts={shortcuts.length > 0 ? "" : undefined}
       onKeyDown={(e) => {
         onKeyDownForShortcuts(e);
