@@ -113,10 +113,7 @@ const DetailsBasic = forwardRef((props, ref) => {
       }}
       open={innerOpen}
     >
-      <summary
-        data-validation-message-stay-on-focus
-        data-validation-message-stay-on-blur
-      >
+      <summary>
         <div className="summary_body">
           <SummaryMarker open={innerOpen} loading={loading} />
           <div className="summary_label">{summaryChildren}</div>
