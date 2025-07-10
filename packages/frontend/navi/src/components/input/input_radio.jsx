@@ -273,7 +273,7 @@ const InputRadioWithAction = forwardRef((props, ref) => {
   });
   const { pending, error, aborted } = useActionStatus(boundAction);
   const checkedInAction = getCheckedValue() === value;
-  const checked = error || aborted ? checkedAtStart : checkedInAction;
+  const checked = aborted || error ? checkedAtStart : checkedInAction;
 
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
@@ -331,7 +331,7 @@ const InputRadioInsideForm = forwardRef((props, ref) => {
     id,
     name,
     value = "",
-    checked: initialChecked,
+    checked: initialChecked = false,
     readOnly,
     onChange,
     ...rest
@@ -349,14 +349,14 @@ const InputRadioInsideForm = forwardRef((props, ref) => {
 
   const [navStateValue, setNavStateValue] = useNavState(id);
   const checkedAtStart =
-    navStateValue === undefined ? initialChecked : navStateValue;
+    navStateValue === undefined ? initialChecked : navStateValue === value;
   const [getCheckedValue, setCheckedValue] = useOneFormParam(
     name,
     checkedAtStart,
   );
   const checkedInFormAction = getCheckedValue() === value;
   const checked =
-    formActionError || formActionAborted ? checkedAtStart : checkedInFormAction;
+    formActionAborted || formActionError ? checkedAtStart : checkedInFormAction;
 
   return (
     <InputRadioBasic
