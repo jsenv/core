@@ -27,6 +27,11 @@ export const renderActionableComponent = (
   }
 
   if (considerInsideForm) {
+    if (import.meta.dev && !ComponentInsideForm) {
+      throw new Error(
+        "renderActionableComponent: ComponentInsideForm is required when inside a form context",
+      );
+    }
     return (
       <ComponentInsideForm formContext={formContext} ref={ref} {...props} />
     );

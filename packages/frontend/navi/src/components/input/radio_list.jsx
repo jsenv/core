@@ -3,7 +3,10 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useActionBoundToOneParam } from "../action_execution/use_action.js";
+import {
+  useActionBoundToOneParam,
+  useOneFormParam,
+} from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
 import { useNavState } from "../use_nav_state.js";
@@ -23,12 +26,22 @@ export const RadioList = forwardRef((props, ref) => {
     ref,
     RadioListBasic,
     RadioListWithAction,
-    // RadioListInsideForm,
+    RadioListInsideForm,
   );
 });
 
 const RadioListControlled = forwardRef((props, ref) => {
-  const { name, value, label, loading, children, onChange, ...rest } = props;
+  const {
+    name,
+    value,
+    label,
+    loading,
+    disabled,
+    readOnly,
+    children,
+    onChange,
+    ...rest
+  } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -39,6 +52,8 @@ const RadioListControlled = forwardRef((props, ref) => {
       {children.map((child) => {
         const {
           label,
+          readOnly: childReadOnly,
+          disabled: childDisabled,
           loading: childLoading,
           onChange: childOnChange,
           value: childValue,
@@ -54,6 +69,8 @@ const RadioListControlled = forwardRef((props, ref) => {
             name={name}
             value={childValue}
             checked={childValue === value}
+            readOnly={readOnly || childReadOnly}
+            disabled={disabled || childDisabled}
             loading={loading || childLoading}
             onChange={(event) => {
               onChange(event);
@@ -175,6 +192,50 @@ const RadioListWithAction = forwardRef((props, ref) => {
           readOnly: child.readOnly || pending,
         };
       })}
+    </RadioListControlled>
+  );
+});
+
+const RadioListInsideForm = forwardRef((props, ref) => {
+  const {
+    formContext,
+    id,
+    name,
+    readOnly,
+    value: initialValue,
+    children,
+    ...rest
+  } = props;
+  const { formActionAborted, formActionError, formIsReadOnly } = formContext;
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  const [navStateValue, setNavStateValue] = useNavState(id);
+  const valueAtStart =
+    navStateValue === undefined ? initialValue : navStateValue;
+  const [getCheckedValue, setCheckedValue] = useOneFormParam(
+    name,
+    valueAtStart,
+  );
+
+  const valueInAction = getCheckedValue();
+  const value =
+    formActionAborted || formActionError ? valueAtStart : valueInAction;
+
+  return (
+    <RadioListControlled
+      ref={innerRef}
+      value={value}
+      readOnly={readOnly || formIsReadOnly}
+      onChange={(event) => {
+        const radio = event.target;
+        setCheckedValue(radio.value);
+        setNavStateValue(radio.value);
+      }}
+      {...rest}
+    >
+      {children}
     </RadioListControlled>
   );
 });
