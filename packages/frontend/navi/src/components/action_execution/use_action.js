@@ -3,7 +3,7 @@ import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
 import { useFormContext } from "./form_context.js";
 
-let debug = false;
+let debug = true;
 let componentActionIdCounter = 0;
 const useComponentActionCacheKey = () => {
   const componentActionCacheKeyRef = useRef(null);
@@ -29,8 +29,9 @@ const useComponentActionCacheKey = () => {
 // we will reserve this behavior to <form>)
 export const useFormActionBoundToFormParams = (action) => {
   const actionCacheKey = useComponentActionCacheKey();
+  const cacheKey = typeof action === "function" ? actionCacheKey : action;
   const [formParamsSignal, updateFormParams] = useActionParamsSignal(
-    actionCacheKey,
+    cacheKey,
     {},
   );
   const formActionBoundActionToFormParams = useBoundAction(
@@ -47,7 +48,8 @@ export const useOneFormParam = (name, value) => {
   const { formParamsSignal } = useFormContext();
   const mountedRef = useRef(false);
   const getValue = () => formParamsSignal.value[name];
-  const setValue = (value) => updateParams(formParamsSignal, { [name]: value });
+  const setValue = (value) =>
+    updateParamsSignal(formParamsSignal, { [name]: value });
   if (!mountedRef.current) {
     mountedRef.current = true;
     if (name && value !== undefined) {
@@ -62,10 +64,8 @@ export const useOneFormParam = (name, value) => {
 export const useActionBoundToOneParam = (action, name, value) => {
   const mountedRef = useRef(false);
   const actionCacheKey = useComponentActionCacheKey();
-  const [paramsSignal, updateParams] = useActionParamsSignal(
-    actionCacheKey,
-    {},
-  );
+  const cacheKey = typeof action === "function" ? actionCacheKey : action;
+  const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
   const boundAction = useBoundAction(action, paramsSignal);
   const getValue = () => paramsSignal.value[name];
   const setValue = (value) => {
@@ -157,7 +157,10 @@ const useActionParamsSignal = (cacheKey, initialParams = {}) => {
   }
 
   const paramsSignal = signal(initialParams);
-  const result = [paramsSignal, (value) => updateParams(paramsSignal, value)];
+  const result = [
+    paramsSignal,
+    (value) => updateParamsSignal(paramsSignal, value, cacheKey),
+  ];
   sharedSignalCache.set(cacheKey, result);
   if (debug) {
     console.debug(
@@ -168,7 +171,7 @@ const useActionParamsSignal = (cacheKey, initialParams = {}) => {
   return result;
 };
 
-export const updateParams = (paramsSignal, object, cacheKey) => {
+export const updateParamsSignal = (paramsSignal, object, cacheKey) => {
   const currentParams = paramsSignal.peek();
   const paramsCopy = { ...currentParams };
   let modified = false;

@@ -72,22 +72,28 @@
                 <p>
                   <strong>2 checkboxes for the same action</strong>
                 </p>
-                <Input
-                  type="checkbox"
-                  name="update"
-                  action={updateUserCheckboxAction}
-                  style="color: blue"
-                >
-                  Test
-                </Input>
-                <Input
-                  type="checkbox"
-                  name="update"
-                  action={updateUserCheckboxAction}
-                  style="color: blue"
-                >
-                  Test
-                </Input>
+                <Field
+                  input={
+                    <Input
+                      type="checkbox"
+                      name="update"
+                      action={updateUserCheckboxAction}
+                      style="color: blue"
+                    />
+                  }
+                  label="test"
+                />
+                <Field
+                  input={
+                    <Input
+                      type="checkbox"
+                      name="update"
+                      action={updateUserCheckboxAction}
+                      style="color: blue"
+                    />
+                  }
+                  label="test"
+                />
               </div>
             </div>
             <div style="display: flex; flex-direction: row; gap: 30px">
@@ -193,9 +199,7 @@
       };
 
       const updateUserCheckboxAction = createAction(async () => {
-        await new Promise((resolve) => {
-          setTimeout(resolve, 2000);
-        });
+        await new Promise((resolve) => setTimeout(resolve, 1_500));
       });
 
       render(<App />, document.querySelector("#root"));
