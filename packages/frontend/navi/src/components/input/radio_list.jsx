@@ -123,6 +123,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
+  const actionRequesterRef = useRef(null);
 
   const valueInAction = getCheckedValue();
   const value = aborted || error ? valueAtStart : valueInAction;
@@ -134,7 +135,10 @@ const RadioListWithAction = forwardRef((props, ref) => {
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
-    onAction: executeAction,
+    onAction: (actionEvent) => {
+      actionRequesterRef.current = actionEvent.detail.requester;
+      executeAction(actionEvent);
+    },
     onStart: onActionStart,
     onError: onActionError,
     onEnd: () => {
@@ -161,7 +165,15 @@ const RadioListWithAction = forwardRef((props, ref) => {
       {...rest}
     >
       {children.map((child) => {
-        return { ...child, loading: child.loading || pending };
+        const childRef = useRef();
+        return {
+          ...child,
+          ref: childRef,
+          loading:
+            child.loading ||
+            (pending && actionRequesterRef.current === childRef.current),
+          readOnly: child.readOnly || pending,
+        };
       })}
     </RadioListControlled>
   );
