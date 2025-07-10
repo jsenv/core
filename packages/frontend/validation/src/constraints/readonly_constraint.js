@@ -7,6 +7,10 @@ export const READONLY_CONSTRAINT = {
     if (!element.readonly && !element.hasAttribute("data-readonly")) {
       return null;
     }
+    const readonlySilent = element.hasAttribute("data-readonly-silent");
+    if (readonlySilent) {
+      return { silent: true };
+    }
     const readonlyMessage = element.getAttribute("data-readonly-message");
     if (readonlyMessage) {
       return {
