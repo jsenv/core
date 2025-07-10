@@ -2,6 +2,7 @@ import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
+import { useRefArray } from "../../use_ref_array.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneParam,
@@ -169,6 +170,8 @@ const RadioListWithAction = forwardRef((props, ref) => {
     },
   });
 
+  const childRefArray = useRefArray(children, (child) => child.value);
+
   return (
     <RadioListControlled
       ref={innerRef}
@@ -192,8 +195,8 @@ const RadioListWithAction = forwardRef((props, ref) => {
       }}
       {...rest}
     >
-      {children.map((child) => {
-        const childRef = useRef();
+      {children.map((child, i) => {
+        const childRef = childRefArray[i];
         return {
           ...child,
           ref: childRef,

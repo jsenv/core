@@ -149,7 +149,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const actionRequesterRef = useRef();
+  const actionRequesterRef = useRef(null);
 
   const valueArrayInAction = getValueArray();
   useEffect(() => {
