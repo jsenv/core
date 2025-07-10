@@ -18,6 +18,8 @@
         Field,
         // eslint-disable-next-line no-unused-vars
         Input,
+        // eslint-disable-next-line no-unused-vars
+        Button,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
@@ -26,7 +28,7 @@
           <div style="display: flex; flex-direction: row; gap: 30px">
             <div>
               <p>
-                <strong>Fieldset + throw after 1s</strong>
+                <strong>Form + throw after 1s</strong>
               </p>
               <Form
                 action={async ({ drone }) => {
@@ -79,6 +81,8 @@
                     />
                   </div>
                 </fieldset>
+
+                <Button type="submit">Submit</Button>
               </Form>
             </div>
             <div>
@@ -100,9 +104,7 @@
                   style="color: blue"
                   // data-validation-message-stay-on-focus
                   // data-validation-message-stay-on-blur
-                >
-                  Test
-                </Input>
+                />
               </div>
             </div>
           </div>
