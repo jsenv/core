@@ -25,6 +25,8 @@
         const [loadingB, setLoadingB] = useState(false);
         const [loadingC, setLoadingC] = useState(false);
         const [loadingD, setLoadingD] = useState(false);
+        const [loadingE, setLoadingE] = useState(false);
+        const [loadingF, setLoadingF] = useState(false);
 
         return (
           <div>
@@ -99,14 +101,14 @@
             <div>
               <div>
                 <p>
-                  <strong>Disabled</strong>
+                  <strong>Read Only</strong>
                 </p>
 
                 <Field
                   input={
                     <Input
                       id="test"
-                      disabled
+                      readOnly
                       type="checkbox"
                       name="colors"
                       loading={loadingC}
@@ -127,7 +129,7 @@
 
                 <div>
                   <label>
-                    <input type="checkbox" name="colors" disabled />C
+                    <input type="checkbox" name="colors" readonly />C
                   </label>
                 </div>
               </div>
@@ -136,21 +138,21 @@
             <div>
               <div>
                 <p>
-                  <strong>Disabled checked</strong>
+                  <strong>Read Only + checked</strong>
                 </p>
 
                 <Field
                   input={
                     <Input
                       id="test"
-                      disabled
+                      readOnly
                       checked
                       type="checkbox"
                       name="colors"
                       loading={loadingD}
                     />
                   }
-                  label="Coucou"
+                  label="D"
                 />
 
                 <button>
@@ -165,8 +167,82 @@
 
                 <div>
                   <label>
-                    <input type="checkbox" name="colors" disabled checked />
-                    Coucou
+                    <input type="checkbox" name="colors" readonly />D
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div>
+                <p>
+                  <strong>Disabled</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input
+                      id="test"
+                      disabled
+                      type="checkbox"
+                      name="colors"
+                      loading={loadingE}
+                    />
+                  }
+                  label="E"
+                />
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingE(!loadingE);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input type="checkbox" name="colors" disabled />E
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div>
+                <p>
+                  <strong>Disabled + checked</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input
+                      id="test"
+                      disabled
+                      checked
+                      type="checkbox"
+                      name="colors"
+                      loading={loadingF}
+                    />
+                  }
+                  label="Coucou"
+                />
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingF(!loadingF);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input type="checkbox" name="colors" disabled checked />F
                   </label>
                 </div>
               </div>

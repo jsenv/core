@@ -14,6 +14,8 @@
       import {
         createAction,
         // eslint-disable-next-line no-unused-vars
+        Field,
+        // eslint-disable-next-line no-unused-vars
         Form,
         // eslint-disable-next-line no-unused-vars
         Input,
@@ -28,37 +30,43 @@
                 <p>
                   <strong>Loading</strong>
                 </p>
-                <Input
-                  type="checkbox"
-                  name="loading"
-                  action={async () => {
-                    await new Promise(() => {});
-                  }}
-                  style="color: blue"
-                >
-                  Test
-                </Input>
+                <Field
+                  input={
+                    <Input
+                      type="checkbox"
+                      name="loading"
+                      action={async () => {
+                        await new Promise(() => {});
+                      }}
+                      style="color: blue"
+                    />
+                  }
+                  label="Test"
+                />
               </div>
               <div>
                 <p>
                   <strong>Throw after 1s</strong>
                 </p>
-                <Input
-                  type="checkbox"
-                  name="test"
-                  action={async ({ test }) => {
-                    await new Promise((resolve) => {
-                      setTimeout(resolve, 1000);
-                    });
-                    throw new Error(`This is an error, checked: ${test}`);
-                  }}
-                  value="coucou"
-                  style="color: blue"
-                  // data-validation-message-stay-on-focus
-                  // data-validation-message-stay-on-blur
-                >
-                  Test
-                </Input>
+                <Field
+                  input={
+                    <Input
+                      type="checkbox"
+                      name="test"
+                      action={async ({ test }) => {
+                        await new Promise((resolve) => {
+                          setTimeout(resolve, 1000);
+                        });
+                        throw new Error(`This is an error, checked: ${test}`);
+                      }}
+                      value="coucou"
+                      style="color: blue"
+                      // data-validation-message-stay-on-focus
+                      // data-validation-message-stay-on-blur
+                    />
+                  }
+                  label="Test"
+                />
               </div>
               <div>
                 <p>

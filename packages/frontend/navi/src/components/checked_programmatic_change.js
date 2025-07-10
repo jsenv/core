@@ -8,16 +8,17 @@ const setupCheckedProgrammaticChange = () => {
       return originalDescriptor.get.call(this);
     },
     set(value) {
-      const oldValue = this.checked;
+      const wasChecked = this.checked;
+      const willBeChecked = Boolean(value);
       originalDescriptor.set.call(this, value);
-      if (oldValue === value) {
+      if (wasChecked === willBeChecked) {
         return;
       }
       if (this.type === "radio" || this.type === "checkbox") {
         this.dispatchEvent(
           new CustomEvent("programmaticchange", {
             bubbles: true,
-            detail: { oldValue, newValue: value },
+            detail: { wasChecked, willBeChecked },
           }),
         );
       }

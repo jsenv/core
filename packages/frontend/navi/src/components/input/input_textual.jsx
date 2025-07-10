@@ -92,7 +92,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
     constraints = [],
     loading,
     appearance = "custom",
-    readonly = loading,
     ...rest
   } = props;
 
@@ -108,7 +107,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
     <input
       ref={innerRef}
       data-custom={appearance === "custom" ? "" : undefined}
-      readOnly={readonly}
       {...rest}
     />
   );
@@ -126,6 +124,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     cancelOnBlurInvalid,
     cancelOnEscape,
     actionErrorEffect,
+    readOnly,
     loading,
     onInput,
     onCancel,
@@ -151,11 +150,8 @@ const InputTextualWithAction = forwardRef((props, ref) => {
         : navStateValue
       : initialValue;
 
-  const [boundAction, getValue, setValue] = useActionBoundToOneParam(
-    action,
-    name,
-    valueAtStart,
-  );
+  const [boundAction, getValue, setValue, resetValue] =
+    useActionBoundToOneParam(action, name, valueAtStart);
   const { pending } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
@@ -192,7 +188,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
         return;
       }
       setNavStateValue(undefined);
-      setValue(valueAtStart);
+      resetValue();
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -205,6 +201,8 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     },
   });
 
+  const innerLoading = loading || pending;
+
   return (
     <InputTextualBasic
       {...rest}
@@ -213,12 +211,12 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       id={id}
       name={name}
       value={value}
-      loading={loading || pending}
+      loading={innerLoading}
+      readOnly={readOnly || innerLoading}
       onInput={(e) => {
         valueAtEnterRef.current = null;
         const inputValue =
           type === "number" ? e.target.valueAsNumber : e.target.value;
-        console.log({ inputValue });
         setNavStateValue(inputValue);
         setValue(inputValue);
         onInput?.(e);

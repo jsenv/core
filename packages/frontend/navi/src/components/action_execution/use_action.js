@@ -93,6 +93,18 @@ export const useActionBoundToOneParam = (action, name, value) => {
   return [boundAction, getValue, setValue, reset];
 };
 
+// export const useActionBoundToOneBooleanParam = (action, name, value) => {
+//   const [boundAction, getValue, setValue, resetValue] =
+//     useActionBoundToOneParam(action, name, Boolean(value));
+
+//   return [
+//     boundAction,
+//     () => Boolean(getValue()),
+//     (value) => setValue(Boolean(value)),
+//     resetValue,
+//   ];
+// };
+
 export const useActionBoundToOneArrayParam = (action, name, value) => {
   const [boundAction, getValue, setValue, resetValue] =
     useActionBoundToOneParam(action, name, value);
