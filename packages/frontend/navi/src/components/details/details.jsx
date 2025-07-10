@@ -43,10 +43,13 @@ import.meta.css = /* css */ `
 `;
 
 export const Details = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, SimpleDetails, ActionDetails);
+  return renderActionableComponent(props, ref, {
+    Basic: DetailsBasic,
+    WithAction: DetailsWithAction,
+  });
 });
 
-const SimpleDetails = forwardRef((props, ref) => {
+const DetailsBasic = forwardRef((props, ref) => {
   const {
     id,
     children = "Summary",
@@ -124,7 +127,7 @@ const SimpleDetails = forwardRef((props, ref) => {
   );
 });
 
-export const ActionDetails = forwardRef((props, ref) => {
+const DetailsWithAction = forwardRef((props, ref) => {
   const {
     action,
     actionRenderer,
@@ -156,7 +159,7 @@ export const ActionDetails = forwardRef((props, ref) => {
   });
 
   return (
-    <SimpleDetails
+    <DetailsBasic
       {...rest}
       ref={innerRef}
       onToggle={(toggleEvent) => {
@@ -179,6 +182,6 @@ export const ActionDetails = forwardRef((props, ref) => {
           {actionRenderer}
         </ActionRenderer>,
       ]}
-    </SimpleDetails>
+    </DetailsBasic>
   );
 });

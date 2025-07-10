@@ -23,13 +23,11 @@ import.meta.css = /* css */ `
 `;
 
 export const CheckboxList = forwardRef((props, ref) => {
-  return renderActionableComponent(
-    props,
-    ref,
-    CheckboxListBasic,
-    CheckboxListWithAction,
-    CheckboxListInsideForm,
-  );
+  return renderActionableComponent(props, ref, {
+    Basic: CheckboxListBasic,
+    WithAction: CheckboxListWithAction,
+    InsideForm: CheckboxListInsideForm,
+  });
 });
 
 const CheckboxListControlled = forwardRef((props, ref) => {

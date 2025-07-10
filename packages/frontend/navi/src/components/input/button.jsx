@@ -94,14 +94,12 @@ import.meta.css = /* css */ `
   }
 `;
 export const Button = forwardRef((props, ref) => {
-  return renderActionableComponent(
-    props,
-    ref,
-    ButtonBasic,
-    ButtonWithAction,
-    ButtonInsideForm,
-    ButtonWithActionInsideForm,
-  );
+  return renderActionableComponent(props, ref, {
+    Basic: ButtonBasic,
+    WithAction: ButtonWithAction,
+    InsideForm: ButtonInsideForm,
+    InsideFormWithAction: ButtonWithActionInsideForm,
+  });
 });
 
 const ButtonBasic = forwardRef((props, ref) => {

@@ -24,7 +24,10 @@ import { collectFormElementValues } from "./collect_form_element_values.js";
 import { useActionEvents } from "./use_action_events.js";
 
 export const Form = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, FormBasic, FormWithAction);
+  return renderActionableComponent(props, ref, {
+    Basic: FormBasic,
+    WithAction: FormWithAction,
+  });
 });
 
 const FormBasic = forwardRef((props, ref) => {

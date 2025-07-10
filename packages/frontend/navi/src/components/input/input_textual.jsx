@@ -75,13 +75,11 @@ import.meta.css = /* css */ `
 `;
 
 export const InputTextual = forwardRef((props, ref) => {
-  return renderActionableComponent(
-    props,
-    ref,
-    InputTextualBasic,
-    InputTextualWithAction,
-    InputTextualInsideForm,
-  );
+  return renderActionableComponent(props, ref, {
+    Basic: InputTextualBasic,
+    WithAction: InputTextualWithAction,
+    InsideForm: InputTextualInsideForm,
+  });
 });
 
 const InputTextualBasic = forwardRef((props, ref) => {

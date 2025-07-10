@@ -132,13 +132,11 @@ import.meta.css = /* css */ `
 `;
 
 export const InputCheckbox = forwardRef((props, ref) => {
-  return renderActionableComponent(
-    props,
-    ref,
-    InputCheckboxBasic,
-    InputCheckboxWithAction,
-    InputCheckboxInsideForm,
-  );
+  return renderActionableComponent(props, ref, {
+    Basic: InputCheckboxBasic,
+    WithAction: InputCheckboxWithAction,
+    InsideForm: InputCheckboxInsideForm,
+  });
 });
 
 const InputCheckboxBasic = forwardRef((props, ref) => {

@@ -31,7 +31,10 @@ import.meta.css = /* css */ `
 `;
 
 export const Link = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, LinkBasic, LinkWithAction);
+  return renderActionableComponent(props, ref, {
+    Basic: LinkBasic,
+    WithAction: LinkWithAction,
+  });
 });
 
 const LinkBasic = forwardRef((props, ref) => {

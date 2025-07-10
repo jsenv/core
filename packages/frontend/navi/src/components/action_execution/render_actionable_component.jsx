@@ -3,39 +3,25 @@ import { useFormContext } from "./form_context.js";
 export const renderActionableComponent = (
   props,
   ref,
-  ComponentBasic,
-  ComponentWithAction,
-  ComponentInsideForm,
-  ComponentWithActionInsideForm,
+  { Basic, WithAction, InsideForm, WithActionInsideForm },
 ) => {
   const { action, shortcuts, ignoreForm } = props;
   const formContext = useFormContext();
   const hasActionProps = Boolean(action || (shortcuts && shortcuts.length > 0));
   const considerInsideForm = ignoreForm ? false : Boolean(formContext);
 
-  if (hasActionProps) {
-    if (considerInsideForm && ComponentWithActionInsideForm) {
+  if (hasActionProps && WithAction) {
+    if (considerInsideForm && WithActionInsideForm) {
       return (
-        <ComponentWithActionInsideForm
-          formContext={formContext}
-          ref={ref}
-          {...props}
-        />
+        <WithActionInsideForm formContext={formContext} ref={ref} {...props} />
       );
     }
-    return <ComponentWithAction ref={ref} {...props} />;
+    return <WithAction ref={ref} {...props} />;
   }
 
-  if (considerInsideForm) {
-    if (import.meta.dev && !ComponentInsideForm) {
-      throw new Error(
-        "renderActionableComponent: ComponentInsideForm is required when inside a form context",
-      );
-    }
-    return (
-      <ComponentInsideForm formContext={formContext} ref={ref} {...props} />
-    );
+  if (considerInsideForm && InsideForm) {
+    return <InsideForm formContext={formContext} ref={ref} {...props} />;
   }
 
-  return <ComponentBasic ref={ref} {...props} />;
+  return <Basic ref={ref} {...props} />;
 };

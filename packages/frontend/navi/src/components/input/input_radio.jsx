@@ -144,13 +144,11 @@ import.meta.css = /* css */ `
 `;
 
 export const InputRadio = forwardRef((props, ref) => {
-  return renderActionableComponent(
-    props,
-    ref,
-    InputRadioBasic,
-    InputRadioWithAction,
-    InputRadioInsideForm,
-  );
+  return renderActionableComponent(props, ref, {
+    Basic: InputRadioBasic,
+    WithAction: InputRadioWithAction,
+    InsideForm: InputRadioInsideForm,
+  });
 });
 
 const InputRadioBasic = forwardRef((props, ref) => {

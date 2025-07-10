@@ -22,13 +22,11 @@ import.meta.css = /* css */ `
 `;
 
 export const RadioList = forwardRef((props, ref) => {
-  return renderActionableComponent(
-    props,
-    ref,
-    RadioListBasic,
-    RadioListWithAction,
-    RadioListInsideForm,
-  );
+  return renderActionableComponent(props, ref, {
+    Basic: RadioListBasic,
+    WithAction: RadioListWithAction,
+    InsideForm: RadioListInsideForm,
+  });
 });
 
 const RadioListControlled = forwardRef((props, ref) => {
