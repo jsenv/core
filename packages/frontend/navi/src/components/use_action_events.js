@@ -11,6 +11,7 @@ export const useActionEvents = (
     onPrevented,
     onAction,
     onStart,
+    onAbort,
     onError,
     onEnd,
   },
@@ -24,6 +25,7 @@ export const useActionEvents = (
       actionprevented: onPrevented,
       action: onAction,
       actionstart: onStart,
+      actionabort: onAbort,
       actionerror: onError,
       actionend: onEnd,
     };

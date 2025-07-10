@@ -85,7 +85,13 @@ export const useExecuteAction = (
     dispatchCustomEvent("actionstart");
     const result = performAction(action, {
       method,
-      onAbort: () => {},
+      onAbort: (reason) => {
+        if (
+          elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
+        ) {
+          dispatchCustomEvent("actionabort", { detail: { reason } });
+        }
+      },
       onError: (error) => {
         if (
           elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
