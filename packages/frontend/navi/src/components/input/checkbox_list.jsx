@@ -150,7 +150,6 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     name,
     value: initialValue,
     action,
-    label,
     children,
     actionErrorEffect,
     onCancel,
@@ -169,23 +168,21 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   const valueAtStart =
     initialValue === undefined ? navStateValue || [] : initialValue;
 
-  const [
-    boundAction,
-    getCheckedValueArray,
-    addToCheckedValues,
-    removeFromCheckedValues,
-    resetCheckedValueArray,
-  ] = useActionBoundToOneArrayParam(action, name, valueAtStart);
-  const { pending } = useActionStatus(boundAction);
+  const [boundAction, getValueArray, addValue, removeValue, resetValueArray] =
+    useActionBoundToOneArrayParam(action, name, valueAtStart);
+  const { pending, aborted, error } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
   const actionRequesterRef = useRef();
 
+  const valueArrayInAction = getValueArray();
+  const valueArray = aborted || error ? valueAtStart : valueArrayInAction;
+
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       resetNavState();
-      resetCheckedValueArray();
+      resetValueArray();
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -205,15 +202,17 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   return (
     <CheckboxListControlled
       {...rest}
+      name={name}
+      value={valueArray}
       ref={innerRef}
       onChange={(event) => {
         const checkbox = event.target;
         const checkboxIsChecked = checkbox.checked;
         const checkboxValue = checkbox.value;
         if (checkboxIsChecked) {
-          addToCheckedValues(checkboxValue);
+          addValue(checkboxValue, valueArray);
         } else {
-          removeFromCheckedValues(checkboxValue);
+          removeValue(checkboxValue, valueArray);
         }
         setNavStateValue();
         const checkboxListContainer = innerRef.current;

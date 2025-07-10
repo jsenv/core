@@ -26,15 +26,14 @@
           <div style="display: flex; flex-direction: row; gap: 30px">
             <div>
               <p>
-                <strong>Action + alert after 1s</strong>
+                <strong>Action + log after 1s</strong>
               </p>
               <CheckboxList
                 name="colors"
                 label="Select your favorite colors:"
                 action={async ({ colors }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  // eslint-disable-next-line no-alert
-                  window.alert(`Colors selected: ${JSON.stringify(colors)}`);
+                  console.log(`Colors selected: ${JSON.stringify(colors)}`);
                 }}
               >
                 {[
