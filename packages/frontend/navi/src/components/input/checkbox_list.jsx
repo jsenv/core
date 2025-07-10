@@ -75,7 +75,7 @@ const CheckboxListControlled = forwardRef((props, ref) => {
             ignoreForm
             name={name}
             value={childValue}
-            checked={childValue === value}
+            checked={value.includes(childValue)}
             readOnly={readOnly || childReadOnly}
             disabled={disabled || childDisabled}
             loading={loading || childLoading}

@@ -31,6 +31,7 @@
               <CheckboxList
                 name="colors"
                 label="Select your favorite colors:"
+                value={["red", "blue"]}
                 action={async ({ colors }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
                   console.log(`Colors selected: ${JSON.stringify(colors)}`);
@@ -59,6 +60,7 @@
                   id="form_alert_1"
                   name="colors"
                   label="Select your favorite colors:"
+                  value={["blue"]}
                 >
                   {[
                     { label: "Red", id: "red", value: "red" },
@@ -85,6 +87,7 @@
                 <CheckboxList
                   label="Select your favorite colors:"
                   name="colors"
+                  value={["red", "blue"]}
                 >
                   {[
                     { label: "Red", value: "red" },
