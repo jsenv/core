@@ -247,7 +247,7 @@ export const updateActions = ({
         // - unload it first
         // - request unload + load at the same time
         // - use isReload: true when requesting the load of this action
-        //   this is default when using action.load()
+        //   this is default when using action.load())
         if (isReload || toUnloadSet.has(actionToLoadOrPreload)) {
           toUnloadSet.add(actionToLoadOrPreload);
           if (isPreload) {
@@ -255,7 +255,6 @@ export const updateActions = ({
           } else {
             toLoadSet.add(actionToLoadOrPreload);
           }
-        } else {
         }
       } else if (isPreload) {
         toPreloadSet.add(actionToLoadOrPreload);
@@ -273,7 +272,7 @@ export const updateActions = ({
     for (const actionToLoad of loadSet) {
       if (!actionToLoad.loadRequested && actionToLoad.loadingState !== IDLE) {
         // was preloaded but is not requested to load
-        // -> can move to load requested state no matter the loading state
+        // -> can move to load requested
         toPromoteSet.add(actionToLoad);
         continue;
       }

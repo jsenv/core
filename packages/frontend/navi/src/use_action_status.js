@@ -28,6 +28,7 @@ export const useActionStatus = (action) => {
   const idle = loadingState === IDLE;
   const pending = loadingState === LOADING;
   const aborted = loadingState === ABORTED;
+  const preloading = loadingState === LOADING && !loadRequested;
   const preloaded = loadingState === LOADED && !loadRequested;
   const data = computedDataSignal.value;
 
@@ -37,6 +38,7 @@ export const useActionStatus = (action) => {
     error,
     aborted,
     pending,
+    preloading,
     preloaded,
     data,
   };
