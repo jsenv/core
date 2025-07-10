@@ -109,7 +109,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     autoFocus,
     constraints = [],
     loading,
-    readonly,
+    readOnly,
     children,
     appearance = "custom",
     style = {},
@@ -144,7 +144,7 @@ const ButtonBasic = forwardRef((props, ref) => {
         {...rest}
         data-custom={appearance === "custom" ? "" : undefined}
         data-validation-message-arrow-x="center"
-        data-readonly={readonly || loading ? "" : undefined}
+        data-readonly={readOnly || loading ? "" : undefined}
         aria-busy={loading}
         style={{
           ...restStyle,
@@ -213,86 +213,17 @@ const ButtonWithAction = forwardRef((props, ref) => {
   );
 });
 
-const ButtonWithActionInsideForm = forwardRef((props, ref) => {
-  const {
-    formContext,
-    type,
-    action,
-    loading,
-    readonly,
-    children,
-    onClick,
-    actionErrorEffect,
-    onActionPrevented,
-    onActionStart,
-    onActionError,
-    onActionEnd,
-    ...rest
-  } = props;
-  const hasEffectOnForm =
-    type === "submit" || type === "reset" || type === "image";
-  if (import.meta.dev && hasEffectOnForm) {
-    throw new Error(
-      "Button with type submit/reset/image should not have their own action",
-    );
-  }
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-
-  const { formIsReadonly, formParamsSignal } = formContext;
-  const actionBoundToFormParams = useAction(action, formParamsSignal);
-  const { pending } = useActionStatus(actionBoundToFormParams);
-  const executeAction = useExecuteAction(innerRef, {
-    errorEffect: actionErrorEffect,
-  });
-
-  useActionEvents(innerRef, {
-    onPrevented: onActionPrevented,
-    onAction: executeAction,
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd,
-  });
-
-  const handleClick = (event) => {
-    event.preventDefault();
-    // lorsque cette action s'éxecute elle doit mettre le form en mode busy
-    // je vois pas encore comment je vais faire ca mais a priori
-    // on va juste le faire "manuellement"
-    // en utilisnt un truc du formContext
-    requestAction(actionBoundToFormParams, { event });
-  };
-
-  return (
-    <ButtonBasic
-      data-action={actionBoundToFormParams.name}
-      ref={innerRef}
-      {...rest}
-      type={type}
-      loading={loading || pending}
-      readonly={readonly || formIsReadonly}
-      onClick={(event) => {
-        handleClick(event);
-        onClick?.(event);
-      }}
-    >
-      {children}
-    </ButtonBasic>
-  );
-});
-
 const ButtonInsideForm = forwardRef((props, ref) => {
   const { formContext, type, loading, readonly, onClick, children, ...rest } =
     props;
-  const { formAction, formIsBusy, formIsReadonly, formActionRequester } =
+  const { formAction, formIsBusy, formIsReadOnly, formActionRequester } =
     formContext;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
   const wouldSubmitFormByType = type === "submit" || type === "image";
-  const innerReadonly = readonly || formIsReadonly;
+  const innerReadOnly = readonly || formIsReadOnly;
 
   const handleClick = (event) => {
     const buttonElement = event.target;
@@ -306,7 +237,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       wouldSubmitForm = wouldSubmitFormBecauseSingleButton;
     }
     if (!wouldSubmitForm) {
-      if (innerReadonly) {
+      if (innerReadOnly) {
         event.preventDefault();
       }
       return;
@@ -330,7 +261,100 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       loading={
         loading || (formIsBusy && formActionRequester === innerRef.current)
       }
-      readonly={innerReadonly}
+      readOnly={innerReadOnly}
+      data-readonly-silent={formIsReadOnly ? "" : undefined}
+      onClick={(event) => {
+        handleClick(event);
+        onClick?.(event);
+      }}
+    >
+      {children}
+    </ButtonBasic>
+  );
+});
+
+const ButtonWithActionInsideForm = forwardRef((props, ref) => {
+  const {
+    formContext,
+    type,
+    action,
+    loading,
+    readonly,
+    children,
+    onClick,
+    actionErrorEffect,
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    ...rest
+  } = props;
+  const hasEffectOnForm =
+    type === "submit" || type === "reset" || type === "image";
+  if (import.meta.dev && hasEffectOnForm) {
+    throw new Error(
+      "Button with type submit/reset/image should not have their own action",
+    );
+  }
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  const { formIsReadOnly, formParamsSignal } = formContext;
+  const actionBoundToFormParams = useAction(action, formParamsSignal);
+  const { pending } = useActionStatus(actionBoundToFormParams);
+  const executeAction = useExecuteAction(innerRef, {
+    errorEffect: actionErrorEffect,
+  });
+
+  useActionEvents(innerRef, {
+    onPrevented: onActionPrevented,
+    onAction: executeAction,
+    onStart: (e) => {
+      e.target.form.dispatchEvent(
+        new CustomEvent("actionstart", { detail: e.detail }),
+      );
+      onActionStart?.(e);
+    },
+    onAbort: (e) => {
+      e.target.form.dispatchEvent(
+        new CustomEvent("actionabort", { detail: e.detail }),
+      );
+      onActionAbort?.(e);
+    },
+    onError: (e) => {
+      e.target.form.dispatchEvent(
+        new CustomEvent("actionerror", { detail: e.detail }),
+      );
+      onActionError?.(e);
+    },
+    onEnd: (e) => {
+      e.target.form.dispatchEvent(
+        new CustomEvent("actionend", { detail: e.detail }),
+      );
+      onActionEnd?.(e);
+    },
+  });
+
+  const handleClick = (event) => {
+    event.preventDefault();
+    // lorsque cette action s'éxecute elle doit mettre le form en mode busy
+    // je vois pas encore comment je vais faire ca mais a priori
+    // on va juste le faire "manuellement"
+    // en utilisnt un truc du formContext
+    requestAction(actionBoundToFormParams, { event });
+  };
+
+  return (
+    <ButtonBasic
+      data-action={actionBoundToFormParams.name}
+      ref={innerRef}
+      {...rest}
+      type={type}
+      loading={loading || pending}
+      readOnly={readonly || formIsReadOnly}
+      data-readonly-silent={!readonly && formIsReadOnly ? "" : undefined}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);

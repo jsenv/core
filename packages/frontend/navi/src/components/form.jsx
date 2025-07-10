@@ -74,12 +74,12 @@ const FormWithAction = forwardRef((props, ref) => {
       setFormParams(formElementValues);
 
       setFormActionRequester(actionEvent.detail.requester);
-      setFormIsBusy(true);
-      setFormActionError(null);
-      setFormActionAborted(false);
       executeAction(actionEvent);
     },
     onStart: (e) => {
+      setFormIsBusy(true);
+      setFormActionError(null);
+      setFormActionAborted(false);
       onActionStart?.(e);
     },
     onAbort: (e) => {
