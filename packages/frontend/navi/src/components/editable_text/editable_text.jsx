@@ -25,48 +25,45 @@ export const useEditableController = () => {
   return { editable, startEditing, stopEditing, editableJustEnded };
 };
 
-export const EditableText = forwardRef(
-  ({ children, action, editable, value, onEditEnd, ...rest }, ref) => {
-    if (import.meta.DEV && !action) {
-      console.warn(`EditableText requires an action prop`);
-    }
+export const EditableText = forwardRef((props, ref) => {
+  const { children, action, editable, value, onEditEnd, ...rest } = props;
+  if (import.meta.DEV && !action) {
+    console.warn(`EditableText requires an action prop`);
+  }
 
-    const innerRef = useRef();
-    useImperativeHandle(ref, () => innerRef.current);
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
 
-    return (
-      <>
-        <div
-          style={{ display: editable ? "none" : "inline-flex", flexGrow: 1 }}
-        >
-          {children || <span>{value}</span>}
-        </div>
-        {editable && (
-          <Input
-            {...rest}
-            onCancel={() => {
+  return (
+    <>
+      <div style={{ display: editable ? "none" : "inline-flex", flexGrow: 1 }}>
+        {children || <span>{value}</span>}
+      </div>
+      {editable && (
+        <Input
+          {...rest}
+          onCancel={() => {
+            onEditEnd();
+          }}
+          onBlur={(e) => {
+            if (e.target.value === value) {
               onEditEnd();
-            }}
-            onBlur={(e) => {
-              if (e.target.value === value) {
-                onEditEnd();
-              }
-            }}
-            action={action}
-            onActionEnd={() => {
-              onEditEnd();
-            }}
-            ref={innerRef}
-            value={value}
-            autoFocus
-            autoFocusVisible
-            autoSelect
-            required
-            cancelOnEscape
-            cancelOnBlurInvalid
-          />
-        )}
-      </>
-    );
-  },
-);
+            }
+          }}
+          action={action}
+          onActionEnd={() => {
+            onEditEnd();
+          }}
+          ref={innerRef}
+          value={value}
+          autoFocus
+          autoFocusVisible
+          autoSelect
+          required
+          cancelOnEscape
+          cancelOnBlurInvalid
+        />
+      )}
+    </>
+  );
+});
