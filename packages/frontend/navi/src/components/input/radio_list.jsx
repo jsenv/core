@@ -27,24 +27,8 @@ export const RadioList = forwardRef((props, ref) => {
   );
 });
 
-const useRadioListValueAtStart = (children, navStateValue) => {
-  let checkedValueAtStart;
-  for (const child of children) {
-    if (child.checked) {
-      checkedValueAtStart = child.value;
-      break;
-    }
-  }
-  if (checkedValueAtStart === undefined && navStateValue !== undefined) {
-    checkedValueAtStart = navStateValue;
-  }
-
-  return [checkedValueAtStart];
-};
-
 const RadioListControlled = forwardRef((props, ref) => {
-  const { name, value, label, loading, children, onChildChecked, ...rest } =
-    props;
+  const { name, value, label, loading, children, onChange, ...rest } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -72,40 +56,42 @@ const RadioListControlled = forwardRef((props, ref) => {
             checked={childValue === value}
             loading={loading || childLoading}
             onChange={(event) => {
-              if (event.target.checked) {
-                onChildChecked(child, event);
-              }
+              onChange(event);
               childOnChange?.(event);
             }}
           />
         );
 
-        return <Field key={value} input={radio} label={label} />;
+        return <Field key={childValue} input={radio} label={label} />;
       })}
     </fieldset>
   );
 });
 
 const RadioListBasic = forwardRef((props, ref) => {
-  const { id, children, ...rest } = props;
+  const { value: initialValue, id, children, ...rest } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navStateValue, setNavStateValue] = useNavState(id);
-  const checkedValueAtStart = useRadioListValueAtStart(children, navStateValue);
-  const [checkedValue, setCheckedValue] = useState(checkedValueAtStart);
+  const valueAtStart =
+    navStateValue === undefined ? initialValue : navStateValue;
+  const [value, setValue] = useState(valueAtStart);
 
   return (
     <RadioListControlled
       ref={innerRef}
-      value={checkedValue}
-      onChildChecked={(childChecked) => {
-        setCheckedValue(childChecked.value);
-        setNavStateValue(childChecked.value);
+      value={value}
+      onChange={(event) => {
+        const value = event.target.value;
+        setValue(value);
+        setNavStateValue(value);
       }}
       {...rest}
-    ></RadioListControlled>
+    >
+      {children}
+    </RadioListControlled>
   );
 });
 
@@ -113,6 +99,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
   const {
     id,
     name,
+    value: initialValue,
     action,
     children,
     onCancel,
@@ -128,22 +115,22 @@ const RadioListWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navStateValue, setNavStateValue] = useNavState(id);
-  const checkedValueAtStart = useRadioListValueAtStart(children, navStateValue);
+  const valueAtStart =
+    navStateValue === undefined ? initialValue : navStateValue;
   const [boundAction, getCheckedValue, setCheckedValue] =
-    useActionBoundToOneParam(action, name, checkedValueAtStart);
+    useActionBoundToOneParam(action, name, valueAtStart);
   const { pending, aborted, error } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
 
-  const checkedValueInAction = getCheckedValue();
-  const checkedValue =
-    aborted || error ? checkedValueAtStart : checkedValueInAction;
+  const valueInAction = getCheckedValue();
+  const value = aborted || error ? valueAtStart : valueInAction;
 
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       setNavStateValue(undefined);
-      setCheckedValue(checkedValueAtStart);
+      setCheckedValue(valueAtStart);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -159,14 +146,15 @@ const RadioListWithAction = forwardRef((props, ref) => {
   return (
     <RadioListControlled
       ref={innerRef}
-      value={checkedValue}
-      onChildChecked={(childChecked, event) => {
-        setCheckedValue(childChecked.value);
+      value={value}
+      onChange={(event) => {
+        const radio = event.target;
+        setCheckedValue(radio.value);
         const radioListContainer = innerRef.current;
         requestAction(boundAction, {
           event,
           target: radioListContainer,
-          requester: event.target,
+          requester: radio,
         });
       }}
       {...rest}
