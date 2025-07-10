@@ -316,11 +316,11 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
     name,
     value = "on",
     checked: initialChecked,
-    readonly,
+    readOnly,
     onChange,
     ...rest
   } = props;
-  const { formIsReadonly } = formContext;
+  const { formIsReadOnly } = formContext;
 
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
@@ -338,7 +338,7 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
       id={id}
       name={name}
       checked={checked}
-      readonly={readonly || formIsReadonly}
+      readOnly={readOnly || formIsReadOnly}
       onChange={(e) => {
         const checkboxIsChecked = e.target.checked;
         if (checkedAtStart) {

@@ -19,6 +19,8 @@
         Form,
         // eslint-disable-next-line no-unused-vars
         Input,
+        // eslint-disable-next-line no-unused-vars
+        Button,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
@@ -104,7 +106,7 @@
                 <Form
                   action={async ({ name, insideForm }) => {
                     await new Promise((resolve) => {
-                      setTimeout(resolve, 600);
+                      setTimeout(resolve, 1_600);
                     });
                     // eslint-disable-next-line no-alert
                     window.alert(
@@ -112,11 +114,11 @@
                     );
                   }}
                 >
-                  <input type="hidden" name="name" value="dam" />
+                  <Input type="hidden" name="name" value="dam" />
                   <Input type="checkbox" name="insideForm" style="color: blue">
                     Test
                   </Input>
-                  <button type="submit">Submit</button>
+                  <Button type="submit">Submit</Button>
                 </Form>
               </div>
 

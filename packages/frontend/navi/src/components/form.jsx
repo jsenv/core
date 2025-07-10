@@ -35,6 +35,7 @@ const FormWithAction = forwardRef((props, ref) => {
   let {
     action,
     method,
+    readOnly = false,
     allowConcurrentActions: formAllowConcurrentActions = false,
     actionErrorEffect = "show_validation_message", // "show_validation_message" or "throw"
     onActionPrevented,
@@ -56,12 +57,13 @@ const FormWithAction = forwardRef((props, ref) => {
   const [boundAction, formParamsSignal, setFormParams] =
     useFormActionBoundToFormParams(action);
   const [formActionRequester, setFormActionRequester] = useState(null);
-  const [formIsReadonly, setFormIsReadonly] = useState(false);
   const [formIsBusy, setFormIsBusy] = useState(false);
   const [formError, setFormError] = useState(null);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
+  const formIsReadOnly =
+    readOnly || (formIsBusy && !formAllowConcurrentActions);
 
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
@@ -72,7 +74,6 @@ const FormWithAction = forwardRef((props, ref) => {
 
       setFormActionRequester(actionEvent.detail.requester);
       setFormIsBusy(true);
-      setFormIsReadonly(!formAllowConcurrentActions);
       setFormError(null);
       executeAction(actionEvent);
     },
@@ -81,17 +82,14 @@ const FormWithAction = forwardRef((props, ref) => {
     },
     onAbort: (e) => {
       setFormIsBusy(false);
-      setFormIsReadonly(false);
       onActionAbort?.(e);
     },
     onError: (e) => {
       setFormIsBusy(false);
-      setFormIsReadonly(false);
       onActionError?.(e);
     },
     onEnd: (e) => {
       setFormIsBusy(false);
-      setFormIsReadonly(false);
       onActionEnd?.(e);
     },
   });
@@ -116,7 +114,7 @@ const FormWithAction = forwardRef((props, ref) => {
           formAction: boundAction,
           formParamsSignal,
           formActionRequester,
-          formIsReadonly,
+          formIsReadOnly,
           formIsBusy,
           formError,
         }}
