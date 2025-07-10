@@ -39,6 +39,7 @@ const FormWithAction = forwardRef((props, ref) => {
     actionErrorEffect = "show_validation_message", // "show_validation_message" or "throw"
     onActionPrevented,
     onActionStart,
+    onActionAbort,
     onActionError,
     onActionEnd,
     children,
@@ -62,15 +63,6 @@ const FormWithAction = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
 
-  if (method === undefined) {
-    if (action && action.meta?.httpVerb) {
-      method = action.meta.httpVerb;
-    } else {
-      method = "get";
-    }
-  }
-  method = method.toLowerCase();
-
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
@@ -86,6 +78,11 @@ const FormWithAction = forwardRef((props, ref) => {
     },
     onStart: (e) => {
       onActionStart?.(e);
+    },
+    onAbort: (e) => {
+      setFormIsBusy(false);
+      setFormIsReadonly(false);
+      onActionAbort?.(e);
     },
     onError: (e) => {
       setFormIsBusy(false);
@@ -103,8 +100,8 @@ const FormWithAction = forwardRef((props, ref) => {
     <form
       {...rest}
       data-action={boundAction.name}
+      data-method={action.meta?.httpVerb || method || "GET"}
       ref={innerRef}
-      method={method === "get" ? "get" : "post"}
       // eslint-disable-next-line react/no-unknown-property
       onrequestsubmit={(e) => {
         // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
