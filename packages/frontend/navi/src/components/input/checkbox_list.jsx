@@ -2,6 +2,7 @@ import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
+import { useRefArray } from "../../use_ref_array.js";
 import { useStateArray } from "../../use_state_array.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneArrayParam } from "../action_execution/use_action.js";
@@ -177,6 +178,8 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     },
   });
 
+  const childRefArray = useRefArray(children, (child) => child.value);
+
   return (
     <CheckboxListControlled
       {...rest}
@@ -200,8 +203,8 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
         });
       }}
     >
-      {children.map((child) => {
-        const childRef = useRef();
+      {children.map((child, i) => {
+        const childRef = childRefArray[i];
         return {
           ...child,
           loading:
