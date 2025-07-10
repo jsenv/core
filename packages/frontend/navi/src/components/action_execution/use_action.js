@@ -4,25 +4,22 @@ import { createAction } from "../../actions.js";
 import { useFormContext } from "./form_context.js";
 
 let debug = false;
-let componentIdCounter = 0;
-const useComponentWeakMapKey = () => {
-  const componentKeyRef = useRef(null);
+let componentActionIdCounter = 0;
+const useComponentActionCacheKey = () => {
+  const componentActionCacheKeyRef = useRef(null);
   // It's very important to use an object here as componentId and not just in integer
   // because this key will be used as a key in a WeakMap
   // and if we pass an integer the browser allows itself to garbage collect it
   // but not if it's an object as the useRef above keeps referencing it
   // this is a subtle different and might be the reason why WeakMap does not accept primitive as keys
-  if (!componentKeyRef.current) {
-    const id = ++componentIdCounter;
-    componentKeyRef.current = {
+  if (!componentActionCacheKeyRef.current) {
+    const id = ++componentActionIdCounter;
+    componentActionCacheKeyRef.current = {
       id,
       toString: () => `component_action_id_${id}`,
     };
-    if (debug) {
-      console.debug(`🆔 Created new componentId: ${id}`);
-    }
   }
-  return componentKeyRef.current;
+  return componentActionCacheKeyRef.current;
 };
 
 // used by <form> to have their own action bound to many parameters
@@ -30,28 +27,27 @@ const useComponentWeakMapKey = () => {
 // these params are also assigned just before executing the action to ensure they are in sync
 // (could also be used by <fieldset> but I think fieldset are not going to be used this way and
 // we will reserve this behavior to <form>)
-export const useFormActionBoundToManyParams = (action) => {
-  const componentWeakMapKey = useComponentWeakMapKey();
-  const [paramsSignal, updateParams] = useActionParamsSignal(
-    componentWeakMapKey,
+export const useFormActionBoundToFormParams = (action) => {
+  const actionCacheKey = useComponentActionCacheKey();
+  const [formParamsSignal, updateFormParams] = useActionParamsSignal(
+    actionCacheKey,
     {},
   );
-  const boundAction = useBoundAction(action, paramsSignal);
-
-  boundAction.meta.paramsSignal = paramsSignal;
-  boundAction.meta.updateParams = updateParams;
-  const getValue = paramsSignal.value;
-  const setValue = updateParams;
-  return [boundAction, getValue, setValue];
+  const formActionBoundActionToFormParams = useBoundAction(
+    action,
+    formParamsSignal,
+  );
+  return [
+    formActionBoundActionToFormParams,
+    formParamsSignal,
+    updateFormParams,
+  ];
 };
 export const useOneFormParam = (name, value) => {
-  const { formAction } = useFormContext();
+  const { formParamsSignal } = useFormContext();
   const mountedRef = useRef(false);
-
-  const formActionParamsSignal = formAction.meta.paramsSignal;
-  const formActionUpdateParams = formAction.meta.updateParams;
-  const getValue = () => formActionParamsSignal.value[name];
-  const setValue = (value) => formActionUpdateParams({ [name]: value });
+  const getValue = () => formParamsSignal.value[name];
+  const setValue = (value) => updateParams(formParamsSignal, { [name]: value });
   if (!mountedRef.current) {
     mountedRef.current = true;
     if (name && value !== undefined) {
@@ -60,26 +56,14 @@ export const useOneFormParam = (name, value) => {
   }
   return [getValue, setValue];
 };
-// used by <button> to have their own action still bound to parent action params (if any)
-// as a result when inside a <form> a <button> action receives the form elements values
-// when outside <form> button action receives no param
-export const useActionBoundToFormParams = (action) => {
-  const { formAction } = useFormContext();
-  const formActionParamsSignal = formAction.meta.paramsSignal;
-  const actionBoundToFormParams = useBoundAction(
-    action,
-    formActionParamsSignal,
-  );
-  return actionBoundToFormParams;
-};
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
 export const useActionBoundToOneParam = (action, name, value) => {
   const mountedRef = useRef(false);
-  const componentWeakMapKey = useComponentWeakMapKey();
+  const actionCacheKey = useComponentActionCacheKey();
   const [paramsSignal, updateParams] = useActionParamsSignal(
-    componentWeakMapKey,
+    actionCacheKey,
     {},
   );
   const boundAction = useBoundAction(action, paramsSignal);
@@ -101,11 +85,55 @@ export const useActionBoundToOneParam = (action, name, value) => {
       setValue(value);
     }
   }
-  return [boundAction, getValue, setValue];
+
+  const reset = () => {
+    setValue(value);
+  };
+
+  return [boundAction, getValue, setValue, reset];
 };
+
+export const useActionBoundToOneArrayParam = (action, name, value) => {
+  const [boundAction, getValue, setValue, resetValue] =
+    useActionBoundToOneParam(action, name, value);
+
+  const add = (valueToAdd, valueArray = getValue()) => {
+    const valueArrayWithThisValue = [];
+    for (const value of valueArray) {
+      if (value === valueToAdd) {
+        return;
+      }
+      valueArrayWithThisValue.push(value);
+    }
+    valueArrayWithThisValue.push(valueToAdd);
+    setValue(valueArrayWithThisValue);
+  };
+  const remove = (valueToRemove, valueArray = getValue()) => {
+    const valueArrayWithoutThisValue = [];
+    let found = false;
+    for (const value of valueArray) {
+      if (value === valueToRemove) {
+        found = true;
+        continue;
+      }
+      valueArrayWithoutThisValue.push(value);
+    }
+    if (!found) {
+      return;
+    }
+    setValue(valueArrayWithoutThisValue);
+  };
+
+  const isInArray = (valueToCheck, valueArray = getValue()) => {
+    return valueArray.includes(valueToCheck);
+  };
+
+  return [boundAction, add, remove, isInArray, resetValue];
+};
+
 // used by <details> to just call their action
-export const useAction = (action) => {
-  return useBoundAction(action);
+export const useAction = (action, paramsSignal) => {
+  return useBoundAction(action, paramsSignal);
 };
 
 const sharedSignalCache = new WeakMap();
@@ -117,44 +145,7 @@ const useActionParamsSignal = (cacheKey, initialParams = {}) => {
   }
 
   const paramsSignal = signal(initialParams);
-  const updateParams = (object) => {
-    const currentParams = paramsSignal.peek();
-    const paramsCopy = { ...currentParams };
-    let modified = false;
-    for (const key of Object.keys(object)) {
-      const value = object[key];
-      const currentValue = currentParams[key];
-      if (Object.hasOwn(currentParams, key)) {
-        if (value !== currentValue) {
-          modified = true;
-          paramsCopy[key] = value;
-        }
-      } else {
-        modified = true;
-        paramsCopy[key] = value;
-      }
-    }
-    if (modified) {
-      if (debug) {
-        console.debug(
-          `Updating params for ${cacheKey} with new params:`,
-          object,
-          `result:`,
-          paramsCopy,
-        );
-      }
-      paramsSignal.value = paramsCopy;
-    } else if (debug) {
-      console.debug(
-        `No change in params for ${cacheKey}, not updating.`,
-        `current params:`,
-        currentParams,
-        `new params:`,
-        object,
-      );
-    }
-  };
-  const result = [paramsSignal, updateParams];
+  const result = [paramsSignal, (value) => updateParams(paramsSignal, value)];
   sharedSignalCache.set(cacheKey, result);
   if (debug) {
     console.debug(
@@ -163,6 +154,44 @@ const useActionParamsSignal = (cacheKey, initialParams = {}) => {
     );
   }
   return result;
+};
+
+export const updateParams = (paramsSignal, object, cacheKey) => {
+  const currentParams = paramsSignal.peek();
+  const paramsCopy = { ...currentParams };
+  let modified = false;
+  for (const key of Object.keys(object)) {
+    const value = object[key];
+    const currentValue = currentParams[key];
+    if (Object.hasOwn(currentParams, key)) {
+      if (value !== currentValue) {
+        modified = true;
+        paramsCopy[key] = value;
+      }
+    } else {
+      modified = true;
+      paramsCopy[key] = value;
+    }
+  }
+  if (modified) {
+    if (debug) {
+      console.debug(
+        `Updating params for ${cacheKey} with new params:`,
+        object,
+        `result:`,
+        paramsCopy,
+      );
+    }
+    paramsSignal.value = paramsCopy;
+  } else if (debug) {
+    console.debug(
+      `No change in params for ${cacheKey}, not updating.`,
+      `current params:`,
+      currentParams,
+      `new params:`,
+      object,
+    );
+  }
 };
 
 const useBoundAction = (action, actionParamsSignal) => {

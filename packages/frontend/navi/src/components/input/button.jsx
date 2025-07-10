@@ -4,10 +4,7 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import {
-  useAction,
-  useActionBoundToFormParams,
-} from "../action_execution/use_action.js";
+import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
@@ -243,9 +240,9 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const { formIsReadonly } = formContext;
-  const actionBoundToForm = useActionBoundToFormParams(action);
-  const { pending } = useActionStatus(actionBoundToForm);
+  const { formIsReadonly, formParamsSignal } = formContext;
+  const actionBoundToFormParams = useAction(action, formParamsSignal);
+  const { pending } = useActionStatus(actionBoundToFormParams);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -264,12 +261,12 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     // je vois pas encore comment je vais faire ca mais a priori
     // on va juste le faire "manuellement"
     // en utilisnt un truc du formContext
-    requestAction(actionBoundToForm, { event });
+    requestAction(actionBoundToFormParams, { event });
   };
 
   return (
     <ButtonBasic
-      data-action={actionBoundToForm.name}
+      data-action={actionBoundToFormParams.name}
       ref={innerRef}
       {...rest}
       type={type}

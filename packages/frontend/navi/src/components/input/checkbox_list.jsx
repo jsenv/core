@@ -27,6 +27,7 @@ export const CheckboxList = forwardRef((props, ref) => {
     onCancel,
     onActionPrevented,
     onActionStart,
+    onActionAbort,
     onActionError,
     onActionEnd,
     ...rest
@@ -43,48 +44,23 @@ export const CheckboxList = forwardRef((props, ref) => {
     }
   }
 
-  const [effectiveAction, getCheckedValueArray, setCheckedValueArray] =
-    useActionBoundToOneParam(action, name, checkedValueArrayAtStart);
-  const { pending, error, aborted } = useActionStatus(effectiveAction);
+  const [
+    boundAction,
+    addToCheckedValues,
+    removeFromCheckedValues,
+    isChecked,
+    resetCheckedValueArray,
+  ] = useActionBoundToOneParam(action, name, checkedValueArrayAtStart);
+  const { pending } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-
-  const checkedValueArrayFromSignal = getCheckedValueArray();
-  const checkedValueArray =
-    error || aborted ? checkedValueArrayAtStart : checkedValueArrayFromSignal;
-  const addToCheckedValues = (valueToAdd) => {
-    const checkedValueArrayWithThisValue = [];
-    for (const checkedValue of checkedValueArray) {
-      if (checkedValue === valueToAdd) {
-        return;
-      }
-      checkedValueArrayWithThisValue.push(checkedValue);
-    }
-    checkedValueArrayWithThisValue.push(valueToAdd);
-    setCheckedValueArray(checkedValueArrayWithThisValue);
-  };
-  const removeFromCheckedValues = (valueToRemove) => {
-    const checkedValueArrayWithoutThisValue = [];
-    let found = false;
-    for (const checkedValue of checkedValueArray) {
-      if (checkedValue === valueToRemove) {
-        found = true;
-        continue;
-      }
-      checkedValueArrayWithoutThisValue.push(checkedValue);
-    }
-    if (!found) {
-      return;
-    }
-    setCheckedValueArray(checkedValueArrayWithoutThisValue);
-  };
 
   const actionRequesterRef = useRef();
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       setNavStateValue(undefined);
-      setCheckedValueArray(checkedValueArrayAtStart);
+      resetCheckedValueArray();
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -94,10 +70,17 @@ export const CheckboxList = forwardRef((props, ref) => {
       executeAction(actionEvent);
     },
     onStart: onActionStart,
-    onError: onActionError,
-    onEnd: () => {
+    onAbort: (e) => {
+      resetCheckedValueArray();
+      onActionAbort?.(e);
+    },
+    onError: (e) => {
+      resetCheckedValueArray();
+      onActionError?.(e);
+    },
+    onEnd: (e) => {
       setNavStateValue(undefined);
-      onActionEnd?.();
+      onActionEnd?.(e);
     },
   });
 
@@ -111,7 +94,7 @@ export const CheckboxList = forwardRef((props, ref) => {
       {label ? <legend>{label}</legend> : null}
       {children.map((child) => {
         const { id, value, disabled, label, loading } = child;
-        const checked = checkedValueArray.includes(value);
+        const checked = isChecked(value);
         const checkboxRef = useRef(null);
 
         const innerLoading =
@@ -147,7 +130,7 @@ export const CheckboxList = forwardRef((props, ref) => {
                 return;
               }
               const checkboxListContainer = innerRef.current;
-              requestAction(effectiveAction, {
+              requestAction(boundAction, {
                 event,
                 target: checkboxListContainer,
                 requester: checkbox,
