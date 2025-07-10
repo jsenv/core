@@ -141,24 +141,6 @@ export const InputCheckbox = forwardRef((props, ref) => {
   );
 });
 
-const CustomCheckbox = ({ children }) => {
-  return (
-    <div className="custom_checkbox_wrapper">
-      {children}
-      <div className="custom_checkbox">
-        <svg viewBox="0 0 12 12" aria-hidden="true">
-          <path
-            className="custom_checkbox_marker"
-            d="M10.5 2L4.5 9L1.5 5.5"
-            fill="none"
-            strokeWidth="2"
-          />
-        </svg>
-      </div>
-    </div>
-  );
-};
-
 const InputCheckboxBasic = forwardRef((props, ref) => {
   const {
     autoFocus,
@@ -199,6 +181,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       value={value}
       checked={innerChecked}
       data-readonly={readOnly && !disabled ? "" : undefined}
+      data-validation-message-arrow-x="center"
       disabled={disabled}
       onClick={(e) => {
         if (readOnly) {
@@ -230,6 +213,23 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
 
   return inputCheckboxWithLoader;
 });
+const CustomCheckbox = ({ children }) => {
+  return (
+    <div className="custom_checkbox_wrapper">
+      {children}
+      <div className="custom_checkbox">
+        <svg viewBox="0 0 12 12" aria-hidden="true">
+          <path
+            className="custom_checkbox_marker"
+            d="M10.5 2L4.5 9L1.5 5.5"
+            fill="none"
+            strokeWidth="2"
+          />
+        </svg>
+      </div>
+    </div>
+  );
+};
 
 const InputCheckboxWithAction = forwardRef((props, ref) => {
   const {
@@ -298,7 +298,6 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       checked={checked}
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
-      data-validation-message-arrow-x="center"
       onChange={(e) => {
         const checkboxIsChecked = e.target.checked;
         setCheckedValue(checkboxIsChecked ? value : undefined);

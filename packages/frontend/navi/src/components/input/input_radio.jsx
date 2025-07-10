@@ -3,22 +3,16 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useActionBoundToOneParam } from "../action_execution/use_action.js";
+import {
+  useActionBoundToOneParam,
+  useOneFormParam,
+} from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import "../checked_programmatic_change.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
-
-export const InputRadio = forwardRef((props, ref) => {
-  return renderActionableComponent(
-    props,
-    ref,
-    SimpleInputRadio,
-    ActionInputRadio,
-  );
-});
 
 const CUSTOM_RADIO_COLORS = {
   borders: {
@@ -42,116 +36,118 @@ const CUSTOM_RADIO_COLORS = {
     disabled: "#D3D3D3",
   },
 };
+import.meta.css = /* css */ `
+  .custom_radio_wrapper {
+    display: inline-flex;
+    box-sizing: content-box;
+  }
 
-import.meta.css = /*css*/ `
-.custom_radio_wrapper {
-  display: inline-flex;
-  box-sizing: content-box;
-}
+  .custom_radio_wrapper input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
 
-.custom_radio_wrapper input[type="radio"] {
-  position: absolute;
-  opacity: 0;
-  inset: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-}
+  .custom_radio {
+    width: 13px;
+    height: 13px;
+    border: 1px solid ${CUSTOM_RADIO_COLORS.borders.default};
+    border-radius: 50%; /* ✅ Rond comme Chrome */
+    background: ${CUSTOM_RADIO_COLORS.background.default};
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    margin-top: 3px;
+    margin-right: 3px;
+  }
 
-.custom_radio {
-  width: 13px;
-  height: 13px;
-  border: 1px solid ${CUSTOM_RADIO_COLORS.borders.default};
-  border-radius: 50%; /* ✅ Rond comme Chrome */
-  background: ${CUSTOM_RADIO_COLORS.background.default};
-  transition: all 0.15s ease;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 5px;
-  margin-top: 3px;
-  margin-right: 3px;
-}
+  .custom_radio svg {
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transform: scale(0.3);
+    transition: all 0.15s ease;
+    pointer-events: none;
+  }
 
-.custom_radio svg {
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transform: scale(0.3);
-  transition: all 0.15s ease;
-  pointer-events: none;
-}
+  .custom_radio svg circle {
+    fill: ${CUSTOM_RADIO_COLORS.checkmark.default};
+  }
 
-.custom_radio svg circle {
-  fill: ${CUSTOM_RADIO_COLORS.checkmark.default};
-}
+  /* États hover */
+  .custom_radio_wrapper:hover .custom_radio {
+    border-color: ${CUSTOM_RADIO_COLORS.borders.hover};
+  }
+  .custom_radio_wrapper:hover .custom_radio svg circle {
+    fill: ${CUSTOM_RADIO_COLORS.checkmark.hover};
+  }
 
-/* États hover */
-.custom_radio_wrapper:hover .custom_radio {
-  border-color: ${CUSTOM_RADIO_COLORS.borders.hover};
-}
-.custom_radio_wrapper:hover .custom_radio svg circle {
-  fill: ${CUSTOM_RADIO_COLORS.checkmark.hover};
-}
+  .custom_radio_wrapper:hover input[type="radio"]:checked + .custom_radio {
+    background: ${CUSTOM_RADIO_COLORS.background.checkedAndHover};
+    border-color: ${CUSTOM_RADIO_COLORS.borders.checkedAndHover};
+  }
 
-.custom_radio_wrapper:hover input[type="radio"]:checked + .custom_radio {
-  background: ${CUSTOM_RADIO_COLORS.background.checkedAndHover};
-  border-color: ${CUSTOM_RADIO_COLORS.borders.checkedAndHover};
-}
+  /* État checked */
+  .custom_radio_wrapper input[type="radio"]:checked + .custom_radio {
+    background: ${CUSTOM_RADIO_COLORS.background.checked};
+    border-color: ${CUSTOM_RADIO_COLORS.borders.checked};
+  }
 
-/* État checked */
-.custom_radio_wrapper input[type="radio"]:checked + .custom_radio {
-  background: ${CUSTOM_RADIO_COLORS.background.checked};
-  border-color: ${CUSTOM_RADIO_COLORS.borders.checked};
-}
+  .custom_radio_wrapper input[type="radio"]:checked + .custom_radio svg {
+    opacity: 1;
+    transform: scale(1);
+  }
 
-.custom_radio_wrapper input[type="radio"]:checked + .custom_radio svg {
-  opacity: 1;
-  transform: scale(1);
-}
+  /* États disabled */
+  .custom_radio_wrapper input[type="radio"][disabled] + .custom_radio {
+    background-color: ${CUSTOM_RADIO_COLORS.background.disabled};
+    border-color: ${CUSTOM_RADIO_COLORS.borders.disabled};
+  }
 
-/* États disabled */
-.custom_radio_wrapper input[type="radio"][disabled] + .custom_radio {
-  background-color: ${CUSTOM_RADIO_COLORS.background.disabled};
-  border-color: ${CUSTOM_RADIO_COLORS.borders.disabled};
-}
+  .custom_radio_wrapper input[type="radio"][disabled]:checked + .custom_radio {
+    border-color: ${CUSTOM_RADIO_COLORS.borders.disabledAndChecked};
+  }
 
-.custom_radio_wrapper input[type="radio"][disabled]:checked + .custom_radio {
-  border-color: ${CUSTOM_RADIO_COLORS.borders.disabledAndChecked};
-}
+  .custom_radio_wrapper
+    input[type="radio"][disabled]:checked
+    + .custom_radio
+    svg
+    circle {
+    fill: ${CUSTOM_RADIO_COLORS.checkmark.disabled};
+  }
 
-.custom_radio_wrapper input[type="radio"][disabled]:checked + .custom_radio svg circle {
-  fill: ${CUSTOM_RADIO_COLORS.checkmark.disabled};
-}
-
-/* Focus state avec outline */
-.custom_radio_wrapper input[type="radio"]:focus-visible + .custom_radio {
-  outline: 2px solid ${CUSTOM_RADIO_COLORS.outline.default};
-  outline-offset: 1px;
-}
+  /* Focus state avec outline */
+  .custom_radio_wrapper input[type="radio"]:focus-visible + .custom_radio {
+    outline: 2px solid ${CUSTOM_RADIO_COLORS.outline.default};
+    outline-offset: 1px;
+  }
 `;
 
-const CustomRadio = ({ children }) => {
-  return (
-    <div className="custom_radio_wrapper">
-      {children}
-      <div className="custom_radio">
-        <svg viewBox="0 0 12 12" aria-hidden="true">
-          <circle cx="6" cy="6" r="4.25" />
-        </svg>
-      </div>
-    </div>
+export const InputRadio = forwardRef((props, ref) => {
+  return renderActionableComponent(
+    props,
+    ref,
+    InputRadioBasic,
+    InputRadioWithAction,
+    InputRadioInsideForm,
   );
-};
+});
 
-const SimpleInputRadio = forwardRef((props, ref) => {
+const InputRadioBasic = forwardRef((props, ref) => {
   const {
     autoFocus,
     constraints = [],
     checked,
+    readOnly,
     disabled,
     loading,
+    onClick,
     onChange,
     appeareance = "custom", // "custom" or "default"
     ...rest
@@ -170,7 +166,8 @@ const SimpleInputRadio = forwardRef((props, ref) => {
   }
 
   const handleChange = (e) => {
-    setInnerChecked(e.target.checked);
+    const isChecked = e.target.checked;
+    setInnerChecked(isChecked);
     onChange?.(e);
   };
 
@@ -179,32 +176,29 @@ const SimpleInputRadio = forwardRef((props, ref) => {
       ref={innerRef}
       type="radio"
       checked={innerChecked}
+      data-readonly={readOnly && !disabled ? "" : undefined}
       disabled={disabled}
+      data-validation-message-arrow-x="center"
+      onClick={(e) => {
+        if (readOnly) {
+          e.preventDefault();
+        }
+        onClick?.(e);
+      }}
       onChange={handleChange}
-      // eslint-disable-next-line react/no-unknown-property
-      onprogrammaticchange={handleChange}
       {...rest}
     />
   );
   const inputRadioDisplayed =
     appeareance === "custom" ? (
-      <CustomRadio checked={innerChecked} loading={loading}>
-        {inputRadio}
-      </CustomRadio>
+      <CustomRadio>{inputRadio}</CustomRadio>
     ) : (
       inputRadio
     );
 
-  const loaderColor =
-    disabled && loading
-      ? innerChecked
-        ? CUSTOM_RADIO_COLORS.borders.checked
-        : CUSTOM_RADIO_COLORS.borders.default
-      : undefined;
   const inputRadioWithLoader = (
     <LoaderBackground
       loading={loading}
-      color={loaderColor}
       targetSelector={appeareance === "custom" ? ".custom_radio" : ""}
       inset={-1}
     >
@@ -214,15 +208,28 @@ const SimpleInputRadio = forwardRef((props, ref) => {
 
   return inputRadioWithLoader;
 });
+const CustomRadio = ({ children }) => {
+  return (
+    <div className="custom_radio_wrapper">
+      {children}
+      <div className="custom_radio">
+        <svg viewBox="0 0 12 12" aria-hidden="true">
+          <circle className="custom_radio_marker" cx="6" cy="6" r="4.25" />
+        </svg>
+      </div>
+    </div>
+  );
+};
 
-const ActionInputRadio = forwardRef((props, ref) => {
+const InputRadioWithAction = forwardRef((props, ref) => {
   const {
     id,
     name,
     value = "",
     checked: initialChecked = false,
     action,
-    disabled,
+    loading,
+    readOnly,
     onCancel,
     onChange,
     actionErrorEffect,
@@ -244,15 +251,15 @@ const ActionInputRadio = forwardRef((props, ref) => {
 
   const [navStateValue, setNavStateValue] = useNavState(id);
   const checkedAtStart = initialChecked || navStateValue === value;
-  const [effectiveAction, getCheckedValue, setCheckedValue] =
+
+  const [boundAction, getCheckedValue, setCheckedValue] =
     useActionBoundToOneParam(action, name, checkedAtStart ? value : undefined);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const { pending, error, aborted } = useActionStatus(effectiveAction);
-
-  const valueChecked = getCheckedValue();
-  const checked = error || aborted ? initialChecked : value === valueChecked;
+  const { pending, error, aborted } = useActionStatus(boundAction);
+  const checkedInAction = getCheckedValue() === value;
+  const checked = error || aborted ? checkedAtStart : checkedInAction;
 
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
@@ -271,32 +278,76 @@ const ActionInputRadio = forwardRef((props, ref) => {
     onAction: executeAction,
     onStart: onActionStart,
     onError: onActionError,
-    onEnd: () => {
+    onEnd: (e) => {
       setNavStateValue(undefined);
-      onActionEnd?.();
+      onActionEnd?.(e);
     },
   });
 
+  const innerLoading = loading || pending;
+
   return (
-    <SimpleInputRadio
+    <InputRadioBasic
       {...rest}
       ref={innerRef}
       id={id}
       name={name}
       value={value}
-      data-validation-message-arrow-x="center"
       checked={checked}
-      disabled={disabled || pending}
+      readOnly={readOnly || innerLoading}
       onChange={(e) => {
         const radioIsChecked = e.target.checked;
         if (radioIsChecked) {
           setNavStateValue(value);
           setCheckedValue(value);
-          if (!e.target.form && action) {
-            requestAction(effectiveAction, {
-              event: e,
-            });
-          }
+          requestAction(boundAction, {
+            event: e,
+          });
+        }
+        onChange?.(e);
+      }}
+    />
+  );
+});
+
+const InputRadioInsideForm = forwardRef((props, ref) => {
+  const {
+    formContext,
+    id,
+    name,
+    value = "on",
+    checked: initialChecked,
+    readOnly,
+    onChange,
+    ...rest
+  } = props;
+  const { formIsReadOnly } = formContext;
+
+  const innerRef = useRef(null);
+  useImperativeHandle(ref, () => innerRef.current);
+
+  const [navStateValue, setNavStateValue] = useNavState(id);
+  const checkedAtStart =
+    navStateValue === undefined ? initialChecked : navStateValue;
+  const [getCheckedValue, setCheckedValue] = useOneFormParam(
+    name,
+    checkedAtStart,
+  );
+  const checked = getCheckedValue() === value;
+
+  return (
+    <InputRadioBasic
+      {...rest}
+      ref={innerRef}
+      id={id}
+      name={name}
+      checked={checked}
+      readOnly={readOnly || formIsReadOnly}
+      onChange={(e) => {
+        const radioIsChecked = e.target.checked;
+        if (radioIsChecked) {
+          setNavStateValue(value);
+          setCheckedValue(value);
         }
         onChange?.(e);
       }}
