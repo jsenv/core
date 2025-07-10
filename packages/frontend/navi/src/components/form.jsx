@@ -58,7 +58,8 @@ const FormWithAction = forwardRef((props, ref) => {
     useFormActionBoundToFormParams(action);
   const [formActionRequester, setFormActionRequester] = useState(null);
   const [formIsBusy, setFormIsBusy] = useState(false);
-  const [formError, setFormError] = useState(null);
+  const [formActionError, setFormActionError] = useState(null);
+  const [formActionAborted, setFormActionAborted] = useState(false);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -74,7 +75,8 @@ const FormWithAction = forwardRef((props, ref) => {
 
       setFormActionRequester(actionEvent.detail.requester);
       setFormIsBusy(true);
-      setFormError(null);
+      setFormActionError(null);
+      setFormActionAborted(false);
       executeAction(actionEvent);
     },
     onStart: (e) => {
@@ -82,10 +84,12 @@ const FormWithAction = forwardRef((props, ref) => {
     },
     onAbort: (e) => {
       setFormIsBusy(false);
+      setFormActionAborted(true);
       onActionAbort?.(e);
     },
     onError: (e) => {
       setFormIsBusy(false);
+      setFormActionError(e);
       onActionError?.(e);
     },
     onEnd: (e) => {
@@ -116,7 +120,8 @@ const FormWithAction = forwardRef((props, ref) => {
           formActionRequester,
           formIsReadOnly,
           formIsBusy,
-          formError,
+          formActionAborted,
+          formActionError,
         }}
       >
         {children}

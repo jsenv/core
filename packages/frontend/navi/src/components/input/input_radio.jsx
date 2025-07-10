@@ -336,7 +336,7 @@ const InputRadioInsideForm = forwardRef((props, ref) => {
     onChange,
     ...rest
   } = props;
-  const { formIsReadOnly } = formContext;
+  const { formIsReadOnly, formActionError, formActionAborted } = formContext;
 
   if (import.meta.dev && value === "") {
     console.warn(
@@ -354,7 +354,9 @@ const InputRadioInsideForm = forwardRef((props, ref) => {
     name,
     checkedAtStart,
   );
-  const checked = getCheckedValue() === value;
+  const checkedInFormAction = getCheckedValue() === value;
+  const checked =
+    formActionError || formActionAborted ? checkedAtStart : checkedInFormAction;
 
   return (
     <InputRadioBasic
