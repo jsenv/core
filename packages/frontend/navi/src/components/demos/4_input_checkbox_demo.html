@@ -137,16 +137,15 @@
                     );
                   }}
                 >
-                  <input type="hidden" name="name" value="dam" />
+                  <Input type="hidden" name="name" value="dam" />
                   <Input
                     type="checkbox"
                     name="insideForm"
                     style="color: blue"
                     checked
-                  >
-                    Test
-                  </Input>
-                  <button type="submit">Submit</button>
+                  />
+
+                  <Button type="submit">Submit</Button>
                 </Form>
               </div>
             </div>
@@ -159,41 +158,56 @@
                     many messages)
                   </strong>
                 </p>
-                <Input
-                  type="checkbox"
-                  name="a"
-                  style="color: blue"
-                  action={async () => {
-                    await new Promise((resolve) => setTimeout(resolve, 1_500));
-                    throw new Error(`error checking a`);
-                  }}
-                >
-                  A
-                </Input>
+                <Field
+                  input={
+                    <Input
+                      type="checkbox"
+                      name="a"
+                      style="color: blue"
+                      action={async () => {
+                        await new Promise((resolve) =>
+                          setTimeout(resolve, 1_500),
+                        );
+                        throw new Error(`error checking a`);
+                      }}
+                    />
+                  }
+                  label="A"
+                />
                 <br />
-                <Input
-                  type="checkbox"
-                  name="b"
-                  style="color: green"
-                  action={async () => {
-                    await new Promise((resolve) => setTimeout(resolve, 1_500));
-                    throw new Error(`error checking b`);
-                  }}
-                >
-                  B
-                </Input>
+                <Field
+                  input={
+                    <Input
+                      type="checkbox"
+                      name="b"
+                      style="color: green"
+                      action={async () => {
+                        await new Promise((resolve) =>
+                          setTimeout(resolve, 1_500),
+                        );
+                        throw new Error(`error checking b`);
+                      }}
+                    />
+                  }
+                  label="B"
+                />
                 <br />
-                <Input
-                  type="checkbox"
-                  name="c"
-                  style="color: yellow"
-                  action={async () => {
-                    await new Promise((resolve) => setTimeout(resolve, 1_500));
-                    throw new Error(`error checking c`);
-                  }}
-                >
-                  C
-                </Input>
+                <Field
+                  input={
+                    <Input
+                      type="checkbox"
+                      name="c"
+                      style="color: yellow"
+                      action={async () => {
+                        await new Promise((resolve) =>
+                          setTimeout(resolve, 1_500),
+                        );
+                        throw new Error(`error checking c`);
+                      }}
+                    />
+                  }
+                  label="C"
+                />
               </div>
             </div>
           </div>
