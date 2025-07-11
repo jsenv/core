@@ -609,18 +609,22 @@ export const resource = (
   resourceInstance.httpHandler = httpHandler;
 
   // Create HTTP actions
-
   const httpActions = {};
-  if (!scope) {
-    for (const key of Object.keys(rest)) {
-      const method = httpHandler[key];
-      if (!method) {
-        continue;
-      }
-      const action = method(rest[key]);
-      httpActions[key] = action;
+  for (const key of Object.keys(rest)) {
+    const method = httpHandler[key];
+    if (!method) {
+      continue;
     }
-    Object.assign(resourceInstance, httpActions);
+    const action = method(rest[key]);
+    if (scope) {
+      // For scoped resources, bind params and assign to both resource and httpActions
+      const boundAction = action.bindParams(scope.params);
+      resourceInstance[key] = boundAction;
+      httpActions[key] = boundAction;
+    } else {
+      httpActions[key] = action;
+      resourceInstance[key] = action;
+    }
   }
 
   resourceInstance.one = (propertyName, childResource, options) => {
@@ -841,12 +845,8 @@ export const resource = (
         id: scopedId,
         params: scopeParams,
       },
+      ...rest,
     });
-
-    for (const key of Object.keys(httpActions)) {
-      const action = httpActions[key];
-      scopedResource[key] = action.bindParams(scopeParams);
-    }
 
     return scopedResource;
   };
