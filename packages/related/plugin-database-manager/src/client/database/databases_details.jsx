@@ -46,12 +46,14 @@ export const DatabasesDetails = (props) => {
         />
       )}
       useItemArrayInStore={useDatabaseArrayInStore}
-      useRenameItemAction={(database) =>
-        DATABASE.PUT.bindParams({
+      useRenameItemAction={(database) => {
+        const renameAction = DATABASE.PUT.bindParams({
           datname: database.datname,
           columnName: "datname",
-        })
-      }
+        });
+        renameAction.meta.valueParamName = "columnValue";
+        return renameAction;
+      }}
       useCreateItemAction={() => DATABASE.POST}
       useDeleteItemAction={(database) =>
         DATABASE.DELETE.bindParams({
