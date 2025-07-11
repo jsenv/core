@@ -10,6 +10,7 @@
     <script type="module">
       import { assert } from "@jsenv/assert";
       import { createRoute } from "./route.js";
+      import { updateDocumentUrl } from "./document_url_signal.js";
 
       assert.colors = false;
 
@@ -144,6 +145,81 @@
         assert({
           actual: url,
           expect: expected,
+        });
+      });
+
+      // Wildcard parameter extraction tests
+      test("paramsSignal extracts single wildcard parameter", () => {
+        const route = createRoute("/*/data");
+        updateDocumentUrl(new URL("/users/data", window.location.origin));
+        const params = route.paramsSignal.value;
+
+        assert({
+          actual: params,
+          expect: { 0: "users" },
+        });
+      });
+
+      test("paramsSignal extracts multiple wildcard parameters", () => {
+        const route = createRoute("/*/*/data");
+        updateDocumentUrl(new URL("/api/v1/data", window.location.origin));
+        const params = route.paramsSignal.value;
+
+        assert({
+          actual: params,
+          expect: { 0: "api", 1: "v1" },
+        });
+      });
+
+      test("paramsSignal mixes wildcards and named parameters", () => {
+        const route = createRoute("/*/user/:id/*");
+        updateDocumentUrl(
+          new URL("/admin/user/123/edit", window.location.origin),
+        );
+        const params = route.paramsSignal.value;
+
+        assert({
+          actual: params,
+          expect: { 0: "admin", id: "123", 1: "edit" },
+        });
+      });
+
+      test("paramsSignal handles wildcards in search params", () => {
+        const route = createRoute("/data?type=*&format=*");
+        updateDocumentUrl(new URL("/data", window.location.origin));
+        updateDocumentUrl(
+          new URL("?type=json&format=csv", window.location.origin),
+        );
+        const params = route.paramsSignal.value;
+
+        assert({
+          actual: params,
+          expect: { 0: "json", 1: "csv" },
+        });
+      });
+
+      test("paramsSignal ignores empty wildcard values", () => {
+        const route = createRoute("/*/data/*");
+        updateDocumentUrl(new URL("//data/", window.location.origin));
+        const params = route.paramsSignal.value;
+
+        // Should only return non-empty values
+        assert({
+          actual: params,
+          expect: {},
+        });
+      });
+
+      test("paramsSignal handles URL-encoded wildcard values", () => {
+        const route = createRoute("/search/*");
+        updateDocumentUrl(
+          new URL("/search/hello%20world", window.location.origin),
+        );
+        const params = route.paramsSignal.value;
+
+        assert({
+          actual: params,
+          expect: { 0: "hello world" },
         });
       });
 

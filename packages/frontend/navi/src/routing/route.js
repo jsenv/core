@@ -6,6 +6,7 @@ const baseUrl = import.meta.dev
   : window.location.origin;
 
 const NO_PARAMS = {};
+
 export const createRoute = (urlPatternInput) => {
   const route = {
     active: false,
@@ -39,10 +40,34 @@ export const createRoute = (urlPatternInput) => {
       return NO_PARAMS;
     }
     const params = {};
+
+    // Collect all parameters from URLPattern groups, handling both named and numbered groups
+    let wildcardOffset = 0;
     for (const property of URL_PATTERN_PROPERTIES_WITH_GROUP_SET) {
       const urlPartMatch = match[property];
-      Object.assign(params, urlPartMatch.groups);
+      if (urlPartMatch && urlPartMatch.groups) {
+        let localWildcardCount = 0;
+        for (const key of Object.keys(urlPartMatch.groups)) {
+          const value = urlPartMatch.groups[key];
+          const keyAsNumber = parseInt(key, 10);
+          if (!isNaN(keyAsNumber)) {
+            if (value) {
+              // Only include non-empty values
+
+              params[wildcardOffset + keyAsNumber] = value;
+              localWildcardCount++;
+            }
+          } else {
+            // Named group (:param or {param})
+            params[key] = value;
+          }
+        }
+        // Update wildcard offset for next URL part
+        wildcardOffset += localWildcardCount;
+      }
     }
+
+    route.params = params;
     return params;
   });
   route.paramsSignal = paramsSignal;
@@ -78,37 +103,45 @@ export const createRoute = (urlPatternInput) => {
 
   const bindAction = (action) => {
     const actionBoundToUrl = action.bindParams(paramsSignal);
+    const actionWeakRef = new WeakRef(actionBoundToUrl);
 
     let wasActive = false;
     let lastParams = null;
     let previousRelativeUrl = null;
+
     // Watch for route activation/deactivation and param changes
     const unsubscribe = effect(() => {
       const isActive = activeSignal.value;
       const currentParams = paramsSignal.value;
       const currentRelativeUrl = relativeUrlSignal.value;
 
+      // Check if the action is still alive
+      const currentAction = actionWeakRef.deref();
+      if (!currentAction) {
+        // Action was garbage collected, clean up the effect
+        unsubscribe();
+        return;
+      }
+
       if (isActive && !wasActive) {
         // First time route matches - load
-        actionBoundToUrl.load({ reason: `${currentRelativeUrl} is matching` });
+        currentAction.load({ reason: `${currentRelativeUrl} is matching` });
       } else if (isActive && wasActive && currentParams !== lastParams) {
-        // Params changed while active - reload
-        actionBoundToUrl.reload({
+        // Params changed while active - reload to ensure fresh data
+        currentAction.reload({
           reason: `Moved from ${previousRelativeUrl} to ${currentRelativeUrl}`,
         });
-      } else if (!isActive && wasActive) {
-        // Route stops matching - unload
-        actionBoundToUrl.unload({
-          reason: `${previousRelativeUrl} is no longer matching`,
-        });
       }
+      // Note: We no longer unload when route stops matching
+      // This allows actions to stay in memory for transitions and preloading
+      // They will be garbage collected naturally when no longer referenced
 
       wasActive = isActive;
       lastParams = currentParams;
       previousRelativeUrl = currentRelativeUrl;
-
-      return { isActive, currentParams };
     });
+
+    // Store cleanup function for manual cleanup if needed
     actionBoundToUrl.meta.cleanup = unsubscribe;
 
     return actionBoundToUrl;
