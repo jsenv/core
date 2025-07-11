@@ -830,10 +830,15 @@ export const resource = (
 
   // Add scope method to create scoped versions of the resource
   resourceInstance.scope = (scopeParams = {}) => {
-    // Generate a unique scope ID based on the original name and params
-    const scopeParamString = stringifyForDisplay(scopeParams, 1);
-    const scopedName = `${name}[${scopeParamString}]`;
-    const scopedId = `${name}_${scopeParamString}`;
+    // Merge current scope params with new ones
+    const currentScopeParams = scope ? scope.params : {};
+    const mergedParams = { ...currentScopeParams, ...scopeParams };
+
+    // Generate a unique scope ID based on the original root name and merged params
+    const rootName = name.includes("[") ? name.split("[")[0] : name;
+    const scopeParamString = stringifyForDisplay(mergedParams, 1);
+    const scopedName = `${rootName}[${scopeParamString}]`;
+    const scopedId = `${rootName}_${scopeParamString}`;
 
     // Create a new resource with the same configuration but scoped
     const scopedResource = resource(scopedName, {
@@ -843,7 +848,7 @@ export const resource = (
       autoreloadGetAfter,
       scope: {
         id: scopedId,
-        params: scopeParams,
+        params: mergedParams,
       },
       ...rest,
     });
