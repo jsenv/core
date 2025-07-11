@@ -1,4 +1,4 @@
-import { computed } from "@preact/signals";
+import { computed, effect } from "@preact/signals";
 import { documentUrlSignal } from "./document_url_signal.js";
 
 const baseUrl = import.meta.dev
@@ -14,6 +14,8 @@ export const createRoute = (urlPatternInput) => {
     paramsSignal: null,
     buildUrl: null,
     bindAction: null,
+    relativeUrl: null,
+    relativeUrlSignal: null,
     url: null,
     urlSignal: null,
   };
@@ -65,7 +67,8 @@ export const createRoute = (urlPatternInput) => {
       return replacement;
     });
 
-    return new URL(relativeUrl, baseUrl).href;
+    const url = new URL(relativeUrl, baseUrl).href;
+    return url;
   };
   route.buildUrl = buildUrl;
 
@@ -74,31 +77,31 @@ export const createRoute = (urlPatternInput) => {
 
     let wasActive = false;
     let lastParams = null;
-    let previousUrl = null;
+    let previousRelativeUrl = null;
     // Watch for route activation/deactivation and param changes
-    const unsubscribe = computed(() => {
+    const unsubscribe = effect(() => {
       const isActive = activeSignal.value;
       const currentParams = paramsSignal.value;
-      const currentUrl = urlSignal.value;
+      const currentRelativeUrl = relativeUrlSignal.value;
 
       if (isActive && !wasActive) {
         // First time route matches - load
-        actionBoundToUrl.load({ reason: `${currentUrl} is matching` });
+        actionBoundToUrl.load({ reason: `${currentRelativeUrl} is matching` });
       } else if (isActive && wasActive && currentParams !== lastParams) {
         // Params changed while active - reload
         actionBoundToUrl.reload({
-          reason: `Moved from ${previousUrl} to ${currentUrl}`,
+          reason: `Moved from ${previousRelativeUrl} to ${currentRelativeUrl}`,
         });
       } else if (!isActive && wasActive) {
         // Route stops matching - unload
         actionBoundToUrl.unload({
-          reason: `${previousUrl} is no longer matching`,
+          reason: `${previousRelativeUrl} is no longer matching`,
         });
       }
 
       wasActive = isActive;
       lastParams = currentParams;
-      previousUrl = currentUrl;
+      previousRelativeUrl = currentRelativeUrl;
 
       return { isActive, currentParams };
     });
@@ -108,9 +111,17 @@ export const createRoute = (urlPatternInput) => {
   };
   route.bindAction = bindAction;
 
-  const urlSignal = computed(() => {
+  const relativeUrlSignal = computed(() => {
     const params = paramsSignal.value;
-    const url = buildUrl(params);
+    const relativeUrl = buildUrl(params);
+    route.relativeUrl = relativeUrl;
+    return relativeUrl;
+  });
+  route.relativeUrlSignal = relativeUrlSignal;
+
+  const urlSignal = computed(() => {
+    const relativeUrl = relativeUrlSignal.value;
+    const url = new URL(relativeUrl, baseUrl).href;
     route.url = url;
     return url;
   });

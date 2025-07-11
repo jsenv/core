@@ -13,6 +13,7 @@ const loadPageFromUrlAction = pageRoute.bindAction(loadPageAction);
 
 const App = () => {
   const pageAUrl = pageRoute.buildUrl({ pageName: "a" });
+  const pageBUrl = pageRoute.buildUrl({ pageName: "b" });
 
   return (
     <>
@@ -20,6 +21,9 @@ const App = () => {
         <ul>
           <li>
             <a href={pageAUrl}>A</a>
+          </li>
+          <li>
+            <a href={pageBUrl}>B</a>
           </li>
         </ul>
       </nav>
