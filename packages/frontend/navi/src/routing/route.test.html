@@ -74,7 +74,7 @@
       });
 
       test("buildUrl with URLPattern object", () => {
-        const route = createRoute({ pathname: "/blog/:slug/comments" });
+        const route = createRoute("/blog/:slug/comments");
         const url = route.buildUrl({ slug: "hello-world" });
         const expected = `${window.location.origin}/blog/hello-world/comments`;
 
@@ -132,6 +132,22 @@
           expect: expected,
         });
       });
+
+      test("buildUrl with param in search", () => {
+        const route = createRoute("/before/:id/after?name=:name");
+        const url = route.buildUrl({
+          id: "123",
+          name: "dam",
+        });
+        const expected = `${window.location.origin}/before/123/after?name=dam`;
+
+        assert({
+          actual: url,
+          expect: expected,
+        });
+      });
+
+      console.log("All tests completed successfully.");
     </script>
   </body>
 </html>

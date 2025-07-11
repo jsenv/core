@@ -34,50 +34,35 @@ export const createRoute = (urlPatternInput) => {
       return NO_PARAMS;
     }
     const params = {};
-    for (const property of URL_PATTERN_PROPERTIES_WITH_GROUPS) {
-      Object.assign(params, match[property].groups);
+    for (const property of URL_PATTERN_PROPERTIES_WITH_GROUP_SET) {
+      const urlPartMatch = match[property];
+      Object.assign(params, urlPartMatch.groups);
     }
     return params;
   });
   route.paramsSignal = paramsSignal;
 
   const buildUrl = (params = {}) => {
-    try {
-      // Handle both string patterns and URLPattern objects
-      let patternString;
-      if (typeof urlPatternInput === "string") {
-        patternString = urlPatternInput;
-      } else if (urlPatternInput.pathname) {
-        patternString = urlPatternInput.pathname;
-      } else {
-        patternString = "/";
-      }
-
-      let builtPath = patternString;
-
-      // Replace named parameters (:param and {param})
-      for (const [key, value] of Object.entries(params)) {
-        const encodedValue = encodeURIComponent(value);
-        builtPath = builtPath.replace(`:${key}`, encodedValue);
-        builtPath = builtPath.replace(`{${key}}`, encodedValue);
-      }
-
-      // Replace wildcards (*) with numbered parameters (0, 1, 2, etc.)
-      let wildcardIndex = 0;
-      builtPath = builtPath.replace(/\*/g, () => {
-        const paramKey = wildcardIndex.toString();
-        const replacement = params[paramKey]
-          ? encodeURIComponent(params[paramKey])
-          : "*";
-        wildcardIndex++;
-        return replacement;
-      });
-
-      return new URL(builtPath, baseUrl).href;
-    } catch (error) {
-      console.warn("Failed to build URL:", error);
-      return baseUrl;
+    let relativeUrl = urlPatternInput;
+    // Replace named parameters (:param and {param})
+    for (const key of Object.keys(params)) {
+      const value = params[key];
+      const encodedValue = encodeURIComponent(value);
+      relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
+      relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
     }
+    // Replace wildcards (*) with numbered parameters (0, 1, 2, etc.)
+    let wildcardIndex = 0;
+    relativeUrl = relativeUrl.replace(/\*/g, () => {
+      const paramKey = wildcardIndex.toString();
+      const replacement = params[paramKey]
+        ? encodeURIComponent(params[paramKey])
+        : "*";
+      wildcardIndex++;
+      return replacement;
+    });
+
+    return new URL(relativeUrl, baseUrl).href;
   };
   route.buildUrl = buildUrl;
 
@@ -95,11 +80,11 @@ export const useRouteStatus = (route) => {
   };
 };
 
-const URL_PATTERN_PROPERTIES_WITH_GROUPS = new Set([
+const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
   "protocol",
   "username",
   "password",
-  "host",
+  "hostname",
   "pathname",
   "search",
   "hash",
