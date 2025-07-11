@@ -1,4 +1,5 @@
 import { TextAndCount } from "../components/text_and_count.jsx";
+import { useDatabaseCount } from "../database_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
@@ -9,7 +10,6 @@ import {
 } from "./database_details_state.js";
 import { DatabaseWithPlusSvg } from "./database_icons.jsx";
 import { DatabaseLink } from "./database_link.jsx";
-import { useDatabaseCount } from "./database_signals.js";
 import {
   DATABASE,
   useDatabaseArray,

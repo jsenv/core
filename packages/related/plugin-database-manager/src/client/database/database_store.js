@@ -3,6 +3,8 @@ import { signal } from "@preact/signals";
 import { setDatabaseCount } from "../database_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
 
+// TODO: database owner link
+
 export const DATABASE = resource("database", {
   idKey: "oid",
   mutableIdKeys: ["datname"],
