@@ -1,13 +1,13 @@
 import { computed, signal } from "@preact/signals";
-import { createAction, reloadActions } from "./actions.js";
-import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
+import { createAction, reloadActions } from "../actions.js";
+import { SYMBOL_OBJECT_SIGNAL } from "../symbol_object_signal.js";
 import {
   SYMBOL_IDENTITY,
   compareTwoJsValues,
-} from "./compare_two_js_values.js";
-import { getCallerInfo } from "./get_caller_info.js";
-import { createIterableWeakSet } from "./iterable_weak_set.js";
-import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
+} from "../utils/compare_two_js_values.js";
+import { getCallerInfo } from "../utils/get_caller_info.js";
+import { createIterableWeakSet } from "../utils/iterable_weak_set.js";
+import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
 let debug = false;
 

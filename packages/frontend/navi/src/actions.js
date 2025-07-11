@@ -11,10 +11,13 @@ import {
   getActionPrivateProperties,
   setActionPrivateProperties,
 } from "./action_private_properties.js";
-import { isSignal, stringifyForDisplay } from "./actions_helpers.js";
-import { createIterableWeakSet } from "./iterable_weak_set.js";
-import { createJsValueWeakMap } from "./js_value_weak_map.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
+import { createIterableWeakSet } from "./utils/iterable_weak_set.js";
+import { createJsValueWeakMap } from "./utils/js_value_weak_map.js";
+import {
+  isSignal,
+  stringifyForDisplay,
+} from "./utils/stringify_for_display.js";
 
 let debug = false;
 

@@ -30,7 +30,7 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
-import { useOnChange } from "../use_on_change.js";
+import { useOnChange } from "./use_on_change.js";
 
 import.meta.css = /* css */ `
   input[data-custom] {
