@@ -2,12 +2,12 @@ export {
   getOptionsForActionConnectedToLocalStorageBoolean,
   getOptionsForActionConnectedToLocalStorageString,
 } from "./src/action_connections.js";
-export { ActionRenderer } from "./src/action_renderer.jsx";
 export { createAction, reloadActions, updateActions } from "./src/actions.js";
 export { resource } from "./src/resource_graph.js";
 export { useActionData } from "./src/use_action_data.js";
 export { useActionStatus } from "./src/use_action_status.js";
 
+export { ActionRenderer } from "./src/components/action_renderer.jsx";
 export { Details } from "./src/components/details/details.jsx";
 export {
   EditableText,
