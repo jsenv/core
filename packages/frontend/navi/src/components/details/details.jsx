@@ -94,6 +94,7 @@ const DetailsBasic = forwardRef((props, ref) => {
   return (
     <details
       {...rest}
+      id={id}
       className={["details", ...(className ? className.split(" ") : [])].join(
         " ",
       )}
