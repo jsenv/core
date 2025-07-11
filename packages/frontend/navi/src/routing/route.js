@@ -47,7 +47,7 @@ export const createRoute = (urlPatternInput) => {
   });
   route.paramsSignal = paramsSignal;
 
-  const buildUrl = (params = {}) => {
+  const buildRelativeUrl = (params = {}) => {
     let relativeUrl = urlPatternInput;
     // Replace named parameters (:param and {param})
     for (const key of Object.keys(params)) {
@@ -66,7 +66,11 @@ export const createRoute = (urlPatternInput) => {
       wildcardIndex++;
       return replacement;
     });
+    return relativeUrl;
+  };
 
+  const buildUrl = (params = {}) => {
+    const relativeUrl = buildRelativeUrl(params);
     const url = new URL(relativeUrl, baseUrl).href;
     return url;
   };
@@ -113,7 +117,7 @@ export const createRoute = (urlPatternInput) => {
 
   const relativeUrlSignal = computed(() => {
     const params = paramsSignal.value;
-    const relativeUrl = buildUrl(params);
+    const relativeUrl = buildRelativeUrl(params);
     route.relativeUrl = relativeUrl;
     return relativeUrl;
   });
