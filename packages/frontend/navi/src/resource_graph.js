@@ -527,7 +527,7 @@ export const resource = (
     autoreloadGetManyAfter,
     autoreloadGetAfter,
     httpHandler,
-    scopeId,
+    scope,
     ...rest
   } = {},
 ) => {
@@ -603,18 +603,24 @@ export const resource = (
       store,
       autoreloadGetManyAfter,
       autoreloadGetAfter,
-      scopeId,
+      scopeId: scope ? scope.id : undefined,
     });
   }
   resourceInstance.httpHandler = httpHandler;
 
-  for (const key of Object.keys(rest)) {
-    const method = httpHandler[key];
-    if (!method) {
-      continue;
+  // Create HTTP actions
+
+  const httpActions = {};
+  if (!scope) {
+    for (const key of Object.keys(rest)) {
+      const method = httpHandler[key];
+      if (!method) {
+        continue;
+      }
+      const action = method(rest[key]);
+      httpActions[key] = action;
     }
-    const action = method(rest[key]);
-    resourceInstance[key] = action;
+    Object.assign(resourceInstance, httpActions);
   }
 
   resourceInstance.one = (propertyName, childResource, options) => {
@@ -831,22 +837,15 @@ export const resource = (
       mutableIdKeys,
       autoreloadGetManyAfter,
       autoreloadGetAfter,
-      scopeId: scopedId,
-      // Copy all the original action definitions but bind them with scope params
-      ...Object.keys(rest).reduce((scopedRest, key) => {
-        scopedRest[key] = rest[key];
-        return scopedRest;
-      }, {}),
+      scope: {
+        id: scopedId,
+        params: scopeParams,
+      },
     });
 
-    // Bind all actions with the scope parameters
-    for (const key of Object.keys(rest)) {
-      if (
-        scopedResource[key] &&
-        typeof scopedResource[key].bindParams === "function"
-      ) {
-        scopedResource[key] = scopedResource[key].bindParams(scopeParams);
-      }
+    for (const key of Object.keys(httpActions)) {
+      const action = httpActions[key];
+      scopedResource[key] = action.bindParams(scopeParams);
     }
 
     return scopedResource;
