@@ -98,7 +98,7 @@ export const ROLE = resource("role", {
   },
 });
 
-export const useRoleArray = ROLE.useArray;
+export const useRoleArrayInStore = ROLE.useArray;
 
 export const ROLE_CAN_LOGIN = ROLE.withParams({ canlogin: true });
 export const ROLE_CANNOT_LOGIN = ROLE.withParams({ canlogin: false });

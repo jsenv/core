@@ -31,3 +31,11 @@ export const setRoleCounts = ({
   setRoleGroupCount(groupCount);
   setRoleWithOwnershipCount(withOwnershipCount);
 };
+
+const databaseCountSignal = signal(0);
+export const setDatabaseCount = (count) => {
+  databaseCountSignal.value = count;
+};
+export const useDatabaseCount = () => {
+  return databaseCountSignal.value;
+};

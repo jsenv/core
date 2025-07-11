@@ -8,7 +8,7 @@ import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
 import {
   ROLE_CAN_LOGIN,
-  useRoleArray,
+  useRoleArrayInStore,
   useRoleCanLoginArray,
 } from "../role_store.js";
 import {
@@ -44,7 +44,7 @@ export const RoleCanLoginListDetails = (props) => {
           {children}
         </RoleLink>
       )}
-      useItemArrayInStore={useRoleArray}
+      useItemArrayInStore={useRoleArrayInStore}
       useRenameItemAction={(role) => {
         const renameAction = ROLE_CAN_LOGIN.PUT.bindParams({
           rolname: role.rolname,

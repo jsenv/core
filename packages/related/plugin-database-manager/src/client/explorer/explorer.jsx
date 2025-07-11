@@ -2,10 +2,10 @@ import { initFlexDetailsSet } from "@jsenv/dom";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 // import { DatabaseSvg } from "../database/database_icons.jsx";
 // import { useCurrentDatabase } from "../database/database_signals.js";
-// import {
-//   DatabasesDetails,
-//   databasesDetailsController,
-// } from "../database/databases_details.jsx";
+import {
+  DatabasesDetails,
+  databasesDetailsController,
+} from "../database/databases_details.jsx";
 import {
   RoleCanLoginListDetails,
   roleCanLoginListDetailsController,
@@ -68,9 +68,9 @@ const ExplorerBody = () => {
         // if (element.id === tablesDetailsController.id) {
         //   tablesDetailsController.setHeightSetting(requestedHeight);
         // }
-        // if (element.id === databasesDetailsController.id) {
-        //   databasesDetailsController.setHeightSetting(requestedHeight);
-        // }
+        if (element.id === databasesDetailsController.id) {
+          databasesDetailsController.setHeightSetting(requestedHeight);
+        }
         if (element.id === roleCanLoginListDetailsController.id) {
           roleCanLoginListDetailsController.setHeightSetting(requestedHeight);
         }
@@ -92,9 +92,10 @@ const ExplorerBody = () => {
       {/* <TablesDetails
         resizable={resizableDetailsIdSet.has(tablesDetailsController.id)}
       />
+      */}
       <DatabasesDetails
         resizable={resizableDetailsIdSet.has(databasesDetailsController.id)}
-      /> */}
+      />
       <RoleCanLoginListDetails
         resizable={resizableDetailsIdSet.has(
           roleCanLoginListDetailsController.id,

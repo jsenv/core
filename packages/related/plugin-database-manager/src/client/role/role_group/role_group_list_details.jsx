@@ -8,7 +8,7 @@ import { RoleGroupWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
 import {
   ROLE_CANNOT_LOGIN,
-  useRoleArray,
+  useRoleArrayInStore,
   useRoleCannotLoginArray,
 } from "../role_store.js";
 import {
@@ -44,7 +44,7 @@ export const RoleGroupListDetails = (props) => {
           {children}
         </RoleLink>
       )}
-      useItemArrayInStore={useRoleArray}
+      useItemArrayInStore={useRoleArrayInStore}
       useRenameItemAction={(role) => {
         const renameAction = ROLE_CANNOT_LOGIN.PUT.bindParams({
           rolname: role.rolname,
