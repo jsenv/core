@@ -40,7 +40,7 @@ export const ROLE = resource("role", {
       ...meta,
     };
   },
-  POST: async ({ rolcanlogin, rolname }, { signal }) => {
+  POST: async ({ canlogin, rolname }, { signal }) => {
     const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`, {
       signal,
       method: "POST",
@@ -48,7 +48,7 @@ export const ROLE = resource("role", {
         "accept": "application/json",
         "content-type": "application/json",
       },
-      body: JSON.stringify({ rolname, rolcanlogin }),
+      body: JSON.stringify({ rolname, rolcanlogin: canlogin }),
     });
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to create role");
@@ -100,8 +100,8 @@ export const ROLE = resource("role", {
 
 export const useRoleArray = ROLE.useArray;
 
-export const ROLE_CAN_LOGIN = ROLE.scope({ canlogin: true });
-export const ROLE_CANNOT_LOGIN = ROLE.scope({ canlogin: false });
+export const ROLE_CAN_LOGIN = ROLE.withParams({ canlogin: true });
+export const ROLE_CANNOT_LOGIN = ROLE.withParams({ canlogin: false });
 export const useRoleCanLoginArray = () => {
   const roleCanLoginArray = useActionData(ROLE_CAN_LOGIN.GET_MANY);
   return roleCanLoginArray;
