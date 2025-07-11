@@ -19,7 +19,7 @@ import {
   stringifyForDisplay,
 } from "./utils/stringify_for_display.js";
 
-let debug = false;
+let DEBUG = true;
 
 /**
  * Registry that prevents preloaded actions from being garbage collected.
@@ -42,7 +42,7 @@ const preloadedProtectionRegistry = (() => {
     if (protection) {
       clearTimeout(protection.timeoutId);
       protectedActionMap.delete(action);
-      if (debug) {
+      if (DEBUG) {
         const elapsed = Date.now() - protection.timestamp;
         console.debug(`"${action}": GC protection removed after ${elapsed}ms`);
       }
@@ -60,7 +60,7 @@ const preloadedProtectionRegistry = (() => {
       const timestamp = Date.now();
       const timeoutId = setTimeout(() => {
         unprotect(action);
-        if (debug) {
+        if (DEBUG) {
           console.debug(
             `"${action}": preload protection expired after ${PROTECTION_DURATION}ms`,
           );
@@ -69,7 +69,7 @@ const preloadedProtectionRegistry = (() => {
 
       protectedActionMap.set(action, { timeoutId, timestamp });
 
-      if (debug) {
+      if (DEBUG) {
         console.debug(
           `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
         );
@@ -200,7 +200,7 @@ export const updateActions = ({
 
   const { loadingSet, settledSet } = getActivationInfo();
 
-  if (debug) {
+  if (DEBUG) {
     console.group(`updateActions()`);
     const lines = [
       ...(preloadSet.size
@@ -312,7 +312,7 @@ export const updateActions = ({
       }
     }
   }
-  if (debug) {
+  if (DEBUG) {
     const formatActionSet = (prefix, actionSet) => {
       let message = "";
       message += `- ${prefix}:`;
@@ -398,7 +398,7 @@ ${lines.join("\n")}`);
       actionToPromotePrivateProperties.loadRequestedSignal.value = true;
     }
   }
-  if (debug) {
+  if (DEBUG) {
     console.groupEnd();
   }
 
@@ -460,9 +460,10 @@ export const createAction = (callback, rootOptions = {}) => {
           : data
         : computedData;
 
-    const preload = () => {
+    const preload = (options) => {
       return requestActionsUpdates({
         preloadSet: new Set([action]),
+        ...options,
       });
     };
     const load = (options) =>
@@ -485,7 +486,7 @@ export const createAction = (callback, rootOptions = {}) => {
       if (!actionAbort) {
         return false;
       }
-      if (debug) {
+      if (DEBUG) {
         console.log(`"${action}": aborting (reason: ${reason})`);
       }
       actionAbort(reason);
@@ -724,7 +725,7 @@ export const createAction = (callback, rootOptions = {}) => {
           if (isPreload && signal.aborted) {
             preloadedProtectionRegistry.unprotect(action);
           }
-          if (debug) {
+          if (DEBUG) {
             console.log(`"${action}": aborted (reason: ${abortReason})`);
           }
         };
@@ -759,7 +760,7 @@ export const createAction = (callback, rootOptions = {}) => {
           preloadedProtectionRegistry.unprotect(action);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
-          if (debug) {
+          if (DEBUG) {
             console.log(`"${action}": loaded (reason: ${reason})`);
           }
         };
@@ -775,7 +776,7 @@ export const createAction = (callback, rootOptions = {}) => {
             }
             return;
           }
-          if (debug) {
+          if (DEBUG) {
             console.log(`"${action}": failed (error: ${e})`);
           }
           batch(() => {
@@ -835,7 +836,7 @@ export const createAction = (callback, rootOptions = {}) => {
 
       const performUnload = ({ reason }) => {
         abort(reason);
-        if (debug) {
+        if (DEBUG) {
           console.log(`"${action}": unloading (reason: ${reason})`);
         }
 
@@ -1061,7 +1062,7 @@ if (import.meta.hot) {
     // important sinon les actions ne se mettent pas a jour
     // par example action.ui.load DOIT etre appelé
     // pour que ui.renderLoaded soit la
-    if (debug) {
+    if (DEBUG) {
       console.debug("updateActions() on hot reload");
     }
     updateActions({ isReload: true });

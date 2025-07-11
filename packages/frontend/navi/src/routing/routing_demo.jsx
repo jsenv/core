@@ -9,7 +9,7 @@ const loadPageAction = createAction(async ({ pageName }) => {
   return `${pageName}: content`;
 });
 const pageRoute = createRoute("page/:pageName");
-const loadPageFromUrlAction = loadPageAction.bindParams(pageRoute.paramsSignal);
+const loadPageFromUrlAction = pageRoute.bindAction(loadPageAction);
 
 const App = () => {
   const pageAUrl = pageRoute.buildUrl({ pageName: "a" });

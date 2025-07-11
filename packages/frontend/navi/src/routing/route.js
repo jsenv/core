@@ -13,6 +13,9 @@ export const createRoute = (urlPatternInput) => {
     params: NO_PARAMS,
     paramsSignal: null,
     buildUrl: null,
+    bindAction: null,
+    url: null,
+    urlSignal: null,
   };
 
   const urlPattern = new URLPattern(urlPatternInput, baseUrl, {
@@ -65,6 +68,50 @@ export const createRoute = (urlPatternInput) => {
     return new URL(relativeUrl, baseUrl).href;
   };
   route.buildUrl = buildUrl;
+
+  const bindAction = (action) => {
+    const actionBoundToUrl = action.bindParams(paramsSignal);
+
+    let wasActive = false;
+    let lastParams = null;
+    // Watch for route activation/deactivation and param changes
+    const unsubscribe = computed(() => {
+      const isActive = activeSignal.value;
+      const currentParams = paramsSignal.value;
+
+      if (isActive && !wasActive) {
+        // First time route matches - load
+        actionBoundToUrl.load({ reason: `${urlPatternInput} is matching` });
+      } else if (isActive && wasActive && currentParams !== lastParams) {
+        // Params changed while active - reload
+        actionBoundToUrl.reload({
+          reason: `Moved from ${urlPatternInput} to ${urlPatternInput}`,
+        });
+      } else if (!isActive && wasActive) {
+        // Route stops matching - unload
+        actionBoundToUrl.unload({
+          reason: `${urlPatternInput} is no longer matching`,
+        });
+      }
+
+      wasActive = isActive;
+      lastParams = currentParams;
+
+      return { isActive, currentParams };
+    });
+    actionBoundToUrl.meta.cleanup = unsubscribe;
+
+    return actionBoundToUrl;
+  };
+  route.bindAction = bindAction;
+
+  const urlSignal = computed(() => {
+    const params = paramsSignal.value;
+    const url = buildUrl(params);
+    route.url = url;
+    return url;
+  });
+  route.urlSignal = urlSignal;
 
   return route;
 };
