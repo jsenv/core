@@ -15,8 +15,8 @@
  */
 
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
-import { getActionPrivateProperties } from "./action_private_properties.js";
-import { useActionStatus } from "./use_action_status.js";
+import { getActionPrivateProperties } from "../action_private_properties.js";
+import { useActionStatus } from "../use_action_status.js";
 
 import.meta.css = /* css */ `
   .action_error {

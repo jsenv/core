@@ -2,7 +2,7 @@ import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
-import { useStateArray } from "../../use_state_array.js";
+import { useStateArray } from "../../utils/use_state_array.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneArrayParam,

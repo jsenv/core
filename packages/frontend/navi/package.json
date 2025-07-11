@@ -28,6 +28,7 @@
     "@jsenv/humanize": "1.6.0"
   },
   "devDependencies": {
+    "@jsenv/assert": "4.5.3",
     "@jsenv/validation": "0.0.1",
     "@preact/signals": "2.2.0",
     "preact": "10.26.9"
