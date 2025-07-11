@@ -8,7 +8,7 @@ export const useRoleCanLoginCount = () => {
   return roleCanLoginCountSignal.value;
 };
 const roleGroupCountSignal = signal(0);
-export const useRoleGroupCountSignal = () => {
+export const useRoleGroupCount = () => {
   return roleGroupCountSignal.value;
 };
 export const setRoleGroupCount = (count) => {

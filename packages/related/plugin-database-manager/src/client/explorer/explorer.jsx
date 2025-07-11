@@ -10,10 +10,10 @@ import {
   RoleCanLoginListDetails,
   roleCanLoginListDetailsController,
 } from "../role/role_can_login/role_can_login_list_details.jsx";
-// import {
-//   RoleGroupListDetails,
-//   roleGroupListDetailsController,
-// } from "../role/role_group/role_group_list_details.jsx";
+import {
+  RoleGroupListDetails,
+  roleGroupListDetailsController,
+} from "../role/role_group/role_group_list_details.jsx";
 import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_store.js";
 // import {
@@ -74,9 +74,9 @@ const ExplorerBody = () => {
         if (element.id === roleCanLoginListDetailsController.id) {
           roleCanLoginListDetailsController.setHeightSetting(requestedHeight);
         }
-        // if (element.id === roleGroupListDetailsController.id) {
-        //   roleGroupListDetailsController.setHeightSetting(requestedHeight);
-        // }
+        if (element.id === roleGroupListDetailsController.id) {
+          roleGroupListDetailsController.setHeightSetting(requestedHeight);
+        }
         // if (element.id === roleWithOwnershipListDetailsController.id) {
         //   roleWithOwnershipListDetailsController.setHeightSetting(
         //     requestedHeight,
@@ -100,9 +100,10 @@ const ExplorerBody = () => {
           roleCanLoginListDetailsController.id,
         )}
       />
-      {/* <RoleGroupListDetails
+      <RoleGroupListDetails
         resizable={resizableDetailsIdSet.has(roleGroupListDetailsController.id)}
       />
+      {/*
       <RoleWithOwnershipListDetails
         resizable={resizableDetailsIdSet.has(
           roleWithOwnershipListDetailsController.id,

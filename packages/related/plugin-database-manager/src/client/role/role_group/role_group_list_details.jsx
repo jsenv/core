@@ -1,31 +1,34 @@
 import { TextAndCount } from "../../components/text_and_count.jsx";
+import { useRoleGroupCount } from "../../database_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../../explorer/explorer_group.jsx";
 import { RoleGroupWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
+import { ROLE, useRoleArray, useRoleGroupArray } from "../role_store.js";
 import {
-  DELETE_ROLE_ACTION,
-  POST_ROLE_ACTION,
-  PUT_ROLE_ACTION,
-} from "../role_routes.js";
-import { useRoleList } from "../role_signals.js";
-import { ROLE_GROUP_LIST_DETAILS_ROUTE } from "./role_group_list_details_routes.js";
-import { useRoleGroupCount, useRoleGroupList } from "./role_group_signals.js";
+  roleGroupListDetailsOnToggle,
+  roleGroupListDetailsOpenAtStart,
+} from "./role_group_list_details_state.js";
 
-export const roleGroupListDetailsController =
-  createExplorerGroupController("role_group_list");
+export const roleGroupListDetailsController = createExplorerGroupController(
+  "role_group_list",
+  {
+    detailsOpenAtStart: roleGroupListDetailsOpenAtStart,
+    detailsOnToggle: roleGroupListDetailsOnToggle,
+  },
+);
 
 export const RoleGroupListDetails = (props) => {
   const roleGroupCount = useRoleGroupCount();
-  const roleGroupList = useRoleGroupList();
+  const roleGroupArray = useRoleGroupArray();
 
   return (
     <ExplorerGroup
       {...props}
       controller={roleGroupListDetailsController}
-      detailsRoute={ROLE_GROUP_LIST_DETAILS_ROUTE}
+      detailsAction={ROLE.GET_MANY_GROUP}
       idKey="oid"
       nameKey="rolname"
       labelChildren={
@@ -33,25 +36,27 @@ export const RoleGroupListDetails = (props) => {
       }
       renderNewButtonChildren={() => <RoleGroupWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
-        <RoleLink role={role} {...props}>
+        <RoleLink draggable={false} role={role} {...props}>
           {children}
         </RoleLink>
       )}
-      useItemList={useRoleList}
-      useRenameItemAction={(role) =>
-        PUT_ROLE_ACTION.bindParams({
+      useItemArrayInStore={useRoleArray}
+      useRenameItemAction={(role) => {
+        const renameAction = ROLE.PUT.bindParams({
           rolname: role.rolname,
           columnName: "rolname",
-        })
-      }
-      useCreateItemAction={() => POST_ROLE_ACTION}
+        });
+        renameAction.meta.valueParamName = "columnValue";
+        return renameAction;
+      }}
+      useCreateItemAction={() => ROLE.POST}
       useDeleteItemAction={(role) =>
-        DELETE_ROLE_ACTION.bindParams({
+        ROLE.DELETE.bindParams({
           rolname: role.rolname,
         })
       }
     >
-      {roleGroupList}
+      {roleGroupArray}
     </ExplorerGroup>
   );
 };

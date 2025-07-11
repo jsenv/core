@@ -8,8 +8,8 @@ export const ROLE = resource("role", {
   mutableIdKeys: ["rolname"],
   GET_MANY: async ({ canlogin }, { signal }) => {
     const getManyRoleUrl = new URL(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`);
-    if (canlogin) {
-      getManyRoleUrl.searchParams.set("can_login", "");
+    if (canlogin !== undefined) {
+      getManyRoleUrl.searchParams.set("can_login", canlogin);
     }
     const response = await fetch(getManyRoleUrl, { signal });
     if (!response.ok) {
@@ -104,6 +104,12 @@ ROLE.GET_MANY_CAN_LOGIN = ROLE.GET_MANY.bindParams({ canlogin: true });
 export const useRoleCanLoginArray = () => {
   const roleCanLoginArray = useActionData(ROLE.GET_MANY_CAN_LOGIN);
   return roleCanLoginArray;
+};
+
+ROLE.GET_MANY_GROUP = ROLE.GET_MANY.bindParams({ canlogin: false });
+export const useRoleGroupArray = () => {
+  const roleGroupArray = useActionData(ROLE.GET_MANY_GROUP);
+  return roleGroupArray;
 };
 
 const currentRoleIdSignal = signal(window.DB_MANAGER_CONFIG.currentRole.oid);
