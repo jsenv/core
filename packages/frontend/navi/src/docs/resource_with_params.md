@@ -8,13 +8,15 @@ Without `withParams()`, this scenario causes unwanted behavior:
 
 ```javascript
 const ROLE = resource("role", {
+  GET_MANY: (params) => fetchRoles(params),
   GET: (params) => fetchRole(params),
   DELETE: (params) => deleteRole(params),
 });
 
-// These actions interfere with each other
-await ROLE.DELETE({ canlogin: true }); // ❌ Triggers reload for ALL role actions
-await ROLE.GET({ canlogin: false }); // ❌ Gets reloaded unnecessarily
+const ADMIN = ROLE.GET_MANY.bindParams({ admin: true });
+const NON_ADMIN = ROLE.GET_MANY.bindParams({ admin: false });
+
+await ROLE.DELETE.bindParams({ id: "123" }); // ❌ Triggers reload for both ADMIN and NON_ADMIN
 ```
 
 ## Solution
@@ -23,17 +25,18 @@ With `withParams()`, actions are isolated by parameter sets:
 
 ```javascript
 const ROLE = resource("role", {
+  GET_MANY: (params) => fetchRoles(params),
   GET: (params) => fetchRole(params),
   DELETE: (params) => deleteRole(params),
 });
 
 // Create isolated parameter scopes
-const adminRoles = ROLE.withParams({ canlogin: true });
-const guestRoles = ROLE.withParams({ canlogin: false });
+const ROLE_ADMIN = ROLE.withParams({ canlogin: true });
+const ROLE_GUEST = ROLE.withParams({ canlogin: false });
 
 // Now actions only affect their own parameter scope
-await adminRoles.DELETE({ id: 123 }); // ✅ Only reloads adminRoles.GET actions
-await guestRoles.GET({ id: 456 }); // ✅ Independent from admin actions
+await ROLE_ADMIN.DELETE({ id: 123 }); // ✅ Only reloads adminRoles.GET actions
+await ROLE_GUEST.GET({ id: 456 }); // ✅ Independent from admin actions
 ```
 
 ## API
@@ -48,7 +51,7 @@ await guestRoles.GET({ id: 456 }); // ✅ Independent from admin actions
 A new resource instance where:
 
 - All HTTP actions are bound with the provided parameters
-- Autoreload is isolated to actions with identical parameters
+- Autoreload follows a hierarchical pattern: child scopes reload their parent scopes
 - The same store is shared with the original resource
 
 **Throws:**
@@ -57,17 +60,70 @@ A new resource instance where:
 
 ## Features
 
-### Parameter Isolation
+### Hierarchical Autoreload
+
+The autoreload system follows a parent-child hierarchy where parameterized actions reload their parent scopes:
+
+```javascript
+const ADMIN = resource("admin", { GET_MANY: () => fetch("/api/admin") });
+const ROLE = resource("role", { GET_MANY: () => fetch("/api/roles") });
+
+// Create hierarchical scopes
+const adminWithDept = ADMIN.withParams({ department: "engineering" });
+const roleWithLogin = ROLE.withParams({ canlogin: true });
+
+// When you modify a child scope, parent scopes are also reloaded
+await adminWithDept.POST({ name: "Alice" });
+// ✅ Reloads: adminWithDept.GET_MANY + ADMIN.GET_MANY (parent)
+
+await roleWithLogin.DELETE({ id: 123 });
+// ✅ Reloads: roleWithLogin.GET_MANY + ROLE.GET_MANY (parent)
+```
+
+**Hierarchy Rules:**
+
+- Child scopes (with parameters) reload their parent scopes (with fewer/no parameters)
+- Sibling scopes (different parameter sets) remain isolated from each other
+- Root scope (no parameters) is reloaded by all parameterized children
+
+### Parameter Isolation Between Siblings
 
 Actions with different parameters operate in separate autoreload scopes:
 
 ```javascript
-const userResource = USER.withParams({ role: "admin" });
-const guestResource = USER.withParams({ role: "guest" });
+const adminUsers = USER.withParams({ role: "admin" });
+const guestUsers = USER.withParams({ role: "guest" });
 
-// These don't interfere with each other
-await userResource.POST({ name: "Alice" }); // Only reloads admin users
-await guestResource.GET({ id: 1 }); // Independent operation
+// Sibling scopes don't interfere with each other
+await adminUsers.POST({ name: "Alice" });
+// ✅ Reloads: adminUsers.GET_MANY + USER.GET_MANY (parent)
+// ✅ Does NOT reload: guestUsers.GET_MANY (sibling)
+
+await guestUsers.DELETE({ id: 1 });
+// ✅ Reloads: guestUsers.GET_MANY + USER.GET_MANY (parent)
+// ✅ Does NOT reload: adminUsers.GET_MANY (sibling)
+```
+
+### Multi-Level Parameter Hierarchy
+
+Complex parameter hierarchies are supported with automatic parent reloading:
+
+```javascript
+const allUsers = USER; // Root scope (no parameters)
+const adminUsers = USER.withParams({ role: "admin" });
+const engineeringAdmins = adminUsers.withParams({ department: "engineering" });
+
+// Hierarchy: engineeringAdmins → adminUsers → allUsers
+
+await engineeringAdmins.POST({ name: "Alice" });
+// ✅ Reloads in order:
+// 1. engineeringAdmins.GET_MANY (same scope)
+// 2. adminUsers.GET_MANY (parent - subset of params)
+// 3. allUsers.GET_MANY (root parent - no params)
+
+// Other scopes remain unaffected
+const salesAdmins = adminUsers.withParams({ department: "sales" });
+// ✅ salesAdmins.GET_MANY is NOT reloaded (sibling scope)
 ```
 
 ### Parameter Merging via Chaining
@@ -96,6 +152,13 @@ console.log(guestUsers.useById(123)); // Same data as USER.useById(123)
 ```
 
 ## Implementation Details
+
+### Hierarchical Scope Resolution
+
+- Parent-child relationships are determined by parameter subset comparison
+- A scope is considered a parent if its parameters are a subset of the child's parameters
+- Uses `isParamSubset()` to detect hierarchical relationships efficiently
+- Symbol-based scope IDs enable fast parent scope lookup during autoreload
 
 ### Scope Identity
 

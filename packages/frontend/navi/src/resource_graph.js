@@ -29,6 +29,19 @@ const getParamScope = (params) => {
   return newParamScope;
 };
 
+// Check if parentParams is a subset of childParams
+// Used to determine parent-child relationships in parameter scopes
+const isParamSubset = (parentParams, childParams) => {
+  if (!parentParams || !childParams) return false;
+
+  for (const [key, value] of Object.entries(parentParams)) {
+    if (!(key in childParams) || !compareTwoJsValues(childParams[key], value)) {
+      return false;
+    }
+  }
+  return true;
+};
+
 const findAliveActionsMatching = (httpActionWeakSet, predicate) => {
   const matchingActionSet = new Set();
   for (const httpAction of httpActionWeakSet) {
@@ -72,8 +85,22 @@ const initAutoreload = ({
     // }
 
     const paramScopePredicate = paramScope
-      ? (httpActionCandidate) =>
-          httpActionCandidate.meta.paramScope.id === paramScope.id
+      ? (httpActionCandidate) => {
+          // For parameterized actions, reload:
+          // 1. Actions with same paramScope (siblings)
+          // 2. Actions with no paramScope (root parent)
+          // 3. Actions whose params are a subset of current params (parent scopes)
+          if (httpActionCandidate.meta.paramScope?.id === paramScope.id) {
+            return true; // Same scope
+          }
+          if (!httpActionCandidate.meta.paramScope) {
+            return true; // Root parent (no params)
+          }
+          // Check if candidate's params are a subset of current params (parent scope)
+          const candidateParams = httpActionCandidate.meta.paramScope.params;
+          const currentParams = paramScope.params;
+          return isParamSubset(candidateParams, currentParams);
+        }
       : (httpActionCandidate) => !httpActionCandidate.meta.paramScope;
 
     const httpMetaPredicate =
