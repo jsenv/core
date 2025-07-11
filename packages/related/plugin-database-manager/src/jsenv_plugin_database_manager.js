@@ -389,6 +389,18 @@ export const jsenvPluginDatabaseManager = ({
             },
           };
         },
+        "GET /:rolname": async (request) => {
+          const { rolname } = request.params;
+          const result = await getRoleByName(rolname);
+          if (!result) {
+            return null;
+          }
+          const { role, ...meta } = result;
+          return {
+            data: role,
+            meta,
+          };
+        },
         "POST": async (request) => {
           const { rolname, rolcanlogin } = await request.json();
           // https://www.postgresql.org/docs/current/sql-createrole.html
@@ -412,24 +424,6 @@ export const jsenvPluginDatabaseManager = ({
             },
           };
         },
-        "GET /:rolname": async (request) => {
-          const { rolname } = request.params;
-          const result = await getRoleByName(rolname);
-          if (!result) {
-            return null;
-          }
-          const { role, ...meta } = result;
-          return {
-            data: role,
-            meta,
-          };
-        },
-        "PUT /:rolname/:colname": async (request) => {
-          const { rolname, colname } = request.params;
-          const value = await request.json();
-          await alterRoleQuery(sql, rolname, colname, value);
-          return { [colname]: value };
-        },
         // when dropping roles, consider this: https://neon.tech/postgresql/postgresql-administration/postgresql-drop-role
         "DELETE /:rolname": async (request) => {
           const { rolname } = request.params;
@@ -440,6 +434,12 @@ export const jsenvPluginDatabaseManager = ({
               roleCounts: await countRoles(sql),
             },
           };
+        },
+        "PUT /:rolname/:colname": async (request) => {
+          const { rolname, colname } = request.params;
+          const value = await request.json();
+          await alterRoleQuery(sql, rolname, colname, value);
+          return { [colname]: value };
         },
         "GET /:rolname/tables": async (request) => {
           const { rolname } = request.params;
@@ -571,24 +571,6 @@ export const jsenvPluginDatabaseManager = ({
             },
           };
         },
-        "POST": async (request) => {
-          const { datname } = await request.json();
-          await sql`CREATE DATABASE ${sql(datname)}`;
-          const [database] = await sql`
-            SELECT
-              *
-            FROM
-              pg_database
-            WHERE
-              datname = ${datname}
-          `;
-          return {
-            data: database,
-            meta: {
-              count: await countRows(sql, "pg_database"),
-            },
-          };
-        },
         "GET /:datname": async (request) => {
           const { datname } = request.params;
           const results = await sql`
@@ -624,11 +606,23 @@ export const jsenvPluginDatabaseManager = ({
             },
           };
         },
-        "PUT /:datname/:colname": async (request) => {
-          const { datname, colname } = request.params;
-          const value = await request.json();
-          await alterDatabaseQuery(sql, datname, colname, value);
-          return { [colname]: value };
+        "POST": async (request) => {
+          const { datname } = await request.json();
+          await sql`CREATE DATABASE ${sql(datname)}`;
+          const [database] = await sql`
+            SELECT
+              *
+            FROM
+              pg_database
+            WHERE
+              datname = ${datname}
+          `;
+          return {
+            data: database,
+            meta: {
+              count: await countRows(sql, "pg_database"),
+            },
+          };
         },
         "DELETE /:datname": async (request) => {
           const { datname } = request.params;
@@ -639,6 +633,12 @@ export const jsenvPluginDatabaseManager = ({
               count: await countRows(sql, "pg_database"),
             },
           };
+        },
+        "PUT /:datname/:colname": async (request) => {
+          const { datname, colname } = request.params;
+          const value = await request.json();
+          await alterDatabaseQuery(sql, datname, colname, value);
+          return { [colname]: value };
         },
       }),
       {
