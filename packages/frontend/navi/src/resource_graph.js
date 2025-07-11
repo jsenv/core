@@ -616,12 +616,13 @@ export const resource = (
       continue;
     }
     const action = method(rest[key]);
-    if (scope) {
-      // For scoped resources, bind params and assign to both resource and httpActions
+    if (scope && Object.keys(scope.params).length > 0) {
+      // For scoped resources with params, bind params and assign to both resource and httpActions
       const boundAction = action.bindParams(scope.params);
       resourceInstance[key] = boundAction;
       httpActions[key] = boundAction;
     } else {
+      // For normal resources or scoped resources without params, assign directly
       httpActions[key] = action;
       resourceInstance[key] = action;
     }
@@ -828,6 +829,7 @@ export const resource = (
     });
   };
 
+  let scopeCounter = 0;
   // Add scope method to create scoped versions of the resource
   resourceInstance.scope = (scopeParams = {}) => {
     // Merge current scope params with new ones
@@ -836,12 +838,19 @@ export const resource = (
 
     // Generate a unique scope ID based on the original root name and merged params
     const rootName = name.includes("[") ? name.split("[")[0] : name;
-    const scopeParamString = stringifyForDisplay(mergedParams, 1);
-    const scopedName = `${rootName}[${scopeParamString}]`;
-    const scopedId = `${rootName}_${scopeParamString}`;
+
+    let scopedId;
+    if (Object.keys(mergedParams).length === 0) {
+      // No params: generate unique ID with counter
+      scopeCounter++;
+      scopedId = `${rootName}_scope${scopeCounter}`;
+    } else {
+      const scopeParamString = stringifyForDisplay(mergedParams, 1);
+      scopedId = `${rootName}_${scopeParamString}`;
+    }
 
     // Create a new resource with the same configuration but scoped
-    const scopedResource = resource(scopedName, {
+    const scopedResource = resource(rootName, {
       idKey,
       mutableIdKeys,
       autoreloadGetManyAfter,
