@@ -1,0 +1,14 @@
+import { signal } from "@preact/signals";
+
+export const documentUrlSignal = signal(window.location.href);
+export const updateDocumentUrl = (value) => {
+  documentUrlSignal.value = value;
+};
+export const useDocumentUrl = () => {
+  return documentUrlSignal.value;
+};
+
+updateDocumentUrl(navigation.currentEntry.url);
+navigation.addEventListener("currententrychange", () => {
+  updateDocumentUrl(navigation.currentEntry.url);
+});

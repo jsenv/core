@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals";
 import { useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
-import { addIntoArray, removeFromArray } from "../../array_add_remove.js";
+import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
 import { useFormContext } from "./form_context.js";
 
 let debug = false;
