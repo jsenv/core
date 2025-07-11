@@ -11,9 +11,10 @@
 
 ### Communication Preferences
 
-- **Concise Updates**: Brief status updates, avoid over-explaining thought processes
-- **Code-First**: Lead with implementation, explain only when necessary
+- **Concise Updates**: Brief status updates with single-sentence explanations when helpful
+- **Code-First**: Lead with implementation, provide short context when beneficial
 - **Problem-Solution Focus**: Identify issue → implement fix → verify it works
+- **Balanced Communication**: Avoid both excessive verbosity and complete silence - a brief explanation enhances understanding
 - **Minimal Ceremony**: Skip unnecessary scaffolding like extensive test suites during initial development
 
 This approach prioritizes rapid iteration and maintains development momentum while ensuring quality through focused implementation.

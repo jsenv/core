@@ -6,7 +6,11 @@ import {
 } from "../../explorer/explorer_group.jsx";
 import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
-import { ROLE, useRoleArray, useRoleCanLoginArray } from "../role_store.js";
+import {
+  ROLE_CAN_LOGIN,
+  useRoleArray,
+  useRoleCanLoginArray,
+} from "../role_store.js";
 import {
   roleCanLoginListDetailsOnToggle,
   roleCanLoginListDetailsOpenAtStart,
@@ -28,7 +32,7 @@ export const RoleCanLoginListDetails = (props) => {
     <ExplorerGroup
       {...props}
       controller={roleCanLoginListDetailsController}
-      detailsAction={ROLE.GET_MANY_CAN_LOGIN}
+      detailsAction={ROLE_CAN_LOGIN.GET_MANY}
       idKey="oid"
       nameKey="rolname"
       labelChildren={
@@ -42,20 +46,16 @@ export const RoleCanLoginListDetails = (props) => {
       )}
       useItemArrayInStore={useRoleArray}
       useRenameItemAction={(role) => {
-        const renameAction = ROLE.PUT.bindParams({
+        const renameAction = ROLE_CAN_LOGIN.PUT.bindParams({
           rolname: role.rolname,
           columnName: "rolname",
         });
         renameAction.meta.valueParamName = "columnValue";
         return renameAction;
       }}
-      useCreateItemAction={() =>
-        ROLE.POST.bindParams({
-          rolcanlogin: true,
-        })
-      }
+      useCreateItemAction={() => ROLE_CAN_LOGIN.POST}
       useDeleteItemAction={(role) =>
-        ROLE.DELETE.bindParams({
+        ROLE_CAN_LOGIN.DELETE.bindParams({
           rolname: role.rolname,
         })
       }

@@ -6,7 +6,11 @@ import {
 } from "../../explorer/explorer_group.jsx";
 import { RoleGroupWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
-import { ROLE, useRoleArray, useRoleGroupArray } from "../role_store.js";
+import {
+  ROLE_CANNOT_LOGIN,
+  useRoleArray,
+  useRoleCannotLoginArray,
+} from "../role_store.js";
 import {
   roleGroupListDetailsOnToggle,
   roleGroupListDetailsOpenAtStart,
@@ -21,18 +25,18 @@ export const roleGroupListDetailsController = createExplorerGroupController(
 );
 
 export const RoleGroupListDetails = (props) => {
-  const roleGroupCount = useRoleGroupCount();
-  const roleGroupArray = useRoleGroupArray();
+  const roleCannotLoginCount = useRoleGroupCount();
+  const roleCannotLoginArray = useRoleCannotLoginArray();
 
   return (
     <ExplorerGroup
       {...props}
       controller={roleGroupListDetailsController}
-      detailsAction={ROLE.GET_MANY_GROUP}
+      detailsAction={ROLE_CANNOT_LOGIN.GET_MANY}
       idKey="oid"
       nameKey="rolname"
       labelChildren={
-        <TextAndCount text={"ROLE GROUPS"} count={roleGroupCount} />
+        <TextAndCount text={"ROLE GROUPS"} count={roleCannotLoginCount} />
       }
       renderNewButtonChildren={() => <RoleGroupWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
@@ -42,21 +46,21 @@ export const RoleGroupListDetails = (props) => {
       )}
       useItemArrayInStore={useRoleArray}
       useRenameItemAction={(role) => {
-        const renameAction = ROLE.PUT.bindParams({
+        const renameAction = ROLE_CANNOT_LOGIN.PUT.bindParams({
           rolname: role.rolname,
           columnName: "rolname",
         });
         renameAction.meta.valueParamName = "columnValue";
         return renameAction;
       }}
-      useCreateItemAction={() => ROLE.POST}
+      useCreateItemAction={() => ROLE_CANNOT_LOGIN.POST}
       useDeleteItemAction={(role) =>
-        ROLE.DELETE.bindParams({
+        ROLE_CANNOT_LOGIN.DELETE.bindParams({
           rolname: role.rolname,
         })
       }
     >
-      {roleGroupArray}
+      {roleCannotLoginArray}
     </ExplorerGroup>
   );
 };
