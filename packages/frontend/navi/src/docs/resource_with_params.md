@@ -1,229 +1,80 @@
 # Resource `withParams()` Method
 
-The `withParams()` method creates a parameterized version of a resource with isolated autoreload behavior. This solves the cross-contamination problem where actions with different parameters would incorrectly trigger each other's autoreload.
+Creates a parameterized version of a resource with isolated autoreload behavior. Solves cross-contamination where actions with different parameters incorrectly trigger each other's autoreload.
 
-## Problem Solved
+## Problem & Solution
 
-Without `withParams()`, this scenario causes unwanted behavior:
+Without `withParams()`:
 
 ```javascript
 const ROLE = resource("role", {
   GET_MANY: (params) => fetchRoles(params),
-  GET: (params) => fetchRole(params),
   DELETE: (params) => deleteRole(params),
 });
 
-const ADMIN = ROLE.GET_MANY.bindParams({ admin: true });
-const NON_ADMIN = ROLE.GET_MANY.bindParams({ admin: false });
-
-await ROLE.DELETE.bindParams({ id: "123" }); // ❌ Triggers reload for both ADMIN and NON_ADMIN
+// These actions interfere with each other
+await ROLE.GET_MANY.bindParams({ admin: true });
+await ROLE.DELETE.bindParams({ id: 123 }); // ❌ Reloads both admin and non-admin queries
 ```
 
-## Solution
-
-With `withParams()`, actions are isolated by parameter sets:
+With `withParams()`:
 
 ```javascript
-const ROLE = resource("role", {
-  GET_MANY: (params) => fetchRoles(params),
-  GET: (params) => fetchRole(params),
-  DELETE: (params) => deleteRole(params),
-});
+const adminRoles = ROLE.withParams({ admin: true });
+const guestRoles = ROLE.withParams({ admin: false });
 
-// Create isolated parameter scopes
-const ROLE_ADMIN = ROLE.withParams({ canlogin: true });
-const ROLE_GUEST = ROLE.withParams({ canlogin: false });
-
-// Now actions only affect their own parameter scope
-await ROLE_ADMIN.DELETE({ id: 123 }); // ✅ Only reloads adminRoles.GET actions
-await ROLE_GUEST.GET({ id: 456 }); // ✅ Independent from admin actions
+await adminRoles.DELETE({ id: 123 }); // ✅ Only reloads admin queries
 ```
 
 ## API
 
 ### `resource.withParams(params)`
 
-**Parameters:**
+**Parameters:** `params` (Object, required) - Parameters to bind to all actions
 
-- `params` (Object, required): Parameters to bind to all actions of this resource
+**Returns:** New resource instance with parameter-bound actions and isolated autoreload
 
-**Returns:**
-A new resource instance where:
+**Throws:** Error if params is empty
 
-- All HTTP actions are bound with the provided parameters
-- Autoreload follows a hierarchical pattern: child scopes reload their parent scopes
-- The same store is shared with the original resource
+## Autoreload Hierarchy
 
-**Throws:**
-
-- `Error` if `params` is empty or undefined
-
-## Features
-
-### Hierarchical Autoreload
-
-The autoreload system follows a parent-child hierarchy where parameterized actions reload their parent scopes:
+Actions follow a parent-child hierarchy where child scopes reload their parents:
 
 ```javascript
-const ADMIN = resource("admin", { GET_MANY: () => fetch("/api/admin") });
-const ROLE = resource("role", { GET_MANY: () => fetch("/api/roles") });
+const ROLE = resource("role", { GET_MANY: () => fetch("/roles") });
+const ROLE_ADMIN = ROLE.withParams({ type: "admin" });
+const ROLE_ADMIN_MALE = ROLE_ADMIN.withParams({ gender: "male" });
 
-// Create hierarchical scopes
-const adminWithDept = ADMIN.withParams({ department: "engineering" });
-const roleWithLogin = ROLE.withParams({ canlogin: true });
+// Si ROLE_ADMIN_MALE.POST() est exécuté, il recharge :
+// ✅ ROLE_ADMIN_MALE.GET_MANY (même scope: { type: "admin", gender: "male" })
+// ✅ ROLE_ADMIN.GET_MANY (parent scope: { type: "admin" })
+// ✅ ROLE.GET_MANY (root parent: {})
+// ❌ Ne recharge PAS femaleAdmin.GET_MANY ({ type: "admin", gender: "female" })
 
-// When you modify a child scope, parent scopes are also reloaded
-await adminWithDept.POST({ name: "Alice" });
-// ✅ Reloads: adminWithDept.GET_MANY + ADMIN.GET_MANY (parent)
+// Si ROLE_ADMIN.POST() est exécuté, il recharge :
+// ✅ ROLE_ADMIN.GET_MANY (même scope: { type: "admin" })
+// ✅ ROLE.GET_MANY (root parent: {})
+// ❌ Ne recharge PAS ROLE_ADMIN_MALE.GET_MANY (enfant, pas parent)
 
-await roleWithLogin.DELETE({ id: 123 });
-// ✅ Reloads: roleWithLogin.GET_MANY + ROLE.GET_MANY (parent)
+// Si ROLE.POST() est exécuté, il recharge :
+// ✅ ROLE.GET_MANY (même scope: {})
+// ❌ Ne recharge PAS ROLE_ADMIN.GET_MANY ni ROLE_ADMIN_MALE.GET_MANY (enfants, pas parents)
 ```
 
-**Hierarchy Rules:**
-
-- Child scopes (with parameters) reload their parent scopes (with fewer/no parameters)
-- Sibling scopes (different parameter sets) remain isolated from each other
-- Root scope (no parameters) is reloaded by all parameterized children
-
-### Parameter Isolation Between Siblings
-
-Actions with different parameters operate in separate autoreload scopes:
+## Chaining
 
 ```javascript
-const adminUsers = USER.withParams({ role: "admin" });
-const guestUsers = USER.withParams({ role: "guest" });
-
-// Sibling scopes don't interfere with each other
-await adminUsers.POST({ name: "Alice" });
-// ✅ Reloads: adminUsers.GET_MANY + USER.GET_MANY (parent)
-// ✅ Does NOT reload: guestUsers.GET_MANY (sibling)
-
-await guestUsers.DELETE({ id: 1 });
-// ✅ Reloads: guestUsers.GET_MANY + USER.GET_MANY (parent)
-// ✅ Does NOT reload: adminUsers.GET_MANY (sibling)
-```
-
-### Multi-Level Parameter Hierarchy
-
-Complex parameter hierarchies are supported with automatic parent reloading:
-
-```javascript
-const allUsers = USER; // Root scope (no parameters)
-const adminUsers = USER.withParams({ role: "admin" });
-const engineeringAdmins = adminUsers.withParams({ department: "engineering" });
-
-// Hierarchy: engineeringAdmins → adminUsers → allUsers
-
-await engineeringAdmins.POST({ name: "Alice" });
-// ✅ Reloads in order:
-// 1. engineeringAdmins.GET_MANY (same scope)
-// 2. adminUsers.GET_MANY (parent - subset of params)
-// 3. allUsers.GET_MANY (root parent - no params)
-
-// Other scopes remain unaffected
-const salesAdmins = adminUsers.withParams({ department: "sales" });
-// ✅ salesAdmins.GET_MANY is NOT reloaded (sibling scope)
-```
-
-### Parameter Merging via Chaining
-
-You can chain `withParams()` calls to merge parameters:
-
-```javascript
-const adminUsers = USER.withParams({ role: "admin" });
-const maleAdminUsers = adminUsers.withParams({ gender: "male" });
+const maleAdmins = USER.withParams({ role: "admin" }).withParams({
+  gender: "male",
+});
 
 // Equivalent to:
-const maleAdminUsers = USER.withParams({ role: "admin", gender: "male" });
+const maleAdmins = USER.withParams({ role: "admin", gender: "male" });
 ```
 
-### Shared Store
+## Key Features
 
-All parameterized resources share the same underlying data store:
-
-```javascript
-const adminUsers = USER.withParams({ role: "admin" });
-const guestUsers = USER.withParams({ role: "guest" });
-
-// Both see the same user data, just with different autoreload behavior
-console.log(adminUsers.useArray()); // Same data as USER.useArray()
-console.log(guestUsers.useById(123)); // Same data as USER.useById(123)
-```
-
-## Implementation Details
-
-### Hierarchical Scope Resolution
-
-- Parent-child relationships are determined by parameter subset comparison
-- A scope is considered a parent if its parameters are a subset of the child's parameters
-- Uses `isParamSubset()` to detect hierarchical relationships efficiently
-- Symbol-based scope IDs enable fast parent scope lookup during autoreload
-
-### Scope Identity
-
-- Uses deep parameter comparison via `compareTwoJsValues()` to determine scope identity
-- Identical parameter objects share the same autoreload scope
-- Each unique parameter set gets a Symbol-based identifier for efficient comparison
-
-### Performance
-
-- Parameter comparison is cached - identical parameter sets reuse the same scope object
-- Symbol-based scope IDs enable fast autoreload filtering
-- No performance impact on the shared data store
-
-### Memory Management
-
-- Uses WeakSet for scope caching to allow garbage collection
-- Parameterized resources don't create duplicate data, only duplicate actions
-
-## Real-World Example
-
-```javascript
-// User management with role-based filtering
-const USER = resource("user", {
-  GET_MANY: ({ role, department }) =>
-    fetch(`/api/users?role=${role}&department=${department}`),
-  POST: (userData) =>
-    fetch("/api/users", { method: "POST", body: JSON.stringify(userData) }),
-  DELETE: ({ id }) => fetch(`/api/users/${id}`, { method: "DELETE" }),
-});
-
-// Create department-specific user resources
-const engineeringAdmins = USER.withParams({
-  department: "engineering",
-}).withParams({ role: "admin" });
-
-const salesUsers = USER.withParams({
-  department: "sales",
-  role: "user",
-});
-
-// Independent operations with isolated autoreload
-await engineeringAdmins.POST({ name: "Alice", role: "admin" });
-// ↑ Only triggers reload for engineering admin user lists
-
-await salesUsers.DELETE({ id: 123 });
-// ↑ Only triggers reload for sales user lists
-
-// Engineering admins are unaffected by sales operations
-```
-
-## Best Practices
-
-1. **Create parameter scopes early**: Define your parameterized resources at module level
-2. **Use descriptive parameters**: Choose parameter names that clearly indicate the scope
-3. **Leverage chaining**: Build complex parameter sets through method chaining
-4. **Share common patterns**: Create utility functions for common parameter combinations
-
-```javascript
-// Good: Clear parameter scoping
-const createDepartmentUsers = (dept) => USER.withParams({ department: dept });
-const engineeringUsers = createDepartmentUsers("engineering");
-const salesUsers = createDepartmentUsers("sales");
-
-// Good: Descriptive chaining
-const activeEngineeringManagers = USER.withParams({ department: "engineering" })
-  .withParams({ role: "manager" })
-  .withParams({ status: "active" });
-```
+- **Isolation**: Different parameter sets have separate autoreload behavior
+- **Hierarchy**: Child scopes reload parent scopes automatically
+- **Shared Store**: All parameterized resources use the same data store
+- **Efficient**: Parameter comparison is cached for performance
