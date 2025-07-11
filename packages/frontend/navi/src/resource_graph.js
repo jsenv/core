@@ -1,5 +1,6 @@
 import { computed, signal } from "@preact/signals";
 import { createAction, reloadActions } from "./actions.js";
+import { stringifyForDisplay } from "./actions_helpers.js";
 import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
 import { getCallerInfo } from "./get_caller_info.js";
@@ -820,12 +821,9 @@ export const resource = (
   // Add scope method to create scoped versions of the resource
   resourceInstance.scope = (scopeParams = {}) => {
     // Generate a unique scope ID based on the original name and params
-    const scopeParamKeys = Object.keys(scopeParams).sort();
-    const scopeParamString = scopeParamKeys
-      .map((key) => `${key}=${JSON.stringify(scopeParams[key])}`)
-      .join("&");
+    const scopeParamString = stringifyForDisplay(scopeParams, 1);
     const scopedName = `${name}[${scopeParamString}]`;
-    const scopedId = `${name}_${scopeParamKeys.join("_")}_${JSON.stringify(scopeParams)}`;
+    const scopedId = `${name}_${scopeParamString}`;
 
     // Create a new resource with the same configuration but scoped
     const scopedResource = resource(scopedName, {
