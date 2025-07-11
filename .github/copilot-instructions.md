@@ -1,5 +1,23 @@
 # AI Coding Agent Instructions for @jsenv/core
 
+## Development Workflow and Communication Style
+
+### Iteration Velocity
+
+- **Efficiency First**: Focus on functional code implementation rather than verbose explanations
+- **Direct Implementation**: Get to working code quickly, minimize analysis paralysis
+- **Defer Documentation**: Tests and comprehensive documentation come later in the development cycle
+- **Action-Oriented**: Show progress through working code rather than lengthy discussions
+
+### Communication Preferences
+
+- **Concise Updates**: Brief status updates, avoid over-explaining thought processes
+- **Code-First**: Lead with implementation, explain only when necessary
+- **Problem-Solution Focus**: Identify issue → implement fix → verify it works
+- **Minimal Ceremony**: Skip unnecessary scaffolding like extensive test suites during initial development
+
+This approach prioritizes rapid iteration and maintains development momentum while ensuring quality through focused implementation.
+
 ## Project Overview
 
 **@jsenv/core** is a comprehensive JavaScript development toolkit that prioritizes web standards and simplicity. It's organized as a monorepo with multiple packages serving different purposes:
@@ -81,43 +99,11 @@ const userProxy = createActionProxy(getUserAction, {
 - **Form Integration**: Automatic form parameter binding with `useActionBoundToFormParams`
 - **Validation**: Integrated with `@jsenv/validation` package
 
-#### Button Components
-
-- **CSS Variables**: Extensive use of CSS variables for customization:
-  - `--button-border-width`: Dynamic border sizing
-  - `--button-outline-width`: Focus outline control
-  - `--button-border-color`: Border color theming
-- **Loading States**: SVG-based loaders with network-aware animation speeds
-- **Active Effects**: Visual feedback with SVG pressed effects
-
 #### Navigation Components
 
 - **Link Component**: Enhanced `<a>` tags with action execution
 - **Details Component**: Collapsible content with nav state persistence
 - **Keyboard Shortcuts**: Integrated keyboard navigation support
-
-### State Management Patterns
-
-#### Navigation State
-
-```js
-// Persisted in browser navigation history
-const [value, setValue, clearValue] = useNavState(id, initialValue);
-```
-
-#### Action Status
-
-```js
-const { idle, pending, aborted, error, data } = useActionStatus(action);
-```
-
-#### Ref Management
-
-```js
-// Custom hook for managing arrays of refs
-const getRef = useRefArray();
-const elementRef = getRef(id);
-```
 
 ## Development Workflow
 
@@ -161,9 +147,8 @@ const elementRef = getRef(id);
 
 ### File Naming
 
-- **kebab-case**: For directories and most files
+- **snake_case**: For directories and files
 - **camelCase**: For JavaScript variables and functions
-- **PascalCase**: For component files and classes
 - **Extensions**: `.mjs` for scripts, `.jsx` for components, `.js` for modules
 
 ## Package-Specific Guidelines
@@ -181,37 +166,6 @@ const elementRef = getRef(id);
 - **Message Positioning**: Smart positioning with `positionValidationMessage`
 - **Real-time Validation**: Integrate with form field changes
 - **Custom Validators**: Extend with custom validation logic
-
-## Performance Considerations
-
-### Frontend Optimization
-
-- **Bundle Splitting**: Use dynamic imports for code splitting
-- **Signal Efficiency**: Minimize signal computations and dependencies
-- **Memory Management**: Use WeakMap for private properties to prevent leaks
-- **Request Deduplication**: Actions automatically deduplicate identical requests
-
-### Build Optimization
-
-- **Tree Shaking**: Optimize imports and exports for tree shaking
-- **Asset Optimization**: Use build system for image and resource optimization
-- **Cache Busting**: Robust versioning to avoid cascading hash changes
-- **Browser Compatibility**: Support modern and older browsers
-
-## Debugging and Development
-
-### Debug Modes
-
-- **Action Debugging**: Enable with `debug = true` for detailed action logging
-- **Navigation Debugging**: Browser navigation state tracking
-- **Component Debugging**: Development-only warnings and validation
-
-### Development Tools
-
-- **Hot Reload**: Automatic reloading during development
-- **Source Maps**: Accurate debugging with source map support
-- **Error Boundaries**: Comprehensive error catching and reporting
-- **Performance Monitoring**: Built-in performance measurement tools
 
 ## Integration Guidelines
 
