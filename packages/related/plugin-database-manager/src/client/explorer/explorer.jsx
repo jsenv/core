@@ -68,9 +68,9 @@ const ExplorerBody = () => {
         // if (element.id === tablesDetailsController.id) {
         //   tablesDetailsController.setHeightSetting(requestedHeight);
         // }
-        if (element.id === databasesDetailsController.id) {
-          databasesDetailsController.setHeightSetting(requestedHeight);
-        }
+        // if (element.id === databasesDetailsController.id) {
+        //   databasesDetailsController.setHeightSetting(requestedHeight);
+        // }
         if (element.id === roleCanLoginListDetailsController.id) {
           roleCanLoginListDetailsController.setHeightSetting(requestedHeight);
         }
@@ -93,9 +93,9 @@ const ExplorerBody = () => {
         resizable={resizableDetailsIdSet.has(tablesDetailsController.id)}
       />
       */}
-      <DatabasesDetails
+      {/* <DatabasesDetails
         resizable={resizableDetailsIdSet.has(databasesDetailsController.id)}
-      />
+      /> */}
       <RoleCanLoginListDetails
         resizable={resizableDetailsIdSet.has(
           roleCanLoginListDetailsController.id,

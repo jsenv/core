@@ -1,4 +1,5 @@
 import { resource, useActionData } from "@jsenv/navi";
+import { signal } from "@preact/signals";
 import { setDatabaseCount } from "../database_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
 
@@ -105,4 +106,16 @@ export const useDatabaseArrayInStore = DATABASE.useArray;
 export const useDatabaseArray = () => {
   const databaseArray = useActionData(DATABASE.GET_MANY);
   return databaseArray;
+};
+
+const currentDatabaseIdSignal = signal(
+  window.DB_MANAGER_CONFIG.currentDatabase.oid,
+);
+export const setCurrentDatabaseId = (id) => {
+  currentDatabaseIdSignal.value = id;
+};
+export const useCurrentDatabase = () => {
+  const currentDatabaseId = currentDatabaseIdSignal.value;
+  const currentDatabase = DATABASE.store.select(currentDatabaseId);
+  return currentDatabase;
 };
