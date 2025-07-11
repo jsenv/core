@@ -53,13 +53,12 @@ export const createRoute = (urlPatternInput) => {
           if (!isNaN(keyAsNumber)) {
             if (value) {
               // Only include non-empty values
-
-              params[wildcardOffset + keyAsNumber] = value;
+              params[wildcardOffset + keyAsNumber] = decodeURIComponent(value);
               localWildcardCount++;
             }
           } else {
             // Named group (:param or {param})
-            params[key] = value;
+            params[key] = decodeURIComponent(value);
           }
         }
         // Update wildcard offset for next URL part

@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>Title</title>
+    <title>Route test</title>
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
   </head>
@@ -186,9 +186,8 @@
 
       test("paramsSignal handles wildcards in search params", () => {
         const route = createRoute("/data?type=*&format=*");
-        updateDocumentUrl(new URL("/data", window.location.origin));
         updateDocumentUrl(
-          new URL("?type=json&format=csv", window.location.origin),
+          new URL("/data?type=json&format=csv", window.location.origin),
         );
         const params = route.paramsSignal.value;
 
