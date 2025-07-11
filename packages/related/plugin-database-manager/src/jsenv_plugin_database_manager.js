@@ -531,6 +531,8 @@ export const jsenvPluginDatabaseManager = ({
               *
             FROM
               pg_database
+            ORDER BY
+              pg_database.oid ASC
           `;
 
           const countTables = async (database) => {

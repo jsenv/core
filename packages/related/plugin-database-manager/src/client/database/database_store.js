@@ -60,8 +60,8 @@ export const DATABASE = resource("database", {
     }
 
     const { data, meta } = await response.json();
-    const { databaseCount } = meta;
-    setDatabaseCount(databaseCount);
+    const { count } = meta;
+    setDatabaseCount(count);
     return data;
   },
   DELETE: async ({ datname }, { signal }) => {
@@ -80,8 +80,8 @@ export const DATABASE = resource("database", {
       throw await errorFromResponse(response, `Failed to delete database`);
     }
     const { meta } = await response.json();
-    const { databaseCount } = meta;
-    setDatabaseCount(databaseCount);
+    const { count } = meta;
+    setDatabaseCount(count);
     return { datname };
   },
   PUT: async ({ datname, columnName, columnValue, signal }) => {
