@@ -1,12 +1,33 @@
 import { computed, signal } from "@preact/signals";
 import { createAction, reloadActions } from "./actions.js";
 import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
-import { SYMBOL_IDENTITY } from "./compare_two_js_values.js";
+import {
+  SYMBOL_IDENTITY,
+  compareTwoJsValues,
+} from "./compare_two_js_values.js";
 import { getCallerInfo } from "./get_caller_info.js";
 import { createIterableWeakSet } from "./iterable_weak_set.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 
 let debug = false;
+
+// Cache for parameter scope identifiers
+const paramScopeWeakSet = createIterableWeakSet();
+let paramScopeIdCounter = 0;
+const getParamScope = (params) => {
+  for (const existingParamScope of paramScopeWeakSet) {
+    if (compareTwoJsValues(existingParamScope.params, params)) {
+      return existingParamScope;
+    }
+  }
+  const id = Symbol(`paramScope-${++paramScopeIdCounter}`);
+  const newParamScope = {
+    params,
+    id,
+  };
+  paramScopeWeakSet.add(newParamScope);
+  return newParamScope;
+};
 
 const findAliveActionsMatching = (httpActionWeakSet, predicate) => {
   const matchingActionSet = new Set();
@@ -24,7 +45,11 @@ const findAliveActionsMatching = (httpActionWeakSet, predicate) => {
   }
   return matchingActionSet;
 };
-const initAutoreload = ({ autoreloadGetManyAfter, autoreloadGetAfter }) => {
+const initAutoreload = ({
+  autoreloadGetManyAfter,
+  autoreloadGetAfter,
+  paramScope,
+}) => {
   const httpActionWeakSet = createIterableWeakSet();
   const shouldAutoreloadGetMany = createShouldAutoreloadAfter(
     autoreloadGetManyAfter,
@@ -46,6 +71,11 @@ const initAutoreload = ({ autoreloadGetManyAfter, autoreloadGetAfter }) => {
     //   debugger;
     // }
 
+    const paramScopePredicate = paramScope
+      ? (httpActionCandidate) =>
+          httpActionCandidate.meta.paramScope.id === paramScope.id
+      : (httpActionCandidate) => !httpActionCandidate.meta.paramScope;
+
     const httpMetaPredicate =
       getManyAutoreload && getAutoreload
         ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
@@ -56,10 +86,12 @@ const initAutoreload = ({ autoreloadGetManyAfter, autoreloadGetAfter }) => {
           : (httpActionCandidate) =>
               httpActionCandidate.meta.httpVerb === "GET" &&
               !httpActionCandidate.meta.httpMany;
-    const toReloadSet = findAliveActionsMatching(
-      httpActionWeakSet,
-      httpMetaPredicate,
-    );
+
+    const predicate = (httpActionCandidate) =>
+      paramScopePredicate(httpActionCandidate) &&
+      httpMetaPredicate(httpActionCandidate);
+
+    const toReloadSet = findAliveActionsMatching(httpActionWeakSet, predicate);
     // setTimeout otherwise the action done side effects could not yet run
     // (for instance when creating an item, we want to listen to actionend first
     // then we want to perform the reload)
@@ -82,11 +114,13 @@ const createHttpHandlerForRootResource = (
     store,
     autoreloadGetManyAfter = ["POST", "DELETE"],
     autoreloadGetAfter = false,
+    paramScope,
   },
 ) => {
   const autoreload = initAutoreload({
     autoreloadGetManyAfter,
     autoreloadGetAfter,
+    paramScope,
   });
 
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
@@ -133,7 +167,7 @@ const createHttpHandlerForRootResource = (
         return applyDataEffect(data);
       }),
       {
-        meta: { httpVerb, httpMany: false },
+        meta: { httpVerb, httpMany: false, paramScope },
         name: `${name}.${httpVerb}`,
         compute: (itemId) => store.select(itemId),
         ...options,
@@ -203,7 +237,7 @@ const createHttpHandlerForRootResource = (
         return applyDataEffect(dataArray);
       }),
       {
-        meta: { httpVerb, httpMany: true },
+        meta: { httpVerb, httpMany: true, paramScope },
         name: `${name}.${httpVerb}[many]`,
         data: [],
         compute: (idArray) => store.selectAll(idArray),
@@ -321,6 +355,7 @@ const createHttpHandlerRelationshipToManyResource = (
     childStore,
     autoreloadGetManyAfter = ["POST", "DELETE"],
     autoreloadGetAfter = false,
+    paramScope,
   } = {},
 ) => {
   // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
@@ -329,6 +364,7 @@ const createHttpHandlerRelationshipToManyResource = (
   const autoreload = initAutoreload({
     autoreloadGetManyAfter,
     autoreloadGetAfter,
+    paramScope,
   });
 
   // one item AND many child items
@@ -807,15 +843,42 @@ export const resource = (
     });
   };
 
-  // Add scope method to create scoped versions of the resource
-  const scope = (scopeParams) => {
-    // Require parameters for scope
-    if (!scopeParams || Object.keys(scopeParams).length === 0) {
-      throw new Error(`resource(${name}).scope() requires parameters`);
+  /**
+   * Creates a parameterized version of the resource with isolated autoreload behavior.
+   *
+   * Actions from parameterized resources only trigger autoreload for other actions with
+   * identical parameters, preventing cross-contamination between different parameter sets.
+   *
+   * @param {Object} params - Parameters to bind to all actions of this resource (required)
+   * @returns {Object} A new resource instance with parameter-bound actions and isolated autoreload
+   * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
+   *
+   * @example
+   * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
+   * const adminRoles = ROLE.withParams({ canlogin: true });
+   * const guestRoles = ROLE.withParams({ canlogin: false });
+   * // adminRoles and guestRoles have isolated autoreload behavior
+   */
+  const withParams = (params) => {
+    // Require parameters
+    if (!params || Object.keys(params).length === 0) {
+      throw new Error(`resource(${name}).withParams() requires parameters`);
     }
 
-    // Create scoped resource by reusing existing actions with bindParams
-    const scopedResource = {
+    // Generate unique param scope for these parameters
+    const paramScopeObject = getParamScope(params);
+
+    // Create a new httpHandler with the param scope for isolated autoreload
+    const parameterizedHttpHandler = createHttpHandlerForRootResource(name, {
+      idKey,
+      store: resourceInstance.store,
+      autoreloadGetManyAfter,
+      autoreloadGetAfter,
+      paramScope: paramScopeObject,
+    });
+
+    // Create parameterized resource
+    const parameterizedResource = {
       isResource: true,
       name,
       idKey,
@@ -823,34 +886,35 @@ export const resource = (
       useById: resourceInstance.useById,
       store: resourceInstance.store,
       addItemSetup: resourceInstance.addItemSetup,
-      httpHandler: resourceInstance.httpHandler,
+      httpHandler: parameterizedHttpHandler,
       one: resourceInstance.one,
       many: resourceInstance.many,
     };
 
-    // Reuse existing HTTP actions and bind the parameters
+    // Create HTTP actions from the parameterized handler and bind parameters
     for (const key of Object.keys(rest)) {
-      const originalAction = resourceInstance[key];
-      if (originalAction) {
-        // Bind the parameters to get a new action instance
-        scopedResource[key] = originalAction.bindParams(scopeParams);
+      const method = parameterizedHttpHandler[key];
+      if (method) {
+        const action = method(rest[key]);
+        // Bind the parameters to get a parameterized action instance
+        parameterizedResource[key] = action.bindParams(params);
       }
     }
 
-    // Add scope method to the scoped resource for chaining
-    scopedResource.scope = (newScopeParams) => {
-      if (!newScopeParams || Object.keys(newScopeParams).length === 0) {
-        throw new Error(`resource(${name}).scope() requires parameters`);
+    // Add withParams method to the parameterized resource for chaining
+    parameterizedResource.withParams = (newParams) => {
+      if (!newParams || Object.keys(newParams).length === 0) {
+        throw new Error(`resource(${name}).withParams() requires parameters`);
       }
-      // Merge current scope params with new ones for chaining
-      const mergedParams = { ...scopeParams, ...newScopeParams };
-      return scope(mergedParams);
+      // Merge current params with new ones for chaining
+      const mergedParams = { ...params, ...newParams };
+      return withParams(mergedParams);
     };
 
-    return scopedResource;
+    return parameterizedResource;
   };
 
-  resourceInstance.scope = scope;
+  resourceInstance.withParams = withParams;
 
   return resourceInstance;
 };
