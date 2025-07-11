@@ -74,28 +74,31 @@ export const createRoute = (urlPatternInput) => {
 
     let wasActive = false;
     let lastParams = null;
+    let previousUrl = null;
     // Watch for route activation/deactivation and param changes
     const unsubscribe = computed(() => {
       const isActive = activeSignal.value;
       const currentParams = paramsSignal.value;
+      const currentUrl = urlSignal.value;
 
       if (isActive && !wasActive) {
         // First time route matches - load
-        actionBoundToUrl.load({ reason: `${urlPatternInput} is matching` });
+        actionBoundToUrl.load({ reason: `${currentUrl} is matching` });
       } else if (isActive && wasActive && currentParams !== lastParams) {
         // Params changed while active - reload
         actionBoundToUrl.reload({
-          reason: `Moved from ${urlPatternInput} to ${urlPatternInput}`,
+          reason: `Moved from ${previousUrl} to ${currentUrl}`,
         });
       } else if (!isActive && wasActive) {
         // Route stops matching - unload
         actionBoundToUrl.unload({
-          reason: `${urlPatternInput} is no longer matching`,
+          reason: `${previousUrl} is no longer matching`,
         });
       }
 
       wasActive = isActive;
       lastParams = currentParams;
+      previousUrl = currentUrl;
 
       return { isActive, currentParams };
     });
