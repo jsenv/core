@@ -2,8 +2,7 @@ import { resource, useActionData } from "@jsenv/navi";
 import { signal } from "@preact/signals";
 import { setDatabaseCount } from "../database_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
-
-// TODO: database owner link
+// import { ROLE } from "../role/role_store.js";
 
 export const DATABASE = resource("database", {
   idKey: "oid",
@@ -104,6 +103,8 @@ export const DATABASE = resource("database", {
     return ["datname", datname, { [columnName]: columnValue }];
   },
 });
+// export const DATABASE_OWNER = DATABASE.one("owner", ROLE);
+
 export const useDatabaseArrayInStore = DATABASE.useArray;
 export const useDatabaseArray = () => {
   const databaseArray = useActionData(DATABASE.GET_MANY);
