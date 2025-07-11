@@ -100,16 +100,15 @@ export const ROLE = resource("role", {
 
 export const useRoleArray = ROLE.useArray;
 
-ROLE.GET_MANY_CAN_LOGIN = ROLE.GET_MANY.bindParams({ canlogin: true });
+export const ROLE_CAN_LOGIN = ROLE.scope({ canlogin: true });
+export const ROLE_CANNOT_LOGIN = ROLE.scope({ canlogin: false });
 export const useRoleCanLoginArray = () => {
-  const roleCanLoginArray = useActionData(ROLE.GET_MANY_CAN_LOGIN);
+  const roleCanLoginArray = useActionData(ROLE_CAN_LOGIN.GET_MANY);
   return roleCanLoginArray;
 };
-
-ROLE.GET_MANY_GROUP = ROLE.GET_MANY.bindParams({ canlogin: false });
-export const useRoleGroupArray = () => {
-  const roleGroupArray = useActionData(ROLE.GET_MANY_GROUP);
-  return roleGroupArray;
+export const useRoleCannotLoginArray = () => {
+  const roleCannotLoginArray = useActionData(ROLE_CANNOT_LOGIN.GET_MANY);
+  return roleCannotLoginArray;
 };
 
 const currentRoleIdSignal = signal(window.DB_MANAGER_CONFIG.currentRole.oid);

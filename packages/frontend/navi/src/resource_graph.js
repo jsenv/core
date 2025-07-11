@@ -24,7 +24,11 @@ const findAliveActionsMatching = (httpActionWeakSet, predicate) => {
   }
   return matchingActionSet;
 };
-const initAutoreload = ({ autoreloadGetManyAfter, autoreloadGetAfter }) => {
+const initAutoreload = ({
+  autoreloadGetManyAfter,
+  autoreloadGetAfter,
+  scopeId,
+}) => {
   const httpActionWeakSet = createIterableWeakSet();
   const shouldAutoreloadGetMany = createShouldAutoreloadAfter(
     autoreloadGetManyAfter,
@@ -46,7 +50,10 @@ const initAutoreload = ({ autoreloadGetManyAfter, autoreloadGetAfter }) => {
     //   debugger;
     // }
 
-    const predicate =
+    const scopePredicate = scopeId
+      ? (httpActionCandidate) => httpActionCandidate.meta.scopeId === scopeId
+      : () => true;
+    const httpMetaPredicate =
       getManyAutoreload && getAutoreload
         ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
         : getManyAutoreload
@@ -56,6 +63,9 @@ const initAutoreload = ({ autoreloadGetManyAfter, autoreloadGetAfter }) => {
           : (httpActionCandidate) =>
               httpActionCandidate.meta.httpVerb === "GET" &&
               !httpActionCandidate.meta.httpMany;
+    const predicate = (httpActionCandidate) =>
+      scopePredicate(httpActionCandidate) &&
+      httpMetaPredicate(httpActionCandidate);
     const toReloadSet = findAliveActionsMatching(httpActionWeakSet, predicate);
     // setTimeout otherwise the action done side effects could not yet run
     // (for instance when creating an item, we want to listen to actionend first
@@ -79,11 +89,13 @@ const createHttpHandlerForRootResource = (
     store,
     autoreloadGetManyAfter = ["POST", "DELETE"],
     autoreloadGetAfter = false,
+    scopeId,
   },
 ) => {
   const autoreload = initAutoreload({
     autoreloadGetManyAfter,
     autoreloadGetAfter,
+    scopeId,
   });
 
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
@@ -130,7 +142,7 @@ const createHttpHandlerForRootResource = (
         return applyDataEffect(data);
       }),
       {
-        meta: { httpVerb, httpMany: false },
+        meta: { httpVerb, httpMany: false, scopeId },
         name: `${name}.${httpVerb}`,
         compute: (itemId) => store.select(itemId),
         ...options,
@@ -200,7 +212,7 @@ const createHttpHandlerForRootResource = (
         return applyDataEffect(dataArray);
       }),
       {
-        meta: { httpVerb, httpMany: true },
+        meta: { httpVerb, httpMany: true, scopeId },
         name: `${name}.${httpVerb}[many]`,
         data: [],
         compute: (idArray) => store.selectAll(idArray),
@@ -514,6 +526,7 @@ export const resource = (
     autoreloadGetManyAfter,
     autoreloadGetAfter,
     httpHandler,
+    scopeId,
     ...rest
   } = {},
 ) => {
@@ -589,6 +602,7 @@ export const resource = (
       store,
       autoreloadGetManyAfter,
       autoreloadGetAfter,
+      scopeId,
     });
   }
   resourceInstance.httpHandler = httpHandler;
@@ -801,6 +815,43 @@ export const resource = (
       httpHandler: httpHandleForChildManyResource,
       ...options,
     });
+  };
+
+  // Add scope method to create scoped versions of the resource
+  resourceInstance.scope = (scopeParams = {}) => {
+    // Generate a unique scope ID based on the original name and params
+    const scopeParamKeys = Object.keys(scopeParams).sort();
+    const scopeParamString = scopeParamKeys
+      .map((key) => `${key}=${JSON.stringify(scopeParams[key])}`)
+      .join("&");
+    const scopedName = `${name}[${scopeParamString}]`;
+    const scopedId = `${name}_${scopeParamKeys.join("_")}_${JSON.stringify(scopeParams)}`;
+
+    // Create a new resource with the same configuration but scoped
+    const scopedResource = resource(scopedName, {
+      idKey,
+      mutableIdKeys,
+      autoreloadGetManyAfter,
+      autoreloadGetAfter,
+      scopeId: scopedId,
+      // Copy all the original action definitions but bind them with scope params
+      ...Object.keys(rest).reduce((scopedRest, key) => {
+        scopedRest[key] = rest[key];
+        return scopedRest;
+      }, {}),
+    });
+
+    // Bind all actions with the scope parameters
+    for (const key of Object.keys(rest)) {
+      if (
+        scopedResource[key] &&
+        typeof scopedResource[key].bindParams === "function"
+      ) {
+        scopedResource[key] = scopedResource[key].bindParams(scopeParams);
+      }
+    }
+
+    return scopedResource;
   };
 
   return resourceInstance;
