@@ -176,7 +176,7 @@
 
       // Create the action that simulates fetching user data
       userAction = createAction(
-        async ({ userId }, { signal, reason, isPreload }) => {
+        async (userId, { signal, reason, isPreload }) => {
           executionCount++;
           elements.executionCount.textContent = executionCount;
 
@@ -195,8 +195,6 @@
 
           const userData = {
             id: userId,
-            name: `User ${userId}`,
-            email: `user${userId}@example.com`,
             loadedAt: new Date().toISOString(),
           };
 

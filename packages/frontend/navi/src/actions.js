@@ -580,22 +580,9 @@ export const createAction = (callback, rootOptions = {}) => {
     };
 
     const createChildAction = (childOptions) => {
-      const childParams = childOptions.params;
-      const args = [];
-      if (childParams === null || typeof childParams !== "object") {
-        args.push(childParams);
-      } else {
-        const keys = Object.keys(childParams);
-        if (keys.length === 0) {
-        } else {
-          args.push(stringifyForDisplay(childParams));
-        }
-      }
-      const childName = args.length ? `${name}(${args.join(", ")})` : name;
       const childAction = createActionCore(
         {
           ...rootOptions,
-          name: childName,
           ...childOptions,
         },
         {
@@ -639,7 +626,7 @@ export const createAction = (callback, rootOptions = {}) => {
       callback,
       rootAction,
       parentAction,
-      name,
+      name: generateActionName(name, params),
       params,
       loadRequested,
       loadingState,
@@ -660,6 +647,19 @@ export const createAction = (callback, rootOptions = {}) => {
         if (nextParams === currentParams) {
           return false;
         }
+
+        // Update the weak map BEFORE updating the signal
+        // so that any code triggered by the signal update finds this action
+        if (parentAction) {
+          const parentActionPrivateProps =
+            getActionPrivateProperties(parentAction);
+          const parentChildActionWeakMap =
+            parentActionPrivateProps.childActionWeakMap;
+          parentChildActionWeakMap.delete(currentParams);
+          parentChildActionWeakMap.set(nextParams, action);
+        }
+
+        action.name = generateActionName(name, nextParams);
         paramsSignal.value = nextParams;
         return true;
       },
@@ -864,6 +864,7 @@ export const createAction = (callback, rootOptions = {}) => {
         ui,
 
         childActionWeakSet,
+        childActionWeakMap,
       };
       setActionPrivateProperties(action, privateProperties);
     }
@@ -1070,6 +1071,21 @@ const createActionProxyFromSignal = (
   }
 
   return actionProxy;
+};
+
+const generateActionName = (name, params) => {
+  const args = [];
+  if (params === null || typeof params !== "object") {
+    args.push(params);
+  } else {
+    const keys = Object.keys(params);
+    if (keys.length === 0) {
+    } else {
+      args.push(stringifyForDisplay(params));
+    }
+  }
+  const nameWithParams = args.length ? `${name}(${args.join(", ")})` : name;
+  return nameWithParams;
 };
 
 if (import.meta.hot) {
