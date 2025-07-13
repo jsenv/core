@@ -7,7 +7,7 @@
     <style>
       body {
         font-family: Arial, sans-serif;
-        max-width: 800px;
+        max-width: 1000px;
         margin: 0 auto;
         padding: 10px;
       }
@@ -86,6 +86,7 @@
         <label>User ID:</label>
         <input type="number" id="userIdInput" value="123" />
         <button onclick="updateSignal()">Update Signal</button>
+        <button onclick="replaceParams()">Replace Params</button>
       </div>
       <div class="status">
         Current Signal Value: <span id="signalValue">123</span>
@@ -106,14 +107,9 @@
       </div>
 
       <div class="section" style="flex: 1">
-        <h3>Underlying Action Status</h3>
+        <h3>All Actions & Proxy Target</h3>
         <div class="status">
-          <div>Name: <span id="actionName">-</span></div>
-          <div>Params: <span id="actionParams">-</span></div>
-          <div>Loading State: <span id="actionLoadingState">-</span></div>
-          <div>Load Requested: <span id="actionLoadRequested">-</span></div>
-          <div>Data: <span id="actionData">-</span></div>
-          <div>Error: <span id="actionError">-</span></div>
+          <div id="actionsList" style="margin-top: 5px; font-size: 11px">-</div>
         </div>
       </div>
     </div>
@@ -164,12 +160,7 @@
         proxyLoadRequested: document.getElementById("proxyLoadRequested"),
         proxyData: document.getElementById("proxyData"),
         proxyError: document.getElementById("proxyError"),
-        actionName: document.getElementById("actionName"),
-        actionParams: document.getElementById("actionParams"),
-        actionLoadingState: document.getElementById("actionLoadingState"),
-        actionLoadRequested: document.getElementById("actionLoadRequested"),
-        actionData: document.getElementById("actionData"),
-        actionError: document.getElementById("actionError"),
+        actionsList: document.getElementById("actionsList"),
         executionCount: document.getElementById("executionCount"),
         userIdInput: document.getElementById("userIdInput"),
         log: document.getElementById("log"),
@@ -229,43 +220,58 @@
       }
 
       function updateProxyDisplay() {
+        // Watch proxy properties through private properties signals
+        const {
+          paramsSignal,
+          loadingStateSignal,
+          loadRequestedSignal,
+          dataSignal,
+          errorSignal,
+        } = getActionPrivateProperties(userActionProxy);
+
         elements.proxyName.textContent = userActionProxy.name;
-        elements.proxyParams.textContent = JSON.stringify(
-          userActionProxy.params,
-        );
-        elements.proxyLoadingState.textContent = userActionProxy.loadingState;
-        elements.proxyLoadRequested.textContent = userActionProxy.loadRequested;
-        elements.proxyData.textContent = userActionProxy.data
-          ? JSON.stringify(userActionProxy.data)
-          : "null";
-        elements.proxyError.textContent = userActionProxy.error || "null";
+        elements.proxyParams.textContent = JSON.stringify(paramsSignal.value);
+        elements.proxyLoadingState.textContent = loadingStateSignal.value.id;
+        elements.proxyLoadRequested.textContent = loadRequestedSignal.value;
+        elements.proxyData.textContent = dataSignal.value;
+        elements.proxyError.textContent = errorSignal.value || "null";
       }
 
-      function updateActionDisplay() {
-        // Get the current underlying action
-        const currentAction = userActionProxy.matchAllSelfOrDescendant(
+      function updateActionsDisplay() {
+        // Get all actions (exclude proxies)
+        const allActions = userAction.matchAllSelfOrDescendant(() => true, {
+          includeProxies: false,
+        });
+
+        // Get the current action the proxy is pointing at
+        const currentProxyTarget = userActionProxy.matchAllSelfOrDescendant(
           () => true,
           { includeProxies: false },
         )[0];
-        if (currentAction) {
-          elements.actionName.textContent = currentAction.name;
-          elements.actionParams.textContent = JSON.stringify(
-            currentAction.params,
-          );
-          elements.actionLoadingState.textContent = currentAction.loadingState;
-          elements.actionLoadRequested.textContent =
-            currentAction.loadRequested;
-          elements.actionData.textContent = currentAction.data
-            ? JSON.stringify(currentAction.data)
-            : "null";
-          elements.actionError.textContent = currentAction.error || "null";
+
+        // Create actions list
+        if (allActions.length === 0) {
+          elements.actionsList.innerHTML = "No actions exist";
         } else {
-          elements.actionName.textContent = "-";
-          elements.actionParams.textContent = "-";
-          elements.actionLoadingState.textContent = "-";
-          elements.actionLoadRequested.textContent = "-";
-          elements.actionData.textContent = "-";
-          elements.actionError.textContent = "-";
+          const actionsHtml = allActions
+            .map((action) => {
+              const isCurrentTarget = action === currentProxyTarget;
+              const actionData = action.data
+                ? JSON.stringify(action.data).substring(0, 50) +
+                  (JSON.stringify(action.data).length > 50 ? "..." : "")
+                : "null";
+              const style = isCurrentTarget
+                ? "background: #ffffcc; font-weight: bold;"
+                : "";
+              const indicator = isCurrentTarget ? "👉 " : "   ";
+
+              return `<div style="${style}; padding: 2px; margin: 1px 0; border-radius: 2px;">
+                ${indicator}<strong>${action.name}</strong> | Data: ${actionData} | State: ${action.loadingState.id}
+              </div>`;
+            })
+            .join("");
+
+          elements.actionsList.innerHTML = actionsHtml;
         }
       }
 
@@ -274,17 +280,6 @@
         // Watch the signal value
         updateSignalDisplay();
 
-        // Watch proxy properties through private properties signals
-        const proxyPrivateProps = getActionPrivateProperties(userActionProxy);
-        // Subscribe to proxy state changes by accessing signal values
-        /* eslint-disable-next-line no-unused-expressions */
-        proxyPrivateProps.loadingStateSignal.value;
-        /* eslint-disable-next-line no-unused-expressions */
-        proxyPrivateProps.loadRequestedSignal.value;
-        /* eslint-disable-next-line no-unused-expressions */
-        proxyPrivateProps.dataSignal.value;
-        /* eslint-disable-next-line no-unused-expressions */
-        proxyPrivateProps.errorSignal.value;
         updateProxyDisplay();
 
         // Watch underlying action properties
@@ -304,14 +299,22 @@
           /* eslint-disable-next-line no-unused-expressions */
           actionPrivateProps.errorSignal.value;
         }
-        updateActionDisplay();
+        updateActionsDisplay();
       });
 
       // Global functions for buttons
       window.updateSignal = function () {
-        const newValue = elements.userIdInput.value;
+        const newValue = elements.userIdInput.valueAsNumber;
         log(`📡 Updating signal from "${userIdSignal.value}" to "${newValue}"`);
         userIdSignal.value = newValue;
+      };
+
+      window.replaceParams = function () {
+        const newValue = elements.userIdInput.valueAsNumber;
+        log(
+          `🔄 Replacing params from "${JSON.stringify(userActionProxy.params)}" to "{userId: ${newValue}}"`,
+        );
+        userActionProxy.replaceParams(newValue);
       };
 
       window.loadAction = function () {
@@ -346,7 +349,7 @@
       // Initial update
       updateSignalDisplay();
       updateProxyDisplay();
-      updateActionDisplay();
+      updateActionsDisplay();
 
       log(
         `🎯 Test setup complete. Action proxy bound to signal with initial value: ${userIdSignal.value}`,

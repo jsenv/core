@@ -14,10 +14,12 @@ import {
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 import { createIterableWeakSet } from "./utils/iterable_weak_set.js";
 import { createJsValueWeakMap } from "./utils/js_value_weak_map.js";
+import { mergeTwoJsValues } from "./utils/merge_two_js_values.js";
 import {
   isSignal,
   stringifyForDisplay,
 } from "./utils/stringify_for_display.js";
+import { weakEffect } from "./utils/weak_effect.js";
 
 let DEBUG = true;
 
@@ -502,16 +504,7 @@ export const createAction = (callback, rootOptions = {}) => {
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
           const newParams = newParamsOrSignal.value;
-
-          if (newParams === null || typeof newParams !== "object") {
-            return newParams;
-          }
-
-          if (params === null || typeof params !== "object") {
-            return newParams;
-          }
-
-          return { ...params, ...newParams };
+          return mergeTwoJsValues(params, newParams);
         });
         return createActionProxyFromSignal(
           action,
@@ -545,7 +538,7 @@ export const createAction = (callback, rootOptions = {}) => {
           if (params === null || typeof params !== "object") {
             return createChildAction(newParamsOrSignal, options);
           }
-          const combinedParams = { ...params, ...newParamsOrSignal };
+          const combinedParams = mergeTwoJsValues(params, newParamsOrSignal);
           return createChildAction({
             params: combinedParams,
             ...options,
@@ -661,6 +654,15 @@ export const createAction = (callback, rootOptions = {}) => {
       abort,
       bindParams,
       matchAllSelfOrDescendant, // ✅ Add the new method
+      replaceParams: (newParams) => {
+        const currentParams = paramsSignal.value;
+        const nextParams = mergeTwoJsValues(currentParams, newParams);
+        if (nextParams === currentParams) {
+          return false;
+        }
+        paramsSignal.value = nextParams;
+        return true;
+      },
       toString: () => name,
       meta,
     };
@@ -668,32 +670,21 @@ export const createAction = (callback, rootOptions = {}) => {
 
     // Effects pour synchroniser les propriétés
     effects: {
-      const actionWeakRef = new WeakRef(action);
-      const actionWeakEffect = (callback) => {
-        const dispose = effect(() => {
-          const actionRef = actionWeakRef.deref();
-          if (!actionRef) {
-            dispose();
-            return;
-          }
-          callback(actionRef);
-        });
-      };
-      actionWeakEffect((actionRef) => {
+      weakEffect([action], (actionRef) => {
         loadRequested = loadRequestedSignal.value;
         actionRef.loadRequested = loadRequested;
       });
-      actionWeakEffect((actionRef) => {
+      weakEffect([action], (actionRef) => {
         loadingState = loadingStateSignal.value;
         actionRef.loadingState = loadingState;
         aborted = loadingState === ABORTED;
         actionRef.aborted = aborted;
       });
-      actionWeakEffect((actionRef) => {
+      weakEffect([action], (actionRef) => {
         error = errorSignal.value;
         actionRef.error = error;
       });
-      actionWeakEffect((actionRef) => {
+      weakEffect([action], (actionRef) => {
         data = dataSignal.value;
         computedData = computedDataSignal.value;
         actionRef.data = data;
@@ -921,6 +912,7 @@ const createActionProxyFromSignal = (
     unload: proxyMethod("unload"),
     abort: proxyMethod("abort"),
     matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
+    replaceParams: null, // Will be set below
     toString: () => actionProxy.name,
     meta: {},
   };
@@ -963,8 +955,21 @@ const createActionProxyFromSignal = (
   const proxyPrivateMethod = (method) => {
     return (...args) => currentActionPrivateProperties[method](...args);
   };
+
+  // Create our own signal for params that we control completely
+  const proxyParamsSignal = signal(paramsSignal.value);
+
+  // Watch for changes in the original paramsSignal and update ours
+  // (original signal wins over any replaceParams calls)
+  weakEffect(
+    [paramsSignal, proxyParamsSignal],
+    (paramsSignalRef, proxyParamsSignalRef) => {
+      proxyParamsSignalRef.value = paramsSignalRef.value;
+    },
+  );
+
   const proxyPrivateProperties = {
-    paramsSignal,
+    paramsSignal: proxyParamsSignal,
     loadRequestedSignal: proxyPrivateSignal(
       "loadRequestedSignal",
       "loadRequested",
@@ -991,19 +996,11 @@ const createActionProxyFromSignal = (
     let actionTargetPreviousWeakRef = null;
     let isFirstEffect = true;
     const changeCleanupCallbackSet = new Set();
-    const actionWeakRef = new WeakRef(action);
-    const proxyWeakRef = new WeakRef(actionProxy);
 
-    const dispose = effect(() => {
-      const actionRef = actionWeakRef.deref();
-      const proxyRef = proxyWeakRef.deref();
-      if (!actionRef || !proxyRef) {
-        dispose();
-        return;
-      }
+    weakEffect([action], (actionRef) => {
+      const previousTarget = actionTargetPreviousWeakRef?.deref();
+      const params = proxyParamsSignal.value;
 
-      const previousTarget = actionTargetPreviousWeakRef?.deref(); // ✅ Dereference
-      const params = paramsSignal.value;
       if (params === undefined) {
         actionTarget = null;
         currentAction = actionRef;
@@ -1036,6 +1033,24 @@ const createActionProxyFromSignal = (
         : null;
     });
   }
+
+  actionProxy.replaceParams = (newParams) => {
+    if (currentAction === action) {
+      const currentParams = proxyParamsSignal.value;
+      const nextParams = mergeTwoJsValues(currentParams, newParams);
+      if (nextParams === currentParams) {
+        return false;
+      }
+      proxyParamsSignal.value = nextParams;
+      return true;
+    }
+    if (!currentAction.replaceParams(newParams)) {
+      return false;
+    }
+    proxyParamsSignal.value =
+      currentActionPrivateProperties.paramsSignal.peek();
+    return true;
+  };
 
   if (reloadOnChange) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
