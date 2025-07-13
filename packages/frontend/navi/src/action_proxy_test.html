@@ -147,6 +147,7 @@
     <script type="module">
       import { signal, effect } from "@preact/signals";
       import { createAction } from "./actions.js";
+      import { getActionPrivateProperties } from "./action_private_properties.js";
 
       // Global state
       let executionCount = 0;
@@ -270,8 +271,39 @@
 
       // Set up reactive updates
       effect(() => {
+        // Watch the signal value
         updateSignalDisplay();
+
+        // Watch proxy properties through private properties signals
+        const proxyPrivateProps = getActionPrivateProperties(userActionProxy);
+        // Subscribe to proxy state changes by accessing signal values
+        /* eslint-disable-next-line no-unused-expressions */
+        proxyPrivateProps.loadingStateSignal.value;
+        /* eslint-disable-next-line no-unused-expressions */
+        proxyPrivateProps.loadRequestedSignal.value;
+        /* eslint-disable-next-line no-unused-expressions */
+        proxyPrivateProps.dataSignal.value;
+        /* eslint-disable-next-line no-unused-expressions */
+        proxyPrivateProps.errorSignal.value;
         updateProxyDisplay();
+
+        // Watch underlying action properties
+        const currentAction = userActionProxy.matchAllSelfOrDescendant(
+          () => true,
+          { includeProxies: false },
+        )[0];
+        if (currentAction) {
+          const actionPrivateProps = getActionPrivateProperties(currentAction);
+          // Subscribe to action state changes by accessing signal values
+          /* eslint-disable-next-line no-unused-expressions */
+          actionPrivateProps.loadingStateSignal.value;
+          /* eslint-disable-next-line no-unused-expressions */
+          actionPrivateProps.loadRequestedSignal.value;
+          /* eslint-disable-next-line no-unused-expressions */
+          actionPrivateProps.dataSignal.value;
+          /* eslint-disable-next-line no-unused-expressions */
+          actionPrivateProps.errorSignal.value;
+        }
         updateActionDisplay();
       });
 
