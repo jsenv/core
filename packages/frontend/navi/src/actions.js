@@ -659,6 +659,8 @@ export const createAction = (callback, rootOptions = {}) => {
           parentChildActionWeakMap.set(nextParams, action);
         }
 
+        params = nextParams;
+        action.params = nextParams;
         action.name = generateActionName(name, nextParams);
         paramsSignal.value = nextParams;
         return true;
@@ -1012,6 +1014,8 @@ const createActionProxyFromSignal = (
       } else {
         actionTarget = actionRef.bindParams(params);
         if (previousTarget === actionTarget) {
+          // replaceParams might have updated the currentAction name
+          nameSignal.value = `[Proxy] ${currentAction.name}`;
           return;
         }
         currentAction = actionTarget;

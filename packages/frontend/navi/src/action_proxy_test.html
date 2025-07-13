@@ -231,7 +231,7 @@
         elements.proxyParams.textContent = JSON.stringify(paramsSignal.value);
         elements.proxyLoadingState.textContent = loadingStateSignal.value.id;
         elements.proxyLoadRequested.textContent = loadRequestedSignal.value;
-        elements.proxyData.textContent = dataSignal.value;
+        elements.proxyData.textContent = JSON.stringify(dataSignal.value);
         elements.proxyError.textContent = errorSignal.value || "null";
       }
 
