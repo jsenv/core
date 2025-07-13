@@ -66,19 +66,14 @@ export const arraySignalStore = (
     }
   });
 
-  const propertyChangeCallbackSetMap = new Map();
-  const registerPropertyChangeCallback = (property, callback) => {
-    const set = propertyChangeCallbackSetMap.get(property);
-    if (set) {
-      set.add(callback);
-    } else {
-      propertyChangeCallbackSetMap.set(property, new Set([callback]));
-    }
+  const propertyMutationCallbackSet = new Set();
+  const observeItemPropertyMutation = (callback) => {
+    propertyMutationCallbackSet.add(callback);
   };
 
-  const itemDropCallbackSet = new Set();
-  const registerItemDropCallback = (callback) => {
-    itemDropCallbackSet.add(callback);
+  const itemRemovedMutationCallbackSet = new Set();
+  const observeItemRemovedMutation = (callback) => {
+    itemRemovedMutationCallbackSet.add(callback);
   };
 
   const itemMatchLifecycleSet = new Set();
@@ -220,51 +215,59 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     return result;
   };
   const upsert = (...args) => {
-    const triggerPropertyChangeSet = new Set();
-    const triggerPropertyChanges = () => {
+    const propertyMutationArray = [];
+    const triggerPropertyMutations = () => {
+      if (propertyMutationArray.length === 0) {
+        return;
+      }
       // we call at the end so that itemWithProps and arraySignal.value was set too
-      for (const triggerPropertyChange of triggerPropertyChangeSet) {
-        triggerPropertyChange();
+      for (const propertyMutationCallback of propertyMutationCallbackSet) {
+        propertyMutationCallback(propertyMutationArray);
       }
     };
     const assign = (item, props) => {
-      let modified = false;
+      const itemOwnPropertyDescriptors = Object.getOwnPropertyDescriptors(item);
+      const itemOwnKeys = Object.keys(itemOwnPropertyDescriptors);
       const itemWithProps = Object.create(
         Object.getPrototypeOf(item),
-        Object.getOwnPropertyDescriptors(item),
+        itemOwnPropertyDescriptors,
       );
+      let hasChanges = false;
+
       for (const key of Object.keys(props)) {
         const newValue = props[key];
-        if (key in item) {
-          const value = item[key];
-          if (newValue !== value) {
-            modified = true;
+        if (itemOwnKeys.includes(key)) {
+          const oldValue = item[key];
+          if (newValue !== oldValue) {
+            hasChanges = true;
             itemWithProps[key] = newValue;
-            const propertyChangeCallbackSet =
-              propertyChangeCallbackSetMap.get(key);
-            if (propertyChangeCallbackSet) {
-              triggerPropertyChangeSet.add(() => {
-                for (const propertyChangeCallback of propertyChangeCallbackSet) {
-                  propertyChangeCallback(newValue, value, itemWithProps);
-                }
-              });
-            }
-          }
-        } else {
-          modified = true;
-          itemWithProps[key] = newValue;
-          const propertyChangeCallbackSet =
-            propertyChangeCallbackSetMap.get(key);
-          if (propertyChangeCallbackSet) {
-            triggerPropertyChangeSet.add(() => {
-              for (const propertyChangeCallback of propertyChangeCallbackSet) {
-                propertyChangeCallback(newValue, undefined, itemWithProps);
-              }
+            propertyMutationArray.push({
+              type: "property",
+              property: key,
+              oldValue,
+              newValue,
+              target: item,
+              newTarget: itemWithProps,
             });
           }
+        } else {
+          hasChanges = true;
+          itemWithProps[key] = newValue;
+          propertyMutationArray.push({
+            type: "property",
+            property: key,
+            added: true,
+            newValue,
+            target: item,
+            newTarget: itemWithProps,
+          });
         }
       }
-      return modified ? itemWithProps : item;
+
+      if (!hasChanges) {
+        return item;
+      }
+      return itemWithProps;
     };
 
     const array = arraySignal.peek();
@@ -324,7 +327,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
 
       if (hasNew || hasUpdate) {
         arraySignal.value = arraySomeUpdated;
-        triggerPropertyChanges();
+        triggerPropertyMutations();
         return arrayWithOnlyAffectedItems;
       }
       return arrayWithOnlyAffectedItems;
@@ -379,29 +382,34 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     }
     if (updatedItem) {
       arraySignal.value = arraySomeUpdated;
-      triggerPropertyChanges();
+      triggerPropertyMutations();
       return updatedItem;
     }
     const item = createItemFromProps(props);
     arraySomeUpdated.push(item);
     arraySignal.value = arraySomeUpdated;
-    triggerPropertyChanges();
+    triggerPropertyMutations();
     return item;
   };
   const drop = (...args) => {
+    const removedMutationArray = [];
+    const triggerRemovedMutations = () => {
+      if (removedMutationArray.length === 0) {
+        return;
+      }
+      // we call at the end so that itemWithProps and arraySignal.value was set too
+      for (const removedMutationCallback of itemRemovedMutationCallbackSet) {
+        removedMutationCallback(removedMutationArray);
+      }
+    };
+
     const array = arraySignal.peek();
     if (args.length === 1 && Array.isArray(args[0])) {
-      const triggerDropSet = new Set();
-      const triggerItemDrops = () => {
-        for (const triggerDrop of triggerDropSet) {
-          triggerDrop();
-        }
-      };
-
       const firstArg = args[0];
       const arrayWithoutDroppedItems = [];
       let hasFound = false;
       const idToRemoveSet = new Set();
+
       for (const value of firstArg) {
         if (typeof value === "object" && value !== null) {
           const id = readIdFromItemProps(value, array);
@@ -416,10 +424,9 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
         if (idToRemoveSet.has(existingItemId)) {
           hasFound = true;
           idToRemoveSet.delete(existingItemId);
-          triggerDropSet.add(() => {
-            for (const itemDropCallback of itemDropCallbackSet) {
-              itemDropCallback(existingItem);
-            }
+          removedMutationArray.push({
+            type: "removal",
+            target: existingItem,
           });
         } else {
           arrayWithoutDroppedItems.push(existingItem);
@@ -427,7 +434,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
       }
       if (hasFound) {
         arraySignal.value = arrayWithoutDroppedItems;
-        triggerItemDrops();
+        triggerRemovedMutations();
         return Array.from(idToRemoveSet);
       }
       return [];
@@ -463,9 +470,11 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     }
     if (found) {
       arraySignal.value = arrayWithoutItemToDrop;
-      for (const itemDropCallback of itemDropCallbackSet) {
-        itemDropCallback(itemDropped);
-      }
+      removedMutationArray.push({
+        type: "removal",
+        target: itemDropped,
+      });
+      triggerRemovedMutations();
       return itemDropped[idKey];
     }
     return null;
@@ -478,8 +487,8 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     upsert,
     drop,
 
-    registerPropertyChangeCallback,
-    registerItemDropCallback,
+    observeItemPropertyMutation,
+    observeItemRemovedMutation,
     registerItemMatchLifecycle,
   });
   return store;

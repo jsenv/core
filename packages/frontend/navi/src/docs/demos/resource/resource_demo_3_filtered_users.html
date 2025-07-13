@@ -158,14 +158,15 @@
       });
       USER.GET_MANY_FILTERED = USER.GET_MANY.bindParams(filtersSignal);
       USER.GET_MANY_FILTERED.load();
-      USER.store.registerPropertyChangeCallback(
-        "name",
-        (value, oldValue, user) => {
-          console.log(
-            `user ${user.id} name changed from "${oldValue}" to "${value}"`,
-          );
-        },
-      );
+      USER.store.observeItemPropertyMutation((mutations) => {
+        for (const { property, target, oldValue, newValue } of mutations) {
+          if (property === "name") {
+            console.log(
+              `user ${target.id} name changed from "${oldValue}" to "${newValue}"`,
+            );
+          }
+        }
+      });
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
