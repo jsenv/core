@@ -1,12 +1,18 @@
+export const MERGE_AS_PRIMITIVE_SYMBOL = Symbol("navi_merge_as_primitive");
+
 export const mergeTwoJsValues = (firstValue, secondValue) => {
   const firstIsPrimitive =
-    firstValue === null || typeof firstValue !== "object";
+    firstValue === null ||
+    typeof firstValue !== "object" ||
+    MERGE_AS_PRIMITIVE_SYMBOL in firstValue;
 
   if (firstIsPrimitive) {
     return secondValue;
   }
   const secondIsPrimitive =
-    secondValue === null || typeof secondValue !== "object";
+    secondValue === null ||
+    typeof secondValue !== "object" ||
+    MERGE_AS_PRIMITIVE_SYMBOL in secondValue;
   if (secondIsPrimitive) {
     return secondValue;
   }

@@ -413,7 +413,8 @@ ${lines.join("\n")}`);
   return [requestedResult, allResult];
 };
 
-const initialParamsDefault = {};
+const NO_PARAMS = {};
+const initialParamsDefault = NO_PARAMS;
 const metaDefault = {};
 
 const actionWeakMap = new WeakMap();
@@ -1008,7 +1009,7 @@ const createActionProxyFromSignal = (
       const previousTarget = actionTargetPreviousWeakRef?.deref();
       const params = proxyParamsSignal.value;
 
-      if (params === undefined) {
+      if (params === NO_PARAMS) {
         actionTarget = null;
         currentAction = actionRef;
         currentActionPrivateProperties = getActionPrivateProperties(actionRef);
@@ -1082,18 +1083,14 @@ const createActionProxyFromSignal = (
 };
 
 const generateActionName = (name, params) => {
-  const args = [];
-  if (params === null || typeof params !== "object") {
-    args.push(stringifyForDisplay(params));
-  } else {
-    const keys = Object.keys(params);
-    if (keys.length === 0) {
-    } else {
-      args.push(stringifyForDisplay(params));
-    }
+  if (params === NO_PARAMS) {
+    return `${name}({})`;
   }
-  const nameWithParams = args.length ? `${name}(${args.join(", ")})` : name;
-  return nameWithParams;
+  // Use stringifyForDisplay with asFunctionArgs option for the entire args array
+  const argsString = stringifyForDisplay([params], 2, 0, {
+    asFunctionArgs: true,
+  });
+  return `${name}${argsString}`;
 };
 
 if (import.meta.hot) {

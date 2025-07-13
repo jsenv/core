@@ -1,4 +1,10 @@
-export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
+export const stringifyForDisplay = (
+  value,
+  maxDepth = 2,
+  currentDepth = 0,
+  options = {},
+) => {
+  const { asFunctionArgs = false } = options;
   const indent = "  ".repeat(currentDepth);
   const nextIndent = "  ".repeat(currentDepth + 1);
 
@@ -31,23 +37,37 @@ export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
   }
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return "[]";
+    const openBracket = asFunctionArgs ? "(" : "[";
+    const closeBracket = asFunctionArgs ? ")" : "]";
+
+    if (value.length === 0) return `${openBracket}${closeBracket}`;
+
+    // Display arrays with only one element on a single line
+    if (value.length === 1) {
+      const item = stringifyForDisplay(
+        value[0],
+        maxDepth,
+        currentDepth + 1,
+        options,
+      );
+      return `${openBracket}${item}${closeBracket}`;
+    }
 
     if (value.length > MAX_ENTRIES) {
       const preview = value
         .slice(0, MAX_ENTRIES)
         .map(
           (v) =>
-            `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1)}`,
+            `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, options)}`,
         );
-      return `[\n${preview.join(",\n")},\n${nextIndent}...${value.length - MAX_ENTRIES} more\n${indent}]`;
+      return `${openBracket}\n${preview.join(",\n")},\n${nextIndent}...${value.length - MAX_ENTRIES} more\n${indent}${closeBracket}`;
     }
 
     const items = value.map(
       (v) =>
-        `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1)}`,
+        `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, options)}`,
     );
-    return `[\n${items.join(",\n")}\n${indent}]`;
+    return `${openBracket}\n${items.join(",\n")}\n${indent}${closeBracket}`;
   }
 
   if (typeof value === "object") {
@@ -55,7 +75,7 @@ export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
     if (signalType) {
       const signalValue = value.peek();
       const prefix = signalType === "computed" ? "computed" : "signal";
-      return `${prefix}(${stringifyForDisplay(signalValue, maxDepth, currentDepth)})`;
+      return `${prefix}(${stringifyForDisplay(signalValue, maxDepth, currentDepth, options)})`;
     }
 
     const entries = Object.entries(value);
@@ -80,14 +100,14 @@ export const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0) => {
         .slice(0, MAX_ENTRIES)
         .map(
           ([k, v]) =>
-            `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1)}`,
+            `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, options)}`,
         );
       return `{\n${preview.join(",\n")},\n${nextIndent}...${allEntries.length - MAX_ENTRIES} more\n${indent}}`;
     }
 
     const pairs = allEntries.map(
       ([k, v]) =>
-        `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1)}`,
+        `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, options)}`,
     );
     return `{\n${pairs.join(",\n")}\n${indent}}`;
   }
