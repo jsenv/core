@@ -1,11 +1,11 @@
 /**
  * Creates a WeakMap-like structure that supports both objects and primitives as keys,
- * with proper garbage collection and value-based comparison for objects.
+ * with proper garbage collection for objects and permanent caching for primitives.
  *
- * KEY IMPROVEMENT: Parameters (keys) cannot keep values alive!
- * - Uses WeakRef for both keys AND values in comparison cache
- * - Values can be GC'd even if parameter objects are still alive
- * - More aggressive cleanup to prevent memory leaks
+ * IMPORTANT: Primitive keys will cause memory to grow indefinitely!
+ * - Object keys: Proper weak references, can be garbage collected
+ * - Primitive keys: Strong references, preserved forever to maintain action identity
+ * - Use object keys when possible to avoid memory leaks
  */
 import { compareTwoJsValues } from "./compare_two_js_values.js";
 
@@ -16,8 +16,8 @@ export const createJsValueWeakMap = () => {
   // This prevents parameter objects from keeping actions alive
   const objectComparisonCache = new Map(); // keyWeakRef -> valueWeakRef
 
-  // Primitive keys cache (WeakMap doesn't support primitives)
-  const primitiveCache = new Map(); // primitive -> WeakRef<value>
+  // Primitive keys cache (strong references - memory will grow!)
+  const primitiveCache = new Map(); // primitive -> value (NOT WeakRef!)
 
   return {
     get(key) {
@@ -50,17 +50,8 @@ export const createJsValueWeakMap = () => {
         return undefined;
       }
 
-      // Handle primitive keys with immediate cleanup
-      const valueWeakRef = primitiveCache.get(key);
-      if (valueWeakRef) {
-        const value = valueWeakRef.deref();
-        if (value) {
-          return value;
-        }
-        // Dead reference, clean it up immediately
-        primitiveCache.delete(key);
-      }
-      return undefined;
+      // Handle primitive keys (no cleanup - permanent cache)
+      return primitiveCache.get(key);
     },
 
     set(key, value) {
@@ -75,9 +66,8 @@ export const createJsValueWeakMap = () => {
         const valueWeakRef = new WeakRef(value);
         objectComparisonCache.set(keyWeakRef, valueWeakRef);
       } else {
-        // Store primitive key with weak value reference
-        const valueWeakRef = new WeakRef(value);
-        primitiveCache.set(key, valueWeakRef);
+        // Store primitive key with strong reference (permanent cache)
+        primitiveCache.set(key, value);
       }
     },
 
@@ -100,12 +90,7 @@ export const createJsValueWeakMap = () => {
         return hadValue;
       }
       // Handle primitive deletion
-      const valueWeakRef = primitiveCache.get(key);
-      if (valueWeakRef) {
-        primitiveCache.delete(key);
-        return true;
-      }
-      return false;
+      return primitiveCache.delete(key);
     },
 
     // ✅ Enhanced debug information
@@ -129,15 +114,7 @@ export const createJsValueWeakMap = () => {
         }
       }
 
-      let primitiveAlive = 0;
-      let primitiveDead = 0;
-      for (const [, valueWeakRef] of primitiveCache) {
-        if (valueWeakRef.deref()) {
-          primitiveAlive++;
-        } else {
-          primitiveDead++;
-        }
-      }
+      let primitiveEntries = primitiveCache.size;
 
       return {
         objectDirectCacheSize: "unknown (WeakMap)",
@@ -149,11 +126,10 @@ export const createJsValueWeakMap = () => {
           keysDead,
         },
         primitive: {
-          total: primitiveCache.size,
-          alive: primitiveAlive,
-          dead: primitiveDead,
+          total: primitiveEntries,
+          note: "Primitive keys are never garbage collected - memory grows indefinitely!",
         },
-        gcStrategy: "value-driven cleanup (keys cannot keep values alive)",
+        gcStrategy: "objects: weak references, primitives: permanent cache",
       };
     },
   };
