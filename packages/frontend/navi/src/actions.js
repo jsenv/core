@@ -970,6 +970,9 @@ const createActionProxyFromSignal = (
   );
 
   const proxyPrivateProperties = {
+    get currentAction() {
+      return currentAction;
+    },
     paramsSignal: proxyParamsSignal,
     loadRequestedSignal: proxyPrivateSignal(
       "loadRequestedSignal",
@@ -1076,7 +1079,7 @@ const createActionProxyFromSignal = (
 const generateActionName = (name, params) => {
   const args = [];
   if (params === null || typeof params !== "object") {
-    args.push(params);
+    args.push(stringifyForDisplay(params));
   } else {
     const keys = Object.keys(params);
     if (keys.length === 0) {
