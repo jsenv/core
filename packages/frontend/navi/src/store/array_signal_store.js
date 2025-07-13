@@ -66,14 +66,14 @@ export const arraySignalStore = (
     }
   });
 
-  const propertyMutationCallbackSet = new Set();
-  const observeItemPropertyMutation = (callback) => {
-    propertyMutationCallbackSet.add(callback);
+  const propertiesCallbackSet = new Set();
+  const observeProperties = (callback) => {
+    propertiesCallbackSet.add(callback);
   };
 
-  const itemRemovedMutationCallbackSet = new Set();
-  const observeItemRemovedMutation = (callback) => {
-    itemRemovedMutationCallbackSet.add(callback);
+  const removalsCallbackSet = new Set();
+  const observeRemovals = (callback) => {
+    removalsCallbackSet.add(callback);
   };
 
   const itemMatchLifecycleSet = new Set();
@@ -215,14 +215,14 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     return result;
   };
   const upsert = (...args) => {
-    const propertyMutationArray = [];
+    const propertyMutations = {};
     const triggerPropertyMutations = () => {
-      if (propertyMutationArray.length === 0) {
+      if (Object.keys(propertyMutations).length === 0) {
         return;
       }
       // we call at the end so that itemWithProps and arraySignal.value was set too
-      for (const propertyMutationCallback of propertyMutationCallbackSet) {
-        propertyMutationCallback(propertyMutationArray);
+      for (const propertiesCallback of propertiesCallbackSet) {
+        propertiesCallback(propertyMutations);
       }
     };
     const assign = (item, props) => {
@@ -241,26 +241,22 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
           if (newValue !== oldValue) {
             hasChanges = true;
             itemWithProps[key] = newValue;
-            propertyMutationArray.push({
-              type: "property",
-              property: key,
+            propertyMutations[key] = {
               oldValue,
               newValue,
               target: item,
               newTarget: itemWithProps,
-            });
+            };
           }
         } else {
           hasChanges = true;
           itemWithProps[key] = newValue;
-          propertyMutationArray.push({
-            type: "property",
-            property: key,
+          propertyMutations[key] = {
             added: true,
             newValue,
             target: item,
             newTarget: itemWithProps,
-          });
+          };
         }
       }
 
@@ -392,14 +388,14 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     return item;
   };
   const drop = (...args) => {
-    const removedMutationArray = [];
+    const removedItemArray = [];
     const triggerRemovedMutations = () => {
-      if (removedMutationArray.length === 0) {
+      if (removedItemArray.length === 0) {
         return;
       }
       // we call at the end so that itemWithProps and arraySignal.value was set too
-      for (const removedMutationCallback of itemRemovedMutationCallbackSet) {
-        removedMutationCallback(removedMutationArray);
+      for (const removalsCallback of removalsCallbackSet) {
+        removalsCallback(removedItemArray);
       }
     };
 
@@ -424,10 +420,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
         if (idToRemoveSet.has(existingItemId)) {
           hasFound = true;
           idToRemoveSet.delete(existingItemId);
-          removedMutationArray.push({
-            type: "removal",
-            target: existingItem,
-          });
+          removedItemArray.push(existingItem);
         } else {
           arrayWithoutDroppedItems.push(existingItem);
         }
@@ -470,10 +463,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     }
     if (found) {
       arraySignal.value = arrayWithoutItemToDrop;
-      removedMutationArray.push({
-        type: "removal",
-        target: itemDropped,
-      });
+      removedItemArray.push(itemDropped);
       triggerRemovedMutations();
       return itemDropped[idKey];
     }
@@ -487,8 +477,8 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     upsert,
     drop,
 
-    observeItemPropertyMutation,
-    observeItemRemovedMutation,
+    observeProperties,
+    observeRemovals,
     registerItemMatchLifecycle,
   });
   return store;

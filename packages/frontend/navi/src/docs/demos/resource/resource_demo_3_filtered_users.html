@@ -158,13 +158,13 @@
       });
       USER.GET_MANY_FILTERED = USER.GET_MANY.bindParams(filtersSignal);
       USER.GET_MANY_FILTERED.load();
-      USER.store.observeItemPropertyMutation((mutations) => {
-        for (const { property, target, oldValue, newValue } of mutations) {
-          if (property === "name") {
-            console.log(
-              `user ${target.id} name changed from "${oldValue}" to "${newValue}"`,
-            );
-          }
+      USER.store.observeProperties((mutations) => {
+        const nameMutation = mutations.name;
+        if (nameMutation) {
+          const { target, oldValue, newValue } = nameMutation;
+          console.log(
+            `user ${target.id} name changed from "${oldValue}" to "${newValue}"`,
+          );
         }
       });
 
