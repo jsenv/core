@@ -748,6 +748,7 @@ export const createAction = (callback, rootOptions = {}) => {
         let rejected = false;
         let rejectedValue;
         const onLoadEnd = () => {
+          signal.removeEventListener("abort", onabort);
           dataSignal.value = loadResult;
           loadingStateSignal.value = LOADED;
           preloadedProtectionRegistry.unprotect(action);
