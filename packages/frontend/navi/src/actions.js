@@ -206,6 +206,28 @@ export const updateActions = ({
   reloadSet = new Set(),
   unloadSet = new Set(),
 } = {}) => {
+  /*
+   * Action update flow:
+   *
+   * Input: 4 sets of requested operations
+   * - preloadSet: actions to preload (background, low priority)
+   * - loadSet: actions to load (user-visible, medium priority)
+   * - reloadSet: actions to force reload (highest priority)
+   * - unloadSet: actions to unload/abort
+   *
+   * Priority resolution:
+   * - unload always wins (explicit cleanup)
+   * - reload > load > preload (reload forces refresh even if already loaded)
+   * - An action in multiple sets triggers warnings in dev mode
+   *
+   * Output: Internal operation sets that track what will actually happen
+   * - willUnloadSet: actions that will be unloaded/aborted
+   * - willPreloadSet: actions that will be preloaded
+   * - willLoadSet: actions that will be loaded
+   * - willPromoteSet: preloaded actions that become load-requested
+   * - stays*Set: actions that remain in their current state
+   */
+
   if (!signal) {
     const abortController = new AbortController();
     signal = abortController.signal;
@@ -243,96 +265,104 @@ export const updateActions = ({
       ...(preloadSet.size ? [formatActionSet("preload", preloadSet)] : []),
       ...(loadSet.size ? [formatActionSet("load", loadSet)] : []),
       ...(reloadSet.size ? [formatActionSet("reload", reloadSet)] : []),
-      ...(unloadSet.size ? [formatActionSet("reload", unloadSet)] : []),
+      ...(unloadSet.size ? [formatActionSet("unload", unloadSet)] : []),
     ];
     console.debug(
-      `${lines.join("\n")}
+      `requested operations:
+${lines.join("\n")}
 - meta: { reason: ${reason}, isReplace: ${isReplace} }`,
     );
   }
-  const toUnloadSet = new Set();
-  const toPreloadSet = new Set();
-  const toLoadSet = new Set();
-  const toPromoteSet = new Set();
+
+  // Internal sets that track what operations will actually be performed
+  const willUnloadSet = new Set();
+  const willPreloadSet = new Set();
+  const willLoadSet = new Set();
+  const willPromoteSet = new Set(); // preloaded -> load requested
   const staysLoadingSet = new Set();
   const staysAbortedSet = new Set();
   const staysFailedSet = new Set();
   const staysLoadedSet = new Set();
-  list_to_unload: {
+
+  // Step 1: Determine which actions will be unloaded
+  collect_actions_to_unload: {
     for (const actionToUnload of unloadSet) {
       if (actionToUnload.loadingState !== IDLE) {
-        toUnloadSet.add(actionToUnload);
+        willUnloadSet.add(actionToUnload);
       }
     }
   }
-  list_to_preload_and_to_load: {
-    const onActionToLoadOrPreload = (
-      actionToLoadOrPreload,
-      isPreload,
-      isReload = false,
+
+  // Step 2: Process preload, load, and reload sets
+  collect_actions_to_preload_and_load: {
+    const handleActionRequest = (
+      action,
+      requestType, // "preload", "load", or "reload"
     ) => {
-      if (
-        actionToLoadOrPreload.loadingState === LOADING ||
-        actionToLoadOrPreload.loadingState === LOADED
-      ) {
-        // by default when an action is already loading/loaded
-        // requesting to load it does nothing so that:
-        // - clicking a link already active in the UI does nothing
-        // - requesting to load an action already pending does not abort + reload it
-        //   (instead it stays pending)
-        //   only trying to load this action with other params
-        //   would abort the current one and load an other.
-        // in order to load the same action code has to do one of:
-        // - unload it first
-        // - request unload + load at the same time
-        // - use reload to force reload this action
-        if (isReload || toUnloadSet.has(actionToLoadOrPreload)) {
-          toUnloadSet.add(actionToLoadOrPreload);
+      const isPreload = requestType === "preload";
+      const isReload = requestType === "reload";
+
+      if (action.loadingState === LOADING || action.loadingState === LOADED) {
+        // Action is already loading/loaded
+        // By default, we don't interfere with already active actions
+        // Unless it's a reload or the action is also being unloaded
+        if (isReload || willUnloadSet.has(action)) {
+          // Force unload first, then reload/load
+          willUnloadSet.add(action);
           if (isPreload) {
-            toPreloadSet.add(actionToLoadOrPreload);
+            willPreloadSet.add(action);
           } else {
-            toLoadSet.add(actionToLoadOrPreload);
+            willLoadSet.add(action);
           }
         }
+        // Otherwise, ignore the request (action stays as-is)
       } else if (isPreload) {
-        toPreloadSet.add(actionToLoadOrPreload);
+        willPreloadSet.add(action);
       } else {
-        toLoadSet.add(actionToLoadOrPreload);
+        willLoadSet.add(action);
       }
     };
+
+    // Process preloadSet (lowest priority)
     for (const actionToPreload of preloadSet) {
       if (loadSet.has(actionToPreload) || reloadSet.has(actionToPreload)) {
-        // load/reload wins over preload
+        // load/reload wins over preload - skip preload
         continue;
       }
-      onActionToLoadOrPreload(actionToPreload, true);
+      handleActionRequest(actionToPreload, "preload");
     }
+
+    // Process loadSet (medium priority)
     for (const actionToLoad of loadSet) {
       if (reloadSet.has(actionToLoad)) {
-        // reload wins over load
+        // reload wins over load - skip load
         continue;
       }
       if (!actionToLoad.loadRequested && actionToLoad.loadingState !== IDLE) {
-        // was preloaded but is not requested to load
-        // -> can move to load requested
-        toPromoteSet.add(actionToLoad);
+        // Special case: action was preloaded but not yet requested to load
+        // Just promote it to "load requested" without reloading
+        willPromoteSet.add(actionToLoad);
         continue;
       }
-      onActionToLoadOrPreload(actionToLoad, false);
+      handleActionRequest(actionToLoad, "load");
     }
+
+    // Process reloadSet (highest priority)
     for (const actionToReload of reloadSet) {
-      onActionToLoadOrPreload(actionToReload, false, true);
+      handleActionRequest(actionToReload, "reload");
     }
   }
   const allThenableArray = [];
   const requestedThenableArray = [];
-  list_stays_loading_and_stays_loaded: {
+
+  // Step 3: Determine which actions will stay in their current state
+  collect_actions_that_stay: {
     for (const actionLoading of loadingSet) {
-      if (toUnloadSet.has(actionLoading)) {
+      if (willUnloadSet.has(actionLoading)) {
         // will be unloaded (aborted), we don't want to wait
       } else if (
-        toLoadSet.has(actionLoading) ||
-        toPreloadSet.has(actionLoading)
+        willLoadSet.has(actionLoading) ||
+        willPreloadSet.has(actionLoading)
       ) {
         // will be loaded, we'll wait for the new load promise
       } else {
@@ -343,7 +373,7 @@ export const updateActions = ({
       }
     }
     for (const actionLoaded of settledSet) {
-      if (toUnloadSet.has(actionLoaded)) {
+      if (willUnloadSet.has(actionLoaded)) {
         // will be unloaded
       } else if (actionLoaded.loadingState === ABORTED) {
         staysAbortedSet.add(actionLoaded);
@@ -356,14 +386,16 @@ export const updateActions = ({
   }
   if (DEBUG) {
     const lines = [
-      ...(toUnloadSet.size ? [formatActionSet("to unload", toUnloadSet)] : []),
-      ...(toPreloadSet.size
-        ? [formatActionSet("to preload", toPreloadSet)]
+      ...(willUnloadSet.size
+        ? [formatActionSet("will unload", willUnloadSet)]
         : []),
-      ...(toPromoteSet.size
-        ? [formatActionSet("to promote", toPromoteSet)]
+      ...(willPreloadSet.size
+        ? [formatActionSet("will preload", willPreloadSet)]
         : []),
-      ...(toLoadSet.size ? [formatActionSet("to load", toLoadSet)] : []),
+      ...(willPromoteSet.size
+        ? [formatActionSet("will promote", willPromoteSet)]
+        : []),
+      ...(willLoadSet.size ? [formatActionSet("will load", willLoadSet)] : []),
       ...(staysLoadingSet.size
         ? [formatActionSet("stays loading", staysLoadingSet)]
         : []),
@@ -377,19 +409,22 @@ export const updateActions = ({
         ? [formatActionSet("stays loaded", staysLoadedSet)]
         : []),
     ];
-    console.debug(`situation before updating actions:
+    console.debug(`operations that will be performed:
 ${lines.join("\n")}`);
   }
 
-  peform_unloads: {
-    for (const actionToUnload of toUnloadSet) {
+  // Step 4: Execute unloads
+  execute_unloads: {
+    for (const actionToUnload of willUnloadSet) {
       const actionToUnloadPrivateProperties =
         getActionPrivateProperties(actionToUnload);
       actionToUnloadPrivateProperties.performUnload({ reason });
       activationWeakSet.delete(actionToUnload);
     }
   }
-  perform_preloads_and_loads: {
+
+  // Step 5: Execute preloads and loads
+  execute_preloads_and_loads: {
     const onActionToLoadOrPreload = (actionToPreloadOrLoad, isPreload) => {
       if (import.meta.dev && actionToPreloadOrLoad.isProxy) {
         // maybe remove this check one the API is stable because
@@ -416,13 +451,19 @@ ${lines.join("\n")}`);
         // sync actions are already done, no need to wait
       }
     };
-    for (const actionToPreload of toPreloadSet) {
+
+    // Execute preloads
+    for (const actionToPreload of willPreloadSet) {
       onActionToLoadOrPreload(actionToPreload, true);
     }
-    for (const actionToLoad of toLoadSet) {
+
+    // Execute loads
+    for (const actionToLoad of willLoadSet) {
       onActionToLoadOrPreload(actionToLoad, false);
     }
-    for (const actionToPromote of toPromoteSet) {
+
+    // Execute promotions (preload -> load requested)
+    for (const actionToPromote of willPromoteSet) {
       const actionToPromotePrivateProperties =
         getActionPrivateProperties(actionToPromote);
       actionToPromotePrivateProperties.loadRequestedSignal.value = true;
