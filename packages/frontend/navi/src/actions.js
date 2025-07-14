@@ -915,7 +915,7 @@ const createActionProxyFromSignal = (
   let isFirstEffect = true;
 
   const _updateTarget = (params) => {
-    const previousTarget = actionTargetPreviousWeakRef?.deref();
+    const previousActionTarget = actionTargetPreviousWeakRef?.deref();
 
     if (params === NO_PARAMS) {
       actionTarget = null;
@@ -923,7 +923,7 @@ const createActionProxyFromSignal = (
       currentActionPrivateProperties = getActionPrivateProperties(action);
     } else {
       actionTarget = action.bindParams(params);
-      if (previousTarget === actionTarget) {
+      if (previousActionTarget === actionTarget) {
         return;
       }
       currentAction = actionTarget;
@@ -936,19 +936,16 @@ const createActionProxyFromSignal = (
     actionTargetPreviousWeakRef = actionTarget
       ? new WeakRef(actionTarget)
       : null;
-    triggerTargetChange(actionTarget, previousTarget);
+    triggerTargetChange(actionTarget, previousActionTarget);
   };
 
   const proxyMethod = (method) => {
     return (...args) => {
       /*
-       * This ensures the proxy always targets the correct action, preventing a race condition.
-       * It's possible for an external effect to run before our internal effect that
-       * syncs the action with its params. This call guarantees the target is updated
-       * "just-in-time" before any method is executed.
-       *
-       * We use peek() to avoid creating a reactive dependency on the params signal
-       * within this method, as it's intended to be a passthrough.
+       * Ensure the proxy targets the correct action before method execution.
+       * This prevents race conditions where external effects run before our
+       * internal parameter synchronization effect. Using peek() avoids creating
+       * reactive dependencies within this pass-through method.
        */
       _updateTarget(proxyParamsSignal.peek());
       return currentAction[method](...args);
