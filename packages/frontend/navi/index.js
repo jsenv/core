@@ -22,3 +22,6 @@ export { Field } from "./src/components/input/field.jsx";
 export { Input } from "./src/components/input/input.jsx";
 export { RadioList } from "./src/components/input/radio_list.jsx";
 export { Link } from "./src/components/link/link.jsx";
+
+// routing
+export { createRoute, useRouteStatus } from "./src/routing/route.js";

@@ -1,6 +1,11 @@
-import { ActionRenderer, createAction, useActionStatus } from "@jsenv/navi";
+import {
+  ActionRenderer,
+  createAction,
+  createRoute,
+  useActionStatus,
+  useRouteStatus,
+} from "@jsenv/navi";
 import { render } from "preact";
-import { createRoute } from "./route.js";
 import { setupRoutingViaHistory } from "./routing_via_history.js";
 
 setupRoutingViaHistory(() => {});
@@ -14,6 +19,8 @@ const pageRoute = createRoute("page/:pageName");
 const loadPageFromUrlAction = pageRoute.bindAction(loadPageAction);
 
 const RouteStatus = ({ route }) => {
+  const { active, params } = useRouteStatus(route);
+
   return (
     <div
       style={{
@@ -32,13 +39,11 @@ const RouteStatus = ({ route }) => {
         <strong>Current URL:</strong> {route.relativeUrl}
       </div>
       <div>
-        <strong>Matches:</strong> {route.matches ? "✅ Yes" : "❌ No"}
+        <strong>Active:</strong> {active ? "✅ Yes" : "❌ No"}
       </div>
-      {route.matches && (
-        <div>
-          <strong>Params:</strong> {JSON.stringify(route.params)}
-        </div>
-      )}
+      <div>
+        <strong>Params:</strong> {JSON.stringify(params)}
+      </div>
     </div>
   );
 };

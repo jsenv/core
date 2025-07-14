@@ -50,13 +50,13 @@ export const ActionRenderer = ({ action, children }) => {
       "ActionRenderer requires an action to render, but none was provided.",
     );
   }
-  const { idle, pending, aborted, error, data } = useActionStatus(action);
+  const { idle, loading, aborted, error, data } = useActionStatus(action);
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
 
   useLayoutEffect(() => {
     resetErrorBoundary();
-  }, [action, pending, idle, resetErrorBoundary]);
+  }, [action, loading, idle, resetErrorBoundary]);
 
   useLayoutEffect(() => {
     UIRenderedPromise.resolve();
@@ -88,7 +88,7 @@ export const ActionRenderer = ({ action, children }) => {
       renderLoadedSafe = renderLoadedDefault;
     }
   }
-  if (pending) {
+  if (loading) {
     if (action.canDisplayOldData && data !== undefined) {
       return renderLoadedSafe(data, action);
     }
