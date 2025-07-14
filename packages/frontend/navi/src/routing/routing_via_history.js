@@ -92,10 +92,10 @@ export const setupRoutingViaHistory = (applyRouting) => {
       return;
     }
     if (replace) {
-      window.history.replaceState(state, null, url);
-    } else {
-      window.history.pushState(state, null, url);
+      replaceDocumentState(state);
+      return;
     }
+    window.history.pushState(state, null, url);
     handleRouting({ url, state });
   };
   const stopLoad = () => {
@@ -111,7 +111,12 @@ export const setupRoutingViaHistory = (applyRouting) => {
     }
   };
   const reload = () => {
-    window.history.replaceState(null, null, documentUrlSignal.peek());
+    const url = window.location.href;
+    const state = history.state;
+    applyRouting({
+      url,
+      state,
+    });
   };
   const goBack = () => {
     window.history.back();
@@ -120,5 +125,25 @@ export const setupRoutingViaHistory = (applyRouting) => {
     window.history.forward();
   };
 
-  return { goTo, stopLoad, reload, goBack, goForward };
+  const getDocumentState = () => {
+    return { ...window.history.state };
+  };
+  const replaceDocumentState = (newState) => {
+    const url = window.location.href;
+    window.history.replaceState(newState, null, url);
+    applyRouting({
+      url,
+      state: newState,
+    });
+  };
+
+  return {
+    goTo,
+    stopLoad,
+    reload,
+    goBack,
+    goForward,
+    getDocumentState,
+    replaceDocumentState,
+  };
 };
