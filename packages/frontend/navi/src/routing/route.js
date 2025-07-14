@@ -104,48 +104,32 @@ export const createRoute = (urlPatternInput) => {
 const routePreviousStateMap = new WeakMap();
 
 export const applyRouting = (url) => {
-  const updateCallbackSet = new Set();
-  const toLoadSet = new Set();
-  const toReloadSet = new Set();
-
+  const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
-    const { urlPattern, activeSignal, paramsSignal, boundActionSet } =
-      getRoutePrivateProperties(route);
+    const routePrivateProperties = getRoutePrivateProperties(route);
+    const { urlPattern } = routePrivateProperties;
 
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
       active: false,
       params: NO_PARAMS,
     };
-
+    const oldActive = previousState.active;
+    const oldParams = previousState.params;
     // Check if the URL matches the route pattern
     const match = urlPattern.exec(url);
     const newActive = Boolean(match);
     const newParams = match ? extractParams(urlPattern, url) : NO_PARAMS;
 
-    // Detect state changes
-    const becomesActive = newActive && !previousState.active;
-    const paramsChangedWhileActive =
-      newActive && previousState.active && newParams !== previousState.params;
-
-    // Update route signals
-    updateCallbackSet.add(() => {
-      activeSignal.value = newActive;
-      paramsSignal.value = newParams;
-      route.active = newActive;
-      route.params = newParams;
-    });
-
-    // Handle bound actions
-    for (const actionProxy of boundActionSet) {
-      const currentAction = actionProxy.getCurrentAction();
-      if (becomesActive) {
-        toLoadSet.add(currentAction);
-      } else if (paramsChangedWhileActive) {
-        toReloadSet.add(currentAction);
-      }
-    }
-
+    const routeMatchInfo = {
+      route,
+      routePrivateProperties,
+      oldActive,
+      newActive,
+      oldParams,
+      newParams,
+    };
+    routeMatchInfoSet.add(routeMatchInfo);
     // Store current state for next comparison
     routePreviousStateMap.set(route, {
       active: newActive,
@@ -155,16 +139,54 @@ export const applyRouting = (url) => {
 
   // Apply all signal updates in a batch
   batch(() => {
-    for (const updateCallback of updateCallbackSet) {
-      updateCallback();
+    for (const {
+      route,
+      routePrivateProperties,
+      newActive,
+      newParams,
+    } of routeMatchInfoSet) {
+      const { activeSignal, paramsSignal } = routePrivateProperties;
+      activeSignal.value = newActive;
+      paramsSignal.value = newParams;
+      route.active = newActive;
+      route.params = newParams;
     }
   });
+
+  // must be after paramsSignal.value udpate to ensure the proxy target is set
+  // (so after the batch call)
+  const toLoadSet = new Set();
+  const toReloadSet = new Set();
+  for (const {
+    routePrivateProperties,
+    newActive,
+    oldActive,
+    newParams,
+    oldParams,
+  } of routeMatchInfoSet) {
+    const { boundActionSet } = routePrivateProperties;
+    const becomesActive = newActive && !oldActive;
+    if (becomesActive) {
+      for (const actionProxy of boundActionSet) {
+        const currentAction = actionProxy.getCurrentAction();
+        toLoadSet.add(currentAction);
+      }
+      continue;
+    }
+    const paramsChangedWhileActive =
+      newActive && oldActive && newParams !== oldParams;
+    if (paramsChangedWhileActive) {
+      for (const actionProxy of boundActionSet) {
+        const currentAction = actionProxy.getCurrentAction();
+        toReloadSet.add(currentAction);
+      }
+    }
+  }
 
   if (toLoadSet.size === 0 && toReloadSet.size === 0) {
     return false;
   }
   return requestActionsUpdates({
-    signal,
     loadSet: toLoadSet,
     reloadSet: toReloadSet,
     reason: `Document navigating to ${url}`,
