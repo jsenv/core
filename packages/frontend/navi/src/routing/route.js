@@ -1,4 +1,5 @@
-import { computed, effect } from "@preact/signals";
+import { computed } from "@preact/signals";
+import { weakEffect } from "../utils/weak_effect.js";
 import { documentUrlSignal } from "./document_url_signal.js";
 
 const baseUrl = import.meta.dev
@@ -102,25 +103,16 @@ export const createRoute = (urlPatternInput) => {
 
   const bindAction = (action) => {
     const actionBoundToUrl = action.bindParams(paramsSignal);
-    const actionWeakRef = new WeakRef(actionBoundToUrl);
 
     let wasActive = false;
     let lastParams = null;
     let previousRelativeUrl = null;
 
     // Watch for route activation/deactivation and param changes
-    const unsubscribe = effect(() => {
+    const unsubscribe = weakEffect([actionBoundToUrl], (currentAction) => {
       const isActive = activeSignal.value;
       const currentParams = paramsSignal.value;
       const currentRelativeUrl = relativeUrlSignal.value;
-
-      // Check if the action is still alive
-      const currentAction = actionWeakRef.deref();
-      if (!currentAction) {
-        // Action was garbage collected, clean up the effect
-        unsubscribe();
-        return;
-      }
 
       if (isActive && !wasActive) {
         // First time route matches - load

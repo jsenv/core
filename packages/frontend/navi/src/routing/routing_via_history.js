@@ -8,7 +8,35 @@ import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
 export const setupRoutingViaHistory = (applyRouting) => {
   const { history } = window;
 
-  updateDocumentUrl(window.location.href);
+  let stopAbortController = new AbortController();
+  const abortStopSignal = (reason) => {
+    stopAbortController.abort(reason);
+    stopAbortController = new AbortController();
+  };
+
+  let abortController = null;
+  const handleRouting = ({ url, state }) => {
+    if (abortController) {
+      abortController.abort(`navigating to ${url}`);
+    }
+    abortController = new AbortController();
+    routingWhile(
+      () => {
+        const result = applyRouting({
+          signal: abortController.signal,
+          stopSignal: stopAbortController.signal,
+          url,
+          state,
+        });
+        return result;
+      },
+      {
+        onFinally: () => {
+          abortController = undefined;
+        },
+      },
+    );
+  };
 
   window.addEventListener(
     "click",
@@ -17,7 +45,13 @@ export const setupRoutingViaHistory = (applyRouting) => {
         const href = e.target.href;
         if (href && href.startsWith(window.location.origin)) {
           e.preventDefault();
-          history.pushState(null, null, e.target.href);
+          const url = e.target.href;
+          history.pushState(null, null, url);
+          updateDocumentUrl(url);
+          handleRouting({
+            url,
+            state: history.state,
+          });
         }
       }
     },
@@ -33,40 +67,22 @@ export const setupRoutingViaHistory = (applyRouting) => {
     { capture: true },
   );
 
-  let stopAbortController = new AbortController();
-  const abortStopSignal = (reason) => {
-    stopAbortController.abort(reason);
-    stopAbortController = new AbortController();
-  };
-
-  let popstateAbortController = null;
-  window.addEventListener("popstate", async (popstateEvent) => {
+  window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;
     const state = popstateEvent.state;
-    if (popstateAbortController) {
-      popstateAbortController.abort(`navigating to ${url}`);
-    }
-    popstateAbortController = new AbortController();
-
     updateDocumentUrl(url);
-    routingWhile(
-      () => {
-        const result = applyRouting({
-          signal: popstateAbortController.signal,
-          stopSignal: stopAbortController.signal,
-          url,
-          state,
-        });
-        return result;
-      },
-      {
-        onFinally: () => {
-          popstateAbortController = undefined;
-        },
-      },
-    );
+    handleRouting({
+      url,
+      state,
+    });
   });
-  history.replaceState(null, null, window.location.href);
+  const url = window.location.href;
+  updateDocumentUrl(url);
+  history.replaceState(null, null, url);
+  handleRouting({
+    url,
+    state: history.state,
+  });
 
   const goTo = async (url, { state, replace } = {}) => {
     const currentUrl = documentUrlSignal.peek();
@@ -78,6 +94,17 @@ export const setupRoutingViaHistory = (applyRouting) => {
     } else {
       window.history.pushState(state, null, url);
     }
+    // Manually trigger routing since pushState/replaceState don't fire popstate
+    updateDocumentUrl(url);
+    routingWhile(() => {
+      const result = applyRouting({
+        signal: new AbortController().signal,
+        stopSignal: stopAbortController.signal,
+        url,
+        state,
+      });
+      return result;
+    });
   };
   const stopLoad = () => {
     const documentIsLoading = documentIsLoadingSignal.value;
