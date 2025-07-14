@@ -92,10 +92,10 @@ export const setupRoutingViaHistory = (applyRouting) => {
       return;
     }
     if (replace) {
-      replaceDocumentState(state);
-      return;
+      window.history.replaceState(state, null, url);
+    } else {
+      window.history.pushState(state, null, url);
     }
-    window.history.pushState(state, null, url);
     handleRouting({ url, state });
   };
   const stopLoad = () => {
@@ -113,7 +113,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
   const reload = () => {
     const url = window.location.href;
     const state = history.state;
-    applyRouting({
+    handleRouting({
       url,
       state,
     });
@@ -126,12 +126,12 @@ export const setupRoutingViaHistory = (applyRouting) => {
   };
 
   const getDocumentState = () => {
-    return { ...window.history.state };
+    return window.history.state ? { ...window.history.state } : null;
   };
   const replaceDocumentState = (newState) => {
     const url = window.location.href;
     window.history.replaceState(newState, null, url);
-    applyRouting({
+    handleRouting({
       url,
       state: newState,
     });
