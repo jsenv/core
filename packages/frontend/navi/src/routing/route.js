@@ -103,7 +103,7 @@ export const createRoute = (urlPatternInput) => {
 // Store previous route states to detect changes
 const routePreviousStateMap = new WeakMap();
 
-export const applyRouting = (url, options = {}) => {
+export const applyRouting = (url) => {
   const updateCallbackSet = new Set();
   const toLoadSet = new Set();
   const toReloadSet = new Set();
@@ -160,30 +160,15 @@ export const applyRouting = (url, options = {}) => {
     }
   });
 
-  // Handle action updates if any
-  const promises = [];
-  const { signal, reason } = options;
-
-  if (toLoadSet.size > 0) {
-    const loadPromise = requestActionsUpdates({
-      signal,
-      loadSet: toLoadSet,
-      reason: reason || `Loading actions for route ${url}`,
-    });
-    if (loadPromise) promises.push(loadPromise);
+  if (toLoadSet.size === 0 && toReloadSet.size === 0) {
+    return false;
   }
-
-  if (toReloadSet.size > 0) {
-    const reloadPromise = requestActionsUpdates({
-      signal,
-      loadSet: toReloadSet,
-      isReload: true,
-      reason: reason || `Reloading actions for route ${url}`,
-    });
-    if (reloadPromise) promises.push(reloadPromise);
-  }
-
-  return promises.length > 0 ? Promise.all(promises) : null;
+  return requestActionsUpdates({
+    signal,
+    loadSet: toLoadSet,
+    reloadSet: toReloadSet,
+    reason: `Document navigating to ${url}`,
+  });
 };
 
 const extractParams = (urlPattern, url) => {

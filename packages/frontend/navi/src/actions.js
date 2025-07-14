@@ -99,12 +99,24 @@ const preloadedProtectionRegistry = (() => {
   };
 })();
 
+const formatActionSet = (prefix, actionSet) => {
+  let message = "";
+  message += `- ${prefix}:`;
+  for (const action of actionSet) {
+    message += "\n";
+    message += prefixFirstAndIndentRemainingLines(String(action), {
+      prefix: "  -",
+    });
+  }
+  return message;
+};
+
 // intermediate function representing the fact we'll use navigation.navigate update action and get a signal
 export const requestActionsUpdates = ({
   preloadSet,
   loadSet,
+  reloadSet,
   unloadSet,
-  isReload,
   reason,
 }) => {
   const signal = new AbortController().signal;
@@ -117,17 +129,16 @@ export const requestActionsUpdates = ({
     signal,
     preloadSet,
     loadSet,
+    reloadSet,
     unloadSet,
-    isReload,
     reason,
   });
   return requestedResult;
 };
 export const reloadActions = async (actionSet, { reason } = {}) => {
   return requestActionsUpdates({
-    loadSet: actionSet,
+    reloadSet: actionSet,
     reason,
-    isReload: true,
   });
 };
 export const abortPendingActions = (
@@ -188,11 +199,11 @@ if (import.meta.dev) {
 
 export const updateActions = ({
   signal,
-  isReload = false,
   isReplace = false,
   reason,
   preloadSet = new Set(),
   loadSet = new Set(),
+  reloadSet = new Set(),
   unloadSet = new Set(),
 } = {}) => {
   if (!signal) {
@@ -202,22 +213,41 @@ export const updateActions = ({
 
   const { loadingSet, settledSet } = getActivationInfo();
 
+  // Warn about overlapping sets in development
+  if (import.meta.dev) {
+    const allSets = [
+      { name: "preload", set: preloadSet },
+      { name: "load", set: loadSet },
+      { name: "reload", set: reloadSet },
+      { name: "unload", set: unloadSet },
+    ];
+
+    for (let i = 0; i < allSets.length; i++) {
+      for (let j = i + 1; j < allSets.length; j++) {
+        const setA = allSets[i];
+        const setB = allSets[j];
+        for (const action of setA.set) {
+          if (setB.set.has(action)) {
+            console.warn(
+              `Action "${action}" is found in both ${setA.name}Set and ${setB.name}Set. This may lead to unexpected behavior.`,
+            );
+          }
+        }
+      }
+    }
+  }
+
   if (DEBUG) {
     console.group(`updateActions()`);
     const lines = [
-      ...(preloadSet.size
-        ? [`- preload requested: ${Array.from(preloadSet).join(", ")}`]
-        : []),
-      ...(loadSet.size
-        ? [`- load requested: ${Array.from(loadSet).join(", ")}`]
-        : []),
-      ...(unloadSet.size
-        ? [`- unload requested: ${Array.from(unloadSet).join(", ")}`]
-        : []),
+      ...(preloadSet.size ? [formatActionSet("preload", preloadSet)] : []),
+      ...(loadSet.size ? [formatActionSet("load", loadSet)] : []),
+      ...(reloadSet.size ? [formatActionSet("reload", reloadSet)] : []),
+      ...(unloadSet.size ? [formatActionSet("reload", unloadSet)] : []),
     ];
     console.debug(
       `${lines.join("\n")}
-- meta: { reason: ${reason}, isReload: ${isReload}, isReplace ${isReplace} }`,
+- meta: { reason: ${reason}, isReplace: ${isReplace} }`,
     );
   }
   const toUnloadSet = new Set();
@@ -236,7 +266,11 @@ export const updateActions = ({
     }
   }
   list_to_preload_and_to_load: {
-    const onActionToLoadOrPreload = (actionToLoadOrPreload, isPreload) => {
+    const onActionToLoadOrPreload = (
+      actionToLoadOrPreload,
+      isPreload,
+      isReload = false,
+    ) => {
       if (
         actionToLoadOrPreload.loadingState === LOADING ||
         actionToLoadOrPreload.loadingState === LOADED
@@ -251,8 +285,7 @@ export const updateActions = ({
         // in order to load the same action code has to do one of:
         // - unload it first
         // - request unload + load at the same time
-        // - use isReload: true when requesting the load of this action
-        //   this is default when using action.load())
+        // - use reload to force reload this action
         if (isReload || toUnloadSet.has(actionToLoadOrPreload)) {
           toUnloadSet.add(actionToLoadOrPreload);
           if (isPreload) {
@@ -268,13 +301,17 @@ export const updateActions = ({
       }
     };
     for (const actionToPreload of preloadSet) {
-      if (loadSet.has(actionToPreload)) {
-        // load wins over preload
+      if (loadSet.has(actionToPreload) || reloadSet.has(actionToPreload)) {
+        // load/reload wins over preload
         continue;
       }
       onActionToLoadOrPreload(actionToPreload, true);
     }
     for (const actionToLoad of loadSet) {
+      if (reloadSet.has(actionToLoad)) {
+        // reload wins over load
+        continue;
+      }
       if (!actionToLoad.loadRequested && actionToLoad.loadingState !== IDLE) {
         // was preloaded but is not requested to load
         // -> can move to load requested
@@ -282,6 +319,9 @@ export const updateActions = ({
         continue;
       }
       onActionToLoadOrPreload(actionToLoad, false);
+    }
+    for (const actionToReload of reloadSet) {
+      onActionToLoadOrPreload(actionToReload, false, true);
     }
   }
   const allThenableArray = [];
@@ -315,18 +355,6 @@ export const updateActions = ({
     }
   }
   if (DEBUG) {
-    const formatActionSet = (prefix, actionSet) => {
-      let message = "";
-      message += `- ${prefix}:`;
-      for (const action of actionSet) {
-        message += "\n";
-        message += prefixFirstAndIndentRemainingLines(String(action), {
-          prefix: "  -",
-        });
-      }
-      return message;
-    };
-
     const lines = [
       ...(toUnloadSet.size ? [formatActionSet("to unload", toUnloadSet)] : []),
       ...(toPreloadSet.size
@@ -475,7 +503,10 @@ export const createAction = (callback, rootOptions = {}) => {
         ...options,
       });
     const reload = (options) => {
-      return load({ isReload: true, ...options });
+      return requestActionsUpdates({
+        reloadSet: new Set([action]),
+        ...options,
+      });
     };
     const unload = (options) =>
       requestActionsUpdates({
@@ -1123,6 +1154,6 @@ if (import.meta.hot) {
     if (DEBUG) {
       console.debug("updateActions() on hot reload");
     }
-    updateActions({ isReload: true });
+    updateActions({ reloadSet: new Set() });
   });
 }
