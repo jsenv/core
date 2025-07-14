@@ -3,6 +3,7 @@ import {
   documentIsRoutingSignal,
   routingWhile,
 } from "./document_routing_signal.js";
+import { updateDocumentState } from "./document_state_signal.js";
 import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
 
 export const setupRoutingViaHistory = (applyRouting) => {
@@ -16,6 +17,8 @@ export const setupRoutingViaHistory = (applyRouting) => {
 
   let abortController = null;
   const handleRouting = ({ url, state }) => {
+    updateDocumentUrl(url);
+    updateDocumentState(state);
     if (abortController) {
       abortController.abort(`navigating to ${url}`);
     }
@@ -46,11 +49,11 @@ export const setupRoutingViaHistory = (applyRouting) => {
         if (href && href.startsWith(window.location.origin)) {
           e.preventDefault();
           const url = e.target.href;
+          const state = history.state;
           history.pushState(null, null, url);
-          updateDocumentUrl(url);
           handleRouting({
             url,
-            state: history.state,
+            state,
           });
         }
       }
@@ -70,18 +73,17 @@ export const setupRoutingViaHistory = (applyRouting) => {
   window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;
     const state = popstateEvent.state;
-    updateDocumentUrl(url);
     handleRouting({
       url,
       state,
     });
   });
   const url = window.location.href;
-  updateDocumentUrl(url);
-  history.replaceState(null, null, url);
+  const state = history.state;
+  history.replaceState(state, null, url);
   handleRouting({
     url,
-    state: history.state,
+    state,
   });
 
   const goTo = async (url, { state, replace } = {}) => {
