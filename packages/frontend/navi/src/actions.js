@@ -119,14 +119,14 @@ export const requestActionsUpdates = ({
   unloadSet,
   reason,
 }) => {
-  const signal = new AbortController().signal;
   const [
     requestedResult,
     // allDoneResult is the thing we'll return the the navigation api
     // so that it waits for every actions to consider things are done
     // allResult
   ] = updateActions({
-    signal,
+    globalAbortSignal: new AbortController().signal,
+    abortSignal: new AbortController().signal,
     preloadSet,
     loadSet,
     reloadSet,
@@ -198,7 +198,8 @@ if (import.meta.dev) {
 }
 
 export const updateActions = ({
-  signal,
+  globalAbortSignal,
+  abortSignal,
   isReplace = false,
   reason,
   preloadSet = new Set(),
@@ -227,11 +228,6 @@ export const updateActions = ({
    * - willPromoteSet: preloaded actions that become load-requested
    * - stays*Set: actions that remain in their current state
    */
-
-  if (!signal) {
-    const abortController = new AbortController();
-    signal = abortController.signal;
-  }
 
   const { loadingSet, settledSet } = getActivationInfo();
 
@@ -437,7 +433,8 @@ ${lines.join("\n")}`);
         actionToPreloadOrLoad,
       );
       const performLoadResult = actionToLoadPrivateProperties.performLoad({
-        signal,
+        globalAbortSignal,
+        abortSignal,
         reason,
         isPreload,
       });
@@ -777,7 +774,7 @@ export const createAction = (callback, rootOptions = {}) => {
       let sideEffectCleanup;
 
       const performLoad = (loadParams) => {
-        const { signal, reason, isPreload } = loadParams;
+        const { globalAbortSignal, reason, isPreload } = loadParams;
 
         if (isPreload) {
           preloadedProtectionRegistry.protect(action);
@@ -789,17 +786,17 @@ export const createAction = (callback, rootOptions = {}) => {
           loadingStateSignal.value = ABORTED;
           abortController.abort(abortReason);
           actionAbortMap.delete(action);
-          if (isPreload && signal.aborted) {
+          if (isPreload && globalAbortSignal.aborted) {
             preloadedProtectionRegistry.unprotect(action);
           }
           if (DEBUG) {
             console.log(`"${action}": aborted (reason: ${abortReason})`);
           }
         };
-        const onabort = () => {
-          abort(signal.reason);
+        const onGlobalAbort = () => {
+          abort(globalAbortSignal.reason);
         };
-        signal.addEventListener("abort", onabort);
+        globalAbortSignal.addEventListener("abort", onGlobalAbort);
         actionAbortMap.set(action, abort);
 
         batch(() => {
@@ -822,7 +819,7 @@ export const createAction = (callback, rootOptions = {}) => {
         let rejected = false;
         let rejectedValue;
         const onLoadEnd = () => {
-          signal.removeEventListener("abort", onabort);
+          globalAbortSignal.removeEventListener("abort", onGlobalAbort);
           dataSignal.value = loadResult;
           loadingStateSignal.value = LOADED;
           preloadedProtectionRegistry.unprotect(action);
@@ -834,12 +831,12 @@ export const createAction = (callback, rootOptions = {}) => {
         };
         const onLoadError = (e) => {
           console.error(e);
-          signal.removeEventListener("abort", onabort);
+          globalAbortSignal.removeEventListener("abort", onGlobalAbort);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
           if (abortSignal.aborted && e === abortSignal.reason) {
             loadingStateSignal.value = ABORTED;
-            if (isPreload && signal.aborted) {
+            if (isPreload && globalAbortSignal.aborted) {
               preloadedProtectionRegistry.unprotect(action);
             }
             return;

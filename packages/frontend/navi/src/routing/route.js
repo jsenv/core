@@ -1,5 +1,5 @@
 import { batch, computed, signal } from "@preact/signals";
-import { requestActionsUpdates } from "../actions.js";
+import { updateActions } from "../actions.js";
 
 const baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
@@ -103,7 +103,7 @@ export const createRoute = (urlPatternInput) => {
 // Store previous route states to detect changes
 const routePreviousStateMap = new WeakMap();
 
-export const applyRouting = (url) => {
+export const applyRouting = (url, { globalАbortSignal, abortSignal }) => {
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
@@ -186,7 +186,9 @@ export const applyRouting = (url) => {
   if (toLoadSet.size === 0 && toReloadSet.size === 0) {
     return false;
   }
-  return requestActionsUpdates({
+  return updateActions({
+    globalАbortSignal,
+    abortSignal,
     loadSet: toLoadSet,
     reloadSet: toReloadSet,
     reason: `Document navigating to ${url}`,

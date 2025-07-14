@@ -9,10 +9,10 @@ import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
 export const setupRoutingViaHistory = (applyRouting) => {
   const { history } = window;
 
-  let stopAbortController = new AbortController();
-  const abortStopSignal = (reason) => {
-    stopAbortController.abort(reason);
-    stopAbortController = new AbortController();
+  let globalAbortController = new AbortController();
+  const triggerGlobalAbort = (reason) => {
+    globalAbortController.abort(reason);
+    globalAbortController = new AbortController();
   };
 
   let abortController = null;
@@ -26,8 +26,8 @@ export const setupRoutingViaHistory = (applyRouting) => {
     routingWhile(
       () => {
         const result = applyRouting(url, {
-          signal: abortController.signal,
-          stopSignal: stopAbortController.signal,
+          globalAbortSignal: globalAbortController.signal,
+          abortSignal: abortController.signal,
           url,
           state,
         });
@@ -98,7 +98,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
     }
     handleRouting({ url, state });
   };
-  const stopLoad = () => {
+  const stopLoad = (reason = "stopLoad() called") => {
     const documentIsLoading = documentIsLoadingSignal.value;
     if (documentIsLoading) {
       window.stop();
@@ -106,7 +106,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
     }
     const documentIsRouting = documentIsRoutingSignal.value;
     if (documentIsRouting) {
-      abortStopSignal();
+      triggerGlobalAbort(reason);
       return;
     }
   };
