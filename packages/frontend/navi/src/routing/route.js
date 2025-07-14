@@ -1,5 +1,5 @@
 import { batch, computed, signal } from "@preact/signals";
-import { weakEffect } from "../utils/weak_effect.js";
+import { requestActionsUpdates } from "../actions.js";
 
 const baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
@@ -31,6 +31,7 @@ export const createRoute = (urlPatternInput) => {
     paramsSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
+    boundActionSet: new Set(),
   };
   routePrivatePropertiesWeakMap.set(route, routePrivateProperties);
 
@@ -73,43 +74,7 @@ export const createRoute = (urlPatternInput) => {
 
   const bindAction = (action) => {
     const actionBoundToUrl = action.bindParams(paramsSignal);
-
-    let previousIsActive = false;
-    let previousParams = null;
-    let previousRelativeUrl = null;
-
-    const unsubscribe = weakEffect(
-      [actionBoundToUrl],
-      (actionBoundToUrlWeak) => {
-        const isActive = activeSignal.value;
-        const currentParams = paramsSignal.value;
-        const currentRelativeUrl = relativeUrlSignal.value;
-        const becomesActive = isActive && !previousIsActive;
-        const paramsChangedWhileActive =
-          isActive && previousIsActive && currentParams !== previousParams;
-        const relativeUrlBefore = previousRelativeUrl;
-        previousIsActive = isActive;
-        previousParams = currentParams;
-        previousRelativeUrl = currentRelativeUrl;
-
-        if (becomesActive) {
-          actionBoundToUrlWeak.load({
-            reason: `"/${currentRelativeUrl}" route is matching`,
-          });
-          return;
-        }
-        if (paramsChangedWhileActive) {
-          actionBoundToUrlWeak.reload({
-            reason: `Moved from ${relativeUrlBefore} to ${currentRelativeUrl}`,
-          });
-          return;
-        }
-      },
-    );
-
-    // Store cleanup function for manual cleanup if needed
-    actionBoundToUrl.meta.cleanup = unsubscribe;
-
+    routePrivateProperties.boundActionSet.add(actionBoundToUrl);
     return actionBoundToUrl;
   };
   route.bindAction = bindAction;
@@ -135,35 +100,90 @@ export const createRoute = (urlPatternInput) => {
   return route;
 };
 
-export const applyRouting = (url) => {
+// Store previous route states to detect changes
+const routePreviousStateMap = new WeakMap();
+
+export const applyRouting = (url, options = {}) => {
   const updateCallbackSet = new Set();
+  const toLoadSet = new Set();
+  const toReloadSet = new Set();
 
   for (const route of routeSet) {
-    const { urlPattern, activeSignal, paramsSignal } =
+    const { urlPattern, activeSignal, paramsSignal, boundActionSet } =
       getRoutePrivateProperties(route);
+
+    // Get previous state
+    const previousState = routePreviousStateMap.get(route) || {
+      active: false,
+      params: NO_PARAMS,
+    };
 
     // Check if the URL matches the route pattern
     const match = urlPattern.exec(url);
-    if (!match) {
-      updateCallbackSet.add(() => {
-        activeSignal.value = false;
-        paramsSignal.value = NO_PARAMS;
-      });
-      continue;
-    }
-    // Extract parameters from the URL
-    const params = extractParams(urlPattern, url);
+    const newActive = Boolean(match);
+    const newParams = match ? extractParams(urlPattern, url) : NO_PARAMS;
+
+    // Detect state changes
+    const becomesActive = newActive && !previousState.active;
+    const paramsChangedWhileActive =
+      newActive && previousState.active && newParams !== previousState.params;
+
+    // Update route signals
     updateCallbackSet.add(() => {
-      activeSignal.value = true;
-      paramsSignal.value = params;
+      activeSignal.value = newActive;
+      paramsSignal.value = newParams;
+      route.active = newActive;
+      route.params = newParams;
+    });
+
+    // Handle bound actions
+    for (const actionProxy of boundActionSet) {
+      const currentAction = actionProxy.getCurrentAction();
+      if (becomesActive) {
+        toLoadSet.add(currentAction);
+      } else if (paramsChangedWhileActive) {
+        toReloadSet.add(currentAction);
+      }
+    }
+
+    // Store current state for next comparison
+    routePreviousStateMap.set(route, {
+      active: newActive,
+      params: newParams,
     });
   }
 
+  // Apply all signal updates in a batch
   batch(() => {
     for (const updateCallback of updateCallbackSet) {
       updateCallback();
     }
   });
+
+  // Handle action updates if any
+  const promises = [];
+  const { signal, reason } = options;
+
+  if (toLoadSet.size > 0) {
+    const loadPromise = requestActionsUpdates({
+      signal,
+      loadSet: toLoadSet,
+      reason: reason || `Loading actions for route ${url}`,
+    });
+    if (loadPromise) promises.push(loadPromise);
+  }
+
+  if (toReloadSet.size > 0) {
+    const reloadPromise = requestActionsUpdates({
+      signal,
+      loadSet: toReloadSet,
+      isReload: true,
+      reason: reason || `Reloading actions for route ${url}`,
+    });
+    if (reloadPromise) promises.push(reloadPromise);
+  }
+
+  return promises.length > 0 ? Promise.all(promises) : null;
 };
 
 const extractParams = (urlPattern, url) => {

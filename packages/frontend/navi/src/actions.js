@@ -972,6 +972,10 @@ const createActionProxyFromSignal = (
     unload: proxyMethod("unload"),
     abort: proxyMethod("abort"),
     matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
+    getCurrentAction: () => {
+      _updateTarget(proxyParamsSignal.peek());
+      return currentAction;
+    },
     replaceParams: null, // Will be set below
     toString: () => actionProxy.name,
     meta: {},
