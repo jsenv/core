@@ -1,10 +1,12 @@
 import { batch, computed, signal } from "@preact/signals";
 import { updateActions } from "../actions.js";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 
 const baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
   : window.location.origin;
 
+const DEBUG = false;
 const NO_PARAMS = {};
 // Controls what happens to actions when their route becomes inactive:
 // 'abort' - Cancel the action immediately when route deactivates
@@ -130,7 +132,16 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
     // Check if the URL matches the route pattern
     const match = urlPattern.exec(url);
     const newActive = Boolean(match);
-    const newParams = match ? extractParams(urlPattern, url) : NO_PARAMS;
+    let newParams;
+    if (match) {
+      const extractedParams = extractParams(urlPattern, url);
+      if (compareTwoJsValues(oldParams, extractedParams)) {
+        // No change in parameters, keep the old params
+        newParams = oldParams;
+      }
+    } else {
+      newParams = NO_PARAMS;
+    }
 
     const routeMatchInfo = {
       route,
@@ -185,6 +196,12 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
 
     // Handle actions for routes that become active
     if (becomesActive) {
+      if (DEBUG) {
+        console.debug(
+          `Route ${routePrivateProperties.urlPattern} became active with params:`,
+          newParams,
+        );
+      }
       for (const actionProxy of boundActionSet) {
         const currentAction = actionProxy.getCurrentAction();
         toLoadSet.add(currentAction);
@@ -213,6 +230,12 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
 
     // Handle parameter changes while route stays active
     if (paramsChangedWhileActive) {
+      if (DEBUG) {
+        console.debug(
+          `Route ${routePrivateProperties.urlPattern} params changed:`,
+          newParams,
+        );
+      }
       for (const actionProxy of boundActionSet) {
         const currentAction = actionProxy.getCurrentAction();
         toReloadSet.add(currentAction);
