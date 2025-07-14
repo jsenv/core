@@ -104,40 +104,38 @@ export const createRoute = (urlPatternInput) => {
   const bindAction = (action) => {
     const actionBoundToUrl = action.bindParams(paramsSignal);
 
-    let wasActive = false;
-    let lastParams = null;
+    let previousIsActive = false;
+    let previousParams = null;
     let previousRelativeUrl = null;
 
-    // Watch for route activation/deactivation and param changes
-    const unsubscribe = weakEffect([actionBoundToUrl], (currentAction) => {
-      const isActive = activeSignal.value;
-      const currentParams = paramsSignal.value;
-      const currentRelativeUrl = relativeUrlSignal.value;
-      const becomesActive = isActive && !wasActive;
-      const paramsChanged =
-        isActive && wasActive && currentParams !== lastParams;
-      wasActive = isActive;
-      lastParams = currentParams;
-      previousRelativeUrl = currentRelativeUrl;
+    const unsubscribe = weakEffect(
+      [actionBoundToUrl],
+      (actionBoundToUrlWeak) => {
+        const isActive = activeSignal.value;
+        const currentParams = paramsSignal.value;
+        const currentRelativeUrl = relativeUrlSignal.value;
+        const becomesActive = isActive && !previousIsActive;
+        const paramsChangedWhileActive =
+          isActive && previousIsActive && currentParams !== previousParams;
+        const relativeUrlBefore = previousRelativeUrl;
+        previousIsActive = isActive;
+        previousParams = currentParams;
+        previousRelativeUrl = currentRelativeUrl;
 
-      if (becomesActive) {
-        // First time route matches - load
-        currentAction.load({
-          reason: `"/${currentRelativeUrl}" route is matching`,
-        });
-        return;
-      }
-      if (paramsChanged) {
-        // Params changed while active - reload to ensure fresh data
-        currentAction.reload({
-          reason: `Moved from ${previousRelativeUrl} to ${currentRelativeUrl}`,
-        });
-        return;
-      }
-      // Note: We no longer unload when route stops matching
-      // This allows actions to stay in memory for transitions and preloading
-      // They will be garbage collected naturally when no longer referenced
-    });
+        if (becomesActive) {
+          actionBoundToUrlWeak.load({
+            reason: `"/${currentRelativeUrl}" route is matching`,
+          });
+          return;
+        }
+        if (paramsChangedWhileActive) {
+          actionBoundToUrlWeak.reload({
+            reason: `Moved from ${relativeUrlBefore} to ${currentRelativeUrl}`,
+          });
+          return;
+        }
+      },
+    );
 
     // Store cleanup function for manual cleanup if needed
     actionBoundToUrl.meta.cleanup = unsubscribe;

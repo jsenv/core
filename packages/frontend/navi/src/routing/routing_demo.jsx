@@ -10,11 +10,16 @@ import { setupRoutingViaHistory } from "./routing_via_history.js";
 
 setupRoutingViaHistory(() => {});
 
-const loadPageAction = createAction(async ({ pageName }) => {
-  // Simulate some loading time
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  return `${pageName}: content loaded at ${new Date().toLocaleTimeString()}`;
-});
+const loadPageAction = createAction(
+  async ({ pageName }) => {
+    // Simulate some loading time
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    return `${pageName}: content loaded at ${new Date().toLocaleTimeString()}`;
+  },
+  {
+    name: "loadPage",
+  },
+);
 const pageRoute = createRoute("page/:pageName");
 const loadPageFromUrlAction = pageRoute.bindAction(loadPageAction);
 

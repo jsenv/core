@@ -477,9 +477,10 @@ export const createAction = (callback, rootOptions = {}) => {
     const reload = (options) => {
       return load({ isReload: true, ...options });
     };
-    const unload = () =>
+    const unload = (options) =>
       requestActionsUpdates({
         unloadSet: new Set([action]),
+        ...options,
       });
     const abort = (reason) => {
       if (loadingState !== LOADING) {
@@ -666,7 +667,7 @@ export const createAction = (callback, rootOptions = {}) => {
         paramsSignal.value = nextParams;
         return true;
       },
-      toString: () => name,
+      toString: () => action.name,
       meta,
     };
     Object.preventExtensions(action);
@@ -889,14 +890,71 @@ const createActionProxyFromSignal = (
   const actionTargetChangeCallbackSet = new Set();
   const onActionTargetChange = (callback) => {
     actionTargetChangeCallbackSet.add(callback);
+    return () => {
+      actionTargetChangeCallbackSet.delete(callback);
+    };
   };
+  const changeCleanupCallbackSet = new Set();
+  const triggerTargetChange = (actionTarget, previousTarget) => {
+    for (const changeCleanupCallback of changeCleanupCallbackSet) {
+      changeCleanupCallback();
+    }
+    changeCleanupCallbackSet.clear();
+    for (const callback of actionTargetChangeCallbackSet) {
+      const returnValue = callback(actionTarget, previousTarget);
+      if (typeof returnValue === "function") {
+        changeCleanupCallbackSet.add(returnValue);
+      }
+    }
+  };
+
   let actionTarget = null;
   let currentAction = action;
   let currentActionPrivateProperties;
+  let actionTargetPreviousWeakRef = null;
+  let isFirstEffect = true;
+
+  const _updateTarget = (params) => {
+    const previousTarget = actionTargetPreviousWeakRef?.deref();
+
+    if (params === NO_PARAMS) {
+      actionTarget = null;
+      currentAction = action;
+      currentActionPrivateProperties = getActionPrivateProperties(action);
+    } else {
+      actionTarget = action.bindParams(params);
+      if (previousTarget === actionTarget) {
+        return;
+      }
+      currentAction = actionTarget;
+      currentActionPrivateProperties = getActionPrivateProperties(actionTarget);
+    }
+
+    if (isFirstEffect) {
+      isFirstEffect = false;
+    }
+    actionTargetPreviousWeakRef = actionTarget
+      ? new WeakRef(actionTarget)
+      : null;
+    triggerTargetChange(actionTarget, previousTarget);
+  };
 
   const proxyMethod = (method) => {
-    return (...args) => currentAction[method](...args);
+    return (...args) => {
+      /*
+       * This ensures the proxy always targets the correct action, preventing a race condition.
+       * It's possible for an external effect to run before our internal effect that
+       * syncs the action with its params. This call guarantees the target is updated
+       * "just-in-time" before any method is executed.
+       *
+       * We use peek() to avoid creating a reactive dependency on the params signal
+       * within this method, as it's intended to be a passthrough.
+       */
+      _updateTarget(proxyParamsSignal.peek());
+      return currentAction[method](...args);
+    };
   };
+
   const nameSignal = signal();
   const actionProxy = {
     isProxy: true,
@@ -1001,46 +1059,9 @@ const createActionProxyFromSignal = (
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
 
   {
-    let actionTargetPreviousWeakRef = null;
-    let isFirstEffect = true;
-    const changeCleanupCallbackSet = new Set();
-
-    weakEffect([action], (actionRef) => {
-      const previousTarget = actionTargetPreviousWeakRef?.deref();
+    weakEffect([action], () => {
       const params = proxyParamsSignal.value;
-
-      if (params === NO_PARAMS) {
-        actionTarget = null;
-        currentAction = actionRef;
-        currentActionPrivateProperties = getActionPrivateProperties(actionRef);
-      } else {
-        actionTarget = actionRef.bindParams(params);
-        if (previousTarget === actionTarget) {
-          // replaceParams might have updated the currentAction name
-          nameSignal.value = `[Proxy] ${currentAction.name}`;
-          return;
-        }
-        currentAction = actionTarget;
-        currentActionPrivateProperties =
-          getActionPrivateProperties(actionTarget);
-      }
-
-      if (isFirstEffect) {
-        isFirstEffect = false;
-      }
-      for (const changeCleanupCallback of changeCleanupCallbackSet) {
-        changeCleanupCallback();
-      }
-      changeCleanupCallbackSet.clear();
-      for (const callback of actionTargetChangeCallbackSet) {
-        const returnValue = callback(actionTarget, previousTarget);
-        if (typeof returnValue === "function") {
-          changeCleanupCallbackSet.add(returnValue);
-        }
-      }
-      actionTargetPreviousWeakRef = actionTarget
-        ? new WeakRef(actionTarget)
-        : null;
+      _updateTarget(params);
     });
   }
 
