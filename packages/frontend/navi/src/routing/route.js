@@ -1,6 +1,5 @@
-import { computed } from "@preact/signals";
+import { batch, computed, signal } from "@preact/signals";
 import { weakEffect } from "../utils/weak_effect.js";
-import { documentUrlSignal } from "./document_url_signal.js";
 
 const baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
@@ -8,69 +7,32 @@ const baseUrl = import.meta.dev
 
 const NO_PARAMS = {};
 
+const routePrivatePropertiesWeakMap = new WeakMap();
+const getRoutePrivateProperties = (route) => {
+  return routePrivatePropertiesWeakMap.get(route);
+};
+
+const routeSet = new Set();
+
 export const createRoute = (urlPatternInput) => {
   const route = {
     active: false,
-    activeSignal: null,
     params: NO_PARAMS,
-    paramsSignal: null,
     buildUrl: null,
     bindAction: null,
     relativeUrl: null,
-    relativeUrlSignal: null,
     url: null,
+  };
+  routeSet.add(route);
+
+  const routePrivateProperties = {
+    urlPattern: undefined,
+    activeSignal: null,
+    paramsSignal: null,
+    relativeUrlSignal: null,
     urlSignal: null,
   };
-
-  const urlPattern = new URLPattern(urlPatternInput, baseUrl, {
-    ignoreCase: true,
-  });
-  const activeSignal = computed(() => {
-    const documentUrl = documentUrlSignal.value;
-    const active = urlPattern.test(documentUrl);
-    route.active = active;
-    return active;
-  });
-  route.activeSignal = activeSignal;
-
-  const paramsSignal = computed(() => {
-    const documentUrl = documentUrlSignal.value;
-    const match = urlPattern.exec(documentUrl);
-    if (!match) {
-      route.params = NO_PARAMS;
-      return NO_PARAMS;
-    }
-    const params = {};
-
-    // Collect all parameters from URLPattern groups, handling both named and numbered groups
-    let wildcardOffset = 0;
-    for (const property of URL_PATTERN_PROPERTIES_WITH_GROUP_SET) {
-      const urlPartMatch = match[property];
-      if (urlPartMatch && urlPartMatch.groups) {
-        let localWildcardCount = 0;
-        for (const key of Object.keys(urlPartMatch.groups)) {
-          const value = urlPartMatch.groups[key];
-          const keyAsNumber = parseInt(key, 10);
-          if (!isNaN(keyAsNumber)) {
-            if (value) {
-              // Only include non-empty values
-              params[wildcardOffset + keyAsNumber] = decodeURIComponent(value);
-              localWildcardCount++;
-            }
-          } else {
-            // Named group (:param or {param})
-            params[key] = decodeURIComponent(value);
-          }
-        }
-        // Update wildcard offset for next URL part
-        wildcardOffset += localWildcardCount;
-      }
-    }
-
-    route.params = params;
-    return params;
-  });
-  route.paramsSignal = paramsSignal;
+  routePrivatePropertiesWeakMap.set(route, routePrivateProperties);
 
   const buildRelativeUrl = (params = {}) => {
     let relativeUrl = urlPatternInput;
@@ -93,13 +55,21 @@ export const createRoute = (urlPatternInput) => {
     });
     return relativeUrl;
   };
-
   const buildUrl = (params = {}) => {
     const relativeUrl = buildRelativeUrl(params);
     const url = new URL(relativeUrl, baseUrl).href;
     return url;
   };
   route.buildUrl = buildUrl;
+
+  const activeSignal = signal(false);
+  const paramsSignal = signal(NO_PARAMS);
+  const relativeUrlSignal = computed(() => {
+    const params = paramsSignal.value;
+    const relativeUrl = buildRelativeUrl(params);
+    route.relativeUrl = relativeUrl;
+    return relativeUrl;
+  });
 
   const bindAction = (action) => {
     const actionBoundToUrl = action.bindParams(paramsSignal);
@@ -144,34 +114,90 @@ export const createRoute = (urlPatternInput) => {
   };
   route.bindAction = bindAction;
 
-  const relativeUrlSignal = computed(() => {
-    const params = paramsSignal.value;
-    const relativeUrl = buildRelativeUrl(params);
-    route.relativeUrl = relativeUrl;
-    return relativeUrl;
-  });
-  route.relativeUrlSignal = relativeUrlSignal;
+  private_properties: {
+    const urlPattern = new URLPattern(urlPatternInput, baseUrl, {
+      ignoreCase: true,
+    });
+    routePrivateProperties.urlPattern = urlPattern;
+    routePrivateProperties.activeSignal = activeSignal;
+    routePrivateProperties.paramsSignal = paramsSignal;
+    routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
 
-  const urlSignal = computed(() => {
-    const relativeUrl = relativeUrlSignal.value;
-    const url = new URL(relativeUrl, baseUrl).href;
-    route.url = url;
-    return url;
-  });
-  route.urlSignal = urlSignal;
+    const urlSignal = computed(() => {
+      const relativeUrl = relativeUrlSignal.value;
+      const url = new URL(relativeUrl, baseUrl).href;
+      route.url = url;
+      return url;
+    });
+    routePrivateProperties.urlSignal = urlSignal;
+  }
 
   return route;
 };
-export const useRouteStatus = (route) => {
-  const { activeSignal, paramsSignal } = route;
 
-  const active = activeSignal.value;
-  const params = paramsSignal.value;
+export const applyRouting = (url) => {
+  const updateCallbackSet = new Set();
 
-  return {
-    active,
-    params,
-  };
+  for (const route of routeSet) {
+    const { urlPattern, activeSignal, paramsSignal } =
+      getRoutePrivateProperties(route);
+
+    // Check if the URL matches the route pattern
+    const match = urlPattern.exec(url);
+    if (!match) {
+      updateCallbackSet.add(() => {
+        activeSignal.value = false;
+        paramsSignal.value = NO_PARAMS;
+      });
+      continue;
+    }
+    // Extract parameters from the URL
+    const params = extractParams(urlPattern, url);
+    updateCallbackSet.add(() => {
+      activeSignal.value = true;
+      paramsSignal.value = params;
+    });
+  }
+
+  batch(() => {
+    for (const updateCallback of updateCallbackSet) {
+      updateCallback();
+    }
+  });
+};
+
+const extractParams = (urlPattern, url) => {
+  const match = urlPattern.exec(url);
+  if (!match) {
+    return NO_PARAMS;
+  }
+  const params = {};
+
+  // Collect all parameters from URLPattern groups, handling both named and numbered groups
+  let wildcardOffset = 0;
+  for (const property of URL_PATTERN_PROPERTIES_WITH_GROUP_SET) {
+    const urlPartMatch = match[property];
+    if (urlPartMatch && urlPartMatch.groups) {
+      let localWildcardCount = 0;
+      for (const key of Object.keys(urlPartMatch.groups)) {
+        const value = urlPartMatch.groups[key];
+        const keyAsNumber = parseInt(key, 10);
+        if (!isNaN(keyAsNumber)) {
+          if (value) {
+            // Only include non-empty values
+            params[wildcardOffset + keyAsNumber] = decodeURIComponent(value);
+            localWildcardCount++;
+          }
+        } else {
+          // Named group (:param or {param})
+          params[key] = decodeURIComponent(value);
+        }
+      }
+      // Update wildcard offset for next URL part
+      wildcardOffset += localWildcardCount;
+    }
+  }
+  return params;
 };
 
 const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
@@ -183,3 +209,15 @@ const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
   "search",
   "hash",
 ]);
+
+export const useRouteStatus = (route) => {
+  const { activeSignal, paramsSignal } = getRoutePrivateProperties(route);
+
+  const active = activeSignal.value;
+  const params = paramsSignal.value;
+
+  return {
+    active,
+    params,
+  };
+};

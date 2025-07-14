@@ -25,7 +25,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
     abortController = new AbortController();
     routingWhile(
       () => {
-        const result = applyRouting({
+        const result = applyRouting(url, {
           signal: abortController.signal,
           stopSignal: stopAbortController.signal,
           url,
