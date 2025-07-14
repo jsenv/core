@@ -5,11 +5,15 @@ export const useActionStatus = (action) => {
   if (!action) {
     return {
       params: undefined,
+      loadingState: IDLE,
+      loadRequested: false,
       idle: true,
-      error: null,
+      preloading: false,
+      loading: false,
       aborted: false,
-      pending: false,
+      error: null,
       preloaded: false,
+      loaded: false,
       data: undefined,
     };
   }
@@ -24,22 +28,26 @@ export const useActionStatus = (action) => {
   const params = paramsSignal.value;
   const loadRequested = loadRequestedSignal.value;
   const loadingState = loadingStateSignal.value;
-  const error = errorSignal.value;
   const idle = loadingState === IDLE;
-  const pending = loadingState === LOADING;
   const aborted = loadingState === ABORTED;
-  const preloading = loadingState === LOADING && !loadRequested;
-  const preloaded = loadingState === LOADED && !loadRequested;
+  const error = errorSignal.value;
+  const loading = loadingState === LOADING;
+  const preloading = loading && !loadRequested;
+  const loaded = loadingState === LOADED;
+  const preloaded = loaded && !loadRequested;
   const data = computedDataSignal.value;
 
   return {
     params,
+    loadingState,
+    loadRequested,
     idle,
-    error,
-    aborted,
-    pending,
     preloading,
+    loading,
+    aborted,
+    error,
     preloaded,
+    loaded,
     data,
   };
 };
