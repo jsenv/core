@@ -104,7 +104,7 @@ export const createRoute = (urlPatternInput) => {
 const routePreviousStateMap = new WeakMap();
 
 // Store abort controllers per action to control their lifecycle based on route state
-const actionAbortControllerMap = new WeakMap();
+const actionAbortControllerWeakMap = new WeakMap();
 
 export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
   const routeMatchInfoSet = new Set();
@@ -183,7 +183,7 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
 
         // Create a new abort controller for this action
         const actionAbortController = new AbortController();
-        actionAbortControllerMap.set(currentAction, actionAbortController);
+        actionAbortControllerWeakMap.set(currentAction, actionAbortController);
         abortSignalMap.set(currentAction, actionAbortController.signal);
       }
       continue;
@@ -194,10 +194,10 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
       for (const actionProxy of boundActionSet) {
         const currentAction = actionProxy.getCurrentAction();
         const actionAbortController =
-          actionAbortControllerMap.get(currentAction);
+          actionAbortControllerWeakMap.get(currentAction);
         if (actionAbortController) {
           actionAbortController.abort(`route no longer matching`);
-          actionAbortControllerMap.delete(currentAction);
+          actionAbortControllerWeakMap.delete(currentAction);
         }
       }
       continue;
@@ -211,7 +211,7 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
 
         // Create a new abort controller for the reload
         const actionAbortController = new AbortController();
-        actionAbortControllerMap.set(currentAction, actionAbortController);
+        actionAbortControllerWeakMap.set(currentAction, actionAbortController);
         abortSignalMap.set(currentAction, actionAbortController.signal);
       }
     }
@@ -220,7 +220,7 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
   if (toLoadSet.size === 0 && toReloadSet.size === 0) {
     return false;
   }
-  return updateActions({
+  const [allResult] = updateActions({
     globalAbortSignal,
     abortSignal,
     loadSet: toLoadSet,
@@ -228,6 +228,7 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
     abortSignalMap,
     reason: `Document navigating to ${url}`,
   });
+  return allResult; // null or Promise.all()
 };
 
 const extractParams = (urlPattern, url) => {
