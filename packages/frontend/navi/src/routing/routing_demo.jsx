@@ -1,9 +1,9 @@
 import { ActionRenderer, createAction } from "@jsenv/navi";
 import { render } from "preact";
-import { setupNavigateHandler } from "./nav.js";
 import { createRoute } from "./route.js";
+import { setupRoutingViaHistory } from "./routing_via_history.js";
 
-setupNavigateHandler(() => {});
+setupRoutingViaHistory(() => {});
 
 const loadPageAction = createAction(async ({ pageName }) => {
   return `${pageName}: content`;
