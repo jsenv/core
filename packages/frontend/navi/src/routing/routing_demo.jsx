@@ -6,9 +6,6 @@ import {
   useRouteStatus,
 } from "@jsenv/navi";
 import { render } from "preact";
-import { setupRoutingViaHistory } from "./routing_via_history.js";
-
-setupRoutingViaHistory(() => {});
 
 const loadPageAction = createAction(
   async ({ pageName }) => {

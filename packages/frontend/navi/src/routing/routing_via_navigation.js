@@ -1,6 +1,6 @@
 let DEBUG = false;
 
-export const setupNavigateHandler = (handler) => {
+export const setupRoutingViaNavigation = (handler) => {
   let isReloadFromNavigationAPI = false;
   const navigationReload = navigation.reload;
   navigation.reload = (...args) => {

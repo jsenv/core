@@ -25,3 +25,11 @@ export { Link } from "./src/components/link/link.jsx";
 
 // routing
 export { createRoute, useRouteStatus } from "./src/routing/route.js";
+export {
+  goBack,
+  goForward,
+  goTo,
+  reload,
+  routingVia,
+  stopLoad,
+} from "./src/routing/router.js";
