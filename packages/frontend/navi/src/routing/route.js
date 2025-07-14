@@ -113,23 +113,30 @@ export const createRoute = (urlPatternInput) => {
       const isActive = activeSignal.value;
       const currentParams = paramsSignal.value;
       const currentRelativeUrl = relativeUrlSignal.value;
+      const becomesActive = isActive && !wasActive;
+      const paramsChanged =
+        isActive && wasActive && currentParams !== lastParams;
+      wasActive = isActive;
+      lastParams = currentParams;
+      previousRelativeUrl = currentRelativeUrl;
 
-      if (isActive && !wasActive) {
+      if (becomesActive) {
         // First time route matches - load
-        currentAction.load({ reason: `${currentRelativeUrl} is matching` });
-      } else if (isActive && wasActive && currentParams !== lastParams) {
+        currentAction.load({
+          reason: `"/${currentRelativeUrl}" route is matching`,
+        });
+        return;
+      }
+      if (paramsChanged) {
         // Params changed while active - reload to ensure fresh data
         currentAction.reload({
           reason: `Moved from ${previousRelativeUrl} to ${currentRelativeUrl}`,
         });
+        return;
       }
       // Note: We no longer unload when route stops matching
       // This allows actions to stay in memory for transitions and preloading
       // They will be garbage collected naturally when no longer referenced
-
-      wasActive = isActive;
-      lastParams = currentParams;
-      previousRelativeUrl = currentRelativeUrl;
     });
 
     // Store cleanup function for manual cleanup if needed
