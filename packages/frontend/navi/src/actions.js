@@ -1204,7 +1204,7 @@ const generateActionName = (name, params) => {
     return `${name}({})`;
   }
   // Use stringifyForDisplay with asFunctionArgs option for the entire args array
-  const argsString = stringifyForDisplay([params], 2, 0, {
+  const argsString = stringifyForDisplay([params], 3, 0, {
     asFunctionArgs: true,
   });
   return `${name}${argsString}`;

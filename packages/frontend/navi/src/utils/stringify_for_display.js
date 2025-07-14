@@ -95,6 +95,18 @@ export const stringifyForDisplay = (
       }
     }
 
+    // Display objects with only one key on a single line
+    if (allEntries.length === 1) {
+      const [key, val] = allEntries[0];
+      const valueStr = stringifyForDisplay(
+        val,
+        maxDepth,
+        currentDepth + 1,
+        options,
+      );
+      return `{ ${key}: ${valueStr} }`;
+    }
+
     if (allEntries.length > MAX_ENTRIES) {
       const preview = allEntries
         .slice(0, MAX_ENTRIES)
