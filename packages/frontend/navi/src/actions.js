@@ -206,6 +206,7 @@ export const updateActions = ({
   loadSet = new Set(),
   reloadSet = new Set(),
   unloadSet = new Set(),
+  abortSignalMap = new Map(),
 } = {}) => {
   /*
    * Action update flow:
@@ -429,12 +430,15 @@ ${lines.join("\n")}`);
           `Proxy should not be reach this point, use the underlying action instead`,
         );
       }
+      const actionSpecificSignal = abortSignalMap.get(actionToPreloadOrLoad);
+      const effectiveSignal = actionSpecificSignal || abortSignal;
+
       const actionToLoadPrivateProperties = getActionPrivateProperties(
         actionToPreloadOrLoad,
       );
       const performLoadResult = actionToLoadPrivateProperties.performLoad({
         globalAbortSignal,
-        abortSignal,
+        abortSignal: effectiveSignal,
         reason,
         isPreload,
       });
@@ -774,29 +778,41 @@ export const createAction = (callback, rootOptions = {}) => {
       let sideEffectCleanup;
 
       const performLoad = (loadParams) => {
-        const { globalAbortSignal, reason, isPreload } = loadParams;
+        const { globalAbortSignal, abortSignal, reason, isPreload } =
+          loadParams;
 
         if (isPreload) {
           preloadedProtectionRegistry.protect(action);
         }
 
-        const abortController = new AbortController();
-        const abortSignal = abortController.signal;
+        const internalAbortController = new AbortController();
+        const internalAbortSignal = internalAbortController.signal;
         const abort = (abortReason) => {
           loadingStateSignal.value = ABORTED;
-          abortController.abort(abortReason);
+          internalAbortController.abort(abortReason);
           actionAbortMap.delete(action);
-          if (isPreload && globalAbortSignal.aborted) {
+          if (isPreload && (globalAbortSignal.aborted || abortSignal.aborted)) {
             preloadedProtectionRegistry.unprotect(action);
           }
           if (DEBUG) {
             console.log(`"${action}": aborted (reason: ${abortReason})`);
           }
         };
-        const onGlobalAbort = () => {
+
+        const onAbortFromSpecific = () => {
+          abort(abortSignal.reason);
+        };
+        const onAbortFromGlobal = () => {
           abort(globalAbortSignal.reason);
         };
-        globalAbortSignal.addEventListener("abort", onGlobalAbort);
+
+        if (abortSignal) {
+          abortSignal.addEventListener("abort", onAbortFromSpecific);
+        }
+        if (globalAbortSignal) {
+          globalAbortSignal.addEventListener("abort", onAbortFromGlobal);
+        }
+
         actionAbortMap.set(action, abort);
 
         batch(() => {
@@ -809,7 +825,7 @@ export const createAction = (callback, rootOptions = {}) => {
 
         const args = [];
         args.push(params);
-        args.push({ signal: abortSignal, reason, isPreload });
+        args.push({ signal: internalAbortSignal, reason, isPreload });
         const returnValue = sideEffect(...args);
         if (typeof returnValue === "function") {
           sideEffectCleanup = returnValue;
@@ -819,7 +835,12 @@ export const createAction = (callback, rootOptions = {}) => {
         let rejected = false;
         let rejectedValue;
         const onLoadEnd = () => {
-          globalAbortSignal.removeEventListener("abort", onGlobalAbort);
+          if (abortSignal) {
+            abortSignal.removeEventListener("abort", onAbortFromSpecific);
+          }
+          if (globalAbortSignal) {
+            globalAbortSignal.removeEventListener("abort", onAbortFromGlobal);
+          }
           dataSignal.value = loadResult;
           loadingStateSignal.value = LOADED;
           preloadedProtectionRegistry.unprotect(action);
@@ -831,12 +852,17 @@ export const createAction = (callback, rootOptions = {}) => {
         };
         const onLoadError = (e) => {
           console.error(e);
-          globalAbortSignal.removeEventListener("abort", onGlobalAbort);
+          if (abortSignal) {
+            abortSignal.removeEventListener("abort", onAbortFromSpecific);
+          }
+          if (globalAbortSignal) {
+            globalAbortSignal.removeEventListener("abort", onAbortFromGlobal);
+          }
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
-          if (abortSignal.aborted && e === abortSignal.reason) {
+          if (internalAbortSignal.aborted && e === internalAbortSignal.reason) {
             loadingStateSignal.value = ABORTED;
-            if (isPreload && globalAbortSignal.aborted) {
+            if (isPreload && abortSignal.aborted) {
               preloadedProtectionRegistry.unprotect(action);
             }
             return;

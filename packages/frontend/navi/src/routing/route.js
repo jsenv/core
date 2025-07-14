@@ -103,6 +103,9 @@ export const createRoute = (urlPatternInput) => {
 // Store previous route states to detect changes
 const routePreviousStateMap = new WeakMap();
 
+// Store abort controllers per action to control their lifecycle based on route state
+const actionAbortControllerMap = new WeakMap();
+
 export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
@@ -153,10 +156,12 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
     }
   });
 
-  // must be after paramsSignal.value udpate to ensure the proxy target is set
+  // must be after paramsSignal.value update to ensure the proxy target is set
   // (so after the batch call)
   const toLoadSet = new Set();
   const toReloadSet = new Set();
+  const abortSignalMap = new Map();
+
   for (const {
     routePrivateProperties,
     newActive,
@@ -166,19 +171,48 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
   } of routeMatchInfoSet) {
     const { boundActionSet } = routePrivateProperties;
     const becomesActive = newActive && !oldActive;
+    const becomesInactive = !newActive && oldActive;
+    const paramsChangedWhileActive =
+      newActive && oldActive && newParams !== oldParams;
+
+    // Handle actions for routes that become active
     if (becomesActive) {
       for (const actionProxy of boundActionSet) {
         const currentAction = actionProxy.getCurrentAction();
         toLoadSet.add(currentAction);
+
+        // Create a new abort controller for this action
+        const actionAbortController = new AbortController();
+        actionAbortControllerMap.set(currentAction, actionAbortController);
+        abortSignalMap.set(currentAction, actionAbortController.signal);
       }
       continue;
     }
-    const paramsChangedWhileActive =
-      newActive && oldActive && newParams !== oldParams;
+
+    // Handle actions for routes that become inactive - abort them
+    if (becomesInactive) {
+      for (const actionProxy of boundActionSet) {
+        const currentAction = actionProxy.getCurrentAction();
+        const actionAbortController =
+          actionAbortControllerMap.get(currentAction);
+        if (actionAbortController) {
+          actionAbortController.abort(`route no longer matching`);
+          actionAbortControllerMap.delete(currentAction);
+        }
+      }
+      continue;
+    }
+
+    // Handle parameter changes while route stays active
     if (paramsChangedWhileActive) {
       for (const actionProxy of boundActionSet) {
         const currentAction = actionProxy.getCurrentAction();
         toReloadSet.add(currentAction);
+
+        // Create a new abort controller for the reload
+        const actionAbortController = new AbortController();
+        actionAbortControllerMap.set(currentAction, actionAbortController);
+        abortSignalMap.set(currentAction, actionAbortController.signal);
       }
     }
   }
@@ -191,6 +225,7 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
     abortSignal,
     loadSet: toLoadSet,
     reloadSet: toReloadSet,
+    abortSignalMap,
     reason: `Document navigating to ${url}`,
   });
 };
