@@ -6,6 +6,14 @@ const baseUrl = import.meta.dev
   : window.location.origin;
 
 const NO_PARAMS = {};
+// Controls what happens to actions when their route becomes inactive:
+// 'abort' - Cancel the action immediately when route deactivates
+// 'keep-loading' - Allow action to continue running after route deactivation
+//
+// The 'keep-loading' strategy could act like preloading, keeping data ready for potential return.
+// However, since route reactivation triggers action reload anyway, the old data won't be used
+// so it's better to abort the action to avoid unnecessary resource usage.
+const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
 
 const routePrivatePropertiesWeakMap = new WeakMap();
 const getRoutePrivateProperties = (route) => {
@@ -190,7 +198,7 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
     }
 
     // Handle actions for routes that become inactive - abort them
-    if (becomesInactive) {
+    if (becomesInactive && ROUTE_DEACTIVATION_STRATEGY === "abort") {
       for (const actionProxy of boundActionSet) {
         const currentAction = actionProxy.getCurrentAction();
         const actionAbortController =
