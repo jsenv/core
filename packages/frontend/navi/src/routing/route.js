@@ -6,7 +6,7 @@ const baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
   : window.location.origin;
 
-const DEBUG = false;
+const DEBUG = true;
 const NO_PARAMS = {};
 // Controls what happens to actions when their route becomes inactive:
 // 'abort' - Cancel the action immediately when route deactivates
@@ -138,6 +138,8 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
       if (compareTwoJsValues(oldParams, extractedParams)) {
         // No change in parameters, keep the old params
         newParams = oldParams;
+      } else {
+        newParams = extractedParams;
       }
     } else {
       newParams = NO_PARAMS;
