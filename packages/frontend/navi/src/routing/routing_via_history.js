@@ -49,8 +49,8 @@ export const setupRoutingViaHistory = (applyRouting) => {
         if (href && href.startsWith(window.location.origin)) {
           e.preventDefault();
           const url = e.target.href;
-          const state = history.state;
-          history.pushState(null, null, url);
+          const state = null; // New navigation, start with null state
+          history.pushState(state, null, url);
           handleRouting({
             url,
             state,
@@ -86,7 +86,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
     state,
   });
 
-  const goTo = async (url, { state, replace } = {}) => {
+  const goTo = async (url, { state = null, replace } = {}) => {
     const currentUrl = documentUrlSignal.peek();
     if (url === currentUrl) {
       return;
@@ -96,17 +96,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
     } else {
       window.history.pushState(state, null, url);
     }
-    // Manually trigger routing since pushState/replaceState don't fire popstate
-    updateDocumentUrl(url);
-    routingWhile(() => {
-      const result = applyRouting({
-        signal: new AbortController().signal,
-        stopSignal: stopAbortController.signal,
-        url,
-        state,
-      });
-      return result;
-    });
+    handleRouting({ url, state });
   };
   const stopLoad = () => {
     const documentIsLoading = documentIsLoadingSignal.value;
