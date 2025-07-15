@@ -2,15 +2,20 @@ import {
   ActionRenderer,
   createAction,
   createRoute,
+  enableDebugActions,
+  // enableDebugOnDocumentLoading,
   useActionStatus,
   useRouteStatus,
 } from "@jsenv/navi";
 import { render } from "preact";
 
+enableDebugActions();
+// enableDebugOnDocumentLoading();
+
 const loadPageAction = createAction(
   async ({ pageName }) => {
     // Simulate some loading time
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 800));
     return `${pageName}: content loaded at ${new Date().toLocaleTimeString()}`;
   },
   {
@@ -156,6 +161,7 @@ const App = () => {
         >
           <li>
             <a
+              draggable="false"
               href={pageAUrl}
               style={{
                 textDecoration: "none",
@@ -170,6 +176,7 @@ const App = () => {
           </li>
           <li>
             <a
+              draggable="false"
               href={pageBUrl}
               style={{
                 textDecoration: "none",

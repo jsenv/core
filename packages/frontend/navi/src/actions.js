@@ -21,7 +21,10 @@ import {
 } from "./utils/stringify_for_display.js";
 import { weakEffect } from "./utils/weak_effect.js";
 
-let DEBUG = true;
+let DEBUG = false;
+export const enableDebugActions = () => {
+  DEBUG = true;
+};
 
 let applyActions = (params) => {
   const { requestedResult } = updateActions({
@@ -178,6 +181,21 @@ if (import.meta.dev) {
   window.__actions__ = {
     activationWeakSet,
     getActivationInfo,
+    inspectActivations: () => {
+      const activations = [];
+      for (const action of activationWeakSet) {
+        const privateProps = getActionPrivateProperties(action);
+        const loadingState = privateProps.loadingStateSignal.peek();
+        activations.push({
+          name: action.name,
+          loadingState: loadingState.id,
+          params: action.params,
+          isProxy: action.isProxy || false,
+        });
+      }
+      console.table(activations);
+      return activations;
+    },
     cleanup: {
       activation: {
         forceCleanup: () => activationWeakSet.forceCleanup(),

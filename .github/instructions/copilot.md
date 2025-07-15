@@ -178,22 +178,6 @@ const userProxy = createActionProxy(getUserAction, {
 4. **Add Tests**: Unit tests and integration tests
 5. **Document Usage**: Include demo files and documentation
 
-### New Actions
-
-1. **Define Template**: Create reusable action template
-2. **Add Caching**: Use appropriate cache keys for memoization
-3. **Handle Errors**: Implement proper error boundaries
-4. **Add Side Effects**: Include cleanup logic if needed
-5. **Test Scenarios**: Test loading, error, and success states
-
-### Plugin Development
-
-1. **Follow Plugin Pattern**: Use established plugin architecture
-2. **Configuration Options**: Expose relevant configuration parameters
-3. **Error Handling**: Graceful degradation and error reporting
-4. **Documentation**: Clear usage examples and API documentation
-5. **Testing**: Integration tests with core system
-
 ## Code Quality Standards
 
 - **ESLint**: Follow established ESLint configuration

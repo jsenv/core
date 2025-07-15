@@ -33,3 +33,7 @@ export {
   stopLoad,
 } from "./src/browser_integration/browser_integration.js";
 export { createRoute, useRouteStatus } from "./src/route/route.js";
+
+// for debbugging testing purposes
+export { enableDebugActions } from "./src/actions.js";
+export { enableDebugOnDocumentLoading } from "./src/browser_integration/document_loading_signal.js";

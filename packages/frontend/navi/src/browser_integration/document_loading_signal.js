@@ -2,6 +2,11 @@ import { computed, signal } from "@preact/signals";
 import { arraySignal } from "../utils/array_signal.js";
 import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 
+let DEBUG = false;
+export const enableDebugOnDocumentLoading = () => {
+  DEBUG = true;
+};
+
 export const windowIsLoadingSignal = signal(true);
 if (document.readyState === "complete") {
   windowIsLoadingSignal.value = false;
@@ -20,9 +25,20 @@ const [
 ] = arraySignal([]);
 export { documentLoadingRouteArraySignal };
 export const routingWhile = (fn, routeNames = []) => {
+  if (DEBUG && routeNames.length > 0) {
+    console.debug(`routingWhile: Adding routes to loading state:`, routeNames);
+  }
   addToDocumentLoadingRouteArraySignal(...routeNames);
   return executeWithCleanup(fn, () => {
     removeFromDocumentLoadingRouteArraySignal(...routeNames);
+    if (DEBUG && routeNames.length > 0) {
+      console.debug(
+        `routingWhile: Removed routes from loading state:`,
+        routeNames,
+        "state after removing:",
+        documentLoadingRouteArraySignal.peek(),
+      );
+    }
   });
 };
 
@@ -33,9 +49,23 @@ const [
 ] = arraySignal([]);
 export { documentLoadingActionArraySignal };
 export const workingWhile = (fn, actionNames = []) => {
+  if (DEBUG && actionNames.length > 0) {
+    console.debug(
+      `workingWhile: Adding actions to loading state:`,
+      actionNames,
+    );
+  }
   addToDocumentLoadingActionArraySignal(...actionNames);
   return executeWithCleanup(fn, () => {
     removeFromDocumentLoadingActionArraySignal(...actionNames);
+    if (DEBUG && actionNames.length > 0) {
+      console.debug(
+        `routingWhile: Removed action from loading state:`,
+        actionNames,
+        "start after removing:",
+        documentLoadingActionArraySignal.peek(),
+      );
+    }
   });
 };
 

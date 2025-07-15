@@ -1,135 +1,158 @@
 /**
- * Creates a WeakMap-like structure that supports both objects and primitives as keys,
- * with proper garbage collection for objects and permanent caching for primitives.
+ * jsenv/navi - createJsValueWeakMap
  *
- * IMPORTANT: Primitive keys will cause memory to grow indefinitely!
- * - Object keys: Proper weak references, can be garbage collected
- * - Primitive keys: Strong references, preserved forever to maintain action identity
- * - Use object keys when possible to avoid memory leaks
+ * Key/value cache with true ephemeron behavior and deep equality support.
+ *
+ * Features:
+ * - Mutual retention: key keeps value alive, value keeps key alive
+ * - Deep equality: different objects with same content are treated as identical keys
+ * - Automatic GC: entries are eligible for collection when unreferenced
+ * - Iteration support: can iterate over live entries for deep equality lookup
+ *
+ * Implementation:
+ * - Dual WeakMap (key->value, value->key) provides ephemeron behavior
+ * - WeakRef registry enables iteration without preventing GC
+ * - Primitives stored in Map (permanent retention - avoid for keys)
+ *
+ * Use case: Action caching where params (key) and action (value) should have
+ * synchronized lifetimes while allowing natural garbage collection.
  */
+
 import { compareTwoJsValues } from "./compare_two_js_values.js";
 
 export const createJsValueWeakMap = () => {
-  // Direct reference cache for objects (standard WeakMap behavior)
-  const objectDirectCache = new WeakMap(); // object -> value
+  // Core ephemeron maps for mutual retention
+  const keyToValue = new WeakMap(); // key -> value
+  const valueToKey = new WeakMap(); // value -> key
 
-  // This prevents parameter objects from keeping actions alive
-  const objectComparisonCache = new Map(); // keyWeakRef -> valueWeakRef
+  // Registry for iteration/deep equality (holds WeakRefs)
+  const keyRegistry = new Set(); // Set of WeakRef(key)
 
-  // Primitive keys cache (strong references - memory will grow!)
-  const primitiveCache = new Map(); // primitive -> value (NOT WeakRef!)
+  // Primitive cache
+  const primitiveCache = new Map();
+
+  function cleanupKeyRegistry() {
+    for (const keyRef of keyRegistry) {
+      if (keyRef.deref() === undefined) {
+        keyRegistry.delete(keyRef);
+      }
+    }
+  }
 
   return {
+    *[Symbol.iterator]() {
+      cleanupKeyRegistry();
+      for (const keyRef of keyRegistry) {
+        const key = keyRef.deref();
+        if (key && keyToValue.has(key)) {
+          yield [key, keyToValue.get(key)];
+        }
+      }
+      for (const [k, v] of primitiveCache) {
+        yield [k, v];
+      }
+    },
+
     get(key) {
       const isObject = key && typeof key === "object";
-
       if (isObject) {
-        // ✅ First try direct reference lookup (fastest)
-        const directResult = objectDirectCache.get(key);
-        if (directResult) {
-          return directResult;
+        // Fast path: exact key match
+        if (keyToValue.has(key)) {
+          return keyToValue.get(key);
         }
 
-        // ✅ Then try value-based comparison lookup with aggressive cleanup
-
-        for (const [keyWeakRef, valueWeakRef] of objectComparisonCache) {
-          const cachedKey = keyWeakRef.deref();
-          const cachedValue = valueWeakRef.deref();
-
-          // ✅ Clean up dead references immediately during search
-          if (!cachedKey || !cachedValue) {
-            objectComparisonCache.delete(keyWeakRef);
-            continue;
-          }
-
-          if (compareTwoJsValues(cachedKey, key)) {
-            return cachedValue;
+        // Slow path: deep equality search
+        cleanupKeyRegistry();
+        for (const keyRef of keyRegistry) {
+          const existingKey = keyRef.deref();
+          if (existingKey && compareTwoJsValues(existingKey, key)) {
+            return keyToValue.get(existingKey);
           }
         }
-
         return undefined;
       }
-
-      // Handle primitive keys (no cleanup - permanent cache)
       return primitiveCache.get(key);
     },
 
     set(key, value) {
       const isObject = key && typeof key === "object";
-
       if (isObject) {
-        // Store in direct cache for reference-based lookup
-        objectDirectCache.set(key, value);
+        cleanupKeyRegistry();
 
-        // Store BOTH key and value as WeakRef
-        const keyWeakRef = new WeakRef(key);
-        const valueWeakRef = new WeakRef(value);
-        objectComparisonCache.set(keyWeakRef, valueWeakRef);
+        // Remove existing deep-equal key
+        for (const keyRef of keyRegistry) {
+          const existingKey = keyRef.deref();
+          if (existingKey && compareTwoJsValues(existingKey, key)) {
+            const existingValue = keyToValue.get(existingKey);
+            keyToValue.delete(existingKey);
+            valueToKey.delete(existingValue);
+            keyRegistry.delete(keyRef);
+            break;
+          }
+        }
+
+        // Set ephemeron pair
+        keyToValue.set(key, value);
+        valueToKey.set(value, key);
+        keyRegistry.add(new WeakRef(key));
       } else {
-        // Store primitive key with strong reference (permanent cache)
         primitiveCache.set(key, value);
       }
     },
 
     delete(key) {
       const isObject = key && typeof key === "object";
-
       if (isObject) {
-        // Remove from direct cache
-        const hadValue = objectDirectCache.delete(key);
+        cleanupKeyRegistry();
 
-        // ✅ Remove from comparison cache and unregister
-        for (const [keyWeakRef] of objectComparisonCache) {
-          const cachedKey = keyWeakRef.deref();
-          if (cachedKey === key) {
-            objectComparisonCache.delete(keyWeakRef);
-            break;
+        // Try exact match first
+        if (keyToValue.has(key)) {
+          const value = keyToValue.get(key);
+          keyToValue.delete(key);
+          valueToKey.delete(value);
+
+          // Remove from registry
+          for (const keyRef of keyRegistry) {
+            if (keyRef.deref() === key) {
+              keyRegistry.delete(keyRef);
+              break;
+            }
           }
+          return true;
         }
 
-        return hadValue;
+        // Try deep equality
+        for (const keyRef of keyRegistry) {
+          const existingKey = keyRef.deref();
+          if (existingKey && compareTwoJsValues(existingKey, key)) {
+            const value = keyToValue.get(existingKey);
+            keyToValue.delete(existingKey);
+            valueToKey.delete(value);
+            keyRegistry.delete(keyRef);
+            return true;
+          }
+        }
+        return false;
       }
-      // Handle primitive deletion
       return primitiveCache.delete(key);
     },
 
-    // ✅ Enhanced debug information
     getStats: () => {
-      let objectAlive = 0;
-      let objectDead = 0;
-      let keysAlive = 0;
-      let keysDead = 0;
-
-      for (const [keyWeakRef, valueWeakRef] of objectComparisonCache) {
-        const key = keyWeakRef.deref();
-        const value = valueWeakRef.deref();
-
-        if (key) keysAlive++;
-        else keysDead++;
-
-        if (key && value) {
-          objectAlive++;
-        } else {
-          objectDead++;
-        }
-      }
-
-      let primitiveEntries = primitiveCache.size;
+      cleanupKeyRegistry();
+      const aliveKeys = Array.from(keyRegistry).filter((ref) =>
+        ref.deref(),
+      ).length;
 
       return {
-        objectDirectCacheSize: "unknown (WeakMap)",
-        objectComparison: {
-          total: objectComparisonCache.size,
-          alive: objectAlive,
-          dead: objectDead,
-          keysAlive,
-          keysDead,
+        ephemeronPairs: {
+          total: keyRegistry.size,
+          alive: aliveKeys,
+          note: "True ephemeron: key ↔ value mutual retention via dual WeakMap",
         },
         primitive: {
-          total: primitiveEntries,
-          note: "Primitive keys are never garbage collected - memory grows indefinitely!",
+          total: primitiveCache.size,
+          note: "Primitive keys never GC'd",
         },
-        gcStrategy: "objects: weak references, primitives: permanent cache",
       };
     },
   };

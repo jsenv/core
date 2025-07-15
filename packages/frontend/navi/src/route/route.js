@@ -1,12 +1,15 @@
-import { batch, computed, signal } from "@preact/signals";
-import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
+import { batch, computed, effect, signal } from "@preact/signals";
+import {
+  SYMBOL_IDENTITY,
+  compareTwoJsValues,
+} from "../utils/compare_two_js_values.js";
 
 const baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
   : window.location.origin;
 
 const DEBUG = true;
-const NO_PARAMS = {};
+const NO_PARAMS = { [SYMBOL_IDENTITY]: Symbol("no_params") };
 // Controls what happens to actions when their route becomes inactive:
 // 'abort' - Cancel the action immediately when route deactivates
 // 'keep-loading' - Allow action to continue running after route deactivation
@@ -267,8 +270,18 @@ export const createRoute = (urlPatternInput) => {
   const relativeUrlSignal = computed(() => {
     const params = paramsSignal.value;
     const relativeUrl = buildRelativeUrl(params);
-    route.relativeUrl = relativeUrl;
     return relativeUrl;
+  });
+  effect(() => {
+    route.relativeUrl = relativeUrlSignal.value;
+  });
+  const urlSignal = computed(() => {
+    const relativeUrl = relativeUrlSignal.value;
+    const url = new URL(relativeUrl, baseUrl).href;
+    return url;
+  });
+  effect(() => {
+    route.url = urlSignal.value;
   });
 
   const bindAction = (action) => {
@@ -286,13 +299,6 @@ export const createRoute = (urlPatternInput) => {
     routePrivateProperties.activeSignal = activeSignal;
     routePrivateProperties.paramsSignal = paramsSignal;
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
-
-    const urlSignal = computed(() => {
-      const relativeUrl = relativeUrlSignal.value;
-      const url = new URL(relativeUrl, baseUrl).href;
-      route.url = url;
-      return url;
-    });
     routePrivateProperties.urlSignal = urlSignal;
   }
 
