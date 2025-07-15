@@ -423,6 +423,25 @@
       window.clearReferences = async () => {
         const logId = "memory-log";
 
+        const initialStats = cache.getStats();
+
+        // Check if already cleared
+        if (
+          initialStats.ephemeronPairs.total <= 1 &&
+          !window.testReferences &&
+          !testKey2 &&
+          !testValue2
+        ) {
+          log(logId, "✅ ALREADY CLEAN", "success");
+          log(logId, "📝 All test references already cleared and GC'd", "info");
+          log(
+            logId,
+            `Current state: ${initialStats.ephemeronPairs.total} pairs remaining (ephemeron test only)`,
+            "info",
+          );
+          return;
+        }
+
         log(logId, "🗑️ CLEARING ALL REFERENCES", "warning");
         log(
           logId,
