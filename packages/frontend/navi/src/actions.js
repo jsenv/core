@@ -24,12 +24,12 @@ import { weakEffect } from "./utils/weak_effect.js";
 let DEBUG = true;
 
 let applyActions = (params) => {
-  const [codeValueToWait] = updateActions({
+  const { requestedResult } = updateActions({
     globalAbortSignal: new AbortController().signal,
     abortSignal: new AbortController().signal,
     ...params,
   });
-  return codeValueToWait;
+  return requestedResult;
 };
 export const setApplyActions = (value) => {
   applyActions = value;
@@ -471,7 +471,12 @@ ${lines.join("\n")}`);
   const allResult = allThenableArray.length
     ? Promise.all(allThenableArray)
     : null;
-  return [requestedResult, allResult];
+  const loadingActionSet = new Set([...willPreloadSet, ...willLoadSet]);
+  return {
+    requestedResult,
+    allResult,
+    loadingActionSet,
+  };
 };
 
 const NO_PARAMS = {};

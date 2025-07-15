@@ -9,30 +9,16 @@ import {
 import { setupBrowserIntegrationViaHistory } from "./via_history.js";
 
 const applyActions = (params) => {
-  let result;
-
-  // Extract action names from the sets
-  const actionNames = [];
-  const {
-    preloadSet = new Set(),
-    loadSet = new Set(),
-    reloadSet = new Set(),
-  } = params;
-  for (const action of preloadSet) {
-    actionNames.push(`${action.name} (preload)`);
-  }
-  for (const action of loadSet) {
-    actionNames.push(`${action.name} (load)`);
-  }
-  for (const action of reloadSet) {
-    actionNames.push(`${action.name} (reload)`);
+  const result = updateActions(params);
+  const { allResult, loadingActionSet } = result;
+  const loadingTaskNames = [];
+  for (const loadingAction of loadingActionSet) {
+    loadingTaskNames.push(loadingAction.name);
   }
 
   workingWhile(() => {
-    result = updateActions(params);
-    const [, browserValueToWait] = result;
-    return browserValueToWait;
-  }, actionNames);
+    return allResult;
+  }, loadingTaskNames);
   return result;
 };
 setApplyActions(applyActions);
@@ -45,28 +31,32 @@ const applyRouting = (
     // state
   },
 ) => {
-  const result = updateRoutes(url);
-  if (!result) {
+  const routingResult = updateRoutes(url);
+  if (!routingResult) {
     return undefined;
   }
-
-  const { loadSet, reloadSet, abortSignalMap, routeLoadRequestedNames } =
-    result;
-
-  return routingWhile(() => {
-    const [, browserValueToWait] = updateActions(
-      {
-        globalAbortSignal,
-        abortSignal,
-        loadSet,
-        reloadSet,
-        abortSignalMap,
-        reason: `Document navigating to ${url}`,
-      },
-      routeLoadRequestedNames,
-    );
-    return browserValueToWait;
+  const { loadSet, reloadSet, abortSignalMap, routeLoadRequestedMap } =
+    routingResult;
+  const updateActionsResult = updateActions({
+    globalAbortSignal,
+    abortSignal,
+    loadSet,
+    reloadSet,
+    abortSignalMap,
+    reason: `Document navigating to ${url}`,
   });
+  const { requestedResult, allResult, loadingActionSet } = updateActionsResult;
+  const loadingTaskNames = [];
+  for (const [route, routeAction] of routeLoadRequestedMap) {
+    if (loadingActionSet.has(routeAction)) {
+      loadingTaskNames.push(`${route.relativeUrl} -> ${routeAction.name}`);
+    }
+  }
+
+  routingWhile(() => {
+    return allResult;
+  }, loadingTaskNames);
+  return requestedResult;
 };
 
 const browserIntegration = setupBrowserIntegrationViaHistory({

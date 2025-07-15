@@ -1,4 +1,5 @@
 import { computed, signal } from "@preact/signals";
+import { arraySignal } from "../utils/array_signal.js";
 import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 
 export const windowIsLoadingSignal = signal(true);
@@ -12,49 +13,29 @@ if (document.readyState === "complete") {
   });
 }
 
-export const documentLoadingRouteArraySignal = signal([]);
-const addRouteToLoading = (routeName) => {
-  documentLoadingRouteArraySignal.value = [
-    ...documentLoadingRouteArraySignal.value,
-    routeName,
-  ];
-};
-const removeRouteFromLoading = (routeName) => {
-  documentLoadingRouteArraySignal.value =
-    documentLoadingRouteArraySignal.value.filter((name) => name !== routeName);
-};
+const [
+  documentLoadingRouteArraySignal,
+  addToDocumentLoadingRouteArraySignal,
+  removeFromDocumentLoadingRouteArraySignal,
+] = arraySignal([]);
+export { documentLoadingRouteArraySignal };
 export const routingWhile = (fn, routeNames = []) => {
-  for (const routeName of routeNames) {
-    addRouteToLoading(routeName);
-  }
+  addToDocumentLoadingRouteArraySignal(...routeNames);
   return executeWithCleanup(fn, () => {
-    for (const routeName of routeNames) {
-      removeRouteFromLoading(routeName);
-    }
+    removeFromDocumentLoadingRouteArraySignal(...routeNames);
   });
 };
 
-export const documentLoadingActionArraySignal = signal([]);
-const addActionToLoading = (actionName) => {
-  documentLoadingActionArraySignal.value = [
-    ...documentLoadingActionArraySignal.value,
-    actionName,
-  ];
-};
-const removeActionFromLoading = (actionName) => {
-  documentLoadingActionArraySignal.value =
-    documentLoadingActionArraySignal.value.filter(
-      (name) => name !== actionName,
-    );
-};
+const [
+  documentLoadingActionArraySignal,
+  addToDocumentLoadingActionArraySignal,
+  removeFromDocumentLoadingActionArraySignal,
+] = arraySignal([]);
+export { documentLoadingActionArraySignal };
 export const workingWhile = (fn, actionNames = []) => {
-  for (const actionName of actionNames) {
-    addActionToLoading(actionName);
-  }
+  addToDocumentLoadingActionArraySignal(...actionNames);
   return executeWithCleanup(fn, () => {
-    for (const actionName of actionNames) {
-      removeActionFromLoading(actionName);
-    }
+    removeFromDocumentLoadingActionArraySignal(...actionNames);
   });
 };
 
