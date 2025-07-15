@@ -23,56 +23,23 @@ import { weakEffect } from "./utils/weak_effect.js";
 
 let DEBUG = true;
 
-// Get handleActionTask from browser integration - this will be set by the router
-let browserActionTask = null;
-export const setBrowserActionTask = (handleActionTask) => {
-  browserActionTask = handleActionTask;
-};
-
-// intermediate function representing the fact we'll use browser integration for action execution
-export const requestActionsUpdates = ({
-  preloadSet,
-  loadSet,
-  reloadSet,
-  unloadSet,
-  reason,
-}) => {
-  if (browserActionTask) {
-    // Use browser integration's handleActionTask for browser-aware action execution
-    return browserActionTask(
-      ({ globalAbortSignal, abortSignal }) => {
-        const [requestedResult] = updateActions({
-          globalAbortSignal,
-          abortSignal,
-          preloadSet,
-          loadSet,
-          reloadSet,
-          unloadSet,
-          reason,
-        });
-        return requestedResult;
-      },
-      { reason },
-    );
-  }
-
-  // Fallback for when browser integration is not available
-  const [requestedResult] = updateActions({
+let applyActions = (params) => {
+  const [codeValueToWait] = updateActions({
     globalAbortSignal: new AbortController().signal,
     abortSignal: new AbortController().signal,
-    preloadSet,
-    loadSet,
-    reloadSet,
-    unloadSet,
-    reason,
+    ...params,
   });
-  return requestedResult;
+  return codeValueToWait;
 };
+export const setApplyActions = (value) => {
+  applyActions = value;
+};
+
 export const reloadActions = async (
   actionSet,
   { reason = "reloadActions was called" } = {},
 ) => {
-  return requestActionsUpdates({
+  return applyActions({
     reloadSet: actionSet,
     reason,
   });
@@ -558,24 +525,24 @@ export const createAction = (callback, rootOptions = {}) => {
         : computedData;
 
     const preload = (options) => {
-      return requestActionsUpdates({
+      return applyActions({
         preloadSet: new Set([action]),
         ...options,
       });
     };
     const load = (options) =>
-      requestActionsUpdates({
+      applyActions({
         loadSet: new Set([action]),
         ...options,
       });
     const reload = (options) => {
-      return requestActionsUpdates({
+      return applyActions({
         reloadSet: new Set([action]),
         ...options,
       });
     };
     const unload = (options) =>
-      requestActionsUpdates({
+      applyActions({
         unloadSet: new Set([action]),
         ...options,
       });

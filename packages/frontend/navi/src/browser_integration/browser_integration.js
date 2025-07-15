@@ -1,11 +1,23 @@
-import { updateActions } from "../actions.js";
+import { setApplyActions, updateActions } from "../actions.js";
 import { updateRoutes } from "../route/route.js";
 import {
-  documentIsRoutingSignal,
+  documentIsBusySignal,
   routingWhile,
   windowIsLoadingSignal,
+  workingWhile,
 } from "./document_loading_signal.js";
 import { setupBrowserIntegrationViaHistory } from "./via_history.js";
+
+const applyActions = (params) => {
+  let result;
+  workingWhile(() => {
+    result = updateActions(params);
+    const [, browserValueToWait] = result;
+    return browserValueToWait;
+  });
+  return result;
+};
+setApplyActions(applyActions);
 
 const applyRouting = (
   url,
@@ -29,14 +41,15 @@ const applyRouting = (
   });
 };
 
-const browserIntegration = setupBrowserIntegrationViaHistory();
+const browserIntegration = setupBrowserIntegrationViaHistory({
+  applyActions,
+  applyRouting,
+});
 // TODO: should be called once route are registered
 // and we'll likely register all route at once because it would create bug
 // to have lazy loaded route as any route (url) can be accessed at any time by
 // "definition" (a url can be shared, reloaded, etc)
-browserIntegration.init({
-  applyRouting,
-});
+browserIntegration.init();
 
 export const actionIntegratedVia = browserIntegration.integration;
 export const goTo = browserIntegration.goTo;
@@ -45,8 +58,8 @@ export const stopLoad = (reason = "stopLoad() called") => {
   if (windowIsLoading) {
     window.stop();
   }
-  const documentIsRouting = documentIsRoutingSignal.value;
-  if (documentIsRouting) {
+  const documentIsBusy = documentIsBusySignal.value;
+  if (documentIsBusy) {
     browserIntegration.stop(reason);
   }
 };

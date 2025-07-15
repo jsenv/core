@@ -2,7 +2,10 @@ import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
 
-export const setupBrowserIntegrationViaHistory = () => {
+export const setupBrowserIntegrationViaHistory = ({
+  applyActions,
+  applyRouting,
+}) => {
   const { history } = window;
 
   let globalAbortController = new AbortController();
@@ -11,14 +14,15 @@ export const setupBrowserIntegrationViaHistory = () => {
     globalAbortController = new AbortController();
   };
 
-  const handleActionTask = (callback) => {
-    return callback({
+  const handleActionTask = (params) => {
+    const [, browserValueToWait] = applyActions({
       globalAbortSignal: globalAbortController.signal,
       abortSignal: new AbortController().signal,
+      ...params,
     });
+    return browserValueToWait;
   };
 
-  let applyRouting;
   let abortController = null;
 
   const handleRoutingTask = (url, { state }) => {
@@ -115,9 +119,7 @@ export const setupBrowserIntegrationViaHistory = () => {
     handleRoutingTask(url, { state: newState });
   };
 
-  const init = (options) => {
-    applyRouting = options.applyRouting;
-
+  const init = () => {
     const url = window.location.href;
     const state = history.state;
     history.replaceState(state, null, url);

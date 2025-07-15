@@ -3,17 +3,14 @@ import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 
 export const windowIsLoadingSignal = signal(true);
 if (document.readyState === "complete") {
-  windowIsLoadingSignal(false);
+  windowIsLoadingSignal.value = false;
 } else {
   document.addEventListener("readystatechange", () => {
     if (document.readyState === "complete") {
-      windowIsLoadingSignal(false);
+      windowIsLoadingSignal.value = false;
     }
   });
 }
-export const useWindowIsLoading = () => {
-  return windowIsLoadingSignal.value;
-};
 
 export const documentIsRoutingSignal = signal(false);
 const startDocumentRouting = () => {
@@ -27,12 +24,22 @@ export const routingWhile = (fn) => {
   return executeWithCleanup(fn, endDocumentRouting);
 };
 
-export const someActionIsLoadingSignal = signal(false);
+export const documentIsWorkingSignal = signal(false);
+export const workingWhile = (fn) => {
+  documentIsWorkingSignal.value = true;
+  return executeWithCleanup(fn, () => {
+    documentIsWorkingSignal.value = false;
+  });
+};
+
+export const documentIsBusySignal = computed(() => {
+  return documentIsRoutingSignal.value || documentIsWorkingSignal.value;
+});
 
 const documentLoadingReasonArraySignal = computed(() => {
   const windowIsLoading = windowIsLoadingSignal.value;
   const documentIsRouting = documentIsRoutingSignal.value;
-  const someActionIsLoading = someActionIsLoadingSignal.value;
+  const documentIsWorking = documentIsWorkingSignal.value;
   const reasonArray = [];
   if (windowIsLoading) {
     reasonArray.push("window_loading");
@@ -40,8 +47,8 @@ const documentLoadingReasonArraySignal = computed(() => {
   if (documentIsRouting) {
     reasonArray.push("document_routing");
   }
-  if (someActionIsLoading) {
-    reasonArray.push("some_action_loading");
+  if (documentIsWorking) {
+    reasonArray.push("document_working");
   }
   return reasonArray;
 });
