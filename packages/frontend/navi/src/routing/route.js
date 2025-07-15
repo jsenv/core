@@ -1,5 +1,4 @@
 import { batch, computed, signal } from "@preact/signals";
-import { updateActions } from "../actions.js";
 import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 
 const baseUrl = import.meta.dev
@@ -22,7 +21,7 @@ const routeSet = new Set();
 const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
-export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
+export const updateRoutes = (url) => {
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
@@ -159,15 +158,12 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
   if (toLoadSet.size === 0 && toReloadSet.size === 0) {
     return false;
   }
-  const [allResult] = updateActions({
-    globalAbortSignal,
-    abortSignal,
+
+  return {
     loadSet: toLoadSet,
     reloadSet: toReloadSet,
     abortSignalMap,
-    reason: `Document navigating to ${url}`,
-  });
-  return allResult; // null or Promise.all()
+  };
 };
 const extractParams = (urlPattern, url) => {
   const match = urlPattern.exec(url);

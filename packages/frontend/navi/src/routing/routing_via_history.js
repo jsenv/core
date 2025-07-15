@@ -1,6 +1,4 @@
 import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
-import { documentIsLoadingSignal } from "./document_loading_signal.js";
-import { documentIsRoutingSignal } from "./document_routing_signal.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
 
@@ -13,7 +11,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
     globalAbortController = new AbortController();
   };
   let abortController = null;
-  const handleRouting = ({ url, state }) => {
+  const handleRouting = (url, { state }) => {
     updateDocumentUrl(url);
     updateDocumentState(state);
     if (abortController) {
@@ -21,14 +19,12 @@ export const setupRoutingViaHistory = (applyRouting) => {
     }
     abortController = new AbortController();
     return executeWithCleanup(
-      () => {
-        return applyRouting(url, {
+      () =>
+        applyRouting(url, {
           globalAbortSignal: globalAbortController.signal,
           abortSignal: abortController.signal,
-          url,
           state,
-        });
-      },
+        }),
       () => {
         abortController = undefined;
       },
@@ -45,8 +41,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
           const url = e.target.href;
           const state = null; // New navigation, start with null state
           history.pushState(state, null, url);
-          handleRouting({
-            url,
+          handleRouting(url, {
             state,
           });
         }
@@ -66,8 +61,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
   window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;
     const state = popstateEvent.state;
-    handleRouting({
-      url,
+    handleRouting(url, {
       state,
     });
   });
@@ -82,25 +76,17 @@ export const setupRoutingViaHistory = (applyRouting) => {
     } else {
       window.history.pushState(state, null, url);
     }
-    handleRouting({ url, state });
+    handleRouting(url, {
+      state,
+    });
   };
-  const stopLoad = (reason = "stopLoad() called") => {
-    const documentIsLoading = documentIsLoadingSignal.value;
-    if (documentIsLoading) {
-      window.stop();
-      return;
-    }
-    const documentIsRouting = documentIsRoutingSignal.value;
-    if (documentIsRouting) {
-      triggerGlobalAbort(reason);
-      return;
-    }
+  const stop = (reason) => {
+    triggerGlobalAbort(reason);
   };
   const reload = () => {
     const url = window.location.href;
     const state = history.state;
-    handleRouting({
-      url,
+    handleRouting(url, {
       state,
     });
   };
@@ -116,8 +102,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
   const replaceDocumentState = (newState) => {
     const url = window.location.href;
     window.history.replaceState(newState, null, url);
-    handleRouting({
-      url,
+    handleRouting(url, {
       state: newState,
     });
   };
@@ -125,8 +110,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
     const url = window.location.href;
     const state = history.state;
     history.replaceState(state, null, url);
-    handleRouting({
-      url,
+    handleRouting(url, {
       state,
     });
   };
@@ -141,7 +125,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
   return {
     init,
     goTo,
-    stopLoad,
+    stop,
     reload,
     goBack,
     goForward,
