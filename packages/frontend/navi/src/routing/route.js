@@ -17,105 +17,11 @@ const NO_PARAMS = {};
 // so it's better to abort the action to avoid unnecessary resource usage.
 const ROUTE_DEACTIVATION_STRATEGY = "abort"; // 'abort', 'keep-loading'
 
-const routePrivatePropertiesWeakMap = new WeakMap();
-const getRoutePrivateProperties = (route) => {
-  return routePrivatePropertiesWeakMap.get(route);
-};
-
 const routeSet = new Set();
-
-export const createRoute = (urlPatternInput) => {
-  const route = {
-    active: false,
-    params: NO_PARAMS,
-    buildUrl: null,
-    bindAction: null,
-    relativeUrl: null,
-    url: null,
-  };
-  routeSet.add(route);
-
-  const routePrivateProperties = {
-    urlPattern: undefined,
-    activeSignal: null,
-    paramsSignal: null,
-    relativeUrlSignal: null,
-    urlSignal: null,
-    boundActionSet: new Set(),
-  };
-  routePrivatePropertiesWeakMap.set(route, routePrivateProperties);
-
-  const buildRelativeUrl = (params = {}) => {
-    let relativeUrl = urlPatternInput;
-    // Replace named parameters (:param and {param})
-    for (const key of Object.keys(params)) {
-      const value = params[key];
-      const encodedValue = encodeURIComponent(value);
-      relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
-      relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
-    }
-    // Replace wildcards (*) with numbered parameters (0, 1, 2, etc.)
-    let wildcardIndex = 0;
-    relativeUrl = relativeUrl.replace(/\*/g, () => {
-      const paramKey = wildcardIndex.toString();
-      const replacement = params[paramKey]
-        ? encodeURIComponent(params[paramKey])
-        : "*";
-      wildcardIndex++;
-      return replacement;
-    });
-    return relativeUrl;
-  };
-  const buildUrl = (params = {}) => {
-    const relativeUrl = buildRelativeUrl(params);
-    const url = new URL(relativeUrl, baseUrl).href;
-    return url;
-  };
-  route.buildUrl = buildUrl;
-
-  const activeSignal = signal(false);
-  const paramsSignal = signal(NO_PARAMS);
-  const relativeUrlSignal = computed(() => {
-    const params = paramsSignal.value;
-    const relativeUrl = buildRelativeUrl(params);
-    route.relativeUrl = relativeUrl;
-    return relativeUrl;
-  });
-
-  const bindAction = (action) => {
-    const actionBoundToUrl = action.bindParams(paramsSignal);
-    routePrivateProperties.boundActionSet.add(actionBoundToUrl);
-    return actionBoundToUrl;
-  };
-  route.bindAction = bindAction;
-
-  private_properties: {
-    const urlPattern = new URLPattern(urlPatternInput, baseUrl, {
-      ignoreCase: true,
-    });
-    routePrivateProperties.urlPattern = urlPattern;
-    routePrivateProperties.activeSignal = activeSignal;
-    routePrivateProperties.paramsSignal = paramsSignal;
-    routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
-
-    const urlSignal = computed(() => {
-      const relativeUrl = relativeUrlSignal.value;
-      const url = new URL(relativeUrl, baseUrl).href;
-      route.url = url;
-      return url;
-    });
-    routePrivateProperties.urlSignal = urlSignal;
-  }
-
-  return route;
-};
-
 // Store previous route states to detect changes
 const routePreviousStateMap = new WeakMap();
-
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
-
 export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
@@ -263,7 +169,6 @@ export const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
   });
   return allResult; // null or Promise.all()
 };
-
 const extractParams = (urlPattern, url) => {
   const match = urlPattern.exec(url);
   if (!match) {
@@ -297,7 +202,6 @@ const extractParams = (urlPattern, url) => {
   }
   return params;
 };
-
 const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
   "protocol",
   "username",
@@ -308,6 +212,95 @@ const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
   "hash",
 ]);
 
+const routePrivatePropertiesWeakMap = new WeakMap();
+const getRoutePrivateProperties = (route) => {
+  return routePrivatePropertiesWeakMap.get(route);
+};
+export const createRoute = (urlPatternInput) => {
+  const route = {
+    active: false,
+    params: NO_PARAMS,
+    buildUrl: null,
+    bindAction: null,
+    relativeUrl: null,
+    url: null,
+  };
+  routeSet.add(route);
+
+  const routePrivateProperties = {
+    urlPattern: undefined,
+    activeSignal: null,
+    paramsSignal: null,
+    relativeUrlSignal: null,
+    urlSignal: null,
+    boundActionSet: new Set(),
+  };
+  routePrivatePropertiesWeakMap.set(route, routePrivateProperties);
+
+  const buildRelativeUrl = (params = {}) => {
+    let relativeUrl = urlPatternInput;
+    // Replace named parameters (:param and {param})
+    for (const key of Object.keys(params)) {
+      const value = params[key];
+      const encodedValue = encodeURIComponent(value);
+      relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
+      relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
+    }
+    // Replace wildcards (*) with numbered parameters (0, 1, 2, etc.)
+    let wildcardIndex = 0;
+    relativeUrl = relativeUrl.replace(/\*/g, () => {
+      const paramKey = wildcardIndex.toString();
+      const replacement = params[paramKey]
+        ? encodeURIComponent(params[paramKey])
+        : "*";
+      wildcardIndex++;
+      return replacement;
+    });
+    return relativeUrl;
+  };
+  const buildUrl = (params = {}) => {
+    const relativeUrl = buildRelativeUrl(params);
+    const url = new URL(relativeUrl, baseUrl).href;
+    return url;
+  };
+  route.buildUrl = buildUrl;
+
+  const activeSignal = signal(false);
+  const paramsSignal = signal(NO_PARAMS);
+  const relativeUrlSignal = computed(() => {
+    const params = paramsSignal.value;
+    const relativeUrl = buildRelativeUrl(params);
+    route.relativeUrl = relativeUrl;
+    return relativeUrl;
+  });
+
+  const bindAction = (action) => {
+    const actionBoundToUrl = action.bindParams(paramsSignal);
+    routePrivateProperties.boundActionSet.add(actionBoundToUrl);
+    return actionBoundToUrl;
+  };
+  route.bindAction = bindAction;
+
+  private_properties: {
+    const urlPattern = new URLPattern(urlPatternInput, baseUrl, {
+      ignoreCase: true,
+    });
+    routePrivateProperties.urlPattern = urlPattern;
+    routePrivateProperties.activeSignal = activeSignal;
+    routePrivateProperties.paramsSignal = paramsSignal;
+    routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
+
+    const urlSignal = computed(() => {
+      const relativeUrl = relativeUrlSignal.value;
+      const url = new URL(relativeUrl, baseUrl).href;
+      route.url = url;
+      return url;
+    });
+    routePrivateProperties.urlSignal = urlSignal;
+  }
+
+  return route;
+};
 export const useRouteStatus = (route) => {
   const { activeSignal, paramsSignal } = getRoutePrivateProperties(route);
 

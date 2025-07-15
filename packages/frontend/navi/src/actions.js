@@ -11,7 +11,6 @@ import {
   getActionPrivateProperties,
   setActionPrivateProperties,
 } from "./action_private_properties.js";
-import { handleTask } from "./routing/router.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 import { createIterableWeakSet } from "./utils/iterable_weak_set.js";
 import { createJsValueWeakMap } from "./utils/js_value_weak_map.js";

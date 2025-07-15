@@ -1,13 +1,21 @@
-import { applyRouting } from "./routing.js";
+import { applyRouting } from "./route.js";
 import { setupRoutingViaHistory } from "./routing_via_history.js";
 import { setupRoutingViaNavigation } from "./routing_via_navigation.js";
 
+import { routingWhile } from "./document_routing_signal.js";
+
 export let routingVia = "history";
+
+const stuff = (...args) => {
+  routingWhile(() => {
+    return applyRouting(...args);
+  });
+};
 
 const methods =
   routingVia === "history"
-    ? setupRoutingViaHistory(applyRouting)
-    : setupRoutingViaNavigation(applyRouting);
+    ? setupRoutingViaHistory(stuff)
+    : setupRoutingViaNavigation(stuff);
 
 // TODO: should be called once route are registered
 // and we'll likely register all route at once because it would create bug

@@ -1,8 +1,6 @@
+import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 import { documentIsLoadingSignal } from "./document_loading_signal.js";
-import {
-  documentIsRoutingSignal,
-  routingWhile,
-} from "./document_routing_signal.js";
+import { documentIsRoutingSignal } from "./document_routing_signal.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
 
@@ -22,20 +20,17 @@ export const setupRoutingViaHistory = (applyRouting) => {
       abortController.abort(`navigating to ${url}`);
     }
     abortController = new AbortController();
-    routingWhile(
+    return executeWithCleanup(
       () => {
-        const result = applyRouting(url, {
+        return applyRouting(url, {
           globalAbortSignal: globalAbortController.signal,
           abortSignal: abortController.signal,
           url,
           state,
         });
-        return result;
       },
-      {
-        onFinally: () => {
-          abortController = undefined;
-        },
+      () => {
+        abortController = undefined;
       },
     );
   };

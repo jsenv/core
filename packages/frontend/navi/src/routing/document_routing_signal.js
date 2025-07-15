@@ -1,4 +1,5 @@
 import { signal } from "@preact/signals";
+import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 
 export const documentIsRoutingSignal = signal(false);
 export const useDocumentIsRouting = () => {
@@ -10,29 +11,7 @@ export const startDocumentRouting = () => {
 export const endDocumentRouting = () => {
   documentIsRoutingSignal.value = false;
 };
-export const routingWhile = (fn, { onFinally, onReturn } = {}) => {
+export const routingWhile = (fn) => {
   startDocumentRouting();
-
-  let isThenable;
-  try {
-    const result = fn();
-    isThenable = result && typeof result.then === "function";
-    if (isThenable) {
-      return (async () => {
-        try {
-          return await result;
-        } finally {
-          endDocumentRouting();
-          onFinally?.();
-        }
-      })();
-    }
-    onReturn?.(result);
-    return result;
-  } finally {
-    if (!isThenable) {
-      endDocumentRouting();
-      onFinally?.();
-    }
-  }
+  return executeWithCleanup(fn, endDocumentRouting);
 };
