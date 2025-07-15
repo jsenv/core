@@ -23,13 +23,13 @@ export { Input } from "./src/components/input/input.jsx";
 export { RadioList } from "./src/components/input/radio_list.jsx";
 export { Link } from "./src/components/link/link.jsx";
 
-// routing
-export { createRoute, useRouteStatus } from "./src/routing/route.js";
+// integration with browser
 export {
+  actionIntegratedVia,
   goBack,
   goForward,
   goTo,
   reload,
-  routingVia,
   stopLoad,
-} from "./src/routing/router.js";
+} from "./src/browser_integration/browser_integration.js";
+export { createRoute, useRouteStatus } from "./src/route/route.js";

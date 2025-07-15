@@ -1,17 +1,21 @@
 import { updateActions } from "../actions.js";
+import { updateRoutes } from "../route/route.js";
 import {
   documentIsRoutingSignal,
   routingWhile,
   windowIsLoadingSignal,
 } from "./document_loading_signal.js";
-import { updateRoutes } from "./route.js";
-import { setupRoutingViaHistory } from "./routing_via_history.js";
-import { setupRoutingViaNavigation } from "./routing_via_navigation.js";
+import { setupBrowserIntegrationViaHistory } from "./via_history.js";
 
-export let routingVia = "history";
-
-const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
-  routingWhile(() => {
+const applyRouting = (
+  url,
+  {
+    globalAbortSignal,
+    abortSignal,
+    // state
+  },
+) => {
+  return routingWhile(() => {
     const { loadSet, reloadSet, abortSignalMap } = updateRoutes(url);
     const [allResult] = updateActions({
       globalAbortSignal,
@@ -25,18 +29,17 @@ const applyRouting = (url, { globalAbortSignal, abortSignal }) => {
   });
 };
 
-const methods =
-  routingVia === "history"
-    ? setupRoutingViaHistory(applyRouting)
-    : setupRoutingViaNavigation(applyRouting);
-
+const browserIntegration = setupBrowserIntegrationViaHistory();
 // TODO: should be called once route are registered
 // and we'll likely register all route at once because it would create bug
 // to have lazy loaded route as any route (url) can be accessed at any time by
 // "definition" (a url can be shared, reloaded, etc)
-methods.init();
+browserIntegration.init({
+  applyRouting,
+});
 
-export const goTo = methods.goTo;
+export const actionIntegratedVia = browserIntegration.integration;
+export const goTo = browserIntegration.goTo;
 export const stopLoad = (reason = "stopLoad() called") => {
   const windowIsLoading = windowIsLoadingSignal.value;
   if (windowIsLoading) {
@@ -44,10 +47,10 @@ export const stopLoad = (reason = "stopLoad() called") => {
   }
   const documentIsRouting = documentIsRoutingSignal.value;
   if (documentIsRouting) {
-    methods.stop(reason);
+    browserIntegration.stop(reason);
   }
 };
-export const reload = methods.reload;
-export const goBack = methods.goBack;
-export const goForward = methods.goForward;
-export const handleTask = methods.handleTask;
+export const reload = browserIntegration.reload;
+export const goBack = browserIntegration.goBack;
+export const goForward = browserIntegration.goForward;
+export const handleActionTask = browserIntegration.handleActionTask;

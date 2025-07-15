@@ -23,7 +23,13 @@ import { weakEffect } from "./utils/weak_effect.js";
 
 let DEBUG = true;
 
-// intermediate function representing the fact we'll use navigation.navigate update action and get a signal
+// Get handleActionTask from browser integration - this will be set by the router
+let browserActionTask = null;
+export const setBrowserActionTask = (handleActionTask) => {
+  browserActionTask = handleActionTask;
+};
+
+// intermediate function representing the fact we'll use browser integration for action execution
 export const requestActionsUpdates = ({
   preloadSet,
   loadSet,
@@ -31,12 +37,27 @@ export const requestActionsUpdates = ({
   unloadSet,
   reason,
 }) => {
-  const [
-    requestedResult,
-    // allDoneResult is the thing we'll return the the navigation api
-    // so that it waits for every actions to consider things are done
-    // allResult
-  ] = updateActions({
+  if (browserActionTask) {
+    // Use browser integration's handleActionTask for browser-aware action execution
+    return browserActionTask(
+      ({ globalAbortSignal, abortSignal }) => {
+        const [requestedResult] = updateActions({
+          globalAbortSignal,
+          abortSignal,
+          preloadSet,
+          loadSet,
+          reloadSet,
+          unloadSet,
+          reason,
+        });
+        return requestedResult;
+      },
+      { reason },
+    );
+  }
+
+  // Fallback for when browser integration is not available
+  const [requestedResult] = updateActions({
     globalAbortSignal: new AbortController().signal,
     abortSignal: new AbortController().signal,
     preloadSet,

@@ -2,7 +2,7 @@ import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
 
-export const setupRoutingViaHistory = (applyRouting) => {
+export const setupBrowserIntegrationViaHistory = () => {
   const { history } = window;
 
   let globalAbortController = new AbortController();
@@ -10,14 +10,25 @@ export const setupRoutingViaHistory = (applyRouting) => {
     globalAbortController.abort(reason);
     globalAbortController = new AbortController();
   };
+
+  const handleActionTask = (callback) => {
+    return callback({
+      globalAbortSignal: globalAbortController.signal,
+      abortSignal: new AbortController().signal,
+    });
+  };
+
+  let applyRouting;
   let abortController = null;
-  const handleRouting = (url, { state }) => {
+
+  const handleRoutingTask = (url, { state }) => {
     updateDocumentUrl(url);
     updateDocumentState(state);
     if (abortController) {
       abortController.abort(`navigating to ${url}`);
     }
     abortController = new AbortController();
+
     return executeWithCleanup(
       () =>
         applyRouting(url, {
@@ -31,6 +42,7 @@ export const setupRoutingViaHistory = (applyRouting) => {
     );
   };
 
+  // Browser event handlers
   window.addEventListener(
     "click",
     (e) => {
@@ -39,31 +51,27 @@ export const setupRoutingViaHistory = (applyRouting) => {
         if (href && href.startsWith(window.location.origin)) {
           e.preventDefault();
           const url = e.target.href;
-          const state = null; // New navigation, start with null state
+          const state = null;
           history.pushState(state, null, url);
-          handleRouting(url, {
-            state,
-          });
+          handleRoutingTask(url, { state });
         }
       }
     },
     { capture: true },
   );
+
   window.addEventListener(
     "submit",
     () => {
-      // for the form submission it's a bit more tricky
-      // we need to have an example with navigation to actually
-      // implement it there too
+      // TODO: Handle form submissions
     },
     { capture: true },
   );
+
   window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;
     const state = popstateEvent.state;
-    handleRouting(url, {
-      state,
-    });
+    handleRoutingTask(url, { state });
   });
 
   const goTo = async (url, { state = null, replace } = {}) => {
@@ -76,53 +84,48 @@ export const setupRoutingViaHistory = (applyRouting) => {
     } else {
       window.history.pushState(state, null, url);
     }
-    handleRouting(url, {
-      state,
-    });
+    handleRoutingTask(url, { state });
   };
-  const stop = (reason) => {
+
+  const stop = (reason = "stop called") => {
     triggerGlobalAbort(reason);
   };
+
   const reload = () => {
     const url = window.location.href;
     const state = history.state;
-    handleRouting(url, {
-      state,
-    });
+    handleRoutingTask(url, { state });
   };
+
   const goBack = () => {
     window.history.back();
   };
+
   const goForward = () => {
     window.history.forward();
   };
+
   const getDocumentState = () => {
     return window.history.state ? { ...window.history.state } : null;
   };
+
   const replaceDocumentState = (newState) => {
     const url = window.location.href;
     window.history.replaceState(newState, null, url);
-    handleRouting(url, {
-      state: newState,
-    });
+    handleRoutingTask(url, { state: newState });
   };
-  const init = () => {
+
+  const init = (options) => {
+    applyRouting = options.applyRouting;
+
     const url = window.location.href;
     const state = history.state;
     history.replaceState(state, null, url);
-    handleRouting(url, {
-      state,
-    });
-  };
-
-  const handleTask = (callback) => {
-    callback({
-      globalAbortSignal: globalAbortController.signal,
-      abortSignal: new AbortController().signal,
-    });
+    handleRoutingTask(url, { state });
   };
 
   return {
+    integration: "browser_history_api",
     init,
     goTo,
     stop,
@@ -131,6 +134,6 @@ export const setupRoutingViaHistory = (applyRouting) => {
     goForward,
     getDocumentState,
     replaceDocumentState,
-    handleTask,
+    handleActionTask,
   };
 };
