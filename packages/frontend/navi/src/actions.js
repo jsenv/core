@@ -587,6 +587,15 @@ export const createAction = (callback, rootOptions = {}) => {
     let action;
 
     const childActionWeakSet = createIterableWeakSet("child_action");
+    /*
+     * Ephemeron behavior is critical here: actions must keep params alive.
+     * Without this, bindParams(params) could create a new action while code
+     * still references the old action with GC'd params. This would cause:
+     * - Duplicate actions in activationWeakSet (old + new)
+     * - Cache misses when looking up existing actions
+     * - Subtle bugs where different parts of code use different action instances
+     * The ephemeron pattern ensures params and actions have synchronized lifetimes.
+     */
     const childActionWeakMap = createJsValueWeakMap();
     const _bindParams = (newParamsOrSignal, options = {}) => {
       // ✅ CAS 1: Signal direct -> proxy
