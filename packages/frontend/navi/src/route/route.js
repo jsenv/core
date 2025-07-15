@@ -87,8 +87,10 @@ export const updateRoutes = (url) => {
   const toLoadSet = new Set();
   const toReloadSet = new Set();
   const abortSignalMap = new Map();
+  const routeLoadRequestedSet = new Set();
 
   for (const {
+    route,
     routePrivateProperties,
     newActive,
     oldActive,
@@ -112,6 +114,7 @@ export const updateRoutes = (url) => {
       for (const actionProxy of boundActionSet) {
         const currentAction = actionProxy.getCurrentAction();
         toLoadSet.add(currentAction);
+        routeLoadRequestedSet.add(route.relativeUrl);
 
         // Create a new abort controller for this action
         const actionAbortController = new AbortController();
@@ -146,6 +149,7 @@ export const updateRoutes = (url) => {
       for (const actionProxy of boundActionSet) {
         const currentAction = actionProxy.getCurrentAction();
         toReloadSet.add(currentAction);
+        routeLoadRequestedSet.add(route.relativeUrl);
 
         // Create a new abort controller for the reload
         const actionAbortController = new AbortController();
@@ -159,6 +163,7 @@ export const updateRoutes = (url) => {
     loadSet: toLoadSet,
     reloadSet: toReloadSet,
     abortSignalMap,
+    routeLoadRequestedNames: Array.from(routeLoadRequestedSet),
   };
 };
 const extractParams = (urlPattern, url) => {

@@ -12,42 +12,71 @@ if (document.readyState === "complete") {
   });
 }
 
-export const documentIsRoutingSignal = signal(false);
-const startDocumentRouting = () => {
-  documentIsRoutingSignal.value = true;
+export const documentLoadingRouteArraySignal = signal([]);
+const addRouteToLoading = (routeName) => {
+  documentLoadingRouteArraySignal.value = [
+    ...documentLoadingRouteArraySignal.value,
+    routeName,
+  ];
 };
-const endDocumentRouting = () => {
-  documentIsRoutingSignal.value = false;
+const removeRouteFromLoading = (routeName) => {
+  documentLoadingRouteArraySignal.value =
+    documentLoadingRouteArraySignal.value.filter((name) => name !== routeName);
 };
-export const routingWhile = (fn) => {
-  startDocumentRouting();
-  return executeWithCleanup(fn, endDocumentRouting);
+export const routingWhile = (fn, routeNames = []) => {
+  for (const routeName of routeNames) {
+    addRouteToLoading(routeName);
+  }
+  return executeWithCleanup(fn, () => {
+    for (const routeName of routeNames) {
+      removeRouteFromLoading(routeName);
+    }
+  });
 };
 
-export const documentIsWorkingSignal = signal(false);
-export const workingWhile = (fn) => {
-  documentIsWorkingSignal.value = true;
+export const documentLoadingActionArraySignal = signal([]);
+const addActionToLoading = (actionName) => {
+  documentLoadingActionArraySignal.value = [
+    ...documentLoadingActionArraySignal.value,
+    actionName,
+  ];
+};
+const removeActionFromLoading = (actionName) => {
+  documentLoadingActionArraySignal.value =
+    documentLoadingActionArraySignal.value.filter(
+      (name) => name !== actionName,
+    );
+};
+export const workingWhile = (fn, actionNames = []) => {
+  for (const actionName of actionNames) {
+    addActionToLoading(actionName);
+  }
   return executeWithCleanup(fn, () => {
-    documentIsWorkingSignal.value = false;
+    for (const actionName of actionNames) {
+      removeActionFromLoading(actionName);
+    }
   });
 };
 
 export const documentIsBusySignal = computed(() => {
-  return documentIsRoutingSignal.value || documentIsWorkingSignal.value;
+  return (
+    documentLoadingRouteArraySignal.value.length > 0 ||
+    documentLoadingActionArraySignal.value.length > 0
+  );
 });
 
 const documentLoadingReasonArraySignal = computed(() => {
   const windowIsLoading = windowIsLoadingSignal.value;
-  const documentIsRouting = documentIsRoutingSignal.value;
-  const documentIsWorking = documentIsWorkingSignal.value;
+  const routesLoading = documentLoadingRouteArraySignal.value;
+  const actionsLoading = documentLoadingActionArraySignal.value;
   const reasonArray = [];
   if (windowIsLoading) {
     reasonArray.push("window_loading");
   }
-  if (documentIsRouting) {
+  if (routesLoading.length > 0) {
     reasonArray.push("document_routing");
   }
-  if (documentIsWorking) {
+  if (actionsLoading.length > 0) {
     reasonArray.push("document_working");
   }
   return reasonArray;

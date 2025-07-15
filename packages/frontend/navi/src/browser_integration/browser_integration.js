@@ -10,11 +10,29 @@ import { setupBrowserIntegrationViaHistory } from "./via_history.js";
 
 const applyActions = (params) => {
   let result;
+
+  // Extract action names from the sets
+  const actionNames = [];
+  const {
+    preloadSet = new Set(),
+    loadSet = new Set(),
+    reloadSet = new Set(),
+  } = params;
+  for (const action of preloadSet) {
+    actionNames.push(`${action.name} (preload)`);
+  }
+  for (const action of loadSet) {
+    actionNames.push(`${action.name} (load)`);
+  }
+  for (const action of reloadSet) {
+    actionNames.push(`${action.name} (reload)`);
+  }
+
   workingWhile(() => {
     result = updateActions(params);
     const [, browserValueToWait] = result;
     return browserValueToWait;
-  });
+  }, actionNames);
   return result;
 };
 setApplyActions(applyActions);
@@ -27,19 +45,26 @@ const applyRouting = (
     // state
   },
 ) => {
+  const result = updateRoutes(url);
+  if (!result) {
+    return undefined;
+  }
+
+  const { loadSet, reloadSet, abortSignalMap, routeLoadRequestedNames } =
+    result;
+
   return routingWhile(() => {
-    const { loadSet, reloadSet, abortSignalMap } = updateRoutes(url);
-    if (loadSet.size === 0 && reloadSet.size === 0) {
-      return undefined;
-    }
-    const [, browserValueToWait] = updateActions({
-      globalAbortSignal,
-      abortSignal,
-      loadSet,
-      reloadSet,
-      abortSignalMap,
-      reason: `Document navigating to ${url}`,
-    });
+    const [, browserValueToWait] = updateActions(
+      {
+        globalAbortSignal,
+        abortSignal,
+        loadSet,
+        reloadSet,
+        abortSignalMap,
+        reason: `Document navigating to ${url}`,
+      },
+      routeLoadRequestedNames,
+    );
     return browserValueToWait;
   });
 };
