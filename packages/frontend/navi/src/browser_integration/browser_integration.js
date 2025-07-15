@@ -29,7 +29,10 @@ const applyRouting = (
 ) => {
   return routingWhile(() => {
     const { loadSet, reloadSet, abortSignalMap } = updateRoutes(url);
-    const [allResult] = updateActions({
+    if (loadSet.size === 0 && reloadSet.size === 0) {
+      return undefined;
+    }
+    const [, browserValueToWait] = updateActions({
       globalAbortSignal,
       abortSignal,
       loadSet,
@@ -37,7 +40,7 @@ const applyRouting = (
       abortSignalMap,
       reason: `Document navigating to ${url}`,
     });
-    return allResult;
+    return browserValueToWait;
   });
 };
 

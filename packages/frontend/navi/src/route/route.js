@@ -155,10 +155,6 @@ export const updateRoutes = (url) => {
     }
   }
 
-  if (toLoadSet.size === 0 && toReloadSet.size === 0) {
-    return false;
-  }
-
   return {
     loadSet: toLoadSet,
     reloadSet: toReloadSet,
