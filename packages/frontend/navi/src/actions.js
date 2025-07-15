@@ -11,6 +11,7 @@ import {
   getActionPrivateProperties,
   setActionPrivateProperties,
 } from "./action_private_properties.js";
+import { handleTask } from "./routing/router.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 import { createIterableWeakSet } from "./utils/iterable_weak_set.js";
 import { createJsValueWeakMap } from "./utils/js_value_weak_map.js";
@@ -22,6 +23,48 @@ import {
 import { weakEffect } from "./utils/weak_effect.js";
 
 let DEBUG = true;
+
+// intermediate function representing the fact we'll use navigation.navigate update action and get a signal
+export const requestActionsUpdates = ({
+  preloadSet,
+  loadSet,
+  reloadSet,
+  unloadSet,
+  reason,
+}) => {
+  const [
+    requestedResult,
+    // allDoneResult is the thing we'll return the the navigation api
+    // so that it waits for every actions to consider things are done
+    // allResult
+  ] = updateActions({
+    globalAbortSignal: new AbortController().signal,
+    abortSignal: new AbortController().signal,
+    preloadSet,
+    loadSet,
+    reloadSet,
+    unloadSet,
+    reason,
+  });
+  return requestedResult;
+};
+export const reloadActions = async (
+  actionSet,
+  { reason = "reloadActions was called" } = {},
+) => {
+  return requestActionsUpdates({
+    reloadSet: actionSet,
+    reason,
+  });
+};
+export const abortPendingActions = (
+  reason = "abortPendingActions was called",
+) => {
+  const { loadingSet } = getActivationInfo();
+  for (const loadingAction of loadingSet) {
+    loadingAction.abort(reason);
+  }
+};
 
 /**
  * Registry that prevents preloaded actions from being garbage collected.
@@ -109,45 +152,6 @@ const formatActionSet = (prefix, actionSet) => {
     });
   }
   return message;
-};
-
-// intermediate function representing the fact we'll use navigation.navigate update action and get a signal
-export const requestActionsUpdates = ({
-  preloadSet,
-  loadSet,
-  reloadSet,
-  unloadSet,
-  reason,
-}) => {
-  const [
-    requestedResult,
-    // allDoneResult is the thing we'll return the the navigation api
-    // so that it waits for every actions to consider things are done
-    // allResult
-  ] = updateActions({
-    globalAbortSignal: new AbortController().signal,
-    abortSignal: new AbortController().signal,
-    preloadSet,
-    loadSet,
-    reloadSet,
-    unloadSet,
-    reason,
-  });
-  return requestedResult;
-};
-export const reloadActions = async (actionSet, { reason } = {}) => {
-  return requestActionsUpdates({
-    reloadSet: actionSet,
-    reason,
-  });
-};
-export const abortPendingActions = (
-  reason = "abortPendingActions was called",
-) => {
-  const { loadingSet } = getActivationInfo(); // ✅ Use new function
-  for (const loadingAction of loadingSet) {
-    loadingAction.abort(reason);
-  }
 };
 
 const actionAbortMap = new Map();

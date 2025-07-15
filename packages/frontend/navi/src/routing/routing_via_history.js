@@ -14,7 +14,6 @@ export const setupRoutingViaHistory = (applyRouting) => {
     globalAbortController.abort(reason);
     globalAbortController = new AbortController();
   };
-
   let abortController = null;
   const handleRouting = ({ url, state }) => {
     updateDocumentUrl(url);
@@ -69,7 +68,6 @@ export const setupRoutingViaHistory = (applyRouting) => {
     },
     { capture: true },
   );
-
   window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;
     const state = popstateEvent.state;
@@ -77,13 +75,6 @@ export const setupRoutingViaHistory = (applyRouting) => {
       url,
       state,
     });
-  });
-  const url = window.location.href;
-  const state = history.state;
-  history.replaceState(state, null, url);
-  handleRouting({
-    url,
-    state,
   });
 
   const goTo = async (url, { state = null, replace } = {}) => {
@@ -124,7 +115,6 @@ export const setupRoutingViaHistory = (applyRouting) => {
   const goForward = () => {
     window.history.forward();
   };
-
   const getDocumentState = () => {
     return window.history.state ? { ...window.history.state } : null;
   };
@@ -136,8 +126,25 @@ export const setupRoutingViaHistory = (applyRouting) => {
       state: newState,
     });
   };
+  const init = () => {
+    const url = window.location.href;
+    const state = history.state;
+    history.replaceState(state, null, url);
+    handleRouting({
+      url,
+      state,
+    });
+  };
+
+  const handleTask = (callback) => {
+    callback({
+      globalAbortSignal: globalAbortController.signal,
+      abortSignal: new AbortController().signal,
+    });
+  };
 
   return {
+    init,
     goTo,
     stopLoad,
     reload,
@@ -145,5 +152,6 @@ export const setupRoutingViaHistory = (applyRouting) => {
     goForward,
     getDocumentState,
     replaceDocumentState,
+    handleTask,
   };
 };
