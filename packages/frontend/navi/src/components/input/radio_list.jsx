@@ -40,6 +40,7 @@ const RadioListControlled = forwardRef((props, ref) => {
     readOnly,
     children,
     onChange,
+    required,
     ...rest
   } = props;
 
@@ -72,6 +73,7 @@ const RadioListControlled = forwardRef((props, ref) => {
             readOnly={readOnly || childReadOnly}
             disabled={disabled || childDisabled}
             loading={loading || childLoading}
+            required={required}
             onChange={(event) => {
               onChange(event);
               childOnChange?.(event);
@@ -243,16 +245,14 @@ const RadioListInsideForm = forwardRef((props, ref) => {
     name,
     valueAtStart,
   );
-
-  const valueInAction = getCheckedValue();
-  const value = valueInAction;
+  const value = getCheckedValue();
   useEffect(() => {
-    setNavStateValue(valueInAction);
-  }, [valueInAction]);
+    setNavStateValue(value);
+  }, [value]);
 
   useFormEvents(innerRef, {
     onFormReset: () => {
-      resetCheckedValue();
+      setCheckedValue(undefined);
     },
     onFormActionAbort: () => {
       resetCheckedValue();

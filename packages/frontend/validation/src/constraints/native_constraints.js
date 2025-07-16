@@ -16,12 +16,63 @@ export const DISABLED_CONSTRAINT = {
 
 export const REQUIRED_CONSTRAINT = {
   name: "required",
-  check: (element) => {
+  check: (element, { registerChange }) => {
     if (!element.required) {
       return null;
     }
+    const requiredMessage = element.getAttribute("data-required-message");
+
+    if (element.type === "checkbox") {
+      if (!element.checked) {
+        return requiredMessage || `Veuillez cocher cette case.`;
+      }
+      return null;
+    }
+    if (element.type === "radio") {
+      // For radio buttons, check if any radio with the same name is selected
+      const name = element.name;
+      if (!name) {
+        // If no name, check just this radio
+        if (!element.checked) {
+          return requiredMessage || `Veuillez sélectionner une option.`;
+        }
+        return null;
+      }
+
+      const closestFieldset = element.closest("fieldset");
+      const fieldsetRequiredMessage = closestFieldset
+        ? closestFieldset.getAttribute("data-required-message")
+        : null;
+
+      // Find the container (form or closest fieldset)
+      const container = element.form || closestFieldset || document;
+      // Check if any radio with the same name is checked
+      const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
+      const radiosWithSameName = container.querySelectorAll(radioSelector);
+      for (const radio of radiosWithSameName) {
+        if (radio.checked) {
+          return null; // At least one radio is selected
+        }
+        registerChange((onChange) => {
+          radio.addEventListener("change", onChange);
+          return () => {
+            radio.removeEventListener("change", onChange);
+          };
+        });
+      }
+
+      return {
+        message:
+          requiredMessage ||
+          fieldsetRequiredMessage ||
+          `Veuillez sélectionner une option.`,
+        target: closestFieldset
+          ? closestFieldset.querySelector("legend")
+          : undefined,
+      };
+    }
     if (!element.value) {
-      return `Veuillez remplir ce champ.`;
+      return requiredMessage || `Veuillez remplir ce champ.`;
     }
     return null;
   },

@@ -76,7 +76,7 @@
                   }}
                 >
                   <RadioList
-                    id="color_form_alert"
+                    id="color_form_log"
                     label="Select your favorite color:"
                     name="color"
                   >
@@ -99,7 +99,7 @@
               </p>
 
               <RadioList
-                id="color_form_alert"
+                id="color_action_throw"
                 label="Select your favorite color:"
                 name="color"
                 action={async ({ color }) => {
@@ -127,7 +127,7 @@
                   }}
                 >
                   <RadioList
-                    id="color_form_alert"
+                    id="color_form_throw"
                     label="Select your favorite color:"
                     name="color"
                   >
@@ -155,10 +155,38 @@
                 }}
               >
                 <RadioList
-                  id="color_form_alert"
+                  id="color_form_checked_throw"
                   label="Select your favorite color:"
                   name="color"
                   value="red"
+                >
+                  {[
+                    { label: "Red", id: "red", value: "red" },
+                    { label: "Blue", id: "blue", value: "blue" },
+                    { label: "Green", id: "green", value: "green" },
+                  ]}
+                </RadioList>
+
+                <Button type="submit">Submit</Button>
+                <Button type="reset">Reset</Button>
+              </Form>
+            </div>
+
+            <div>
+              <p>
+                <strong>Form + required</strong>
+              </p>
+              <Form
+                action={async () => {
+                  await new Promise((resolve) => setTimeout(resolve, 1_000));
+                }}
+              >
+                <RadioList
+                  id="color_form_required"
+                  label="Select your favorite color:"
+                  name="color"
+                  required
+                  data-required-message="Veuillez sélectionner une couleur"
                 >
                   {[
                     { label: "Red", id: "red", value: "red" },
