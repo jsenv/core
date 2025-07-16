@@ -1,7 +1,11 @@
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
-  label[data-readonly] {
+  .label_wrapper_for_opacity {
+    display: inline-flex;
+  }
+
+  label[data-readonly] .label_wrapper_for_opacity {
     opacity: 0.5;
   }
 `;
@@ -14,7 +18,11 @@ export const Field = (props) => {
   const inputIndex = keys.indexOf("input");
   const labelBeforeInput = labelIndex < inputIndex;
 
-  const children = labelBeforeInput ? [label, input] : [input, label];
+  const labelWrapped = <div className="label_wrapper_for_opacity">{label}</div>;
+
+  const children = labelBeforeInput
+    ? [labelWrapped, input]
+    : [input, labelWrapped];
 
   const [inputReadOnly, setInputReadOnly] = useState(false);
   const innerReadOnly = readOnly || inputReadOnly;
