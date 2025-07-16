@@ -128,6 +128,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
     onCancel,
     onActionPrevented,
     onActionStart,
+    onActionAbort,
     onActionError,
     onActionEnd,
     actionErrorEffect,
@@ -142,18 +143,14 @@ const RadioListWithAction = forwardRef((props, ref) => {
     initialValue === undefined ? navStateValue : initialValue;
   const [boundAction, getCheckedValue, setCheckedValue, resetCheckedValue] =
     useActionBoundToOneParam(action, name, valueAtStart);
-  const {
-    loading: actionLoading,
-    aborted,
-    error,
-  } = useActionStatus(boundAction);
+  const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
   const actionRequesterRef = useRef(null);
 
   const valueInAction = getCheckedValue();
-  const value = aborted || error ? valueAtStart : valueInAction;
+  const value = valueInAction;
   useEffect(() => {
     setNavStateValue(value);
   }, [valueInAction]);
@@ -170,7 +167,14 @@ const RadioListWithAction = forwardRef((props, ref) => {
       executeAction(actionEvent);
     },
     onStart: onActionStart,
-    onError: onActionError,
+    onAbort: (e) => {
+      resetCheckedValue();
+      onActionAbort?.(e);
+    },
+    onError: (e) => {
+      resetCheckedValue();
+      onActionError?.(e);
+    },
     onEnd: () => {
       resetNavState();
       onActionEnd?.();
@@ -226,7 +230,7 @@ const RadioListInsideForm = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const { formActionAborted, formActionError, formIsReadOnly } = formContext;
+  const { formIsReadOnly } = formContext;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -234,17 +238,33 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   const [navStateValue, setNavStateValue] = useNavState(id);
   const valueAtStart =
     initialValue === undefined ? navStateValue : initialValue;
-  const [getCheckedValue, setCheckedValue] = useOneFormParam(
+  const [getCheckedValue, setCheckedValue, resetCheckedValue] = useOneFormParam(
     name,
     valueAtStart,
   );
 
   const valueInAction = getCheckedValue();
-  const value =
-    formActionAborted || formActionError ? valueAtStart : valueInAction;
+  const value = valueInAction;
   useEffect(() => {
     setNavStateValue(valueInAction);
   }, [valueInAction]);
+
+  useEffect(() => {
+    const radio = innerRef.current;
+    const form = radio.form;
+    const onactionabort = () => {
+      resetCheckedValue();
+    };
+    const onactionerror = () => {
+      resetCheckedValue();
+    };
+    form.addEventListener("actionabort", onactionerror);
+    form.addEventListener("actionerror", onactionabort);
+    return () => {
+      form.removeEventListener("actionabort", onactionabort);
+      form.removeEventListener("actionerror", onactionerror);
+    };
+  }, [resetCheckedValue]);
 
   return (
     <RadioListControlled

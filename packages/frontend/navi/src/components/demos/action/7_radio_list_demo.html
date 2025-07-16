@@ -94,6 +94,28 @@
             </div>
 
             <div>
+              <p>
+                <strong>Action + throw after 1s</strong>
+              </p>
+
+              <RadioList
+                id="color_form_alert"
+                label="Select your favorite color:"
+                name="color"
+                action={async ({ color }) => {
+                  await new Promise((resolve) => setTimeout(resolve, 1_000));
+                  throw new Error(`Color selected: ${JSON.stringify(color)}`);
+                }}
+              >
+                {[
+                  { label: "Red", id: "red", value: "red" },
+                  { label: "Blue", id: "blue", value: "blue" },
+                  { label: "Green", id: "green", value: "green" },
+                ]}
+              </RadioList>
+            </div>
+
+            <div>
               <div>
                 <p>
                   <strong>Form + throw after 1s</strong>
@@ -108,7 +130,6 @@
                     id="color_form_alert"
                     label="Select your favorite color:"
                     name="color"
-                    value="red"
                   >
                     {[
                       { label: "Red", id: "red", value: "red" },
@@ -121,6 +142,34 @@
                   <Button type="reset">Reset</Button>
                 </Form>
               </div>
+            </div>
+
+            <div>
+              <p>
+                <strong>Form + ref checked throw after 1s</strong>
+              </p>
+              <Form
+                action={async ({ color }) => {
+                  await new Promise((resolve) => setTimeout(resolve, 1_000));
+                  throw new Error(`Color selected: ${JSON.stringify(color)}`);
+                }}
+              >
+                <RadioList
+                  id="color_form_alert"
+                  label="Select your favorite color:"
+                  name="color"
+                  value="red"
+                >
+                  {[
+                    { label: "Red", id: "red", value: "red" },
+                    { label: "Blue", id: "blue", value: "blue" },
+                    { label: "Green", id: "green", value: "green" },
+                  ]}
+                </RadioList>
+
+                <Button type="submit">Submit</Button>
+                <Button type="reset">Reset</Button>
+              </Form>
             </div>
           </div>
         );

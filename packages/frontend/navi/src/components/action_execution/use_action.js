@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { useRef } from "preact/hooks";
+import { useCallback, useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
 import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
 import { useFormContext } from "./form_context.js";
@@ -57,7 +57,10 @@ export const useOneFormParam = (name, value) => {
       setValue(value);
     }
   }
-  return [getValue, setValue];
+  const resetValue = useCallback(() => {
+    setValue(value);
+  }, [value]);
+  return [getValue, setValue, resetValue];
 };
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
@@ -121,14 +124,14 @@ export const useActionBoundToOneArrayParam = (action, name, value) => {
   return [boundAction, getValue, add, remove, resetValue];
 };
 export const useOneFormArrayParam = (name, value) => {
-  const [getValue, setValue] = useOneFormParam(name, value);
+  const [getValue, setValue, resetValue] = useOneFormParam(name, value);
   const add = (valueToAdd, valueArray = getValue()) => {
     setValue(addIntoArray(valueArray, valueToAdd));
   };
   const remove = (valueToRemove, valueArray = getValue()) => {
     setValue(removeFromArray(valueArray, valueToRemove));
   };
-  return [getValue, add, remove];
+  return [getValue, add, remove, resetValue];
 };
 
 // used by <details> to just call their action

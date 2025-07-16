@@ -180,8 +180,14 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
       executeAction(actionEvent);
     },
     onStart: onActionStart,
-    onAbort: onActionAbort,
-    onError: onActionError,
+    onAbort: (e) => {
+      resetValueArray();
+      onActionAbort?.(e);
+    },
+    onError: (e) => {
+      resetValueArray();
+      onActionError?.(e);
+    },
     onEnd: (e) => {
       resetNavState();
       onActionEnd?.(e);
@@ -240,7 +246,7 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const { formActionAborted, formActionError, formIsReadOnly } = formContext;
+  const { formIsReadOnly } = formContext;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -248,17 +254,31 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
   const [navStateValue, setNavStateValue] = useNavState(id);
   const valueAtStart =
     initialValue === undefined ? navStateValue || [] : initialValue;
-  const [getValueArray, addValue, removeValue] = useOneFormArrayParam(
-    name,
-    valueAtStart,
-  );
+  const [getValueArray, addValue, removeValue, resetValueArray] =
+    useOneFormArrayParam(name, valueAtStart);
 
   const valueArrayInAction = getValueArray();
-  const valueArray =
-    formActionAborted || formActionError ? valueAtStart : valueArrayInAction;
+  const valueArray = valueArrayInAction;
   useEffect(() => {
     setNavStateValue(valueArrayInAction);
   }, [valueArrayInAction]);
+
+  useEffect(() => {
+    const radio = innerRef.current;
+    const form = radio.form;
+    const onactionabort = () => {
+      resetValueArray();
+    };
+    const onactionerror = () => {
+      resetValueArray();
+    };
+    form.addEventListener("actionabort", onactionerror);
+    form.addEventListener("actionerror", onactionabort);
+    return () => {
+      form.removeEventListener("actionabort", onactionabort);
+      form.removeEventListener("actionerror", onactionerror);
+    };
+  }, [resetValueArray]);
 
   return (
     <CheckboxListControlled
