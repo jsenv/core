@@ -38,7 +38,6 @@ import.meta.css = /* css */ `
     height: 13px;
     border: 1px solid var(--field-border-color);
     border-radius: 2px;
-    transition: all 0.15s ease;
     box-sizing: border-box;
     display: inline-flex;
     margin: 3px 3px 3px 4px;
@@ -93,6 +92,11 @@ import.meta.css = /* css */ `
   .custom_checkbox_wrapper input:focus-visible + .custom_checkbox {
     outline: 2px solid var(--field-outline-color);
     outline-offset: 1px;
+  }
+  .custom_checkbox_wrapper
+    input[data-readonly]:focus-visible
+    + .custom_checkbox {
+    outline-style: dashed;
   }
 
   .custom_checkbox_wrapper input[disabled] + .custom_checkbox {

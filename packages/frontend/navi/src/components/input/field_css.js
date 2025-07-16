@@ -35,6 +35,11 @@ import.meta.css = /* css */ `
     );
 
     --field-outline-color: var(--field-strong-color);
+    --field-readonly-outline-color: color-mix(
+      in srgb,
+      var(--field-strong-color) 70%,
+      white
+    );
 
     --field-background-color: light-dark(#f3f4f6, #2d3748);
     --field-disabled-background-color: var(--field-background-color);

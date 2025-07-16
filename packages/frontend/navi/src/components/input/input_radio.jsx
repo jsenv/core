@@ -40,7 +40,6 @@ import.meta.css = /* css */ `
     border: 1px solid var(--field-border-color);
     border-radius: 50%;
     background: white;
-    transition: all 0.15s ease;
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
@@ -132,6 +131,10 @@ import.meta.css = /* css */ `
   .custom_radio_wrapper input:focus-visible + .custom_radio {
     outline: 2px solid var(--field-outline-color);
     outline-offset: 1px;
+  }
+
+  .custom_radio_wrapper input[data-readonly]:focus-visible + .custom_radio {
+    outline-style: dashed;
   }
 `;
 
