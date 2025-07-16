@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Button demo</title>
+    <title>Button loading demo</title>
   </head>
   <body>
     <div id="root" style="position: relative"></div>
@@ -14,190 +14,137 @@
       import { useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
-        Input,
-      } from "@jsenv/navi";
-      import {
-        // eslint-disable-next-line no-unused-vars
         Button,
-      } from "../input/button.jsx";
-      import {
         // eslint-disable-next-line no-unused-vars
-        Form,
-      } from "../form.jsx";
+        Field,
+      } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
+        const [loading, setLoading] = useState(false);
+        const [loadingB, setLoadingB] = useState(false);
+        const [loadingC, setLoadingC] = useState(false);
+        const [loadingD, setLoadingD] = useState(false);
+
         return (
           <div>
             <div style="display: flex; flex-direction: row; gap: 30px">
               <div>
                 <p>
-                  <strong>Default</strong>
+                  <strong>Loading</strong>
                 </p>
-                <Button>A</Button>
+                <Button loading={loading}>Toggle</Button>
+                <br />
+                <button
+                  onClick={() => {
+                    setLoading(!loading);
+                  }}
+                >
+                  Toggle
+                </button>
               </div>
 
               <div>
                 <p>
-                  <strong>Big content</strong>
+                  <strong>Loading (action)</strong>
                 </p>
-                <Button>
-                  <div style="width: 50px; height: 50px;">B</div>
+                <Button loading={loadingB} action={() => {}}>
+                  B
                 </Button>
+                <br /> <br />
+                <button
+                  onClick={() => {
+                    setLoadingB(!loadingB);
+                  }}
+                >
+                  Toggle
+                </button>
               </div>
 
               <div>
                 <p>
-                  <strong>Border radius</strong>
+                  <strong>Readonly</strong>
                 </p>
-                <Button style={{ borderRadius: "20px" }}>C</Button>
+                <Button loading={loadingC} readonly>
+                  C
+                </Button>
+                <br />
+                <button data-readonly>C</button>
+                <br />
+                <br />
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingC(!loadingC);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
               </div>
-            </div>
 
-            <div style="display: flex; flex-direction: row; gap: 30px">
               <div>
                 <p>
-                  <strong>Violet border</strong>
+                  <strong>Disabled</strong>
                 </p>
-                <Button style={{ borderColor: "violet" }}>D</Button>
-              </div>
-
-              <div>
-                <p>
-                  <strong>Border width</strong>
-                </p>
-                <Button style={{ borderWidth: "10px" }}>D</Button>
-              </div>
-
-              <div>
-                <p>
-                  <strong>Outline width</strong>
-                </p>
-                <Button style={{ borderWidth: "5px", outlineWidth: "5px" }}>
+                <Button loading={loadingD} disabled>
                   D
                 </Button>
+                <br />
+                <button disabled>D</button>
+                <br /> <br />
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingD(!loadingD);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
               </div>
             </div>
 
             <div style="display: flex; flex-direction: row; gap: 30px">
               <div>
                 <p>
-                  <strong>Outside form</strong>
+                  <strong>Large button (anim speed shoud be consistent)</strong>
                 </p>
-                <OutsideForm />
+                <Button loading={loading}>
+                  This button is quite large but loader speed should be same as
+                  small buttons
+                </Button>
+                <br />
+                <button
+                  onClick={() => {
+                    setLoading(!loading);
+                  }}
+                >
+                  Toggle
+                </button>
               </div>
             </div>
-
-            <div style="display: flex; flex-direction: row; gap: 30px">
-              <div>
-                <p>
-                  <strong>Inside form</strong>
-                </p>
-                <InsideForm />
-              </div>
-
-              <div>
-                <p>
-                  <strong>Inside form (allow concurrent)</strong>
-                </p>
-                <InsideForm allowConcurrentActions />
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      const TIME_TO_WAIT = 1_000;
-
-      // eslint-disable-next-line no-unused-vars
-      const OutsideForm = () => {
-        const [count, setCount] = useState(0);
-
-        return (
-          <div>
-            <span>
-              Count: {count}{" "}
-              <button
-                onClick={() => {
-                  setCount((count) => count + 1);
-                }}
-              >
-                +
-              </button>
-              <button
-                onClick={() => {
-                  setCount((count) => count - 1);
-                }}
-              >
-                -
-              </button>
-            </span>
 
             <div>
-              <Button
-                action={async () => {
-                  setTimeout(() => {
-                    setCount((count) => count + 1);
-                  }, 200);
-                  await new Promise((resolve) =>
-                    setTimeout(resolve, TIME_TO_WAIT),
-                  );
-                  throw new Error(`test: ${count}`);
-                }}
-              >
-                Hello
-              </Button>
+              <div>
+                <p>
+                  <strong>Big borders</strong>
+                </p>
+                <Button loading={loadingC} borderWidth={10}>
+                  C
+                </Button>
+                <br /> <br />
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingC(!loadingC);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+              </div>
             </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const InsideForm = (props) => {
-        const [count, setCount] = useState(0);
-
-        return (
-          <div>
-            <p>
-              <i>
-                This input is outside the form (it is not expected to become
-                readonly), it can be used to force re-render
-              </i>
-            </p>
-            <Input
-              type="number"
-              min="5"
-              name="count"
-              value={count}
-              onInput={(e) => {
-                setCount(e.target.valueAsNumber);
-              }}
-            />
-
-            <Form
-              action={async ({ name }) => {
-                await new Promise((resolve) =>
-                  setTimeout(resolve, TIME_TO_WAIT),
-                );
-                console.log(`form action: { count: ${count}, name: ${name} }`);
-              }}
-              {...props}
-            >
-              <Input type="hidden" name="name" value="dam" />
-              <Button
-                action={async ({ name }) => {
-                  await new Promise((resolve) =>
-                    setTimeout(resolve, TIME_TO_WAIT),
-                  );
-                  throw new Error(
-                    `button action: { count: ${count}, name: ${name} }`,
-                  );
-                }}
-              >
-                Hello
-              </Button>
-              <Button type="submit">Submit</Button>
-            </Form>
           </div>
         );
       };
