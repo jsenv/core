@@ -221,7 +221,7 @@ const CustomRadio = ({ children }) => {
       {children}
       <div className="custom_radio">
         <svg viewBox="0 0 12 12" aria-hidden="true">
-          <circle className="custom_radio_marker" cx="6" cy="6" r="4.25" />
+          <circle className="custom_radio_marker" cx="6" cy="6" r="4" />
         </svg>
       </div>
     </div>
