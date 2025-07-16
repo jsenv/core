@@ -1,3 +1,11 @@
+/**
+ * HTML page server by jsenv dev server will listen for drop events
+ * and redirect the browser to the dropped file location.
+ *
+ * Works only for VSCode right now (because it sets "resourceurls" dataTransfer type).
+ *
+ */
+
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 
 export const jsenvPluginDropToOpen = () => {
