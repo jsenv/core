@@ -14,6 +14,7 @@ import { useNavState } from "../use_nav_state.js";
 import { useRefArray } from "../use_ref_array.js";
 import { Field } from "./field.jsx";
 import { InputCheckbox } from "./input_checkbox.jsx";
+import { useFormEvents } from "./use_form_event.js";
 
 import.meta.css = /* css */ `
   .checkbox_list {
@@ -263,22 +264,17 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
     setNavStateValue(valueArrayInAction);
   }, [valueArrayInAction]);
 
-  useEffect(() => {
-    const radio = innerRef.current;
-    const form = radio.form;
-    const onactionabort = () => {
+  useFormEvents(innerRef, {
+    onFormReset: () => {
       resetValueArray();
-    };
-    const onactionerror = () => {
+    },
+    onFormActionAbort: () => {
       resetValueArray();
-    };
-    form.addEventListener("actionabort", onactionerror);
-    form.addEventListener("actionerror", onactionabort);
-    return () => {
-      form.removeEventListener("actionabort", onactionabort);
-      form.removeEventListener("actionerror", onactionerror);
-    };
-  }, [resetValueArray]);
+    },
+    onFormActionError: () => {
+      resetValueArray();
+    },
+  });
 
   return (
     <CheckboxListControlled

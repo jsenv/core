@@ -13,6 +13,7 @@ import { useNavState } from "../use_nav_state.js";
 import { useRefArray } from "../use_ref_array.js";
 import { Field } from "./field.jsx";
 import { InputRadio } from "./input_radio.jsx";
+import { useFormEvents } from "./use_form_event.js";
 
 import.meta.css = /* css */ `
   .radio_list {
@@ -171,9 +172,9 @@ const RadioListWithAction = forwardRef((props, ref) => {
       resetCheckedValue();
       onActionAbort?.(e);
     },
-    onError: (e) => {
+    onError: (error) => {
       resetCheckedValue();
-      onActionError?.(e);
+      onActionError?.(error);
     },
     onEnd: () => {
       resetNavState();
@@ -249,22 +250,17 @@ const RadioListInsideForm = forwardRef((props, ref) => {
     setNavStateValue(valueInAction);
   }, [valueInAction]);
 
-  useEffect(() => {
-    const radio = innerRef.current;
-    const form = radio.form;
-    const onactionabort = () => {
+  useFormEvents(innerRef, {
+    onFormReset: () => {
       resetCheckedValue();
-    };
-    const onactionerror = () => {
+    },
+    onFormActionAbort: () => {
       resetCheckedValue();
-    };
-    form.addEventListener("actionabort", onactionerror);
-    form.addEventListener("actionerror", onactionabort);
-    return () => {
-      form.removeEventListener("actionabort", onactionabort);
-      form.removeEventListener("actionerror", onactionerror);
-    };
-  }, [resetCheckedValue]);
+    },
+    onFormActionError: () => {
+      resetCheckedValue();
+    },
+  });
 
   return (
     <RadioListControlled
