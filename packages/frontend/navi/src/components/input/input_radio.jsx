@@ -29,9 +29,7 @@ import.meta.css = /* css */ `
   .custom_radio {
     width: 13px;
     height: 13px;
-    border: 1px solid var(--field-border-color);
-    border-radius: 50%;
-    background: white;
+    background: transparent;
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
@@ -44,85 +42,110 @@ import.meta.css = /* css */ `
   .custom_radio svg {
     width: 100%;
     height: 100%;
-    opacity: 0;
-    transform: scale(0.3);
     transition: all 0.15s ease;
     pointer-events: none;
   }
 
-  .custom_radio svg circle {
+  .custom_radio svg .custom_radio_border {
+    transition: all 0.15s ease;
+  }
+
+  .custom_radio svg .custom_radio_marker {
     fill: var(--checkmark-color);
+    opacity: 0;
+    transform-origin: center;
+    transform: scale(0.3);
+    transition: all 0.15s ease;
   }
 
   /* États hover */
-  .custom_radio_wrapper:hover .custom_radio {
-    border-color: var(--field-hover-border-color);
+  .custom_radio_wrapper:hover .custom_radio svg .custom_radio_border {
+    stroke: var(--field-hover-border-color);
   }
-  .custom_radio_wrapper:hover .custom_radio svg circle {
+  .custom_radio_wrapper:hover .custom_radio svg .custom_radio_marker {
     fill: var(--field-strong-color);
   }
 
-  .custom_radio_wrapper:hover input:checked + .custom_radio {
-    background: white;
-    border-color: var(--field-strong-color);
+  .custom_radio_wrapper:hover
+    input:checked
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    stroke: var(--field-strong-color);
   }
 
   /* État checked */
-  .custom_radio_wrapper input:checked + .custom_radio {
-    background: white;
-    border-color: var(--field-strong-color);
+  .custom_radio_wrapper input:checked + .custom_radio svg .custom_radio_border {
+    stroke: var(--field-strong-color);
   }
 
-  .custom_radio_wrapper input:checked + .custom_radio svg {
+  .custom_radio_wrapper input:checked + .custom_radio svg .custom_radio_marker {
     opacity: 1;
     transform: scale(1);
   }
 
   /* États disabled */
-  .custom_radio_wrapper input[disabled] + .custom_radio {
-    background-color: light-dark(
-      rgba(239, 239, 239, 0.3),
-      rgba(59, 59, 59, 0.3)
-    );
-    border-color: var(--field-disabled-border-color);
-  }
-
-  .custom_radio_wrapper input[disabled]:checked + .custom_radio {
-    background-color: light-dark(
-      rgba(239, 239, 239, 0.3),
-      rgba(59, 59, 59, 0.3)
-    );
-    border-color: var(--checked-disabled-color);
+  .custom_radio_wrapper
+    input[disabled]
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
+    stroke: var(--field-disabled-border-color);
   }
 
   .custom_radio_wrapper
     input[disabled]:checked
     + .custom_radio
+    svg
+    .custom_radio_border {
+    stroke: var(--checked-disabled-color);
+  }
+
+  .custom_radio_wrapper
+    input[disabled]:checked
+    + .custom_radio
+    svg
     .custom_radio_marker {
     fill: var(--checkmark-disabled-color);
   }
 
-  .custom_radio_wrapper input[data-readonly] + .custom_radio {
-    border-style: dashed;
-    background: white;
+  .custom_radio_wrapper
+    input[data-readonly]
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    stroke-dasharray: 2 2;
+    stroke: var(--field-border-color);
   }
-  .custom_radio_wrapper input[data-readonly]:checked + .custom_radio {
-    border-style: dashed;
-    border-color: var(--field-strong-color);
-    background: white;
+  .custom_radio_wrapper
+    input[data-readonly]:checked
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    stroke-dasharray: 2 2;
+    stroke: var(--field-strong-color);
   }
-  .custom_radio_wrapper:hover input[data-readonly] + .custom_radio {
-    border-color: var(--field-readonly-hover-border-color);
+  .custom_radio_wrapper:hover
+    input[data-readonly]
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    stroke: var(--field-readonly-hover-border-color);
   }
-  .custom_radio_wrapper:hover input[data-readonly]:checked + .custom_radio {
-    background: white;
-    border-color: var(--field-strong-color);
+  .custom_radio_wrapper:hover
+    input[data-readonly]:checked
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    stroke: var(--field-strong-color);
   }
 
   /* Focus state avec outline */
   .custom_radio_wrapper input:focus-visible + .custom_radio {
     outline: 2px solid var(--field-outline-color);
     outline-offset: 1px;
+    border-radius: 50%;
   }
 `;
 
@@ -208,8 +231,23 @@ const CustomRadio = ({ children }) => {
     <div className="custom_radio_wrapper" data-field-wrapper="">
       {children}
       <div className="custom_radio">
-        <svg viewBox="0 0 12 12" aria-hidden="true">
-          <circle className="custom_radio_marker" cx="6" cy="6" r="4" />
+        <svg
+          viewBox="0 0 12 12"
+          aria-hidden="true"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          {/* Border circle - always visible */}
+          <circle
+            className="custom_radio_border"
+            cx="6"
+            cy="6"
+            r="5.5"
+            fill="white"
+            stroke="var(--field-border-color)"
+            strokeWidth="1"
+          />
+          {/* Inner fill circle - only visible when checked */}
+          <circle className="custom_radio_marker" cx="6" cy="6" r="3.5" />
         </svg>
       </div>
     </div>
