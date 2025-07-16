@@ -101,6 +101,7 @@ const ButtonBasic = forwardRef((props, ref) => {
         ref={innerRef}
         {...rest}
         data-field
+        data-field-with-background
         data-field-with-hover
         data-custom={appearance === "custom" ? "" : undefined}
         data-validation-message-arrow-x="center"
