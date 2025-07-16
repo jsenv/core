@@ -26,7 +26,7 @@ export const enableDebugActions = () => {
   DEBUG = true;
 };
 
-let applyActions = (params) => {
+let dispatchActions = (params) => {
   const { requestedResult } = updateActions({
     globalAbortSignal: new AbortController().signal,
     abortSignal: new AbortController().signal,
@@ -34,15 +34,15 @@ let applyActions = (params) => {
   });
   return requestedResult;
 };
-export const setApplyActions = (value) => {
-  applyActions = value;
+export const setActionDispatcher = (value) => {
+  dispatchActions = value;
 };
 
 export const reloadActions = async (
   actionSet,
   { reason = "reloadActions was called" } = {},
 ) => {
-  return applyActions({
+  return dispatchActions({
     reloadSet: actionSet,
     reason,
   });
@@ -547,24 +547,24 @@ export const createAction = (callback, rootOptions = {}) => {
         : computedData;
 
     const preload = (options) => {
-      return applyActions({
+      return dispatchActions({
         preloadSet: new Set([action]),
         ...options,
       });
     };
     const load = (options) =>
-      applyActions({
+      dispatchActions({
         loadSet: new Set([action]),
         ...options,
       });
     const reload = (options) => {
-      return applyActions({
+      return dispatchActions({
         reloadSet: new Set([action]),
         ...options,
       });
     };
     const unload = (options) =>
-      applyActions({
+      dispatchActions({
         unloadSet: new Set([action]),
         ...options,
       });

@@ -1,3 +1,4 @@
+import { setActionDispatcher } from "../actions.js";
 import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
@@ -14,7 +15,7 @@ export const setupBrowserIntegrationViaHistory = ({
     globalAbortController = new AbortController();
   };
 
-  const handleActionTask = (params) => {
+  const dispatchActions = (params) => {
     const { requestedResult } = applyActions({
       globalAbortSignal: globalAbortController.signal,
       abortSignal: new AbortController().signal,
@@ -22,6 +23,7 @@ export const setupBrowserIntegrationViaHistory = ({
     });
     return requestedResult;
   };
+  setActionDispatcher(dispatchActions);
 
   let abortController = null;
 
@@ -137,6 +139,5 @@ export const setupBrowserIntegrationViaHistory = ({
     goForward,
     getDocumentState,
     replaceDocumentState,
-    handleActionTask,
   };
 };

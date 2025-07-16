@@ -1,4 +1,4 @@
-import { setApplyActions, updateActions } from "../actions.js";
+import { updateActions } from "../actions.js";
 import { updateRoutes } from "../route/route.js";
 import {
   documentIsBusySignal,
@@ -18,7 +18,6 @@ const applyActions = (params) => {
   workingWhile(() => allResult, loadingTaskNames);
   return updateActionsResult;
 };
-setApplyActions(applyActions);
 
 const applyRouting = (
   url,
@@ -31,7 +30,7 @@ const applyRouting = (
   const { loadSet, reloadSet, abortSignalMap, routeLoadRequestedMap } =
     updateRoutes(url);
   if (loadSet.size === 0 && reloadSet.size === 0) {
-    return undefined;
+    return { allResult: undefined, requestedResult: undefined };
   }
   const updateActionsResult = updateActions({
     globalAbortSignal,

@@ -83,7 +83,7 @@ export const useExecuteAction = (
     validationMessageTargetRef.current = validationMessageTarget;
 
     dispatchCustomEvent("actionstart");
-    const result = performAction(action, {
+    return performAction(action, {
       method,
       onAbort: (reason) => {
         if (
@@ -112,19 +112,12 @@ export const useExecuteAction = (
         }
       },
     });
-    return result;
   }, []);
 
   return executeAction;
 };
 
 const performAction = (action, { method, onAbort, onError, onSuccess }) => {
-  const onSettled = () => {
-    const aborted = action.aborted;
-    const error = action.error;
-    return onResult({ aborted, error });
-  };
-
   const onResult = ({ aborted, error }) => {
     if (aborted) {
       onAbort();
@@ -136,20 +129,50 @@ const performAction = (action, { method, onAbort, onError, onSuccess }) => {
     return { aborted, error };
   };
 
+  return executeWithCatchFinally(() => action[method](), {
+    onCatch: (e) => {
+      if (e.name === "AbortError") {
+        return onResult({ aborted: true, error: null });
+      }
+      console.error(e);
+      return onResult({ aborted: false, error: e });
+    },
+    onFinally: () => {
+      const aborted = action.aborted;
+      const error = action.error;
+      return onResult({ aborted, error });
+    },
+  });
+};
+
+const executeWithCatchFinally = (fn, { onCatch, onFinally }) => {
+  let isThenable;
   try {
-    const result = action[method]();
-    if (result && typeof result.then === "function") {
-      return result.then(onSettled, onSettled);
+    const result = fn();
+    isThenable = result && typeof result.then === "function";
+    if (isThenable) {
+      return (async () => {
+        try {
+          return await result;
+        } catch (e) {
+          onCatch(e);
+          return undefined;
+        } finally {
+          onFinally();
+        }
+      })();
     }
-    return onSettled();
+    return result;
   } catch (e) {
-    if (e.name === "AbortError") {
-      return onResult({ aborted: true, error: null });
+    onCatch(e);
+    return undefined;
+  } finally {
+    if (!isThenable) {
+      onFinally();
     }
-    console.error(e);
-    return onResult({ aborted: false, error: e });
   }
 };
+
 // const applyActionOnFormSubmission = canUseNavigation
 //   ? async ({ method, formData, action }) => {
 //       // const error = action.errorSignal.peek();
