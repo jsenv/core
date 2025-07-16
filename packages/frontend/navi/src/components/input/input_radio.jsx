@@ -50,6 +50,11 @@ import.meta.css = /* css */ `
     transition: all 0.15s ease;
   }
 
+  .custom_radio svg .custom_radio_dashed_border {
+    display: none;
+    transition: all 0.15s ease;
+  }
+
   .custom_radio svg .custom_radio_marker {
     fill: var(--checkmark-color);
     opacity: 0;
@@ -115,29 +120,34 @@ import.meta.css = /* css */ `
     + .custom_radio
     svg
     .custom_radio_border {
-    stroke-dasharray: 2 2;
-    stroke: var(--field-border-color);
+    display: none;
+  }
+  .custom_radio_wrapper
+    input[data-readonly]
+    + .custom_radio
+    svg
+    .custom_radio_dashed_border {
+    display: block;
   }
   .custom_radio_wrapper
     input[data-readonly]:checked
     + .custom_radio
     svg
-    .custom_radio_border {
-    stroke-dasharray: 2 2;
+    .custom_radio_dashed_border {
     stroke: var(--field-strong-color);
   }
   .custom_radio_wrapper:hover
     input[data-readonly]
     + .custom_radio
     svg
-    .custom_radio_border {
+    .custom_radio_dashed_border {
     stroke: var(--field-readonly-hover-border-color);
   }
   .custom_radio_wrapper:hover
     input[data-readonly]:checked
     + .custom_radio
     svg
-    .custom_radio_border {
+    .custom_radio_dashed_border {
     stroke: var(--field-strong-color);
   }
 
@@ -245,6 +255,18 @@ const CustomRadio = ({ children }) => {
             fill="white"
             stroke="var(--field-border-color)"
             strokeWidth="1"
+          />
+          {/* Dashed border for readonly - calculated for even distribution */}
+          <circle
+            className="custom_radio_dashed_border"
+            cx="6"
+            cy="6"
+            r="5.5"
+            fill="var(--field-readonly-background-color)"
+            stroke="var(--field-border-color)"
+            strokeWidth="1"
+            strokeDasharray="2.16 2.16"
+            strokeDashoffset="0"
           />
           {/* Inner fill circle - only visible when checked */}
           <circle className="custom_radio_marker" cx="6" cy="6" r="3.5" />
