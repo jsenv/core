@@ -15,12 +15,11 @@ export const setupBrowserIntegrationViaHistory = ({
   };
 
   const handleActionTask = (params) => {
-    const [, browserValueToWait] = applyActions({
+    return applyActions({
       globalAbortSignal: globalAbortController.signal,
       abortSignal: new AbortController().signal,
       ...params,
     });
-    return browserValueToWait;
   };
 
   let abortController = null;

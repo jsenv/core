@@ -184,11 +184,10 @@ if (import.meta.dev) {
     inspectActivations: () => {
       const activations = [];
       for (const action of activationWeakSet) {
-        const privateProps = getActionPrivateProperties(action);
-        const loadingState = privateProps.loadingStateSignal.peek();
         activations.push({
           name: action.name,
-          loadingState: loadingState.id,
+          loadingState: action.loadingState.id,
+          error: action.error,
           params: action.params,
           isProxy: action.isProxy || false,
         });
