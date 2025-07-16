@@ -11,9 +11,9 @@
  * - tel
  * - etc.
  *
- * For non-textual inputs, use specialized components:
- * - InputCheckbox for type="checkbox"
- * - InputRadio for type="radio"
+ * For non-textual inputs, specialized components will be used:
+ * - <InputCheckbox /> for type="checkbox"
+ * - <InputRadio /> for type="radio"
  */
 
 import { requestAction, useConstraints } from "@jsenv/validation";
