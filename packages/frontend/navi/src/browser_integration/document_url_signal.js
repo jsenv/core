@@ -7,8 +7,3 @@ export const useDocumentUrl = () => {
 export const updateDocumentUrl = (value) => {
   documentUrlSignal.value = value;
 };
-
-updateDocumentUrl(navigation.currentEntry.url);
-navigation.addEventListener("currententrychange", () => {
-  updateDocumentUrl(navigation.currentEntry.url);
-});

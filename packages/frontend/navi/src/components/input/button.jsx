@@ -64,6 +64,7 @@ import.meta.css = /* css */ `
   }
 
   button[data-custom][data-readonly] {
+    outline-style: dashed;
     outline-color: light-dark(#d1d5db, #4b5563);
     background: light-dark(#f3f4f6, #2d3748);
     color: light-dark(#374151, #cbd5e0);
@@ -142,7 +143,7 @@ const ButtonBasic = forwardRef((props, ref) => {
         {...rest}
         data-custom={appearance === "custom" ? "" : undefined}
         data-validation-message-arrow-x="center"
-        data-readonly={readOnly || loading ? "" : undefined}
+        data-readonly={readOnly ? "" : undefined}
         aria-busy={loading}
         style={{
           ...restStyle,
@@ -163,6 +164,7 @@ const ButtonWithAction = forwardRef((props, ref) => {
   const {
     action,
     loading,
+    readOnly,
     children,
     onClick,
     actionErrorEffect,
@@ -194,13 +196,15 @@ const ButtonWithAction = forwardRef((props, ref) => {
     event.preventDefault();
     requestAction(boundAction, { event });
   };
+  const innerLoading = loading || actionLoading;
 
   return (
     <ButtonBasic
       data-action={boundAction.name}
       ref={innerRef}
       {...rest}
-      loading={loading || actionLoading}
+      loading={innerLoading}
+      readOnly={readOnly || innerLoading}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
@@ -212,7 +216,7 @@ const ButtonWithAction = forwardRef((props, ref) => {
 });
 
 const ButtonInsideForm = forwardRef((props, ref) => {
-  const { formContext, type, loading, readonly, onClick, children, ...rest } =
+  const { formContext, type, loading, readOnly, onClick, children, ...rest } =
     props;
   const { formAction, formIsBusy, formIsReadOnly, formActionRequester } =
     formContext;
@@ -221,7 +225,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const wouldSubmitFormByType = type === "submit" || type === "image";
-  const innerReadOnly = readonly || formIsReadOnly;
+  const innerReadOnly = readOnly || formIsReadOnly;
 
   const handleClick = (event) => {
     const buttonElement = event.target;
@@ -277,7 +281,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     type,
     action,
     loading,
-    readonly,
+    readOnly,
     children,
     onClick,
     actionErrorEffect,
@@ -351,8 +355,8 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       {...rest}
       type={type}
       loading={loading || actionLoading}
-      readOnly={readonly || formIsReadOnly}
-      data-readonly-silent={!readonly && formIsReadOnly ? "" : undefined}
+      readOnly={readOnly || formIsReadOnly}
+      data-readonly-silent={!readOnly && formIsReadOnly ? "" : undefined}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);

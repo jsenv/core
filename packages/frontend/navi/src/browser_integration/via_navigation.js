@@ -1,6 +1,11 @@
 let DEBUG = false;
 
 export const setupRoutingViaNavigation = (handler) => {
+  updateDocumentUrl(navigation.currentEntry.url);
+  navigation.addEventListener("currententrychange", () => {
+    updateDocumentUrl(navigation.currentEntry.url);
+  });
+
   let isReloadFromNavigationAPI = false;
   const navigationReload = navigation.reload;
   navigation.reload = (...args) => {
