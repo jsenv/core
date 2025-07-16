@@ -86,7 +86,6 @@ import.meta.css = /* css */ `
 
   [data-field][readonly],
   [data-field][data-readonly] {
-    outline-style: dashed;
     outline-color: var(--field-readonly-border-color);
     background: var(--field-readonly-background-color);
   }

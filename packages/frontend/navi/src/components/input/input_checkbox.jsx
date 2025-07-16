@@ -94,11 +94,6 @@ import.meta.css = /* css */ `
     outline: 2px solid var(--field-outline-color);
     outline-offset: 1px;
   }
-  .custom_checkbox_wrapper
-    input[data-readonly]:focus-visible
-    + .custom_checkbox {
-    outline-style: dashed;
-  }
 
   .custom_checkbox_wrapper input[disabled] + .custom_checkbox {
     background-color: var(--field-disabled-background-color);
