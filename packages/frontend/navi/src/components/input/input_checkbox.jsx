@@ -12,6 +12,7 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
+import { useFormEvents } from "./use_form_event.js";
 
 import.meta.css = /* css */ `
   .custom_checkbox_wrapper {
@@ -227,6 +228,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     actionErrorEffect,
     onActionPrevented,
     onActionStart,
+    onActionAbort,
     onActionError,
     onActionEnd,
     ...rest
@@ -241,16 +243,12 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
 
   const [boundAction, getCheckedValue, setCheckedValue, resetChecked] =
     useActionBoundToOneParam(action, name, checkedAtStart ? value : undefined);
-  const {
-    loading: actionLoading,
-    error,
-    aborted,
-  } = useActionStatus(boundAction);
+  const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const checkedInAction = Boolean(getCheckedValue());
-  const checked = error || aborted ? checkedAtStart : checkedInAction;
+  const checked = Boolean(getCheckedValue());
+  const innerLoading = loading || actionLoading;
 
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
@@ -264,15 +262,19 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,
-    onAbort: onActionError,
-    onError: onActionError,
+    onAbort: (e) => {
+      resetChecked();
+      onActionAbort?.(e);
+    },
+    onError: (e) => {
+      resetChecked();
+      onActionError?.(e);
+    },
     onEnd: (e) => {
       setNavStateValue(undefined);
       onActionEnd?.(e);
     },
   });
-
-  const innerLoading = loading || actionLoading;
 
   return (
     <InputCheckboxBasic
@@ -313,8 +315,20 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   const [navStateValue, setNavStateValue] = useNavState(id);
   const checkedAtStart =
     navStateValue === undefined ? initialChecked : navStateValue;
-  const [getChecked, setChecked] = useOneFormParam(name, checkedAtStart);
+  const [getChecked, setChecked, resetChecked] = useOneFormParam(
+    name,
+    checkedAtStart,
+  );
   const checked = getChecked();
+
+  useFormEvents(innerRef, {
+    onFormActionAbort: () => {
+      resetChecked();
+    },
+    onFormActionError: () => {
+      resetChecked();
+    },
+  });
 
   return (
     <InputCheckboxBasic

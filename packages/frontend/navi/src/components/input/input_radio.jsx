@@ -1,17 +1,9 @@
-import { requestAction, useConstraints } from "@jsenv/validation";
+import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
-import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import {
-  useActionBoundToOneParam,
-  useOneFormParam,
-} from "../action_execution/use_action.js";
-import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { useNavState } from "../use_nav_state.js";
 
 import.meta.css = /* css */ `
   .custom_radio_wrapper {
@@ -228,149 +220,14 @@ const CustomRadio = ({ children }) => {
   );
 };
 
-const InputRadioWithAction = forwardRef((props, ref) => {
-  const {
-    id,
-    name,
-    value = "",
-    checked: initialChecked = false,
-    action,
-    loading,
-    readOnly,
-    onCancel,
-    onChange,
-    actionErrorEffect,
-    onActionPrevented,
-    onActionStart,
-    onActionError,
-    onActionEnd,
-    ...rest
-  } = props;
-
-  if (import.meta.dev && value === "") {
-    console.warn(
-      `InputRadio: value is an empty string, this is probably not what you want`,
-    );
-  }
-
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
-
-  const [navStateValue, setNavStateValue] = useNavState(id);
-  const checkedAtStart = initialChecked || navStateValue === value;
-
-  const [boundAction, getCheckedValue, setCheckedValue] =
-    useActionBoundToOneParam(action, name, checkedAtStart ? value : undefined);
-  const executeAction = useExecuteAction(innerRef, {
-    errorEffect: actionErrorEffect,
-  });
-  const {
-    loading: actionLoading,
-    error,
-    aborted,
-  } = useActionStatus(boundAction);
-  const checkedInAction = getCheckedValue() === value;
-  const checked = aborted || error ? checkedAtStart : checkedInAction;
-
-  useActionEvents(innerRef, {
-    onCancel: (e, reason) => {
-      if (reason === "blur_invalid") {
-        return;
-      }
-      if (checked) {
-        setNavStateValue(value);
-      }
-      if (checkedAtStart) {
-        setCheckedValue(value);
-      }
-      onCancel?.(e);
-    },
-    onPrevented: onActionPrevented,
-    onAction: executeAction,
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: (e) => {
-      setNavStateValue(undefined);
-      onActionEnd?.(e);
-    },
-  });
-
-  const innerLoading = loading || actionLoading;
-
-  return (
-    <InputRadioBasic
-      {...rest}
-      ref={innerRef}
-      id={id}
-      name={name}
-      value={value}
-      checked={checked}
-      loading={innerLoading}
-      readOnly={readOnly || innerLoading}
-      onChange={(e) => {
-        const radioIsChecked = e.target.checked;
-        if (radioIsChecked) {
-          setNavStateValue(value);
-          setCheckedValue(value);
-          requestAction(boundAction, {
-            event: e,
-          });
-        }
-        onChange?.(e);
-      }}
-    />
+const InputRadioWithAction = () => {
+  throw new Error(
+    `Do not use <Input type="radio" />, use <RadioList /> instead`,
   );
-});
+};
 
-const InputRadioInsideForm = forwardRef((props, ref) => {
-  const {
-    formContext,
-    id,
-    name,
-    value = "",
-    checked: initialChecked = false,
-    readOnly,
-    onChange,
-    ...rest
-  } = props;
-  const { formIsReadOnly } = formContext;
-
-  if (import.meta.dev && value === "") {
-    console.warn(
-      `InputRadio: value is an empty string, this is probably not what you want`,
-    );
-  }
-
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
-
-  const [navStateValue, setNavStateValue] = useNavState(id);
-  const checkedAtStart =
-    navStateValue === undefined ? initialChecked : navStateValue === value;
-  const [getCheckedValue, setCheckedValue] = useOneFormParam(
-    name,
-    checkedAtStart ? value : undefined,
+const InputRadioInsideForm = () => {
+  throw new Error(
+    `Do not use <Input type="radio" />, use <RadioList /> instead`,
   );
-  const checkedInFormAction = getCheckedValue() === value;
-  const checked = checkedInFormAction;
-
-  return (
-    <InputRadioBasic
-      {...rest}
-      ref={innerRef}
-      id={id}
-      name={name}
-      value={value}
-      checked={checked}
-      readOnly={readOnly || formIsReadOnly}
-      onChange={(e) => {
-        const radioIsChecked = e.target.checked;
-        if (radioIsChecked) {
-          setNavStateValue(value);
-          setCheckedValue(value);
-        }
-        onChange?.(e);
-      }}
-    />
-  );
-});
+};

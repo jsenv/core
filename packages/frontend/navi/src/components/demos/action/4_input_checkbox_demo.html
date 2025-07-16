@@ -70,6 +70,32 @@
                   label="Test"
                 />
               </div>
+
+              <div>
+                <p>
+                  <strong>Checked, throw after 1s</strong>
+                </p>
+                <Field
+                  input={
+                    <Input
+                      type="checkbox"
+                      name="test"
+                      action={async ({ test }) => {
+                        await new Promise((resolve) => {
+                          setTimeout(resolve, 1000);
+                        });
+                        throw new Error(`This is an error, checked: ${test}`);
+                      }}
+                      checked
+                      value="coucou"
+                      style="color: blue"
+                      // data-validation-message-stay-on-focus
+                      // data-validation-message-stay-on-blur
+                    />
+                  }
+                  label="Test"
+                />
+              </div>
               <div>
                 <p>
                   <strong>2 checkboxes for the same action</strong>

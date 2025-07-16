@@ -1,4 +1,5 @@
 import { useLayoutEffect } from "preact/hooks";
+import { addManyEventListeners } from "../utils/add_many_event_listeners.js";
 
 export const useActionEvents = (
   elementRef,
@@ -18,7 +19,8 @@ export const useActionEvents = (
 ) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
-    const eventsToListenOnElement = {
+
+    return addManyEventListeners(element, {
       cancel: (e) => {
         onCancel?.(e, e.detail.reason);
       },
@@ -26,26 +28,10 @@ export const useActionEvents = (
       action: onAction,
       actionstart: onStart,
       actionabort: onAbort,
-      actionerror: onError,
+      actionerror: (e) => {
+        onError?.(e.detail.error);
+      },
       actionend: onEnd,
-    };
-
-    return listenEvents(element, eventsToListenOnElement);
-  }, [onCancel, onPrevented, onAction, onStart, onError, onEnd]);
-};
-
-const listenEvents = (element, events) => {
-  const cleanupCallbackSet = new Set();
-  for (const event of Object.keys(events)) {
-    const callback = events[event];
-    element.addEventListener(event, callback);
-    cleanupCallbackSet.add(() => {
-      element.removeEventListener(event, callback);
     });
-  }
-  return () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-  };
+  }, [onCancel, onPrevented, onAction, onStart, onError, onEnd]);
 };
