@@ -1,6 +1,7 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef } from "preact/hooks";
+import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { useStateArray } from "../../utils/use_state_array.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -10,7 +11,6 @@ import {
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
-import { useNavState } from "../use_nav_state.js";
 import { useRefArray } from "../use_ref_array.js";
 import { Field } from "./field.jsx";
 import { InputCheckbox } from "./input_checkbox.jsx";
@@ -97,13 +97,13 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue] = useNavState(id);
+  const [navState, setNavState] = useNavState(id);
   const valueAtStart =
-    initialValue === undefined ? navStateValue || [] : initialValue;
+    initialValue === undefined ? navState || [] : initialValue;
   const [valueArray, addValue, removeValue] = useStateArray(valueAtStart);
 
   useEffect(() => {
-    setNavStateValue(valueArray);
+    setNavState(valueArray);
   }, [valueArray]);
 
   return (
@@ -147,9 +147,9 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue, resetNavState] = useNavState(id);
+  const [navState, setNavState, resetNavState] = useNavState(id);
   const valueAtStart =
-    initialValue === undefined ? navStateValue || [] : initialValue;
+    initialValue === undefined ? navState || [] : initialValue;
 
   const [boundAction, getValueArray, addValue, removeValue, resetValueArray] =
     useActionBoundToOneArrayParam(action, name, valueAtStart);
@@ -165,7 +165,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
 
   const valueArrayInAction = getValueArray();
   useEffect(() => {
-    setNavStateValue(valueArrayInAction);
+    setNavState(valueArrayInAction);
   }, [valueArrayInAction]);
   const valueArray = aborted || error ? valueAtStart : valueArrayInAction;
 
@@ -252,16 +252,16 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue] = useNavState(id);
+  const [navState, setNavState] = useNavState(id);
   const valueAtStart =
-    initialValue === undefined ? navStateValue || [] : initialValue;
+    initialValue === undefined ? navState || [] : initialValue;
   const [getValueArray, addValue, removeValue, resetValueArray] =
     useOneFormArrayParam(name, valueAtStart);
 
   const valueArrayInAction = getValueArray();
   const valueArray = valueArrayInAction;
   useEffect(() => {
-    setNavStateValue(valueArrayInAction);
+    setNavState(valueArrayInAction);
   }, [valueArrayInAction]);
 
   useFormEvents(innerRef, {

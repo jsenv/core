@@ -1,13 +1,13 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { ActionRenderer } from "../action_renderer.jsx";
 import { useActionEvents } from "../use_action_events.js";
-import { useNavState } from "../use_nav_state.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
 import.meta.css = /* css */ `
@@ -60,8 +60,8 @@ const DetailsBasic = forwardRef((props, ref) => {
     ...rest
   } = props;
 
-  const [navStateValue, setNavStateValue] = useNavState(id);
-  const [innerOpen, innerOpenSetter] = useState(open || navStateValue);
+  const [navState, setNavState] = useNavState(id);
+  const [innerOpen, innerOpenSetter] = useState(open || navState);
 
   let summaryChildren;
   let contentChildren;
@@ -104,10 +104,10 @@ const DetailsBasic = forwardRef((props, ref) => {
         if (mountedRef.current) {
           if (isOpen) {
             innerOpenSetter(true);
-            setNavStateValue(true);
+            setNavState(true);
           } else {
             innerOpenSetter(false);
-            setNavStateValue(undefined);
+            setNavState(undefined);
           }
         }
         onToggle?.(e);

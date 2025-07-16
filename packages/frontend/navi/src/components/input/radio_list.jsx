@@ -1,6 +1,7 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
@@ -9,7 +10,6 @@ import {
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
-import { useNavState } from "../use_nav_state.js";
 import { useRefArray } from "../use_ref_array.js";
 import { Field } from "./field.jsx";
 import { InputRadio } from "./input_radio.jsx";
@@ -93,12 +93,11 @@ const RadioListBasic = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue] = useNavState(id);
-  const valueAtStart =
-    navStateValue === undefined ? initialValue : navStateValue;
+  const [navState, setNavState] = useNavState(id);
+  const valueAtStart = navState === undefined ? initialValue : navState;
   const [value, setValue] = useState(valueAtStart);
   useEffect(() => {
-    setNavStateValue(value);
+    setNavState(value);
   }, [value]);
 
   return (
@@ -141,9 +140,8 @@ const RadioListWithAction = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue, resetNavState] = useNavState(id);
-  const valueAtStart =
-    initialValue === undefined ? navStateValue : initialValue;
+  const [navState, setNavState, resetNavState] = useNavState(id);
+  const valueAtStart = initialValue === undefined ? navState : initialValue;
   const [boundAction, getCheckedValue, setCheckedValue, resetCheckedValue] =
     useActionBoundToOneParam(action, name, valueAtStart);
   const { loading: actionLoading } = useActionStatus(boundAction);
@@ -155,7 +153,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
   const valueInAction = getCheckedValue();
   const value = valueInAction;
   useEffect(() => {
-    setNavStateValue(value);
+    setNavState(value);
   }, [valueInAction]);
 
   useActionEvents(innerRef, {
@@ -238,16 +236,15 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue] = useNavState(id);
-  const valueAtStart =
-    initialValue === undefined ? navStateValue : initialValue;
+  const [navState, setNavState] = useNavState(id);
+  const valueAtStart = initialValue === undefined ? navState : initialValue;
   const [getCheckedValue, setCheckedValue, resetCheckedValue] = useOneFormParam(
     name,
     valueAtStart,
   );
   const value = getCheckedValue();
   useEffect(() => {
-    setNavStateValue(value);
+    setNavState(value);
   }, [value]);
 
   useFormEvents(innerRef, {

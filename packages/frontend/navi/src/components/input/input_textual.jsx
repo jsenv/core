@@ -19,6 +19,7 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
+import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
@@ -29,7 +30,6 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { useNavState } from "../use_nav_state.js";
 import "./field_css.js";
 import { useOnChange } from "./use_on_change.js";
 
@@ -100,12 +100,12 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue] = useNavState(id);
+  const [navState, setNavState] = useNavState(id);
   const valueAtStart =
     initialValue === undefined || initialValue === ""
-      ? navStateValue === undefined
+      ? navState === undefined
         ? ""
-        : navStateValue
+        : navState
       : initialValue;
 
   const [boundAction, getValue, setValue, resetValue] =
@@ -145,7 +145,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       if (reason === "escape_key" && !cancelOnEscape) {
         return;
       }
-      setNavStateValue(undefined);
+      setNavState(undefined);
       resetValue();
       onCancel?.(e, reason);
     },
@@ -154,7 +154,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     onStart: onActionStart,
     onError: onActionError,
     onEnd: (e) => {
-      setNavStateValue(undefined);
+      setNavState(undefined);
       onActionEnd?.(e);
     },
   });
@@ -175,7 +175,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
         valueAtEnterRef.current = null;
         const inputValue =
           type === "number" ? e.target.valueAsNumber : e.target.value;
-        setNavStateValue(inputValue);
+        setNavState(inputValue);
         setValue(inputValue);
         onInput?.(e);
       }}
@@ -212,12 +212,12 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [navStateValue, setNavStateValue] = useNavState(id);
+  const [navState, setNavState] = useNavState(id);
   const valueAtStart =
     initialValue === undefined || initialValue === ""
-      ? navStateValue === undefined
+      ? navState === undefined
         ? ""
-        : navStateValue
+        : navState
       : initialValue;
 
   const { formAction, formIsBusy, formIsReadOnly, formActionRequester } =
@@ -238,7 +238,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       readOnly={readOnly || formIsReadOnly}
       onInput={(e) => {
         const inputValue = e.target.value;
-        setNavStateValue(inputValue);
+        setNavState(inputValue);
         setValue(inputValue);
         onInput?.(e);
       }}

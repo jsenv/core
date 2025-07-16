@@ -80,7 +80,7 @@ export const goForward = browserIntegration.goForward;
 export const handleActionTask = browserIntegration.handleActionTask;
 
 const idUsageMap = new Map();
-const useElementStateWithWarnings = (id, initialValue, options) => {
+const useNavStateWithWarnings = (id, initialValue, options) => {
   const idRef = useRef(undefined);
   if (idRef.current !== id) {
     const oldId = idRef.current;
@@ -94,7 +94,7 @@ const useElementStateWithWarnings = (id, initialValue, options) => {
       });
     } else {
       console.warn(
-        `useElementState ID conflict detected!
+        `useNavState ID conflict detected!
 ID "${id}" is already in use by another component.
 This can cause UI state conflicts and unexpected behavior.
 Consider using unique IDs for each component instance.`,
@@ -108,46 +108,46 @@ Consider using unique IDs for each component instance.`,
     };
   }, [id]);
 
-  return useElementStateBasic(id, initialValue, options);
+  return useNavStateBasic(id, initialValue, options);
 };
 
 const NOT_SET = {};
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
-const useElementStateBasic = (id, initialValue, { debug } = {}) => {
-  const elementStateRef = useRef(NOT_SET);
+const useNavStateBasic = (id, initialValue, { debug } = {}) => {
+  const navStateRef = useRef(NOT_SET);
   if (!id) {
     return NO_ID_GIVEN;
   }
 
-  if (elementStateRef.current === NOT_SET) {
+  if (navStateRef.current === NOT_SET) {
     const documentState = browserIntegration.getDocumentState();
     const valueInDocumentState = documentState ? documentState[id] : undefined;
     if (valueInDocumentState === undefined) {
-      elementStateRef.current = initialValue;
+      navStateRef.current = initialValue;
       if (initialValue !== undefined) {
         console.debug(
-          `useElementState(${id}) initial value is ${initialValue} (from initialValue passed in as argument)`,
+          `useNavState(${id}) initial value is ${initialValue} (from initialValue passed in as argument)`,
         );
       }
     } else {
-      elementStateRef.current = valueInDocumentState;
+      navStateRef.current = valueInDocumentState;
       if (debug) {
         console.debug(
-          `useElementState(${id}) initial value is ${initialValue} (from nav state)`,
+          `useNavState(${id}) initial value is ${initialValue} (from nav state)`,
         );
       }
     }
   }
 
   const set = (value) => {
-    const currentValue = elementStateRef.current;
+    const currentValue = navStateRef.current;
     if (typeof value === "function") {
       value = value(currentValue);
     }
     if (debug) {
       console.debug(
-        `useElementState(${id}) set ${value} (previous was ${currentValue})`,
+        `useNavState(${id}) set ${value} (previous was ${currentValue})`,
       );
     }
 
@@ -161,7 +161,7 @@ const useElementStateBasic = (id, initialValue, { debug } = {}) => {
   };
 
   return [
-    elementStateRef.current,
+    navStateRef.current,
     set,
     () => {
       set(undefined);
@@ -169,6 +169,6 @@ const useElementStateBasic = (id, initialValue, { debug } = {}) => {
   ];
 };
 
-export const useElementState = import.meta.dev
-  ? useElementStateWithWarnings
-  : useElementStateBasic;
+export const useNavState = import.meta.dev
+  ? useNavStateWithWarnings
+  : useNavStateBasic;
