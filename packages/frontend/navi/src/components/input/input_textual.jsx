@@ -30,49 +30,8 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
+import "./field_css.js";
 import { useOnChange } from "./use_on_change.js";
-
-import.meta.css = /* css */ `
-  input[data-custom] {
-    --button-border-width: 1px;
-    --button-outline-width: 1px;
-
-    border-radius: 2px;
-    border-width: calc(
-      var(--button-border-width) + var(--button-outline-width)
-    );
-    border-style: solid;
-    border-color: transparent;
-    outline: var(--button-border-width) solid light-dark(#767676, #8e8e93);
-    outline-offset: calc(-1 * (var(--button-border-width)));
-  }
-
-  input[data-custom]:active {
-    outline-color: light-dark(#808080, #707070);
-  }
-
-  input[data-custom][readonly] {
-    outline-color: light-dark(#d1d5db, #4b5563);
-    background: light-dark(#f3f4f6, #2d3748);
-    color: light-dark(#374151, #cbd5e0);
-  }
-
-  input[data-custom]:focus-visible {
-    outline-width: calc(
-      var(--button-border-width) + var(--button-outline-width)
-    );
-    outline-offset: calc(
-      -1 * (var(--button-border-width) + var(--button-outline-width))
-    );
-    outline-color: light-dark(#355fcc, #3b82f6);
-  }
-
-  input[data-custom]:disabled {
-    outline-color: light-dark(#a0a0a050, #90909050);
-    background-color: rgb(239, 239, 239);
-    color: light-dark(rgba(16, 16, 16, 0.3), rgba(255, 255, 255, 0.3));
-  }
-`;
 
 export const InputTextual = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
@@ -104,6 +63,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
   const inputTextual = (
     <input
       ref={innerRef}
+      data-field
       data-custom={appearance === "custom" ? "" : undefined}
       {...rest}
     />
