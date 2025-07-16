@@ -1,7 +1,10 @@
 import.meta.css = /* css */ `
-  [data-field] {
+  [data-field],
+  [data-field-wrapper] {
     --field-border-width: 1px;
     --field-outline-width: 1px;
+
+    --field-strong-color: light-dark(#355fcc, #3b82f6);
 
     --field-border-color: light-dark(#767676, #8e8e93);
     --field-readonly-border-color: color-mix(
@@ -31,7 +34,7 @@ import.meta.css = /* css */ `
       white
     );
 
-    --field-outline-color: light-dark(#355fcc, #3b82f6);
+    --field-outline-color: var(--field-strong-color);
 
     --field-background-color: light-dark(#f3f4f6, #2d3748);
     --field-disabled-background-color: var(--field-background-color);

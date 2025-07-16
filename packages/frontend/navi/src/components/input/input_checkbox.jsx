@@ -13,34 +13,15 @@ import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 
-const CUSTOM_CHECKBOX_COLORS = {
-  borders: {
-    default: "#6b7280",
-    hover: "#9ca3af",
-    disabled: "rgba(118, 118, 118, 0.3)",
-    checked: "#3b82f6",
-    checkedAndHover: "#1d4ed8",
-    disabledAndChecked: "#D3D3D3",
-  },
-  outline: {
-    default: "light-dark(#1d4ed8, #3b82f6)",
-  },
-  background: {
-    checked: "#3b82f6",
-    checkedAndHover: "#1d4ed8",
-    disabled: "light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3))",
-    disabledAndChecked: "#D3D3D3",
-  },
-  checkmark: {
-    default: "white",
-    disabled: "#EEEEEE",
-  },
-};
-
 import.meta.css = /* css */ `
   .custom_checkbox_wrapper {
     display: inline-flex;
     box-sizing: content-box;
+
+    --checkmark-color: white;
+    --checkmark-disabled-color: #eeeeee;
+    --checked-color: #3b82f6;
+    --checked-disabled-color: #d3d3d3;
   }
 
   .custom_checkbox_wrapper input {
@@ -55,7 +36,7 @@ import.meta.css = /* css */ `
   .custom_checkbox {
     width: 13px;
     height: 13px;
-    border: 1px solid ${CUSTOM_CHECKBOX_COLORS.borders.default};
+    border: 1px solid var(--field-border-color);
     border-radius: 2px;
     transition: all 0.15s ease;
     box-sizing: border-box;
@@ -71,19 +52,19 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
   .custom_checkbox svg path {
-    stroke: ${CUSTOM_CHECKBOX_COLORS.checkmark.default};
+    stroke: var(--checkmark-color);
   }
 
   .custom_checkbox_wrapper:hover .custom_checkbox {
-    border-color: ${CUSTOM_CHECKBOX_COLORS.borders.hover};
+    border-color: var(--field-hover-border-color);
   }
   .custom_checkbox_wrapper:hover input:checked + .custom_checkbox {
-    background: ${CUSTOM_CHECKBOX_COLORS.background.checkedAndHover};
-    border-color: ${CUSTOM_CHECKBOX_COLORS.borders.checkedAndHover};
+    background: var(--field-strong-color);
+    border-color: var(--field-strong-color);
   }
   .custom_checkbox_wrapper input:checked + .custom_checkbox {
-    background: ${CUSTOM_CHECKBOX_COLORS.background.checked};
-    border-color: ${CUSTOM_CHECKBOX_COLORS.borders.checked};
+    background: var(--checked-color);
+    border-color: var(--checked-color);
   }
   .custom_checkbox_wrapper input:checked + .custom_checkbox svg {
     opacity: 1;
@@ -92,7 +73,7 @@ import.meta.css = /* css */ `
 
   .custom_checkbox_wrapper input[data-readonly] + .custom_checkbox {
     border-style: dashed;
-    background: light-dark(#f3f4f6, #2d3748);
+    background: var(--field-readonly-background-color);
   }
   .custom_checkbox_wrapper input[data-readonly]:checked + .custom_checkbox {
     border-style: dashed;
@@ -110,23 +91,23 @@ import.meta.css = /* css */ `
   }
 
   .custom_checkbox_wrapper input:focus-visible + .custom_checkbox {
-    outline: 2px solid ${CUSTOM_CHECKBOX_COLORS.outline.default};
+    outline: 2px solid var(--field-outline-color);
     outline-offset: 1px;
   }
 
   .custom_checkbox_wrapper input[disabled] + .custom_checkbox {
-    background-color: ${CUSTOM_CHECKBOX_COLORS.background.disabled};
-    border-color: ${CUSTOM_CHECKBOX_COLORS.borders.disabled};
+    background-color: var(--field-disabled-background-color);
+    border-color: var(--field-disabled-border-color);
   }
   .custom_checkbox_wrapper input[disabled]:checked + .custom_checkbox {
-    background: ${CUSTOM_CHECKBOX_COLORS.background.disabledAndChecked};
-    border-color: ${CUSTOM_CHECKBOX_COLORS.borders.disabledAndChecked};
+    background: var(--checked-disabled-color);
+    border-color: var(--checked-disabled-color);
   }
   .custom_checkbox_wrapper
     input[disabled]:checked
     + .custom_checkbox
     .custom_checkbox_marker {
-    stroke: ${CUSTOM_CHECKBOX_COLORS.checkmark.disabled};
+    stroke: var(--checkmark-disabled-color);
   }
 `;
 
@@ -212,7 +193,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
 });
 const CustomCheckbox = ({ children }) => {
   return (
-    <div className="custom_checkbox_wrapper">
+    <div className="custom_checkbox_wrapper" data-field-wrapper="">
       {children}
       <div className="custom_checkbox">
         <svg viewBox="0 0 12 12" aria-hidden="true">
