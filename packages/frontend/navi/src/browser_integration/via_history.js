@@ -15,11 +15,12 @@ export const setupBrowserIntegrationViaHistory = ({
   };
 
   const handleActionTask = (params) => {
-    return applyActions({
+    const { requestedResult } = applyActions({
       globalAbortSignal: globalAbortController.signal,
       abortSignal: new AbortController().signal,
       ...params,
     });
+    return requestedResult;
   };
 
   let abortController = null;
@@ -32,17 +33,18 @@ export const setupBrowserIntegrationViaHistory = ({
     }
     abortController = new AbortController();
 
-    return executeWithCleanup(
-      () =>
-        applyRouting(url, {
-          globalAbortSignal: globalAbortController.signal,
-          abortSignal: abortController.signal,
-          state,
-        }),
+    const { allResult, requestedResult } = applyRouting(url, {
+      globalAbortSignal: globalAbortController.signal,
+      abortSignal: abortController.signal,
+      state,
+    });
+    executeWithCleanup(
+      () => allResult,
       () => {
         abortController = undefined;
       },
     );
+    return requestedResult;
   };
 
   // Browser event handlers

@@ -197,7 +197,7 @@ const ButtonWithAction = forwardRef((props, ref) => {
 
   return (
     <ButtonBasic
-      action={`javascript:void(\`${boundAction.name}\`)`}
+      data-action={boundAction.name}
       ref={innerRef}
       {...rest}
       loading={loading || pending}
