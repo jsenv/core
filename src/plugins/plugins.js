@@ -23,6 +23,7 @@ import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js";
 import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_control.js";
 // other
 import { jsenvPluginRibbon } from "./ribbon/jsenv_plugin_ribbon.js";
+import { jsenvPluginDropToOpen } from "./drop_to_open/jsenv_plugin_drop_to_open.js";
 import { jsenvPluginCleanHTML } from "./clean_html/jsenv_plugin_clean_html.js";
 import { jsenvPluginChromeDevtoolsJson } from "./chrome_devtools_json/jsenv_plugin_chrome_devtools_json.js";
 import { jsenvPluginAutoreloadOnServerRestart } from "./autoreload_on_server_restart/jsenv_plugin_autoreload_on_server_restart.js";
@@ -146,6 +147,7 @@ export const getCorePlugins = ({
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
+    jsenvPluginDropToOpen(),
     jsenvPluginCleanHTML(),
     jsenvPluginChromeDevtoolsJson(),
     ...(packageSideEffects
