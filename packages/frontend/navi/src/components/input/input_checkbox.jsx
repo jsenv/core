@@ -86,8 +86,8 @@ import.meta.css = /* css */ `
   .custom_checkbox_wrapper:hover
     input[data-readonly]:checked
     + .custom_checkbox {
-    background: light-dark(#60a5fa, #2563eb); /* Same as non-hover */
-    border-color: #3b82f6;
+    background: var(--field-strong-color);
+    border-color: var(--field-strong-color);
   }
 
   .custom_checkbox_wrapper input:focus-visible + .custom_checkbox {

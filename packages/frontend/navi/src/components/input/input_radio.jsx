@@ -13,32 +13,15 @@ import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useNavState } from "../use_nav_state.js";
 
-const CUSTOM_RADIO_COLORS = {
-  borders: {
-    default: "#6b7280",
-    hover: "#9ca3af",
-    disabled: "rgba(118, 118, 118, 0.3)",
-    checked: "#3b82f6",
-    checkedAndHover: "#1a56db",
-    disabledAndChecked: "#D3D3D3",
-  },
-  outline: {
-    default: "light-dark(#1d4ed8, #3b82f6)",
-  },
-  background: {
-    default: "white",
-    disabled: "light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3))",
-  },
-  checkmark: {
-    default: "#3b82f6",
-    hover: "#1d4ed8",
-    disabled: "#D3D3D3",
-  },
-};
 import.meta.css = /* css */ `
   .custom_radio_wrapper {
     display: inline-flex;
     box-sizing: content-box;
+
+    --checkmark-color: var(--field-strong-color);
+    --checkmark-disabled-color: var(--field-disabled-text-color);
+    --checked-color: var(--field-strong-color);
+    --checked-disabled-color: var(--field-disabled-border-color);
   }
 
   .custom_radio_wrapper input {
@@ -53,9 +36,9 @@ import.meta.css = /* css */ `
   .custom_radio {
     width: 13px;
     height: 13px;
-    border: 1px solid ${CUSTOM_RADIO_COLORS.borders.default};
-    border-radius: 50%; /* ✅ Rond comme Chrome */
-    background: ${CUSTOM_RADIO_COLORS.background.default};
+    border: 1px solid var(--field-border-color);
+    border-radius: 50%;
+    background: white;
     transition: all 0.15s ease;
     box-sizing: border-box;
     display: inline-flex;
@@ -76,26 +59,26 @@ import.meta.css = /* css */ `
   }
 
   .custom_radio svg circle {
-    fill: ${CUSTOM_RADIO_COLORS.checkmark.default};
+    fill: var(--checkmark-color);
   }
 
   /* États hover */
   .custom_radio_wrapper:hover .custom_radio {
-    border-color: ${CUSTOM_RADIO_COLORS.borders.hover};
+    border-color: var(--field-hover-border-color);
   }
   .custom_radio_wrapper:hover .custom_radio svg circle {
-    fill: ${CUSTOM_RADIO_COLORS.checkmark.hover};
+    fill: var(--field-strong-color);
   }
 
   .custom_radio_wrapper:hover input:checked + .custom_radio {
-    background: ${CUSTOM_RADIO_COLORS.background.checkedAndHover};
-    border-color: ${CUSTOM_RADIO_COLORS.borders.checkedAndHover};
+    background: white;
+    border-color: var(--field-strong-color);
   }
 
   /* État checked */
   .custom_radio_wrapper input:checked + .custom_radio {
-    background: ${CUSTOM_RADIO_COLORS.background.checked};
-    border-color: ${CUSTOM_RADIO_COLORS.borders.checked};
+    background: white;
+    border-color: var(--checked-color);
   }
 
   .custom_radio_wrapper input:checked + .custom_radio svg {
@@ -105,39 +88,48 @@ import.meta.css = /* css */ `
 
   /* États disabled */
   .custom_radio_wrapper input[disabled] + .custom_radio {
-    background-color: ${CUSTOM_RADIO_COLORS.background.disabled};
-    border-color: ${CUSTOM_RADIO_COLORS.borders.disabled};
+    background-color: light-dark(
+      rgba(239, 239, 239, 0.3),
+      rgba(59, 59, 59, 0.3)
+    );
+    border-color: var(--field-disabled-border-color);
   }
 
   .custom_radio_wrapper input[disabled]:checked + .custom_radio {
-    border-color: ${CUSTOM_RADIO_COLORS.borders.disabledAndChecked};
+    background-color: light-dark(
+      rgba(239, 239, 239, 0.3),
+      rgba(59, 59, 59, 0.3)
+    );
+    border-color: var(--checked-disabled-color);
   }
 
   .custom_radio_wrapper
     input[disabled]:checked
     + .custom_radio
     .custom_radio_marker {
-    fill: ${CUSTOM_RADIO_COLORS.checkmark.disabled};
+    fill: var(--checkmark-disabled-color);
   }
 
   .custom_radio_wrapper input[data-readonly] + .custom_radio {
     border-style: dashed;
-    background: light-dark(#f3f4f6, #2d3748);
+    background: white;
   }
   .custom_radio_wrapper input[data-readonly]:checked + .custom_radio {
     border-style: dashed;
-    border-color: #3b82f6;
+    border-color: var(--field-strong-color);
+    background: white;
   }
   .custom_radio_wrapper:hover input[data-readonly] + .custom_radio {
-    border-color: #6b7280;
+    border-color: var(--field-readonly-hover-border-color);
   }
   .custom_radio_wrapper:hover input[data-readonly]:checked + .custom_radio {
-    border-color: #3b82f6;
+    background: white;
+    border-color: var(--field-strong-color);
   }
 
   /* Focus state avec outline */
   .custom_radio_wrapper input:focus-visible + .custom_radio {
-    outline: 2px solid ${CUSTOM_RADIO_COLORS.outline.default};
+    outline: 2px solid var(--field-outline-color);
     outline-offset: 1px;
   }
 `;
@@ -221,7 +213,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
 });
 const CustomRadio = ({ children }) => {
   return (
-    <div className="custom_radio_wrapper">
+    <div className="custom_radio_wrapper" data-field-wrapper="">
       {children}
       <div className="custom_radio">
         <svg viewBox="0 0 12 12" aria-hidden="true">
