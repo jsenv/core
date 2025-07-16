@@ -18,10 +18,11 @@ import.meta.css = /* css */ `
     display: inline-flex;
     box-sizing: content-box;
 
-    --checkmark-color: var(--field-strong-color);
-    --checkmark-disabled-color: var(--field-disabled-text-color);
-    --checked-color: var(--field-strong-color);
+    --checked-color: #3b82f6;
     --checked-disabled-color: var(--field-disabled-border-color);
+
+    --checkmark-color: var(--checked-color);
+    --checkmark-disabled-color: var(--field-disabled-text-color);
   }
 
   .custom_radio_wrapper input {
@@ -78,7 +79,7 @@ import.meta.css = /* css */ `
   /* État checked */
   .custom_radio_wrapper input:checked + .custom_radio {
     background: white;
-    border-color: var(--checked-color);
+    border-color: var(--field-strong-color);
   }
 
   .custom_radio_wrapper input:checked + .custom_radio svg {
