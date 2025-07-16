@@ -4,10 +4,21 @@ import.meta.css = /* css */ `
     --field-outline-width: 1px;
 
     --field-border-color: light-dark(#767676, #8e8e93);
+    --field-readonly-border-color: color-mix(
+      in srgb,
+      var(--field-border-color) 30%,
+      white
+    );
     --field-active-border-color: color-mix(
       in srgb,
       var(--field-border-color) 90%,
       black
+    );
+
+    --field-disabled-border-color: color-mix(
+      in srgb,
+      var(--field-border-color) 30%,
+      white
     );
     --field-hover-border-color: color-mix(
       in srgb,
@@ -23,6 +34,7 @@ import.meta.css = /* css */ `
     --field-outline-color: light-dark(#355fcc, #3b82f6);
 
     --field-background-color: light-dark(#f3f4f6, #2d3748);
+    --field-disabled-background-color: var(--field-background-color);
     --field-hover-background-color: color-mix(
       in srgb,
       var(--field-background-color) 95%,
@@ -33,9 +45,16 @@ import.meta.css = /* css */ `
       var(--field-background-color) 95%,
       white
     );
+
+    --field-disabled-text-color: color-mix(
+      in srgb,
+      currentColor 30%,
+      transparent
+    );
   }
 
   [data-field] {
+    border-radius: 2px;
     border-width: calc(var(--field-border-width) + var(--field-outline-width));
     border-style: solid;
     border-color: transparent;
@@ -60,14 +79,12 @@ import.meta.css = /* css */ `
   [data-field][readonly],
   [data-field][data-readonly] {
     outline-style: dashed;
-    outline-color: light-dark(#d1d5db, #4b5563);
+    outline-color: var(--field-readonly-border-color);
     background: var(--field-readonly-background-color);
-    color: light-dark(#374151, #cbd5e0);
   }
   [data-field-with-hover][data-readonly]:hover {
     outline-color: var(--field-readonly-hover-border-color);
-    background: light-dark(#f1f5f9, #334155);
-    color: light-dark(#374151, #cbd5e0);
+    background: var(--field-readonly-background-color);
   }
 
   [data-field]:focus-visible {
@@ -82,8 +99,8 @@ import.meta.css = /* css */ `
   [data-field][data-disabled],
   [data-field-with-hover]:disabled:hover,
   [data-field-with-hover][data-disabled]:hover {
-    outline-color: light-dark(#a0a0a050, #90909050);
-    background-color: rgb(239, 239, 239);
-    color: light-dark(rgba(16, 16, 16, 0.3), rgba(255, 255, 255, 0.3));
+    outline-color: var(--field-disabled-border-color);
+    background-color: var(--field-disabled-background-color);
+    color: var(--field-disabled-text-color);
   }
 `;

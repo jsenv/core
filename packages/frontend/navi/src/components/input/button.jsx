@@ -19,14 +19,15 @@ import "./field_css.js";
  */
 import.meta.css = /* css */ `
   button[data-custom] {
-    border-radius: 2px;
     transition-duration: 0.15s;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-property: transform;
   }
-
   button[data-custom]:active {
     transform: scale(0.9);
+  }
+  button[data-custom]:disabled {
+    transform: none;
   }
 
   button[data-custom] > .shadow {
@@ -37,7 +38,6 @@ import.meta.css = /* css */ `
     pointer-events: none;
     border-radius: inherit;
   }
-
   button[data-custom]:active > .shadow {
     box-shadow:
       inset 0 3px 6px rgba(0, 0, 0, 0.2),
@@ -46,10 +46,7 @@ import.meta.css = /* css */ `
       inset 2px 0 4px rgba(0, 0, 0, 0.1),
       inset -2px 0 4px rgba(0, 0, 0, 0.1);
   }
-
-  button[data-custom]:disabled,
-  button[data-custom]:disabled:hover {
-    transform: none;
+  button[data-custom]:disabled > .shadow {
     box-shadow: none;
   }
 `;
@@ -100,9 +97,9 @@ const ButtonBasic = forwardRef((props, ref) => {
       <button
         ref={innerRef}
         {...rest}
-        data-field
-        data-field-with-background
-        data-field-with-hover
+        data-field=""
+        data-field-with-background=""
+        data-field-with-hover=""
         data-custom={appearance === "custom" ? "" : undefined}
         data-validation-message-arrow-x="center"
         data-readonly={readOnly ? "" : undefined}
