@@ -177,7 +177,7 @@ const ButtonWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const boundAction = useAction(action);
-  const { pending } = useActionStatus(boundAction);
+  const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -200,7 +200,7 @@ const ButtonWithAction = forwardRef((props, ref) => {
       data-action={boundAction.name}
       ref={innerRef}
       {...rest}
-      loading={loading || pending}
+      loading={loading || actionLoading}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
@@ -301,7 +301,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
 
   const { formIsReadOnly, formParamsSignal } = formContext;
   const actionBoundToFormParams = useAction(action, formParamsSignal);
-  const { pending } = useActionStatus(actionBoundToFormParams);
+  const { loading: actionLoading } = useActionStatus(actionBoundToFormParams);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -350,7 +350,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       type={type}
-      loading={loading || pending}
+      loading={loading || actionLoading}
       readOnly={readonly || formIsReadOnly}
       data-readonly-silent={!readonly && formIsReadOnly ? "" : undefined}
       onClick={(event) => {

@@ -150,7 +150,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
 
   const [boundAction, getValue, setValue, resetValue] =
     useActionBoundToOneParam(action, name, valueAtStart);
-  const { pending } = useActionStatus(boundAction);
+  const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -199,7 +199,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     },
   });
 
-  const innerLoading = loading || pending;
+  const innerLoading = loading || actionLoading;
 
   return (
     <InputTextualBasic

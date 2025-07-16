@@ -143,7 +143,7 @@ const DetailsWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const effectiveAction = useAction(action);
-  const { pending } = useActionStatus(effectiveAction);
+  const { loading: actionLoading } = useActionStatus(effectiveAction);
   const executeAction = useExecuteAction(innerRef, {
     // the error will be displayed by actionRenderer inside <details>
     errorEffect: "none",
@@ -172,7 +172,7 @@ const DetailsWithAction = forwardRef((props, ref) => {
         }
         onToggle?.(toggleEvent);
       }}
-      loading={loading || pending}
+      loading={loading || actionLoading}
     >
       {[
         children,

@@ -268,7 +268,11 @@ const InputRadioWithAction = forwardRef((props, ref) => {
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const { pending, error, aborted } = useActionStatus(boundAction);
+  const {
+    loading: actionLoading,
+    error,
+    aborted,
+  } = useActionStatus(boundAction);
   const checkedInAction = getCheckedValue() === value;
   const checked = aborted || error ? checkedAtStart : checkedInAction;
 
@@ -295,7 +299,7 @@ const InputRadioWithAction = forwardRef((props, ref) => {
     },
   });
 
-  const innerLoading = loading || pending;
+  const innerLoading = loading || actionLoading;
 
   return (
     <InputRadioBasic

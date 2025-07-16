@@ -97,8 +97,8 @@ const LinkWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [action, onKeyDownForShortcuts] = useKeyboardShortcuts(shortcuts);
-  const { pending } = useActionStatus(action);
-  const innerLoading = Boolean(loading || pending);
+  const { loading: actionLoading } = useActionStatus(action);
+  const innerLoading = Boolean(loading || actionLoading);
   const executeAction = useExecuteAction(innerRef);
   useActionEvents(innerRef, {
     onAction: executeAction,
@@ -114,8 +114,8 @@ const LinkWithAction = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       loading={innerLoading}
-      readOnly={readOnly || pending}
-      data-readonly-silent={pending && !readOnly ? "" : undefined}
+      readOnly={readOnly || actionLoading}
+      data-readonly-silent={actionLoading && !readOnly ? "" : undefined}
       data-has-shortcuts={shortcuts.length > 0 ? "" : undefined}
       onKeyDown={(e) => {
         onKeyDownForShortcuts(e);

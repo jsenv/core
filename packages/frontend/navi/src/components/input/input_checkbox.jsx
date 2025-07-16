@@ -256,7 +256,11 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
 
   const [boundAction, getCheckedValue, setCheckedValue, resetChecked] =
     useActionBoundToOneParam(action, name, checkedAtStart ? value : undefined);
-  const { pending, error, aborted } = useActionStatus(boundAction);
+  const {
+    loading: actionLoading,
+    error,
+    aborted,
+  } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -283,7 +287,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     },
   });
 
-  const innerLoading = loading || pending;
+  const innerLoading = loading || actionLoading;
 
   return (
     <InputCheckboxBasic

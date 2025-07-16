@@ -142,7 +142,11 @@ const RadioListWithAction = forwardRef((props, ref) => {
     initialValue === undefined ? navStateValue : initialValue;
   const [boundAction, getCheckedValue, setCheckedValue, resetCheckedValue] =
     useActionBoundToOneParam(action, name, valueAtStart);
-  const { pending, aborted, error } = useActionStatus(boundAction);
+  const {
+    loading: actionLoading,
+    aborted,
+    error,
+  } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -204,8 +208,8 @@ const RadioListWithAction = forwardRef((props, ref) => {
           ref: childRef,
           loading:
             child.loading ||
-            (pending && actionRequesterRef.current === childRef.current),
-          readOnly: child.readOnly || pending,
+            (actionLoading && actionRequesterRef.current === childRef.current),
+          readOnly: child.readOnly || actionLoading,
         };
       })}
     </RadioListControlled>

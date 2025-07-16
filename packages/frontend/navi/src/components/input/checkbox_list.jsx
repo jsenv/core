@@ -152,7 +152,11 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
 
   const [boundAction, getValueArray, addValue, removeValue, resetValueArray] =
     useActionBoundToOneArrayParam(action, name, valueAtStart);
-  const { pending, aborted, error } = useActionStatus(boundAction);
+  const {
+    loading: actionLoading,
+    aborted,
+    error,
+  } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -213,13 +217,13 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
         const childRef = childRefArray[i];
         const loading =
           child.loading ||
-          (pending && actionRequesterRef.current === childRef.current);
+          (actionLoading && actionRequesterRef.current === childRef.current);
 
         return {
           ...child,
           ref: childRef,
           loading,
-          readOnly: child.readOnly || pending,
+          readOnly: child.readOnly || actionLoading,
         };
       })}
     </CheckboxListControlled>
