@@ -86,6 +86,7 @@ import.meta.css = /* css */ `
 
   [data-field][readonly],
   [data-field][data-readonly] {
+    outline-style: dashed;
     outline-color: var(--field-readonly-border-color);
     background: var(--field-readonly-background-color);
   }
@@ -95,6 +96,7 @@ import.meta.css = /* css */ `
   }
 
   [data-field]:focus-visible {
+    outline-style: solid;
     outline-width: calc(var(--field-border-width) + var(--field-outline-width));
     outline-offset: calc(
       -1 * (var(--field-border-width) + var(--field-outline-width))

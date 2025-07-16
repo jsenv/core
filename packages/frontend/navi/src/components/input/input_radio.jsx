@@ -124,10 +124,6 @@ import.meta.css = /* css */ `
     outline: 2px solid var(--field-outline-color);
     outline-offset: 1px;
   }
-
-  .custom_radio_wrapper input[data-readonly]:focus-visible + .custom_radio {
-    outline-style: dashed;
-  }
 `;
 
 export const InputRadio = forwardRef((props, ref) => {

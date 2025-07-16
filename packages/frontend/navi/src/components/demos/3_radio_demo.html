@@ -22,7 +22,6 @@
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const [loading, setLoading] = useState(false);
-        const [loadingB, setLoadingB] = useState(false);
         const [loadingC, setLoadingC] = useState(false);
         const [loadingD, setLoadingD] = useState(false);
         const [loadingE, setLoadingE] = useState(false);
@@ -47,44 +46,6 @@
                   <span
                     onClick={() => {
                       setLoading(!loading);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-
-                <div>
-                  <label>
-                    <input type="radio" name="loading_native" />
-                    Coucou
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div>
-                <p>
-                  <strong>Loading with action</strong>
-                </p>
-
-                <Field
-                  input={
-                    <Input
-                      action={() => {}}
-                      type="radio"
-                      name="loading_with_action"
-                      value="toto"
-                      loading={loadingB}
-                    />
-                  }
-                  label="Coucou"
-                ></Field>
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingB(!loadingB);
                     }}
                   >
                     Toggle
