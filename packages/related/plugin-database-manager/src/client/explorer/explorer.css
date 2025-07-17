@@ -112,7 +112,7 @@
 .explorer_item {
   display: flex;
 }
-.explorer_item > * {
+.explorer_item .navi_link {
   padding-left: 16px;
 }
 .explorer_item > a:focus {
