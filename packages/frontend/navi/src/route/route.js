@@ -345,9 +345,6 @@ export const setOnRouteDefined = (v) => {
 // Later I'll consider adding ability to have dynamic import into the mix
 // (An async function returning an action)
 export const defineRoutes = (routeDefinition) => {
-  // Clear existing routes to handle hot reload case
-  routeSet.clear();
-
   const routeArray = [];
   for (const key of Object.keys(routeDefinition)) {
     const value = routeDefinition[key];
@@ -364,3 +361,9 @@ export const defineRoutes = (routeDefinition) => {
 
   return routeArray;
 };
+
+if (import.meta.hot) {
+  import.meta.dispose(() => {
+    routeSet.clear();
+  });
+}
