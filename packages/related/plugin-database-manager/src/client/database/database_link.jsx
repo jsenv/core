@@ -1,24 +1,24 @@
+import { useRouteStatus } from "@jsenv/navi";
 import { LinkWithIcon } from "../components/link_with_icon.jsx";
+import { DATABASE_ROUTE } from "../routes.js";
 import { DatabaseSvg } from "./database_icons.jsx";
-// import { useCurrentDatabase } from "./database_store.js";
+import { useCurrentDatabase } from "./database_store.js";
 
 export const DatabaseLink = ({ database, children, ...rest }) => {
   const datname = database.datname;
-  // const databaseRouteUrl = useRouteUrl(GET_DATABASE_ROUTE, { datname });
-  // const databaseRouteIsMatching = useRouteIsMatching(GET_DATABASE_ROUTE, {
-  //   datname,
-  // });
-  const databaseRouteIsMatching = false;
-  // const currentDatabase = useCurrentDatabase();
-  const currentDatabase = null;
+  const databaseUrl = DATABASE_ROUTE.buildUrl({ datname });
+  const { params } = useRouteStatus(DATABASE_ROUTE);
+  const activeDatname = params.datname;
+  const isActive = activeDatname === datname;
+  const currentDatabase = useCurrentDatabase();
   const isCurrent = currentDatabase && datname === currentDatabase.datname;
 
   return (
     <LinkWithIcon
       icon={<DatabaseSvg color="#333" />}
       isCurrent={isCurrent}
-      href={"#"}
-      data-active={databaseRouteIsMatching ? "" : undefined}
+      href={databaseUrl}
+      data-active={isActive ? "" : undefined}
       {...rest}
     >
       {children}

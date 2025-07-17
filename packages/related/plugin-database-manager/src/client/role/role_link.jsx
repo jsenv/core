@@ -6,7 +6,7 @@ import { useCurrentRole } from "./role_store.js";
 
 export const RoleLink = ({ role, children, ...rest }) => {
   const rolname = role.rolname;
-  const roleUrl = ROLE_ROUTE.buildUrl({ rolname: role.rolname });
+  const roleUrl = ROLE_ROUTE.buildUrl({ rolname });
   const { params } = useRouteStatus(ROLE_ROUTE);
   const activeRolname = params.rolname;
   const isActive = activeRolname === rolname;
