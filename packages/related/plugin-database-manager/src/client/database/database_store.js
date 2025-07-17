@@ -32,14 +32,14 @@ export const DATABASE = resource("database", {
       throw await errorFromResponse(response, `Failed to get database`);
     }
 
-    const {
-      data,
-      // { databases, columns, ownerRole }
-      meta,
-    } = await response.json();
+    const { data, meta } = await response.json();
+    const { columns, ownerRole } = meta;
     return {
       ...data,
-      ...meta,
+      ownerRole,
+      meta: {
+        columns,
+      },
     };
   },
   POST: async ({ datname }, { signal }) => {
