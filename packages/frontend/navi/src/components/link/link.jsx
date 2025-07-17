@@ -22,14 +22,14 @@ import.meta.css = /* css */ `
   }
 
   /*
-     * Apply opacity to child content, not the link element itself.
-     *
-     * Why not apply opacity directly to .navi_link?
-     * - Would make focus outlines semi-transparent too (accessibility issue)
-     * - We want dimmed text but full-opacity focus indicators for visibility
-     *
-     * This approach dims the content while preserving focus outline visibility.
-     */
+       * Apply opacity to child content, not the link element itself.
+       *
+       * Why not apply opacity directly to .navi_link?
+       * - Would make focus outlines semi-transparent too (accessibility issue)
+       * - We want dimmed text but full-opacity focus indicators for visibility
+       *
+       * This approach dims the content while preserving focus outline visibility.
+       */
   .navi_link[data-readonly] > *,
   .navi_link[inert] > * {
     opacity: 0.5;
@@ -107,7 +107,7 @@ const LinkBasic = forwardRef((props, ref) => {
  *    fully visible for accessibility
  */
 const useDimColorWhen = (elementRef, shouldDim) => {
-  const shouldDimPreviousRef = useRef(shouldDim);
+  const shouldDimPreviousRef = useRef();
   useLayoutEffect(() => {
     const element = elementRef.current;
     const shouldDimPrevious = shouldDimPreviousRef.current;

@@ -20,19 +20,15 @@
       const App = () => {
         return (
           <div>
-            <Link
-              href="#"
-              onEnterKeyDown={(e) => {
-                console.log("Enter key pressed on link A");
-                e.target.focus({ focusVisible: true });
-              }}
-            >
-              A
+            <Link href="#">Default link</Link>
+            <br />
+            <Link href="#" readOnly>
+              This link is readonly
             </Link>
             <br />
-            <Link href="#">B</Link>
-            <br />
-            <Link href="#">C</Link>
+            <Link href="#" disabled>
+              This link is disabled
+            </Link>
           </div>
         );
       };
