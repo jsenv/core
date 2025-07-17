@@ -18,53 +18,29 @@
  *
  */
 
-import {
-  ErrorBoundaryContext,
-  Route,
-  SPADeleteButton,
-  useRouteParam,
-} from "@jsenv/router";
-import { useErrorBoundary } from "preact/hooks";
+import { Button } from "@jsenv/navi";
 import { DatabaseValue } from "../components/database_value.jsx";
-import { PageBody, PageHead } from "../layout/page.jsx";
+import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import { RoleLink } from "../role/role_link.jsx";
-import { useRoleByName } from "../role/role_signals.js";
 import { TableSvg } from "./table_icons.jsx";
-import {
-  DELETE_TABLE_ACTION,
-  GET_TABLE_ROUTE,
-  PUT_TABLE_ACTION,
-} from "./table_routes.js";
-import { useActiveTableColumns, useTable } from "./table_signals.js";
+import { TABLE } from "./table_store.js";
 
-export const TableRoutes = () => {
-  return (
-    <Route
-      route={GET_TABLE_ROUTE}
-      renderLoaded={() => <TablePage />}
-      renderError={({ error }) => <TablePage routeError={error} />}
-    />
-  );
-};
-
-const TablePage = ({ routeError }) => {
-  const [error, resetError] = useErrorBoundary();
-  const tablename = useRouteParam(GET_TABLE_ROUTE, "tablename");
-  const deleteTableAction = DELETE_TABLE_ACTION.bindParams({ tablename });
-  const table = useTable(tablename);
+export const TablePage = ({ table }) => {
+  const tablename = table.tablename;
+  const deleteTableAction = TABLE.DELETE.bindParams({ tablename });
 
   return (
-    <ErrorBoundaryContext.Provider value={resetError}>
+    <Page>
       <PageHead
         actions={[
           {
             component: (
-              <SPADeleteButton
+              <Button
+                confirmMessage={`Are you sure you want to delete ${tablename}`}
                 action={deleteTableAction}
-                disabled={error || routeError}
               >
                 Delete
-              </SPADeleteButton>
+              </Button>
             ),
           },
         ]}
@@ -74,39 +50,23 @@ const TablePage = ({ routeError }) => {
         </PageHead.Label>
       </PageHead>
       <PageBody>
-        {routeError ? (
-          <ErrorDetails error={routeError} />
-        ) : (
-          <>
-            <TableFields table={table} />
-            <a
-              href="https://www.postgresql.org/docs/14/ddl-basics.html"
-              target="_blank"
-            >
-              TABLE documentation
-            </a>
-          </>
-        )}
+        <>
+          <TableFields table={table} />
+          <a
+            href="https://www.postgresql.org/docs/14/ddl-basics.html"
+            target="_blank"
+          >
+            TABLE documentation
+          </a>
+        </>
       </PageBody>
-    </ErrorBoundaryContext.Provider>
-  );
-};
-
-const ErrorDetails = ({ error }) => {
-  return (
-    <details className="route_error">
-      <summary>{error.message}</summary>
-      <pre style="white-space: pre-wrap;">
-        <code>{error.stack}</code>
-      </pre>
-    </details>
+    </Page>
   );
 };
 
 const TableFields = ({ table }) => {
-  const columns = useActiveTableColumns();
-  const ownerRolname = table.tableowner;
-  const ownerRole = useRoleByName(ownerRolname);
+  const columns = table.meta.columns;
+  const ownerRole = table.ownerRole;
 
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
@@ -117,7 +77,7 @@ const TableFields = ({ table }) => {
       {columns.map((column) => {
         const columnName = column.column_name;
         const value = table ? table[columnName] : "";
-        const action = PUT_TABLE_ACTION.bindParams({
+        const action = TABLE.PUT.bindParams({
           tablename: table.tablename,
           columnName,
         });

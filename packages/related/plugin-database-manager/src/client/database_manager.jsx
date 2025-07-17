@@ -6,7 +6,8 @@ import { Explorer } from "./explorer/explorer.jsx";
 import { Aside } from "./layout/aside.jsx";
 import "./layout/layout.css" with { type: "css" };
 import { RolePage } from "./role/role_page.jsx";
-import { DATABASE_ROUTE, ROLE_ROUTE } from "./routes.js";
+import { DATABASE_ROUTE, ROLE_ROUTE, TABLE_ROUTE } from "./routes.js";
+import { TablePage } from "./table/table_page.jsx";
 
 const App = () => {
   return (
@@ -19,6 +20,9 @@ const App = () => {
           <Route route={ROLE_ROUTE}>{(role) => <RolePage role={role} />}</Route>
           <Route route={DATABASE_ROUTE}>
             {(database) => <DatabasePage database={database} />}
+          </Route>
+          <Route route={TABLE_ROUTE}>
+            {(table) => <TablePage table={table} />}
           </Route>
         </div>
       </main>

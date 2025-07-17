@@ -1,5 +1,9 @@
 import { resource } from "@jsenv/navi";
-import { setDatabaseCount, setRoleCounts } from "../database_signals.js";
+import {
+  setDatabaseCount,
+  setRoleCounts,
+  setTableCount,
+} from "../database_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
 
 export const EXPLORER = resource("explorer", {
@@ -12,9 +16,10 @@ export const EXPLORER = resource("explorer", {
       throw await errorFromResponse(response, "Failed to get explorer data");
     }
     const { data } = await response.json();
-    const { roleCounts, databaseCount } = data;
+    const { roleCounts, databaseCount, tableCount } = data;
     setRoleCounts(roleCounts);
     setDatabaseCount(databaseCount);
+    setTableCount(tableCount);
     return {};
   },
 });
