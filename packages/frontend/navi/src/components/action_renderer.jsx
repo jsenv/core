@@ -12,6 +12,14 @@
  * And once we know the new content size ideally we could have some sort of transition
  * (like an height transition from current height to new height)
  *
+ * consider https://motion.dev/docs/react-layout-animations
+ *
+ * but might be too complexe for what we want.
+ * we want ability to transit from anything to anything, it's not a layout change
+ * it's more view transition but with a very simple behavior
+ *
+ * And certainly this https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API#pseudo-elements
+ *
  */
 
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
