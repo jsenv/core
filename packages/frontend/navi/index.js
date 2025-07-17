@@ -7,6 +7,18 @@ export { useActionStatus } from "./src/use_action_status.js";
 export { resource } from "./src/store/resource_graph.js";
 export { valueInLocalStorage } from "./src/store/value_in_local_storage.js";
 
+// integration with browser (and routing)
+export {
+  actionIntegratedVia,
+  defineRoutes,
+  goBack,
+  goForward,
+  goTo,
+  reload,
+  stopLoad,
+} from "./src/browser_integration/browser_integration.js";
+export { useRouteStatus } from "./src/route/route.js";
+
 // UI
 export { ActionRenderer } from "./src/components/action_renderer.jsx";
 export { Details } from "./src/components/details/details.jsx";
@@ -23,17 +35,6 @@ export { Input } from "./src/components/input/input.jsx";
 export { RadioList } from "./src/components/input/radio_list.jsx";
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
-
-// integration with browser
-export {
-  actionIntegratedVia,
-  goBack,
-  goForward,
-  goTo,
-  reload,
-  stopLoad,
-} from "./src/browser_integration/browser_integration.js";
-export { createRoute, useRouteStatus } from "./src/route/route.js";
 
 // for debbugging testing purposes
 export { enableDebugActions } from "./src/actions.js";

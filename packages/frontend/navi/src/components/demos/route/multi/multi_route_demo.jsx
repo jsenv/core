@@ -1,6 +1,6 @@
 import {
   createAction,
-  createRoute,
+  defineRoutes,
   enableDebugActions,
   enableDebugOnDocumentLoading,
   Route,
@@ -28,10 +28,10 @@ const loadPageAction = createAction(
     name: "loadPage",
   },
 );
-const userRoute = createRoute("user/:userName");
-userRoute.bindAction(loadUserAction);
-const pageRoute = createRoute("page/:pageName");
-pageRoute.bindAction(loadPageAction);
+const [userRoute, pageRoute] = defineRoutes({
+  "user/:userName": loadUserAction,
+  "page/:pageName": loadPageAction,
+});
 
 const RouteStatus = ({ name, route }) => {
   const { active, params } = useRouteStatus(route);

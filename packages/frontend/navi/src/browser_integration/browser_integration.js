@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
-import { updateActions } from "../actions.js";
-import { updateRoutes } from "../route/route.js";
+import { createAction, updateActions } from "../actions.js";
+import { createRoute, updateRoutes } from "../route/route.js";
 import {
   documentIsBusySignal,
   routingWhile,
@@ -56,11 +56,27 @@ const browserIntegration = setupBrowserIntegrationViaHistory({
   applyActions,
   applyRouting,
 });
-// TODO: should be called once route are registered
-// and we'll likely register all route at once because it would create bug
-// to have lazy loaded route as any route (url) can be accessed at any time by
-// "definition" (a url can be shared, reloaded, etc)
-browserIntegration.init();
+// All routes MUST be created at once because any url can be accessed
+// at any given ti,e (url can be shared, reloaded, etc..)
+// Later I'll consider addin ability to have dynamic import into the mix
+// (An async function returning an action)
+export const defineRoutes = (routeDefinition) => {
+  const routeArray = [];
+  for (const key of Object.keys(routeDefinition)) {
+    const value = routeDefinition[key];
+    const route = createRoute(key);
+    if (typeof value === "function") {
+      const actionFromFunction = createAction(value);
+      route.bindAction(actionFromFunction);
+    } else if (value) {
+      route.bindAction(value);
+    }
+    routeArray.push(route);
+  }
+  browserIntegration.init();
+
+  return routeArray;
+};
 
 export const actionIntegratedVia = browserIntegration.integration;
 export const goTo = browserIntegration.goTo;
