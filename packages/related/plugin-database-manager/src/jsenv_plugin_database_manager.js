@@ -200,13 +200,25 @@ export const jsenvPluginDatabaseManager = ({
           const publicFilter = request.searchParams.has("public");
           const data = await sql`
             SELECT
-              *
+              pg_tables.*,
+              pg_class.oid AS tableoid
             FROM
               pg_tables
+              LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename
+              AND pg_class.relnamespace = (
+                SELECT
+                  oid
+                FROM
+                  pg_namespace
+                WHERE
+                  nspname = pg_tables.schemaname
+              )
             WHERE
               ${publicFilter
-              ? sql`schemaname = 'public'`
-              : sql`schemaname NOT IN ('pg_catalog', 'information_schema')`}
+              ? sql`pg_tables.schemaname = 'public'`
+              : sql`
+                  pg_tables.schemaname NOT IN ('pg_catalog', 'information_schema')
+                `}
           `;
           const columns = await getTableColumns(sql, "pg_tables");
           return {
@@ -240,10 +252,20 @@ export const jsenvPluginDatabaseManager = ({
             SELECT
               pg_tables.*,
               role.rolname AS owner_rolname,
-              role.oid AS owner_oid
+              role.oid AS owner_oid,
+              pg_class.oid AS tableoid
             FROM
               pg_tables
               LEFT JOIN pg_roles role ON pg_tables.tableowner = role.rolname
+              LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename
+              AND pg_class.relnamespace = (
+                SELECT
+                  oid
+                FROM
+                  pg_namespace
+                WHERE
+                  nspname = pg_tables.schemaname
+              )
             WHERE
               pg_tables.tablename = ${tablename}
           `;
