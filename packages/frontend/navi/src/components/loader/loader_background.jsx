@@ -140,6 +140,9 @@ const LoaderBackgroundWithWrapper = ({
   const [paddingLeft, setPaddingLeft] = useState(0);
   const [paddingRight, setPaddingRight] = useState(0);
   const [paddingBottom, setPaddingBottom] = useState(0);
+  const [flexGrow, setFlexGrow] = useState(0);
+  const [flexShrink, setFlexShrink] = useState(1);
+  const [flexBasis, setFlexBasis] = useState("auto");
 
   const [currentColor, setCurrentColor] = useState(color);
 
@@ -157,6 +160,12 @@ const LoaderBackgroundWithWrapper = ({
         const containedComputedStyle =
           window.getComputedStyle(containedElement);
         const targetComputedStyle = window.getComputedStyle(target);
+
+        // Read flex properties from the contained element to mirror its behavior
+        const newFlexGrow = containedComputedStyle.flexGrow || "0";
+        const newFlexShrink = containedComputedStyle.flexShrink || "1";
+        const newFlexBasis = containedComputedStyle.flexBasis || "auto";
+
         const newBorderTopWidth = resolveCSSSize(
           targetComputedStyle.borderTopWidth,
         );
@@ -207,6 +216,9 @@ const LoaderBackgroundWithWrapper = ({
         setPaddingLeft(paddingLeft);
         setPaddingRight(paddingRight);
         setPaddingBottom(paddingBottom);
+        setFlexGrow(newFlexGrow);
+        setFlexShrink(newFlexShrink);
+        setFlexBasis(newFlexBasis);
 
         if (color) {
           setCurrentColor(color);
@@ -273,6 +285,11 @@ const LoaderBackgroundWithWrapper = ({
       name="element_with_loader_wrapper"
       ref={containerRef}
       data-loader-visible={shouldShowSpinner ? "" : undefined}
+      style={{
+        flexGrow,
+        flexShrink,
+        flexBasis,
+      }}
     >
       {shouldShowSpinner && (
         <div
