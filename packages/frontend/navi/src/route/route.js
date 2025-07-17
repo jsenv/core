@@ -299,7 +299,11 @@ export const createRoute = (urlPatternInput) => {
   route.bindAction = bindAction;
 
   private_properties: {
-    const urlPattern = new URLPattern(urlPatternInput, baseUrl, {
+    // Remove leading slash from urlPattern to make it relative to baseUrl
+    const normalizedUrlPattern = urlPatternInput.startsWith("/")
+      ? urlPatternInput.slice(1)
+      : urlPatternInput;
+    const urlPattern = new URLPattern(normalizedUrlPattern, baseUrl, {
       ignoreCase: true,
     });
     routePrivateProperties.urlPattern = urlPattern;
