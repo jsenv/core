@@ -9,6 +9,15 @@ import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useKeyboardShortcuts } from "../use_keyboard_shortcuts.js";
 
+/*
+ * Apply opacity to child content, not the link element itself.
+ *
+ * Why not apply opacity directly to .navi_link?
+ * - Would make focus outlines semi-transparent too (accessibility issue)
+ * - We want dimmed text but full-opacity focus indicators for visibility
+ *
+ * This approach dims the content while preserving focus outline visibility.
+ */
 import.meta.css = /* css */ `
   .navi_link {
     /* Color will be controlled entirely by JavaScript */
@@ -22,15 +31,11 @@ import.meta.css = /* css */ `
     border-radius: 1px;
   }
 
-  /*
-    * Apply opacity to child content, not the link element itself.
-    *
-    * Why not apply opacity directly to .navi_link?
-    * - Would make focus outlines semi-transparent too (accessibility issue)
-    * - We want dimmed text but full-opacity focus indicators for visibility
-    *
-    * This approach dims the content while preserving focus outline visibility.
-    */
+  .navi_link:focus {
+    position: relative;
+    z-index: 1; /* Ensure focus outline is above other elements */
+  }
+
   .navi_link[data-readonly] > *,
   .navi_link[inert] > * {
     opacity: 0.5;
