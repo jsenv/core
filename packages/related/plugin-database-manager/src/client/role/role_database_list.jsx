@@ -1,7 +1,7 @@
 import { DatabaseLink } from "../database/database_link.jsx";
 
 export const RoleDatabaseList = ({ role }) => {
-  const databases = [];
+  const databases = role.databases;
 
   return (
     <div>

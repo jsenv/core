@@ -15,6 +15,7 @@ export {
   goTo,
   reload,
   stopLoad,
+  useNavState,
 } from "./src/browser_integration/browser_integration.js";
 export { defineRoutes, setBaseUrl, useRouteStatus } from "./src/route/route.js";
 

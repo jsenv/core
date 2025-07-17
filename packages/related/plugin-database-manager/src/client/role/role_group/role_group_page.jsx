@@ -1,27 +1,31 @@
-// import { DatabaseValue } from "../../components/database_value.jsx";
+import { Button } from "@jsenv/navi";
+import { DatabaseValue } from "../../components/database_value.jsx";
 import { Page, PageBody, PageHead } from "../../layout/page.jsx";
-// import { RoleDatabaseList } from "../role_database_list.jsx";
+import { RoleDatabaseList } from "../role_database_list.jsx";
 import { pickRoleIcon } from "../role_icons.jsx";
 import { ROLE } from "../role_store.js";
-// import { RoleGroupMemberList } from "./role_group_member_list.jsx";
+import { RoleGroupMemberList } from "./role_group_member_list.jsx";
 
 export const RoleGroupPage = ({ role }) => {
   const rolname = role.rolname;
-  // const deleteRoleAction = ROLE.DELETE.bindParams({ rolname });
+  const deleteRoleAction = ROLE.DELETE.bindParams({ rolname });
   const RoleIcon = pickRoleIcon(role);
 
   return (
     <Page>
       <PageHead
-      // actions={[
-      //   {
-      //     component: (
-      //       <SPADeleteButton action={deleteRoleAction}>
-      //         Delete
-      //       </SPADeleteButton>
-      //     ),
-      //   },
-      // ]}
+        actions={[
+          {
+            component: (
+              <Button
+                confirmMessage={`Are you sure you want to delete ${rolname}?`}
+                action={deleteRoleAction}
+              >
+                Delete
+              </Button>
+            ),
+          },
+        ]}
       >
         <PageHead.Label icon={<RoleIcon />} label={"Role Group:"}>
           {rolname}
@@ -29,8 +33,8 @@ export const RoleGroupPage = ({ role }) => {
       </PageHead>
       <PageBody>
         <RoleFields role={role} />
-        {/* <RoleGroupMemberList role={role} /> */}
-        {/* <RoleDatabaseList role={role} /> */}
+        <RoleGroupMemberList role={role} />
+        <RoleDatabaseList role={role} />
         <a
           href="https://www.postgresql.org/docs/current/sql-createrole.html"
           target="_blank"
@@ -43,8 +47,7 @@ export const RoleGroupPage = ({ role }) => {
 };
 
 const RoleFields = ({ role }) => {
-  const columns = [];
-
+  const columns = role.meta.columns;
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
   });
@@ -72,12 +75,12 @@ const RoleFields = ({ role }) => {
 
         return (
           <li key={columnName}>
-            {/* <DatabaseValue
+            <DatabaseValue
               label={<span>{columnName}:</span>}
               column={column}
               value={value}
               action={action}
-            /> */}
+            />
           </li>
         );
       })}
