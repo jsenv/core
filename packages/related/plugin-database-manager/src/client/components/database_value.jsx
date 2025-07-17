@@ -1,50 +1,67 @@
-import {
-  SPAInputCheckbox,
-  SPAInputDateAndTime,
-  SPAInputInteger,
-  SPAInputText,
-} from "@jsenv/router";
+import { Field, Input } from "@jsenv/navi";
 
-export const DatabaseValue = ({ column, ...rest }) => {
+export const DatabaseValue = ({ column, label, ...rest }) => {
   const columnName = column.column_name;
 
   if (column.name === "tablename") {
     const { value } = rest;
-    return <TableNameValue name={value} />;
+    return <Field label={label} input={<span>{value}</span>} />;
   }
   if (column.data_type === "boolean") {
     const { value, ...props } = rest;
-    return <SPAInputCheckbox name={columnName} checked={value} {...props} />;
+    return (
+      <Field
+        label={label}
+        input={
+          <Input type="checkbox" name={columnName} checked={value} {...props} />
+        }
+      />
+    );
   }
   if (column.data_type === "timestamp with time zone") {
     const props = rest;
-    return <SPAInputDateAndTime name={columnName} {...props} />;
+    return (
+      <Field
+        label={label}
+        input={<Input type="date_and_time" name={columnName} {...props} />}
+      />
+    );
   }
   if (column.data_type === "integer") {
     const props = rest;
-    return <SPAInputInteger name={columnName} {...props} />;
+    return (
+      <Field
+        label={label}
+        input={
+          <Input type="number" min="0" step="1" name={columnName} {...props} />
+        }
+      />
+    );
   }
   if (column.data_type === "name") {
     const props = rest;
     return (
-      <SPAInputText
-        requestSubmitOnChange
-        required
-        name={columnName}
-        {...props}
+      <Field
+        label={label}
+        input={<Input type="text" required name={columnName} {...props} />}
       />
     );
   }
   if (column.data_type === "oid") {
     return (
-      <span>
-        <span>{column.column_name}: </span>
-        <span>{rest.value}</span>
-      </span>
+      <Field
+        label={<span>{column.column_name}: </span>}
+        input={<span>{rest.value}</span>}
+      ></Field>
     );
   }
   if (column.column_name === "rolpassword") {
-    return <SPAInputText requestSubmitOnChange name={columnName} {...rest} />;
+    return (
+      <Field
+        label={label}
+        input={<Input type="text" name={columnName} {...rest} />}
+      />
+    );
   }
   if (column.column_name === "rolconfig") {
     // rolconfig something custom like client_min_messages
@@ -57,22 +74,28 @@ export const DatabaseValue = ({ column, ...rest }) => {
     );
   }
   if (column.data_type === "xid") {
-    return <SPAInputText readOnly name={columnName} {...rest} />;
+    return (
+      <Field
+        label={label}
+        input={<Input type="text" readOnly name={columnName} {...rest} />}
+      />
+    );
   }
   if (column.column_name === "datacl") {
     // datacl is a custom type
     // see https://www.postgresql.org/docs/14/sql-grant.html
     return (
-      <span>
-        <span>{column.column_name}: </span>
-        <span>{String(rest.value)}</span>
-      </span>
+      <Field
+        label={<span>{column.column_name}: </span>}
+        input={<span>{String(rest.value)}</span>}
+      />
     );
   }
   const { value } = rest;
-  return String(value);
-};
-
-const TableNameValue = ({ name }) => {
-  return <span>{name}</span>;
+  return (
+    <Field
+      label={<span>{column.column_name}: </span>}
+      input={String(value)}
+    ></Field>
+  );
 };

@@ -30,14 +30,15 @@ export const ROLE = resource("role", {
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to get role");
     }
-    const {
-      data,
-      // { databases, columns, members }
-      meta,
-    } = await response.json();
+    const { data, meta } = await response.json();
+    const { databases, members, columns } = meta;
     return {
       ...data,
-      ...meta,
+      databases,
+      members,
+      meta: {
+        columns,
+      },
     };
   },
   POST: async ({ canlogin, rolname }, { signal }) => {
