@@ -217,9 +217,9 @@ const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
   "hash",
 ]);
 
-const routePrivatePropertiesWeakMap = new WeakMap();
+const routePrivatePropertiesMap = new Map();
 const getRoutePrivateProperties = (route) => {
-  return routePrivatePropertiesWeakMap.get(route);
+  return routePrivatePropertiesMap.get(route);
 };
 export const createRoute = (urlPatternInput) => {
   const cleanupCallbackSet = new Set();
@@ -249,7 +249,7 @@ export const createRoute = (urlPatternInput) => {
     relativeUrlSignal: null,
     urlSignal: null,
   };
-  routePrivatePropertiesWeakMap.set(route, routePrivateProperties);
+  routePrivatePropertiesMap.set(route, routePrivateProperties);
 
   const buildRelativeUrl = (params = {}) => {
     let relativeUrl = urlPatternInput;
@@ -382,7 +382,5 @@ export const defineRoutes = (routeDefinition) => {
 };
 
 if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    // Cleanup will be handled by defineRoutes when it's called again
-  });
+  import.meta.hot.decline();
 }
