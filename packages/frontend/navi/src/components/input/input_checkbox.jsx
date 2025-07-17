@@ -72,22 +72,28 @@ import.meta.css = /* css */ `
   }
 
   .custom_checkbox_wrapper input[data-readonly] + .custom_checkbox {
-    border-style: dashed;
-    background: var(--field-readonly-background-color);
+    background-color: var(--field-disabled-background-color);
+    border-color: var(--field-disabled-border-color);
   }
   .custom_checkbox_wrapper input[data-readonly]:checked + .custom_checkbox {
-    border-style: dashed;
-    border-color: #3b82f6;
-    background: light-dark(#60a5fa, #2563eb);
+    background: var(--checked-disabled-color);
+    border-color: var(--checked-disabled-color);
   }
   .custom_checkbox_wrapper:hover input[data-readonly] + .custom_checkbox {
-    border-color: #6b7280;
+    background-color: var(--field-disabled-background-color);
+    border-color: var(--field-disabled-border-color);
   }
   .custom_checkbox_wrapper:hover
     input[data-readonly]:checked
     + .custom_checkbox {
-    background: var(--field-strong-color);
-    border-color: var(--field-strong-color);
+    background: var(--checked-disabled-color);
+    border-color: var(--checked-disabled-color);
+  }
+  .custom_checkbox_wrapper
+    input[data-readonly]:checked
+    + .custom_checkbox
+    .custom_checkbox_marker {
+    stroke: var(--checkmark-disabled-color);
   }
 
   .custom_checkbox_wrapper input:focus-visible + .custom_checkbox {
@@ -184,6 +190,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       loading={loading}
       inset={-1}
       targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
+      color="light-dark(#355fcc, #3b82f6)"
     >
       {inputCheckboxDisplayed}
     </LoaderBackground>

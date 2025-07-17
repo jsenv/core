@@ -1,6 +1,4 @@
-1. Faire le useElementState(id) connecté a l'api history
-
-2. Faire un exemple de navigation avec une page user et une page table
+1. Faire un exemple de navigation avec une page user et une page table
    comme ca on a le cas de deux routes qui controlle le contenu de la page via
    deux action différente (notre exemple avec pageA/pageB on une action qui controle les deux)
 
