@@ -21,10 +21,10 @@ import { useCurrentRole } from "../role/role_store.js";
 //   roleWithOwnershipListDetailsController,
 // } from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
-// import {
-//   TablesDetails,
-//   tablesDetailsController,
-// } from "../table/tables_details.jsx";
+import {
+  TablesDetails,
+  tablesDetailsController,
+} from "../table/tables_details.jsx";
 import "./explorer.css" with { type: "css" };
 import "./explorer_store.js";
 
@@ -65,9 +65,9 @@ const ExplorerBody = () => {
         setResizableDetailsIdSet(new Set(resizableDetailsIdSet));
       },
       onRequestedSizeChange: (element, requestedHeight) => {
-        // if (element.id === tablesDetailsController.id) {
-        //   tablesDetailsController.setHeightSetting(requestedHeight);
-        // }
+        if (element.id === tablesDetailsController.id) {
+          tablesDetailsController.setHeightSetting(requestedHeight);
+        }
         if (element.id === databasesDetailsController.id) {
           databasesDetailsController.setHeightSetting(requestedHeight);
         }
@@ -89,13 +89,6 @@ const ExplorerBody = () => {
 
   return (
     <div ref={flexDetailsSetRef} className="explorer_body">
-      {/* <TablesDetails
-        resizable={resizableDetailsIdSet.has(tablesDetailsController.id)}
-      />
-      */}
-      <DatabasesDetails
-        resizable={resizableDetailsIdSet.has(databasesDetailsController.id)}
-      />
       <RoleCanLoginListDetails
         resizable={resizableDetailsIdSet.has(
           roleCanLoginListDetailsController.id,
@@ -103,6 +96,12 @@ const ExplorerBody = () => {
       />
       <RoleGroupListDetails
         resizable={resizableDetailsIdSet.has(roleGroupListDetailsController.id)}
+      />
+      <DatabasesDetails
+        resizable={resizableDetailsIdSet.has(databasesDetailsController.id)}
+      />
+      <TablesDetails
+        resizable={resizableDetailsIdSet.has(tablesDetailsController.id)}
       />
       {/*
       <RoleWithOwnershipListDetails

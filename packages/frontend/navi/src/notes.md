@@ -1,5 +1,5 @@
 - Try to add remove members from a group
 - Try to update info on role and database
-- Add ability to change the owern of the database (just an input with submit for now)
+- Add ability to change the owner of the database (just an input with submit for now)
   - Ideally this would be a dialog with suggestions, an input to search for users
 - Restore tables to be able to see them

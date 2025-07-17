@@ -1,20 +1,20 @@
-import { useRouteIsMatching, useRouteUrl } from "@jsenv/router";
+import { useRouteStatus } from "@jsenv/navi";
 import { LinkWithIcon } from "../components/link_with_icon.jsx";
+import { TABLE_ROUTE } from "../routes.js";
 import { TableSvg } from "./table_icons.jsx";
-import { GET_TABLE_ROUTE } from "./table_routes.js";
 
 export const TableLink = ({ table, children, ...rest }) => {
   const tablename = table.tablename;
-  const tableRouteUrl = useRouteUrl(GET_TABLE_ROUTE, { tablename });
-  const tableRouteIsMatching = useRouteIsMatching(GET_TABLE_ROUTE, {
-    tablename,
-  });
+  const tableUrl = TABLE_ROUTE.buildUrl({ tablename });
+  const { params } = useRouteStatus(TABLE_ROUTE);
+  const activeTablename = params.tablename;
+  const isActive = activeTablename === tablename;
 
   return (
     <LinkWithIcon
       icon={<TableSvg color="#333" />}
-      href={tableRouteUrl}
-      data-active={tableRouteIsMatching ? "" : undefined}
+      href={tableUrl}
+      data-active={isActive ? "" : undefined}
       {...rest}
     >
       {children}

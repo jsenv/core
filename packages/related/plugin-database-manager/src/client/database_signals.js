@@ -39,3 +39,11 @@ export const setDatabaseCount = (count) => {
 export const useDatabaseCount = () => {
   return databaseCountSignal.value;
 };
+
+const tableCountSignal = signal(0);
+export const setTableCount = (count) => {
+  tableCountSignal.value = count;
+};
+export const useTableCount = () => {
+  return tableCountSignal.value;
+};

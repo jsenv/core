@@ -5,45 +5,49 @@ import {
 } from "../explorer/explorer_group.jsx";
 import { TableWithPlusSvg } from "./table_icons.jsx";
 import { TableLink } from "./table_link.jsx";
+import { useTableCount } from "./table_signals.js";
+import { TABLE, useTableArray } from "./table_store.js";
 import {
-  DELETE_TABLE_ACTION,
-  POST_TABLE_ACTION,
-  PUT_TABLE_ACTION,
-} from "./table_routes.js";
-import { useTableCount, useTableList } from "./table_signals.js";
-import { TABLES_DETAILS_ROUTE } from "./tables_details_routes.js";
+  tableListDetailsOnToggle,
+  tableListDetailsOpenAtStart,
+} from "./tables_details_state.js";
 
-export const tablesDetailsController = createExplorerGroupController("tables");
+export const tablesDetailsController = createExplorerGroupController("tables", {
+  detailsOpenAtStart: tableListDetailsOpenAtStart,
+  detailsOnToggle: tableListDetailsOnToggle,
+});
 
 export const TablesDetails = (props) => {
-  const tables = useTableList();
   const tableCount = useTableCount();
+  const tableArray = useTableArray();
 
   return (
     <ExplorerGroup
       {...props}
       controller={tablesDetailsController}
-      detailsRoute={TABLES_DETAILS_ROUTE}
+      detailsAction={TABLE.GET_MANY}
       idKey="oid"
       nameKey="tablename"
       labelChildren={<TextAndCount text={"TABLES"} count={tableCount} />}
       renderNewButtonChildren={() => <TableWithPlusSvg />}
-      renderItem={(item, props) => <TableLink table={item} {...props} />}
-      useItemList={useTableList}
+      renderItem={(item, props) => (
+        <TableLink draggable={false} key={item.oid} table={item} {...props} />
+      )}
+      useItemList={useTableArray}
       useRenameItemAction={(table) =>
-        PUT_TABLE_ACTION.bindParams({
+        TABLE.PUT.bindParams({
           tablename: table.tablename,
           columnName: "tablename",
         })
       }
-      useCreateItemAction={() => POST_TABLE_ACTION}
+      useCreateItemAction={() => TABLE.POST}
       useDeleteItemAction={(table) =>
-        DELETE_TABLE_ACTION.bindParams({
+        TABLE.DELETE.bindParams({
           tablename: table.tablename,
         })
       }
     >
-      {tables}
+      {tableArray}
     </ExplorerGroup>
   );
 };
