@@ -83,11 +83,17 @@
   justify-content: center;
   align-items: center;
   flex-shrink: 0;
+  background-color: transparent;
+  opacity: 0;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
 }
 .explorer_body > [data-resize-handle]:hover,
 .explorer_body > [data-resize-handle][data-active] {
   background-color: blue;
   opacity: 0.5;
+  transition-delay: 300ms; /* Delay before showing hover effect */
 }
 
 .explorer_group_content {
