@@ -1,14 +1,11 @@
-// organize-imports-ignore
+import { Route } from "@jsenv/navi";
 import { render } from "preact";
-
-import "./layout/layout.css" with { type: "css" };
 import "./database_manager.css" with { type: "css" };
-import { Aside } from "./layout/aside.jsx";
 import { Explorer } from "./explorer/explorer.jsx";
-
-// import { DatabaseRoutes } from "./database/database_page.jsx";
-// import { RoleRoutes } from "./role/role_page.jsx";
-// import { TableRoutes } from "./table/table_page.jsx";
+import { Aside } from "./layout/aside.jsx";
+import "./layout/layout.css" with { type: "css" };
+import { RolePage } from "./role/role_page.jsx";
+import { ROLE_ROUTE } from "./routes.js";
 
 const App = () => {
   return (
@@ -16,20 +13,13 @@ const App = () => {
       <Aside>
         <Explorer />
       </Aside>
-      {/* <main>
+      <main>
         <div className="main_body">
-          <TableRoutes />
-          <RoleRoutes />
-          <DatabaseRoutes />
+          <Route route={ROLE_ROUTE}>{(role) => <RolePage role={role} />}</Route>
         </div>
-      </main> */}
+      </main>
     </div>
   );
 };
 
 render(<App />, document.querySelector("#root"));
-
-if (import.meta.hot) {
-  // jsenv router does not support hot reload (yet)
-  import.meta.hot.decline();
-}

@@ -1,6 +1,6 @@
 // import { DatabaseValue } from "../../components/database_value.jsx";
 import { Page, PageBody, PageHead } from "../../layout/page.jsx";
-import { RoleDatabaseList } from "../role_database_list.jsx";
+// import { RoleDatabaseList } from "../role_database_list.jsx";
 import { pickRoleIcon } from "../role_icons.jsx";
 // import { ROLE } from "../role_store.js";
 
@@ -28,7 +28,7 @@ export const RoleCanLoginPage = ({ role }) => {
       </PageHead>
       <PageBody>
         <RoleFields role={role} />
-        <RoleDatabaseList role={role} />
+        {/* <RoleDatabaseList role={role} /> */}
         <a
           href="https://www.postgresql.org/docs/current/sql-createrole.html"
           target="_blank"

@@ -1,6 +1,6 @@
 import { LinkWithIcon } from "../components/link_with_icon.jsx";
 import { DatabaseSvg } from "./database_icons.jsx";
-import { useCurrentDatabase } from "./database_store.js";
+// import { useCurrentDatabase } from "./database_store.js";
 
 export const DatabaseLink = ({ database, children, ...rest }) => {
   const datname = database.datname;
@@ -9,7 +9,8 @@ export const DatabaseLink = ({ database, children, ...rest }) => {
   //   datname,
   // });
   const databaseRouteIsMatching = false;
-  const currentDatabase = useCurrentDatabase();
+  // const currentDatabase = useCurrentDatabase();
+  const currentDatabase = null;
   const isCurrent = currentDatabase && datname === currentDatabase.datname;
 
   return (

@@ -1,32 +1,27 @@
-import { ErrorBoundaryContext, SPADeleteButton } from "@jsenv/router";
-import { useErrorBoundary } from "preact/hooks";
-import { DatabaseValue } from "../../components/database_value.jsx";
-import { PageBody, PageHead } from "../../layout/page.jsx";
-import { RoleDatabaseList } from "../role_database_list.jsx";
+// import { DatabaseValue } from "../../components/database_value.jsx";
+import { Page, PageBody, PageHead } from "../../layout/page.jsx";
+// import { RoleDatabaseList } from "../role_database_list.jsx";
 import { pickRoleIcon } from "../role_icons.jsx";
-import { DELETE_ROLE_ACTION, PUT_ROLE_ACTION } from "../role_routes.js";
-import { useActiveRoleColumns } from "../role_signals.js";
-import { RoleGroupMemberList } from "./role_group_member_list.jsx";
+import { ROLE } from "../role_store.js";
+// import { RoleGroupMemberList } from "./role_group_member_list.jsx";
 
 export const RoleGroupPage = ({ role }) => {
-  const [error, resetError] = useErrorBoundary();
   const rolname = role.rolname;
-  const deleteRoleAction = DELETE_ROLE_ACTION.bindParams({ rolname });
+  // const deleteRoleAction = ROLE.DELETE.bindParams({ rolname });
   const RoleIcon = pickRoleIcon(role);
 
   return (
-    <ErrorBoundaryContext.Provider value={resetError}>
-      {error && <ErrorDetails error={error} />}
+    <Page>
       <PageHead
-        actions={[
-          {
-            component: (
-              <SPADeleteButton action={deleteRoleAction}>
-                Delete
-              </SPADeleteButton>
-            ),
-          },
-        ]}
+      // actions={[
+      //   {
+      //     component: (
+      //       <SPADeleteButton action={deleteRoleAction}>
+      //         Delete
+      //       </SPADeleteButton>
+      //     ),
+      //   },
+      // ]}
       >
         <PageHead.Label icon={<RoleIcon />} label={"Role Group:"}>
           {rolname}
@@ -34,8 +29,8 @@ export const RoleGroupPage = ({ role }) => {
       </PageHead>
       <PageBody>
         <RoleFields role={role} />
-        <RoleGroupMemberList role={role} />
-        <RoleDatabaseList role={role} />
+        {/* <RoleGroupMemberList role={role} /> */}
+        {/* <RoleDatabaseList role={role} /> */}
         <a
           href="https://www.postgresql.org/docs/current/sql-createrole.html"
           target="_blank"
@@ -43,23 +38,12 @@ export const RoleGroupPage = ({ role }) => {
           ROLE documentation
         </a>
       </PageBody>
-    </ErrorBoundaryContext.Provider>
-  );
-};
-
-const ErrorDetails = ({ error }) => {
-  return (
-    <details>
-      <summary>{error.message}</summary>
-      <pre>
-        <code>{error.stack}</code>
-      </pre>
-    </details>
+    </Page>
   );
 };
 
 const RoleFields = ({ role }) => {
-  const columns = useActiveRoleColumns();
+  const columns = [];
 
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
@@ -81,19 +65,19 @@ const RoleFields = ({ role }) => {
     <ul>
       {fields.map(({ column, value }) => {
         const columnName = column.column_name;
-        const action = PUT_ROLE_ACTION.bindParams({
+        const action = ROLE.PUT.bindParams({
           rolname: role.rolname,
           columnName,
         });
 
         return (
           <li key={columnName}>
-            <DatabaseValue
+            {/* <DatabaseValue
               label={<span>{columnName}:</span>}
               column={column}
               value={value}
               action={action}
-            />
+            /> */}
           </li>
         );
       })}
