@@ -119,7 +119,7 @@ export const updateRoutes = (url) => {
         );
       }
       const currentAction = routeAction.getCurrentAction();
-      toLoadSet.add(currentAction);
+      toReloadSet.add(currentAction);
       routeLoadRequestedMap.set(route, currentAction);
 
       // Create a new abort controller for this action
