@@ -1,4 +1,5 @@
 import { batch, computed, effect, signal } from "@preact/signals";
+import { createAction } from "../actions.js";
 import {
   SYMBOL_IDENTITY,
   compareTwoJsValues,
@@ -316,7 +317,15 @@ export const createRoute = (urlPatternInput) => {
   return route;
 };
 export const useRouteStatus = (route) => {
-  const { activeSignal, paramsSignal } = getRoutePrivateProperties(route);
+  const routePrivateProperties = getRoutePrivateProperties(route);
+
+  if (!routePrivateProperties) {
+    throw new Error(
+      "Route is not properly initialized. Make sure defineRoutes() is called before using routes.",
+    );
+  }
+
+  const { activeSignal, paramsSignal } = routePrivateProperties;
 
   const active = activeSignal.value;
   const params = paramsSignal.value;
@@ -325,4 +334,33 @@ export const useRouteStatus = (route) => {
     active,
     params,
   };
+};
+
+let onRouteDefined = () => {};
+export const setOnRouteDefined = (v) => {
+  onRouteDefined = v;
+};
+// All routes MUST be created at once because any url can be accessed
+// at any given time (url can be shared, reloaded, etc..)
+// Later I'll consider adding ability to have dynamic import into the mix
+// (An async function returning an action)
+export const defineRoutes = (routeDefinition) => {
+  // Clear existing routes to handle hot reload case
+  routeSet.clear();
+
+  const routeArray = [];
+  for (const key of Object.keys(routeDefinition)) {
+    const value = routeDefinition[key];
+    const route = createRoute(key);
+    if (typeof value === "function") {
+      const actionFromFunction = createAction(value);
+      route.bindAction(actionFromFunction);
+    } else if (value) {
+      route.bindAction(value);
+    }
+    routeArray.push(route);
+  }
+  onRouteDefined();
+
+  return routeArray;
 };

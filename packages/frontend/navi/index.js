@@ -10,14 +10,13 @@ export { valueInLocalStorage } from "./src/store/value_in_local_storage.js";
 // integration with browser (and routing)
 export {
   actionIntegratedVia,
-  defineRoutes,
   goBack,
   goForward,
   goTo,
   reload,
   stopLoad,
 } from "./src/browser_integration/browser_integration.js";
-export { setBaseUrl, useRouteStatus } from "./src/route/route.js";
+export { defineRoutes, setBaseUrl, useRouteStatus } from "./src/route/route.js";
 
 // UI
 export { ActionRenderer } from "./src/components/action_renderer.jsx";

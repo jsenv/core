@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
-import { createAction, updateActions } from "../actions.js";
-import { createRoute, updateRoutes } from "../route/route.js";
+import { updateActions } from "../actions.js";
+import { setOnRouteDefined, updateRoutes } from "../route/route.js";
 import {
   documentIsBusySignal,
   routingWhile,
@@ -56,27 +56,10 @@ const browserIntegration = setupBrowserIntegrationViaHistory({
   applyActions,
   applyRouting,
 });
-// All routes MUST be created at once because any url can be accessed
-// at any given ti,e (url can be shared, reloaded, etc..)
-// Later I'll consider addin ability to have dynamic import into the mix
-// (An async function returning an action)
-export const defineRoutes = (routeDefinition) => {
-  const routeArray = [];
-  for (const key of Object.keys(routeDefinition)) {
-    const value = routeDefinition[key];
-    const route = createRoute(key);
-    if (typeof value === "function") {
-      const actionFromFunction = createAction(value);
-      route.bindAction(actionFromFunction);
-    } else if (value) {
-      route.bindAction(value);
-    }
-    routeArray.push(route);
-  }
-  browserIntegration.init();
 
-  return routeArray;
-};
+setOnRouteDefined(() => {
+  browserIntegration.init();
+});
 
 export const actionIntegratedVia = browserIntegration.integration;
 export const goTo = browserIntegration.goTo;
