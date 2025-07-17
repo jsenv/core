@@ -17,7 +17,7 @@ export {
   reload,
   stopLoad,
 } from "./src/browser_integration/browser_integration.js";
-export { useRouteStatus } from "./src/route/route.js";
+export { setBaseUrl, useRouteStatus } from "./src/route/route.js";
 
 // UI
 export { ActionRenderer } from "./src/components/action_renderer.jsx";

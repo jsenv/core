@@ -4,9 +4,13 @@ import {
   compareTwoJsValues,
 } from "../utils/compare_two_js_values.js";
 
-const baseUrl = import.meta.dev
+let baseUrl = import.meta.dev
   ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
   : window.location.origin;
+
+export const setBaseUrl = (value) => {
+  baseUrl = new URL(value, window.location).href;
+};
 
 const DEBUG = true;
 const NO_PARAMS = { [SYMBOL_IDENTITY]: Symbol("no_params") };
@@ -259,7 +263,10 @@ export const createRoute = (urlPatternInput) => {
     return relativeUrl;
   };
   const buildUrl = (params = {}) => {
-    const relativeUrl = buildRelativeUrl(params);
+    let relativeUrl = buildRelativeUrl(params);
+    if (relativeUrl[0] === "/") {
+      relativeUrl = relativeUrl.slice(1);
+    }
     const url = new URL(relativeUrl, baseUrl).href;
     return url;
   };
