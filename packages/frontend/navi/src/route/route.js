@@ -222,6 +222,14 @@ const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesWeakMap.get(route);
 };
 export const createRoute = (urlPatternInput) => {
+  const cleanupCallbackSet = new Set();
+  const cleanup = () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+    cleanupCallbackSet.clear();
+  };
+
   const route = {
     active: false,
     params: NO_PARAMS,
@@ -230,6 +238,7 @@ export const createRoute = (urlPatternInput) => {
     relativeUrl: null,
     url: null,
     action: null,
+    cleanup,
   };
   routeSet.add(route);
 
@@ -280,17 +289,20 @@ export const createRoute = (urlPatternInput) => {
     const relativeUrl = buildRelativeUrl(params);
     return relativeUrl;
   });
-  effect(() => {
+  const disposeRelativeUrlEffect = effect(() => {
     route.relativeUrl = relativeUrlSignal.value;
   });
+  cleanupCallbackSet.add(disposeRelativeUrlEffect);
+
   const urlSignal = computed(() => {
     const relativeUrl = relativeUrlSignal.value;
     const url = new URL(relativeUrl, baseUrl).href;
     return url;
   });
-  effect(() => {
+  const disposeUrlEffect = effect(() => {
     route.url = urlSignal.value;
   });
+  cleanupCallbackSet.add(disposeUrlEffect);
 
   const bindAction = (action) => {
     const actionBoundToThisRoute = action.bindParams(paramsSignal);
@@ -312,6 +324,7 @@ export const createRoute = (urlPatternInput) => {
     routePrivateProperties.paramsSignal = paramsSignal;
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
     routePrivateProperties.urlSignal = urlSignal;
+    routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
   }
 
   return route;
@@ -345,6 +358,12 @@ export const setOnRouteDefined = (v) => {
 // Later I'll consider adding ability to have dynamic import into the mix
 // (An async function returning an action)
 export const defineRoutes = (routeDefinition) => {
+  // Clean up existing routes
+  for (const route of routeSet) {
+    route.cleanup();
+  }
+  routeSet.clear();
+
   const routeArray = [];
   for (const key of Object.keys(routeDefinition)) {
     const value = routeDefinition[key];
@@ -363,10 +382,7 @@ export const defineRoutes = (routeDefinition) => {
 };
 
 if (import.meta.hot) {
-  // import.meta.hot.accept();
   import.meta.hot.dispose(() => {
-    // routeSet.clear();
-    // routePreviousStateMap = new WeakMap();
-    // actionAbortControllerWeakMap = new WeakMap();
+    // Cleanup will be handled by defineRoutes when it's called again
   });
 }
