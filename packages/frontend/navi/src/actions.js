@@ -1233,13 +1233,7 @@ const generateActionName = (name, params) => {
 };
 
 if (import.meta.hot) {
-  import.meta.hot.accept(() => {
-    // important sinon les actions ne se mettent pas a jour
-    // par example action.ui.load DOIT etre appelé
-    // pour que ui.renderLoaded soit la
-    if (DEBUG) {
-      console.debug("updateActions() on hot reload");
-    }
-    updateActions({ reloadSet: new Set() });
+  import.meta.hot.dispose(() => {
+    abortPendingActions();
   });
 }

@@ -171,3 +171,9 @@ const useNavStateBasic = (id, initialValue, { debug } = {}) => {
 export const useNavState = import.meta.dev
   ? useNavStateWithWarnings
   : useNavStateBasic;
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    idUsageMap.clear();
+  });
+}

@@ -363,7 +363,10 @@ export const defineRoutes = (routeDefinition) => {
 };
 
 if (import.meta.hot) {
-  import.meta.dispose(() => {
-    routeSet.clear();
+  // import.meta.hot.accept();
+  import.meta.hot.dispose(() => {
+    // routeSet.clear();
+    // routePreviousStateMap = new WeakMap();
+    // actionAbortControllerWeakMap = new WeakMap();
   });
 }
