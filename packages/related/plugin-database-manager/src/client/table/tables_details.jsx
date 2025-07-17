@@ -1,12 +1,12 @@
 import { TextAndCount } from "../components/text_and_count.jsx";
+import { useTableCount } from "../database_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../explorer/explorer_group.jsx";
 import { TableWithPlusSvg } from "./table_icons.jsx";
 import { TableLink } from "./table_link.jsx";
-import { useTableCount } from "./table_signals.js";
-import { TABLE, useTableArray } from "./table_store.js";
+import { TABLE, useTableArray, useTableArrayInStore } from "./table_store.js";
 import {
   tableListDetailsOnToggle,
   tableListDetailsOpenAtStart,
@@ -33,7 +33,7 @@ export const TablesDetails = (props) => {
       renderItem={(item, props) => (
         <TableLink draggable={false} key={item.oid} table={item} {...props} />
       )}
-      useItemList={useTableArray}
+      useItemArrayInStore={useTableArrayInStore}
       useRenameItemAction={(table) =>
         TABLE.PUT.bindParams({
           tablename: table.tablename,

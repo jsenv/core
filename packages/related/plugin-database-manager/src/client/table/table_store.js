@@ -5,6 +5,13 @@ import { errorFromResponse } from "../error_from_response.js";
 export const TABLE = resource("table", {
   idKey: "oid",
   mutableIdKeys: ["tablename"],
+  GET_MANY: async (_, { signal }) => {
+    const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/tables`, {
+      signal,
+    });
+    const { data } = await response.json();
+    return data;
+  },
   GET: async ({ tablename }, { signal }) => {
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}`,

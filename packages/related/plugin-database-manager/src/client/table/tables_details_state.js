@@ -1,4 +1,4 @@
-import { valueInLocalStorage } from "@jsenv/router";
+import { valueInLocalStorage } from "@jsenv/navi";
 
 const [
   readTableListDetailsOpened,
