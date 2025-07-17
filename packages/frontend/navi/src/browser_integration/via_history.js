@@ -53,16 +53,18 @@ export const setupBrowserIntegrationViaHistory = ({
   window.addEventListener(
     "click",
     (e) => {
-      if (e.target.tagName === "A") {
-        const href = e.target.href;
-        if (href && href.startsWith(window.location.origin)) {
-          e.preventDefault();
-          const url = e.target.href;
-          const state = null;
-          history.pushState(state, null, url);
-          handleRoutingTask(url, { state });
-        }
+      const linkElement = e.target.closest("a");
+      if (!linkElement) {
+        return;
       }
+      const href = linkElement.href;
+      if (!href || !href.startsWith(window.location.origin)) {
+        return;
+      }
+      e.preventDefault();
+      const state = null;
+      history.pushState(state, null, href);
+      handleRoutingTask(href, { state });
     },
     { capture: true },
   );
