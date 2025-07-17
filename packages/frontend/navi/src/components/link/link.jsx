@@ -4,6 +4,7 @@ import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useKeyboardShortcuts } from "../use_keyboard_shortcuts.js";
@@ -22,14 +23,14 @@ import.meta.css = /* css */ `
   }
 
   /*
-       * Apply opacity to child content, not the link element itself.
-       *
-       * Why not apply opacity directly to .navi_link?
-       * - Would make focus outlines semi-transparent too (accessibility issue)
-       * - We want dimmed text but full-opacity focus indicators for visibility
-       *
-       * This approach dims the content while preserving focus outline visibility.
-       */
+                   * Apply opacity to child content, not the link element itself.
+                   *
+                   * Why not apply opacity directly to .navi_link?
+                   * - Would make focus outlines semi-transparent too (accessibility issue)
+                   * - We want dimmed text but full-opacity focus indicators for visibility
+                   *
+                   * This approach dims the content while preserving focus outline visibility.
+                   */
   .navi_link[data-readonly] > *,
   .navi_link[inert] > * {
     opacity: 0.5;
@@ -70,24 +71,30 @@ const LinkBasic = forwardRef((props, ref) => {
   useDimColorWhen(innerRef, shouldDimColor);
 
   return (
-    <a
-      {...rest}
-      ref={innerRef}
-      className={["navi_link", ...className.split(" ")].join(" ")}
-      aria-busy={loading}
-      inert={disabled}
-      data-readonly={readOnly ? "" : undefined}
-      onClick={(e) => {
-        closeValidationMessage(e.target, "click");
-        if (readOnly) {
-          e.preventDefault();
-          return;
-        }
-        onClick?.(e);
-      }}
+    <LoaderBackground
+      loading={loading}
+      inset={-2}
+      color="light-dark(#355fcc, #3b82f6)"
     >
-      {children}
-    </a>
+      <a
+        {...rest}
+        ref={innerRef}
+        className={["navi_link", ...className.split(" ")].join(" ")}
+        aria-busy={loading}
+        inert={disabled}
+        data-readonly={readOnly ? "" : undefined}
+        onClick={(e) => {
+          closeValidationMessage(e.target, "click");
+          if (readOnly) {
+            e.preventDefault();
+            return;
+          }
+          onClick?.(e);
+        }}
+      >
+        {children}
+      </a>
+    </LoaderBackground>
   );
 });
 
