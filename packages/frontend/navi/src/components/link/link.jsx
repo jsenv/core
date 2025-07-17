@@ -61,6 +61,7 @@ const LinkBasic = forwardRef((props, ref) => {
     disabled,
     children,
     autoFocus,
+    spaceToClick = true,
     constraints = [],
     onClick,
     ...rest
@@ -95,6 +96,14 @@ const LinkBasic = forwardRef((props, ref) => {
             return;
           }
           onClick?.(e);
+        }}
+        onKeyDown={(e) => {
+          if (spaceToClick && e.key === " ") {
+            e.preventDefault(); // Prevent page scroll
+            if (!readOnly && !disabled) {
+              e.target.click();
+            }
+          }
         }}
       >
         {children}
