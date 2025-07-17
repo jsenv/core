@@ -22,6 +22,7 @@ export { Field } from "./src/components/input/field.jsx";
 export { Input } from "./src/components/input/input.jsx";
 export { RadioList } from "./src/components/input/radio_list.jsx";
 export { Link } from "./src/components/link/link.jsx";
+export { Route } from "./src/components/route.jsx";
 
 // integration with browser
 export {

@@ -100,7 +100,11 @@ export const updateRoutes = (url) => {
     newParams,
     oldParams,
   } of routeMatchInfoSet) {
-    const { boundActionSet } = routePrivateProperties;
+    const routeAction = route.action;
+    if (!routeAction) {
+      continue;
+    }
+
     const becomesActive = newActive && !oldActive;
     const becomesInactive = !newActive && oldActive;
     const paramsChangedWhileActive =
@@ -114,29 +118,26 @@ export const updateRoutes = (url) => {
           newParams,
         );
       }
-      for (const actionProxy of boundActionSet) {
-        const currentAction = actionProxy.getCurrentAction();
-        toLoadSet.add(currentAction);
-        routeLoadRequestedMap.set(route, currentAction);
+      const currentAction = routeAction.getCurrentAction();
+      toLoadSet.add(currentAction);
+      routeLoadRequestedMap.set(route, currentAction);
 
-        // Create a new abort controller for this action
-        const actionAbortController = new AbortController();
-        actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-        abortSignalMap.set(currentAction, actionAbortController.signal);
-      }
+      // Create a new abort controller for this action
+      const actionAbortController = new AbortController();
+      actionAbortControllerWeakMap.set(currentAction, actionAbortController);
+      abortSignalMap.set(currentAction, actionAbortController.signal);
+
       continue;
     }
 
     // Handle actions for routes that become inactive - abort them
     if (becomesInactive && ROUTE_DEACTIVATION_STRATEGY === "abort") {
-      for (const actionProxy of boundActionSet) {
-        const currentAction = actionProxy.getCurrentAction();
-        const actionAbortController =
-          actionAbortControllerWeakMap.get(currentAction);
-        if (actionAbortController) {
-          actionAbortController.abort(`route no longer matching`);
-          actionAbortControllerWeakMap.delete(currentAction);
-        }
+      const currentAction = routeAction.getCurrentAction();
+      const actionAbortController =
+        actionAbortControllerWeakMap.get(currentAction);
+      if (actionAbortController) {
+        actionAbortController.abort(`route no longer matching`);
+        actionAbortControllerWeakMap.delete(currentAction);
       }
       continue;
     }
@@ -149,16 +150,15 @@ export const updateRoutes = (url) => {
           newParams,
         );
       }
-      for (const actionProxy of boundActionSet) {
-        const currentAction = actionProxy.getCurrentAction();
-        toReloadSet.add(currentAction);
-        routeLoadRequestedMap.set(route, currentAction);
+      const currentAction = routeAction.getCurrentAction();
+      toReloadSet.add(currentAction);
+      routeLoadRequestedMap.set(route, currentAction);
 
-        // Create a new abort controller for the reload
-        const actionAbortController = new AbortController();
-        actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-        abortSignalMap.set(currentAction, actionAbortController.signal);
-      }
+      // Create a new abort controller for the reload
+      const actionAbortController = new AbortController();
+      actionAbortControllerWeakMap.set(currentAction, actionAbortController);
+      abortSignalMap.set(currentAction, actionAbortController.signal);
+      continue;
     }
   }
 
@@ -224,6 +224,7 @@ export const createRoute = (urlPatternInput) => {
     bindAction: null,
     relativeUrl: null,
     url: null,
+    action: null,
   };
   routeSet.add(route);
 
@@ -233,7 +234,6 @@ export const createRoute = (urlPatternInput) => {
     paramsSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
-    boundActionSet: new Set(),
   };
   routePrivatePropertiesWeakMap.set(route, routePrivateProperties);
 
@@ -285,9 +285,9 @@ export const createRoute = (urlPatternInput) => {
   });
 
   const bindAction = (action) => {
-    const actionBoundToUrl = action.bindParams(paramsSignal);
-    routePrivateProperties.boundActionSet.add(actionBoundToUrl);
-    return actionBoundToUrl;
+    const actionBoundToThisRoute = action.bindParams(paramsSignal);
+    route.action = actionBoundToThisRoute;
+    return actionBoundToThisRoute;
   };
   route.bindAction = bindAction;
 
