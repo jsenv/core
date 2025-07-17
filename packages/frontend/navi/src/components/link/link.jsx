@@ -1,6 +1,6 @@
 import { closeValidationMessage, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from "../use_keyboard_shortcuts.js";
 
 import.meta.css = /* css */ `
   .navi_link {
+    /* Color will be controlled entirely by JavaScript */
   }
 
   /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
@@ -20,8 +21,17 @@ import.meta.css = /* css */ `
     border-radius: 1px;
   }
 
-  .navi_link[data-readonly],
-  .navi_link[inert] {
+  /*
+     * Apply opacity to child content, not the link element itself.
+     *
+     * Why not apply opacity directly to .navi_link?
+     * - Would make focus outlines semi-transparent too (accessibility issue)
+     * - We want dimmed text but full-opacity focus indicators for visibility
+     *
+     * This approach dims the content while preserving focus outline visibility.
+     */
+  .navi_link[data-readonly] > *,
+  .navi_link[inert] > * {
     opacity: 0.5;
   }
 
@@ -56,6 +66,9 @@ const LinkBasic = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
+  const shouldDimColor = readOnly || disabled;
+  useDimColorWhen(innerRef, shouldDimColor);
+
   return (
     <a
       {...rest}
@@ -77,6 +90,43 @@ const LinkBasic = forwardRef((props, ref) => {
     </a>
   );
 });
+
+/*
+ * Custom hook to apply semi-transparent color when an element should be dimmed.
+ *
+ * Why we do it this way:
+ * 1. **Precise timing**: Captures the element's natural color exactly when transitioning
+ *    from normal to dimmed state (not before, not after)
+ * 2. **Avoids CSS inheritance issues**: CSS `currentColor` and `color-mix()` don't work
+ *    reliably for creating true transparency that matches `opacity: 0.5`
+ * 3. **Performance**: Only executes when the dimmed state actually changes, not on every render
+ * 4. **Color accuracy**: Uses `color(from ... / 0.5)` syntax to preserve the exact visual
+ *    appearance of `opacity: 0.5` but applied only to color
+ * 5. **Works with any color**: Handles default blue, visited purple, inherited colors, etc.
+ * 6. **Maintains focus outline**: Since we only dim the text color, focus outlines remain
+ *    fully visible for accessibility
+ */
+const useDimColorWhen = (elementRef, shouldDim) => {
+  const shouldDimPreviousRef = useRef(shouldDim);
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    const shouldDimPrevious = shouldDimPreviousRef.current;
+
+    if (shouldDim === shouldDimPrevious) {
+      return;
+    }
+    shouldDimPreviousRef.current = shouldDim;
+    if (shouldDim) {
+      // Capture color just before applying disabled state
+      const computedStyle = getComputedStyle(element);
+      const currentColor = computedStyle.color;
+      element.style.color = `color(from ${currentColor} srgb r g b / 0.5)`;
+    } else {
+      // Clear the inline style to let CSS take over
+      element.style.color = "";
+    }
+  });
+};
 
 const LinkWithAction = forwardRef((props, ref) => {
   const {

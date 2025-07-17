@@ -25,28 +25,30 @@
               <br />- press enter -> loading 0.5s, then alert
               <br />- press space ->loading 1.5s, then throw
             </p>
-            <Link
-              href="#"
-              shortcuts={[
-                {
-                  key: "Enter",
-                  action: async () => {
-                    await new Promise((resolve) => setTimeout(resolve, 500));
-                    // eslint-disable-next-line no-alert
-                    window.alert("Enter key pressed on link A");
+            <div style="color: yellow">
+              <Link
+                href="#"
+                shortcuts={[
+                  {
+                    key: "Enter",
+                    action: async () => {
+                      await new Promise((resolve) => setTimeout(resolve, 500));
+                      // eslint-disable-next-line no-alert
+                      window.alert("Enter key pressed on link A");
+                    },
                   },
-                },
-                {
-                  key: "Space",
-                  action: async () => {
-                    await new Promise((resolve) => setTimeout(resolve, 1500));
-                    throw new Error("toto");
+                  {
+                    key: "Space",
+                    action: async () => {
+                      await new Promise((resolve) => setTimeout(resolve, 1500));
+                      throw new Error("toto");
+                    },
                   },
-                },
-              ]}
-            >
-              The link
-            </Link>
+                ]}
+              >
+                The link
+              </Link>
+            </div>
             <br />
           </div>
         );
