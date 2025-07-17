@@ -69,7 +69,11 @@ const InputTextualBasic = forwardRef((props, ref) => {
     />
   );
 
-  return <LoaderBackground loading={loading}>{inputTextual}</LoaderBackground>;
+  return (
+    <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
+      {inputTextual}
+    </LoaderBackground>
+  );
 });
 
 const InputTextualWithAction = forwardRef((props, ref) => {

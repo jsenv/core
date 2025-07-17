@@ -93,6 +93,7 @@ const ButtonBasic = forwardRef((props, ref) => {
         // -1 is the outline offset thing
         1
       }
+      color="light-dark(#355fcc, #3b82f6)"
     >
       <button
         ref={innerRef}
