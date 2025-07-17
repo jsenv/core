@@ -18,7 +18,7 @@
 
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useEffect, useImperativeHandle, useRef } from "preact/hooks";
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -42,7 +42,9 @@ export const InputTextual = forwardRef((props, ref) => {
 });
 
 const InputTextualBasic = forwardRef((props, ref) => {
-  const {
+  let {
+    type,
+    value,
     autoFocus,
     autoFocusVisible,
     autoSelect,
@@ -60,9 +62,15 @@ const InputTextualBasic = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
+  if (type === "datetime-local") {
+    value = convertToLocalTimezone(value);
+  }
+
   const inputTextual = (
     <input
       ref={innerRef}
+      type={type}
+      value={value}
       data-field=""
       data-custom={appearance === "custom" ? "" : undefined}
       {...rest}
@@ -76,12 +84,64 @@ const InputTextualBasic = forwardRef((props, ref) => {
   );
 });
 
+// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
+// datetime-local does not support timezones
+const convertToLocalTimezone = (dateTimeString) => {
+  const date = new Date(dateTimeString);
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return dateTimeString;
+  }
+
+  // Format to YYYY-MM-DDThh:mm:ss
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+
+/**
+ * Converts a datetime string without timezone (local time) to UTC format with 'Z' notation
+ *
+ * @param {string} localDateTimeString - Local datetime string without timezone (e.g., "2023-07-15T14:30:00")
+ * @returns {string} Datetime string in UTC with 'Z' notation (e.g., "2023-07-15T12:30:00Z")
+ */
+const convertToUTCTimezone = (localDateTimeString) => {
+  if (!localDateTimeString) {
+    return localDateTimeString;
+  }
+
+  try {
+    // Create a Date object using the local time string
+    // The browser will interpret this as local timezone
+    const localDate = new Date(localDateTimeString);
+
+    // Check if the date is valid
+    if (isNaN(localDate.getTime())) {
+      return localDateTimeString;
+    }
+
+    // Convert to UTC ISO string
+    const utcString = localDate.toISOString();
+
+    // Return the UTC string (which includes the 'Z' notation)
+    return utcString;
+  } catch (error) {
+    console.error("Error converting local datetime to UTC:", error);
+    return localDateTimeString;
+  }
+};
+
 const InputTextualWithAction = forwardRef((props, ref) => {
   const {
     id,
+    type,
     name,
     action,
-    type,
     value: initialValue = "",
     cancelOnBlurInvalid,
     cancelOnEscape,
@@ -119,6 +179,9 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
   const value = getValue();
+  useEffect(() => {
+    setNavState(value);
+  }, [value]);
 
   const valueAtEnterRef = useRef(null);
   useOnChange(innerRef, (e) => {
@@ -149,7 +212,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       if (reason === "escape_key" && !cancelOnEscape) {
         return;
       }
-      setNavState(undefined);
       resetValue();
       onCancel?.(e, reason);
     },
@@ -173,14 +235,14 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       id={id}
       name={name}
       value={value}
+      data-form-value={convertToUTCTimezone(value)}
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
       onInput={(e) => {
         valueAtEnterRef.current = null;
         const inputValue =
           type === "number" ? e.target.valueAsNumber : e.target.value;
-        setNavState(inputValue);
-        setValue(inputValue);
+        setValue(convertToUTCTimezone(inputValue));
         onInput?.(e);
       }}
       onKeyDown={(e) => {
@@ -228,6 +290,9 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
     formContext;
   const [getValue, setValue] = useOneFormParam(name, valueAtStart);
   const value = getValue();
+  useEffect(() => {
+    setNavState(value);
+  }, [value]);
 
   return (
     <InputTextualBasic
@@ -236,14 +301,14 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       id={id}
       name={name}
       value={value}
+      data-form-value={convertToUTCTimezone(value)}
       loading={
         loading || (formIsBusy && formActionRequester === innerRef.current)
       }
       readOnly={readOnly || formIsReadOnly}
       onInput={(e) => {
         const inputValue = e.target.value;
-        setNavState(inputValue);
-        setValue(inputValue);
+        setValue(convertToUTCTimezone(inputValue));
         onInput?.(e);
       }}
       onKeyDown={(e) => {

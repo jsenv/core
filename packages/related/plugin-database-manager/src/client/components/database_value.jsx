@@ -23,7 +23,7 @@ export const DatabaseValue = ({ column, label, ...rest }) => {
     return (
       <Field
         label={label}
-        input={<Input type="date_and_time" name={columnName} {...props} />}
+        input={<Input type="datetime-local" name={columnName} {...props} />}
       />
     );
   }

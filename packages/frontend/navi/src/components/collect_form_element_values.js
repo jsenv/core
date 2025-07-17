@@ -53,18 +53,27 @@ const getFormElementValue = (formElement) => {
 
   if (tagName === "SELECT") {
     if (formElement.multiple) {
-      return Array.from(formElement.selectedOptions, (option) => option.value);
+      return Array.from(formElement.selectedOptions, (option) =>
+        getValue(option),
+      );
     }
     return formElement.value;
   }
 
   if (type === "checkbox" || type === "radio") {
-    return formElement.checked ? formElement.value : undefined;
+    return formElement.checked ? getValue(formElement) : undefined;
   }
 
   if (type === "file") {
     return formElement.files; // Return FileList for special handling
   }
 
-  return formElement.value;
+  return getValue(formElement);
+};
+
+const getValue = (formElement) => {
+  const hasDataFormValueAttribute = formElement.hasAttribute("data-form-value");
+  return hasDataFormValueAttribute
+    ? formElement.getAttribute("data-form-value")
+    : formElement.value;
 };
