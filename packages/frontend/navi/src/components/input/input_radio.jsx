@@ -30,7 +30,7 @@ import.meta.css = /* css */ `
     width: 13px;
     height: 13px;
     background: transparent;
-    box-sizing: border-box;
+    border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -120,35 +120,44 @@ import.meta.css = /* css */ `
     + .custom_radio
     svg
     .custom_radio_border {
+    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
+    stroke: var(--field-disabled-border-color);
+  }
+  .custom_radio_wrapper
+    input[data-readonly]
+    + .custom_radio
+    svg
+    .custom_radio_dashed_border {
     display: none;
   }
   .custom_radio_wrapper
-    input[data-readonly]
+    input[data-readonly]:checked
     + .custom_radio
     svg
-    .custom_radio_dashed_border {
-    display: block;
+    .custom_radio_border {
+    stroke: var(--checked-disabled-color);
   }
   .custom_radio_wrapper
     input[data-readonly]:checked
     + .custom_radio
     svg
-    .custom_radio_dashed_border {
-    stroke: var(--field-strong-color);
+    .custom_radio_marker {
+    fill: var(--checkmark-disabled-color);
   }
   .custom_radio_wrapper:hover
     input[data-readonly]
     + .custom_radio
     svg
-    .custom_radio_dashed_border {
-    stroke: var(--field-readonly-hover-border-color);
+    .custom_radio_border {
+    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
+    stroke: var(--field-disabled-border-color);
   }
   .custom_radio_wrapper:hover
     input[data-readonly]:checked
     + .custom_radio
     svg
-    .custom_radio_dashed_border {
-    stroke: var(--field-strong-color);
+    .custom_radio_border {
+    stroke: var(--checked-disabled-color);
   }
 
   /* Focus state avec outline */
@@ -228,7 +237,8 @@ const InputRadioBasic = forwardRef((props, ref) => {
     <LoaderBackground
       loading={loading}
       targetSelector={appeareance === "custom" ? ".custom_radio" : ""}
-      inset={-1}
+      inset={-2}
+      color="light-dark(#355fcc, #3b82f6)"
     >
       {inputRadioDisplayed}
     </LoaderBackground>
