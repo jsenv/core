@@ -13,7 +13,9 @@ import { createSizeAnimationGroupController } from "./size_animation_group_contr
 import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;
-const DEBUG = false;
+const ANIMATE_TOGGLE = true;
+const ANIMATE_RESIZE_AFTER_MUTATION = true;
+const DEBUG = true;
 
 export const initFlexDetailsSet = (
   container,
@@ -169,10 +171,7 @@ export const initFlexDetailsSet = (
         continue;
       }
       if (isDetailsElement(child) && child.open) {
-        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(
-          child,
-          { animated: true },
-        );
+        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
         changeSet.add({
           element: child,
           target: allocatedSize,
@@ -585,7 +584,7 @@ export const initFlexDetailsSet = (
         distributeSpaceAfterToggle(details);
         applyAllocatedSpaces({
           reason: details.open ? "details_opened" : "details_closed",
-          animated: true,
+          animated: ANIMATE_TOGGLE,
         });
         updateResizableDetails();
       };
@@ -799,14 +798,14 @@ export const initFlexDetailsSet = (
         if (mutation.type === "childList") {
           updateSpaceDistribution({
             reason: "content_change",
-            animated: true,
+            animated: ANIMATE_RESIZE_AFTER_MUTATION,
           });
           return;
         }
         if (mutation.type === "characterData") {
           updateSpaceDistribution({
             reason: "content_change",
-            animated: true,
+            animated: ANIMATE_RESIZE_AFTER_MUTATION,
           });
           return;
         }
