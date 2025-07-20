@@ -1,0 +1,304 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Flex details set demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <style>
+      body {
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      #app {
+        display: flex;
+      }
+
+      aside {
+        height: 100vh;
+        width: 400px;
+      }
+
+      .flex_details_set {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid black;
+        display: flex;
+        flex-direction: column;
+        box-sizing: content-box;
+      }
+
+      .flex_details {
+        overflow: hidden;
+        flex-shrink: 1;
+      }
+      .flex_details summary {
+        user-select: none;
+        cursor: pointer;
+        height: 30px;
+        /* display: flex; */
+        align-items: center;
+      }
+      .flex_details_content {
+        padding: 20px 10px;
+        width: fit-content;
+        background: lightgray;
+        overflow-y: auto;
+        scrollbar-gutter: stable both-edges;
+        scrollbar-width: thin;
+      }
+    </style>
+
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useLayoutEffect, useState } from "preact/hooks";
+      import { initFlexDetailsSet } from "../size/flex_details_set.js";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const ref = useRef();
+
+        const detailsGroupRef = useRef();
+        const [aHeight, aHeightSetter] = useState(0);
+        const [bHeight, bHeightSetter] = useState(0);
+        const [cHeight, cHeightSetter] = useState(0);
+
+        const [resizableDetailsIdSet, setResizableDetailsIdSet] = useState(
+          new Set(),
+        );
+
+        // to test: put sizes in local storage to see if that works
+
+        useLayoutEffect(() => {
+          const flexDetailsSet = initFlexDetailsSet(ref.current, {
+            onResizableDetailsChange: (resizableDetailsIdSet) => {
+              console.log("resizableDetailsIdSet", resizableDetailsIdSet);
+              setResizableDetailsIdSet(resizableDetailsIdSet);
+            },
+            onSizeChange: (sizeChangeEntries) => {
+              for (const { element, value } of sizeChangeEntries) {
+                if (element.id === "a") {
+                  aHeightSetter(value);
+                }
+                if (element.id === "b") {
+                  bHeightSetter(value);
+                }
+                if (element.id === "c") {
+                  cHeightSetter(value);
+                }
+              }
+            },
+          });
+          detailsGroupRef.current = flexDetailsSet;
+          return flexDetailsSet.cleanup;
+        }, []);
+
+        const [detailsCount, detailsCountSetter] = useState(3);
+
+        return (
+          <>
+            <aside>
+              <div ref={ref} className="flex_details_set">
+                <FlexDetails id="a" color="blue">
+                  This is the main content area. Lorem ipsum dolor sit amet,
+                  consectetur adipiscing elit. Sed do eiusmod tempor incididunt
+                  ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                  quis nostrud exercitation. This is the main content area.
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                </FlexDetails>
+                <FlexDetails
+                  id="b"
+                  color="green"
+                  open
+                  resizable={resizableDetailsIdSet.has("b")}
+                >
+                  This is the main content area. Lorem ipsum dolor sit amet,
+                  consectetur adipiscing elit. Sed do eiusmod tempor incididunt
+                  ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                  quis nostrud exercitation.
+                </FlexDetails>
+                {detailsCount === 3 && (
+                  <FlexDetails
+                    id="c"
+                    color="red"
+                    open
+                    resizable={resizableDetailsIdSet.has("c")}
+                  >
+                    This is the main content area. Lorem ipsum dolor sit amet,
+                    consectetur adipiscing elit. Sed do eiusmod tempor
+                    incididunt ut labore et dolore magna aliqua. Ut enim ad
+                    minim veniam, quis nostrud exercitation. This is the main
+                    content area.
+                  </FlexDetails>
+                )}
+              </div>
+            </aside>
+            <main>
+              <fieldset>
+                <legend>Flex details set controls</legend>
+                <div>
+                  First details height{" "}
+                  <label>
+                    <strong>requested:</strong>
+                    <input
+                      type="number"
+                      style="width: 100px;"
+                      step="20"
+                      onInput={(e) => {
+                        detailsGroupRef.current.requestResize(
+                          document.querySelector("#a"),
+                          e.target.valueAsNumber,
+                        );
+                      }}
+                    />
+                  </label>{" "}
+                  <label>
+                    <strong>actual:</strong>
+                    <input
+                      type="number"
+                      style="width: 100px;"
+                      value={aHeight}
+                      readOnly
+                    />
+                  </label>
+                </div>
+                <div>
+                  Second details height{" "}
+                  <label>
+                    <strong>requested:</strong>
+                    <input
+                      type="number"
+                      style="width: 100px;"
+                      step="20"
+                      onInput={(e) => {
+                        detailsGroupRef.current.requestResize(
+                          document.querySelector("#b"),
+                          e.target.valueAsNumber,
+                        );
+                      }}
+                    />
+                  </label>{" "}
+                  <label>
+                    <strong>actual:</strong>
+                    <input
+                      type="number"
+                      style="width: 100px;"
+                      value={bHeight}
+                      readOnly
+                    />
+                  </label>
+                </div>
+                <div>
+                  Third details height{" "}
+                  <label>
+                    <strong>requested:</strong>
+                    <input
+                      type="number"
+                      style="width: 100px;"
+                      step="20"
+                      onInput={(e) => {
+                        detailsGroupRef.current.requestResize(
+                          document.querySelector("#c"),
+                          e.target.valueAsNumber,
+                        );
+                      }}
+                    />
+                  </label>{" "}
+                  <label>
+                    <strong>actual:</strong>
+                    <input
+                      type="number"
+                      style="width: 100px;"
+                      value={cHeight}
+                      readOnly
+                    />
+                  </label>
+                </div>
+                <br />
+                <button
+                  onClick={() => {
+                    document.querySelector("#a").toggleAttribute("open");
+                  }}
+                >
+                  Toggle first details
+                </button>{" "}
+                <button
+                  onClick={() => {
+                    document.querySelector("#b").toggleAttribute("open");
+                  }}
+                >
+                  Toggle second details
+                </button>{" "}
+                <button
+                  onClick={() => {
+                    document.querySelector("#c").toggleAttribute("open");
+                  }}
+                >
+                  Toggle third details
+                </button>
+                <br /> <br />
+                <button
+                  onClick={() => {
+                    console.clear();
+                  }}
+                >
+                  Clear console
+                </button>
+                <label>
+                  Two details
+                  <input
+                    type="checkbox"
+                    checked={detailsCount === 2}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        detailsCountSetter(2);
+                      } else {
+                        detailsCountSetter(3);
+                      }
+                    }}
+                  />
+                </label>
+              </fieldset>
+            </main>
+          </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const FlexDetails = ({ id, color, children, open, resizable }) => {
+        return (
+          <>
+            {resizable && (
+              <div
+                id={`${id}-resize-handle`}
+                data-resize-handle={id}
+                style="height: 20px; margin-top: -5px; background: orange; flex-shrink: 0;"
+              ></div>
+            )}
+            <details
+              className="flex_details"
+              id={id}
+              style={`background: ${color};`}
+              open={open}
+              data-resize={resizable ? "vertical" : undefined}
+              data-min-height="80"
+            >
+              <summary>Summary</summary>
+              <div className="flex_details_content">{children}</div>
+            </details>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
