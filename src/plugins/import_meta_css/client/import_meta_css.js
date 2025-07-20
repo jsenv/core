@@ -7,6 +7,9 @@ export const installImportMetaCss = (importMeta) => {
     toString: () => cssText,
     update: (value) => {
       cssText = value;
+      cssText += `
+/* sourceURL=${importMeta.url} */
+/* inlined from ${importMeta.url} */`;
       stylesheet.replaceSync(cssText);
     },
     inject: () => {
