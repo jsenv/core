@@ -112,8 +112,9 @@
 .explorer_item_list {
   margin-top: 0;
   margin-bottom: 0;
-  padding-left: 2px;
+  padding-left: 3px; /* let space for item outline (2px by default) */
   padding-top: 3px; /* let space for item outline (2px by default) */
+  padding-right: 3px; /* let space for item outline (2px by default) */
 }
 .explorer_item {
   display: flex;
