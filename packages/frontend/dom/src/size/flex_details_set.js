@@ -279,14 +279,18 @@ export const initFlexDetailsSet = (
     remainingSpace -= allocatedSpace;
     if (debug) {
       const allocatedSize = spaceToSize(allocatedSpace, child);
+      const sourceInfo =
+        allocatedSpaceSource === requestSource
+          ? ""
+          : ` (${allocatedSpaceSource})`;
       if (allocatedSpace === spaceToAllocate) {
         console.debug(
-          `  → ${child.id}: ${allocatedSize}px (${allocatedSpaceSource}) | remaining: ${remainingSpace}px`,
+          `  → ${allocatedSize}px to "${child.id}"${sourceInfo} | ${remainingSpace}px remaining`,
         );
       } else {
         const requestedSize = spaceToSize(spaceToAllocate, child);
         console.debug(
-          `  → ${child.id}: ${allocatedSize}px/${requestedSize}px (${allocatedSpaceSource}) | remaining: ${remainingSpace}px`,
+          `  → ${allocatedSize}px -out of ${requestedSize}px wanted- to "${child.id}"${sourceInfo} | ${remainingSpace}px remaining`,
         );
       }
     }
