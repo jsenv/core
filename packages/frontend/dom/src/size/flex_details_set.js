@@ -14,7 +14,7 @@ import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;
 const ANIMATE_TOGGLE = true;
-const ANIMATE_RESIZE_AFTER_MUTATION = true;
+const ANIMATE_RESIZE_AFTER_MUTATION = false;
 const DEBUG = true;
 
 export const initFlexDetailsSet = (
@@ -72,7 +72,7 @@ export const initFlexDetailsSet = (
     openedDetailsArray.length = 0;
     lastChild = null;
     if (debug) {
-      console.debug(`availableSpace: ${availableSpace}px`);
+      console.debug(`📐 Container space: ${availableSpace}px`);
     }
 
     for (const child of container.children) {
@@ -150,8 +150,14 @@ export const initFlexDetailsSet = (
       requestedSpaceMap.set(details, requestedSize + marginSize);
       minSpaceMap.set(details, minSize + marginSize);
       if (debug) {
+        const currentSizeFormatted = spaceToSize(size + marginSize, details);
+        const requestedSizeFormatted = spaceToSize(
+          requestedSize + marginSize,
+          details,
+        );
+        const minSizeFormatted = spaceToSize(minSize + marginSize, details);
         console.debug(
-          `details ${details.id} space: ${spaceMap.get(details)}px, min space: ${minSpaceMap.get(details)}px, requested space: ${requestedSpaceMap.get(details)}px (${requestedSizeSource})`,
+          `  ${details.id}: ${currentSizeFormatted}px → wants ${requestedSizeFormatted}px (min: ${minSizeFormatted}px) [${requestedSizeSource}]`,
         );
       }
     }
@@ -272,13 +278,15 @@ export const initFlexDetailsSet = (
 
     remainingSpace -= allocatedSpace;
     if (debug) {
+      const allocatedSize = spaceToSize(allocatedSpace, child);
       if (allocatedSpace === spaceToAllocate) {
         console.debug(
-          `${allocatedSpace}px allocated to ${child.id} (${allocatedSpaceSource}), remaining space: ${remainingSpace}px`,
+          `  → ${child.id}: ${allocatedSize}px (${allocatedSpaceSource}) | remaining: ${remainingSpace}px`,
         );
       } else {
+        const requestedSize = spaceToSize(spaceToAllocate, child);
         console.debug(
-          `${allocatedSpace}px allocated to ${child.id} out of ${spaceToAllocate}px (${allocatedSpaceSource}), remaining space: ${remainingSpace}px`,
+          `  → ${child.id}: ${allocatedSize}px/${requestedSize}px (${allocatedSpaceSource}) | remaining: ${remainingSpace}px`,
         );
       }
     }
@@ -296,7 +304,7 @@ export const initFlexDetailsSet = (
     const spaceToAllocate = allocatedSpace + diff;
     if (debug) {
       console.debug(
-        `applying diff on allocated space for ${child.id} (${source}), diff: ${diff}px, current allocated space: ${allocatedSpace}px, new space to allocate: ${spaceToAllocate}px, remaining space: ${remainingSpace}px`,
+        `🔄 ${child.id}: ${allocatedSpace}px + ${diff}px = ${spaceToAllocate}px (${source})`,
       );
     }
     allocateSpace(child, spaceToAllocate, source);
@@ -304,8 +312,16 @@ export const initFlexDetailsSet = (
     return reallocatedSpace - allocatedSpace;
   };
   const distributeAvailableSpace = (source) => {
+    if (debug) {
+      console.debug(
+        `📦 Distributing ${availableSpace}px among ${container.children.length} children:`,
+      );
+    }
     for (const child of container.children) {
       allocateSpace(child, requestedSpaceMap.get(child), source);
+    }
+    if (debug) {
+      console.debug(`📦 After distribution: ${remainingSpace}px remaining`);
     }
   };
   const distributeRemainingSpace = ({ childToGrow, childToShrinkFrom }) => {
@@ -313,20 +329,25 @@ export const initFlexDetailsSet = (
       return;
     }
     if (remainingSpace < 0) {
-      const spaceToSleal = -remainingSpace;
+      const spaceToSteal = -remainingSpace;
       if (debug) {
         console.debug(
-          `remaining space is negative: ${remainingSpace}px, stealing ${spaceToSleal}px from child before ${childToShrinkFrom.id}`,
+          `⚠️  Deficit: ${remainingSpace}px, stealing ${spaceToSteal}px from elements before ${childToShrinkFrom.id}`,
         );
       }
       updatePreviousSiblingsAllocatedSpace(
         childToShrinkFrom,
-        -spaceToSleal,
+        -spaceToSteal,
         `remaining space is negative: ${remainingSpace}px`,
       );
       return;
     }
     if (childToGrow) {
+      if (debug) {
+        console.debug(
+          `✨ Bonus: giving ${remainingSpace}px to ${childToGrow.id}`,
+        );
+      }
       applyDiffOnAllocatedSpace(
         childToGrow,
         remainingSpace,
