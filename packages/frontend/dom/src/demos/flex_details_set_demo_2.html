@@ -284,6 +284,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const FlexDetails = ({ id, color, children, open, resizable }) => {
+        resizable = false;
         return (
           <>
             {resizable && (
@@ -299,7 +300,7 @@
               style={`background: ${color};`}
               open={open}
               data-resize={resizable ? "vertical" : undefined}
-              data-min-height="80"
+              data-min-height="150"
             >
               <summary>Summary</summary>
               <div className="flex_details_content">{children}</div>
