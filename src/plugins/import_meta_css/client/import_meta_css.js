@@ -1,6 +1,6 @@
 export const installImportMetaCss = (importMeta) => {
   let cssText = "";
-  let stylesheet = new CSSStyleSheet();
+  let stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
   let adopted = false;
 
   const css = {
