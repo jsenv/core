@@ -33,6 +33,7 @@ export { CheckboxList } from "./src/components/input/checkbox_list.jsx";
 export { Field } from "./src/components/input/field.jsx";
 export { Input } from "./src/components/input/input.jsx";
 export { RadioList } from "./src/components/input/radio_list.jsx";
+export { Select } from "./src/components/input/select.jsx";
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
 
