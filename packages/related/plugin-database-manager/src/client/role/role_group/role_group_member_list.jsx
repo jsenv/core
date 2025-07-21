@@ -1,7 +1,7 @@
 import { Button, Form, Input, useNavState } from "@jsenv/navi";
 import { useState } from "preact/hooks";
+import { ROLE_MEMBERS } from "../../store.js";
 import { RoleLink } from "../role_link.jsx";
-import { ROLE_MEMBERS } from "../role_store.js";
 
 export const RoleGroupMemberList = ({ role }) => {
   const memberList = role.members;

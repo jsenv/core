@@ -49,62 +49,7 @@ export const RoleWithOwnershipListDetails = (props) => {
             <ExplorerItemList
               idKey="id"
               nameKey="name"
-              renderItem={(subitem) => {
-                if (subitem.id === "tables") {
-                  return (
-                    <Details
-                      action={ROLE_TABLES.GET_MANY.bindParams({
-                        rolname: role.rolname,
-                      })}
-                      renderLoaded={(tableArray) => {
-                        return (
-                          <ExplorerItemList
-                            renderItem={(table) => (
-                              <TableLink table={table}>
-                                {table.tablename}
-                              </TableLink>
-                            )}
-                          >
-                            {tableArray}
-                          </ExplorerItemList>
-                        );
-                      }}
-                    >
-                      <TextAndCount text="tables" count={role.table_count} />
-                    </Details>
-                  );
-                }
-                if (subitem.id === "databases") {
-                  return (
-                    <Details
-                      action={ROLE_DATABASES.GET_MANY.bindParams({
-                        rolname: role.rolname,
-                      })}
-                      actionRenderer={(databaseArray) => {
-                        return (
-                          <ExplorerItemList
-                            renderItem={(database) => (
-                              <DatabaseLink database={database}>
-                                {database.datname}
-                              </DatabaseLink>
-                            )}
-                          >
-                            {databaseArray}
-                          </ExplorerItemList>
-                        );
-                      }}
-                    >
-                      <TextAndCount
-                        text="databases"
-                        count={role.database_count}
-                      />
-                    </Details>
-                  );
-                }
-                return null;
-              }}
-            >
-              {[
+              itemArray={[
                 ...(role.database_count > 0
                   ? [
                       {
@@ -124,7 +69,59 @@ export const RoleWithOwnershipListDetails = (props) => {
                     ]
                   : []),
               ]}
-            </ExplorerItemList>
+              renderItem={(subitem) => {
+                if (subitem.id === "tables") {
+                  return (
+                    <Details
+                      action={ROLE_TABLES.GET_MANY.bindParams({
+                        rolname: role.rolname,
+                      })}
+                      renderLoaded={(tableArray) => {
+                        return (
+                          <ExplorerItemList
+                            itemArray={tableArray}
+                            renderItem={(table) => (
+                              <TableLink table={table}>
+                                {table.tablename}
+                              </TableLink>
+                            )}
+                          />
+                        );
+                      }}
+                    >
+                      <TextAndCount text="tables" count={role.table_count} />
+                    </Details>
+                  );
+                }
+                if (subitem.id === "databases") {
+                  return (
+                    <Details
+                      action={ROLE_DATABASES.GET_MANY.bindParams({
+                        rolname: role.rolname,
+                      })}
+                      actionRenderer={(databaseArray) => {
+                        return (
+                          <ExplorerItemList
+                            itemArray={databaseArray}
+                            renderItem={(database) => (
+                              <DatabaseLink database={database}>
+                                {database.datname}
+                              </DatabaseLink>
+                            )}
+                          />
+                        );
+                      }}
+                    >
+                      <TextAndCount
+                        text="databases"
+                        count={role.database_count}
+                      />
+                    </Details>
+                  );
+                }
+                return null;
+              }}
+            ></ExplorerItemList>
           </ExplorerDetails>
         );
       }}
