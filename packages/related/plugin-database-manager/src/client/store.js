@@ -57,7 +57,7 @@ export const ROLE_MEMBERS = ROLE.many("members", ROLE, {
 export const ROLE_DATABASES = ROLE.many("databases", DATABASE, {
   GET_MANY: async ({ rolname }, { signal }) => {
     const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/databases/`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/databases`,
       { signal },
     );
     if (!response.ok) {
@@ -74,7 +74,7 @@ export const ROLE_DATABASES = ROLE.many("databases", DATABASE, {
 export const ROLE_TABLES = ROLE.many("tables", TABLE, {
   GET_MANY: async ({ rolname }, { signal }) => {
     const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/tables/`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/tables`,
       { signal },
     );
     if (!response.ok) {
