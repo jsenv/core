@@ -6,10 +6,13 @@ import { errorFromResponse } from "../error_from_response.js";
 export const ROLE = resource("role", {
   idKey: "oid",
   mutableIdKeys: ["rolname"],
-  GET_MANY: async ({ canlogin }, { signal }) => {
+  GET_MANY: async ({ canlogin, owners }, { signal }) => {
     const getManyRoleUrl = new URL(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`);
     if (canlogin !== undefined) {
       getManyRoleUrl.searchParams.set("can_login", canlogin);
+    }
+    if (owners) {
+      getManyRoleUrl.searchParams.set("owners", owners);
     }
     const response = await fetch(getManyRoleUrl, { signal });
     if (!response.ok) {
@@ -103,6 +106,7 @@ export const useRoleArrayInStore = ROLE.useArray;
 
 export const ROLE_CAN_LOGIN = ROLE.withParams({ canlogin: true });
 export const ROLE_CANNOT_LOGIN = ROLE.withParams({ canlogin: false });
+export const ROLE_WITH_OWNERSHIP = ROLE.withParams({ owners: true });
 export const useRoleCanLoginArray = () => {
   const roleCanLoginArray = useActionData(ROLE_CAN_LOGIN.GET_MANY);
   return roleCanLoginArray;
@@ -110,6 +114,10 @@ export const useRoleCanLoginArray = () => {
 export const useRoleCannotLoginArray = () => {
   const roleCannotLoginArray = useActionData(ROLE_CANNOT_LOGIN.GET_MANY);
   return roleCannotLoginArray;
+};
+export const useRoleWithOwnershipArray = () => {
+  const roleWithOwnershipArray = useActionData(ROLE_WITH_OWNERSHIP.GET_MANY);
+  return roleWithOwnershipArray;
 };
 
 const currentRoleIdSignal = signal(window.DB_MANAGER_CONFIG.currentRole.oid);
@@ -121,42 +129,3 @@ export const useCurrentRole = () => {
   const currentRole = ROLE.store.select(currentRoleId);
   return currentRole;
 };
-
-export const ROLE_MEMBERS = ROLE.many("members", ROLE, {
-  POST: async ({ rolname, memberRolname }, { signal }) => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/members/${memberRolname}`,
-      {
-        signal,
-        method: "PUT",
-      },
-    );
-    if (!response.ok) {
-      throw await errorFromResponse(
-        response,
-        `Failed to add ${memberRolname} to ${rolname}`,
-      );
-    }
-    const { data } = await response.json();
-    const member = data;
-    return [{ rolname }, member];
-  },
-  DELETE: async ({ rolname, memberRolname }, { signal }) => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/members/${memberRolname}`,
-      {
-        signal,
-        method: "DELETE",
-      },
-    );
-    if (!response.ok) {
-      throw await errorFromResponse(
-        response,
-        `Failed to remove ${memberRolname} from ${rolname}`,
-      );
-    }
-    return [{ rolname }, { rolname: memberRolname }];
-  },
-});
-
-ROLE.store.upsert(window.DB_MANAGER_CONFIG.currentRole);
