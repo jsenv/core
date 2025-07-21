@@ -10,6 +10,8 @@ import.meta.css = /* css */ `
   }
 
   .count {
+    position: relative;
+    top: -1px;
     color: rgba(28, 43, 52, 0.4);
   }
 `;
