@@ -3,6 +3,7 @@ import.meta.css = /* css */ `
     display: flex;
     align-items: center;
     gap: 3px;
+    flex: 1;
   }
 
   .count {

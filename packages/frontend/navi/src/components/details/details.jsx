@@ -11,7 +11,7 @@ import { useActionEvents } from "../use_action_events.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
 import.meta.css = /* css */ `
-  .details {
+  .navi_details {
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -20,7 +20,7 @@ import.meta.css = /* css */ `
     flex-shrink: 0;
   }
 
-  .details > summary {
+  .navi_details > summary {
     flex-shrink: 0;
     cursor: pointer;
     display: flex;
@@ -95,9 +95,10 @@ const DetailsBasic = forwardRef((props, ref) => {
     <details
       {...rest}
       id={id}
-      className={["details", ...(className ? className.split(" ") : [])].join(
-        " ",
-      )}
+      className={[
+        "navi_details",
+        ...(className ? className.split(" ") : []),
+      ].join(" ")}
       ref={ref}
       onToggle={(e) => {
         const isOpen = e.newState === "open";
