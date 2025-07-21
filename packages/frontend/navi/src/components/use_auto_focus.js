@@ -17,6 +17,8 @@ export const useAutoFocus = (
     focusableElement.focus({ focusVisible: autoFocusVisible });
     if (autoSelect) {
       focusableElement.select();
+      // Keep the beginning of the text visible instead of scrolling to the end
+      focusableElement.scrollLeft = 0;
     }
     return () => {
       if (
