@@ -6,7 +6,7 @@ import { TABLE } from "./table/table_store.js";
 export const ROLE_MEMBERS = ROLE.many("members", ROLE, {
   GET_MANY: async ({ rolname }, { signal }) => {
     const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/members/`,
+      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/members`,
       { signal },
     );
     if (!response.ok) {

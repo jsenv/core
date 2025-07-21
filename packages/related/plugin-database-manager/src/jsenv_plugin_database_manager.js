@@ -19,6 +19,40 @@ const databaseManagerHtmlFileUrl = import.meta.resolve(
   "./client/database_manager.html",
 );
 
+const selectTables = async (sql, { publicFilter, rolname }) => {
+  let whereConditions = [];
+  if (publicFilter) {
+    whereConditions.push(sql`pg_tables.schemaname = 'public'`);
+  } else {
+    whereConditions.push(sql`
+      pg_tables.schemaname NOT IN ('pg_catalog', 'information_schema')
+    `);
+  }
+  if (rolname) {
+    whereConditions.push(sql`pg_tables.tableowner = ${rolname}`);
+  }
+
+  const data = await sql`
+    SELECT
+      pg_tables.*,
+      pg_class.oid AS tableoid
+    FROM
+      pg_tables
+      LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename
+      AND pg_class.relnamespace = (
+        SELECT
+          oid
+        FROM
+          pg_namespace
+        WHERE
+          nspname = pg_tables.schemaname
+      )
+    WHERE
+      ${whereConditions.flatMap((x, i) => (i ? [sql`AND`, x] : x))}
+  `;
+  return { data };
+};
+
 export const jsenvPluginDatabaseManager = ({
   pathname = "/.internal/database/",
 } = {}) => {
@@ -198,31 +232,10 @@ export const jsenvPluginDatabaseManager = ({
       ...createRESTRoutes(`${pathname}api/tables`, {
         "GET": async (request) => {
           const publicFilter = request.searchParams.has("public");
-          const data = await sql`
-            SELECT
-              pg_tables.*,
-              pg_class.oid AS tableoid
-            FROM
-              pg_tables
-              LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename
-              AND pg_class.relnamespace = (
-                SELECT
-                  oid
-                FROM
-                  pg_namespace
-                WHERE
-                  nspname = pg_tables.schemaname
-              )
-            WHERE
-              ${publicFilter
-              ? sql`pg_tables.schemaname = 'public'`
-              : sql`
-                  pg_tables.schemaname NOT IN ('pg_catalog', 'information_schema')
-                `}
-          `;
+          const tables = await selectTables(sql, { publicFilter });
           const columns = await getTableColumns(sql, "pg_tables");
           return {
-            data,
+            data: tables,
             meta: {
               columns,
             },
@@ -463,23 +476,54 @@ export const jsenvPluginDatabaseManager = ({
           await alterRoleQuery(sql, rolname, colname, value);
           return { [colname]: value };
         },
+        "GET /:rolname/members": async (request) => {
+          const { rolname } = request.params;
+          const members = await sql`
+            SELECT
+              member_role.*,
+              grantor_role.rolname AS grantor_rolname,
+              pg_auth_members.admin_option
+            FROM
+              pg_auth_members
+              JOIN pg_roles AS parent_role ON pg_auth_members.roleid = parent_role.oid
+              JOIN pg_roles AS member_role ON pg_auth_members.member = member_role.oid
+              LEFT JOIN pg_roles AS grantor_role ON pg_auth_members.grantor = grantor_role.oid
+            WHERE
+              parent_role.rolname = ${rolname}
+          `;
+          return {
+            data: members,
+          };
+        },
+        "POST /:rolname/members/:memberRolname": async (request) => {
+          const { rolname, memberRolname } = request.params;
+          await sql`GRANT ${sql(rolname)} TO ${sql(memberRolname)}`;
+          const [memberRole] = await sql`
+            SELECT
+              *
+            FROM
+              pg_roles
+            WHERE
+              rolname = ${memberRolname}
+          `;
+          return {
+            data: memberRole,
+          };
+        },
+        "DELETE /:rolname/members/:memberRolname": async (request) => {
+          const { rolname, memberRolname } = request.params;
+          await sql`
+            REVOKE ${sql(rolname)}
+            FROM
+              ${sql(memberRolname)}
+          `;
+          return {
+            data: null,
+          };
+        },
         "GET /:rolname/tables": async (request) => {
           const { rolname } = request.params;
-          const tables = await sql`
-            SELECT
-              pg_tables.*
-            FROM
-              pg_tables
-              JOIN pg_roles ON pg_roles.rolname = pg_tables.tableowner
-            WHERE
-              pg_roles.rolname = ${rolname}
-              AND pg_tables.schemaname NOT IN ('pg_catalog', 'information_schema')
-          `;
-          if (tables.length === 0) {
-            return {
-              data: [],
-            };
-          }
+          const tables = await selectTables(sql, { rolname });
           return {
             data: tables,
             meta: {},
@@ -504,32 +548,6 @@ export const jsenvPluginDatabaseManager = ({
           return {
             data: databases,
             meta: {},
-          };
-        },
-        "PUT /:rolname/members/:memberRolname": async (request) => {
-          const { rolname, memberRolname } = request.params;
-          await sql`GRANT ${sql(rolname)} TO ${sql(memberRolname)}`;
-          const [memberRole] = await sql`
-            SELECT
-              *
-            FROM
-              pg_roles
-            WHERE
-              rolname = ${memberRolname}
-          `;
-          return {
-            data: memberRole,
-          };
-        },
-        "DELETE /:rolname/members/:memberRolname": async (request) => {
-          const { rolname, memberRolname } = request.params;
-          await sql`
-            REVOKE ${sql(rolname)}
-            FROM
-              ${sql(memberRolname)}
-          `;
-          return {
-            data: null,
           };
         },
       }),
