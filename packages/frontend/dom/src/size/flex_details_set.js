@@ -17,6 +17,49 @@ const ANIMATE_TOGGLE = true;
 const ANIMATE_RESIZE_AFTER_MUTATION = true;
 const DEBUG = false;
 
+// Helper to create scroll state capture/restore function for an element
+const captureScrollState = (element) => {
+  const scrollLeft = element.scrollLeft;
+  const scrollTop = element.scrollTop;
+  const scrollWidth = element.scrollWidth;
+  const scrollHeight = element.scrollHeight;
+  const clientWidth = element.clientWidth;
+  const clientHeight = element.clientHeight;
+
+  // Calculate scroll percentages to preserve relative position
+  const scrollLeftPercent =
+    scrollWidth > clientWidth ? scrollLeft / (scrollWidth - clientWidth) : 0;
+  const scrollTopPercent =
+    scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0;
+
+  // Return restore function
+  return () => {
+    // First try to restore exact pixel values
+    element.scrollLeft = scrollLeft;
+    element.scrollTop = scrollTop;
+
+    // If content dimensions changed, use percentage-based fallback
+    requestAnimationFrame(() => {
+      const newScrollWidth = element.scrollWidth;
+      const newScrollHeight = element.scrollHeight;
+      const newClientWidth = element.clientWidth;
+      const newClientHeight = element.clientHeight;
+
+      if (newScrollWidth > newClientWidth) {
+        const newScrollLeft =
+          scrollLeftPercent * (newScrollWidth - newClientWidth);
+        element.scrollLeft = newScrollLeft;
+      }
+
+      if (newScrollHeight > newClientHeight) {
+        const newScrollTop =
+          scrollTopPercent * (newScrollHeight - newClientHeight);
+        element.scrollTop = newScrollTop;
+      }
+    });
+  };
+};
+
 export const initFlexDetailsSet = (
   container,
   {
@@ -105,11 +148,16 @@ export const initFlexDetailsSet = (
         const detailsContent = summary.nextElementSibling;
         let detailsHeight;
         if (detailsContent) {
+          const restoreScrollState = captureScrollState(detailsContent);
           const restoreSizeStyle = forceStyles(detailsContent, {
             height: "auto",
           });
           const detailsContentHeight = getHeight(detailsContent);
           restoreSizeStyle();
+
+          // Restore scroll position after height manipulation
+          restoreScrollState();
+
           detailsHeight = summaryHeight + detailsContentHeight;
         } else {
           // empty details content like
@@ -874,6 +922,7 @@ const prepareSyncDetailsContentHeight = (details) => {
       );
     };
   }
+
   content.style.height = "var(--content-height)";
 
   const contentComputedStyle = getComputedStyle(content);
@@ -882,6 +931,9 @@ const prepareSyncDetailsContentHeight = (details) => {
     contentComputedStyle.scrollbarGutter !== "stable";
 
   return (detailsHeight, { isAnimation, isAnimationEnd } = {}) => {
+    // Capture scroll state and get restore function
+    const restoreScrollState = captureScrollState(content);
+
     const contentHeight = detailsHeight - summaryHeight;
     details.style.setProperty(
       "--details-height",
@@ -912,6 +964,9 @@ const prepareSyncDetailsContentHeight = (details) => {
         restoreOverflow();
       }
     }
+
+    // Restore scroll position using smart percentage-based restoration
+    restoreScrollState();
   };
 };
 
