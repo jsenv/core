@@ -92,7 +92,29 @@ const initAutoreload = ({
     httpActionWeakSet.add(httpAction);
   };
 
-  const performAutoreload = (httpAction, reason) => {
+  // Centralized autoreload logic
+  const performAutoreload = (triggeringAction, reason, options = {}) => {
+    const {
+      forceGetMany = false,
+      forceGet = false,
+      forceBoth = false,
+    } = options;
+
+    // Determine what should be reloaded
+    let shouldReloadGetMany = forceGetMany || forceBoth;
+    let shouldReloadGet = forceGet || forceBoth;
+
+    // For normal same-resource autoreload, check the triggering action
+    if (!forceGetMany && !forceGet && !forceBoth) {
+      shouldReloadGetMany = shouldAutoreloadGetMany(triggeringAction);
+      shouldReloadGet = shouldAutoreloadGet(triggeringAction);
+    }
+
+    if (!shouldReloadGetMany && !shouldReloadGet) {
+      return;
+    }
+
+    // Build the predicate for which actions to reload
     const paramScopePredicate = paramScope
       ? (httpActionCandidate) => {
           // For parameterized actions, reload:
@@ -112,9 +134,16 @@ const initAutoreload = ({
         }
       : (httpActionCandidate) => !httpActionCandidate.meta.paramScope;
 
-    const httpMetaPredicate = (httpActionCandidate) =>
-      httpActionCandidate.meta.httpVerb === "GET" &&
-      httpActionCandidate.meta.httpMany === true;
+    const httpMetaPredicate =
+      shouldReloadGetMany && shouldReloadGet
+        ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
+        : shouldReloadGetMany
+          ? (httpActionCandidate) =>
+              httpActionCandidate.meta.httpVerb === "GET" &&
+              httpActionCandidate.meta.httpMany === true
+          : (httpActionCandidate) =>
+              httpActionCandidate.meta.httpVerb === "GET" &&
+              !httpActionCandidate.meta.httpMany;
 
     const predicate = (httpActionCandidate) =>
       paramScopePredicate(httpActionCandidate) &&
@@ -122,69 +151,23 @@ const initAutoreload = ({
 
     const toReloadSet = findAliveActionsMatching(httpActionWeakSet, predicate);
 
-    // setTimeout otherwise the action done side effects could not yet run
-    // (for instance when creating an item, we want to listen to actionend first
-    // then we want to perform the reload)
-    // ideally we would put this reload after dispacthing actionend
-    // and we could as a result remove the setTimeout
-    setTimeout(() => {
-      reloadActions(toReloadSet, { reason });
-    });
-  };
-
-  const onActionDone = (httpAction) => {
-    const getManyAutoreload = shouldAutoreloadGetMany(httpAction);
-    const getAutoreload = shouldAutoreloadGet(httpAction);
-
-    if (getManyAutoreload || getAutoreload) {
-      const httpMetaPredicate =
-        getManyAutoreload && getAutoreload
-          ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
-          : getManyAutoreload
-            ? (httpActionCandidate) =>
-                httpActionCandidate.meta.httpVerb === "GET" &&
-                httpActionCandidate.meta.httpMany === true
-            : (httpActionCandidate) =>
-                httpActionCandidate.meta.httpVerb === "GET" &&
-                !httpActionCandidate.meta.httpMany;
-
-      const paramScopePredicate = paramScope
-        ? (httpActionCandidate) => {
-            if (httpActionCandidate.meta.paramScope?.id === paramScope.id) {
-              return true; // Same scope
-            }
-            if (!httpActionCandidate.meta.paramScope) {
-              return true; // Root parent (no params)
-            }
-            // Check if candidate's params are a subset of current params (parent scope)
-            const candidateParams = httpActionCandidate.meta.paramScope.params;
-            const currentParams = paramScope.params;
-            return isParamSubset(candidateParams, currentParams);
-          }
-        : (httpActionCandidate) => !httpActionCandidate.meta.paramScope;
-
-      const predicate = (httpActionCandidate) =>
-        paramScopePredicate(httpActionCandidate) &&
-        httpMetaPredicate(httpActionCandidate);
-
-      const toReloadSet = findAliveActionsMatching(
-        httpActionWeakSet,
-        predicate,
-      );
-
+    if (toReloadSet.size > 0) {
       // setTimeout otherwise the action done side effects could not yet run
       // (for instance when creating an item, we want to listen to actionend first
       // then we want to perform the reload)
       // ideally we would put this reload after dispacthing actionend
       // and we could as a result remove the setTimeout
       setTimeout(() => {
-        reloadActions(toReloadSet, {
-          reason: `${httpAction} triggered`,
-        });
+        reloadActions(toReloadSet, { reason });
       });
     }
+  };
 
-    // Notify dependents through global registry
+  const onActionDone = (httpAction) => {
+    // Handle same-resource autoreload using normal rules
+    performAutoreload(httpAction, `${httpAction} triggered`);
+
+    // Handle cross-resource dependency notifications
     if (resourceInstance && httpAction.meta.httpVerb !== "GET") {
       notifyDependents(resourceInstance, httpAction);
     }
@@ -192,11 +175,13 @@ const initAutoreload = ({
 
   // Handle dependency-triggered reloads
   const onDependencyActionDone = (httpAction) => {
-    // For dependencies, only non-GET verbs trigger autoreload of GET_MANY
+    // Dependencies have specific behavior: only non-GET verbs trigger autoreload,
+    // and they only trigger GET_MANY reloads (not individual GET reloads)
     if (httpAction.meta.httpVerb !== "GET") {
       performAutoreload(
         httpAction,
         `${httpAction} triggered dependency reload`,
+        { forceGetMany: true }, // Dependencies only reload GET_MANY actions
       );
     }
   };
