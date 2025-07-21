@@ -40,6 +40,8 @@
 
         const forceReRender = () => {
           setRenderKey((prev) => prev + 1);
+          // Force a re-render by updating items with new objects
+          setItems((prev) => prev.map((item) => ({ ...item })));
         };
 
         const scrollToMiddleAndReRender = () => {
@@ -52,6 +54,8 @@
             // Force re-render after scrolling
             setTimeout(() => {
               setRenderKey((prev) => prev + 1);
+              // Force a re-render by updating items with new objects
+              setItems((prev) => prev.map((item) => ({ ...item })));
             }, 100);
           }
         };
@@ -88,7 +92,6 @@
 
             <ul
               ref={listRef}
-              key={renderKey}
               style="
                 height: 400px; 
                 overflow-y: auto; 
