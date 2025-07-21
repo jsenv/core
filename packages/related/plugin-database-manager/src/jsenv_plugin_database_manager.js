@@ -664,7 +664,7 @@ export const jsenvPluginDatabaseManager = ({
         },
       }),
       {
-        endpoint: `PUT ${pathname}/api/tables/:tableName/columns/name`,
+        endpoint: `PUT ${pathname}api/tables/:tableName/columns/name`,
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
@@ -678,7 +678,7 @@ export const jsenvPluginDatabaseManager = ({
         },
       },
       {
-        endpoint: `PUT ${pathname}/api/tables/:tableName/columns/rowsecurity`,
+        endpoint: `PUT ${pathname}api/tables/:tableName/columns/rowsecurity`,
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async (request) => {
@@ -697,7 +697,7 @@ export const jsenvPluginDatabaseManager = ({
         },
       },
       {
-        endpoint: `PUT ${pathname}/api/tables/:tableName/columns/:columnName/rows/:rowId`,
+        endpoint: `PUT ${pathname}api/tables/:tableName/columns/:columnName/rows/:rowId`,
         declarationSource: import.meta.url,
         acceptedMediaTypes: ["application/json"],
         fetch: async () => {
@@ -876,6 +876,30 @@ export const jsenvPluginDatabaseManager = ({
           debugger;
           await sql.unsafe(query);
           return Response.json(null, { status: 204 });
+        },
+      },
+      {
+        endpoint: `GET ${pathname}api`,
+        description: "Get info about the database manager API.",
+        declarationSource: import.meta.url,
+        fetch: () => {
+          return Response.json({
+            data: {
+              pathname,
+              apiUrl: new URL(`${pathname}api`, import.meta.url).href,
+            },
+          });
+        },
+      },
+      {
+        endpoint: `GET ${pathname}api/*`,
+        description: "Fallback for api endpoints (404).",
+        declarationSource: import.meta.url,
+        fetch: (request) => {
+          return Response.json(
+            { message: `API endpoint not found: ${request.url}` },
+            { status: 404 },
+          );
         },
       },
     ],

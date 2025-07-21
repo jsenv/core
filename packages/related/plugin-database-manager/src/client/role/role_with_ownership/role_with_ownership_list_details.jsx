@@ -24,6 +24,9 @@ import {
 import.meta.css = /* css */ `
   .explorer_details {
     flex: 1;
+  }
+
+  .explorer_details summary {
     padding-left: 16px;
   }
 `;
