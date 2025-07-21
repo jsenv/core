@@ -11,6 +11,23 @@ import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
 let debug = false;
 
+// Global dependency tracking system
+const globalDependencyRegistry = new Map(); // Map<dependencyResource, Set<dependentAutoreload>>
+const registerDependency = (dependencyResource, dependentAutoreload) => {
+  if (!globalDependencyRegistry.has(dependencyResource)) {
+    globalDependencyRegistry.set(dependencyResource, new Set());
+  }
+  globalDependencyRegistry.get(dependencyResource).add(dependentAutoreload);
+};
+const notifyDependents = (triggeringResource, httpAction) => {
+  const dependents = globalDependencyRegistry.get(triggeringResource);
+  if (dependents) {
+    for (const dependentAutoreload of dependents) {
+      dependentAutoreload.onDependencyActionDone(httpAction);
+    }
+  }
+};
+
 // Cache for parameter scope identifiers
 const paramScopeWeakSet = createIterableWeakSet();
 let paramScopeIdCounter = 0;
@@ -62,6 +79,8 @@ const initAutoreload = ({
   autoreloadGetManyAfter,
   autoreloadGetAfter,
   paramScope,
+  dependencies = [],
+  resourceInstance,
 }) => {
   const httpActionWeakSet = createIterableWeakSet();
   const shouldAutoreloadGetMany = createShouldAutoreloadAfter(
@@ -73,17 +92,7 @@ const initAutoreload = ({
     httpActionWeakSet.add(httpAction);
   };
 
-  const onActionDone = (httpAction) => {
-    const getManyAutoreload = shouldAutoreloadGetMany(httpAction);
-    const getAutoreload = shouldAutoreloadGet(httpAction);
-    if (!getManyAutoreload && !getAutoreload) {
-      return;
-    }
-
-    // if (httpAction.name === "user.friends.POST") {
-    //   debugger;
-    // }
-
+  const performAutoreload = (httpAction, reason) => {
     const paramScopePredicate = paramScope
       ? (httpActionCandidate) => {
           // For parameterized actions, reload:
@@ -103,35 +112,103 @@ const initAutoreload = ({
         }
       : (httpActionCandidate) => !httpActionCandidate.meta.paramScope;
 
-    const httpMetaPredicate =
-      getManyAutoreload && getAutoreload
-        ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
-        : getManyAutoreload
-          ? (httpActionCandidate) =>
-              httpActionCandidate.meta.httpVerb === "GET" &&
-              httpActionCandidate.meta.httpMany === true
-          : (httpActionCandidate) =>
-              httpActionCandidate.meta.httpVerb === "GET" &&
-              !httpActionCandidate.meta.httpMany;
+    const httpMetaPredicate = (httpActionCandidate) =>
+      httpActionCandidate.meta.httpVerb === "GET" &&
+      httpActionCandidate.meta.httpMany === true;
 
     const predicate = (httpActionCandidate) =>
       paramScopePredicate(httpActionCandidate) &&
       httpMetaPredicate(httpActionCandidate);
 
     const toReloadSet = findAliveActionsMatching(httpActionWeakSet, predicate);
+
     // setTimeout otherwise the action done side effects could not yet run
     // (for instance when creating an item, we want to listen to actionend first
     // then we want to perform the reload)
     // ideally we would put this reload after dispacthing actionend
     // and we could as a result remove the setTimeout
     setTimeout(() => {
-      reloadActions(toReloadSet, {
-        reason: `${httpAction} triggered`,
-      });
+      reloadActions(toReloadSet, { reason });
     });
   };
 
-  return { onActionCreated, onActionDone };
+  const onActionDone = (httpAction) => {
+    const getManyAutoreload = shouldAutoreloadGetMany(httpAction);
+    const getAutoreload = shouldAutoreloadGet(httpAction);
+
+    if (getManyAutoreload || getAutoreload) {
+      const httpMetaPredicate =
+        getManyAutoreload && getAutoreload
+          ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
+          : getManyAutoreload
+            ? (httpActionCandidate) =>
+                httpActionCandidate.meta.httpVerb === "GET" &&
+                httpActionCandidate.meta.httpMany === true
+            : (httpActionCandidate) =>
+                httpActionCandidate.meta.httpVerb === "GET" &&
+                !httpActionCandidate.meta.httpMany;
+
+      const paramScopePredicate = paramScope
+        ? (httpActionCandidate) => {
+            if (httpActionCandidate.meta.paramScope?.id === paramScope.id) {
+              return true; // Same scope
+            }
+            if (!httpActionCandidate.meta.paramScope) {
+              return true; // Root parent (no params)
+            }
+            // Check if candidate's params are a subset of current params (parent scope)
+            const candidateParams = httpActionCandidate.meta.paramScope.params;
+            const currentParams = paramScope.params;
+            return isParamSubset(candidateParams, currentParams);
+          }
+        : (httpActionCandidate) => !httpActionCandidate.meta.paramScope;
+
+      const predicate = (httpActionCandidate) =>
+        paramScopePredicate(httpActionCandidate) &&
+        httpMetaPredicate(httpActionCandidate);
+
+      const toReloadSet = findAliveActionsMatching(
+        httpActionWeakSet,
+        predicate,
+      );
+
+      // setTimeout otherwise the action done side effects could not yet run
+      // (for instance when creating an item, we want to listen to actionend first
+      // then we want to perform the reload)
+      // ideally we would put this reload after dispacthing actionend
+      // and we could as a result remove the setTimeout
+      setTimeout(() => {
+        reloadActions(toReloadSet, {
+          reason: `${httpAction} triggered`,
+        });
+      });
+    }
+
+    // Notify dependents through global registry
+    if (resourceInstance && httpAction.meta.httpVerb !== "GET") {
+      notifyDependents(resourceInstance, httpAction);
+    }
+  };
+
+  // Handle dependency-triggered reloads
+  const onDependencyActionDone = (httpAction) => {
+    // For dependencies, only non-GET verbs trigger autoreload of GET_MANY
+    if (httpAction.meta.httpVerb !== "GET") {
+      performAutoreload(
+        httpAction,
+        `${httpAction} triggered dependency reload`,
+      );
+    }
+  };
+
+  // Register this autoreload instance as dependent on its dependencies
+  if (dependencies.length > 0) {
+    for (const dependency of dependencies) {
+      registerDependency(dependency, { onDependencyActionDone });
+    }
+  }
+
+  return { onActionCreated, onActionDone, httpActionWeakSet };
 };
 
 const createHttpHandlerForRootResource = (
@@ -142,12 +219,16 @@ const createHttpHandlerForRootResource = (
     autoreloadGetManyAfter = ["POST", "DELETE"],
     autoreloadGetAfter = false,
     paramScope,
+    dependencies = [],
+    resourceInstance,
   },
 ) => {
   const autoreload = initAutoreload({
     autoreloadGetManyAfter,
     autoreloadGetAfter,
     paramScope,
+    dependencies,
+    resourceInstance,
   });
 
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
@@ -383,6 +464,7 @@ const createHttpHandlerRelationshipToManyResource = (
     autoreloadGetManyAfter = ["POST", "DELETE"],
     autoreloadGetAfter = false,
     paramScope,
+    resourceInstance,
   } = {},
 ) => {
   // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
@@ -392,6 +474,7 @@ const createHttpHandlerRelationshipToManyResource = (
     autoreloadGetManyAfter,
     autoreloadGetAfter,
     paramScope,
+    resourceInstance,
   });
 
   // one item AND many child items
@@ -590,6 +673,9 @@ export const resource = (
     isResource: true,
     name,
     idKey,
+    httpActions: {},
+    addItemSetup: undefined,
+    httpHandler,
   };
   if (!httpHandler) {
     const setupCallbackSet = new Set();
@@ -655,9 +741,13 @@ export const resource = (
       store,
       autoreloadGetManyAfter,
       autoreloadGetAfter,
+      resourceInstance,
     });
   }
   resourceInstance.httpHandler = httpHandler;
+
+  // Store the action callback definitions for withParams to use later
+  resourceInstance.httpActions = rest;
 
   // Create HTTP actions
   for (const key of Object.keys(rest)) {
@@ -862,6 +952,7 @@ export const resource = (
         propertyName,
         childIdKey,
         childStore: childResource.store,
+        resourceInstance,
       });
     return resource(childName, {
       idKey: childIdKey,
@@ -877,6 +968,10 @@ export const resource = (
    * identical parameters, preventing cross-contamination between different parameter sets.
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
+   * @param {Object} options - Additional options for the parameterized resource
+   * @param {Array} options.dependencies - Array of resources that should trigger autoreload when modified
+   * @param {Array|string} options.autoreloadGetManyAfter - HTTP verbs that trigger GET_MANY autoreload
+   * @param {Array|string|boolean} options.autoreloadGetAfter - HTTP verbs that trigger GET autoreload
    * @returns {Object} A new resource instance with parameter-bound actions and isolated autoreload
    * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
    *
@@ -885,23 +980,51 @@ export const resource = (
    * const adminRoles = ROLE.withParams({ canlogin: true });
    * const guestRoles = ROLE.withParams({ canlogin: false });
    * // adminRoles and guestRoles have isolated autoreload behavior
+   *
+   * @example
+   * // Cross-resource dependencies
+   * const role = resource("role");
+   * const database = resource("database");
+   * const tables = resource("tables");
+   * const ROLE_WITH_OWNERSHIP = role.withParams({ owners: true }, {
+   *   dependencies: [role, database, tables],
+   * });
+   * // ROLE_WITH_OWNERSHIP.GET_MANY will autoreload when any table/database/role is POST/DELETE
    */
-  const withParams = (params) => {
+  const withParams = (params, options = {}) => {
     // Require parameters
     if (!params || Object.keys(params).length === 0) {
       throw new Error(`resource(${name}).withParams() requires parameters`);
     }
 
+    const {
+      dependencies = [],
+      autoreloadGetManyAfter: customAutoreloadGetManyAfter,
+      autoreloadGetAfter: customAutoreloadGetAfter,
+    } = options;
+
     // Generate unique param scope for these parameters
     const paramScopeObject = getParamScope(params);
+
+    // Use custom autoreload settings if provided, otherwise use resource defaults
+    const finalAutoreloadGetManyAfter =
+      customAutoreloadGetManyAfter !== undefined
+        ? customAutoreloadGetManyAfter
+        : autoreloadGetManyAfter;
+    const finalAutoreloadGetAfter =
+      customAutoreloadGetAfter !== undefined
+        ? customAutoreloadGetAfter
+        : autoreloadGetAfter;
 
     // Create a new httpHandler with the param scope for isolated autoreload
     const parameterizedHttpHandler = createHttpHandlerForRootResource(name, {
       idKey,
       store: resourceInstance.store,
-      autoreloadGetManyAfter,
-      autoreloadGetAfter,
+      autoreloadGetManyAfter: finalAutoreloadGetManyAfter,
+      autoreloadGetAfter: finalAutoreloadGetAfter,
       paramScope: paramScopeObject,
+      dependencies,
+      resourceInstance,
     });
 
     // Create parameterized resource
@@ -916,26 +1039,35 @@ export const resource = (
       httpHandler: parameterizedHttpHandler,
       one: resourceInstance.one,
       many: resourceInstance.many,
+      dependencies, // Store dependencies for debugging/inspection
+      httpActions: resourceInstance.httpActions,
     };
 
     // Create HTTP actions from the parameterized handler and bind parameters
-    for (const key of Object.keys(rest)) {
+    for (const key of Object.keys(resourceInstance.httpActions)) {
       const method = parameterizedHttpHandler[key];
       if (method) {
-        const action = method(rest[key]);
+        const action = method(resourceInstance.httpActions[key]);
         // Bind the parameters to get a parameterized action instance
         parameterizedResource[key] = action.bindParams(params);
       }
     }
 
     // Add withParams method to the parameterized resource for chaining
-    parameterizedResource.withParams = (newParams) => {
+    parameterizedResource.withParams = (newParams, newOptions = {}) => {
       if (!newParams || Object.keys(newParams).length === 0) {
         throw new Error(`resource(${name}).withParams() requires parameters`);
       }
       // Merge current params with new ones for chaining
       const mergedParams = { ...params, ...newParams };
-      return withParams(mergedParams);
+      // Merge options, with new options taking precedence
+      const mergedOptions = {
+        dependencies,
+        autoreloadGetManyAfter: finalAutoreloadGetManyAfter,
+        autoreloadGetAfter: finalAutoreloadGetAfter,
+        ...newOptions,
+      };
+      return withParams(mergedParams, mergedOptions);
     };
 
     return parameterizedResource;
