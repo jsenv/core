@@ -93,7 +93,6 @@
 
 .explorer_group_content {
   overflow-y: auto;
-  scrollbar-gutter: stable;
   overscroll-behavior: contain;
   height: 100%;
   flex: 1;

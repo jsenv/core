@@ -21,7 +21,7 @@ export const LinkWithIcon = ({
   icon,
   isCurrent,
   children,
-  className,
+  className = "",
   ...rest
 }) => {
   return (
