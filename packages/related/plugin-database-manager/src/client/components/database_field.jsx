@@ -1,4 +1,6 @@
-import { Field, Input } from "@jsenv/navi";
+import { Button, Field, Form, Input, Select } from "@jsenv/navi";
+import { useCallback, useState } from "preact/hooks";
+import { RoleLink } from "../role/role_link.jsx";
 
 export const DatabaseFieldset = ({
   item,
@@ -26,6 +28,50 @@ export const DatabaseFieldset = ({
         return <li key={columnName}>{dbField}</li>;
       })}
     </ul>
+  );
+};
+
+export const RoleField = ({ role }) => {
+  const [editing, setEditing] = useState(false);
+  const startEditing = useCallback(() => {
+    setEditing(true);
+  }, []);
+  const stopEditing = useCallback(() => {
+    setEditing(false);
+  }, []);
+
+  return (
+    <Field
+      label="Owner:"
+      input={
+        <div style="display: inline-flex; flex-direction: row; gap: 0.5em;">
+          {editing ? (
+            <Form
+              action={() => {
+                // TODO
+              }}
+              onReset={stopEditing}
+            >
+              <Select value={role.rolname}>
+                {[
+                  {
+                    label: role.rolname,
+                    value: role.rolname,
+                  },
+                ]}
+              </Select>
+              <Button type="submit">Validate</Button>
+              <Button type="reset">Cancel</Button>
+            </Form>
+          ) : (
+            <>
+              <RoleLink role={role}>{role.rolname}</RoleLink>
+              <Button action={startEditing}>Change</Button>
+            </>
+          )}
+        </div>
+      }
+    />
   );
 };
 

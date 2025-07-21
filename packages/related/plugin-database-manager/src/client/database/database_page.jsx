@@ -1,7 +1,6 @@
 import { Button } from "@jsenv/navi";
-import { DatabaseFieldset } from "../components/database_field.jsx";
+import { DatabaseFieldset, RoleField } from "../components/database_field.jsx";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
-import { RoleLink } from "../role/role_link.jsx";
 import { DatabaseSvg } from "./database_icons.jsx";
 import { DATABASE } from "./database_store.js";
 
@@ -42,12 +41,7 @@ export const DatabasePage = ({ database }) => {
           customFields={{
             datdba: () => {
               const ownerRole = database.ownerRole;
-              return (
-                <>
-                  Owner:
-                  <RoleLink role={ownerRole}>{ownerRole.rolname}</RoleLink>{" "}
-                </>
-              );
+              return <RoleField role={ownerRole} />;
             },
           }}
         />
