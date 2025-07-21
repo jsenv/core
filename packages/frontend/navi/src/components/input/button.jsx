@@ -105,6 +105,7 @@ const ButtonBasic = forwardRef((props, ref) => {
         data-field-with-hover=""
         data-field-with-border={borderWidth ? "" : undefined}
         data-field-with-border-hover={discrete ? "" : undefined}
+        data-field-with-background-hover={discrete ? "" : undefined}
         data-custom={appearance === "custom" ? "" : undefined}
         data-validation-message-arrow-x="center"
         data-readonly={readOnly ? "" : undefined}

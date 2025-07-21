@@ -64,6 +64,9 @@ import.meta.css = /* css */ `
   [data-field-with-background] {
     background-color: var(--field-background-color);
   }
+  [data-field-with-background-hover] {
+    background: none;
+  }
 
   [data-field-with-background]:hover {
     background-color: var(--field-hover-background-color);
