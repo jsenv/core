@@ -1,6 +1,7 @@
-import { Route } from "@jsenv/router";
+import { Details } from "@jsenv/navi";
 import { TextAndCount } from "../../components/text_and_count.jsx";
 import { DatabaseLink } from "../../database/database_link.jsx";
+import { useRoleWithOwnershipCount } from "../../database_signals.js";
 import { ExplorerDetails } from "../../explorer/explorer_details.jsx";
 import {
   createExplorerGroupController,
@@ -9,39 +10,35 @@ import {
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
 import { TableLink } from "../../table/table_link.jsx";
 import {
-  useRoleDatabases,
-  useRoleList,
-  useRoleTables,
-} from "../role_signals.js";
-import { ROLE_WITH_OWNERSHIP_LIST_DETAILS_ROUTE } from "./role_with_ownership_list_details_routes.js";
+  ROLE_WITH_OWNERSHIP,
+  useRoleArrayInStore,
+  useRoleWithOwnershipArray,
+} from "../role_store.js";
 import {
-  getRoleDatabaseListDetailsRoute,
-  getRoleTableListDetailsRoute,
-} from "./role_with_ownership_routes.js";
-import {
-  useRoleWithOwnershipCount,
-  useRoleWithOwnershipList,
-} from "./role_with_ownership_signals.js";
+  roleWithOwnershipListDetailsOnToggle,
+  roleWithOwnershipListDetailsOpenAtStart,
+} from "./role_with_ownership_list_details_state.js";
+import { getRoleDatabaseListDetailsRoute } from "./role_with_ownership_routes.js";
 
 export const roleWithOwnershipListDetailsController =
-  createExplorerGroupController("role_with_ownership_list");
+  createExplorerGroupController("role_with_ownership_list", {
+    detailsOpenAtStart: roleWithOwnershipListDetailsOpenAtStart,
+    detailsOnToggle: roleWithOwnershipListDetailsOnToggle,
+  });
 
 export const RoleWithOwnershipListDetails = (props) => {
   const roleWithOwnershipCount = useRoleWithOwnershipCount();
-  const roleWithOwnershipList = useRoleWithOwnershipList();
+  const roleWithOwnershipArray = useRoleWithOwnershipArray();
 
   return (
     <ExplorerGroup
       {...props}
       controller={roleWithOwnershipListDetailsController}
-      detailsRoute={ROLE_WITH_OWNERSHIP_LIST_DETAILS_ROUTE}
+      tailsAction={ROLE_WITH_OWNERSHIP.GET_MANY}
       idKey="oid"
       nameKey="rolname"
       labelChildren={
-        <TextAndCount
-          text={"ROLE WITH OWNERSHIP"}
-          count={roleWithOwnershipCount}
-        />
+        <TextAndCount text={"OWNERSHIP"} count={roleWithOwnershipCount} />
       }
       renderItem={(role, { children }) => {
         return (
@@ -55,21 +52,9 @@ export const RoleWithOwnershipListDetails = (props) => {
               renderItem={(subitem) => {
                 if (subitem.id === "tables") {
                   return (
-                    <Route.Details
-                      route={
-                        // ceci se produit un peu tard en réalité
-                        // idéalement la route devrait etre crée plus tot pour se charger plus tot
-                        // genre dans le signal du coup
-                        // si on a un role avec ownership
-                        // alors il faut immédiatement lui créer une route
-                        // pour les tables qu'ils own (au cas ou elle soit deja ouverte)
-                        // et donc qu'on veuille load direct
-                        // (il faut aussi que des qu'on perd ce role dans la liste des roles
-                        // la route soit bien garbage collect)
-                        getRoleTableListDetailsRoute(role)
-                      }
-                      renderLoaded={() => {
-                        const tables = useRoleTables(role);
+                    <Details
+                      action={ROLE_WITH_OWNERSHIP.GET_MANY}
+                      renderLoaded={(tableArray) => {
                         return (
                           <ExplorerItemList
                             renderItem={(table) => (
@@ -78,21 +63,20 @@ export const RoleWithOwnershipListDetails = (props) => {
                               </TableLink>
                             )}
                           >
-                            {tables}
+                            {tableArray}
                           </ExplorerItemList>
                         );
                       }}
                     >
                       <TextAndCount text="tables" count={role.table_count} />
-                    </Route.Details>
+                    </Details>
                   );
                 }
                 if (subitem.id === "databases") {
                   return (
-                    <Route.Details
-                      route={getRoleDatabaseListDetailsRoute(role)}
-                      renderLoaded={() => {
-                        const databaseList = useRoleDatabases(role);
+                    <Details
+                      action={getRoleDatabaseListDetailsRoute(role)}
+                      actionRenderer={(databaseArray) => {
                         return (
                           <ExplorerItemList
                             renderItem={(database) => (
@@ -101,7 +85,7 @@ export const RoleWithOwnershipListDetails = (props) => {
                               </DatabaseLink>
                             )}
                           >
-                            {databaseList}
+                            {databaseArray}
                           </ExplorerItemList>
                         );
                       }}
@@ -110,7 +94,7 @@ export const RoleWithOwnershipListDetails = (props) => {
                         text="databases"
                         count={role.database_count}
                       />
-                    </Route.Details>
+                    </Details>
                   );
                 }
                 return null;
@@ -140,9 +124,9 @@ export const RoleWithOwnershipListDetails = (props) => {
           </ExplorerDetails>
         );
       }}
-      useItemList={useRoleList}
+      useItemArrayInStore={useRoleArrayInStore}
     >
-      {roleWithOwnershipList}
+      {roleWithOwnershipArray}
     </ExplorerGroup>
   );
 };

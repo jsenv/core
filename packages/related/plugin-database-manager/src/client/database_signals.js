@@ -15,7 +15,7 @@ export const setRoleGroupCount = (count) => {
   roleGroupCountSignal.value = count;
 };
 const roleWithOwnershipCountSignal = signal(0);
-export const useRoleWithOwnershipCountSignal = () => {
+export const useRoleWithOwnershipCount = () => {
   return roleWithOwnershipCountSignal.value;
 };
 export const setRoleWithOwnershipCount = (count) => {

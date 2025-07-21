@@ -16,10 +16,10 @@ import {
 } from "../role/role_group/role_group_list_details.jsx";
 import { pickRoleIcon } from "../role/role_icons.jsx";
 import { useCurrentRole } from "../role/role_store.js";
-// import {
-//   RoleWithOwnershipListDetails,
-//   roleWithOwnershipListDetailsController,
-// } from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
+import {
+  RoleWithOwnershipListDetails,
+  roleWithOwnershipListDetailsController,
+} from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 import {
   TablesDetails,
@@ -77,11 +77,11 @@ const ExplorerBody = () => {
         if (element.id === roleGroupListDetailsController.id) {
           roleGroupListDetailsController.setHeightSetting(requestedHeight);
         }
-        // if (element.id === roleWithOwnershipListDetailsController.id) {
-        //   roleWithOwnershipListDetailsController.setHeightSetting(
-        //     requestedHeight,
-        //   );
-        // }
+        if (element.id === roleWithOwnershipListDetailsController.id) {
+          roleWithOwnershipListDetailsController.setHeightSetting(
+            requestedHeight,
+          );
+        }
       },
     });
     return flexDetailsSet.cleanup;
@@ -103,12 +103,11 @@ const ExplorerBody = () => {
       <TablesDetails
         resizable={resizableDetailsIdSet.has(tablesDetailsController.id)}
       />
-      {/*
       <RoleWithOwnershipListDetails
         resizable={resizableDetailsIdSet.has(
           roleWithOwnershipListDetailsController.id,
         )}
-      /> */}
+      />
     </div>
   );
 };
