@@ -92,30 +92,9 @@ const initAutoreload = ({
     httpActionWeakSet.add(httpAction);
   };
 
-  // Centralized autoreload logic
-  const performAutoreload = (triggeringAction, reason, options = {}) => {
-    const {
-      forceGetMany = false,
-      forceGet = false,
-      forceBoth = false,
-    } = options;
-
-    // Determine what should be reloaded
-    let shouldReloadGetMany = forceGetMany || forceBoth;
-    let shouldReloadGet = forceGet || forceBoth;
-
-    // For normal same-resource autoreload, check the triggering action
-    if (!forceGetMany && !forceGet && !forceBoth) {
-      shouldReloadGetMany = shouldAutoreloadGetMany(triggeringAction);
-      shouldReloadGet = shouldAutoreloadGet(triggeringAction);
-    }
-
-    if (!shouldReloadGetMany && !shouldReloadGet) {
-      return;
-    }
-
-    // Build the predicate for which actions to reload
-    const paramScopePredicate = paramScope
+  // Build the predicate for which actions to reload based on param scope
+  const buildParamScopePredicate = () => {
+    return paramScope
       ? (httpActionCandidate) => {
           // For parameterized actions, reload:
           // 1. Actions with same paramScope (siblings)
@@ -133,21 +112,41 @@ const initAutoreload = ({
           return isParamSubset(candidateParams, currentParams);
         }
       : (httpActionCandidate) => !httpActionCandidate.meta.paramScope;
+  };
 
-    const httpMetaPredicate =
-      shouldReloadGetMany && shouldReloadGet
-        ? (httpActionCandidate) => httpActionCandidate.meta.httpVerb === "GET"
-        : shouldReloadGetMany
-          ? (httpActionCandidate) =>
-              httpActionCandidate.meta.httpVerb === "GET" &&
-              httpActionCandidate.meta.httpMany === true
-          : (httpActionCandidate) =>
-              httpActionCandidate.meta.httpVerb === "GET" &&
-              !httpActionCandidate.meta.httpMany;
+  // Build the predicate for which HTTP methods to reload
+  const buildHttpMetaPredicate = ({ shouldReloadGetMany, shouldReloadGet }) => {
+    if (shouldReloadGetMany && shouldReloadGet) {
+      return (httpActionCandidate) =>
+        httpActionCandidate.meta.httpVerb === "GET";
+    }
+    if (shouldReloadGetMany) {
+      return (httpActionCandidate) =>
+        httpActionCandidate.meta.httpVerb === "GET" &&
+        httpActionCandidate.meta.httpMany === true;
+    }
+    if (shouldReloadGet) {
+      return (httpActionCandidate) =>
+        httpActionCandidate.meta.httpVerb === "GET" &&
+        !httpActionCandidate.meta.httpMany;
+    }
+    return () => false;
+  };
+
+  // Core autoreload execution logic
+  const performAutoreload = (
+    reason,
+    { shouldReloadGetMany, shouldReloadGet },
+  ) => {
+    const paramScopePredicate = buildParamScopePredicate();
+    const httpMetaPredicate = buildHttpMetaPredicate({
+      shouldReloadGetMany,
+      shouldReloadGet,
+    });
 
     const predicate = (httpActionCandidate) =>
-      paramScopePredicate(httpActionCandidate) &&
-      httpMetaPredicate(httpActionCandidate);
+      httpMetaPredicate(httpActionCandidate) &&
+      paramScopePredicate(httpActionCandidate);
 
     const toReloadSet = findAliveActionsMatching(httpActionWeakSet, predicate);
 
@@ -164,8 +163,16 @@ const initAutoreload = ({
   };
 
   const onActionDone = (httpAction) => {
-    // Handle same-resource autoreload using normal rules
-    performAutoreload(httpAction, `${httpAction} triggered`);
+    // Handle same-resource autoreload using configured rules
+    const shouldReloadGetMany = shouldAutoreloadGetMany(httpAction);
+    const shouldReloadGet = shouldAutoreloadGet(httpAction);
+    if (!shouldReloadGetMany && !shouldReloadGet) {
+      return;
+    }
+    performAutoreload(`${httpAction} triggered same-resource autoreload`, {
+      shouldReloadGetMany,
+      shouldReloadGet,
+    });
 
     // Handle cross-resource dependency notifications
     if (resourceInstance && httpAction.meta.httpVerb !== "GET") {
@@ -175,15 +182,14 @@ const initAutoreload = ({
 
   // Handle dependency-triggered reloads
   const onDependencyActionDone = (httpAction) => {
-    // Dependencies have specific behavior: only non-GET verbs trigger autoreload,
-    // and they only trigger GET_MANY reloads (not individual GET reloads)
-    if (httpAction.meta.httpVerb !== "GET") {
-      performAutoreload(
-        httpAction,
-        `${httpAction} triggered dependency reload`,
-        { forceGetMany: true }, // Dependencies only reload GET_MANY actions
-      );
+    if (httpAction.meta.httpVerb === "GET") {
+      // Dependencies have specific behavior: only non-GET verbs trigger autoreload,
+      // and they only trigger GET_MANY reloads (not individual GET reloads)
+      return;
     }
+    performAutoreload(`${httpAction} triggered dependency autoreload`, {
+      shouldReloadGetMany: true,
+    });
   };
 
   // Register this autoreload instance as dependent on its dependencies
