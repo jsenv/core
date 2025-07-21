@@ -1,9 +1,12 @@
+import { Overflow } from "../layout/overflow.jsx";
+
 import.meta.css = /* css */ `
   .text_and_count {
     display: flex;
     align-items: center;
     gap: 3px;
     flex: 1;
+    white-space: nowrap;
   }
 
   .count {
@@ -13,9 +16,11 @@ import.meta.css = /* css */ `
 
 export const TextAndCount = ({ text, count }) => {
   return (
-    <span className="text_and_count">
+    <Overflow
+      className="text_and_count"
+      afterContent={count > 0 && <span className="count">({count})</span>}
+    >
       <span className="label">{text}</span>
-      {count > 0 && <span className="count">({count})</span>}
-    </span>
+    </Overflow>
   );
 };
