@@ -1,7 +1,19 @@
+import { useActionData } from "@jsenv/navi";
 import { DATABASE } from "./database/database_store.js";
 import { errorFromResponse } from "./error_from_response.js";
 import { ROLE } from "./role/role_store.js";
 import { TABLE } from "./table/table_store.js";
+
+export const ROLE_WITH_OWNERSHIP = ROLE.withParams(
+  { owners: true },
+  {
+    dependencies: [ROLE, DATABASE, TABLE],
+  },
+);
+export const useRoleWithOwnershipArray = () => {
+  const roleWithOwnershipArray = useActionData(ROLE_WITH_OWNERSHIP.GET_MANY);
+  return roleWithOwnershipArray;
+};
 
 export const ROLE_MEMBERS = ROLE.many("members", ROLE, {
   GET_MANY: async ({ rolname }, { signal }) => {

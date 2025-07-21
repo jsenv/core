@@ -8,14 +8,15 @@ import {
   ExplorerGroup,
 } from "../../explorer/explorer_group.jsx";
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
-import { ROLE_DATABASES, ROLE_TABLES } from "../../store.js";
+import {
+  ROLE_DATABASES,
+  ROLE_TABLES,
+  ROLE_WITH_OWNERSHIP,
+  useRoleWithOwnershipArray,
+} from "../../store.js";
 import { TableLink } from "../../table/table_link.jsx";
 import { pickRoleIcon } from "../role_icons.jsx";
-import {
-  ROLE_WITH_OWNERSHIP,
-  useRoleArrayInStore,
-  useRoleWithOwnershipArray,
-} from "../role_store.js";
+import { useRoleArrayInStore } from "../role_store.js";
 import {
   roleWithOwnershipListDetailsOnToggle,
   roleWithOwnershipListDetailsOpenAtStart,
