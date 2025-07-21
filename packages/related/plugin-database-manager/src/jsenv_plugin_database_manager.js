@@ -50,7 +50,7 @@ const selectTables = async (sql, { publicFilter, rolname }) => {
     WHERE
       ${whereConditions.flatMap((x, i) => (i ? [sql`AND`, x] : x))}
   `;
-  return { data };
+  return data;
 };
 
 export const jsenvPluginDatabaseManager = ({

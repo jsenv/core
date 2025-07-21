@@ -29,6 +29,10 @@ import.meta.css = /* css */ `
   .explorer_details summary {
     padding-left: calc(16px + var(--details-depth, 0) * 16px);
   }
+
+  .explorer_details .explorer_item_content {
+    padding-left: calc(32px + var(--details-depth, 0) * 16px);
+  }
 `;
 
 export const roleWithOwnershipListDetailsController =
@@ -95,6 +99,7 @@ export const RoleWithOwnershipListDetails = (props) => {
                 if (subitem.id === "tables") {
                   return (
                     <Details
+                      id={`role_${role.rolname}_tables_details`}
                       className="explorer_details"
                       style={{ "--details-depth": 1 }}
                       action={ROLE_TABLES.GET_MANY.bindParams({
@@ -109,7 +114,10 @@ export const RoleWithOwnershipListDetails = (props) => {
                           <ExplorerItemList
                             itemArray={tableArray}
                             renderItem={(table) => (
-                              <TableLink table={table}>
+                              <TableLink
+                                className="explorer_item_content"
+                                table={table}
+                              >
                                 {table.tablename}
                               </TableLink>
                             )}
@@ -122,6 +130,7 @@ export const RoleWithOwnershipListDetails = (props) => {
                 if (subitem.id === "databases") {
                   return (
                     <Details
+                      id={`role_${role.rolname}_databases_details`}
                       className="explorer_details"
                       style={{ "--details-depth": 1 }}
                       label={
@@ -139,7 +148,10 @@ export const RoleWithOwnershipListDetails = (props) => {
                           <ExplorerItemList
                             itemArray={databaseArray}
                             renderItem={(database) => (
-                              <DatabaseLink database={database}>
+                              <DatabaseLink
+                                className="explorer_item_content"
+                                database={database}
+                              >
                                 {database.datname}
                               </DatabaseLink>
                             )}

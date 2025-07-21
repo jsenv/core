@@ -17,7 +17,7 @@ export const ROLE_MEMBERS = ROLE.many("members", ROLE, {
     }
     const { data } = await response.json();
     const members = data;
-    return members;
+    return { rolname, members };
   },
   POST: async ({ rolname, memberRolname }, { signal }) => {
     const response = await fetch(
@@ -68,7 +68,7 @@ export const ROLE_DATABASES = ROLE.many("databases", DATABASE, {
     }
     const { data } = await response.json();
     const databases = data;
-    return databases;
+    return { rolname, databases };
   },
 });
 export const ROLE_TABLES = ROLE.many("tables", TABLE, {
@@ -85,7 +85,7 @@ export const ROLE_TABLES = ROLE.many("tables", TABLE, {
     }
     const { data } = await response.json();
     const tables = data;
-    return tables;
+    return { rolname, tables };
   },
 });
 
