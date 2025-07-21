@@ -125,7 +125,9 @@
   /* this is the line height of the text */
   /* without this, the input is 0.5px too big in height and slighlty moves the text or the layout around */
   /* height: 1.5em; */
-  width: 100%;
+  flex: 1;
+  padding-top: 0.1em;
+  padding-bottom: 0em;
 }
 .explorer_item_content {
   align-items: center;
@@ -133,7 +135,6 @@
   display: flex;
   gap: 0.3em;
   min-width: 0; /* https://css-tricks.com/flexbox-truncated-text/#aa-the-solution-is-min-width-0-on-the-flex-child */
-  overflow: hidden;
 }
 
 .explorer_foot {
