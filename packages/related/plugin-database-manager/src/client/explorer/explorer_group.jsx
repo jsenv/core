@@ -2,7 +2,7 @@
  *
  */
 
-import { Details, valueInLocalStorage } from "@jsenv/navi";
+import { Button, Details, valueInLocalStorage } from "@jsenv/navi";
 import { effect, signal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import {
@@ -135,9 +135,15 @@ export const ExplorerGroup = forwardRef((props, ref) => {
         {renderNewButtonChildren ? (
           <>
             <span style="display: flex; flex: 1"></span>
-            <button
+            <Button
               className="summary_action_icon"
-              style="width: 22px; height: 22px; cursor: pointer;"
+              discrete
+              style={{
+                width: "22px",
+                height: "22px",
+                cursor: "pointer",
+                padding: "4px",
+              }}
               onMouseDown={(e) => {
                 // ensure when input is focused it stays focused
                 // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
@@ -149,7 +155,7 @@ export const ExplorerGroup = forwardRef((props, ref) => {
               }}
             >
               {renderNewButtonChildren()}
-            </button>
+            </Button>
           </>
         ) : null}
       </Details>

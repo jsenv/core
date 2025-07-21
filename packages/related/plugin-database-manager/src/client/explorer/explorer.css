@@ -49,15 +49,10 @@
   visibility: hidden;
   pointer-events: none;
   padding: 0;
-  border: 0;
-  background-color: transparent;
 }
 .explorer_group[open] .summary_action_icon {
   visibility: visible;
   pointer-events: auto;
-}
-.summary_action_icon:hover {
-  background: rgba(0, 0, 0, 0.1);
 }
 .summary_label {
   display: flex;
@@ -112,14 +107,13 @@
 .explorer_item_list {
   margin-top: 0;
   margin-bottom: 0;
-  padding-left: 3px; /* let space for item outline (2px by default) */
-  padding-top: 3px; /* let space for item outline (2px by default) */
-  padding-right: 3px; /* let space for item outline (2px by default) */
+  padding-left: 0;
 }
 .explorer_item {
   display: flex;
 }
 .explorer_item .navi_link {
+  border-radius: 0;
   padding-left: 16px;
 }
 .explorer_item > a:focus {

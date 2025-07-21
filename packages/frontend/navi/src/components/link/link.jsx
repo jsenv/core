@@ -23,19 +23,6 @@ import.meta.css = /* css */ `
     border-radius: 2px;
   }
 
-  /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
-  .navi_link[data-has-shortcuts]:focus,
-  .navi_link:focus-visible,
-  .navi_link[data-focus-visible] {
-    outline: 2px solid #1d4ed8;
-    outline-offset: 2px;
-  }
-
-  .navi_link[data-outline-inset] {
-    padding: 2px;
-    outline-offset: -2px;
-  }
-
   .navi_link:focus {
     position: relative;
     z-index: 1; /* Ensure focus outline is above other elements */
@@ -89,6 +76,7 @@ const LinkBasic = forwardRef((props, ref) => {
         className={["navi_link", ...className.split(" ")].join(" ")}
         aria-busy={loading}
         inert={disabled}
+        data-field
         data-readonly={readOnly ? "" : undefined}
         onClick={(e) => {
           closeValidationMessage(e.target, "click");
@@ -188,7 +176,8 @@ const LinkWithAction = forwardRef((props, ref) => {
       loading={innerLoading}
       readOnly={readOnly || actionLoading}
       data-readonly-silent={actionLoading && !readOnly ? "" : undefined}
-      data-has-shortcuts={shortcuts.length > 0 ? "" : undefined}
+      /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
+      data-focus-visible={shortcuts.length > 0 ? "" : undefined}
       onKeyDown={(e) => {
         onKeyDownForShortcuts(e);
         onKeyDown?.(e);

@@ -44,35 +44,54 @@ import.meta.css = /* css */ `
 
   [data-field] {
     border-radius: 2px;
-    border-width: calc(var(--field-border-width) + var(--field-outline-width));
-    border-style: solid;
-    border-color: transparent;
-    outline: var(--field-border-width) solid var(--field-border-color);
+    outline-width: var(--field-border-width);
+    outline-style: solid;
+    outline-color: transparent;
     outline-offset: calc(-1 * (var(--field-border-width)));
   }
 
+  [data-field][data-field-with-border] {
+    border-width: calc(var(--field-border-width) + var(--field-outline-width));
+    border-style: solid;
+    border-color: transparent;
+    outline-color: var(--field-border-color);
+  }
+
+  [data-field-with-border-hover] {
+    border: 0;
+  }
+
   [data-field-with-background] {
-    background: var(--field-background-color);
+    background-color: var(--field-background-color);
+  }
+
+  [data-field-with-background]:hover {
+    background-color: var(--field-hover-background-color);
   }
 
   [data-field-with-hover]:hover {
     outline-color: var(--field-hover-border-color);
-    background: var(--field-hover-background-color);
   }
 
-  [data-field]:active,
-  [data-field][data-active] {
+  [data-field][data-field-with-border]:active,
+  [data-field][data-field-with-border][data-active] {
     outline-color: var(--field-active-border-color);
+    background-color: none;
+  }
+
+  [data-field][readonly][data-field-with-border],
+  [data-field][data-readonly][data-field-with-border] {
+    outline-color: var(--field-readonly-border-color);
   }
 
   [data-field][readonly],
   [data-field][data-readonly] {
-    outline-color: var(--field-readonly-border-color);
     background-color: var(--field-readonly-background-color);
     color: var(--field-readonly-text-color);
   }
 
-  [data-field]:focus-visible {
+  [data-field]:focus-visible,
+  [data-field][data-focus-visible]:focus {
     outline-style: solid;
     outline-width: calc(var(--field-border-width) + var(--field-outline-width));
     outline-offset: calc(

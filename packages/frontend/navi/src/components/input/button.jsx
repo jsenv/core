@@ -67,6 +67,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     readOnly,
     children,
     appearance = "custom",
+    discrete,
     style = {},
     ...rest
   } = props;
@@ -77,8 +78,9 @@ const ButtonBasic = forwardRef((props, ref) => {
   useConstraints(innerRef, constraints);
 
   let {
-    borderWidth = 1,
-    outlineWidth = 1,
+    border,
+    borderWidth = border === "none" || discrete ? 0 : 1,
+    outlineWidth = discrete ? 0 : 1,
     borderColor = "light-dark(#767676, #8e8e93)",
     ...restStyle
   } = style;
@@ -101,6 +103,8 @@ const ButtonBasic = forwardRef((props, ref) => {
         data-field=""
         data-field-with-background=""
         data-field-with-hover=""
+        data-field-with-border={borderWidth ? "" : undefined}
+        data-field-with-border-hover={discrete ? "" : undefined}
         data-custom={appearance === "custom" ? "" : undefined}
         data-validation-message-arrow-x="center"
         data-readonly={readOnly ? "" : undefined}
