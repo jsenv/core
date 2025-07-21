@@ -72,6 +72,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
       type={type}
       value={value}
       data-field=""
+      data-field-with-border=""
       data-custom={appearance === "custom" ? "" : undefined}
       {...rest}
     />

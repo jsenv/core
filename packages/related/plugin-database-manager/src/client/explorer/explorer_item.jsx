@@ -20,7 +20,8 @@ export const ExplorerItem = ({
   const renameAction = useRenameItemAction(item);
   const { editable, startEditing, stopEditing } = useEditableController();
 
-  return renderItem(item, {
+  const itemRendered = renderItem(item, {
+    className: "explorer_item_content",
     shortcuts: [
       {
         key: "Enter",
@@ -49,6 +50,7 @@ export const ExplorerItem = ({
       <Overflow>{itemName}</Overflow>
     ),
   });
+  return itemRendered;
 };
 
 const RenameInputOrName = ({

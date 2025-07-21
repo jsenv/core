@@ -14,8 +14,8 @@ import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;
 const ANIMATE_TOGGLE = true;
-const ANIMATE_RESIZE_AFTER_MUTATION = false;
-const DEBUG = true;
+const ANIMATE_RESIZE_AFTER_MUTATION = true;
+const DEBUG = false;
 
 export const initFlexDetailsSet = (
   container,
