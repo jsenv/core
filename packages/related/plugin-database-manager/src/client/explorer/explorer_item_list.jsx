@@ -30,7 +30,7 @@ export const ExplorerItemList = ({
         );
       })}
       {isCreatingNew && (
-        <li className="explorer_item">
+        <li className="explorer_item" key="new_item">
           <ExplorerNewItem
             nameKey={nameKey}
             useItemArrayInStore={useItemArrayInStore}
