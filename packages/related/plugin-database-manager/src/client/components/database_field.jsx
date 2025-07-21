@@ -1,5 +1,48 @@
 import { Field, Input } from "@jsenv/navi";
 
+export const DatabaseFieldset = ({
+  item,
+  columns,
+  usePutAction,
+  customFields = {},
+}) => {
+  columns.sort((a, b) => {
+    return a.ordinal_position - b.ordinal_position;
+  });
+  return (
+    <ul>
+      {columns.map((column) => {
+        const columnName = column.column_name;
+        const customField = customFields?.[columnName];
+        const dbField = customField ? (
+          customField(item)
+        ) : (
+          <DatabaseFieldWrapper
+            item={item}
+            column={column}
+            usePutAction={usePutAction}
+          />
+        );
+        return <li key={columnName}>{dbField}</li>;
+      })}
+    </ul>
+  );
+};
+
+const DatabaseFieldWrapper = ({ item, column, usePutAction }) => {
+  const columnName = column.column_name;
+  const putAction = usePutAction(columnName);
+  const value = item ? item[columnName] : "";
+
+  return (
+    <DatabaseField
+      label={<span>{columnName}:</span>}
+      column={column}
+      value={value}
+      action={putAction}
+    />
+  );
+};
 export const DatabaseField = ({ column, label, ...rest }) => {
   const columnName = column.column_name;
 
