@@ -32,19 +32,21 @@ const captureScrollState = (element) => {
   const scrollTopPercent =
     scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0;
 
-  // Return restore function
+  // Return preserve function that maintains scroll position relative to content
   return () => {
-    // First try to restore exact pixel values
-    element.scrollLeft = scrollLeft;
-    element.scrollTop = scrollTop;
+    // Get current dimensions after DOM changes
+    const newScrollWidth = element.scrollWidth;
+    const newScrollHeight = element.scrollHeight;
+    const newClientWidth = element.clientWidth;
+    const newClientHeight = element.clientHeight;
 
-    // If content dimensions changed, use percentage-based fallback
-    requestAnimationFrame(() => {
-      const newScrollWidth = element.scrollWidth;
-      const newScrollHeight = element.scrollHeight;
-      const newClientWidth = element.clientWidth;
-      const newClientHeight = element.clientHeight;
-
+    // If content dimensions changed significantly, use percentage-based positioning
+    if (
+      Math.abs(newScrollWidth - scrollWidth) > 1 ||
+      Math.abs(newScrollHeight - scrollHeight) > 1 ||
+      Math.abs(newClientWidth - clientWidth) > 1 ||
+      Math.abs(newClientHeight - clientHeight) > 1
+    ) {
       if (newScrollWidth > newClientWidth) {
         const newScrollLeft =
           scrollLeftPercent * (newScrollWidth - newClientWidth);
@@ -56,7 +58,10 @@ const captureScrollState = (element) => {
           scrollTopPercent * (newScrollHeight - newClientHeight);
         element.scrollTop = newScrollTop;
       }
-    });
+    } else {
+      element.scrollLeft = scrollLeft;
+      element.scrollTop = scrollTop;
+    }
   };
 };
 
@@ -148,16 +153,14 @@ export const initFlexDetailsSet = (
         const detailsContent = summary.nextElementSibling;
         let detailsHeight;
         if (detailsContent) {
-          const restoreScrollState = captureScrollState(detailsContent);
+          const preserveScroll = captureScrollState(detailsContent);
           const restoreSizeStyle = forceStyles(detailsContent, {
             height: "auto",
           });
           const detailsContentHeight = getHeight(detailsContent);
           restoreSizeStyle();
-
-          // Restore scroll position after height manipulation
-          restoreScrollState();
-
+          // Preserve scroll position after height manipulation
+          preserveScroll();
           detailsHeight = summaryHeight + detailsContentHeight;
         } else {
           // empty details content like
@@ -923,6 +926,8 @@ const prepareSyncDetailsContentHeight = (details) => {
     };
   }
 
+  // Capture scroll state at the beginning before any DOM manipulation
+  const preserveScroll = captureScrollState(content);
   content.style.height = "var(--content-height)";
 
   const contentComputedStyle = getComputedStyle(content);
@@ -931,9 +936,6 @@ const prepareSyncDetailsContentHeight = (details) => {
     contentComputedStyle.scrollbarGutter !== "stable";
 
   return (detailsHeight, { isAnimation, isAnimationEnd } = {}) => {
-    // Capture scroll state and get restore function
-    const restoreScrollState = captureScrollState(content);
-
     const contentHeight = detailsHeight - summaryHeight;
     details.style.setProperty(
       "--details-height",
@@ -965,8 +967,9 @@ const prepareSyncDetailsContentHeight = (details) => {
       }
     }
 
-    // Restore scroll position using smart percentage-based restoration
-    restoreScrollState();
+    // Preserve scroll position at the end after all DOM manipulations
+    // The captureScrollState function is smart enough to handle new dimensions
+    preserveScroll();
   };
 };
 
