@@ -17,9 +17,18 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const LinkWithIcon = ({ icon, isCurrent, children, ...rest }) => {
+export const LinkWithIcon = ({
+  icon,
+  isCurrent,
+  children,
+  className,
+  ...rest
+}) => {
   return (
-    <Link className="link_with_icon" {...rest}>
+    <Link
+      className={["link_with_icon", ...className.split(" ")].join(" ")}
+      {...rest}
+    >
       <FontSizedSvg>{icon}</FontSizedSvg>
       {isCurrent && (
         <FontSizedSvg>

@@ -56,6 +56,7 @@ const LinkBasic = forwardRef((props, ref) => {
     spaceToClick = true,
     constraints = [],
     onClick,
+    onKeyDown,
     ...rest
   } = props;
 
@@ -93,6 +94,7 @@ const LinkBasic = forwardRef((props, ref) => {
               e.target.click();
             }
           }
+          onKeyDown?.(e);
         }}
       >
         {children}

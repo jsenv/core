@@ -61,7 +61,10 @@ const DatabaseFields = ({ database }) => {
         });
 
         if (columnName === "datdba") {
-          // we will display this elswhere
+          // TODO: display a select with the ownerRole being selected
+          // this select should also be loading because we'll loading other roles
+          // and we can open that select while it's loading ideally (but not for now)
+          // this select will display all other roles and will update the role on change
           return (
             <li key={columnName}>
               Owner:

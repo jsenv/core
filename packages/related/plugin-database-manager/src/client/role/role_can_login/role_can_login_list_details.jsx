@@ -39,10 +39,8 @@ export const RoleCanLoginListDetails = (props) => {
         <TextAndCount text={"ROLE LOGINS"} count={roleCanLoginCount} />
       }
       renderNewButtonChildren={() => <RoleCanLoginWithPlusSvg />}
-      renderItem={(role, { children, ...props }) => (
-        <RoleLink draggable={false} role={role} {...props}>
-          {children}
-        </RoleLink>
+      renderItem={(role, props) => (
+        <RoleLink draggable={false} role={role} {...props} />
       )}
       useItemArrayInStore={useRoleArrayInStore}
       useRenameItemAction={(role) => {
