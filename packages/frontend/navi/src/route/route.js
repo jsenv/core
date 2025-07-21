@@ -221,7 +221,7 @@ const routePrivatePropertiesMap = new Map();
 const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
-export const createRoute = (urlPatternInput) => {
+const createRoute = (urlPatternInput) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -231,6 +231,7 @@ export const createRoute = (urlPatternInput) => {
   };
 
   const route = {
+    isRoute: true,
     active: false,
     params: NO_PARAMS,
     buildUrl: null,
@@ -239,6 +240,9 @@ export const createRoute = (urlPatternInput) => {
     url: null,
     action: null,
     cleanup,
+    toString: () => {
+      return `route "${urlPatternInput}"`;
+    },
   };
   routeSet.add(route);
 
@@ -330,12 +334,30 @@ export const createRoute = (urlPatternInput) => {
   return route;
 };
 export const useRouteStatus = (route) => {
-  const routePrivateProperties = getRoutePrivateProperties(route);
-
-  if (!routePrivateProperties) {
-    throw new Error(
-      "Route is not properly initialized. Make sure defineRoutes() is called before using routes.",
+  if (import.meta.dev && (!route || !route.isRoute)) {
+    throw new TypeError(
+      `useRouteStatus() requires a route object, but received ${route}.`,
     );
+  }
+  const routePrivateProperties = getRoutePrivateProperties(route);
+  if (!routePrivateProperties) {
+    // In development, provide more debugging info for hot reload issues
+    if (import.meta.dev) {
+      const isInCurrentRouteSet = routeSet.has(route);
+      const routeString = route.toString();
+      console.error(`Route not found in private properties map:`, {
+        route: routeString,
+        isInCurrentRouteSet,
+        currentRouteSetSize: routeSet.size,
+        privatePropertiesMapSize: routePrivatePropertiesMap.size,
+      });
+      throw new Error(
+        `Cannot find route private properties for ${routeString}. ` +
+          `This might be caused by hot reloading - try refreshing the page. ` +
+          `Route in current set: ${isInCurrentRouteSet}`,
+      );
+    }
+    throw new Error(`Cannot find route private properties for ${route}`);
   }
 
   const { activeSignal, paramsSignal } = routePrivateProperties;
@@ -381,6 +403,6 @@ export const defineRoutes = (routeDefinition) => {
   return routeArray;
 };
 
-if (import.meta.hot) {
-  import.meta.hot.decline();
-}
+// if (import.meta.hot) {
+//   import.meta.hot.decline();
+// }

@@ -15,7 +15,7 @@ import { startResizeGesture } from "./start_resize_gesture.js";
 const HEIGHT_ANIMATION_DURATION = 300;
 const ANIMATE_TOGGLE = true;
 const ANIMATE_RESIZE_AFTER_MUTATION = true;
-const ANIMATION_THRESHOLD_PX = 2; // Don't animate changes smaller than this
+const ANIMATION_THRESHOLD_PX = 10; // Don't animate changes smaller than this
 const DEBUG = false;
 
 // Helper to create scroll state capture/restore function for an element
