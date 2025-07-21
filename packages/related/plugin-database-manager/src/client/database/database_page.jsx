@@ -1,5 +1,5 @@
 import { Button } from "@jsenv/navi";
-import { DatabaseValue } from "../components/database_value.jsx";
+import { DatabaseField } from "../components/database_field.jsx";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import { RoleLink } from "../role/role_link.jsx";
 import { DatabaseSvg } from "./database_icons.jsx";
@@ -74,7 +74,7 @@ const DatabaseFields = ({ database }) => {
         }
         return (
           <li key={columnName}>
-            <DatabaseValue
+            <DatabaseField
               label={<span>{columnName}:</span>}
               column={column}
               value={value}

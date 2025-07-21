@@ -1,6 +1,6 @@
 import { Field, Input } from "@jsenv/navi";
 
-export const DatabaseValue = ({ column, label, ...rest }) => {
+export const DatabaseField = ({ column, label, ...rest }) => {
   const columnName = column.column_name;
 
   if (column.name === "tablename") {

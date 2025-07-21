@@ -19,7 +19,7 @@
  */
 
 import { Button } from "@jsenv/navi";
-import { DatabaseValue } from "../components/database_value.jsx";
+import { DatabaseField } from "../components/database_field.jsx";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import { RoleLink } from "../role/role_link.jsx";
 import { TableSvg } from "./table_icons.jsx";
@@ -92,7 +92,7 @@ const TableFields = ({ table }) => {
         }
         return (
           <li key={columnName}>
-            <DatabaseValue
+            <DatabaseField
               label={<span>{columnName}:</span>}
               column={column}
               value={value}
