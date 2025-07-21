@@ -341,21 +341,11 @@ export const useRouteStatus = (route) => {
   }
   const routePrivateProperties = getRoutePrivateProperties(route);
   if (!routePrivateProperties) {
-    // In development, provide more debugging info for hot reload issues
     if (import.meta.dev) {
-      const isInCurrentRouteSet = routeSet.has(route);
-      const routeString = route.toString();
-      console.error(`Route not found in private properties map:`, {
-        route: routeString,
-        isInCurrentRouteSet,
-        currentRouteSetSize: routeSet.size,
-        privatePropertiesMapSize: routePrivatePropertiesMap.size,
-      });
-      throw new Error(
-        `Cannot find route private properties for ${routeString}. ` +
-          `This might be caused by hot reloading - try refreshing the page. ` +
-          `Route in current set: ${isInCurrentRouteSet}`,
-      );
+      let errorMessage = `Cannot find route private properties for ${route}.`;
+
+      errorMessage += `\nThis might be caused by hot reloading - try refreshing the page.`;
+      throw new Error(errorMessage);
     }
     throw new Error(`Cannot find route private properties for ${route}`);
   }
@@ -375,6 +365,18 @@ let onRouteDefined = () => {};
 export const setOnRouteDefined = (v) => {
   onRouteDefined = v;
 };
+/**
+ * Define all routes for the application.
+ *
+ * ⚠️ HOT RELOAD WARNING: When destructuring the returned routes, use 'let' instead of 'const'
+ * to allow hot reload to update the route references:
+ *
+ * ❌ const [ROLE_ROUTE, DATABASE_ROUTE] = defineRoutes({...})
+ * ✅ let [ROLE_ROUTE, DATABASE_ROUTE] = defineRoutes({...})
+ *
+ * @param {Object} routeDefinition - Object mapping URL patterns to actions
+ * @returns {Array} Array of route objects in the same order as the keys
+ */
 // All routes MUST be created at once because any url can be accessed
 // at any given time (url can be shared, reloaded, etc..)
 // Later I'll consider adding ability to have dynamic import into the mix
@@ -402,7 +404,3 @@ export const defineRoutes = (routeDefinition) => {
 
   return routeArray;
 };
-
-// if (import.meta.hot) {
-//   import.meta.hot.decline();
-// }
