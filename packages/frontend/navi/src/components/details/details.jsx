@@ -52,7 +52,8 @@ export const Details = forwardRef((props, ref) => {
 const DetailsBasic = forwardRef((props, ref) => {
   const {
     id,
-    children = "Summary",
+    label = "Summary",
+    children,
     open,
     loading,
     className,
@@ -62,15 +63,6 @@ const DetailsBasic = forwardRef((props, ref) => {
 
   const [navState, setNavState] = useNavState(id);
   const [innerOpen, innerOpenSetter] = useState(open || navState);
-
-  let summaryChildren;
-  let contentChildren;
-  if (Array.isArray(children)) {
-    summaryChildren = children[0];
-    contentChildren = children.slice(1);
-  } else {
-    summaryChildren = children;
-  }
 
   /**
    * Browser will dispatch "toggle" event even if we set open={true}
@@ -118,10 +110,10 @@ const DetailsBasic = forwardRef((props, ref) => {
       <summary>
         <div className="summary_body">
           <SummaryMarker open={innerOpen} loading={loading} />
-          <div className="summary_label">{summaryChildren}</div>
+          <div className="summary_label">{label}</div>
         </div>
       </summary>
-      {contentChildren}
+      {children}
     </details>
   );
 });
@@ -129,14 +121,13 @@ const DetailsBasic = forwardRef((props, ref) => {
 const DetailsWithAction = forwardRef((props, ref) => {
   const {
     action,
-    actionRenderer,
-    children = "Summary",
     loading,
     onToggle,
     onActionPrevented,
     onActionStart,
     onActionError,
     onActionEnd,
+    children,
     ...rest
   } = props;
 
@@ -175,12 +166,7 @@ const DetailsWithAction = forwardRef((props, ref) => {
       }}
       loading={loading || actionLoading}
     >
-      {[
-        children,
-        <ActionRenderer key="content" action={effectiveAction}>
-          {actionRenderer}
-        </ActionRenderer>,
-      ]}
+      <ActionRenderer action={effectiveAction}>{children}</ActionRenderer>
     </DetailsBasic>
   );
 });

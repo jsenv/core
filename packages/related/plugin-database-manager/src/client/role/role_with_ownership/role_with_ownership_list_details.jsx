@@ -1,8 +1,8 @@
 import { Details } from "@jsenv/navi";
+import { IconAndText } from "../../components/icon_and_text.jsx";
 import { TextAndCount } from "../../components/text_and_count.jsx";
 import { DatabaseLink } from "../../database/database_link.jsx";
 import { useRoleWithOwnershipCount } from "../../database_signals.js";
-import { ExplorerDetails } from "../../explorer/explorer_details.jsx";
 import {
   createExplorerGroupController,
   ExplorerGroup,
@@ -10,6 +10,7 @@ import {
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
 import { ROLE_DATABASES, ROLE_TABLES } from "../../store.js";
 import { TableLink } from "../../table/table_link.jsx";
+import { pickRoleIcon } from "../role_icons.jsx";
 import {
   ROLE_WITH_OWNERSHIP,
   useRoleArrayInStore,
@@ -19,6 +20,13 @@ import {
   roleWithOwnershipListDetailsOnToggle,
   roleWithOwnershipListDetailsOpenAtStart,
 } from "./role_with_ownership_list_details_state.js";
+
+import.meta.css = /* css */ `
+  .explorer_details {
+    flex: 1;
+    padding-left: 16px;
+  }
+`;
 
 export const roleWithOwnershipListDetailsController =
   createExplorerGroupController("role_with_ownership_list", {
@@ -40,11 +48,21 @@ export const RoleWithOwnershipListDetails = (props) => {
       labelChildren={
         <TextAndCount text={"OWNERSHIP"} count={roleWithOwnershipCount} />
       }
-      renderItem={(role, { children }) => {
+      renderItem={(role) => {
         return (
-          <ExplorerDetails
+          <Details
             id={`role_${role.rolname}_ownership_details`}
-            label={<TextAndCount text={children} count={role.object_count} />}
+            className="explorer_details"
+            label={
+              <TextAndCount
+                text={
+                  <IconAndText icon={pickRoleIcon(role)}>
+                    {role.rolname}
+                  </IconAndText>
+                }
+                count={role.object_count}
+              />
+            }
           >
             <ExplorerItemList
               idKey="id"
@@ -73,10 +91,15 @@ export const RoleWithOwnershipListDetails = (props) => {
                 if (subitem.id === "tables") {
                   return (
                     <Details
+                      className="explorer_details"
                       action={ROLE_TABLES.GET_MANY.bindParams({
                         rolname: role.rolname,
                       })}
-                      renderLoaded={(tableArray) => {
+                      label={
+                        <TextAndCount text="tables" count={role.table_count} />
+                      }
+                    >
+                      {(tableArray) => {
                         return (
                           <ExplorerItemList
                             itemArray={tableArray}
@@ -88,18 +111,24 @@ export const RoleWithOwnershipListDetails = (props) => {
                           />
                         );
                       }}
-                    >
-                      <TextAndCount text="tables" count={role.table_count} />
                     </Details>
                   );
                 }
                 if (subitem.id === "databases") {
                   return (
                     <Details
+                      className="explorer_details"
+                      label={
+                        <TextAndCount
+                          text="databases"
+                          count={role.database_count}
+                        />
+                      }
                       action={ROLE_DATABASES.GET_MANY.bindParams({
                         rolname: role.rolname,
                       })}
-                      actionRenderer={(databaseArray) => {
+                    >
+                      {(databaseArray) => {
                         return (
                           <ExplorerItemList
                             itemArray={databaseArray}
@@ -111,18 +140,13 @@ export const RoleWithOwnershipListDetails = (props) => {
                           />
                         );
                       }}
-                    >
-                      <TextAndCount
-                        text="databases"
-                        count={role.database_count}
-                      />
                     </Details>
                   );
                 }
                 return null;
               }}
             ></ExplorerItemList>
-          </ExplorerDetails>
+          </Details>
         );
       }}
       useItemArrayInStore={useRoleArrayInStore}

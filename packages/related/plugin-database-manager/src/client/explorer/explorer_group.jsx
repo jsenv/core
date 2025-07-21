@@ -112,7 +112,39 @@ export const ExplorerGroup = forwardRef((props, ref) => {
         data-min-height="150"
         data-requested-height={heightSetting}
         action={detailsAction}
-        actionRenderer={(itemArray) => {
+        label={
+          <>
+            {labelChildren}
+            {renderNewButtonChildren ? (
+              <>
+                <span style="display: flex; flex: 1"></span>
+                <Button
+                  className="summary_action_icon"
+                  discrete
+                  style={{
+                    width: "22px",
+                    height: "22px",
+                    cursor: "pointer",
+                    padding: "4px",
+                  }}
+                  onMouseDown={(e) => {
+                    // ensure when input is focused it stays focused
+                    // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
+                    e.preventDefault();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    startCreatingNew();
+                  }}
+                >
+                  {renderNewButtonChildren()}
+                </Button>
+              </>
+            ) : null}
+          </>
+        }
+      >
+        {(itemArray) => {
           return (
             <div className="explorer_group_content">
               <ExplorerItemList
@@ -130,34 +162,6 @@ export const ExplorerGroup = forwardRef((props, ref) => {
             </div>
           );
         }}
-      >
-        {labelChildren}
-        {renderNewButtonChildren ? (
-          <>
-            <span style="display: flex; flex: 1"></span>
-            <Button
-              className="summary_action_icon"
-              discrete
-              style={{
-                width: "22px",
-                height: "22px",
-                cursor: "pointer",
-                padding: "4px",
-              }}
-              onMouseDown={(e) => {
-                // ensure when input is focused it stays focused
-                // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
-                e.preventDefault();
-              }}
-              onClick={(e) => {
-                e.preventDefault();
-                startCreatingNew();
-              }}
-            >
-              {renderNewButtonChildren()}
-            </Button>
-          </>
-        ) : null}
       </Details>
     </>
   );
