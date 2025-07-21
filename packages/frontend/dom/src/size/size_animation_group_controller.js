@@ -1,5 +1,6 @@
 import { cubicBezier } from "@jsenv/animation";
 import { setStyles } from "../style_and_attributes.js";
+import { getHeight } from "./get_height.js";
 
 const easing = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 
@@ -40,7 +41,7 @@ export const createSizeAnimationGroupController = ({ duration }) => {
       let somethingChanged = false;
       for (const { element, target, sideEffect } of animations) {
         const isNew = !elementSet.has(element);
-        const startSize = parseFloat(getComputedStyle(element).height);
+        const startSize = getHeight(element);
         if (isNew) {
           if (startSize === target) {
             continue;

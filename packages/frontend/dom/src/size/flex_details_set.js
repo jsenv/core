@@ -15,6 +15,7 @@ import { startResizeGesture } from "./start_resize_gesture.js";
 const HEIGHT_ANIMATION_DURATION = 300;
 const ANIMATE_TOGGLE = true;
 const ANIMATE_RESIZE_AFTER_MUTATION = true;
+const ANIMATION_THRESHOLD_PX = 2; // Don't animate changes smaller than this
 const DEBUG = false;
 
 // Helper to create scroll state capture/restore function for an element
@@ -219,14 +220,22 @@ export const initFlexDetailsSet = (
   });
   const applyAllocatedSpaces = (resizeDetails) => {
     const changeSet = new Set();
+    let maxChange = 0;
+
     for (const child of container.children) {
       const allocatedSpace = allocatedSpaceMap.get(child);
       const allocatedSize = spaceToSize(allocatedSpace, child);
       const space = spaceMap.get(child);
       const size = spaceToSize(space, child);
+      const sizeChange = Math.abs(size - allocatedSize);
+
       if (size === allocatedSize) {
         continue;
       }
+
+      // Track the maximum change to decide if animation is worth it
+      maxChange = Math.max(maxChange, sizeChange);
+
       if (isDetailsElement(child) && child.open) {
         const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
         changeSet.add({
@@ -252,7 +261,17 @@ export const initFlexDetailsSet = (
       return;
     }
 
-    if (!resizeDetails.animated) {
+    // Don't animate if changes are too small (avoids imperceptible animations that hide scrollbars)
+    const shouldAnimate =
+      resizeDetails.animated && maxChange >= ANIMATION_THRESHOLD_PX;
+
+    if (debug && resizeDetails.animated && !shouldAnimate) {
+      console.debug(
+        `🚫 Skipping animation: max change ${maxChange.toFixed(2)}px < ${ANIMATION_THRESHOLD_PX}px threshold`,
+      );
+    }
+
+    if (!shouldAnimate) {
       const sizeChangeEntries = [];
       for (const { element, target, sideEffect } of changeSet) {
         element.style.height = `${target}px`;
