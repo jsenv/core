@@ -22,6 +22,7 @@ export { defineRoutes, setBaseUrl, useRouteStatus } from "./src/route/route.js";
 // UI
 export { ActionRenderer } from "./src/components/action_renderer.jsx";
 export { Details } from "./src/components/details/details.jsx";
+export { SummaryMarker } from "./src/components/details/summary_marker.jsx";
 export {
   EditableText,
   useEditableController,

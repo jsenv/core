@@ -1,4 +1,4 @@
-import { SummaryMarker, valueInLocalStorage } from "@jsenv/router";
+import { SummaryMarker, valueInLocalStorage } from "@jsenv/navi";
 import { useEffect, useRef, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `

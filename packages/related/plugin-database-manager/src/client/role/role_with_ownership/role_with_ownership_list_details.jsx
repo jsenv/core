@@ -8,6 +8,7 @@ import {
   ExplorerGroup,
 } from "../../explorer/explorer_group.jsx";
 import { ExplorerItemList } from "../../explorer/explorer_item_list.jsx";
+import { ROLE_DATABASES, ROLE_TABLES } from "../../store.js";
 import { TableLink } from "../../table/table_link.jsx";
 import {
   ROLE_WITH_OWNERSHIP,
@@ -18,7 +19,6 @@ import {
   roleWithOwnershipListDetailsOnToggle,
   roleWithOwnershipListDetailsOpenAtStart,
 } from "./role_with_ownership_list_details_state.js";
-import { getRoleDatabaseListDetailsRoute } from "./role_with_ownership_routes.js";
 
 export const roleWithOwnershipListDetailsController =
   createExplorerGroupController("role_with_ownership_list", {
@@ -34,7 +34,7 @@ export const RoleWithOwnershipListDetails = (props) => {
     <ExplorerGroup
       {...props}
       controller={roleWithOwnershipListDetailsController}
-      tailsAction={ROLE_WITH_OWNERSHIP.GET_MANY}
+      detailsAction={ROLE_WITH_OWNERSHIP.GET_MANY}
       idKey="oid"
       nameKey="rolname"
       labelChildren={
@@ -53,7 +53,9 @@ export const RoleWithOwnershipListDetails = (props) => {
                 if (subitem.id === "tables") {
                   return (
                     <Details
-                      action={ROLE_WITH_OWNERSHIP.GET_MANY}
+                      action={ROLE_TABLES.GET_MANY.bindParams({
+                        rolname: role.rolname,
+                      })}
                       renderLoaded={(tableArray) => {
                         return (
                           <ExplorerItemList
@@ -75,7 +77,9 @@ export const RoleWithOwnershipListDetails = (props) => {
                 if (subitem.id === "databases") {
                   return (
                     <Details
-                      action={getRoleDatabaseListDetailsRoute(role)}
+                      action={ROLE_DATABASES.GET_MANY.bindParams({
+                        rolname: role.rolname,
+                      })}
                       actionRenderer={(databaseArray) => {
                         return (
                           <ExplorerItemList
