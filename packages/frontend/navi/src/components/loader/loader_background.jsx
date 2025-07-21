@@ -127,6 +127,7 @@ const LoaderBackgroundWithWrapper = ({
 }) => {
   const shouldShowSpinner = useDebounceTrue(loading, 300);
   const containerRef = useRef(null);
+  const [outlineOffset, setOutlineOffset] = useState(0);
   const [borderRadius, setBorderRadius] = useState(0);
   const [borderTopWidth, setBorderTopWidth] = useState(0);
   const [borderLeftWidth, setBorderLeftWidth] = useState(0);
@@ -187,6 +188,9 @@ const LoaderBackgroundWithWrapper = ({
         const newOutlineColor = targetComputedStyle.outlineColor;
         const newBorderColor = targetComputedStyle.borderColor;
         const newDetectedColor = targetComputedStyle.color;
+        const newOutlineOffset = resolveCSSSize(
+          targetComputedStyle.outlineOffset,
+        );
         const newMarginTop = resolveCSSSize(targetComputedStyle.marginTop);
         const newMarginBottom = resolveCSSSize(
           targetComputedStyle.marginBottom,
@@ -208,6 +212,7 @@ const LoaderBackgroundWithWrapper = ({
         setBorderRightWidth(newBorderRightWidth);
         setBorderBottomWidth(newBorderBottomWidth);
         setBorderRadius(newBorderRadius);
+        setOutlineOffset(newOutlineOffset);
         setMarginTop(newMarginTop);
         setMarginBottom(newMarginBottom);
         setMarginLeft(newMarginLeft);
@@ -247,15 +252,19 @@ const LoaderBackgroundWithWrapper = ({
   }, [color, targetSelector]);
 
   spacingTop += inset;
+  spacingTop += outlineOffset;
   spacingTop -= borderTopWidth;
   spacingTop += marginTop;
   spacingLeft += inset;
+  spacingLeft += outlineOffset;
   spacingLeft -= borderLeftWidth;
   spacingLeft += marginLeft;
   spacingRight += inset;
+  spacingRight += outlineOffset;
   spacingRight -= borderRightWidth;
   spacingRight += marginRight;
   spacingBottom += inset;
+  spacingBottom += outlineOffset;
   spacingBottom -= borderBottomWidth;
   spacingBottom += marginBottom;
   if (targetSelector) {

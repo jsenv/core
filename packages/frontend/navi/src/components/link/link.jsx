@@ -20,15 +20,20 @@ import { useKeyboardShortcuts } from "../use_keyboard_shortcuts.js";
  */
 import.meta.css = /* css */ `
   .navi_link {
-    /* Color will be controlled entirely by JavaScript */
+    border-radius: 2px;
   }
 
   /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
   .navi_link[data-has-shortcuts]:focus,
-  .navi_link[data-has-shortcuts]:focus-visible {
+  .navi_link:focus-visible,
+  .navi_link[data-focus-visible] {
     outline: 2px solid #1d4ed8;
-    outline-offset: 1px;
-    border-radius: 1px;
+    outline-offset: 2px;
+  }
+
+  .navi_link[data-outline-inset] {
+    padding: 2px;
+    outline-offset: -2px;
   }
 
   .navi_link:focus {
@@ -77,11 +82,7 @@ const LinkBasic = forwardRef((props, ref) => {
   useDimColorWhen(innerRef, shouldDimColor);
 
   return (
-    <LoaderBackground
-      loading={loading}
-      inset={-2}
-      color="light-dark(#355fcc, #3b82f6)"
-    >
+    <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
       <a
         {...rest}
         ref={innerRef}
