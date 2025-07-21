@@ -27,7 +27,7 @@ import.meta.css = /* css */ `
   }
 
   .explorer_details summary {
-    padding-left: 16px;
+    padding-left: calc(16px + var(--details-depth, 0) * 16px);
   }
 `;
 
@@ -56,6 +56,7 @@ export const RoleWithOwnershipListDetails = (props) => {
           <Details
             id={`role_${role.rolname}_ownership_details`}
             className="explorer_details"
+            style={{ "--details-depth": 0 }}
             label={
               <TextAndCount
                 text={
@@ -95,6 +96,7 @@ export const RoleWithOwnershipListDetails = (props) => {
                   return (
                     <Details
                       className="explorer_details"
+                      style={{ "--details-depth": 1 }}
                       action={ROLE_TABLES.GET_MANY.bindParams({
                         rolname: role.rolname,
                       })}
@@ -121,6 +123,7 @@ export const RoleWithOwnershipListDetails = (props) => {
                   return (
                     <Details
                       className="explorer_details"
+                      style={{ "--details-depth": 1 }}
                       label={
                         <TextAndCount
                           text="databases"
