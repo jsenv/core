@@ -95,17 +95,14 @@ const Navigation = () => {
 
   return (
     <div className="nav-links">
-      {users.map((user) => (
-        <a
-          key={user.id}
-          href={`/user/${user.name}`}
-          className={
-            window.location.pathname === `/user/${user.name}` ? "active" : ""
-          }
-        >
-          {user.name}
-        </a>
-      ))}
+      {users.map((user) => {
+        const url = USER_ROUTE.buildUrl({ username: user.name });
+        return (
+          <a key={user.id} href={url}>
+            {user.name}
+          </a>
+        );
+      })}
     </div>
   );
 };
@@ -174,8 +171,8 @@ const DocumentInfo = () => {
 
   return (
     <div>
-      <div className="current-url">
-        Current URL: <span>{documentUrl}</span>
+      <div>
+        Current URL: <div className="current-url">{documentUrl}</div>
       </div>
       <div className="current-state">
         Current State: <pre>{JSON.stringify(documentState, null, 2)}</pre>
