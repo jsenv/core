@@ -12,28 +12,215 @@ import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
 let DEBUG = true;
 
-// Global dependency tracking system
-const globalDependencyRegistry = new Map(); // Map<dependencyResource, Set<dependentAutoreload>>
-const registerDependency = (dependencyResource, dependentAutoreload) => {
-  if (!globalDependencyRegistry.has(dependencyResource)) {
-    globalDependencyRegistry.set(dependencyResource, new Set());
-  }
-  globalDependencyRegistry.get(dependencyResource).add(dependentAutoreload);
-};
-const notifyDependents = (triggeringResource, httpAction) => {
-  const allActionsToReload = new Set();
-  const dependents = globalDependencyRegistry.get(triggeringResource);
-  if (dependents) {
-    for (const dependentAutoreload of dependents) {
-      const dependentActions =
-        dependentAutoreload.collectDependencyActionsToReload(httpAction);
-      for (const action of dependentActions) {
-        allActionsToReload.add(action);
+// Centralized Autoreload Manager
+// This handles ALL autoreload logic across all resources
+const createAutoreloadManager = () => {
+  const registeredResources = new Map(); // Map<resourceInstance, autoreloadConfig>
+  const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
+
+  const registerResource = (resourceInstance, config) => {
+    const {
+      autoreloadGetManyAfter = ["POST", "DELETE"],
+      autoreloadGetAfter = false,
+      paramScope = null,
+      dependencies = [],
+    } = config;
+
+    registeredResources.set(resourceInstance, {
+      autoreloadGetManyAfter,
+      autoreloadGetAfter,
+      paramScope,
+      httpActions: new Set(),
+    });
+
+    // Register dependencies
+    if (dependencies.length > 0) {
+      for (const dependency of dependencies) {
+        if (!resourceDependencies.has(dependency)) {
+          resourceDependencies.set(dependency, new Set());
+        }
+        resourceDependencies.get(dependency).add(resourceInstance);
       }
     }
-  }
-  return allActionsToReload;
+  };
+
+  const registerAction = (resourceInstance, httpAction) => {
+    const config = registeredResources.get(resourceInstance);
+    if (config) {
+      config.httpActions.add(httpAction);
+    }
+  };
+
+  const shouldAutoreloadAfter = (autoreloadAfter) => {
+    if (autoreloadAfter === "*") return () => true;
+    if (Array.isArray(autoreloadAfter)) {
+      const verbSet = new Set(autoreloadAfter.map((v) => v.toUpperCase()));
+      if (verbSet.has("*")) return () => true;
+      return (httpVerb) => verbSet.has(httpVerb.toUpperCase());
+    }
+    return () => false;
+  };
+
+  const isParamSubset = (parentParams, childParams) => {
+    if (!parentParams || !childParams) return false;
+    for (const [key, value] of Object.entries(parentParams)) {
+      if (
+        !(key in childParams) ||
+        !compareTwoJsValues(childParams[key], value)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const findActionsToReload = (triggeringAction) => {
+    const actionsToReload = new Set();
+    const reasonSet = new Set();
+
+    for (const [resourceInstance, config] of registeredResources) {
+      const shouldReloadGetMany = shouldAutoreloadAfter(
+        config.autoreloadGetManyAfter,
+      )(triggeringAction.meta.httpVerb);
+      const shouldReloadGet = shouldAutoreloadAfter(config.autoreloadGetAfter)(
+        triggeringAction.meta.httpVerb,
+      );
+
+      // Skip if no autoreload rules apply
+      if (
+        !shouldReloadGetMany &&
+        !shouldReloadGet &&
+        triggeringAction.meta.httpVerb !== "DELETE"
+      ) {
+        continue;
+      }
+
+      // Build parameter scope predicate
+      const paramScopePredicate = config.paramScope
+        ? (candidateAction) => {
+            if (candidateAction.meta.paramScope?.id === config.paramScope.id)
+              return true;
+            if (!candidateAction.meta.paramScope) return true;
+            const candidateParams = candidateAction.meta.paramScope.params;
+            const currentParams = config.paramScope.params;
+            return isParamSubset(candidateParams, currentParams);
+          }
+        : (candidateAction) => !candidateAction.meta.paramScope;
+
+      for (const httpAction of config.httpActions) {
+        // Find all instances of this action
+        const allInstances = httpAction.matchAllSelfOrDescendant(
+          (action) => action.loadRequested,
+        );
+
+        for (const instance of allInstances) {
+          // Check parameter scope compatibility
+          if (!paramScopePredicate(instance)) continue;
+
+          // Same-resource autoreload rules
+          if (resourceInstance === getResourceForAction(triggeringAction)) {
+            if (instance.meta.httpVerb === "GET") {
+              const shouldReload = instance.meta.httpMany
+                ? shouldReloadGetMany
+                : shouldReloadGet;
+              if (shouldReload) {
+                actionsToReload.add(instance);
+                reasonSet.add("same-resource autoreload");
+              }
+            }
+          }
+
+          // Cross-resource dependency autoreload
+          const triggeringResource = getResourceForAction(triggeringAction);
+          if (
+            triggeringResource &&
+            resourceDependencies.get(triggeringResource)?.has(resourceInstance)
+          ) {
+            if (
+              triggeringAction.meta.httpVerb !== "GET" &&
+              instance.meta.httpVerb === "GET" &&
+              instance.meta.httpMany
+            ) {
+              actionsToReload.add(instance);
+              reasonSet.add("dependency autoreload");
+            }
+          }
+
+          // DELETE-specific autoreload
+          if (
+            triggeringAction.meta.httpVerb === "DELETE" &&
+            instance.meta.httpVerb === "GET"
+          ) {
+            const { dataSignal } = getActionPrivateProperties(triggeringAction);
+            const deletedIds = triggeringAction.meta.httpMany
+              ? dataSignal.peek()
+              : [dataSignal.peek()];
+
+            if (
+              deletedIds &&
+              deletedIds.length > 0 &&
+              deletedIds.every((id) => id !== undefined)
+            ) {
+              // Always reload GET_MANY
+              if (instance.meta.httpMany) {
+                actionsToReload.add(instance);
+                reasonSet.add("DELETE-affected GET actions");
+              }
+              // For single GET, check if data matches deleted IDs
+              else if (deletedIds.includes(instance.data)) {
+                actionsToReload.add(instance);
+                reasonSet.add("DELETE-affected GET actions");
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return { actionsToReload, reasons: Array.from(reasonSet) };
+  };
+
+  const onActionComplete = (httpAction) => {
+    const { actionsToReload, reasons } = findActionsToReload(httpAction);
+
+    if (actionsToReload.size > 0) {
+      const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
+      if (DEBUG) {
+        console.debug(
+          `Autoreload triggered by ${httpAction.name}, will reload: ${formatActionSet(actionsToReload)}`,
+        );
+      }
+      reloadActions(actionsToReload, { reason });
+    }
+  };
+
+  // Helper to find which resource an action belongs to
+  const getResourceForAction = (action) => {
+    for (const [resourceInstance, config] of registeredResources) {
+      if (
+        config.httpActions.has(action) ||
+        Array.from(config.httpActions).some(
+          (registeredAction) =>
+            registeredAction.matchAllSelfOrDescendant(
+              (candidate) => candidate === action,
+            ).length > 0,
+        )
+      ) {
+        return resourceInstance;
+      }
+    }
+    return null;
+  };
+
+  return {
+    registerResource,
+    registerAction,
+    onActionComplete,
+  };
 };
+
+// Global autoreload manager instance
+const autoreloadManager = createAutoreloadManager();
 
 // Cache for parameter scope identifiers
 const paramScopeWeakSet = createIterableWeakSet();
@@ -53,254 +240,14 @@ const getParamScope = (params) => {
   return newParamScope;
 };
 
-// Check if parentParams is a subset of childParams
-// Used to determine parent-child relationships in parameter scopes
-const isParamSubset = (parentParams, childParams) => {
-  if (!parentParams || !childParams) return false;
-
-  for (const [key, value] of Object.entries(parentParams)) {
-    if (!(key in childParams) || !compareTwoJsValues(childParams[key], value)) {
-      return false;
+const mapCallbackMaybeAsyncResult = (callback, effect) => {
+  return (...args) => {
+    const result = callback(...args);
+    if (result && typeof result.then === "function") {
+      return result.then(effect);
     }
-  }
-  return true;
-};
-
-const findAliveActionsMatching = (
-  httpActionWeakSet,
-  predicate,
-  deletedIds = null,
-) => {
-  const matchingActionSet = new Set();
-  for (const httpAction of httpActionWeakSet) {
-    if (!predicate(httpAction)) {
-      continue;
-    }
-    // Find all instances of this action (including bound params versions)
-    const allInstances = httpAction.matchAllSelfOrDescendant((action) => {
-      if (!action.loadRequested) {
-        return false;
-      }
-      // If we have deletedIds (DELETE case), only include instances that match deleted IDs
-      if (
-        deletedIds &&
-        httpAction.meta.httpVerb === "GET" &&
-        !httpAction.meta.httpMany
-      ) {
-        return deletedIds.includes(action.data);
-      }
-      return true;
-    });
-    for (const instance of allInstances) {
-      matchingActionSet.add(instance);
-    }
-  }
-  return matchingActionSet;
-};
-const initAutoreload = ({
-  autoreloadGetManyAfter,
-  autoreloadGetAfter,
-  paramScope,
-  dependencies = [],
-  resourceInstance,
-}) => {
-  const httpActionWeakSet = createIterableWeakSet();
-  const shouldAutoreloadGetMany = createShouldAutoreloadAfter(
-    autoreloadGetManyAfter,
-  );
-  const shouldAutoreloadGet = createShouldAutoreloadAfter(autoreloadGetAfter);
-
-  const onActionCreated = (httpAction) => {
-    httpActionWeakSet.add(httpAction);
+    return effect(result);
   };
-
-  // Build the predicate for which actions to reload based on param scope
-  const buildParamScopePredicate = () => {
-    return paramScope
-      ? (httpActionCandidate) => {
-          // For parameterized actions, reload:
-          // 1. Actions with same paramScope (siblings)
-          // 2. Actions with no paramScope (root parent)
-          // 3. Actions whose params are a subset of current params (parent scopes)
-          if (httpActionCandidate.meta.paramScope?.id === paramScope.id) {
-            return true; // Same scope
-          }
-          if (!httpActionCandidate.meta.paramScope) {
-            return true; // Root parent (no params)
-          }
-          // Check if candidate's params are a subset of current params (parent scope)
-          const candidateParams = httpActionCandidate.meta.paramScope.params;
-          const currentParams = paramScope.params;
-          return isParamSubset(candidateParams, currentParams);
-        }
-      : (httpActionCandidate) => !httpActionCandidate.meta.paramScope;
-  };
-
-  // Build the predicate for which HTTP methods to reload
-  const buildHttpMetaPredicate = ({ shouldReloadGetMany, shouldReloadGet }) => {
-    if (shouldReloadGetMany && shouldReloadGet) {
-      return (httpActionCandidate) =>
-        httpActionCandidate.meta.httpVerb === "GET";
-    }
-    if (shouldReloadGetMany) {
-      return (httpActionCandidate) =>
-        httpActionCandidate.meta.httpVerb === "GET" &&
-        httpActionCandidate.meta.httpMany === true;
-    }
-    if (shouldReloadGet) {
-      return (httpActionCandidate) =>
-        httpActionCandidate.meta.httpVerb === "GET" &&
-        !httpActionCandidate.meta.httpMany;
-    }
-    return () => false;
-  };
-
-  const onActionDone = (httpAction) => {
-    const predicates = [];
-    const reasons = [];
-    const actionToReloadSet = new Set();
-
-    // Handle same-resource autoreload using configured rules
-    const shouldReloadGetMany = shouldAutoreloadGetMany(httpAction);
-    const shouldReloadGet = shouldAutoreloadGet(httpAction);
-
-    if (shouldReloadGetMany || shouldReloadGet) {
-      const paramScopePredicate = buildParamScopePredicate();
-      const httpMetaPredicate = buildHttpMetaPredicate({
-        shouldReloadGetMany,
-        shouldReloadGet,
-      });
-
-      const autoreloadPredicate = (httpActionCandidate) =>
-        httpMetaPredicate(httpActionCandidate) &&
-        paramScopePredicate(httpActionCandidate);
-
-      predicates.push(autoreloadPredicate);
-      reasons.push("same-resource autoreload");
-    }
-
-    // Collect actions from regular autoreload rules
-    if (predicates.length > 0) {
-      const combinedPredicate = (httpActionCandidate) => {
-        return predicates.some((predicate) => predicate(httpActionCandidate));
-      };
-
-      const localActions = findAliveActionsMatching(
-        httpActionWeakSet,
-        combinedPredicate,
-        null,
-      );
-      for (const action of localActions) {
-        actionToReloadSet.add(action);
-      }
-    }
-
-    // Special case: For DELETE actions, also reload any GET actions that reference the deleted resource(s)
-    if (httpAction.meta.httpVerb === "DELETE") {
-      // we use dataSignal.peek() and not httpAction.data because this code is called
-      // before the signal effect could run (inside a bath) on purpose
-      // This also make code more robust
-      const { dataSignal } = getActionPrivateProperties(httpAction);
-      const deletedIds = httpAction.meta.httpMany
-        ? dataSignal.peek() // Array of IDs for DELETE_MANY
-        : [dataSignal.peek()]; // Single ID for DELETE
-
-      if (
-        deletedIds &&
-        deletedIds.length > 0 &&
-        deletedIds.every((id) => id !== undefined)
-      ) {
-        const deletePredicate = (httpActionCandidate) => {
-          // Only target GET actions (both single and many can reference deleted resources)
-          if (httpActionCandidate.meta.httpVerb !== "GET") {
-            return false;
-          }
-
-          // For GET_MANY actions, we reload them as item deletion might affect the list returned
-          // by the server
-          if (httpActionCandidate.meta.httpMany) {
-            return true;
-          }
-
-          // For single GET actions, this predicate will be used by findAliveActionsMatching
-          // which will then call matchAllSelfOrDescendant to find actual instances.
-          // We just need to indicate this action type should be considered for reloading.
-          return true;
-        };
-
-        const deleteActions = findAliveActionsMatching(
-          httpActionWeakSet,
-          deletePredicate,
-          deletedIds,
-        );
-        for (const action of deleteActions) {
-          actionToReloadSet.add(action);
-        }
-
-        if (deleteActions.size > 0) {
-          reasons.push("DELETE-affected GET actions");
-        }
-      }
-    }
-
-    // Collect actions to reload from cross-resource dependencies
-    if (resourceInstance && httpAction.meta.httpVerb !== "GET") {
-      const dependencyActions = notifyDependents(resourceInstance, httpAction);
-      for (const action of dependencyActions) {
-        actionToReloadSet.add(action);
-      }
-      if (dependencyActions.size > 0) {
-        reasons.push("dependency autoreload");
-      }
-    }
-
-    // Execute single autoreload if any actions were collected
-    if (actionToReloadSet.size > 0) {
-      const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
-      if (DEBUG) {
-        console.debug(
-          `Autoreload triggered by ${httpAction.name}, will reload: ${formatActionSet(actionToReloadSet)}`,
-        );
-      }
-      reloadActions(actionToReloadSet, {
-        reason,
-      });
-    }
-  };
-
-  // Collect actions to reload for dependency-triggered reloads (without executing)
-  const collectDependencyActionsToReload = (httpAction) => {
-    if (httpAction.meta.httpVerb === "GET") {
-      // Dependencies have specific behavior: only non-GET verbs trigger autoreload,
-      // and they only trigger GET_MANY reloads (not individual GET reloads)
-      return new Set();
-    }
-
-    const paramScopePredicate = buildParamScopePredicate();
-    const dependencyPredicate = (httpActionCandidate) => {
-      // Dependencies only reload GET_MANY actions
-      return (
-        httpActionCandidate.meta.httpVerb === "GET" &&
-        httpActionCandidate.meta.httpMany === true &&
-        paramScopePredicate(httpActionCandidate)
-      );
-    };
-
-    return findAliveActionsMatching(
-      httpActionWeakSet,
-      dependencyPredicate,
-      null,
-    );
-  };
-
-  // Register this autoreload instance as dependent on its dependencies
-  if (dependencies.length > 0) {
-    for (const dependency of dependencies) {
-      registerDependency(dependency, { collectDependencyActionsToReload });
-    }
-  }
-
-  return { onActionCreated, onActionDone, httpActionWeakSet };
 };
 
 const createHttpHandlerForRootResource = (
@@ -315,12 +262,12 @@ const createHttpHandlerForRootResource = (
     resourceInstance,
   },
 ) => {
-  const autoreload = initAutoreload({
+  // Register this resource with the autoreload manager
+  autoreloadManager.registerResource(resourceInstance, {
     autoreloadGetManyAfter,
     autoreloadGetAfter,
     paramScope,
     dependencies,
-    resourceInstance,
   });
 
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
@@ -368,11 +315,15 @@ const createHttpHandlerForRootResource = (
         meta: { httpVerb, httpMany: false, paramScope },
         name: `${name}.${httpVerb}`,
         compute: (itemId) => store.select(itemId),
-        onLoad: (loadedAction) => autoreload.onActionDone(loadedAction),
+        onLoad: (loadedAction) =>
+          autoreloadManager.onActionComplete(loadedAction),
         ...options,
       },
     );
-    autoreload.onActionCreated(httpActionAffectingOneItem);
+    autoreloadManager.registerAction(
+      resourceInstance,
+      httpActionAffectingOneItem,
+    );
     return httpActionAffectingOneItem;
   };
   const GET = (callback, options) =>
@@ -438,11 +389,15 @@ const createHttpHandlerForRootResource = (
         name: `${name}.${httpVerb}_MANY`,
         data: [],
         compute: (idArray) => store.selectAll(idArray),
-        onLoad: (loadedAction) => autoreload.onActionDone(loadedAction),
+        onLoad: (loadedAction) =>
+          autoreloadManager.onActionComplete(loadedAction),
         ...options,
       },
     );
-    autoreload.onActionCreated(httpActionAffectingManyItems);
+    autoreloadManager.registerAction(
+      resourceInstance,
+      httpActionAffectingManyItems,
+    );
     return httpActionAffectingManyItems;
   };
   const GET_MANY = (callback, options) =>
@@ -457,7 +412,6 @@ const createHttpHandlerForRootResource = (
     createActionAffectingManyItems("DELETE", { callback, ...options });
 
   return {
-    autoreload,
     GET,
     POST,
     PUT,
@@ -551,21 +505,13 @@ const createHttpHandlerRelationshipToManyResource = (
     propertyName,
     childIdKey,
     childStore,
-    autoreloadGetManyAfter = ["POST", "DELETE"],
-    autoreloadGetAfter = false,
-    paramScope,
     resourceInstance,
+    autoreloadManager,
   } = {},
 ) => {
   // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
   // parce que le store originel peut retourner cette liste ou etre impacté
   // pour l'instant on ignore
-  const autoreload = initAutoreload({
-    autoreloadGetManyAfter,
-    autoreloadGetAfter,
-    paramScope,
-    resourceInstance,
-  });
 
   // one item AND many child items
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
@@ -606,11 +552,15 @@ const createHttpHandlerRelationshipToManyResource = (
         meta: { httpVerb, httpMany: false },
         name: `${name}.${httpVerb}`,
         compute: (childItemId) => childStore.select(childItemId),
-        onLoad: (loadedAction) => autoreload.onActionDone(loadedAction),
+        onLoad: (loadedAction) =>
+          autoreloadManager.onActionComplete(loadedAction),
         ...options,
       },
     );
-    autoreload.onActionCreated(httpActionAffectingOneItem);
+    autoreloadManager.registerAction(
+      resourceInstance,
+      httpActionAffectingOneItem,
+    );
     return httpActionAffectingOneItem;
   };
   const GET = (callback, options) =>
@@ -709,11 +659,15 @@ const createHttpHandlerRelationshipToManyResource = (
         name: `${name}.${httpVerb}[many]`,
         data: [],
         compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
-        onLoad: (loadedAction) => autoreload.onActionDone(loadedAction),
+        onLoad: (loadedAction) =>
+          autoreloadManager.onActionComplete(loadedAction),
         ...options,
       },
     );
-    autoreload.onActionCreated(httpActionAffectingManyItem);
+    autoreloadManager.registerAction(
+      resourceInstance,
+      httpActionAffectingManyItem,
+    );
     return httpActionAffectingManyItem;
   };
 
@@ -1040,6 +994,7 @@ export const resource = (
         childIdKey,
         childStore: childResource.store,
         resourceInstance,
+        autoreloadManager,
       });
     return resource(childName, {
       idKey: childIdKey,
@@ -1167,42 +1122,4 @@ export const resource = (
 
 const isProps = (value) => {
   return value !== null && typeof value === "object";
-};
-
-const createHttpVerbPredicate = (httpVerbCondition) => {
-  if (httpVerbCondition === "*") {
-    return () => true;
-  }
-  if (Array.isArray(httpVerbCondition)) {
-    const httpVerbSet = new Set();
-    for (const v of httpVerbCondition) {
-      httpVerbSet.add(v.toUpperCase());
-      if (v === "*") {
-        httpVerbSet.clear();
-        return () => true;
-      }
-    }
-    return (httpVerb) => httpVerbSet.has(httpVerb.toUpperCase());
-  }
-  return () => false;
-};
-const createShouldAutoreloadAfter = (autoreloadAfter) => {
-  const httpVerbPredicate = createHttpVerbPredicate(autoreloadAfter);
-  return (action) => {
-    const { httpVerb } = action.meta;
-    if (httpVerb === "GET") {
-      return false;
-    }
-    return httpVerbPredicate(httpVerb);
-  };
-};
-
-const mapCallbackMaybeAsyncResult = (callback, effect) => {
-  return (...args) => {
-    const result = callback(...args);
-    if (result && typeof result.then === "function") {
-      return result.then(effect);
-    }
-    return effect(result);
-  };
 };
