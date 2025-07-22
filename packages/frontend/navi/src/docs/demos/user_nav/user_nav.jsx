@@ -1,5 +1,6 @@
-import { defineRoutes, resource, Route } from "@jsenv/navi";
+import { defineRoutes, resource, Route, useRouteStatus } from "@jsenv/navi";
 import { render } from "preact";
+import { useEffect, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
   body {
@@ -73,7 +74,183 @@ import.meta.css = /* css */ `
   }
 `;
 
-const App = () => {};
+const App = () => {
+  return (
+    <div>
+      <h1>User Navigation Test</h1>
+      <Navigation />
+      <Route route={USER_ROUTE}>
+        <UserDetails />
+      </Route>
+      <CurrentUrl />
+    </div>
+  );
+};
+
+const Navigation = () => {
+  const users = USER.useArray();
+
+  return (
+    <div className="nav-links">
+      {users.map((user) => (
+        <a
+          key={user.id}
+          href={`/user/${user.name}`}
+          className={
+            window.location.pathname === `/user/${user.name}` ? "active" : ""
+          }
+        >
+          {user.name}
+        </a>
+      ))}
+    </div>
+  );
+};
+
+const UserDetails = () => {
+  const { active, params } = useRouteStatus(USER_ROUTE);
+  const userAction = USER.GET.bindParams(params);
+
+  useEffect(() => {
+    if (active) {
+      userAction.load();
+    }
+  }, [active, params.username]);
+
+  if (!active) {
+    return <p>No user selected. Click on a user link above.</p>;
+  }
+
+  if (userAction.loadingState === "LOADING") {
+    return (
+      <div className="user-details loading">
+        <p>Loading user...</p>
+      </div>
+    );
+  }
+
+  if (userAction.loadingState === "FAILED") {
+    return (
+      <div className="error">
+        Error: {userAction.error?.message || "Failed to load user"}
+      </div>
+    );
+  }
+
+  const currentUser = userAction.data;
+  if (!currentUser) {
+    return <p>User not found.</p>;
+  }
+
+  const isRenamed = currentUser.name !== currentUser.originalName;
+
+  const handleRename = async () => {
+    try {
+      const renameAction = USER.PUT.bindParams({
+        username: currentUser.name,
+        property: "name",
+        value: `${currentUser.name}_2`,
+      });
+      await renameAction.load();
+      // Reload the current user to get updated data
+      await userAction.reload();
+    } catch (error) {
+      console.error("Failed to rename user:", error);
+      // eslint-disable-next-line no-alert
+      window.alert(`Failed to rename user: ${error.message}`);
+    }
+  };
+
+  const handleRevert = async () => {
+    try {
+      const revertAction = USER.PUT.bindParams({
+        username: currentUser.name,
+        property: "name",
+        value: currentUser.originalName,
+      });
+      await revertAction.load();
+      // Reload the current user to get updated data
+      await userAction.reload();
+    } catch (error) {
+      console.error("Failed to revert user name:", error);
+      // eslint-disable-next-line no-alert
+      window.alert(`Failed to revert user name: ${error.message}`);
+    }
+  };
+
+  return (
+    <div className="user-details">
+      <h2>User: {currentUser.name}</h2>
+      <p>
+        <strong>ID:</strong> {currentUser.id}
+      </p>
+      <p>
+        <strong>Email:</strong> {currentUser.email}
+      </p>
+      <p>
+        <strong>Original Name:</strong> {currentUser.originalName}
+      </p>
+      <p>
+        <strong>Current Name:</strong> {currentUser.name}
+      </p>
+      <p>
+        <strong>Status:</strong> {isRenamed ? "Renamed" : "Original"}
+      </p>
+
+      <div className="actions">
+        <button
+          onClick={handleRename}
+          disabled={USER.PUT.loadingState === "LOADING"}
+        >
+          Rename to &quot;{currentUser.name}_2&quot;
+        </button>
+        <button
+          onClick={handleRevert}
+          disabled={!isRenamed || USER.PUT.loadingState === "LOADING"}
+        >
+          Revert to Original Name
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const CurrentUrl = () => {
+  const [currentUrl, setCurrentUrl] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentUrl(window.location.pathname);
+    };
+
+    window.addEventListener("popstate", handleLocationChange);
+    // Also listen for pushstate/replacestate
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = function (...args) {
+      originalPushState.apply(this, args);
+      handleLocationChange();
+    };
+
+    window.history.replaceState = function (...args) {
+      originalReplaceState.apply(this, args);
+      handleLocationChange();
+    };
+
+    return () => {
+      window.removeEventListener("popstate", handleLocationChange);
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
+  }, []);
+
+  return (
+    <div className="current-url">
+      Current URL: <span>{currentUrl}</span>
+    </div>
+  );
+};
 
 const initialUsers = [
   {
@@ -111,71 +288,7 @@ const [USER_ROUTE] = defineRoutes({
   "/user/:username": USER.GET,
 });
 
-// UI Functions
-function updateNavigation() {
-  const nav = document.getElementById("navigation");
-  const currentPath = window.location.pathname;
-
-  const users = USER.store.arraySignal.value;
-  nav.innerHTML = users
-    .map((user) => {
-      const userPath = `/user/${user.name}`;
-      const isActive = currentPath === userPath;
-      return `<a href="${userPath}" class="${isActive ? "active" : ""}" data-route="${userPath}">${user.name}</a>`;
-    })
-    .join("");
-}
-
-function updateUserContent() {
-  const content = document.getElementById("user-content");
-
-  if (!userRoute.active) {
-    content.innerHTML = "<p>No user selected. Click on a user link above.</p>";
-    return;
-  }
-
-  const action = boundGetUserAction;
-  const currentUser = action.data;
-
-  if (action.loadingState === "LOADING") {
-    content.innerHTML =
-      '<div class="user-details loading"><p>Loading user...</p></div>';
-    return;
-  }
-
-  if (action.loadingState === "FAILED") {
-    content.innerHTML = `<div class="error">Error: ${action.error?.message || "Failed to load user"}</div>`;
-    return;
-  }
-
-  if (!currentUser) {
-    content.innerHTML = "<p>User not found.</p>";
-    return;
-  }
-
-  const isRenamed = currentUser.name !== currentUser.originalName;
-
-  content.innerHTML = `
-                <div class="user-details">
-                    <h2>User: ${currentUser.name}</h2>
-                    <p><strong>ID:</strong> ${currentUser.id}</p>
-                    <p><strong>Email:</strong> ${currentUser.email}</p>
-                    <p><strong>Original Name:</strong> ${currentUser.originalName}</p>
-                    <p><strong>Current Name:</strong> ${currentUser.name}</p>
-                    <p><strong>Status:</strong> ${isRenamed ? "Renamed" : "Original"}</p>
-                    
-                    <div class="actions">
-                        <button onclick="renameUser('${currentUser.id}', '${currentUser.name}_2')" 
-                                ${renameUserAction.loadingState === "LOADING" ? "disabled" : ""}>
-                            Rename to "${currentUser.name}_2"
-                        </button>
-                        <button onclick="revertUserName('${currentUser.id}')" 
-                                ${!isRenamed || renameUserAction.loadingState === "LOADING" ? "disabled" : ""}>
-                            Revert to Original Name
-                        </button>
-                    </div>
-                </div>
-            `;
-}
+// Populate initial users in the store
+USER.store.upsert(initialUsers);
 
 render(<App />, document.querySelector("#app"));
