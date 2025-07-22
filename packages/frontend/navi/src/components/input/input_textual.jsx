@@ -231,19 +231,26 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   return (
     <InputTextualBasic
       {...rest}
+      data-action={action}
       ref={innerRef}
       type={type}
       id={id}
       name={name}
       value={value}
-      data-form-value={convertToUTCTimezone(value)}
+      data-form-value={
+        type === "datetime-local" ? convertToUTCTimezone(value) : undefined
+      }
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
       onInput={(e) => {
         valueAtEnterRef.current = null;
         const inputValue =
           type === "number" ? e.target.valueAsNumber : e.target.value;
-        setValue(convertToUTCTimezone(inputValue));
+        setValue(
+          type === "datetime-local"
+            ? convertToUTCTimezone(inputValue)
+            : inputValue,
+        );
         onInput?.(e);
       }}
       onKeyDown={(e) => {
