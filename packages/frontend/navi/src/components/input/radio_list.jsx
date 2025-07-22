@@ -149,12 +149,10 @@ const RadioListWithAction = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
   const actionRequesterRef = useRef(null);
-
-  const valueInAction = getCheckedValue();
-  const value = valueInAction;
+  const value = getCheckedValue();
   useEffect(() => {
     setNavState(value);
-  }, [valueInAction]);
+  }, [value]);
 
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
@@ -176,9 +174,9 @@ const RadioListWithAction = forwardRef((props, ref) => {
       resetCheckedValue();
       onActionError?.(error);
     },
-    onEnd: () => {
+    onEnd: (e) => {
       resetNavState();
-      onActionEnd?.();
+      onActionEnd?.(e);
     },
   });
 
