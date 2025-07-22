@@ -86,7 +86,7 @@ export const useOneFormParam = (
 
   const resetValue = useCallback(() => {
     setValue(initialValue);
-  }, [initialValue]);
+  }, [initialValue, formParamsSignal]);
 
   return [getValue(), setValue, resetValue];
 };
@@ -141,7 +141,7 @@ export const useActionBoundToOneParam = (
 
   const reset = useCallback(() => {
     setValue(initialValue);
-  }, [initialValue]);
+  }, [initialValue, paramsSignal]);
 
   return [boundAction, getValue(), setValue, reset];
 };
