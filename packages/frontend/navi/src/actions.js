@@ -21,7 +21,7 @@ import {
 } from "./utils/stringify_for_display.js";
 import { weakEffect } from "./utils/weak_effect.js";
 
-let DEBUG = false;
+let DEBUG = true;
 export const enableDebugActions = () => {
   DEBUG = true;
 };
@@ -132,7 +132,7 @@ const preloadedProtectionRegistry = (() => {
   };
 })();
 
-const formatActionSet = (prefix, actionSet) => {
+export const formatActionSet = (prefix, actionSet) => {
   let message = "";
   message += `- ${prefix}:`;
   for (const action of actionSet) {

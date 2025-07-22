@@ -1,5 +1,5 @@
 import { computed, signal } from "@preact/signals";
-import { createAction, reloadActions } from "../actions.js";
+import { createAction, formatActionSet, reloadActions } from "../actions.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../symbol_object_signal.js";
 import {
   SYMBOL_IDENTITY,
@@ -142,7 +142,7 @@ const initAutoreload = ({
   const onActionDone = (httpAction) => {
     const predicates = [];
     const reasons = [];
-    const allActionsToReload = new Set();
+    const actionToReloadSet = new Set();
 
     // Handle same-resource autoreload using configured rules
     const shouldReloadGetMany = shouldAutoreloadGetMany(httpAction);
@@ -210,7 +210,7 @@ const initAutoreload = ({
         combinedPredicate,
       );
       for (const action of localActions) {
-        allActionsToReload.add(action);
+        actionToReloadSet.add(action);
       }
     }
 
@@ -218,7 +218,7 @@ const initAutoreload = ({
     if (resourceInstance && httpAction.meta.httpVerb !== "GET") {
       const dependencyActions = notifyDependents(resourceInstance, httpAction);
       for (const action of dependencyActions) {
-        allActionsToReload.add(action);
+        actionToReloadSet.add(action);
       }
       if (dependencyActions.size > 0) {
         reasons.push("dependency autoreload");
@@ -226,14 +226,14 @@ const initAutoreload = ({
     }
 
     // Execute single autoreload if any actions were collected
-    if (allActionsToReload.size > 0) {
+    if (actionToReloadSet.size > 0) {
       const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
       if (DEBUG) {
         console.debug(
-          `Autoreload triggered by ${httpAction.name} with reasons: ${reasons.join(", ")}`,
+          `Autoreload triggered by ${httpAction.name}: ${formatActionSet("toReload", actionToReloadSet)}`,
         );
       }
-      reloadActions(allActionsToReload, {
+      reloadActions(actionToReloadSet, {
         reason,
       });
     }
@@ -402,7 +402,7 @@ const createHttpHandlerForRootResource = (
       }),
       {
         meta: { httpVerb, httpMany: true, paramScope },
-        name: `${name}.${httpVerb}[many]`,
+        name: `${name}.${httpVerb}_MANY`,
         data: [],
         compute: (idArray) => store.selectAll(idArray),
         onLoad: () => autoreload.onActionDone(httpActionAffectingManyItems),
