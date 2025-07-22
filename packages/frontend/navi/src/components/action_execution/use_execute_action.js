@@ -108,7 +108,7 @@ export const useExecuteAction = (
         if (
           elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
         ) {
-          dispatchCustomEvent("actionend");
+          dispatchCustomEvent("actionend", { detail: { data: action.data } });
         }
       },
     });

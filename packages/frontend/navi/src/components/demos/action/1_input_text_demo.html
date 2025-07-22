@@ -101,11 +101,6 @@
         font-size: 14px;
         box-sizing: border-box;
       }
-      input:focus {
-        outline: none;
-        border-color: #007bff;
-        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-      }
       .control-group {
         margin-bottom: 15px;
       }
@@ -402,14 +397,6 @@
       const SharedActionDemo = () => {
         const [result, setResult] = useState("");
 
-        const sharedAction = createAction(async ({ name }) => {
-          setResult("Processing...");
-          await delay(800);
-          const response = `✅ Hello ${name}! (from shared action)`;
-          setResult(response);
-          return response;
-        });
-
         return (
           <div className="demo-card">
             <h3 className="demo-title">Shared Action Example</h3>
@@ -420,6 +407,12 @@
                 name="name"
                 placeholder="Enter name for input 1"
                 action={sharedAction}
+                onActionStart={() => {
+                  setResult("Processing...");
+                }}
+                onActionEnd={(e) => {
+                  setResult(e.detail.data);
+                }}
               />
             </div>
             <div className="control-group">
@@ -441,6 +434,12 @@
           </div>
         );
       };
+
+      const sharedAction = createAction(async ({ name }) => {
+        await delay(800);
+        const response = `✅ Hello ${name}! (from shared action)`;
+        return response;
+      });
 
       render(<App />, document.querySelector("#root"));
     </script>
