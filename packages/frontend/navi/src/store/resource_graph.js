@@ -66,16 +66,31 @@ const isParamSubset = (parentParams, childParams) => {
   return true;
 };
 
-const findAliveActionsMatching = (httpActionWeakSet, predicate) => {
+const findAliveActionsMatching = (
+  httpActionWeakSet,
+  predicate,
+  deletedIds = null,
+) => {
   const matchingActionSet = new Set();
   for (const httpAction of httpActionWeakSet) {
     if (!predicate(httpAction)) {
       continue;
     }
     // Find all instances of this action (including bound params versions)
-    const allInstances = httpAction.matchAllSelfOrDescendant(
-      (action) => action.loadRequested,
-    );
+    const allInstances = httpAction.matchAllSelfOrDescendant((action) => {
+      if (!action.loadRequested) {
+        return false;
+      }
+      // If we have deletedIds (DELETE case), only include instances that match deleted IDs
+      if (
+        deletedIds &&
+        httpAction.meta.httpVerb === "GET" &&
+        !httpAction.meta.httpMany
+      ) {
+        return deletedIds.includes(action.data);
+      }
+      return true;
+    });
     for (const instance of allInstances) {
       matchingActionSet.add(instance);
     }
@@ -164,6 +179,22 @@ const initAutoreload = ({
       reasons.push("same-resource autoreload");
     }
 
+    // Collect actions from regular autoreload rules
+    if (predicates.length > 0) {
+      const combinedPredicate = (httpActionCandidate) => {
+        return predicates.some((predicate) => predicate(httpActionCandidate));
+      };
+
+      const localActions = findAliveActionsMatching(
+        httpActionWeakSet,
+        combinedPredicate,
+        null,
+      );
+      for (const action of localActions) {
+        actionToReloadSet.add(action);
+      }
+    }
+
     // Special case: For DELETE actions, also reload any GET actions that reference the deleted resource(s)
     if (httpAction.meta.httpVerb === "DELETE") {
       // we use dataSignal.peek() and not httpAction.data because this code is called
@@ -173,7 +204,6 @@ const initAutoreload = ({
       const deletedIds = httpAction.meta.httpMany
         ? dataSignal.peek() // Array of IDs for DELETE_MANY
         : [dataSignal.peek()]; // Single ID for DELETE
-      debugger;
 
       if (
         deletedIds &&
@@ -186,37 +216,30 @@ const initAutoreload = ({
             return false;
           }
 
-          // For GET_MANY actions, we reload them as they might contain deleted items
+          // For GET_MANY actions, we reload them as item deletion might affect the list returned
+          // by the server
           if (httpActionCandidate.meta.httpMany) {
             return true;
           }
 
-          // For single GET actions, check if they reference any of the deleted IDs
-          return deletedIds.some((deletedId) => {
-            const instances = httpActionCandidate.matchAllSelfOrDescendant(
-              (action) => action.loadRequested && action.data === deletedId,
-            );
-            return instances.length > 0;
-          });
+          // For single GET actions, this predicate will be used by findAliveActionsMatching
+          // which will then call matchAllSelfOrDescendant to find actual instances.
+          // We just need to indicate this action type should be considered for reloading.
+          return true;
         };
 
-        predicates.push(deletePredicate);
-        reasons.push("DELETE-affected GET actions");
-      }
-    }
+        const deleteActions = findAliveActionsMatching(
+          httpActionWeakSet,
+          deletePredicate,
+          deletedIds,
+        );
+        for (const action of deleteActions) {
+          actionToReloadSet.add(action);
+        }
 
-    // Collect actions to reload from current resource's autoreload rules
-    if (predicates.length > 0) {
-      const combinedPredicate = (httpActionCandidate) => {
-        return predicates.some((predicate) => predicate(httpActionCandidate));
-      };
-
-      const localActions = findAliveActionsMatching(
-        httpActionWeakSet,
-        combinedPredicate,
-      );
-      for (const action of localActions) {
-        actionToReloadSet.add(action);
+        if (deleteActions.size > 0) {
+          reasons.push("DELETE-affected GET actions");
+        }
       }
     }
 
@@ -263,7 +286,11 @@ const initAutoreload = ({
       );
     };
 
-    return findAliveActionsMatching(httpActionWeakSet, dependencyPredicate);
+    return findAliveActionsMatching(
+      httpActionWeakSet,
+      dependencyPredicate,
+      null,
+    );
   };
 
   // Register this autoreload instance as dependent on its dependencies
