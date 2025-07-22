@@ -1,4 +1,4 @@
-import { getTableColumns } from "./database_sql.js";
+import { getTableColumns } from "./manage_sql.js";
 
 export const selectRoleByName = async (sql, rolname) => {
   const results = await sql`

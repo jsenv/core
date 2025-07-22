@@ -1,5 +1,5 @@
 import { TextAndCount } from "../../components/text_and_count.jsx";
-import { useRoleCanLoginCount } from "../../database_signals.js";
+import { useRoleCanLoginCount } from "../../database_manager_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,

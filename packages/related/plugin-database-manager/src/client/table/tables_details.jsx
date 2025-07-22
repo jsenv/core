@@ -1,5 +1,5 @@
 import { TextAndCount } from "../components/text_and_count.jsx";
-import { useTableCount } from "../database_signals.js";
+import { useTableCount } from "../database_manager_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
