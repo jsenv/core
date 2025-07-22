@@ -17,6 +17,7 @@ export {
   stopLoad,
   useNavState,
 } from "./src/browser_integration/browser_integration.js";
+export { useDocumentUrl } from "./src/browser_integration/document_url_signal.js";
 export { defineRoutes, setBaseUrl, useRouteStatus } from "./src/route/route.js";
 
 // UI
