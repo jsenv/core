@@ -67,8 +67,6 @@ export const useExternalValueSync = (
 /**
  * Hook that handles initial value setup and external value synchronization.
  *
- * @deprecated Use resolveInitialValue + useExternalValueSync instead for better control
- *
  * @param {string} name - Parameter name for debugging
  * @param {any} externalValue - Value from props or parent component
  * @param {any} fallbackValue - Backup value if external value isn't useful

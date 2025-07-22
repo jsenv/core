@@ -5,7 +5,7 @@ import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useFormContext } from "./form_context.js";
 
-let debug = false;
+let debug = true;
 let componentActionIdCounter = 0;
 const useComponentActionCacheKey = () => {
   const componentActionCacheKeyRef = useRef(null);
@@ -90,7 +90,7 @@ export const useActionBoundToOneParam = (
   const setValue = (value) => {
     if (debug) {
       console.debug(
-        `useAction(${name}) set value to ${value} (old value is ${getValue()} )`,
+        `useActionBoundToOneParam(${name}) set value to ${value} (old value is ${getValue()} )`,
       );
     }
     return updateParams({ [name]: value });
