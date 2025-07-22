@@ -120,7 +120,7 @@ const UserPage = ({ user }) => {
       value: `${user.name}_2`,
     });
     console.log("About to call renameAction.load()");
-    await renameAction.load();
+    await renameAction.reload();
     console.log("renameAction.load() completed");
   };
 
@@ -130,7 +130,7 @@ const UserPage = ({ user }) => {
       property: "name",
       value: user.originalName,
     });
-    await revertAction.load();
+    await revertAction.reload();
   };
 
   return (
@@ -198,6 +198,9 @@ const MutableIdSignalDemo = ({ currentUser }) => {
     originalUserNameSignalValue: originalUserNameSignal.value,
   });
 
+  // Check if a rename has occurred
+  const hasBeenRenamed = currentUser.name !== originalName;
+
   return (
     <div
       style={{
@@ -226,9 +229,14 @@ const MutableIdSignalDemo = ({ currentUser }) => {
         but should return the same user even after renaming, demonstrating the
         caching behavior of signalForMutableIdKey.
       </p>
-      {signalValue && signalValue.id === currentUser.id && (
+      {signalValue && signalValue.id === currentUser.id && hasBeenRenamed && (
         <p style={{ color: "green", fontWeight: "bold" }}>
           ✅ Signal correctly returns the same user instance even after rename!
+        </p>
+      )}
+      {signalValue && signalValue.id === currentUser.id && !hasBeenRenamed && (
+        <p style={{ color: "blue", fontWeight: "bold" }}>
+          🔵 Signal correctly returns the user (no rename yet)
         </p>
       )}
       {signalValue && signalValue.id !== currentUser.id && (
