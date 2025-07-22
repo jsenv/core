@@ -188,9 +188,9 @@ const userProxy = createActionProxy(getUserAction, {
 
 ## Migration and Compatibility
 
-- **Backward Compatibility**: Maintain compatibility when possible
-- **Deprecation Warnings**: Clear warnings before breaking changes
-- **Migration Guides**: Document upgrade paths for breaking changes
+- **Backward Compatibility**: Do not try to maintain it.
+- **Deprecation Warnings**: You can deprecate and make breaking changes as long as we update package major version.
+- **Migration Guides**: Do not proactively document upgrade paths for breaking changes. I'll request it if needed.
 - **Feature Detection**: Progressive enhancement for new browser features
 
 This guide should help AI coding agents understand the architecture, patterns, and conventions used throughout the @jsenv/core codebase, enabling them to contribute effectively while maintaining consistency with the existing codebase.
