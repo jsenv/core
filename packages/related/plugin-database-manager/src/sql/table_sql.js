@@ -5,11 +5,21 @@ export const createTable = async (sql, tablename) => {
 export const selectTable = async (sql, tablename) => {
   const [table] = await sql`
     SELECT
-      *
+      pg_tables.*,
+      pg_class.oid AS tableoid
     FROM
       pg_tables
+      LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename
+      AND pg_class.relnamespace = (
+        SELECT
+          oid
+        FROM
+          pg_namespace
+        WHERE
+          nspname = pg_tables.schemaname
+      )
     WHERE
-      tablename = ${tablename}
+      pg_tables.tablename = ${tablename}
   `;
   return table;
 };
