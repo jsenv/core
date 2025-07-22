@@ -66,14 +66,14 @@ export const arraySignalStore = (
     }
   });
 
-  const propertiesCallbackSet = new Set();
+  const propertiesObserverSet = new Set();
   const observeProperties = (itemSignal, callback) => {
     const observer = { itemSignal, callback };
-    propertiesCallbackSet.add(observer);
+    propertiesObserverSet.add(observer);
 
     // Return cleanup function
     return () => {
-      propertiesCallbackSet.delete(observer);
+      propertiesObserverSet.delete(observer);
     };
   };
 
@@ -221,13 +221,13 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     return result;
   };
   const upsert = (...args) => {
-    const itemMutationsMap = new Map(); // Map<item, propertyMutations>
+    const itemMutationsMap = new Map(); // Map<itemId, propertyMutations>
     const triggerPropertyMutations = () => {
       if (itemMutationsMap.size === 0) {
         return;
       }
       // we call at the end so that itemWithProps and arraySignal.value was set too
-      for (const observer of propertiesCallbackSet) {
+      for (const observer of propertiesObserverSet) {
         const { itemSignal, callback } = observer;
         const watchedItem = itemSignal.peek();
         if (!watchedItem) {
@@ -235,7 +235,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
         }
 
         // Check if this item has mutations
-        const itemSpecificMutations = itemMutationsMap.get(watchedItem);
+        const itemSpecificMutations = itemMutationsMap.get(watchedItem[idKey]);
         if (itemSpecificMutations) {
           callback(itemSpecificMutations);
         }
@@ -282,7 +282,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
       }
 
       // Store mutations for this specific item
-      itemMutationsMap.set(item, propertyMutations);
+      itemMutationsMap.set(item[idKey], propertyMutations);
       return itemWithProps;
     };
 

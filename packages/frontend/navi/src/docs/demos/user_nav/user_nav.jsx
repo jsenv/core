@@ -5,7 +5,9 @@ import {
   useDocumentState,
   useDocumentUrl,
 } from "@jsenv/navi";
+import { signal } from "@preact/signals";
 import { render } from "preact";
+import { useEffect, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
   body {
@@ -132,18 +134,6 @@ const UserPage = ({ user }) => {
     <div className="user-details">
       <h2>User: {user.name}</h2>
       <p>
-        <strong>ID:</strong> {user.id}
-      </p>
-      <p>
-        <strong>Email:</strong> {user.email}
-      </p>
-      <p>
-        <strong>Original Name:</strong> {user.originalName}
-      </p>
-      <p>
-        <strong>Current Name:</strong> {user.name}
-      </p>
-      <p>
         <strong>Status:</strong> {isRenamed ? "Renamed" : "Original"}
       </p>
 
@@ -161,6 +151,77 @@ const UserPage = ({ user }) => {
           Revert to Original Name
         </button>
       </div>
+
+      <MutableIdSignalDemo currentUser={user} />
+    </div>
+  );
+};
+
+const MutableIdSignalDemo = ({ currentUser }) => {
+  // Create a signal that tracks the current user's name
+  const currentUserNameSignal = signal(currentUser.name);
+
+  // Update the signal when the user changes
+  useEffect(() => {
+    currentUserNameSignal.value = currentUser.name;
+  }, [currentUser.name]);
+
+  // Use signalForMutableIdKey to get a signal that tracks the user by name
+  const userFromMutableIdSignal = USER.store.signalForMutableIdKey(
+    "name",
+    currentUserNameSignal,
+  );
+
+  // Get the current value
+  const [signalValue, setSignalValue] = useState(userFromMutableIdSignal.value);
+
+  // Subscribe to changes
+  useEffect(() => {
+    const unsubscribe = userFromMutableIdSignal.subscribe((newValue) => {
+      setSignalValue(newValue);
+    });
+    return unsubscribe;
+  }, []);
+
+  return (
+    <div
+      style={{
+        marginTop: "20px",
+        padding: "15px",
+        backgroundColor: "#f0f8ff",
+        borderRadius: "5px",
+        border: "1px solid #007bff",
+      }}
+    >
+      <h3>signalForMutableIdKey Demo</h3>
+      <p>
+        <strong>Current Route User:</strong> {currentUser.name} (ID:{" "}
+        {currentUser.id})
+      </p>
+      <p>
+        <strong>Signal Value:</strong>{" "}
+        {signalValue ? `${signalValue.name} (ID: ${signalValue.id})` : "null"}
+      </p>
+      <p style={{ fontSize: "0.9em", color: "#666" }}>
+        💡 This signal should return the same user even if you rename them,
+        demonstrating the caching behavior of signalForMutableIdKey.
+      </p>
+      {signalValue && signalValue.id === currentUser.id && (
+        <p style={{ color: "green", fontWeight: "bold" }}>
+          ✅ Signal correctly returns the same user instance!
+        </p>
+      )}
+      {signalValue && signalValue.id !== currentUser.id && (
+        <p style={{ color: "orange", fontWeight: "bold" }}>
+          ⚠️ Signal returned a different user (this might happen during
+          transitions)
+        </p>
+      )}
+      {!signalValue && (
+        <p style={{ color: "red", fontWeight: "bold" }}>
+          ❌ Signal returned null (user not found in store)
+        </p>
+      )}
     </div>
   );
 };
@@ -188,7 +249,12 @@ const initialUsers = [
     email: "alice@example.com",
     originalName: "alice",
   },
-  { id: 2, name: "bob", email: "bob@example.com", originalName: "bob" },
+  {
+    id: 2,
+    name: "bob",
+    email: "bob@example.com",
+    originalName: "bob",
+  },
   {
     id: 3,
     name: "charlie",
