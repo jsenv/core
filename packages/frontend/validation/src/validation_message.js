@@ -173,7 +173,7 @@ export const openValidationMessage = (
     onClose,
     closeOnClickOutside = level === "info",
     canClickThrough = level === "info",
-    debug = true,
+    debug = false,
   } = {},
 ) => {
   let _closeOnClickOutside = closeOnClickOutside;
@@ -711,10 +711,23 @@ const followPosition = (validationMessage, targetElement, { debug }) => {
 
   // Request animation frame mechanism for efficient updates
   let rafId = null;
+  let resizeObserverContent = null; // Declare at scope level for disconnect/reconnect
+
   const schedulePositionUpdate = (reason) => {
     cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(() => {
+      // Temporarily disconnect ResizeObserver to prevent feedback loops
+      if (resizeObserverContent) {
+        resizeObserverContent.disconnect();
+      }
+
       updatePosition();
+
+      // Reconnect ResizeObserver after position updates are complete
+      if (resizeObserverContent) {
+        resizeObserverContent.observe(validationMessageContent);
+      }
+
       if (debug) {
         console.debug(
           `validation message position updated (reason: ${reason})`,
@@ -727,9 +740,28 @@ const followPosition = (validationMessage, targetElement, { debug }) => {
   });
 
   update_on_content_change: {
-    const resizeObserverContent = new ResizeObserver((entries) => {
+    let lastContentSize = null;
+    resizeObserverContent = new ResizeObserver((entries) => {
       const [entry] = entries;
       const { width, height } = entry.contentRect;
+
+      // Debounce tiny changes that are likely sub-pixel rounding
+      if (lastContentSize) {
+        const widthDiff = Math.abs(width - lastContentSize.width);
+        const heightDiff = Math.abs(height - lastContentSize.height);
+        const threshold = 1; // Ignore changes smaller than 1px
+
+        if (widthDiff < threshold && heightDiff < threshold) {
+          if (debug) {
+            console.debug(
+              `content_size_change ignored - too small: ${widthDiff.toFixed(3)}px width, ${heightDiff.toFixed(3)}px height`,
+            );
+          }
+          return;
+        }
+      }
+
+      lastContentSize = { width, height };
       schedulePositionUpdate(`content_size_change (${width}x${height})`);
     });
     resizeObserverContent.observe(validationMessageContent);
