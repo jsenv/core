@@ -67,8 +67,14 @@ export const arraySignalStore = (
   });
 
   const propertiesCallbackSet = new Set();
-  const observeProperties = (callback) => {
-    propertiesCallbackSet.add(callback);
+  const observeProperties = (itemSignal, callback) => {
+    const observer = { itemSignal, callback };
+    propertiesCallbackSet.add(observer);
+
+    // Return cleanup function
+    return () => {
+      propertiesCallbackSet.delete(observer);
+    };
   };
 
   const removalsCallbackSet = new Set();
@@ -215,14 +221,24 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     return result;
   };
   const upsert = (...args) => {
-    const propertyMutations = {};
+    const itemMutationsMap = new Map(); // Map<item, propertyMutations>
     const triggerPropertyMutations = () => {
-      if (Object.keys(propertyMutations).length === 0) {
+      if (itemMutationsMap.size === 0) {
         return;
       }
       // we call at the end so that itemWithProps and arraySignal.value was set too
-      for (const propertiesCallback of propertiesCallbackSet) {
-        propertiesCallback(propertyMutations);
+      for (const observer of propertiesCallbackSet) {
+        const { itemSignal, callback } = observer;
+        const watchedItem = itemSignal.peek();
+        if (!watchedItem) {
+          continue;
+        }
+
+        // Check if this item has mutations
+        const itemSpecificMutations = itemMutationsMap.get(watchedItem);
+        if (itemSpecificMutations) {
+          callback(itemSpecificMutations);
+        }
       }
     };
     const assign = (item, props) => {
@@ -233,6 +249,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
         itemOwnPropertyDescriptors,
       );
       let hasChanges = false;
+      const propertyMutations = {};
 
       for (const key of Object.keys(props)) {
         const newValue = props[key];
@@ -263,6 +280,9 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
       if (!hasChanges) {
         return item;
       }
+
+      // Store mutations for this specific item
+      itemMutationsMap.set(item, propertyMutations);
       return itemWithProps;
     };
 
@@ -470,7 +490,17 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     return null;
   };
 
+  const signalForMutableIdKey = (mutableIdKey, mutableIdValueSignal) => {
+    const itemSignal = computed(() => {
+      const mutableIdValue = mutableIdValueSignal.value;
+      const item = select(mutableIdKey, mutableIdValue);
+      return item;
+    });
+    return itemSignal;
+  };
+
   Object.assign(store, {
+    mutableIdKeys,
     arraySignal,
     select,
     selectAll,
@@ -480,6 +510,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
     observeProperties,
     observeRemovals,
     registerItemMatchLifecycle,
+    signalForMutableIdKey,
   });
   return store;
 };

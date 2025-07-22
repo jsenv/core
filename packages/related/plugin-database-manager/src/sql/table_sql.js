@@ -60,4 +60,14 @@ export const selectTables = async (sql, { publicFilter, rolname }) => {
   return data;
 };
 
-export const alterTableQuery = () => {};
+export const alterTableQuery = async (sql, tablename, columnName, value) => {
+  if (columnName === "tablename") {
+    await sql`
+      ALTER TABLE ${sql(tablename)}
+      RENAME TO ${sql(value)}
+    `;
+  }
+
+  // TODO: Handle other column alterations
+  throw new Error(`Altering column "${columnName}" is not yet implemented`);
+};

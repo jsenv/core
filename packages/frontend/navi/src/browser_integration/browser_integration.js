@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "preact/hooks";
 import { updateActions } from "../actions.js";
-import { setOnRouteDefined, updateRoutes } from "../route/route.js";
+import {
+  setBrowserIntegration,
+  setOnRouteDefined,
+  updateRoutes,
+} from "../route/route.js";
 import {
   documentIsBusySignal,
   routingWhile,
@@ -60,6 +64,7 @@ const browserIntegration = setupBrowserIntegrationViaHistory({
 setOnRouteDefined(() => {
   browserIntegration.init();
 });
+setBrowserIntegration(browserIntegration);
 
 export const actionIntegratedVia = browserIntegration.integration;
 export const goTo = browserIntegration.goTo;

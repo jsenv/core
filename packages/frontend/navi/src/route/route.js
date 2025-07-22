@@ -243,6 +243,7 @@ const createRoute = (urlPatternInput) => {
     toString: () => {
       return `route "${urlPatternInput}"`;
     },
+    replaceParams: undefined,
   };
   routeSet.add(route);
 
@@ -308,7 +309,79 @@ const createRoute = (urlPatternInput) => {
   });
   cleanupCallbackSet.add(disposeUrlEffect);
 
+  const replaceParams = (newParams) => {
+    const currentParams = paramsSignal.peek();
+    const updatedParams = { ...currentParams, ...newParams };
+    const updatedUrl = route.buildUrl(updatedParams);
+    browserIntegration.goTo(updatedUrl, { replace: true });
+  };
+  route.replaceParams = replaceParams;
+
   const bindAction = (action) => {
+    /*
+     *
+     * here I need to check the store for that action (if any)
+     * and listen store changes to do this:
+     *
+     * When we detect changes we want to update the route params
+     * so we'll need to use goTo(buildUrl(params), { replace: true })
+     *
+     * reinserted is useful because the item id might have changed
+     * but not the mutable key
+     *
+     */
+
+    const { store } = action.meta;
+    if (store) {
+      const { mutableIdKeys } = store;
+      if (mutableIdKeys.length) {
+        const mutableIdKey = mutableIdKeys[0];
+        const mutableIdValueSignal = computed(() => {
+          const params = paramsSignal.value;
+          return params[mutableIdKey];
+        });
+        const routeItemSignal = store.signalForMutableIdKey(
+          mutableIdKey,
+          mutableIdValueSignal,
+        );
+        store.observeProperties(routeItemSignal, (propertyMutations) => {
+          const mutableIdPropertyMutation = propertyMutations[mutableIdKey];
+          if (!mutableIdPropertyMutation) {
+            return;
+          }
+          debugger;
+          route.replaceParams({
+            [mutableIdKey]: mutableIdPropertyMutation.newValue,
+          });
+        });
+      }
+    }
+
+    /*
+    store.registerPropertyLifecycle(activeItemSignal, key, {
+    changed: (value) => {
+      route.replaceParams({
+        [key]: value,
+      });
+    },
+    dropped: () => {
+      route.reload();
+    },
+    reinserted: () => {
+      // this will reload all routes which works but
+      // - most of the time only "route" is impacted, any other route could stay as is
+      // - we already have the data, reloading the route will refetch the backend which is unnecessary
+      // we could just remove routing error (which is cause by 404 likely)
+      // to actually let the data be displayed
+      // because they are available, but in reality the route has no data
+      // because the fetch failed
+      // so conceptually reloading is fine,
+      // the only thing that bothers me a little is that it reloads all routes
+      route.reload();
+    },
+  });
+    */
+
     const actionBoundToThisRoute = action.bindParams(paramsSignal);
     route.action = actionBoundToThisRoute;
     return actionBoundToThisRoute;
@@ -359,6 +432,11 @@ export const useRouteStatus = (route) => {
     active,
     params,
   };
+};
+
+let browserIntegration;
+export const setBrowserIntegration = (integration) => {
+  browserIntegration = integration;
 };
 
 let onRouteDefined = () => {};
