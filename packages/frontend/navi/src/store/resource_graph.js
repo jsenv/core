@@ -168,6 +168,7 @@ const initAutoreload = ({
       const deletedIds = httpAction.meta.httpMany
         ? httpAction.data // Array of IDs for DELETE_MANY
         : [httpAction.data]; // Single ID for DELETE
+      debugger;
 
       if (
         deletedIds &&
@@ -335,7 +336,7 @@ const createHttpHandlerForRootResource = (
         meta: { httpVerb, httpMany: false, paramScope },
         name: `${name}.${httpVerb}`,
         compute: (itemId) => store.select(itemId),
-        onLoad: () => autoreload.onActionDone(httpActionAffectingOneItem),
+        onLoad: (loadedAction) => autoreload.onActionDone(loadedAction),
         ...options,
       },
     );
@@ -405,7 +406,7 @@ const createHttpHandlerForRootResource = (
         name: `${name}.${httpVerb}_MANY`,
         data: [],
         compute: (idArray) => store.selectAll(idArray),
-        onLoad: () => autoreload.onActionDone(httpActionAffectingManyItems),
+        onLoad: (loadedAction) => autoreload.onActionDone(loadedAction),
         ...options,
       },
     );
@@ -573,7 +574,7 @@ const createHttpHandlerRelationshipToManyResource = (
         meta: { httpVerb, httpMany: false },
         name: `${name}.${httpVerb}`,
         compute: (childItemId) => childStore.select(childItemId),
-        onLoad: () => autoreload.onActionDone(httpActionAffectingOneItem),
+        onLoad: (loadedAction) => autoreload.onActionDone(loadedAction),
         ...options,
       },
     );
@@ -676,7 +677,7 @@ const createHttpHandlerRelationshipToManyResource = (
         name: `${name}.${httpVerb}[many]`,
         data: [],
         compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
-        onLoad: () => autoreload.onActionDone(httpActionAffectingManyItem),
+        onLoad: (loadedAction) => autoreload.onActionDone(loadedAction),
         ...options,
       },
     );

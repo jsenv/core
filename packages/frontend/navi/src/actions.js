@@ -132,9 +132,9 @@ const preloadedProtectionRegistry = (() => {
   };
 })();
 
-export const formatActionSet = (prefix, actionSet) => {
+export const formatActionSet = (actionSet, prefix = "") => {
   let message = "";
-  message += `- ${prefix}:`;
+  message += `${prefix}`;
   for (const action of actionSet) {
     message += "\n";
     message += prefixFirstAndIndentRemainingLines(String(action), {
@@ -267,10 +267,10 @@ export const updateActions = ({
   if (DEBUG) {
     console.group(`updateActions()`);
     const lines = [
-      ...(preloadSet.size ? [formatActionSet("preload", preloadSet)] : []),
-      ...(loadSet.size ? [formatActionSet("load", loadSet)] : []),
-      ...(reloadSet.size ? [formatActionSet("reload", reloadSet)] : []),
-      ...(unloadSet.size ? [formatActionSet("unload", unloadSet)] : []),
+      ...(preloadSet.size ? [formatActionSet(preloadSet, "- preload:")] : []),
+      ...(loadSet.size ? [formatActionSet(loadSet, "- load:")] : []),
+      ...(reloadSet.size ? [formatActionSet(reloadSet, "- reload:")] : []),
+      ...(unloadSet.size ? [formatActionSet(unloadSet, "- unload:")] : []),
     ];
     console.debug(
       `requested operations:
@@ -392,26 +392,28 @@ ${lines.join("\n")}
   if (DEBUG) {
     const lines = [
       ...(willUnloadSet.size
-        ? [formatActionSet("will unload", willUnloadSet)]
+        ? [formatActionSet(willUnloadSet, "- will unload:")]
         : []),
       ...(willPreloadSet.size
-        ? [formatActionSet("will preload", willPreloadSet)]
+        ? [formatActionSet(willPreloadSet, "- will preload:")]
         : []),
       ...(willPromoteSet.size
-        ? [formatActionSet("will promote", willPromoteSet)]
+        ? [formatActionSet(willPromoteSet, "- will promote:")]
         : []),
-      ...(willLoadSet.size ? [formatActionSet("will load", willLoadSet)] : []),
+      ...(willLoadSet.size
+        ? [formatActionSet(willLoadSet, "- will load:")]
+        : []),
       ...(staysLoadingSet.size
-        ? [formatActionSet("stays loading", staysLoadingSet)]
+        ? [formatActionSet(staysLoadingSet, "- stays loading:")]
         : []),
       ...(staysAbortedSet.size
-        ? [formatActionSet("stays aborted", staysAbortedSet)]
+        ? [formatActionSet(staysAbortedSet, "- stays aborted:")]
         : []),
       ...(staysFailedSet.size
-        ? [formatActionSet("stays failed", staysFailedSet)]
+        ? [formatActionSet(staysFailedSet, "- stays failed:")]
         : []),
       ...(staysLoadedSet.size
-        ? [formatActionSet("stays loaded", staysLoadedSet)]
+        ? [formatActionSet(staysLoadedSet, "- stays loaded:")]
         : []),
     ];
     console.debug(`operations that will be performed:
@@ -871,7 +873,7 @@ export const createAction = (callback, rootOptions = {}) => {
           batch(() => {
             dataSignal.value = loadResult;
             loadingStateSignal.value = LOADED;
-            onLoad();
+            onLoad(action);
           });
           if (DEBUG) {
             console.log(`"${action}": loaded (reason: ${reason})`);
