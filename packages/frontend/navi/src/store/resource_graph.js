@@ -272,7 +272,7 @@ const createHttpHandlerForRootResource = (
     const callerInfo = getCallerInfo(createActionAffectingOneItem, 1);
     const actionTrace = `${name}.${httpVerb} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
     const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, paramScope, resourceInstance },
+      meta: { httpVerb, httpMany: false, paramScope, resourceInstance, store },
       name: `${name}.${httpVerb}`,
       dataEffect: (data) => {
         if (httpVerb === "DELETE") {
@@ -356,7 +356,7 @@ const createHttpHandlerForRootResource = (
           };
 
     const httpActionAffectingManyItems = createAction(callback, {
-      meta: { httpVerb, httpMany: true, paramScope, resourceInstance },
+      meta: { httpVerb, httpMany: true, paramScope, resourceInstance, store },
       name: `${name}.${httpVerb}_MANY`,
       data: [],
       dataEffect: applyDataEffect,
@@ -439,7 +439,7 @@ const createHttpHandlerForRelationshipToOneResource = (
           };
 
     const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, resourceInstance },
+      meta: { httpVerb, httpMany: false, resourceInstance, store },
       name: `${name}.${httpVerb}`,
       dataEffect: applyDataEffect,
       compute: (childItemId) => childStore.select(childItemId),
@@ -526,7 +526,7 @@ const createHttpHandlerRelationshipToManyResource = (
           };
 
     const httpActionAffectingOneItem = createAction(callback, {
-      meta: { httpVerb, httpMany: false, resourceInstance },
+      meta: { httpVerb, httpMany: false, resourceInstance, store: childStore },
       name: `${name}.${httpVerb}`,
       dataEffect: applyDataEffect,
       compute: (childItemId) => childStore.select(childItemId),
@@ -628,7 +628,7 @@ const createHttpHandlerRelationshipToManyResource = (
             };
 
     const httpActionAffectingManyItem = createAction(callback, {
-      meta: { httpVerb, httpMany: true, resourceInstance },
+      meta: { httpVerb, httpMany: true, resourceInstance, store: childStore },
       name: `${name}.${httpVerb}[many]`,
       data: [],
       dataEffect: applyDataEffect,
