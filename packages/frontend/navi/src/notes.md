@@ -1,6 +1,4 @@
 - lorsque je renomme une pages les inputs ne sont pas mis a jour
-  Reproduire dans une page genre input_demo ou on met a jour la valeur de l'exterieur
-  d'un input avec action
 
 - Create, rename, delete table
 - La table qui affiche une page, on mettra les detais dans un bouton settings en haut a droite
