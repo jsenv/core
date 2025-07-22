@@ -196,20 +196,7 @@ const createAutoreloadManager = () => {
 
   // Helper to find which resource an action belongs to
   const getResourceForAction = (action) => {
-    for (const [resourceInstance, config] of registeredResources) {
-      if (
-        config.httpActions.has(action) ||
-        Array.from(config.httpActions).some(
-          (registeredAction) =>
-            registeredAction.matchAllSelfOrDescendant(
-              (candidate) => candidate === action,
-            ).length > 0,
-        )
-      ) {
-        return resourceInstance;
-      }
-    }
-    return null;
+    return action.meta.resourceInstance;
   };
 
   return {
@@ -312,7 +299,7 @@ const createHttpHandlerForRootResource = (
         return applyDataEffect(data);
       }),
       {
-        meta: { httpVerb, httpMany: false, paramScope },
+        meta: { httpVerb, httpMany: false, paramScope, resourceInstance },
         name: `${name}.${httpVerb}`,
         compute: (itemId) => store.select(itemId),
         onLoad: (loadedAction) =>
@@ -385,7 +372,7 @@ const createHttpHandlerForRootResource = (
         return applyDataEffect(dataArray);
       }),
       {
-        meta: { httpVerb, httpMany: true, paramScope },
+        meta: { httpVerb, httpMany: true, paramScope, resourceInstance },
         name: `${name}.${httpVerb}_MANY`,
         data: [],
         compute: (idArray) => store.selectAll(idArray),
@@ -549,7 +536,7 @@ const createHttpHandlerRelationshipToManyResource = (
         return applyDataEffect(dataArray);
       }),
       {
-        meta: { httpVerb, httpMany: false },
+        meta: { httpVerb, httpMany: false, resourceInstance },
         name: `${name}.${httpVerb}`,
         compute: (childItemId) => childStore.select(childItemId),
         onLoad: (loadedAction) =>
@@ -655,7 +642,7 @@ const createHttpHandlerRelationshipToManyResource = (
         return applyDataEffect(dataArray);
       }),
       {
-        meta: { httpVerb, httpMany: true },
+        meta: { httpVerb, httpMany: true, resourceInstance },
         name: `${name}.${httpVerb}[many]`,
         data: [],
         compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),

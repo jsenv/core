@@ -681,15 +681,17 @@ export const createAction = (callback, rootOptions = {}) => {
     };
 
     const createChildAction = (childOptions) => {
-      const childAction = createActionCore(
-        {
-          ...rootOptions,
-          ...childOptions,
+      const childActionOptions = {
+        ...rootOptions,
+        ...childOptions,
+        meta: {
+          ...rootOptions.meta,
+          ...childOptions.meta,
         },
-        {
-          parentAction: action,
-        },
-      );
+      };
+      const childAction = createActionCore(childActionOptions, {
+        parentAction: action,
+      });
       return childAction;
     };
 
