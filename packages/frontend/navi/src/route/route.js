@@ -169,11 +169,11 @@ export const updateRoutes = (
       if (!replace || currentAction.aborted || currentAction.error) {
         toReloadSet.add(currentAction);
         routeLoadRequestedMap.set(route, currentAction);
+        // Create a new abort controller for the reload
+        const actionAbortController = new AbortController();
+        actionAbortControllerWeakMap.set(currentAction, actionAbortController);
+        abortSignalMap.set(currentAction, actionAbortController.signal);
       }
-      // Create a new abort controller for the reload
-      const actionAbortController = new AbortController();
-      actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-      abortSignalMap.set(currentAction, actionAbortController.signal);
       continue;
     }
   }
@@ -324,6 +324,9 @@ const createRoute = (urlPatternInput) => {
     const currentParams = paramsSignal.peek();
     const updatedParams = { ...currentParams, ...newParams };
     const updatedUrl = route.buildUrl(updatedParams);
+    if (route.action) {
+      route.action.replaceParams(updatedParams);
+    }
     browserIntegration.goTo(updatedUrl, { replace: true });
   };
   route.replaceParams = replaceParams;
@@ -361,7 +364,6 @@ const createRoute = (urlPatternInput) => {
           if (!mutableIdPropertyMutation) {
             return;
           }
-          debugger;
           route.replaceParams({
             [mutableIdKey]: mutableIdPropertyMutation.newValue,
           });
