@@ -413,7 +413,15 @@ const createHttpHandlerForRootResource = (
 };
 const createHttpHandlerForRelationshipToOneResource = (
   name,
-  { idKey, store, propertyName, childIdKey, childStore },
+  {
+    idKey,
+    store,
+    propertyName,
+    childIdKey,
+    childStore,
+    resourceInstance,
+    autoreloadManager,
+  },
 ) => {
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
     const applyDataEffect =
@@ -451,11 +459,17 @@ const createHttpHandlerForRelationshipToOneResource = (
         return applyDataEffect(data);
       }),
       {
-        meta: { httpVerb, httpMany: false },
+        meta: { httpVerb, httpMany: false, resourceInstance },
         name: `${name}.${httpVerb}`,
         compute: (childItemId) => childStore.select(childItemId),
+        onLoad: (loadedAction) =>
+          autoreloadManager.onActionComplete(loadedAction),
         ...options,
       },
+    );
+    autoreloadManager.registerAction(
+      resourceInstance,
+      httpActionAffectingOneItem,
     );
     return httpActionAffectingOneItem;
   };
@@ -878,6 +892,8 @@ export const resource = (
         propertyName,
         childIdKey,
         childStore: childResource.store,
+        resourceInstance,
+        autoreloadManager,
       });
     return resource(childName, {
       idKey: childIdKey,
