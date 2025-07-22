@@ -240,7 +240,6 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-
   const [boundAction, checkedValue, setCheckedValue, resetCheckedValue] =
     useActionBoundToOneParam(
       action,
@@ -249,6 +248,13 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       navState ? value : undefined,
     );
   const checked = checkedValue === value;
+  useEffect(() => {
+    if (checkedExternal) {
+      setNavState(checked ? false : undefined);
+    } else {
+      setNavState(checked ? true : undefined);
+    }
+  }, [checkedExternal, checked]);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
