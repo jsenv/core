@@ -11,47 +11,24 @@ import {
   urlToExtension,
 } from "@jsenv/urls";
 import { execSync } from "node:child_process";
-import { alterDatabaseQuery } from "./sql/alter_database_query.js";
-import { alterRoleQuery } from "./sql/alter_role_query.js";
-import { alterTableQuery } from "./sql/alter_table_query.js";
+import { alterDatabaseQuery } from "./sql/database_sql.js";
+import {
+  countRoles,
+  countRows,
+  getTableColumns,
+  selectCurrentInfo,
+} from "./sql/manage_sql.js";
+import { alterRoleQuery, selectRoleByName } from "./sql/role_sql.js";
+import {
+  alterTableQuery,
+  createTable,
+  selectTable,
+  selectTables,
+} from "./sql/table_sql.js";
 
 const databaseManagerHtmlFileUrl = import.meta.resolve(
   "./client/database_manager.html",
 );
-
-const selectTables = async (sql, { publicFilter, rolname }) => {
-  let whereConditions = [];
-  if (publicFilter) {
-    whereConditions.push(sql`pg_tables.schemaname = 'public'`);
-  } else {
-    whereConditions.push(sql`
-      pg_tables.schemaname NOT IN ('pg_catalog', 'information_schema')
-    `);
-  }
-  if (rolname) {
-    whereConditions.push(sql`pg_tables.tableowner = ${rolname}`);
-  }
-
-  const data = await sql`
-    SELECT
-      pg_tables.*,
-      pg_class.oid AS tableoid
-    FROM
-      pg_tables
-      LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename
-      AND pg_class.relnamespace = (
-        SELECT
-          oid
-        FROM
-          pg_namespace
-        WHERE
-          nspname = pg_tables.schemaname
-      )
-    WHERE
-      ${whereConditions.flatMap((x, i) => (i ? [sql`AND`, x] : x))}
-  `;
-  return data;
-};
 
 export const jsenvPluginDatabaseManager = ({
   pathname = "/.internal/database/",
@@ -59,75 +36,6 @@ export const jsenvPluginDatabaseManager = ({
   let databaseManagerRootDirectoryUrl;
   let defaultUsername;
   let sql;
-
-  const getRoleByName = async (rolname) => {
-    const results = await sql`
-      SELECT
-        *
-      FROM
-        pg_roles
-      WHERE
-        rolname = ${rolname}
-    `;
-    if (results.length === 0) {
-      return null;
-    }
-
-    const columns = await getTableColumns(sql, "pg_roles");
-    const role = results[0];
-    //  const privileges = await sql`
-    //     SELECT
-    //       grantor,
-    //       table_schema,
-    //       table_name,
-    //       privilege_type
-    //     FROM
-    //       information_schema.table_privileges
-    //     WHERE
-    //       grantee = ${rolname}
-    //   `;
-    const objects = await sql`
-      SELECT
-        pg_class.relname AS object_name,
-        pg_class.relkind AS object_type,
-        pg_namespace.nspname AS schema_name
-      FROM
-        pg_class
-        JOIN pg_roles ON pg_roles.oid = pg_class.relowner
-        LEFT JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid
-      WHERE
-        pg_roles.rolname = ${rolname}
-        AND pg_class.relkind IN ('r', 'v', 'm', 'S', 'f')
-      ORDER BY
-        pg_namespace.nspname,
-        pg_class.relname
-    `;
-    const databases = await sql`
-      SELECT
-        pg_database.*
-      FROM
-        pg_database
-        JOIN pg_roles ON pg_roles.oid = pg_database.datdba
-      WHERE
-        pg_roles.rolname = ${rolname}
-    `;
-
-    const members = await sql`
-      SELECT
-        member_role.*,
-        grantor_role.rolname AS grantor_rolname,
-        pg_auth_members.admin_option
-      FROM
-        pg_auth_members
-        JOIN pg_roles AS parent_role ON pg_auth_members.roleid = parent_role.oid
-        JOIN pg_roles AS member_role ON pg_auth_members.member = member_role.oid
-        LEFT JOIN pg_roles AS grantor_role ON pg_auth_members.grantor = grantor_role.oid
-      WHERE
-        parent_role.rolname = ${rolname}
-    `;
-
-    return { role, objects, databases, members, columns };
-  };
 
   return {
     name: "jsenv:database_manager",
@@ -150,29 +58,7 @@ export const jsenvPluginDatabaseManager = ({
           return null;
         }
 
-        // we might want to use any available cookie used to auth
-        const currentRoleResult = await sql`
-          SELECT
-            current_user
-        `;
-        const currentRoleName = currentRoleResult[0].current_user;
-        const [currentRole] = await sql`
-          SELECT
-            *
-          FROM
-            pg_roles
-          WHERE
-            rolname = ${currentRoleName}
-        `;
-
-        const [currentDatabase] = await sql`
-          SELECT
-            *
-          FROM
-            pg_database
-          WHERE
-            datname = current_database()
-        `;
+        const { currentRole, currentDatabase } = await selectCurrentInfo(sql);
 
         return {
           contentInjections: {
@@ -243,15 +129,8 @@ export const jsenvPluginDatabaseManager = ({
         },
         "POST": async (request) => {
           const { tablename } = await request.json();
-          await sql`CREATE TABLE ${sql(tablename)}`;
-          const [table] = await sql`
-            SELECT
-              *
-            FROM
-              pg_tables
-            WHERE
-              tablename = ${tablename}
-          `;
+          await createTable(sql, tablename);
+          const table = await selectTable(sql, tablename);
           return {
             data: table,
             meta: {
@@ -304,12 +183,6 @@ export const jsenvPluginDatabaseManager = ({
             },
           };
         },
-        "PUT /:tablename/:colname": async (request) => {
-          const { tablename, colname } = request.params;
-          const value = await request.json();
-          await alterTableQuery(sql, tablename, colname, value);
-          return { [colname]: value };
-        },
         "DELETE /:tablename": async (request) => {
           const { tablename } = request.params;
           await sql`DROP TABLE ${sql(tablename)}`;
@@ -319,6 +192,12 @@ export const jsenvPluginDatabaseManager = ({
               count: await countRows(sql, "pg_tables"),
             },
           };
+        },
+        "PUT /:tablename/:colname": async (request) => {
+          const { tablename, colname } = request.params;
+          const value = await request.json();
+          await alterTableQuery(sql, tablename, colname, value);
+          return { [colname]: value };
         },
       }),
       ...createRESTRoutes(`${pathname}api/roles`, {
@@ -426,7 +305,7 @@ export const jsenvPluginDatabaseManager = ({
         },
         "GET /:rolname": async (request) => {
           const { rolname } = request.params;
-          const result = await getRoleByName(rolname);
+          const result = await selectRoleByName(rolname);
           if (!result) {
             return null;
           }
@@ -1059,88 +938,4 @@ const createRESTRoutes = (resource, endpoints) => {
   }
 
   return routes;
-};
-
-const countRoles = async (sql) => {
-  const [roleStats] = await sql`
-    SELECT
-      COUNT(*) AS total_roles,
-      COUNT(
-        CASE
-          WHEN rolcanlogin = TRUE THEN 1
-        END
-      ) AS can_login_count,
-      COUNT(
-        CASE
-          WHEN rolcanlogin = FALSE THEN 1
-        END
-      ) AS group_count,
-      COUNT(
-        CASE
-          WHEN (
-            table_owners.tableowner IS NOT NULL
-            OR database_owners.database_owner IS NOT NULL
-          ) THEN 1
-        END
-      ) AS with_ownership_count
-    FROM
-      pg_roles
-      LEFT JOIN (
-        SELECT DISTINCT
-          tableowner
-        FROM
-          pg_tables
-        WHERE
-          schemaname NOT IN ('pg_catalog', 'information_schema')
-      ) table_owners ON pg_roles.rolname = table_owners.tableowner
-      LEFT JOIN (
-        SELECT DISTINCT
-          pg_roles.rolname AS database_owner
-        FROM
-          pg_database
-          JOIN pg_roles ON pg_roles.oid = pg_database.datdba
-      ) database_owners ON pg_roles.rolname = database_owners.database_owner
-  `;
-  const { total_roles, can_login_count, group_count, with_ownership_count } =
-    roleStats;
-  return {
-    total: parseInt(total_roles),
-    canLoginCount: parseInt(can_login_count),
-    groupCount: parseInt(group_count),
-    withOwnershipCount: parseInt(with_ownership_count),
-  };
-};
-
-const countRows = async (sql, tableName, { whereClause } = {}) => {
-  if (tableName === "pg_tables") {
-    const [tableCountResult] = await sql`
-      SELECT
-        COUNT(*)
-      FROM
-        pg_tables
-      WHERE
-        schemaname NOT IN ('pg_catalog', 'information_schema')
-    `;
-    return parseInt(tableCountResult.count);
-  }
-
-  const [countResult] = await sql`
-    SELECT
-      COUNT(*)
-    FROM
-      ${sql(tableName)} ${whereClause || sql``}
-  `;
-  return parseInt(countResult.count);
-};
-
-const getTableColumns = async (sql, tableName) => {
-  const columns = await sql`
-    SELECT
-      *
-    FROM
-      information_schema.columns
-    WHERE
-      table_name = ${tableName}
-  `;
-  return columns;
 };

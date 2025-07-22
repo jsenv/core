@@ -34,12 +34,14 @@ export const TablesDetails = (props) => {
         <TableLink draggable={false} key={item.oid} table={item} {...props} />
       )}
       useItemArrayInStore={useTableArrayInStore}
-      useRenameItemAction={(table) =>
-        TABLE.PUT.bindParams({
+      useRenameItemAction={(table) => {
+        const renameAction = TABLE.PUT.bindParams({
           tablename: table.tablename,
           columnName: "tablename",
-        })
-      }
+        });
+        renameAction.meta.valueParamName = "columnValue";
+        return renameAction;
+      }}
       useCreateItemAction={() => TABLE.POST}
       useDeleteItemAction={(table) =>
         TABLE.DELETE.bindParams({

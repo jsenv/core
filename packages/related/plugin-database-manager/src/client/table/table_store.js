@@ -1,5 +1,5 @@
 import { resource, useActionData } from "@jsenv/navi";
-import { setTableCount } from "../database_signals.js";
+import { setTableCount } from "../database_manager_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
 
 export const TABLE = resource("table", {
@@ -44,7 +44,7 @@ export const TABLE = resource("table", {
       body: JSON.stringify({ tablename }),
     });
     if (!response.ok) {
-      throw await errorFromResponse(response, "Failed to create role");
+      throw await errorFromResponse(response, "Failed to create table");
     }
     const { data, meta } = await response.json();
     const { count } = meta;

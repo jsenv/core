@@ -1,6 +1,6 @@
 import { resource, useActionData } from "@jsenv/navi";
 import { signal } from "@preact/signals";
-import { setDatabaseCount } from "../database_signals.js";
+import { setDatabaseCount } from "../database_manager_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
 
 export const DATABASE = resource("database", {

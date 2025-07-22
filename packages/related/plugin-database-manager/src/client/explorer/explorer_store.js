@@ -3,7 +3,7 @@ import {
   setDatabaseCount,
   setRoleCounts,
   setTableCount,
-} from "../database_signals.js";
+} from "../database_manager_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
 
 export const EXPLORER = resource("explorer", {
