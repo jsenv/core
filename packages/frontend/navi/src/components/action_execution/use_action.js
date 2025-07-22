@@ -65,13 +65,12 @@ export const useOneFormParam = (
     defaultValue,
     setValue,
   );
-  const value = getValue();
 
   const resetValue = useCallback(() => {
     setValue(initialValue);
   }, [initialValue]);
 
-  return [value, setValue, resetValue];
+  return [getValue(), setValue, resetValue];
 };
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
@@ -104,13 +103,12 @@ export const useActionBoundToOneParam = (
     defaultValue,
     setValue,
   );
-  const value = getValue();
 
   const reset = useCallback(() => {
     setValue(initialValue);
   }, [initialValue]);
 
-  return [boundAction, value, setValue, reset];
+  return [boundAction, getValue(), setValue, reset];
 };
 
 // export const useActionBoundToOneBooleanParam = (action, name, value) => {

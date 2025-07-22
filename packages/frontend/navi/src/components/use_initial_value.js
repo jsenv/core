@@ -1,52 +1,6 @@
 import { useRef } from "preact/hooks";
 
 /**
- * Hook that handles initial value setup and external value synchronization.
- *
- * @param {string} name - Parameter name for debugging
- * @param {any} externalValue - Value from props or parent component
- * @param {any} fallbackValue - Backup value if external value isn't useful
- * @param {any} defaultValue - Final fallback value
- * @param {Function} setValue - Function to call when value needs to be set
- * @param {Function} getValue - Function to get current value (for sync comparison)
- *
- * @returns {any} The resolved initial value
- */
-export const useInitialValue = (
-  name,
-  externalValue,
-  fallbackValue,
-  defaultValue,
-  setValue,
-) => {
-  const initialValue = resolveInitialValue(
-    externalValue,
-    fallbackValue,
-    defaultValue,
-  );
-
-  // Set initial value on mount
-  const mountedRef = useRef(false);
-  if (!mountedRef.current) {
-    mountedRef.current = true;
-    if (name) {
-      setValue(initialValue);
-    }
-  }
-
-  // Track external value changes and sync them
-  const previousExternalValueRef = useRef(externalValue);
-  if (externalValue !== previousExternalValueRef.current) {
-    previousExternalValueRef.current = externalValue;
-    if (name && externalValue !== undefined && externalValue !== defaultValue) {
-      setValue(externalValue);
-    }
-  }
-
-  return initialValue;
-};
-
-/**
  * Picks the best initial value from three options using a simple priority system.
  *
  * @param {any} externalValue - Value from props or parent component
@@ -73,4 +27,75 @@ export const resolveInitialValue = (
       ? defaultValue
       : fallbackValue
     : externalValue;
+};
+
+/**
+ * Hook that syncs external value changes to a setState function.
+ * Only updates when the external value changes and is meaningful (not undefined and different from default).
+ *
+ * @param {any} externalValue - Value from props or parent component to watch for changes
+ * @param {Function} setValue - Function to call when external value changes
+ * @param {any} defaultValue - Default value to compare against
+ * @param {string} name - Parameter name for debugging
+ */
+export const useExternalValueSync = (
+  externalValue,
+  defaultValue,
+  setValue,
+  name = "",
+) => {
+  // Track external value changes and sync them
+  const previousExternalValueRef = useRef(externalValue);
+  if (externalValue !== previousExternalValueRef.current) {
+    previousExternalValueRef.current = externalValue;
+    if (externalValue !== undefined && externalValue !== defaultValue) {
+      if (name) {
+        console.debug(
+          `useExternalValueSync(${name}) syncing external value change: ${externalValue}`,
+        );
+      }
+      setValue(externalValue);
+    }
+  }
+};
+
+/**
+ * Hook that handles initial value setup and external value synchronization.
+ *
+ * @deprecated Use resolveInitialValue + useExternalValueSync instead for better control
+ *
+ * @param {string} name - Parameter name for debugging
+ * @param {any} externalValue - Value from props or parent component
+ * @param {any} fallbackValue - Backup value if external value isn't useful
+ * @param {any} defaultValue - Final fallback value
+ * @param {Function} setValue - Function to call when value needs to be set
+ *
+ * @returns {any} The resolved initial value
+ */
+export const useInitialValue = (
+  name,
+  externalValue,
+  fallbackValue,
+  defaultValue,
+  setValue,
+) => {
+  const initialValue = resolveInitialValue(
+    externalValue,
+    fallbackValue,
+    defaultValue,
+  );
+
+  // Set initial value on mount
+  const mountedRef = useRef(false);
+  if (!mountedRef.current) {
+    mountedRef.current = true;
+    if (name) {
+      setValue(initialValue);
+    }
+  }
+
+  // Use the new sync hook
+  useExternalValueSync(externalValue, defaultValue, setValue, name);
+
+  return initialValue;
 };
