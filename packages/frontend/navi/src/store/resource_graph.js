@@ -1,4 +1,5 @@
 import { computed, signal } from "@preact/signals";
+import { getActionPrivateProperties } from "../action_private_properties.js";
 import { createAction, formatActionSet, reloadActions } from "../actions.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../symbol_object_signal.js";
 import {
@@ -165,9 +166,13 @@ const initAutoreload = ({
 
     // Special case: For DELETE actions, also reload any GET actions that reference the deleted resource(s)
     if (httpAction.meta.httpVerb === "DELETE") {
+      // we use dataSignal.peek() and not httpAction.data because this code is called
+      // before the signal effect could run (inside a bath) on purpose
+      // This also make code more robust
+      const { dataSignal } = getActionPrivateProperties(httpAction);
       const deletedIds = httpAction.meta.httpMany
-        ? httpAction.data // Array of IDs for DELETE_MANY
-        : [httpAction.data]; // Single ID for DELETE
+        ? dataSignal.peek() // Array of IDs for DELETE_MANY
+        : [dataSignal.peek()]; // Single ID for DELETE
       debugger;
 
       if (
@@ -231,7 +236,7 @@ const initAutoreload = ({
       const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
       if (DEBUG) {
         console.debug(
-          `Autoreload triggered by ${httpAction.name}: ${formatActionSet("toReload", actionToReloadSet)}`,
+          `Autoreload triggered by ${httpAction.name}, will reload: ${formatActionSet(actionToReloadSet)}`,
         );
       }
       reloadActions(actionToReloadSet, {
