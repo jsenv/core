@@ -492,18 +492,26 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
 
   const signalForMutableIdKey = (mutableIdKey, mutableIdValueSignal) => {
     let itemId;
-    const itemSignal = computed(() => {
+
+    // Use effect to eagerly update itemId cache when mutableIdValue changes
+    effect(() => {
       const mutableIdValue = mutableIdValueSignal.value;
-      if (itemId !== undefined) {
-        return select(itemId);
-      }
       const item = select(mutableIdKey, mutableIdValue);
       if (item) {
         itemId = item[idKey];
-        return item;
+      } else {
+        itemId = undefined;
+      }
+    });
+
+    // The computed signal now just returns the cached item
+    const itemSignal = computed(() => {
+      if (itemId !== undefined) {
+        return select(itemId);
       }
       return null;
     });
+
     return itemSignal;
   };
 
