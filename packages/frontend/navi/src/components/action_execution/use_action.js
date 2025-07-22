@@ -2,89 +2,8 @@ import { signal } from "@preact/signals";
 import { useCallback, useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
 import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
+import { useInitialValue } from "../use_initial_value.js";
 import { useFormContext } from "./form_context.js";
-
-/**
- * Picks the best initial value from three options using a simple priority system.
- *
- * @param {any} externalValue - Value from props or parent component
- * @param {any} fallbackValue - Backup value if external value isn't useful
- * @param {any} defaultValue - Final fallback (usually empty/neutral value)
- *
- * @returns {any} The chosen value using this priority:
- *   1. externalValue (if provided and different from default)
- *   2. fallbackValue (if external value is missing/same as default)
- *   3. defaultValue (if nothing else works)
- *
- * @example
- * resolveInitialValue("hello", "backup", "") → "hello"
- * resolveInitialValue(undefined, "backup", "") → "backup"
- * resolveInitialValue("", "backup", "") → "backup" (empty same as default)
- */
-const resolveInitialValue = (externalValue, fallbackValue, defaultValue) => {
-  return externalValue === undefined || externalValue === defaultValue
-    ? fallbackValue === undefined
-      ? defaultValue
-      : fallbackValue
-    : externalValue;
-};
-
-/**
- * Hook that handles initial value setup and external value synchronization.
- *
- * @param {string} name - Parameter name for debugging
- * @param {any} externalValue - Value from props or parent component
- * @param {any} fallbackValue - Backup value if external value isn't useful
- * @param {any} defaultValue - Final fallback value
- * @param {Function} setValue - Function to call when value needs to be set
- * @param {Function} getValue - Function to get current value (for sync comparison)
- *
- * @returns {any} The resolved initial value
- */
-const useInitialValue = (
-  name,
-  externalValue,
-  fallbackValue,
-  defaultValue,
-  setValue,
-  getValue,
-) => {
-  const initialValue = resolveInitialValue(
-    externalValue,
-    fallbackValue,
-    defaultValue,
-  );
-
-  // Set initial value on mount
-  const mountedRef = useRef(false);
-  if (!mountedRef.current) {
-    mountedRef.current = true;
-    if (name) {
-      setValue(initialValue);
-    }
-  }
-
-  // Track external value changes and sync them
-  const previousExternalValueRef = useRef(externalValue);
-  if (externalValue !== previousExternalValueRef.current) {
-    previousExternalValueRef.current = externalValue;
-    if (
-      name &&
-      externalValue !== undefined &&
-      externalValue !== defaultValue &&
-      externalValue !== getValue()
-    ) {
-      if (debug) {
-        console.debug(
-          `useAction(${name}) syncing external value change: ${externalValue}`,
-        );
-      }
-      setValue(externalValue);
-    }
-  }
-
-  return initialValue;
-};
 
 let debug = false;
 let componentActionIdCounter = 0;
@@ -145,14 +64,14 @@ export const useOneFormParam = (
     fallbackValue,
     defaultValue,
     setValue,
-    getValue,
   );
+  const value = getValue();
 
   const resetValue = useCallback(() => {
     setValue(initialValue);
   }, [initialValue]);
 
-  return [getValue, setValue, resetValue];
+  return [value, setValue, resetValue];
 };
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
@@ -184,14 +103,14 @@ export const useActionBoundToOneParam = (
     fallbackValue,
     defaultValue,
     setValue,
-    getValue,
   );
+  const value = getValue();
 
   const reset = useCallback(() => {
     setValue(initialValue);
   }, [initialValue]);
 
-  return [boundAction, getValue, setValue, reset];
+  return [boundAction, value, setValue, reset];
 };
 
 // export const useActionBoundToOneBooleanParam = (action, name, value) => {
@@ -213,24 +132,23 @@ export const useActionBoundToOneArrayParam = (
   fallbackValue,
   defaultValue = [],
 ) => {
-  const [boundAction, getValue, setValue, resetValue] =
-    useActionBoundToOneParam(
-      action,
-      name,
-      initialValue,
-      fallbackValue,
-      defaultValue,
-    );
+  const [boundAction, value, setValue, resetValue] = useActionBoundToOneParam(
+    action,
+    name,
+    initialValue,
+    fallbackValue,
+    defaultValue,
+  );
 
-  const add = (valueToAdd, valueArray = getValue()) => {
+  const add = (valueToAdd, valueArray = value) => {
     setValue(addIntoArray(valueArray, valueToAdd));
   };
 
-  const remove = (valueToRemove, valueArray = getValue()) => {
+  const remove = (valueToRemove, valueArray = value) => {
     setValue(removeFromArray(valueArray, valueToRemove));
   };
 
-  return [boundAction, getValue, add, remove, resetValue];
+  return [boundAction, value, add, remove, resetValue];
 };
 export const useOneFormArrayParam = (
   name,

@@ -119,7 +119,7 @@ const SelectWithAction = forwardRef((props, ref) => {
   const {
     id,
     name,
-    value: initialValue,
+    value: externalValue,
     action,
     children,
     onCancel,
@@ -136,25 +136,25 @@ const SelectWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState, resetNavState] = useNavState(id);
-  const valueAtStart = initialValue === undefined ? navState : initialValue;
-  const [boundAction, getCheckedValue, setCheckedValue, resetCheckedValue] =
-    useActionBoundToOneParam(action, name, valueAtStart);
+  const [boundAction, value, setValue, resetValue] = useActionBoundToOneParam(
+    action,
+    name,
+    externalValue,
+    navState,
+  );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const actionRequesterRef = useRef(null);
-
-  const valueInAction = getCheckedValue();
-  const value = valueInAction;
   useEffect(() => {
     setNavState(value);
-  }, [valueInAction]);
+  }, [value]);
 
+  const actionRequesterRef = useRef(null);
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       resetNavState();
-      resetCheckedValue();
+      resetValue();
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -164,11 +164,11 @@ const SelectWithAction = forwardRef((props, ref) => {
     },
     onStart: onActionStart,
     onAbort: (e) => {
-      resetCheckedValue();
+      resetValue();
       onActionAbort?.(e);
     },
     onError: (error) => {
-      resetCheckedValue();
+      resetValue();
       onActionError?.(error);
     },
     onEnd: () => {
@@ -187,7 +187,7 @@ const SelectWithAction = forwardRef((props, ref) => {
       onChange={(event) => {
         const select = event.target;
         const selectedValue = select.value;
-        setCheckedValue(selectedValue);
+        setValue(selectedValue);
         const radioListContainer = innerRef.current;
         const optionSelected = select.querySelector(
           `option[value="${selectedValue}"]`,
@@ -221,7 +221,7 @@ const SelectInsideForm = forwardRef((props, ref) => {
     id,
     name,
     readOnly,
-    value: initialValue,
+    value: externalValue,
     children,
     ...rest
   } = props;
@@ -231,22 +231,24 @@ const SelectInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [getSelectedValue, setSelectedValue, resetSelectedValue] =
-    useOneFormParam(name, initialValue, navState);
-  const value = getSelectedValue();
+  const [value, setValue, resetValue] = useOneFormParam(
+    name,
+    externalValue,
+    navState,
+  );
   useEffect(() => {
     setNavState(value);
   }, [value]);
 
   useFormEvents(innerRef, {
     onFormReset: () => {
-      setSelectedValue(undefined);
+      setValue(undefined);
     },
     onFormActionAbort: () => {
-      resetSelectedValue();
+      resetValue();
     },
     onFormActionError: () => {
-      resetSelectedValue();
+      resetValue();
     },
   });
 
@@ -259,7 +261,7 @@ const SelectInsideForm = forwardRef((props, ref) => {
       onChange={(event) => {
         const select = event.target;
         const selectedValue = select.checked;
-        setSelectedValue(selectedValue);
+        setValue(selectedValue);
       }}
       {...rest}
     >

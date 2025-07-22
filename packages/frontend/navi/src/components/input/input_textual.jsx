@@ -143,7 +143,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     type,
     name,
     action,
-    value: initialValue,
+    value: externalValue,
     cancelOnBlurInvalid,
     cancelOnEscape,
     actionErrorEffect,
@@ -166,13 +166,17 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [boundAction, getValue, setValue, resetValue] =
-    useActionBoundToOneParam(action, name, initialValue, navState, "");
+  const [boundAction, value, setValue, resetValue] = useActionBoundToOneParam(
+    action,
+    name,
+    externalValue,
+    navState,
+    "",
+  );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const value = getValue();
   useEffect(() => {
     setNavState(value);
   }, [value]);
@@ -268,7 +272,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
     formContext,
     id,
     name,
-    value: initialValue,
+    value: externalValue,
     loading,
     readOnly,
     onInput,
@@ -282,13 +286,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   const [navState, setNavState] = useNavState(id);
   const { formAction, formIsBusy, formIsReadOnly, formActionRequester } =
     formContext;
-  const [getValue, setValue] = useOneFormParam(
-    name,
-    initialValue,
-    navState,
-    "",
-  );
-  const value = getValue();
+  const [value, setValue] = useOneFormParam(name, externalValue, navState, "");
   useEffect(() => {
     setNavState(value);
   }, [value]);

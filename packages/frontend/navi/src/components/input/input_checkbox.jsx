@@ -221,7 +221,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     id,
     name,
     value = "on",
-    checked: initialChecked = false,
+    checked: checkedExternal,
     action,
     readOnly,
     loading,
@@ -240,16 +240,19 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const checkedAtStart =
-    navState === undefined ? initialChecked : Boolean(navState);
 
-  const [boundAction, getCheckedValue, setCheckedValue, resetChecked] =
-    useActionBoundToOneParam(action, name, checkedAtStart ? value : undefined);
+  const [boundAction, checkedValue, setCheckedValue, resetCheckedValue] =
+    useActionBoundToOneParam(
+      action,
+      name,
+      checkedExternal ? value : undefined,
+      navState ? value : undefined,
+    );
+  const checked = checkedValue === value;
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const checked = Boolean(getCheckedValue());
   const innerLoading = loading || actionLoading;
 
   useActionEvents(innerRef, {
@@ -258,18 +261,18 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
         return;
       }
       setNavState(undefined);
-      resetChecked();
+      resetCheckedValue();
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,
     onAbort: (e) => {
-      resetChecked();
+      resetCheckedValue();
       onActionAbort?.(e);
     },
     onError: (e) => {
-      resetChecked();
+      resetCheckedValue();
       onActionError?.(e);
     },
     onEnd: (e) => {
@@ -304,7 +307,7 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
     id,
     name,
     value = "on",
-    checked: initialChecked,
+    checked: checkedExternal,
     readOnly,
     onChange,
     ...rest
@@ -315,26 +318,26 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [getChecked, setChecked, resetChecked] = useOneFormParam(
+  const [checkedValue, setCheckedValue, resetCheckedValue] = useOneFormParam(
     name,
-    initialChecked,
-    navState,
+    checkedExternal ? value : undefined,
+    navState ? value : undefined,
   );
-  const checked = getChecked();
+  const checked = checkedValue === value;
   useEffect(() => {
-    if (initialChecked) {
+    if (checkedExternal) {
       setNavState(checked ? false : undefined);
     } else {
       setNavState(checked ? true : undefined);
     }
-  }, [initialChecked, checked]);
+  }, [checkedExternal, checked]);
 
   useFormEvents(innerRef, {
     onFormActionAbort: () => {
-      resetChecked();
+      resetCheckedValue();
     },
     onFormActionError: () => {
-      resetChecked();
+      resetCheckedValue();
     },
   });
 
@@ -348,7 +351,7 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
       readOnly={readOnly || formIsReadOnly}
       onChange={(e) => {
         const checkboxIsChecked = e.target.checked;
-        setChecked(checkboxIsChecked ? value : undefined);
+        setCheckedValue(checkboxIsChecked ? value : undefined);
         onChange?.(e);
       }}
     />
