@@ -29,6 +29,63 @@ const resolveInitialValue = (externalValue, fallbackValue, defaultValue) => {
     : externalValue;
 };
 
+/**
+ * Hook that handles initial value setup and external value synchronization.
+ *
+ * @param {string} name - Parameter name for debugging
+ * @param {any} externalValue - Value from props or parent component
+ * @param {any} fallbackValue - Backup value if external value isn't useful
+ * @param {any} defaultValue - Final fallback value
+ * @param {Function} setValue - Function to call when value needs to be set
+ * @param {Function} getValue - Function to get current value (for sync comparison)
+ *
+ * @returns {any} The resolved initial value
+ */
+const useInitialValue = (
+  name,
+  externalValue,
+  fallbackValue,
+  defaultValue,
+  setValue,
+  getValue,
+) => {
+  const initialValue = resolveInitialValue(
+    externalValue,
+    fallbackValue,
+    defaultValue,
+  );
+
+  // Set initial value on mount
+  const mountedRef = useRef(false);
+  if (!mountedRef.current) {
+    mountedRef.current = true;
+    if (name) {
+      setValue(initialValue);
+    }
+  }
+
+  // Track external value changes and sync them
+  const previousExternalValueRef = useRef(externalValue);
+  if (externalValue !== previousExternalValueRef.current) {
+    previousExternalValueRef.current = externalValue;
+    if (
+      name &&
+      externalValue !== undefined &&
+      externalValue !== defaultValue &&
+      externalValue !== getValue()
+    ) {
+      if (debug) {
+        console.debug(
+          `useAction(${name}) syncing external value change: ${externalValue}`,
+        );
+      }
+      setValue(externalValue);
+    }
+  }
+
+  return initialValue;
+};
+
 let debug = false;
 let componentActionIdCounter = 0;
 const useComponentActionCacheKey = () => {
@@ -82,38 +139,14 @@ export const useOneFormParam = (
   const setValue = (value) =>
     updateParamsSignal(formParamsSignal, { [name]: value });
 
-  const initialValue = resolveInitialValue(
+  const initialValue = useInitialValue(
+    name,
     externalValue,
     fallbackValue,
     defaultValue,
+    setValue,
+    getValue,
   );
-
-  const mountedRef = useRef(false);
-  if (!mountedRef.current) {
-    mountedRef.current = true;
-    if (name) {
-      setValue(initialValue);
-    }
-  }
-  // Track previous external value to sync external value changes
-  const previousExternalValueRef = useRef(externalValue);
-  if (externalValue !== previousExternalValueRef.current) {
-    // External value changed after mount - sync internal state
-    previousExternalValueRef.current = externalValue;
-    if (
-      name &&
-      externalValue !== undefined &&
-      externalValue !== defaultValue &&
-      externalValue !== getValue()
-    ) {
-      if (debug) {
-        console.debug(
-          `useAction(${name}) syncing external value change: ${externalValue}`,
-        );
-      }
-      setValue(externalValue);
-    }
-  }
 
   const resetValue = useCallback(() => {
     setValue(initialValue);
@@ -131,7 +164,6 @@ export const useActionBoundToOneParam = (
   fallbackValue,
   defaultValue,
 ) => {
-  const mountedRef = useRef(false);
   const actionCacheKey = useComponentActionCacheKey();
   const cacheKey = typeof action === "function" ? actionCacheKey : action;
   const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
@@ -146,40 +178,14 @@ export const useActionBoundToOneParam = (
     return updateParams({ [name]: value });
   };
 
-  const initialValue = resolveInitialValue(
+  const initialValue = useInitialValue(
+    name,
     externalValue,
     fallbackValue,
     defaultValue,
+    setValue,
+    getValue,
   );
-
-  if (!mountedRef.current) {
-    mountedRef.current = true;
-    if (name) {
-      if (debug) {
-        console.debug(`useAction(${name}) initial value: ${initialValue}`);
-      }
-      setValue(initialValue);
-    }
-  }
-  // Track previous external value to sync external value changes
-  const previousExternalValueRef = useRef(externalValue);
-  if (externalValue !== previousExternalValueRef.current) {
-    // External value changed after mount - sync internal state
-    previousExternalValueRef.current = externalValue;
-    if (
-      name &&
-      externalValue !== undefined &&
-      externalValue !== defaultValue &&
-      externalValue !== getValue()
-    ) {
-      if (debug) {
-        console.debug(
-          `useAction(${name}) syncing external value change: ${externalValue}`,
-        );
-      }
-      setValue(externalValue);
-    }
-  }
 
   const reset = useCallback(() => {
     setValue(initialValue);
