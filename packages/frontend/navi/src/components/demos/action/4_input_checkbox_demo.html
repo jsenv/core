@@ -457,6 +457,19 @@
         return (
           <div className="demo-card">
             <h3 className="demo-title">Shared Action Example</h3>
+            <p
+              style={{
+                margin: "0 0 15px 0",
+                fontSize: "14px",
+                color: "#666",
+                lineHeight: "1.4",
+              }}
+            >
+              <strong>Note:</strong> The checkbox states are not synced here,
+              which is normal. In a real application, both checkboxes would
+              typically be controlled by the same external state to keep them
+              synchronized.
+            </p>
             <div className="control-group">
               <div className="checkbox-group">
                 <Input
