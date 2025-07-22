@@ -230,7 +230,7 @@ const initAutoreload = ({
       const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
       if (DEBUG) {
         console.debug(
-          `Autoreload triggered by ${httpAction.name} (${httpAction.meta.httpVerb}) with reasons: ${reasons.join(", ")}`,
+          `Autoreload triggered by ${httpAction.name} with reasons: ${reasons.join(", ")}`,
         );
       }
       reloadActions(allActionsToReload, {

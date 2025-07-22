@@ -865,12 +865,14 @@ export const createAction = (callback, rootOptions = {}) => {
           if (globalAbortSignal) {
             globalAbortSignal.removeEventListener("abort", onAbortFromGlobal);
           }
-          dataSignal.value = loadResult;
-          loadingStateSignal.value = LOADED;
           preloadedProtectionRegistry.unprotect(action);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
-          onLoad();
+          batch(() => {
+            dataSignal.value = loadResult;
+            loadingStateSignal.value = LOADED;
+            onLoad();
+          });
           if (DEBUG) {
             console.log(`"${action}": loaded (reason: ${reason})`);
           }
@@ -898,8 +900,8 @@ export const createAction = (callback, rootOptions = {}) => {
           batch(() => {
             errorSignal.value = e;
             loadingStateSignal.value = FAILED;
+            onError(e);
           });
-          onError(e);
         };
 
         try {
