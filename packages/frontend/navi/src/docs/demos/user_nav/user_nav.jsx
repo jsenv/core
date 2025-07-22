@@ -1,4 +1,10 @@
-import { defineRoutes, resource, Route, useDocumentUrl } from "@jsenv/navi";
+import {
+  defineRoutes,
+  resource,
+  Route,
+  useDocumentState,
+  useDocumentUrl,
+} from "@jsenv/navi";
 import { render } from "preact";
 
 import.meta.css = /* css */ `
@@ -79,7 +85,7 @@ const App = () => {
       <h1>User Navigation Test</h1>
       <Navigation />
       <Route route={USER_ROUTE}>{(user) => <UserPage user={user} />}</Route>
-      <CurrentUrl />
+      <DocumentInfo />
     </div>
   );
 };
@@ -162,12 +168,18 @@ const UserPage = ({ user }) => {
   );
 };
 
-const CurrentUrl = () => {
+const DocumentInfo = () => {
   const documentUrl = useDocumentUrl();
+  const documentState = useDocumentState();
 
   return (
-    <div className="current-url">
-      Current URL: <span>{documentUrl}</span>
+    <div>
+      <div className="current-url">
+        Current URL: <span>{documentUrl}</span>
+      </div>
+      <div className="current-state">
+        Current State: <pre>{JSON.stringify(documentState, null, 2)}</pre>
+      </div>
     </div>
   );
 };
