@@ -9,7 +9,7 @@ import { getCallerInfo } from "../utils/get_caller_info.js";
 import { createIterableWeakSet } from "../utils/iterable_weak_set.js";
 import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
-let debug = false;
+let DEBUG = true;
 
 // Global dependency tracking system
 const globalDependencyRegistry = new Map(); // Map<dependencyResource, Set<dependentAutoreload>>
@@ -20,12 +20,18 @@ const registerDependency = (dependencyResource, dependentAutoreload) => {
   globalDependencyRegistry.get(dependencyResource).add(dependentAutoreload);
 };
 const notifyDependents = (triggeringResource, httpAction) => {
+  const allActionsToReload = new Set();
   const dependents = globalDependencyRegistry.get(triggeringResource);
   if (dependents) {
     for (const dependentAutoreload of dependents) {
-      dependentAutoreload.onDependencyActionDone(httpAction);
+      const dependentActions =
+        dependentAutoreload.collectDependencyActionsToReload(httpAction);
+      for (const action of dependentActions) {
+        allActionsToReload.add(action);
+      }
     }
   }
+  return allActionsToReload;
 };
 
 // Cache for parameter scope identifiers
@@ -133,18 +139,10 @@ const initAutoreload = ({
     return () => false;
   };
 
-  // Core autoreload execution logic
-  const performAutoreload = (reason, predicate) => {
-    const toReloadSet = findAliveActionsMatching(httpActionWeakSet, predicate);
-
-    if (toReloadSet.size > 0) {
-      reloadActions(toReloadSet, { reason });
-    }
-  };
-
   const onActionDone = (httpAction) => {
     const predicates = [];
     const reasons = [];
+    const allActionsToReload = new Set();
 
     // Handle same-resource autoreload using configured rules
     const shouldReloadGetMany = shouldAutoreloadGetMany(httpAction);
@@ -201,30 +199,52 @@ const initAutoreload = ({
       }
     }
 
-    // Execute autoreload if any predicates were added
+    // Collect actions to reload from current resource's autoreload rules
     if (predicates.length > 0) {
       const combinedPredicate = (httpActionCandidate) => {
         return predicates.some((predicate) => predicate(httpActionCandidate));
       };
 
-      performAutoreload(
-        `${httpAction} triggered ${reasons.join(" and ")}`,
+      const localActions = findAliveActionsMatching(
+        httpActionWeakSet,
         combinedPredicate,
       );
+      for (const action of localActions) {
+        allActionsToReload.add(action);
+      }
     }
 
-    // Handle cross-resource dependency notifications
+    // Collect actions to reload from cross-resource dependencies
     if (resourceInstance && httpAction.meta.httpVerb !== "GET") {
-      notifyDependents(resourceInstance, httpAction);
+      const dependencyActions = notifyDependents(resourceInstance, httpAction);
+      for (const action of dependencyActions) {
+        allActionsToReload.add(action);
+      }
+      if (dependencyActions.size > 0) {
+        reasons.push("dependency autoreload");
+      }
+    }
+
+    // Execute single autoreload if any actions were collected
+    if (allActionsToReload.size > 0) {
+      const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
+      if (DEBUG) {
+        console.debug(
+          `Autoreload triggered by ${httpAction.name} (${httpAction.meta.httpVerb}) with reasons: ${reasons.join(", ")}`,
+        );
+      }
+      reloadActions(allActionsToReload, {
+        reason,
+      });
     }
   };
 
-  // Handle dependency-triggered reloads
-  const onDependencyActionDone = (httpAction) => {
+  // Collect actions to reload for dependency-triggered reloads (without executing)
+  const collectDependencyActionsToReload = (httpAction) => {
     if (httpAction.meta.httpVerb === "GET") {
       // Dependencies have specific behavior: only non-GET verbs trigger autoreload,
       // and they only trigger GET_MANY reloads (not individual GET reloads)
-      return;
+      return new Set();
     }
 
     const paramScopePredicate = buildParamScopePredicate();
@@ -237,16 +257,13 @@ const initAutoreload = ({
       );
     };
 
-    performAutoreload(
-      `${httpAction} triggered dependency autoreload`,
-      dependencyPredicate,
-    );
+    return findAliveActionsMatching(httpActionWeakSet, dependencyPredicate);
   };
 
   // Register this autoreload instance as dependent on its dependencies
   if (dependencies.length > 0) {
     for (const dependency of dependencies) {
-      registerDependency(dependency, { onDependencyActionDone });
+      registerDependency(dependency, { collectDependencyActionsToReload });
     }
   }
 
@@ -857,7 +874,7 @@ export const resource = (
         return nullItem;
       });
 
-      if (debug) {
+      if (DEBUG) {
         console.debug(
           `setup ${item}.${propertyName} is one "${childResource.name}" (current value: ${childItemSignal.peek()})`,
         );
@@ -872,7 +889,7 @@ export const resource = (
           if (!updateChildItemId(value)) {
             return;
           }
-          if (debug) {
+          if (DEBUG) {
             console.debug(
               `${item}.${propertyName} updated to ${childItemSignal.peek()}`,
             );
@@ -955,7 +972,7 @@ export const resource = (
         return childItemArray;
       });
 
-      if (debug) {
+      if (DEBUG) {
         const childItemArray = childItemArraySignal.peek();
         console.debug(
           `setup ${item}.${propertyName} is many "${childResource.name}" (current value: ${childItemArray.length ? childItemArray.join(",") : "[]"})`,
@@ -965,7 +982,7 @@ export const resource = (
       Object.defineProperty(item, propertyName, {
         get: () => {
           const childItemArray = childItemArraySignal.value;
-          if (debug) {
+          if (DEBUG) {
             console.debug(
               `return ${childItemArray.length ? childItemArray.join(",") : "[]"} for ${item}.${propertyName}`,
             );
@@ -974,7 +991,7 @@ export const resource = (
         },
         set: (value) => {
           updateChildItemIdArray(value);
-          if (debug) {
+          if (DEBUG) {
             console.debug(
               `${item}.${propertyName} updated to ${childItemIdArraySignal.peek()}`,
             );
