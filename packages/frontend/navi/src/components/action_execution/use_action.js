@@ -53,10 +53,20 @@ export const useOneFormParam = (
   defaultValue,
 ) => {
   const { formParamsSignal } = useFormContext();
+  const previousFormParamsSignalRef = useRef(null);
+  const formActionChanged =
+    previousFormParamsSignalRef.current !== null &&
+    previousFormParamsSignalRef.current !== formParamsSignal;
+  previousFormParamsSignalRef.current = formParamsSignal;
 
-  const getValue = () => formParamsSignal.value[name];
-  const setValue = (value) =>
-    updateParamsSignal(formParamsSignal, { [name]: value });
+  const getValue = useCallback(
+    () => formParamsSignal.value[name],
+    [formParamsSignal],
+  );
+  const setValue = useCallback(
+    (value) => updateParamsSignal(formParamsSignal, { [name]: value }),
+    [formParamsSignal],
+  );
 
   const initialValue = useInitialValue(
     name,
@@ -65,6 +75,14 @@ export const useOneFormParam = (
     defaultValue,
     setValue,
   );
+  if (formActionChanged) {
+    if (debug) {
+      console.debug(
+        `useOneFormParam(${name}) form action changed, re-initializing with: ${initialValue}`,
+      );
+    }
+    setValue(initialValue);
+  }
 
   const resetValue = useCallback(() => {
     setValue(initialValue);
@@ -92,15 +110,18 @@ export const useActionBoundToOneParam = (
   previousParamsSignalRef.current = paramsSignal;
 
   const boundAction = useBoundAction(action, paramsSignal);
-  const getValue = () => paramsSignal.value[name];
-  const setValue = (value) => {
-    if (debug) {
-      console.debug(
-        `useActionBoundToOneParam(${name}) set value to ${value} (old value is ${getValue()} )`,
-      );
-    }
-    return updateParams({ [name]: value });
-  };
+  const getValue = useCallback(() => paramsSignal.value[name], [paramsSignal]);
+  const setValue = useCallback(
+    (value) => {
+      if (debug) {
+        console.debug(
+          `useActionBoundToOneParam(${name}) set value to ${value} (old value is ${getValue()} )`,
+        );
+      }
+      return updateParams({ [name]: value });
+    },
+    [updateParams],
+  );
 
   const initialValue = useInitialValue(
     name,
