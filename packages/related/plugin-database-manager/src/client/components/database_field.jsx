@@ -130,10 +130,7 @@ export const DatabaseField = ({ column, label, ...rest }) => {
   if (column.data_type === "name") {
     const props = rest;
     return (
-      <Field
-        label={label}
-        input={<Input type="text" required name={columnName} {...props} />}
-      />
+      <Field label={label} input={<Input type="text" required {...props} />} />
     );
   }
   if (column.data_type === "oid") {
