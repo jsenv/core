@@ -173,7 +173,7 @@ export const openValidationMessage = (
     onClose,
     closeOnClickOutside = level === "info",
     canClickThrough = level === "info",
-    debug = false,
+    debug = true,
   } = {},
 ) => {
   let _closeOnClickOutside = closeOnClickOutside;
@@ -264,6 +264,7 @@ export const openValidationMessage = (
   const positionFollower = followPosition(
     jsenvValidationMessage,
     targetElement,
+    { debug },
   );
   closeCallbackSet.add(() => {
     positionFollower.stop();
@@ -504,7 +505,7 @@ const createValidationMessage = () => {
  * @param {HTMLElement} targetElement - The element the validation message should follow
  * @returns {Function} - Cleanup function to stop position tracking
  */
-const followPosition = (validationMessage, targetElement) => {
+const followPosition = (validationMessage, targetElement, { debug }) => {
   const cleanupCallbackSet = new Set();
   const stop = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -704,20 +705,32 @@ const followPosition = (validationMessage, targetElement) => {
 
   // Initial position calculation
   updatePosition();
+  if (debug) {
+    console.debug("initial validation message position updated");
+  }
 
   // Request animation frame mechanism for efficient updates
   let rafId = null;
-  const schedulePositionUpdate = () => {
+  const schedulePositionUpdate = (reason) => {
     cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(updatePosition);
+    rafId = requestAnimationFrame(() => {
+      updatePosition();
+      if (debug) {
+        console.debug(
+          `validation message position updated (reason: ${reason})`,
+        );
+      }
+    });
   };
   cleanupCallbackSet.add(() => {
     cancelAnimationFrame(rafId);
   });
 
   update_on_content_change: {
-    const resizeObserverContent = new ResizeObserver(() => {
-      schedulePositionUpdate();
+    const resizeObserverContent = new ResizeObserver((entries) => {
+      const [entry] = entries;
+      const { width, height } = entry.contentRect;
+      schedulePositionUpdate(`content_size_change (${width}x${height})`);
     });
     resizeObserverContent.observe(validationMessageContent);
     cleanupCallbackSet.add(() => {
@@ -757,7 +770,7 @@ const followPosition = (validationMessage, targetElement) => {
           width: currentRect.width,
           height: currentRect.height,
         };
-        schedulePositionUpdate();
+        schedulePositionUpdate("position_change");
       }
     };
 
@@ -782,7 +795,7 @@ const followPosition = (validationMessage, targetElement) => {
       const [entry] = entries;
       if (entry.isIntersecting) {
         validationMessage.style.opacity = 1;
-        schedulePositionUpdate();
+        schedulePositionUpdate("becomes_intersecting");
         positionCheck.start();
       } else {
         validationMessage.style.opacity = 0;
@@ -798,7 +811,7 @@ const followPosition = (validationMessage, targetElement) => {
   // Update position on scroll events
   update_on_scroll: {
     const handleScroll = () => {
-      schedulePositionUpdate();
+      schedulePositionUpdate("parent_scroll");
     };
 
     const scrollableParentSet = getScrollableParentSet(targetElement);
@@ -817,7 +830,7 @@ const followPosition = (validationMessage, targetElement) => {
   // Update position when target element size changes
   update_on_target_size_change: {
     const resizeObserver = new ResizeObserver(() => {
-      schedulePositionUpdate();
+      schedulePositionUpdate("target_size_change");
     });
     resizeObserver.observe(targetElement);
     cleanupCallbackSet.add(() => {
@@ -827,7 +840,7 @@ const followPosition = (validationMessage, targetElement) => {
 
   update_on_window_resize: {
     const handleResize = () => {
-      schedulePositionUpdate();
+      schedulePositionUpdate("window_resize");
     };
 
     window.addEventListener("resize", handleResize);

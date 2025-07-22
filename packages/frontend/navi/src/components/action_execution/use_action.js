@@ -5,7 +5,7 @@ import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useFormContext } from "./form_context.js";
 
-let debug = true;
+let debug = false;
 let componentActionIdCounter = 0;
 const useComponentActionCacheKey = () => {
   const componentActionCacheKeyRef = useRef(null);

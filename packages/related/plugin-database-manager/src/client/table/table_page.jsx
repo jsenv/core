@@ -19,9 +19,8 @@
  */
 
 import { Button } from "@jsenv/navi";
-import { DatabaseField } from "../components/database_field.jsx";
+import { DatabaseFieldset, RoleField } from "../components/database_field.jsx";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
-import { RoleLink } from "../role/role_link.jsx";
 import { TableSvg } from "./table_icons.jsx";
 import { TABLE } from "./table_store.js";
 
@@ -51,7 +50,22 @@ export const TablePage = ({ table }) => {
       </PageHead>
       <PageBody>
         <>
-          <TableFields table={table} />
+          <DatabaseFieldset
+            item={table}
+            columns={table.meta.columns}
+            usePutAction={(columnName) =>
+              TABLE.PUT.bindParams({
+                tablename: table.tablename,
+                columnName,
+              })
+            }
+            customFields={{
+              tableowner: () => {
+                const ownerRole = table.ownerRole;
+                return <RoleField role={ownerRole} />;
+              },
+            }}
+          />
           <a
             href="https://www.postgresql.org/docs/14/ddl-basics.html"
             target="_blank"
@@ -61,50 +75,5 @@ export const TablePage = ({ table }) => {
         </>
       </PageBody>
     </Page>
-  );
-};
-
-const TableFields = ({ table }) => {
-  let columns = table.meta.columns;
-  const ownerRole = table.ownerRole;
-
-  columns.sort((a, b) => {
-    return a.ordinal_position - b.ordinal_position;
-  });
-
-  columns = columns.filter((column) => {
-    return column.column_name === "hasindexes";
-  });
-
-  return (
-    <ul>
-      {columns.map((column) => {
-        const columnName = column.column_name;
-        const value = table ? table[columnName] : "";
-        const action = TABLE.PUT.bindParams({
-          tablename: table.tablename,
-          columnName,
-        });
-
-        if (columnName === "tableowner") {
-          return (
-            <li key={columnName}>
-              Owner:
-              <RoleLink role={ownerRole}>{ownerRole.rolname}</RoleLink>
-            </li>
-          );
-        }
-        return (
-          <li key={columnName}>
-            <DatabaseField
-              label={<span>{columnName}:</span>}
-              column={column}
-              value={value}
-              action={action}
-            />
-          </li>
-        );
-      })}
-    </ul>
   );
 };
