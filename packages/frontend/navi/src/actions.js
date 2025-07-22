@@ -524,6 +524,8 @@ export const createAction = (callback, rootOptions = {}) => {
       sideEffect = () => {},
       keepOldData = false,
       meta = metaDefault,
+      onLoad = () => {},
+      onError = () => {},
     },
     { parentAction } = {},
   ) => {
@@ -868,6 +870,7 @@ export const createAction = (callback, rootOptions = {}) => {
           preloadedProtectionRegistry.unprotect(action);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
+          onLoad();
           if (DEBUG) {
             console.log(`"${action}": loaded (reason: ${reason})`);
           }
@@ -896,6 +899,7 @@ export const createAction = (callback, rootOptions = {}) => {
             errorSignal.value = e;
             loadingStateSignal.value = FAILED;
           });
+          onError(e);
         };
 
         try {

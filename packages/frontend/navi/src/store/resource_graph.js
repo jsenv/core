@@ -151,14 +151,7 @@ const initAutoreload = ({
     const toReloadSet = findAliveActionsMatching(httpActionWeakSet, predicate);
 
     if (toReloadSet.size > 0) {
-      // setTimeout otherwise the action done side effects could not yet run
-      // (for instance when creating an item, we want to listen to actionend first
-      // then we want to perform the reload)
-      // ideally we would put this reload after dispacthing actionend
-      // and we could as a result remove the setTimeout
-      setTimeout(() => {
-        reloadActions(toReloadSet, { reason });
-      });
+      reloadActions(toReloadSet, { reason });
     }
   };
 
@@ -227,7 +220,6 @@ const createHttpHandlerForRootResource = (
       httpVerb === "DELETE"
         ? (itemIdOrItemProps) => {
             const itemId = store.drop(itemIdOrItemProps);
-            autoreload.onActionDone(httpActionAffectingOneItem);
             return itemId;
           }
         : (data) => {
@@ -241,7 +233,6 @@ const createHttpHandlerForRootResource = (
             } else {
               item = store.upsert(data);
             }
-            autoreload.onActionDone(httpActionAffectingOneItem);
             const itemId = item[idKey];
             return itemId;
           };
@@ -269,6 +260,7 @@ const createHttpHandlerForRootResource = (
         meta: { httpVerb, httpMany: false, paramScope },
         name: `${name}.${httpVerb}`,
         compute: (itemId) => store.select(itemId),
+        onLoad: () => autoreload.onActionDone(httpActionAffectingOneItem),
         ...options,
       },
     );
@@ -321,12 +313,10 @@ const createHttpHandlerForRootResource = (
       httpVerb === "DELETE"
         ? (idArray) => {
             store.drop(idArray);
-            autoreload.onActionDone(httpActionAffectingManyItems);
             return idArray;
           }
         : (dataArray) => {
             const itemArray = store.upsert(dataArray);
-            autoreload.onActionDone(httpActionAffectingManyItems);
             const idArray = itemArray.map((item) => item[idKey]);
             return idArray;
           };
@@ -340,6 +330,7 @@ const createHttpHandlerForRootResource = (
         name: `${name}.${httpVerb}[many]`,
         data: [],
         compute: (idArray) => store.selectAll(idArray),
+        onLoad: () => autoreload.onActionDone(httpActionAffectingManyItems),
         ...options,
       },
     );
@@ -490,13 +481,11 @@ const createHttpHandlerRelationshipToManyResource = (
                 [idKey]: itemId,
                 [propertyName]: childItemArrayWithoutThisOne,
               });
-              autoreload.onActionDone(httpActionAffectingOneItem);
             }
             return childItemId;
           }
         : (childData) => {
             const childItem = childStore.upsert(childData); // if the child item was used it will reload thanks to signals
-            autoreload.onActionDone(httpActionAffectingOneItem);
             const childItemId = childItem[childIdKey];
             return childItemId;
           };
@@ -509,6 +498,7 @@ const createHttpHandlerRelationshipToManyResource = (
         meta: { httpVerb, httpMany: false },
         name: `${name}.${httpVerb}`,
         compute: (childItemId) => childStore.select(childItemId),
+        onLoad: () => autoreload.onActionDone(httpActionAffectingOneItem),
         ...options,
       },
     );
@@ -564,7 +554,6 @@ const createHttpHandlerRelationshipToManyResource = (
             // }
             // the array can be empty
             const item = store.upsert(data);
-            autoreload.onActionDone(httpActionAffectingManyItem);
             const childItemArray = item[propertyName];
             const childItemIdArray = childItemArray.map(
               (childItem) => childItem[childIdKey],
@@ -590,7 +579,6 @@ const createHttpHandlerRelationshipToManyResource = (
                   [idKey]: itemId,
                   [propertyName]: childItemArrayWithoutThoose,
                 });
-                autoreload.onActionDone(httpActionAffectingManyItem);
               }
               return childItemIdArray;
             }
@@ -598,7 +586,6 @@ const createHttpHandlerRelationshipToManyResource = (
               // hum ici aussi on voudra reload "user" pour POST
               // les autres les signals se charge de reload si visible
               const childItemArray = childStore.upsert(childDataArray);
-              autoreload.onActionDone(httpActionAffectingManyItem);
               const childItemIdArray = childItemArray.map(
                 (childItem) => childItem[childIdKey],
               );
@@ -614,6 +601,7 @@ const createHttpHandlerRelationshipToManyResource = (
         name: `${name}.${httpVerb}[many]`,
         data: [],
         compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
+        onLoad: () => autoreload.onActionDone(httpActionAffectingManyItem),
         ...options,
       },
     );

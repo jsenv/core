@@ -54,6 +54,8 @@ export const selectTables = async (sql, { publicFilter, rolname }) => {
       )
     WHERE
       ${whereConditions.flatMap((x, i) => (i ? [sql`AND`, x] : x))}
+    ORDER BY
+      pg_class.oid ASC
   `;
   return data;
 };
