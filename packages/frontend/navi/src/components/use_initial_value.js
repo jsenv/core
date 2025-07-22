@@ -1,5 +1,7 @@
 import { useRef } from "preact/hooks";
 
+let debug = false;
+
 /**
  * Picks the best initial value from three options using a simple priority system.
  *
@@ -22,11 +24,13 @@ export const resolveInitialValue = (
   fallbackValue,
   defaultValue,
 ) => {
-  return externalValue === undefined || externalValue === defaultValue
-    ? fallbackValue === undefined
-      ? defaultValue
-      : fallbackValue
-    : externalValue;
+  if (externalValue !== undefined && externalValue !== defaultValue) {
+    return externalValue;
+  }
+  if (fallbackValue !== undefined) {
+    return fallbackValue;
+  }
+  return defaultValue;
 };
 
 /**
@@ -51,9 +55,9 @@ export const useExternalValueSync = (
     // Always sync external value changes - use defaultValue only when external is undefined
     const valueToSet =
       externalValue === undefined ? defaultValue : externalValue;
-    if (name) {
+    if (debug) {
       console.debug(
-        `useExternalValueSync(${name}) syncing external value change: ${externalValue} -> ${valueToSet}`,
+        `useExternalValueSync(${name}) syncing external value change: ${valueToSet}`,
       );
     }
     setValue(valueToSet);

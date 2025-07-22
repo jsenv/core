@@ -213,7 +213,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const InputWithExternalControlDemo = () => {
-        const [inputValue, setInputValue] = useState("");
+        const [inputValue, setInputValue] = useState(undefined);
         const [result, setResult] = useState("");
 
         return (
@@ -238,13 +238,27 @@
               />
             </div>
             <div className="button-group">
-              <button onClick={() => setInputValue("Preset Value 1")}>
+              <button
+                onClick={() => {
+                  setInputValue("Preset Value 1");
+                }}
+              >
                 Set Value 1
               </button>
-              <button onClick={() => setInputValue("Preset Value 2")}>
+              <button
+                onClick={() => {
+                  setInputValue("Preset Value 2");
+                }}
+              >
                 Set Value 2
               </button>
-              <button onClick={() => setInputValue("")}>Clear</button>
+              <button
+                onClick={() => {
+                  setInputValue("");
+                }}
+              >
+                Clear
+              </button>
             </div>
             <div
               className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
@@ -314,8 +328,8 @@
 
       // eslint-disable-next-line no-unused-vars
       const FormWithExternalControlDemo = () => {
-        const [username, setUsername] = useState("");
-        const [email, setEmail] = useState("");
+        const [username, setUsername] = useState(undefined);
+        const [email, setEmail] = useState(undefined);
         const [result, setResult] = useState("");
 
         return (
