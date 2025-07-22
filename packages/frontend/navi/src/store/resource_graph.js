@@ -227,16 +227,6 @@ const getParamScope = (params) => {
   return newParamScope;
 };
 
-const mapCallbackMaybeAsyncResult = (callback, effect) => {
-  return (...args) => {
-    const result = callback(...args);
-    if (result && typeof result.then === "function") {
-      return result.then(effect);
-    }
-    return effect(result);
-  };
-};
-
 const createHttpHandlerForRootResource = (
   name,
   {
@@ -281,8 +271,10 @@ const createHttpHandlerForRootResource = (
 
     const callerInfo = getCallerInfo(createActionAffectingOneItem, 1);
     const actionTrace = `${name}.${httpVerb} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
-    const httpActionAffectingOneItem = createAction(
-      mapCallbackMaybeAsyncResult(callback, (data) => {
+    const httpActionAffectingOneItem = createAction(callback, {
+      meta: { httpVerb, httpMany: false, paramScope, resourceInstance },
+      name: `${name}.${httpVerb}`,
+      dataEffect: (data) => {
         if (httpVerb === "DELETE") {
           if (!isProps(data) && !primitiveCanBeId(data)) {
             throw new TypeError(
@@ -297,16 +289,12 @@ const createHttpHandlerForRootResource = (
           );
         }
         return applyDataEffect(data);
-      }),
-      {
-        meta: { httpVerb, httpMany: false, paramScope, resourceInstance },
-        name: `${name}.${httpVerb}`,
-        compute: (itemId) => store.select(itemId),
-        onLoad: (loadedAction) =>
-          autoreloadManager.onActionComplete(loadedAction),
-        ...options,
       },
-    );
+      compute: (itemId) => store.select(itemId),
+      onLoad: (loadedAction) =>
+        autoreloadManager.onActionComplete(loadedAction),
+      ...options,
+    });
     autoreloadManager.registerAction(
       resourceInstance,
       httpActionAffectingOneItem,
@@ -367,20 +355,16 @@ const createHttpHandlerForRootResource = (
             return idArray;
           };
 
-    const httpActionAffectingManyItems = createAction(
-      mapCallbackMaybeAsyncResult(callback, (dataArray) => {
-        return applyDataEffect(dataArray);
-      }),
-      {
-        meta: { httpVerb, httpMany: true, paramScope, resourceInstance },
-        name: `${name}.${httpVerb}_MANY`,
-        data: [],
-        compute: (idArray) => store.selectAll(idArray),
-        onLoad: (loadedAction) =>
-          autoreloadManager.onActionComplete(loadedAction),
-        ...options,
-      },
-    );
+    const httpActionAffectingManyItems = createAction(callback, {
+      meta: { httpVerb, httpMany: true, paramScope, resourceInstance },
+      name: `${name}.${httpVerb}_MANY`,
+      data: [],
+      dataEffect: applyDataEffect,
+      compute: (idArray) => store.selectAll(idArray),
+      onLoad: (loadedAction) =>
+        autoreloadManager.onActionComplete(loadedAction),
+      ...options,
+    });
     autoreloadManager.registerAction(
       resourceInstance,
       httpActionAffectingManyItems,
@@ -454,19 +438,15 @@ const createHttpHandlerForRelationshipToOneResource = (
             return childItemId;
           };
 
-    const httpActionAffectingOneItem = createAction(
-      mapCallbackMaybeAsyncResult(callback, (data) => {
-        return applyDataEffect(data);
-      }),
-      {
-        meta: { httpVerb, httpMany: false, resourceInstance },
-        name: `${name}.${httpVerb}`,
-        compute: (childItemId) => childStore.select(childItemId),
-        onLoad: (loadedAction) =>
-          autoreloadManager.onActionComplete(loadedAction),
-        ...options,
-      },
-    );
+    const httpActionAffectingOneItem = createAction(callback, {
+      meta: { httpVerb, httpMany: false, resourceInstance },
+      name: `${name}.${httpVerb}`,
+      dataEffect: applyDataEffect,
+      compute: (childItemId) => childStore.select(childItemId),
+      onLoad: (loadedAction) =>
+        autoreloadManager.onActionComplete(loadedAction),
+      ...options,
+    });
     autoreloadManager.registerAction(
       resourceInstance,
       httpActionAffectingOneItem,
@@ -545,19 +525,15 @@ const createHttpHandlerRelationshipToManyResource = (
             return childItemId;
           };
 
-    const httpActionAffectingOneItem = createAction(
-      mapCallbackMaybeAsyncResult(callback, (dataArray) => {
-        return applyDataEffect(dataArray);
-      }),
-      {
-        meta: { httpVerb, httpMany: false, resourceInstance },
-        name: `${name}.${httpVerb}`,
-        compute: (childItemId) => childStore.select(childItemId),
-        onLoad: (loadedAction) =>
-          autoreloadManager.onActionComplete(loadedAction),
-        ...options,
-      },
-    );
+    const httpActionAffectingOneItem = createAction(callback, {
+      meta: { httpVerb, httpMany: false, resourceInstance },
+      name: `${name}.${httpVerb}`,
+      dataEffect: applyDataEffect,
+      compute: (childItemId) => childStore.select(childItemId),
+      onLoad: (loadedAction) =>
+        autoreloadManager.onActionComplete(loadedAction),
+      ...options,
+    });
     autoreloadManager.registerAction(
       resourceInstance,
       httpActionAffectingOneItem,
@@ -651,20 +627,16 @@ const createHttpHandlerRelationshipToManyResource = (
               return childItemIdArray;
             };
 
-    const httpActionAffectingManyItem = createAction(
-      mapCallbackMaybeAsyncResult(callback, (dataArray) => {
-        return applyDataEffect(dataArray);
-      }),
-      {
-        meta: { httpVerb, httpMany: true, resourceInstance },
-        name: `${name}.${httpVerb}[many]`,
-        data: [],
-        compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
-        onLoad: (loadedAction) =>
-          autoreloadManager.onActionComplete(loadedAction),
-        ...options,
-      },
-    );
+    const httpActionAffectingManyItem = createAction(callback, {
+      meta: { httpVerb, httpMany: true, resourceInstance },
+      name: `${name}.${httpVerb}[many]`,
+      data: [],
+      dataEffect: applyDataEffect,
+      compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
+      onLoad: (loadedAction) =>
+        autoreloadManager.onActionComplete(loadedAction),
+      ...options,
+    });
     autoreloadManager.registerAction(
       resourceInstance,
       httpActionAffectingManyItem,

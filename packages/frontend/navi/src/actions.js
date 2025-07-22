@@ -526,6 +526,7 @@ export const createAction = (callback, rootOptions = {}) => {
       sideEffect = () => {},
       keepOldData = false,
       meta = metaDefault,
+      dataEffect,
       onLoad = () => {},
       onError = () => {},
     },
@@ -872,8 +873,23 @@ export const createAction = (callback, rootOptions = {}) => {
           preloadedProtectionRegistry.unprotect(action);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
+          /*
+           * Critical: dataEffect and onLoad must be batched together to prevent
+           * UI inconsistencies. The dataEffect might modify shared state (e.g.,
+           * deleting items from a store), and onLoad callbacks might trigger
+           * dependent action state changes.
+           *
+           * Without batching, the UI could render with partially updated state:
+           * - dataEffect deletes a resource from the store
+           * - UI renders immediately and tries to display the deleted resource
+           * - onLoad hasn't yet updated dependent actions to loading state
+           *
+           * Example: When deleting a resource, we need to both update the store
+           * AND put the action that loaded that resource back into loading state
+           * before the UI attempts to render the now-missing resource.
+           */
           batch(() => {
-            dataSignal.value = loadResult;
+            dataSignal.value = dataEffect ? dataEffect(loadResult) : loadResult;
             loadingStateSignal.value = LOADED;
             onLoad(action);
           });
