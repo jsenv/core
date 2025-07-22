@@ -134,20 +134,7 @@ const initAutoreload = ({
   };
 
   // Core autoreload execution logic
-  const performAutoreload = (
-    reason,
-    { shouldReloadGetMany, shouldReloadGet },
-  ) => {
-    const paramScopePredicate = buildParamScopePredicate();
-    const httpMetaPredicate = buildHttpMetaPredicate({
-      shouldReloadGetMany,
-      shouldReloadGet,
-    });
-
-    const predicate = (httpActionCandidate) =>
-      httpMetaPredicate(httpActionCandidate) &&
-      paramScopePredicate(httpActionCandidate);
-
+  const performAutoreload = (reason, predicate) => {
     const toReloadSet = findAliveActionsMatching(httpActionWeakSet, predicate);
 
     if (toReloadSet.size > 0) {
@@ -156,16 +143,75 @@ const initAutoreload = ({
   };
 
   const onActionDone = (httpAction) => {
+    const predicates = [];
+    const reasons = [];
+
     // Handle same-resource autoreload using configured rules
     const shouldReloadGetMany = shouldAutoreloadGetMany(httpAction);
     const shouldReloadGet = shouldAutoreloadGet(httpAction);
-    if (!shouldReloadGetMany && !shouldReloadGet) {
-      return;
+
+    if (shouldReloadGetMany || shouldReloadGet) {
+      const paramScopePredicate = buildParamScopePredicate();
+      const httpMetaPredicate = buildHttpMetaPredicate({
+        shouldReloadGetMany,
+        shouldReloadGet,
+      });
+
+      const autoreloadPredicate = (httpActionCandidate) =>
+        httpMetaPredicate(httpActionCandidate) &&
+        paramScopePredicate(httpActionCandidate);
+
+      predicates.push(autoreloadPredicate);
+      reasons.push("same-resource autoreload");
     }
-    performAutoreload(`${httpAction} triggered same-resource autoreload`, {
-      shouldReloadGetMany,
-      shouldReloadGet,
-    });
+
+    // Special case: For DELETE actions, also reload any GET actions that reference the deleted resource(s)
+    if (httpAction.meta.httpVerb === "DELETE") {
+      const deletedIds = httpAction.meta.httpMany
+        ? httpAction.data // Array of IDs for DELETE_MANY
+        : [httpAction.data]; // Single ID for DELETE
+
+      if (
+        deletedIds &&
+        deletedIds.length > 0 &&
+        deletedIds.every((id) => id !== undefined)
+      ) {
+        const deletePredicate = (httpActionCandidate) => {
+          // Only target GET actions (both single and many can reference deleted resources)
+          if (httpActionCandidate.meta.httpVerb !== "GET") {
+            return false;
+          }
+
+          // For GET_MANY actions, we reload them as they might contain deleted items
+          if (httpActionCandidate.meta.httpMany) {
+            return true;
+          }
+
+          // For single GET actions, check if they reference any of the deleted IDs
+          return deletedIds.some((deletedId) => {
+            const instances = httpActionCandidate.matchAllSelfOrDescendant(
+              (action) => action.loadRequested && action.data === deletedId,
+            );
+            return instances.length > 0;
+          });
+        };
+
+        predicates.push(deletePredicate);
+        reasons.push("DELETE-affected GET actions");
+      }
+    }
+
+    // Execute autoreload if any predicates were added
+    if (predicates.length > 0) {
+      const combinedPredicate = (httpActionCandidate) => {
+        return predicates.some((predicate) => predicate(httpActionCandidate));
+      };
+
+      performAutoreload(
+        `${httpAction} triggered ${reasons.join(" and ")}`,
+        combinedPredicate,
+      );
+    }
 
     // Handle cross-resource dependency notifications
     if (resourceInstance && httpAction.meta.httpVerb !== "GET") {
@@ -180,9 +226,21 @@ const initAutoreload = ({
       // and they only trigger GET_MANY reloads (not individual GET reloads)
       return;
     }
-    performAutoreload(`${httpAction} triggered dependency autoreload`, {
-      shouldReloadGetMany: true,
-    });
+
+    const paramScopePredicate = buildParamScopePredicate();
+    const dependencyPredicate = (httpActionCandidate) => {
+      // Dependencies only reload GET_MANY actions
+      return (
+        httpActionCandidate.meta.httpVerb === "GET" &&
+        httpActionCandidate.meta.httpMany === true &&
+        paramScopePredicate(httpActionCandidate)
+      );
+    };
+
+    performAutoreload(
+      `${httpAction} triggered dependency autoreload`,
+      dependencyPredicate,
+    );
   };
 
   // Register this autoreload instance as dependent on its dependencies
