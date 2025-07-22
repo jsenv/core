@@ -231,9 +231,8 @@ const SelectInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const valueAtStart = initialValue === undefined ? navState : initialValue;
   const [getSelectedValue, setSelectedValue, resetSelectedValue] =
-    useOneFormParam(name, valueAtStart);
+    useOneFormParam(name, initialValue, navState);
   const value = getSelectedValue();
   useEffect(() => {
     setNavState(value);

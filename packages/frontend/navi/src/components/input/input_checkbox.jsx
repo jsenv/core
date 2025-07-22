@@ -1,6 +1,6 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -315,12 +315,19 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const checkedAtStart = navState === undefined ? initialChecked : navState;
   const [getChecked, setChecked, resetChecked] = useOneFormParam(
     name,
-    checkedAtStart,
+    initialChecked,
+    navState,
   );
   const checked = getChecked();
+  useEffect(() => {
+    if (initialChecked) {
+      setNavState(checked ? false : undefined);
+    } else {
+      setNavState(checked ? true : undefined);
+    }
+  }, [initialChecked, checked]);
 
   useFormEvents(innerRef, {
     onFormActionAbort: () => {
@@ -341,11 +348,6 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
       readOnly={readOnly || formIsReadOnly}
       onChange={(e) => {
         const checkboxIsChecked = e.target.checked;
-        if (checkedAtStart) {
-          setNavState(checkboxIsChecked ? false : undefined);
-        } else {
-          setNavState(checkboxIsChecked ? true : undefined);
-        }
         setChecked(checkboxIsChecked ? value : undefined);
         onChange?.(e);
       }}

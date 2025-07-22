@@ -45,27 +45,64 @@ export const useFormActionBoundToFormParams = (action) => {
     updateFormParams,
   ];
 };
-export const useOneFormParam = (name, value) => {
+export const useOneFormParam = (
+  name,
+  externalValue,
+  fallbackValue,
+  defaultValue,
+) => {
   const { formParamsSignal } = useFormContext();
-  const mountedRef = useRef(false);
+
   const getValue = () => formParamsSignal.value[name];
   const setValue = (value) =>
     updateParamsSignal(formParamsSignal, { [name]: value });
+
+  const valueAtStart =
+    externalValue === undefined || externalValue === defaultValue
+      ? fallbackValue === undefined
+        ? defaultValue
+        : fallbackValue
+      : externalValue;
+
+  const mountedRef = useRef(false);
   if (!mountedRef.current) {
     mountedRef.current = true;
-    if (name && value !== undefined) {
-      setValue(value);
+    if (name && externalValue !== undefined) {
+      setValue(externalValue);
     }
   }
+
+  // Track previous external value to sync external value changes
+  const previousExternalValueRef = useRef(externalValue);
+  if (externalValue !== previousExternalValueRef.current) {
+    // External value changed after mount - sync internal state
+    previousExternalValueRef.current = externalValue;
+    if (externalValue !== undefined && externalValue !== getValue()) {
+      if (debug) {
+        console.debug(
+          `useAction(${name}) syncing external value change: ${externalValue}`,
+        );
+      }
+      setValue(externalValue);
+    }
+  }
+
   const resetValue = useCallback(() => {
-    setValue(value);
-  }, [value]);
+    setValue(valueAtStart);
+  }, [valueAtStart]);
+
   return [getValue, setValue, resetValue];
 };
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
-export const useActionBoundToOneParam = (action, name, value) => {
+export const useActionBoundToOneParam = (
+  action,
+  name,
+  externalValue,
+  fallbackValue,
+  defaultValue,
+) => {
   const mountedRef = useRef(false);
   const actionCacheKey = useComponentActionCacheKey();
   const cacheKey = typeof action === "function" ? actionCacheKey : action;
@@ -80,19 +117,41 @@ export const useActionBoundToOneParam = (action, name, value) => {
     }
     return updateParams({ [name]: value });
   };
+
+  const valueAtStart =
+    externalValue === undefined || externalValue === defaultValue
+      ? fallbackValue === undefined
+        ? defaultValue
+        : fallbackValue
+      : externalValue;
+
   if (!mountedRef.current) {
     mountedRef.current = true;
     if (name) {
       if (debug) {
-        console.debug(`useAction(${name}) initial value: ${value}`);
+        console.debug(`useAction(${name}) initial value: ${valueAtStart}`);
       }
-      setValue(value);
+      setValue(valueAtStart);
+    }
+  }
+  // Track previous external value to sync external value changes
+  const previousExternalValueRef = useRef(externalValue);
+  if (externalValue !== previousExternalValueRef.current) {
+    // External value changed after mount - sync internal state
+    previousExternalValueRef.current = externalValue;
+    if (externalValue !== undefined && externalValue !== getValue()) {
+      if (debug) {
+        console.debug(
+          `useAction(${name}) syncing external value change: ${externalValue}`,
+        );
+      }
+      setValue(externalValue);
     }
   }
 
-  const reset = () => {
-    setValue(value);
-  };
+  const reset = useCallback(() => {
+    setValue(valueAtStart);
+  }, [valueAtStart]);
 
   return [boundAction, getValue, setValue, reset];
 };

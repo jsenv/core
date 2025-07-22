@@ -237,10 +237,10 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const valueAtStart = initialValue === undefined ? navState : initialValue;
   const [getCheckedValue, setCheckedValue, resetCheckedValue] = useOneFormParam(
     name,
-    valueAtStart,
+    initialValue,
+    navState,
   );
   const value = getCheckedValue();
   useEffect(() => {
