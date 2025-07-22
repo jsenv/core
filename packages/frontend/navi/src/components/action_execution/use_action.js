@@ -4,6 +4,31 @@ import { createAction } from "../../actions.js";
 import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
 import { useFormContext } from "./form_context.js";
 
+/**
+ * Picks the best initial value from three options using a simple priority system.
+ *
+ * @param {any} externalValue - Value from props or parent component
+ * @param {any} fallbackValue - Backup value if external value isn't useful
+ * @param {any} defaultValue - Final fallback (usually empty/neutral value)
+ *
+ * @returns {any} The chosen value using this priority:
+ *   1. externalValue (if provided and different from default)
+ *   2. fallbackValue (if external value is missing/same as default)
+ *   3. defaultValue (if nothing else works)
+ *
+ * @example
+ * resolveInitialValue("hello", "backup", "") → "hello"
+ * resolveInitialValue(undefined, "backup", "") → "backup"
+ * resolveInitialValue("", "backup", "") → "backup" (empty same as default)
+ */
+const resolveInitialValue = (externalValue, fallbackValue, defaultValue) => {
+  return externalValue === undefined || externalValue === defaultValue
+    ? fallbackValue === undefined
+      ? defaultValue
+      : fallbackValue
+    : externalValue;
+};
+
 let debug = false;
 let componentActionIdCounter = 0;
 const useComponentActionCacheKey = () => {
@@ -57,27 +82,30 @@ export const useOneFormParam = (
   const setValue = (value) =>
     updateParamsSignal(formParamsSignal, { [name]: value });
 
-  const valueAtStart =
-    externalValue === undefined || externalValue === defaultValue
-      ? fallbackValue === undefined
-        ? defaultValue
-        : fallbackValue
-      : externalValue;
+  const initialValue = resolveInitialValue(
+    externalValue,
+    fallbackValue,
+    defaultValue,
+  );
 
   const mountedRef = useRef(false);
   if (!mountedRef.current) {
     mountedRef.current = true;
-    if (name && externalValue !== undefined) {
-      setValue(externalValue);
+    if (name) {
+      setValue(initialValue);
     }
   }
-
   // Track previous external value to sync external value changes
   const previousExternalValueRef = useRef(externalValue);
   if (externalValue !== previousExternalValueRef.current) {
     // External value changed after mount - sync internal state
     previousExternalValueRef.current = externalValue;
-    if (externalValue !== undefined && externalValue !== getValue()) {
+    if (
+      name &&
+      externalValue !== undefined &&
+      externalValue !== defaultValue &&
+      externalValue !== getValue()
+    ) {
       if (debug) {
         console.debug(
           `useAction(${name}) syncing external value change: ${externalValue}`,
@@ -88,8 +116,8 @@ export const useOneFormParam = (
   }
 
   const resetValue = useCallback(() => {
-    setValue(valueAtStart);
-  }, [valueAtStart]);
+    setValue(initialValue);
+  }, [initialValue]);
 
   return [getValue, setValue, resetValue];
 };
@@ -118,20 +146,19 @@ export const useActionBoundToOneParam = (
     return updateParams({ [name]: value });
   };
 
-  const valueAtStart =
-    externalValue === undefined || externalValue === defaultValue
-      ? fallbackValue === undefined
-        ? defaultValue
-        : fallbackValue
-      : externalValue;
+  const initialValue = resolveInitialValue(
+    externalValue,
+    fallbackValue,
+    defaultValue,
+  );
 
   if (!mountedRef.current) {
     mountedRef.current = true;
     if (name) {
       if (debug) {
-        console.debug(`useAction(${name}) initial value: ${valueAtStart}`);
+        console.debug(`useAction(${name}) initial value: ${initialValue}`);
       }
-      setValue(valueAtStart);
+      setValue(initialValue);
     }
   }
   // Track previous external value to sync external value changes
@@ -139,7 +166,12 @@ export const useActionBoundToOneParam = (
   if (externalValue !== previousExternalValueRef.current) {
     // External value changed after mount - sync internal state
     previousExternalValueRef.current = externalValue;
-    if (externalValue !== undefined && externalValue !== getValue()) {
+    if (
+      name &&
+      externalValue !== undefined &&
+      externalValue !== defaultValue &&
+      externalValue !== getValue()
+    ) {
       if (debug) {
         console.debug(
           `useAction(${name}) syncing external value change: ${externalValue}`,
@@ -150,8 +182,8 @@ export const useActionBoundToOneParam = (
   }
 
   const reset = useCallback(() => {
-    setValue(valueAtStart);
-  }, [valueAtStart]);
+    setValue(initialValue);
+  }, [initialValue]);
 
   return [boundAction, getValue, setValue, reset];
 };
@@ -168,9 +200,21 @@ export const useActionBoundToOneParam = (
 //   ];
 // };
 
-export const useActionBoundToOneArrayParam = (action, name, value) => {
+export const useActionBoundToOneArrayParam = (
+  action,
+  name,
+  initialValue,
+  fallbackValue,
+  defaultValue = [],
+) => {
   const [boundAction, getValue, setValue, resetValue] =
-    useActionBoundToOneParam(action, name, value);
+    useActionBoundToOneParam(
+      action,
+      name,
+      initialValue,
+      fallbackValue,
+      defaultValue,
+    );
 
   const add = (valueToAdd, valueArray = getValue()) => {
     setValue(addIntoArray(valueArray, valueToAdd));
@@ -182,8 +226,18 @@ export const useActionBoundToOneArrayParam = (action, name, value) => {
 
   return [boundAction, getValue, add, remove, resetValue];
 };
-export const useOneFormArrayParam = (name, value) => {
-  const [getValue, setValue, resetValue] = useOneFormParam(name, value);
+export const useOneFormArrayParam = (
+  name,
+  initialValue,
+  fallbackValue,
+  defaultValue = [],
+) => {
+  const [getValue, setValue, resetValue] = useOneFormParam(
+    name,
+    initialValue,
+    fallbackValue,
+    defaultValue,
+  );
   const add = (valueToAdd, valueArray = getValue()) => {
     setValue(addIntoArray(valueArray, valueToAdd));
   };
