@@ -29,7 +29,13 @@ const routeSet = new Set();
 const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
-export const updateRoutes = (url) => {
+export const updateRoutes = (
+  url,
+  {
+    // state
+    replace,
+  },
+) => {
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
@@ -124,7 +130,11 @@ export const updateRoutes = (url) => {
         );
       }
       const currentAction = routeAction.getCurrentAction();
-      toReloadSet.add(currentAction);
+      if (replace) {
+        toLoadSet.add(currentAction);
+      } else {
+        toReloadSet.add(currentAction);
+      }
       routeLoadRequestedMap.set(route, currentAction);
 
       // Create a new abort controller for this action
@@ -156,9 +166,10 @@ export const updateRoutes = (url) => {
         );
       }
       const currentAction = routeAction.getCurrentAction();
-      toReloadSet.add(currentAction);
-      routeLoadRequestedMap.set(route, currentAction);
-
+      if (!replace || currentAction.aborted || currentAction.error) {
+        toReloadSet.add(currentAction);
+        routeLoadRequestedMap.set(route, currentAction);
+      }
       // Create a new abort controller for the reload
       const actionAbortController = new AbortController();
       actionAbortControllerWeakMap.set(currentAction, actionAbortController);
@@ -338,7 +349,8 @@ const createRoute = (urlPatternInput) => {
         const mutableIdKey = mutableIdKeys[0];
         const mutableIdValueSignal = computed(() => {
           const params = paramsSignal.value;
-          return params[mutableIdKey];
+          const mutableIdValue = params[mutableIdKey];
+          return mutableIdValue;
         });
         const routeItemSignal = store.signalForMutableIdKey(
           mutableIdKey,

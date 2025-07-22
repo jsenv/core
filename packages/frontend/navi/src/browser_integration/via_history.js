@@ -27,7 +27,7 @@ export const setupBrowserIntegrationViaHistory = ({
 
   let abortController = null;
 
-  const handleRoutingTask = (url, { state }) => {
+  const handleRoutingTask = (url, { state, replace }) => {
     updateDocumentUrl(url);
     updateDocumentState(state);
     if (abortController) {
@@ -39,6 +39,7 @@ export const setupBrowserIntegrationViaHistory = ({
       globalAbortSignal: globalAbortController.signal,
       abortSignal: abortController.signal,
       state,
+      replace,
     });
     executeWithCleanup(
       () => allResult,
@@ -93,7 +94,7 @@ export const setupBrowserIntegrationViaHistory = ({
     } else {
       window.history.pushState(state, null, url);
     }
-    handleRoutingTask(url, { state });
+    handleRoutingTask(url, { state, replace });
   };
 
   const stop = (reason = "stop called") => {
@@ -128,7 +129,7 @@ export const setupBrowserIntegrationViaHistory = ({
     const url = window.location.href;
     const state = history.state;
     history.replaceState(state, null, url);
-    handleRoutingTask(url, { state });
+    handleRoutingTask(url, { state, replace: true });
   };
 
   return {

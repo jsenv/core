@@ -491,10 +491,26 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
   };
 
   const signalForMutableIdKey = (mutableIdKey, mutableIdValueSignal) => {
+    let lastKnownItem = null;
+
     const itemSignal = computed(() => {
       const mutableIdValue = mutableIdValueSignal.value;
       const item = select(mutableIdKey, mutableIdValue);
-      return item;
+
+      if (item) {
+        // Item found in current array, update our cache
+        lastKnownItem = item;
+        return item;
+      }
+
+      // Item not found in current array, but check if we have a cached item
+      // with the same mutableId value
+      if (lastKnownItem && lastKnownItem[mutableIdKey] === mutableIdValue) {
+        return lastKnownItem;
+      }
+
+      // No item found and no valid cache
+      return null;
     });
     return itemSignal;
   };

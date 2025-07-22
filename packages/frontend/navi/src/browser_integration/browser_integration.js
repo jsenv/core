@@ -26,14 +26,10 @@ const applyActions = (params) => {
 
 const applyRouting = (
   url,
-  {
-    globalAbortSignal,
-    abortSignal,
-    // state
-  },
+  { globalAbortSignal, abortSignal, state, replace },
 ) => {
   const { loadSet, reloadSet, abortSignalMap, routeLoadRequestedMap } =
-    updateRoutes(url);
+    updateRoutes(url, { state, replace });
   if (loadSet.size === 0 && reloadSet.size === 0) {
     return { allResult: undefined, requestedResult: undefined };
   }

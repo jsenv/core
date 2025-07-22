@@ -66,6 +66,7 @@ export const alterTableQuery = async (sql, tablename, columnName, value) => {
       ALTER TABLE ${sql(tablename)}
       RENAME TO ${sql(value)}
     `;
+    return;
   }
 
   // TODO: Handle other column alterations
