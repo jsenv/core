@@ -31,11 +31,11 @@ export const resolveInitialValue = (
 
 /**
  * Hook that syncs external value changes to a setState function.
- * Only updates when the external value changes and is meaningful (not undefined and different from default).
+ * Always syncs when external value changes, regardless of what it changes to.
  *
  * @param {any} externalValue - Value from props or parent component to watch for changes
+ * @param {any} defaultValue - Default value to use when external value is undefined
  * @param {Function} setValue - Function to call when external value changes
- * @param {any} defaultValue - Default value to compare against
  * @param {string} name - Parameter name for debugging
  */
 export const useExternalValueSync = (
@@ -48,14 +48,15 @@ export const useExternalValueSync = (
   const previousExternalValueRef = useRef(externalValue);
   if (externalValue !== previousExternalValueRef.current) {
     previousExternalValueRef.current = externalValue;
-    if (externalValue !== undefined && externalValue !== defaultValue) {
-      if (name) {
-        console.debug(
-          `useExternalValueSync(${name}) syncing external value change: ${externalValue}`,
-        );
-      }
-      setValue(externalValue);
+    // Always sync external value changes - use defaultValue only when external is undefined
+    const valueToSet =
+      externalValue === undefined ? defaultValue : externalValue;
+    if (name) {
+      console.debug(
+        `useExternalValueSync(${name}) syncing external value change: ${externalValue} -> ${valueToSet}`,
+      );
     }
+    setValue(valueToSet);
   }
 };
 
