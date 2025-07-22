@@ -65,11 +65,15 @@ export const TablePage = ({ table }) => {
 };
 
 const TableFields = ({ table }) => {
-  const columns = table.meta.columns;
+  let columns = table.meta.columns;
   const ownerRole = table.ownerRole;
 
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
+  });
+
+  columns = columns.filter((column) => {
+    return column.column_name === "hasindexes";
   });
 
   return (

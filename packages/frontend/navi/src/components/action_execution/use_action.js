@@ -85,6 +85,12 @@ export const useActionBoundToOneParam = (
   const actionCacheKey = useComponentActionCacheKey();
   const cacheKey = typeof action === "function" ? actionCacheKey : action;
   const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
+  const previousParamsSignalRef = useRef(null);
+  const actionChanged =
+    previousParamsSignalRef.current !== null &&
+    previousParamsSignalRef.current !== paramsSignal;
+  previousParamsSignalRef.current = paramsSignal;
+
   const boundAction = useBoundAction(action, paramsSignal);
   const getValue = () => paramsSignal.value[name];
   const setValue = (value) => {
@@ -103,6 +109,14 @@ export const useActionBoundToOneParam = (
     defaultValue,
     setValue,
   );
+  if (actionChanged) {
+    if (debug) {
+      console.debug(
+        `useActionBoundToOneParam(${name}) action changed, re-initializing with: ${initialValue}`,
+      );
+    }
+    setValue(initialValue);
+  }
 
   const reset = useCallback(() => {
     setValue(initialValue);
