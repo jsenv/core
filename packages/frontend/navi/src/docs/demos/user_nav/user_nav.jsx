@@ -98,7 +98,7 @@ const Navigation = () => {
   return (
     <div className="nav-links">
       {users.map((user) => {
-        const url = USER_ROUTE.buildUrl({ username: user.name });
+        const url = USER_ROUTE.buildUrl({ name: user.name });
         return (
           <a key={user.id} href={url}>
             {user.name}
@@ -113,17 +113,20 @@ const UserPage = ({ user }) => {
   const isRenamed = user.name !== user.originalName;
 
   const handleRename = async () => {
+    console.log("handleRename called for user:", user.name);
     const renameAction = USER.PUT.bindParams({
-      username: user.name,
+      name: user.name,
       property: "name",
       value: `${user.name}_2`,
     });
+    console.log("About to call renameAction.load()");
     await renameAction.load();
+    console.log("renameAction.load() completed");
   };
 
   const handleRevert = async () => {
     const revertAction = USER.PUT.bindParams({
-      username: user.name,
+      name: user.name,
       property: "name",
       value: user.originalName,
     });
@@ -163,6 +166,10 @@ const MutableIdSignalDemo = ({ currentUser }) => {
 
   // Update the signal when the user changes
   useEffect(() => {
+    console.log(
+      "MutableIdSignalDemo: currentUser.name changed to:",
+      currentUser.name,
+    );
     currentUserNameSignal.value = currentUser.name;
   }, [currentUser.name]);
 
@@ -177,11 +184,26 @@ const MutableIdSignalDemo = ({ currentUser }) => {
 
   // Subscribe to changes
   useEffect(() => {
+    console.log(
+      "MutableIdSignalDemo: Setting up subscription to userFromMutableIdSignal",
+    );
     const unsubscribe = userFromMutableIdSignal.subscribe((newValue) => {
+      console.log(
+        "MutableIdSignalDemo: userFromMutableIdSignal changed to:",
+        newValue,
+      );
       setSignalValue(newValue);
     });
     return unsubscribe;
   }, []);
+
+  console.log("MutableIdSignalDemo render:", {
+    currentUserName: currentUser.name,
+    currentUserId: currentUser.id,
+    signalValueName: signalValue?.name,
+    signalValueId: signalValue?.id,
+    currentUserNameSignalValue: currentUserNameSignal.value,
+  });
 
   return (
     <div
@@ -197,6 +219,9 @@ const MutableIdSignalDemo = ({ currentUser }) => {
       <p>
         <strong>Current Route User:</strong> {currentUser.name} (ID:{" "}
         {currentUser.id})
+      </p>
+      <p>
+        <strong>Signal Tracking:</strong> {currentUserNameSignal.value}
       </p>
       <p>
         <strong>Signal Value:</strong>{" "}
@@ -219,7 +244,8 @@ const MutableIdSignalDemo = ({ currentUser }) => {
       )}
       {!signalValue && (
         <p style={{ color: "red", fontWeight: "bold" }}>
-          ❌ Signal returned null (user not found in store)
+          ❌ Signal returned null (user not found in store) - Looking for name:
+          &quot;{currentUserNameSignal.value}&quot;
         </p>
       )}
     </div>
@@ -266,21 +292,33 @@ const USER = resource("user", {
   idKey: "id",
   mutableIdKeys: ["name"],
   GET_MANY: () => initialUsers,
-  GET: async ({ username }) => {
+  GET: async ({ name }) => {
     await new Promise((resolve) => setTimeout(resolve, 100));
-    return initialUsers.find((user) => user.name === username);
+    return initialUsers.find((user) => user.name === name);
   },
-  PUT: ({ username, property, value }) => {
-    const user = initialUsers.find((user) => user.name === username);
-    return {
+  PUT: ({ name, property, value }) => {
+    console.log("PUT action called:", { name, property, value });
+    const userIndex = initialUsers.findIndex((user) => user.name === name);
+    if (userIndex === -1) {
+      throw new Error(`User with name "${name}" not found`);
+    }
+    const user = initialUsers[userIndex];
+    console.log("Found user:", user);
+    const updatedUser = {
       ...user,
       [property]: value,
     };
+    console.log("Updated user:", updatedUser);
+
+    // Update the initialUsers array so future lookups work
+    initialUsers[userIndex] = updatedUser;
+
+    return updatedUser;
   },
 });
 
 const [USER_ROUTE] = defineRoutes({
-  "/user/:username": USER.GET,
+  "/user/:name": USER.GET,
 });
 
 // Populate initial users in the store
