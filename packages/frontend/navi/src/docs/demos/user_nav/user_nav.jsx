@@ -161,22 +161,14 @@ const UserPage = ({ user }) => {
 };
 
 const MutableIdSignalDemo = ({ currentUser }) => {
-  // Create a signal that tracks the current user's name
-  const currentUserNameSignal = signal(currentUser.name);
+  // Create a signal that tracks the ORIGINAL user's name (this should NOT change)
+  const [originalName] = useState(currentUser.name);
+  const originalUserNameSignal = signal(originalName);
 
-  // Update the signal when the user changes
-  useEffect(() => {
-    console.log(
-      "MutableIdSignalDemo: currentUser.name changed to:",
-      currentUser.name,
-    );
-    currentUserNameSignal.value = currentUser.name;
-  }, [currentUser.name]);
-
-  // Use signalForMutableIdKey to get a signal that tracks the user by name
+  // Use signalForMutableIdKey to get a signal that tracks the user by the ORIGINAL name
   const userFromMutableIdSignal = USER.store.signalForMutableIdKey(
     "name",
-    currentUserNameSignal,
+    originalUserNameSignal,
   );
 
   // Get the current value
@@ -198,11 +190,12 @@ const MutableIdSignalDemo = ({ currentUser }) => {
   }, []);
 
   console.log("MutableIdSignalDemo render:", {
+    originalName,
     currentUserName: currentUser.name,
     currentUserId: currentUser.id,
     signalValueName: signalValue?.name,
     signalValueId: signalValue?.id,
-    currentUserNameSignalValue: currentUserNameSignal.value,
+    originalUserNameSignalValue: originalUserNameSignal.value,
   });
 
   return (
@@ -221,19 +214,21 @@ const MutableIdSignalDemo = ({ currentUser }) => {
         {currentUser.id})
       </p>
       <p>
-        <strong>Signal Tracking:</strong> {currentUserNameSignal.value}
+        <strong>Signal Tracking Original Name:</strong>{" "}
+        {originalUserNameSignal.value}
       </p>
       <p>
         <strong>Signal Value:</strong>{" "}
         {signalValue ? `${signalValue.name} (ID: ${signalValue.id})` : "null"}
       </p>
       <p style={{ fontSize: "0.9em", color: "#666" }}>
-        💡 This signal should return the same user even if you rename them,
-        demonstrating the caching behavior of signalForMutableIdKey.
+        💡 This signal tracks by the original name &quot;{originalName}&quot;
+        but should return the same user even after renaming, demonstrating the
+        caching behavior of signalForMutableIdKey.
       </p>
       {signalValue && signalValue.id === currentUser.id && (
         <p style={{ color: "green", fontWeight: "bold" }}>
-          ✅ Signal correctly returns the same user instance!
+          ✅ Signal correctly returns the same user instance even after rename!
         </p>
       )}
       {signalValue && signalValue.id !== currentUser.id && (
@@ -244,8 +239,8 @@ const MutableIdSignalDemo = ({ currentUser }) => {
       )}
       {!signalValue && (
         <p style={{ color: "red", fontWeight: "bold" }}>
-          ❌ Signal returned null (user not found in store) - Looking for name:
-          &quot;{currentUserNameSignal.value}&quot;
+          ❌ Signal returned null (user not found in store) - Looking for
+          original name: &quot;{originalUserNameSignal.value}&quot;
         </p>
       )}
     </div>
