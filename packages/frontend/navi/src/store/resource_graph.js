@@ -1,6 +1,6 @@
 import { computed, signal } from "@preact/signals";
 import { getActionPrivateProperties } from "../action_private_properties.js";
-import { createAction, formatActionSet, reloadActions } from "../actions.js";
+import { createAction, reloadActions } from "../actions.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../symbol_object_signal.js";
 import {
   SYMBOL_IDENTITY,
@@ -194,8 +194,9 @@ const createAutoreloadManager = () => {
             resourceInstance === getResourceForAction(triggeringAction) &&
             config.mutableIdKeys.length > 0
           ) {
-            const { dataSignal } = getActionPrivateProperties(triggeringAction);
-            const createdData = dataSignal.peek();
+            const { computedDataSignal } =
+              getActionPrivateProperties(triggeringAction);
+            const createdData = computedDataSignal.peek();
 
             if (createdData && typeof createdData === "object") {
               // Check if any GET action uses a mutableId that matches the created resource
@@ -231,11 +232,6 @@ const createAutoreloadManager = () => {
 
     if (actionsToReload.size > 0) {
       const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
-      if (DEBUG) {
-        console.debug(
-          `Autoreload triggered by ${httpAction.name}, will reload: ${formatActionSet(actionsToReload)}`,
-        );
-      }
       reloadActions(actionsToReload, { reason });
     }
   };
