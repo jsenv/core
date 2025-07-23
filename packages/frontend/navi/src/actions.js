@@ -232,6 +232,9 @@ export const updateActions = ({
   reloadSet = new Set(),
   unloadSet = new Set(),
   abortSignalMap = new Map(),
+  onEnd,
+  onAbort,
+  onError,
 } = {}) => {
   /*
    * Action update flow:
@@ -470,6 +473,9 @@ ${lines.join("\n")}`);
         abortSignal: effectiveSignal,
         reason,
         isPreload,
+        onEnd,
+        onAbort,
+        onError,
       });
       activationWeakSet.add(actionToPreloadOrLoad);
 
@@ -567,7 +573,6 @@ export const createAction = (callback, rootOptions = {}) => {
       meta = metaDefault,
       dataEffect,
       onLoad = () => {},
-      onError = () => {},
     },
     { parentAction } = {},
   ) => {
@@ -853,8 +858,15 @@ export const createAction = (callback, rootOptions = {}) => {
       let sideEffectCleanup;
 
       const performLoad = (loadParams) => {
-        const { globalAbortSignal, abortSignal, reason, isPreload } =
-          loadParams;
+        const {
+          globalAbortSignal,
+          abortSignal,
+          reason,
+          isPreload,
+          onEnd,
+          onAbort,
+          onError,
+        } = loadParams;
 
         if (isPreload) {
           preloadedProtectionRegistry.protect(action);
@@ -940,6 +952,10 @@ export const createAction = (callback, rootOptions = {}) => {
               : loadResult;
             loadingStateSignal.value = LOADED;
             onLoad(action);
+            // Call onActionEnd BEFORE updating the data and UI state (just like onLoad)
+            if (onEnd) {
+              onEnd();
+            }
           });
           if (DEBUG) {
             console.log(`"${action}": loaded (reason: ${reason})`);
@@ -960,7 +976,13 @@ export const createAction = (callback, rootOptions = {}) => {
             if (isPreload && abortSignal.aborted) {
               preloadedProtectionRegistry.unprotect(action);
             }
+            onAbort(e);
             return e;
+          }
+          if (e.name === "AbortError") {
+            throw new Error(
+              "never supposed to happen, abort error should be handled by the abort signal",
+            );
           }
           if (DEBUG) {
             console.log(
