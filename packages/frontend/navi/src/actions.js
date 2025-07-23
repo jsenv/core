@@ -22,7 +22,7 @@ import {
 import { weakEffect } from "./utils/weak_effect.js";
 
 const ACTION_AS_FUNCTION = true;
-let DEBUG = false;
+let DEBUG = true;
 export const enableDebugActions = () => {
   DEBUG = true;
 };
@@ -771,6 +771,7 @@ export const createAction = (callback, rootOptions = {}) => {
 
     // Assign all the action properties and methods to the function
     Object.assign(action, {
+      isAction: true,
       callback,
       rootAction,
       parentAction,
@@ -1249,9 +1250,18 @@ const createActionProxyFromSignal = (
   };
 
   onActionTargetChange(() => {
+    const previousUI = proxyPrivateProperties.ui;
+    const previousHasRenderers = previousUI ? previousUI.hasRenderers : false;
+
     proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
     proxyPrivateProperties.childActionWeakSet =
       currentActionPrivateProperties.childActionWeakSet;
+
+    // If the proxy was previously marked as having renderers,
+    // ensure the new target action also gets this flag
+    if (previousHasRenderers && proxyPrivateProperties.ui) {
+      proxyPrivateProperties.ui.hasRenderers = true;
+    }
   });
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
 

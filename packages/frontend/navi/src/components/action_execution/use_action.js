@@ -277,7 +277,7 @@ const useBoundAction = (action, actionParamsSignal) => {
   if (!action) {
     return null;
   }
-  if (typeof action === "function") {
+  if (typeof action === "function" && !action.isAction) {
     let actionInstance = actionRef.current;
     if (!actionInstance) {
       actionInstance = createAction((...args) => {
