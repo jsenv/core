@@ -199,15 +199,18 @@ const createAutoreloadManager = () => {
 
             if (createdData && typeof createdData === "object") {
               // Check if any GET action uses a mutableId that matches the created resource
+              // we'll use the action params since the GET might be reloaded, hence in 404
               for (const mutableIdKey of config.mutableIdKeys) {
                 const createdMutableId = createdData[mutableIdKey];
-                const instanceData = actionCandidate.data;
+                const candidateParams = actionCandidate.params;
 
                 // If instance.data matches the mutableId value, this GET was likely in 404
                 // and should be reloaded since a resource with this mutableId now exists
                 if (
                   createdMutableId !== undefined &&
-                  instanceData === createdMutableId
+                  candidateParams &&
+                  typeof candidateParams === "object" &&
+                  candidateParams[mutableIdKey] === createdMutableId
                 ) {
                   actionsToReload.add(actionCandidate);
                   reasonSet.add("POST-mutableId autoreload");
