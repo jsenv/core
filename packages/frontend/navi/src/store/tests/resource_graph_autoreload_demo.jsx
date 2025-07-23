@@ -81,12 +81,22 @@ const USER = resource("user", {
     return user;
   },
 
-  PATCH: ({ name, age }) => {
-    console.log(`📝 PATCH user: ${name}, age: ${age}`);
+  PATCH: ({ name, newName, age }) => {
+    console.log(
+      `📝 PATCH user: ${name}${newName ? ` -> ${newName}` : ""}, age: ${age}`,
+    );
     const user = userStore.get(name);
     if (!user) {
       throw new Error(`User ${name} not found`);
     }
+
+    // Si le nom change, supprimer l'ancienne entrée
+    if (newName && newName !== name) {
+      userStore.delete(name);
+      user.name = newName;
+      userStore.set(newName, user);
+    }
+
     if (age !== undefined) {
       user.age = age;
     }
@@ -679,18 +689,33 @@ const App = () => {
   };
 
   const runRenameScenario = async () => {
-    console.log("🎯 Scénario: Renommer");
+    console.log("🎯 Scénario: Renommer avec PUT");
 
-    // 1. Renommer Bob en Bob2
-    await USER.PUT({ name: "Bob", newName: "Bob2" });
-    console.log("Étape 1: Bob renommé en Bob2");
+    // 1. Renommer Bob en TestUser
+    await USER.PUT({ name: "Bob", newName: "TestUser" });
+    console.log("Étape 1: Bob renommé en TestUser");
 
     // 2. Attendre un peu
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // 3. Renommer Bob2 en Bob
-    await USER.PUT({ name: "Bob2", newName: "Bob" });
-    console.log("Étape 2: Bob2 renommé en Bob");
+    // 3. Renommer TestUser en Bob
+    await USER.PUT({ name: "TestUser", newName: "Bob" });
+    console.log("Étape 2: TestUser renommé en Bob");
+  };
+
+  const runPatchRenameScenario = async () => {
+    console.log("🎯 Scénario: Renommer avec PATCH");
+
+    // 1. Renommer Bob en TestUser avec PATCH
+    await USER.PATCH({ name: "Bob", newName: "TestUser" });
+    console.log("Étape 1: Bob renommé en TestUser avec PATCH");
+
+    // 2. Attendre un peu
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // 3. Renommer TestUser en Bob avec PATCH
+    await USER.PATCH({ name: "TestUser", newName: "Bob" });
+    console.log("Étape 2: TestUser renommé en Bob avec PATCH");
   };
 
   const inputStyle = {
@@ -766,7 +791,7 @@ const App = () => {
           <ActionForm
             title=""
             onSubmit={runRenameScenario}
-            buttonText="✏️ Renommer Bob ↔ Bob2"
+            buttonText="✏️ PUT: Bob ↔ TestUser"
             buttonColor="#6f42c1"
           >
             <p
@@ -777,6 +802,23 @@ const App = () => {
               }}
             >
               Teste l&apos;autoreload PUT avec changement de mutableId
+            </p>
+          </ActionForm>
+
+          <ActionForm
+            title=""
+            onSubmit={runPatchRenameScenario}
+            buttonText="📝 PATCH: Bob ↔ TestUser"
+            buttonColor="#6f42c1"
+          >
+            <p
+              style={{
+                margin: "0 0 8px 0",
+                fontSize: "0.9em",
+                color: "#6c757d",
+              }}
+            >
+              Teste l&apos;autoreload PATCH avec changement de mutableId
             </p>
           </ActionForm>
         </div>

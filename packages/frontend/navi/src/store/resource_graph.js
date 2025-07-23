@@ -89,15 +89,17 @@ const createAutoreloadManager = () => {
       );
 
       // Skip if no autoreload rules apply
-      const hasMutableIdPostAutoreload =
-        triggeringAction.meta.httpVerb === "POST" &&
+      const hasMutableIdAutoreload =
+        (triggeringAction.meta.httpVerb === "POST" ||
+          triggeringAction.meta.httpVerb === "PUT" ||
+          triggeringAction.meta.httpVerb === "PATCH") &&
         config.mutableIdKeys.length > 0;
 
       if (
         !shouldReloadGetMany &&
         !shouldReloadGet &&
         triggeringAction.meta.httpVerb !== "DELETE" &&
-        !hasMutableIdPostAutoreload
+        !hasMutableIdAutoreload
       ) {
         continue;
       }
@@ -183,38 +185,40 @@ const createAutoreloadManager = () => {
             }
           }
 
-          // POST-specific autoreload for mutableId actions
-          // When a POST action completes successfully, it means a new resource was created.
+          // POST/PUT/PATCH-specific autoreload for mutableId actions
+          // When a POST/PUT/PATCH action completes successfully, it means a resource was created/updated.
           // If we have GET actions using mutableId that are currently in 404 (because the resource
           // didn't exist), we should reload them since a resource with that mutableId now exists.
+          // For PUT/PATCH, we also need to handle mutableId changes (e.g., renaming).
           if (
-            triggeringAction.meta.httpVerb === "POST" &&
+            hasMutableIdAutoreload &&
             actionCandidate.meta.httpVerb === "GET" &&
             !actionCandidate.meta.httpMany &&
-            resourceInstance === getResourceForAction(triggeringAction) &&
-            config.mutableIdKeys.length > 0
+            resourceInstance === getResourceForAction(triggeringAction)
           ) {
             const { computedDataSignal } =
               getActionPrivateProperties(triggeringAction);
-            const createdData = computedDataSignal.peek();
+            const modifiedData = computedDataSignal.peek();
 
-            if (createdData && typeof createdData === "object") {
-              // Check if any GET action uses a mutableId that matches the created resource
+            if (modifiedData && typeof modifiedData === "object") {
+              // Check if any GET action uses a mutableId that matches the created/modified resource
               // we'll use the action params since the GET might be reloaded, hence in 404
               for (const mutableIdKey of config.mutableIdKeys) {
-                const createdMutableId = createdData[mutableIdKey];
+                const modifiedMutableId = modifiedData[mutableIdKey];
                 const candidateParams = actionCandidate.params;
 
                 // If instance.data matches the mutableId value, this GET was likely in 404
                 // and should be reloaded since a resource with this mutableId now exists
                 if (
-                  createdMutableId !== undefined &&
+                  modifiedMutableId !== undefined &&
                   candidateParams &&
                   typeof candidateParams === "object" &&
-                  candidateParams[mutableIdKey] === createdMutableId
+                  candidateParams[mutableIdKey] === modifiedMutableId
                 ) {
                   actionsToReload.add(actionCandidate);
-                  reasonSet.add("POST-mutableId autoreload");
+                  reasonSet.add(
+                    `${triggeringAction.meta.httpVerb}-mutableId autoreload`,
+                  );
                   break; // No need to check other mutableIdKeys for this instance
                 }
               }
