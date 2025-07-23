@@ -694,28 +694,14 @@ const App = () => {
     // 1. Renommer Bob en TestUser
     await USER.PUT({ name: "Bob", newName: "TestUser" });
     console.log("Étape 1: Bob renommé en TestUser");
-
-    // 2. Attendre un peu
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // 3. Renommer TestUser en Bob
-    await USER.PUT({ name: "TestUser", newName: "Bob" });
-    console.log("Étape 2: TestUser renommé en Bob");
   };
 
   const runPatchRenameScenario = async () => {
     console.log("🎯 Scénario: Renommer avec PATCH");
 
     // 1. Renommer Bob en TestUser avec PATCH
-    await USER.PATCH({ name: "Bob", newName: "TestUser" });
+    await USER.PATCH({ name: "Bob", newName: "TestUser", age: 40 });
     console.log("Étape 1: Bob renommé en TestUser avec PATCH");
-
-    // 2. Attendre un peu
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // 3. Renommer TestUser en Bob avec PATCH
-    await USER.PATCH({ name: "TestUser", newName: "Bob" });
-    console.log("Étape 2: TestUser renommé en Bob avec PATCH");
   };
 
   const inputStyle = {
@@ -851,9 +837,9 @@ const App = () => {
           }}
         >
           <UserCard name="Alice" action={aliceAction} />
+          <UserCard name="TestUser" action={testUserAction} />
           <UserCard name="Bob" action={bobAction} />
           <UserCard name="Charlie" action={charlieAction} />
-          <UserCard name="TestUser" action={testUserAction} />
         </div>
       </div>
 
